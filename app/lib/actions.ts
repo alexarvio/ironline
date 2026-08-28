@@ -201,15 +201,22 @@ export async function publishWeekAction(formData: FormData) {
   revalidatePath("/admin");
 }
 
+function weekHref(base: string, week: number) {
+  return `${base}${base.includes("?") ? "&" : "?"}week=${week}`;
+}
+
 // "Add a new sheet": either duplicates an existing week's exercises as a
 // starting point (fromWeek provided — "Duplicate week N" in the week
 // switcher) or creates a blank draft week (no fromWeek — "Start something
 // new" at the bottom of the page). Always left as a draft for the coach to
 // review/adjust (helped along by the last-week target/actual reference and
 // inline-editable targets) before deploying via the existing publish button.
+// Redirects straight to the new week — otherwise the coach would land back
+// on whatever week is currently live and have to notice/click the new pill.
 export async function addWeekSheetAction(formData: FormData) {
   const clientId = Number(formData.get("clientId")) || CLIENT_ID;
   const fromWeekRaw = formData.get("fromWeek");
+  const weekLinkBase = String(formData.get("weekLinkBase") || "/admin");
   const weeks = listWeekNumbers(clientId);
   const toWeek = (weeks.length > 0 ? Math.max(...weeks) : 0) + 1;
   if (fromWeekRaw) {
@@ -218,15 +225,18 @@ export async function addWeekSheetAction(formData: FormData) {
     ensureWeekSkeleton(clientId, toWeek);
   }
   revalidatePath("/admin");
+  redirect(weekHref(weekLinkBase, toWeek));
 }
 
 // Only the latest week, and only while every day in it is still a draft —
 // weeks are append-only everywhere else in this app, so deleting anything
 // but the most recent one (or one already live) would leave a gap or pull
-// a week out from under the client.
+// a week out from under the client. Redirects back to whichever week is
+// current after the delete, rather than a now-nonexistent ?week= param.
 export async function removeWeekAction(formData: FormData) {
   const clientId = Number(formData.get("clientId"));
   const week = Number(formData.get("week"));
+  const weekLinkBase = String(formData.get("weekLinkBase") || "/admin");
   const weeks = listWeekNumbers(clientId);
   const days = getWeek(clientId, week);
   const isLatest = weeks.length > 0 && week === Math.max(...weeks);
@@ -235,6 +245,7 @@ export async function removeWeekAction(formData: FormData) {
     removeWeek(clientId, week);
   }
   revalidatePath("/admin");
+  redirect(weekLinkBase);
 }
 
 export async function logSetAction(formData: FormData) {

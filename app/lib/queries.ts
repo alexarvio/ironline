@@ -207,30 +207,17 @@ export function listWeekNumbers(clientId: number): number[] {
   return [...weeks].sort((a, b) => a - b);
 }
 
-// Which week a client "should" be on right now, based on their coaching
-// start date — floor((today - start) / 7 days) + 1. Clamped to the range of
-// weeks that actually exist so a client is never pointed at a week the
-// coach hasn't built/deployed yet (falls back to the latest one that is).
-// This is what makes "deploy weeks ahead of time" actually pay off: once
-// the coach has deployed week 2, the client is automatically looking at it
-// the moment week 2 starts, with no manual coach action on the day itself.
+// Which week a client is currently looking at by default: the highest
+// week_number the coach has actually published. Deliberately NOT tied to
+// the calendar — a coach can build (and rebuild) week N+1 as a draft for as
+// long as they like while the client keeps seeing week N, and the instant
+// they hit deploy, the client's default view flips to the new week. No
+// waiting for a date to roll over, no separate "make it live" step.
 export function getCurrentWeekNumber(clientId: number): number {
   const weeks = listWeekNumbers(clientId);
   if (weeks.length === 0) return 1;
-  const profile = getClientProfile(clientId);
-  if (!profile.coaching_start_date) return weeks[0];
-
-  const start = new Date(profile.coaching_start_date + "T00:00:00");
-  const today = new Date(localDateStr() + "T00:00:00");
-  const daysElapsed = Math.floor((today.getTime() - start.getTime()) / 86400000);
-  const computed = Math.floor(daysElapsed / 7) + 1;
-
-  const maxWeek = Math.max(...weeks);
-  const minWeek = Math.min(...weeks);
-  const clamped = Math.min(Math.max(computed, minWeek), maxWeek);
-  // Land on the closest week that actually exists (weeks can have gaps if a
-  // blank week was never built), preferring the nearest one at or below.
-  return [...weeks].reverse().find((w) => w <= clamped) ?? weeks[0];
+  const publishedWeeks = weeks.filter((w) => getWeek(clientId, w).every((d) => d.status === "published"));
+  return publishedWeeks.length > 0 ? Math.max(...publishedWeeks) : weeks[0];
 }
 
 // Copies one week's day labels + exercise assignments into another week

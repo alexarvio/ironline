@@ -15,17 +15,20 @@ export default function WeekActionsMenu({
   latestWeek,
   activeWeek,
   canDeleteActiveWeek,
+  weekLinkBase,
 }: {
   clientId: number;
   latestWeek: number;
   activeWeek: number;
   canDeleteActiveWeek: boolean;
+  weekLinkBase: string;
 }) {
   return (
     <div className="week-actions-row">
       <form action={addWeekSheetAction}>
         <input type="hidden" name="clientId" value={clientId} />
         <input type="hidden" name="fromWeek" value={latestWeek} />
+        <input type="hidden" name="weekLinkBase" value={weekLinkBase} />
         <button
           className="btn secondary"
           type="submit"
@@ -37,7 +40,7 @@ export default function WeekActionsMenu({
       {canDeleteActiveWeek && (
         <ConfirmDeleteButton
           action={removeWeekAction}
-          hiddenFields={{ clientId, week: activeWeek }}
+          hiddenFields={{ clientId, week: activeWeek, weekLinkBase }}
           label={`Delete draft week ${activeWeek}`}
         />
       )}

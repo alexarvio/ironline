@@ -126,6 +126,7 @@ export default function ProgramBuilder({
           latestWeek={latestWeek}
           activeWeek={activeWeek}
           canDeleteActiveWeek={canDeleteActiveWeek}
+          weekLinkBase={weekLinkBase}
         />
       </div>
 
@@ -399,29 +400,35 @@ export default function ProgramBuilder({
           )}
           <div className="exercise-meta" style={{ marginTop: 4 }}>
             {allPublished
-              ? "The client can see this week right now."
+              ? activeWeek === computedCurrentWeek
+                ? "The client can see this week right now."
+                : `Published, but week ${computedCurrentWeek} is what the client currently lands on.`
               : anyBuilt
-              ? "Client can't see this yet — deploy to make it live."
+              ? "Client can't see this yet — deploy to make it live immediately."
               : "Add at least one exercise, then deploy."}
           </div>
         </div>
-        <form action={publishWeekAction} style={{ marginLeft: "auto" }}>
-          <input type="hidden" name="clientId" value={clientId} />
-          <input type="hidden" name="week" value={activeWeek} />
-          <button className="deploy-btn" type="submit">
-            Deploy week {activeWeek} to client
-          </button>
-        </form>
+        {!allPublished && (
+          <form action={publishWeekAction} style={{ marginLeft: "auto" }}>
+            <input type="hidden" name="clientId" value={clientId} />
+            <input type="hidden" name="week" value={activeWeek} />
+            <button className="deploy-btn" type="submit">
+              Deploy week {activeWeek} to client
+            </button>
+          </form>
+        )}
       </div>
 
       <div className="nutrition-table-wrap builder-card" style={{ marginTop: 16 }}>
         <h3 className="builder-pill-heading">Start something new</h3>
         <p className="empty-note" style={{ marginBottom: 12 }}>
-          Not a continuation of week {latestWeek} — a fresh, empty week {latestWeek + 1} the client won&rsquo;t see
-          until you build it out and deploy it.
+          Not a continuation of week {latestWeek} — a fresh, empty week {latestWeek + 1} you can build out on your
+          own time. The client keeps seeing what&rsquo;s live now; the moment you deploy this one, it instantly
+          becomes what they land on.
         </p>
         <form action={addWeekSheetAction}>
           <input type="hidden" name="clientId" value={clientId} />
+          <input type="hidden" name="weekLinkBase" value={weekLinkBase} />
           <button className="btn secondary" type="submit">
             + Blank week {latestWeek + 1}
           </button>
