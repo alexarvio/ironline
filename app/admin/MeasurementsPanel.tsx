@@ -17,6 +17,7 @@ import {
 } from "../lib/queries";
 import ComboBoxInput from "../components/ComboBoxInput";
 import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
+import { LineChart, Point } from "../components/LineChart";
 import MeasurementFieldRow from "./MeasurementFieldRow";
 
 function changeLabel(delta: number, pct: number | null, unit: string) {
@@ -43,6 +44,19 @@ export default function MeasurementsPanel({ clientId }: { clientId: number }) {
 
   const valueFor = (fieldId: number, date: string) =>
     values.find((v) => v.field_id === fieldId && v.date === date)?.value ?? null;
+
+  // One trend line per field — not just Weight/Waist, whatever columns the
+  // coach has set up for this client — so the graph section grows with the
+  // check-in form instead of needing to be told which fields matter.
+  const seriesByField: Record<number, Point[]> = Object.fromEntries(
+    fields.map((f) => [
+      f.id,
+      values
+        .filter((v) => v.field_id === f.id && v.value != null)
+        .sort((a, b) => (a.date < b.date ? -1 : 1))
+        .map((v) => ({ date: v.date, value: v.value as number })),
+    ])
+  );
 
   // A long program (say, daily check-ins over 3 months) can produce dozens of
   // rows — nobody wants to scroll the whole page to compare the first entry
@@ -181,6 +195,28 @@ export default function MeasurementsPanel({ clientId }: { clientId: number }) {
           </div>
         )}
       </div>
+
+      {fields.length > 0 && (
+        <div className="nutrition-table-wrap builder-card">
+          <h3 className="builder-pill-heading">Trends</h3>
+          {fields.map((f) => {
+            const points = seriesByField[f.id] ?? [];
+            return (
+              <div key={f.id} style={{ marginTop: 16 }}>
+                <div className="exercise-meta" style={{ marginBottom: 4 }}>
+                  {f.name}
+                  {f.unit ? ` (${f.unit})` : ""}
+                </div>
+                {points.length < 2 ? (
+                  <div className="graph-empty">Not enough check-ins yet for a trend.</div>
+                ) : (
+                  <LineChart points={points} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <div className="nutrition-table-wrap">
         <h3>Weekly averages</h3>
