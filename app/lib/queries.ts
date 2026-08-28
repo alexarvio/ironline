@@ -312,6 +312,61 @@ export function removeAssignment(assignmentId: number) {
   persist();
 }
 
+// Edits an already-added assignment's targets in place, rather than forcing
+// a delete-and-re-add — that was the only way to change sets/reps/weight
+// once an exercise was on the sheet, which made adjusting a duplicated
+// week's targets far more tedious than it needed to be.
+export function updateAssignmentFields(
+  assignmentId: number,
+  fields: Partial<Pick<WorkoutAssignment, "sets" | "reps" | "target_weight_kg" | "rpe_target" | "tempo" | "notes">>
+) {
+  const data = getData();
+  const assignment = data.workout_assignments.find((wa) => wa.id === assignmentId);
+  if (!assignment) return;
+  Object.assign(assignment, fields);
+  persist();
+}
+
+export type PreviousWeekAssignmentRef = {
+  sets: number;
+  reps: string;
+  target_weight_kg: number | null;
+  rpe_target: number | null;
+  actualLogs: SetLog[];
+};
+
+// What this same exercise, on this same day, looked like one sheet ago —
+// both the target the coach set and what the client actually logged against
+// it. Surfaced while building the next week's sheet so the coach can set
+// this week's numbers off real data instead of guessing or hunting through
+// the log feed; `week` is the sheet number (not a calendar week), so this is
+// "the previous sheet for this client", which is what a coach building week
+// N+1 actually means by "last week".
+export function getPreviousWeekAssignmentRef(
+  clientId: number,
+  week: number,
+  dayOfWeek: number,
+  exerciseId: number
+): PreviousWeekAssignmentRef | null {
+  if (week <= 1) return null;
+  const data = getData();
+  const prevDay = data.program_days.find(
+    (pd) => pd.client_id === clientId && pd.week_number === week - 1 && pd.day_of_week === dayOfWeek
+  );
+  if (!prevDay) return null;
+  const prevAssignment = data.workout_assignments.find(
+    (wa) => wa.program_day_id === prevDay.id && wa.exercise_id === exerciseId
+  );
+  if (!prevAssignment) return null;
+  return {
+    sets: prevAssignment.sets,
+    reps: prevAssignment.reps,
+    target_weight_kg: prevAssignment.target_weight_kg,
+    rpe_target: prevAssignment.rpe_target,
+    actualLogs: getLogsForAssignment(prevAssignment.id),
+  };
+}
+
 export function publishWeek(clientId: number, week: number) {
   const data = getData();
   data.program_days

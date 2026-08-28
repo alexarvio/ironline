@@ -6,6 +6,7 @@ import {
   getCustomValues,
   getExerciseStrengthSeries,
   getLogsForAssignmentByWeek,
+  getPreviousWeekAssignmentRef,
   getRecentLogsForClient,
   getStrengthSeries,
   getWeek,
@@ -19,6 +20,7 @@ import {
   weekStart,
 } from "../lib/queries";
 import { DAY_NAMES } from "../lib/db";
+import AssignmentFieldInput from "./AssignmentFieldInput";
 import DayLabelForm from "./DayLabelForm";
 import ExercisePicker from "./ExercisePicker";
 import CustomValueInput from "../admin/CustomValueInput";
@@ -36,6 +38,17 @@ function weekLabel(weekStartStr: string, isCurrent: boolean) {
 
 function weekHref(base: string, week: number) {
   return `${base}${base.includes("?") ? "&" : "?"}week=${week}`;
+}
+
+function formatTarget(sets: number, reps: string, targetWeight: number | null, rpe: number | null) {
+  const weightPart = targetWeight ? ` @${targetWeight}kg` : "";
+  const rpePart = rpe ? ` RPE${rpe}` : "";
+  return `${sets}×${reps}${weightPart}${rpePart}`;
+}
+
+function formatActualLogs(logs: { weight_kg: number | null; reps: number | null }[]) {
+  if (logs.length === 0) return "not logged";
+  return logs.map((l) => `${l.weight_kg ?? "–"}kg×${l.reps ?? "–"}`).join(", ");
 }
 
 // The 7-day program canvas + "what's logged" feed, used by /admin for
@@ -152,6 +165,10 @@ export default function ProgramBuilder({
                   <tbody>
                     {assignments.map((a) => {
                       const weekGroups = getLogsForAssignmentByWeek(a.id);
+                      const prevRef =
+                        day.status === "published"
+                          ? null
+                          : getPreviousWeekAssignmentRef(clientId, activeWeek, day.day_of_week, a.exercise_id);
                       return (
                         <tr key={a.id}>
                           <td className="exercise-name-cell">
@@ -165,6 +182,13 @@ export default function ProgramBuilder({
                               >
                                 ▶ demo
                               </a>
+                            )}
+                            {prevRef && (
+                              <div className="exercise-meta" style={{ marginTop: 4, fontWeight: 400 }}>
+                                Last week: {formatTarget(prevRef.sets, prevRef.reps, prevRef.target_weight_kg, prevRef.rpe_target)}
+                                {" — "}
+                                did {formatActualLogs(prevRef.actualLogs)}
+                              </div>
                             )}
                           </td>
                           {columns.map((col) => {
@@ -181,19 +205,65 @@ export default function ProgramBuilder({
                             }
                             switch (col.key) {
                               case "sets":
-                                return <td key={col.id}>{a.sets}</td>;
+                                return (
+                                  <td key={col.id}>
+                                    <AssignmentFieldInput assignmentId={a.id} name="sets" type="number" min={1} defaultValue={a.sets} />
+                                  </td>
+                                );
                               case "reps":
-                                return <td key={col.id}>{a.reps}</td>;
+                                return (
+                                  <td key={col.id}>
+                                    <AssignmentFieldInput assignmentId={a.id} name="reps" type="text" defaultValue={a.reps} />
+                                  </td>
+                                );
                               case "weight_goal":
-                                return <td key={col.id}>{a.target_weight_kg ? `${a.target_weight_kg}kg` : "–"}</td>;
+                                return (
+                                  <td key={col.id}>
+                                    <AssignmentFieldInput
+                                      assignmentId={a.id}
+                                      name="targetWeight"
+                                      type="number"
+                                      step={0.5}
+                                      placeholder="kg"
+                                      defaultValue={a.target_weight_kg ?? ""}
+                                    />
+                                  </td>
+                                );
                               case "rpe":
-                                return <td key={col.id}>{a.rpe_target ?? "–"}</td>;
+                                return (
+                                  <td key={col.id}>
+                                    <AssignmentFieldInput
+                                      assignmentId={a.id}
+                                      name="rpe"
+                                      type="number"
+                                      step={0.5}
+                                      placeholder="RPE"
+                                      defaultValue={a.rpe_target ?? ""}
+                                    />
+                                  </td>
+                                );
                               case "tempo":
-                                return <td key={col.id}>{a.tempo ?? "–"}</td>;
+                                return (
+                                  <td key={col.id}>
+                                    <AssignmentFieldInput
+                                      assignmentId={a.id}
+                                      name="tempo"
+                                      type="text"
+                                      placeholder="e.g. 3-1-1"
+                                      defaultValue={a.tempo ?? ""}
+                                    />
+                                  </td>
+                                );
                               case "notes":
                                 return (
                                   <td key={col.id} className="notes-cell">
-                                    {a.notes ?? "–"}
+                                    <AssignmentFieldInput
+                                      assignmentId={a.id}
+                                      name="notes"
+                                      type="text"
+                                      placeholder="optional"
+                                      defaultValue={a.notes ?? ""}
+                                    />
                                   </td>
                                 );
                               default:

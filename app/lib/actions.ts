@@ -70,6 +70,7 @@ import {
   setTrainingColumnVisible,
   slugify,
   SUPPLEMENT_ITEMS,
+  updateAssignmentFields,
   updateMeasurementField,
   updateMetricDefinition,
   updatePhotoSlot,
@@ -105,6 +106,30 @@ export async function addExerciseAction(formData: FormData) {
 export async function removeExerciseAction(formData: FormData) {
   const assignmentId = Number(formData.get("assignmentId"));
   removeAssignment(assignmentId);
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+// One shared action for every editable target field on an already-added
+// assignment (sets/reps/targetWeight/rpe/tempo/notes) — each field's input
+// submits itself on blur with only its own name present, so this only ever
+// touches the one field that changed.
+export async function updateAssignmentAction(formData: FormData) {
+  const assignmentId = Number(formData.get("assignmentId"));
+  const fields: Parameters<typeof updateAssignmentFields>[1] = {};
+  if (formData.has("sets")) fields.sets = Math.max(1, Number(formData.get("sets")) || 1);
+  if (formData.has("reps")) fields.reps = String(formData.get("reps") || "");
+  if (formData.has("targetWeight")) {
+    const raw = String(formData.get("targetWeight") || "").trim();
+    fields.target_weight_kg = raw ? Number(raw) : null;
+  }
+  if (formData.has("rpe")) {
+    const raw = String(formData.get("rpe") || "").trim();
+    fields.rpe_target = raw ? Number(raw) : null;
+  }
+  if (formData.has("tempo")) fields.tempo = String(formData.get("tempo") || "").trim() || null;
+  if (formData.has("notes")) fields.notes = String(formData.get("notes") || "").trim() || null;
+  updateAssignmentFields(assignmentId, fields);
   revalidatePath("/client");
   revalidatePath("/admin");
 }
