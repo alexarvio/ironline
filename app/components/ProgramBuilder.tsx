@@ -1,13 +1,19 @@
+import Link from "next/link";
 import { addExerciseAction, publishWeekAction, removeExerciseAction } from "../lib/actions";
 import {
   getAssignmentsForDay,
+  getCurrentWeekNumber,
   getCustomValues,
+  getExerciseStrengthSeries,
   getLogsForAssignmentByWeek,
   getRecentLogsForClient,
+  getStrengthSeries,
   getWeek,
   ensureWeekSkeleton,
   listExercisesByGroup,
+  listLoggedExercisesForClient,
   listTrainingColumns,
+  listWeekNumbers,
   localDateStr,
   MUSCLE_GROUPS,
   weekStart,
@@ -19,8 +25,8 @@ import CustomValueInput from "../admin/CustomValueInput";
 import TrainingColumnsPanel from "../admin/TrainingColumnsPanel";
 import ConfirmDeleteButton from "./ConfirmDeleteButton";
 import AdminDayCard from "./AdminDayCard";
-
-const WEEK = 1;
+import StrengthProgressPanel from "../admin/StrengthProgressPanel";
+import WeekActionsMenu from "./WeekActionsMenu";
 
 function weekLabel(weekStartStr: string, isCurrent: boolean) {
   const d = new Date(weekStartStr + "T00:00:00");
@@ -28,12 +34,31 @@ function weekLabel(weekStartStr: string, isCurrent: boolean) {
   return isCurrent ? `This week (${formatted})` : formatted;
 }
 
+function weekHref(base: string, week: number) {
+  return `${base}${base.includes("?") ? "&" : "?"}week=${week}`;
+}
+
 // The 7-day program canvas + "what's logged" feed. Shared by /coach (the
 // original single-client view) and /admin (the multi-client panel) — pass in
-// whichever client is currently selected.
-export default function ProgramBuilder({ clientId }: { clientId: number }) {
-  ensureWeekSkeleton(clientId, WEEK);
-  const days = getWeek(clientId, WEEK);
+// whichever client is currently selected. `week` and `weekLinkBase` are
+// optional so existing callers keep working unchanged: without them this
+// defaults to whichever week getCurrentWeekNumber computes, same as the old
+// hardcoded WEEK=1 did for a client with only one week ever built.
+export default function ProgramBuilder({
+  clientId,
+  week,
+  weekLinkBase = "/coach",
+}: {
+  clientId: number;
+  week?: number;
+  weekLinkBase?: string;
+}) {
+  const computedCurrentWeek = getCurrentWeekNumber(clientId);
+  const activeWeek = week ?? computedCurrentWeek;
+  ensureWeekSkeleton(clientId, activeWeek);
+  const days = getWeek(clientId, activeWeek);
+  const existingWeeks = [...new Set([...listWeekNumbers(clientId), activeWeek])].sort((a, b) => a - b);
+  const latestWeek = Math.max(...existingWeeks);
   const exercisesByGroup = listExercisesByGroup();
   const allColumns = listTrainingColumns(clientId);
   const columns = allColumns.filter((c) => c.visible);
@@ -56,8 +81,30 @@ export default function ProgramBuilder({ clientId }: { clientId: number }) {
   const anyBuilt = days.some((d) => getAssignmentsForDay(d.id).length > 0);
   const currentWeek = weekStart(localDateStr());
 
+  const strengthOverall = getStrengthSeries(clientId, 3650);
+  const loggedExercises = listLoggedExercisesForClient(clientId);
+  const strengthByExercise = Object.fromEntries(
+    loggedExercises.map((e) => [e.id, getExerciseStrengthSeries(clientId, e.id, 3650)])
+  );
+
   return (
     <div>
+      <div className="week-switcher-row">
+        <div className="week-switcher">
+          {existingWeeks.map((w) => (
+            <Link
+              key={w}
+              href={weekHref(weekLinkBase, w)}
+              className={`toggle-btn${w === activeWeek ? " active" : ""}`}
+            >
+              Week {w}
+              {w === computedCurrentWeek && <span className="week-current-dot" aria-hidden="true" />}
+            </Link>
+          ))}
+        </div>
+        <WeekActionsMenu clientId={clientId} latestWeek={latestWeek} />
+      </div>
+
       <TrainingColumnsPanel clientId={clientId} columns={allColumns} />
 
       <div className="program-sheet">
@@ -275,11 +322,14 @@ export default function ProgramBuilder({ clientId }: { clientId: number }) {
         </div>
         <form action={publishWeekAction} style={{ marginLeft: "auto" }}>
           <input type="hidden" name="clientId" value={clientId} />
+          <input type="hidden" name="week" value={activeWeek} />
           <button className="deploy-btn" type="submit">
-            Deploy to client
+            Deploy week {activeWeek} to client
           </button>
         </form>
       </div>
+
+      <StrengthProgressPanel overall={strengthOverall} exercises={loggedExercises} byExercise={strengthByExercise} />
 
       <h3 style={{ marginTop: 24 }}>What this client has logged</h3>
       {recentLogs.length === 0 ? (

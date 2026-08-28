@@ -19,7 +19,7 @@ import { getClient, getClientSummary, getStrengthSeries, getWeightSeries, listCh
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ client?: string; view?: string; tab?: string; month?: string }>;
+  searchParams: Promise<{ client?: string; view?: string; tab?: string; month?: string; week?: string }>;
 }) {
   const params = await searchParams;
   const clients = listClients();
@@ -31,6 +31,7 @@ export default async function AdminPage({
     ? clients[0]?.id ?? null
     : null;
   const client = selectedId ? getClient(selectedId) : undefined;
+  const week = params.week ? Number(params.week) : undefined;
 
   return (
     <div className="admin-shell">
@@ -65,7 +66,7 @@ export default async function AdminPage({
                 : "Select a client from the sidebar."}
             </p>
           ) : (
-            <ClientDashboard clientId={client.id} name={client.name} initialTab={params.tab} />
+            <ClientDashboard clientId={client.id} name={client.name} initialTab={params.tab} week={week} />
           )}
         </main>
       </div>
@@ -77,10 +78,12 @@ function ClientDashboard({
   clientId,
   name,
   initialTab,
+  week,
 }: {
   clientId: number;
   name: string;
   initialTab?: string;
+  week?: number;
 }) {
   const summary = getClientSummary(clientId);
   const strengthSeries = getStrengthSeries(clientId, 3650);
@@ -95,7 +98,9 @@ function ClientDashboard({
     {
       id: "training",
       label: "Training",
-      content: <ProgramBuilder clientId={clientId} />,
+      content: (
+        <ProgramBuilder clientId={clientId} week={week} weekLinkBase={`/admin?client=${clientId}&tab=training`} />
+      ),
     },
     { id: "nutrition", label: "Nutrition", content: <NutritionPanel clientId={clientId} /> },
     {

@@ -8,7 +8,13 @@ const CLIENT_ID = 1;
 // whatever data existed at build time instead of reading it per request.
 export const dynamic = "force-dynamic";
 
-export default function CoachPage() {
+export default async function CoachPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ week?: string }>;
+}) {
+  const params = await searchParams;
+  const week = params.week ? Number(params.week) : undefined;
   const client = getClient(CLIENT_ID);
 
   return (
@@ -32,7 +38,7 @@ export default function CoachPage() {
         rest empty (they&rsquo;re rest days by default), then deploy when ready.
       </p>
 
-      <ProgramBuilder clientId={CLIENT_ID} />
+      <ProgramBuilder clientId={CLIENT_ID} week={week} weekLinkBase="/coach" />
     </div>
   );
 }

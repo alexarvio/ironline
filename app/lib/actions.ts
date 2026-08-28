@@ -18,7 +18,9 @@ import {
   addSkinfoldEntry,
   applyMetricTemplateToClient,
   createClient,
+  duplicateWeek,
   ensureWeekSkeleton,
+  listWeekNumbers,
   listMeasurementFields,
   listMetricDefinitions,
   logCoachActivity,
@@ -158,11 +160,47 @@ export async function setLabelAction(formData: FormData) {
 
 export async function publishWeekAction(formData: FormData) {
   const clientId = Number(formData.get("clientId")) || CLIENT_ID;
-  ensureWeekSkeleton(clientId, WEEK);
-  publishWeek(clientId, WEEK);
-  logCoachActivity(clientId, "Published this week's training");
+  const week = Number(formData.get("week")) || WEEK;
+  ensureWeekSkeleton(clientId, week);
+  publishWeek(clientId, week);
+  logCoachActivity(clientId, `Published week ${week}'s training`);
   revalidatePath("/coach");
   revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+// "Deploy next week": duplicates the latest existing week's day labels and
+// exercises forward one week and publishes it immediately — the client sees
+// it live right away (under whichever week number getCurrentWeekNumber
+// currently computes for them, once that week's date range arrives).
+export async function deployNextWeekAction(formData: FormData) {
+  const clientId = Number(formData.get("clientId")) || CLIENT_ID;
+  const weeks = listWeekNumbers(clientId);
+  const fromWeek = weeks.length > 0 ? Math.max(...weeks) : 1;
+  const toWeek = fromWeek + 1;
+  duplicateWeek(clientId, fromWeek, toWeek);
+  publishWeek(clientId, toWeek);
+  logCoachActivity(clientId, `Deployed week ${toWeek}'s training`);
+  revalidatePath("/coach");
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+// "Add a new sheet": either duplicates an existing week's exercises as a
+// starting point (fromWeek provided) or creates a blank draft week (no
+// fromWeek) — either way it's left as a draft for the coach to review
+// before deploying, unlike deployNextWeekAction which publishes right away.
+export async function addWeekSheetAction(formData: FormData) {
+  const clientId = Number(formData.get("clientId")) || CLIENT_ID;
+  const fromWeekRaw = formData.get("fromWeek");
+  const weeks = listWeekNumbers(clientId);
+  const toWeek = (weeks.length > 0 ? Math.max(...weeks) : 0) + 1;
+  if (fromWeekRaw) {
+    duplicateWeek(clientId, Number(fromWeekRaw), toWeek);
+  } else {
+    ensureWeekSkeleton(clientId, toWeek);
+  }
+  revalidatePath("/coach");
   revalidatePath("/admin");
 }
 

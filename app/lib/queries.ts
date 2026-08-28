@@ -196,6 +196,63 @@ export function getWeek(clientId: number, week: number): ProgramDay[] {
     .sort((a, b) => a.day_of_week - b.day_of_week);
 }
 
+// Every week_number that has at least one ProgramDay for this client,
+// ascending — drives the week switcher in the Training tab.
+export function listWeekNumbers(clientId: number): number[] {
+  const weeks = new Set(
+    getData()
+      .program_days.filter((pd) => pd.client_id === clientId)
+      .map((pd) => pd.week_number)
+  );
+  return [...weeks].sort((a, b) => a - b);
+}
+
+// Which week a client "should" be on right now, based on their coaching
+// start date — floor((today - start) / 7 days) + 1. Clamped to the range of
+// weeks that actually exist so a client is never pointed at a week the
+// coach hasn't built/deployed yet (falls back to the latest one that is).
+// This is what makes "deploy weeks ahead of time" actually pay off: once
+// the coach has deployed week 2, the client is automatically looking at it
+// the moment week 2 starts, with no manual coach action on the day itself.
+export function getCurrentWeekNumber(clientId: number): number {
+  const weeks = listWeekNumbers(clientId);
+  if (weeks.length === 0) return 1;
+  const profile = getClientProfile(clientId);
+  if (!profile.coaching_start_date) return weeks[0];
+
+  const start = new Date(profile.coaching_start_date + "T00:00:00");
+  const today = new Date(localDateStr() + "T00:00:00");
+  const daysElapsed = Math.floor((today.getTime() - start.getTime()) / 86400000);
+  const computed = Math.floor(daysElapsed / 7) + 1;
+
+  const maxWeek = Math.max(...weeks);
+  const minWeek = Math.min(...weeks);
+  const clamped = Math.min(Math.max(computed, minWeek), maxWeek);
+  // Land on the closest week that actually exists (weeks can have gaps if a
+  // blank week was never built), preferring the nearest one at or below.
+  return [...weeks].reverse().find((w) => w <= clamped) ?? weeks[0];
+}
+
+// Copies one week's day labels + exercise assignments into another week
+// (creating its skeleton first) — used for both "duplicate to deploy next
+// week" and "add a new sheet from an existing one". Never copies set_logs,
+// so the new week always starts unlogged. If toWeek already has exercises,
+// this adds duplicates on top rather than overwriting — call only against
+// an empty/fresh week.
+export function duplicateWeek(clientId: number, fromWeek: number, toWeek: number) {
+  ensureWeekSkeleton(clientId, toWeek);
+  const fromDays = getWeek(clientId, fromWeek);
+  const toDays = getWeek(clientId, toWeek);
+  fromDays.forEach((fromDay) => {
+    const toDay = toDays.find((d) => d.day_of_week === fromDay.day_of_week);
+    if (!toDay) return;
+    if (fromDay.label) setDayLabel(toDay.id, fromDay.label);
+    getAssignmentsForDay(fromDay.id).forEach((a) => {
+      addExerciseToDay(toDay.id, a.exercise_id, a.sets, a.reps, a.target_weight_kg, a.rpe_target, a.tempo, a.notes);
+    });
+  });
+}
+
 export function getAssignmentsForDay(programDayId: number): WorkoutAssignment[] {
   const data = getData();
   return data.workout_assignments
@@ -1408,6 +1465,54 @@ export function getStrengthSeries(clientId: number, days: number) {
   return [...byDate.entries()]
     .sort(([a], [b]) => (a < b ? -1 : 1))
     .map(([date, value]) => ({ date, value }));
+}
+
+// Same volume calculation as getStrengthSeries, scoped to one exercise —
+// the per-exercise drilldown inside Training's Strength Progress section.
+export function getExerciseStrengthSeries(clientId: number, exerciseId: number, days: number) {
+  const data = getData();
+  const assignmentIds = new Set(
+    data.workout_assignments
+      .filter((wa) => {
+        if (wa.exercise_id !== exerciseId) return false;
+        const day = data.program_days.find((pd) => pd.id === wa.program_day_id);
+        return day?.client_id === clientId;
+      })
+      .map((wa) => wa.id)
+  );
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const byDate = new Map<string, number>();
+
+  data.set_logs
+    .filter((sl) => assignmentIds.has(sl.workout_assignment_id))
+    .filter((sl) => new Date(sl.logged_at) >= cutoff)
+    .forEach((sl) => {
+      const date = sl.logged_at.slice(0, 10);
+      const volume = (sl.weight_kg ?? 0) * (sl.reps ?? 0);
+      byDate.set(date, (byDate.get(date) ?? 0) + volume);
+    });
+
+  return [...byDate.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([date, value]) => ({ date, value }));
+}
+
+// Every exercise this client has at least one logged set for, ordered by
+// name — populates the exercise picker in Strength Progress.
+export function listLoggedExercisesForClient(clientId: number): { id: number; name: string }[] {
+  const data = getData();
+  const dayIds = new Set(data.program_days.filter((pd) => pd.client_id === clientId).map((pd) => pd.id));
+  const assignments = data.workout_assignments.filter((wa) => dayIds.has(wa.program_day_id));
+  const loggedAssignmentIds = new Set(data.set_logs.map((sl) => sl.workout_assignment_id));
+  const exerciseIds = new Set(
+    assignments.filter((wa) => loggedAssignmentIds.has(wa.id)).map((wa) => wa.exercise_id)
+  );
+  return data.exercises
+    .filter((e) => exerciseIds.has(e.id))
+    .map((e) => ({ id: e.id, name: e.name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // ---- Start Page: the coach's "Startpagina" tab ----

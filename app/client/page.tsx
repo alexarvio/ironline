@@ -4,6 +4,7 @@ import {
   getClientProfile,
   getLatestWeight,
   getLogsForAssignment,
+  getCurrentWeekNumber,
   getLatestCoachActivity,
   getPinnedMetricsSummary,
   getMeasurementValues,
@@ -57,10 +58,12 @@ const PERIOD_UNIT = {
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const CLIENT_ID = 1;
-const WEEK = 1;
 
 function getWeekDays() {
-  const publishedDays = getPublishedWeek(CLIENT_ID, WEEK);
+  // Auto-advances the moment a week the coach has already deployed starts —
+  // see getCurrentWeekNumber's doc comment in lib/queries.ts.
+  const week = getCurrentWeekNumber(CLIENT_ID);
+  const publishedDays = getPublishedWeek(CLIENT_ID, week);
   return publishedDays.map((day) => ({ day, assignments: getAssignmentsForDay(day.id) }));
 }
 
