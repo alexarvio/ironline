@@ -45,6 +45,21 @@ if (process.env.SKIP_SEED !== "1" && !fs.existsSync(lightMarker)) {
   console.log("[start-server] Light client data already enriched, skipping.");
 }
 
+// Coach-level metric templates (Stress/Nutrition/Training/Wellbeing/Optional
+// weekly tracker categories) — not tied to any client, so this doesn't need
+// the client data to exist first. The script itself is idempotent (skips
+// categories that already exist), but it's marker-guarded too so a restart
+// doesn't re-check on every boot.
+const templatesMarker = path.join(DATA_DIR, ".seeded-templates");
+if (process.env.SKIP_SEED !== "1" && !fs.existsSync(templatesMarker)) {
+  console.log("[start-server] Seeding metric templates...");
+  run("npx", ["tsx", "scripts/seed-metric-templates.ts"]);
+  fs.writeFileSync(templatesMarker, new Date().toISOString());
+  console.log("[start-server] Metric templates seeded.");
+} else {
+  console.log("[start-server] Metric templates already seeded, skipping.");
+}
+
 const result = spawnSync("npx", ["next", "start"], { stdio: "inherit", shell: true });
 if (result.error) throw result.error;
 process.exit(result.status ?? 0);

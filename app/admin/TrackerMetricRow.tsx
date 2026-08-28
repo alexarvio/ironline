@@ -22,6 +22,11 @@ export default function TrackerMetricRow({
 }) {
   const [mode, setMode] = useState<"view" | "edit" | "confirm-delete">("view");
 
+  // Only worth showing once there's enough logged history for an average to
+  // mean something — a single entry isn't a trend.
+  const logged = values.filter((v): v is { period: string; value: number } => v.value != null);
+  const average = logged.length >= 3 ? logged.reduce((sum, v) => sum + v.value, 0) / logged.length : null;
+
   if (mode === "edit") {
     return (
       <tr>
@@ -47,6 +52,11 @@ export default function TrackerMetricRow({
     <tr>
       <td className="exercise-name-cell tracker-metric-col">
         {def.name} {def.unit && <span className="exercise-meta">({def.unit})</span>}
+        {average != null && (
+          <span className="tracker-metric-avg" title={`Average of ${logged.length} logged entries`}>
+            avg {average.toFixed(1)}
+          </span>
+        )}
       </td>
       {values.map((v) => (
         <td key={v.period} className="computed-cell">

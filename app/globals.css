@@ -3091,6 +3091,19 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   font-weight: 400;
 }
 
+.tracker-metric-avg {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 14%, white);
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
 .tracker-metric-row input {
   width: 96px;
   flex-shrink: 0;
