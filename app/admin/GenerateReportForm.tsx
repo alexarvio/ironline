@@ -4,6 +4,7 @@ import { useState } from "react";
 import { generateReportAction } from "../lib/actions";
 import { REPORT_SECTION_TYPE_LABEL, ReportSectionType } from "../lib/reportSectionTypes";
 import ComboBoxInput from "../components/ComboBoxInput";
+import SubmitButton from "./SubmitButton";
 import type { ReportTemplateSection } from "../lib/queries";
 
 export type TemplateWithSections = { id: number; name: string; sections: ReportTemplateSection[] };
@@ -112,9 +113,9 @@ export default function GenerateReportForm({
             </button>
           )}
 
-          <button className="btn" type="submit" style={{ marginTop: 14 }}>
-            Generate draft
-          </button>
+          <div style={{ marginTop: 14 }}>
+            <SubmitButton pendingText="Generating draft… (calling the AI, a few seconds)">Generate draft</SubmitButton>
+          </div>
         </div>
       )}
 
@@ -170,9 +171,11 @@ export default function GenerateReportForm({
             </button>
           </div>
 
-          <button className="btn" type="submit" style={{ marginTop: 14 }} disabled={customSections.length === 0}>
-            Generate draft
-          </button>
+          <div style={{ marginTop: 14 }}>
+            <SubmitButton pendingText="Generating draft… (calling the AI, a few seconds)" disabled={customSections.length === 0}>
+              Generate draft
+            </SubmitButton>
+          </div>
         </div>
       )}
     </form>
