@@ -43,7 +43,6 @@ export default async function AdminPage({
           Ironline
         </Link>
         <div className="nav-links">
-          <Link href="/coach">Coach</Link>
           <Link href="/client">Client</Link>
           <Link className="active" href="/admin">
             Admin panel

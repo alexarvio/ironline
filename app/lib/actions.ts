@@ -98,7 +98,6 @@ export async function addExerciseAction(formData: FormData) {
   const notes = notesRaw || null;
 
   addExerciseToDay(programDayId, exerciseId, sets, reps, targetWeight, rpe, tempo, notes);
-  revalidatePath("/coach");
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -106,7 +105,6 @@ export async function addExerciseAction(formData: FormData) {
 export async function removeExerciseAction(formData: FormData) {
   const assignmentId = Number(formData.get("assignmentId"));
   removeAssignment(assignmentId);
-  revalidatePath("/coach");
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -117,7 +115,6 @@ export async function addExerciseToLibraryAction(formData: FormData) {
   const videoUrl = String(formData.get("videoUrl") || "").trim() || null;
   if (!name) return;
   addExercise(name, muscleGroup, videoUrl);
-  revalidatePath("/coach");
   revalidatePath("/admin");
 }
 
@@ -127,7 +124,6 @@ export async function updateTrainingColumnAction(formData: FormData) {
   if (!label) return;
   updateTrainingColumn(id, label);
   revalidatePath("/admin");
-  revalidatePath("/coach");
 }
 
 export async function setTrainingColumnVisibleAction(formData: FormData) {
@@ -135,7 +131,6 @@ export async function setTrainingColumnVisibleAction(formData: FormData) {
   const visible = formData.get("visible") === "true";
   setTrainingColumnVisible(id, visible);
   revalidatePath("/admin");
-  revalidatePath("/coach");
 }
 
 export async function addTrainingColumnAction(formData: FormData) {
@@ -144,14 +139,12 @@ export async function addTrainingColumnAction(formData: FormData) {
   if (!label) return;
   addCustomTrainingColumn(clientId, label);
   revalidatePath("/admin");
-  revalidatePath("/coach");
 }
 
 export async function removeCustomTrainingColumnAction(formData: FormData) {
   const id = Number(formData.get("id"));
   removeCustomTrainingColumn(id);
   revalidatePath("/admin");
-  revalidatePath("/coach");
 }
 
 export async function setAssignmentCustomValueAction(formData: FormData) {
@@ -160,7 +153,6 @@ export async function setAssignmentCustomValueAction(formData: FormData) {
   const value = String(formData.get("value") || "");
   setAssignmentCustomValue(assignmentId, columnId, value);
   revalidatePath("/admin");
-  revalidatePath("/coach");
   revalidatePath("/client");
 }
 
@@ -168,7 +160,6 @@ export async function setLabelAction(formData: FormData) {
   const programDayId = Number(formData.get("programDayId"));
   const label = String(formData.get("label") || "");
   setDayLabel(programDayId, label);
-  revalidatePath("/coach");
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -179,7 +170,6 @@ export async function publishWeekAction(formData: FormData) {
   ensureWeekSkeleton(clientId, week);
   publishWeek(clientId, week);
   logCoachActivity(clientId, `Published week ${week}'s training`);
-  revalidatePath("/coach");
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -196,7 +186,6 @@ export async function deployNextWeekAction(formData: FormData) {
   duplicateWeek(clientId, fromWeek, toWeek);
   publishWeek(clientId, toWeek);
   logCoachActivity(clientId, `Deployed week ${toWeek}'s training`);
-  revalidatePath("/coach");
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -215,7 +204,6 @@ export async function addWeekSheetAction(formData: FormData) {
   } else {
     ensureWeekSkeleton(clientId, toWeek);
   }
-  revalidatePath("/coach");
   revalidatePath("/admin");
 }
 
@@ -228,7 +216,6 @@ export async function logSetAction(formData: FormData) {
 
   logSet(assignmentId, setNumber, weight, reps, rpe);
   revalidatePath("/client");
-  revalidatePath("/coach");
   revalidatePath("/admin");
 }
 

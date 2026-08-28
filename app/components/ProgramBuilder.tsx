@@ -19,7 +19,7 @@ import {
   weekStart,
 } from "../lib/queries";
 import { DAY_NAMES } from "../lib/db";
-import DayLabelForm from "../coach/DayLabelForm";
+import DayLabelForm from "./DayLabelForm";
 import ExercisePicker from "./ExercisePicker";
 import CustomValueInput from "../admin/CustomValueInput";
 import TrainingColumnsPanel from "../admin/TrainingColumnsPanel";
@@ -38,16 +38,15 @@ function weekHref(base: string, week: number) {
   return `${base}${base.includes("?") ? "&" : "?"}week=${week}`;
 }
 
-// The 7-day program canvas + "what's logged" feed. Shared by /coach (the
-// original single-client view) and /admin (the multi-client panel) — pass in
+// The 7-day program canvas + "what's logged" feed, used by /admin for
 // whichever client is currently selected. `week` and `weekLinkBase` are
-// optional so existing callers keep working unchanged: without them this
-// defaults to whichever week getCurrentWeekNumber computes, same as the old
-// hardcoded WEEK=1 did for a client with only one week ever built.
+// optional so callers can omit them: without them this defaults to
+// whichever week getCurrentWeekNumber computes, same as the old hardcoded
+// WEEK=1 did for a client with only one week ever built.
 export default function ProgramBuilder({
   clientId,
   week,
-  weekLinkBase = "/coach",
+  weekLinkBase = "/admin",
 }: {
   clientId: number;
   week?: number;
