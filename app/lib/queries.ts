@@ -915,6 +915,7 @@ export type MetricDefinition = {
   unit: string;
   frequency: "daily" | "weekly";
   order_index: number;
+  pinned?: boolean;
 };
 export type MetricEntry = {
   id: number;
@@ -971,6 +972,67 @@ export function removeMetricDefinition(id: number) {
   data.metric_definitions = data.metric_definitions.filter((m) => m.id !== id);
   data.metric_entries = data.metric_entries.filter((e) => e.metric_definition_id !== id);
   persist();
+}
+
+// Pinning surfaces a metric at the top of the client's Start Page (any
+// daily or weekly metric qualifies) so the coach doesn't have to open the
+// Tracker tab to see it. Capped per client — five is enough to be useful
+// as an at-a-glance panel without turning into a second full tracker table.
+export const PINNED_METRIC_LIMIT = 5;
+
+export function togglePinMetric(id: number): { ok: boolean; reason?: string } {
+  const data = getData();
+  const def = data.metric_definitions.find((m) => m.id === id);
+  if (!def) return { ok: false, reason: "Metric not found." };
+  if (!def.pinned) {
+    const pinnedCount = data.metric_definitions.filter((m) => m.client_id === def.client_id && m.pinned).length;
+    if (pinnedCount >= PINNED_METRIC_LIMIT) {
+      return { ok: false, reason: `Only ${PINNED_METRIC_LIMIT} metrics can be pinned at once — unpin one first.` };
+    }
+  }
+  def.pinned = !def.pinned;
+  persist();
+  return { ok: true };
+}
+
+export type PinnedMetricSummary = {
+  def: MetricDefinition;
+  latest: number | null;
+  latestPeriod: string | null;
+  average: number | null;
+  entryCount: number;
+};
+
+// Latest value + running average for every metric the coach has pinned for
+// this client, across both daily and weekly trackers — used by the Start
+// Page's pinned-metrics panel.
+export function getPinnedMetricsSummary(clientId: number): PinnedMetricSummary[] {
+  const data = getData();
+  const defs = data.metric_definitions.filter((m) => m.client_id === clientId && m.pinned);
+  return defs.map((def) => {
+    const logged = data.metric_entries
+      .filter((e) => e.metric_definition_id === def.id && e.value != null)
+      .sort((a, b) => (a.period < b.period ? -1 : 1));
+    const latestEntry = logged.length > 0 ? logged[logged.length - 1] : null;
+    const average =
+      logged.length >= 3 ? logged.reduce((sum, e) => sum + (e.value as number), 0) / logged.length : null;
+    return {
+      def,
+      latest: latestEntry?.value ?? null,
+      latestPeriod: latestEntry?.period ?? null,
+      average,
+      entryCount: logged.length,
+    };
+  });
+}
+
+// Full logged history for one metric, oldest first, ready to hand straight
+// to <LineChart> — used by the per-metric trend view in the Tracker tabs.
+export function getMetricSeries(metricDefinitionId: number): { date: string; value: number }[] {
+  return getData()
+    .metric_entries.filter((e) => e.metric_definition_id === metricDefinitionId && e.value != null)
+    .map((e) => ({ date: e.period, value: e.value as number }))
+    .sort((a, b) => (a.date < b.date ? -1 : 1));
 }
 
 // Distinct category/name values already in use ACROSS ALL CLIENTS (plus any
@@ -1728,7 +1790,7 @@ export function getCalendarMonth(monthStr?: string): CalendarMonth {
   const month = valid ? Number(monthStr!.slice(5, 7)) - 1 : now.getMonth();
 
   const first = new Date(year, month, 1);
-  const label = first.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const label = first.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
   // Monday-start offset: getDay() is 0=Sun..6=Sat, we want 0=Mon..6=Sun.
   const firstWeekday = (first.getDay() + 6) % 7;

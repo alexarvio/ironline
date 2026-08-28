@@ -2,11 +2,13 @@ import { Fragment } from "react";
 import { addMetricDefinitionAction, applyMetricTemplateAction } from "../lib/actions";
 import {
   getMetricEntries,
+  getPinnedMetricsSummary,
   listDistinctMetricCategories,
   listDistinctMetricNames,
   listMetricDefinitions,
   listMetricPeriods,
   listMetricTemplateCategories,
+  PINNED_METRIC_LIMIT,
 } from "../lib/queries";
 import ComboBoxInput from "../components/ComboBoxInput";
 import TrackerMetricRow from "./TrackerMetricRow";
@@ -32,6 +34,9 @@ export default function TrackerPanel({
   definitions.forEach((d) => {
     if (!categories.includes(d.category)) categories.push(d.category);
   });
+  // The 5-pin limit is per client across BOTH trackers, not per frequency —
+  // so this counts pins client-wide, not just the metrics in this panel.
+  const pinnedCount = getPinnedMetricsSummary(clientId).length;
 
   return (
     <div>
@@ -85,7 +90,7 @@ export default function TrackerPanel({
               client logs an entry from their app. You can still edit or remove a metric below.
             </p>
           )}
-          <div className="exercise-table-wrap">
+          <div className="exercise-table-wrap tracker-overview-scroll">
             <table className="data-table tracker-overview-table">
               <thead>
                 <tr>
@@ -111,6 +116,9 @@ export default function TrackerPanel({
                           key={def.id}
                           def={def}
                           values={periods.map((p) => ({ period: p, value: valueFor(def.id, p) }))}
+                          frequency={frequency}
+                          pinnedCount={pinnedCount}
+                          pinLimit={PINNED_METRIC_LIMIT}
                         />
                       ))}
                   </Fragment>

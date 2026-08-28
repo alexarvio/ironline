@@ -2294,7 +2294,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
    edit form + text "remove" link cluttering every row — now it's a quiet
    pencil/trash pair that only expands when clicked. */
 .tracker-actions-col {
-  width: 64px;
+  width: 128px;
 }
 
 .row-actions-cell {
@@ -2330,6 +2330,128 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   background: #f3d2d2;
   color: #a13a3a;
   border-color: #e2a5a5;
+}
+
+.row-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.row-icon-btn:disabled:hover {
+  background: white;
+  color: var(--steel, #666);
+}
+
+.row-icon-btn.row-icon-active {
+  background: color-mix(in srgb, var(--accent) 14%, white);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ---- Tracker overview: vertical scroll once a metric has a lot of history ---- */
+
+.tracker-overview-scroll {
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.tracker-overview-table thead th {
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 1;
+}
+
+.tracker-overview-table thead .tracker-metric-col {
+  z-index: 4;
+}
+
+/* ---- Per-metric trend modal ---- */
+
+.tracker-trend-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(20, 23, 28, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.tracker-trend-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 20px 24px 24px;
+  width: 100%;
+  max-width: 780px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 48px rgba(20, 23, 28, 0.25);
+}
+
+.tracker-trend-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.tracker-trend-header h3 {
+  margin: 0;
+}
+
+.tracker-trend-custom-range {
+  display: flex;
+  gap: 16px;
+  margin: 14px 0;
+}
+
+.tracker-trend-custom-range label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--steel);
+}
+
+.tracker-trend-custom-range input {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+/* ---- Pinned metrics (admin Start Page + client Home) ---- */
+
+.pinned-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.pinned-metric-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: var(--paper-raised);
+}
+
+.pinned-metric-card .pinned-metric-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--steel);
+  margin-bottom: 6px;
+}
+
+.pinned-metric-card .pinned-metric-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.pinned-metric-card .pinned-metric-sub {
+  font-size: 0.74rem;
+  color: var(--steel);
+  margin-top: 4px;
 }
 
 .row-confirm-delete {

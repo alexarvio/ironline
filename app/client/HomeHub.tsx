@@ -12,6 +12,13 @@ export type HubSubTab = { id: string; label: string; content: ReactNode };
 export type UpcomingMeeting = { dateLabel: string; dayLabel: string; topic: string; timeLabel: string } | null;
 export type MessagePreview = { id: number; sender: "client" | "coach"; text: string; timeLabel: string };
 export type CoachActivityPreview = { message: string; timeLabel: string } | null;
+export type PinnedMetricPreview = {
+  id: number;
+  name: string;
+  unit: string;
+  latest: number | null;
+  average: number | null;
+};
 
 // Home used to be its own tab with Check-ins as a separate one; they're
 // merged here so the client has one landing screen (profile + what's due
@@ -32,6 +39,7 @@ export default function HomeHub({
   lastCoachActivity,
   recentMessages,
   dueItems,
+  pinnedMetrics,
   tabs,
 }: {
   dateLabel: string;
@@ -48,6 +56,7 @@ export default function HomeHub({
   lastCoachActivity: CoachActivityPreview;
   recentMessages: MessagePreview[];
   dueItems: DueItem[];
+  pinnedMetrics: PinnedMetricPreview[];
   tabs: HubSubTab[];
 }) {
   const [view, setView] = useState("home");
@@ -97,6 +106,23 @@ export default function HomeHub({
           )}
         </div>
       </section>
+
+      {pinnedMetrics.length > 0 && (
+        <section className="home-section">
+          <h3 className="home-section-title">Pinned by your coach</h3>
+          <div className="pinned-metrics-grid">
+            {pinnedMetrics.map((m) => (
+              <div key={m.id} className="pinned-metric-card">
+                <div className="pinned-metric-label">{m.name}</div>
+                <div className="pinned-metric-value">
+                  {m.latest != null ? `${m.latest}${m.unit ? ` ${m.unit}` : ""}` : "No entries yet"}
+                </div>
+                {m.average != null && <div className="pinned-metric-sub">avg {m.average.toFixed(1)}</div>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="home-section">
         <h3 className="home-section-title">Today</h3>

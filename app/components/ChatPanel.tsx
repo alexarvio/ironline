@@ -5,8 +5,8 @@ function timeLabel(iso: string) {
   const d = new Date(iso);
   const today = new Date();
   const sameDay = d.toDateString() === today.toDateString();
-  const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-  return sameDay ? time : `${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })} · ${time}`;
+  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return sameDay ? time : `${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })} · ${time}`;
 }
 
 // Shared by both sides of the conversation — /client renders it with

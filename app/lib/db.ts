@@ -100,6 +100,10 @@ type MetricDefinition = {
   unit: string;
   frequency: "daily" | "weekly";
   order_index: number;
+  // Up to 5 per client, surfaced at the top of their Start Page — see
+  // PINNED_METRIC_LIMIT in queries.ts. Optional so existing saved data
+  // without this field just reads as unpinned.
+  pinned?: boolean;
 };
 type MetricEntry = {
   id: number;

@@ -33,6 +33,7 @@ import {
   removeMeeting,
   removeMeetingNote,
   removeMetricDefinition,
+  togglePinMetric,
   removeMetricTemplateCategory,
   removeMetricTemplateItem,
   removePhotoSlot,
@@ -308,6 +309,12 @@ export async function removeMetricDefinitionAction(formData: FormData) {
   removeMetricDefinition(id);
   revalidatePath("/admin");
   revalidatePath("/client");
+}
+
+export async function togglePinMetricAction(formData: FormData) {
+  const id = Number(formData.get("id"));
+  togglePinMetric(id);
+  revalidatePath("/admin");
 }
 
 // ---- Tracker metric templates: coach-level presets applied to a client ----

@@ -5,6 +5,7 @@ import {
   getLatestWeight,
   getLogsForAssignment,
   getLatestCoachActivity,
+  getPinnedMetricsSummary,
   getMeasurementValues,
   getNutritionGoalsSummary,
   getNutritionPlan,
@@ -168,8 +169,8 @@ function HomeTab() {
   const messageTimeLabel = (createdAt: string) => {
     const d = new Date(createdAt);
     const sameDay = d.toDateString() === new Date().toDateString();
-    const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-    return sameDay ? `Today, ${time}` : `${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })}, ${time}`;
+    const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+    return sameDay ? `Today, ${time}` : `${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })}, ${time}`;
   };
   const recentMessages: MessagePreview[] = [...messages]
     .slice(-3)
@@ -188,6 +189,16 @@ function HomeTab() {
   const lastCoachActivity: CoachActivityPreview = latestActivity
     ? { message: latestActivity.message, timeLabel: messageTimeLabel(latestActivity.created_at) }
     : null;
+
+  // Coach-controlled — the client only ever sees these, never edits which
+  // metrics are pinned (that toggle lives in the admin Tracker tabs only).
+  const pinnedMetrics = getPinnedMetricsSummary(CLIENT_ID).map(({ def, latest, average }) => ({
+    id: def.id,
+    name: def.name,
+    unit: def.unit,
+    latest,
+    average,
+  }));
 
   const tabs: HubSubTab[] = [
     {
@@ -215,7 +226,7 @@ function HomeTab() {
     },
   ];
 
-  const dateLabel = new Date(`${today}T00:00:00`).toLocaleDateString(undefined, {
+  const dateLabel = new Date(`${today}T00:00:00`).toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -237,6 +248,7 @@ function HomeTab() {
       lastCoachActivity={lastCoachActivity}
       recentMessages={recentMessages}
       dueItems={dueItems}
+      pinnedMetrics={pinnedMetrics}
       tabs={tabs}
     />
   );
@@ -559,7 +571,7 @@ function nextCallBanner() {
     .sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1))[0];
   if (!upcomingMeeting) return null;
   const d = new Date(`${upcomingMeeting.date}T00:00:00`);
-  const dateLabel = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  const dateLabel = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
   const timeLabel = upcomingMeeting.time ? ` at ${upcomingMeeting.time}` : "";
   return (
     <>

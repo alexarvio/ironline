@@ -12,6 +12,7 @@ import {
   getClientSnapshot,
   getLatestWeight,
   getNutritionGoalsSummary,
+  getPinnedMetricsSummary,
   getTimeToGoal,
   listClientGoals,
 } from "../lib/queries";
@@ -19,6 +20,34 @@ import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
 
 function money(n: number) {
   return `€${n.toFixed(2)}`;
+}
+
+function PinnedMetricsGrid({ clientId }: { clientId: number }) {
+  const pinned = getPinnedMetricsSummary(clientId);
+  if (pinned.length === 0) return null;
+
+  return (
+    <div className="nutrition-table-wrap">
+      <h3>Pinned metrics</h3>
+      <p className="empty-note" style={{ marginBottom: 14 }}>
+        Pin up to 5 tracker metrics (from the pin icon in Daily or Weekly Tracker) to see them
+        here first, without opening the full tracker.
+      </p>
+      <div className="pinned-metrics-grid">
+        {pinned.map(({ def, latest, latestPeriod, average, entryCount }) => (
+          <div key={def.id} className="pinned-metric-card">
+            <div className="pinned-metric-label">{def.name}</div>
+            <div className="pinned-metric-value">
+              {latest != null ? `${latest}${def.unit ? ` ${def.unit}` : ""}` : "No entries"}
+            </div>
+            <div className="pinned-metric-sub">
+              {average != null ? `avg ${average.toFixed(1)} · ${entryCount} logged` : latestPeriod ?? "Not logged yet"}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function SnapshotGrid({ snapshot }: { snapshot: ClientSnapshot }) {
@@ -177,6 +206,7 @@ export default function StartPagePanel({ clientId, name }: { clientId: number; n
 
   return (
     <div>
+      <PinnedMetricsGrid clientId={clientId} />
       <SnapshotGrid snapshot={snapshot} />
 
       <form action={saveClientProfileAction}>

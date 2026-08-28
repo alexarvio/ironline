@@ -1,31 +1,38 @@
 "use client";
 
 import { useState } from "react";
-import { removeMetricDefinitionAction, updateMetricDefinitionAction } from "../lib/actions";
-import { PencilIcon, TrashIcon } from "../components/icons";
+import { removeMetricDefinitionAction, togglePinMetricAction, updateMetricDefinitionAction } from "../lib/actions";
+import { ChartIcon, PencilIcon, PinIcon, TrashIcon } from "../components/icons";
+import TrackerMetricTrendModal from "./TrackerMetricTrendModal";
 
 type MetricValue = { period: string; value: number | null };
 
 // One row of the Overview table. Normally it's just read-only numbers, with
-// a small pencil/trash pair tucked on the far right — click the pencil to
-// turn the row into an inline edit form, click the trash to get a
-// "delete this?" confirm before anything actually happens. This replaces
-// the old always-visible "Category / Name / Unit / Save / remove" row that
-// used to sit under "Add a metric", which just duplicated what the Overview
-// table already shows.
+// pin/chart/pencil/trash icons tucked on the far right — pin surfaces this
+// metric on the Start Page, chart opens a trend view over time, pencil turns
+// the row into an inline edit form, trash gets a "delete this?" confirm
+// before anything actually happens.
 export default function TrackerMetricRow({
   def,
   values,
+  frequency,
+  pinnedCount,
+  pinLimit,
 }: {
-  def: { id: number; category: string; name: string; unit: string };
+  def: { id: number; category: string; name: string; unit: string; pinned?: boolean };
   values: MetricValue[];
+  frequency: "daily" | "weekly";
+  pinnedCount: number;
+  pinLimit: number;
 }) {
   const [mode, setMode] = useState<"view" | "edit" | "confirm-delete">("view");
+  const [showTrend, setShowTrend] = useState(false);
 
   // Only worth showing once there's enough logged history for an average to
   // mean something — a single entry isn't a trend.
   const logged = values.filter((v): v is { period: string; value: number } => v.value != null);
   const average = logged.length >= 3 ? logged.reduce((sum, v) => sum + v.value, 0) / logged.length : null;
+  const pinDisabled = !def.pinned && pinnedCount >= pinLimit;
 
   if (mode === "edit") {
     return (
@@ -79,6 +86,27 @@ export default function TrackerMetricRow({
           </div>
         ) : (
           <div className="row-icon-actions">
+            <form action={togglePinMetricAction}>
+              <input type="hidden" name="id" value={def.id} />
+              <button
+                type="submit"
+                className={`row-icon-btn${def.pinned ? " row-icon-active" : ""}`}
+                aria-label={def.pinned ? `Unpin ${def.name}` : `Pin ${def.name}`}
+                disabled={pinDisabled}
+                title={pinDisabled ? `Only ${pinLimit} metrics can be pinned at once` : undefined}
+              >
+                <PinIcon filled={def.pinned} />
+              </button>
+            </form>
+            <button
+              type="button"
+              className="row-icon-btn"
+              aria-label={`View ${def.name} trend`}
+              onClick={() => setShowTrend(true)}
+              disabled={logged.length === 0}
+            >
+              <ChartIcon />
+            </button>
             <button
               type="button"
               className="row-icon-btn"
@@ -98,6 +126,15 @@ export default function TrackerMetricRow({
           </div>
         )}
       </td>
+      {showTrend && (
+        <TrackerMetricTrendModal
+          metricName={def.name}
+          unit={def.unit}
+          frequency={frequency}
+          points={logged.map((v) => ({ date: v.period, value: v.value }))}
+          onClose={() => setShowTrend(false)}
+        />
+      )}
     </tr>
   );
 }

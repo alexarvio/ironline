@@ -31,6 +31,43 @@ export function TrashIcon() {
   );
 }
 
+export function PinIcon({ filled = false }: { filled?: boolean }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M8 1.5c-2 0-3.5 1.6-3.5 3.6 0 2.3 2.3 4.3 3.5 6.4 1.2-2.1 3.5-4.1 3.5-6.4 0-2-1.5-3.6-3.5-3.6z"
+        stroke="currentColor"
+        strokeWidth="1.1"
+        strokeLinejoin="round"
+        fill={filled ? "currentColor" : "none"}
+      />
+      <circle cx="8" cy="5.1" r="1.3" stroke="currentColor" strokeWidth="1.1" fill={filled ? "white" : "none"} />
+      <path d="M8 11.5v3" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function ChartIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M2.3 13.7V2.3M2.3 13.7h11.4"
+        stroke="currentColor"
+        strokeWidth="1.1"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M4.3 11.2l2.6-3.4 2.2 1.9 3.3-4.9"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function FeedIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">

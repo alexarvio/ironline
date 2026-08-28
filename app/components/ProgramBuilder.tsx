@@ -24,7 +24,7 @@ const WEEK = 1;
 
 function weekLabel(weekStartStr: string, isCurrent: boolean) {
   const d = new Date(weekStartStr + "T00:00:00");
-  const formatted = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const formatted = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   return isCurrent ? `This week (${formatted})` : formatted;
 }
 
