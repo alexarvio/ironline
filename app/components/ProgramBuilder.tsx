@@ -184,10 +184,14 @@ export default function ProgramBuilder({
                               </a>
                             )}
                             {prevRef && (
-                              <div className="exercise-meta" style={{ marginTop: 4, fontWeight: 400 }}>
-                                Last week: {formatTarget(prevRef.sets, prevRef.reps, prevRef.target_weight_kg, prevRef.rpe_target)}
-                                {" — "}
-                                did {formatActualLogs(prevRef.actualLogs)}
+                              <div className="prev-week-ref" style={{ marginTop: 4 }}>
+                                <div className="exercise-meta">
+                                  <span className="prev-week-ref-label">Last week target</span>{" "}
+                                  {formatTarget(prevRef.sets, prevRef.reps, prevRef.target_weight_kg, prevRef.rpe_target)}
+                                </div>
+                                <div className="exercise-meta">
+                                  <span className="prev-week-ref-label">Actual</span> {formatActualLogs(prevRef.actualLogs)}
+                                </div>
                               </div>
                             )}
                           </td>

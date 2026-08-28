@@ -304,6 +304,25 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   margin-bottom: 3px;
 }
 
+/* Reference block under an exercise name while its day is still a draft —
+   last sheet's target vs. what the client actually did, one line each so
+   they're easy to compare at a glance rather than run together. */
+.prev-week-ref {
+  border-left: 2px solid var(--border);
+  padding-left: 8px;
+}
+
+.prev-week-ref .exercise-meta + .exercise-meta {
+  margin-top: 2px;
+}
+
+.prev-week-ref-label {
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 /* Tight table-style rows instead of wrapped pill tags — a set number
    pinned left, the reading right-aligned, matching the admin's plain
    .data-table rhythm rather than a bag of badges. */
