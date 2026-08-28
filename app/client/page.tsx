@@ -6,7 +6,9 @@ import {
   getLogsForAssignment,
   getCurrentWeekNumber,
   getLatestCoachActivity,
+  getLatestSentReport,
   getPinnedMetricsSummary,
+  listWeekNumbers,
   getMeasurementValues,
   getNutritionGoalsSummary,
   getNutritionPlan,
@@ -40,9 +42,10 @@ import PhotoPeriodHistoryRow from "./PhotoPeriodHistoryRow";
 import CheckInForm from "./CheckInForm";
 import TrackerLogForm from "./TrackerLogForm";
 import HomeHub, { CoachActivityPreview, DueItem, HubSubTab, MessagePreview, UpcomingMeeting } from "./HomeHub";
+import ClientWeekSwitcher from "./ClientWeekSwitcher";
 import ChatPanel from "../components/ChatPanel";
 import AppShell, { AppTab } from "./AppShell";
-import { DumbbellIcon, GearIcon, HomeIcon, LeafIcon } from "../components/icons";
+import { AppleIcon, DumbbellIcon, GearIcon, HomeIcon } from "../components/icons";
 
 // Reads live from the JSON store on every request — without this, Next
 // statically prerenders this page at build time (before any real data
@@ -59,11 +62,12 @@ const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const CLIENT_ID = 1;
 
-function getWeekDays() {
+function getWeekDays(week?: number) {
   // Auto-advances the moment a week the coach has already deployed starts —
-  // see getCurrentWeekNumber's doc comment in lib/queries.ts.
-  const week = getCurrentWeekNumber(CLIENT_ID);
-  const publishedDays = getPublishedWeek(CLIENT_ID, week);
+  // see getCurrentWeekNumber's doc comment in lib/queries.ts. Callers that
+  // want a specific week (the Training tab's week switcher) pass one in.
+  const targetWeek = week ?? getCurrentWeekNumber(CLIENT_ID);
+  const publishedDays = getPublishedWeek(CLIENT_ID, targetWeek);
   return publishedDays.map((day) => ({ day, assignments: getAssignmentsForDay(day.id) }));
 }
 
@@ -203,6 +207,11 @@ function HomeTab() {
     average,
   }));
 
+  const sentReport = getLatestSentReport(CLIENT_ID);
+  const latestReport = sentReport
+    ? { periodStart: sentReport.period_start, periodEnd: sentReport.period_end, summary: sentReport.summary }
+    : null;
+
   const tabs: HubSubTab[] = [
     {
       id: "tracker",
@@ -252,13 +261,14 @@ function HomeTab() {
       recentMessages={recentMessages}
       dueItems={dueItems}
       pinnedMetrics={pinnedMetrics}
+      latestReport={latestReport}
       tabs={tabs}
     />
   );
 }
 
-function TrainingTab() {
-  const days = getWeekDays();
+function TrainingTab({ week }: { week: number }) {
+  const days = getWeekDays(week);
   const trainingDays = days.filter((d) => d.assignments.length > 0);
   const daysFullyDone = trainingDays.filter((d) =>
     d.assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets)
@@ -654,10 +664,22 @@ export default function ClientPage() {
   const messages = listChatMessages(CLIENT_ID);
   const hasCoachUpdate = [...messages].reverse().find((m) => m.sender === "coach") != null;
 
+  const currentWeekNum = getCurrentWeekNumber(CLIENT_ID);
+  const weekNumbers = listWeekNumbers(CLIENT_ID);
+  const trainingWeeks = weekNumbers.length > 0 ? weekNumbers : [currentWeekNum];
+  const trainingWeekContents = Object.fromEntries(trainingWeeks.map((w) => [w, <TrainingTab key={w} week={w} />]));
+
   const tabs: AppTab[] = [
     { id: "home", label: "Home", icon: <HomeIcon />, content: <HomeTab /> },
-    { id: "training", label: "Training", icon: <DumbbellIcon />, content: <TrainingTab /> },
-    { id: "nutrition", label: "Nutrition", icon: <LeafIcon />, content: <NutritionTab /> },
+    {
+      id: "training",
+      label: "Training",
+      icon: <DumbbellIcon />,
+      content: (
+        <ClientWeekSwitcher weeks={trainingWeeks} currentWeek={currentWeekNum} contents={trainingWeekContents} />
+      ),
+    },
+    { id: "nutrition", label: "Nutrition", icon: <AppleIcon />, content: <NutritionTab /> },
     { id: "settings", label: "Settings", icon: <GearIcon />, content: <SettingsTab /> },
   ];
 

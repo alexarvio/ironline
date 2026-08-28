@@ -19,6 +19,7 @@ export type PinnedMetricPreview = {
   latest: number | null;
   average: number | null;
 };
+export type LatestReportPreview = { periodStart: string; periodEnd: string; summary: string } | null;
 
 // Home used to be its own tab with Check-ins as a separate one; they're
 // merged here so the client has one landing screen (profile + what's due
@@ -40,6 +41,7 @@ export default function HomeHub({
   recentMessages,
   dueItems,
   pinnedMetrics,
+  latestReport,
   tabs,
 }: {
   dateLabel: string;
@@ -57,6 +59,7 @@ export default function HomeHub({
   recentMessages: MessagePreview[];
   dueItems: DueItem[];
   pinnedMetrics: PinnedMetricPreview[];
+  latestReport: LatestReportPreview;
   tabs: HubSubTab[];
 }) {
   const [view, setView] = useState("home");
@@ -144,6 +147,18 @@ export default function HomeHub({
           </div>
         )}
       </section>
+
+      {latestReport && (
+        <section className="home-section">
+          <h3 className="home-section-title">Progress report</h3>
+          <div className="upcoming-card" style={{ flexDirection: "column", alignItems: "flex-start", gap: 6 }}>
+            <div className="upcoming-title">
+              {latestReport.periodStart} – {latestReport.periodEnd}
+            </div>
+            <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{latestReport.summary}</p>
+          </div>
+        </section>
+      )}
 
       <section className="home-section">
         <h3 className="home-section-title">Next meeting</h3>

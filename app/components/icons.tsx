@@ -47,6 +47,20 @@ export function PinIcon({ filled = false }: { filled?: boolean }) {
   );
 }
 
+export function ReportIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M4.5 2h6l3 3v9a1.5 1.5 0 0 1-1.5 1.5h-7.5A1.5 1.5 0 0 1 3 14V3.5A1.5 1.5 0 0 1 4.5 2z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+      <path d="M6 10.5h6M6 13h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function PlusIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -102,14 +116,12 @@ export function CalendarIcon() {
 
 export function DumbbellIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M2.5 9.2v1.6M5.2 7.2v5.6M14.8 7.2v5.6M17.5 9.2v1.6M5.2 10h9.6"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    <svg width="24" height="16" viewBox="0 0 24 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0.5" y="5" width="3" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="4.5" y="2.5" width="3" height="11" rx="1.2" stroke="currentColor" strokeWidth="1.5" />
+      <line x1="7.5" y1="8" x2="16.5" y2="8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <rect x="16.5" y="2.5" width="3" height="11" rx="1.2" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="20.5" y="5" width="3" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" />
     </svg>
   );
 }
@@ -212,16 +224,32 @@ export function LeafIcon() {
   );
 }
 
-export function GearIcon() {
+export function AppleIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="2.6" stroke="currentColor" strokeWidth="1.5" />
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path
-        d="M12 3.6v2M12 18.4v2M20.4 12h-2M5.6 12h-2M17.6 6.4l-1.4 1.4M7.8 16.2l-1.4 1.4M17.6 17.6l-1.4-1.4M7.8 7.8 6.4 6.4"
+        d="M15.5 8.5c2.8 0 4.5 2.4 4.5 5.5 0 4-2.7 7.5-5.5 7.5-1 0-1.5-.5-2.5-.5s-1.5.5-2.5.5c-2.8 0-5.5-3.5-5.5-7.5 0-3.1 1.9-5.5 4.7-5.5 1.3 0 2.1.6 3.3.6s1.9-.6 3.5-.6Z"
         stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
       />
+      <path d="M12 8.5V6a2.2 2.2 0 0 1 2-2.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function GearIcon() {
+  // A real cog (trapezoidal teeth), not the ray-burst that reads as a sun —
+  // eight teeth around a ring, hollow center for the axle.
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M19.4 13a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V19a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 17.6a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12" r="2.8" stroke="currentColor" strokeWidth="1.4" />
     </svg>
   );
 }

@@ -15,11 +15,21 @@ import {
   addMetricTemplateCategory,
   addMetricTemplateItem,
   addPhotoSlot,
+  addReportTemplateSection,
   addSkinfoldEntry,
   applyMetricTemplateToClient,
+  approveReport,
+  computeReportSections,
   createClient,
+  createDraftReport,
+  createReportTemplate,
+  deleteReport,
+  deleteReportTemplate,
   duplicateWeek,
   ensureWeekSkeleton,
+  getClient,
+  getReportTemplate,
+  listReportTemplateSections,
   listWeekNumbers,
   listMeasurementFields,
   listMetricDefinitions,
@@ -27,6 +37,9 @@ import {
   logSet,
   OTHER_ITEMS,
   publishWeek,
+  removeReportTemplateSection,
+  sendReport,
+  updateReportSummary,
   removeAssignment,
   removeClientGoal,
   removeCustomTrainingColumn,
@@ -64,6 +77,7 @@ import {
   VITAMIN_ITEMS,
   weekStart,
 } from "./queries";
+import { writeReportNarrative } from "./reportAi";
 
 const CLIENT_ID = 1;
 const WEEK = 1;
@@ -642,4 +656,88 @@ export async function sendChatMessageAction(formData: FormData) {
   sendChatMessage(clientId, sender, text, media);
   revalidatePath("/admin");
   revalidatePath("/client");
+}
+
+// ---- Reports ----
+
+export async function createReportTemplateAction(formData: FormData) {
+  const name = String(formData.get("name") || "").trim();
+  if (!name) return;
+  createReportTemplate(name);
+  revalidatePath("/admin");
+}
+
+export async function deleteReportTemplateAction(formData: FormData) {
+  const id = Number(formData.get("id"));
+  deleteReportTemplate(id);
+  revalidatePath("/admin");
+}
+
+export async function addReportTemplateSectionAction(formData: FormData) {
+  const templateId = Number(formData.get("templateId"));
+  const type = String(formData.get("type") || "training") as
+    | "training"
+    | "nutrition"
+    | "measurements"
+    | "tracker_metric"
+    | "photos"
+    | "goals";
+  const label = String(formData.get("label") || "").trim();
+  const metricName = String(formData.get("metricName") || "").trim() || null;
+  if (!label) return;
+  addReportTemplateSection(templateId, type, label, type === "tracker_metric" ? metricName : null);
+  revalidatePath("/admin");
+}
+
+export async function removeReportTemplateSectionAction(formData: FormData) {
+  const id = Number(formData.get("id"));
+  removeReportTemplateSection(id);
+  revalidatePath("/admin");
+}
+
+// The one action that calls the AI — pulls real data for the period, hands
+// it to writeReportNarrative (falls back to a plain templated summary if
+// ANTHROPIC_API_KEY isn't set), and stores the result as a new draft.
+export async function generateReportAction(formData: FormData) {
+  const clientId = Number(formData.get("clientId"));
+  const templateId = Number(formData.get("templateId"));
+  const periodStart = String(formData.get("periodStart") || "");
+  const periodEnd = String(formData.get("periodEnd") || "");
+  if (!clientId || !templateId || !periodStart || !periodEnd) return;
+
+  const template = getReportTemplate(templateId);
+  const templateSections = listReportTemplateSections(templateId);
+  const client = getClient(clientId);
+  if (!template || !client || templateSections.length === 0) return;
+
+  const sectionsData = computeReportSections(clientId, templateSections, periodStart, periodEnd);
+  const { summary, aiGenerated } = await writeReportNarrative(client.name, periodStart, periodEnd, sectionsData);
+  createDraftReport(clientId, templateId, template.name, periodStart, periodEnd, summary, aiGenerated, sectionsData);
+  revalidatePath("/admin");
+}
+
+export async function updateReportSummaryAction(formData: FormData) {
+  const id = Number(formData.get("id"));
+  const summary = String(formData.get("summary") || "");
+  updateReportSummary(id, summary);
+  revalidatePath("/admin");
+}
+
+export async function approveReportAction(formData: FormData) {
+  const id = Number(formData.get("id"));
+  approveReport(id);
+  revalidatePath("/admin");
+}
+
+export async function sendReportAction(formData: FormData) {
+  const id = Number(formData.get("id"));
+  sendReport(id);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function deleteReportAction(formData: FormData) {
+  const id = Number(formData.get("id"));
+  deleteReport(id);
+  revalidatePath("/admin");
 }

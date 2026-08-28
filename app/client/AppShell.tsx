@@ -86,8 +86,9 @@ export default function AppShell({
                 setNavResetKey((k) => k + 1);
               }}
             >
-              <span className="app-tab-icon">{t.icon}</span>
-              <span className="app-tab-label">{t.label}</span>
+              <span className="app-tab-icon" aria-label={t.label}>
+                {t.icon}
+              </span>
             </button>
           ))}
         </nav>

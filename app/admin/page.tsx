@@ -10,6 +10,8 @@ import MeetingsPanel from "./MeetingsPanel";
 import NotBuiltPanel from "./NotBuiltPanel";
 import NutritionPanel from "./NutritionPanel";
 import ProgressPicturesPanel from "./ProgressPicturesPanel";
+import ReportsPanel from "./ReportsPanel";
+import ReportTemplatesPanel from "./ReportTemplatesPanel";
 import StartPagePanel from "./StartPagePanel";
 import TrackerPanel from "./TrackerPanel";
 import ProgramBuilder from "../components/ProgramBuilder";
@@ -25,9 +27,10 @@ export default async function AdminPage({
   const clients = listClients();
   const showFeed = params.view === "feed";
   const showCalendar = params.view === "calendar";
+  const showReportTemplates = params.view === "report-templates";
   const selectedId = params.client
     ? Number(params.client)
-    : !showFeed && !showCalendar
+    : !showFeed && !showCalendar && !showReportTemplates
     ? clients[0]?.id ?? null
     : null;
   const client = selectedId ? getClient(selectedId) : undefined;
@@ -51,7 +54,7 @@ export default async function AdminPage({
       <div className="admin-body">
         <ClientSidebar
           selectedId={selectedId}
-          activeView={showFeed ? "feed" : showCalendar ? "calendar" : "client"}
+          activeView={showFeed ? "feed" : showCalendar ? "calendar" : showReportTemplates ? "report-templates" : "client"}
         />
 
         <main className="admin-main">
@@ -59,6 +62,8 @@ export default async function AdminPage({
             <FeedPanel />
           ) : showCalendar ? (
             <CalendarPanel month={params.month} />
+          ) : showReportTemplates ? (
+            <ReportTemplatesPanel />
           ) : !client ? (
             <p className="empty-note">
               {clients.length === 0
@@ -137,6 +142,11 @@ function ClientDashboard({
       id: "invoices",
       label: "Invoices",
       content: <InvoicesPanel clientId={clientId} />,
+    },
+    {
+      id: "reports",
+      label: "Reports",
+      content: <ReportsPanel clientId={clientId} />,
     },
   ];
 

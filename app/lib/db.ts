@@ -259,6 +259,48 @@ type CoachActivity = {
   created_at: string;
 };
 
+// Coach-level, reusable report templates (mirrors the metric_template_*
+// pattern) — a template is just an ordered set of sections; applying it to
+// a client just means generating a report using that section list, nothing
+// is copied/instantiated onto the client ahead of time.
+type ReportSectionType = "training" | "nutrition" | "measurements" | "tracker_metric" | "photos" | "goals";
+type ReportTemplate = {
+  id: number;
+  name: string;
+  created_at: string;
+};
+type ReportTemplateSection = {
+  id: number;
+  template_id: number;
+  type: ReportSectionType;
+  label: string;
+  // Only meaningful for type "tracker_metric" — matched by name against
+  // whichever client the template is applied to (metric_definitions aren't
+  // shared across clients, so a template can't reference an id directly).
+  metric_name: string | null;
+  order_index: number;
+};
+
+// One generated report for one client over one period. sections_snapshot
+// freezes the computed numbers at generation time (JSON-stringified) so a
+// past report keeps reading the same even as new data comes in later —
+// only the coach's summary text is editable after generation.
+type ClientReport = {
+  id: number;
+  client_id: number;
+  template_id: number | null;
+  template_name: string;
+  period_start: string;
+  period_end: string;
+  status: "draft" | "approved" | "sent";
+  summary: string;
+  ai_generated: boolean;
+  sections_snapshot: string;
+  generated_at: string;
+  approved_at: string | null;
+  sent_at: string | null;
+};
+
 type Data = {
   clients: Client[];
   exercises: Exercise[];
@@ -286,6 +328,9 @@ type Data = {
   assignment_custom_values: AssignmentCustomValue[];
   chat_messages: ChatMessage[];
   coach_activity: CoachActivity[];
+  report_templates: ReportTemplate[];
+  report_template_sections: ReportTemplateSection[];
+  client_reports: ClientReport[];
   _seq: Record<string, number>;
 };
 
@@ -317,6 +362,9 @@ function emptyData(): Data {
     assignment_custom_values: [],
     chat_messages: [],
     coach_activity: [],
+    report_templates: [],
+    report_template_sections: [],
+    client_reports: [],
     _seq: {},
   };
 }

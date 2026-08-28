@@ -2083,3 +2083,281 @@ export function getClientSnapshot(clientId: number): ClientSnapshot {
     },
   };
 }
+
+// ---- Reports: coach-level reusable templates + generated client reports ----
+// Templates are just an ordered list of sections (mirrors the metric
+// template pattern) — generating a report for a client walks the template's
+// sections, pulls real numbers for that client over the given period, and
+// hands them to writeReportNarrative() (lib/reportAi.ts) to turn into prose.
+// Nothing about the template is client-specific, so the same template can
+// be reused across every client the coach has.
+
+export type { ReportSectionType } from "./reportSectionTypes";
+export { REPORT_SECTION_TYPE_LABEL } from "./reportSectionTypes";
+import type { ReportSectionType } from "./reportSectionTypes";
+
+export type ReportTemplate = {
+  id: number;
+  name: string;
+  created_at: string;
+};
+
+export type ReportTemplateSection = {
+  id: number;
+  template_id: number;
+  type: ReportSectionType;
+  label: string;
+  metric_name: string | null;
+  order_index: number;
+};
+
+export function listReportTemplates(): ReportTemplate[] {
+  return [...getData().report_templates].sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
+}
+
+export function createReportTemplate(name: string): number {
+  const data = getData();
+  const id = allocId("report_templates");
+  data.report_templates.push({ id, name, created_at: new Date().toISOString() });
+  persist();
+  return id;
+}
+
+export function getReportTemplate(id: number): ReportTemplate | undefined {
+  return getData().report_templates.find((t) => t.id === id);
+}
+
+export function deleteReportTemplate(id: number) {
+  const data = getData();
+  data.report_templates = data.report_templates.filter((t) => t.id !== id);
+  data.report_template_sections = data.report_template_sections.filter((s) => s.template_id !== id);
+  persist();
+}
+
+export function listReportTemplateSections(templateId: number): ReportTemplateSection[] {
+  return getData()
+    .report_template_sections.filter((s) => s.template_id === templateId)
+    .sort((a, b) => a.order_index - b.order_index);
+}
+
+export function addReportTemplateSection(
+  templateId: number,
+  type: ReportSectionType,
+  label: string,
+  metricName: string | null
+) {
+  const data = getData();
+  const count = data.report_template_sections.filter((s) => s.template_id === templateId).length;
+  data.report_template_sections.push({
+    id: allocId("report_template_sections"),
+    template_id: templateId,
+    type,
+    label,
+    metric_name: metricName,
+    order_index: count,
+  });
+  persist();
+}
+
+export function removeReportTemplateSection(id: number) {
+  const data = getData();
+  data.report_template_sections = data.report_template_sections.filter((s) => s.id !== id);
+  persist();
+}
+
+export type ClientReport = {
+  id: number;
+  client_id: number;
+  template_id: number | null;
+  template_name: string;
+  period_start: string;
+  period_end: string;
+  status: "draft" | "approved" | "sent";
+  summary: string;
+  ai_generated: boolean;
+  sections_snapshot: string;
+  generated_at: string;
+  approved_at: string | null;
+  sent_at: string | null;
+};
+
+export type ReportSectionData = { type: ReportSectionType; label: string; data: Record<string, unknown> };
+
+// Pulls real numbers for one client/period per the template's section list.
+// Each section type reads from whichever store already backs that part of
+// the app — nothing here is a new source of truth, just a period-scoped view.
+export function computeReportSections(
+  clientId: number,
+  sections: { type: ReportSectionType; label: string; metric_name: string | null }[],
+  periodStart: string,
+  periodEnd: string
+): ReportSectionData[] {
+  const data = getData();
+
+  return sections.map((s): ReportSectionData => {
+    switch (s.type) {
+      case "training": {
+        const dayIds = new Set(data.program_days.filter((pd) => pd.client_id === clientId).map((pd) => pd.id));
+        const assignmentIds = new Set(
+          data.workout_assignments.filter((wa) => dayIds.has(wa.program_day_id)).map((wa) => wa.id)
+        );
+        const logsInPeriod = data.set_logs.filter(
+          (sl) =>
+            assignmentIds.has(sl.workout_assignment_id) &&
+            sl.logged_at.slice(0, 10) >= periodStart &&
+            sl.logged_at.slice(0, 10) <= periodEnd
+        );
+        const daysTrained = new Set(logsInPeriod.map((l) => l.logged_at.slice(0, 10))).size;
+        const totalVolume = logsInPeriod.reduce((sum, l) => sum + (l.weight_kg ?? 0) * (l.reps ?? 0), 0);
+        return { type: s.type, label: s.label, data: { sets_logged: logsInPeriod.length, days_trained: daysTrained, total_volume_kg: Math.round(totalVolume) } };
+      }
+      case "nutrition": {
+        const plan = data.nutrition_plans.find((p) => p.client_id === clientId);
+        return {
+          type: s.type,
+          label: s.label,
+          data: {
+            training_day_kcal: plan?.maintenance_kcal ?? null,
+            coach_notes: plan?.coach_notes || null,
+          },
+        };
+      }
+      case "measurements": {
+        const fieldIds = data.measurement_fields.filter((f) => f.client_id === clientId).map((f) => f.id);
+        const valuesInPeriod = data.measurement_values
+          .filter((v) => fieldIds.includes(v.field_id) && v.value != null && v.date >= periodStart && v.date <= periodEnd)
+          .sort((a, b) => (a.date < b.date ? -1 : 1));
+        const byField = new Map<number, typeof valuesInPeriod>();
+        valuesInPeriod.forEach((v) => byField.set(v.field_id, [...(byField.get(v.field_id) ?? []), v]));
+        const changes: Record<string, unknown> = {};
+        byField.forEach((vals, fieldId) => {
+          const field = data.measurement_fields.find((f) => f.id === fieldId);
+          if (!field || vals.length === 0) return;
+          const first = vals[0].value as number;
+          const last = vals[vals.length - 1].value as number;
+          changes[field.name] = `${first} -> ${last} ${field.unit}`.trim();
+        });
+        return { type: s.type, label: s.label, data: changes };
+      }
+      case "tracker_metric": {
+        if (!s.metric_name) return { type: s.type, label: s.label, data: {} };
+        const def = data.metric_definitions.find((d) => d.client_id === clientId && d.name === s.metric_name);
+        if (!def) return { type: s.type, label: s.label, data: { note: "not set up for this client" } };
+        const entries = data.metric_entries.filter(
+          (e) => e.metric_definition_id === def.id && e.value != null && e.period >= periodStart && e.period <= periodEnd
+        );
+        const avg = entries.length > 0 ? entries.reduce((sum, e) => sum + (e.value as number), 0) / entries.length : null;
+        return {
+          type: s.type,
+          label: s.label,
+          data: { metric: def.name, average: avg != null ? Math.round(avg * 10) / 10 : null, entries_logged: entries.length, unit: def.unit },
+        };
+      }
+      case "photos": {
+        const slotIds = data.photo_slots.filter((sl) => sl.client_id === clientId).map((sl) => sl.id);
+        const count = data.photo_uploads.filter(
+          (u) => slotIds.includes(u.slot_id) && u.period >= periodStart && u.period <= periodEnd
+        ).length;
+        return { type: s.type, label: s.label, data: { photos_uploaded: count } };
+      }
+      case "goals": {
+        const goals = data.client_goals.filter((g) => g.client_id === clientId);
+        return {
+          type: s.type,
+          label: s.label,
+          data: {
+            short_term_done: `${goals.filter((g) => g.term === "short" && g.done).length}/${goals.filter((g) => g.term === "short").length}`,
+            long_term: goals.filter((g) => g.term === "long").map((g) => g.text).join("; ") || null,
+          },
+        };
+      }
+      default:
+        return { type: s.type, label: s.label, data: {} };
+    }
+  });
+}
+
+export function listClientReports(clientId: number): ClientReport[] {
+  return getData()
+    .client_reports.filter((r) => r.client_id === clientId)
+    .sort((a, b) => (a.generated_at < b.generated_at ? 1 : -1));
+}
+
+export function getClientReport(id: number): ClientReport | undefined {
+  return getData().client_reports.find((r) => r.id === id);
+}
+
+// The client-visible report — only ever the latest one the coach has
+// actually sent. Drafts and approved-but-unsent reports are coach-only.
+export function getLatestSentReport(clientId: number): ClientReport | undefined {
+  return getData()
+    .client_reports.filter((r) => r.client_id === clientId && r.status === "sent")
+    .sort((a, b) => (a.sent_at! < b.sent_at! ? 1 : -1))[0];
+}
+
+export function createDraftReport(
+  clientId: number,
+  templateId: number | null,
+  templateName: string,
+  periodStart: string,
+  periodEnd: string,
+  summary: string,
+  aiGenerated: boolean,
+  sectionsSnapshot: ReportSectionData[]
+): number {
+  const data = getData();
+  const id = allocId("client_reports");
+  data.client_reports.push({
+    id,
+    client_id: clientId,
+    template_id: templateId,
+    template_name: templateName,
+    period_start: periodStart,
+    period_end: periodEnd,
+    status: "draft",
+    summary,
+    ai_generated: aiGenerated,
+    sections_snapshot: JSON.stringify(sectionsSnapshot),
+    generated_at: new Date().toISOString(),
+    approved_at: null,
+    sent_at: null,
+  });
+  persist();
+  return id;
+}
+
+export function updateReportSummary(id: number, summary: string) {
+  const data = getData();
+  const report = data.client_reports.find((r) => r.id === id);
+  if (report) {
+    report.summary = summary;
+    persist();
+  }
+}
+
+export function approveReport(id: number) {
+  const data = getData();
+  const report = data.client_reports.find((r) => r.id === id);
+  if (report && report.status === "draft") {
+    report.status = "approved";
+    report.approved_at = new Date().toISOString();
+    persist();
+  }
+}
+
+export function sendReport(id: number) {
+  const data = getData();
+  const report = data.client_reports.find((r) => r.id === id);
+  if (report && report.status !== "sent") {
+    report.status = "sent";
+    report.sent_at = new Date().toISOString();
+    persist();
+    logCoachActivity(report.client_id, `Your coach sent you a progress report (${report.period_start} to ${report.period_end})`);
+  }
+}
+
+export function deleteReport(id: number) {
+  const data = getData();
+  data.client_reports = data.client_reports.filter((r) => r.id !== id);
+  persist();
+}
