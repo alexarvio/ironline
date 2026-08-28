@@ -1,5 +1,5 @@
-import { generateReportAction } from "../lib/actions";
-import { listClientReports, listReportTemplates, localDateStr } from "../lib/queries";
+import { getClient, listClientReports, listReportTemplates, listReportTemplateSections, localDateStr } from "../lib/queries";
+import GenerateReportForm from "./GenerateReportForm";
 import ReportCard from "./ReportCard";
 
 // Sensible default period for the "generate" form: the last 30 days ending
@@ -12,7 +12,8 @@ function defaultPeriod() {
 }
 
 export default function ReportsPanel({ clientId }: { clientId: number }) {
-  const templates = listReportTemplates();
+  const client = getClient(clientId);
+  const templates = listReportTemplates().map((t) => ({ id: t.id, name: t.name, sections: listReportTemplateSections(t.id) }));
   const reports = listClientReports(clientId);
   const { start, end } = defaultPeriod();
 
@@ -30,37 +31,14 @@ export default function ReportsPanel({ clientId }: { clientId: number }) {
             No report templates yet — build one first from Report Templates in the sidebar.
           </p>
         ) : (
-          <form action={generateReportAction} className="add-invoice-form add-metric-form">
-            <input type="hidden" name="clientId" value={clientId} />
-            <select name="templateId" defaultValue="">
-              <option value="" disabled>
-                Choose a template…
-              </option>
-              {templates.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-            <label className="exercise-meta" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              From
-              <input name="periodStart" type="date" defaultValue={start} />
-            </label>
-            <label className="exercise-meta" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              To
-              <input name="periodEnd" type="date" defaultValue={end} />
-            </label>
-            <button className="btn" type="submit">
-              Generate draft
-            </button>
-          </form>
+          <GenerateReportForm clientId={clientId} templates={templates} defaultPeriodStart={start} defaultPeriodEnd={end} />
         )}
       </div>
 
       {reports.length === 0 ? (
         <p className="empty-note">No reports generated yet for this client.</p>
       ) : (
-        reports.map((r) => <ReportCard key={r.id} report={r} />)
+        reports.map((r) => <ReportCard key={r.id} report={r} clientName={client?.name ?? ""} />)
       )}
     </div>
   );

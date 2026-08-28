@@ -209,7 +209,18 @@ function HomeTab() {
 
   const sentReport = getLatestSentReport(CLIENT_ID);
   const latestReport = sentReport
-    ? { periodStart: sentReport.period_start, periodEnd: sentReport.period_end, summary: sentReport.summary }
+    ? {
+        periodStart: sentReport.period_start,
+        periodEnd: sentReport.period_end,
+        summary: sentReport.summary,
+        sections: (() => {
+          try {
+            return JSON.parse(sentReport.sections_snapshot);
+          } catch {
+            return [];
+          }
+        })(),
+      }
     : null;
 
   const tabs: HubSubTab[] = [

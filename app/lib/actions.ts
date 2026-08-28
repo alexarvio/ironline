@@ -706,11 +706,33 @@ export async function generateReportAction(formData: FormData) {
   if (!clientId || !templateId || !periodStart || !periodEnd) return;
 
   const template = getReportTemplate(templateId);
-  const templateSections = listReportTemplateSections(templateId);
   const client = getClient(clientId);
-  if (!template || !client || templateSections.length === 0) return;
+  if (!template || !client) return;
 
-  const sectionsData = computeReportSections(clientId, templateSections, periodStart, periodEnd);
+  // Per-client customization for this one generation: the coach can drop
+  // any of the template's sections and/or bolt on one extra tracker metric
+  // that isn't in the shared template — without editing the template itself.
+  // Checkboxes are checked by default in the UI, so an empty includedIds
+  // (e.g. a non-JS form submit) falls back to running every section.
+  const includedIds = formData.getAll("sectionId").map(Number);
+  const allSections = listReportTemplateSections(templateId);
+  const sectionsToRun = includedIds.length > 0 ? allSections.filter((s) => includedIds.includes(s.id)) : allSections;
+
+  const extraMetricName = String(formData.get("extraMetricName") || "").trim();
+  if (extraMetricName) {
+    const extraLabel = String(formData.get("extraMetricLabel") || "").trim() || extraMetricName;
+    sectionsToRun.push({
+      id: -1,
+      template_id: templateId,
+      type: "tracker_metric",
+      label: extraLabel,
+      metric_name: extraMetricName,
+      order_index: sectionsToRun.length,
+    });
+  }
+  if (sectionsToRun.length === 0) return;
+
+  const sectionsData = computeReportSections(clientId, sectionsToRun, periodStart, periodEnd);
   const { summary, aiGenerated } = await writeReportNarrative(client.name, periodStart, periodEnd, sectionsData);
   createDraftReport(clientId, templateId, template.name, periodStart, periodEnd, summary, aiGenerated, sectionsData);
   revalidatePath("/admin");

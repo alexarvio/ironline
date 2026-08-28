@@ -2181,7 +2181,19 @@ export type ClientReport = {
   sent_at: string | null;
 };
 
-export type ReportSectionData = { type: ReportSectionType; label: string; data: Record<string, unknown> };
+export type ReportSeriesPoint = { date: string; value: number };
+export type ReportSectionData = {
+  type: ReportSectionType;
+  label: string;
+  data: Record<string, unknown>;
+  // Chart-ready time series, when this section type has one obvious numeric
+  // trend to plot (training volume, a tracker metric). Absent for section
+  // types that are just a snapshot (nutrition targets, photo counts, goals).
+  series?: ReportSeriesPoint[];
+  // Measurements can track several fields (weight, waist, ...) at once, so
+  // it gets one named series per field instead of a single `series`.
+  seriesByField?: Record<string, { unit: string; points: ReportSeriesPoint[] }>;
+};
 
 // Pulls real numbers for one client/period per the template's section list.
 // Each section type reads from whichever store already backs that part of
@@ -2209,7 +2221,18 @@ export function computeReportSections(
         );
         const daysTrained = new Set(logsInPeriod.map((l) => l.logged_at.slice(0, 10))).size;
         const totalVolume = logsInPeriod.reduce((sum, l) => sum + (l.weight_kg ?? 0) * (l.reps ?? 0), 0);
-        return { type: s.type, label: s.label, data: { sets_logged: logsInPeriod.length, days_trained: daysTrained, total_volume_kg: Math.round(totalVolume) } };
+        const byDate = new Map<string, number>();
+        logsInPeriod.forEach((l) => {
+          const date = l.logged_at.slice(0, 10);
+          byDate.set(date, (byDate.get(date) ?? 0) + (l.weight_kg ?? 0) * (l.reps ?? 0));
+        });
+        const series = [...byDate.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([date, value]) => ({ date, value: Math.round(value) }));
+        return {
+          type: s.type,
+          label: s.label,
+          data: { sets_logged: logsInPeriod.length, days_trained: daysTrained, total_volume_kg: Math.round(totalVolume) },
+          series: series.length >= 2 ? series : undefined,
+        };
       }
       case "nutrition": {
         const plan = data.nutrition_plans.find((p) => p.client_id === clientId);
@@ -2223,34 +2246,45 @@ export function computeReportSections(
         };
       }
       case "measurements": {
-        const fieldIds = data.measurement_fields.filter((f) => f.client_id === clientId).map((f) => f.id);
+        const fields = data.measurement_fields.filter((f) => f.client_id === clientId);
         const valuesInPeriod = data.measurement_values
-          .filter((v) => fieldIds.includes(v.field_id) && v.value != null && v.date >= periodStart && v.date <= periodEnd)
+          .filter(
+            (v) => fields.some((f) => f.id === v.field_id) && v.value != null && v.date >= periodStart && v.date <= periodEnd
+          )
           .sort((a, b) => (a.date < b.date ? -1 : 1));
         const byField = new Map<number, typeof valuesInPeriod>();
         valuesInPeriod.forEach((v) => byField.set(v.field_id, [...(byField.get(v.field_id) ?? []), v]));
         const changes: Record<string, unknown> = {};
+        const seriesByField: Record<string, { unit: string; points: ReportSeriesPoint[] }> = {};
         byField.forEach((vals, fieldId) => {
-          const field = data.measurement_fields.find((f) => f.id === fieldId);
+          const field = fields.find((f) => f.id === fieldId);
           if (!field || vals.length === 0) return;
           const first = vals[0].value as number;
           const last = vals[vals.length - 1].value as number;
           changes[field.name] = `${first} -> ${last} ${field.unit}`.trim();
+          if (vals.length >= 2) {
+            seriesByField[field.name] = {
+              unit: field.unit,
+              points: vals.map((v) => ({ date: v.date, value: v.value as number })),
+            };
+          }
         });
-        return { type: s.type, label: s.label, data: changes };
+        return { type: s.type, label: s.label, data: changes, seriesByField: Object.keys(seriesByField).length > 0 ? seriesByField : undefined };
       }
       case "tracker_metric": {
         if (!s.metric_name) return { type: s.type, label: s.label, data: {} };
         const def = data.metric_definitions.find((d) => d.client_id === clientId && d.name === s.metric_name);
         if (!def) return { type: s.type, label: s.label, data: { note: "not set up for this client" } };
-        const entries = data.metric_entries.filter(
-          (e) => e.metric_definition_id === def.id && e.value != null && e.period >= periodStart && e.period <= periodEnd
-        );
+        const entries = data.metric_entries
+          .filter((e) => e.metric_definition_id === def.id && e.value != null && e.period >= periodStart && e.period <= periodEnd)
+          .sort((a, b) => (a.period < b.period ? -1 : 1));
         const avg = entries.length > 0 ? entries.reduce((sum, e) => sum + (e.value as number), 0) / entries.length : null;
+        const series = entries.map((e) => ({ date: e.period, value: e.value as number }));
         return {
           type: s.type,
           label: s.label,
           data: { metric: def.name, average: avg != null ? Math.round(avg * 10) / 10 : null, entries_logged: entries.length, unit: def.unit },
+          series: series.length >= 2 ? series : undefined,
         };
       }
       case "photos": {

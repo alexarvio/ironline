@@ -2588,6 +2588,41 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   margin-top: 4px;
 }
 
+/* ---- Reports ---- */
+
+.report-section-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.report-section-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.report-section-block {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: var(--paper-raised);
+}
+
+.report-section-heading {
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+.report-section-chart {
+  margin-top: 10px;
+  background: white;
+  border-radius: 8px;
+  padding: 8px;
+}
+
 .row-confirm-delete {
   display: inline-flex;
   align-items: center;

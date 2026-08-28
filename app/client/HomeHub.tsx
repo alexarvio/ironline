@@ -2,6 +2,7 @@
 
 import { ReactNode, useState } from "react";
 import { ArrowRightIcon } from "../components/icons";
+import { LineChart, Point } from "../components/LineChart";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
 // CheckInHub.tsx this replaces — a "use client" file importing queries.ts
@@ -19,7 +20,17 @@ export type PinnedMetricPreview = {
   latest: number | null;
   average: number | null;
 };
-export type LatestReportPreview = { periodStart: string; periodEnd: string; summary: string } | null;
+type ReportSectionPreview = {
+  label: string;
+  series?: Point[];
+  seriesByField?: Record<string, { points: Point[] }>;
+};
+export type LatestReportPreview = {
+  periodStart: string;
+  periodEnd: string;
+  summary: string;
+  sections: ReportSectionPreview[];
+} | null;
 
 // Home used to be its own tab with Check-ins as a separate one; they're
 // merged here so the client has one landing screen (profile + what's due
@@ -151,11 +162,36 @@ export default function HomeHub({
       {latestReport && (
         <section className="home-section">
           <h3 className="home-section-title">Progress report</h3>
-          <div className="upcoming-card" style={{ flexDirection: "column", alignItems: "flex-start", gap: 6 }}>
+          <div className="upcoming-card" style={{ flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
             <div className="upcoming-title">
               {latestReport.periodStart} – {latestReport.periodEnd}
             </div>
             <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{latestReport.summary}</p>
+            {latestReport.sections
+              .filter((s) => (s.series && s.series.length >= 2) || s.seriesByField)
+              .map((s, i) => (
+                <div key={i} style={{ width: "100%" }}>
+                  <div className="exercise-meta" style={{ marginBottom: 4 }}>
+                    {s.label}
+                  </div>
+                  {s.series && s.series.length >= 2 && (
+                    <div className="report-section-chart">
+                      <LineChart points={s.series} />
+                    </div>
+                  )}
+                  {s.seriesByField &&
+                    Object.entries(s.seriesByField).map(([fieldName, { points }]) => (
+                      <div key={fieldName} style={{ marginBottom: 8 }}>
+                        <div className="exercise-meta" style={{ marginBottom: 4 }}>
+                          {fieldName}
+                        </div>
+                        <div className="report-section-chart">
+                          <LineChart points={points} />
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              ))}
           </div>
         </section>
       )}
