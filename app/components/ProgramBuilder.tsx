@@ -95,6 +95,7 @@ export default function ProgramBuilder({
             <Link
               key={w}
               href={weekHref(weekLinkBase, w)}
+              scroll={false}
               className={`toggle-btn${w === activeWeek ? " active" : ""}`}
             >
               Week {w}
