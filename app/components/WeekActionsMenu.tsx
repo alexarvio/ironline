@@ -1,64 +1,45 @@
-"use client";
+import { addWeekSheetAction, removeWeekAction } from "../lib/actions";
+import ConfirmDeleteButton from "./ConfirmDeleteButton";
 
-import { useState } from "react";
-import { addWeekSheetAction, deployNextWeekAction } from "../lib/actions";
-import { PlusIcon } from "./icons";
-
-// The "+" icon on the right of the week switcher — collapses the three
-// week-creation actions (deploy/duplicate/blank) into one dropdown instead
-// of three always-visible buttons competing with the week pills for space.
-export default function WeekActionsMenu({ clientId, latestWeek }: { clientId: number; latestWeek: number }) {
-  const [open, setOpen] = useState(false);
-
+// Sits next to the week pills. Just one action — duplicate the latest week
+// forward as a new draft — instead of the old three-item dropdown (deploy /
+// duplicate-as-draft / blank), which buried "duplicate" (by far the common
+// case, continuing the same routine) behind a menu alongside two other
+// things that sounded similar but weren't. Starting a brand new blank week
+// lives separately, at the bottom of the page — see the "Start something
+// new" section in ProgramBuilder — since that's a different intent
+// (a new program, not a continuation) and doesn't need to compete for
+// attention here.
+export default function WeekActionsMenu({
+  clientId,
+  latestWeek,
+  activeWeek,
+  canDeleteActiveWeek,
+}: {
+  clientId: number;
+  latestWeek: number;
+  activeWeek: number;
+  canDeleteActiveWeek: boolean;
+}) {
   return (
-    <div className="week-actions-menu-wrap">
-      <button
-        type="button"
-        className="row-icon-btn"
-        aria-label="Add or deploy a week"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-      >
-        <PlusIcon />
-      </button>
-
-      {open && (
-        <>
-          <div className="exercise-picker-backdrop" onClick={() => setOpen(false)} />
-          <div className="week-actions-menu">
-            <form action={deployNextWeekAction}>
-              <input type="hidden" name="clientId" value={clientId} />
-              <button
-                className="week-actions-menu-item"
-                type="submit"
-                title={`Duplicates week ${latestWeek} and deploys week ${latestWeek + 1} immediately`}
-              >
-                Deploy week {latestWeek + 1}
-              </button>
-            </form>
-            <form action={addWeekSheetAction}>
-              <input type="hidden" name="clientId" value={clientId} />
-              <input type="hidden" name="fromWeek" value={latestWeek} />
-              <button
-                className="week-actions-menu-item"
-                type="submit"
-                title={`Adds week ${latestWeek + 1} as a draft, copied from week ${latestWeek}`}
-              >
-                + Sheet from week {latestWeek}
-              </button>
-            </form>
-            <form action={addWeekSheetAction}>
-              <input type="hidden" name="clientId" value={clientId} />
-              <button
-                className="week-actions-menu-item"
-                type="submit"
-                title={`Adds week ${latestWeek + 1} as a blank draft`}
-              >
-                + Blank week {latestWeek + 1}
-              </button>
-            </form>
-          </div>
-        </>
+    <div className="week-actions-row">
+      <form action={addWeekSheetAction}>
+        <input type="hidden" name="clientId" value={clientId} />
+        <input type="hidden" name="fromWeek" value={latestWeek} />
+        <button
+          className="btn secondary"
+          type="submit"
+          title={`Copies week ${latestWeek}'s day labels and exercises into a new draft week ${latestWeek + 1}`}
+        >
+          Duplicate week {latestWeek}
+        </button>
+      </form>
+      {canDeleteActiveWeek && (
+        <ConfirmDeleteButton
+          action={removeWeekAction}
+          hiddenFields={{ clientId, week: activeWeek }}
+          label={`Delete draft week ${activeWeek}`}
+        />
       )}
     </div>
   );

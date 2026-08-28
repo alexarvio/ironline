@@ -253,6 +253,24 @@ export function duplicateWeek(clientId: number, fromWeek: number, toWeek: number
   });
 }
 
+// Deletes an entire week (days + assignments + their logs). Weeks are
+// otherwise append-only — nothing else in this file ever removes one — so
+// callers are expected to only allow this for the latest week while it's
+// still a draft, to avoid leaving a gap in the sequence.
+export function removeWeek(clientId: number, week: number) {
+  const data = getData();
+  const dayIds = new Set(
+    data.program_days.filter((pd) => pd.client_id === clientId && pd.week_number === week).map((pd) => pd.id)
+  );
+  const assignmentIds = new Set(
+    data.workout_assignments.filter((wa) => dayIds.has(wa.program_day_id)).map((wa) => wa.id)
+  );
+  data.set_logs = data.set_logs.filter((sl) => !assignmentIds.has(sl.workout_assignment_id));
+  data.workout_assignments = data.workout_assignments.filter((wa) => !assignmentIds.has(wa.id));
+  data.program_days = data.program_days.filter((pd) => !dayIds.has(pd.id));
+  persist();
+}
+
 export function getAssignmentsForDay(programDayId: number): WorkoutAssignment[] {
   const data = getData();
   return data.workout_assignments

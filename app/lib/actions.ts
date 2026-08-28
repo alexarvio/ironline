@@ -29,6 +29,7 @@ import {
   ensureWeekSkeleton,
   getClient,
   getReportTemplate,
+  getWeek,
   listReportTemplateSections,
   listWeekNumbers,
   listMeasurementFields,
@@ -41,6 +42,7 @@ import {
   sendReport,
   updateReportSummary,
   removeAssignment,
+  removeWeek,
   removeClientGoal,
   removeCustomTrainingColumn,
   removeMeasurementCheckIn,
@@ -199,26 +201,12 @@ export async function publishWeekAction(formData: FormData) {
   revalidatePath("/admin");
 }
 
-// "Deploy next week": duplicates the latest existing week's day labels and
-// exercises forward one week and publishes it immediately — the client sees
-// it live right away (under whichever week number getCurrentWeekNumber
-// currently computes for them, once that week's date range arrives).
-export async function deployNextWeekAction(formData: FormData) {
-  const clientId = Number(formData.get("clientId")) || CLIENT_ID;
-  const weeks = listWeekNumbers(clientId);
-  const fromWeek = weeks.length > 0 ? Math.max(...weeks) : 1;
-  const toWeek = fromWeek + 1;
-  duplicateWeek(clientId, fromWeek, toWeek);
-  publishWeek(clientId, toWeek);
-  logCoachActivity(clientId, `Deployed week ${toWeek}'s training`);
-  revalidatePath("/client");
-  revalidatePath("/admin");
-}
-
 // "Add a new sheet": either duplicates an existing week's exercises as a
-// starting point (fromWeek provided) or creates a blank draft week (no
-// fromWeek) — either way it's left as a draft for the coach to review
-// before deploying, unlike deployNextWeekAction which publishes right away.
+// starting point (fromWeek provided — "Duplicate week N" in the week
+// switcher) or creates a blank draft week (no fromWeek — "Start something
+// new" at the bottom of the page). Always left as a draft for the coach to
+// review/adjust (helped along by the last-week target/actual reference and
+// inline-editable targets) before deploying via the existing publish button.
 export async function addWeekSheetAction(formData: FormData) {
   const clientId = Number(formData.get("clientId")) || CLIENT_ID;
   const fromWeekRaw = formData.get("fromWeek");
@@ -228,6 +216,23 @@ export async function addWeekSheetAction(formData: FormData) {
     duplicateWeek(clientId, Number(fromWeekRaw), toWeek);
   } else {
     ensureWeekSkeleton(clientId, toWeek);
+  }
+  revalidatePath("/admin");
+}
+
+// Only the latest week, and only while every day in it is still a draft —
+// weeks are append-only everywhere else in this app, so deleting anything
+// but the most recent one (or one already live) would leave a gap or pull
+// a week out from under the client.
+export async function removeWeekAction(formData: FormData) {
+  const clientId = Number(formData.get("clientId"));
+  const week = Number(formData.get("week"));
+  const weeks = listWeekNumbers(clientId);
+  const days = getWeek(clientId, week);
+  const isLatest = weeks.length > 0 && week === Math.max(...weeks);
+  const isDraft = days.length > 0 && days.every((d) => d.status === "draft");
+  if (weeks.length > 1 && isLatest && isDraft) {
+    removeWeek(clientId, week);
   }
   revalidatePath("/admin");
 }

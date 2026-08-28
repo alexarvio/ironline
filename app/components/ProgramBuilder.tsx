@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { addExerciseAction, publishWeekAction, removeExerciseAction } from "../lib/actions";
+import { addExerciseAction, addWeekSheetAction, publishWeekAction, removeExerciseAction } from "../lib/actions";
 import {
   getAssignmentsForDay,
   getCurrentWeekNumber,
@@ -90,7 +90,13 @@ export default function ProgramBuilder({
   }>;
 
   const allPublished = days.every((d) => d.status === "published");
+  const allDraft = days.every((d) => d.status === "draft");
   const anyBuilt = days.some((d) => getAssignmentsForDay(d.id).length > 0);
+  // Only offer deletion for the latest week while it's still untouched by a
+  // deploy, and only when there's another week to fall back to — matches
+  // the guard in removeWeekAction so the button never looks clickable when
+  // the action would silently no-op.
+  const canDeleteActiveWeek = existingWeeks.length > 1 && activeWeek === latestWeek && allDraft;
   const currentWeek = weekStart(localDateStr());
 
   const strengthOverall = getStrengthSeries(clientId, 3650);
@@ -115,7 +121,12 @@ export default function ProgramBuilder({
             </Link>
           ))}
         </div>
-        <WeekActionsMenu clientId={clientId} latestWeek={latestWeek} />
+        <WeekActionsMenu
+          clientId={clientId}
+          latestWeek={latestWeek}
+          activeWeek={activeWeek}
+          canDeleteActiveWeek={canDeleteActiveWeek}
+        />
       </div>
 
       <TrainingColumnsPanel clientId={clientId} columns={allColumns} />
@@ -399,6 +410,20 @@ export default function ProgramBuilder({
           <input type="hidden" name="week" value={activeWeek} />
           <button className="deploy-btn" type="submit">
             Deploy week {activeWeek} to client
+          </button>
+        </form>
+      </div>
+
+      <div className="nutrition-table-wrap builder-card" style={{ marginTop: 16 }}>
+        <h3 className="builder-pill-heading">Start something new</h3>
+        <p className="empty-note" style={{ marginBottom: 12 }}>
+          Not a continuation of week {latestWeek} — a fresh, empty week {latestWeek + 1} the client won&rsquo;t see
+          until you build it out and deploy it.
+        </p>
+        <form action={addWeekSheetAction}>
+          <input type="hidden" name="clientId" value={clientId} />
+          <button className="btn secondary" type="submit">
+            + Blank week {latestWeek + 1}
           </button>
         </form>
       </div>

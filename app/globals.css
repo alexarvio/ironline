@@ -1406,42 +1406,11 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   display: inline-block;
 }
 
-.week-actions-menu-wrap {
-  position: relative;
-  flex-shrink: 0;
-}
-
-.week-actions-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 20;
+.week-actions-row {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 220px;
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: 0 12px 28px rgba(20, 23, 28, 0.16);
-  padding: 6px;
-}
-
-.week-actions-menu-item {
-  display: block;
-  width: 100%;
-  text-align: left;
-  background: none;
-  border: none;
-  border-radius: 6px;
-  padding: 9px 10px;
-  font-size: 0.82rem;
-  color: var(--ink);
-  cursor: pointer;
-}
-
-.week-actions-menu-item:hover {
-  background: var(--paper-raised);
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .strength-progress-toggle {
