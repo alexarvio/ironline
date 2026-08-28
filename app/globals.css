@@ -1,49 +1,3415 @@
+@import url("https://fonts.googleapis.com/css2?family=Newsreader:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap");
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ink: #14171c;
+  --paper: #f1f2ed;
+  --paper-raised: #e8e9e2;
+  --steel: #5b6472;
+  --border: #c9ccc2;
+  --accent: #2f6485;
+  --accent-plate: #a94e26;
+  --good: #3f6e46;
+  --font-serif: "Newsreader", Georgia, serif;
+  --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-html {
-  height: 100%;
-}
-
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
+* { box-sizing: border-box; }
 
 body {
-  min-height: 100%;
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.5;
+}
+
+a { color: var(--accent); }
+
+.shell {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 20px 80px;
+}
+
+.top-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  font-weight: 800;
+  font-size: 1.1rem;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.nav-links { display: flex; gap: 8px; }
+
+.nav-links a {
+  text-decoration: none;
+  font-size: 0.85rem;
+  padding: 6px 12px;
+  border-radius: 6px;
+  color: var(--steel);
+}
+
+.nav-links a.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+h1 { font-size: 1.6rem; margin: 0 0 4px; }
+h2 { font-size: 1.1rem; margin: 28px 0 12px; }
+.subtitle { color: var(--steel); margin: 0 0 28px; font-size: 0.95rem; }
+
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.day-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  background: white;
   display: flex;
   flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  gap: 10px;
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+.day-card.rest { background: var(--paper-raised); }
+
+.day-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
 }
 
-a {
-  color: inherit;
+.day-name {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--steel);
+}
+
+.day-label-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.exercise-row {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.exercise-meta { color: var(--steel); font-size: 0.76rem; }
+
+.remove-btn {
+  background: none;
+  border: none;
+  color: var(--accent-plate);
+  cursor: pointer;
+  font-size: 0.78rem;
+  padding: 2px 4px;
+}
+
+.add-exercise-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+
+.add-exercise-form select,
+.add-exercise-form input {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 7px;
+  font-size: 0.78rem;
+}
+
+.inline-row { display: flex; gap: 6px; }
+.inline-row input { flex: 1; min-width: 0; }
+
+.btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.btn.secondary {
+  background: var(--paper-raised);
+  color: var(--ink);
+  border: 1px solid var(--border);
+}
+
+.btn-sm {
+  padding: 5px 8px;
+  font-size: 0.7rem;
+  border-radius: 5px;
+}
+
+.publish-bar {
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: var(--paper-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.status-pill {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.status-pill.draft { background: #f0d9c4; color: var(--accent-plate); }
+.status-pill.published { background: #d7e6da; color: var(--good); }
+
+.deploy-btn {
+  background: var(--good);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 18px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.log-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  display: flex;
+  justify-content: space-between;
+  background: white;
+}
+
+.log-item .when { color: var(--steel); font-size: 0.76rem; flex-shrink: 0; margin-left: 16px; }
+
+.log-item a {
+  color: var(--ink);
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+.log-item a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.log-item a strong {
+  color: var(--accent);
+}
+
+.empty-note {
+  color: var(--steel);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.client-day {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 14px;
+  background: white;
+}
+
+.client-exercise {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  margin-top: 10px;
+}
+
+.client-exercise:first-child { border-top: none; margin-top: 0; padding-top: 0; }
+
+.set-log-form {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.set-log-form input {
+  width: 70px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 7px;
+  font-size: 0.8rem;
+}
+
+.logged-sets {
+  display: flex;
+  flex-direction: column;
+  margin-top: 2px;
+}
+
+.logged-weeks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 150px;
+  overflow-y: auto;
+  padding-right: 4px;
+  min-width: 190px;
+}
+
+.logged-week-group + .logged-week-group {
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+}
+
+.logged-week-label {
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--steel);
+  margin-bottom: 3px;
+}
+
+/* Tight table-style rows instead of wrapped pill tags — a set number
+   pinned left, the reading right-aligned, matching the admin's plain
+   .data-table rhythm rather than a bag of badges. */
+.set-chip {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.72rem;
+  font-family: ui-monospace, monospace;
+  padding: 2px 0;
+}
+
+.set-chip + .set-chip {
+  border-top: 1px solid var(--border);
+}
+
+/* ---- Program builder: horizontal spreadsheet layout ---- */
+
+.program-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Collapsible per-day container for the program builder — mirrors the
+   client Training tab's day cards so the coach gets the same scannable
+   list instead of 7 always-open tables. Rest days collapse by default
+   (nothing to see until the coach wants to add something); built days
+   default open since the coach is usually there to edit them. */
+.admin-day-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: white;
+  overflow: hidden;
+}
+
+.admin-day-card + .admin-day-card {
+  margin-top: 10px;
+}
+
+.admin-day-card.rest {
+  background: var(--paper-raised);
+}
+
+.admin-day-card-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--paper-raised);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.admin-day-card-toggle:hover {
+  background: var(--border);
+}
+
+.admin-day-card-head-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-day-card-head-left .day-name {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--steel);
+  min-width: 34px;
+  flex-shrink: 0;
+}
+
+.admin-day-card-head-left .inline-row {
+  flex: 1;
+  max-width: 280px;
+}
+
+.admin-day-card-head-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.admin-day-summary {
+  font-size: 0.76rem;
+  color: var(--steel);
+  white-space: nowrap;
+}
+
+.admin-day-chevron-btn {
+  border: none;
+  background: none;
+  padding: 2px;
+  cursor: pointer;
+  display: flex;
+  color: var(--steel);
+}
+
+.admin-day-chevron {
+  display: flex;
+  transition: transform 0.15s ease;
+}
+
+.admin-day-chevron.open {
+  transform: rotate(180deg);
+}
+
+.admin-day-card-body {
+  /* the table inside brings its own padding via .exercise-table-wrap */
+}
+
+.exercise-table-wrap {
+  overflow-x: auto;
+}
+
+.exercise-table,
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.exercise-table th,
+.data-table th {
+  text-align: left;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--steel);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.exercise-table td,
+.data-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.exercise-table th:last-child,
+.exercise-table td:last-child,
+.data-table th:last-child,
+.data-table td:last-child {
+  border-right: none;
+}
+
+.exercise-table tbody tr:last-child td,
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.exercise-name-cell {
+  font-weight: 600;
+  white-space: normal;
+  min-width: 140px;
+}
+
+.notes-cell {
+  color: var(--steel);
+  white-space: normal;
+  max-width: 220px;
+}
+
+.add-exercise-row td {
+  background: var(--paper);
+  padding: 6px 6px;
+}
+
+.exercise-table input,
+.exercise-table select,
+.data-table input,
+.data-table select {
+  width: 100%;
+  min-width: 64px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 5px 6px;
+  font-size: 0.78rem;
+}
+
+/* ---- Nutrition panel ---- */
+
+.nutrition-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nutrition-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding: 14px 16px;
+  margin-bottom: 22px;
+  background: var(--paper-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.inline-number-input {
+  width: 90px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.nutrition-table-wrap {
+  margin-bottom: 22px;
+}
+
+.nutrition-table-wrap h3 {
+  font-size: 0.85rem;
+  margin: 0 0 8px;
+}
+
+.computed-cell {
+  color: var(--steel);
+  font-family: ui-monospace, monospace;
+}
+
+.totals-cell {
+  font-weight: 700;
+  font-family: ui-monospace, monospace;
+}
+
+.coach-notes-textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.add-exercise-row .btn {
+  width: auto;
+  white-space: nowrap;
+}
+
+.tracker-category-row {
+  background: var(--paper-raised) !important;
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--steel);
+}
+
+/* Daily/Weekly Tracker Overview: metric names stay pinned on the left as the
+   coach scrolls sideways through weeks/days — same "frozen column" idea as a
+   spreadsheet, since a client can accumulate far more periods than fit on
+   screen at once. */
+.tracker-metric-col {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: white;
+  box-shadow: 1px 0 0 0 var(--border);
+  min-width: 160px;
+}
+
+.tracker-overview-table thead .tracker-metric-col {
+  z-index: 3;
+}
+
+/* ---- Progress pictures ---- */
+
+.photo-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Collapsed-by-default accordion row: one period's photos + coach notes.
+   Collapsed it's just a title/subtitle/chevron bar, so a long history costs
+   almost no vertical space until a specific check-in is opened. */
+.photo-period-row {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: white;
+  overflow: hidden;
+}
+
+.photo-period-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: none;
+  background: none;
+  padding: 12px 14px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.photo-period-header:hover {
+  background: var(--paper-raised);
+}
+
+.photo-period-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.photo-period-title {
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.photo-period-subtitle {
+  font-size: 0.74rem;
+  color: var(--steel);
+}
+
+.photo-period-chevron {
+  flex: 0 0 auto;
+  display: flex;
+  color: var(--steel);
+  transition: transform 0.15s ease;
+}
+
+.photo-period-chevron.open {
+  transform: rotate(180deg);
+}
+
+.photo-period-body {
+  padding: 4px 14px 16px;
+  border-top: 1px dashed var(--border);
+}
+
+.photo-period-body .photo-slot-grid {
+  margin-top: 14px;
+}
+
+.photo-note-form {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.photo-note-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--steel);
+}
+
+.photo-note-field textarea {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 9px;
+  font-size: 0.84rem;
+  font-family: inherit;
+  font-weight: 400;
+  color: var(--ink, #222);
+  resize: vertical;
+}
+
+.photo-note-form .btn {
+  align-self: flex-start;
+}
+
+.photo-note-readonly {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.photo-note-readonly-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--steel);
+  margin-bottom: 2px;
+}
+
+.photo-note-readonly-text {
+  font-size: 0.86rem;
+  white-space: pre-wrap;
+}
+
+.photo-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.photo-thumb-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.photo-thumb-img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--paper-raised);
+}
+
+.photo-thumb-empty {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: 8px;
+  border: 1px dashed var(--border);
+  background: var(--paper-raised);
+  color: var(--steel);
+  font-size: 0.72rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 6px;
+}
+
+.photo-thumb-label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.photo-upload-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.photo-upload-tile {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: 10px;
+  border: 2px dashed var(--border);
+  background: var(--paper-raised);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.photo-upload-tile .photo-thumb-img {
+  border: none;
+  border-radius: 0;
+}
+
+.photo-upload-plus {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: var(--steel);
+}
+
+.photo-upload-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- Admin panel ---- */
+
+.admin-shell {
+  min-height: 100vh;
+}
+
+.admin-body {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.admin-sidebar {
+  padding: 24px 16px;
+  border-right: 1px solid var(--border);
+  min-height: calc(100vh - 57px);
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.feed-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  margin-bottom: 18px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: white;
+}
+
+.feed-nav-btn:hover {
+  background: var(--paper-raised);
+}
+
+.feed-nav-btn.active {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+
+.feed-nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.conflict-badge {
+  margin-left: auto;
+  background: var(--accent-plate);
+  color: white;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 1px 7px;
+  line-height: 1.5;
+}
+
+.conflict-banner {
+  border: 1px solid var(--accent-plate);
+  background: #fbeee6;
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: var(--accent-plate);
+}
+
+.conflict-banner strong {
+  color: var(--accent-plate);
+}
+
+.conflict-banner ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.conflict-banner li {
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+}
+
+.conflict-tag {
+  background: var(--accent-plate);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+
+.calendar-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.calendar-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--paper);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.calendar-nav-btn:hover {
+  background: var(--paper-raised);
+}
+
+.calendar-month-label {
+  font-weight: 700;
+  font-size: 0.95rem;
+  min-width: 140px;
+  text-align: center;
+}
+
+.calendar-today-btn {
+  text-decoration: none;
+  font-size: 0.8rem;
+  padding: 6px 12px;
+}
+
+.calendar-grid {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--border);
+  box-shadow: 0 1px 2px rgba(20, 23, 28, 0.04);
+}
+
+.calendar-grid-head {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--border);
+}
+
+.calendar-weekday {
+  padding: 9px 10px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--steel);
+  background: var(--paper-raised);
+}
+
+.calendar-grid-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--border);
+}
+
+.calendar-grid-row + .calendar-grid-row {
+  margin-top: 1px;
+}
+
+.calendar-grid-head {
+  margin-bottom: 1px;
+}
+
+.calendar-cell {
+  background: #f6f5f0;
+  min-height: 110px;
+  padding: 7px 7px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: background-color 0.1s ease;
+}
+
+.calendar-cell.outside {
+  background: var(--paper-raised);
+}
+
+.calendar-cell.outside .calendar-cell-date {
+  color: #b6b9ae;
+}
+
+.calendar-cell.today {
+  background: #e9eff3;
+}
+
+.calendar-cell-date {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--steel);
+  padding: 2px 4px;
+}
+
+.calendar-cell.today .calendar-cell-date {
+  color: var(--accent);
+}
+
+.calendar-cell-meetings {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.calendar-chip {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: var(--paper-raised);
+  text-decoration: none;
+  color: var(--ink);
+  font-size: 0.7rem;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.calendar-chip:hover {
+  background: var(--border);
+}
+
+.calendar-chip-time {
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.calendar-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calendar-chip.conflict {
+  background: #fbeee6;
+  color: var(--accent-plate);
+}
+
+.calendar-chip.completed {
+  opacity: 0.55;
+}
+
+.calendar-chip-more {
+  font-size: 0.68rem;
+  color: var(--steel);
+  padding: 0 5px;
+}
+
+@media (max-width: 900px) {
+  .calendar-cell {
+    min-height: 80px;
   }
+  .calendar-chip-name {
+    display: none;
+  }
+}
+
+.sidebar-heading {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--steel);
+  margin-bottom: 12px;
+}
+
+.client-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 18px;
+}
+
+.client-list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.client-list-item:hover {
+  background: var(--paper-raised);
+}
+
+.client-list-item.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.client-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.client-list-item.active .client-avatar {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.new-client-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+}
+
+.new-client-form input {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 0.82rem;
+}
+
+.admin-main {
+  padding: 28px 32px 80px;
+  /* Grid items default to min-width: auto, which lets wide content (like the
+     Tracker's frozen-column table) stretch the whole page instead of
+     scrolling within its own wrapper. min-width: 0 lets this column shrink
+     to the grid track and pushes overflow down to .exercise-table-wrap. */
+  min-width: 0;
+}
+
+.client-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  padding-bottom: 22px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.client-header h1 {
+  margin-bottom: 14px;
+}
+
+.client-stat-row {
+  display: flex;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+.client-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.stat-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--steel);
+}
+
+.stat-value {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.measurement-summary-row {
+  background: var(--paper-raised);
+  font-weight: 600;
+}
+
+.measurement-summary-row td {
+  border-top: 2px solid var(--border);
+}
+
+.measurement-summary-row .change-up {
+  color: #b8471f;
+}
+
+.measurement-summary-row .change-down {
+  color: #1f7a4d;
+}
+
+.change-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.change-stat .stat-value.change-up {
+  color: #b8471f;
+}
+
+.change-stat .stat-value.change-down {
+  color: #1f7a4d;
+}
+
+.snapshot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.snapshot-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  background: var(--paper-raised);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.snapshot-card h4 {
+  margin: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--steel);
+}
+
+.snapshot-card .snapshot-main {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.snapshot-card .snapshot-sub {
+  font-size: 0.78rem;
+  color: var(--steel);
+  line-height: 1.4;
+}
+
+.client-avatar-large {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.graph-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  background: white;
+  margin-bottom: 24px;
+}
+
+.graph-controls {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.toggle-group {
+  display: flex;
+  gap: 4px;
+  background: var(--paper-raised);
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  color: var(--steel);
+}
+
+.toggle-btn.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.graph-empty {
+  color: var(--steel);
+  font-size: 0.88rem;
+  font-style: italic;
+  padding: 40px 0;
+  text-align: center;
+}
+
+.line-chart {
+  width: 100%;
+  height: 220px;
+}
+
+.chart-axis {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.chart-area {
+  fill: var(--accent);
+  opacity: 0.08;
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.chart-dot {
+  fill: var(--accent);
+}
+
+.chart-endpoint-label {
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  fill: var(--ink);
+  text-anchor: middle;
+}
+
+.chart-gridline {
+  stroke: var(--border);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.chart-ylabel {
+  font-size: 10px;
+  font-family: ui-monospace, monospace;
+  fill: var(--steel);
+}
+
+.chart-xlabel {
+  font-size: 10px;
+  font-family: ui-monospace, monospace;
+  fill: var(--steel);
+}
+
+.section-tabs {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: white;
+}
+
+.tab-bar {
+  display: flex;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+  background: var(--paper-raised);
+}
+
+.tab-item {
+  background: none;
+  border: none;
+  padding: 14px 18px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--steel);
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+}
+
+.tab-item.active {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
+.tab-panel {
+  padding: 22px;
+}
+
+.not-built-panel {
+  padding: 20px 0;
+}
+
+.field-row {
+  display: flex;
+  gap: 10px;
+  font-size: 0.9rem;
+}
+
+.start-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.start-form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.78rem;
+  color: var(--steel);
+}
+
+.start-form-grid input,
+.start-form-grid select {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 9px;
+  font-size: 0.9rem;
+  color: var(--ink);
+  font-family: inherit;
+}
+
+.start-form-grid input:disabled {
+  background: var(--paper-raised);
+  color: var(--steel);
+}
+
+.goal-checkbox {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  color: var(--paper);
+  font-size: 0.72rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.field-label {
+  color: var(--steel);
+  min-width: 90px;
+}
+
+.invoice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.invoice-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.invoice-desc {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.invoice-amount {
+  font-family: ui-monospace, monospace;
+  font-size: 0.88rem;
+  margin-left: auto;
+}
+
+.status-select {
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+}
+
+.status-unpaid { background: #f0d9c4; color: var(--accent-plate); }
+.status-sent { background: #dfe6ee; color: var(--accent); }
+.status-paid { background: #d7e6da; color: var(--good); }
+.status-due { background: #f3d2d2; color: #a13a3a; }
+
+.add-invoice-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border);
+}
+
+.add-invoice-form input,
+.add-invoice-form select {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 0.82rem;
+}
+
+.add-invoice-form input[name="description"] {
+  flex: 1;
+  min-width: 200px;
+}
+
+/* "Add a ___" builder rows (Daily/Weekly Tracker metrics, Photo slots,
+   Invoices, etc.): stretch inputs/selects to fill the card instead of
+   leaving the natural (small) input widths bunched on the left with blank
+   space after them. */
+.add-metric-form input,
+.add-metric-form select {
+  flex: 1;
+  min-width: 120px;
+}
+
+.add-metric-form button {
+  flex: 0 0 auto;
+}
+
+/* ---- Client app shell: renders /client as a phone-frame mock, with a
+   sticky app header and bottom tab bar, so viewing it in a desktop browser
+   during development already reads as "an app" rather than a web page. On
+   an actual phone-width viewport the frame just fills the screen. ---- */
+
+.phone-frame {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2b2d24;
+  padding: 40px 12px;
+}
+
+/* iPhone 16-proportioned shell: 393x852pt aspect ratio, tall pill-radius
+   corners, a dynamic-island cutout floating over the header, and a couple
+   of hardware-accent details (side buttons) so it reads as a real device
+   rather than a generic rounded rectangle. */
+.app-screen {
+  width: min(393px, calc(100vw - 24px));
+  height: min(852px, calc((100vw - 24px) * 852 / 393), calc(100vh - 80px));
+  aspect-ratio: 393 / 852;
+  background: var(--paper);
+  border-radius: 55px;
+  border: 12px solid #0b0c09;
+  box-shadow:
+    0 30px 60px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 2px #2a2b24;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  font-family: var(--font-sans);
+}
+
+/* Dynamic island — floats above the header content, doesn't take up any
+   flex space of its own. */
+.app-screen::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 30px;
+  background: #0b0c09;
+  border-radius: 999px;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.app-header {
+  flex-shrink: 0;
+  padding: 56px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--paper);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.app-header-brand {
+  font-family: var(--font-serif, inherit);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.app-header-icon-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--ink);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.app-header-icon-badge {
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  border: 1.5px solid white;
+}
+
+.app-header-icon-btn:hover {
+  background: var(--paper-raised);
+}
+
+/* Pushed full-screen views (currently: chat) — a slim back-only header
+   instead of the brand/icon row, and content flush to the edges since
+   chat manages its own inner padding via .chat-panel/.chat-thread. */
+.app-push-header {
+  flex-shrink: 0;
+  padding: 52px 16px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: none;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.app-back-btn:hover {
+  background: var(--paper-raised);
+}
+
+.app-push-header-avatar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--paper-raised);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.app-push-header-identity {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-push-header-name {
+  font-weight: 700;
+  font-size: 0.94rem;
+}
+
+.app-push-header-sub {
+  color: var(--steel);
+  font-size: 0.72rem;
+}
+
+.app-chat-banner {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: white;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.78rem;
+  color: var(--steel);
+}
+
+.app-chat-banner-icon {
+  flex-shrink: 0;
+  color: var(--steel);
+}
+
+.app-content-flush {
+  padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-content-flush .chat-panel {
+  flex: 1;
+  min-height: 0;
+  padding: 14px 16px;
+}
+
+.app-content-flush .chat-thread {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.app-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 18px 24px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* old Edge */
+}
+
+/* A real phone has no visible scrollbar track — the desktop mock
+   shouldn't either, since it reads as chrome rather than app UI. */
+.app-content::-webkit-scrollbar,
+.app-content-flush .chat-thread::-webkit-scrollbar {
+  display: none;
+}
+
+.app-lead {
+  color: var(--steel);
+  margin: 0 0 20px;
+  font-size: 0.9rem;
+}
+
+.app-bottom-nav {
+  flex-shrink: 0;
+  display: flex;
+  border-top: 1px solid var(--border);
+  background: var(--paper);
+  padding: 6px 6px calc(env(safe-area-inset-bottom, 0px) + 6px);
+}
+
+.app-tab-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 4px;
+  border: none;
+  background: none;
+  border-radius: 12px;
+  color: var(--steel);
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.app-tab-btn:hover {
+  background: var(--paper-raised);
+}
+
+.app-tab-btn.active {
+  color: var(--ink);
+}
+
+.app-tab-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 480px), (max-height: 760px) {
+  .phone-frame {
+    padding: 0;
+    background: var(--paper);
+  }
+  .app-screen {
+    width: 100%;
+    max-width: none;
+    height: 100vh;
+    aspect-ratio: auto;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+  /* A real phone already has its own notch/island — don't draw a fake one
+     on top of it. */
+  .app-screen::before {
+    display: none;
+  }
+  .app-header {
+    padding: 18px 20px 14px;
+  }
+  .app-push-header {
+    padding: 14px 16px;
+  }
+}
+
+/* ---- Exercise picker: category-first "Add exercise" popover ---- */
+
+.exercise-picker {
+  position: relative;
+}
+
+.exercise-picker-trigger {
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: white;
+  font-size: 0.85rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.exercise-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 19;
+}
+
+.exercise-picker-pop {
+  position: fixed;
+  z-index: 20;
+  width: 260px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(20, 23, 28, 0.16);
+  padding: 10px;
+}
+
+.exercise-picker-groups {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.exercise-picker-group-btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--paper);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.exercise-picker-group-btn:hover {
+  background: var(--paper-raised);
+}
+
+.exercise-picker-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.exercise-picker-back {
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.exercise-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.exercise-picker-item {
+  text-align: left;
+  padding: 7px 8px;
+  border-radius: 6px;
+  border: none;
+  background: none;
+  font-size: 0.83rem;
+  cursor: pointer;
+}
+
+.exercise-picker-item:hover {
+  background: var(--paper-raised);
+}
+
+.exercise-picker-add-toggle {
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 6px;
+  border: 1px dashed var(--border);
+  background: none;
+  font-size: 0.8rem;
+  color: var(--steel);
+  cursor: pointer;
+}
+
+.exercise-picker-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.exercise-picker-add-form input {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 0.8rem;
+}
+
+.video-link {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.video-link:hover {
+  text-decoration: underline;
+}
+
+/* ---- Training columns customization panel ---- */
+
+.training-columns-panel {
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: white;
+  padding: 4px 16px;
+}
+
+.training-columns-panel summary {
+  cursor: pointer;
+  padding: 10px 0;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.training-columns-body {
+  padding-bottom: 14px;
+}
+
+.training-columns-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.training-column-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.training-column-label-form {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.training-column-label-form input {
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+  width: 150px;
+}
+
+.column-visible-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--steel);
+  cursor: pointer;
+}
+
+.custom-column-input {
+  width: 100%;
+  min-width: 90px;
+  padding: 5px 7px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+}
+
+/* ---- Client check-in: structured form card + sticky trend footer ---- */
+
+.checkin-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  padding: 16px;
+}
+
+.checkin-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.checkin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.checkin-field-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--steel);
+}
+
+.checkin-field input {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-size: 0.9rem;
+}
+
+.checkin-date-field {
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.checkin-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 12px;
+}
+
+.checkin-save-btn {
+  width: 100%;
+  padding: 11px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.app-sticky-footer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: var(--paper-raised);
+}
+
+.checkin-summary-footer {
+  padding: 10px 18px;
+}
+
+.checkin-summary-label {
+  display: block;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--steel);
+  margin-bottom: 6px;
+}
+
+.checkin-summary-stats {
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+}
+
+.checkin-summary-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.checkin-summary-stat-name {
+  font-size: 0.68rem;
+  color: var(--steel);
+}
+
+.checkin-summary-stat-value {
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.checkin-summary-stat-value.change-up {
+  color: #b8471f;
+}
+
+.checkin-summary-stat-value.change-down {
+  color: #1f7a4d;
+}
+
+/* ---- Coach Measurements: windowed check-ins table ----
+   First and most-recent check-ins (plus the change row) stay pinned; any
+   entries between them scroll in their own short window instead of pushing
+   the table tall. Each <tbody> becomes its own mini table (display: table)
+   so a scrollable middle section can sit between static ones while all three
+   keep matching column widths via the shared inline % widths on th/td. */
+
+.checkins-table thead,
+.checkins-table tbody:not(.checkins-scroll-body) {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.checkins-scroll-body {
+  display: block;
+  width: 100%;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.checkins-scroll-body tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.checkins-scroll-hint {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--steel);
+  background: var(--paper-raised);
+  padding: 5px 10px;
+  border-top: 1px dashed var(--border);
+  border-bottom: 1px dashed var(--border);
+  text-align: center;
+}
+
+/* ---- Builder-section pill heading ----
+   The "this is where you set up the structure" sections (Add a metric,
+   Check-in columns, Photo slots, Add an invoice) get a capsule-shaped label
+   instead of a plain heading, so they visually pop out from the read-only
+   tables around them — "oh, this is where I add/edit/delete things". */
+.builder-pill-heading {
+  display: inline-flex;
+  align-items: center;
+  background: var(--accent);
+  color: white;
+  padding: 5px 16px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 14px;
+}
+
+.builder-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  padding: 16px 18px;
+}
+
+/* ---- ComboBoxInput: a text input with a themed, always-visible chevron
+   that opens a menu of values already used elsewhere (other clients'
+   metrics, saved templates, existing columns) — "Create a new one" is
+   always the last row, since typing anything not in the list creates it. */
+.add-metric-form .combo-box,
+.add-invoice-form .combo-box {
+  flex: 1;
+  min-width: 160px;
+}
+
+.combo-box {
+  position: relative;
+}
+
+.combo-box-field {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: white;
+}
+
+.combo-box-field input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-radius: 0;
+  padding: 6px 8px;
+  font-size: 0.82rem;
+  outline: none;
+}
+
+.combo-box-chevron {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  border: none;
+  border-left: 1px solid var(--border);
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.combo-box-chevron:hover {
+  filter: brightness(1.08);
+}
+
+.combo-box-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.combo-box-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 7px 10px;
+  font-size: 0.82rem;
+  border-radius: 5px;
+  cursor: pointer;
+  color: var(--ink, #222);
+}
+
+.combo-box-option:hover {
+  background: var(--paper-raised, #f0f0f0);
+}
+
+.combo-box-create {
+  color: var(--accent);
+  font-weight: 600;
+  border-top: 1px dashed var(--border);
+  margin-top: 4px;
+  padding-top: 9px;
+  border-radius: 0 0 5px 5px;
+}
+
+/* ---- Row actions: pencil to edit, trash to delete-with-confirm ----
+   Used wherever a builder list/table would otherwise need an always-visible
+   edit form + text "remove" link cluttering every row — now it's a quiet
+   pencil/trash pair that only expands when clicked. */
+.tracker-actions-col {
+  width: 64px;
+}
+
+.row-actions-cell {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.row-icon-actions {
+  display: inline-flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.row-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: white;
+  color: var(--steel, #666);
+  cursor: pointer;
+}
+
+.row-icon-btn:hover {
+  background: var(--paper-raised, #f0f0f0);
+  color: var(--accent);
+}
+
+.row-icon-btn.row-icon-danger:hover {
+  background: #f3d2d2;
+  color: #a13a3a;
+  border-color: #e2a5a5;
+}
+
+.row-confirm-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #a13a3a;
+  white-space: nowrap;
+}
+
+.row-confirm-yes {
+  border: none;
+  border-radius: 5px;
+  background: #a13a3a;
+  color: white;
+  padding: 4px 10px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.row-confirm-no {
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: white;
+  color: var(--steel, #666);
+  padding: 4px 10px;
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+
+.tracker-inline-edit-form {
+  border: none;
+  padding-top: 0;
+}
+
+/* ---- Client Home tab ---- */
+
+.home-date-line {
+  color: var(--steel);
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.home-greeting-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+/* Every Home section gets its own container — paper-raised (a shade darker
+   than the screen background) so the white cards inside it (today-card,
+   home-recap-stat, coach-preview-card, ...) still read as distinct, layered
+   elements rather than blending into a plain white-on-white box. */
+.home-section {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--paper-raised);
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.home-section:last-child {
+  margin-bottom: 0;
+}
+
+.home-section-title {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.home-section .empty-note {
+  margin: 0;
+}
+
+.coach-activity-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.coach-activity-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.coach-activity-message {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.coach-activity-time {
+  color: var(--steel);
+  font-size: 0.76rem;
+  margin-top: 2px;
+}
+
+.home-greeting-name {
+  font-family: var(--font-serif);
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.home-greeting-sub {
+  color: var(--steel);
+  font-size: 0.85rem;
+  margin-top: 2px;
+}
+
+.home-greeting-goal {
+  margin-top: 8px;
+  display: inline-block;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--paper-raised);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+
+.home-recap-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.home-recap-grid-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.home-recap-stat {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  padding: 14px;
+  text-align: center;
+}
+
+.home-recap-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.home-recap-value-trend {
+  color: var(--good);
+  font-size: 1.25rem;
+}
+
+.home-recap-label {
+  color: var(--steel);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+
+.message-feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.coach-preview-card {
+  display: flex;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: white;
+  padding: 14px;
+}
+
+.coach-preview-avatar.me {
+  color: var(--steel);
+}
+
+.coach-preview-avatar {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--paper-raised);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.coach-preview-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.coach-preview-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.coach-preview-time {
+  flex-shrink: 0;
+  color: var(--steel);
+  font-size: 0.7rem;
+}
+
+.coach-preview-text {
+  color: var(--ink);
+  font-size: 0.82rem;
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+.home-goal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.home-goal-row {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: white;
+  padding: 10px 14px;
+  font-size: 0.88rem;
+}
+
+.hub-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0;
+  cursor: pointer;
+}
+
+.hub-back-link:hover {
+  text-decoration: underline;
+}
+
+.upcoming-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  padding: 14px;
+}
+
+.upcoming-date-badge {
+  flex-shrink: 0;
+  width: 50px;
+  text-align: center;
+  border-radius: 10px;
+  background: var(--paper-raised);
+  padding: 8px 4px;
+}
+
+.upcoming-date-day {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--steel);
+  font-weight: 700;
+}
+
+.upcoming-date-num {
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin-top: 1px;
+}
+
+.upcoming-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.upcoming-time {
+  color: var(--steel);
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+/* ---- Client Check-ins hub: sub-tab strip + "Today" due list ---- */
+
+.checkin-subtab-strip {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.checkin-subtab-btn {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  color: var(--steel);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 8px 4px 10px;
+  margin-right: 14px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.checkin-subtab-btn.active {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
+.today-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.today-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  padding: 14px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.today-card-title {
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.today-card-detail {
+  color: var(--steel);
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+.today-card-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--paper-raised);
+  color: var(--accent);
+}
+
+.today-card:hover .today-card-cta {
+  background: var(--accent);
+  color: white;
+}
+
+/* ---- Client Training tab: week-progress ring + day cards ---- */
+
+.week-progress-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+
+.week-progress-label {
+  color: var(--steel);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+}
+
+.week-progress-value {
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.week-progress-ring {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.week-progress-ring-inner {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+/* Collapsed-by-default day container — same accordion idea as
+   .photo-period-row/-header/-chevron above: a title/subtitle/chevron bar
+   until tapped, then the day's exercises unfold below. */
+.training-day-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 12px;
+  background: white;
+  overflow: hidden;
+}
+
+.training-day-card-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: none;
+  background: none;
+  padding: 14px 16px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.training-day-card-toggle:hover {
+  background: var(--paper-raised);
+}
+
+.training-day-card-name {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.training-day-card-label {
+  color: var(--steel);
+  font-size: 0.8rem;
+  margin-top: 1px;
+}
+
+.training-day-card-toggle-right {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.training-day-progress-pill {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--steel);
+  background: var(--paper-raised);
+  border-radius: 999px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
+.training-day-progress-pill.done {
+  color: var(--good);
+  background: color-mix(in srgb, var(--good) 14%, white);
+}
+
+.training-day-chevron {
+  flex: 0 0 auto;
+  display: flex;
+  color: var(--steel);
+  transition: transform 0.15s ease;
+}
+
+.training-day-chevron.open {
+  transform: rotate(180deg);
+}
+
+.training-day-card-body {
+  border-top: 1px solid var(--border);
+  padding: 4px 16px 14px;
+}
+
+/* Exercise list styled like the admin's data tables: tight rows separated
+   by a hairline instead of individually-boxed cards, name/target aligned
+   left/right on one line so the whole week reads at a glance. */
+.training-exercise-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.training-exercise-row {
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.training-exercise-row:first-child {
+  border-top: none;
+  padding-top: 14px;
+}
+
+.training-exercise-row-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.training-exercise-row-top strong {
+  font-size: 0.9rem;
+}
+
+.training-exercise-target {
+  color: var(--steel);
+  font-size: 0.82rem;
+  margin-top: 1px;
+  white-space: nowrap;
+}
+
+/* The coach's target for this exercise (sets/reps/weight/RPE/tempo), shown
+   as a row of small badges under the exercise name — the thing the client
+   is meant to check before and during a set, so it needs to read at a
+   glance rather than blend into the exercise-name line. */
+.exercise-target-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.target-badge {
+  display: inline-flex;
+  align-items: center;
+  background: var(--paper-raised);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--steel);
+  white-space: nowrap;
+}
+
+.target-badge-primary {
+  background: var(--accent-tint, #eaf1ff);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.exercise-coach-note {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--steel);
+}
+
+.training-exercise-done {
+  margin-top: 8px;
+  color: var(--good);
+  font-weight: 600;
+}
+
+/* Per-exercise set log, styled like the admin's .data-table: a real header
+   row + tight aligned columns instead of wrapped chips, so weight/reps/RPE
+   read the same way a coach's table does. */
+.training-set-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  font-size: 0.8rem;
+}
+
+.training-set-table th {
+  text-align: center;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--steel);
+  padding: 0 4px 6px;
+}
+
+.training-set-table th:first-child,
+.training-set-table td:first-child {
+  text-align: left;
+}
+
+.training-set-table td {
+  padding: 6px 4px;
+  border-top: 1px solid var(--border);
+  vertical-align: middle;
+  text-align: center;
+}
+
+.training-set-cell-num {
+  font-weight: 700;
+  color: var(--steel);
+  width: 26px;
+}
+
+.training-set-cell-action {
+  width: 44px;
+  color: var(--good);
+  font-weight: 700;
+}
+
+.training-set-row-active td {
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+
+.training-set-table input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 4px;
+  font-size: 0.76rem;
+  text-align: center;
+}
+
+/* ---- Client Tracker tab: category containers + metric rows ----
+   Same accordion shell as .training-day-card (title/subtitle/status
+   pill/chevron), so "Daily check-in" and "Weekly check-in" read as two
+   categories you open, each holding a clean label/input row list instead
+   of a flat wrap of unlabeled inputs. */
+.checkin-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 12px;
+  background: white;
+  overflow: hidden;
+}
+
+.checkin-card-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: none;
+  background: none;
+  padding: 14px 16px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.checkin-card-toggle:hover {
+  background: var(--paper-raised);
+}
+
+.checkin-card-title {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.checkin-card-subtitle {
+  color: var(--steel);
+  font-size: 0.8rem;
+  margin-top: 1px;
+}
+
+.checkin-card-toggle-right {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkin-status-pill {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--steel);
+  background: var(--paper-raised);
+  border-radius: 999px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
+.checkin-status-pill.done {
+  color: var(--good);
+  background: color-mix(in srgb, var(--good) 14%, white);
+}
+
+.checkin-chevron {
+  flex-shrink: 0;
+  display: flex;
+  color: var(--steel);
+  transition: transform 0.15s ease;
+}
+
+.checkin-chevron.open {
+  transform: rotate(180deg);
+}
+
+.checkin-card-body {
+  border-top: 1px solid var(--border);
+  padding: 4px 16px 16px;
+}
+
+.tracker-metric-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.tracker-metric-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+  border-top: 1px solid var(--border);
+}
+
+.tracker-metric-row:first-child {
+  border-top: none;
+  padding-top: 14px;
+}
+
+.tracker-metric-row label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.tracker-metric-unit {
+  color: var(--steel);
+  font-weight: 400;
+}
+
+.tracker-metric-row input {
+  width: 96px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+  text-align: right;
+}
+
+.tracker-metric-form .btn {
+  margin-top: 14px;
+  align-self: flex-start;
+}
+
+/* ---- Chat (shared by client + coach) ---- */
+
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chat-bubble-row {
+  display: flex;
+}
+
+.chat-bubble-row.mine {
+  justify-content: flex-end;
+}
+
+.chat-bubble-row.theirs {
+  justify-content: flex-start;
+}
+
+.chat-bubble {
+  max-width: 78%;
+  border-radius: 14px;
+  padding: 9px 12px;
+  background: white;
+  border: 1px solid var(--border);
+}
+
+.chat-bubble-row.mine .chat-bubble {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.chat-bubble-text {
+  font-size: 0.88rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-bubble-time {
+  font-size: 0.68rem;
+  opacity: 0.65;
+  margin-top: 3px;
+}
+
+.chat-compose-form {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.chat-compose-form input[type="text"] {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+}
+
+.chat-attach-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--steel);
+  cursor: pointer;
+}
+
+.chat-attach-btn:hover {
+  background: var(--paper-raised);
+  color: var(--ink);
+}
+
+.chat-attach-input {
+  display: none;
+}
+
+.chat-bubble-media {
+  padding: 5px;
+}
+
+.chat-bubble-img,
+.chat-bubble-video {
+  display: block;
+  width: 100%;
+  max-width: 220px;
+  border-radius: 10px;
+  margin-bottom: 4px;
+}
+
+.chat-bubble-video {
+  background: #000;
+}
+
+/* ---- Client Nutrition tab ---- */
+
+.nutrition-target-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  padding: 16px;
+}
+
+.nutrition-target-kcal {
+  font-size: 1.7rem;
+  font-weight: 800;
+}
+
+.nutrition-target-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.nutrition-target-grid > div {
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 6px;
+  background: var(--paper-raised);
+}
+
+.nutrition-target-value {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.nutrition-target-label {
+  color: var(--steel);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+
+.nutrition-target-water {
+  margin-top: 12px;
+  font-size: 0.85rem;
+  color: var(--steel);
+}
+
+.supplement-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.supplement-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: white;
+  padding: 10px 14px;
+}
+
+.supplement-row-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.supplement-row-detail {
+  flex-shrink: 0;
+  color: var(--steel);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: right;
+}
+
+/* ---- Client Settings tab ---- */
+
+.settings-profile-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  padding: 16px;
+}
+
+.settings-avatar {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 800;
+  font-family: var(--font-serif);
+}
+
+.settings-profile-name {
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.settings-profile-sub {
+  color: var(--steel);
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  overflow: hidden;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 14px;
+  border-top: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+
+.settings-row:first-child {
+  border-top: none;
+}
+
+.settings-row-title {
+  font-weight: 600;
+}
+
+.settings-row-sub {
+  color: var(--steel);
+  font-size: 0.76rem;
+  margin-top: 1px;
+}
+
+.settings-row-value {
+  flex-shrink: 0;
+  color: var(--steel);
+  font-size: 0.82rem;
+}
+
+.settings-toggle {
+  flex-shrink: 0;
+  width: 40px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--border);
+  position: relative;
+  display: inline-block;
+}
+
+.settings-toggle-on {
+  background: var(--accent);
+}
+
+.settings-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: white;
+  transition: left 0.15s ease;
+}
+
+.settings-toggle-on .settings-toggle-knob {
+  left: 18px;
+}
+
+.settings-logout-btn {
+  width: 100%;
+  text-align: center;
+  background: none;
+  border: none;
+  padding: 14px;
+  margin-top: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--accent-plate);
+}
+
+.settings-logout-btn:hover {
+  text-decoration: underline;
 }

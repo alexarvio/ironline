@@ -1,0 +1,370 @@
+import fs from "fs";
+import path from "path";
+
+// Pure-JS JSON file store — no native module, no compiler, works identically
+// on any machine. Swap this file for a real database later without touching
+// any page or server action; queries.ts is the only other file that reads it.
+
+// In production this points at a mounted persistent volume (e.g. /data) so
+// the JSON store and uploaded files survive redeploys/restarts; unset in
+// local dev, so both default to the project directory as before.
+export const DATA_DIR = process.env.DATA_DIR ?? process.cwd();
+const DB_PATH = path.join(DATA_DIR, "ironline.json");
+
+type Client = { id: number; name: string };
+type Exercise = { id: number; name: string; muscle_tags: string | null; video_url: string | null };
+type ProgramDay = {
+  id: number;
+  client_id: number;
+  week_number: number;
+  day_of_week: number;
+  label: string | null;
+  status: "draft" | "published";
+};
+type WorkoutAssignment = {
+  id: number;
+  program_day_id: number;
+  exercise_id: number;
+  order_index: number;
+  sets: number;
+  reps: string;
+  target_weight_kg: number | null;
+  rpe_target: number | null;
+  rest_seconds: number | null;
+  tempo: string | null;
+  notes: string | null;
+};
+type SetLog = {
+  id: number;
+  workout_assignment_id: number;
+  set_number: number;
+  weight_kg: number | null;
+  reps: number | null;
+  rpe_actual: number | null;
+  logged_at: string;
+};
+type Invoice = {
+  id: number;
+  client_id: number;
+  description: string;
+  amount: number;
+  status: "unpaid" | "sent" | "paid" | "due";
+  created_at: string;
+  updated_at: string;
+};
+
+type MealMacros = { protein: number | null; fats: number | null; carbs: number | null };
+type NutritionPlan = {
+  client_id: number;
+  maintenance_kcal: number | null;
+  ebf: number | null;
+  training_day_meals: MealMacros[];
+  rest_day_meals: MealMacros[];
+  vitamins: Record<string, { quantity: string; timing: string }>;
+  other: Record<string, { amount: string; timing: string }>;
+  supplements: Record<string, { quantity: string; timing: string }>;
+  coach_notes: string;
+};
+
+// Coach-defined check-in columns (default: Weight/kg, Waist/cm) — the coach
+// decides what the client is asked to log at each check-in, and can rename,
+// add, or remove columns at any time. Values are keyed by field + date so
+// adding/removing a column never touches historical data for the others.
+type MeasurementFieldDef = {
+  id: number;
+  client_id: number;
+  name: string;
+  unit: string;
+  order_index: number;
+};
+type MeasurementValue = {
+  id: number;
+  client_id: number;
+  field_id: number;
+  date: string;
+  value: number | null;
+};
+type SkinfoldEntry = {
+  id: number;
+  client_id: number;
+  date: string;
+  site: string;
+  reading_mm: number | null;
+};
+
+type MetricDefinition = {
+  id: number;
+  client_id: number;
+  category: string;
+  name: string;
+  unit: string;
+  frequency: "daily" | "weekly";
+  order_index: number;
+};
+type MetricEntry = {
+  id: number;
+  metric_definition_id: number;
+  period: string; // exact date for a daily metric; Monday of the week for a weekly one
+  value: number | null;
+};
+
+// Coach-level (not tied to any one client) reusable metric presets — build a
+// category + its metrics once (e.g. "Stress": Work/Private/Social stress),
+// then apply the whole set to any client's Daily/Weekly Tracker in one click
+// instead of retyping it from scratch every time a new client signs up.
+type MetricTemplateCategory = {
+  id: number;
+  name: string;
+  frequency: "daily" | "weekly";
+  order_index: number;
+};
+type MetricTemplateItem = {
+  id: number;
+  template_category_id: number;
+  name: string;
+  unit: string;
+  order_index: number;
+};
+
+type PhotoSlot = {
+  id: number;
+  client_id: number;
+  label: string;
+  order_index: number;
+};
+// "period" is the start-date of whatever bucket the coach's chosen upload
+// cadence puts this photo in — a Monday for weekly/biweekly, the 1st of the
+// month for monthly. See photoPeriodFor() in queries.ts.
+type PhotoUpload = {
+  id: number;
+  slot_id: number;
+  period: string;
+  file_path: string; // public URL path, e.g. /uploads/progress/1/3/2026-08-24.jpg
+  uploaded_at: string;
+};
+
+// How often a client gets a fresh, empty photo sheet to fill in — one
+// setting per client, applying to all of their photo slots at once. Default
+// is weekly when no row exists yet (mirrors every other coach-configurable
+// default in this file).
+type PhotoCadence = "weekly" | "biweekly" | "monthly";
+type PhotoSettings = {
+  client_id: number;
+  cadence: PhotoCadence;
+};
+
+// The coach's written feedback on one period's photo set — shape, what's
+// strong, what to improve, next steps. One per (client, period); shown to
+// both the coach (editable, in the expanded row) and the client (read-only,
+// in their own progress history).
+type PhotoPeriodNote = {
+  client_id: number;
+  period: string;
+  shape: string;
+  strengths: string;
+  improvements: string;
+  next_steps: string;
+};
+
+// Start Page: the coach's "Startpagina" tab — member info, coaching info, and goals.
+type ClientProfile = {
+  client_id: number;
+  birthdate: string | null;
+  height_cm: number | null;
+  starting_weight_kg: number | null;
+  coaching_start_date: string | null;
+  current_week: string;
+  goal_phase: string;
+  goal_date: string | null;
+  check_in_day: string | null;
+  steps_goal: string;
+  cardio_goal: string;
+  training_goal: string;
+  water_goal: string;
+};
+type ClientGoal = {
+  id: number;
+  client_id: number;
+  term: "short" | "long";
+  text: string;
+  done: boolean;
+  order_index: number;
+};
+
+// Meetings: coach-scheduled check-in calls, each with its own running notes log.
+type Meeting = {
+  id: number;
+  client_id: number;
+  date: string;
+  time: string;
+  duration_minutes: number;
+  topic: string;
+  status: "scheduled" | "completed" | "canceled";
+};
+type MeetingNote = {
+  id: number;
+  meeting_id: number;
+  text: string;
+  created_at: string;
+};
+
+// Per-client customization of the Training exercise table: which columns
+// show, in what order, and whether they're a built-in (backed by a real
+// WorkoutAssignment field) or a coach-defined custom column (backed by
+// AssignmentCustomValue). Mirrors the same coach-configurable-fields pattern
+// used for Measurements and Trackers elsewhere in the app.
+type TrainingColumn = {
+  id: number;
+  client_id: number;
+  key: string; // builtin: "sets"|"reps"|"weight_goal"|"rpe"|"tempo"|"notes"; custom: "custom_<id>"
+  label: string;
+  kind: "builtin" | "custom";
+  visible: boolean;
+  order_index: number;
+};
+type AssignmentCustomValue = {
+  id: number;
+  workout_assignment_id: number;
+  column_id: number;
+  value: string;
+};
+
+// A simple message thread between one client and their coach — no threads,
+// no attachments, just text in order. "sender" is which side wrote it, so
+// the UI can align/color bubbles without a separate participants table.
+type ChatMessage = {
+  id: number;
+  client_id: number;
+  sender: "client" | "coach";
+  text: string;
+  media_path: string | null;
+  media_type: "image" | "video" | null;
+  created_at: string;
+};
+
+// A lightweight log of coach-side changes worth surfacing to the client —
+// "your coach updated your nutrition plan" and the like — so the client
+// Home tab can show a "last update from your coach" line without the
+// client having to notice a diff themselves. Deliberately just a flat
+// message string per entry (no structured "what changed") since the Home
+// tab only ever shows the single latest one.
+type CoachActivity = {
+  id: number;
+  client_id: number;
+  message: string;
+  created_at: string;
+};
+
+type Data = {
+  clients: Client[];
+  exercises: Exercise[];
+  program_days: ProgramDay[];
+  workout_assignments: WorkoutAssignment[];
+  set_logs: SetLog[];
+  invoices: Invoice[];
+  nutrition_plans: NutritionPlan[];
+  measurement_fields: MeasurementFieldDef[];
+  measurement_values: MeasurementValue[];
+  skinfold_entries: SkinfoldEntry[];
+  metric_definitions: MetricDefinition[];
+  metric_entries: MetricEntry[];
+  metric_template_categories: MetricTemplateCategory[];
+  metric_template_items: MetricTemplateItem[];
+  photo_slots: PhotoSlot[];
+  photo_uploads: PhotoUpload[];
+  photo_settings: PhotoSettings[];
+  photo_period_notes: PhotoPeriodNote[];
+  client_profiles: ClientProfile[];
+  client_goals: ClientGoal[];
+  meetings: Meeting[];
+  meeting_notes: MeetingNote[];
+  training_columns: TrainingColumn[];
+  assignment_custom_values: AssignmentCustomValue[];
+  chat_messages: ChatMessage[];
+  coach_activity: CoachActivity[];
+  _seq: Record<string, number>;
+};
+
+function emptyData(): Data {
+  return {
+    clients: [],
+    exercises: [],
+    program_days: [],
+    workout_assignments: [],
+    set_logs: [],
+    invoices: [],
+    nutrition_plans: [],
+    measurement_fields: [],
+    measurement_values: [],
+    skinfold_entries: [],
+    metric_definitions: [],
+    metric_entries: [],
+    metric_template_categories: [],
+    metric_template_items: [],
+    photo_slots: [],
+    photo_uploads: [],
+    photo_settings: [],
+    photo_period_notes: [],
+    client_profiles: [],
+    client_goals: [],
+    meetings: [],
+    meeting_notes: [],
+    training_columns: [],
+    assignment_custom_values: [],
+    chat_messages: [],
+    coach_activity: [],
+    _seq: {},
+  };
+}
+
+function load(): Data {
+  if (!fs.existsSync(DB_PATH)) return emptyData();
+  try {
+    const parsed = JSON.parse(fs.readFileSync(DB_PATH, "utf-8")) as Partial<Data>;
+    // Fill in any fields added since this file was last written.
+    return { ...emptyData(), ...parsed };
+  } catch {
+    return emptyData();
+  }
+}
+
+function save(data: Data) {
+  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+}
+
+// Reuse one in-memory copy across hot reloads in dev, always synced to disk on write.
+const globalForDb = globalThis as unknown as { _jsonDb?: Data };
+if (!globalForDb._jsonDb) globalForDb._jsonDb = load();
+
+function nextId(table: string): number {
+  const data = globalForDb._jsonDb!;
+  data._seq[table] = (data._seq[table] ?? 0) + 1;
+  return data._seq[table];
+}
+
+export function getData(): Data {
+  const data = globalForDb._jsonDb!;
+  // Self-heal: a dev server keeps this object in memory across hot reloads
+  // (Node's globalThis survives module swaps), so a field added to the
+  // schema after the server started would otherwise be missing until a full
+  // restart. Patch in any defaults that aren't there yet, every call — cheap,
+  // and it means "add a field, sync the file, refresh the browser" always
+  // works without asking anyone to restart their dev server.
+  const defaults = emptyData();
+  (Object.keys(defaults) as (keyof Data)[]).forEach((key) => {
+    if (data[key] === undefined) {
+      (data as Record<keyof Data, unknown>)[key] = defaults[key];
+    }
+  });
+  return data;
+}
+
+export function persist() {
+  save(globalForDb._jsonDb!);
+}
+
+export function allocId(table: string): number {
+  return nextId(table);
+}
+
+export const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
