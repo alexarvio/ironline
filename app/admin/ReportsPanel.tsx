@@ -1,4 +1,4 @@
-import { getClient, listClientReports, listReportTemplates, listReportTemplateSections, localDateStr } from "../lib/queries";
+import { getClient, listClientReports, listMetricDefinitions, listReportTemplates, listReportTemplateSections, localDateStr } from "../lib/queries";
 import GenerateReportForm from "./GenerateReportForm";
 import ReportCard from "./ReportCard";
 
@@ -17,22 +17,30 @@ export default function ReportsPanel({ clientId }: { clientId: number }) {
   const reports = listClientReports(clientId);
   const { start, end } = defaultPeriod();
 
+  // Scoped to what THIS client actually has deployed (not every metric
+  // across every client) — suggesting a metric they don't have would just
+  // generate a report section that says "not set up for this client".
+  const clientMetricNames = [
+    ...new Set([...listMetricDefinitions(clientId, "daily"), ...listMetricDefinitions(clientId, "weekly")].map((d) => d.name)),
+  ];
+
   return (
     <div>
       <p className="empty-note" style={{ marginBottom: 18 }}>
-        Generate a report from a template, review the AI-written draft, edit if needed, then
-        approve and send — nothing reaches the client until you send it.
+        Generate a report from a saved template, or build one from scratch for just this client —
+        review the AI-written draft, edit if needed, then approve and send. Nothing reaches the
+        client until you send it.
       </p>
 
       <div className="nutrition-table-wrap builder-card">
         <h3 className="builder-pill-heading">Generate a report</h3>
-        {templates.length === 0 ? (
-          <p className="empty-note">
-            No report templates yet — build one first from Report Templates in the sidebar.
-          </p>
-        ) : (
-          <GenerateReportForm clientId={clientId} templates={templates} defaultPeriodStart={start} defaultPeriodEnd={end} />
-        )}
+        <GenerateReportForm
+          clientId={clientId}
+          templates={templates}
+          knownMetricNames={clientMetricNames}
+          defaultPeriodStart={start}
+          defaultPeriodEnd={end}
+        />
       </div>
 
       {reports.length === 0 ? (

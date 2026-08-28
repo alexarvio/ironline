@@ -14,14 +14,23 @@ export default function ComboBoxInput({
   placeholder,
   defaultValue = "",
   required,
+  onChange,
 }: {
   name: string;
   options: string[];
   placeholder?: string;
   defaultValue?: string;
   required?: boolean;
+  // Optional — most callers just read the value from FormData on submit.
+  // Only needed when a parent wants the value outside of a form submit
+  // (e.g. building up a list client-side before the form is ever submitted).
+  onChange?: (value: string) => void;
 }) {
-  const [value, setValue] = useState(defaultValue);
+  const [value, setValueState] = useState(defaultValue);
+  const setValue = (v: string) => {
+    setValueState(v);
+    onChange?.(v);
+  };
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);

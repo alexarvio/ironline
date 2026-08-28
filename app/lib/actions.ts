@@ -78,6 +78,7 @@ import {
   weekStart,
 } from "./queries";
 import { writeReportNarrative } from "./reportAi";
+import type { ReportSectionType } from "./reportSectionTypes";
 
 const CLIENT_ID = 1;
 const WEEK = 1;
@@ -698,43 +699,71 @@ export async function removeReportTemplateSectionAction(formData: FormData) {
 // The one action that calls the AI — pulls real data for the period, hands
 // it to writeReportNarrative (falls back to a plain templated summary if
 // ANTHROPIC_API_KEY isn't set), and stores the result as a new draft.
+// Two ways in: pick a saved template (templateId), or skip templates
+// entirely and build a one-off section list right here for this client
+// (customSections, a JSON array from GenerateReportForm's "Custom" mode) —
+// a coach with no templates yet, or a client who just needs one different
+// report, isn't blocked on building a template first.
 export async function generateReportAction(formData: FormData) {
   const clientId = Number(formData.get("clientId"));
-  const templateId = Number(formData.get("templateId"));
   const periodStart = String(formData.get("periodStart") || "");
   const periodEnd = String(formData.get("periodEnd") || "");
-  if (!clientId || !templateId || !periodStart || !periodEnd) return;
-
-  const template = getReportTemplate(templateId);
   const client = getClient(clientId);
-  if (!template || !client) return;
+  if (!clientId || !client || !periodStart || !periodEnd) return;
 
-  // Per-client customization for this one generation: the coach can drop
-  // any of the template's sections and/or bolt on one extra tracker metric
-  // that isn't in the shared template — without editing the template itself.
-  // Checkboxes are checked by default in the UI, so an empty includedIds
-  // (e.g. a non-JS form submit) falls back to running every section.
-  const includedIds = formData.getAll("sectionId").map(Number);
-  const allSections = listReportTemplateSections(templateId);
-  const sectionsToRun = includedIds.length > 0 ? allSections.filter((s) => includedIds.includes(s.id)) : allSections;
+  const templateIdRaw = formData.get("templateId");
+  const templateId = templateIdRaw ? Number(templateIdRaw) : null;
+  const customSectionsRaw = String(formData.get("customSections") || "");
 
-  const extraMetricName = String(formData.get("extraMetricName") || "").trim();
-  if (extraMetricName) {
-    const extraLabel = String(formData.get("extraMetricLabel") || "").trim() || extraMetricName;
-    sectionsToRun.push({
-      id: -1,
-      template_id: templateId,
-      type: "tracker_metric",
-      label: extraLabel,
-      metric_name: extraMetricName,
-      order_index: sectionsToRun.length,
-    });
+  let sectionsToRun: { id: number; template_id: number; type: ReportSectionType; label: string; metric_name: string | null; order_index: number }[] = [];
+  let templateName = "Custom";
+
+  if (templateId) {
+    const template = getReportTemplate(templateId);
+    if (!template) return;
+    templateName = template.name;
+
+    // Per-client customization for this one generation: the coach can drop
+    // any of the template's sections and/or bolt on one extra tracker metric
+    // that isn't in the shared template — without editing the template itself.
+    // Checkboxes are checked by default in the UI, so an empty includedIds
+    // (e.g. a non-JS form submit) falls back to running every section.
+    const includedIds = formData.getAll("sectionId").map(Number);
+    const allSections = listReportTemplateSections(templateId);
+    sectionsToRun = includedIds.length > 0 ? allSections.filter((s) => includedIds.includes(s.id)) : allSections;
+
+    const extraMetricName = String(formData.get("extraMetricName") || "").trim();
+    if (extraMetricName) {
+      const extraLabel = String(formData.get("extraMetricLabel") || "").trim() || extraMetricName;
+      sectionsToRun.push({
+        id: -1,
+        template_id: templateId,
+        type: "tracker_metric",
+        label: extraLabel,
+        metric_name: extraMetricName,
+        order_index: sectionsToRun.length,
+      });
+    }
+  } else if (customSectionsRaw) {
+    try {
+      const parsed = JSON.parse(customSectionsRaw) as { type: ReportSectionType; label: string; metricName: string | null }[];
+      sectionsToRun = parsed.map((s, i) => ({
+        id: -1 - i,
+        template_id: 0,
+        type: s.type,
+        label: s.label,
+        metric_name: s.metricName || null,
+        order_index: i,
+      }));
+    } catch {
+      return;
+    }
   }
   if (sectionsToRun.length === 0) return;
 
   const sectionsData = computeReportSections(clientId, sectionsToRun, periodStart, periodEnd);
   const { summary, aiGenerated } = await writeReportNarrative(client.name, periodStart, periodEnd, sectionsData);
-  createDraftReport(clientId, templateId, template.name, periodStart, periodEnd, summary, aiGenerated, sectionsData);
+  createDraftReport(clientId, templateId, templateName, periodStart, periodEnd, summary, aiGenerated, sectionsData);
   revalidatePath("/admin");
 }
 
