@@ -39,7 +39,11 @@ function xTickIndices(pointCount: number, maxTicks = 5) {
   return [...new Set(indices)];
 }
 
-export function LineChart({ points }: { points: Point[] }) {
+// yRange fixes the axis to a known bounded scale (e.g. [0, 10] for a /10
+// rating) instead of auto-fitting to whatever the data happens to span —
+// without it, a metric that's consistently rated 8-10 renders as a
+// dramatic-looking sawtooth when the real story is "always near the top".
+export function LineChart({ points, yRange }: { points: Point[]; yRange?: [number, number] }) {
   const width = 720;
   const height = 240;
   const paddingTop = 20;
@@ -53,9 +57,9 @@ export function LineChart({ points }: { points: Point[] }) {
   const dataMax = values.length > 0 ? Math.max(...values) : 1;
   const dataMin = values.length > 0 ? Math.min(...values) : 0;
 
-  const ticks = niceTicks(dataMin, dataMax);
-  const axisMin = Math.min(...ticks, dataMin);
-  const axisMax = Math.max(...ticks, dataMax);
+  const ticks = yRange ? niceTicks(yRange[0], yRange[1]) : niceTicks(dataMin, dataMax);
+  const axisMin = yRange ? yRange[0] : Math.min(...ticks, dataMin);
+  const axisMax = yRange ? yRange[1] : Math.max(...ticks, dataMax);
   const span = axisMax - axisMin || 1;
 
   const yFor = (v: number) => paddingTop + plotHeight - ((v - axisMin) / span) * plotHeight;

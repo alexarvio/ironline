@@ -10,6 +10,7 @@ import {
 import PhotoSlotRow from "./PhotoSlotRow";
 import PhotoCadenceSelect from "./PhotoCadenceSelect";
 import PhotoPeriodRow from "./PhotoPeriodRow";
+import PhotoCompareView from "./PhotoCompareView";
 
 const PERIOD_UNIT = {
   weekly: "Week",
@@ -61,6 +62,18 @@ export default function ProgressPicturesPanel({ clientId }: { clientId: number }
           </div>
         )}
       </div>
+
+      {slots.length >= 1 && periods.length >= 2 && (
+        <PhotoCompareView
+          periodsData={[...periods]
+            .reverse() // listPhotoPeriods is newest-first; compare wants oldest-first so "Compare" defaults to Week 1
+            .map((period) => ({
+              period,
+              label: `${PERIOD_UNIT[cadence]} ${periodIndex[period] ?? "?"}`,
+              photos: slots.map((slot) => ({ slotId: slot.id, label: slot.label, src: photoFor(slot.id, period) })),
+            }))}
+        />
+      )}
 
       {slots.length === 0 ? (
         <p className="empty-note">No photo slots defined yet — add one above.</p>

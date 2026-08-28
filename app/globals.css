@@ -523,11 +523,15 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 .nutrition-table-wrap {
   margin-bottom: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
 }
 
 .nutrition-table-wrap h3 {
   font-size: 0.85rem;
   margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .computed-cell {
@@ -748,6 +752,54 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   font-size: 0.76rem;
   font-weight: 600;
   text-align: center;
+}
+
+/* ---- Progress pictures: compare any two check-ins side by side ---- */
+
+.photo-compare-controls {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.photo-compare-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--steel);
+}
+
+.photo-compare-controls select {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: white;
+  font-size: 0.85rem;
+  color: var(--ink);
+}
+
+.photo-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.photo-compare-pair {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.photo-compare-slot-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.photo-compare-images {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
 }
 
 .photo-upload-box {

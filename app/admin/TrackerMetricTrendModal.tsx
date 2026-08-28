@@ -35,6 +35,12 @@ export default function TrackerMetricTrendModal({
   points: Point[];
   onClose: () => void;
 }) {
+  // A unit like "/10" or "/5" is a bounded rating scale — fix the y-axis to
+  // its full range (0 to N) rather than auto-fitting to the data, so a
+  // consistently high or low rating doesn't render as a misleading sawtooth.
+  const boundedMatch = /^\/(\d+(\.\d+)?)$/.exec(unit.trim());
+  const yRange: [number, number] | undefined = boundedMatch ? [0, Number(boundedMatch[1])] : undefined;
+
   const ranges = RANGES_BY_FREQUENCY[frequency];
   const [range, setRange] = useState<RangeKey>(frequency === "daily" ? "month" : "all");
   const [customFrom, setCustomFrom] = useState(points[0]?.date ?? "");
@@ -98,7 +104,7 @@ export default function TrackerMetricTrendModal({
         {filtered.length === 0 ? (
           <div className="graph-empty">No entries logged in this range yet.</div>
         ) : (
-          <LineChart points={filtered} />
+          <LineChart points={filtered} yRange={yRange} />
         )}
       </div>
     </div>,
