@@ -44,7 +44,7 @@ export default function TrackerPanel({
         {frequency === "daily"
           ? "Build whatever daily check-in metrics make sense for this client — sleep hours, water in liters, steps, a 1-5 energy rating, anything. Each metric has its own unit."
           : "Same idea, logged once a week instead of daily — good for slower-moving check-ins like stress, recovery, or overall wellbeing."}{" "}
-        Nothing here is a fixed template — add or remove metrics for this client any time.
+        Nothing here is a fixed preset — add or remove metrics for this client any time.
       </p>
 
       <div className="nutrition-table-wrap builder-card">
@@ -55,7 +55,7 @@ export default function TrackerPanel({
             <input type="hidden" name="clientId" value={clientId} />
             <select name="templateCategoryId" defaultValue="">
               <option value="" disabled>
-                Apply a saved template…
+                Apply a saved preset…
               </option>
               {templates.map((t) => (
                 <option key={t.id} value={t.id}>
