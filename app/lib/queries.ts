@@ -1451,7 +1451,10 @@ export function getLatestWeight(clientId: number): number | null {
   const values = getMeasurementValues([weightField.id])
     .filter((v) => v.value != null)
     .sort((a, b) => (a.date < b.date ? -1 : 1));
-  return values.length > 0 ? values[values.length - 1].value : null;
+  const latest = values.length > 0 ? values[values.length - 1].value : null;
+  // Round away float noise (e.g. 71.2 - 0.4 === 70.79999999999999) so the UI
+  // never shows a raw binary-floating-point artifact.
+  return latest != null ? Math.round(latest * 10) / 10 : null;
 }
 
 export type ClientGoal = {

@@ -31,6 +31,20 @@ if (process.env.SKIP_SEED !== "1" && !fs.existsSync(marker)) {
   console.log("[start-server] Existing data found, skipping seed.");
 }
 
+// Second-stage, separately-guarded enrichment pass (added after the initial
+// seed was already deployed) — adds richer demo data to Jordan Blake and Sam
+// Rivera without re-running or duplicating the first stage. Runs once ever,
+// same marker-file pattern as above.
+const lightMarker = path.join(DATA_DIR, ".seeded-light-v2");
+if (process.env.SKIP_SEED !== "1" && !fs.existsSync(lightMarker)) {
+  console.log("[start-server] Enriching light demo clients...");
+  run("npx", ["tsx", "scripts/enrich-light-clients.ts"]);
+  fs.writeFileSync(lightMarker, new Date().toISOString());
+  console.log("[start-server] Light client enrichment complete.");
+} else {
+  console.log("[start-server] Light client data already enriched, skipping.");
+}
+
 const result = spawnSync("npx", ["next", "start"], { stdio: "inherit", shell: true });
 if (result.error) throw result.error;
 process.exit(result.status ?? 0);
