@@ -99,6 +99,43 @@ export default function HomeHub({
         {goalNote && <div className="home-greeting-goal">{goalNote}</div>}
       </div>
 
+      {latestReport && (
+        <section className="home-section">
+          <h3 className="home-section-title">Progress report</h3>
+          <div className="upcoming-card" style={{ flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
+            <div className="upcoming-title">
+              {latestReport.periodStart} – {latestReport.periodEnd}
+            </div>
+            <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{latestReport.summary}</p>
+            {latestReport.sections
+              .filter((s) => (s.series && s.series.length >= 2) || s.seriesByField)
+              .map((s, i) => (
+                <div key={i} style={{ width: "100%" }}>
+                  <div className="exercise-meta" style={{ marginBottom: 4 }}>
+                    {s.label}
+                  </div>
+                  {s.series && s.series.length >= 2 && (
+                    <div className="report-section-chart">
+                      <LineChart points={s.series} />
+                    </div>
+                  )}
+                  {s.seriesByField &&
+                    Object.entries(s.seriesByField).map(([fieldName, { points }]) => (
+                      <div key={fieldName} style={{ marginBottom: 8 }}>
+                        <div className="exercise-meta" style={{ marginBottom: 4 }}>
+                          {fieldName}
+                        </div>
+                        <div className="report-section-chart">
+                          <LineChart points={points} />
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              ))}
+          </div>
+        </section>
+      )}
+
       <section className="home-section">
         <h3 className="home-section-title">This week</h3>
         <div className={`home-recap-grid${weightTrendLabel ? " home-recap-grid-3" : ""}`}>
@@ -158,43 +195,6 @@ export default function HomeHub({
           </div>
         )}
       </section>
-
-      {latestReport && (
-        <section className="home-section">
-          <h3 className="home-section-title">Progress report</h3>
-          <div className="upcoming-card" style={{ flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
-            <div className="upcoming-title">
-              {latestReport.periodStart} – {latestReport.periodEnd}
-            </div>
-            <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{latestReport.summary}</p>
-            {latestReport.sections
-              .filter((s) => (s.series && s.series.length >= 2) || s.seriesByField)
-              .map((s, i) => (
-                <div key={i} style={{ width: "100%" }}>
-                  <div className="exercise-meta" style={{ marginBottom: 4 }}>
-                    {s.label}
-                  </div>
-                  {s.series && s.series.length >= 2 && (
-                    <div className="report-section-chart">
-                      <LineChart points={s.series} />
-                    </div>
-                  )}
-                  {s.seriesByField &&
-                    Object.entries(s.seriesByField).map(([fieldName, { points }]) => (
-                      <div key={fieldName} style={{ marginBottom: 8 }}>
-                        <div className="exercise-meta" style={{ marginBottom: 4 }}>
-                          {fieldName}
-                        </div>
-                        <div className="report-section-chart">
-                          <LineChart points={points} />
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              ))}
-          </div>
-        </section>
-      )}
 
       <section className="home-section">
         <h3 className="home-section-title">Next meeting</h3>
