@@ -4,6 +4,10 @@ import { getClient } from "../lib/queries";
 
 const CLIENT_ID = 1;
 
+// See app/client/page.tsx — same reasoning, without this the page freezes
+// whatever data existed at build time instead of reading it per request.
+export const dynamic = "force-dynamic";
+
 export default function CoachPage() {
   const client = getClient(CLIENT_ID);
 

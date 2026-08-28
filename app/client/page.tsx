@@ -42,6 +42,11 @@ import ChatPanel from "../components/ChatPanel";
 import AppShell, { AppTab } from "./AppShell";
 import { DumbbellIcon, GearIcon, HomeIcon, LeafIcon } from "../components/icons";
 
+// Reads live from the JSON store on every request — without this, Next
+// statically prerenders this page at build time (before any real data
+// exists) and freezes that empty snapshot in the deployed build forever.
+export const dynamic = "force-dynamic";
+
 const PERIOD_UNIT = {
   weekly: "Week",
   biweekly: "Check-in",
