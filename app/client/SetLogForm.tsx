@@ -14,15 +14,20 @@ export default function SetLogForm({
   targetWeight,
   targetReps,
   targetRpe,
+  showTempoColumn,
 }: {
   assignmentId: number;
   nextSetNumber: number;
   // The coach's target for this exercise, shown as placeholder text in each
   // input so the client sees what to aim for right where they're typing —
-  // not just once in a badge above the table.
+  // not just once in the goal row above.
   targetWeight?: number | null;
   targetReps?: string | null;
   targetRpe?: number | null;
+  // Tempo isn't logged per set (there's no tempo_actual), but when the
+  // exercise's table has a Tempo column this row still needs a matching
+  // (blank) cell so columns stay aligned with the header/goal row above it.
+  showTempoColumn?: boolean;
 }) {
   const [pending, setPending] = useState(false);
   const formId = useId();
@@ -58,6 +63,7 @@ export default function SetLogForm({
           placeholder={targetRpe != null ? String(targetRpe) : "—"}
         />
       </td>
+      {showTempoColumn && <td>—</td>}
       <td className="training-set-cell-action">
         <form
           id={formId}

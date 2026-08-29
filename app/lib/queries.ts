@@ -214,21 +214,138 @@ export function listWeekNumbers(clientId: number): number[] {
 // they hit deploy, the client's default view flips to the new week. No
 // waiting for a date to roll over, no separate "make it live" step.
 export function getCurrentWeekNumber(clientId: number): number {
+  const deployed = getDeployedProgram(clientId);
+  if (deployed) return deployed.start_week + getProgramCurrentWeekIndex(deployed) - 1;
   const weeks = listWeekNumbers(clientId);
   if (weeks.length === 0) return 1;
   const publishedWeeks = weeks.filter((w) => getWeek(clientId, w).every((d) => d.status === "published"));
   return publishedWeeks.length > 0 ? Math.max(...publishedWeeks) : weeks[0];
 }
 
-// Copies one week's day labels + exercise assignments into another week
-// (creating its skeleton first) — used for both "duplicate to deploy next
-// week" and "add a new sheet from an existing one". Never copies set_logs,
-// so the new week always starts unlogged. If toWeek already has exercises,
-// this adds duplicates on top rather than overwriting — call only against
-// an empty/fresh week.
-export function duplicateWeek(clientId: number, fromWeek: number, toWeek: number) {
-  ensureWeekSkeleton(clientId, toWeek);
-  const fromDays = getWeek(clientId, fromWeek);
+// Every week_number the client has that's actually published — unlike
+// listWeekNumbers, this excludes a draft program's pre-created (empty,
+// unpublished) weeks, which would otherwise show up as a wall of empty
+// tabs in the client's own week switcher the moment a coach picks e.g. an
+// 8-week program length, well before deploying anything.
+export function listPublishedWeekNumbers(clientId: number): number[] {
+  return listWeekNumbers(clientId).filter((w) => getWeek(clientId, w).every((d) => d.status === "published"));
+}
+
+// ---- Training programs: a coach-named, fixed-length (total_weeks) block of
+// weeks — see the TrainingProgram doc comment in db.ts for the model. One
+// draft at a time per client (matches the admin UI, which only ever offers
+// "start a new program" when there isn't one already); any number of past
+// deployed programs can accumulate as a client progresses through them. ----
+
+export type TrainingProgram = {
+  id: number;
+  client_id: number;
+  name: string | null;
+  start_week: number;
+  total_weeks: number;
+  status: "draft" | "deployed";
+  deployed_at: string | null;
+  scheduled_at: string | null;
+};
+
+export function listPrograms(clientId: number): TrainingProgram[] {
+  return getData()
+    .training_programs.filter((p) => p.client_id === clientId)
+    .sort((a, b) => a.start_week - b.start_week);
+}
+
+export function getDeployedProgram(clientId: number): TrainingProgram | null {
+  const deployed = listPrograms(clientId).filter((p) => p.status === "deployed");
+  if (deployed.length === 0) return null;
+  return deployed.reduce((latest, p) => (p.start_week > latest.start_week ? p : latest));
+}
+
+export function getDraftProgram(clientId: number): TrainingProgram | null {
+  return listPrograms(clientId).find((p) => p.status === "draft") ?? null;
+}
+
+// A program's total_weeks internal position (1..total_weeks) that "now"
+// falls into, by real calendar weeks elapsed since it was deployed —
+// clamped to the program's actual length so it never points past the last
+// week (a program that's run its full course just stays parked on its
+// final week) or before the first.
+export function getProgramCurrentWeekIndex(program: TrainingProgram): number {
+  if (!program.deployed_at) return 1;
+  const start = weekStart(program.deployed_at.slice(0, 10));
+  const now = weekStart(localDateStr());
+  const diffDays = Math.round((new Date(`${now}T00:00:00`).getTime() - new Date(`${start}T00:00:00`).getTime()) / 86400000);
+  const index = Math.floor(diffDays / 7) + 1;
+  return Math.min(Math.max(index, 1), program.total_weeks);
+}
+
+// The label shown for one of this program's weeks — always "Week N" where N
+// is the position WITHIN the program (1..total_weeks), never the underlying
+// global week_number, so a client's second program starts back at "Week 1".
+export function programWeekLabel(program: TrainingProgram, weekNumber: number): string {
+  return `Week ${weekNumber - program.start_week + 1}`;
+}
+
+export function createProgram(clientId: number, name: string, totalWeeks: number, startWeek: number): TrainingProgram {
+  const data = getData();
+  const program: TrainingProgram = {
+    id: allocId("training_programs"),
+    client_id: clientId,
+    name: name.trim() || null,
+    start_week: startWeek,
+    total_weeks: totalWeeks,
+    status: "draft",
+    deployed_at: null,
+    scheduled_at: null,
+  };
+  data.training_programs.push(program);
+  persist();
+  for (let i = 0; i < totalWeeks; i++) ensureWeekSkeleton(clientId, startWeek + i);
+  return program;
+}
+
+export function renameProgram(programId: number, name: string) {
+  const data = getData();
+  const program = data.training_programs.find((p) => p.id === programId);
+  if (!program) return;
+  program.name = name.trim() || null;
+  persist();
+}
+
+export function deployProgram(programId: number) {
+  const data = getData();
+  const program = data.training_programs.find((p) => p.id === programId);
+  if (!program) return;
+  program.status = "deployed";
+  program.deployed_at = new Date().toISOString();
+  program.scheduled_at = null;
+  for (let i = 0; i < program.total_weeks; i++) publishWeek(program.client_id, program.start_week + i);
+  persist();
+  logCoachActivity(program.client_id, `Your coach published a new plan${program.name ? `: ${program.name}` : ""} — check it out`);
+}
+
+export function scheduleProgramDeploy(programId: number, scheduledAt: string | null) {
+  const data = getData();
+  const program = data.training_programs.find((p) => p.id === programId);
+  if (!program) return;
+  program.scheduled_at = scheduledAt;
+  persist();
+}
+
+// Deletes a draft program and every one of its (still-empty-or-not)
+// program_days — mirrors the old removeWeek's append-only-history stance:
+// only ever called on a draft, never a deployed program, so this can't
+// leave a gap the client would ever have seen.
+// Copies Week 1's day labels + exercise assignments into another week of
+// the same program (which must already have its skeleton) — it's the same
+// program, so every week starts as a copy of the template the coach
+// already built rather than a blank slate they'd have to rebuild N times.
+// Never copies set_logs, so the target week always starts unlogged. A
+// one-time copy at the moment a week is added, not a live link — editing
+// Week 1 afterward doesn't retroactively touch weeks already copied from it,
+// so a deliberately different deload/taper week elsewhere is never
+// silently overwritten.
+function copyWeekOneInto(clientId: number, startWeek: number, toWeek: number) {
+  const fromDays = getWeek(clientId, startWeek);
   const toDays = getWeek(clientId, toWeek);
   fromDays.forEach((fromDay) => {
     const toDay = toDays.find((d) => d.day_of_week === fromDay.day_of_week);
@@ -238,6 +355,47 @@ export function duplicateWeek(clientId: number, fromWeek: number, toWeek: number
       addExerciseToDay(toDay.id, a.exercise_id, a.sets, a.reps, a.target_weight_kg, a.rpe_target, a.tempo, a.notes);
     });
   });
+}
+
+// Grows (never shrinks — nothing here ever deletes a built week's content)
+// a draft program's length. Each newly-added week starts as a copy of
+// Week 1 (see copyWeekOneInto) rather than blank, so setting a program to
+// 12 weeks after building out Week 1 gives 12 working weeks to start
+// adjusting from, not 11 empty ones. Requesting a number no bigger than
+// the current length is just a no-op.
+export function updateProgramTotalWeeks(programId: number, requestedTotal: number) {
+  const data = getData();
+  const program = data.training_programs.find((p) => p.id === programId);
+  if (!program) return;
+  const newTotal = Math.max(program.total_weeks, Math.max(1, Math.floor(requestedTotal) || 1));
+  if (newTotal === program.total_weeks) return;
+  for (let i = program.total_weeks; i < newTotal; i++) {
+    const weekNumber = program.start_week + i;
+    ensureWeekSkeleton(program.client_id, weekNumber);
+    if (weekNumber !== program.start_week) copyWeekOneInto(program.client_id, program.start_week, weekNumber);
+  }
+  program.total_weeks = newTotal;
+  persist();
+}
+
+export function removeProgram(programId: number) {
+  const data = getData();
+  const program = data.training_programs.find((p) => p.id === programId);
+  if (!program) return;
+  for (let i = 0; i < program.total_weeks; i++) removeWeek(program.client_id, program.start_week + i);
+  data.training_programs = data.training_programs.filter((p) => p.id !== programId);
+  persist();
+}
+
+// Called once per request (from the root layout, so it runs regardless of
+// which route loads next) — deploys any program whose scheduled time has
+// passed, standing in for a push notification (via the coach_activity log
+// deployProgram writes) without needing any background infrastructure.
+export function applyDueProgramDeployments() {
+  const data = getData();
+  const now = new Date().toISOString();
+  const due = data.training_programs.filter((p) => p.status === "draft" && p.scheduled_at && p.scheduled_at <= now);
+  due.forEach((program) => deployProgram(program.id));
 }
 
 // Deletes an entire week (days + assignments + their logs). Weeks are
@@ -575,6 +733,75 @@ export function getRecentLogsForClient(clientId: number, limit = 20) {
         week_number: day.week_number,
       };
     });
+}
+
+export type CompletedDay = {
+  dayId: number;
+  dayOfWeek: number;
+  label: string | null;
+  weekNumber: number;
+  completedAt: string;
+};
+
+// A day counts as "completed" once every one of its assignments has at
+// least as many logged sets as its target — this is the same doneAllSets
+// check the client's own Training tab uses to show "All sets logged for
+// today". completedAt is the most recent of those sets' timestamps, i.e.
+// the moment the day actually finished, not when it started. Rest days
+// (no assignments) never appear — there's nothing to complete.
+export function getCompletedDaysForClient(clientId: number, limit = 10): CompletedDay[] {
+  const data = getData();
+  const days = data.program_days.filter((d) => d.client_id === clientId);
+  const results: CompletedDay[] = [];
+
+  days.forEach((day) => {
+    const assignments = data.workout_assignments.filter((a) => a.program_day_id === day.id);
+    if (assignments.length === 0) return;
+
+    let completedAt: string | null = null;
+    const allDone = assignments.every((a) => {
+      const logs = data.set_logs.filter((l) => l.workout_assignment_id === a.id);
+      if (logs.length < a.sets) return false;
+      logs.forEach((l) => {
+        if (!completedAt || l.logged_at > completedAt!) completedAt = l.logged_at;
+      });
+      return true;
+    });
+
+    if (allDone && completedAt) {
+      results.push({ dayId: day.id, dayOfWeek: day.day_of_week, label: day.label, weekNumber: day.week_number, completedAt });
+    }
+  });
+
+  return results.sort((a, b) => (a.completedAt < b.completedAt ? 1 : -1)).slice(0, limit);
+}
+
+// Percent change in logged weight for one exercise, earliest log through
+// the given program week — a fast "is this number trending up" signal for
+// the coach next to the last-week target/actual reference, rather than
+// needing to open the full Strength Progress chart to eyeball a direction.
+// Scoped to logs from weeks <= throughWeekNumber so the badge reflects how
+// far the client has come AS OF the week being viewed, instead of a single
+// whole-history number that reads the same on every week.
+export function getExerciseWeightTrendPct(clientId: number, exerciseId: number, throughWeekNumber: number): number | null {
+  const data = getData();
+  const assignmentIds = new Set(
+    data.workout_assignments
+      .filter((wa) => {
+        if (wa.exercise_id !== exerciseId) return false;
+        const day = data.program_days.find((pd) => pd.id === wa.program_day_id);
+        return day?.client_id === clientId && day.week_number <= throughWeekNumber;
+      })
+      .map((wa) => wa.id)
+  );
+  const logs = data.set_logs
+    .filter((l) => assignmentIds.has(l.workout_assignment_id) && l.weight_kg != null)
+    .sort((a, b) => (a.logged_at < b.logged_at ? -1 : 1));
+  if (logs.length < 2) return null;
+  const first = logs[0].weight_kg as number;
+  const last = logs[logs.length - 1].weight_kg as number;
+  if (first === 0) return null;
+  return ((last - first) / first) * 100;
 }
 
 // ---- Admin panel: client summary + invoices + the trend graph ----
@@ -1494,6 +1721,81 @@ export function savePhotoUpload(clientId: number, slotId: number, buffer: Buffer
   }
   persist();
   return publicPath;
+}
+
+// ---- Branding: coach-wide logo + accent colors ----
+
+export type Branding = { logo_path: string | null; color_primary: string | null; color_frame: string | null };
+
+export function getBranding(): Branding {
+  return getData().branding;
+}
+
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+
+// Empty string clears the override (falls back to the built-in default);
+// anything else must be a valid 6-digit hex or it's silently ignored rather
+// than saving a value that'd break the CSS custom property.
+export function saveBrandingColors(colorPrimary: string, colorFrame: string) {
+  const data = getData();
+  if (colorPrimary === "") data.branding.color_primary = null;
+  else if (HEX_COLOR_RE.test(colorPrimary)) data.branding.color_primary = colorPrimary;
+  if (colorFrame === "") data.branding.color_frame = null;
+  else if (HEX_COLOR_RE.test(colorFrame)) data.branding.color_frame = colorFrame;
+  persist();
+}
+
+// Same "write to DATA_DIR/uploads" pattern as savePhotoUpload, but a single
+// slot rather than per-client/per-period — replaces the old file on every
+// upload so we don't accumulate old logos, and stamps the public path with
+// the upload time so browsers/CDNs don't keep serving a cached old logo from
+// the same URL.
+export function saveBrandingLogo(buffer: Buffer, mimeType: string): string {
+  const dir = path.join(DATA_DIR, "uploads", "branding");
+  fs.mkdirSync(dir, { recursive: true });
+  const ext = (mimeType.split("/")[1] || "png").replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "png";
+
+  const data = getData();
+  const previous = data.branding.logo_path;
+  const filename = `logo.${ext}`;
+  fs.writeFileSync(path.join(dir, filename), buffer);
+  const stamp = Date.now();
+  const publicPath = `/uploads/branding/${filename}?v=${stamp}`;
+
+  // Clean up a stale file left over from a previous upload with a different
+  // extension (e.g. swapping a .png logo for a .webp one).
+  if (previous) {
+    const prevFilename = previous.split("?")[0].split("/").pop();
+    if (prevFilename && prevFilename !== filename) {
+      try {
+        fs.unlinkSync(path.join(dir, prevFilename));
+      } catch {
+        // already gone — fine
+      }
+    }
+  }
+
+  data.branding.logo_path = publicPath;
+  persist();
+  return publicPath;
+}
+
+export function removeBrandingLogo() {
+  const data = getData();
+  const previous = data.branding.logo_path;
+  if (previous) {
+    const dir = path.join(DATA_DIR, "uploads", "branding");
+    const prevFilename = previous.split("?")[0].split("/").pop();
+    if (prevFilename) {
+      try {
+        fs.unlinkSync(path.join(dir, prevFilename));
+      } catch {
+        // already gone — fine
+      }
+    }
+  }
+  data.branding.logo_path = null;
+  persist();
 }
 
 // Real data: daily training "volume" (sum of weight x reps across logged sets)

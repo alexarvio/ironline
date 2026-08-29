@@ -21,7 +21,7 @@ export default function AdminDayCard({
 }: {
   dayName: string;
   labelSlot: ReactNode;
-  statusPill: ReactNode;
+  statusPill?: ReactNode;
   summary: string;
   isRest: boolean;
   defaultOpen: boolean;

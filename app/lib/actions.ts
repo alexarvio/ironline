@@ -25,11 +25,14 @@ import {
   createReportTemplate,
   deleteReport,
   deleteReportTemplate,
-  duplicateWeek,
-  ensureWeekSkeleton,
+  createProgram,
+  deployProgram,
   getClient,
   getReportTemplate,
-  getWeek,
+  renameProgram,
+  removeProgram,
+  scheduleProgramDeploy,
+  updateProgramTotalWeeks,
   listReportTemplateSections,
   listWeekNumbers,
   listMeasurementFields,
@@ -37,12 +40,10 @@ import {
   logCoachActivity,
   logSet,
   OTHER_ITEMS,
-  publishWeek,
   removeReportTemplateSection,
   sendReport,
   updateReportSummary,
   removeAssignment,
-  removeWeek,
   removeClientGoal,
   removeCustomTrainingColumn,
   removeMeasurementCheckIn,
@@ -56,6 +57,9 @@ import {
   removePhotoSlot,
   removeSkinfoldEntry,
   saveClientProfile,
+  removeBrandingLogo,
+  saveBrandingColors,
+  saveBrandingLogo,
   saveNutritionPlan,
   savePhotoPeriodNote,
   savePhotoUpload,
@@ -83,8 +87,7 @@ import {
 import { writeReportNarrative } from "./reportAi";
 import type { ReportSectionType } from "./reportSectionTypes";
 
-const CLIENT_ID = 1;
-const WEEK = 1;
+const CLIENT_ID = 3;
 
 export async function addExerciseAction(formData: FormData) {
   const programDayId = Number(formData.get("programDayId"));
@@ -191,61 +194,77 @@ export async function setLabelAction(formData: FormData) {
   revalidatePath("/admin");
 }
 
-export async function publishWeekAction(formData: FormData) {
+// Starts a new program: just a single blank week to begin building right
+// away — no name/length upfront. Both get set later, in place, on the
+// draft card itself (ProgramNameForm, ProgramWeeksForm) once the coach
+// actually knows what they're building. The new program's week lives after
+// every week_number the client already has (append-only, same as the old
+// week-at-a-time model), but always displays as "Week 1" — see
+// programWeekLabel.
+export async function createProgramAction(formData: FormData) {
   const clientId = Number(formData.get("clientId")) || CLIENT_ID;
-  const week = Number(formData.get("week")) || WEEK;
-  ensureWeekSkeleton(clientId, week);
-  publishWeek(clientId, week);
-  logCoachActivity(clientId, `Published week ${week}'s training`);
+  const weekLinkBase = String(formData.get("weekLinkBase") || "/admin");
+  const existingWeeks = listWeekNumbers(clientId);
+  const startWeek = (existingWeeks.length > 0 ? Math.max(...existingWeeks) : 0) + 1;
+  createProgram(clientId, "", 1, startWeek);
+  revalidatePath("/admin");
+  redirect(weekLinkBase || "/admin");
+}
+
+export async function updateProgramWeeksAction(formData: FormData) {
+  const programId = Number(formData.get("programId"));
+  const totalWeeks = Number(formData.get("totalWeeks"));
+  updateProgramTotalWeeks(programId, totalWeeks);
+  revalidatePath("/admin");
+}
+
+export async function renameProgramAction(formData: FormData) {
+  const programId = Number(formData.get("programId"));
+  const name = String(formData.get("name") || "");
+  renameProgram(programId, name);
+  revalidatePath("/admin");
+}
+
+export async function deployProgramAction(formData: FormData) {
+  const programId = Number(formData.get("programId"));
+  deployProgram(programId);
   revalidatePath("/client");
   revalidatePath("/admin");
 }
 
-function weekHref(base: string, week: number) {
-  return `${base}${base.includes("?") ? "&" : "?"}week=${week}`;
-}
-
-// "Add a new sheet": either duplicates an existing week's exercises as a
-// starting point (fromWeek provided — "Duplicate week N" in the week
-// switcher) or creates a blank draft week (no fromWeek — "Start something
-// new" at the bottom of the page). Always left as a draft for the coach to
-// review/adjust (helped along by the last-week target/actual reference and
-// inline-editable targets) before deploying via the existing publish button.
-// Redirects straight to the new week — otherwise the coach would land back
-// on whatever week is currently live and have to notice/click the new pill.
-export async function addWeekSheetAction(formData: FormData) {
-  const clientId = Number(formData.get("clientId")) || CLIENT_ID;
-  const fromWeekRaw = formData.get("fromWeek");
-  const weekLinkBase = String(formData.get("weekLinkBase") || "/admin");
-  const weeks = listWeekNumbers(clientId);
-  const toWeek = (weeks.length > 0 ? Math.max(...weeks) : 0) + 1;
-  if (fromWeekRaw) {
-    duplicateWeek(clientId, Number(fromWeekRaw), toWeek);
-  } else {
-    ensureWeekSkeleton(clientId, toWeek);
+// Combines the coach's separate date + time inputs (local to the coach's
+// own clock — there's no per-client timezone concept in this app) into an
+// ISO instant, comparable against `new Date().toISOString()` in
+// applyDueProgramDeployments. Silently no-ops on a missing/invalid date or
+// time rather than scheduling for "right now".
+export async function scheduleProgramDeployAction(formData: FormData) {
+  const programId = Number(formData.get("programId"));
+  const date = String(formData.get("date") || "");
+  const time = String(formData.get("time") || "");
+  if (date && time) {
+    const when = new Date(`${date}T${time}:00`);
+    if (!Number.isNaN(when.getTime())) {
+      scheduleProgramDeploy(programId, when.toISOString());
+    }
   }
   revalidatePath("/admin");
-  redirect(weekHref(weekLinkBase, toWeek));
 }
 
-// Only the latest week, and only while every day in it is still a draft —
-// weeks are append-only everywhere else in this app, so deleting anything
-// but the most recent one (or one already live) would leave a gap or pull
-// a week out from under the client. Redirects back to whichever week is
-// current after the delete, rather than a now-nonexistent ?week= param.
-export async function removeWeekAction(formData: FormData) {
-  const clientId = Number(formData.get("clientId"));
-  const week = Number(formData.get("week"));
-  const weekLinkBase = String(formData.get("weekLinkBase") || "/admin");
-  const weeks = listWeekNumbers(clientId);
-  const days = getWeek(clientId, week);
-  const isLatest = weeks.length > 0 && week === Math.max(...weeks);
-  const isDraft = days.length > 0 && days.every((d) => d.status === "draft");
-  if (weeks.length > 1 && isLatest && isDraft) {
-    removeWeek(clientId, week);
-  }
+export async function cancelProgramScheduleAction(formData: FormData) {
+  const programId = Number(formData.get("programId"));
+  scheduleProgramDeploy(programId, null);
   revalidatePath("/admin");
-  redirect(weekLinkBase);
+}
+
+// Only ever offered in the UI for a draft program — deploying moves it out
+// of reach of this action entirely, so there's no risk of pulling a program
+// out from under a client who's already seen it.
+export async function removeProgramAction(formData: FormData) {
+  const programId = Number(formData.get("programId"));
+  const weekLinkBase = String(formData.get("weekLinkBase") || "/admin");
+  removeProgram(programId);
+  revalidatePath("/admin");
+  redirect(weekLinkBase || "/admin");
 }
 
 export async function logSetAction(formData: FormData) {
@@ -518,6 +537,26 @@ export async function uploadProgressPhotoAction(formData: FormData) {
   savePhotoUpload(clientId, slotId, buffer, file.type || "image/jpeg");
   revalidatePath("/admin");
   revalidatePath("/client");
+}
+
+export async function uploadBrandingLogoAction(formData: FormData) {
+  const file = formData.get("file") as File | null;
+  if (!file || file.size === 0) return;
+  const buffer = Buffer.from(await file.arrayBuffer());
+  saveBrandingLogo(buffer, file.type || "image/png");
+  revalidatePath("/", "layout");
+}
+
+export async function removeBrandingLogoAction() {
+  removeBrandingLogo();
+  revalidatePath("/", "layout");
+}
+
+export async function saveBrandingColorsAction(formData: FormData) {
+  const colorPrimary = String(formData.get("colorPrimary") || "");
+  const colorFrame = String(formData.get("colorFrame") || "");
+  saveBrandingColors(colorPrimary, colorFrame);
+  revalidatePath("/", "layout");
 }
 
 export async function saveNutritionPlanAction(formData: FormData) {

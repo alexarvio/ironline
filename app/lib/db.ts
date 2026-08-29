@@ -21,6 +21,31 @@ type ProgramDay = {
   label: string | null;
   status: "draft" | "published";
 };
+// A multi-week training program — the coach picks a name and a length
+// (total_weeks) up front; program_days for weeks [start_week, start_week +
+// total_weeks) are created immediately so every week is reachable right
+// away, not "unlocked" one at a time. Internally weeks are numbered
+// globally-uniquely per client (program_days.week_number), but the UI only
+// ever shows a week's position WITHIN its program ("Week 1".."Week N" —
+// see programWeekLabel in queries.ts), so a client's second program starts
+// back at "Week 1" even though its underlying week_numbers continue on.
+//
+// "draft"/"deployed" is a property of the whole program, not any one day —
+// deploying publishes every week in the range at once. There's no
+// background job runner in this app, so scheduled_at is enforced lazily:
+// applyDueProgramDeployments() (called once per request from the root
+// layout) deploys any program whose scheduled_at has passed the moment
+// anyone next loads the app, rather than firing at the exact second.
+type TrainingProgram = {
+  id: number;
+  client_id: number;
+  name: string | null;
+  start_week: number;
+  total_weeks: number;
+  status: "draft" | "deployed";
+  deployed_at: string | null;
+  scheduled_at: string | null;
+};
 type WorkoutAssignment = {
   id: number;
   program_day_id: number;
@@ -301,6 +326,18 @@ type ClientReport = {
   sent_at: string | null;
 };
 
+// Coach-wide app branding — one row for the whole app (no multi-tenant
+// "coach" entity exists yet, just clients), covering the logo shown in both
+// the admin and client headers and a couple of brand colors. Colors are
+// deliberately narrow (just accent + frame) rather than the whole palette —
+// letting a coach recolor every semantic color (warnings, success, etc.)
+// risks unreadable combinations for what's a cosmetic ask.
+type Branding = {
+  logo_path: string | null;
+  color_primary: string | null;
+  color_frame: string | null;
+};
+
 type Data = {
   clients: Client[];
   exercises: Exercise[];
@@ -331,12 +368,16 @@ type Data = {
   report_templates: ReportTemplate[];
   report_template_sections: ReportTemplateSection[];
   client_reports: ClientReport[];
+  branding: Branding;
+  training_programs: TrainingProgram[];
   _seq: Record<string, number>;
 };
 
 function emptyData(): Data {
   return {
     clients: [],
+    branding: { logo_path: null, color_primary: null, color_frame: null },
+    training_programs: [],
     exercises: [],
     program_days: [],
     workout_assignments: [],

@@ -12,10 +12,14 @@ export default function ClientWeekSwitcher({
   weeks,
   currentWeek,
   contents,
+  weekLabels,
 }: {
   weeks: number[];
   currentWeek: number;
   contents: Record<number, ReactNode>;
+  // Program-relative labels ("Week 1".."Week N") — falls back to the raw
+  // week number when there's no deployed program to derive them from.
+  weekLabels?: Record<number, string>;
 }) {
   const [selected, setSelected] = useState(currentWeek);
 
@@ -30,7 +34,7 @@ export default function ClientWeekSwitcher({
               className={`toggle-btn${w === selected ? " active" : ""}`}
               onClick={() => setSelected(w)}
             >
-              Week {w}
+              {weekLabels?.[w] ?? `Week ${w}`}
               {w === currentWeek && <span className="week-current-dot" aria-hidden="true" />}
             </button>
           ))}

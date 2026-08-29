@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { applyDueProgramDeployments, getBranding } from "./lib/queries";
+import { DEFAULT_BRAND_PRIMARY, pickForegroundColor, pickTextSafeColor } from "./lib/branding";
 
 export const metadata: Metadata = {
   title: "Ironline",
@@ -7,9 +9,38 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // No background job runner in this app — a plan the coach scheduled for
+  // e.g. Monday 6am goes live the moment anyone next loads any page after
+  // that time, checked here since every route passes through this layout.
+  applyDueProgramDeployments();
+
+  const branding = getBranding();
+  const primary = branding.color_primary ?? DEFAULT_BRAND_PRIMARY;
+  // Coach-chosen brand colors, applied as a root-level override of the CSS
+  // custom properties they're allowed to touch — --accent (fills: buttons,
+  // avatars, active pills), --accent-fg (text/icons ON TOP of an --accent
+  // fill, picked for contrast so a light accent like lime doesn't get
+  // unreadable white text), --accent-ink (the accent used AS text/icon/
+  // border color against the app's light surfaces — links, chart lines,
+  // badge text — darkened only as much as needed to stay legible), and the
+  // phone-frame bezel color behind the client app mockup. Injected here
+  // rather than per-page so every route (/, /admin, /client) picks it up
+  // from one place.
+  const colorOverrides = [
+    `--accent: ${primary};`,
+    `--accent-fg: ${pickForegroundColor(primary)};`,
+    `--accent-ink: ${pickTextSafeColor(primary)};`,
+    branding.color_frame ? `--brand-frame: ${branding.color_frame};` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {colorOverrides && <style>{`:root { ${colorOverrides} }`}</style>}
+        {children}
+      </body>
     </html>
   );
 }

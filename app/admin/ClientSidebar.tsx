@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { createClientAction } from "../lib/actions";
 import { getMeetingConflicts, listClients } from "../lib/queries";
-import { CalendarIcon, FeedIcon, ReportIcon } from "../components/icons";
+import { CalendarIcon, FeedIcon, PaletteIcon, ReportIcon } from "../components/icons";
 
 export default function ClientSidebar({
   selectedId,
   activeView,
 }: {
   selectedId: number | null;
-  activeView: "feed" | "calendar" | "report-templates" | "client";
+  activeView: "feed" | "calendar" | "report-templates" | "branding" | "client";
 }) {
   const clients = listClients();
   const conflictCount = getMeetingConflicts().length;
@@ -44,6 +44,16 @@ export default function ClientSidebar({
           <ReportIcon />
         </span>
         Report Templates
+      </Link>
+
+      <Link
+        href="/admin?view=branding"
+        className={`feed-nav-btn${activeView === "branding" ? " active" : ""}`}
+      >
+        <span className="feed-nav-icon">
+          <PaletteIcon />
+        </span>
+        Branding
       </Link>
 
       <div className="sidebar-heading">Clients ({clients.length})</div>

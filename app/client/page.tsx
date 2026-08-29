@@ -1,15 +1,18 @@
 import {
   getAssignmentsForDay,
+  getBranding,
   getClient,
   getClientProfile,
+  getDeployedProgram,
   getLatestWeight,
   getLogsForAssignment,
   getCurrentWeekNumber,
   getLatestCoachActivity,
   getLatestSentReport,
+  getMetricSeries,
   getPinnedMetricsSummary,
-  listWeekNumbers,
-  getMeasurementValues,
+  getWeightSeries,
+  listPublishedWeekNumbers,
   getNutritionGoalsSummary,
   getNutritionPlan,
   getPhotoCadence,
@@ -29,6 +32,7 @@ import {
   localDateStr,
   photoPeriodFor,
   photoPeriodIndex,
+  programWeekLabel,
   slugify,
   SUPPLEMENT_ITEMS,
   VITAMIN_ITEMS,
@@ -60,7 +64,7 @@ const PERIOD_UNIT = {
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-const CLIENT_ID = 1;
+const CLIENT_ID = 3;
 
 function getWeekDays(week?: number) {
   // Auto-advances the moment a week the coach has already deployed starts —
@@ -154,21 +158,6 @@ function HomeTab() {
     });
   }
 
-  // ---- Weight trend: most recent logged value vs. the one before it ----
-  let weightTrendLabel: string | null = null;
-  const weightField = measurementFields.find((f) => f.name.toLowerCase().includes("weight"));
-  if (weightField) {
-    const values = getMeasurementValues([weightField.id])
-      .filter((v) => v.value != null)
-      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id));
-    if (values.length >= 2) {
-      const latest = values[values.length - 1];
-      const prior = values[values.length - 2];
-      const delta = Math.round(((latest.value ?? 0) - (prior.value ?? 0)) * 10) / 10;
-      weightTrendLabel = `${delta > 0 ? "+" : ""}${delta}kg`;
-    }
-  }
-
   // ---- Recent conversation, previewed on Home as a small feed (not just
   // the single latest coach message — the last few messages either way, so
   // it reads like an activity feed rather than a one-off notification) ----
@@ -197,15 +186,27 @@ function HomeTab() {
     ? { message: latestActivity.message, timeLabel: messageTimeLabel(latestActivity.created_at) }
     : null;
 
-  // Coach-controlled — the client only ever sees these, never edits which
-  // metrics are pinned (that toggle lives in the admin Tracker tabs only).
-  const pinnedMetrics = getPinnedMetricsSummary(CLIENT_ID).map(({ def, latest, average }) => ({
-    id: def.id,
-    name: def.name,
-    unit: def.unit,
-    latest,
-    average,
-  }));
+  // One swipeable carousel of trend sparklines: Weight plus whatever the
+  // coach has pinned (that pin toggle lives in the admin Tracker tabs only —
+  // "any metric the coach wants" graphed is just "any metric they've
+  // pinned"). Each entry needs >=2 points to plot a shape and compute a
+  // trend, so anything thinner than that is left out rather than shown as
+  // an empty slide.
+  const trendMetric = (id: string, name: string, unit: string, series: { date: string; value: number }[]) => {
+    if (series.length < 2) return null;
+    const average = series.reduce((sum, p) => sum + p.value, 0) / series.length;
+    const first = series[0].value;
+    const last = series[series.length - 1].value;
+    const trendPct = first !== 0 ? ((last - first) / first) * 100 : null;
+    return { id, name, unit, series, average, trendPct };
+  };
+
+  const chartMetrics = [
+    trendMetric("weight", "Weight", "kg", getWeightSeries(CLIENT_ID, 3650)),
+    ...getPinnedMetricsSummary(CLIENT_ID).map(({ def }) =>
+      trendMetric(`metric-${def.id}`, def.name, def.unit, getMetricSeries(def.id))
+    ),
+  ].filter((m): m is NonNullable<typeof m> => m !== null);
 
   const sentReport = getLatestSentReport(CLIENT_ID);
   const latestReport = sentReport
@@ -265,13 +266,12 @@ function HomeTab() {
       daysTrained={daysTrained}
       totalDays={totalDaysBuilt}
       setsThisWeek={setsThisWeek}
-      weightTrendLabel={weightTrendLabel}
+      chartMetrics={chartMetrics}
       goals={goals}
       upcoming={upcoming}
       lastCoachActivity={lastCoachActivity}
       recentMessages={recentMessages}
       dueItems={dueItems}
-      pinnedMetrics={pinnedMetrics}
       latestReport={latestReport}
       tabs={tabs}
     />
@@ -345,61 +345,69 @@ function TrainingTab({ week }: { week: number }) {
                       <div key={a.id} className="training-exercise-row">
                         <div className="training-exercise-row-top">
                           <strong>{a.exercise_name}</strong>
+                          <span className="training-exercise-target">
+                            {a.sets} set{a.sets === 1 ? "" : "s"}
+                          </span>
                         </div>
                         {a.exercise_video_url && (
                           <a href={a.exercise_video_url} target="_blank" rel="noreferrer" className="video-link">
                             ▶ how to
                           </a>
                         )}
-
-                        {/* The coach's target for this exercise — sets/reps always
-                            shown, weight/RPE/tempo only when the coach set them.
-                            This is the whole point of the request: the client
-                            should see exactly what to aim for without hunting
-                            through the admin panel's mental model. */}
-                        <div className="exercise-target-badges">
-                          <span className="target-badge target-badge-primary">
-                            {a.sets} × {a.reps}
-                          </span>
-                          {a.target_weight_kg != null && (
-                            <span className="target-badge">{a.target_weight_kg}kg</span>
-                          )}
-                          {a.rpe_target != null && <span className="target-badge">RPE {a.rpe_target}</span>}
-                          {a.tempo && <span className="target-badge">Tempo {a.tempo}</span>}
-                        </div>
                         {a.notes && <p className="exercise-coach-note">“{a.notes}”</p>}
 
-                        <table className="training-set-table">
-                          <thead>
-                            <tr>
-                              <th>Set</th>
-                              <th>Weight</th>
-                              <th>Reps</th>
-                              <th>RPE</th>
-                              <th />
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {logs.map((l) => (
-                              <tr key={l.id} className="training-set-row">
-                                <td className="training-set-cell-num">{l.set_number}</td>
-                                <td>{l.weight_kg}kg</td>
-                                <td>{l.reps}</td>
-                                <td>{l.rpe_actual ?? "—"}</td>
-                                <td className="training-set-cell-action">✓</td>
+                        {/* Coach's target laid out as the first row of the same
+                            table the client logs into below, instead of a
+                            separate row of badges — so "what to aim for" and
+                            "what I actually did" line up column-by-column.
+                            Tempo only gets its own column when the coach set
+                            one; the wrap scrolls horizontally rather than
+                            squeezing columns if it (or future metrics) don't
+                            fit the phone width. */}
+                        <div className="training-set-table-wrap">
+                          <table className="training-set-table">
+                            <thead>
+                              <tr>
+                                <th>Set</th>
+                                <th>Weight</th>
+                                <th>Reps</th>
+                                <th>RPE</th>
+                                {a.tempo && <th>Tempo</th>}
+                                <th />
                               </tr>
-                            ))}
-                            {!doneAllSets && (
-                              <SetLogForm
-                                assignmentId={a.id}
-                                nextSetNumber={nextSetNumber}
-                                targetWeight={a.target_weight_kg}
-                                targetReps={a.reps}
-                                targetRpe={a.rpe_target}
-                              />
-                            )}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody>
+                              <tr className="training-goal-row">
+                                <td className="training-set-cell-num">Goal</td>
+                                <td>{a.target_weight_kg != null ? `${a.target_weight_kg}kg` : "—"}</td>
+                                <td>{a.reps}</td>
+                                <td>{a.rpe_target ?? "—"}</td>
+                                {a.tempo && <td>{a.tempo}</td>}
+                                <td />
+                              </tr>
+                              {logs.map((l) => (
+                                <tr key={l.id} className="training-set-row">
+                                  <td className="training-set-cell-num">{l.set_number}</td>
+                                  <td>{l.weight_kg}kg</td>
+                                  <td>{l.reps}</td>
+                                  <td>{l.rpe_actual ?? "—"}</td>
+                                  {a.tempo && <td>—</td>}
+                                  <td className="training-set-cell-action">✓</td>
+                                </tr>
+                              ))}
+                              {!doneAllSets && (
+                                <SetLogForm
+                                  assignmentId={a.id}
+                                  nextSetNumber={nextSetNumber}
+                                  targetWeight={a.target_weight_kg}
+                                  targetReps={a.reps}
+                                  targetRpe={a.rpe_target}
+                                  showTempoColumn={!!a.tempo}
+                                />
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
                         {doneAllSets && (
                           <div className="exercise-meta training-exercise-done">✓ All sets logged for today</div>
                         )}
@@ -676,8 +684,19 @@ export default function ClientPage() {
   const hasCoachUpdate = [...messages].reverse().find((m) => m.sender === "coach") != null;
 
   const currentWeekNum = getCurrentWeekNumber(CLIENT_ID);
-  const weekNumbers = listWeekNumbers(CLIENT_ID);
-  const trainingWeeks = weekNumbers.length > 0 ? weekNumbers : [currentWeekNum];
+  // Only the currently deployed program's own weeks — not every published
+  // week_number ever (a superseded program's weeks would otherwise mix in
+  // and, worse, collide on the same "Week 1" label as the current one; see
+  // programWeekLabel in lib/queries.ts).
+  const deployedProgram = getDeployedProgram(CLIENT_ID);
+  const trainingWeeks = deployedProgram
+    ? Array.from({ length: deployedProgram.total_weeks }, (_, i) => deployedProgram.start_week + i)
+    : listPublishedWeekNumbers(CLIENT_ID).length > 0
+    ? listPublishedWeekNumbers(CLIENT_ID)
+    : [currentWeekNum];
+  const trainingWeekLabels = deployedProgram
+    ? Object.fromEntries(trainingWeeks.map((w) => [w, programWeekLabel(deployedProgram, w)]))
+    : undefined;
   const trainingWeekContents = Object.fromEntries(trainingWeeks.map((w) => [w, <TrainingTab key={w} week={w} />]));
 
   const tabs: AppTab[] = [
@@ -687,7 +706,12 @@ export default function ClientPage() {
       label: "Training",
       icon: <DumbbellIcon />,
       content: (
-        <ClientWeekSwitcher weeks={trainingWeeks} currentWeek={currentWeekNum} contents={trainingWeekContents} />
+        <ClientWeekSwitcher
+          weeks={trainingWeeks}
+          currentWeek={currentWeekNum}
+          contents={trainingWeekContents}
+          weekLabels={trainingWeekLabels}
+        />
       ),
     },
     { id: "nutrition", label: "Nutrition", icon: <AppleIcon />, content: <NutritionTab /> },
@@ -701,6 +725,7 @@ export default function ClientPage() {
       chatContent={<ChatTab />}
       chatBanner={nextCallBanner()}
       hasCoachUpdate={hasCoachUpdate}
+      logoUrl={getBranding().logo_path}
     />
   );
 }

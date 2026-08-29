@@ -4,6 +4,7 @@ import ClientSidebar from "./ClientSidebar";
 import FeedPanel from "./FeedPanel";
 import MetricGraph from "./MetricGraph";
 import SectionTabs, { TabSection } from "./SectionTabs";
+import BrandingPanel from "./BrandingPanel";
 import InvoicesPanel from "./InvoicesPanel";
 import MeasurementsPanel from "./MeasurementsPanel";
 import MeetingsPanel from "./MeetingsPanel";
@@ -16,7 +17,7 @@ import StartPagePanel from "./StartPagePanel";
 import TrackerPanel from "./TrackerPanel";
 import ProgramBuilder from "../components/ProgramBuilder";
 import ChatPanel from "../components/ChatPanel";
-import { getClient, getClientSummary, getStrengthSeries, getWeightSeries, listChatMessages, listClients } from "../lib/queries";
+import { getBranding, getClient, getClientSummary, getStrengthSeries, getWeightSeries, listChatMessages, listClients } from "../lib/queries";
 
 export default async function AdminPage({
   searchParams,
@@ -25,12 +26,14 @@ export default async function AdminPage({
 }) {
   const params = await searchParams;
   const clients = listClients();
+  const branding = getBranding();
   const showFeed = params.view === "feed";
   const showCalendar = params.view === "calendar";
   const showReportTemplates = params.view === "report-templates";
+  const showBranding = params.view === "branding";
   const selectedId = params.client
     ? Number(params.client)
-    : !showFeed && !showCalendar && !showReportTemplates
+    : !showFeed && !showCalendar && !showReportTemplates && !showBranding
     ? clients[0]?.id ?? null
     : null;
   const client = selectedId ? getClient(selectedId) : undefined;
@@ -40,7 +43,12 @@ export default async function AdminPage({
     <div className="admin-shell">
       <div className="top-nav" style={{ maxWidth: "none", padding: "0 24px" }}>
         <Link className="brand" href="/">
-          Ironline
+          {branding.logo_path ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={branding.logo_path} alt="" className="brand-logo-img" />
+          ) : (
+            "Ironline"
+          )}
         </Link>
         <div className="nav-links">
           <Link href="/client">Client</Link>
@@ -53,7 +61,17 @@ export default async function AdminPage({
       <div className="admin-body">
         <ClientSidebar
           selectedId={selectedId}
-          activeView={showFeed ? "feed" : showCalendar ? "calendar" : showReportTemplates ? "report-templates" : "client"}
+          activeView={
+            showFeed
+              ? "feed"
+              : showCalendar
+              ? "calendar"
+              : showReportTemplates
+              ? "report-templates"
+              : showBranding
+              ? "branding"
+              : "client"
+          }
         />
 
         <main className="admin-main">
@@ -63,6 +81,8 @@ export default async function AdminPage({
             <CalendarPanel month={params.month} />
           ) : showReportTemplates ? (
             <ReportTemplatesPanel />
+          ) : showBranding ? (
+            <BrandingPanel />
           ) : !client ? (
             <p className="empty-note">
               {clients.length === 0

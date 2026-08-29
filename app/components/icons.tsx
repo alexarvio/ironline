@@ -254,6 +254,22 @@ export function GearIcon() {
   );
 }
 
+export function PaletteIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M9 2.25a6.75 6.75 0 1 0 0 13.5c.9 0 1.5-.6 1.5-1.35 0-.35-.15-.65-.35-.9-.2-.25-.35-.55-.35-.9 0-.75.6-1.35 1.35-1.35h1.35A3.15 3.15 0 0 0 15.75 8.1c0-3.2-3.02-5.85-6.75-5.85z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+      <circle cx="5.7" cy="8.1" r="0.95" fill="currentColor" />
+      <circle cx="6.9" cy="5.4" r="0.95" fill="currentColor" />
+      <circle cx="10.2" cy="4.8" r="0.95" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function CameraIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">

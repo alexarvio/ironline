@@ -43,13 +43,26 @@ function xTickIndices(pointCount: number, maxTicks = 5) {
 // rating) instead of auto-fitting to whatever the data happens to span —
 // without it, a metric that's consistently rated 8-10 renders as a
 // dramatic-looking sawtooth when the real story is "always near the top".
-export function LineChart({ points, yRange }: { points: Point[]; yRange?: [number, number] }) {
+//
+// `sparkline` strips every axis/gridline/label and thins the line/fill down
+// to a soft, low-contrast shape — for spots (the client Home carousel) that
+// show the average and trend as their own text instead of reading exact
+// values off the chart, so the chart's only job is "shape of the trend".
+export function LineChart({
+  points,
+  yRange,
+  sparkline,
+}: {
+  points: Point[];
+  yRange?: [number, number];
+  sparkline?: boolean;
+}) {
   const width = 720;
   const height = 240;
-  const paddingTop = 20;
-  const paddingBottom = 44;
-  const paddingRight = 32;
-  const paddingLeft = 52;
+  const paddingTop = sparkline ? 10 : 20;
+  const paddingBottom = sparkline ? 10 : 44;
+  const paddingRight = sparkline ? 6 : 32;
+  const paddingLeft = sparkline ? 6 : 52;
   const plotHeight = height - paddingTop - paddingBottom;
   const axisY = height - paddingBottom;
 
@@ -78,36 +91,39 @@ export function LineChart({ points, yRange }: { points: Point[]; yRange?: [numbe
   return (
     <svg
       viewBox={`0 0 ${width} ${height}`}
-      className="line-chart"
+      className={`line-chart${sparkline ? " line-chart-sparkline" : ""}`}
       role="img"
       aria-label="Trend chart"
     >
-      {ticks.map((t) => (
-        <g key={t}>
-          <line
-            x1={paddingLeft}
-            y1={yFor(t)}
-            x2={width - paddingRight}
-            y2={yFor(t)}
-            className="chart-gridline"
-          />
-          <text x={paddingLeft - 10} y={yFor(t)} className="chart-ylabel" textAnchor="end" dominantBaseline="middle">
-            {t}
-          </text>
-        </g>
-      ))}
-      <line x1={paddingLeft} y1={axisY} x2={width - paddingRight} y2={axisY} className="chart-axis" />
+      {!sparkline &&
+        ticks.map((t) => (
+          <g key={t}>
+            <line
+              x1={paddingLeft}
+              y1={yFor(t)}
+              x2={width - paddingRight}
+              y2={yFor(t)}
+              className="chart-gridline"
+            />
+            <text x={paddingLeft - 10} y={yFor(t)} className="chart-ylabel" textAnchor="end" dominantBaseline="middle">
+              {t}
+            </text>
+          </g>
+        ))}
+      {!sparkline && <line x1={paddingLeft} y1={axisY} x2={width - paddingRight} y2={axisY} className="chart-axis" />}
       <path d={areaPath} className="chart-area" />
       <path d={linePath} className="chart-line" />
-      {coords.map((c, i) => (
-        <circle key={i} cx={c.x} cy={c.y} r={i === coords.length - 1 ? 4 : 2.5} className="chart-dot" />
-      ))}
-      {xTicks.map((i) => (
-        <text key={i} x={coords[i].x} y={axisY + 18} className="chart-xlabel" textAnchor="middle">
-          {formatXLabel(coords[i].date)}
-        </text>
-      ))}
-      {coords.length > 0 && (
+      {!sparkline &&
+        coords.map((c, i) => (
+          <circle key={i} cx={c.x} cy={c.y} r={i === coords.length - 1 ? 4 : 2.5} className="chart-dot" />
+        ))}
+      {!sparkline &&
+        xTicks.map((i) => (
+          <text key={i} x={coords[i].x} y={axisY + 18} className="chart-xlabel" textAnchor="middle">
+            {formatXLabel(coords[i].date)}
+          </text>
+        ))}
+      {!sparkline && coords.length > 0 && (
         <text x={coords[coords.length - 1].x} y={coords[coords.length - 1].y - 10} className="chart-endpoint-label">
           {Math.round(coords[coords.length - 1].value)}
         </text>

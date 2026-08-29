@@ -1,7 +1,7 @@
 "use client";
 
-import { ReactNode, useState } from "react";
-import { ArrowRightIcon } from "../components/icons";
+import { ReactNode, useRef, useState } from "react";
+import { ArrowRightIcon, ChevronLeftIcon } from "../components/icons";
 import { LineChart, Point } from "../components/LineChart";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
@@ -13,12 +13,13 @@ export type HubSubTab = { id: string; label: string; content: ReactNode };
 export type UpcomingMeeting = { dateLabel: string; dayLabel: string; topic: string; timeLabel: string } | null;
 export type MessagePreview = { id: number; sender: "client" | "coach"; text: string; timeLabel: string };
 export type CoachActivityPreview = { message: string; timeLabel: string } | null;
-export type PinnedMetricPreview = {
-  id: number;
+export type ChartMetric = {
+  id: string;
   name: string;
   unit: string;
-  latest: number | null;
+  series: Point[];
   average: number | null;
+  trendPct: number | null;
 };
 type ReportSectionPreview = {
   label: string;
@@ -45,13 +46,12 @@ export default function HomeHub({
   daysTrained,
   totalDays,
   setsThisWeek,
-  weightTrendLabel,
+  chartMetrics,
   goals,
   upcoming,
   lastCoachActivity,
   recentMessages,
   dueItems,
-  pinnedMetrics,
   latestReport,
   tabs,
 }: {
@@ -63,17 +63,30 @@ export default function HomeHub({
   daysTrained: number;
   totalDays: number;
   setsThisWeek: number;
-  weightTrendLabel: string | null;
+  chartMetrics: ChartMetric[];
   goals: string[];
   upcoming: UpcomingMeeting;
   lastCoachActivity: CoachActivityPreview;
   recentMessages: MessagePreview[];
   dueItems: DueItem[];
-  pinnedMetrics: PinnedMetricPreview[];
   latestReport: LatestReportPreview;
   tabs: HubSubTab[];
 }) {
   const [view, setView] = useState("home");
+  const carouselRef = useRef<HTMLDivElement>(null);
+  // Snaps to the nearest slide index first (self-correcting even if a prior
+  // scroll landed slightly off), then moves exactly one index over — a
+  // relative scrollBy() fights with scroll-snap-type and can settle short.
+  const scrollCarousel = (dir: 1 | -1) => {
+    const el = carouselRef.current;
+    const slide = el?.firstElementChild as HTMLElement | null;
+    if (!el || !slide) return;
+    const step = slide.getBoundingClientRect().width + 10;
+    const currentIndex = Math.round(el.scrollLeft / step);
+    const maxIndex = Math.round((el.scrollWidth - el.clientWidth) / step);
+    const nextIndex = Math.max(0, Math.min(maxIndex, currentIndex + dir));
+    el.scrollTo({ left: nextIndex * step, behavior: "smooth" });
+  };
 
   if (view !== "home") {
     const tab = tabs.find((t) => t.id === view);
@@ -138,10 +151,21 @@ export default function HomeHub({
 
       <section className="home-section">
         <h3 className="home-section-title">This week</h3>
-        <div className={`home-recap-grid${weightTrendLabel ? " home-recap-grid-3" : ""}`}>
-          <div className="home-recap-stat">
-            <div className="home-recap-value">
-              {daysTrained}/{totalDays || 7}
+        <div className="home-recap-grid">
+          <div className="home-recap-stat home-recap-stat-ring">
+            <div
+              className="home-days-ring"
+              style={{
+                background: `conic-gradient(var(--accent) 0deg ${
+                  totalDays > 0 ? Math.min(1, daysTrained / totalDays) * 360 : 0
+                }deg, var(--paper-raised) ${
+                  totalDays > 0 ? Math.min(1, daysTrained / totalDays) * 360 : 0
+                }deg 360deg)`,
+              }}
+            >
+              <div className="home-days-ring-inner">
+                {daysTrained}/{totalDays || 7}
+              </div>
             </div>
             <div className="home-recap-label">days trained</div>
           </div>
@@ -149,28 +173,59 @@ export default function HomeHub({
             <div className="home-recap-value">{setsThisWeek}</div>
             <div className="home-recap-label">sets logged</div>
           </div>
-          {weightTrendLabel && (
-            <div className="home-recap-stat">
-              <div className="home-recap-value home-recap-value-trend">{weightTrendLabel}</div>
-              <div className="home-recap-label">weight trend</div>
-            </div>
-          )}
         </div>
       </section>
 
-      {pinnedMetrics.length > 0 && (
+      {chartMetrics.length > 0 && (
         <section className="home-section">
-          <h3 className="home-section-title">Pinned by your coach</h3>
-          <div className="pinned-metrics-grid">
-            {pinnedMetrics.map((m) => (
-              <div key={m.id} className="pinned-metric-card">
-                <div className="pinned-metric-label">{m.name}</div>
-                <div className="pinned-metric-value">
-                  {m.latest != null ? `${m.latest}${m.unit ? ` ${m.unit}` : ""}` : "No entries yet"}
-                </div>
-                {m.average != null && <div className="pinned-metric-sub">avg {m.average.toFixed(1)}</div>}
-              </div>
-            ))}
+          <h3 className="home-section-title">Trends</h3>
+          <div className="metric-carousel-wrap">
+            {chartMetrics.length > 1 && (
+              <button
+                type="button"
+                className="metric-carousel-arrow metric-carousel-arrow-prev"
+                aria-label="Previous metric"
+                onClick={() => scrollCarousel(-1)}
+              >
+                <ChevronLeftIcon />
+              </button>
+            )}
+            <div className="metric-carousel" ref={carouselRef}>
+              {chartMetrics.map((m) => {
+                const trendDir = m.trendPct == null ? null : m.trendPct > 0 ? "up" : m.trendPct < 0 ? "down" : null;
+                return (
+                  <div key={m.id} className="metric-carousel-slide">
+                    <div className="metric-carousel-head">
+                      <span className="metric-carousel-name">{m.name}</span>
+                      {m.trendPct != null && (
+                        <span className={`metric-carousel-trend${trendDir ? ` ${trendDir}` : ""}`}>
+                          {trendDir === "up" ? "▲" : trendDir === "down" ? "▼" : "–"} {Math.abs(m.trendPct).toFixed(1)}%
+                        </span>
+                      )}
+                    </div>
+                    {m.average != null && (
+                      <div className="metric-carousel-avg">
+                        avg {Number.isInteger(m.average) ? m.average : m.average.toFixed(1)}
+                        {m.unit ? ` ${m.unit}` : ""}
+                      </div>
+                    )}
+                    <div className="metric-carousel-chart">
+                      <LineChart points={m.series} sparkline />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {chartMetrics.length > 1 && (
+              <button
+                type="button"
+                className="metric-carousel-arrow metric-carousel-arrow-next"
+                aria-label="Next metric"
+                onClick={() => scrollCarousel(1)}
+              >
+                <ArrowRightIcon />
+              </button>
+            )}
           </div>
         </section>
       )}
