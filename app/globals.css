@@ -6768,6 +6768,11 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   color: var(--good);
 }
 
+/* Volume falling is not good news, so it must not read green. */
+.pb-rail-delta.down {
+  color: var(--accent-plate);
+}
+
 .pb-rail-chart {
   position: relative;
   width: 100%;

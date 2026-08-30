@@ -39,7 +39,11 @@ export default function BuilderRail({
         <>
           <div className="pb-rail-headline">
             <span className="pb-rail-value">{Math.round(latest)}</span>
-            {strengthDelta && <span className="pb-rail-delta">{strengthDelta}</span>}
+            {strengthDelta && (
+              <span className={`pb-rail-delta${strengthDelta.startsWith("−") || strengthDelta.startsWith("-") ? " down" : ""}`}>
+                {strengthDelta}
+              </span>
+            )}
           </div>
           {strength.length >= 2 && (
             <>
