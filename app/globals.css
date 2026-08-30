@@ -2356,6 +2356,670 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   }
 }
 
+/* ---- Home Dark (client only): the app shell's header/content/nav go dark
+   only while the Home tab is active — Training/Nutrition/Settings haven't
+   been redesigned yet and stay on the original light theme (see AppShell's
+   isHomeActive). Descendant overrides of the existing light rules, same
+   scoping approach as the Chat and Notifications section above. ---- */
+
+.app-header.dark {
+  background: #0e0e0c;
+  border-bottom-color: #23231f;
+}
+
+.app-header.dark .app-header-brand {
+  color: #ffffff;
+}
+
+.app-header.dark .app-header-icon-btn {
+  border-color: #2c2c26;
+  background: #151511;
+  color: #ffffff;
+}
+
+.app-header.dark .app-header-icon-btn:hover {
+  background: #1b1b16;
+}
+
+.app-header.dark .app-header-icon-badge {
+  border-color: #0e0e0c;
+}
+
+.app-content.dark {
+  background: #0e0e0c;
+  padding: 6px 18px 24px;
+}
+
+.app-bottom-nav.dark {
+  background: #0e0e0c;
+  border-top-color: #23231f;
+}
+
+.app-bottom-nav.dark .app-tab-btn {
+  color: #8a8a80;
+}
+
+.app-bottom-nav.dark .app-tab-btn:hover {
+  background: #151511;
+}
+
+.app-bottom-nav.dark .app-tab-btn.active {
+  color: #d6ff3f;
+}
+
+/* Tracker/Measurements/Photos aren't redesigned yet — kept as an opaque
+   light card so they stay legible sitting on the now-dark Home shell. */
+.home-subview-panel {
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 16px;
+  padding: 16px;
+  margin: 2px 0 16px;
+}
+
+.home-dark {
+  color: #ffffff;
+  font-family: var(--font-sans);
+}
+
+.home-dark-datebar {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a8a80;
+}
+
+.home-dark-name {
+  font-family: var(--font-serif);
+  font-size: 1.9rem;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+
+.home-dark-subrow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.home-dark-sub {
+  font-size: 0.8rem;
+  color: #8a8a80;
+}
+
+.home-dark-goal {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #d6ff3f;
+}
+
+.home-dark-hr {
+  height: 1px;
+  background: #23231f;
+  margin: 18px 0 16px;
+}
+
+.home-dark-stats {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.home-dark-stat {
+  flex: 1;
+  min-width: 0;
+}
+
+.home-dark-stat-divider {
+  width: 1px;
+  align-self: stretch;
+  background: #23231f;
+}
+
+.home-dark-stat-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a8a80;
+}
+
+.home-dark-stat-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.home-dark-stat-value {
+  font-family: var(--font-serif);
+  font-size: 2.4rem;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.05;
+}
+
+.home-dark-stat-of {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #8a8a80;
+}
+
+.home-dark-stat-delta {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #d6ff3f;
+}
+
+.home-dark-segments {
+  display: flex;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.home-dark-segment {
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: #23231f;
+}
+
+.home-dark-segment.filled {
+  background: #d6ff3f;
+}
+
+.home-dark-bar {
+  width: 100%;
+  height: 5px;
+  border-radius: 999px;
+  background: #23231f;
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.home-dark-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #d6ff3f;
+}
+
+.home-dark-stat-caption {
+  font-size: 0.72rem;
+  color: #8a8a80;
+  margin-top: 8px;
+}
+
+/* ---- Trend carousel: full-bleed swipeable panels ---- */
+
+.trend-carousel-section {
+  margin: 14px -18px 0;
+}
+
+.trend-carousel {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.trend-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.trend-slide {
+  flex: 0 0 100%;
+  scroll-snap-align: center;
+  position: relative;
+  height: 216px;
+}
+
+.line-chart-bleed {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.trend-slide-overlay {
+  position: absolute;
+  inset: 0;
+  padding: 6px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.trend-slide-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.trend-slide-name {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a8a80;
+}
+
+.trend-slide-trend {
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.trend-slide-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.trend-slide-value {
+  font-family: var(--font-serif);
+  font-size: 2.4rem;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.05;
+}
+
+.trend-slide-unit {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #8a8a80;
+}
+
+.trend-slide-foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.72rem;
+  color: #8a8a80;
+}
+
+.trend-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 18px;
+  margin-top: -8px;
+}
+
+.trend-dot-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 20px 8px;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.trend-dot {
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  transition: width 0.15s, background 0.15s;
+}
+
+/* ---- Progress report card ---- */
+
+.report-card {
+  margin: 20px -18px 0;
+  padding: 20px 18px;
+  background: #151511;
+  border-top: 1px solid #23231f;
+  border-bottom: 1px solid #23231f;
+}
+
+.report-card-top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.report-card-kicker {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #d6ff3f;
+}
+
+.report-card-period {
+  font-size: 0.7rem;
+  color: #8a8a80;
+}
+
+.report-card-headline {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.2;
+  margin-top: 6px;
+}
+
+.report-card-body {
+  margin: 12px 0 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #c9c9bf;
+}
+
+.report-card-stats {
+  display: flex;
+  gap: 18px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.report-card-stat-label {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8a8a80;
+}
+
+.report-card-stat-value {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.1;
+  margin-top: 2px;
+}
+
+.report-card-chart {
+  position: relative;
+  width: 100%;
+  height: 120px;
+  margin-top: 16px;
+}
+
+.report-card-chart .line-chart-bleed {
+  position: static;
+  width: 100%;
+  height: 100%;
+}
+
+.report-card-chart-foot {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: #8a8a80;
+}
+
+.report-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.report-toggle-btn {
+  flex: 1;
+  min-height: 44px;
+  border: 1px solid #3a3a32;
+  background: none;
+  color: #ffffff;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.report-toggle-btn:hover {
+  background: #1b1b16;
+}
+
+.report-done-btn {
+  flex: 1;
+  min-height: 44px;
+  border: none;
+  background: #d6ff3f;
+  color: #0e0e0c;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.report-done-btn:hover {
+  background: #ffffff;
+}
+
+.report-archived-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 -18px;
+  padding: 14px 18px;
+  border-top: 1px solid #23231f;
+  border-bottom: 1px solid #23231f;
+  font-size: 0.78rem;
+  color: #8a8a80;
+}
+
+.report-undo-btn {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 8px;
+  border: none;
+  background: none;
+  color: #d6ff3f;
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* ---- Today / Next meeting / Coach notes / Goals — divider rows ---- */
+
+.home-dark-section {
+  padding-top: 22px;
+}
+
+.home-dark-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.home-dark-section-title {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a8a80;
+}
+
+.home-dark-section-count {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #d6ff3f;
+}
+
+.home-dark-empty {
+  color: #8a8a80;
+  font-size: 0.85rem;
+  margin: 10px 0 0;
+}
+
+.home-dark-rows {
+  display: flex;
+  flex-direction: column;
+  margin-top: 6px;
+}
+
+.home-dark-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  border: none;
+  border-top: 1px solid #23231f;
+  background: none;
+  padding: 14px 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  min-height: 44px;
+  width: 100%;
+}
+
+.home-dark-row-body {
+  min-width: 0;
+}
+
+.home-dark-row-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.home-dark-row-detail {
+  color: #8a8a80;
+  font-size: 0.78rem;
+  margin-top: 1px;
+}
+
+.home-dark-row-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1.5px solid #3a3a32;
+  color: #8a8a80;
+}
+
+.home-dark-row-mark svg {
+  width: 12px;
+  height: 12px;
+}
+
+.home-dark-meeting-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.home-dark-meeting-date {
+  font-family: var(--font-serif);
+  font-size: 2.1rem;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.05;
+}
+
+.home-dark-meeting-time {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #8a8a80;
+}
+
+.home-dark-meeting-caption {
+  font-size: 0.72rem;
+  color: #8a8a80;
+  margin-top: 6px;
+}
+
+.home-dark-note-row {
+  display: flex;
+  gap: 10px;
+  border-top: 1px solid #23231f;
+  padding: 13px 0;
+}
+
+.home-dark-note-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  margin-top: 7px;
+  border-radius: 999px;
+  background: #3a3a32;
+}
+
+.home-dark-note-dot.unread {
+  background: #d6ff3f;
+}
+
+.home-dark-note-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.home-dark-note-context {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8a8a80;
+}
+
+.home-dark-note-time {
+  flex-shrink: 0;
+  color: #8a8a80;
+  font-size: 0.7rem;
+}
+
+.home-dark-note-text {
+  font-size: 0.9rem;
+  color: #ffffff;
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+.home-dark-goal-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border-top: 1px solid #23231f;
+  padding: 13px 0;
+}
+
+.home-dark-goal-index {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #d6ff3f;
+  margin-top: 3px;
+}
+
+.home-dark-goal-text {
+  font-size: 0.9rem;
+  color: #ffffff;
+}
+
+@media (max-width: 480px), (max-height: 760px) {
+  .cn-header {
+    padding: 18px 16px 14px;
+  }
+}
+
 @media (max-width: 480px), (max-height: 760px) {
   .phone-frame {
     padding: 0;

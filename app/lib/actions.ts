@@ -19,6 +19,7 @@ import {
   addSkinfoldEntry,
   applyMetricTemplateToClient,
   approveReport,
+  archiveReport,
   computeReportSections,
   createClient,
   createDraftReport,
@@ -44,6 +45,7 @@ import {
   OTHER_ITEMS,
   removeReportTemplateSection,
   sendReport,
+  unarchiveReport,
   updateReportSummary,
   removeAssignment,
   removeClientGoal,
@@ -882,4 +884,16 @@ export async function deleteReportAction(formData: FormData) {
   const id = Number(formData.get("id"));
   deleteReport(id);
   revalidatePath("/admin");
+}
+
+export async function archiveReportAction(formData: FormData) {
+  const id = Number(formData.get("id"));
+  archiveReport(id);
+  revalidatePath("/client");
+}
+
+export async function unarchiveReportAction(formData: FormData) {
+  const id = Number(formData.get("id"));
+  unarchiveReport(id);
+  revalidatePath("/client");
 }

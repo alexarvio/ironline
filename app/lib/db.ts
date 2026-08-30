@@ -335,6 +335,11 @@ type ClientReport = {
   generated_at: string;
   approved_at: string | null;
   sent_at: string | null;
+  // Set when the client dismisses ("Done") the report on Home — the report
+  // itself is untouched, this just controls whether Home shows the full
+  // card or the "archived, find it in Settings" strip. Missing on rows
+  // written before this field existed, so callers default it to false.
+  archived_at: string | null;
 };
 
 // Coach-wide app branding — one row for the whole app (no multi-tenant

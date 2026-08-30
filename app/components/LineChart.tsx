@@ -48,15 +48,55 @@ function xTickIndices(pointCount: number, maxTicks = 5) {
 // to a soft, low-contrast shape — for spots (the client Home carousel) that
 // show the average and trend as their own text instead of reading exact
 // values off the chart, so the chart's only job is "shape of the trend".
+//
+// `bleed` is the Home Dark trend panel's full-bleed treatment: the area
+// fades from the line down to transparent (an SVG gradient, not a flat
+// low-opacity fill) and the line itself runs edge to edge with no padding
+// at all — the panel's own absolutely-positioned text overlay is drawn by
+// the caller (TrendCarousel), not this component. gradientId must be
+// unique per chart on the page since it's referenced via url(#id).
 export function LineChart({
   points,
   yRange,
   sparkline,
+  bleed,
+  gradientId,
 }: {
   points: Point[];
   yRange?: [number, number];
   sparkline?: boolean;
+  bleed?: boolean;
+  gradientId?: string;
 }) {
+  if (bleed) {
+    const width = 720;
+    const height = 200;
+    const pad = 8;
+    const values = points.map((p) => p.value);
+    const lo = values.length > 0 ? Math.min(...values) : 0;
+    const hi = values.length > 0 ? Math.max(...values) : 1;
+    const span = hi - lo || 1;
+    const yFor = (v: number) => pad + (height - pad * 2) - ((v - lo) / span) * (height - pad * 2);
+    const stepX = points.length > 1 ? (width - pad * 2) / (points.length - 1) : 0;
+    const coords = points.map((p, i) => ({ x: pad + i * stepX, y: yFor(p.value) }));
+    const linePath = coords.map((c, i) => `${i === 0 ? "M" : "L"} ${c.x.toFixed(1)} ${c.y.toFixed(1)}`).join(" ");
+    const last = coords[coords.length - 1];
+    const areaPath = coords.length > 0 ? `${linePath} L ${last.x.toFixed(1)} ${height} L ${coords[0].x.toFixed(1)} ${height} Z` : "";
+    const id = gradientId ?? "chart-grad";
+    return (
+      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="line-chart-bleed" role="img" aria-label="Trend chart">
+        <defs>
+          <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#d6ff3f" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="#d6ff3f" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {areaPath && <path d={areaPath} fill={`url(#${id})`} />}
+        <path d={linePath} fill="none" stroke="#d6ff3f" strokeWidth="3" vectorEffect="non-scaling-stroke" />
+      </svg>
+    );
+  }
+
   const width = 720;
   const height = 240;
   const paddingTop = sparkline ? 10 : 20;

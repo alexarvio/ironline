@@ -4,11 +4,9 @@ import {
   getClient,
   getClientProfile,
   getDeployedProgram,
-  getLatestWeight,
   getLogsForAssignment,
   getCurrentWeekNumber,
   getDueItems,
-  getLatestCoachActivity,
   getLatestSentReport,
   getMetricSeries,
   getPinnedMetricsSummary,
@@ -45,7 +43,8 @@ import PhotoUploadBox from "./PhotoUploadBox";
 import PhotoPeriodHistoryRow from "./PhotoPeriodHistoryRow";
 import CheckInForm from "./CheckInForm";
 import TrackerLogForm from "./TrackerLogForm";
-import HomeHub, { CoachActivityPreview, DueItem, HubSubTab, MessagePreview, UpcomingMeeting } from "./HomeHub";
+import HomeHub, { DueItem, HomeReport, HubSubTab, UpcomingMeeting } from "./HomeHub";
+import { TrendMetric } from "./TrendCarousel";
 import ClientWeekSwitcher from "./ClientWeekSwitcher";
 import ChatComposeForm from "../components/ChatComposeForm";
 import AppShell, { AppTab } from "./AppShell";
@@ -80,7 +79,6 @@ function HomeTab() {
   const client = getClient(CLIENT_ID);
   const profile = getClientProfile(CLIENT_ID);
   const timeToGoal = getTimeToGoal(profile);
-  const weight = getLatestWeight(CLIENT_ID);
   const goals = [...listClientGoals(CLIENT_ID, "short"), ...listClientGoals(CLIENT_ID, "long")]
     .filter((g) => !g.done)
     .map((g) => g.text);
@@ -92,6 +90,25 @@ function HomeTab() {
     (sum, d) => sum + d.assignments.reduce((s, a) => s + getLogsForAssignment(a.id).length, 0),
     0
   );
+  const setsPlannedThisWeek = days.reduce((sum, d) => sum + d.assignments.reduce((s, a) => s + a.sets, 0), 0);
+
+  // Week-over-week volume trend for the "Sets logged" stat — same
+  // weight*reps volume measure the report/admin panels already use.
+  const volumeOf = (weekDays: ReturnType<typeof getWeekDays>) =>
+    weekDays.reduce(
+      (sum, d) =>
+        sum +
+        d.assignments.reduce(
+          (s, a) => s + getLogsForAssignment(a.id).reduce((v, l) => v + (l.weight_kg ?? 0) * (l.reps ?? 0), 0),
+          0
+        ),
+      0
+    );
+  const currentWeekNumber = getCurrentWeekNumber(CLIENT_ID);
+  const volumeThisWeek = volumeOf(days);
+  const volumePrevWeek = volumeOf(getWeekDays(currentWeekNumber - 1));
+  const volumeTrendPct = volumePrevWeek > 0 ? ((volumeThisWeek - volumePrevWeek) / volumePrevWeek) * 100 : null;
+  const volumeTrendLabel = volumeTrendPct == null ? null : `${volumeTrendPct >= 0 ? "+" : ""}${Math.round(volumeTrendPct)}% vol`;
 
   const today = localDateStr();
   const currentWeekStart = weekStart(today);
@@ -107,6 +124,12 @@ function HomeTab() {
         timeLabel: upcomingMeeting.time
           ? `${upcomingMeeting.time} · ${upcomingMeeting.duration_minutes}min`
           : `${upcomingMeeting.duration_minutes}min`,
+        daysAwayLabel: (() => {
+          const days = Math.round(
+            (new Date(`${upcomingMeeting.date}T00:00:00`).getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000
+          );
+          return days <= 0 ? "Today" : days === 1 ? "Tomorrow" : `${days} days away`;
+        })(),
       }
     : null;
 
@@ -122,71 +145,118 @@ function HomeTab() {
 
   const dueItems: DueItem[] = getDueItems(CLIENT_ID);
 
-  // ---- Recent conversation, previewed on Home as a small feed (not just
-  // the single latest coach message — the last few messages either way, so
-  // it reads like an activity feed rather than a one-off notification) ----
-  const messages = listChatMessages(CLIENT_ID);
-  const messageTimeLabel = (createdAt: string) => {
-    const d = new Date(createdAt);
-    const sameDay = d.toDateString() === new Date().toDateString();
-    const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-    return sameDay ? `Today, ${time}` : `${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })}, ${time}`;
-  };
-  const recentMessages: MessagePreview[] = [...messages]
-    .slice(-3)
-    .reverse()
-    .map((m) => ({
-      id: m.id,
-      sender: m.sender,
-      text: m.text || (m.media_type === "video" ? "Sent a video" : m.media_type === "image" ? "Sent a photo" : ""),
-      timeLabel: messageTimeLabel(m.created_at),
+  // ---- Coach notes: coach chat messages, same feed the Notifications
+  // screen shows (kind "coach_note"), filtered down to just those so Home
+  // reads as "what has my coach said about my work", not a full inbox —
+  // the chat itself lives solely behind the header's chat icon now. ----
+  const coachNotes = getNotifications(CLIENT_ID)
+    .filter((n) => n.kind === "coach_note")
+    .slice(0, 5)
+    .map((n) => ({
+      id: n.id,
+      context: "Coach note",
+      timeLabel: notificationTimeLabel(n.created_at),
+      text: n.message,
+      unread: !n.read,
     }));
 
-  // ---- Last coach-side change worth flagging (nutrition update, training
-  // published, meeting scheduled, ...) — always shows a container, empty
-  // state when nothing's happened yet ----
-  const latestActivity = getLatestCoachActivity(CLIENT_ID);
-  const lastCoachActivity: CoachActivityPreview = latestActivity
-    ? { message: latestActivity.message, timeLabel: messageTimeLabel(latestActivity.created_at) }
-    : null;
-
-  // One swipeable carousel of trend sparklines: Weight plus whatever the
-  // coach has pinned (that pin toggle lives in the admin Tracker tabs only —
-  // "any metric the coach wants" graphed is just "any metric they've
-  // pinned"). Each entry needs >=2 points to plot a shape and compute a
-  // trend, so anything thinner than that is left out rather than shown as
-  // an empty slide.
-  const trendMetric = (id: string, name: string, unit: string, series: { date: string; value: number }[]) => {
+  // One swipeable carousel of trend panels: Weight plus whatever the coach
+  // has pinned (that pin toggle lives in the admin Tracker tabs only — "any
+  // metric the coach wants" graphed is just "any metric they've pinned").
+  // Each entry needs >=2 points to plot a shape and compute a trend, so
+  // anything thinner than that is left out rather than shown as an empty
+  // slide. goodDown says which direction of change is the good one — known
+  // for weight (down is good); left undefined for coach-pinned metrics
+  // since there's no way to know that generically, and guessing would risk
+  // coloring a genuinely good change red.
+  const trendMetric = (
+    id: string,
+    name: string,
+    unit: string,
+    series: { date: string; value: number }[],
+    goodDown?: boolean
+  ): TrendMetric | null => {
     if (series.length < 2) return null;
+    const fmt = (v: number) => (Number.isInteger(v) ? v.toLocaleString("en-US") : v.toFixed(1));
     const average = series.reduce((sum, p) => sum + p.value, 0) / series.length;
     const first = series[0].value;
     const last = series[series.length - 1].value;
-    const trendPct = first !== 0 ? ((last - first) / first) * 100 : null;
-    return { id, name, unit, series, average, trendPct };
+    const pct = first !== 0 ? ((last - first) / first) * 100 : null;
+    const improving = pct == null || goodDown == null ? null : goodDown ? pct < 0 : pct > 0;
+    const weeksSpan = Math.max(
+      1,
+      Math.round(
+        (new Date(series[series.length - 1].date).getTime() - new Date(series[0].date).getTime()) / (7 * 86400000)
+      )
+    );
+    return {
+      id,
+      name,
+      points: series,
+      currentValueLabel: fmt(last),
+      unitLabel: unit,
+      trendLabel: pct == null ? "" : `${pct > 0 ? "▲" : "▼"} ${Math.abs(pct).toFixed(1)}%`,
+      trendGood: improving ?? true,
+      rangeLabel: `${fmt(first)}${unit} → ${fmt(last)}${unit} · ${weeksSpan} week${weeksSpan === 1 ? "" : "s"}`,
+      avgLabel: `avg ${fmt(average)}${unit ? ` ${unit}` : ""}`,
+    };
   };
 
-  const chartMetrics = [
-    trendMetric("weight", "Weight", "kg", getWeightSeries(CLIENT_ID, 3650)),
-    ...getPinnedMetricsSummary(CLIENT_ID).map(({ def }) =>
-      trendMetric(`metric-${def.id}`, def.name, def.unit, getMetricSeries(def.id))
-    ),
-  ].filter((m): m is NonNullable<typeof m> => m !== null);
+  const trendMetrics: TrendMetric[] = [
+    trendMetric("weight", "Weight", "kg", getWeightSeries(CLIENT_ID, 3650), true),
+    ...getPinnedMetricsSummary(CLIENT_ID).map(({ def }) => trendMetric(`metric-${def.id}`, def.name, def.unit, getMetricSeries(def.id))),
+  ].filter((m): m is TrendMetric => m !== null);
 
+  // ---- Progress report card: collapsed headline until "Read report", plus
+  // up to 3 stat deltas and one trend chart pulled from whichever sections
+  // the report actually has (no domain knowledge of which are "good" for a
+  // coach-defined metric, so deltas render neutral rather than guessing). ----
   const sentReport = getLatestSentReport(CLIENT_ID);
-  const latestReport = sentReport
-    ? {
-        periodStart: sentReport.period_start,
-        periodEnd: sentReport.period_end,
-        summary: sentReport.summary,
-        sections: (() => {
-          try {
-            return JSON.parse(sentReport.sections_snapshot);
-          } catch {
-            return [];
-          }
-        })(),
+  const fmtShortDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  let report: HomeReport | null = null;
+  if (sentReport) {
+    type Section = { label: string; series?: { date: string; value: number }[]; seriesByField?: Record<string, { unit: string; points: { date: string; value: number }[] }> };
+    const sections: Section[] = (() => {
+      try {
+        return JSON.parse(sentReport.sections_snapshot);
+      } catch {
+        return [];
       }
-    : null;
+    })();
+    const stats: { label: string; value: string }[] = [];
+    for (const s of sections) {
+      if (stats.length >= 3) break;
+      if (s.series && s.series.length >= 2) {
+        const delta = s.series[s.series.length - 1].value - s.series[0].value;
+        stats.push({ label: s.label, value: `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}` });
+      } else if (s.seriesByField) {
+        for (const [field, { points, unit }] of Object.entries(s.seriesByField)) {
+          if (stats.length >= 3 || points.length < 2) continue;
+          const delta = points[points.length - 1].value - points[0].value;
+          stats.push({ label: field, value: `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}${unit ? ` ${unit}` : ""}` });
+        }
+      }
+    }
+    const chartSection = sections.find((s) => s.series && s.series.length >= 2);
+    const summary = sentReport.summary || "";
+    const firstSentence = summary.match(/^.*?[.!?](?=\s|$)/)?.[0];
+    report = {
+      id: sentReport.id,
+      periodLabel: `${fmtShortDate(sentReport.period_start)} – ${fmtShortDate(sentReport.period_end)}`,
+      headline: firstSentence || summary,
+      body: summary,
+      stats,
+      chart: chartSection
+        ? {
+            points: chartSection.series!,
+            fromLabel: fmtShortDate(chartSection.series![0].date),
+            toLabel: fmtShortDate(chartSection.series![chartSection.series!.length - 1].date),
+            caption: chartSection.label,
+          }
+        : null,
+      archived: sentReport.archived_at != null,
+    };
+  }
 
   const tabs: HubSubTab[] = [
     {
@@ -226,17 +296,17 @@ function HomeTab() {
       name={client?.name ?? ""}
       subLine={`${profile.goal_phase || "No goal phase set yet"}${profile.current_week ? ` · ${profile.current_week}` : ""}`}
       goalNote={timeToGoal ? `${timeToGoal} to your goal date` : null}
-      weightLabel={weight != null ? `${weight} kg current weight` : null}
       daysTrained={daysTrained}
       totalDays={totalDaysBuilt}
       setsThisWeek={setsThisWeek}
-      chartMetrics={chartMetrics}
+      setsPlanned={setsPlannedThisWeek}
+      volumeTrendLabel={volumeTrendLabel}
+      trendMetrics={trendMetrics}
       goals={goals}
       upcoming={upcoming}
-      lastCoachActivity={lastCoachActivity}
-      recentMessages={recentMessages}
+      coachNotes={coachNotes}
       dueItems={dueItems}
-      latestReport={latestReport}
+      report={report}
       tabs={tabs}
     />
   );

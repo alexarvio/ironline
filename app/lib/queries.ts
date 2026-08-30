@@ -2744,6 +2744,7 @@ export type ClientReport = {
   generated_at: string;
   approved_at: string | null;
   sent_at: string | null;
+  archived_at: string | null;
 };
 
 export type ReportSeriesPoint = { date: string; value: number };
@@ -2920,9 +2921,29 @@ export function createDraftReport(
     generated_at: new Date().toISOString(),
     approved_at: null,
     sent_at: null,
+    archived_at: null,
   });
   persist();
   return id;
+}
+
+// Client-side dismiss ("Done") / undo on the Home progress-report card —
+// doesn't touch the report content, just whether Home shows the full card
+// or the "archived, find it in Settings" strip.
+export function archiveReport(id: number) {
+  const data = getData();
+  const report = data.client_reports.find((r) => r.id === id);
+  if (!report) return;
+  report.archived_at = new Date().toISOString();
+  persist();
+}
+
+export function unarchiveReport(id: number) {
+  const data = getData();
+  const report = data.client_reports.find((r) => r.id === id);
+  if (!report) return;
+  report.archived_at = null;
+  persist();
 }
 
 export function updateReportSummary(id: number, summary: string) {
