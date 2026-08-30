@@ -1669,7 +1669,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--brand-frame, #2b2d24);
+  background: #2b2d24;
   padding: 40px 12px;
 }
 

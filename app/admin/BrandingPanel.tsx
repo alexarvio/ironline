@@ -19,7 +19,7 @@ export default function BrandingPanel() {
 
       <div className="nutrition-table-wrap builder-card">
         <h3 className="builder-pill-heading">Brand colors</h3>
-        <BrandingColorForm colorPrimary={branding.color_primary} colorFrame={branding.color_frame} />
+        <BrandingColorForm colorPrimary={branding.color_primary} />
       </div>
     </div>
   );

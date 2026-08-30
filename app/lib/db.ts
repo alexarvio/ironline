@@ -367,7 +367,6 @@ type ClientReport = {
 type Branding = {
   logo_path: string | null;
   color_primary: string | null;
-  color_frame: string | null;
 };
 
 // Per-client Settings preferences. No row means defaults (see
@@ -421,7 +420,7 @@ type Data = {
 function emptyData(): Data {
   return {
     clients: [],
-    branding: { logo_path: null, color_primary: null, color_frame: null },
+    branding: { logo_path: null, color_primary: null },
     training_programs: [],
     client_preferences: [],
     exercises: [],

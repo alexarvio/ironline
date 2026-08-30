@@ -1771,7 +1771,7 @@ export function savePhotoUpload(clientId: number, slotId: number, buffer: Buffer
 
 // ---- Branding: coach-wide logo + accent colors ----
 
-export type Branding = { logo_path: string | null; color_primary: string | null; color_frame: string | null };
+export type Branding = { logo_path: string | null; color_primary: string | null };
 
 export function getBranding(): Branding {
   return getData().branding;
@@ -1834,12 +1834,10 @@ const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 // Empty string clears the override (falls back to the built-in default);
 // anything else must be a valid 6-digit hex or it's silently ignored rather
 // than saving a value that'd break the CSS custom property.
-export function saveBrandingColors(colorPrimary: string, colorFrame: string) {
+export function saveBrandingColors(colorPrimary: string) {
   const data = getData();
   if (colorPrimary === "") data.branding.color_primary = null;
   else if (HEX_COLOR_RE.test(colorPrimary)) data.branding.color_primary = colorPrimary;
-  if (colorFrame === "") data.branding.color_frame = null;
-  else if (HEX_COLOR_RE.test(colorFrame)) data.branding.color_frame = colorFrame;
   persist();
 }
 

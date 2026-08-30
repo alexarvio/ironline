@@ -561,8 +561,7 @@ export async function removeBrandingLogoAction() {
 
 export async function saveBrandingColorsAction(formData: FormData) {
   const colorPrimary = String(formData.get("colorPrimary") || "");
-  const colorFrame = String(formData.get("colorFrame") || "");
-  saveBrandingColors(colorPrimary, colorFrame);
+  saveBrandingColors(colorPrimary);
   revalidatePath("/", "layout");
 }
 

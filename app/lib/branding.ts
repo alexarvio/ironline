@@ -1,10 +1,8 @@
-// Default brand colors — match the current hardcoded values in globals.css
-// (--accent and .phone-frame's background) so "no branding set" looks
-// identical to today. Kept in their own file (no fs/path imports) so client
-// components can import it without pulling in server-only code from
-// queries.ts/db.ts.
+// Default brand accent — matches the hardcoded --accent in globals.css so
+// "no branding set" looks identical to today. Kept in its own file (no
+// fs/path imports) so client components can import it without pulling in
+// server-only code from queries.ts/db.ts.
 export const DEFAULT_BRAND_PRIMARY = "#2f6485";
-export const DEFAULT_BRAND_FRAME = "#2b2d24";
 
 // The client app's dark surface (see .app-screen / --fp-surface). Accent
 // colors shown on it are measured against this, not white.

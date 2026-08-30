@@ -47,7 +47,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     `--accent-ink: ${pickTextSafeColor(primary)};`,
     `--fp-accent: ${clientAccent};`,
     `--fp-accent-fg: ${pickForegroundColor(clientAccent)};`,
-    branding.color_frame ? `--brand-frame: ${branding.color_frame};` : "",
   ]
     .filter(Boolean)
     .join(" ");
