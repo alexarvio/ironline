@@ -20,7 +20,6 @@ import {
   getPhotoCadence,
   getPhotoPeriodNote,
   getPublishedWeek,
-  getTimeToGoal,
   listChatMessages,
   listClientGoals,
   listMeetings,
@@ -136,7 +135,21 @@ function getWeekDays(week?: number) {
 function HomeTab() {
   const client = getClient(CLIENT_ID);
   const profile = getClientProfile(CLIENT_ID);
-  const timeToGoal = getTimeToGoal(profile);
+  // Home's header keeps the goal countdown to whole weeks ("11 weeks to
+  // goal") so it reads as one line next to the phase/week label instead of
+  // wrapping — getTimeToGoal's day-precision string (e.g. "11 weeks 5d") is
+  // still what the coach sees in admin's Start Page, unchanged.
+  const goalNote = (() => {
+    if (!profile.goal_date) return null;
+    const days = Math.round(
+      (new Date(`${profile.goal_date}T00:00:00`).getTime() - new Date(`${localDateStr()}T00:00:00`).getTime()) / 86400000
+    );
+    if (days < 0) return `${Math.abs(days)} day${Math.abs(days) === 1 ? "" : "s"} overdue`;
+    if (days === 0) return "Goal date is today";
+    if (days < 7) return `${days} day${days === 1 ? "" : "s"} to goal`;
+    const weeks = Math.floor(days / 7);
+    return `${weeks} week${weeks === 1 ? "" : "s"} to goal`;
+  })();
   const goals = [...listClientGoals(CLIENT_ID, "short"), ...listClientGoals(CLIENT_ID, "long")]
     .filter((g) => !g.done)
     .map((g) => g.text);
@@ -318,7 +331,7 @@ function HomeTab() {
       dateLabel={dateLabel}
       name={client?.name ?? ""}
       subLine={`${profile.goal_phase || "No goal phase set yet"}${profile.current_week ? ` · ${profile.current_week}` : ""}`}
-      goalNote={timeToGoal ? `${timeToGoal} to your goal date` : null}
+      goalNote={goalNote}
       daysTrained={daysTrained}
       totalDays={totalDaysBuilt}
       setsThisWeek={setsThisWeek}

@@ -2376,6 +2376,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 }
 
 .app-header.dark .app-header-icon-badge {
+  background: #d6ff3f;
   border-color: #0e0e0c;
 }
 
