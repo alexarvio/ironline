@@ -91,7 +91,7 @@ export default function ProgramBuilderShell({
             onClick={() => selectProgram(p)}
           >
             <span className="pb-program-name">{p.name || "Untitled program"}</span>
-            <span className={`pb-program-status ${p.status}`}>{p.statusLabel}</span>
+            <span className={`status-pill ${p.status}`}>{p.statusLabel}</span>
             <span className="pb-program-weeks">{p.totalWeeks}w</span>
           </button>
         ))}

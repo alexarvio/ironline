@@ -146,23 +146,20 @@ export default function ProgramBuilder({
                     </th>
                   ))}
                   <th className="logged-col">Logged by client</th>
-                  <th aria-hidden="true" style={{ width: "34px" }}></th>
+                  {/* Holds the row delete on an exercise row and the Add button on the
+                      add row, so it needs to fit the wider of the two. */}
+                  <th aria-hidden="true" style={{ width: "58px" }}></th>
                 </tr>
               </thead>
               <tbody>
                 {assignments.map((a) => {
                   const weekGroups = getLogsForAssignmentByWeek(a.id);
-                  const prevRef =
-                    day.status === "published"
-                      ? null
-                      : getPreviousWeekAssignmentRef(clientId, day.week_number, day.day_of_week, a.exercise_id);
-                  // Only on published days — this is a "how is the client actually
-                  // trending" signal drawn from real logged history, and showing it
-                  // next to a draft day's "Actual: not logged" reads as a
-                  // contradiction (the badge isn't about this row, it's about the
-                  // exercise overall, but sitting there it looks like it is).
-                  const weightTrendPct =
-                    day.status === "published" ? getExerciseWeightTrendPct(clientId, a.exercise_id, day.week_number) : null;
+                  // Two independent facts about this exercise, both shown when
+                  // there's history for them: how the client is trending on it
+                  // overall, and what last week actually asked for versus what
+                  // they did. Neither depends on whether this day is published.
+                  const prevRef = getPreviousWeekAssignmentRef(clientId, day.week_number, day.day_of_week, a.exercise_id);
+                  const weightTrendPct = getExerciseWeightTrendPct(clientId, a.exercise_id, day.week_number);
                   const trendDir = weightTrendPct == null ? null : weightTrendPct > 0 ? "up" : weightTrendPct < 0 ? "down" : null;
                   return (
                     <tr key={a.id}>

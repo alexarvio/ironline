@@ -209,7 +209,9 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 }
 
 .status-pill.draft { background: #f0d9c4; color: var(--accent-plate); }
-.status-pill.published { background: #d7e6da; color: var(--good); }
+.status-pill.published,
+.status-pill.live { background: #d7e6da; color: var(--good); }
+.status-pill.past { background: var(--paper-raised); color: var(--steel); }
 
 .deploy-btn {
   background: var(--good);
@@ -6347,27 +6349,6 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   color: var(--ink);
 }
 
-.pb-program-status {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  border-radius: 99px;
-  padding: 2px 7px;
-  color: var(--steel);
-  background: var(--paper-raised);
-}
-
-.pb-program-status.live {
-  color: var(--good);
-  background: #d7e6da;
-}
-
-.pb-program-status.draft {
-  color: var(--accent-plate);
-  background: #f0d9c4;
-}
-
 .pb-program-weeks {
   font-size: 11px;
   color: var(--steel);
@@ -7589,4 +7570,87 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 .ad-rail-body {
   display: block;
+}
+
+/* ---- Training tab: density corrections against the shell's 13px base ---- */
+
+/* The pill inside a program chip sits at the design's 11px, not the admin's
+   default 0.72rem — it's a chip inside a chip. */
+.pb-program-chip .status-pill {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+}
+
+.pb .deploy-btn {
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.pb .plan-deploy-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pb .plan-deploy-controls .btn,
+.pb .plan-schedule-form .btn {
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.pb .plan-schedule-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pb .plan-schedule-form input {
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 0 8px;
+  font-family: inherit;
+  font-size: 11.5px;
+}
+
+/* Day label: the design's 26px field, 170px wide, sitting inline in the
+   day header rather than filling it. */
+.pb .day-label-input {
+  width: 170px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.pb .admin-day-card-head-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.pb .admin-day-summary {
+  font-size: 11px;
+  color: var(--steel);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pb .exercise-table td:last-child,
+.pb .exercise-table th:last-child {
+  padding-right: 10px;
+  text-align: right;
 }
