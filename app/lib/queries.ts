@@ -2635,7 +2635,10 @@ export type CheckInMetric = {
 export type CheckInSection = {
   id: "daily" | "weekly" | "measurements";
   label: string;
-  sub: string;
+  // The period this segment covers ("today", "week 3"). Null where there
+  // isn't one — measurements have no cadence in this data model, so the
+  // segment carries no sub-label rather than promising a schedule.
+  sub: string | null;
   intro: string;
   metrics: CheckInMetric[];
 };
@@ -2737,7 +2740,7 @@ export function getCheckInSections(clientId: number): CheckInData {
     sections.push({
       id: "measurements",
       label: "Measure",
-      sub: "check-in",
+      sub: null,
       intro: "Same spots, same time of day — first thing, before food.",
       metrics: fields.map((f) => {
         const current = valueAt(f.id, today);

@@ -19,7 +19,7 @@ export type CheckInMetric = {
 export type CheckInSection = {
   id: "daily" | "weekly" | "measurements";
   label: string;
-  sub: string;
+  sub: string | null;
   intro: string;
   metrics: CheckInMetric[];
 };
@@ -160,7 +160,7 @@ export default function CheckInScreen({
               onClick={() => setSectionId(s.id)}
             >
               {s.label}
-              <span className="ci-tab-sub">{s.sub}</span>
+              {s.sub && <span className="ci-tab-sub">{s.sub}</span>}
               {dueSections.includes(s.id) && <span className="ci-tab-dot" aria-label="Not logged yet" />}
             </button>
           ))}
