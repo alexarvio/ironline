@@ -1,14 +1,14 @@
-import Link from "next/link";
 import CalendarPanel from "./CalendarPanel";
-import ClientSidebar from "./ClientSidebar";
+import AdminShell from "./AdminShell";
+import AdminSidebar, { AdminView } from "./AdminSidebar";
+import ClientHeader from "./ClientHeader";
+import ClientRail from "./ClientRail";
 import FeedPanel from "./FeedPanel";
-import MetricGraph from "./MetricGraph";
 import SectionTabs, { TabSection } from "./SectionTabs";
 import BrandingPanel from "./BrandingPanel";
 import InvoicesPanel from "./InvoicesPanel";
 import MeasurementsPanel from "./MeasurementsPanel";
 import MeetingsPanel from "./MeetingsPanel";
-import NotBuiltPanel from "./NotBuiltPanel";
 import NutritionPanel from "./NutritionPanel";
 import ProgressPicturesPanel from "./ProgressPicturesPanel";
 import ReportsPanel from "./ReportsPanel";
@@ -17,7 +17,12 @@ import StartPagePanel from "./StartPagePanel";
 import TrackerPanel from "./TrackerPanel";
 import ProgramBuilder from "../components/ProgramBuilder";
 import ChatPanel from "../components/ChatPanel";
-import { getBranding, getClient, getClientSummary, getStrengthSeries, getWeightSeries, listChatMessages, listClients } from "../lib/queries";
+import { getClient, getClientHeaderStats, getClientProfile, listChatMessages, listClients } from "../lib/queries";
+
+// Reads live from the JSON store on every request — without this, Next
+// statically prerenders this page at build time (before any real data
+// exists) and freezes that empty snapshot in the deployed build forever.
+export const dynamic = "force-dynamic";
 
 export default async function AdminPage({
   searchParams,
@@ -26,74 +31,57 @@ export default async function AdminPage({
 }) {
   const params = await searchParams;
   const clients = listClients();
-  const branding = getBranding();
   const showFeed = params.view === "feed";
   const showCalendar = params.view === "calendar";
   const showReportTemplates = params.view === "report-templates";
   const showBranding = params.view === "branding";
-  const selectedId = params.client
-    ? Number(params.client)
-    : !showFeed && !showCalendar && !showReportTemplates && !showBranding
-    ? clients[0]?.id ?? null
-    : null;
+  const isClientView = !showFeed && !showCalendar && !showReportTemplates && !showBranding;
+  const selectedId = params.client ? Number(params.client) : isClientView ? clients[0]?.id ?? null : null;
   const client = selectedId ? getClient(selectedId) : undefined;
 
+  const activeView: AdminView = showFeed
+    ? "feed"
+    : showCalendar
+    ? "calendar"
+    : showReportTemplates
+    ? "report-templates"
+    : showBranding
+    ? "branding"
+    : "client";
+
   return (
-    <div className="admin-shell">
-      <div className="top-nav" style={{ maxWidth: "none", padding: "0 24px" }}>
-        <Link className="brand" href="/">
-          {branding.logo_path ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={branding.logo_path} alt="" className="brand-logo-img" />
-          ) : (
-            "Ironline"
-          )}
-        </Link>
-        <div className="nav-links">
-          <Link href="/client">Client</Link>
-          <Link className="active" href="/admin">
-            Admin panel
-          </Link>
+    <AdminShell
+      sidebar={<AdminSidebar selectedId={selectedId} activeView={activeView} />}
+      rail={client ? <ClientRail clientId={client.id} clientName={client.name} /> : undefined}
+    >
+      {showFeed ? (
+        <div className="ad-pad">
+          <FeedPanel />
         </div>
-      </div>
-
-      <div className="admin-body">
-        <ClientSidebar
-          selectedId={selectedId}
-          activeView={
-            showFeed
-              ? "feed"
-              : showCalendar
-              ? "calendar"
-              : showReportTemplates
-              ? "report-templates"
-              : showBranding
-              ? "branding"
-              : "client"
-          }
-        />
-
-        <main className="admin-main">
-          {showFeed ? (
-            <FeedPanel />
-          ) : showCalendar ? (
-            <CalendarPanel month={params.month} />
-          ) : showReportTemplates ? (
-            <ReportTemplatesPanel />
-          ) : showBranding ? (
-            <BrandingPanel />
-          ) : !client ? (
-            <p className="empty-note">
-              {clients.length === 0
-                ? "No clients yet — add one from the sidebar to get started."
-                : "Select a client from the sidebar."}
-            </p>
-          ) : (
-            <ClientDashboard clientId={client.id} name={client.name} initialTab={params.tab} />
-          )}
-        </main>
-      </div>
-    </div>
+      ) : showCalendar ? (
+        <div className="ad-pad">
+          <CalendarPanel month={params.month} />
+        </div>
+      ) : showReportTemplates ? (
+        <div className="ad-pad">
+          <ReportTemplatesPanel />
+        </div>
+      ) : showBranding ? (
+        <div className="ad-pad">
+          <BrandingPanel />
+        </div>
+      ) : !client ? (
+        <div className="ad-pad">
+          <p className="ad-empty">
+            {clients.length === 0
+              ? "No clients yet — add one from the sidebar to get started."
+              : "Select a client from the sidebar."}
+          </p>
+        </div>
+      ) : (
+        <ClientDashboard clientId={client.id} name={client.name} initialTab={params.tab} />
+      )}
+    </AdminShell>
   );
 }
 
@@ -106,108 +94,64 @@ function ClientDashboard({
   name: string;
   initialTab?: string;
 }) {
-  const summary = getClientSummary(clientId);
-  const strengthSeries = getStrengthSeries(clientId, 3650);
-  const weightSeries = getWeightSeries(clientId, 3650);
+  const profile = getClientProfile(clientId);
+
+  // Only the parts actually filled in, so a half-set profile doesn't render
+  // a row of orphaned separators.
+  const meta = [
+    profile.coaching_start_date
+      ? `Client since ${new Date(`${profile.coaching_start_date}T12:00:00`).toLocaleDateString("en-US", {
+          month: "short",
+          year: "numeric",
+        })}`
+      : null,
+    profile.current_week || null,
+    profile.goal_date
+      ? `Goal ${new Date(`${profile.goal_date}T12:00:00`).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        })}`
+      : null,
+  ].filter((m): m is string => m !== null);
 
   const sections: TabSection[] = [
-    {
-      id: "start",
-      label: "Start Page",
-      content: <StartPagePanel clientId={clientId} name={name} />,
-    },
+    { id: "start", label: "Start Page", content: <StartPagePanel clientId={clientId} name={name} /> },
     {
       id: "training",
       label: "Training",
       content: (
-        <ProgramBuilder clientId={clientId} clientName={name} weekLinkBase={`/admin?client=${clientId}&tab=training`} />
+        <ProgramBuilder
+          clientId={clientId}
+          clientName={name}
+          weekLinkBase={`/admin?client=${clientId}&tab=training`}
+        />
       ),
     },
     { id: "nutrition", label: "Nutrition", content: <NutritionPanel clientId={clientId} /> },
-    {
-      id: "measurements",
-      label: "Measurements",
-      content: <MeasurementsPanel clientId={clientId} />,
-    },
-    {
-      id: "photos",
-      label: "Progress Pictures",
-      content: <ProgressPicturesPanel clientId={clientId} />,
-    },
-    {
-      id: "daily",
-      label: "Daily Tracker",
-      content: <TrackerPanel clientId={clientId} frequency="daily" />,
-    },
-    {
-      id: "weekly",
-      label: "Weekly Tracker",
-      content: <TrackerPanel clientId={clientId} frequency="weekly" />,
-    },
-    {
-      id: "meetings",
-      label: "Meetings",
-      content: <MeetingsPanel clientId={clientId} />,
-    },
+    { id: "measurements", label: "Measurements", content: <MeasurementsPanel clientId={clientId} /> },
+    { id: "photos", label: "Progress Pictures", content: <ProgressPicturesPanel clientId={clientId} /> },
+    { id: "daily", label: "Daily Tracker", content: <TrackerPanel clientId={clientId} frequency="daily" /> },
+    { id: "weekly", label: "Weekly Tracker", content: <TrackerPanel clientId={clientId} frequency="weekly" /> },
+    { id: "meetings", label: "Meetings", content: <MeetingsPanel clientId={clientId} /> },
     {
       id: "chat",
       label: "Chat",
       content: <ChatPanel clientId={clientId} viewer="coach" messages={listChatMessages(clientId)} />,
     },
-    {
-      id: "invoices",
-      label: "Invoices",
-      content: <InvoicesPanel clientId={clientId} />,
-    },
-    {
-      id: "reports",
-      label: "Reports",
-      content: <ReportsPanel clientId={clientId} />,
-    },
+    { id: "invoices", label: "Invoices", content: <InvoicesPanel clientId={clientId} /> },
+    { id: "reports", label: "Reports", content: <ReportsPanel clientId={clientId} /> },
   ];
 
   return (
-    <div>
-      <header className="client-header">
-        <div className="client-header-main">
-          <h1>{name}</h1>
-          <div className="client-stat-row">
-            <div className="client-stat">
-              <span className="stat-label">Training</span>
-              <span className="stat-value">
-                {summary.programPublished
-                  ? `Published · ${summary.trainingDaysBuilt} day${
-                      summary.trainingDaysBuilt === 1 ? "" : "s"
-                    } built`
-                  : summary.trainingDaysBuilt > 0
-                  ? `Draft · ${summary.trainingDaysBuilt} day${
-                      summary.trainingDaysBuilt === 1 ? "" : "s"
-                    } built`
-                  : "Not started"}
-              </span>
-            </div>
-            <div className="client-stat">
-              <span className="stat-label">Workout</span>
-              <span className="stat-value">{summary.totalSetsLogged} sets logged</span>
-            </div>
-            <div className="client-stat">
-              <span className="stat-label">Nutrition</span>
-              <span className="stat-value">Not tracked yet</span>
-            </div>
-            <div className="client-stat">
-              <span className="stat-label">Last active</span>
-              <span className="stat-value">{summary.lastActive ?? "No activity yet"}</span>
-            </div>
-          </div>
-        </div>
-        <div className="client-avatar-large" aria-hidden="true">
-          {name.slice(0, 1).toUpperCase()}
-        </div>
-      </header>
-
-      <MetricGraph strengthSeries={strengthSeries} weightSeries={weightSeries} />
-
+    <>
+      <ClientHeader
+        name={name}
+        phase={profile.goal_phase || null}
+        meta={meta}
+        stats={getClientHeaderStats(clientId)}
+        messageHref={`/admin?client=${clientId}&tab=chat`}
+      />
       <SectionTabs sections={sections} initialId={initialTab} />
-    </div>
+    </>
   );
 }

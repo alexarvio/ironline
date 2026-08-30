@@ -2,20 +2,15 @@ import { ReactNode } from "react";
 import { addExerciseAction, createProgramAction, removeExerciseAction, removeProgramAction } from "../lib/actions";
 import {
   getAssignmentsForDay,
-  getCompletedDaysForClient,
   getCustomValues,
   getDeployedProgram,
   getDraftProgram,
-  getExerciseStrengthSeries,
   getExerciseWeightTrendPct,
-  getLatestCheckInSnapshot,
   getLogsForAssignmentByWeek,
   getPreviousWeekAssignmentRef,
   getProgramCurrentWeekIndex,
-  getStrengthSeries,
   getWeek,
   listExercisesByGroup,
-  listLoggedExercisesForClient,
   listPrograms,
   listTrainingColumns,
   localDateStr,
@@ -40,7 +35,6 @@ import TrainingColumnsPanel from "../admin/TrainingColumnsPanel";
 import ColumnPills from "../admin/ColumnPills";
 import CopyWeekButton from "../admin/CopyWeekButton";
 import DayRestToggle from "../admin/DayRestToggle";
-import BuilderRail, { CompletedEntry } from "../admin/BuilderRail";
 
 function formatTarget(sets: number, reps: string, targetWeight: number | null, rpe: number | null) {
   const weightPart = targetWeight ? ` @${targetWeight}kg` : "";
@@ -86,9 +80,6 @@ export default function ProgramBuilder({
   const pastPrograms = allPrograms
     .filter((p) => p.status === "deployed" && p.id !== deployedProgram?.id)
     .sort((a, b) => b.start_week - a.start_week);
-
-  const programForWeek = (weekNumber: number): TrainingProgram | undefined =>
-    allPrograms.find((p) => weekNumber >= p.start_week && weekNumber < p.start_week + p.total_weeks);
 
   const exercisesByGroup = listExercisesByGroup();
   const allColumns = listTrainingColumns(clientId);
@@ -479,46 +470,6 @@ export default function ProgramBuilder({
     ...pastPrograms.map((p) => buildProgram(p, "past")),
   ];
 
-  // ---- Right rail ----
-  const strengthOverall = getStrengthSeries(clientId, 3650);
-  const strengthDelta = (() => {
-    if (strengthOverall.length < 2) return null;
-    const first = strengthOverall[0].value;
-    const last = strengthOverall[strengthOverall.length - 1].value;
-    if (!first) return null;
-    const pct = ((last - first) / first) * 100;
-    return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`;
-  })();
-
-  const loggedExercises = listLoggedExercisesForClient(clientId);
-  const lifts = loggedExercises
-    .map((e) => {
-      const points = getExerciseStrengthSeries(clientId, e.id, 3650);
-      if (points.length < 2) return null;
-      const diff = points[points.length - 1].value - points[0].value;
-      return {
-        id: e.id,
-        name: e.name,
-        points,
-        delta: diff === 0 ? "±0" : `${diff > 0 ? "+" : "−"}${Math.abs(diff).toFixed(1)}`,
-        up: diff > 0,
-      };
-    })
-    .filter((l): l is NonNullable<typeof l> => l !== null)
-    .slice(0, 6);
-
-  const completed: CompletedEntry[] = getCompletedDaysForClient(clientId, 6).map((d) => {
-    const program = programForWeek(d.weekNumber);
-    return {
-      id: d.dayId,
-      day: `${DAY_NAMES_FULL[d.dayOfWeek - 1]}${d.label ? ` — ${d.label}` : ""}`,
-      program: program
-        ? `${program.name || "Program"} · ${programWeekLabel(program, d.weekNumber)}`
-        : `Week ${d.weekNumber}`,
-      when: d.completedAt,
-    };
-  });
-
   return (
     <div className="pb">
       <ProgramBuilderShell
@@ -535,20 +486,7 @@ export default function ProgramBuilder({
             </form>
           )
         }
-        emptySlot={
-          <p key="empty" className="empty-note">No programs yet — start one and build the first week.</p>
-        }
-      />
-
-      <BuilderRail
-        clientId={clientId}
-        clientFirstName={(clientName ?? "").split(" ")[0] || "your client"}
-        strength={strengthOverall}
-        strengthDelta={strengthDelta}
-        strengthFrom={strengthOverall.length > 0 ? fmtDay(strengthOverall[0].date) : null}
-        lifts={lifts}
-        checkIn={getLatestCheckInSnapshot(clientId)}
-        completed={completed}
+        emptySlot={<p key="empty" className="empty-note">No programs yet — start one and build the first week.</p>}
       />
 
       <div className="pb-columns-panel">

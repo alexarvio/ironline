@@ -373,6 +373,9 @@ type ClientReport = {
 type Branding = {
   logo_path: string | null;
   color_primary: string | null;
+  // Shown beside the mark in the admin sidebar. There's no coach entity yet
+  // (one coach, one app), so this lives on branding with the logo and colour.
+  coach_name?: string | null;
 };
 
 // Per-client Settings preferences. No row means defaults (see
@@ -426,7 +429,7 @@ type Data = {
 function emptyData(): Data {
   return {
     clients: [],
-    branding: { logo_path: null, color_primary: null },
+    branding: { logo_path: null, color_primary: null, coach_name: null },
     training_programs: [],
     client_preferences: [],
     exercises: [],

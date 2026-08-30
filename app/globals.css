@@ -36,7 +36,10 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Manrope is the typeface both designs are drawn in; this was falling back
+     to the OS system font, which is the single biggest reason the admin
+     didn't look like the handoff. */
+  font-family: var(--font-sans);
   line-height: 1.5;
 }
 
@@ -7021,7 +7024,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   /* The rail leaves the builder narrower than the design's canvas, so rather
      than crushing columns into each other the table keeps its natural widths
      and the wrapper scrolls. */
-  min-width: 780px;
+  min-width: 720px;
 }
 
 .pb .exercise-table th {
@@ -7080,4 +7083,510 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 .pb-editing-actions {
   display: flex;
   justify-content: flex-end;
+}
+
+/* ==================== Admin shell ====================
+   Shared by every admin page. Three columns, each scrolling itself so the
+   document never does; 13px base with the design's density steps (12px
+   sidebar, 11.5px tables, 9.5–10px micro-labels, 26px inputs, 30px rows).
+   Colours come only from the tokens at the top of this file. */
+
+.ad-shell {
+  height: 100vh;
+  display: grid;
+  grid-template-columns: 216px minmax(0, 1fr) 296px;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.ad-shell.no-rail {
+  grid-template-columns: 216px minmax(0, 1fr);
+}
+
+.ad-sidebar,
+.ad-main,
+.ad-rail {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.ad-sidebar {
+  background: var(--paper-raised);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+.ad-main {
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+}
+
+.ad-rail {
+  background: var(--paper-raised);
+  border-left: 1px solid var(--border);
+  padding: 16px 16px 24px;
+}
+
+.ad-pad {
+  padding: 16px 20px 24px;
+}
+
+/* ---- Shared primitives ---- */
+
+.ad-microlabel {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--steel);
+}
+
+.ad-stat-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  justify-content: flex-end;
+  margin-top: 1px;
+}
+
+.ad-stat-value {
+  font-family: var(--font-serif);
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.ad-stat-value.good {
+  color: var(--good);
+}
+
+.ad-stat-value.warn {
+  color: var(--accent-plate);
+}
+
+.ad-stat-unit {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--steel);
+}
+
+.ad-input {
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 0 9px;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.ad-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.ad-btn {
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 0 12px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.ad-btn:hover {
+  border-color: var(--steel);
+  color: var(--ink);
+}
+
+.ad-icon-btn {
+  flex-shrink: 0;
+  height: 30px;
+  width: 30px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #ffffff;
+  color: var(--accent-ink);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.ad-empty {
+  font-size: 12px;
+  color: var(--steel);
+  font-style: italic;
+}
+
+/* ---- Sidebar ---- */
+
+.ad-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 16px 14px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ad-brand-mark {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 7px;
+  background: var(--ink);
+  color: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.ad-brand-logo {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 7px;
+  object-fit: cover;
+}
+
+.ad-brand-text {
+  min-width: 0;
+}
+
+.ad-brand-name {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ad-brand-sub {
+  font-size: 10px;
+  color: var(--steel);
+  letter-spacing: 0.04em;
+}
+
+.ad-nav {
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ad-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-radius: 7px;
+  padding: 7px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--steel);
+  text-decoration: none;
+}
+
+.ad-nav-row:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--ink);
+}
+
+.ad-nav-row.active {
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 800;
+}
+
+.ad-nav-icon {
+  display: flex;
+  flex-shrink: 0;
+  color: currentColor;
+}
+
+.ad-nav-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.ad-nav-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.ad-nav-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 800;
+  background: var(--accent-plate);
+  color: #ffffff;
+  border-radius: 99px;
+  padding: 1px 6px;
+}
+
+.ad-clients-head {
+  padding: 12px 14px 6px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.ad-clients-count {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--steel);
+}
+
+.ad-clients {
+  flex: 1;
+  min-height: 0;
+  padding: 0 8px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ad-client-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-radius: 7px;
+  padding: 7px 9px;
+  text-decoration: none;
+}
+
+.ad-client-row:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.ad-client-row.active {
+  background: var(--ink);
+}
+
+.ad-client-avatar {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 99px;
+  background: var(--accent);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ad-client-row.active .ad-client-avatar {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.ad-client-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--steel);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ad-client-row.active .ad-client-name {
+  color: var(--paper);
+  font-weight: 800;
+}
+
+.ad-client-dot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 99px;
+  background: var(--accent-plate);
+}
+
+.ad-new-client {
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 6px;
+}
+
+.ad-new-client .ad-input {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+}
+
+.ad-client-app-link {
+  padding: 0 14px 12px;
+  font-size: 11px;
+  color: var(--steel);
+  text-decoration: none;
+}
+
+.ad-client-app-link:hover {
+  color: var(--ink);
+}
+
+/* ---- Client header ---- */
+
+.ad-client-header {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 14px 20px 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.ad-client-identity {
+  flex: 1;
+  min-width: 0;
+}
+
+.ad-client-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ad-client-name {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.1;
+}
+
+.ad-client-phase {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+}
+
+.ad-client-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--steel);
+  flex-wrap: wrap;
+}
+
+.ad-client-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ad-client-meta-sep {
+  color: var(--steel);
+}
+
+.ad-client-readouts {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ad-stat {
+  text-align: right;
+}
+
+/* ---- Tab bar ---- */
+
+.ad-tabbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.ad-tabbar::-webkit-scrollbar {
+  display: none;
+}
+
+.ad-tab {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  padding: 9px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--steel);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+}
+
+.ad-tab:hover {
+  color: var(--ink);
+}
+
+.ad-tab.active {
+  color: var(--ink);
+  font-weight: 800;
+  border-bottom-color: var(--accent-ink);
+}
+
+.ad-tab-panel {
+  flex: 1;
+  min-height: 0;
+  padding: 16px 20px 24px;
+}
+
+/* The Program Builder already owns its own column layout, so inside the
+   shell it drops its rail column and its own padding. */
+.ad-tab-panel .pb {
+  display: block;
+}
+
+.ad-tab-panel .pb-main {
+  padding-right: 0;
+}
+
+.ad-tab-panel .pb-columns-panel {
+  padding-right: 0;
+}
+
+.ad-rail-body {
+  display: block;
 }

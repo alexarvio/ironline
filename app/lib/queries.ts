@@ -1827,7 +1827,7 @@ export function savePhotoUpload(clientId: number, slotId: number, buffer: Buffer
 
 // ---- Branding: coach-wide logo + accent colors ----
 
-export type Branding = { logo_path: string | null; color_primary: string | null };
+export type Branding = { logo_path: string | null; color_primary: string | null; coach_name?: string | null };
 
 export function getBranding(): Branding {
   return getData().branding;
@@ -1890,6 +1890,12 @@ const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 // Empty string clears the override (falls back to the built-in default);
 // anything else must be a valid 6-digit hex or it's silently ignored rather
 // than saving a value that'd break the CSS custom property.
+export function saveCoachName(name: string) {
+  const data = getData();
+  data.branding.coach_name = name.trim() || null;
+  persist();
+}
+
 export function saveBrandingColors(colorPrimary: string) {
   const data = getData();
   if (colorPrimary === "") data.branding.color_primary = null;
@@ -2524,6 +2530,13 @@ const PHOTO_PERIOD_UNIT: Record<PhotoCadence, string> = {
 
 export type DueItem = { id: string; label: string; detail: string; targetTab: string };
 
+// Ids of clients with something outstanding, for the sidebar's attention
+// dots. Reuses the same due-item logic the client app and reminders read, so
+// a dot and a reminder can never disagree.
+export function clientsNeedingAttention(): Set<number> {
+  return new Set(listClients().filter((c) => getDueItems(c.id).length > 0).map((c) => c.id));
+}
+
 export function getDueItems(clientId: number): DueItem[] {
   const today = localDateStr();
   const currentWeekStart = weekStart(today);
@@ -2625,6 +2638,71 @@ export type CheckInStatus = {
 // next week's session rather than having to leave the tab.
 export type CheckInSnapshotMetric = { id: string; name: string; value: string; unit: string };
 export type CheckInSnapshot = { when: string | null; metrics: CheckInSnapshotMetric[] };
+
+// The three read-outs beside the client's name. Every one is derived from
+// something the client actually logged — weight from their measurements,
+// adherence from sets logged against sets planned this week, and then
+// whichever daily metric the coach put first (Sleep, for most). No
+// placeholder numbers: a read-out with nothing behind it is left out.
+export type HeaderStat = { id: string; label: string; value: string; unit: string; tone: "ink" | "good" | "warn" };
+
+export function getClientHeaderStats(clientId: number): HeaderStat[] {
+  const stats: HeaderStat[] = [];
+
+  const weightSeries = getWeightSeries(clientId, 3650);
+  if (weightSeries.length > 0) {
+    stats.push({
+      id: "weight",
+      label: "Weight",
+      value: String(weightSeries[weightSeries.length - 1].value),
+      unit: "kg",
+      tone: "ink",
+    });
+  }
+
+  // Adherence: how much of this week's planned work actually got logged.
+  const thisWeek = weekStart(localDateStr());
+  const currentWeekNumber = getCurrentWeekNumber(clientId);
+  const days = getPublishedWeek(clientId, currentWeekNumber);
+  let planned = 0;
+  let logged = 0;
+  for (const day of days) {
+    for (const a of getAssignmentsForDay(day.id)) {
+      planned += a.sets;
+      logged += getLogsForAssignmentByWeek(a.id).find((g) => g.weekStart === thisWeek)?.logs.length ?? 0;
+    }
+  }
+  if (planned > 0) {
+    const pct = Math.round((Math.min(logged, planned) / planned) * 100);
+    stats.push({
+      id: "adherence",
+      label: "Adherence",
+      value: String(pct),
+      unit: "%",
+      tone: pct >= 80 ? "good" : pct >= 50 ? "ink" : "warn",
+    });
+  }
+
+  const dailyDefs = listMetricDefinitions(clientId, "daily").filter(deployedToClient);
+  const firstDaily = dailyDefs[0];
+  if (firstDaily) {
+    const last = getMetricEntries([firstDaily.id])
+      .filter((e) => e.value != null)
+      .sort((a, b) => (a.period < b.period ? 1 : -1))[0];
+    if (last) {
+      const scaleMax = ratingScaleMax(firstDaily.unit);
+      stats.push({
+        id: `metric-${firstDaily.id}`,
+        label: firstDaily.name,
+        value: String(last.value),
+        unit: scaleMax ? `/${scaleMax}` : firstDaily.unit,
+        tone: "ink",
+      });
+    }
+  }
+
+  return stats;
+}
 
 export function getLatestCheckInSnapshot(clientId: number): CheckInSnapshot {
   const metrics: CheckInSnapshotMetric[] = [];

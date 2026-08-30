@@ -4,6 +4,10 @@ import { ReactNode, useState } from "react";
 
 export type TabSection = { id: string; label: string; content: ReactNode };
 
+// The section tabs under the client header. The bar scrolls horizontally
+// with its scrollbar hidden (there are eleven of these and a visible track
+// under a row of tabs reads as a broken layout), and only the active
+// section's content is mounted.
 export default function SectionTabs({
   sections,
   initialId,
@@ -17,22 +21,22 @@ export default function SectionTabs({
   const active = sections.find((s) => s.id === activeId) ?? sections[0];
 
   return (
-    <div className="section-tabs">
-      <div className="tab-bar" role="tablist">
+    <>
+      <div className="ad-tabbar" role="tablist">
         {sections.map((s) => (
           <button
             key={s.id}
             type="button"
             role="tab"
             aria-selected={s.id === activeId}
-            className={`tab-item${s.id === activeId ? " active" : ""}`}
+            className={`ad-tab${s.id === activeId ? " active" : ""}`}
             onClick={() => setActiveId(s.id)}
           >
             {s.label}
           </button>
         ))}
       </div>
-      <div className="tab-panel">{active?.content}</div>
-    </div>
+      <div className="ad-tab-panel">{active?.content}</div>
+    </>
   );
 }

@@ -62,6 +62,7 @@ import {
   saveClientProfile,
   removeBrandingLogo,
   saveBrandingColors,
+  saveCoachName,
   saveBrandingLogo,
   saveNutritionPlan,
   savePhotoPeriodNote,
@@ -579,6 +580,11 @@ export async function uploadBrandingLogoAction(formData: FormData) {
 
 export async function removeBrandingLogoAction() {
   removeBrandingLogo();
+  revalidatePath("/", "layout");
+}
+
+export async function saveCoachNameAction(formData: FormData) {
+  saveCoachName(String(formData.get("coachName") || ""));
   revalidatePath("/", "layout");
 }
 
