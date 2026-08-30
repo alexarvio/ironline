@@ -498,3 +498,14 @@ export function allocId(table: string): number {
 }
 
 export const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+// The client app spells days out in full on its Training day cards; the
+// admin's dense week grid keeps the short forms above.
+export const DAY_NAMES_FULL = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];

@@ -15,3 +15,13 @@ export const CheckInProvider = CheckInContext.Provider;
 export function useOpenCheckIn() {
   return useContext(CheckInContext);
 }
+
+// Same bridge for the chat push view — Home's coach notes open the thread
+// the note came from.
+const ChatContext = createContext<(() => void) | null>(null);
+
+export const ChatProvider = ChatContext.Provider;
+
+export function useOpenChat() {
+  return useContext(ChatContext);
+}

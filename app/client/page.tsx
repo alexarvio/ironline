@@ -35,7 +35,7 @@ import {
   SUPPLEMENT_ITEMS,
   VITAMIN_ITEMS,
 } from "../lib/queries";
-import { DAY_NAMES } from "../lib/db";
+import { DAY_NAMES_FULL } from "../lib/db";
 import SetLogForm from "./SetLogForm";
 import TrainingDayCard from "./TrainingDayCard";
 import PhotoPeriodHistoryRow from "./PhotoPeriodHistoryRow";
@@ -181,22 +181,19 @@ function HomeTab() {
   const upcomingMeeting = listMeetings(CLIENT_ID)
     .filter((m) => m.status === "scheduled" && m.date >= today)
     .sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1))[0];
-  const upcoming: UpcomingMeeting = upcomingMeeting
-    ? {
-        dayLabel: DAY_LABELS[new Date(`${upcomingMeeting.date}T00:00:00`).getDay()],
-        dateLabel: String(new Date(`${upcomingMeeting.date}T00:00:00`).getDate()),
-        topic: upcomingMeeting.topic || "Check-in call",
-        timeLabel: upcomingMeeting.time
-          ? `${upcomingMeeting.time} · ${upcomingMeeting.duration_minutes}min`
-          : `${upcomingMeeting.duration_minutes}min`,
-        daysAwayLabel: (() => {
-          const days = Math.round(
-            (new Date(`${upcomingMeeting.date}T00:00:00`).getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000
-          );
-          return days <= 0 ? "Today" : days === 1 ? "Tomorrow" : `${days} days away`;
-        })(),
-      }
-    : null;
+  const upcoming: UpcomingMeeting = (() => {
+    if (!upcomingMeeting) return null;
+    const when = new Date(`${upcomingMeeting.date}T00:00:00`);
+    const days = Math.round((when.getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000);
+    return {
+      monthCap: when.toLocaleDateString("en-US", { month: "short" }),
+      dayNumber: String(when.getDate()),
+      topic: upcomingMeeting.topic || "Check-in call",
+      inLabel: days <= 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days} days`,
+      whenLabel: `${DAY_LABELS[when.getDay()]}${upcomingMeeting.time ? ` ${upcomingMeeting.time}` : ""}`,
+      durationLabel: `${upcomingMeeting.duration_minutes} min`,
+    };
+  })();
 
   // ---- "Today" due items (was the Check-ins tab; folded into Home) ----
   // Computation itself lives in getDueItems() in lib/queries.ts, shared with
@@ -362,7 +359,7 @@ function TrainingTab({ week }: { week: number }) {
             return (
               <TrainingDayCard
                 key={day.id}
-                name={DAY_NAMES[day.day_of_week - 1]}
+                name={DAY_NAMES_FULL[day.day_of_week - 1]}
                 label={day.label}
                 doneCount={doneCount}
                 totalCount={assignments.length}

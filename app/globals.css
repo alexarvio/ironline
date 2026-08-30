@@ -2928,31 +2928,94 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   height: 12px;
 }
 
-.home-dark-meeting-row {
+/* Next with your coach: a date block beside the call detail, rather than a
+   bare numeral — reads as a diary entry at a glance. */
+.home-meeting-row {
+  display: flex;
+  align-items: stretch;
+  gap: 14px;
+  border-top: 1px solid #23231f;
+  margin-top: 6px;
+  padding-top: 14px;
+}
+
+.home-meeting-date {
+  flex-shrink: 0;
+  width: 52px;
+  border: 1px solid #2c2c26;
+  border-radius: 12px;
+  overflow: hidden;
+  text-align: center;
+}
+
+.home-meeting-month {
+  background: var(--fp-accent-tint);
+  color: var(--fp-accent);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 3px 0;
+}
+
+.home-meeting-day {
+  font-family: var(--font-serif);
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.15;
+  padding: 2px 0 4px;
+}
+
+.home-meeting-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+}
+
+.home-meeting-title-row {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin-top: 2px;
+  flex-wrap: wrap;
 }
 
-.home-dark-meeting-date {
-  font-family: var(--font-serif);
-  font-size: 2.1rem;
-  font-weight: 600;
-  color: #ffffff;
-  line-height: 1.05;
-}
-
-.home-dark-meeting-time {
-  font-size: 0.8rem;
+.home-meeting-title {
+  font-size: 1rem;
   font-weight: 700;
-  color: #8a8a80;
+  color: #ffffff;
 }
 
-.home-dark-meeting-caption {
-  font-size: 0.72rem;
+.home-meeting-in {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fp-accent);
+}
+
+.home-meeting-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
   color: #8a8a80;
-  margin-top: 6px;
+  font-size: 0.76rem;
+  flex-wrap: wrap;
+}
+
+.home-meeting-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.home-meeting-meta-item svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
 }
 
 .home-dark-note-row {
@@ -2960,6 +3023,20 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   gap: 10px;
   border-top: 1px solid #23231f;
   padding: 13px 0;
+}
+
+/* Tapping a note opens the conversation it came from. */
+.home-dark-note-row.tappable {
+  width: 100%;
+  text-align: left;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  min-height: 44px;
 }
 
 .home-dark-note-dot {

@@ -3,7 +3,7 @@
 import { ReactNode, useState } from "react";
 import { BellIcon, ChatIcon, ChevronLeftIcon } from "../components/icons";
 import CheckInScreen, { CheckInProps } from "./CheckInScreen";
-import { CheckInProvider } from "./CheckInContext";
+import { ChatProvider, CheckInProvider } from "./CheckInContext";
 
 export type AppTab = { id: string; label: string; icon: ReactNode; content: ReactNode; footer?: ReactNode };
 
@@ -128,7 +128,9 @@ export default function AppShell({
         </header>
 
         <main className="app-content dark" key={`${activeId}-${navResetKey}`}>
-          <CheckInProvider value={openCheckIn}>{active?.content}</CheckInProvider>
+          <CheckInProvider value={openCheckIn}>
+            <ChatProvider value={() => setPushView("chat")}>{active?.content}</ChatProvider>
+          </CheckInProvider>
         </main>
 
         {active?.footer && <div className="app-sticky-footer">{active.footer}</div>}

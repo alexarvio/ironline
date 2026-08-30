@@ -1,9 +1,9 @@
 "use client";
 
-import { ArrowRightIcon, CheckIcon } from "../components/icons";
+import { ArrowRightIcon, CalendarIcon, CheckIcon, ClockIcon } from "../components/icons";
 import TrendCarousel, { TrendMetric } from "./TrendCarousel";
 import ProgressReportCard, { ReportChart, ReportStat } from "./ProgressReportCard";
-import { useOpenCheckIn } from "./CheckInContext";
+import { useOpenChat, useOpenCheckIn } from "./CheckInContext";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
 // CheckInHub.tsx this replaces — a "use client" file importing queries.ts
@@ -17,7 +17,14 @@ export type CheckInStatus = {
   dueNames: string;
   nextLabel: string;
 };
-export type UpcomingMeeting = { dateLabel: string; dayLabel: string; topic: string; timeLabel: string; daysAwayLabel: string } | null;
+export type UpcomingMeeting = {
+  monthCap: string;
+  dayNumber: string;
+  topic: string;
+  inLabel: string;
+  whenLabel: string;
+  durationLabel: string;
+} | null;
 export type CoachNote = { id: number; context: string; timeLabel: string; text: string; unread: boolean };
 export type HomeReport = {
   id: number;
@@ -70,6 +77,9 @@ export default function HomeHub({
   // Check-in is a full-screen pushed view owned by AppShell; a due row just
   // asks it to open on that row's section.
   const openCheckIn = useOpenCheckIn();
+  // Coach notes are the coach commenting on your work; tapping one opens
+  // the conversation it came from, same as the prototype.
+  const openChat = useOpenChat();
 
   const dayTarget = totalDays || 7;
 
@@ -165,17 +175,28 @@ export default function HomeHub({
       <section className="home-dark-section">
         <span className="home-dark-section-title">Next with your coach</span>
         {upcoming ? (
-          <>
-            <div className="home-dark-meeting-row">
-              <span className="home-dark-meeting-date">
-                {upcoming.dayLabel} {upcoming.dateLabel}
-              </span>
-              <span className="home-dark-meeting-time">{upcoming.timeLabel}</span>
+          <div className="home-meeting-row">
+            <div className="home-meeting-date">
+              <div className="home-meeting-month">{upcoming.monthCap}</div>
+              <div className="home-meeting-day">{upcoming.dayNumber}</div>
             </div>
-            <div className="home-dark-meeting-caption">
-              {upcoming.topic} · {upcoming.daysAwayLabel}
+            <div className="home-meeting-body">
+              <div className="home-meeting-title-row">
+                <span className="home-meeting-title">{upcoming.topic}</span>
+                <span className="home-meeting-in">{upcoming.inLabel}</span>
+              </div>
+              <div className="home-meeting-meta">
+                <span className="home-meeting-meta-item">
+                  <CalendarIcon />
+                  {upcoming.whenLabel}
+                </span>
+                <span className="home-meeting-meta-item">
+                  <ClockIcon />
+                  {upcoming.durationLabel}
+                </span>
+              </div>
             </div>
-          </>
+          </div>
         ) : (
           <p className="home-dark-empty">Nothing scheduled yet — your coach hasn&rsquo;t booked a call.</p>
         )}
@@ -188,7 +209,12 @@ export default function HomeHub({
         ) : (
           <div className="home-dark-rows">
             {coachNotes.map((n) => (
-              <div key={n.id} className="home-dark-note-row">
+              <button
+                key={n.id}
+                type="button"
+                className="home-dark-note-row tappable"
+                onClick={() => openChat?.()}
+              >
                 <span className={`home-dark-note-dot${n.unread ? " unread" : ""}`} aria-hidden="true" />
                 <div className="home-dark-row-body">
                   <div className="home-dark-note-top">
@@ -197,7 +223,7 @@ export default function HomeHub({
                   </div>
                   <div className="home-dark-note-text">{n.text}</div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}

@@ -2714,13 +2714,14 @@ export function getCheckInSections(clientId: number): CheckInData {
   );
   if (daily) sections.push(daily);
 
-  const weekly = trackerSection(
-    "weekly",
-    thisWeek,
-    "Weekly",
-    "this week",
-    "One entry covers the whole week."
-  );
+  // "week 3" rather than a generic "this week" — the number is the week's
+  // position inside the deployed programme, the same label Training shows.
+  const deployed = getDeployedProgram(clientId);
+  const currentWeek = getCurrentWeekNumber(clientId);
+  const weeklySub = deployed
+    ? programWeekLabel(deployed, currentWeek).toLowerCase()
+    : "this week";
+  const weekly = trackerSection("weekly", thisWeek, "Weekly", weeklySub, "One entry covers the whole week.");
   if (weekly) sections.push(weekly);
 
   // ---- Measurements ----
