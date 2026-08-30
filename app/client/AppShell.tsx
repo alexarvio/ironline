@@ -3,7 +3,7 @@
 import { ReactNode, useState } from "react";
 import { BellIcon, ChatIcon, ChevronLeftIcon } from "../components/icons";
 import CheckInScreen, { CheckInProps } from "./CheckInScreen";
-import { ChatProvider, CheckInProvider } from "./CheckInContext";
+import { ChatProvider, CheckInProvider, FocusRefProvider, NavigateProvider } from "./CheckInContext";
 
 export type AppTab = { id: string; label: string; icon: ReactNode; content: ReactNode; footer?: ReactNode };
 
@@ -48,7 +48,18 @@ export default function AppShell({
   // nothing — there's no in-page back link otherwise, so this is how "go
   // home" works from a sub-view like Photos or Tracker.
   const [navResetKey, setNavResetKey] = useState(0);
+  // Which row the tab we're switching to should open on arrival, set only by
+  // a notification's deep link and cleared by any ordinary nav tap.
+  const [focusRef, setFocusRef] = useState<number | null>(null);
   const active = tabs.find((t) => t.id === activeId) ?? tabs[0];
+
+  const goToTab = (tab: string, ref?: number) => {
+    if (!tabs.some((t) => t.id === tab)) return;
+    setPushView(null);
+    setActiveId(tab);
+    setFocusRef(ref ?? null);
+    setNavResetKey((k) => k + 1);
+  };
 
   if (pushView === "checkin") {
     return (
@@ -60,7 +71,7 @@ export default function AppShell({
             today={checkIn.today}
             sections={checkIn.sections}
             initialSection={checkInSection}
-            lastCheckInDate={checkIn.lastCheckInDate}
+            phaseLabel={checkIn.phaseLabel}
             deltas={checkIn.deltas}
             photoSlots={checkIn.photoSlots}
             photoPeriodLabel={checkIn.photoPeriodLabel}
@@ -99,7 +110,9 @@ export default function AppShell({
               {isChat && hasUnreadNotifications && <span className="cn-badge" aria-hidden="true" />}
             </button>
           </header>
-          <main className="cn-body">{isChat ? chatContent : notificationsContent}</main>
+          <main className="cn-body">
+            <NavigateProvider value={goToTab}>{isChat ? chatContent : notificationsContent}</NavigateProvider>
+          </main>
         </div>
       </div>
     );
@@ -129,7 +142,9 @@ export default function AppShell({
 
         <main className="app-content dark" key={`${activeId}-${navResetKey}`}>
           <CheckInProvider value={openCheckIn}>
-            <ChatProvider value={() => setPushView("chat")}>{active?.content}</ChatProvider>
+            <ChatProvider value={() => setPushView("chat")}>
+              <FocusRefProvider value={focusRef}>{active?.content}</FocusRefProvider>
+            </ChatProvider>
           </CheckInProvider>
         </main>
 
@@ -143,6 +158,7 @@ export default function AppShell({
               className={`app-tab-btn${t.id === activeId ? " active" : ""}`}
               onClick={() => {
                 setActiveId(t.id);
+                setFocusRef(null);
                 setNavResetKey((k) => k + 1);
               }}
             >

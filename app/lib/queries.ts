@@ -2007,6 +2007,7 @@ export type ClientProfile = {
   coaching_start_date: string | null;
   current_week: string;
   goal_phase: string;
+  goal_phase_start_date: string | null;
   goal_date: string | null;
   check_in_day: string | null;
   steps_goal: string;
@@ -2036,6 +2037,7 @@ export function getClientProfile(clientId: number): ClientProfile {
     coaching_start_date: null,
     current_week: "",
     goal_phase: "",
+    goal_phase_start_date: null,
     goal_date: null,
     check_in_day: null,
     steps_goal: "",
@@ -2635,23 +2637,21 @@ export type CheckInMetric = {
 export type CheckInSection = {
   id: "daily" | "weekly" | "measurements";
   label: string;
-  // The period this segment covers ("today", "week 3"). Null where there
-  // isn't one — measurements have no cadence in this data model, so the
-  // segment carries no sub-label rather than promising a schedule.
-  sub: string | null;
   intro: string;
   metrics: CheckInMetric[];
 };
 
-export type CheckInDelta = { name: string; value: string };
+export type CheckInDelta = { name: string; value: string; unit: string };
 
 export type CheckInPhotoSlot = { id: number; label: string; src: string | null };
 
 export type CheckInData = {
   sections: CheckInSection[];
-  // Measurements-only extras, matching the design: the change since the
-  // previous check-in, and this period's progress pictures.
-  lastCheckInDate: string | null;
+  // Measurements-only extras, matching the design: how far each measurement
+  // has moved since the current phase began, and this period's progress
+  // pictures. Phase-to-date rather than since-last-check-in because a week
+  // of measurements moves too little to be worth showing.
+  phaseLabel: string | null;
   deltas: CheckInDelta[];
   photoSlots: CheckInPhotoSlot[];
   photoPeriodLabel: string;
@@ -2675,7 +2675,6 @@ export function getCheckInSections(clientId: number): CheckInData {
     frequency: "daily" | "weekly",
     period: string,
     label: string,
-    sub: string,
     intro: string
   ): CheckInSection | null => {
     const defs = listMetricDefinitions(clientId, frequency).filter(deployedToClient);
@@ -2684,7 +2683,6 @@ export function getCheckInSections(clientId: number): CheckInData {
     return {
       id: frequency,
       label,
-      sub,
       intro,
       metrics: defs.map((def) => {
         const current = entries.find((e) => e.metric_definition_id === def.id && e.period === period);
@@ -2712,19 +2710,11 @@ export function getCheckInSections(clientId: number): CheckInData {
     "daily",
     today,
     "Daily",
-    "today",
     "What your coach asked you to log every day. Takes about twenty seconds."
   );
   if (daily) sections.push(daily);
 
-  // "week 3" rather than a generic "this week" — the number is the week's
-  // position inside the deployed programme, the same label Training shows.
-  const deployed = getDeployedProgram(clientId);
-  const currentWeek = getCurrentWeekNumber(clientId);
-  const weeklySub = deployed
-    ? programWeekLabel(deployed, currentWeek).toLowerCase()
-    : "this week";
-  const weekly = trackerSection("weekly", thisWeek, "Weekly", weeklySub, "One entry covers the whole week.");
+  const weekly = trackerSection("weekly", thisWeek, "Weekly", "One entry covers the whole week.");
   if (weekly) sections.push(weekly);
 
   // ---- Measurements ----
@@ -2740,7 +2730,6 @@ export function getCheckInSections(clientId: number): CheckInData {
     sections.push({
       id: "measurements",
       label: "Measure",
-      sub: null,
       intro: "Same spots, same time of day — first thing, before food.",
       metrics: fields.map((f) => {
         const current = valueAt(f.id, today);
@@ -2758,25 +2747,45 @@ export function getCheckInSections(clientId: number): CheckInData {
     });
   }
 
-  // Change since the previous check-in. Which direction counts as "good"
-  // isn't knowable for a coach-named field (is a bigger chest good? depends
-  // on the goal), so deltas render neutral rather than guessing — only the
-  // number and its sign are shown.
+  // How far each measurement has moved since the current phase began.
+  // Phase-to-date, not since the last check-in: a week apart, most of these
+  // barely move, and the number the client actually cares about is the one
+  // for the block of work they're in. The phase start is the coach's
+  // goal_phase_start_date, falling back to when coaching began.
+  //
+  // Which direction counts as "good" isn't knowable for a coach-named field
+  // (is a bigger chest good? depends on the goal), so deltas render neutral
+  // rather than guessing — only the number and its sign are shown.
+  const profile = getClientProfile(clientId);
+  const phaseStart = profile.goal_phase_start_date || profile.coaching_start_date;
+  // The first check-in from the phase onwards is the baseline; anything
+  // earlier belongs to the phase before this one.
+  const baselineDate = phaseStart ? dates.filter((d) => d >= phaseStart && d < today).sort()[0] ?? null : null;
+  const latestDate = dates.filter((d) => d <= today).sort((a, b) => (a < b ? 1 : -1))[0] ?? null;
+
   const deltas: CheckInDelta[] =
-    previousDate == null
+    baselineDate == null || latestDate == null || latestDate === baselineDate
       ? []
       : fields
           .map((f) => {
-            const now = valueAt(f.id, today);
-            const before = valueAt(f.id, previousDate);
+            const now = valueAt(f.id, latestDate);
+            const before = valueAt(f.id, baselineDate);
             if (now == null || before == null) return null;
             const diff = Math.round((now - before) * 10) / 10;
             return {
               name: f.name,
-              value: `${diff > 0 ? "+" : diff < 0 ? "−" : ""}${Math.abs(diff)}${f.unit ? ` ${f.unit}` : ""}`,
+              value: `${diff > 0 ? "+" : diff < 0 ? "−" : ""}${Math.abs(diff)}`,
+              unit: f.unit,
             };
           })
           .filter((d): d is CheckInDelta => d !== null);
+
+  // "Fat loss · from Jun 15" — whichever halves we actually have.
+  const phaseLabel =
+    deltas.length === 0
+      ? null
+      : [profile.goal_phase, baselineDate ? `from ${fmtDate(baselineDate)}` : null].filter(Boolean).join(" · ") ||
+        null;
 
   const cadence = getPhotoCadence(clientId);
   const photoPeriod = photoPeriodFor(today, cadence);
@@ -2792,7 +2801,7 @@ export function getCheckInSections(clientId: number): CheckInData {
 
   return {
     sections,
-    lastCheckInDate: previousDate ? fmtDate(previousDate) : null,
+    phaseLabel,
     deltas,
     photoSlots,
     photoPeriodLabel: unit,
@@ -2820,6 +2829,7 @@ export type ClientNotification = {
   read: boolean;
   action_tab: CoachActivityActionTab | null;
   action_label: string | null;
+  action_ref: number | null;
 };
 
 export function logCoachActivity(
@@ -2829,6 +2839,8 @@ export function logCoachActivity(
     kind: CoachActivityKind;
     actionTab?: CoachActivityActionTab;
     actionLabel?: string;
+    // Which row on that tab to open — see CoachActivity.action_ref in db.ts.
+    actionRef?: number;
     // Set only by lazily-generated entries (see applyDueClientReminders) so
     // a still-due condition doesn't spawn a fresh row on every request.
     dedupeKey?: string;
@@ -2847,6 +2859,7 @@ export function logCoachActivity(
     read: false,
     action_tab: opts.actionTab ?? null,
     action_label: opts.actionLabel ?? null,
+    action_ref: opts.actionRef ?? null,
     dedupe_key: opts.dedupeKey ?? null,
   });
   persist();
@@ -2872,6 +2885,7 @@ function normalizeNotification(a: {
   read?: boolean;
   action_tab?: CoachActivityActionTab | null;
   action_label?: string | null;
+  action_ref?: number | null;
 }): ClientNotification {
   return {
     id: a.id,
@@ -2882,6 +2896,7 @@ function normalizeNotification(a: {
     read: a.read ?? true,
     action_tab: a.action_tab ?? null,
     action_label: a.action_label ?? null,
+    action_ref: a.action_ref ?? null,
   };
 }
 
@@ -3082,7 +3097,7 @@ export type ClientReport = {
   generated_at: string;
   approved_at: string | null;
   sent_at: string | null;
-  archived_at: string | null;
+  opened_at: string | null;
 };
 
 export type ReportSeriesPoint = { date: string; value: number };
@@ -3225,14 +3240,6 @@ export function getClientReport(id: number): ClientReport | undefined {
   return getData().client_reports.find((r) => r.id === id);
 }
 
-// The client-visible report — only ever the latest one the coach has
-// actually sent. Drafts and approved-but-unsent reports are coach-only.
-export function getLatestSentReport(clientId: number): ClientReport | undefined {
-  return getData()
-    .client_reports.filter((r) => r.client_id === clientId && r.status === "sent")
-    .sort((a, b) => (a.sent_at! < b.sent_at! ? 1 : -1))[0];
-}
-
 export function createDraftReport(
   clientId: number,
   templateId: number | null,
@@ -3259,28 +3266,20 @@ export function createDraftReport(
     generated_at: new Date().toISOString(),
     approved_at: null,
     sent_at: null,
-    archived_at: null,
+    opened_at: null,
   });
   persist();
   return id;
 }
 
-// Client-side dismiss ("Done") / undo on the Home progress-report card —
-// doesn't touch the report content, just whether Home shows the full card
-// or the "archived, find it in Settings" strip.
-export function archiveReport(id: number) {
+// The client expanded this report in Settings. Doesn't touch the report
+// content — it only clears the "New" flag, and only once, so re-reading an
+// old report never makes it look new again.
+export function markReportOpened(id: number) {
   const data = getData();
   const report = data.client_reports.find((r) => r.id === id);
-  if (!report) return;
-  report.archived_at = new Date().toISOString();
-  persist();
-}
-
-export function unarchiveReport(id: number) {
-  const data = getData();
-  const report = data.client_reports.find((r) => r.id === id);
-  if (!report) return;
-  report.archived_at = null;
+  if (!report || report.opened_at) return;
+  report.opened_at = new Date().toISOString();
   persist();
 }
 
@@ -3312,8 +3311,9 @@ export function sendReport(id: number) {
     persist();
     logCoachActivity(report.client_id, `Your coach sent you a progress report (${report.period_start} to ${report.period_end})`, {
       kind: "report",
-      actionTab: "home",
+      actionTab: "settings",
       actionLabel: "Read report",
+      actionRef: report.id,
     });
   }
 }

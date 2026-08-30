@@ -2684,50 +2684,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   transition: width 0.15s, background 0.15s;
 }
 
-/* ---- Progress report card ---- */
-
-.report-card {
-  margin: 20px -18px 0;
-  padding: 20px 18px;
-  background: #151511;
-  border-top: 1px solid #23231f;
-  border-bottom: 1px solid #23231f;
-}
-
-.report-card-top {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-
-.report-card-kicker {
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--fp-accent);
-}
-
-.report-card-period {
-  font-size: 0.7rem;
-  color: #8a8a80;
-}
-
-.report-card-headline {
-  font-family: var(--font-serif);
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #ffffff;
-  line-height: 1.2;
-  margin-top: 6px;
-}
-
-.report-card-body {
-  margin: 12px 0 0;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  color: #c9c9bf;
-}
+/* ---- Progress report body (Settings -> Progress reports) ---- */
 
 .report-card-stats {
   display: flex;
@@ -2771,72 +2728,6 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   justify-content: space-between;
   font-size: 0.7rem;
   color: #8a8a80;
-}
-
-.report-card-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 16px;
-}
-
-.report-toggle-btn {
-  flex: 1;
-  min-height: 44px;
-  border: 1px solid #3a3a32;
-  background: none;
-  color: #ffffff;
-  border-radius: 12px;
-  font-size: 0.82rem;
-  font-weight: 800;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.report-toggle-btn:hover {
-  background: #1b1b16;
-}
-
-.report-done-btn {
-  flex: 1;
-  min-height: 44px;
-  border: none;
-  background: var(--fp-accent);
-  color: var(--fp-accent-fg);
-  border-radius: 12px;
-  font-size: 0.82rem;
-  font-weight: 800;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.report-done-btn:hover {
-  background: #ffffff;
-}
-
-.report-archived-strip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 0 -18px;
-  padding: 14px 18px;
-  border-top: 1px solid #23231f;
-  border-bottom: 1px solid #23231f;
-  font-size: 0.78rem;
-  color: #8a8a80;
-}
-
-.report-undo-btn {
-  min-height: 44px;
-  min-width: 44px;
-  padding: 0 8px;
-  border: none;
-  background: none;
-  color: var(--fp-accent);
-  font-size: 0.76rem;
-  font-weight: 800;
-  cursor: pointer;
-  font-family: inherit;
 }
 
 /* ---- Today / Next meeting / Coach notes / Goals — divider rows ---- */
@@ -3451,16 +3342,13 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   background: none;
   color: #ffffff;
   border-radius: 12px;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 800;
   cursor: pointer;
   font-family: inherit;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1px;
-  line-height: 1.15;
 }
 
 .ci-tab.active {
@@ -3483,18 +3371,6 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 .ci-tab.active .ci-tab-dot {
   background: var(--fp-accent-fg);
-}
-
-.ci-tab-sub {
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: #8a8a80;
-}
-
-.ci-tab.active .ci-tab-sub {
-  color: var(--fp-accent-fg);
-  opacity: 0.7;
 }
 
 .ci-body,
@@ -3665,7 +3541,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 .ci-deltas {
   display: flex;
-  gap: 16px;
+  gap: 10px;
   margin-top: 10px;
   flex-wrap: wrap;
 }
@@ -3676,20 +3552,32 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 }
 
 .ci-delta-name {
-  font-size: 0.64rem;
+  font-size: 0.62rem;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: #8a8a80;
 }
 
+.ci-delta-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  margin-top: 2px;
+}
+
 .ci-delta-value {
   font-family: var(--font-serif);
-  font-size: 1.4rem;
+  font-size: 1.3rem;
   font-weight: 600;
   color: #ffffff;
   line-height: 1.1;
-  margin-top: 2px;
+}
+
+.ci-delta-unit {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: #8a8a80;
 }
 
 .ci-photos {

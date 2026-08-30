@@ -259,6 +259,14 @@ export default function StartPagePanel({ clientId, name }: { clientId: number; n
               <input name="goal_phase" type="text" placeholder="e.g. Body recomposition" defaultValue={profile.goal_phase} />
             </label>
             <label>
+              Phase started
+              <input
+                name="goal_phase_start_date"
+                type="date"
+                defaultValue={profile.goal_phase_start_date ?? ""}
+              />
+            </label>
+            <label>
               Goal date
               <input name="goal_date" type="date" defaultValue={profile.goal_date ?? ""} />
             </label>

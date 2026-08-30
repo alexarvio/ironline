@@ -9,7 +9,6 @@ import {
   getCheckInSections,
   getCheckInStatus,
   getClientPreferences,
-  getLatestSentReport,
   getMetricSeries,
   getPinnedMetricsSummary,
   getWeightSeries,
@@ -39,27 +38,27 @@ import { DAY_NAMES_FULL } from "../lib/db";
 import SetLogForm from "./SetLogForm";
 import TrainingDayCard from "./TrainingDayCard";
 import PhotoPeriodHistoryRow from "./PhotoPeriodHistoryRow";
-import HomeHub, { HomeReport, UpcomingMeeting } from "./HomeHub";
+import HomeHub, { UpcomingMeeting } from "./HomeHub";
 import { TrendMetric } from "./TrendCarousel";
 import NutritionDayToggle, { NutritionTargetSet } from "./NutritionDayToggle";
 import ReportArchiveList, { ArchiveReport } from "./ReportArchiveList";
+import NotificationRow from "./NotificationRow";
 import ClientWeekSwitcher from "./ClientWeekSwitcher";
 import ChatComposeForm from "../components/ChatComposeForm";
 import AppShell, { AppTab } from "./AppShell";
 import {
+  AccountIcon,
   AppleIcon,
   ArrowRightIcon,
   CalendarIcon,
   ChatIcon,
   ClockIcon,
   DumbbellIcon,
-  GearIcon,
   HomeIcon,
   ReportIcon,
 } from "../components/icons";
 import {
   markAllNotificationsReadAction,
-  markNotificationReadAction,
   setClientPreferenceAction,
   setClientUnitsAction,
 } from "../lib/actions";
@@ -81,11 +80,11 @@ const CLIENT_ID = 3;
 
 const fmtShortDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-// Shared by Home's report card and Settings' report archive — a sent
+// Settings' progress-report list is the only place reports appear — a sent
 // report's sections_snapshot parsed, plus up to 3 stat deltas derived from
 // whichever sections it actually has. No domain knowledge of which
 // direction is "good" for a coach-defined metric, so deltas render neutral
-// (both Home and Settings) rather than guessing.
+// rather than guessing.
 type ReportSection = {
   label: string;
   series?: { date: string; value: number }[];
@@ -251,35 +250,6 @@ function HomeTab() {
     ...getPinnedMetricsSummary(CLIENT_ID).map(({ def }) => trendMetric(`metric-${def.id}`, def.name, def.unit, getMetricSeries(def.id))),
   ].filter((m): m is TrendMetric => m !== null);
 
-  // ---- Progress report card: collapsed headline until "Read report", plus
-  // up to 3 stat deltas and one trend chart pulled from whichever sections
-  // the report actually has. ----
-  const sentReport = getLatestSentReport(CLIENT_ID);
-  let report: HomeReport | null = null;
-  if (sentReport) {
-    const sections = parseReportSections(sentReport.sections_snapshot);
-    const stats = deriveReportStats(sections);
-    const chartSection = sections.find((s) => s.series && s.series.length >= 2);
-    const summary = sentReport.summary || "";
-    const firstSentence = summary.match(/^.*?[.!?](?=\s|$)/)?.[0];
-    report = {
-      id: sentReport.id,
-      periodLabel: `${fmtShortDate(sentReport.period_start)} – ${fmtShortDate(sentReport.period_end)}`,
-      headline: firstSentence || summary,
-      body: summary,
-      stats,
-      chart: chartSection
-        ? {
-            points: chartSection.series!,
-            fromLabel: fmtShortDate(chartSection.series![0].date),
-            toLabel: fmtShortDate(chartSection.series![chartSection.series!.length - 1].date),
-            caption: chartSection.label,
-          }
-        : null,
-      archived: sentReport.archived_at != null,
-    };
-  }
-
   const dateLabel = new Date(`${today}T00:00:00`).toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -302,7 +272,6 @@ function HomeTab() {
       upcoming={upcoming}
       coachNotes={coachNotes}
       checkInStatus={checkInStatus}
-      report={report}
     />
   );
 }
@@ -584,15 +553,27 @@ function SettingsTab() {
     const sections = parseReportSections(r.sections_snapshot);
     const summary = r.summary || "";
     const firstSentence = summary.match(/^.*?[.!?](?=\s|$)/)?.[0];
+    const chartSection = sections.find((s) => s.series && s.series.length >= 2);
     return {
       id: r.id,
       period: `${fmtShortDate(r.period_start)} – ${fmtShortDate(r.period_end)}`,
       summary: firstSentence || summary,
       body: summary,
-      isNew: r.archived_at == null,
+      isNew: r.opened_at == null,
       stats: deriveReportStats(sections),
+      chart: chartSection
+        ? {
+            points: chartSection.series!,
+            fromLabel: fmtShortDate(chartSection.series![0].date),
+            toLabel: fmtShortDate(chartSection.series![chartSection.series!.length - 1].date),
+            caption: chartSection.label,
+          }
+        : null,
     };
   });
+  // "1 new · 3 saved" while anything is unopened, otherwise just the count.
+  const newReportCount = reports.filter((r) => r.isNew).length;
+  const reportCountLabel = `${newReportCount > 0 ? `${newReportCount} new · ` : ""}${reports.length} saved`;
 
   const toggleDefs: { key: "coach_notes" | "checkin_reminders" | "weekly_digest"; label: string; detail: string }[] = [
     { key: "coach_notes", label: "Coach notes", detail: "Log a note when your coach comments on your work" },
@@ -616,7 +597,7 @@ function SettingsTab() {
       <section className="home-dark-section" style={{ paddingTop: 18 }}>
         <div className="home-dark-section-head">
           <span className="home-dark-section-title">Progress reports</span>
-          {reports.length > 0 && <span className="home-dark-section-count">{reports.length} saved</span>}
+          {reports.length > 0 && <span className="home-dark-section-count">{reportCountLabel}</span>}
         </div>
         {reports.length === 0 ? (
           <p className="home-dark-empty">No reports sent yet.</p>
@@ -868,23 +849,20 @@ function NotificationsPanel() {
             <span className="cn-notif-group-label">{g.label}</span>
             <div className="cn-notif-list">
               {g.items.map((n) => (
-                <form key={n.id} action={markNotificationReadAction}>
-                  <input type="hidden" name="id" value={n.id} />
-                  <button type="submit" className="cn-notif-row">
-                    <span className={`cn-notif-icon${n.read ? "" : " unread"}`} aria-hidden="true">
-                      {notificationIcon(n.kind)}
+                <NotificationRow key={n.id} id={n.id} actionTab={n.action_tab} actionRef={n.action_ref}>
+                  <span className={`cn-notif-icon${n.read ? "" : " unread"}`} aria-hidden="true">
+                    {notificationIcon(n.kind)}
+                  </span>
+                  <span className="cn-notif-body">
+                    <span className="cn-notif-top">
+                      <span className="cn-notif-kind">{NOTIFICATION_KIND_LABEL[n.kind] ?? "Update"}</span>
+                      <span className="cn-notif-time">{notificationTimeLabel(n.created_at)}</span>
                     </span>
-                    <span className="cn-notif-body">
-                      <span className="cn-notif-top">
-                        <span className="cn-notif-kind">{NOTIFICATION_KIND_LABEL[n.kind] ?? "Update"}</span>
-                        <span className="cn-notif-time">{notificationTimeLabel(n.created_at)}</span>
-                      </span>
-                      <span className={`cn-notif-text${n.read ? "" : " unread"}`}>{n.message}</span>
-                      {n.action_label && <span className="cn-notif-action">{n.action_label} →</span>}
-                    </span>
-                    {!n.read && <span className="cn-notif-dot" aria-hidden="true" />}
-                  </button>
-                </form>
+                    <span className={`cn-notif-text${n.read ? "" : " unread"}`}>{n.message}</span>
+                    {n.action_label && <span className="cn-notif-action">{n.action_label} →</span>}
+                  </span>
+                  {!n.read && <span className="cn-notif-dot" aria-hidden="true" />}
+                </NotificationRow>
               ))}
             </div>
           </section>
@@ -957,7 +935,7 @@ export default function ClientPage() {
     }),
     today: localDateStr(),
     sections: checkInData.sections,
-    lastCheckInDate: checkInData.lastCheckInDate,
+    phaseLabel: checkInData.phaseLabel,
     deltas: checkInData.deltas,
     photoSlots: checkInData.photoSlots,
     photoPeriodLabel: checkInData.photoPeriodLabel,
@@ -1007,7 +985,7 @@ export default function ClientPage() {
       ),
     },
     { id: "nutrition", label: "Nutrition", icon: <AppleIcon />, content: <NutritionTab /> },
-    { id: "settings", label: "Settings", icon: <GearIcon />, content: <SettingsTab /> },
+    { id: "settings", label: "Settings", icon: <AccountIcon />, content: <SettingsTab /> },
   ];
 
   return (

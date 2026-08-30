@@ -19,7 +19,6 @@ import {
   addSkinfoldEntry,
   applyMetricTemplateToClient,
   approveReport,
-  archiveReport,
   computeReportSections,
   createClient,
   createDraftReport,
@@ -41,11 +40,11 @@ import {
   logCoachActivity,
   markAllNotificationsRead,
   markNotificationRead,
+  markReportOpened,
   logSet,
   OTHER_ITEMS,
   removeReportTemplateSection,
   sendReport,
-  unarchiveReport,
   updateReportSummary,
   removeAssignment,
   removeClientGoal,
@@ -646,6 +645,7 @@ export async function saveClientProfileAction(formData: FormData) {
     coaching_start_date: strOrNull("coaching_start_date"),
     current_week: str("current_week"),
     goal_phase: str("goal_phase"),
+    goal_phase_start_date: strOrNull("goal_phase_start_date"),
     goal_date: strOrNull("goal_date"),
     check_in_day: strOrNull("check_in_day"),
     steps_goal: str("steps_goal"),
@@ -742,8 +742,10 @@ export async function sendChatMessageAction(formData: FormData) {
   revalidatePath("/client");
 }
 
-export async function markNotificationReadAction(formData: FormData) {
-  const id = Number(formData.get("id"));
+// Called straight from the notification row rather than through a form —
+// tapping one both marks it read and navigates, and a form that unmounts as
+// the view changes is a bad place to be mid-submit.
+export async function markNotificationReadAction(id: number) {
   if (!id) return;
   markNotificationRead(id);
   revalidatePath("/client");
@@ -926,14 +928,7 @@ export async function setClientUnitsAction(formData: FormData) {
   revalidatePath("/client");
 }
 
-export async function archiveReportAction(formData: FormData) {
-  const id = Number(formData.get("id"));
-  archiveReport(id);
-  revalidatePath("/client");
-}
-
-export async function unarchiveReportAction(formData: FormData) {
-  const id = Number(formData.get("id"));
-  unarchiveReport(id);
+export async function markReportOpenedAction(id: number) {
+  markReportOpened(id);
   revalidatePath("/client");
 }

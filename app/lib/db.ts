@@ -211,6 +211,11 @@ type ClientProfile = {
   coaching_start_date: string | null;
   current_week: string;
   goal_phase: string;
+  // When the current phase began. The client's measurement deltas are
+  // phase-to-date, so they need a start that moves when the coach switches
+  // phase; unset falls back to coaching_start_date, which is right for a
+  // client still in their first one.
+  goal_phase_start_date: string | null;
   goal_date: string | null;
   check_in_day: string | null;
   steps_goal: string;
@@ -299,6 +304,10 @@ type CoachActivity = {
   read: boolean;
   action_tab: CoachActivityActionTab | null;
   action_label: string | null;
+  // The row the action tab should open on arrival — currently only a
+  // client_reports id, for "your coach sent you a progress report", which
+  // deep-links to Settings with that report expanded.
+  action_ref: number | null;
   dedupe_key: string | null;
 };
 
@@ -342,11 +351,11 @@ type ClientReport = {
   generated_at: string;
   approved_at: string | null;
   sent_at: string | null;
-  // Set when the client dismisses ("Done") the report on Home — the report
-  // itself is untouched, this just controls whether Home shows the full
-  // card or the "archived, find it in Settings" strip. Missing on rows
-  // written before this field existed, so callers default it to false.
-  archived_at: string | null;
+  // Set the first time the client expands the report in Settings. Reports
+  // are client-visible only there, and one stays flagged "New" until this is
+  // set. Missing on rows written before this field existed, so callers treat
+  // absent as "not opened yet".
+  opened_at: string | null;
 };
 
 // Coach-wide app branding — one row for the whole app (no multi-tenant

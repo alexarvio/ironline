@@ -80,6 +80,7 @@ saveClientProfile({
   coaching_start_date: daysAgo(28),
   current_week: "Week 4",
   goal_phase: "Strength — Foundations phase 1",
+  goal_phase_start_date: null,
   goal_date: daysAgo(-56),
   check_in_day: "Monday",
   steps_goal: "8,000 steps/day",

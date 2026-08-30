@@ -2,7 +2,6 @@
 
 import { ArrowRightIcon, CalendarIcon, CheckIcon, ClockIcon } from "../components/icons";
 import TrendCarousel, { TrendMetric } from "./TrendCarousel";
-import ProgressReportCard, { ReportChart, ReportStat } from "./ProgressReportCard";
 import { useOpenChat, useOpenCheckIn } from "./CheckInContext";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
@@ -26,15 +25,6 @@ export type UpcomingMeeting = {
   durationLabel: string;
 } | null;
 export type CoachNote = { id: number; context: string; timeLabel: string; text: string; unread: boolean };
-export type HomeReport = {
-  id: number;
-  periodLabel: string;
-  headline: string;
-  body: string;
-  stats: ReportStat[];
-  chart: ReportChart;
-  archived: boolean;
-} | null;
 export type { TrendMetric };
 
 // Home used to be its own tab with Check-ins as a separate one; they're
@@ -52,7 +42,6 @@ export default function HomeHub({
   setsPlanned,
   volumeTrendLabel,
   trendMetrics,
-  report,
   goals,
   upcoming,
   coachNotes,
@@ -68,7 +57,6 @@ export default function HomeHub({
   setsPlanned: number;
   volumeTrendLabel: string | null;
   trendMetrics: TrendMetric[];
-  report: HomeReport;
   goals: string[];
   upcoming: UpcomingMeeting;
   coachNotes: CoachNote[];
@@ -130,18 +118,6 @@ export default function HomeHub({
       </div>
 
       <TrendCarousel metrics={trendMetrics} />
-
-      {report && (
-        <ProgressReportCard
-          reportId={report.id}
-          periodLabel={report.periodLabel}
-          headline={report.headline}
-          body={report.body}
-          stats={report.stats}
-          chart={report.chart}
-          archived={report.archived}
-        />
-      )}
 
       {checkInStatus.configuredCount > 0 && (
         <section className="home-dark-section">

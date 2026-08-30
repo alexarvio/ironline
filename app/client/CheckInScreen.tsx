@@ -19,11 +19,10 @@ export type CheckInMetric = {
 export type CheckInSection = {
   id: "daily" | "weekly" | "measurements";
   label: string;
-  sub: string | null;
   intro: string;
   metrics: CheckInMetric[];
 };
-export type CheckInDelta = { name: string; value: string };
+export type CheckInDelta = { name: string; value: string; unit: string };
 export type CheckInPhotoSlot = { id: number; label: string; src: string | null };
 export type CheckInCoachNote = { timeLabel: string; text: string } | null;
 // Everything the screen needs, computed server-side by getCheckInSections()
@@ -32,7 +31,8 @@ export type CheckInProps = {
   dateLabel: string;
   today: string;
   sections: CheckInSection[];
-  lastCheckInDate: string | null;
+  // "Fat loss · from Jun 15" — what the deltas below are measured against.
+  phaseLabel: string | null;
   deltas: CheckInDelta[];
   photoSlots: CheckInPhotoSlot[];
   photoPeriodLabel: string;
@@ -59,7 +59,7 @@ export default function CheckInScreen({
   today,
   sections,
   initialSection,
-  lastCheckInDate,
+  phaseLabel,
   deltas,
   photoSlots,
   photoPeriodLabel,
@@ -75,7 +75,7 @@ export default function CheckInScreen({
   today: string;
   sections: CheckInSection[];
   initialSection: string;
-  lastCheckInDate: string | null;
+  phaseLabel: string | null;
   deltas: CheckInDelta[];
   photoSlots: CheckInPhotoSlot[];
   photoPeriodLabel: string;
@@ -160,7 +160,6 @@ export default function CheckInScreen({
               onClick={() => setSectionId(s.id)}
             >
               {s.label}
-              {s.sub && <span className="ci-tab-sub">{s.sub}</span>}
               {dueSections.includes(s.id) && <span className="ci-tab-dot" aria-label="Not logged yet" />}
             </button>
           ))}
@@ -237,14 +236,17 @@ export default function CheckInScreen({
           {deltas.length > 0 && (
             <section className="ci-section">
               <div className="ci-section-head">
-                <span className="ci-section-title">Since your last check-in</span>
-                {lastCheckInDate && <span className="ci-section-meta">{lastCheckInDate}</span>}
+                <span className="ci-section-title">Since this phase started</span>
+                {phaseLabel && <span className="ci-section-meta">{phaseLabel}</span>}
               </div>
               <div className="ci-deltas">
                 {deltas.map((d) => (
                   <div key={d.name} className="ci-delta">
                     <div className="ci-delta-name">{d.name}</div>
-                    <div className="ci-delta-value">{d.value}</div>
+                    <div className="ci-delta-value-row">
+                      <span className="ci-delta-value">{d.value}</span>
+                      {d.unit && <span className="ci-delta-unit">{d.unit}</span>}
+                    </div>
                   </div>
                 ))}
               </div>

@@ -25,3 +25,26 @@ export const ChatProvider = ChatContext.Provider;
 export function useOpenChat() {
   return useContext(ChatContext);
 }
+
+// And for cross-tab navigation: a notification carries the tab it belongs to
+// plus, optionally, the id of the row to open there (see action_ref in
+// db.ts). Tapping "your coach sent you a progress report" closes the
+// notifications view, switches to Settings, and expands that report.
+const NavigateContext = createContext<((tab: string, ref?: number) => void) | null>(null);
+
+export const NavigateProvider = NavigateContext.Provider;
+
+export function useNavigateTab() {
+  return useContext(NavigateContext);
+}
+
+// The other half of that: whichever row the arriving tab should open. Read
+// by the list that owns those rows (ReportArchiveList), so the server
+// component in between doesn't have to thread a prop through.
+const FocusRefContext = createContext<number | null>(null);
+
+export const FocusRefProvider = FocusRefContext.Provider;
+
+export function useFocusRef() {
+  return useContext(FocusRefContext);
+}
