@@ -2,10 +2,12 @@
 
 import { ReactNode, useState } from "react";
 import { BellIcon, ChatIcon, ChevronLeftIcon } from "../components/icons";
+import CheckInScreen, { CheckInProps } from "./CheckInScreen";
+import { CheckInProvider } from "./CheckInContext";
 
 export type AppTab = { id: string; label: string; icon: ReactNode; content: ReactNode; footer?: ReactNode };
 
-type PushView = "chat" | "notifications" | null;
+type PushView = "chat" | "notifications" | "checkin" | null;
 
 // Top bar is brand + chat/bell icons (not a per-tab greeting). Both icons
 // open the same pushed full-screen view — a single dark Chat and
@@ -19,6 +21,8 @@ export default function AppShell({
   hasCoachUpdate,
   hasUnreadNotifications,
   logoUrl,
+  clientId,
+  checkIn,
 }: {
   clientName: string;
   tabs: AppTab[];
@@ -27,9 +31,17 @@ export default function AppShell({
   hasCoachUpdate?: boolean;
   hasUnreadNotifications?: boolean;
   logoUrl?: string | null;
+  clientId: number;
+  checkIn: CheckInProps;
 }) {
   const [activeId, setActiveId] = useState(tabs[0]?.id);
   const [pushView, setPushView] = useState<PushView>(null);
+  // Which check-in section to land on, set by whichever due item opened it.
+  const [checkInSection, setCheckInSection] = useState("daily");
+  const openCheckIn = (section: string) => {
+    setCheckInSection(section);
+    setPushView("checkin");
+  };
   // Bumped on every bottom-nav tap (including tapping the already-active
   // tab) and used as a key on the content below, so tapping Home while
   // already on Home resets HomeHub's internal sub-view instead of doing
@@ -37,6 +49,29 @@ export default function AppShell({
   // home" works from a sub-view like Photos or Tracker.
   const [navResetKey, setNavResetKey] = useState(0);
   const active = tabs.find((t) => t.id === activeId) ?? tabs[0];
+
+  if (pushView === "checkin") {
+    return (
+      <div className="phone-frame">
+        <div className="app-screen cn-screen">
+          <CheckInScreen
+            clientId={clientId}
+            dateLabel={checkIn.dateLabel}
+            today={checkIn.today}
+            sections={checkIn.sections}
+            initialSection={checkInSection}
+            lastCheckInDate={checkIn.lastCheckInDate}
+            deltas={checkIn.deltas}
+            photoSlots={checkIn.photoSlots}
+            photoPeriodLabel={checkIn.photoPeriodLabel}
+            coachNote={checkIn.coachNote}
+            photoHistory={checkIn.photoHistory}
+            onBack={() => setPushView(null)}
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (pushView) {
     const isChat = pushView === "chat";
@@ -90,7 +125,7 @@ export default function AppShell({
         </header>
 
         <main className="app-content dark" key={`${activeId}-${navResetKey}`}>
-          {active?.content}
+          <CheckInProvider value={openCheckIn}>{active?.content}</CheckInProvider>
         </main>
 
         {active?.footer && <div className="app-sticky-footer">{active.footer}</div>}

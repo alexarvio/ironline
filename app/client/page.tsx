@@ -6,6 +6,7 @@ import {
   getDeployedProgram,
   getLogsForAssignment,
   getCurrentWeekNumber,
+  getCheckInSections,
   getClientPreferences,
   getDueItems,
   getLatestSentReport,
@@ -23,8 +24,6 @@ import {
   listChatMessages,
   listClientGoals,
   listMeetings,
-  listMetricDefinitions,
-  listMetricPeriods,
   listPhotoPeriods,
   listPhotoSlots,
   listPhotoUploads,
@@ -35,16 +34,12 @@ import {
   slugify,
   SUPPLEMENT_ITEMS,
   VITAMIN_ITEMS,
-  weekStart,
 } from "../lib/queries";
 import { DAY_NAMES } from "../lib/db";
 import SetLogForm from "./SetLogForm";
 import TrainingDayCard from "./TrainingDayCard";
-import PhotoUploadBox from "./PhotoUploadBox";
 import PhotoPeriodHistoryRow from "./PhotoPeriodHistoryRow";
-import CheckInForm from "./CheckInForm";
-import TrackerLogForm from "./TrackerLogForm";
-import HomeHub, { DueItem, HomeReport, HubSubTab, UpcomingMeeting } from "./HomeHub";
+import HomeHub, { DueItem, HomeReport, UpcomingMeeting } from "./HomeHub";
 import { TrendMetric } from "./TrendCarousel";
 import NutritionDayToggle, { NutritionTargetSet } from "./NutritionDayToggle";
 import ReportArchiveList, { ArchiveReport } from "./ReportArchiveList";
@@ -182,7 +177,6 @@ function HomeTab() {
   const volumeTrendLabel = volumeTrendPct == null ? null : `${volumeTrendPct >= 0 ? "+" : ""}${Math.round(volumeTrendPct)}% vol`;
 
   const today = localDateStr();
-  const currentWeekStart = weekStart(today);
 
   const upcomingMeeting = listMeetings(CLIENT_ID)
     .filter((m) => m.status === "scheduled" && m.date >= today)
@@ -209,11 +203,6 @@ function HomeTab() {
   // applyDueClientReminders() so the notification feed's reminders and this
   // list never disagree on what's due. dailyDefs/weeklyDefs/*LoggedToday are
   // still needed here directly for the Tracker sub-tab below.
-  const dailyDefs = listMetricDefinitions(CLIENT_ID, "daily");
-  const weeklyDefs = listMetricDefinitions(CLIENT_ID, "weekly");
-  const dailyLoggedToday = listMetricPeriods(dailyDefs.map((d) => d.id), 1)[0] === today;
-  const weeklyLoggedThisWeek = listMetricPeriods(weeklyDefs.map((d) => d.id), 1)[0] === currentWeekStart;
-
   const dueItems: DueItem[] = getDueItems(CLIENT_ID);
 
   const coachNotes = coachNotesFor(5);
@@ -294,32 +283,6 @@ function HomeTab() {
     };
   }
 
-  const tabs: HubSubTab[] = [
-    {
-      id: "tracker",
-      label: "Tracker",
-      content: (
-        <div>
-          <TrackerLogForm clientId={CLIENT_ID} frequency="daily" loggedForPeriod={dailyLoggedToday} />
-          <TrackerLogForm clientId={CLIENT_ID} frequency="weekly" loggedForPeriod={weeklyLoggedThisWeek} />
-          {dailyDefs.length === 0 && weeklyDefs.length === 0 && (
-            <p className="empty-note">Your coach hasn&rsquo;t set up any tracker metrics yet.</p>
-          )}
-        </div>
-      ),
-    },
-    {
-      id: "measurements",
-      label: "Measurements",
-      content: <CheckInForm clientId={CLIENT_ID} />,
-    },
-    {
-      id: "photos",
-      label: "Photos",
-      content: <ProgressTab />,
-    },
-  ];
-
   const dateLabel = new Date(`${today}T00:00:00`).toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -343,7 +306,6 @@ function HomeTab() {
       coachNotes={coachNotes}
       dueItems={dueItems}
       report={report}
-      tabs={tabs}
     />
   );
 }
@@ -937,68 +899,74 @@ function NotificationsPanel() {
   );
 }
 
-function ProgressTab() {
+// Past photo periods and the coach's written feedback on each. The
+// current period's upload slots moved into the Check-in screen's
+// measurements section; this is the history that sat below them, kept
+// reachable there rather than dropped.
+function PhotoHistory() {
   const photoSlots = listPhotoSlots(CLIENT_ID);
   const photoUploads = listPhotoUploads(photoSlots.map((s) => s.id));
   const cadence = getPhotoCadence(CLIENT_ID);
   const currentPeriod = photoPeriodFor(localDateStr(), cadence);
-  const photoFor = (slotId: number) =>
-    photoUploads.find((u) => u.slot_id === slotId && u.period === currentPeriod)?.file_path ?? null;
 
   const pastPeriods = listPhotoPeriods(photoSlots.map((s) => s.id)).filter((p) => p !== currentPeriod);
   const periodIndex = photoPeriodIndex(photoSlots.map((s) => s.id));
+  if (pastPeriods.length === 0) return null;
 
   return (
     <div>
-      <p className="app-lead">
-        Tap a box to shoot or upload a photo — your coach sees it right away.
-      </p>
-      {photoSlots.length === 0 ? (
-        <p className="empty-note">Your coach hasn&rsquo;t set up any photo slots yet.</p>
-      ) : (
-        <div className="photo-slot-grid">
-          {photoSlots.map((slot) => (
-            <PhotoUploadBox
-              key={slot.id}
-              clientId={CLIENT_ID}
-              slotId={slot.id}
-              label={slot.label}
-              currentSrc={photoFor(slot.id)}
+      <div className="ci-section-title" style={{ display: "block", marginBottom: 8 }}>
+        Earlier sets
+      </div>
+      <div className="photo-gallery">
+        {pastPeriods.map((period) => {
+          const photos = photoSlots.map((slot) => ({
+            slotId: slot.id,
+            label: slot.label,
+            src: photoUploads.find((u) => u.slot_id === slot.id && u.period === period)?.file_path ?? null,
+          }));
+          const uploadedCount = photos.filter((p) => p.src).length;
+          return (
+            <PhotoPeriodHistoryRow
+              key={period}
+              title={`${PERIOD_UNIT[cadence]} ${periodIndex[period] ?? "?"}`}
+              subtitle={`${uploadedCount}/${photoSlots.length} photos · ${period}`}
+              photos={photos}
+              note={getPhotoPeriodNote(CLIENT_ID, period)}
             />
-          ))}
-        </div>
-      )}
-
-      {pastPeriods.length > 0 && (
-        <div style={{ marginTop: 22 }}>
-          <h3 style={{ margin: "0 0 10px" }}>History</h3>
-          <div className="photo-gallery">
-            {pastPeriods.map((period) => {
-              const photos = photoSlots.map((slot) => ({
-                slotId: slot.id,
-                label: slot.label,
-                src: photoUploads.find((u) => u.slot_id === slot.id && u.period === period)?.file_path ?? null,
-              }));
-              const uploadedCount = photos.filter((p) => p.src).length;
-              return (
-                <PhotoPeriodHistoryRow
-                  key={period}
-                  title={`${PERIOD_UNIT[cadence]} ${periodIndex[period] ?? "?"}`}
-                  subtitle={`${uploadedCount}/${photoSlots.length} photos · ${period}`}
-                  photos={photos}
-                  note={getPhotoPeriodNote(CLIENT_ID, period)}
-                />
-              );
-            })}
-          </div>
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 }
 
 export default function ClientPage() {
   const client = getClient(CLIENT_ID);
+  // The Check-in screen's three sections, the measurement deltas and this
+  // period's photo slots. Built here rather than in HomeTab because the
+  // screen is a full-screen push view owned by AppShell.
+  const checkInData = getCheckInSections(CLIENT_ID);
+  // Most recent coach note, shown at the foot of the check-in the same way
+  // Home surfaces them — reusing the notification feed, not a new store.
+  const latestCoachNote = coachNotesFor(1)[0] ?? null;
+  const checkIn = {
+    dateLabel: new Date(`${localDateStr()}T00:00:00`).toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    }),
+    today: localDateStr(),
+    sections: checkInData.sections,
+    lastCheckInDate: checkInData.lastCheckInDate,
+    deltas: checkInData.deltas,
+    photoSlots: checkInData.photoSlots,
+    photoPeriodLabel: checkInData.photoPeriodLabel,
+    coachNote: latestCoachNote
+      ? { timeLabel: latestCoachNote.timeLabel, text: latestCoachNote.text }
+      : null,
+    photoHistory: <PhotoHistory />,
+  };
   const messages = listChatMessages(CLIENT_ID);
   const hasCoachUpdate = [...messages].reverse().find((m) => m.sender === "coach") != null;
   const hasUnreadNotifications = getNotifications(CLIENT_ID).some((n) => !n.read);
@@ -1049,6 +1017,8 @@ export default function ClientPage() {
       hasCoachUpdate={hasCoachUpdate}
       hasUnreadNotifications={hasUnreadNotifications}
       logoUrl={getBranding().logo_path}
+      clientId={CLIENT_ID}
+      checkIn={checkIn}
     />
   );
 }

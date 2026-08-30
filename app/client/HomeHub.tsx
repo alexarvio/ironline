@@ -1,16 +1,15 @@
 "use client";
 
-import { ReactNode, useState } from "react";
 import { ArrowRightIcon } from "../components/icons";
 import TrendCarousel, { TrendMetric } from "./TrendCarousel";
 import ProgressReportCard, { ReportChart, ReportStat } from "./ProgressReportCard";
+import { useOpenCheckIn } from "./CheckInContext";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
 // CheckInHub.tsx this replaces — a "use client" file importing queries.ts
 // breaks the dev server at runtime). All data comes in as plain props,
 // computed server-side in page.tsx.
 export type DueItem = { id: string; label: string; detail: string; targetTab: string };
-export type HubSubTab = { id: string; label: string; content: ReactNode };
 export type UpcomingMeeting = { dateLabel: string; dayLabel: string; topic: string; timeLabel: string; daysAwayLabel: string } | null;
 export type CoachNote = { id: number; context: string; timeLabel: string; text: string; unread: boolean };
 export type HomeReport = {
@@ -44,7 +43,6 @@ export default function HomeHub({
   upcoming,
   coachNotes,
   dueItems,
-  tabs,
 }: {
   dateLabel: string;
   name: string;
@@ -61,23 +59,10 @@ export default function HomeHub({
   upcoming: UpcomingMeeting;
   coachNotes: CoachNote[];
   dueItems: DueItem[];
-  tabs: HubSubTab[];
 }) {
-  const [view, setView] = useState("home");
-
-  // Tracker/Measurements/Photos aren't part of this redesign yet (still the
-  // original light forms) — wrapped in their own opaque light panel so they
-  // stay legible sitting on the now-dark Home shell behind them, rather than
-  // trying to force-fit unrelated, unredesigned screens into this palette.
-  if (view !== "home") {
-    const tab = tabs.find((t) => t.id === view);
-    return (
-      <div className="home-subview-panel">
-        <h2 style={{ margin: "4px 0 14px" }}>{tab?.label}</h2>
-        {tab?.content}
-      </div>
-    );
-  }
+  // Check-in is a full-screen pushed view owned by AppShell; a due row just
+  // asks it to open on that row's section.
+  const openCheckIn = useOpenCheckIn();
 
   const dayTarget = totalDays || 7;
 
@@ -151,7 +136,7 @@ export default function HomeHub({
         ) : (
           <div className="home-dark-rows">
             {dueItems.map((item) => (
-              <button key={item.id} type="button" className="home-dark-row" onClick={() => setView(item.targetTab)}>
+              <button key={item.id} type="button" className="home-dark-row" onClick={() => openCheckIn?.(item.targetTab)}>
                 <div className="home-dark-row-body">
                   <div className="home-dark-row-title">{item.label}</div>
                   <div className="home-dark-row-detail">{item.detail}</div>

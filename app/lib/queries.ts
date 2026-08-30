@@ -2488,7 +2488,7 @@ export function getDueItems(clientId: number): DueItem[] {
       id: "daily",
       label: "Daily check-in",
       detail: `${dailyDefs.length} metric${dailyDefs.length === 1 ? "" : "s"} to log for today`,
-      targetTab: "tracker",
+      targetTab: "daily",
     });
   }
   if (weeklyDefs.length > 0 && !weeklyLoggedThisWeek) {
@@ -2496,7 +2496,7 @@ export function getDueItems(clientId: number): DueItem[] {
       id: "weekly",
       label: "Weekly check-in",
       detail: `${weeklyDefs.length} metric${weeklyDefs.length === 1 ? "" : "s"} to log for this week`,
-      targetTab: "tracker",
+      targetTab: "weekly",
     });
   }
   if (measurementFields.length > 0 && !measurementLoggedToday) {
@@ -2512,10 +2512,195 @@ export function getDueItems(clientId: number): DueItem[] {
       id: "photos",
       label: "Progress pictures",
       detail: `${uploadedThisPeriod}/${photoSlots.length} uploaded for this ${PHOTO_PERIOD_UNIT[cadence].toLowerCase()}`,
-      targetTab: "photos",
+      targetTab: "measurements",
     });
   }
   return items;
+}
+
+// ---- Check-in screen: the three logging sections (daily tracker, weekly
+// tracker, measurements) as one screen, replacing what used to be three
+// separate Home sub-views. Everything the client can fill in is here; what
+// the coach configured decides which sections exist at all. ----
+
+// A coach writing "/5" or "/10" as a metric's unit means "rate it out of N"
+// — a convention already in the seed data (Energy /5, Stress /5, Soreness
+// /5). Those render as a row of tap targets instead of a number pad; every
+// other unit ("kg", "hrs", "steps") stays a plain numeric input.
+function ratingScaleMax(unit: string): number | null {
+  const match = /^\/(\d+)$/.exec(unit.trim());
+  if (!match) return null;
+  const max = Number(match[1]);
+  return max >= 2 && max <= 10 ? max : null;
+}
+
+export type CheckInMetric = {
+  id: string;
+  name: string;
+  unit: string;
+  step: string;
+  // Value already logged for the period being edited, so reopening the
+  // screen shows what was sent rather than an empty form.
+  value: string;
+  // "84.4 kg yesterday" — the last thing logged BEFORE this period, so the
+  // client has something to anchor against while typing.
+  hint: string | null;
+  scaleMax: number | null;
+};
+
+export type CheckInSection = {
+  id: "daily" | "weekly" | "measurements";
+  label: string;
+  sub: string;
+  intro: string;
+  metrics: CheckInMetric[];
+};
+
+export type CheckInDelta = { name: string; value: string };
+
+export type CheckInPhotoSlot = { id: number; label: string; src: string | null };
+
+export type CheckInData = {
+  sections: CheckInSection[];
+  // Measurements-only extras, matching the design: the change since the
+  // previous check-in, and this period's progress pictures.
+  lastCheckInDate: string | null;
+  deltas: CheckInDelta[];
+  photoSlots: CheckInPhotoSlot[];
+  photoPeriodLabel: string;
+};
+
+export function getCheckInSections(clientId: number): CheckInData {
+  const today = localDateStr();
+  const thisWeek = weekStart(today);
+
+  const fmtDate = (iso: string) =>
+    new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+  // A tracker metric's row: what's logged for the current period, plus the
+  // most recent entry from any earlier period as the hint.
+  const trackerSection = (
+    frequency: "daily" | "weekly",
+    period: string,
+    label: string,
+    sub: string,
+    intro: string
+  ): CheckInSection | null => {
+    const defs = listMetricDefinitions(clientId, frequency);
+    if (defs.length === 0) return null;
+    const entries = getMetricEntries(defs.map((d) => d.id));
+    return {
+      id: frequency,
+      label,
+      sub,
+      intro,
+      metrics: defs.map((def) => {
+        const current = entries.find((e) => e.metric_definition_id === def.id && e.period === period);
+        const previous = entries
+          .filter((e) => e.metric_definition_id === def.id && e.period < period && e.value != null)
+          .sort((a, b) => (a.period < b.period ? 1 : -1))[0];
+        const scaleMax = ratingScaleMax(def.unit);
+        return {
+          id: String(def.id),
+          name: def.name,
+          unit: def.unit,
+          step: scaleMax ? "1" : "0.1",
+          value: current?.value != null ? String(current.value) : "",
+          hint: previous
+            ? `${previous.value}${def.unit && !scaleMax ? ` ${def.unit}` : scaleMax ? `/${scaleMax}` : ""} on ${fmtDate(previous.period)}`
+            : null,
+          scaleMax,
+        };
+      }),
+    };
+  };
+
+  const sections: CheckInSection[] = [];
+  const daily = trackerSection(
+    "daily",
+    today,
+    "Daily",
+    "today",
+    "What your coach asked you to log every day. Takes about twenty seconds."
+  );
+  if (daily) sections.push(daily);
+
+  const weekly = trackerSection(
+    "weekly",
+    thisWeek,
+    "Weekly",
+    "this week",
+    "One entry covers the whole week."
+  );
+  if (weekly) sections.push(weekly);
+
+  // ---- Measurements ----
+  const fields = listMeasurementFields(clientId);
+  const measurementValues = getMeasurementValues(fields.map((f) => f.id));
+  const dates = listMeasurementDates(clientId);
+  const previousDate = dates.filter((d) => d < today).sort((a, b) => (a < b ? 1 : -1))[0] ?? null;
+
+  const valueAt = (fieldId: number, date: string) =>
+    measurementValues.find((v) => v.field_id === fieldId && v.date === date)?.value ?? null;
+
+  if (fields.length > 0) {
+    sections.push({
+      id: "measurements",
+      label: "Measure",
+      sub: "check-in",
+      intro: "Same spots, same time of day — first thing, before food.",
+      metrics: fields.map((f) => {
+        const current = valueAt(f.id, today);
+        const previous = previousDate ? valueAt(f.id, previousDate) : null;
+        return {
+          id: String(f.id),
+          name: f.name,
+          unit: f.unit,
+          step: "0.1",
+          value: current != null ? String(current) : "",
+          hint: previous != null ? `${previous}${f.unit ? ` ${f.unit}` : ""} on ${fmtDate(previousDate!)}` : null,
+          scaleMax: null,
+        };
+      }),
+    });
+  }
+
+  // Change since the previous check-in. Which direction counts as "good"
+  // isn't knowable for a coach-named field (is a bigger chest good? depends
+  // on the goal), so deltas render neutral rather than guessing — only the
+  // number and its sign are shown.
+  const deltas: CheckInDelta[] =
+    previousDate == null
+      ? []
+      : fields
+          .map((f) => {
+            const now = valueAt(f.id, today);
+            const before = valueAt(f.id, previousDate);
+            if (now == null || before == null) return null;
+            const diff = Math.round((now - before) * 10) / 10;
+            return {
+              name: f.name,
+              value: `${diff > 0 ? "+" : diff < 0 ? "−" : ""}${Math.abs(diff)}${f.unit ? ` ${f.unit}` : ""}`,
+            };
+          })
+          .filter((d): d is CheckInDelta => d !== null);
+
+  const cadence = getPhotoCadence(clientId);
+  const photoPeriod = photoPeriodFor(today, cadence);
+  const slots = listPhotoSlots(clientId);
+  const uploads = listPhotoUploads(slots.map((s) => s.id));
+
+  return {
+    sections,
+    lastCheckInDate: previousDate ? fmtDate(previousDate) : null,
+    deltas,
+    photoSlots: slots.map((s) => ({
+      id: s.id,
+      label: s.label,
+      src: uploads.find((u) => u.slot_id === s.id && u.period === photoPeriod)?.file_path ?? null,
+    })),
+    photoPeriodLabel: PHOTO_PERIOD_UNIT[cadence],
+  };
 }
 
 // ---- Coach activity log: "last update from your coach" on client Home,
