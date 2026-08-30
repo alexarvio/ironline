@@ -109,6 +109,10 @@ type MeasurementFieldDef = {
   order_index: number;
   // Same "deployed to the client" switch as MetricDefinition above.
   visible_to_client?: boolean;
+  // Same pin as MetricDefinition: one of the six figures surfaced on the
+  // coach's rail. Shared across metrics and measurements so the coach picks
+  // six things total, not six of each.
+  pinned?: boolean;
 };
 type MeasurementValue = {
   id: number;

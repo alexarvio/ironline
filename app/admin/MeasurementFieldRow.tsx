@@ -1,8 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { removeMeasurementFieldAction, setMeasurementFieldVisibleAction, updateMeasurementFieldAction } from "../lib/actions";
-import { EyeIcon, PencilIcon, TrashIcon } from "../components/icons";
+import {
+  removeMeasurementFieldAction,
+  setMeasurementFieldVisibleAction,
+  togglePinMeasurementFieldAction,
+  updateMeasurementFieldAction,
+} from "../lib/actions";
+import { EyeIcon, PencilIcon, PinIcon, TrashIcon } from "../components/icons";
 
 // One row in the "Check-in columns" list — normally just the column's name
 // and unit, with a pencil/trash pair on the right. Pencil turns the row
@@ -12,10 +17,15 @@ import { EyeIcon, PencilIcon, TrashIcon } from "../components/icons";
 // where the coach edits/removes them.)
 export default function MeasurementFieldRow({
   field,
+  pinnedCount,
+  pinLimit,
 }: {
-  field: { id: number; name: string; unit: string; visible_to_client?: boolean };
+  field: { id: number; name: string; unit: string; visible_to_client?: boolean; pinned?: boolean };
+  pinnedCount: number;
+  pinLimit: number;
 }) {
   const [mode, setMode] = useState<"view" | "edit" | "confirm-delete">("view");
+  const pinDisabled = !field.pinned && pinnedCount >= pinLimit;
 
   if (mode === "edit") {
     return (
@@ -55,6 +65,27 @@ export default function MeasurementFieldRow({
         </div>
       ) : (
         <div className="row-icon-actions" style={{ marginLeft: "auto" }}>
+          {/* One of the six figures surfaced on the coach's rail. The cap is
+              shared with tracker metrics, so the button goes inert once six
+              of anything are pinned. */}
+          <form action={togglePinMeasurementFieldAction}>
+            <input type="hidden" name="id" value={field.id} />
+            <button
+              type="submit"
+              disabled={pinDisabled}
+              className={`row-icon-btn${field.pinned ? " row-icon-active" : ""}`}
+              aria-label={field.pinned ? `Unpin ${field.name}` : `Pin ${field.name}`}
+              title={
+                field.pinned
+                  ? "Pinned to the client rail — tap to unpin"
+                  : pinDisabled
+                  ? `${pinLimit} already pinned — unpin one first`
+                  : "Pin to the client rail"
+              }
+            >
+              <PinIcon />
+            </button>
+          </form>
           {/* Whether the client is asked for this column at check-in.
               Hiding it leaves everything already logged intact. */}
           <form action={setMeasurementFieldVisibleAction}>

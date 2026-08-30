@@ -55,6 +55,7 @@ import {
   removeMeetingNote,
   removeMetricDefinition,
   togglePinMetric,
+  togglePinMeasurementField,
   removeMetricTemplateCategory,
   removeMetricTemplateItem,
   removePhotoSlot,
@@ -441,6 +442,12 @@ export async function removeMetricDefinitionAction(formData: FormData) {
 export async function togglePinMetricAction(formData: FormData) {
   const id = Number(formData.get("id"));
   togglePinMetric(id);
+  revalidatePath("/admin");
+}
+
+export async function togglePinMeasurementFieldAction(formData: FormData) {
+  const id = Number(formData.get("id"));
+  togglePinMeasurementField(id);
   revalidatePath("/admin");
 }
 

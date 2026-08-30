@@ -14,6 +14,8 @@ import {
   listSkinfoldEntries,
   localDateStr,
   SKINFOLD_SITES,
+  countPinned,
+  PINNED_METRIC_LIMIT,
 } from "../lib/queries";
 import ComboBoxInput from "../components/ComboBoxInput";
 import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
@@ -34,6 +36,7 @@ function changeClass(delta: number) {
 
 export default function MeasurementsPanel({ clientId }: { clientId: number }) {
   const fields = listMeasurementFields(clientId);
+  const pinnedCount = countPinned(clientId);
   const values = getMeasurementValues(fields.map((f) => f.id));
   const dates = listMeasurementDates(clientId);
   const weekly = getWeeklyMeasurementSummary(clientId);
@@ -123,7 +126,7 @@ export default function MeasurementsPanel({ clientId }: { clientId: number }) {
         {fields.length > 0 && (
           <div className="invoice-list" style={{ marginTop: 14 }}>
             {fields.map((f) => (
-              <MeasurementFieldRow key={f.id} field={f} />
+              <MeasurementFieldRow key={f.id} field={f} pinnedCount={pinnedCount} pinLimit={PINNED_METRIC_LIMIT} />
             ))}
           </div>
         )}

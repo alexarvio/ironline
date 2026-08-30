@@ -1109,6 +1109,8 @@ export type MeasurementFieldDef = {
   order_index: number;
   // Deployed to the client's check-in screen; see deployedToClient().
   visible_to_client?: boolean;
+  // One of the six figures pinned to the coach's rail; see togglePinMeasurementField.
+  pinned?: boolean;
 };
 export type MeasurementValue = {
   id: number;
@@ -1420,23 +1422,43 @@ export function removeMetricDefinition(id: number) {
   persist();
 }
 
-// Pinning surfaces a metric at the top of the client's Start Page (any
-// daily or weekly metric qualifies) so the coach doesn't have to open the
-// Tracker tab to see it. Capped per client — five is enough to be useful
-// as an at-a-glance panel without turning into a second full tracker table.
-export const PINNED_METRIC_LIMIT = 5;
+// Pinning surfaces a figure on the coach's rail beside whatever tab they're
+// working in, and at the top of the client's Start Page. Any daily metric,
+// weekly metric or measurement field qualifies, and the cap is shared across
+// all three — the coach picks six things total, not six of each. Six is what
+// fits the rail's three-column grid in two clean rows.
+export const PINNED_METRIC_LIMIT = 6;
+
+export function countPinned(clientId: number): number {
+  const data = getData();
+  return (
+    data.metric_definitions.filter((m) => m.client_id === clientId && m.pinned).length +
+    data.measurement_fields.filter((f) => f.client_id === clientId && f.pinned).length
+  );
+}
+
+const PIN_FULL_REASON = `Only ${PINNED_METRIC_LIMIT} can be pinned at once — unpin one first.`;
 
 export function togglePinMetric(id: number): { ok: boolean; reason?: string } {
   const data = getData();
   const def = data.metric_definitions.find((m) => m.id === id);
   if (!def) return { ok: false, reason: "Metric not found." };
-  if (!def.pinned) {
-    const pinnedCount = data.metric_definitions.filter((m) => m.client_id === def.client_id && m.pinned).length;
-    if (pinnedCount >= PINNED_METRIC_LIMIT) {
-      return { ok: false, reason: `Only ${PINNED_METRIC_LIMIT} metrics can be pinned at once — unpin one first.` };
-    }
+  if (!def.pinned && countPinned(def.client_id) >= PINNED_METRIC_LIMIT) {
+    return { ok: false, reason: PIN_FULL_REASON };
   }
   def.pinned = !def.pinned;
+  persist();
+  return { ok: true };
+}
+
+export function togglePinMeasurementField(id: number): { ok: boolean; reason?: string } {
+  const data = getData();
+  const field = data.measurement_fields.find((f) => f.id === id);
+  if (!field) return { ok: false, reason: "Measurement not found." };
+  if (!field.pinned && countPinned(field.client_id) >= PINNED_METRIC_LIMIT) {
+    return { ok: false, reason: PIN_FULL_REASON };
+  }
+  field.pinned = !field.pinned;
   persist();
   return { ok: true };
 }
@@ -2648,8 +2670,15 @@ export function getLatestCheckInSnapshot(clientId: number): CheckInSnapshot {
     if (!latest || d > latest) latest = d;
   };
 
+  // The coach picks which figures land here by pinning them — up to
+  // PINNED_METRIC_LIMIT across metrics and measurements together. A client
+  // with nothing pinned yet falls back to the first few deployed rather than
+  // showing an empty panel, so this is useful before anyone configures it.
+  const anyPinned = countPinned(clientId) > 0;
+  const isShown = (x: { pinned?: boolean }) => (anyPinned ? x.pinned === true : true);
+
   // Measurements lead — weight is the number a coach looks for first.
-  const fields = listMeasurementFields(clientId).filter(deployedToClient);
+  const fields = listMeasurementFields(clientId).filter(deployedToClient).filter(isShown);
   const values = getMeasurementValues(fields.map((f) => f.id));
   for (const field of fields) {
     const last = values
@@ -2664,7 +2693,9 @@ export function getLatestCheckInSnapshot(clientId: number): CheckInSnapshot {
   const defs = [
     ...listMetricDefinitions(clientId, "daily"),
     ...listMetricDefinitions(clientId, "weekly"),
-  ].filter(deployedToClient);
+  ]
+    .filter(deployedToClient)
+    .filter(isShown);
   const entries = getMetricEntries(defs.map((d) => d.id));
   for (const def of defs) {
     const last = entries
@@ -2681,7 +2712,9 @@ export function getLatestCheckInSnapshot(clientId: number): CheckInSnapshot {
 
   return {
     when: latest ? new Date(`${latest}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null,
-    metrics,
+    // Hard cap regardless of how the list was built, so the unpinned
+    // fallback can't overflow the panel either.
+    metrics: metrics.slice(0, PINNED_METRIC_LIMIT),
   };
 }
 

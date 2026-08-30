@@ -2,13 +2,13 @@ import { Fragment } from "react";
 import { addMetricDefinitionAction, applyMetricTemplateAction } from "../lib/actions";
 import {
   getMetricEntries,
-  getPinnedMetricsSummary,
   listDistinctMetricCategories,
   listDistinctMetricNames,
   listMetricDefinitions,
   listMetricPeriods,
   listMetricTemplateCategories,
   PINNED_METRIC_LIMIT,
+  countPinned,
 } from "../lib/queries";
 import ComboBoxInput from "../components/ComboBoxInput";
 import TrackerMetricRow from "./TrackerMetricRow";
@@ -36,7 +36,8 @@ export default function TrackerPanel({
   });
   // The 5-pin limit is per client across BOTH trackers, not per frequency —
   // so this counts pins client-wide, not just the metrics in this panel.
-  const pinnedCount = getPinnedMetricsSummary(clientId).length;
+  // Shared cap across metrics and measurements, so this counts both.
+  const pinnedCount = countPinned(clientId);
 
   return (
     <div>
