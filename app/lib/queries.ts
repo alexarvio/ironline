@@ -2670,12 +2670,10 @@ export function getLatestCheckInSnapshot(clientId: number): CheckInSnapshot {
     if (!latest || d > latest) latest = d;
   };
 
-  // The coach picks which figures land here by pinning them — up to
-  // PINNED_METRIC_LIMIT across metrics and measurements together. A client
-  // with nothing pinned yet falls back to the first few deployed rather than
-  // showing an empty panel, so this is useful before anyone configures it.
-  const anyPinned = countPinned(clientId) > 0;
-  const isShown = (x: { pinned?: boolean }) => (anyPinned ? x.pinned === true : true);
+  // Strictly what the coach pinned — up to PINNED_METRIC_LIMIT across
+  // metrics and measurements together. Nothing is ever substituted in: unpin
+  // one and the panel shows five, not five plus whatever came next.
+  const isShown = (x: { pinned?: boolean }) => x.pinned === true;
 
   // Measurements lead — weight is the number a coach looks for first.
   const fields = listMeasurementFields(clientId).filter(deployedToClient).filter(isShown);

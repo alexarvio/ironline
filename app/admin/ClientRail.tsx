@@ -101,7 +101,9 @@ export default function ClientRail({ clientId, clientName }: { clientId: number;
           {checkIn.when && <span className="pb-rail-when">{checkIn.when}</span>}
         </div>
         {checkIn.metrics.length === 0 ? (
-          <p className="empty-note">Nothing logged yet.</p>
+          <p className="empty-note">
+            Nothing pinned yet — pin up to six from Daily Tracker, Weekly Tracker or Measurements.
+          </p>
         ) : (
           <div className="pb-rail-metrics">
             {checkIn.metrics.map((m) => (
