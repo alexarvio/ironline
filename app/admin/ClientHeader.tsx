@@ -21,7 +21,7 @@ export default function ClientHeader({
     <header className="ad-client-header">
       <div className="ad-client-identity">
         <div className="ad-client-title-row">
-          <h1 className="ad-client-name">{name}</h1>
+          <h1 className="ad-client-title">{name}</h1>
           {phase && <span className="ad-client-phase">{phase}</span>}
         </div>
         {meta.length > 0 && (

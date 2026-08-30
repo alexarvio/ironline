@@ -7455,7 +7455,9 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   flex-wrap: wrap;
 }
 
-.ad-client-name {
+/* The header's H1. Distinct from .ad-client-name in the sidebar list, which
+   is a 12px sans row label — they collided before this rename. */
+.ad-client-title {
   margin: 0;
   font-family: var(--font-serif);
   font-size: 22px;
