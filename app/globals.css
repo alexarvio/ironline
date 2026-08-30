@@ -3193,6 +3193,69 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   background: #ffffff;
 }
 
+/* Home's check-ins row: one status line, not a to-do list — Home reports
+   whether anything is outstanding and hands off to the Check-in screen, it
+   never completes anything itself. */
+.home-checkin-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  border: none;
+  border-top: 1px solid #23231f;
+  background: none;
+  padding: 15px 0;
+  margin-top: 6px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  min-height: 44px;
+}
+
+.home-checkin-body {
+  min-width: 0;
+}
+
+.home-checkin-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.home-checkin-detail {
+  font-size: 0.78rem;
+  color: #8a8a80;
+  margin-top: 1px;
+}
+
+.home-checkin-detail.due {
+  color: var(--fp-accent);
+}
+
+.home-checkin-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--fp-accent-tint);
+  color: var(--fp-accent);
+}
+
+.home-checkin-mark.due {
+  background: var(--fp-accent);
+  color: var(--fp-accent-fg);
+}
+
+.home-checkin-mark svg {
+  width: 14px;
+  height: 14px;
+}
+
 /* ---- Check-in (client only, dark): the three logging sections as one
    pushed screen. Sits inside .app-content.dark, which already provides the
    dark ground and horizontal padding — the header/footer pull back out to

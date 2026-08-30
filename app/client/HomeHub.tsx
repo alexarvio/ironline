@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRightIcon } from "../components/icons";
+import { ArrowRightIcon, CheckIcon } from "../components/icons";
 import TrendCarousel, { TrendMetric } from "./TrendCarousel";
 import ProgressReportCard, { ReportChart, ReportStat } from "./ProgressReportCard";
 import { useOpenCheckIn } from "./CheckInContext";
@@ -9,7 +9,14 @@ import { useOpenCheckIn } from "./CheckInContext";
 // CheckInHub.tsx this replaces — a "use client" file importing queries.ts
 // breaks the dev server at runtime). All data comes in as plain props,
 // computed server-side in page.tsx.
-export type DueItem = { id: string; label: string; detail: string; targetTab: string };
+// Home reports check-in status as one line — it no longer enumerates each
+// outstanding item, so it needs the counts, not the items.
+export type CheckInStatus = {
+  configuredCount: number;
+  dueTypes: ("daily" | "weekly" | "measurements")[];
+  dueNames: string;
+  nextLabel: string;
+};
 export type UpcomingMeeting = { dateLabel: string; dayLabel: string; topic: string; timeLabel: string; daysAwayLabel: string } | null;
 export type CoachNote = { id: number; context: string; timeLabel: string; text: string; unread: boolean };
 export type HomeReport = {
@@ -42,7 +49,7 @@ export default function HomeHub({
   goals,
   upcoming,
   coachNotes,
-  dueItems,
+  checkInStatus,
 }: {
   dateLabel: string;
   name: string;
@@ -58,7 +65,7 @@ export default function HomeHub({
   goals: string[];
   upcoming: UpcomingMeeting;
   coachNotes: CoachNote[];
-  dueItems: DueItem[];
+  checkInStatus: CheckInStatus;
 }) {
   // Check-in is a full-screen pushed view owned by AppShell; a due row just
   // asks it to open on that row's section.
@@ -126,29 +133,34 @@ export default function HomeHub({
         />
       )}
 
-      <section className="home-dark-section">
-        <div className="home-dark-section-head">
-          <span className="home-dark-section-title">Today</span>
-          {dueItems.length > 0 && <span className="home-dark-section-count">{dueItems.length} due</span>}
-        </div>
-        {dueItems.length === 0 ? (
-          <p className="home-dark-empty">All caught up — nothing due today.</p>
-        ) : (
-          <div className="home-dark-rows">
-            {dueItems.map((item) => (
-              <button key={item.id} type="button" className="home-dark-row" onClick={() => openCheckIn?.(item.targetTab)}>
-                <div className="home-dark-row-body">
-                  <div className="home-dark-row-title">{item.label}</div>
-                  <div className="home-dark-row-detail">{item.detail}</div>
-                </div>
-                <span className="home-dark-row-mark" aria-hidden="true">
-                  <ArrowRightIcon />
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-      </section>
+      {checkInStatus.configuredCount > 0 && (
+        <section className="home-dark-section">
+          <span className="home-dark-section-title">Check-ins</span>
+          <button type="button" className="home-checkin-row" onClick={() => openCheckIn?.(checkInStatus.dueTypes[0] ?? "daily")}>
+            <div className="home-checkin-body">
+              {checkInStatus.dueTypes.length > 0 ? (
+                <>
+                  <div className="home-checkin-title">
+                    {checkInStatus.dueTypes.length} check-in{checkInStatus.dueTypes.length === 1 ? "" : "s"} due
+                  </div>
+                  <div className="home-checkin-detail due">{checkInStatus.dueNames} · tap to log</div>
+                </>
+              ) : (
+                <>
+                  <div className="home-checkin-title">All check-ins up to date</div>
+                  <div className="home-checkin-detail">{checkInStatus.nextLabel}</div>
+                </>
+              )}
+            </div>
+            <span
+              className={`home-checkin-mark${checkInStatus.dueTypes.length > 0 ? " due" : ""}`}
+              aria-hidden="true"
+            >
+              {checkInStatus.dueTypes.length > 0 ? <ArrowRightIcon /> : <CheckIcon />}
+            </span>
+          </button>
+        </section>
+      )}
 
       <section className="home-dark-section">
         <span className="home-dark-section-title">Next with your coach</span>

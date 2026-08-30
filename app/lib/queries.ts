@@ -2518,6 +2518,63 @@ export function getDueItems(clientId: number): DueItem[] {
   return items;
 }
 
+// Home reports check-in status as one line rather than enumerating each
+// outstanding item, so it needs a count of check-in TYPES still open for
+// their current period — daily (today), weekly (this week), measurements
+// (this cycle). Progress pictures aren't a fourth type: they're submitted
+// as part of the measurements check-in, so they don't get their own row.
+export type CheckInStatus = {
+  // Zero when the coach hasn't configured any check-ins at all, which is
+  // the signal to hide the section rather than claim everything's done.
+  configuredCount: number;
+  dueTypes: ("daily" | "weekly" | "measurements")[];
+  // "Daily and weekly", "Measurements", ... — names what's outstanding.
+  dueNames: string;
+  // What opens next once nothing is due; depends on which types exist, so
+  // a client with no daily tracker isn't promised a daily check-in.
+  nextLabel: string;
+};
+
+export function getCheckInStatus(clientId: number): CheckInStatus {
+  const today = localDateStr();
+  const thisWeek = weekStart(today);
+
+  const dailyDefs = listMetricDefinitions(clientId, "daily");
+  const weeklyDefs = listMetricDefinitions(clientId, "weekly");
+  const fields = listMeasurementFields(clientId);
+
+  const dailyDue =
+    dailyDefs.length > 0 && listMetricPeriods(dailyDefs.map((d) => d.id), 1)[0] !== today;
+  const weeklyDue =
+    weeklyDefs.length > 0 && listMetricPeriods(weeklyDefs.map((d) => d.id), 1)[0] !== thisWeek;
+  const measurementsDue = fields.length > 0 && !listMeasurementDates(clientId).includes(today);
+
+  const dueTypes: ("daily" | "weekly" | "measurements")[] = [];
+  if (dailyDue) dueTypes.push("daily");
+  if (weeklyDue) dueTypes.push("weekly");
+  if (measurementsDue) dueTypes.push("measurements");
+
+  const NAME = { daily: "Daily", weekly: "weekly", measurements: "measurements" };
+  const parts = dueTypes.map((t) => NAME[t]);
+  const dueNames =
+    parts.length === 0
+      ? ""
+      : parts.length === 1
+      ? parts[0].charAt(0).toUpperCase() + parts[0].slice(1)
+      : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+
+  return {
+    configuredCount: [dailyDefs.length, weeklyDefs.length, fields.length].filter((n) => n > 0).length,
+    dueTypes,
+    dueNames,
+    nextLabel: dailyDefs.length
+      ? "Next daily check-in opens tomorrow"
+      : weeklyDefs.length
+      ? "Next weekly check-in opens Monday"
+      : "Nothing due right now",
+  };
+}
+
 // ---- Check-in screen: the three logging sections (daily tracker, weekly
 // tracker, measurements) as one screen, replacing what used to be three
 // separate Home sub-views. Everything the client can fill in is here; what

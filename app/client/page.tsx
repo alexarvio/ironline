@@ -7,8 +7,8 @@ import {
   getLogsForAssignment,
   getCurrentWeekNumber,
   getCheckInSections,
+  getCheckInStatus,
   getClientPreferences,
-  getDueItems,
   getLatestSentReport,
   getMetricSeries,
   getPinnedMetricsSummary,
@@ -39,7 +39,7 @@ import { DAY_NAMES } from "../lib/db";
 import SetLogForm from "./SetLogForm";
 import TrainingDayCard from "./TrainingDayCard";
 import PhotoPeriodHistoryRow from "./PhotoPeriodHistoryRow";
-import HomeHub, { DueItem, HomeReport, UpcomingMeeting } from "./HomeHub";
+import HomeHub, { HomeReport, UpcomingMeeting } from "./HomeHub";
 import { TrendMetric } from "./TrendCarousel";
 import NutritionDayToggle, { NutritionTargetSet } from "./NutritionDayToggle";
 import ReportArchiveList, { ArchiveReport } from "./ReportArchiveList";
@@ -203,7 +203,7 @@ function HomeTab() {
   // applyDueClientReminders() so the notification feed's reminders and this
   // list never disagree on what's due. dailyDefs/weeklyDefs/*LoggedToday are
   // still needed here directly for the Tracker sub-tab below.
-  const dueItems: DueItem[] = getDueItems(CLIENT_ID);
+  const checkInStatus = getCheckInStatus(CLIENT_ID);
 
   const coachNotes = coachNotesFor(5);
 
@@ -304,7 +304,7 @@ function HomeTab() {
       goals={goals}
       upcoming={upcoming}
       coachNotes={coachNotes}
-      dueItems={dueItems}
+      checkInStatus={checkInStatus}
       report={report}
     />
   );
