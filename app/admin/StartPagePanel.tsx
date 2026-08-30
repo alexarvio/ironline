@@ -13,13 +13,10 @@ import {
   getLatestWeight,
   getNutritionGoalsSummary,
   getPinnedMetricsSummary,
-  getStrengthSeries,
   getTimeToGoal,
-  getWeightSeries,
   listClientGoals,
 } from "../lib/queries";
 import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
-import MetricGraph from "./MetricGraph";
 
 function money(n: number) {
   return `€${n.toFixed(2)}`;
@@ -209,15 +206,6 @@ export default function StartPagePanel({ clientId, name }: { clientId: number; n
 
   return (
     <div>
-      {/* The range-toggle trend chart used to sit above the tabs. The redesign
-          gives the header to identity + read-outs instead, and the rail carries
-          a fixed strength trend — so the version with the day/week/month and
-          weight/calories switches lives here, on the tab that is already a
-          snapshot of everything. */}
-      <MetricGraph
-        strengthSeries={getStrengthSeries(clientId, 3650)}
-        weightSeries={getWeightSeries(clientId, 3650)}
-      />
       <PinnedMetricsGrid clientId={clientId} />
       <SnapshotGrid snapshot={snapshot} />
 

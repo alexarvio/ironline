@@ -2483,12 +2483,6 @@ const PHOTO_PERIOD_UNIT: Record<PhotoCadence, string> = {
 
 export type DueItem = { id: string; label: string; detail: string; targetTab: string };
 
-// Ids of clients with something outstanding, for the sidebar's attention
-// dots. Reuses the same due-item logic the client app and reminders read, so
-// a dot and a reminder can never disagree.
-export function clientsNeedingAttention(): Set<number> {
-  return new Set(listClients().filter((c) => getDueItems(c.id).length > 0).map((c) => c.id));
-}
 
 export function getDueItems(clientId: number): DueItem[] {
   const today = localDateStr();
@@ -2589,8 +2583,6 @@ export type CheckInStatus = {
 // the date of the newest of them. Drives the program builder's "Latest
 // check-in" rail, so the coach sees how the client is doing while writing
 // next week's session rather than having to leave the tab.
-export type CheckInSnapshotMetric = { id: string; name: string; value: string; unit: string };
-export type CheckInSnapshot = { when: string | null; metrics: CheckInSnapshotMetric[] };
 
 // What the header carries beside the client's name: the two plans they're
 // currently on. Both are read from what's actually deployed/saved, and a
@@ -2633,66 +2625,7 @@ export function getClientHeaderPlans(clientId: number): HeaderPlan[] {
 }
 
 
-// Four figures and a unit is as wide as a rail column gets before the grid
-// stops lining up, so a step count reads "9.1 k" rather than "9111 steps" —
-// the label above it already says which metric it is.
-function compactValue(value: number, unit: string): { value: string; unit: string } {
-  if (Math.abs(value) >= 1000) return { value: (value / 1000).toFixed(1), unit: "k" };
-  return { value: String(value), unit };
-}
 
-export function getLatestCheckInSnapshot(clientId: number): CheckInSnapshot {
-  const metrics: CheckInSnapshotMetric[] = [];
-  let latest: string | null = null;
-  const noteDate = (d: string) => {
-    if (!latest || d > latest) latest = d;
-  };
-
-  // Strictly what the coach pinned — up to PINNED_METRIC_LIMIT across
-  // metrics and measurements together. Nothing is ever substituted in: unpin
-  // one and the panel shows five, not five plus whatever came next.
-  const isShown = (x: { pinned?: boolean }) => x.pinned === true;
-
-  // Measurements lead — weight is the number a coach looks for first.
-  const fields = listMeasurementFields(clientId).filter(deployedToClient).filter(isShown);
-  const values = getMeasurementValues(fields.map((f) => f.id));
-  for (const field of fields) {
-    const last = values
-      .filter((v) => v.field_id === field.id && v.value != null)
-      .sort((a, b) => (a.date < b.date ? 1 : -1))[0];
-    if (!last) continue;
-    noteDate(last.date);
-    const c = compactValue(last.value as number, field.unit);
-    metrics.push({ id: `f${field.id}`, name: field.name, value: c.value, unit: c.unit });
-  }
-
-  const defs = [
-    ...listMetricDefinitions(clientId, "daily"),
-    ...listMetricDefinitions(clientId, "weekly"),
-  ]
-    .filter(deployedToClient)
-    .filter(isShown);
-  const entries = getMetricEntries(defs.map((d) => d.id));
-  for (const def of defs) {
-    const last = entries
-      .filter((e) => e.metric_definition_id === def.id && e.value != null)
-      .sort((a, b) => (a.period < b.period ? 1 : -1))[0];
-    if (!last) continue;
-    noteDate(last.period);
-    const scaleMax = ratingScaleMax(def.unit);
-    const c = scaleMax
-      ? { value: String(last.value), unit: `/${scaleMax}` }
-      : compactValue(last.value as number, def.unit);
-    metrics.push({ id: `m${def.id}`, name: def.name, value: c.value, unit: c.unit });
-  }
-
-  return {
-    when: latest ? new Date(`${latest}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null,
-    // Hard cap regardless of how the list was built, so the unpinned
-    // fallback can't overflow the panel either.
-    metrics: metrics.slice(0, PINNED_METRIC_LIMIT),
-  };
-}
 
 export function getCheckInStatus(clientId: number): CheckInStatus {
   const today = localDateStr();

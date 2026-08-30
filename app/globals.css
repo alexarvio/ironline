@@ -7079,19 +7079,14 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 .ad-shell {
   height: 100vh;
   display: grid;
-  grid-template-columns: 216px minmax(0, 1fr) 296px;
+  grid-template-columns: 216px minmax(0, 1fr);
   overflow: hidden;
   font-size: 13px;
   line-height: 1.45;
 }
 
-.ad-shell.no-rail {
-  grid-template-columns: 216px minmax(0, 1fr);
-}
-
 .ad-sidebar,
-.ad-main,
-.ad-rail {
+.ad-main {
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
@@ -7110,11 +7105,6 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   flex-direction: column;
 }
 
-.ad-rail {
-  background: var(--paper-raised);
-  border-left: 1px solid var(--border);
-  padding: 16px 16px 24px;
-}
 
 .ad-pad {
   padding: 16px 20px 24px;

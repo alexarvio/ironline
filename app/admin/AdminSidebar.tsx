@@ -1,26 +1,11 @@
 import Link from "next/link";
 import { createClientAction } from "../lib/actions";
-import { clientsNeedingAttention, getMeetingConflicts, listClients } from "../lib/queries";
-import { CalendarIcon, FeedIcon, ReportIcon } from "../components/icons";
+import { listClients } from "../lib/queries";
 
-export type AdminView = "feed" | "calendar" | "report-templates" | "client";
-
-const NAV: { id: AdminView; label: string; href: string; icon: React.ReactNode }[] = [
-  { id: "feed", label: "Feed", href: "/admin?view=feed", icon: <FeedIcon /> },
-  { id: "calendar", label: "Calendar", href: "/admin?view=calendar", icon: <CalendarIcon /> },
-  { id: "report-templates", label: "Report templates", href: "/admin?view=report-templates", icon: <ReportIcon /> },
-];
-
-export default function AdminSidebar({
-  selectedId,
-  activeView,
-}: {
-  selectedId: number | null;
-  activeView: AdminView;
-}) {
+// Every client the coach manages, and a box to add another. Nothing else —
+// this is the only navigation the admin has.
+export default function AdminSidebar({ selectedId }: { selectedId: number | null }) {
   const clients = listClients();
-  const conflictCount = getMeetingConflicts().length;
-  const needsAttention = clientsNeedingAttention();
 
   return (
     <>
@@ -32,18 +17,6 @@ export default function AdminSidebar({
         </div>
       </div>
 
-      <nav className="ad-nav">
-        {NAV.map((n) => (
-          <Link key={n.id} href={n.href} className={`ad-nav-row${activeView === n.id ? " active" : ""}`}>
-            <span className="ad-nav-icon" aria-hidden="true">
-              {n.icon}
-            </span>
-            <span className="ad-nav-label">{n.label}</span>
-            {n.id === "calendar" && conflictCount > 0 && <span className="ad-nav-badge">{conflictCount}</span>}
-          </Link>
-        ))}
-      </nav>
-
       <div className="ad-clients-head">
         <span className="ad-microlabel">Clients</span>
         <span className="ad-clients-count">{clients.length}</span>
@@ -53,20 +26,18 @@ export default function AdminSidebar({
         {clients.length === 0 ? (
           <p className="ad-empty">No clients yet — add your first one below.</p>
         ) : (
-          clients.map((c) => {
-            const active = activeView === "client" && c.id === selectedId;
-            return (
-              <Link key={c.id} href={`/admin?client=${c.id}`} className={`ad-client-row${active ? " active" : ""}`}>
-                <span className="ad-client-avatar" aria-hidden="true">
-                  {c.name.slice(0, 1).toUpperCase()}
-                </span>
-                <span className="ad-client-name">{c.name}</span>
-                {needsAttention.has(c.id) && (
-                  <span className="ad-client-dot" title="Something is due" aria-label="Something is due" />
-                )}
-              </Link>
-            );
-          })
+          clients.map((c) => (
+            <Link
+              key={c.id}
+              href={`/admin?client=${c.id}`}
+              className={`ad-client-row${c.id === selectedId ? " active" : ""}`}
+            >
+              <span className="ad-client-avatar" aria-hidden="true">
+                {c.name.slice(0, 1).toUpperCase()}
+              </span>
+              <span className="ad-client-name">{c.name}</span>
+            </Link>
+          ))
         )}
       </div>
 
