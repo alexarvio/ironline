@@ -1915,6 +1915,447 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   height: 24px;
 }
 
+/* ---- Chat and Notifications (client only): a dark, Full Potential-branded
+   pushed screen — scoped entirely under .cn-screen so it doesn't touch the
+   shared (still light) .chat-panel/.chat-bubble rules admin's ChatPanel
+   still uses (see "Chat (shared by client + coach)" below), or the rest of
+   the still-light client app. ---- */
+
+.cn-screen {
+  background: #0e0e0c;
+}
+
+.cn-header {
+  flex-shrink: 0;
+  padding: 52px 18px 14px;
+  background: #0e0e0c;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cn-icon-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid #2c2c26;
+  background: #151511;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.cn-icon-btn:hover {
+  background: #1b1b16;
+}
+
+.cn-badge {
+  position: absolute;
+  top: 9px;
+  right: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #d6ff3f;
+  border: 1.5px solid #0e0e0c;
+}
+
+.cn-header-titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.cn-kicker {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a8a80;
+}
+
+.cn-title {
+  font-family: var(--font-serif);
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.15;
+}
+
+.cn-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  color: #ffffff;
+  overflow: hidden;
+  font-family: var(--font-sans);
+}
+
+/* ---- Chat sub-view ---- */
+
+.cn-chat {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cn-callbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 18px 14px;
+  border-bottom: 1px solid #23231f;
+}
+
+.cn-callbar-label {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8a8a80;
+}
+
+.cn-callbar-value {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.cn-thread {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  scrollbar-width: none;
+}
+
+.cn-thread::-webkit-scrollbar {
+  display: none;
+}
+
+.cn-daylabel {
+  text-align: center;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8a8a80;
+  padding: 6px 0 12px;
+}
+
+.cn-row {
+  display: flex;
+  margin-bottom: 6px;
+}
+
+.cn-row.mine {
+  justify-content: flex-end;
+}
+
+.cn-row.theirs {
+  justify-content: flex-start;
+}
+
+.cn-bubble {
+  max-width: 80%;
+  border-radius: 16px;
+  border-bottom-left-radius: 4px;
+  padding: 11px 14px;
+  background: #151511;
+  border: 1px solid #23231f;
+  color: #ffffff;
+}
+
+.cn-row.mine .cn-bubble {
+  background: #d6ff3f;
+  border-color: #d6ff3f;
+  color: #0e0e0c;
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 4px;
+}
+
+.cn-bubble-text {
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.45;
+}
+
+.cn-bubble-time {
+  font-size: 0.66rem;
+  color: #8a8a80;
+  margin-top: 4px;
+}
+
+.cn-row.mine .cn-bubble-time {
+  color: rgba(14, 14, 12, 0.65);
+}
+
+.cn-bubble-img,
+.cn-bubble-video {
+  display: block;
+  width: 100%;
+  max-width: 220px;
+  border-radius: 10px;
+  margin-bottom: 4px;
+}
+
+.cn-bubble-video {
+  background: #000;
+}
+
+.cn-empty {
+  color: #8a8a80;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 24px 0;
+}
+
+/* Reskins the shared ChatComposeForm (also used, unstyled by this, on
+   /admin) purely via descendant selectors — its own base rules in the
+   "Chat (shared by client + coach)" section below are untouched. */
+.cn-compose {
+  flex-shrink: 0;
+  padding: 12px 18px 18px;
+  border-top: 1px solid #23231f;
+}
+
+.cn-compose .chat-compose-form {
+  gap: 8px;
+  align-items: center;
+}
+
+.cn-compose .chat-attach-btn {
+  width: 44px;
+  height: 44px;
+  border-color: #2c2c26;
+  background: #151511;
+  color: #8a8a80;
+}
+
+.cn-compose .chat-attach-btn:hover {
+  background: #1b1b16;
+  color: #ffffff;
+}
+
+.cn-compose input[type="text"] {
+  height: 44px;
+  border: 1px solid #3a3a32;
+  border-radius: 999px;
+  padding: 0 16px;
+  font-size: 0.9rem;
+  background: #0e0e0c;
+  color: #ffffff;
+}
+
+.cn-compose input[type="text"]::placeholder {
+  color: #6b6b62;
+}
+
+.cn-compose input[type="text"]:focus {
+  outline: none;
+  border-color: #d6ff3f;
+}
+
+.cn-compose .btn {
+  min-width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 999px;
+  padding: 0 16px;
+  background: #d6ff3f;
+  color: #0e0e0c;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.cn-compose .btn:hover {
+  background: #ffffff;
+}
+
+/* ---- Notifications sub-view ---- */
+
+.cn-notifications {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 18px 24px;
+  scrollbar-width: none;
+}
+
+.cn-notifications::-webkit-scrollbar {
+  display: none;
+}
+
+.cn-notif-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #23231f;
+}
+
+.cn-unread-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #d6ff3f;
+}
+
+.cn-markall {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: #8a8a80;
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.cn-markall:hover {
+  color: #ffffff;
+}
+
+.cn-notif-group {
+  padding-top: 18px;
+}
+
+.cn-notif-group-label {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a8a80;
+}
+
+.cn-notif-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+}
+
+.cn-notif-row {
+  width: 100%;
+  display: flex;
+  gap: 12px;
+  text-align: left;
+  border: none;
+  border-top: 1px solid #23231f;
+  background: none;
+  padding: 14px 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  min-height: 44px;
+}
+
+.cn-notif-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #151511;
+  color: #8a8a80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cn-notif-icon.unread {
+  background: #21260f;
+  color: #d6ff3f;
+}
+
+.cn-notif-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.cn-notif-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cn-notif-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cn-notif-kind {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8a8a80;
+}
+
+.cn-notif-time {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  color: #8a8a80;
+}
+
+.cn-notif-text {
+  font-size: 0.92rem;
+  color: #8a8a80;
+  font-weight: 500;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.cn-notif-text.unread {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.cn-notif-action {
+  display: inline-block;
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #d6ff3f;
+  margin-top: 6px;
+}
+
+.cn-notif-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: #d6ff3f;
+}
+
+.cn-footnote {
+  border-top: 1px solid #23231f;
+  margin-top: 22px;
+  padding-top: 14px;
+  font-size: 0.74rem;
+  color: #8a8a80;
+}
+
+@media (max-width: 480px), (max-height: 760px) {
+  .cn-header {
+    padding: 18px 16px 14px;
+  }
+}
+
 @media (max-width: 480px), (max-height: 760px) {
   .phone-frame {
     padding: 0;

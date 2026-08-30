@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { applyDueProgramDeployments, getBranding } from "./lib/queries";
+import { applyDueClientReminders, applyDueProgramDeployments, getBranding } from "./lib/queries";
 import { DEFAULT_BRAND_PRIMARY, pickForegroundColor, pickTextSafeColor } from "./lib/branding";
 
 export const metadata: Metadata = {
@@ -13,6 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   // e.g. Monday 6am goes live the moment anyone next loads any page after
   // that time, checked here since every route passes through this layout.
   applyDueProgramDeployments();
+  applyDueClientReminders();
 
   const branding = getBranding();
   const primary = branding.color_primary ?? DEFAULT_BRAND_PRIMARY;

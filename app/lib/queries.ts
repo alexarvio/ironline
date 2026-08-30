@@ -320,7 +320,11 @@ export function deployProgram(programId: number) {
   program.scheduled_at = null;
   for (let i = 0; i < program.total_weeks; i++) publishWeek(program.client_id, program.start_week + i);
   persist();
-  logCoachActivity(program.client_id, `Your coach published a new plan${program.name ? `: ${program.name}` : ""} — check it out`);
+  logCoachActivity(program.client_id, `Your coach published a new plan${program.name ? `: ${program.name}` : ""} — check it out`, {
+    kind: "programme",
+    actionTab: "training",
+    actionLabel: "See the week",
+  });
 }
 
 export function scheduleProgramDeploy(programId: number, scheduledAt: string | null) {
@@ -396,6 +400,43 @@ export function applyDueProgramDeployments() {
   const now = new Date().toISOString();
   const due = data.training_programs.filter((p) => p.status === "draft" && p.scheduled_at && p.scheduled_at <= now);
   due.forEach((program) => deployProgram(program.id));
+}
+
+// Same lazy-catch-up pattern as applyDueProgramDeployments (no background
+// job runner in this app), but turns getDueItems() into reminder rows on the
+// notification feed. dedupeKey is scoped to the due item's own period (day,
+// week, or photo period) so it only fires once per rollover, not once per
+// request — logCoachActivity no-ops if that key already exists.
+export function applyDueClientReminders() {
+  const data = getData();
+  const today = localDateStr();
+  const weekKey = weekStart(today);
+
+  // Not driven off data.clients — a client can have tracker/measurement/photo
+  // setup (and so due items) without a row there yet, same as every other
+  // client-scoped read in this file that just takes a clientId. Instead,
+  // scope to whichever client ids actually have coach-configured items to be
+  // due in the first place — the same tables getDueItems() itself gates on.
+  const clientIds = new Set<number>([
+    ...data.metric_definitions.map((d) => d.client_id),
+    ...data.measurement_fields.map((f) => f.client_id),
+    ...data.photo_slots.map((s) => s.client_id),
+  ]);
+
+  clientIds.forEach((clientId) => {
+    getDueItems(clientId).forEach((item) => {
+      const periodKey =
+        item.id === "weekly"
+          ? weekKey
+          : item.id === "photos"
+          ? photoPeriodFor(today, getPhotoCadence(clientId))
+          : today;
+      logCoachActivity(clientId, `${item.label} — ${item.detail}`, {
+        kind: "reminder",
+        dedupeKey: `reminder:${item.id}:${clientId}:${periodKey}`,
+      });
+    });
+  });
 }
 
 // Deletes an entire week (days + assignments + their logs). Weeks are
@@ -2348,16 +2389,127 @@ export function sendChatMessage(
     created_at: new Date().toISOString(),
   });
   persist();
+  if (sender === "coach") {
+    const preview = text.length > 80 ? `${text.slice(0, 77)}…` : text;
+    logCoachActivity(clientId, preview ? `Your coach sent you a message: "${preview}"` : "Your coach sent you a message", {
+      kind: "coach_note",
+      actionTab: "chat",
+      actionLabel: "Open chat",
+    });
+  }
 }
 
-// ---- Coach activity log: "last update from your coach" on client Home ----
-export function logCoachActivity(clientId: number, message: string) {
+// ---- "Today" due items: was the Check-ins tab, folded into Home. Shared by
+// HomeHub's due list and applyDueClientReminders() (the notification feed's
+// reminder entries), so the two never drift apart on what counts as due. ----
+
+const PHOTO_PERIOD_UNIT: Record<PhotoCadence, string> = {
+  weekly: "Week",
+  biweekly: "Check-in",
+  monthly: "Month",
+};
+
+export type DueItem = { id: string; label: string; detail: string; targetTab: string };
+
+export function getDueItems(clientId: number): DueItem[] {
+  const today = localDateStr();
+  const currentWeekStart = weekStart(today);
+
+  const dailyDefs = listMetricDefinitions(clientId, "daily");
+  const weeklyDefs = listMetricDefinitions(clientId, "weekly");
+  const dailyLoggedToday = listMetricPeriods(dailyDefs.map((d) => d.id), 1)[0] === today;
+  const weeklyLoggedThisWeek = listMetricPeriods(weeklyDefs.map((d) => d.id), 1)[0] === currentWeekStart;
+
+  const measurementFields = listMeasurementFields(clientId);
+  const measurementLoggedToday = listMeasurementDates(clientId).includes(today);
+
+  const photoSlots = listPhotoSlots(clientId);
+  const cadence = getPhotoCadence(clientId);
+  const currentPeriod = photoPeriodFor(today, cadence);
+  const photoUploads = listPhotoUploads(photoSlots.map((s) => s.id));
+  const uploadedThisPeriod = photoUploads.filter((u) => u.period === currentPeriod).length;
+
+  const items: DueItem[] = [];
+  if (dailyDefs.length > 0 && !dailyLoggedToday) {
+    items.push({
+      id: "daily",
+      label: "Daily check-in",
+      detail: `${dailyDefs.length} metric${dailyDefs.length === 1 ? "" : "s"} to log for today`,
+      targetTab: "tracker",
+    });
+  }
+  if (weeklyDefs.length > 0 && !weeklyLoggedThisWeek) {
+    items.push({
+      id: "weekly",
+      label: "Weekly check-in",
+      detail: `${weeklyDefs.length} metric${weeklyDefs.length === 1 ? "" : "s"} to log for this week`,
+      targetTab: "tracker",
+    });
+  }
+  if (measurementFields.length > 0 && !measurementLoggedToday) {
+    items.push({
+      id: "measurements",
+      label: "Check-in measurements",
+      detail: `Log ${measurementFields.map((f) => f.name).join(", ")}`,
+      targetTab: "measurements",
+    });
+  }
+  if (photoSlots.length > 0 && uploadedThisPeriod < photoSlots.length) {
+    items.push({
+      id: "photos",
+      label: "Progress pictures",
+      detail: `${uploadedThisPeriod}/${photoSlots.length} uploaded for this ${PHOTO_PERIOD_UNIT[cadence].toLowerCase()}`,
+      targetTab: "photos",
+    });
+  }
+  return items;
+}
+
+// ---- Coach activity log: "last update from your coach" on client Home,
+// and the backing store for the client's Chat and Notifications screen ----
+
+export type CoachActivityKind = "coach_note" | "report" | "programme" | "reminder" | "general";
+// Where a notification's action link should take the client — the four
+// bottom-nav tabs, or "chat" to open the chat/notifications panel itself.
+export type CoachActivityActionTab = "home" | "training" | "nutrition" | "settings" | "chat";
+
+export type ClientNotification = {
+  id: number;
+  client_id: number;
+  message: string;
+  created_at: string;
+  kind: CoachActivityKind;
+  read: boolean;
+  action_tab: CoachActivityActionTab | null;
+  action_label: string | null;
+};
+
+export function logCoachActivity(
+  clientId: number,
+  message: string,
+  opts: {
+    kind: CoachActivityKind;
+    actionTab?: CoachActivityActionTab;
+    actionLabel?: string;
+    // Set only by lazily-generated entries (see applyDueClientReminders) so
+    // a still-due condition doesn't spawn a fresh row on every request.
+    dedupeKey?: string;
+  }
+) {
   const data = getData();
+  if (opts.dedupeKey && data.coach_activity.some((a) => a.client_id === clientId && a.dedupe_key === opts.dedupeKey)) {
+    return;
+  }
   data.coach_activity.push({
     id: allocId("coach_activity"),
     client_id: clientId,
     message,
     created_at: new Date().toISOString(),
+    kind: opts.kind,
+    read: false,
+    action_tab: opts.actionTab ?? null,
+    action_label: opts.actionLabel ?? null,
+    dedupe_key: opts.dedupeKey ?? null,
   });
   persist();
 }
@@ -2367,6 +2519,57 @@ export function getLatestCoachActivity(clientId: number) {
   const entries = data.coach_activity.filter((a) => a.client_id === clientId);
   if (entries.length === 0) return null;
   return entries.reduce((latest, e) => (e.created_at > latest.created_at ? e : latest));
+}
+
+// Rows written before `kind`/`read`/etc. existed (or restored from an older
+// export) won't have them — default defensively rather than trusting the
+// stored shape to match the current type. Old, kind-less rows default to
+// read so they don't surface as a wall of new unread notifications.
+function normalizeNotification(a: {
+  id: number;
+  client_id: number;
+  message: string;
+  created_at: string;
+  kind?: CoachActivityKind;
+  read?: boolean;
+  action_tab?: CoachActivityActionTab | null;
+  action_label?: string | null;
+}): ClientNotification {
+  return {
+    id: a.id,
+    client_id: a.client_id,
+    message: a.message,
+    created_at: a.created_at,
+    kind: a.kind ?? "general",
+    read: a.read ?? true,
+    action_tab: a.action_tab ?? null,
+    action_label: a.action_label ?? null,
+  };
+}
+
+export function getNotifications(clientId: number, limit = 50): ClientNotification[] {
+  const data = getData();
+  return data.coach_activity
+    .filter((a) => a.client_id === clientId)
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : b.id - a.id))
+    .slice(0, limit)
+    .map(normalizeNotification);
+}
+
+export function markNotificationRead(id: number) {
+  const data = getData();
+  const entry = data.coach_activity.find((a) => a.id === id);
+  if (!entry) return;
+  entry.read = true;
+  persist();
+}
+
+export function markAllNotificationsRead(clientId: number) {
+  const data = getData();
+  data.coach_activity.forEach((a) => {
+    if (a.client_id === clientId) a.read = true;
+  });
+  persist();
 }
 
 // Chat attachments: same "write to DATA_DIR/uploads, store the public path"
@@ -2748,7 +2951,11 @@ export function sendReport(id: number) {
     report.status = "sent";
     report.sent_at = new Date().toISOString();
     persist();
-    logCoachActivity(report.client_id, `Your coach sent you a progress report (${report.period_start} to ${report.period_end})`);
+    logCoachActivity(report.client_id, `Your coach sent you a progress report (${report.period_start} to ${report.period_end})`, {
+      kind: "report",
+      actionTab: "home",
+      actionLabel: "Read report",
+    });
   }
 }
 

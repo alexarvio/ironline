@@ -5,51 +5,63 @@ import { BellIcon, ChatIcon, ChevronLeftIcon } from "../components/icons";
 
 export type AppTab = { id: string; label: string; icon: ReactNode; content: ReactNode; footer?: ReactNode };
 
-// Top bar is now brand + chat/bell icons (not a per-tab greeting) — chat
-// opens as a pushed full-screen view with its own back header, independent
-// of which bottom tab is active, so switching tabs underneath doesn't lose
-// your place in the chat.
+type PushView = "chat" | "notifications" | null;
+
+// Top bar is brand + chat/bell icons (not a per-tab greeting). Both icons
+// open the same pushed full-screen view — a single dark Chat and
+// Notifications screen with its own header toggle between the two — so
+// switching tabs underneath never loses your place in either.
 export default function AppShell({
   clientName,
   tabs,
   chatContent,
-  chatBanner,
+  notificationsContent,
   hasCoachUpdate,
+  hasUnreadNotifications,
   logoUrl,
 }: {
   clientName: string;
   tabs: AppTab[];
   chatContent: ReactNode;
-  chatBanner?: ReactNode;
+  notificationsContent: ReactNode;
   hasCoachUpdate?: boolean;
+  hasUnreadNotifications?: boolean;
   logoUrl?: string | null;
 }) {
   const [activeId, setActiveId] = useState(tabs[0]?.id);
-  const [chatOpen, setChatOpen] = useState(false);
+  const [pushView, setPushView] = useState<PushView>(null);
   // Bumped on every bottom-nav tap (including tapping the already-active
   // tab) and used as a key on the content below, so tapping Home while
   // already on Home resets HomeHub's internal sub-view instead of doing
-  // nothing — there's no in-page back link anymore, so this is how "go
+  // nothing — there's no in-page back link otherwise, so this is how "go
   // home" works from a sub-view like Photos or Tracker.
   const [navResetKey, setNavResetKey] = useState(0);
   const active = tabs.find((t) => t.id === activeId) ?? tabs[0];
 
-  if (chatOpen) {
+  if (pushView) {
+    const isChat = pushView === "chat";
     return (
       <div className="phone-frame">
-        <div className="app-screen">
-          <header className="app-push-header">
-            <button type="button" className="app-back-btn" onClick={() => setChatOpen(false)} aria-label="Back">
+        <div className="app-screen cn-screen">
+          <header className="cn-header">
+            <button type="button" className="cn-icon-btn" onClick={() => setPushView(null)} aria-label="Back">
               <ChevronLeftIcon />
             </button>
-            <div className="app-push-header-avatar">C</div>
-            <div className="app-push-header-identity">
-              <div className="app-push-header-name">Coach</div>
-              <div className="app-push-header-sub">Your coach</div>
+            <div className="cn-header-titles">
+              <div className="cn-kicker">{isChat ? "Your coach" : "Activity"}</div>
+              <div className="cn-title">{isChat ? "Coach" : "Notifications"}</div>
             </div>
+            <button
+              type="button"
+              className="cn-icon-btn"
+              onClick={() => setPushView(isChat ? "notifications" : "chat")}
+              aria-label={isChat ? "Open notifications" : "Open chat"}
+            >
+              {isChat ? <ChatIcon /> : <BellIcon />}
+              {isChat && hasUnreadNotifications && <span className="cn-badge" aria-hidden="true" />}
+            </button>
           </header>
-          {chatBanner && <div className="app-chat-banner">{chatBanner}</div>}
-          <main className="app-content app-content-flush">{chatContent}</main>
+          <main className="cn-body">{isChat ? chatContent : notificationsContent}</main>
         </div>
       </div>
     );
@@ -66,12 +78,13 @@ export default function AppShell({
             <span className="app-header-brand">Ironline</span>
           )}
           <div className="app-header-actions">
-            <button type="button" className="app-header-icon-btn" onClick={() => setChatOpen(true)} aria-label={`Chat with ${clientName || "your coach"}`}>
+            <button type="button" className="app-header-icon-btn" onClick={() => setPushView("chat")} aria-label={`Chat with ${clientName || "your coach"}`}>
               <ChatIcon />
               {hasCoachUpdate && <span className="app-header-icon-badge" aria-hidden="true" />}
             </button>
-            <button type="button" className="app-header-icon-btn" aria-label="Notifications">
+            <button type="button" className="app-header-icon-btn" onClick={() => setPushView("notifications")} aria-label="Notifications">
               <BellIcon />
+              {hasUnreadNotifications && <span className="app-header-icon-badge" aria-hidden="true" />}
             </button>
           </div>
         </header>

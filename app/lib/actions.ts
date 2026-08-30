@@ -38,6 +38,8 @@ import {
   listMeasurementFields,
   listMetricDefinitions,
   logCoachActivity,
+  markAllNotificationsRead,
+  markNotificationRead,
   logSet,
   OTHER_ITEMS,
   removeReportTemplateSection,
@@ -298,7 +300,7 @@ export async function addInvoiceAction(formData: FormData) {
     | "due";
   if (!description) return;
   addInvoice(clientId, description, amount, status);
-  logCoachActivity(clientId, `Sent a new invoice — "${description}"`);
+  logCoachActivity(clientId, `Sent a new invoice — "${description}"`, { kind: "general" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -606,7 +608,11 @@ export async function saveNutritionPlanAction(formData: FormData) {
     supplements,
     coach_notes: str("coach_notes"),
   });
-  logCoachActivity(clientId, "Updated your nutrition plan");
+  logCoachActivity(clientId, "Updated your nutrition plan", {
+    kind: "general",
+    actionTab: "nutrition",
+    actionLabel: "View nutrition",
+  });
 
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -675,7 +681,11 @@ export async function addMeetingAction(formData: FormData) {
   const topic = String(formData.get("topic") || "").trim();
   if (!date) return;
   addMeeting(clientId, date, time, topic, duration);
-  logCoachActivity(clientId, topic ? `Scheduled a meeting — "${topic}"` : "Scheduled a new meeting");
+  logCoachActivity(clientId, topic ? `Scheduled a meeting — "${topic}"` : "Scheduled a new meeting", {
+    kind: "general",
+    actionTab: "home",
+    actionLabel: "View schedule",
+  });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -723,6 +733,20 @@ export async function sendChatMessageAction(formData: FormData) {
 
   sendChatMessage(clientId, sender, text, media);
   revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function markNotificationReadAction(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  markNotificationRead(id);
+  revalidatePath("/client");
+}
+
+export async function markAllNotificationsReadAction(formData: FormData) {
+  const clientId = Number(formData.get("clientId"));
+  if (!clientId) return;
+  markAllNotificationsRead(clientId);
   revalidatePath("/client");
 }
 

@@ -7,12 +7,14 @@ import {
   getLatestWeight,
   getLogsForAssignment,
   getCurrentWeekNumber,
+  getDueItems,
   getLatestCoachActivity,
   getLatestSentReport,
   getMetricSeries,
   getPinnedMetricsSummary,
   getWeightSeries,
   listPublishedWeekNumbers,
+  getNotifications,
   getNutritionGoalsSummary,
   getNutritionPlan,
   getPhotoCadence,
@@ -21,8 +23,6 @@ import {
   getTimeToGoal,
   listChatMessages,
   listClientGoals,
-  listMeasurementDates,
-  listMeasurementFields,
   listMeetings,
   listMetricDefinitions,
   listMetricPeriods,
@@ -47,9 +47,10 @@ import CheckInForm from "./CheckInForm";
 import TrackerLogForm from "./TrackerLogForm";
 import HomeHub, { CoachActivityPreview, DueItem, HubSubTab, MessagePreview, UpcomingMeeting } from "./HomeHub";
 import ClientWeekSwitcher from "./ClientWeekSwitcher";
-import ChatPanel from "../components/ChatPanel";
+import ChatComposeForm from "../components/ChatComposeForm";
 import AppShell, { AppTab } from "./AppShell";
-import { AppleIcon, DumbbellIcon, GearIcon, HomeIcon } from "../components/icons";
+import { AppleIcon, CalendarIcon, ChatIcon, ClockIcon, DumbbellIcon, GearIcon, HomeIcon, ReportIcon } from "../components/icons";
+import { markAllNotificationsReadAction, markNotificationReadAction } from "../lib/actions";
 
 // Reads live from the JSON store on every request — without this, Next
 // statically prerenders this page at build time (before any real data
@@ -110,53 +111,16 @@ function HomeTab() {
     : null;
 
   // ---- "Today" due items (was the Check-ins tab; folded into Home) ----
+  // Computation itself lives in getDueItems() in lib/queries.ts, shared with
+  // applyDueClientReminders() so the notification feed's reminders and this
+  // list never disagree on what's due. dailyDefs/weeklyDefs/*LoggedToday are
+  // still needed here directly for the Tracker sub-tab below.
   const dailyDefs = listMetricDefinitions(CLIENT_ID, "daily");
   const weeklyDefs = listMetricDefinitions(CLIENT_ID, "weekly");
   const dailyLoggedToday = listMetricPeriods(dailyDefs.map((d) => d.id), 1)[0] === today;
   const weeklyLoggedThisWeek = listMetricPeriods(weeklyDefs.map((d) => d.id), 1)[0] === currentWeekStart;
 
-  const measurementFields = listMeasurementFields(CLIENT_ID);
-  const measurementLoggedToday = listMeasurementDates(CLIENT_ID).includes(today);
-
-  const photoSlots = listPhotoSlots(CLIENT_ID);
-  const cadence = getPhotoCadence(CLIENT_ID);
-  const currentPeriod = photoPeriodFor(today, cadence);
-  const photoUploads = listPhotoUploads(photoSlots.map((s) => s.id));
-  const uploadedThisPeriod = photoUploads.filter((u) => u.period === currentPeriod).length;
-
-  const dueItems: DueItem[] = [];
-  if (dailyDefs.length > 0 && !dailyLoggedToday) {
-    dueItems.push({
-      id: "daily",
-      label: "Daily check-in",
-      detail: `${dailyDefs.length} metric${dailyDefs.length === 1 ? "" : "s"} to log for today`,
-      targetTab: "tracker",
-    });
-  }
-  if (weeklyDefs.length > 0 && !weeklyLoggedThisWeek) {
-    dueItems.push({
-      id: "weekly",
-      label: "Weekly check-in",
-      detail: `${weeklyDefs.length} metric${weeklyDefs.length === 1 ? "" : "s"} to log for this week`,
-      targetTab: "tracker",
-    });
-  }
-  if (measurementFields.length > 0 && !measurementLoggedToday) {
-    dueItems.push({
-      id: "measurements",
-      label: "Check-in measurements",
-      detail: `Log ${measurementFields.map((f) => f.name).join(", ")}`,
-      targetTab: "measurements",
-    });
-  }
-  if (photoSlots.length > 0 && uploadedThisPeriod < photoSlots.length) {
-    dueItems.push({
-      id: "photos",
-      label: "Progress pictures",
-      detail: `${uploadedThisPeriod}/${photoSlots.length} uploaded for this ${PERIOD_UNIT[cadence].toLowerCase()}`,
-      targetTab: "photos",
-    });
-  }
+  const dueItems: DueItem[] = getDueItems(CLIENT_ID);
 
   // ---- Recent conversation, previewed on Home as a small feed (not just
   // the single latest coach message — the last few messages either way, so
@@ -587,34 +551,170 @@ function SettingsTab() {
   );
 }
 
-function ChatTab() {
+// Chat sub-view of the Chat and Notifications screen — day-grouped bubble
+// thread (coach messages left, client's own right) with a "next call" strip
+// and the shared compose form. Read-only scheduling: the call itself is set
+// on the coach's side (Meetings tab).
+function ChatThread() {
   const messages = listChatMessages(CLIENT_ID);
-  return <ChatPanel clientId={CLIENT_ID} viewer="client" messages={messages} />;
-}
-
-// Read-only — scheduling itself happens on the coach's side (Meetings tab).
-// A plain function (not a component) so a "no upcoming call" result is a
-// real `null` the caller can branch on, rather than an always-truthy JSX
-// element whose own render happens to return nothing.
-function nextCallBanner() {
   const today = localDateStr();
+
   const upcomingMeeting = listMeetings(CLIENT_ID)
     .filter((m) => m.status === "scheduled" && m.date >= today)
     .sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1))[0];
-  if (!upcomingMeeting) return null;
-  const d = new Date(`${upcomingMeeting.date}T00:00:00`);
-  const dateLabel = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-  const timeLabel = upcomingMeeting.time ? ` at ${upcomingMeeting.time}` : "";
+  const nextCallLabel = upcomingMeeting
+    ? `${new Date(`${upcomingMeeting.date}T00:00:00`).toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      })}${upcomingMeeting.time ? ` · ${upcomingMeeting.time}` : ""}`
+    : null;
+
+  const dayLabel = (iso: string) => {
+    const d = new Date(iso);
+    const sameYear = d.getFullYear() === new Date().getFullYear();
+    return d.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: sameYear ? undefined : "numeric",
+    });
+  };
+  const timeLabel = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+
+  let lastDay: string | null = null;
+
   return (
-    <>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="app-chat-banner-icon">
-        <rect x="2.5" y="4" width="15" height="14" rx="1.8" stroke="currentColor" strokeWidth="1.3" />
-        <path d="M2.5 8h15M6.5 2v3M13.5 2v3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-      </svg>
-      <span>
-        Next call: <strong>{dateLabel}{timeLabel}</strong> — set by your coach
-      </span>
-    </>
+    <div className="cn-chat">
+      {nextCallLabel && (
+        <div className="cn-callbar">
+          <span className="cn-callbar-label">Next call</span>
+          <span className="cn-callbar-value">{nextCallLabel}</span>
+        </div>
+      )}
+      <div className="cn-thread">
+        {messages.length === 0 ? (
+          <p className="cn-empty">No messages yet — say hello below.</p>
+        ) : (
+          messages.map((m) => {
+            const day = dayLabel(m.created_at);
+            const showDay = day !== lastDay;
+            lastDay = day;
+            const mine = m.sender === "client";
+            return (
+              <div key={m.id}>
+                {showDay && <div className="cn-daylabel">{day}</div>}
+                <div className={`cn-row ${mine ? "mine" : "theirs"}`}>
+                  <div className="cn-bubble">
+                    {m.media_path && m.media_type === "image" && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={m.media_path} alt="" className="cn-bubble-img" />
+                    )}
+                    {m.media_path && m.media_type === "video" && (
+                      <video src={m.media_path} controls className="cn-bubble-video" />
+                    )}
+                    {m.text && <div className="cn-bubble-text">{m.text}</div>}
+                    <div className="cn-bubble-time">{timeLabel(m.created_at)}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+      <div className="cn-compose">
+        <ChatComposeForm clientId={CLIENT_ID} sender="client" />
+      </div>
+    </div>
+  );
+}
+
+const NOTIFICATION_KIND_LABEL: Record<string, string> = {
+  coach_note: "Coach note",
+  report: "Progress report",
+  programme: "Programme",
+  reminder: "Reminder",
+  general: "Update",
+};
+
+function notificationIcon(kind: string) {
+  switch (kind) {
+    case "report":
+      return <ReportIcon />;
+    case "programme":
+      return <CalendarIcon />;
+    case "reminder":
+      return <ClockIcon />;
+    default:
+      return <ChatIcon />;
+  }
+}
+
+function notificationTimeLabel(iso: string) {
+  const d = new Date(iso);
+  const sameDay = d.toDateString() === new Date().toDateString();
+  return sameDay
+    ? d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+    : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// Notifications sub-view — grouped Today/Earlier, each row a self-submitting
+// form (mark-read on tap, same auto-submit pattern used elsewhere in this
+// app, e.g. PhotoUploadBox) rather than client-side state.
+function NotificationsPanel() {
+  const notifications = getNotifications(CLIENT_ID);
+  const unreadCount = notifications.filter((n) => !n.read).length;
+  const todayStr = localDateStr();
+  const groups = [
+    { label: "Today", items: notifications.filter((n) => n.created_at.slice(0, 10) === todayStr) },
+    { label: "Earlier", items: notifications.filter((n) => n.created_at.slice(0, 10) !== todayStr) },
+  ].filter((g) => g.items.length > 0);
+
+  return (
+    <div className="cn-notifications">
+      <div className="cn-notif-header">
+        <span className="cn-unread-label">{unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}</span>
+        <form action={markAllNotificationsReadAction}>
+          <input type="hidden" name="clientId" value={CLIENT_ID} />
+          <button type="submit" className="cn-markall">
+            Mark all read
+          </button>
+        </form>
+      </div>
+
+      {groups.length === 0 ? (
+        <p className="cn-empty">No notifications yet.</p>
+      ) : (
+        groups.map((g) => (
+          <section key={g.label} className="cn-notif-group">
+            <span className="cn-notif-group-label">{g.label}</span>
+            <div className="cn-notif-list">
+              {g.items.map((n) => (
+                <form key={n.id} action={markNotificationReadAction}>
+                  <input type="hidden" name="id" value={n.id} />
+                  <button type="submit" className="cn-notif-row">
+                    <span className={`cn-notif-icon${n.read ? "" : " unread"}`} aria-hidden="true">
+                      {notificationIcon(n.kind)}
+                    </span>
+                    <span className="cn-notif-body">
+                      <span className="cn-notif-top">
+                        <span className="cn-notif-kind">{NOTIFICATION_KIND_LABEL[n.kind] ?? "Update"}</span>
+                        <span className="cn-notif-time">{notificationTimeLabel(n.created_at)}</span>
+                      </span>
+                      <span className={`cn-notif-text${n.read ? "" : " unread"}`}>{n.message}</span>
+                      {n.action_label && <span className="cn-notif-action">{n.action_label} →</span>}
+                    </span>
+                    {!n.read && <span className="cn-notif-dot" aria-hidden="true" />}
+                  </button>
+                </form>
+              ))}
+            </div>
+          </section>
+        ))
+      )}
+
+      <div className="cn-footnote">Turn individual alerts on or off in Settings → Preferences.</div>
+    </div>
   );
 }
 
@@ -682,6 +782,7 @@ export default function ClientPage() {
   const client = getClient(CLIENT_ID);
   const messages = listChatMessages(CLIENT_ID);
   const hasCoachUpdate = [...messages].reverse().find((m) => m.sender === "coach") != null;
+  const hasUnreadNotifications = getNotifications(CLIENT_ID).some((n) => !n.read);
 
   const currentWeekNum = getCurrentWeekNumber(CLIENT_ID);
   // Only the currently deployed program's own weeks — not every published
@@ -722,9 +823,10 @@ export default function ClientPage() {
     <AppShell
       clientName={client?.name ?? ""}
       tabs={tabs}
-      chatContent={<ChatTab />}
-      chatBanner={nextCallBanner()}
+      chatContent={<ChatThread />}
+      notificationsContent={<NotificationsPanel />}
       hasCoachUpdate={hasCoachUpdate}
+      hasUnreadNotifications={hasUnreadNotifications}
       logoUrl={getBranding().logo_path}
     />
   );
