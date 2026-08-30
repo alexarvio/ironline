@@ -20,6 +20,12 @@ type ProgramDay = {
   day_of_week: number;
   label: string | null;
   status: "draft" | "published";
+  // A day with no exercises already reads as a rest day; this is the coach
+  // saying so deliberately, so an empty day can be marked "Rest" rather than
+  // "nothing built yet". Only settable while the day IS empty, so toggling it
+  // can never discard programming. Missing on rows written before this field
+  // existed, so callers treat absent as false.
+  is_rest?: boolean;
 };
 // A multi-week training program — the coach picks a name and a length
 // (total_weeks) up front; program_days for weeks [start_week, start_week +

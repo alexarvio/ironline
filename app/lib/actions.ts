@@ -73,6 +73,8 @@ import {
   setMetricVisibleToClient,
   setClientUnits,
   setDayLabel,
+  setDayRest,
+  copyProgramWeek,
   setInvoiceStatus,
   setMeasurementValue,
   setMeetingStatus,
@@ -191,6 +193,27 @@ export async function setAssignmentCustomValueAction(formData: FormData) {
   setAssignmentCustomValue(assignmentId, columnId, value);
   revalidatePath("/admin");
   revalidatePath("/client");
+}
+
+export async function setDayRestAction(formData: FormData) {
+  const programDayId = Number(formData.get("programDayId"));
+  const isRest = formData.get("isRest") === "true";
+  setDayRest(programDayId, isRest);
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+// "Copy week N here" in the builder toolbar — duplicates the previous
+// week's plan onto the one being edited so a coach progressing a block
+// isn't retyping seven days of exercises.
+export async function copyProgramWeekAction(formData: FormData) {
+  const clientId = Number(formData.get("clientId"));
+  const fromWeek = Number(formData.get("fromWeek"));
+  const toWeek = Number(formData.get("toWeek"));
+  if (!clientId || !fromWeek || !toWeek) return;
+  copyProgramWeek(clientId, fromWeek, toWeek);
+  revalidatePath("/client");
+  revalidatePath("/admin");
 }
 
 export async function setLabelAction(formData: FormData) {

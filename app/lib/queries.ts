@@ -25,6 +25,7 @@ export type ProgramDay = {
   day_of_week: number;
   label: string | null;
   status: "draft" | "published";
+  is_rest?: boolean;
 };
 export type WorkoutAssignment = {
   id: number;
@@ -480,6 +481,61 @@ export function setDayLabel(programDayId: number, label: string) {
     day.label = label;
     persist();
   }
+}
+
+// The coach marking an empty day as a deliberate rest day rather than one
+// they haven't built yet. Refuses while the day still has exercises, so this
+// can never be the thing that loses a session's programming — the caller is
+// expected to only offer it on empty days, and this enforces it.
+export function setDayRest(programDayId: number, isRest: boolean) {
+  const data = getData();
+  const day = data.program_days.find((pd) => pd.id === programDayId);
+  if (!day) return;
+  if (isRest && data.workout_assignments.some((wa) => wa.program_day_id === programDayId)) return;
+  day.is_rest = isRest;
+  persist();
+}
+
+// Duplicates one week's programming onto another week of the same client —
+// day labels, every exercise and its targets. Copies plan only: logged sets
+// belong to the week they were performed in, and rest-day marks follow the
+// day they describe. Skips silently if either week has no days.
+export function copyProgramWeek(clientId: number, fromWeek: number, toWeek: number) {
+  if (fromWeek === toWeek) return;
+  const data = getData();
+  const source = getWeek(clientId, fromWeek);
+  const target = getWeek(clientId, toWeek);
+  if (source.length === 0 || target.length === 0) return;
+
+  for (const src of source) {
+    const dest = target.find((d) => d.day_of_week === src.day_of_week);
+    if (!dest) continue;
+    dest.label = src.label;
+    dest.is_rest = src.is_rest ?? false;
+    // Replace rather than append, so copying twice doesn't double the day.
+    const replacedIds = data.workout_assignments.filter((wa) => wa.program_day_id === dest.id).map((wa) => wa.id);
+    data.workout_assignments = data.workout_assignments.filter((wa) => wa.program_day_id !== dest.id);
+    data.assignment_custom_values = data.assignment_custom_values.filter(
+      (v) => !replacedIds.includes(v.workout_assignment_id)
+    );
+
+    const srcAssignments = data.workout_assignments
+      .filter((wa) => wa.program_day_id === src.id)
+      .sort((a, b) => a.order_index - b.order_index);
+    for (const wa of srcAssignments) {
+      const id = allocId("workout_assignments");
+      data.workout_assignments.push({ ...wa, id, program_day_id: dest.id });
+      // Custom columns are part of the plan too, so they come along.
+      for (const v of data.assignment_custom_values.filter((v) => v.workout_assignment_id === wa.id)) {
+        data.assignment_custom_values.push({
+          ...v,
+          id: allocId("assignment_custom_values"),
+          workout_assignment_id: id,
+        });
+      }
+    }
+  }
+  persist();
 }
 
 export function addExerciseToDay(
@@ -2561,6 +2617,58 @@ export type CheckInStatus = {
   // a client with no daily tracker isn't promised a daily check-in.
   nextLabel: string;
 };
+
+// The most recent value the client logged for each thing the coach asked
+// for — every deployed tracker metric plus every measurement field — with
+// the date of the newest of them. Drives the program builder's "Latest
+// check-in" rail, so the coach sees how the client is doing while writing
+// next week's session rather than having to leave the tab.
+export type CheckInSnapshotMetric = { id: string; name: string; value: string; unit: string };
+export type CheckInSnapshot = { when: string | null; metrics: CheckInSnapshotMetric[] };
+
+export function getLatestCheckInSnapshot(clientId: number): CheckInSnapshot {
+  const metrics: CheckInSnapshotMetric[] = [];
+  let latest: string | null = null;
+  const noteDate = (d: string) => {
+    if (!latest || d > latest) latest = d;
+  };
+
+  const defs = [
+    ...listMetricDefinitions(clientId, "daily"),
+    ...listMetricDefinitions(clientId, "weekly"),
+  ].filter(deployedToClient);
+  const entries = getMetricEntries(defs.map((d) => d.id));
+  for (const def of defs) {
+    const last = entries
+      .filter((e) => e.metric_definition_id === def.id && e.value != null)
+      .sort((a, b) => (a.period < b.period ? 1 : -1))[0];
+    if (!last) continue;
+    noteDate(last.period);
+    const scaleMax = ratingScaleMax(def.unit);
+    metrics.push({
+      id: `m${def.id}`,
+      name: def.name,
+      value: String(last.value),
+      unit: scaleMax ? `/${scaleMax}` : def.unit,
+    });
+  }
+
+  const fields = listMeasurementFields(clientId).filter(deployedToClient);
+  const values = getMeasurementValues(fields.map((f) => f.id));
+  for (const field of fields) {
+    const last = values
+      .filter((v) => v.field_id === field.id && v.value != null)
+      .sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+    if (!last) continue;
+    noteDate(last.date);
+    metrics.push({ id: `f${field.id}`, name: field.name, value: String(last.value), unit: field.unit });
+  }
+
+  return {
+    when: latest ? new Date(`${latest}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null,
+    metrics,
+  };
+}
 
 export function getCheckInStatus(clientId: number): CheckInStatus {
   const today = localDateStr();
