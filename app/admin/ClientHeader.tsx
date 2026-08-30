@@ -1,4 +1,3 @@
-import { ChatIcon } from "../components/icons";
 import type { HeaderPlan } from "../lib/queries";
 
 // The identity strip above the section tabs: who this is, the two plans
@@ -8,11 +7,9 @@ import type { HeaderPlan } from "../lib/queries";
 export default function ClientHeader({
   name,
   plans,
-  messageHref,
 }: {
   name: string;
   plans: HeaderPlan[];
-  messageHref: string;
 }) {
   return (
     <header className="ad-client-header">
@@ -25,10 +22,6 @@ export default function ClientHeader({
             <div className="ad-plan-value">{p.value}</div>
           </div>
         ))}
-        <a href={messageHref} className="ad-btn">
-          <ChatIcon />
-          Message
-        </a>
       </div>
     </header>
   );

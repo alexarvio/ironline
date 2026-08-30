@@ -20,6 +20,7 @@ import {
   getPhotoPeriodNote,
   getPublishedWeek,
   listChatMessages,
+  listClients,
   listClientGoals,
   listMeetings,
   listPhotoPeriods,
@@ -75,7 +76,15 @@ const PERIOD_UNIT = {
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-const CLIENT_ID = 3;
+// Which client the app is showing. There's no login yet, so the admin's
+// "View client app" link carries ?client=<id> and this falls back to the
+// first client on the books — that fallback is why building a program for
+// one client and opening the app showed another's.
+function resolveClientId(raw: string | undefined): number | null {
+  const asked = raw ? Number(raw) : null;
+  if (asked && getClient(asked)) return asked;
+  return listClients()[0]?.id ?? null;
+}
 
 const fmtShortDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
@@ -116,7 +125,7 @@ function deriveReportStats(sections: ReportSection[]): { label: string; value: s
   return stats;
 }
 
-function getWeekDays(week?: number) {
+function getWeekDays(CLIENT_ID: number, week?: number) {
   // Auto-advances the moment a week the coach has already deployed starts —
   // see getCurrentWeekNumber's doc comment in lib/queries.ts. Callers that
   // want a specific week (the Training tab's week switcher) pass one in.
@@ -125,7 +134,7 @@ function getWeekDays(week?: number) {
   return publishedDays.map((day) => ({ day, assignments: getAssignmentsForDay(day.id) }));
 }
 
-function HomeTab() {
+function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   const client = getClient(CLIENT_ID);
   const profile = getClientProfile(CLIENT_ID);
   // Home's header keeps the goal countdown to whole weeks ("11 weeks to
@@ -147,7 +156,7 @@ function HomeTab() {
     .filter((g) => !g.done)
     .map((g) => g.text);
 
-  const days = getWeekDays();
+  const days = getWeekDays(CLIENT_ID);
   const daysTrained = days.filter((d) => d.assignments.some((a) => getLogsForAssignment(a.id).length > 0)).length;
   const totalDaysBuilt = days.filter((d) => d.assignments.length > 0).length;
   const setsThisWeek = days.reduce(
@@ -170,7 +179,7 @@ function HomeTab() {
     );
   const currentWeekNumber = getCurrentWeekNumber(CLIENT_ID);
   const volumeThisWeek = volumeOf(days);
-  const volumePrevWeek = volumeOf(getWeekDays(currentWeekNumber - 1));
+  const volumePrevWeek = volumeOf(getWeekDays(CLIENT_ID, currentWeekNumber - 1));
   const volumeTrendPct = volumePrevWeek > 0 ? ((volumeThisWeek - volumePrevWeek) / volumePrevWeek) * 100 : null;
   const volumeTrendLabel = volumeTrendPct == null ? null : `${volumeTrendPct >= 0 ? "+" : ""}${Math.round(volumeTrendPct)}% vol`;
 
@@ -200,7 +209,7 @@ function HomeTab() {
   // still needed here directly for the Tracker sub-tab below.
   const checkInStatus = getCheckInStatus(CLIENT_ID);
 
-  const coachNotes = coachNotesFor(5);
+  const coachNotes = coachNotesFor(CLIENT_ID, 5);
 
   // One swipeable carousel of trend panels: Weight plus whatever the coach
   // has pinned (that pin toggle lives in the admin Tracker tabs only — "any
@@ -275,8 +284,8 @@ function HomeTab() {
   );
 }
 
-function TrainingTab({ week }: { week: number }) {
-  const days = getWeekDays(week);
+function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
+  const days = getWeekDays(CLIENT_ID, week);
   const trainingDays = days.filter((d) => d.assignments.length > 0);
   const daysFullyDone = trainingDays.filter((d) =>
     d.assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets)
@@ -421,7 +430,7 @@ function TrainingTab({ week }: { week: number }) {
   );
 }
 
-function NutritionTab() {
+function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   const summary = getNutritionGoalsSummary(CLIENT_ID);
   const plan = getNutritionPlan(CLIENT_ID);
   const profile = getClientProfile(CLIENT_ID);
@@ -431,7 +440,7 @@ function NutritionTab() {
     const jsDay = new Date(`${today}T00:00:00`).getDay();
     return jsDay === 0 ? 7 : jsDay;
   })();
-  const todayDay = getWeekDays().find((d) => d.day.day_of_week === dow);
+  const todayDay = getWeekDays(CLIENT_ID).find((d) => d.day.day_of_week === dow);
   const isTrainingDay = !!todayDay && todayDay.assignments.length > 0;
   const dateLabel = new Date(`${today}T00:00:00`).toLocaleDateString("en-US", { weekday: "long" });
 
@@ -472,7 +481,7 @@ function NutritionTab() {
     (r) => r.entry?.quantity
   );
   const referenceRows = [...supplementRows, ...vitaminRows];
-  const coachNotes = coachNotesFor(3);
+  const coachNotes = coachNotesFor(CLIENT_ID, 3);
 
   return (
     <div className="nutrition-dark">
@@ -533,7 +542,7 @@ function NutritionTab() {
   );
 }
 
-function SettingsTab() {
+function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   const client = getClient(CLIENT_ID);
   const profile = getClientProfile(CLIENT_ID);
   const prefs = getClientPreferences(CLIENT_ID);
@@ -697,7 +706,7 @@ function SettingsTab() {
 // thread (coach messages left, client's own right) with a "next call" strip
 // and the shared compose form. Read-only scheduling: the call itself is set
 // on the coach's side (Meetings tab).
-function ChatThread() {
+function ChatThread({ CLIENT_ID }: { CLIENT_ID: number }) {
   const messages = listChatMessages(CLIENT_ID);
   const today = localDateStr();
 
@@ -803,7 +812,7 @@ function notificationTimeLabel(iso: string) {
 // Coach chat messages, same feed the Notifications screen shows (kind
 // "coach_note"), filtered down to just those so a tab reads as "what has my
 // coach said about my work" — shared by Home and Nutrition's "Coach notes".
-function coachNotesFor(limit: number) {
+function coachNotesFor(CLIENT_ID: number, limit: number) {
   return getNotifications(CLIENT_ID)
     .filter((n) => n.kind === "coach_note")
     .slice(0, limit)
@@ -819,7 +828,7 @@ function coachNotesFor(limit: number) {
 // Notifications sub-view — grouped Today/Earlier, each row a self-submitting
 // form (mark-read on tap, same auto-submit pattern used elsewhere in this
 // app, e.g. PhotoUploadBox) rather than client-side state.
-function NotificationsPanel() {
+function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
   const notifications = getNotifications(CLIENT_ID);
   const unreadCount = notifications.filter((n) => !n.read).length;
   const todayStr = localDateStr();
@@ -877,7 +886,7 @@ function NotificationsPanel() {
 // current period's upload slots moved into the Check-in screen's
 // measurements section; this is the history that sat below them, kept
 // reachable there rather than dropped.
-function PhotoHistory() {
+function PhotoHistory({ CLIENT_ID }: { CLIENT_ID: number }) {
   const photoSlots = listPhotoSlots(CLIENT_ID);
   const photoUploads = listPhotoUploads(photoSlots.map((s) => s.id));
   const cadence = getPhotoCadence(CLIENT_ID);
@@ -915,7 +924,24 @@ function PhotoHistory() {
   );
 }
 
-export default function ClientPage() {
+export default async function ClientPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ client?: string }>;
+}) {
+  const params = await searchParams;
+  const CLIENT_ID = resolveClientId(params.client);
+  if (CLIENT_ID == null) {
+    return (
+      <div className="phone-frame">
+        <div className="app-screen">
+          <p className="app-lead" style={{ padding: 24 }}>
+            No clients yet — add one in the admin panel first.
+          </p>
+        </div>
+      </div>
+    );
+  }
   const client = getClient(CLIENT_ID);
   // The Check-in screen's three sections, the measurement deltas and this
   // period's photo slots. Built here rather than in HomeTab because the
@@ -925,7 +951,7 @@ export default function ClientPage() {
   const checkInStatusForScreen = getCheckInStatus(CLIENT_ID);
   // Most recent coach note, shown at the foot of the check-in the same way
   // Home surfaces them — reusing the notification feed, not a new store.
-  const latestCoachNote = coachNotesFor(1)[0] ?? null;
+  const latestCoachNote = coachNotesFor(CLIENT_ID, 1)[0] ?? null;
   const checkIn = {
     dateLabel: new Date(`${localDateStr()}T00:00:00`).toLocaleDateString("en-US", {
       weekday: "long",
@@ -944,7 +970,7 @@ export default function ClientPage() {
     coachNote: latestCoachNote
       ? { timeLabel: latestCoachNote.timeLabel, text: latestCoachNote.text }
       : null,
-    photoHistory: <PhotoHistory />,
+    photoHistory: <PhotoHistory CLIENT_ID={CLIENT_ID} />,
   };
   const messages = listChatMessages(CLIENT_ID);
   const hasCoachUpdate = [...messages].reverse().find((m) => m.sender === "coach") != null;
@@ -964,10 +990,10 @@ export default function ClientPage() {
   const trainingWeekLabels = deployedProgram
     ? Object.fromEntries(trainingWeeks.map((w) => [w, programWeekLabel(deployedProgram, w)]))
     : undefined;
-  const trainingWeekContents = Object.fromEntries(trainingWeeks.map((w) => [w, <TrainingTab key={w} week={w} />]));
+  const trainingWeekContents = Object.fromEntries(trainingWeeks.map((w) => [w, <TrainingTab key={w} CLIENT_ID={CLIENT_ID} week={w} />]));
 
   const tabs: AppTab[] = [
-    { id: "home", label: "Home", icon: <HomeIcon />, content: <HomeTab /> },
+    { id: "home", label: "Home", icon: <HomeIcon />, content: <HomeTab CLIENT_ID={CLIENT_ID} /> },
     {
       id: "training",
       label: "Training",
@@ -983,16 +1009,16 @@ export default function ClientPage() {
         </div>
       ),
     },
-    { id: "nutrition", label: "Nutrition", icon: <AppleIcon />, content: <NutritionTab /> },
-    { id: "settings", label: "Settings", icon: <AccountIcon />, content: <SettingsTab /> },
+    { id: "nutrition", label: "Nutrition", icon: <AppleIcon />, content: <NutritionTab CLIENT_ID={CLIENT_ID} /> },
+    { id: "settings", label: "Settings", icon: <AccountIcon />, content: <SettingsTab CLIENT_ID={CLIENT_ID} /> },
   ];
 
   return (
     <AppShell
       clientName={client?.name ?? ""}
       tabs={tabs}
-      chatContent={<ChatThread />}
-      notificationsContent={<NotificationsPanel />}
+      chatContent={<ChatThread CLIENT_ID={CLIENT_ID} />}
+      notificationsContent={<NotificationsPanel CLIENT_ID={CLIENT_ID} />}
       hasCoachUpdate={hasCoachUpdate}
       hasUnreadNotifications={hasUnreadNotifications}
       clientId={CLIENT_ID}

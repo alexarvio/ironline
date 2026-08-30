@@ -48,7 +48,12 @@ export default function AdminSidebar({ selectedId }: { selectedId: number | null
         </button>
       </form>
 
-      <Link href="/client" className="ad-client-app-link">
+      {/* Opens the app as whoever is selected, so what the coach just built
+          is what they see — there's no login yet to do that for them. */}
+      <Link
+        href={selectedId ? `/client?client=${selectedId}` : "/client"}
+        className="ad-client-app-link"
+      >
         View client app →
       </Link>
     </>

@@ -6,8 +6,7 @@ import NutritionPanel from "./NutritionPanel";
 import StartPagePanel from "./StartPagePanel";
 import TrackerPanel from "./TrackerPanel";
 import ProgramBuilder from "../components/ProgramBuilder";
-import ChatPanel from "../components/ChatPanel";
-import { getClient, getClientHeaderPlans, listChatMessages, listClients } from "../lib/queries";
+import { getClient, getClientHeaderPlans, listClients } from "../lib/queries";
 
 // Reads live from the JSON store on every request — without this, Next
 // statically prerenders this page at build time (before any real data
@@ -51,8 +50,8 @@ function ClientDashboard({
   initialTab?: string;
 }) {
   // The core loop, nothing else: say who this client is, build their
-  // training, set their nutrition, define what they log daily and weekly,
-  // and talk to them.
+  // training, set their nutrition, and define what they log daily and
+  // weekly.
   const sections: TabSection[] = [
     { id: "start", label: "Start Page", content: <StartPagePanel clientId={clientId} name={name} /> },
     {
@@ -69,20 +68,11 @@ function ClientDashboard({
     { id: "nutrition", label: "Nutrition", content: <NutritionPanel clientId={clientId} /> },
     { id: "daily", label: "Daily Tracker", content: <TrackerPanel clientId={clientId} frequency="daily" /> },
     { id: "weekly", label: "Weekly Tracker", content: <TrackerPanel clientId={clientId} frequency="weekly" /> },
-    {
-      id: "chat",
-      label: "Chat",
-      content: <ChatPanel clientId={clientId} viewer="coach" messages={listChatMessages(clientId)} />,
-    },
   ];
 
   return (
     <>
-      <ClientHeader
-        name={name}
-        plans={getClientHeaderPlans(clientId)}
-        messageHref={`/admin?client=${clientId}&tab=chat`}
-      />
+      <ClientHeader name={name} plans={getClientHeaderPlans(clientId)} />
       <SectionTabs sections={sections} initialId={initialTab} />
     </>
   );
