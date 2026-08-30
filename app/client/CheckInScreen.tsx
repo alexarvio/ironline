@@ -36,6 +36,14 @@ export type CheckInProps = {
   deltas: CheckInDelta[];
   photoSlots: CheckInPhotoSlot[];
   photoPeriodLabel: string;
+  // Which segments still have no entry for their current period — drives
+  // the dot on each tab so the client can see where action is needed.
+  dueSections: string[];
+  // Progress pictures only accept uploads while this period's set is
+  // incomplete; once it's full there's nothing for the client to do until
+  // the next one opens.
+  photosDue: boolean;
+  photosNextLabel: string;
   coachNote: CheckInCoachNote;
   photoHistory: ReactNode;
 };
@@ -55,6 +63,9 @@ export default function CheckInScreen({
   deltas,
   photoSlots,
   photoPeriodLabel,
+  dueSections,
+  photosDue,
+  photosNextLabel,
   coachNote,
   photoHistory,
   onBack,
@@ -68,6 +79,9 @@ export default function CheckInScreen({
   deltas: CheckInDelta[];
   photoSlots: CheckInPhotoSlot[];
   photoPeriodLabel: string;
+  dueSections: string[];
+  photosDue: boolean;
+  photosNextLabel: string;
   coachNote: CheckInCoachNote;
   // Past photo periods and the coach's written feedback on them, rendered
   // server-side and passed through. Not in the Check-in mockup, but it's
@@ -107,6 +121,16 @@ export default function CheckInScreen({
   const isMeasurements = active.id === "measurements";
   const remaining = active.metrics.length - filled.length;
 
+  // m.value is what's actually persisted for this period, so comparing the
+  // two tells us whether there's anything left to send — no separate "saved"
+  // flag to keep in sync, and editing a saved section re-arms Save by
+  // itself. After a submit the server re-renders with the new values, so
+  // this settles into the saved state on its own.
+  const dirty = active.metrics.some((m) => (activeValues[m.id] ?? "") !== m.value);
+  const savedSomething = active.metrics.some((m) => m.value.length > 0);
+  const isSaved = !dirty && savedSomething;
+  const canSave = dirty && filled.length > 0;
+
   return (
     <div className="ci-screen">
       <header className="ci-header">
@@ -137,6 +161,7 @@ export default function CheckInScreen({
             >
               {s.label}
               <span className="ci-tab-sub">{s.sub}</span>
+              {dueSections.includes(s.id) && <span className="ci-tab-dot" aria-label="Not logged yet" />}
             </button>
           ))}
         </div>
@@ -239,45 +264,59 @@ export default function CheckInScreen({
                 </span>
               </div>
               <div className="ci-photos">
-                {photoSlots.map((p) => (
-                  // Each tile is its own upload form that submits the moment a
-                  // file is picked — same auto-submit pattern as PhotoUploadBox,
-                  // and kept outside the metrics form since a nested form isn't
-                  // valid HTML.
-                  <form key={p.id} action={uploadProgressPhotoAction} className="ci-photo-form">
-                    <input type="hidden" name="clientId" value={clientId} />
-                    <input type="hidden" name="slotId" value={p.id} />
-                    <label className={`ci-photo${p.src ? " filled" : ""}`}>
-                      {p.src ? (
+                {photoSlots.map((p) =>
+                  // Uploading is only offered while this period's set is
+                  // still incomplete — once it's full there's nothing for
+                  // the client to do, so the tiles go read-only rather than
+                  // inviting a pointless re-shoot.
+                  photosDue ? (
+                    <form key={p.id} action={uploadProgressPhotoAction} className="ci-photo-form">
+                      <input type="hidden" name="clientId" value={clientId} />
+                      <input type="hidden" name="slotId" value={p.id} />
+                      <label className={`ci-photo${p.src ? " filled" : ""}`}>
+                        {p.src ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={p.src} alt={p.label} className="ci-photo-img" />
+                        ) : (
+                          <span className="ci-photo-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                              <path
+                                d="M2.5 6.2a1 1 0 0 1 1-1h1.7l.9-1.5h3.8l.9 1.5H15a1 1 0 0 1 1 1v7.3a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V6.2z"
+                                stroke="currentColor"
+                                strokeWidth="1.3"
+                                strokeLinejoin="round"
+                              />
+                              <circle cx="9" cy="10" r="2.6" stroke="currentColor" strokeWidth="1.3" />
+                            </svg>
+                          </span>
+                        )}
+                        <span className="ci-photo-label">{p.label}</span>
+                        <input
+                          type="file"
+                          name="file"
+                          accept="image/*"
+                          capture="environment"
+                          className="ci-photo-input"
+                          onChange={(e) => e.currentTarget.form?.requestSubmit()}
+                        />
+                      </label>
+                    </form>
+                  ) : (
+                    <div key={p.id} className={`ci-photo done${p.src ? " filled" : ""}`}>
+                      {p.src && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={p.src} alt={p.label} className="ci-photo-img" />
-                      ) : (
-                        <span className="ci-photo-icon" aria-hidden="true">
-                          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                            <path
-                              d="M2.5 6.2a1 1 0 0 1 1-1h1.7l.9-1.5h3.8l.9 1.5H15a1 1 0 0 1 1 1v7.3a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V6.2z"
-                              stroke="currentColor"
-                              strokeWidth="1.3"
-                              strokeLinejoin="round"
-                            />
-                            <circle cx="9" cy="10" r="2.6" stroke="currentColor" strokeWidth="1.3" />
-                          </svg>
-                        </span>
                       )}
                       <span className="ci-photo-label">{p.label}</span>
-                      <input
-                        type="file"
-                        name="file"
-                        accept="image/*"
-                        capture="environment"
-                        className="ci-photo-input"
-                        onChange={(e) => e.currentTarget.form?.requestSubmit()}
-                      />
-                    </label>
-                  </form>
-                ))}
+                    </div>
+                  )
+                )}
               </div>
-              <div className="ci-photo-note">One set per {photoPeriodLabel.toLowerCase()} — a new photo replaces this one.</div>
+              <div className="ci-photo-note">
+                {photosDue
+                  ? `One set per ${photoPeriodLabel.toLowerCase()} — a new photo replaces this one.`
+                  : photosNextLabel}
+              </div>
               {photoHistory && <div className="ci-photo-history">{photoHistory}</div>}
             </section>
           )}
@@ -310,18 +349,19 @@ export default function CheckInScreen({
 
       <div className="ci-footer">
         <div className="ci-footer-labels">
-          <div className="ci-footer-kicker">Goes to your coach</div>
-          <div className={`ci-footer-label${complete ? " complete" : ""}`}>
-            {complete ? "Everything filled in" : `${remaining} still empty`}
+          <div className="ci-footer-kicker">{isSaved ? "Sent" : "Goes to your coach"}</div>
+          <div className={`ci-footer-label${isSaved ? " sent" : complete ? " complete" : ""}`}>
+            {isSaved
+              ? complete
+                ? "All updated"
+                : "Your coach has it"
+              : complete
+              ? "Everything filled in"
+              : `${remaining} still empty`}
           </div>
         </div>
-        <button
-          type="submit"
-          form="ci-form"
-          className="ci-save"
-          disabled={filled.length === 0}
-        >
-          Save
+        <button type="submit" form="ci-form" className="ci-save" disabled={!canSave}>
+          {isSaved ? "Saved ✓" : "Save"}
         </button>
       </div>
     </div>

@@ -101,6 +101,8 @@ type MeasurementFieldDef = {
   name: string;
   unit: string;
   order_index: number;
+  // Same "deployed to the client" switch as MetricDefinition above.
+  visible_to_client?: boolean;
 };
 type MeasurementValue = {
   id: number;
@@ -129,6 +131,11 @@ type MetricDefinition = {
   // PINNED_METRIC_LIMIT in queries.ts. Optional so existing saved data
   // without this field just reads as unpinned.
   pinned?: boolean;
+  // Whether this metric is deployed to the client's check-in screen. The
+  // coach can build a metric and keep it off the client app (or retire one
+  // without deleting its history). Optional and read as "!== false", so
+  // every metric saved before this field existed stays visible.
+  visible_to_client?: boolean;
 };
 type MetricEntry = {
   id: number;

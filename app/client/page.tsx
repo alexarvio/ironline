@@ -947,6 +947,8 @@ export default function ClientPage() {
   // period's photo slots. Built here rather than in HomeTab because the
   // screen is a full-screen push view owned by AppShell.
   const checkInData = getCheckInSections(CLIENT_ID);
+  // Same source Home reads, so the tab dots and Home's count can't disagree.
+  const checkInStatusForScreen = getCheckInStatus(CLIENT_ID);
   // Most recent coach note, shown at the foot of the check-in the same way
   // Home surfaces them — reusing the notification feed, not a new store.
   const latestCoachNote = coachNotesFor(1)[0] ?? null;
@@ -962,6 +964,9 @@ export default function ClientPage() {
     deltas: checkInData.deltas,
     photoSlots: checkInData.photoSlots,
     photoPeriodLabel: checkInData.photoPeriodLabel,
+    photosDue: checkInData.photosDue,
+    photosNextLabel: checkInData.photosNextLabel,
+    dueSections: checkInStatusForScreen.dueTypes as string[],
     coachNote: latestCoachNote
       ? { timeLabel: latestCoachNote.timeLabel, text: latestCoachNote.text }
       : null,

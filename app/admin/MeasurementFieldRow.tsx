@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { removeMeasurementFieldAction, updateMeasurementFieldAction } from "../lib/actions";
-import { PencilIcon, TrashIcon } from "../components/icons";
+import { removeMeasurementFieldAction, setMeasurementFieldVisibleAction, updateMeasurementFieldAction } from "../lib/actions";
+import { EyeIcon, PencilIcon, TrashIcon } from "../components/icons";
 
 // One row in the "Check-in columns" list — normally just the column's name
 // and unit, with a pencil/trash pair on the right. Pencil turns the row
@@ -13,7 +13,7 @@ import { PencilIcon, TrashIcon } from "../components/icons";
 export default function MeasurementFieldRow({
   field,
 }: {
-  field: { id: number; name: string; unit: string };
+  field: { id: number; name: string; unit: string; visible_to_client?: boolean };
 }) {
   const [mode, setMode] = useState<"view" | "edit" | "confirm-delete">("view");
 
@@ -55,6 +55,28 @@ export default function MeasurementFieldRow({
         </div>
       ) : (
         <div className="row-icon-actions" style={{ marginLeft: "auto" }}>
+          {/* Whether the client is asked for this column at check-in.
+              Hiding it leaves everything already logged intact. */}
+          <form action={setMeasurementFieldVisibleAction}>
+            <input type="hidden" name="id" value={field.id} />
+            <input type="hidden" name="visible" value={field.visible_to_client === false ? "true" : "false"} />
+            <button
+              type="submit"
+              className={`row-icon-btn${field.visible_to_client === false ? "" : " row-icon-active"}`}
+              aria-label={
+                field.visible_to_client === false
+                  ? `Ask the client for ${field.name}`
+                  : `Stop asking the client for ${field.name}`
+              }
+              title={
+                field.visible_to_client === false
+                  ? "Hidden from the client — tap to show"
+                  : "On the client's check-in — tap to hide"
+              }
+            >
+              <EyeIcon off={field.visible_to_client === false} />
+            </button>
+          </form>
           <button
             type="button"
             className="row-icon-btn"

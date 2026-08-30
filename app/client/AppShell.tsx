@@ -64,6 +64,9 @@ export default function AppShell({
             deltas={checkIn.deltas}
             photoSlots={checkIn.photoSlots}
             photoPeriodLabel={checkIn.photoPeriodLabel}
+            dueSections={checkIn.dueSections}
+            photosDue={checkIn.photosDue}
+            photosNextLabel={checkIn.photosNextLabel}
             coachNote={checkIn.coachNote}
             photoHistory={checkIn.photoHistory}
             onBack={() => setPushView(null)}

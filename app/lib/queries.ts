@@ -1051,6 +1051,8 @@ export type MeasurementFieldDef = {
   name: string;
   unit: string;
   order_index: number;
+  // Deployed to the client's check-in screen; see deployedToClient().
+  visible_to_client?: boolean;
 };
 export type MeasurementValue = {
   id: number;
@@ -1302,6 +1304,8 @@ export type MetricDefinition = {
   frequency: "daily" | "weekly";
   order_index: number;
   pinned?: boolean;
+  // Deployed to the client's check-in screen; see deployedToClient().
+  visible_to_client?: boolean;
 };
 export type MetricEntry = {
   id: number;
@@ -2468,12 +2472,12 @@ export function getDueItems(clientId: number): DueItem[] {
   const today = localDateStr();
   const currentWeekStart = weekStart(today);
 
-  const dailyDefs = listMetricDefinitions(clientId, "daily");
-  const weeklyDefs = listMetricDefinitions(clientId, "weekly");
+  const dailyDefs = listMetricDefinitions(clientId, "daily").filter(deployedToClient);
+  const weeklyDefs = listMetricDefinitions(clientId, "weekly").filter(deployedToClient);
   const dailyLoggedToday = listMetricPeriods(dailyDefs.map((d) => d.id), 1)[0] === today;
   const weeklyLoggedThisWeek = listMetricPeriods(weeklyDefs.map((d) => d.id), 1)[0] === currentWeekStart;
 
-  const measurementFields = listMeasurementFields(clientId);
+  const measurementFields = listMeasurementFields(clientId).filter(deployedToClient);
   const measurementLoggedToday = listMeasurementDates(clientId).includes(today);
 
   const photoSlots = listPhotoSlots(clientId);
@@ -2518,6 +2522,29 @@ export function getDueItems(clientId: number): DueItem[] {
   return items;
 }
 
+// A metric or measurement column the coach has built but not deployed to
+// the client. Read as "!== false" so anything saved before the flag existed
+// stays visible — the coach opts OUT, never has to opt every metric in.
+function deployedToClient(x: { visible_to_client?: boolean }): boolean {
+  return x.visible_to_client !== false;
+}
+
+export function setMetricVisibleToClient(id: number, visible: boolean) {
+  const data = getData();
+  const def = data.metric_definitions.find((m) => m.id === id);
+  if (!def) return;
+  def.visible_to_client = visible;
+  persist();
+}
+
+export function setMeasurementFieldVisibleToClient(id: number, visible: boolean) {
+  const data = getData();
+  const field = data.measurement_fields.find((f) => f.id === id);
+  if (!field) return;
+  field.visible_to_client = visible;
+  persist();
+}
+
 // Home reports check-in status as one line rather than enumerating each
 // outstanding item, so it needs a count of check-in TYPES still open for
 // their current period — daily (today), weekly (this week), measurements
@@ -2539,9 +2566,9 @@ export function getCheckInStatus(clientId: number): CheckInStatus {
   const today = localDateStr();
   const thisWeek = weekStart(today);
 
-  const dailyDefs = listMetricDefinitions(clientId, "daily");
-  const weeklyDefs = listMetricDefinitions(clientId, "weekly");
-  const fields = listMeasurementFields(clientId);
+  const dailyDefs = listMetricDefinitions(clientId, "daily").filter(deployedToClient);
+  const weeklyDefs = listMetricDefinitions(clientId, "weekly").filter(deployedToClient);
+  const fields = listMeasurementFields(clientId).filter(deployedToClient);
 
   const dailyDue =
     dailyDefs.length > 0 && listMetricPeriods(dailyDefs.map((d) => d.id), 1)[0] !== today;
@@ -2625,6 +2652,11 @@ export type CheckInData = {
   deltas: CheckInDelta[];
   photoSlots: CheckInPhotoSlot[];
   photoPeriodLabel: string;
+  // A new set is only asked for while this period's slots aren't all
+  // filled; once they are, the client has nothing to do until the next
+  // period opens.
+  photosDue: boolean;
+  photosNextLabel: string;
 };
 
 export function getCheckInSections(clientId: number): CheckInData {
@@ -2643,7 +2675,7 @@ export function getCheckInSections(clientId: number): CheckInData {
     sub: string,
     intro: string
   ): CheckInSection | null => {
-    const defs = listMetricDefinitions(clientId, frequency);
+    const defs = listMetricDefinitions(clientId, frequency).filter(deployedToClient);
     if (defs.length === 0) return null;
     const entries = getMetricEntries(defs.map((d) => d.id));
     return {
@@ -2692,7 +2724,7 @@ export function getCheckInSections(clientId: number): CheckInData {
   if (weekly) sections.push(weekly);
 
   // ---- Measurements ----
-  const fields = listMeasurementFields(clientId);
+  const fields = listMeasurementFields(clientId).filter(deployedToClient);
   const measurementValues = getMeasurementValues(fields.map((f) => f.id));
   const dates = listMeasurementDates(clientId);
   const previousDate = dates.filter((d) => d < today).sort((a, b) => (a < b ? 1 : -1))[0] ?? null;
@@ -2747,16 +2779,23 @@ export function getCheckInSections(clientId: number): CheckInData {
   const slots = listPhotoSlots(clientId);
   const uploads = listPhotoUploads(slots.map((s) => s.id));
 
+  const photoSlots = slots.map((s) => ({
+    id: s.id,
+    label: s.label,
+    src: uploads.find((u) => u.slot_id === s.id && u.period === photoPeriod)?.file_path ?? null,
+  }));
+  const unit = PHOTO_PERIOD_UNIT[cadence];
+
   return {
     sections,
     lastCheckInDate: previousDate ? fmtDate(previousDate) : null,
     deltas,
-    photoSlots: slots.map((s) => ({
-      id: s.id,
-      label: s.label,
-      src: uploads.find((u) => u.slot_id === s.id && u.period === photoPeriod)?.file_path ?? null,
-    })),
-    photoPeriodLabel: PHOTO_PERIOD_UNIT[cadence],
+    photoSlots,
+    photoPeriodLabel: unit,
+    photosDue: photoSlots.length > 0 && photoSlots.some((p) => !p.src),
+    photosNextLabel: `All ${photoSlots.length} taken — the next set opens ${
+      cadence === "monthly" ? "next month" : cadence === "biweekly" ? "in two weeks" : "next week"
+    }.`,
   };
 }
 

@@ -270,6 +270,24 @@ export function PaletteIcon() {
   );
 }
 
+// Whether a metric is deployed to the client's check-in screen — the open
+// eye means the client is asked for it, the struck-through one means the
+// coach keeps it to themselves.
+export function EyeIcon({ off = false }: { off?: boolean }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12" r="2.6" stroke="currentColor" strokeWidth="1.6" />
+      {off && <path d="M4 20 20 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />}
+    </svg>
+  );
+}
+
 // "Nothing outstanding" states — the client Home check-ins row when every
 // check-in is up to date.
 export function CheckIcon() {

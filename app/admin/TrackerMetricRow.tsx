@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { removeMetricDefinitionAction, togglePinMetricAction, updateMetricDefinitionAction } from "../lib/actions";
-import { ChartIcon, PencilIcon, PinIcon, TrashIcon } from "../components/icons";
+import { removeMetricDefinitionAction, setMetricVisibleAction, togglePinMetricAction, updateMetricDefinitionAction } from "../lib/actions";
+import { ChartIcon, EyeIcon, PencilIcon, PinIcon, TrashIcon } from "../components/icons";
 import TrackerMetricTrendModal from "./TrackerMetricTrendModal";
 
 type MetricValue = { period: string; value: number | null };
@@ -19,7 +19,7 @@ export default function TrackerMetricRow({
   pinnedCount,
   pinLimit,
 }: {
-  def: { id: number; category: string; name: string; unit: string; pinned?: boolean };
+  def: { id: number; category: string; name: string; unit: string; pinned?: boolean; visible_to_client?: boolean };
   values: MetricValue[];
   frequency: "daily" | "weekly";
   pinnedCount: number;
@@ -33,6 +33,8 @@ export default function TrackerMetricRow({
   const logged = values.filter((v): v is { period: string; value: number } => v.value != null);
   const average = logged.length >= 3 ? logged.reduce((sum, v) => sum + v.value, 0) / logged.length : null;
   const pinDisabled = !def.pinned && pinnedCount >= pinLimit;
+  // Absent on metrics saved before the flag existed — those stay deployed.
+  const visibleToClient = def.visible_to_client !== false;
 
   if (mode === "edit") {
     return (
@@ -86,6 +88,20 @@ export default function TrackerMetricRow({
           </div>
         ) : (
           <div className="row-icon-actions">
+            {/* Whether the client is asked for this metric at check-in.
+                Hiding it leaves everything already logged intact. */}
+            <form action={setMetricVisibleAction}>
+              <input type="hidden" name="id" value={def.id} />
+              <input type="hidden" name="visible" value={visibleToClient ? "false" : "true"} />
+              <button
+                type="submit"
+                className={`row-icon-btn${visibleToClient ? " row-icon-active" : ""}`}
+                aria-label={visibleToClient ? `Stop asking the client for ${def.name}` : `Ask the client for ${def.name}`}
+                title={visibleToClient ? "On the client's check-in — tap to hide" : "Hidden from the client — tap to show"}
+              >
+                <EyeIcon off={!visibleToClient} />
+              </button>
+            </form>
             <form action={togglePinMetricAction}>
               <input type="hidden" name="id" value={def.id} />
               <button

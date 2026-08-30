@@ -3367,6 +3367,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 }
 
 .ci-tab {
+  position: relative;
   flex: 1;
   min-height: 44px;
   border: 1px solid #3a3a32;
@@ -3389,6 +3390,22 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   background: var(--fp-accent);
   border-color: var(--fp-accent);
   color: var(--fp-accent-fg);
+}
+
+/* Marks a segment that still has nothing logged for its period. Positioned
+   against .ci-tab, which is relative for this. */
+.ci-tab-dot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--fp-accent);
+}
+
+.ci-tab.active .ci-tab-dot {
+  background: var(--fp-accent-fg);
 }
 
 .ci-tab-sub {
@@ -3629,6 +3646,18 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   background: var(--fp-accent-tint);
 }
 
+/* Set already complete — the tiles still show what was taken, but they're
+   not upload targets any more. */
+.ci-photo.done {
+  cursor: default;
+  border-style: solid;
+  border-color: #23231f;
+}
+
+.ci-photo.done.filled {
+  border-color: var(--fp-accent);
+}
+
 .ci-photo-icon {
   display: flex;
   color: #8a8a80;
@@ -3758,6 +3787,12 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 .ci-footer-label.complete {
   color: #ffffff;
+}
+
+/* Nothing left to send — the section reads as done rather than inviting
+   another save. */
+.ci-footer-label.sent {
+  color: var(--fp-accent);
 }
 
 .ci-save {

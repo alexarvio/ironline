@@ -70,6 +70,8 @@ import {
   setAssignmentCustomValue,
   setClientGoalDone,
   setClientPreference,
+  setMeasurementFieldVisibleToClient,
+  setMetricVisibleToClient,
   setClientUnits,
   setDayLabel,
   setInvoiceStatus,
@@ -886,6 +888,25 @@ export async function deleteReportAction(formData: FormData) {
   const id = Number(formData.get("id"));
   deleteReport(id);
   revalidatePath("/admin");
+}
+
+// Coach-side switch for whether a metric/measurement column is deployed to
+// the client's check-in screen. History is untouched either way — hiding a
+// metric stops it being asked for, it doesn't delete what's already logged.
+export async function setMetricVisibleAction(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  setMetricVisibleToClient(id, formData.get("visible") === "true");
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function setMeasurementFieldVisibleAction(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  setMeasurementFieldVisibleToClient(id, formData.get("visible") === "true");
+  revalidatePath("/admin");
+  revalidatePath("/client");
 }
 
 export async function setClientPreferenceAction(formData: FormData) {
