@@ -7443,8 +7443,29 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   border-bottom: 1px solid var(--border);
   padding: 14px 20px 12px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: space-between;
   gap: 20px;
+  flex-wrap: wrap;
+}
+
+/* A plan is a name, not a numeral, so it sits at body size rather than in
+   the serif display face the rail's figures use. */
+.ad-plan {
+  min-width: 0;
+}
+
+.ad-plan-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+.ad-plan-value.muted {
+  font-weight: 500;
+  color: var(--steel);
 }
 
 .ad-client-identity {

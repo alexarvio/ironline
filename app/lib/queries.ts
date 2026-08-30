@@ -2590,70 +2590,33 @@ export type CheckInStatus = {
 export type CheckInSnapshotMetric = { id: string; name: string; value: string; unit: string };
 export type CheckInSnapshot = { when: string | null; metrics: CheckInSnapshotMetric[] };
 
-// The three read-outs beside the client's name. Every one is derived from
-// something the client actually logged — weight from their measurements,
-// adherence from sets logged against sets planned this week, and then
-// whichever daily metric the coach put first (Sleep, for most). No
-// placeholder numbers: a read-out with nothing behind it is left out.
-export type HeaderStat = { id: string; label: string; value: string; unit: string; tone: "ink" | "good" | "warn" };
+// What the header carries beside the client's name: the two plans they're
+// currently on. Both are read from what's actually deployed/saved, and a
+// plan that doesn't exist yet says so rather than rendering a blank slot.
+export type HeaderPlan = { id: string; label: string; value: string; muted: boolean };
 
-export function getClientHeaderStats(clientId: number): HeaderStat[] {
-  const stats: HeaderStat[] = [];
+export function getClientHeaderPlans(clientId: number): HeaderPlan[] {
+  const program = getDeployedProgram(clientId);
+  const weekNumber = program ? program.start_week + getProgramCurrentWeekIndex(program) - 1 : null;
+  const workout = program
+    ? `${program.name || "Untitled program"} · ${programWeekLabel(program, weekNumber!)}`
+    : "No program deployed";
 
-  const weightSeries = getWeightSeries(clientId, 3650);
-  if (weightSeries.length > 0) {
-    stats.push({
-      id: "weight",
-      label: "Weight",
-      value: String(weightSeries[weightSeries.length - 1].value),
-      unit: "kg",
-      tone: "ink",
-    });
-  }
+  // Nutrition plans have no name in this model — a client has one plan, and
+  // what identifies it is the targets it sets. Training and rest day differ,
+  // so both are shown.
+  const nutrition = getNutritionGoalsSummary(clientId);
+  const hasNutrition = nutrition.trainingKcal > 0 || nutrition.restKcal > 0;
+  const nutritionLabel = hasNutrition
+    ? `${Math.round(nutrition.trainingKcal)} / ${Math.round(nutrition.restKcal)} kcal`
+    : "Not set up";
 
-  // Adherence: how much of this week's planned work actually got logged.
-  const thisWeek = weekStart(localDateStr());
-  const currentWeekNumber = getCurrentWeekNumber(clientId);
-  const days = getPublishedWeek(clientId, currentWeekNumber);
-  let planned = 0;
-  let logged = 0;
-  for (const day of days) {
-    for (const a of getAssignmentsForDay(day.id)) {
-      planned += a.sets;
-      logged += getLogsForAssignmentByWeek(a.id).find((g) => g.weekStart === thisWeek)?.logs.length ?? 0;
-    }
-  }
-  if (planned > 0) {
-    const pct = Math.round((Math.min(logged, planned) / planned) * 100);
-    stats.push({
-      id: "adherence",
-      label: "Adherence",
-      value: String(pct),
-      unit: "%",
-      tone: pct >= 80 ? "good" : pct >= 50 ? "ink" : "warn",
-    });
-  }
-
-  const dailyDefs = listMetricDefinitions(clientId, "daily").filter(deployedToClient);
-  const firstDaily = dailyDefs[0];
-  if (firstDaily) {
-    const last = getMetricEntries([firstDaily.id])
-      .filter((e) => e.value != null)
-      .sort((a, b) => (a.period < b.period ? 1 : -1))[0];
-    if (last) {
-      const scaleMax = ratingScaleMax(firstDaily.unit);
-      stats.push({
-        id: `metric-${firstDaily.id}`,
-        label: firstDaily.name,
-        value: String(last.value),
-        unit: scaleMax ? `/${scaleMax}` : firstDaily.unit,
-        tone: "ink",
-      });
-    }
-  }
-
-  return stats;
+  return [
+    { id: "workout", label: "Workout plan", value: workout, muted: !program },
+    { id: "nutrition", label: "Nutrition plan", value: nutritionLabel, muted: !hasNutrition },
+  ];
 }
+
 
 // Four figures and a unit is as wide as a rail column gets before the grid
 // stops lining up, so a step count reads "9.1 k" rather than "9111 steps" —

@@ -1,53 +1,28 @@
 import { ChatIcon } from "../components/icons";
-import type { HeaderStat } from "../lib/queries";
+import type { HeaderPlan } from "../lib/queries";
 
-// The identity block above the section tabs: who this is, where they are in
-// their coaching, and the three numbers a coach glances at before doing
-// anything else. Shared by every client tab.
+// The identity strip above the section tabs: who this is, the two plans
+// they're currently on, and a way to message them. Everything else a coach
+// might want here lives one click away in the tab it belongs to, or in the
+// rail on the right.
 export default function ClientHeader({
   name,
-  phase,
-  meta,
-  stats,
+  plans,
   messageHref,
 }: {
   name: string;
-  phase: string | null;
-  meta: string[];
-  stats: HeaderStat[];
+  plans: HeaderPlan[];
   messageHref: string;
 }) {
   return (
     <header className="ad-client-header">
-      <div className="ad-client-identity">
-        <div className="ad-client-title-row">
-          <h1 className="ad-client-title">{name}</h1>
-          {phase && <span className="ad-client-phase">{phase}</span>}
-        </div>
-        {meta.length > 0 && (
-          <div className="ad-client-meta">
-            {meta.map((m, i) => (
-              <span key={m} className="ad-client-meta-item">
-                {i > 0 && (
-                  <span aria-hidden="true" className="ad-client-meta-sep">
-                    ·
-                  </span>
-                )}
-                {m}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
+      <h1 className="ad-client-title">{name}</h1>
 
       <div className="ad-client-readouts">
-        {stats.map((s) => (
-          <div key={s.id} className="ad-stat">
-            <div className="ad-microlabel">{s.label}</div>
-            <div className="ad-stat-value-row">
-              <span className={`ad-stat-value ${s.tone}`}>{s.value}</span>
-              {s.unit && <span className="ad-stat-unit">{s.unit}</span>}
-            </div>
+        {plans.map((p) => (
+          <div key={p.id} className="ad-plan">
+            <div className="ad-microlabel">{p.label}</div>
+            <div className={`ad-plan-value${p.muted ? " muted" : ""}`}>{p.value}</div>
           </div>
         ))}
         <a href={messageHref} className="ad-btn">

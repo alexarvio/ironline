@@ -16,7 +16,7 @@ import StartPagePanel from "./StartPagePanel";
 import TrackerPanel from "./TrackerPanel";
 import ProgramBuilder from "../components/ProgramBuilder";
 import ChatPanel from "../components/ChatPanel";
-import { getClient, getClientHeaderStats, getClientProfile, listChatMessages, listClients } from "../lib/queries";
+import { getClient, getClientHeaderPlans, listChatMessages, listClients } from "../lib/queries";
 
 // Reads live from the JSON store on every request — without this, Next
 // statically prerenders this page at build time (before any real data
@@ -86,26 +86,6 @@ function ClientDashboard({
   name: string;
   initialTab?: string;
 }) {
-  const profile = getClientProfile(clientId);
-
-  // Only the parts actually filled in, so a half-set profile doesn't render
-  // a row of orphaned separators.
-  const meta = [
-    profile.coaching_start_date
-      ? `Client since ${new Date(`${profile.coaching_start_date}T12:00:00`).toLocaleDateString("en-US", {
-          month: "short",
-          year: "numeric",
-        })}`
-      : null,
-    profile.current_week || null,
-    profile.goal_date
-      ? `Goal ${new Date(`${profile.goal_date}T12:00:00`).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        })}`
-      : null,
-  ].filter((m): m is string => m !== null);
-
   const sections: TabSection[] = [
     { id: "start", label: "Start Page", content: <StartPagePanel clientId={clientId} name={name} /> },
     {
@@ -138,9 +118,7 @@ function ClientDashboard({
     <>
       <ClientHeader
         name={name}
-        phase={profile.goal_phase || null}
-        meta={meta}
-        stats={getClientHeaderStats(clientId)}
+        plans={getClientHeaderPlans(clientId)}
         messageHref={`/admin?client=${clientId}&tab=chat`}
       />
       <SectionTabs sections={sections} initialId={initialTab} />
