@@ -364,19 +364,6 @@ type ClientReport = {
   opened_at: string | null;
 };
 
-// Coach-wide app branding — one row for the whole app (no multi-tenant
-// "coach" entity exists yet, just clients), covering the logo shown in both
-// the admin and client headers and a couple of brand colors. Colors are
-// deliberately narrow (just accent + frame) rather than the whole palette —
-// letting a coach recolor every semantic color (warnings, success, etc.)
-// risks unreadable combinations for what's a cosmetic ask.
-type Branding = {
-  logo_path: string | null;
-  color_primary: string | null;
-  // Shown beside the mark in the admin sidebar. There's no coach entity yet
-  // (one coach, one app), so this lives on branding with the logo and colour.
-  coach_name?: string | null;
-};
 
 // Per-client Settings preferences. No row means defaults (see
 // DEFAULT_CLIENT_PREFERENCES in queries.ts) — only written once the client
@@ -420,7 +407,6 @@ type Data = {
   report_templates: ReportTemplate[];
   report_template_sections: ReportTemplateSection[];
   client_reports: ClientReport[];
-  branding: Branding;
   training_programs: TrainingProgram[];
   client_preferences: ClientPreferences[];
   _seq: Record<string, number>;
@@ -429,7 +415,6 @@ type Data = {
 function emptyData(): Data {
   return {
     clients: [],
-    branding: { logo_path: null, color_primary: null, coach_name: null },
     training_programs: [],
     client_preferences: [],
     exercises: [],

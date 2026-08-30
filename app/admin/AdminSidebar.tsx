@@ -1,26 +1,15 @@
 import Link from "next/link";
 import { createClientAction } from "../lib/actions";
-import { clientsNeedingAttention, getBranding, getMeetingConflicts, listClients } from "../lib/queries";
-import { CalendarIcon, FeedIcon, PaletteIcon, ReportIcon } from "../components/icons";
+import { clientsNeedingAttention, getMeetingConflicts, listClients } from "../lib/queries";
+import { CalendarIcon, FeedIcon, ReportIcon } from "../components/icons";
 
-export type AdminView = "feed" | "calendar" | "report-templates" | "branding" | "client";
+export type AdminView = "feed" | "calendar" | "report-templates" | "client";
 
 const NAV: { id: AdminView; label: string; href: string; icon: React.ReactNode }[] = [
   { id: "feed", label: "Feed", href: "/admin?view=feed", icon: <FeedIcon /> },
   { id: "calendar", label: "Calendar", href: "/admin?view=calendar", icon: <CalendarIcon /> },
   { id: "report-templates", label: "Report templates", href: "/admin?view=report-templates", icon: <ReportIcon /> },
-  { id: "branding", label: "Branding", href: "/admin?view=branding", icon: <PaletteIcon /> },
 ];
-
-// Initials for the brand mark. Two letters from the coach's name where
-// there are two words, otherwise the first two characters — and "IL" when
-// no name is set yet, rather than a blank square.
-function initialsFor(name: string | null | undefined) {
-  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "IL";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[1][0]).toUpperCase();
-}
 
 export default function AdminSidebar({
   selectedId,
@@ -31,20 +20,14 @@ export default function AdminSidebar({
 }) {
   const clients = listClients();
   const conflictCount = getMeetingConflicts().length;
-  const branding = getBranding();
   const needsAttention = clientsNeedingAttention();
 
   return (
     <>
       <div className="ad-brand">
-        {branding.logo_path ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={branding.logo_path} alt="" className="ad-brand-logo" />
-        ) : (
-          <span className="ad-brand-mark">{initialsFor(branding.coach_name)}</span>
-        )}
+        <span className="ad-brand-mark">FP</span>
         <div className="ad-brand-text">
-          <div className="ad-brand-name">{branding.coach_name || "Ironline"}</div>
+          <div className="ad-brand-name">Full Potential</div>
           <div className="ad-brand-sub">Coach workstation</div>
         </div>
       </div>

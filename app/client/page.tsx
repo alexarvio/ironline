@@ -1,6 +1,5 @@
 import {
   getAssignmentsForDay,
-  getBranding,
   getClient,
   getClientProfile,
   getDeployedProgram,
@@ -996,7 +995,6 @@ export default function ClientPage() {
       notificationsContent={<NotificationsPanel />}
       hasCoachUpdate={hasCoachUpdate}
       hasUnreadNotifications={hasUnreadNotifications}
-      logoUrl={getBranding().logo_path}
       clientId={CLIENT_ID}
       checkIn={checkIn}
     />

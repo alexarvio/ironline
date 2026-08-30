@@ -1825,13 +1825,8 @@ export function savePhotoUpload(clientId: number, slotId: number, buffer: Buffer
   return publicPath;
 }
 
-// ---- Branding: coach-wide logo + accent colors ----
 
-export type Branding = { logo_path: string | null; color_primary: string | null; coach_name?: string | null };
 
-export function getBranding(): Branding {
-  return getData().branding;
-}
 
 // ---- Client Settings preferences ----
 
@@ -1885,76 +1880,10 @@ export function setClientUnits(clientId: number, units: "metric" | "imperial") {
   persist();
 }
 
-const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 
-// Empty string clears the override (falls back to the built-in default);
-// anything else must be a valid 6-digit hex or it's silently ignored rather
-// than saving a value that'd break the CSS custom property.
-export function saveCoachName(name: string) {
-  const data = getData();
-  data.branding.coach_name = name.trim() || null;
-  persist();
-}
 
-export function saveBrandingColors(colorPrimary: string) {
-  const data = getData();
-  if (colorPrimary === "") data.branding.color_primary = null;
-  else if (HEX_COLOR_RE.test(colorPrimary)) data.branding.color_primary = colorPrimary;
-  persist();
-}
 
-// Same "write to DATA_DIR/uploads" pattern as savePhotoUpload, but a single
-// slot rather than per-client/per-period — replaces the old file on every
-// upload so we don't accumulate old logos, and stamps the public path with
-// the upload time so browsers/CDNs don't keep serving a cached old logo from
-// the same URL.
-export function saveBrandingLogo(buffer: Buffer, mimeType: string): string {
-  const dir = path.join(DATA_DIR, "uploads", "branding");
-  fs.mkdirSync(dir, { recursive: true });
-  const ext = (mimeType.split("/")[1] || "png").replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "png";
 
-  const data = getData();
-  const previous = data.branding.logo_path;
-  const filename = `logo.${ext}`;
-  fs.writeFileSync(path.join(dir, filename), buffer);
-  const stamp = Date.now();
-  const publicPath = `/uploads/branding/${filename}?v=${stamp}`;
-
-  // Clean up a stale file left over from a previous upload with a different
-  // extension (e.g. swapping a .png logo for a .webp one).
-  if (previous) {
-    const prevFilename = previous.split("?")[0].split("/").pop();
-    if (prevFilename && prevFilename !== filename) {
-      try {
-        fs.unlinkSync(path.join(dir, prevFilename));
-      } catch {
-        // already gone — fine
-      }
-    }
-  }
-
-  data.branding.logo_path = publicPath;
-  persist();
-  return publicPath;
-}
-
-export function removeBrandingLogo() {
-  const data = getData();
-  const previous = data.branding.logo_path;
-  if (previous) {
-    const dir = path.join(DATA_DIR, "uploads", "branding");
-    const prevFilename = previous.split("?")[0].split("/").pop();
-    if (prevFilename) {
-      try {
-        fs.unlinkSync(path.join(dir, prevFilename));
-      } catch {
-        // already gone — fine
-      }
-    }
-  }
-  data.branding.logo_path = null;
-  persist();
-}
 
 // Real data: daily training "volume" (sum of weight x reps across logged sets)
 // as a first-pass stand-in for a strength trend, until a real formula is defined.
@@ -2704,12 +2633,33 @@ export function getClientHeaderStats(clientId: number): HeaderStat[] {
   return stats;
 }
 
+// Four figures and a unit is as wide as a rail column gets before the grid
+// stops lining up, so a step count reads "9.1 k" rather than "9111 steps" —
+// the label above it already says which metric it is.
+function compactValue(value: number, unit: string): { value: string; unit: string } {
+  if (Math.abs(value) >= 1000) return { value: (value / 1000).toFixed(1), unit: "k" };
+  return { value: String(value), unit };
+}
+
 export function getLatestCheckInSnapshot(clientId: number): CheckInSnapshot {
   const metrics: CheckInSnapshotMetric[] = [];
   let latest: string | null = null;
   const noteDate = (d: string) => {
     if (!latest || d > latest) latest = d;
   };
+
+  // Measurements lead — weight is the number a coach looks for first.
+  const fields = listMeasurementFields(clientId).filter(deployedToClient);
+  const values = getMeasurementValues(fields.map((f) => f.id));
+  for (const field of fields) {
+    const last = values
+      .filter((v) => v.field_id === field.id && v.value != null)
+      .sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+    if (!last) continue;
+    noteDate(last.date);
+    const c = compactValue(last.value as number, field.unit);
+    metrics.push({ id: `f${field.id}`, name: field.name, value: c.value, unit: c.unit });
+  }
 
   const defs = [
     ...listMetricDefinitions(clientId, "daily"),
@@ -2723,23 +2673,10 @@ export function getLatestCheckInSnapshot(clientId: number): CheckInSnapshot {
     if (!last) continue;
     noteDate(last.period);
     const scaleMax = ratingScaleMax(def.unit);
-    metrics.push({
-      id: `m${def.id}`,
-      name: def.name,
-      value: String(last.value),
-      unit: scaleMax ? `/${scaleMax}` : def.unit,
-    });
-  }
-
-  const fields = listMeasurementFields(clientId).filter(deployedToClient);
-  const values = getMeasurementValues(fields.map((f) => f.id));
-  for (const field of fields) {
-    const last = values
-      .filter((v) => v.field_id === field.id && v.value != null)
-      .sort((a, b) => (a.date < b.date ? 1 : -1))[0];
-    if (!last) continue;
-    noteDate(last.date);
-    metrics.push({ id: `f${field.id}`, name: field.name, value: String(last.value), unit: field.unit });
+    const c = scaleMax
+      ? { value: String(last.value), unit: `/${scaleMax}` }
+      : compactValue(last.value as number, def.unit);
+    metrics.push({ id: `m${def.id}`, name: def.name, value: c.value, unit: c.unit });
   }
 
   return {

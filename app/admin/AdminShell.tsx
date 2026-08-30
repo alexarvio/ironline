@@ -13,7 +13,7 @@ export default function AdminShell({
   sidebar: ReactNode;
   children: ReactNode;
   // Client context. Views with no client selected (Feed, Calendar, Report
-  // templates, Branding) pass nothing and the shell collapses to two columns.
+  // templates) pass nothing and the shell collapses to two columns.
   rail?: ReactNode;
 }) {
   return (

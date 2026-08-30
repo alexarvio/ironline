@@ -20,7 +20,6 @@ export default function AppShell({
   notificationsContent,
   hasCoachUpdate,
   hasUnreadNotifications,
-  logoUrl,
   clientId,
   checkIn,
 }: {
@@ -30,7 +29,6 @@ export default function AppShell({
   notificationsContent: ReactNode;
   hasCoachUpdate?: boolean;
   hasUnreadNotifications?: boolean;
-  logoUrl?: string | null;
   clientId: number;
   checkIn: CheckInProps;
 }) {
@@ -122,12 +120,7 @@ export default function AppShell({
     <div className="phone-frame">
       <div className="app-screen">
         <header className="app-header dark">
-          {logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt="" className="app-header-brand-img" />
-          ) : (
-            <span className="app-header-brand">Ironline</span>
-          )}
+          <span className="app-header-brand">Ironline</span>
           <div className="app-header-actions">
             <button type="button" className="app-header-icon-btn" onClick={() => setPushView("chat")} aria-label={`Chat with ${clientName || "your coach"}`}>
               <ChatIcon />

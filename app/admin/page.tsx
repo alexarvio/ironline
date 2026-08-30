@@ -5,7 +5,6 @@ import ClientHeader from "./ClientHeader";
 import ClientRail from "./ClientRail";
 import FeedPanel from "./FeedPanel";
 import SectionTabs, { TabSection } from "./SectionTabs";
-import BrandingPanel from "./BrandingPanel";
 import InvoicesPanel from "./InvoicesPanel";
 import MeasurementsPanel from "./MeasurementsPanel";
 import MeetingsPanel from "./MeetingsPanel";
@@ -34,8 +33,7 @@ export default async function AdminPage({
   const showFeed = params.view === "feed";
   const showCalendar = params.view === "calendar";
   const showReportTemplates = params.view === "report-templates";
-  const showBranding = params.view === "branding";
-  const isClientView = !showFeed && !showCalendar && !showReportTemplates && !showBranding;
+  const isClientView = !showFeed && !showCalendar && !showReportTemplates;
   const selectedId = params.client ? Number(params.client) : isClientView ? clients[0]?.id ?? null : null;
   const client = selectedId ? getClient(selectedId) : undefined;
 
@@ -45,8 +43,6 @@ export default async function AdminPage({
     ? "calendar"
     : showReportTemplates
     ? "report-templates"
-    : showBranding
-    ? "branding"
     : "client";
 
   return (
@@ -65,10 +61,6 @@ export default async function AdminPage({
       ) : showReportTemplates ? (
         <div className="ad-pad">
           <ReportTemplatesPanel />
-        </div>
-      ) : showBranding ? (
-        <div className="ad-pad">
-          <BrandingPanel />
         </div>
       ) : !client ? (
         <div className="ad-pad">

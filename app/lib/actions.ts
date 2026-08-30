@@ -60,10 +60,6 @@ import {
   removePhotoSlot,
   removeSkinfoldEntry,
   saveClientProfile,
-  removeBrandingLogo,
-  saveBrandingColors,
-  saveCoachName,
-  saveBrandingLogo,
   saveNutritionPlan,
   savePhotoPeriodNote,
   savePhotoUpload,
@@ -568,30 +564,6 @@ export async function uploadProgressPhotoAction(formData: FormData) {
   savePhotoUpload(clientId, slotId, buffer, file.type || "image/jpeg");
   revalidatePath("/admin");
   revalidatePath("/client");
-}
-
-export async function uploadBrandingLogoAction(formData: FormData) {
-  const file = formData.get("file") as File | null;
-  if (!file || file.size === 0) return;
-  const buffer = Buffer.from(await file.arrayBuffer());
-  saveBrandingLogo(buffer, file.type || "image/png");
-  revalidatePath("/", "layout");
-}
-
-export async function removeBrandingLogoAction() {
-  removeBrandingLogo();
-  revalidatePath("/", "layout");
-}
-
-export async function saveCoachNameAction(formData: FormData) {
-  saveCoachName(String(formData.get("coachName") || ""));
-  revalidatePath("/", "layout");
-}
-
-export async function saveBrandingColorsAction(formData: FormData) {
-  const colorPrimary = String(formData.get("colorPrimary") || "");
-  saveBrandingColors(colorPrimary);
-  revalidatePath("/", "layout");
 }
 
 export async function saveNutritionPlanAction(formData: FormData) {

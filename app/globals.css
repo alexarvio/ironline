@@ -15,12 +15,8 @@
   --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 
   /* ---- Client app (/client) dark theme ----
-     Surfaces are fixed — only the accent follows the coach's brand. Both
-     accent vars are overridden per-coach from the root layout (see
-     pickAccentOnDark in lib/branding.ts); these defaults are Full Potential's
-     lime, i.e. what the screens look like with no brand color set.
-     --fp-warn is semantic (a metric moving the wrong way, destructive
-     actions), NOT brand-driven, so it stays constant across coaches. */
+     Fixed, like the admin palette above. These are the values the client
+     designs were drawn in; nothing overrides them at runtime any more. */
   --fp-accent: #d6ff3f;
   --fp-accent-fg: #0e0e0c;
   --fp-surface: #0e0e0c;
@@ -6853,15 +6849,23 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   color: var(--steel);
 }
 
+/* A fixed three-column grid rather than a wrap, so every row of metrics
+   lines up down the rail no matter how wide any one value renders. */
 .pb-rail-metrics {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 18px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 10px;
   margin-top: 8px;
 }
 
 .pb-rail-metric {
-  min-width: 56px;
+  min-width: 0;
+}
+
+.pb-rail-metric-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pb-rail-metric-name {

@@ -1,13 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { applyDueClientReminders, applyDueProgramDeployments, getBranding } from "./lib/queries";
-import {
-  DEFAULT_BRAND_PRIMARY,
-  DEFAULT_CLIENT_ACCENT,
-  pickAccentOnDark,
-  pickForegroundColor,
-  pickTextSafeColor,
-} from "./lib/branding";
+import { applyDueClientReminders, applyDueProgramDeployments } from "./lib/queries";
 
 export const metadata: Metadata = {
   title: "Ironline",
@@ -21,42 +14,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   applyDueProgramDeployments();
   applyDueClientReminders();
 
-  const branding = getBranding();
-  const primary = branding.color_primary ?? DEFAULT_BRAND_PRIMARY;
-  // Coach-chosen brand colors, applied as a root-level override of the CSS
-  // custom properties they're allowed to touch — --accent (fills: buttons,
-  // avatars, active pills), --accent-fg (text/icons ON TOP of an --accent
-  // fill, picked for contrast so a light accent like lime doesn't get
-  // unreadable white text), --accent-ink (the accent used AS text/icon/
-  // border color against the app's light surfaces — links, chart lines,
-  // badge text — darkened only as much as needed to stay legible), and the
-  // phone-frame bezel color behind the client app mockup. Injected here
-  // rather than per-page so every route (/, /admin, /client) picks it up
-  // from one place.
-  //
-  // The client app (/client) is a single dark theme whose surfaces are fixed;
-  // only the accent follows the coach's brand — --fp-accent (every highlight,
-  // fill, bar, chart line and active state on those screens) and
-  // --fp-accent-fg (text/icons ON TOP of an --fp-accent fill). The accent is
-  // lightened only as much as needed to stay readable on that dark surface,
-  // so a dark brand color can't disappear into the background.
-  const clientAccent = pickAccentOnDark(branding.color_primary ?? DEFAULT_CLIENT_ACCENT);
-  const colorOverrides = [
-    `--accent: ${primary};`,
-    `--accent-fg: ${pickForegroundColor(primary)};`,
-    `--accent-ink: ${pickTextSafeColor(primary)};`,
-    `--fp-accent: ${clientAccent};`,
-    `--fp-accent-fg: ${pickForegroundColor(clientAccent)};`,
-  ]
-    .filter(Boolean)
-    .join(" ");
-
+  // Colours are fixed to the design's palette (see the tokens at the top of
+  // globals.css) rather than injected per coach. Coach-configurable branding
+  // is deliberately out for now: one moving accent was enough to make both
+  // apps drift away from the files they were drawn from.
   return (
     <html lang="en">
-      <body>
-        {colorOverrides && <style>{`:root { ${colorOverrides} }`}</style>}
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
