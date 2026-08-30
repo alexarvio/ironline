@@ -37,11 +37,6 @@ export default function AppShell({
   // home" works from a sub-view like Photos or Tracker.
   const [navResetKey, setNavResetKey] = useState(0);
   const active = tabs.find((t) => t.id === activeId) ?? tabs[0];
-  // Home's redesign is dark (Full Potential branding); Training/Nutrition/
-  // Settings haven't been redesigned yet and stay on the original light
-  // theme, so the shared header/nav only go dark while Home is the active
-  // tab rather than app-wide.
-  const isHomeActive = activeId === "home";
 
   if (pushView) {
     const isChat = pushView === "chat";
@@ -75,7 +70,7 @@ export default function AppShell({
   return (
     <div className="phone-frame">
       <div className="app-screen">
-        <header className={`app-header${isHomeActive ? " dark" : ""}`}>
+        <header className="app-header dark">
           {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={logoUrl} alt="" className="app-header-brand-img" />
@@ -94,13 +89,13 @@ export default function AppShell({
           </div>
         </header>
 
-        <main className={`app-content${isHomeActive ? " dark" : ""}`} key={`${activeId}-${navResetKey}`}>
+        <main className="app-content dark" key={`${activeId}-${navResetKey}`}>
           {active?.content}
         </main>
 
         {active?.footer && <div className="app-sticky-footer">{active.footer}</div>}
 
-        <nav className={`app-bottom-nav${isHomeActive ? " dark" : ""}`}>
+        <nav className="app-bottom-nav dark">
           {tabs.map((t) => (
             <button
               key={t.id}

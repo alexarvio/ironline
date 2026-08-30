@@ -354,6 +354,18 @@ type Branding = {
   color_frame: string | null;
 };
 
+// Per-client Settings preferences. No row means defaults (see
+// DEFAULT_CLIENT_PREFERENCES in queries.ts) — only written once the client
+// actually changes something, same "no row = default" pattern as the rest
+// of this coach-configurable-fields file.
+type ClientPreferences = {
+  client_id: number;
+  coach_notes: boolean;
+  checkin_reminders: boolean;
+  weekly_digest: boolean;
+  units: "metric" | "imperial";
+};
+
 type Data = {
   clients: Client[];
   exercises: Exercise[];
@@ -386,6 +398,7 @@ type Data = {
   client_reports: ClientReport[];
   branding: Branding;
   training_programs: TrainingProgram[];
+  client_preferences: ClientPreferences[];
   _seq: Record<string, number>;
 };
 
@@ -394,6 +407,7 @@ function emptyData(): Data {
     clients: [],
     branding: { logo_path: null, color_primary: null, color_frame: null },
     training_programs: [],
+    client_preferences: [],
     exercises: [],
     program_days: [],
     workout_assignments: [],

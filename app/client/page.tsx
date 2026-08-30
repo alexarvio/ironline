@@ -6,11 +6,13 @@ import {
   getDeployedProgram,
   getLogsForAssignment,
   getCurrentWeekNumber,
+  getClientPreferences,
   getDueItems,
   getLatestSentReport,
   getMetricSeries,
   getPinnedMetricsSummary,
   getWeightSeries,
+  listClientReports,
   listPublishedWeekNumbers,
   getNotifications,
   getNutritionGoalsSummary,
@@ -45,11 +47,28 @@ import CheckInForm from "./CheckInForm";
 import TrackerLogForm from "./TrackerLogForm";
 import HomeHub, { DueItem, HomeReport, HubSubTab, UpcomingMeeting } from "./HomeHub";
 import { TrendMetric } from "./TrendCarousel";
+import NutritionDayToggle, { NutritionTargetSet } from "./NutritionDayToggle";
+import ReportArchiveList, { ArchiveReport } from "./ReportArchiveList";
 import ClientWeekSwitcher from "./ClientWeekSwitcher";
 import ChatComposeForm from "../components/ChatComposeForm";
 import AppShell, { AppTab } from "./AppShell";
-import { AppleIcon, CalendarIcon, ChatIcon, ClockIcon, DumbbellIcon, GearIcon, HomeIcon, ReportIcon } from "../components/icons";
-import { markAllNotificationsReadAction, markNotificationReadAction } from "../lib/actions";
+import {
+  AppleIcon,
+  ArrowRightIcon,
+  CalendarIcon,
+  ChatIcon,
+  ClockIcon,
+  DumbbellIcon,
+  GearIcon,
+  HomeIcon,
+  ReportIcon,
+} from "../components/icons";
+import {
+  markAllNotificationsReadAction,
+  markNotificationReadAction,
+  setClientPreferenceAction,
+  setClientUnitsAction,
+} from "../lib/actions";
 
 // Reads live from the JSON store on every request — without this, Next
 // statically prerenders this page at build time (before any real data
@@ -65,6 +84,45 @@ const PERIOD_UNIT = {
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const CLIENT_ID = 3;
+
+const fmtShortDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+// Shared by Home's report card and Settings' report archive — a sent
+// report's sections_snapshot parsed, plus up to 3 stat deltas derived from
+// whichever sections it actually has. No domain knowledge of which
+// direction is "good" for a coach-defined metric, so deltas render neutral
+// (both Home and Settings) rather than guessing.
+type ReportSection = {
+  label: string;
+  series?: { date: string; value: number }[];
+  seriesByField?: Record<string, { unit: string; points: { date: string; value: number }[] }>;
+};
+
+function parseReportSections(snapshot: string): ReportSection[] {
+  try {
+    return JSON.parse(snapshot);
+  } catch {
+    return [];
+  }
+}
+
+function deriveReportStats(sections: ReportSection[]): { label: string; value: string }[] {
+  const stats: { label: string; value: string }[] = [];
+  for (const s of sections) {
+    if (stats.length >= 3) break;
+    if (s.series && s.series.length >= 2) {
+      const delta = s.series[s.series.length - 1].value - s.series[0].value;
+      stats.push({ label: s.label, value: `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}` });
+    } else if (s.seriesByField) {
+      for (const [field, { points, unit }] of Object.entries(s.seriesByField)) {
+        if (stats.length >= 3 || points.length < 2) continue;
+        const delta = points[points.length - 1].value - points[0].value;
+        stats.push({ label: field, value: `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}${unit ? ` ${unit}` : ""}` });
+      }
+    }
+  }
+  return stats;
+}
 
 function getWeekDays(week?: number) {
   // Auto-advances the moment a week the coach has already deployed starts —
@@ -145,20 +203,7 @@ function HomeTab() {
 
   const dueItems: DueItem[] = getDueItems(CLIENT_ID);
 
-  // ---- Coach notes: coach chat messages, same feed the Notifications
-  // screen shows (kind "coach_note"), filtered down to just those so Home
-  // reads as "what has my coach said about my work", not a full inbox —
-  // the chat itself lives solely behind the header's chat icon now. ----
-  const coachNotes = getNotifications(CLIENT_ID)
-    .filter((n) => n.kind === "coach_note")
-    .slice(0, 5)
-    .map((n) => ({
-      id: n.id,
-      context: "Coach note",
-      timeLabel: notificationTimeLabel(n.created_at),
-      text: n.message,
-      unread: !n.read,
-    }));
+  const coachNotes = coachNotesFor(5);
 
   // One swipeable carousel of trend panels: Weight plus whatever the coach
   // has pinned (that pin toggle lives in the admin Tracker tabs only — "any
@@ -209,34 +254,12 @@ function HomeTab() {
 
   // ---- Progress report card: collapsed headline until "Read report", plus
   // up to 3 stat deltas and one trend chart pulled from whichever sections
-  // the report actually has (no domain knowledge of which are "good" for a
-  // coach-defined metric, so deltas render neutral rather than guessing). ----
+  // the report actually has. ----
   const sentReport = getLatestSentReport(CLIENT_ID);
-  const fmtShortDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   let report: HomeReport | null = null;
   if (sentReport) {
-    type Section = { label: string; series?: { date: string; value: number }[]; seriesByField?: Record<string, { unit: string; points: { date: string; value: number }[] }> };
-    const sections: Section[] = (() => {
-      try {
-        return JSON.parse(sentReport.sections_snapshot);
-      } catch {
-        return [];
-      }
-    })();
-    const stats: { label: string; value: string }[] = [];
-    for (const s of sections) {
-      if (stats.length >= 3) break;
-      if (s.series && s.series.length >= 2) {
-        const delta = s.series[s.series.length - 1].value - s.series[0].value;
-        stats.push({ label: s.label, value: `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}` });
-      } else if (s.seriesByField) {
-        for (const [field, { points, unit }] of Object.entries(s.seriesByField)) {
-          if (stats.length >= 3 || points.length < 2) continue;
-          const delta = points[points.length - 1].value - points[0].value;
-          stats.push({ label: field, value: `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}${unit ? ` ${unit}` : ""}` });
-        }
-      }
-    }
+    const sections = parseReportSections(sentReport.sections_snapshot);
+    const stats = deriveReportStats(sections);
     const chartSection = sections.find((s) => s.series && s.series.length >= 2);
     const summary = sentReport.summary || "";
     const firstSentence = summary.match(/^.*?[.!?](?=\s|$)/)?.[0];
@@ -470,12 +493,37 @@ function NutritionTab() {
   })();
   const todayDay = getWeekDays().find((d) => d.day.day_of_week === dow);
   const isTrainingDay = !!todayDay && todayDay.assignments.length > 0;
+  const dateLabel = new Date(`${today}T00:00:00`).toLocaleDateString("en-US", { weekday: "long" });
 
-  const kcal = isTrainingDay ? summary.trainingKcal : summary.restKcal;
-  const protein = isTrainingDay ? summary.trainingProtein : summary.restProtein;
-  const carbs = isTrainingDay ? summary.trainingCarbs : summary.restCarbs;
-  const fats = isTrainingDay ? summary.trainingFats : summary.restFats;
-  const hasTargets = kcal > 0;
+  // Both day types' targets are computed up front (not just today's) so the
+  // Training day/Rest day toggle can switch between them client-side with no
+  // server round trip — see NutritionDayToggle.
+  const macroSet = (kcalTarget: number, protein: number, carbs: number, fats: number, caption: string): NutritionTargetSet => {
+    const macroKcal = protein * 4 + carbs * 4 + fats * 9;
+    const maxGrams = Math.max(protein, carbs, fats, 1);
+    const macro = (id: string, name: string, grams: number, kcalPerGram: number) => ({
+      id,
+      name,
+      grams,
+      barPct: Math.round((grams / maxGrams) * 100),
+      share: macroKcal > 0 ? `${Math.round(((grams * kcalPerGram) / macroKcal) * 100)}% of kcal` : "—",
+    });
+    return {
+      kcalLabel: kcalTarget.toLocaleString("en-US"),
+      caption,
+      macros: [macro("protein", "Protein", protein, 4), macro("carbs", "Carbs", carbs, 4), macro("fat", "Fat", fats, 9)],
+    };
+  };
+
+  const hasTargets = summary.trainingKcal > 0 || summary.restKcal > 0;
+  const training = macroSet(
+    summary.trainingKcal,
+    summary.trainingProtein,
+    summary.trainingCarbs,
+    summary.trainingFats,
+    "Training day targets"
+  );
+  const rest = macroSet(summary.restKcal, summary.restProtein, summary.restCarbs, summary.restFats, "Rest day targets");
 
   const supplementRows = SUPPLEMENT_ITEMS.map((item) => ({ item, entry: plan.supplements[slugify(item)] })).filter(
     (r) => r.entry?.quantity
@@ -483,77 +531,64 @@ function NutritionTab() {
   const vitaminRows = VITAMIN_ITEMS.map((item) => ({ item, entry: plan.vitamins[slugify(item)] })).filter(
     (r) => r.entry?.quantity
   );
+  const referenceRows = [...supplementRows, ...vitaminRows];
+  const coachNotes = coachNotesFor(3);
 
   return (
-    <div>
-      <p className="app-lead">
-        {isTrainingDay ? "Today's a training day — here are your targets." : "Today's a rest day — here are your targets."}
-      </p>
-
+    <div className="nutrition-dark">
       {!hasTargets ? (
         <p className="empty-note">Your coach hasn&rsquo;t set up nutrition targets yet.</p>
       ) : (
-        <div className="nutrition-target-card">
-          <div className="nutrition-target-kcal">{kcal} kcal</div>
-          <div className="nutrition-target-grid">
-            <div>
-              <div className="nutrition-target-label">Protein</div>
-              <div className="nutrition-target-value">{protein}g</div>
-            </div>
-            <div>
-              <div className="nutrition-target-label">Carbs</div>
-              <div className="nutrition-target-value">{carbs}g</div>
-            </div>
-            <div>
-              <div className="nutrition-target-label">Fat</div>
-              <div className="nutrition-target-value">{fats}g</div>
-            </div>
+        <NutritionDayToggle dateLabel={dateLabel} training={training} rest={rest} initialIsTraining={isTrainingDay} />
+      )}
+
+      {profile.water_goal && (
+        <div className="nd-water-row">
+          <span className="nd-water-label">Water goal</span>
+          <span className="nd-water-value">{profile.water_goal}</span>
+        </div>
+      )}
+
+      {referenceRows.length > 0 && (
+        <section className="home-dark-section">
+          <span className="home-dark-section-title">Supplements</span>
+          <div className="home-dark-rows">
+            {referenceRows.map(({ item, entry }) => (
+              <div key={item} className="nd-supp-row">
+                <div className="nd-supp-name">{item}</div>
+                <div className="nd-supp-detail">
+                  {entry!.quantity}
+                  {entry!.timing ? ` · ${entry!.timing}` : ""}
+                </div>
+              </div>
+            ))}
           </div>
-          {profile.water_goal && <div className="nutrition-target-water">Water: {profile.water_goal}</div>}
-        </div>
+        </section>
       )}
 
-      {plan.coach_notes && (
-        <div className="empty-note" style={{ marginTop: 14 }}>
-          &ldquo;{plan.coach_notes}&rdquo;
-        </div>
-      )}
-
-      <p className="empty-note" style={{ marginTop: 18 }}>
-        Logging your own meals/macros is coming soon — for now this shows the targets your coach set.
-      </p>
-
-      {(supplementRows.length > 0 || vitaminRows.length > 0) && (
-        <>
-          <h3 style={{ margin: "18px 0 10px" }}>Supplements & vitamins</h3>
-          {supplementRows.length > 0 && (
-            <div className="supplement-list" style={{ marginBottom: 10 }}>
-              {supplementRows.map(({ item, entry }) => (
-                <div key={item} className="supplement-row">
-                  <div className="supplement-row-name">{item}</div>
-                  <div className="supplement-row-detail">
-                    {entry!.quantity}
-                    {entry!.timing ? ` · ${entry!.timing}` : ""}
+      <section className="home-dark-section">
+        <span className="home-dark-section-title">Coach notes</span>
+        {coachNotes.length === 0 ? (
+          <p className="home-dark-empty">No notes yet.</p>
+        ) : (
+          <div className="home-dark-rows">
+            {coachNotes.map((n) => (
+              <div key={n.id} className="home-dark-note-row">
+                <span className={`home-dark-note-dot${n.unread ? " unread" : ""}`} aria-hidden="true" />
+                <div className="home-dark-row-body">
+                  <div className="home-dark-note-top">
+                    <span className="home-dark-note-context">{n.context}</span>
+                    <span className="home-dark-note-time">{n.timeLabel}</span>
                   </div>
+                  <div className="home-dark-note-text">{n.text}</div>
                 </div>
-              ))}
-            </div>
-          )}
-          {vitaminRows.length > 0 && (
-            <div className="supplement-list">
-              {vitaminRows.map(({ item, entry }) => (
-                <div key={item} className="supplement-row">
-                  <div className="supplement-row-name">{item}</div>
-                  <div className="supplement-row-detail">
-                    {entry!.quantity}
-                    {entry!.timing ? ` · ${entry!.timing}` : ""}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <div className="nd-footnote">Meal logging isn&rsquo;t on yet — your coach sets the targets, you hit them.</div>
     </div>
   );
 }
@@ -561,62 +596,147 @@ function NutritionTab() {
 function SettingsTab() {
   const client = getClient(CLIENT_ID);
   const profile = getClientProfile(CLIENT_ID);
+  const prefs = getClientPreferences(CLIENT_ID);
+
+  const weeksInLabel = (() => {
+    if (!profile.coaching_start_date) return null;
+    const weeks = Math.floor(
+      (new Date(`${localDateStr()}T00:00:00`).getTime() - new Date(`${profile.coaching_start_date}T00:00:00`).getTime()) /
+        (7 * 86400000)
+    );
+    return weeks >= 0 ? `${weeks} week${weeks === 1 ? "" : "s"} in` : null;
+  })();
+
+  const sentReports = listClientReports(CLIENT_ID).filter((r) => r.status === "sent");
+  const reports: ArchiveReport[] = sentReports.map((r) => {
+    const sections = parseReportSections(r.sections_snapshot);
+    const summary = r.summary || "";
+    const firstSentence = summary.match(/^.*?[.!?](?=\s|$)/)?.[0];
+    return {
+      id: r.id,
+      period: `${fmtShortDate(r.period_start)} – ${fmtShortDate(r.period_end)}`,
+      summary: firstSentence || summary,
+      body: summary,
+      isNew: r.archived_at == null,
+      stats: deriveReportStats(sections),
+    };
+  });
+
+  const toggleDefs: { key: "coach_notes" | "checkin_reminders" | "weekly_digest"; label: string; detail: string }[] = [
+    { key: "coach_notes", label: "Coach notes", detail: "Log a note when your coach comments on your work" },
+    { key: "checkin_reminders", label: "Check-in reminders", detail: "Nudge when a tracker, measurement or photo is due" },
+    { key: "weekly_digest", label: "Weekly summary", detail: "Sunday recap of your week (coming soon)" },
+  ];
 
   return (
-    <div>
-      <div className="settings-profile-row">
-        <div className="settings-avatar">{(client?.name ?? "?").charAt(0)}</div>
-        <div>
-          <div className="settings-profile-name">{client?.name}</div>
-          <div className="settings-profile-sub">
-            {profile.coaching_start_date ? `Coaching since ${profile.coaching_start_date}` : "Profile"}
-          </div>
-        </div>
+    <div className="settings-dark">
+      <div className="home-dark-datebar">Your account</div>
+      <div className="home-dark-name">{client?.name}</div>
+      <div className="home-dark-subrow">
+        {profile.coaching_start_date && (
+          <span className="home-dark-sub">Client since {fmtShortDate(profile.coaching_start_date)}</span>
+        )}
+        {weeksInLabel && <span className="home-dark-goal">{weeksInLabel}</span>}
       </div>
 
-      <h3 style={{ margin: "20px 0 10px" }}>Account</h3>
-      <div className="settings-group">
-        <div className="settings-row">
-          <div>
-            <div className="settings-row-title">Notifications</div>
-            <div className="settings-row-sub">Reminders and coach messages</div>
-          </div>
-          <span className="settings-toggle settings-toggle-on" aria-hidden="true">
-            <span className="settings-toggle-knob" />
-          </span>
-        </div>
-        <div className="settings-row">
-          <div className="settings-row-title">Units</div>
-          <span className="settings-row-value">kg, cm ›</span>
-        </div>
-        <div className="settings-row">
-          <div className="settings-row-title">Privacy & data</div>
-          <span className="settings-row-value">›</span>
-        </div>
-      </div>
+      <div className="home-dark-hr" />
 
-      <h3 style={{ margin: "20px 0 10px" }}>Connected apps</h3>
-      <div className="settings-group">
-        <div className="settings-row">
-          <div>
-            <div className="settings-row-title">Apple Health</div>
-            <div className="settings-row-sub">Auto-log steps, weight & workouts</div>
-          </div>
-          <span className="settings-row-value">Connect</span>
+      <section className="home-dark-section" style={{ paddingTop: 18 }}>
+        <div className="home-dark-section-head">
+          <span className="home-dark-section-title">Progress reports</span>
+          {reports.length > 0 && <span className="home-dark-section-count">{reports.length} saved</span>}
         </div>
-        <div className="settings-row">
-          <div>
-            <div className="settings-row-title">Google Fit / Health Connect</div>
-            <div className="settings-row-sub">Auto-log steps, weight & workouts</div>
+        {reports.length === 0 ? (
+          <p className="home-dark-empty">No reports sent yet.</p>
+        ) : (
+          <ReportArchiveList reports={reports} />
+        )}
+      </section>
+
+      <section className="home-dark-section">
+        <span className="home-dark-section-title">Preferences</span>
+        <div className="home-dark-rows">
+          {toggleDefs.map((t) => {
+            const on = prefs[t.key];
+            return (
+              <form key={t.key} action={setClientPreferenceAction}>
+                <input type="hidden" name="clientId" value={CLIENT_ID} />
+                <input type="hidden" name="key" value={t.key} />
+                <input type="hidden" name="value" value={(!on).toString()} />
+                <button type="submit" className="settings-toggle-row">
+                  <div className="home-dark-row-body">
+                    <div className="home-dark-row-title">{t.label}</div>
+                    <div className="home-dark-row-detail">{t.detail}</div>
+                  </div>
+                  <span className={`settings-switch${on ? " on" : ""}`} aria-hidden="true">
+                    <span className="settings-switch-knob" />
+                  </span>
+                </button>
+              </form>
+            );
+          })}
+          <div className="settings-units-row">
+            <div className="home-dark-row-title">Units</div>
+            <div className="settings-units-options">
+              {(["metric", "imperial"] as const).map((u) => (
+                <form key={u} action={setClientUnitsAction}>
+                  <input type="hidden" name="clientId" value={CLIENT_ID} />
+                  <input type="hidden" name="units" value={u} />
+                  <button type="submit" className={`settings-unit-btn${prefs.units === u ? " active" : ""}`}>
+                    {u === "metric" ? "kg · cm" : "lb · in"}
+                  </button>
+                </form>
+              ))}
+            </div>
           </div>
-          <span className="settings-row-value">Connect</span>
         </div>
-      </div>
-      <p className="empty-note" style={{ marginTop: 8 }}>Requires the Ironline mobile app — not available on web.</p>
+      </section>
+
+      <section className="home-dark-section">
+        <span className="home-dark-section-title">Connected apps</span>
+        <div className="home-dark-rows">
+          <div className="settings-app-row">
+            <div className="home-dark-row-body">
+              <div className="home-dark-row-title">Apple Health</div>
+              <div className="home-dark-row-detail">Auto-log steps, weight & workouts</div>
+            </div>
+            <span className="settings-app-action">Connect</span>
+          </div>
+          <div className="settings-app-row">
+            <div className="home-dark-row-body">
+              <div className="home-dark-row-title">Health Connect</div>
+              <div className="home-dark-row-detail">Auto-log steps, weight & workouts</div>
+            </div>
+            <span className="settings-app-action">Connect</span>
+          </div>
+        </div>
+        <div className="home-dark-empty" style={{ marginTop: 12 }}>
+          Health syncing needs the Ironline mobile app — not available on web.
+        </div>
+      </section>
+
+      <section className="home-dark-section">
+        <span className="home-dark-section-title">Data</span>
+        <div className="home-dark-rows">
+          <div className="settings-data-row">
+            <div className="home-dark-row-title">Export my data</div>
+            <ArrowRightIcon />
+          </div>
+          <div className="settings-data-row">
+            <div className="home-dark-row-title">Privacy policy</div>
+            <ArrowRightIcon />
+          </div>
+          <div className="settings-data-row warn">
+            <div className="home-dark-row-title">Delete account</div>
+            <ArrowRightIcon />
+          </div>
+        </div>
+      </section>
 
       <button type="button" className="settings-logout-btn">
         Log out
       </button>
+      <div className="settings-footnote">Ironline · Full Potential Coaching</div>
     </div>
   );
 }
@@ -726,6 +846,22 @@ function notificationTimeLabel(iso: string) {
   return sameDay
     ? d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
     : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// Coach chat messages, same feed the Notifications screen shows (kind
+// "coach_note"), filtered down to just those so a tab reads as "what has my
+// coach said about my work" — shared by Home and Nutrition's "Coach notes".
+function coachNotesFor(limit: number) {
+  return getNotifications(CLIENT_ID)
+    .filter((n) => n.kind === "coach_note")
+    .slice(0, limit)
+    .map((n) => ({
+      id: n.id,
+      context: "Coach note",
+      timeLabel: notificationTimeLabel(n.created_at),
+      text: n.message,
+      unread: !n.read,
+    }));
 }
 
 // Notifications sub-view — grouped Today/Earlier, each row a self-submitting
@@ -877,12 +1013,14 @@ export default function ClientPage() {
       label: "Training",
       icon: <DumbbellIcon />,
       content: (
-        <ClientWeekSwitcher
-          weeks={trainingWeeks}
-          currentWeek={currentWeekNum}
-          contents={trainingWeekContents}
-          weekLabels={trainingWeekLabels}
-        />
+        <div className="training-dark">
+          <ClientWeekSwitcher
+            weeks={trainingWeeks}
+            currentWeek={currentWeekNum}
+            contents={trainingWeekContents}
+            weekLabels={trainingWeekLabels}
+          />
+        </div>
       ),
     },
     { id: "nutrition", label: "Nutrition", icon: <AppleIcon />, content: <NutritionTab /> },

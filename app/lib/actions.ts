@@ -69,6 +69,8 @@ import {
   savePhotoUpload,
   setAssignmentCustomValue,
   setClientGoalDone,
+  setClientPreference,
+  setClientUnits,
   setDayLabel,
   setInvoiceStatus,
   setMeasurementValue,
@@ -884,6 +886,23 @@ export async function deleteReportAction(formData: FormData) {
   const id = Number(formData.get("id"));
   deleteReport(id);
   revalidatePath("/admin");
+}
+
+export async function setClientPreferenceAction(formData: FormData) {
+  const clientId = Number(formData.get("clientId"));
+  const key = String(formData.get("key"));
+  if (key !== "coach_notes" && key !== "checkin_reminders" && key !== "weekly_digest") return;
+  const value = formData.get("value") === "true";
+  setClientPreference(clientId, key, value);
+  revalidatePath("/client");
+}
+
+export async function setClientUnitsAction(formData: FormData) {
+  const clientId = Number(formData.get("clientId"));
+  const units = String(formData.get("units"));
+  if (units !== "metric" && units !== "imperial") return;
+  setClientUnits(clientId, units);
+  revalidatePath("/client");
 }
 
 export async function archiveReportAction(formData: FormData) {

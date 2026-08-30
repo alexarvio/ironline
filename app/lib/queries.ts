@@ -424,6 +424,7 @@ export function applyDueClientReminders() {
   ]);
 
   clientIds.forEach((clientId) => {
+    if (!getClientPreferences(clientId).checkin_reminders) return;
     getDueItems(clientId).forEach((item) => {
       const periodKey =
         item.id === "weekly"
@@ -1772,6 +1773,58 @@ export function getBranding(): Branding {
   return getData().branding;
 }
 
+// ---- Client Settings preferences ----
+
+export type ClientPreferences = {
+  client_id: number;
+  coach_notes: boolean;
+  checkin_reminders: boolean;
+  weekly_digest: boolean;
+  units: "metric" | "imperial";
+};
+
+const DEFAULT_CLIENT_PREFERENCES: Omit<ClientPreferences, "client_id"> = {
+  coach_notes: true,
+  checkin_reminders: true,
+  weekly_digest: false,
+  units: "metric",
+};
+
+export function getClientPreferences(clientId: number): ClientPreferences {
+  const existing = getData().client_preferences.find((p) => p.client_id === clientId);
+  return existing ?? { client_id: clientId, ...DEFAULT_CLIENT_PREFERENCES };
+}
+
+function upsertClientPreferences(clientId: number): ClientPreferences {
+  const data = getData();
+  let row = data.client_preferences.find((p) => p.client_id === clientId);
+  if (!row) {
+    row = { client_id: clientId, ...DEFAULT_CLIENT_PREFERENCES };
+    data.client_preferences.push(row);
+  }
+  return row;
+}
+
+export function setClientPreference(
+  clientId: number,
+  key: "coach_notes" | "checkin_reminders" | "weekly_digest",
+  value: boolean
+) {
+  const row = upsertClientPreferences(clientId);
+  row[key] = value;
+  persist();
+}
+
+// Not yet wired to any display — every kg/cm value in the app still shows
+// the units it's stored in. Saved now so the preference survives once
+// each display surface adds the actual conversion, same as how a coach's
+// water_goal free text is a stated target before this app can track it.
+export function setClientUnits(clientId: number, units: "metric" | "imperial") {
+  const row = upsertClientPreferences(clientId);
+  row.units = units;
+  persist();
+}
+
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 
 // Empty string clears the override (falls back to the built-in default);
@@ -2389,7 +2442,7 @@ export function sendChatMessage(
     created_at: new Date().toISOString(),
   });
   persist();
-  if (sender === "coach") {
+  if (sender === "coach" && getClientPreferences(clientId).coach_notes) {
     const preview = text.length > 80 ? `${text.slice(0, 77)}…` : text;
     logCoachActivity(clientId, preview ? `Your coach sent you a message: "${preview}"` : "Your coach sent you a message", {
       kind: "coach_note",

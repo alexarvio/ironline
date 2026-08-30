@@ -2350,12 +2350,6 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   color: #8a8a80;
 }
 
-@media (max-width: 480px), (max-height: 760px) {
-  .cn-header {
-    padding: 18px 16px 14px;
-  }
-}
-
 /* ---- Home Dark (client only): the app shell's header/content/nav go dark
    only while the Home tab is active — Training/Nutrition/Settings haven't
    been redesigned yet and stay on the original light theme (see AppShell's
@@ -3012,6 +3006,367 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 .home-dark-goal-text {
   font-size: 0.9rem;
   color: #ffffff;
+}
+
+/* ---- Training (client only, dark): reuses the same real components
+   (TrainingDayCard/SetLogForm/ClientWeekSwitcher) — purely a visual reskin
+   via descendant overrides, scoped under .training-dark so admin's
+   ProgramBuilder (which shares .week-switcher/.toggle-btn) is untouched. */
+
+.training-dark {
+  color: #ffffff;
+}
+
+.training-dark .app-lead,
+.training-dark .empty-note {
+  color: #8a8a80;
+}
+
+.training-dark .week-switcher {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.training-dark .week-switcher::-webkit-scrollbar {
+  display: none;
+}
+
+.training-dark .week-switcher .toggle-btn {
+  flex: none;
+  border: 1px solid #2c2c26;
+  background: #151511;
+  color: #8a8a80;
+}
+
+.training-dark .week-switcher .toggle-btn.active {
+  background: #d6ff3f;
+  color: #0e0e0c;
+  border-color: #d6ff3f;
+}
+
+.training-dark .week-current-dot {
+  background: #d6ff3f;
+}
+
+.training-dark .week-switcher .toggle-btn.active .week-current-dot {
+  background: #0e0e0c;
+}
+
+.training-dark .week-progress-card {
+  border-color: #23231f;
+  background: #151511;
+}
+
+.training-dark .week-progress-label {
+  color: #8a8a80;
+}
+
+.training-dark .week-progress-value {
+  color: #ffffff;
+}
+
+.training-dark .week-progress-ring-inner {
+  background: #151511;
+  color: #ffffff;
+}
+
+.training-dark .training-day-card {
+  border-color: #23231f;
+  background: #151511;
+}
+
+.training-dark .training-day-card-toggle:hover {
+  background: #1c1c17;
+}
+
+.training-dark .training-day-card-name {
+  color: #ffffff;
+}
+
+.training-dark .training-day-card-label {
+  color: #8a8a80;
+}
+
+.training-dark .training-day-progress-pill {
+  color: #8a8a80;
+  background: #23231f;
+}
+
+.training-dark .training-day-progress-pill.done {
+  color: #0e0e0c;
+  background: #d6ff3f;
+}
+
+.training-dark .training-day-chevron {
+  color: #8a8a80;
+}
+
+.training-dark .training-day-card-body {
+  border-top-color: #23231f;
+}
+
+.training-dark .training-exercise-row {
+  border-top-color: #23231f;
+}
+
+.training-dark .training-exercise-row-top strong {
+  color: #ffffff;
+}
+
+.training-dark .training-exercise-target {
+  color: #8a8a80;
+}
+
+.training-dark .exercise-coach-note {
+  color: #8a8a80;
+}
+
+.training-dark .video-link {
+  color: #d6ff3f;
+}
+
+.training-dark .training-exercise-done {
+  color: #d6ff3f;
+}
+
+.training-dark .training-set-table th {
+  color: #8a8a80;
+}
+
+.training-dark .training-set-table td {
+  border-top-color: #23231f;
+  color: #ffffff;
+}
+
+.training-dark .training-set-cell-num {
+  color: #8a8a80;
+}
+
+.training-dark .training-goal-row td {
+  background: #191d0c;
+  color: #d6ff3f;
+}
+
+.training-dark .training-set-cell-action {
+  color: #d6ff3f;
+}
+
+.training-dark .training-set-table input {
+  border-color: #3a3a32;
+  background: #0e0e0c;
+  color: #ffffff;
+}
+
+.training-dark .training-set-table input::placeholder {
+  color: #6b6b62;
+}
+
+.training-dark .training-set-table input:focus {
+  outline: none;
+  border-color: #d6ff3f;
+}
+
+.training-dark .btn.btn-sm {
+  background: #d6ff3f;
+  color: #0e0e0c;
+  border: none;
+}
+
+.training-dark .btn.btn-sm:hover {
+  background: #ffffff;
+}
+
+/* ---- Nutrition (client only, dark) ---- */
+
+.nutrition-dark {
+  color: #ffffff;
+}
+
+.nutrition-dark .empty-note {
+  color: #8a8a80;
+}
+
+.nd-kicker {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a8a80;
+}
+
+.nd-kcal-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.nd-kcal {
+  font-family: var(--font-serif);
+  font-size: 3rem;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.nd-kcal-unit {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #8a8a80;
+}
+
+.nd-caption {
+  font-size: 0.74rem;
+  color: #8a8a80;
+  margin-top: 4px;
+}
+
+.nd-toggle-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.nd-toggle-btn {
+  flex: 1;
+  min-height: 44px;
+  border: 1px solid #3a3a32;
+  background: none;
+  color: #ffffff;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.nd-toggle-btn.active {
+  background: #d6ff3f;
+  border-color: #d6ff3f;
+  color: #0e0e0c;
+}
+
+.nd-hr {
+  height: 1px;
+  background: #23231f;
+  margin: 20px 0 16px;
+}
+
+.nd-macros {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.nd-macro {
+  flex: 1;
+  min-width: 0;
+}
+
+.nd-macro-label {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8a8a80;
+}
+
+.nd-macro-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.nd-macro-value {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.05;
+}
+
+.nd-macro-unit {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #8a8a80;
+}
+
+.nd-bar {
+  width: 100%;
+  height: 5px;
+  border-radius: 999px;
+  background: #23231f;
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.nd-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #d6ff3f;
+}
+
+.nd-macro-share {
+  font-size: 0.7rem;
+  color: #8a8a80;
+  margin-top: 8px;
+}
+
+.nd-water-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid #23231f;
+  margin-top: 22px;
+  padding-top: 14px;
+}
+
+.nd-water-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a8a80;
+}
+
+.nd-water-value {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.nd-supp-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid #23231f;
+  padding: 13px 0;
+}
+
+.nd-supp-name {
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.nd-supp-detail {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  color: #8a8a80;
+  text-align: right;
+}
+
+.nd-footnote {
+  border-top: 1px solid #23231f;
+  margin-top: 24px;
+  padding-top: 14px;
+  font-size: 0.76rem;
+  color: #8a8a80;
 }
 
 @media (max-width: 480px), (max-height: 760px) {
@@ -4840,128 +5195,227 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   text-align: right;
 }
 
-/* ---- Client Settings tab ---- */
+/* ---- Client Settings tab (dark) ---- */
 
-.settings-profile-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: white;
-  padding: 16px;
+.settings-dark {
+  color: #ffffff;
 }
 
-.settings-avatar {
-  flex-shrink: 0;
-  width: 48px;
-  height: 48px;
-  border-radius: 999px;
-  background: var(--accent);
-  color: var(--accent-fg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.1rem;
-  font-weight: 800;
-  font-family: var(--font-serif);
+.settings-dark .home-dark-empty {
+  margin-top: 0;
 }
 
-.settings-profile-name {
-  font-weight: 800;
-  font-size: 1rem;
-}
-
-.settings-profile-sub {
-  color: var(--steel);
-  font-size: 0.8rem;
-  margin-top: 2px;
-}
-
-.settings-group {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: white;
-  overflow: hidden;
-}
-
-.settings-row {
+.settings-report-row {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 13px 14px;
-  border-top: 1px solid var(--border);
-  font-size: 0.88rem;
+  gap: 12px;
+  text-align: left;
+  border: none;
+  border-top: 1px solid #23231f;
+  background: none;
+  padding: 13px 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  min-height: 44px;
 }
 
-.settings-row:first-child {
-  border-top: none;
+.settings-report-top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
 }
 
-.settings-row-title {
-  font-weight: 600;
+.settings-report-period {
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: #ffffff;
 }
 
-.settings-row-sub {
-  color: var(--steel);
+.settings-report-new {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #0e0e0c;
+  background: #d6ff3f;
+  border-radius: 999px;
+  padding: 2px 7px;
+}
+
+.settings-report-summary {
+  color: #8a8a80;
   font-size: 0.76rem;
   margin-top: 1px;
 }
 
-.settings-row-value {
+.settings-report-chevron {
   flex-shrink: 0;
-  color: var(--steel);
-  font-size: 0.82rem;
+  color: #8a8a80;
+  display: flex;
+  transition: transform 0.15s ease;
 }
 
-.settings-toggle {
+.settings-report-chevron.open {
+  transform: rotate(180deg);
+}
+
+.settings-report-body {
+  border-top: 1px solid #23231f;
+  padding: 14px 0;
+}
+
+.settings-report-text {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #c9c9bf;
+}
+
+.settings-toggle-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  border: none;
+  border-top: 1px solid #23231f;
+  background: none;
+  padding: 13px 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  min-height: 44px;
+}
+
+.settings-switch {
   flex-shrink: 0;
-  width: 40px;
-  height: 24px;
+  width: 44px;
+  height: 26px;
   border-radius: 999px;
-  background: var(--border);
+  background: #23231f;
   position: relative;
   display: inline-block;
+  transition: background 140ms;
 }
 
-.settings-toggle-on {
-  background: var(--accent);
+.settings-switch.on {
+  background: #d6ff3f;
 }
 
-.settings-toggle-knob {
+.settings-switch-knob {
   position: absolute;
-  top: 2px;
-  left: 2px;
+  top: 3px;
+  left: 3px;
   width: 20px;
   height: 20px;
   border-radius: 999px;
-  background: white;
-  transition: left 0.15s ease;
+  background: #8a8a80;
+  transition: left 140ms;
 }
 
-.settings-toggle-on .settings-toggle-knob {
-  left: 18px;
+.settings-switch.on .settings-switch-knob {
+  left: 21px;
+  background: #0e0e0c;
+}
+
+.settings-units-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid #23231f;
+  padding: 13px 0;
+  min-height: 44px;
+}
+
+.settings-units-options {
+  display: flex;
+  gap: 6px;
+}
+
+.settings-unit-btn {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid #3a3a32;
+  background: none;
+  color: #ffffff;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.settings-unit-btn.active {
+  background: #d6ff3f;
+  border-color: #d6ff3f;
+  color: #0e0e0c;
+}
+
+.settings-app-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid #23231f;
+  padding: 13px 0;
+  min-height: 44px;
+}
+
+.settings-app-action {
+  flex-shrink: 0;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #8a8a80;
+}
+
+.settings-data-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid #23231f;
+  padding: 13px 0;
+  min-height: 44px;
+  color: #8a8a80;
+}
+
+.settings-data-row svg {
+  width: 14px;
+  height: 14px;
+}
+
+.settings-data-row.warn .home-dark-row-title {
+  color: #e2915f;
 }
 
 .settings-logout-btn {
   width: 100%;
-  text-align: center;
+  min-height: 44px;
+  margin-top: 24px;
+  border: 1px solid #3a3a32;
   background: none;
-  border: none;
-  padding: 14px;
-  margin-top: 4px;
+  color: #e2915f;
+  border-radius: 12px;
+  font-size: 0.86rem;
+  font-weight: 800;
   cursor: pointer;
   font-family: inherit;
-  font-size: 0.86rem;
-  font-weight: 700;
-  color: var(--accent-plate);
 }
 
 .settings-logout-btn:hover {
-  text-decoration: underline;
+  background: #151511;
+}
+
+.settings-footnote {
+  font-size: 0.7rem;
+  color: #8a8a80;
+  margin-top: 14px;
+  text-align: center;
 }
 
 /* ---- Branding panel: logo upload + brand color pickers ---- */
