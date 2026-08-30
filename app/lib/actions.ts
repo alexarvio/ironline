@@ -611,6 +611,7 @@ export async function saveNutritionPlanAction(formData: FormData) {
 
   saveNutritionPlan({
     client_id: clientId,
+    name: str("plan_name").trim() || null,
     maintenance_kcal: num("maintenance"),
     ebf: num("ebf"),
     training_day_meals: meals("td"),

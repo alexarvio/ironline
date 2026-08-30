@@ -22,7 +22,7 @@ export default function ClientHeader({
         {plans.map((p) => (
           <div key={p.id} className="ad-plan">
             <div className="ad-microlabel">{p.label}</div>
-            <div className={`ad-plan-value${p.muted ? " muted" : ""}`}>{p.value}</div>
+            <div className="ad-plan-value">{p.value}</div>
           </div>
         ))}
         <a href={messageHref} className="ad-btn">

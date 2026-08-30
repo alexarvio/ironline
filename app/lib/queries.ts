@@ -55,6 +55,7 @@ export type SetLog = {
 export type MealMacros = { protein: number | null; fats: number | null; carbs: number | null };
 export type NutritionPlan = {
   client_id: number;
+  name?: string | null;
   maintenance_kcal: number | null;
   ebf: number | null;
   training_day_meals: MealMacros[];
@@ -1067,6 +1068,7 @@ export function getNutritionPlan(clientId: number): NutritionPlan {
   if (existing) return existing;
   return {
     client_id: clientId,
+    name: null,
     maintenance_kcal: null,
     ebf: null,
     training_day_meals: emptyMeals(),
@@ -2593,28 +2595,41 @@ export type CheckInSnapshot = { when: string | null; metrics: CheckInSnapshotMet
 // What the header carries beside the client's name: the two plans they're
 // currently on. Both are read from what's actually deployed/saved, and a
 // plan that doesn't exist yet says so rather than rendering a blank slot.
-export type HeaderPlan = { id: string; label: string; value: string; muted: boolean };
+export type HeaderPlan = { id: string; label: string; value: string };
 
 export function getClientHeaderPlans(clientId: number): HeaderPlan[] {
+  const plans: HeaderPlan[] = [];
+
+  // Both slots are about what the plan is CALLED. An unnamed plan has
+  // nothing to say here, so the whole read-out is left out rather than
+  // filled with "Untitled program" or a bare number — a fresh client's
+  // header is just their name until the coach names something.
   const program = getDeployedProgram(clientId);
-  const weekNumber = program ? program.start_week + getProgramCurrentWeekIndex(program) - 1 : null;
-  const workout = program
-    ? `${program.name || "Untitled program"} · ${programWeekLabel(program, weekNumber!)}`
-    : "No program deployed";
+  if (program?.name) {
+    const weekNumber = program.start_week + getProgramCurrentWeekIndex(program) - 1;
+    plans.push({
+      id: "workout",
+      label: "Workout plan",
+      value: `${program.name} · ${programWeekLabel(program, weekNumber)}`,
+    });
+  }
 
-  // Nutrition plans have no name in this model — a client has one plan, and
-  // what identifies it is the targets it sets. Training and rest day differ,
-  // so both are shown.
-  const nutrition = getNutritionGoalsSummary(clientId);
-  const hasNutrition = nutrition.trainingKcal > 0 || nutrition.restKcal > 0;
-  const nutritionLabel = hasNutrition
-    ? `${Math.round(nutrition.trainingKcal)} / ${Math.round(nutrition.restKcal)} kcal`
-    : "Not set up";
+  // Nutrition is one plan per client, renamed as the phase changes; the
+  // kcal targets ride along as supporting detail once it has a name.
+  const nutrition = getNutritionPlan(clientId);
+  if (nutrition.name) {
+    const goals = getNutritionGoalsSummary(clientId);
+    const hasKcal = goals.trainingKcal > 0 || goals.restKcal > 0;
+    plans.push({
+      id: "nutrition",
+      label: "Nutrition plan",
+      value: hasKcal
+        ? `${nutrition.name} · ${Math.round(goals.trainingKcal)} / ${Math.round(goals.restKcal)} kcal`
+        : nutrition.name,
+    });
+  }
 
-  return [
-    { id: "workout", label: "Workout plan", value: workout, muted: !program },
-    { id: "nutrition", label: "Nutrition plan", value: nutritionLabel, muted: !hasNutrition },
-  ];
+  return plans;
 }
 
 

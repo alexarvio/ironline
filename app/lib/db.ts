@@ -87,6 +87,10 @@ type Invoice = {
 type MealMacros = { protein: number | null; fats: number | null; carbs: number | null };
 type NutritionPlan = {
   client_id: number;
+  // What the coach calls this phase's plan ("Lean bulk", "Cut A"). One plan
+  // per client, renamed as the phase changes; absent on rows written before
+  // this field existed.
+  name?: string | null;
   maintenance_kcal: number | null;
   ebf: number | null;
   training_day_meals: MealMacros[];

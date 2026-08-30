@@ -84,6 +84,20 @@ export default function NutritionPanel({ clientId }: { clientId: number }) {
         feature, not built yet.
       </p>
 
+      {/* One plan per client, renamed as the phase changes. Naming it is what
+          puts it in the header above every tab; leave it blank and the header
+          simply doesn't carry a nutrition slot. */}
+      <div className="nutrition-table-wrap" style={{ marginBottom: 18 }}>
+        <h3 className="builder-pill-heading">Plan name</h3>
+        <input
+          name="plan_name"
+          type="text"
+          defaultValue={plan.name ?? ""}
+          placeholder="e.g. Lean bulk — phase 2"
+          style={{ maxWidth: 320 }}
+        />
+      </div>
+
       <NutritionMacrosLive
         trainingMeals={plan.training_day_meals}
         restMeals={plan.rest_day_meals}
