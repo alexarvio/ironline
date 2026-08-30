@@ -24,7 +24,10 @@ export default function BrandingColorForm({
       <div className="branding-color-field">
         <div className="branding-color-label">
           <div>Primary accent</div>
-          <div className="empty-note">Buttons, links, and highlights across the coach and client app</div>
+          <div className="empty-note">
+            Buttons, links, and highlights across the coach and client app. The client app&rsquo;s dark screens
+            lighten it as needed so it stays readable on their near-black background.
+          </div>
         </div>
         <div className="branding-color-input-row">
           <input

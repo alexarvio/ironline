@@ -87,12 +87,12 @@ export function LineChart({
       <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="line-chart-bleed" role="img" aria-label="Trend chart">
         <defs>
           <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#d6ff3f" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="#d6ff3f" stopOpacity="0" />
+            <stop offset="0%" stopColor="var(--fp-accent)" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="var(--fp-accent)" stopOpacity="0" />
           </linearGradient>
         </defs>
         {areaPath && <path d={areaPath} fill={`url(#${id})`} />}
-        <path d={linePath} fill="none" stroke="#d6ff3f" strokeWidth="3" vectorEffect="non-scaling-stroke" />
+        <path d={linePath} fill="none" stroke="var(--fp-accent)" strokeWidth="3" vectorEffect="non-scaling-stroke" />
       </svg>
     );
   }

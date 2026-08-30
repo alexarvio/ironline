@@ -13,6 +13,21 @@
   --good: #3f6e46;
   --font-serif: "Newsreader", Georgia, serif;
   --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* ---- Client app (/client) dark theme ----
+     Surfaces are fixed — only the accent follows the coach's brand. Both
+     accent vars are overridden per-coach from the root layout (see
+     pickAccentOnDark in lib/branding.ts); these defaults are Full Potential's
+     lime, i.e. what the screens look like with no brand color set.
+     --fp-warn is semantic (a metric moving the wrong way, destructive
+     actions), NOT brand-driven, so it stays constant across coaches. */
+  --fp-accent: #d6ff3f;
+  --fp-accent-fg: #0e0e0c;
+  --fp-surface: #0e0e0c;
+  --fp-warn: #e2915f;
+  /* Accent at low opacity over the dark surface — the unread/goal-row tints
+     that were hand-mixed olive greens back when the accent was always lime. */
+  --fp-accent-tint: color-mix(in srgb, var(--fp-accent) 14%, var(--fp-surface));
 }
 
 * { box-sizing: border-box; }
@@ -1960,7 +1975,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: #d6ff3f;
+  background: var(--fp-accent);
   border: 1.5px solid #0e0e0c;
 }
 
@@ -2077,9 +2092,9 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 }
 
 .cn-row.mine .cn-bubble {
-  background: #d6ff3f;
-  border-color: #d6ff3f;
-  color: #0e0e0c;
+  background: var(--fp-accent);
+  border-color: var(--fp-accent);
+  color: var(--fp-accent-fg);
   border-bottom-left-radius: 16px;
   border-bottom-right-radius: 4px;
 }
@@ -2164,7 +2179,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 .cn-compose input[type="text"]:focus {
   outline: none;
-  border-color: #d6ff3f;
+  border-color: var(--fp-accent);
 }
 
 .cn-compose .btn {
@@ -2173,8 +2188,8 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   border: none;
   border-radius: 999px;
   padding: 0 16px;
-  background: #d6ff3f;
-  color: #0e0e0c;
+  background: var(--fp-accent);
+  color: var(--fp-accent-fg);
   font-size: 0.8rem;
   font-weight: 800;
 }
@@ -2209,7 +2224,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 .cn-unread-label {
   font-size: 0.72rem;
   font-weight: 800;
-  color: #d6ff3f;
+  color: var(--fp-accent);
 }
 
 .cn-markall {
@@ -2275,8 +2290,8 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 }
 
 .cn-notif-icon.unread {
-  background: #21260f;
-  color: #d6ff3f;
+  background: var(--fp-accent-tint);
+  color: var(--fp-accent);
 }
 
 .cn-notif-icon svg {
@@ -2329,7 +2344,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   display: inline-block;
   font-size: 0.74rem;
   font-weight: 800;
-  color: #d6ff3f;
+  color: var(--fp-accent);
   margin-top: 6px;
 }
 
@@ -2339,7 +2354,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   height: 8px;
   margin-top: 6px;
   border-radius: 999px;
-  background: #d6ff3f;
+  background: var(--fp-accent);
 }
 
 .cn-footnote {
@@ -2376,7 +2391,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 }
 
 .app-header.dark .app-header-icon-badge {
-  background: #d6ff3f;
+  background: var(--fp-accent);
   border-color: #0e0e0c;
 }
 
@@ -2399,7 +2414,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 }
 
 .app-bottom-nav.dark .app-tab-btn.active {
-  color: #d6ff3f;
+  color: var(--fp-accent);
 }
 
 /* Tracker/Measurements/Photos aren't redesigned yet — kept as an opaque
@@ -2450,7 +2465,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 .home-dark-goal {
   font-size: 0.8rem;
   font-weight: 800;
-  color: #d6ff3f;
+  color: var(--fp-accent);
 }
 
 .home-dark-hr {
@@ -2508,7 +2523,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 .home-dark-stat-delta {
   font-size: 0.72rem;
   font-weight: 800;
-  color: #d6ff3f;
+  color: var(--fp-accent);
 }
 
 .home-dark-segments {
@@ -2525,7 +2540,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 }
 
 .home-dark-segment.filled {
-  background: #d6ff3f;
+  background: var(--fp-accent);
 }
 
 .home-dark-bar {
@@ -2540,7 +2555,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 .home-dark-bar-fill {
   height: 100%;
   border-radius: 999px;
-  background: #d6ff3f;
+  background: var(--fp-accent);
 }
 
 .home-dark-stat-caption {
@@ -2690,7 +2705,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   font-weight: 800;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: #d6ff3f;
+  color: var(--fp-accent);
 }
 
 .report-card-period {
@@ -2785,8 +2800,8 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   flex: 1;
   min-height: 44px;
   border: none;
-  background: #d6ff3f;
-  color: #0e0e0c;
+  background: var(--fp-accent);
+  color: var(--fp-accent-fg);
   border-radius: 12px;
   font-size: 0.82rem;
   font-weight: 800;
@@ -2817,7 +2832,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   padding: 0 8px;
   border: none;
   background: none;
-  color: #d6ff3f;
+  color: var(--fp-accent);
   font-size: 0.76rem;
   font-weight: 800;
   cursor: pointer;
@@ -2848,7 +2863,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 .home-dark-section-count {
   font-size: 0.72rem;
   font-weight: 800;
-  color: #d6ff3f;
+  color: var(--fp-accent);
 }
 
 .home-dark-empty {
@@ -2957,7 +2972,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 }
 
 .home-dark-note-dot.unread {
-  background: #d6ff3f;
+  background: var(--fp-accent);
 }
 
 .home-dark-note-top {
@@ -3000,7 +3015,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   font-family: ui-monospace, Menlo, monospace;
   font-size: 0.72rem;
   font-weight: 800;
-  color: #d6ff3f;
+  color: var(--fp-accent);
   margin-top: 3px;
 }
 
@@ -3041,17 +3056,17 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 }
 
 .training-dark .week-switcher .toggle-btn.active {
-  background: #d6ff3f;
-  color: #0e0e0c;
-  border-color: #d6ff3f;
+  background: var(--fp-accent);
+  color: var(--fp-accent-fg);
+  border-color: var(--fp-accent);
 }
 
 .training-dark .week-current-dot {
-  background: #d6ff3f;
+  background: var(--fp-accent);
 }
 
 .training-dark .week-switcher .toggle-btn.active .week-current-dot {
-  background: #0e0e0c;
+  background: var(--fp-accent-fg);
 }
 
 .training-dark .week-progress-card {
@@ -3095,8 +3110,8 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 }
 
 .training-dark .training-day-progress-pill.done {
-  color: #0e0e0c;
-  background: #d6ff3f;
+  color: var(--fp-accent-fg);
+  background: var(--fp-accent);
 }
 
 .training-dark .training-day-chevron {
@@ -3124,11 +3139,11 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 }
 
 .training-dark .video-link {
-  color: #d6ff3f;
+  color: var(--fp-accent);
 }
 
 .training-dark .training-exercise-done {
-  color: #d6ff3f;
+  color: var(--fp-accent);
 }
 
 .training-dark .training-set-table th {
@@ -3145,12 +3160,12 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 }
 
 .training-dark .training-goal-row td {
-  background: #191d0c;
-  color: #d6ff3f;
+  background: var(--fp-accent-tint);
+  color: var(--fp-accent);
 }
 
 .training-dark .training-set-cell-action {
-  color: #d6ff3f;
+  color: var(--fp-accent);
 }
 
 .training-dark .training-set-table input {
@@ -3165,12 +3180,12 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 .training-dark .training-set-table input:focus {
   outline: none;
-  border-color: #d6ff3f;
+  border-color: var(--fp-accent);
 }
 
 .training-dark .btn.btn-sm {
-  background: #d6ff3f;
-  color: #0e0e0c;
+  background: var(--fp-accent);
+  color: var(--fp-accent-fg);
   border: none;
 }
 
@@ -3243,9 +3258,9 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 }
 
 .nd-toggle-btn.active {
-  background: #d6ff3f;
-  border-color: #d6ff3f;
-  color: #0e0e0c;
+  background: var(--fp-accent);
+  border-color: var(--fp-accent);
+  color: var(--fp-accent-fg);
 }
 
 .nd-hr {
@@ -3306,7 +3321,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 .nd-bar-fill {
   height: 100%;
   border-radius: 999px;
-  background: #d6ff3f;
+  background: var(--fp-accent);
 }
 
 .nd-macro-share {
@@ -5240,8 +5255,8 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #0e0e0c;
-  background: #d6ff3f;
+  color: var(--fp-accent-fg);
+  background: var(--fp-accent);
   border-radius: 999px;
   padding: 2px 7px;
 }
@@ -5304,7 +5319,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 }
 
 .settings-switch.on {
-  background: #d6ff3f;
+  background: var(--fp-accent);
 }
 
 .settings-switch-knob {
@@ -5320,7 +5335,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 .settings-switch.on .settings-switch-knob {
   left: 21px;
-  background: #0e0e0c;
+  background: var(--fp-accent-fg);
 }
 
 .settings-units-row {
@@ -5352,9 +5367,9 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 }
 
 .settings-unit-btn.active {
-  background: #d6ff3f;
-  border-color: #d6ff3f;
-  color: #0e0e0c;
+  background: var(--fp-accent);
+  border-color: var(--fp-accent);
+  color: var(--fp-accent-fg);
 }
 
 .settings-app-row {
@@ -5391,7 +5406,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 }
 
 .settings-data-row.warn .home-dark-row-title {
-  color: #e2915f;
+  color: var(--fp-warn);
 }
 
 .settings-logout-btn {
@@ -5400,7 +5415,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   margin-top: 24px;
   border: 1px solid #3a3a32;
   background: none;
-  color: #e2915f;
+  color: var(--fp-warn);
   border-radius: 12px;
   font-size: 0.86rem;
   font-weight: 800;

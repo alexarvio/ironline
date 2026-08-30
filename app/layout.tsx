@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { applyDueClientReminders, applyDueProgramDeployments, getBranding } from "./lib/queries";
-import { DEFAULT_BRAND_PRIMARY, pickForegroundColor, pickTextSafeColor } from "./lib/branding";
+import {
+  DEFAULT_BRAND_PRIMARY,
+  DEFAULT_CLIENT_ACCENT,
+  pickAccentOnDark,
+  pickForegroundColor,
+  pickTextSafeColor,
+} from "./lib/branding";
 
 export const metadata: Metadata = {
   title: "Ironline",
@@ -27,10 +33,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   // phone-frame bezel color behind the client app mockup. Injected here
   // rather than per-page so every route (/, /admin, /client) picks it up
   // from one place.
+  //
+  // The client app (/client) is a single dark theme whose surfaces are fixed;
+  // only the accent follows the coach's brand — --fp-accent (every highlight,
+  // fill, bar, chart line and active state on those screens) and
+  // --fp-accent-fg (text/icons ON TOP of an --fp-accent fill). The accent is
+  // lightened only as much as needed to stay readable on that dark surface,
+  // so a dark brand color can't disappear into the background.
+  const clientAccent = pickAccentOnDark(branding.color_primary ?? DEFAULT_CLIENT_ACCENT);
   const colorOverrides = [
     `--accent: ${primary};`,
     `--accent-fg: ${pickForegroundColor(primary)};`,
     `--accent-ink: ${pickTextSafeColor(primary)};`,
+    `--fp-accent: ${clientAccent};`,
+    `--fp-accent-fg: ${pickForegroundColor(clientAccent)};`,
     branding.color_frame ? `--brand-frame: ${branding.color_frame};` : "",
   ]
     .filter(Boolean)

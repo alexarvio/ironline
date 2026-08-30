@@ -54,7 +54,7 @@ export default function TrendCarousel({ metrics }: { metrics: TrendMetric[] }) {
               <div>
                 <div className="trend-slide-head">
                   <span className="trend-slide-name">{m.name}</span>
-                  <span className="trend-slide-trend" style={{ color: m.trendGood ? "#d6ff3f" : "#e2915f" }}>
+                  <span className="trend-slide-trend" style={{ color: m.trendGood ? "var(--fp-accent)" : "var(--fp-warn)" }}>
                     {m.trendLabel}
                   </span>
                 </div>
@@ -83,7 +83,7 @@ export default function TrendCarousel({ metrics }: { metrics: TrendMetric[] }) {
             >
               <span
                 className="trend-dot"
-                style={{ width: i === index ? 20 : 5, background: i === index ? "#d6ff3f" : "#3a3a32" }}
+                style={{ width: i === index ? 20 : 5, background: i === index ? "var(--fp-accent)" : "#3a3a32" }}
               />
             </button>
           ))}

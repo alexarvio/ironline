@@ -6,6 +6,14 @@
 export const DEFAULT_BRAND_PRIMARY = "#2f6485";
 export const DEFAULT_BRAND_FRAME = "#2b2d24";
 
+// The client app's dark surface (see .app-screen / --fp-surface). Accent
+// colors shown on it are measured against this, not white.
+export const CLIENT_DARK_SURFACE = "#0e0e0c";
+
+// Default accent for the client app when a coach hasn't set a brand color —
+// Full Potential's lime, i.e. exactly how the dark screens already look.
+export const DEFAULT_CLIENT_ACCENT = "#d6ff3f";
+
 function hexToRgb(hex: string): [number, number, number] | null {
   const match = /^#([0-9a-fA-F]{6})$/.exec(hex);
   if (!match) return null;
@@ -54,6 +62,31 @@ export function pickForegroundColor(hex: string): string {
 // toward black in steps, preserving its hue/saturation, until it clears the
 // WCAG AA small-text contrast ratio (4.5:1) against white. A dark accent
 // (the default) already passes and comes back unchanged.
+// The dark-surface counterpart to pickTextSafeColor: the client app is a
+// near-black screen, so a coach's brand color has to be LIGHTENED (not
+// darkened) to stay readable as the accent on it — a dark navy brand would
+// otherwise disappear into the background. Lightens toward white in steps,
+// preserving hue, until it clears WCAG AA small-text contrast (4.5:1)
+// against the app's dark surface. A bright accent (lime, the default)
+// already passes and comes back unchanged.
+export function pickAccentOnDark(hex: string): string {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return DEFAULT_CLIENT_ACCENT;
+  const surface = hexToRgb(CLIENT_DARK_SURFACE);
+  const surfaceLuminance = surface ? relativeLuminance(...surface) : 0;
+  if (contrastRatio(relativeLuminance(...rgb), surfaceLuminance) >= 4.5) return hex;
+  const [r, g, b] = rgb;
+  for (let amount = 0.1; amount <= 0.9; amount += 0.1) {
+    const mixed: [number, number, number] = [
+      r + (255 - r) * amount,
+      g + (255 - g) * amount,
+      b + (255 - b) * amount,
+    ];
+    if (contrastRatio(relativeLuminance(...mixed), surfaceLuminance) >= 4.5) return rgbToHex(...mixed);
+  }
+  return "#ffffff";
+}
+
 export function pickTextSafeColor(hex: string): string {
   const rgb = hexToRgb(hex);
   if (!rgb) return "#14171c";
