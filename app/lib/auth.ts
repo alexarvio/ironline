@@ -196,6 +196,30 @@ export async function canAccessClient(clientId: number): Promise<boolean> {
   return user.client_id === clientId;
 }
 
+/**
+ * Creates the first coach account from COACH_EMAIL / COACH_PASSWORD if the
+ * store has no coach yet. This exists because a fresh deployment has no way
+ * in: there is no signup, and running a one-off script against a container
+ * needs shell access the deploy flow doesn't necessarily have.
+ *
+ * Idempotent, and does nothing once any coach exists — so rotating the env
+ * vars later will NOT change an existing password (use the admin panel or
+ * scripts/create-coach.ts for that). The bootstrap account is forced through
+ * a password change on first login, so the value sitting in the environment
+ * is never the password that ends up guarding the CRM.
+ */
+export function ensureCoachFromEnv() {
+  const email = process.env.COACH_EMAIL?.trim().toLowerCase();
+  const password = process.env.COACH_PASSWORD;
+  if (!email || !password || password.length < 8) return;
+
+  const data = getData();
+  if (data.users.some((u) => u.role === "coach")) return;
+  if (data.users.some((u) => u.email === email)) return;
+
+  createUser(email, password, "coach", null, true);
+}
+
 // ---- User records -------------------------------------------------------
 
 export function findUserByEmail(email: string) {

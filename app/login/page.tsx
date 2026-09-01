@@ -1,12 +1,17 @@
 import { redirect } from "next/navigation";
 import { loginAction } from "../lib/auth-actions";
-import { getSessionUser } from "../lib/auth";
+import { ensureCoachFromEnv, getSessionUser } from "../lib/auth";
 
 export default async function LoginPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
+  // A fresh deployment has no accounts and no signup, so the very first
+  // request to the login page is where the bootstrap coach gets created
+  // from the environment. No-op once any coach exists.
+  ensureCoachFromEnv();
+
   // Already signed in? Send them where they belong rather than showing a
   // login form they'd have no reason to fill in.
   const user = await getSessionUser();
