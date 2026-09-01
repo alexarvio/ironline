@@ -39,9 +39,24 @@ export type WorkoutAssignment = {
   rest_seconds: number | null;
   tempo: string | null;
   notes: string | null;
+  note_kind: ExerciseNoteKind | null;
+  note_at: string | null;
+  note_read: boolean;
   exercise_name?: string;
   exercise_video_url?: string | null;
 };
+
+// What a coach's note on an exercise is *about*. Shown as the panel's header
+// on the client so a load instruction doesn't read like a technique
+// correction. Kept to three because the coach picks one every time they
+// write a note — a longer list would just slow that down.
+export type ExerciseNoteKind = "form" | "load" | "tempo";
+
+export const EXERCISE_NOTE_KINDS: { value: ExerciseNoteKind; label: string; hint: string }[] = [
+  { value: "form", label: "Form", hint: "Technique or posture, usually off a video" },
+  { value: "load", label: "Load", hint: "Weight or intensity instruction" },
+  { value: "tempo", label: "Tempo", hint: "Speed of the rep" },
+];
 export type SetLog = {
   id: number;
   workout_assignment_id: number;
@@ -469,6 +484,12 @@ export function getAssignmentsForDay(programDayId: number): WorkoutAssignment[] 
       const exercise = data.exercises.find((e) => e.id === wa.exercise_id);
       return {
         ...wa,
+        // Rows written before the note fields existed have them undefined —
+        // getData()'s schema patch back-fills missing tables, not missing
+        // columns — so they're defaulted on the way out.
+        note_kind: wa.note_kind ?? null,
+        note_at: wa.note_at ?? null,
+        note_read: wa.note_read ?? false,
         exercise_name: exercise?.name ?? "Unknown exercise",
         exercise_video_url: exercise?.video_url ?? null,
       };
@@ -563,6 +584,9 @@ export function addExerciseToDay(
     rest_seconds: null,
     tempo,
     notes,
+    note_kind: null,
+    note_at: notes ? new Date().toISOString() : null,
+    note_read: false,
   });
   persist();
 }
@@ -585,7 +609,39 @@ export function updateAssignmentFields(
   const data = getData();
   const assignment = data.workout_assignments.find((wa) => wa.id === assignmentId);
   if (!assignment) return;
+
+  // Editing the note text re-dates it and marks it unread again, so the
+  // client sees a dot for a correction that changed — otherwise a coach
+  // rewriting a note the athlete had already opened would land silently.
+  if ("notes" in fields && fields.notes !== assignment.notes) {
+    const text = (fields.notes ?? "").trim();
+    assignment.note_at = text ? new Date().toISOString() : null;
+    assignment.note_read = false;
+    if (!text) assignment.note_kind = null;
+  }
+
   Object.assign(assignment, fields);
+  persist();
+}
+
+/** Coach-side: set which kind of note this is (technique / load / tempo). */
+export function setExerciseNoteKind(assignmentId: number, kind: ExerciseNoteKind | null) {
+  const data = getData();
+  const assignment = data.workout_assignments.find((wa) => wa.id === assignmentId);
+  if (!assignment) return;
+  assignment.note_kind = kind;
+  persist();
+}
+
+/**
+ * Client-side: clears the unread dot the first time the athlete opens a note.
+ * Idempotent, and a no-op on an assignment with no note.
+ */
+export function markExerciseNoteRead(assignmentId: number) {
+  const data = getData();
+  const assignment = data.workout_assignments.find((wa) => wa.id === assignmentId);
+  if (!assignment || !assignment.notes || assignment.note_read) return;
+  assignment.note_read = true;
   persist();
 }
 
@@ -2490,10 +2546,11 @@ export function sendChatMessage(
   persist();
   if (sender === "coach" && getClientPreferences(clientId).coach_notes) {
     const preview = text.length > 80 ? `${text.slice(0, 77)}…` : text;
+    // No action link: this used to deep-link into the chat thread, which is
+    // cut from the first beta. The notification still tells them a message
+    // arrived; there is just nowhere to send them yet.
     logCoachActivity(clientId, preview ? `Your coach sent you a message: "${preview}"` : "Your coach sent you a message", {
       kind: "coach_note",
-      actionTab: "chat",
-      actionLabel: "Open chat",
     });
   }
 }

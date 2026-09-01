@@ -63,7 +63,17 @@ type WorkoutAssignment = {
   rpe_target: number | null;
   rest_seconds: number | null;
   tempo: string | null;
+  // The coach's note on this exercise for this week. `notes` is the text and
+  // long predates the rest; the three fields beside it turn that plain string
+  // into something the client app can present properly — a labelled, dated,
+  // collapsible panel that shows an unread dot until it's first opened.
+  // Deliberately on the assignment rather than a table of its own: an
+  // assignment is already "this exercise, this day, this week", which is
+  // exactly the scope a note has.
   notes: string | null;
+  note_kind: "form" | "load" | "tempo" | null;
+  note_at: string | null;
+  note_read: boolean;
 };
 type SetLog = {
   id: number;

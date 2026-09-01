@@ -100,6 +100,8 @@ import {
   getClientIdForPhotoSlot,
   getClientIdForNotification,
   getClientIdForReport,
+  markExerciseNoteRead,
+  setExerciseNoteKind,
 } from "./queries";
 import { writeReportNarrative } from "./reportAi";
 import type { ReportSectionType } from "./reportSectionTypes";
@@ -155,6 +157,11 @@ export async function updateAssignmentAction(formData: FormData) {
   if (formData.has("tempo")) fields.tempo = String(formData.get("tempo") || "").trim() || null;
   if (formData.has("notes")) fields.notes = String(formData.get("notes") || "").trim() || null;
   updateAssignmentFields(assignmentId, fields);
+  if (formData.has("noteKind")) {
+    const raw = String(formData.get("noteKind") || "");
+    const kind = raw === "form" || raw === "load" || raw === "tempo" ? raw : null;
+    setExerciseNoteKind(assignmentId, kind);
+  }
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -1028,6 +1035,19 @@ export async function setClientUnitsAction(formData: FormData) {
   const units = String(formData.get("units"));
   if (units !== "metric" && units !== "imperial") return;
   setClientUnits(clientId, units);
+  revalidatePath("/client");
+}
+
+/**
+ * Client-side: clears the unread dot when the athlete first opens a coach's
+ * note on an exercise. Reachable from the client app, so it resolves the
+ * owning client from the assignment and checks the session can touch it.
+ */
+export async function markExerciseNoteReadAction(assignmentId: number) {
+  if (!assignmentId) return;
+  const owner = getClientIdForAssignment(assignmentId);
+  if (owner == null || !(await canAccessClient(owner))) return;
+  markExerciseNoteRead(assignmentId);
   revalidatePath("/client");
 }
 

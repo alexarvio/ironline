@@ -22,7 +22,6 @@ import {
   getPhotoCadence,
   getPhotoPeriodNote,
   getPublishedWeek,
-  listChatMessages,
   listClients,
   listClientGoals,
   listMeetings,
@@ -40,6 +39,7 @@ import {
 import { DAY_NAMES_FULL } from "../lib/db";
 import SetLogForm from "./SetLogForm";
 import TrainingDayCard from "./TrainingDayCard";
+import ExerciseCoachNote from "./ExerciseCoachNote";
 import PhotoPeriodHistoryRow from "./PhotoPeriodHistoryRow";
 import HomeHub, { UpcomingMeeting } from "./HomeHub";
 import { TrendMetric } from "./TrendCarousel";
@@ -47,7 +47,6 @@ import NutritionDayToggle, { NutritionTargetSet } from "./NutritionDayToggle";
 import ReportArchiveList, { ArchiveReport } from "./ReportArchiveList";
 import NotificationRow from "./NotificationRow";
 import ClientWeekSwitcher from "./ClientWeekSwitcher";
-import ChatComposeForm from "../components/ChatComposeForm";
 import AppShell, { AppTab } from "./AppShell";
 import {
   AccountIcon,
@@ -76,6 +75,35 @@ const PERIOD_UNIT = {
   biweekly: "Check-in",
   monthly: "Month",
 } as const;
+
+// A note with no kind set still needs a header — "Note" is the honest
+// fallback rather than guessing which of the three it is.
+// Which way weight should be moving for this athlete. Hardcoding "down is
+// better" told a client on a lean bulk they were going the wrong way, in
+// warning colour, on their own Home screen.
+//
+// This is a heuristic over the coach's free-text phase because that's the
+// only place the intent is recorded today — there's no structured "direction"
+// field. It errs toward "down is better", which matches most coaching
+// phases; if it guesses wrong the only cost is the colour of one percentage.
+// Worth replacing with a real field on the profile when one exists.
+function weightGoalIsDown(goalPhase: string | null | undefined): boolean {
+  const phase = (goalPhase ?? "").toLowerCase();
+  const gaining = ["bulk", "gain", "mass", "build", "bulking", "surplus"];
+  return !gaining.some((word) => phase.includes(word));
+}
+
+function noteKindLabel(kind: "form" | "load" | "tempo" | null): string {
+  if (kind === "form") return "Form";
+  if (kind === "load") return "Load";
+  if (kind === "tempo") return "Tempo";
+  return "Note";
+}
+
+function noteDateLabel(at: string | null): string {
+  if (!at) return "";
+  return new Date(at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -272,7 +300,7 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   };
 
   const trendMetrics: TrendMetric[] = [
-    trendMetric("weight", "Weight", "kg", getWeightSeries(CLIENT_ID, 3650), true),
+    trendMetric("weight", "Weight", "kg", getWeightSeries(CLIENT_ID, 3650), weightGoalIsDown(profile?.goal_phase)),
     ...getPinnedMetricsSummary(CLIENT_ID).map(({ def }) => trendMetric(`metric-${def.id}`, def.name, def.unit, getMetricSeries(def.id))),
   ].filter((m): m is TrendMetric => m !== null);
 
@@ -372,13 +400,24 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
                           <span className="training-exercise-target">
                             {a.sets} set{a.sets === 1 ? "" : "s"}
                           </span>
+                          {/* Only exercises the coach actually wrote a note on
+                              render the button — an empty bubble on every row
+                              would be noise. */}
+                          {a.notes && (
+                            <ExerciseCoachNote
+                              assignmentId={a.id}
+                              kindLabel={noteKindLabel(a.note_kind)}
+                              dateLabel={noteDateLabel(a.note_at)}
+                              text={a.notes}
+                              unread={!a.note_read}
+                            />
+                          )}
                         </div>
                         {a.exercise_video_url && (
                           <a href={a.exercise_video_url} target="_blank" rel="noreferrer" className="video-link">
                             ▶ how to
                           </a>
                         )}
-                        {a.notes && <p className="exercise-coach-note">“{a.notes}”</p>}
 
                         {/* Coach's target laid out as the first row of the same
                             table the client logs into below, instead of a
@@ -722,83 +761,6 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   );
 }
 
-// Chat sub-view of the Chat and Notifications screen — day-grouped bubble
-// thread (coach messages left, client's own right) with a "next call" strip
-// and the shared compose form. Read-only scheduling: the call itself is set
-// on the coach's side (Meetings tab).
-function ChatThread({ CLIENT_ID }: { CLIENT_ID: number }) {
-  const messages = listChatMessages(CLIENT_ID);
-  const today = localDateStr();
-
-  const upcomingMeeting = listMeetings(CLIENT_ID)
-    .filter((m) => m.status === "scheduled" && m.date >= today)
-    .sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1))[0];
-  const nextCallLabel = upcomingMeeting
-    ? `${new Date(`${upcomingMeeting.date}T00:00:00`).toLocaleDateString("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-      })}${upcomingMeeting.time ? ` · ${upcomingMeeting.time}` : ""}`
-    : null;
-
-  const dayLabel = (iso: string) => {
-    const d = new Date(iso);
-    const sameYear = d.getFullYear() === new Date().getFullYear();
-    return d.toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      year: sameYear ? undefined : "numeric",
-    });
-  };
-  const timeLabel = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-
-  let lastDay: string | null = null;
-
-  return (
-    <div className="cn-chat">
-      {nextCallLabel && (
-        <div className="cn-callbar">
-          <span className="cn-callbar-label">Next call</span>
-          <span className="cn-callbar-value">{nextCallLabel}</span>
-        </div>
-      )}
-      <div className="cn-thread">
-        {messages.length === 0 ? (
-          <p className="cn-empty">No messages yet — say hello below.</p>
-        ) : (
-          messages.map((m) => {
-            const day = dayLabel(m.created_at);
-            const showDay = day !== lastDay;
-            lastDay = day;
-            const mine = m.sender === "client";
-            return (
-              <div key={m.id}>
-                {showDay && <div className="cn-daylabel">{day}</div>}
-                <div className={`cn-row ${mine ? "mine" : "theirs"}`}>
-                  <div className="cn-bubble">
-                    {m.media_path && m.media_type === "image" && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={m.media_path} alt="" className="cn-bubble-img" />
-                    )}
-                    {m.media_path && m.media_type === "video" && (
-                      <video src={m.media_path} controls className="cn-bubble-video" />
-                    )}
-                    {m.text && <div className="cn-bubble-text">{m.text}</div>}
-                    <div className="cn-bubble-time">{timeLabel(m.created_at)}</div>
-                  </div>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-      <div className="cn-compose">
-        <ChatComposeForm clientId={CLIENT_ID} sender="client" />
-      </div>
-    </div>
-  );
-}
 
 const NOTIFICATION_KIND_LABEL: Record<string, string> = {
   coach_note: "Coach note",
@@ -992,8 +954,6 @@ export default async function ClientPage({
       : null,
     photoHistory: <PhotoHistory CLIENT_ID={CLIENT_ID} />,
   };
-  const messages = listChatMessages(CLIENT_ID);
-  const hasCoachUpdate = [...messages].reverse().find((m) => m.sender === "coach") != null;
   const hasUnreadNotifications = getNotifications(CLIENT_ID).some((n) => !n.read);
 
   const currentWeekNum = getCurrentWeekNumber(CLIENT_ID);
@@ -1037,9 +997,7 @@ export default async function ClientPage({
     <AppShell
       clientName={client?.name ?? ""}
       tabs={tabs}
-      chatContent={<ChatThread CLIENT_ID={CLIENT_ID} />}
       notificationsContent={<NotificationsPanel CLIENT_ID={CLIENT_ID} />}
-      hasCoachUpdate={hasCoachUpdate}
       hasUnreadNotifications={hasUnreadNotifications}
       clientId={CLIENT_ID}
       checkIn={checkIn}

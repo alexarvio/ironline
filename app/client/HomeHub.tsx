@@ -2,7 +2,7 @@
 
 import { ArrowRightIcon, CalendarIcon, CheckIcon, ClockIcon } from "../components/icons";
 import TrendCarousel, { TrendMetric } from "./TrendCarousel";
-import { useOpenChat, useOpenCheckIn } from "./CheckInContext";
+import { useOpenCheckIn, useOpenNotifications } from "./CheckInContext";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
 // CheckInHub.tsx this replaces — a "use client" file importing queries.ts
@@ -67,7 +67,7 @@ export default function HomeHub({
   const openCheckIn = useOpenCheckIn();
   // Coach notes are the coach commenting on your work; tapping one opens
   // the conversation it came from, same as the prototype.
-  const openChat = useOpenChat();
+  const openNotifications = useOpenNotifications();
 
   const dayTarget = totalDays || 7;
 
@@ -189,7 +189,7 @@ export default function HomeHub({
                 key={n.id}
                 type="button"
                 className="home-dark-note-row tappable"
-                onClick={() => openChat?.()}
+                onClick={() => openNotifications?.()}
               >
                 <span className={`home-dark-note-dot${n.unread ? " unread" : ""}`} aria-hidden="true" />
                 <div className="home-dark-row-body">

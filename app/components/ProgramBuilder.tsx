@@ -22,6 +22,7 @@ import {
 } from "../lib/queries";
 import { DAY_NAMES_FULL } from "../lib/db";
 import AssignmentFieldInput from "./AssignmentFieldInput";
+import NoteKindSelect from "./NoteKindSelect";
 import DayLabelForm from "./DayLabelForm";
 import ExercisePicker from "./ExercisePicker";
 import CustomValueInput from "../admin/CustomValueInput";
@@ -258,6 +259,10 @@ export default function ProgramBuilder({
                                   placeholder="optional"
                                   defaultValue={a.notes ?? ""}
                                 />
+                                {/* Only worth labelling once something's been
+                                    written — the client only sees a note
+                                    button when there's a note. */}
+                                {a.notes && <NoteKindSelect assignmentId={a.id} value={a.note_kind} />}
                               </td>
                             );
                           default:

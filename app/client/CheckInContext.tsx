@@ -16,14 +16,16 @@ export function useOpenCheckIn() {
   return useContext(CheckInContext);
 }
 
-// Same bridge for the chat push view — Home's coach notes open the thread
-// the note came from.
-const ChatContext = createContext<(() => void) | null>(null);
+// Same bridge for the Notifications push view. Home's coach-note rows used
+// to open the chat thread the note came from; with chat cut from the first
+// beta they open Notifications instead, which is where coach activity now
+// lives.
+const NotificationsContext = createContext<(() => void) | null>(null);
 
-export const ChatProvider = ChatContext.Provider;
+export const NotificationsProvider = NotificationsContext.Provider;
 
-export function useOpenChat() {
-  return useContext(ChatContext);
+export function useOpenNotifications() {
+  return useContext(NotificationsContext);
 }
 
 // And for cross-tab navigation: a notification carries the tab it belongs to

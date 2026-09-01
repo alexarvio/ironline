@@ -1,22 +1,21 @@
 "use client";
 
 import { ReactNode, useState } from "react";
-import { BellIcon, ChatIcon, ChevronLeftIcon } from "../components/icons";
+import { BellIcon, ChevronLeftIcon } from "../components/icons";
 import CheckInScreen, { CheckInProps } from "./CheckInScreen";
-import { ChatProvider, CheckInProvider, FocusRefProvider, NavigateProvider } from "./CheckInContext";
+import { CheckInProvider, FocusRefProvider, NavigateProvider, NotificationsProvider } from "./CheckInContext";
 
 export type AppTab = { id: string; label: string; icon: ReactNode; content: ReactNode; footer?: ReactNode };
 
-type PushView = "chat" | "notifications" | "checkin" | null;
+type PushView = "notifications" | "checkin" | null;
 
-// Top bar is brand + chat/bell icons (not a per-tab greeting). Both icons
-// open the same pushed full-screen view — a single dark Chat and
-// Notifications screen with its own header toggle between the two — so
-// switching tabs underneath never loses your place in either.
+// Top bar is the brand plus a single notifications bell (not a per-tab
+// greeting). Chat is deliberately absent: it's cut from the first beta, so
+// the bell is the only header action and Notifications is the only pushed
+// view besides the check-in flow.
 export default function AppShell({
   clientName,
   tabs,
-  chatContent,
   notificationsContent,
   hasCoachUpdate,
   hasUnreadNotifications,
@@ -25,7 +24,6 @@ export default function AppShell({
 }: {
   clientName: string;
   tabs: AppTab[];
-  chatContent: ReactNode;
   notificationsContent: ReactNode;
   hasCoachUpdate?: boolean;
   hasUnreadNotifications?: boolean;
@@ -86,7 +84,6 @@ export default function AppShell({
   }
 
   if (pushView) {
-    const isChat = pushView === "chat";
     return (
       <div className="phone-frame">
         <div className="app-screen cn-screen">
@@ -95,21 +92,14 @@ export default function AppShell({
               <ChevronLeftIcon />
             </button>
             <div className="cn-header-titles">
-              <div className="cn-kicker">{isChat ? "Your coach" : "Activity"}</div>
-              <div className="cn-title">{isChat ? "Coach" : "Notifications"}</div>
+              <div className="cn-kicker">Activity</div>
+              <div className="cn-title">Notifications</div>
             </div>
-            <button
-              type="button"
-              className="cn-icon-btn"
-              onClick={() => setPushView(isChat ? "notifications" : "chat")}
-              aria-label={isChat ? "Open notifications" : "Open chat"}
-            >
-              {isChat ? <ChatIcon /> : <BellIcon />}
-              {isChat && hasUnreadNotifications && <span className="cn-badge" aria-hidden="true" />}
-            </button>
+            {/* No right-hand action: that slot was the chat toggle. */}
+            <span className="cn-icon-spacer" aria-hidden="true" />
           </header>
           <main className="cn-body">
-            <NavigateProvider value={goToTab}>{isChat ? chatContent : notificationsContent}</NavigateProvider>
+            <NavigateProvider value={goToTab}>{notificationsContent}</NavigateProvider>
           </main>
         </div>
       </div>
@@ -122,10 +112,6 @@ export default function AppShell({
         <header className="app-header dark">
           <span className="app-header-brand">Ironline</span>
           <div className="app-header-actions">
-            <button type="button" className="app-header-icon-btn" onClick={() => setPushView("chat")} aria-label={`Chat with ${clientName || "your coach"}`}>
-              <ChatIcon />
-              {hasCoachUpdate && <span className="app-header-icon-badge" aria-hidden="true" />}
-            </button>
             <button type="button" className="app-header-icon-btn" onClick={() => setPushView("notifications")} aria-label="Notifications">
               <BellIcon />
               {hasUnreadNotifications && <span className="app-header-icon-badge" aria-hidden="true" />}
@@ -135,9 +121,9 @@ export default function AppShell({
 
         <main className="app-content dark" key={`${activeId}-${navResetKey}`}>
           <CheckInProvider value={openCheckIn}>
-            <ChatProvider value={() => setPushView("chat")}>
+            <NotificationsProvider value={() => setPushView("notifications")}>
               <FocusRefProvider value={focusRef}>{active?.content}</FocusRefProvider>
-            </ChatProvider>
+            </NotificationsProvider>
           </CheckInProvider>
         </main>
 
