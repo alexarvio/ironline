@@ -12,6 +12,7 @@ import {
 } from "../lib/queries";
 import MetricLibrary, { LibraryPackView } from "./MetricLibrary";
 import MetricHistoryTable from "./MetricHistoryTable";
+import TrackerHistory from "./TrackerHistory";
 import MetricGraphPanel from "./MetricGraphPanel";
 
 const CADENCE_LABEL: Record<string, string> = {
@@ -55,10 +56,8 @@ export default function MeasurementsPanel({ clientId }: { clientId: number }) {
     <div className="ms">
       {/* ---- 1. What the client is asked to log ---- */}
       <section className="ms-section">
-        <div className="ms-head">
-          <h3 className="ad-microlabel">Check-in columns</h3>
-          <MetricLibrary clientId={clientId} packs={packs} />
-        </div>
+        <h3 className="ad-microlabel ms-title">Check-in columns</h3>
+        <MetricLibrary clientId={clientId} packs={packs} />
 
         {metrics.length === 0 ? (
           <p className="ad-panel-empty">
@@ -71,14 +70,17 @@ export default function MeasurementsPanel({ clientId }: { clientId: number }) {
               const visible = m.visible_to_client !== false;
               return (
                 <div key={m.id} className="ms-metric-row">
-                  {/* Fixed-width group and cadence pills, so they form
-                      straight columns instead of jittering with word length. */}
+                  {/* Name leads the row; the two pills are fixed width so they
+                      form straight columns down the list instead of jittering
+                      with the length of each word. */}
+                  <span className="ms-metric-name">
+                    {m.name}
+                    {m.unit && <em className="ms-metric-unit">({m.unit})</em>}
+                  </span>
                   <span className="ms-group-pill" style={{ background: g.tint }}>
                     {g.label}
                   </span>
                   <span className="ms-cadence-pill">{CADENCE_LABEL[m.frequency] ?? m.frequency}</span>
-                  <span className="ms-metric-name">{m.name}</span>
-                  <span className="ms-metric-unit">{m.unit || "—"}</span>
 
                   {/* Hidden metrics stay configured and keep their history;
                       they just drop off the client's check-in. */}
@@ -107,46 +109,11 @@ export default function MeasurementsPanel({ clientId }: { clientId: number }) {
           </div>
         )}
 
-        {/* The manual row stays for one-offs the library doesn't cover. */}
-        <form action={addMetricDefinitionAction} className="ms-manual">
-          <input type="hidden" name="clientId" value={clientId} />
-          <input name="name" type="text" placeholder="Metric name" aria-label="Metric name" required />
-          <input name="unit" type="text" placeholder="Unit" aria-label="Unit" />
-          <select name="frequency" aria-label="Cadence" defaultValue="daily">
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-          </select>
-          <select name="category" aria-label="Group" defaultValue="other">
-            {METRIC_GROUPS.map((g) => (
-              <option key={g.key} value={g.key}>
-                {g.label}
-              </option>
-            ))}
-          </select>
-          <button type="submit" className="btn secondary btn-sm">
-            Add
-          </button>
-        </form>
       </section>
 
       {/* ---- 2. What they logged ---- */}
       <section className="ms-section">
-        <h3 className="ad-microlabel">Daily &amp; weekly tracker</h3>
-        <div className="ms-tables">
-          <MetricHistoryTable
-            history={daily}
-            emptyNote="No daily metrics configured yet."
-            maxHeight={290}
-          />
-          {weekly.columns.length > 0 && (
-            <MetricHistoryTable
-              history={weekly}
-              emptyNote="No weekly metrics configured yet."
-              maxHeight={290}
-            />
-          )}
-        </div>
+        <TrackerHistory daily={daily} weekly={weekly} />
       </section>
 
       <section className="ms-section">

@@ -108,7 +108,6 @@ export default function ProgramBuilderShell({
           <div className="pb-eyebrow">Editing</div>
           <div className="pb-editing-name-row">
             {program.nameSlot}
-            <span className="pb-editing-meta">{program.meta}</span>
           </div>
         </div>
         <div className="pb-editing-actions">{program.actionsSlot}</div>

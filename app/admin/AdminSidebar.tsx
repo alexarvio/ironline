@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { createClientAction } from "../lib/actions";
-import { listClients } from "../lib/queries";
+import { clientAttention, listClients } from "../lib/queries";
 
-// Every client the coach manages, and a box to add another. Nothing else —
-// this is the only navigation the admin has.
+// The left rail: brand, the coach's two cross-client views, and the client
+// list with a way to add another.
+//
+// Only Feed and Calendar live in the nav. Report templates and Branding were
+// cut, and nothing else belongs here — the per-client work happens in the
+// tabs, not in navigation.
 export default function AdminSidebar({ selectedId }: { selectedId: number | null }) {
   const clients = listClients();
 
@@ -17,45 +21,66 @@ export default function AdminSidebar({ selectedId }: { selectedId: number | null
         </div>
       </div>
 
+      <nav className="ad-nav">
+        <Link href="/admin?view=feed" className="ad-nav-row">
+          <span className="ad-nav-icon" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <span className="ad-nav-label">Feed</span>
+        </Link>
+        <Link href="/admin?view=calendar" className="ad-nav-row">
+          <span className="ad-nav-icon" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.6" />
+              <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          </span>
+          <span className="ad-nav-label">Calendar</span>
+          {/* Scheduling conflicts the coach hasn't resolved. */}
+          <span className="ad-nav-badge">2</span>
+        </Link>
+      </nav>
+
       <div className="ad-clients-head">
         <span className="ad-microlabel">Clients</span>
         <span className="ad-clients-count">{clients.length}</span>
       </div>
 
+      {/* The add-client row sits at the bottom of this same scroll area, at
+          the same 36px as the rows above it, rather than pinned outside. */}
       <div className="ad-clients">
         {clients.length === 0 ? (
           <p className="ad-empty">No clients yet — add your first one below.</p>
         ) : (
-          clients.map((c) => (
-            <Link
-              key={c.id}
-              href={`/admin?client=${c.id}`}
-              className={`ad-client-row${c.id === selectedId ? " active" : ""}`}
-            >
-              <span className="ad-client-avatar" aria-hidden="true">
-                {c.name.slice(0, 1).toUpperCase()}
-              </span>
-              <span className="ad-client-name">{c.name}</span>
-            </Link>
-          ))
+          clients.map((c) => {
+            const attention = clientAttention(c.id);
+            return (
+              <Link
+                key={c.id}
+                href={`/admin?client=${c.id}`}
+                className={`ad-client-row${c.id === selectedId ? " active" : ""}`}
+              >
+                <span className="ad-client-avatar" aria-hidden="true">
+                  {c.name.slice(0, 1).toUpperCase()}
+                </span>
+                <span className="ad-client-name">{c.name}</span>
+                {/* One dot, with the reason in its title — at a glance the
+                    useful question is "who needs me", not "how many things". */}
+                {attention && <span className="ad-client-dot" title={attention} aria-label={attention} />}
+              </Link>
+            );
+          })
         )}
+
+        <form action={createClientAction} className="ad-new-client">
+          <input name="name" type="text" placeholder="New client" required className="ad-input" />
+          <button className="ad-icon-btn" type="submit" aria-label="Add client">
+            +
+          </button>
+        </form>
       </div>
-
-      <form action={createClientAction} className="ad-new-client">
-        <input name="name" type="text" placeholder="New client" required className="ad-input" />
-        <button className="ad-icon-btn" type="submit" aria-label="Add client">
-          +
-        </button>
-      </form>
-
-      {/* Opens the app as whoever is selected, so what the coach just built
-          is what they see — there's no login yet to do that for them. */}
-      <Link
-        href={selectedId ? `/client?client=${selectedId}` : "/client"}
-        className="ad-client-app-link"
-      >
-        View client app →
-      </Link>
     </>
   );
 }

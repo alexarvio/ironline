@@ -112,6 +112,7 @@ import {
   updateSupplementRow,
   removeSupplementRow,
   addMetricsFromLibrary,
+  getNutritionPlan,
 } from "./queries";
 import { writeReportNarrative } from "./reportAi";
 import type { ReportSectionType } from "./reportSectionTypes";
@@ -714,6 +715,9 @@ export async function saveNutritionTargetsAction(formData: FormData) {
     { protein: num("t_protein"), carbs: num("t_carbs"), fats: num("t_fats") },
     { protein: num("r_protein"), carbs: num("r_carbs"), fats: num("r_fats") }
   );
+  // Water rides along on the same form — it's one row inside the same card,
+  // and a second Save button for a single number would be silly.
+  if (formData.has("water")) setNutritionWater(clientId, num("water"));
   logCoachActivity(clientId, "Updated your nutrition targets", { kind: "general", actionTab: "nutrition", actionLabel: "See your targets" });
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -749,6 +753,16 @@ export async function updateSupplementRowAction(formData: FormData) {
 export async function removeSupplementRowAction(formData: FormData) {
   await requireCoach();
   removeSupplementRow(Number(formData.get("clientId")), Number(formData.get("rowId")));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function saveCoachNutritionNoteAction(formData: FormData) {
+  await requireCoach();
+  const clientId = Number(formData.get("clientId"));
+  const plan = getNutritionPlan(clientId);
+  plan.coach_notes = String(formData.get("note") ?? "");
+  saveNutritionPlan(plan);
   revalidatePath("/admin");
   revalidatePath("/client");
 }

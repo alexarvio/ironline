@@ -13,10 +13,13 @@ export default function MetricHistoryTable({
   history,
   emptyNote,
   maxHeight,
+  averaged = false,
 }: {
   history: MetricHistory;
   emptyNote: string;
   maxHeight: number;
+  /** At weekly grain a daily metric is an average, and the header says so. */
+  averaged?: boolean;
 }) {
   if (history.columns.length === 0) {
     return <p className="ad-panel-empty">{emptyNote}</p>;
@@ -43,6 +46,7 @@ export default function MetricHistoryTable({
               <th key={c.id} className="mh-name" title={c.unit ? `${c.name} (${c.unit})` : c.name}>
                 <span>{c.name}</span>
                 {c.unit && <em>{c.unit}</em>}
+                {averaged && <em className="mh-avg">avg</em>}
               </th>
             ))}
           </tr>

@@ -55,12 +55,19 @@ function formatActualLogs(logs: { weight_kg: number | null; reps: number | null 
 // Column widths from the design. The exercise column takes whatever is left
 // (table-layout is fixed), so it isn't listed here; anything the coach adds
 // as a custom column falls back to a sane default.
+// The exercise column (210px) and the client's logged column (300px) are
+// fixed by the design; these are what's left to divide at a 1440 canvas once
+// the 216px rail and 296px panel are taken out. Sized to the content — a
+// weight is at most "142.5", an RPE is one or two characters.
 const COLUMN_WIDTH: Record<string, string> = {
-  sets: "56px",
-  reps: "68px",
-  weight_goal: "76px",
-  rpe: "56px",
-  tempo: "72px",
+  sets: "48px",
+  reps: "58px",
+  weight_goal: "64px",
+  rpe: "48px",
+  tempo: "56px",
+  rest: "52px",
+  distance: "62px",
+  time: "58px",
 };
 
 const fmtDay = (iso: string) =>

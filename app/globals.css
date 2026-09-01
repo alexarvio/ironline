@@ -6,11 +6,11 @@
      the product stop reading as different products. */
   --ink: #14171c;                /* body text */
   --paper: #f8f9fb;              /* app background (centre column) */
-  --paper-raised: #edf0f4;       /* left rail and right panel */
+  --paper-raised: #e8e9e2;       /* left rail and right panel */
   --surface: #ffffff;            /* cards, inputs, day bodies */
   --table-head: #edf0f4;         /* table header fill */
   --logged-head: #eaeef4;        /* "what the client did" header */
-  --logged-band: #f3f6fa;        /* and its column band */
+  --logged-band: #f6f7f2;        /* and its column band */
   --steel: #5b6472;              /* dim / labels, 4.9:1 — do not lighten */
   --faint: #8b93a0;              /* placeholder, "already added" state */
   --border: #c2cbd3;             /* hairline */
@@ -530,7 +530,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
    read as visually distinct at a glance. */
 .exercise-table th.logged-col,
 .exercise-table td.logged-col {
-  border-left: 2px solid var(--steel);
+  border-left: 1px solid var(--border);
 }
 
 .exercise-table tbody tr:last-child td,
@@ -7074,16 +7074,46 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   white-space: normal;
 }
 
+/* The column the coach actually reads gets the room the design gives it;
+   the prescription inputs shrink around it, not the other way round. */
 .pb .exercise-table .logged-col {
-  width: 180px;
+  width: 290px;
+  min-width: 290px;
   white-space: normal;
 }
 
 /* Exercise names need room for the trend badge and last-week reference
    underneath; Notes takes whatever is left over. */
 .pb .exercise-table th:first-child {
-  width: 190px;
+  width: 210px;
+  min-width: 210px;
 }
+
+/* Notes takes what's left, but never so little that it can't hold a phrase. */
+.pb .exercise-table th.notes-cell,
+.pb .exercise-table td.notes-cell {
+  min-width: 96px;
+}
+
+/* If a coach switches on all six columns it can still outgrow 1440; the
+   day scrolls rather than crushing the logged column, which is the one
+   thing on this row that must stay readable. */
+.pb .exercise-table-wrap { overflow-x: auto; }
+
+/* Spinners eat 16px of every numeric cell and a coach types these anyway. */
+.pb .exercise-table input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+.pb .exercise-table input[type="number"]::-webkit-outer-spin-button,
+.pb .exercise-table input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.pb .exercise-table input { padding: 0 5px; font-size: 11.5px; }
+
+/* The row's delete sits in a fixed 30px gutter rather than sharing the
+   logged column's width. */
+.pb .exercise-table th:last-child,
+.pb .exercise-table td:last-child { width: 30px; min-width: 30px; padding-left: 0; padding-right: 6px; }
 
 .pb .exercise-table input {
   width: 100%;
@@ -8542,377 +8572,8 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   cursor: pointer;
 }
 
-/* ---- Nutrition tab ---- */
-.nt { padding: 16px 0 0; }
 
-.nt-targets {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  align-items: start;
-}
 
-.nt-day {
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: var(--surface);
-  padding: 12px 14px;
-}
-
-.nt-day-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border);
-}
-
-.nt-kcal {
-  font-family: var(--font-serif);
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.nt-macros {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.nt-macro { display: flex; flex-direction: column; gap: 4px; }
-
-.nt-macro span {
-  font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--steel);
-}
-
-.nt-macro input,
-.nt-water-input input {
-  height: 30px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--ink);
-  padding: 0 8px;
-  font-size: 12.5px;
-  width: 100%;
-  min-width: 0;
-}
-
-.nt-targets-foot {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.nt-derived-note { font-size: 11px; color: var(--steel); }
-
-.nt-water {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 18px;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: var(--surface);
-}
-
-.nt-water-input {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-left: auto;
-}
-
-.nt-water-input input { width: 80px; text-align: right; }
-
-.nt-water-unit { font-size: 11.5px; color: var(--steel); }
-
-.nt-supps { margin-top: 18px; }
-
-.nt-supps-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.nt-supp-table {
-  width: 100%;
-  border-collapse: collapse;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  overflow: hidden;
-  background: var(--surface);
-}
-
-.nt-supp-table th {
-  text-align: left;
-  font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--steel);
-  background: var(--table-head);
-  padding: 6px 10px;
-  border-bottom: 1px solid var(--border);
-}
-
-.nt-supp-table td {
-  padding: 5px 6px;
-  border-top: 1px solid var(--border);
-}
-
-.nt-supp-table td:first-child { padding-left: 10px; }
-
-.nt-supp-table input {
-  width: 100%;
-  min-width: 0;
-  height: 26px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--ink);
-  padding: 0 7px;
-  font-size: 11.5px;
-}
-
-.nt-supp-remove { width: 34px; text-align: right; padding-right: 8px; }
-
-.nt-supp-remove button {
-  border: none;
-  background: none;
-  color: var(--steel);
-  font-size: 15px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0 4px;
-}
-
-.nt-supp-remove button:hover { color: var(--accent-plate); }
-
-/* ---- Measurements tab ---- */
-.ms { padding: 16px 0 0; }
-.ms-section { margin-bottom: 22px; }
-
-.ms-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.ms-metric-list {
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: var(--surface);
-  overflow: hidden;
-}
-
-.ms-metric-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 10px;
-  border-top: 1px solid var(--border);
-}
-
-.ms-metric-row:first-child { border-top: none; }
-
-/* Fixed widths so the pills form straight columns down the list rather than
-   jittering with the length of each word. */
-.ms-group-pill {
-  flex-shrink: 0;
-  width: 130px;
-  border-radius: 999px;
-  padding: 2px 9px;
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--ink);
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ms-cadence-pill {
-  flex-shrink: 0;
-  width: 74px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 2px 8px;
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--steel);
-  text-align: center;
-}
-
-.ms-metric-name { flex: 1; min-width: 0; font-size: 12px; font-weight: 600; color: var(--ink); }
-.ms-metric-unit { flex-shrink: 0; width: 54px; font-size: 11px; color: var(--steel); }
-.ms-metric-action { flex-shrink: 0; display: flex; }
-
-.ms-eye,
-.ms-del {
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 13px;
-  line-height: 1;
-  padding: 2px 5px;
-  color: var(--faint);
-}
-
-.ms-eye.on { color: var(--accent); }
-.ms-del:hover { color: var(--accent-plate); }
-
-.ms-manual {
-  display: flex;
-  gap: 6px;
-  margin-top: 10px;
-  flex-wrap: wrap;
-}
-
-.ms-manual input,
-.ms-manual select {
-  height: 28px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--ink);
-  padding: 0 8px;
-  font-size: 11.5px;
-}
-
-.ms-manual input[name="name"] { flex: 1; min-width: 140px; }
-.ms-manual input[name="unit"] { width: 80px; }
-
-.ms-tables { display: flex; flex-direction: column; gap: 14px; }
-
-/* ---- Metric library dropdown ---- */
-.ml-wrap { position: relative; }
-
-.ml-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 28px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--surface);
-  color: var(--ink);
-  padding: 0 10px;
-  font: inherit;
-  font-size: 11.5px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.ml-trigger.open { border-color: var(--accent); color: var(--accent); }
-.ml-chev { font-size: 10px; transition: transform 120ms; }
-.ml-chev.open { transform: rotate(180deg); }
-
-/* Floats, so ticking things never reflows the list underneath. */
-.ml-pop {
-  position: absolute;
-  top: 34px;
-  right: 0;
-  z-index: 30;
-  width: 660px;
-  max-height: 460px;
-  overflow-y: auto;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
-  box-shadow: 0 12px 28px rgba(20, 23, 28, 0.16);
-  padding: 12px 14px 14px;
-}
-
-.ml-groups { display: flex; flex-direction: column; gap: 12px; }
-
-.ml-group-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-bottom: 5px;
-  border-bottom: 1px solid var(--border);
-}
-
-.ml-group-name { font-size: 11px; font-weight: 800; color: var(--ink); }
-
-.ml-cadence {
-  border-radius: 999px;
-  background: var(--accent-tint);
-  color: var(--accent);
-  padding: 1px 7px;
-  font-size: 9.5px;
-  font-weight: 800;
-  text-transform: capitalize;
-}
-
-.ml-group-actions { margin-left: auto; display: flex; gap: 4px; }
-
-.ml-group-actions button {
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface);
-  color: var(--steel);
-  font-size: 9.5px;
-  font-weight: 700;
-  padding: 1px 6px;
-  cursor: pointer;
-}
-
-.ml-group-actions button:disabled { opacity: 0.4; cursor: not-allowed; }
-
-.ml-items {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 3px 10px;
-  margin-top: 6px;
-}
-
-.ml-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--ink);
-  cursor: pointer;
-  min-width: 0;
-}
-
-.ml-item em {
-  font-style: normal;
-  font-size: 9.5px;
-  color: var(--faint);
-}
-
-/* Already on the check-in: greyed and marked so it can't be added twice. */
-.ml-item.added { color: var(--faint); cursor: default; }
-.ml-item.added em { color: var(--faint); font-weight: 700; }
-
-.ml-commit {
-  position: sticky;
-  bottom: -14px;
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
-  background: var(--surface);
-}
-
-.ml-commit button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* ---- History tables ---- */
 .mh-wrap {
@@ -9071,3 +8732,718 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   padding: 10px;
   min-height: 160px;
 }
+
+/* ================= Workstation: shared controls ================= */
+.ad-btn-primary {
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: var(--good);
+  color: #ffffff;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ad-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.ad-btn-secondary {
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0 12px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ---- Left rail nav ---- */
+.ad-nav {
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ad-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-radius: 7px;
+  padding: 7px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.ad-nav-row:hover { background: var(--accent-tint); }
+.ad-nav-icon { display: flex; flex-shrink: 0; color: var(--steel); }
+.ad-nav-label { flex: 1; min-width: 0; }
+
+.ad-nav-badge {
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--accent-plate);
+  color: #ffffff;
+  padding: 1px 6px;
+  font-size: 9.5px;
+  font-weight: 800;
+}
+
+/* One dot, reason in the title — the question at a glance is "who needs me". */
+.ad-client-dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--accent-plate);
+}
+
+/* The add-client row matches the 36px client rows above it. */
+.ad-new-client {
+  display: flex;
+  gap: 6px;
+  margin-top: 5px;
+  padding: 0 1px;
+}
+
+.ad-new-client .ad-input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0 9px;
+  font-size: 12px;
+}
+
+.ad-new-client .ad-icon-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* ================= Nutrition ================= */
+.nt { padding: 16px 0 0; }
+
+.nt-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.nt-card,
+.nt-note-card {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  padding: 13px 15px 14px;
+}
+
+.nt-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Training day / Rest day — one segmented control, not two buttons. */
+.nt-daytoggle {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  padding: 2px;
+}
+
+.nt-daybtn {
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--steel);
+  padding: 4px 12px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.nt-daybtn.on { background: var(--ink); color: var(--paper); }
+
+.nt-kcal-block { margin-top: 12px; }
+
+.nt-kcal-row { display: flex; align-items: baseline; gap: 6px; margin-top: 2px; }
+
+.nt-kcal-value {
+  font-family: var(--font-serif);
+  font-size: 34px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.05;
+}
+
+.nt-kcal-unit { font-size: 12px; font-weight: 700; color: var(--steel); }
+
+.nt-macros {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+  padding-top: 13px;
+  border-top: 1px solid var(--border);
+}
+
+.nt-macro { min-width: 0; }
+
+.nt-macro-input { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
+
+.nt-macro-input input {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.nt-macro-unit { font-size: 11px; color: var(--steel); }
+
+.nt-bar {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--border);
+  margin-top: 9px;
+  overflow: hidden;
+}
+
+.nt-bar-fill { display: block; height: 100%; border-radius: 999px; }
+
+.nt-macro-pct { display: block; font-size: 10.5px; color: var(--steel); margin-top: 7px; }
+
+/* Water: one hairline row inside the same card. */
+.nt-water-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.nt-water-label { flex: 1; font-size: 11.5px; color: var(--steel); }
+
+.nt-water-input {
+  width: 64px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.nt-water-unit { font-size: 11.5px; color: var(--steel); }
+
+.nt-card-foot { display: flex; justify-content: flex-end; margin-top: 13px; }
+
+.nt-note-card textarea {
+  width: 100%;
+  min-height: 196px;
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 9px 10px;
+  font: inherit;
+  font-size: 12px;
+  resize: vertical;
+}
+
+.nt-note-foot { display: flex; justify-content: flex-end; margin-top: 10px; }
+
+.nt-supps { margin-top: 16px; }
+
+.nt-supps-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.nt-supps-count { font-size: 11px; color: var(--steel); }
+
+.nt-supp-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.nt-supp-table th {
+  text-align: left;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--steel);
+  background: var(--table-head);
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.nt-supp-table td { padding: 5px 6px; border-top: 1px solid var(--border); }
+.nt-supp-table tr:first-child td { border-top: none; }
+.nt-supp-table td:first-child { padding-left: 10px; }
+
+.nt-supp-table input {
+  width: 100%;
+  min-width: 0;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0 7px;
+  font-size: 11.5px;
+}
+
+.nt-supp-table td:first-child input { border-color: transparent; font-weight: 600; }
+.nt-supp-table td:first-child input:hover { border-color: var(--border); }
+
+.nt-supp-empty { padding: 12px 10px; color: var(--faint); font-size: 11.5px; }
+
+.nt-supp-add-hint { font-size: 11.5px; color: var(--faint); padding-left: 4px; }
+
+.nt-supp-remove { width: 46px; text-align: right; padding-right: 8px; }
+
+.nt-supp-remove button {
+  border: none;
+  background: none;
+  color: var(--steel);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.nt-supp-remove button:hover { color: var(--accent-plate); }
+.nt-supp-add-btn { padding: 0 12px; }
+
+/* ================= Measurements ================= */
+.ms { padding: 16px 0 0; }
+.ms-section { margin-bottom: 20px; }
+.ms-title { display: block; margin-bottom: 9px; }
+
+.ms-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 9px;
+}
+
+/* ---- Add-a-column row, with the library inside the name field ---- */
+.ms-addrow { position: relative; margin-bottom: 10px; }
+
+.ms-addrow-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ms-namefield {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+/* The whole field lights up while the library is open, because the chevron
+   inside it is what opened the thing floating below. */
+.ms-namefield.open { border-color: var(--accent); }
+
+.ms-namefield input {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  border: none;
+  background: none;
+  color: var(--ink);
+  padding: 0 9px;
+  font-size: 12px;
+}
+
+.ms-namefield input:focus { outline: none; }
+
+.ms-namechev {
+  flex-shrink: 0;
+  width: 30px;
+  border: none;
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--steel);
+  font-size: 10px;
+  cursor: pointer;
+  transition: transform 120ms;
+}
+
+.ms-namechev.open {
+  background: var(--accent);
+  color: var(--accent-fg);
+  transform: rotate(180deg);
+}
+
+.ms-unitfield {
+  width: 110px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0 9px;
+  font-size: 12px;
+}
+
+.ms-logged {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  padding: 3px 4px 3px 9px;
+}
+
+.ms-logged-label {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--steel);
+  margin-right: 4px;
+}
+
+.ms-logged-btn {
+  border: none;
+  border-radius: 5px;
+  background: none;
+  color: var(--steel);
+  padding: 3px 9px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ms-logged-btn.on { background: var(--ink); color: var(--paper); }
+
+/* ---- The configured metrics: hairline rows, not cards ---- */
+.ms-metric-list { display: flex; flex-direction: column; }
+
+.ms-metric-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 4px 0;
+  border-top: 1px solid var(--border);
+}
+
+.ms-metric-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ms-metric-unit {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--steel);
+  margin-left: 4px;
+}
+
+/* Fixed widths so the two pills form straight columns down the list rather
+   than jittering with the length of each word. */
+.ms-group-pill {
+  flex-shrink: 0;
+  width: 130px;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ms-cadence-pill {
+  flex-shrink: 0;
+  width: 74px;
+  border-radius: 999px;
+  background: var(--accent-tint);
+  color: var(--accent);
+  padding: 3px 8px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.ms-metric-action { flex-shrink: 0; display: flex; }
+
+.ms-eye,
+.ms-del {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  padding: 0;
+  color: var(--faint);
+}
+
+.ms-eye.on { color: var(--accent); }
+.ms-del:hover { color: var(--accent-plate); }
+
+/* ---- VIEW BY ---- */
+.ms-viewby {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  padding: 2px 3px 2px 9px;
+}
+
+.ms-viewby-label {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--steel);
+  margin-right: 4px;
+}
+
+.ms-viewby-btn {
+  border: none;
+  border-radius: 5px;
+  background: none;
+  color: var(--steel);
+  padding: 3px 11px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ms-viewby-btn.on { background: var(--ink); color: var(--paper); }
+
+/* ---- Metric library dropdown ---- */
+.ml-pop {
+  position: absolute;
+  top: 34px;
+  left: 0;
+  z-index: 30;
+  width: 660px;
+  max-height: 330px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 12px 28px rgba(20, 23, 28, 0.16);
+  padding: 0 14px 14px;
+}
+
+.ml-pop-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--surface);
+  padding: 12px 0 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ml-groups { display: flex; flex-direction: column; gap: 12px; padding-top: 12px; }
+
+.ml-group-head { display: flex; align-items: center; gap: 8px; }
+.ml-group-name { font-size: 11px; font-weight: 800; color: var(--ink); }
+
+.ml-cadence {
+  border-radius: 999px;
+  background: var(--accent-tint);
+  color: var(--accent);
+  padding: 1px 7px;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.ml-rule { flex: 1; height: 1px; background: var(--border); }
+
+.ml-group-actions { display: flex; gap: 4px; }
+
+.ml-group-actions button {
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--steel);
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 6px;
+  cursor: pointer;
+}
+
+.ml-group-actions button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.ml-items { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 7px; }
+
+.ml-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ink);
+  cursor: pointer;
+  min-width: 0;
+}
+
+.ml-item input[type="checkbox"] { width: 13px; height: 13px; accent-color: var(--accent); }
+.ml-item em { font-style: normal; font-size: 9.5px; color: var(--faint); }
+.ml-item.added { color: var(--faint); cursor: default; }
+.ml-item.added em { font-weight: 700; }
+
+.mh-avg {
+  display: block;
+  font-style: normal;
+  font-size: 8.5px;
+  font-weight: 700;
+  color: var(--faint);
+  text-transform: lowercase;
+}
+
+/* ---- Day type: one segmented control, split 50/50 ---- */
+.pb-daytype {
+  flex-shrink: 0;
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  padding: 2px;
+  overflow: hidden;
+}
+
+.pb-daytype-half { display: flex; }
+
+.pb-daytype-btn {
+  width: 62px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--steel);
+  padding: 3px 0;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.pb-daytype-btn.on { background: var(--ink); color: var(--paper); }
+.pb-daytype-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ---- Exercise cell: trend left, name, demo right, all on one line ---- */
+.pb-exercise-title { flex-wrap: nowrap; align-items: flex-start; }
+
+.pb-exercise-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.pb-trend { flex-shrink: 0; font-size: 10px; font-weight: 800; }
+.pb-demo-chip { margin-left: auto; }
+
+/* ---- "What the client did": its own band ---- */
+.logged-col { background: var(--logged-band); border-left: 1px solid var(--border); }
+
+.pb-logged-wk {
+  width: 30px;
+  border-radius: 4px;
+  background: var(--paper-raised);
+  color: var(--steel);
+  font-size: 9px;
+  margin-right: 5px;
+}
+
+/* The week being edited is the one the coach is acting on, so its tag is
+   filled rather than merely darker. */
+.pb-logged-row.current .pb-logged-wk {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+.pb-logged-cell {
+  font-size: 10px;
+  padding: 2px 3px;
+}
+
+.pb-logged-row.current .pb-logged-cell { color: var(--ink); font-weight: 700; }
+.pb-logged-row:not(.current) .pb-logged-cell { color: var(--steel); font-weight: 400; }
+
+/* Met or beat the target for that week, or came in under it. */
+.pb-logged-cell.met { box-shadow: inset 0 -2px 0 var(--good); }
+.pb-logged-cell.under { box-shadow: inset 0 -2px 0 var(--accent-plate); }
+
+.pb-logged-empty { font-size: 10.5px; font-style: italic; color: var(--faint); }

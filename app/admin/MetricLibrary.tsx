@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { addMetricsFromLibraryAction } from "../lib/actions";
+import { addMetricDefinitionAction, addMetricsFromLibraryAction } from "../lib/actions";
 
 export type LibraryPackView = {
   id: string;
@@ -11,16 +11,16 @@ export type LibraryPackView = {
   items: { name: string; unit: string; already: boolean }[];
 };
 
-// The metric library: the coach's own spreadsheets, section for section, so
-// setting a client up is ticking boxes rather than retyping forty rows.
+// The add-a-column row, with the metric library living INSIDE the name field.
 //
-// It floats rather than expanding in place — the setup list below must not
-// reflow while the coach is picking — and commits everything ticked with one
-// button, because adding seven metrics one at a time is the thing this is
-// meant to replace.
+// The chevron at the right edge of that input is the library: putting it
+// there rather than as a separate button elsewhere means "type a name" and
+// "pick a name" are the same control, which is how the coach thinks about it.
+// The dropdown floats, so nothing below it reflows while they're picking.
 export default function MetricLibrary({ clientId, packs }: { clientId: number; packs: LibraryPackView[] }) {
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<Record<string, boolean>>({});
+  const [cadence, setCadence] = useState<"daily" | "weekly" | "monthly">("daily");
   const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export default function MetricLibrary({ clientId, packs }: { clientId: number; p
       .map((i) => ({ name: i.name, unit: i.unit, group: p.group, cadence: p.cadence }))
   );
 
-  const setPack = (pack: LibraryPackView, on: boolean) => {
+  const setPack = (pack: LibraryPackView, on: boolean) =>
     setPicked((prev) => {
       const next = { ...prev };
       pack.items.forEach((i) => {
@@ -53,33 +53,79 @@ export default function MetricLibrary({ clientId, packs }: { clientId: number; p
       });
       return next;
     });
-  };
 
   return (
-    <div className="ml-wrap" ref={wrapRef}>
-      <button
-        type="button"
-        className={`ml-trigger${open ? " open" : ""}`}
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-      >
-        Metric library
-        <span className={`ml-chev${open ? " open" : ""}`} aria-hidden="true">
-          ▾
-        </span>
-      </button>
+    <div className="ms-addrow" ref={wrapRef}>
+      <form action={addMetricDefinitionAction} className="ms-addrow-form">
+        <input type="hidden" name="clientId" value={clientId} />
+        {/* Manually added metrics land in "Other" — there's no group picker
+            here because choosing one is the library's job. */}
+        <input type="hidden" name="category" value="other" />
+        <input type="hidden" name="frequency" value={cadence} />
+
+        <div className={`ms-namefield${open ? " open" : ""}`}>
+          <input name="name" type="text" placeholder="Column name — or pick from the library" aria-label="Column name" />
+          <button
+            type="button"
+            className={`ms-namechev${open ? " open" : ""}`}
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            aria-label="Open the metric library"
+          >
+            ▾
+          </button>
+        </div>
+
+        <input name="unit" type="text" placeholder="Unit (e.g. kg)" aria-label="Unit" className="ms-unitfield" />
+
+        <div className="ms-logged" role="group" aria-label="Logged how often">
+          <span className="ms-logged-label">Logged</span>
+          {(["daily", "weekly", "monthly"] as const).map((c) => (
+            <button
+              key={c}
+              type="button"
+              className={`ms-logged-btn${cadence === c ? " on" : ""}`}
+              onClick={() => setCadence(c)}
+              aria-pressed={cadence === c}
+            >
+              {c[0].toUpperCase() + c.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        <button type="submit" className="ad-btn-primary">
+          Add column
+        </button>
+      </form>
 
       {open && (
         <div className="ml-pop" role="dialog" aria-label="Metric library">
+          <div className="ml-pop-head">
+            <span className="ad-microlabel">Metric library</span>
+            <form
+              action={addMetricsFromLibraryAction}
+              onSubmit={() => {
+                setPicked({});
+                setOpen(false);
+              }}
+            >
+              <input type="hidden" name="clientId" value={clientId} />
+              <input type="hidden" name="picks" value={JSON.stringify(selected)} />
+              <button type="submit" className="ad-btn-primary" disabled={selected.length === 0}>
+                {selected.length === 0 ? "Pick some metrics" : `Add ${selected.length} to check-in`}
+              </button>
+            </form>
+          </div>
+
           <div className="ml-groups">
             {packs.map((pack) => {
               const available = pack.items.filter((i) => !i.already);
-              const allOn = available.length > 0 && available.every((i) => picked[key(pack.id, i.name)]);
               return (
                 <section key={pack.id} className="ml-group">
                   <div className="ml-group-head">
                     <span className="ml-group-name">{pack.label}</span>
                     <span className="ml-cadence">{pack.cadence}</span>
+                    <span className="ml-rule" />
                     <span className="ml-group-actions">
                       <button type="button" onClick={() => setPack(pack, true)} disabled={available.length === 0}>
                         all
@@ -91,8 +137,6 @@ export default function MetricLibrary({ clientId, packs }: { clientId: number; p
                   </div>
                   <div className="ml-items">
                     {pack.items.map((item) => {
-                      // Anything already on the check-in is greyed and marked,
-                      // so it can't be added twice.
                       if (item.already) {
                         return (
                           <span key={item.name} className="ml-item added" title="Already on this client's check-in">
@@ -119,23 +163,6 @@ export default function MetricLibrary({ clientId, packs }: { clientId: number; p
               );
             })}
           </div>
-
-          <form
-            action={addMetricsFromLibraryAction}
-            className="ml-commit"
-            onSubmit={() => {
-              setPicked({});
-              setOpen(false);
-            }}
-          >
-            <input type="hidden" name="clientId" value={clientId} />
-            <input type="hidden" name="picks" value={JSON.stringify(selected)} />
-            <button type="submit" className="btn" disabled={selected.length === 0}>
-              {selected.length === 0
-                ? "Pick some metrics"
-                : `Add ${selected.length} to check-in`}
-            </button>
-          </form>
         </div>
       )}
     </div>

@@ -3328,6 +3328,33 @@ export function getClientHeaderPlans(clientId: number): HeaderPlan[] {
 
 
 
+/**
+ * Why a client needs the coach's attention, or null when they don't.
+ *
+ * The rail shows this as a single amber dot with the reason in its title —
+ * one dot, not a badge count, because the useful question at a glance is
+ * "who needs me", not "how many things".
+ */
+export function clientAttention(clientId: number): string | null {
+  // Check-ins the client owes but hasn't logged.
+  const due = getCheckInStatus(clientId);
+  if (due.dueTypes.length > 0) {
+    const n = due.dueTypes.length;
+    return `${n} check-in${n === 1 ? "" : "s"} due`;
+  }
+
+  // The live week having no split is the coach's own omission, and the one
+  // that stops the client training at all.
+  const program = getDeployedProgram(clientId);
+  if (program) {
+    const liveWeek = program.start_week + getProgramCurrentWeekIndex(program) - 1;
+    const built = getWeek(clientId, liveWeek).some((d) => getAssignmentsForDay(d.id).length > 0);
+    if (!built) return `Week ${liveWeek} not built`;
+  }
+
+  return null;
+}
+
 export function getCheckInStatus(clientId: number): CheckInStatus {
   const today = localDateStr();
   const thisWeek = weekStart(today);
