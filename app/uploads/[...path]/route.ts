@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { DATA_DIR } from "../../lib/db";
+import { canAccessClient } from "../../lib/auth";
 
 // Serves files written by savePhotoUpload/saveChatMedia in queries.ts. Those
 // live under DATA_DIR/uploads rather than /public/uploads so they survive on
@@ -21,6 +22,31 @@ export async function GET(
   { params }: { params: Promise<{ path: string[] }> }
 ) {
   const { path: segments } = await params;
+
+  // Layout on disk mirrors the URL, so the client id is always the second
+  // segment:
+  //   uploads/progress/<clientId>/<slotId>/<period>.<ext>
+  //   uploads/chat/<clientId>/<filename>
+  // Progress photos are about as sensitive as this app gets, and without
+  // this check anyone who guessed or was sent a URL could fetch any
+  // client's. 404 rather than 403 for an unauthorized caller, since a
+  // "forbidden" would confirm the file exists.
+  if (
+    !segments ||
+    segments.length < 2 ||
+    segments.some((seg) => !seg || seg === "." || seg === ".." || seg.includes("/") || seg.includes("\\"))
+  ) {
+    return new Response("Not found", { status: 404 });
+  }
+  const [kind, clientIdRaw] = segments;
+  if (kind !== "progress" && kind !== "chat") {
+    return new Response("Not found", { status: 404 });
+  }
+  const clientId = Number(clientIdRaw);
+  if (!Number.isInteger(clientId) || clientId <= 0 || !(await canAccessClient(clientId))) {
+    return new Response("Not found", { status: 404 });
+  }
+
   const uploadsRoot = path.join(DATA_DIR, "uploads");
   const filePath = path.join(uploadsRoot, ...segments);
 
@@ -37,10 +63,10 @@ export async function GET(
   const contentType = MIME_TYPES[ext] ?? "application/octet-stream";
   const body = fs.readFileSync(filePath);
 
-  return new Response(body, {
+  return new Response(new Uint8Array(body), {
     headers: {
       "Content-Type": contentType,
-      "Cache-Control": "private, max-age=31536000, immutable",
+      "Cache-Control": "private, max-age=3600",
     },
   });
 }

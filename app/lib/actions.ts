@@ -3,6 +3,12 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import {
+  canAccessClient,
+  getSessionUser,
+  requireClientAccess,
+  requireCoach,
+} from "./auth";
+import {
   addClientGoal,
   addCustomTrainingColumn,
   addExercise,
@@ -90,6 +96,10 @@ import {
   updateTrainingColumn,
   VITAMIN_ITEMS,
   weekStart,
+  getClientIdForAssignment,
+  getClientIdForPhotoSlot,
+  getClientIdForNotification,
+  getClientIdForReport,
 } from "./queries";
 import { writeReportNarrative } from "./reportAi";
 import type { ReportSectionType } from "./reportSectionTypes";
@@ -97,6 +107,7 @@ import type { ReportSectionType } from "./reportSectionTypes";
 const CLIENT_ID = 3;
 
 export async function addExerciseAction(formData: FormData) {
+  await requireCoach();
   const programDayId = Number(formData.get("programDayId"));
   const exerciseId = Number(formData.get("exerciseId"));
   const sets = Number(formData.get("sets")) || 3;
@@ -116,6 +127,7 @@ export async function addExerciseAction(formData: FormData) {
 }
 
 export async function removeExerciseAction(formData: FormData) {
+  await requireCoach();
   const assignmentId = Number(formData.get("assignmentId"));
   removeAssignment(assignmentId);
   revalidatePath("/client");
@@ -127,6 +139,7 @@ export async function removeExerciseAction(formData: FormData) {
 // submits itself on blur with only its own name present, so this only ever
 // touches the one field that changed.
 export async function updateAssignmentAction(formData: FormData) {
+  await requireCoach();
   const assignmentId = Number(formData.get("assignmentId"));
   const fields: Parameters<typeof updateAssignmentFields>[1] = {};
   if (formData.has("sets")) fields.sets = Math.max(1, Number(formData.get("sets")) || 1);
@@ -147,6 +160,7 @@ export async function updateAssignmentAction(formData: FormData) {
 }
 
 export async function addExerciseToLibraryAction(formData: FormData) {
+  await requireCoach();
   const name = String(formData.get("name") || "").trim();
   const muscleGroup = String(formData.get("muscleGroup") || "other");
   const videoUrl = String(formData.get("videoUrl") || "").trim() || null;
@@ -156,6 +170,7 @@ export async function addExerciseToLibraryAction(formData: FormData) {
 }
 
 export async function updateTrainingColumnAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   const label = String(formData.get("label") || "").trim();
   if (!label) return;
@@ -164,6 +179,7 @@ export async function updateTrainingColumnAction(formData: FormData) {
 }
 
 export async function setTrainingColumnVisibleAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   const visible = formData.get("visible") === "true";
   setTrainingColumnVisible(id, visible);
@@ -171,6 +187,7 @@ export async function setTrainingColumnVisibleAction(formData: FormData) {
 }
 
 export async function addTrainingColumnAction(formData: FormData) {
+  await requireCoach();
   const clientId = Number(formData.get("clientId"));
   const label = String(formData.get("label") || "").trim();
   if (!label) return;
@@ -179,12 +196,14 @@ export async function addTrainingColumnAction(formData: FormData) {
 }
 
 export async function removeCustomTrainingColumnAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   removeCustomTrainingColumn(id);
   revalidatePath("/admin");
 }
 
 export async function setAssignmentCustomValueAction(formData: FormData) {
+  await requireCoach();
   const assignmentId = Number(formData.get("assignmentId"));
   const columnId = Number(formData.get("columnId"));
   const value = String(formData.get("value") || "");
@@ -194,6 +213,7 @@ export async function setAssignmentCustomValueAction(formData: FormData) {
 }
 
 export async function setDayRestAction(formData: FormData) {
+  await requireCoach();
   const programDayId = Number(formData.get("programDayId"));
   const isRest = formData.get("isRest") === "true";
   setDayRest(programDayId, isRest);
@@ -205,6 +225,7 @@ export async function setDayRestAction(formData: FormData) {
 // week's plan onto the one being edited so a coach progressing a block
 // isn't retyping seven days of exercises.
 export async function copyProgramWeekAction(formData: FormData) {
+  await requireCoach();
   const clientId = Number(formData.get("clientId"));
   const fromWeek = Number(formData.get("fromWeek"));
   const toWeek = Number(formData.get("toWeek"));
@@ -215,6 +236,7 @@ export async function copyProgramWeekAction(formData: FormData) {
 }
 
 export async function setLabelAction(formData: FormData) {
+  await requireCoach();
   const programDayId = Number(formData.get("programDayId"));
   const label = String(formData.get("label") || "");
   setDayLabel(programDayId, label);
@@ -230,6 +252,7 @@ export async function setLabelAction(formData: FormData) {
 // week-at-a-time model), but always displays as "Week 1" — see
 // programWeekLabel.
 export async function createProgramAction(formData: FormData) {
+  await requireCoach();
   const clientId = Number(formData.get("clientId")) || CLIENT_ID;
   const weekLinkBase = String(formData.get("weekLinkBase") || "/admin");
   const existingWeeks = listWeekNumbers(clientId);
@@ -240,6 +263,7 @@ export async function createProgramAction(formData: FormData) {
 }
 
 export async function updateProgramWeeksAction(formData: FormData) {
+  await requireCoach();
   const programId = Number(formData.get("programId"));
   const totalWeeks = Number(formData.get("totalWeeks"));
   updateProgramTotalWeeks(programId, totalWeeks);
@@ -247,6 +271,7 @@ export async function updateProgramWeeksAction(formData: FormData) {
 }
 
 export async function renameProgramAction(formData: FormData) {
+  await requireCoach();
   const programId = Number(formData.get("programId"));
   const name = String(formData.get("name") || "");
   renameProgram(programId, name);
@@ -254,6 +279,7 @@ export async function renameProgramAction(formData: FormData) {
 }
 
 export async function deployProgramAction(formData: FormData) {
+  await requireCoach();
   const programId = Number(formData.get("programId"));
   deployProgram(programId);
   revalidatePath("/client");
@@ -266,6 +292,7 @@ export async function deployProgramAction(formData: FormData) {
 // applyDueProgramDeployments. Silently no-ops on a missing/invalid date or
 // time rather than scheduling for "right now".
 export async function scheduleProgramDeployAction(formData: FormData) {
+  await requireCoach();
   const programId = Number(formData.get("programId"));
   const date = String(formData.get("date") || "");
   const time = String(formData.get("time") || "");
@@ -279,6 +306,7 @@ export async function scheduleProgramDeployAction(formData: FormData) {
 }
 
 export async function cancelProgramScheduleAction(formData: FormData) {
+  await requireCoach();
   const programId = Number(formData.get("programId"));
   scheduleProgramDeploy(programId, null);
   revalidatePath("/admin");
@@ -288,6 +316,7 @@ export async function cancelProgramScheduleAction(formData: FormData) {
 // of reach of this action entirely, so there's no risk of pulling a program
 // out from under a client who's already seen it.
 export async function removeProgramAction(formData: FormData) {
+  await requireCoach();
   const programId = Number(formData.get("programId"));
   const weekLinkBase = String(formData.get("weekLinkBase") || "/admin");
   removeProgram(programId);
@@ -297,6 +326,13 @@ export async function removeProgramAction(formData: FormData) {
 
 export async function logSetAction(formData: FormData) {
   const assignmentId = Number(formData.get("assignmentId"));
+
+  // The assignment decides whose data this is; the session decides whether
+  // the caller may write it. A client posting someone else's assignment id
+  // gets a silent no-op.
+  const owner = getClientIdForAssignment(assignmentId);
+  if (owner == null || !(await canAccessClient(owner))) return;
+
   const setNumber = Number(formData.get("setNumber"));
   const weight = formData.get("weight") ? Number(formData.get("weight")) : null;
   const reps = formData.get("reps") ? Number(formData.get("reps")) : null;
@@ -308,6 +344,7 @@ export async function logSetAction(formData: FormData) {
 }
 
 export async function createClientAction(formData: FormData) {
+  await requireCoach();
   const name = String(formData.get("name") || "").trim();
   if (!name) return;
   const client = createClient(name);
@@ -316,6 +353,7 @@ export async function createClientAction(formData: FormData) {
 }
 
 export async function addInvoiceAction(formData: FormData) {
+  await requireCoach();
   const clientId = Number(formData.get("clientId"));
   const description = String(formData.get("description") || "").trim();
   const amount = Number(formData.get("amount")) || 0;
@@ -332,6 +370,7 @@ export async function addInvoiceAction(formData: FormData) {
 }
 
 export async function setInvoiceStatusAction(formData: FormData) {
+  await requireCoach();
   const invoiceId = Number(formData.get("invoiceId"));
   const status = String(formData.get("status")) as "unpaid" | "sent" | "paid" | "due";
   setInvoiceStatus(invoiceId, status);
@@ -342,7 +381,7 @@ export async function setInvoiceStatusAction(formData: FormData) {
 // client's check-in form submits all of the coach's current columns in a
 // single action, same pattern as logMetricPeriodAction for the Trackers.
 export async function saveMeasurementCheckInAction(formData: FormData) {
-  const clientId = Number(formData.get("clientId"));
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const date = String(formData.get("date") || "");
   if (!date) return;
 
@@ -359,6 +398,7 @@ export async function saveMeasurementCheckInAction(formData: FormData) {
 }
 
 export async function removeMeasurementCheckInAction(formData: FormData) {
+  await requireCoach();
   const clientId = Number(formData.get("clientId"));
   const date = String(formData.get("date") || "");
   removeMeasurementCheckIn(clientId, date);
@@ -367,6 +407,7 @@ export async function removeMeasurementCheckInAction(formData: FormData) {
 }
 
 export async function addMeasurementFieldAction(formData: FormData) {
+  await requireCoach();
   const clientId = Number(formData.get("clientId"));
   const name = String(formData.get("name") || "").trim();
   const unit = String(formData.get("unit") || "").trim();
@@ -377,6 +418,7 @@ export async function addMeasurementFieldAction(formData: FormData) {
 }
 
 export async function updateMeasurementFieldAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   const name = String(formData.get("name") || "").trim();
   const unit = String(formData.get("unit") || "").trim();
@@ -387,6 +429,7 @@ export async function updateMeasurementFieldAction(formData: FormData) {
 }
 
 export async function removeMeasurementFieldAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   removeMeasurementField(id);
   revalidatePath("/admin");
@@ -394,6 +437,7 @@ export async function removeMeasurementFieldAction(formData: FormData) {
 }
 
 export async function addSkinfoldEntryAction(formData: FormData) {
+  await requireCoach();
   const clientId = Number(formData.get("clientId"));
   const date = String(formData.get("date") || "");
   const site = String(formData.get("site") || "");
@@ -404,12 +448,14 @@ export async function addSkinfoldEntryAction(formData: FormData) {
 }
 
 export async function removeSkinfoldEntryAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   removeSkinfoldEntry(id);
   revalidatePath("/admin");
 }
 
 export async function addMetricDefinitionAction(formData: FormData) {
+  await requireCoach();
   const clientId = Number(formData.get("clientId"));
   const category = String(formData.get("category") || "").trim();
   const name = String(formData.get("name") || "").trim();
@@ -422,6 +468,7 @@ export async function addMetricDefinitionAction(formData: FormData) {
 }
 
 export async function updateMetricDefinitionAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   const category = String(formData.get("category") || "").trim();
   const name = String(formData.get("name") || "").trim();
@@ -433,6 +480,7 @@ export async function updateMetricDefinitionAction(formData: FormData) {
 }
 
 export async function removeMetricDefinitionAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   removeMetricDefinition(id);
   revalidatePath("/admin");
@@ -440,12 +488,14 @@ export async function removeMetricDefinitionAction(formData: FormData) {
 }
 
 export async function togglePinMetricAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   togglePinMetric(id);
   revalidatePath("/admin");
 }
 
 export async function togglePinMeasurementFieldAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   togglePinMeasurementField(id);
   revalidatePath("/admin");
@@ -454,6 +504,7 @@ export async function togglePinMeasurementFieldAction(formData: FormData) {
 // ---- Tracker metric templates: coach-level presets applied to a client ----
 
 export async function addMetricTemplateCategoryAction(formData: FormData) {
+  await requireCoach();
   const name = String(formData.get("name") || "").trim();
   const frequency = String(formData.get("frequency") || "daily") as "daily" | "weekly";
   if (!name) return;
@@ -462,12 +513,14 @@ export async function addMetricTemplateCategoryAction(formData: FormData) {
 }
 
 export async function removeMetricTemplateCategoryAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   removeMetricTemplateCategory(id);
   revalidatePath("/admin");
 }
 
 export async function addMetricTemplateItemAction(formData: FormData) {
+  await requireCoach();
   const templateCategoryId = Number(formData.get("templateCategoryId"));
   const name = String(formData.get("name") || "").trim();
   const unit = String(formData.get("unit") || "").trim();
@@ -477,12 +530,14 @@ export async function addMetricTemplateItemAction(formData: FormData) {
 }
 
 export async function removeMetricTemplateItemAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   removeMetricTemplateItem(id);
   revalidatePath("/admin");
 }
 
 export async function applyMetricTemplateAction(formData: FormData) {
+  await requireCoach();
   const clientId = Number(formData.get("clientId"));
   const templateCategoryId = Number(formData.get("templateCategoryId"));
   if (!templateCategoryId) return;
@@ -495,7 +550,8 @@ export async function applyMetricTemplateAction(formData: FormData) {
 // "log today" / "log this week" form submits all currently-defined metrics
 // in a single action rather than one action per field.
 export async function logMetricPeriodAction(formData: FormData) {
-  const clientId = Number(formData.get("clientId"));
+  // Ignores the posted client id for clients — they always write their own.
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const frequency = String(formData.get("frequency") || "daily") as "daily" | "weekly";
   const dateRaw = String(formData.get("date") || "");
   if (!dateRaw) return;
@@ -514,6 +570,7 @@ export async function logMetricPeriodAction(formData: FormData) {
 }
 
 export async function addPhotoSlotAction(formData: FormData) {
+  await requireCoach();
   const clientId = Number(formData.get("clientId"));
   const label = String(formData.get("label") || "").trim();
   if (!label) return;
@@ -523,6 +580,7 @@ export async function addPhotoSlotAction(formData: FormData) {
 }
 
 export async function updatePhotoSlotAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   const label = String(formData.get("label") || "").trim();
   if (!label) return;
@@ -532,6 +590,7 @@ export async function updatePhotoSlotAction(formData: FormData) {
 }
 
 export async function removePhotoSlotAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   removePhotoSlot(id);
   revalidatePath("/admin");
@@ -539,6 +598,7 @@ export async function removePhotoSlotAction(formData: FormData) {
 }
 
 export async function setPhotoCadenceAction(formData: FormData) {
+  await requireCoach();
   const clientId = Number(formData.get("clientId"));
   const cadence = String(formData.get("cadence") || "weekly") as "weekly" | "biweekly" | "monthly";
   setPhotoCadence(clientId, cadence);
@@ -547,6 +607,7 @@ export async function setPhotoCadenceAction(formData: FormData) {
 }
 
 export async function savePhotoPeriodNoteAction(formData: FormData) {
+  await requireCoach();
   const clientId = Number(formData.get("clientId"));
   const period = String(formData.get("period") || "");
   if (!period) return;
@@ -563,8 +624,13 @@ export async function savePhotoPeriodNoteAction(formData: FormData) {
 }
 
 export async function uploadProgressPhotoAction(formData: FormData) {
-  const clientId = Number(formData.get("clientId"));
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const slotId = Number(formData.get("slotId"));
+
+  // Belt and braces: the slot must also belong to that same client, so a
+  // photo can't be filed into another client's sheet.
+  if (getClientIdForPhotoSlot(slotId) !== clientId) return;
+
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return;
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -574,6 +640,7 @@ export async function uploadProgressPhotoAction(formData: FormData) {
 }
 
 export async function saveNutritionPlanAction(formData: FormData) {
+  await requireCoach();
   const clientId = Number(formData.get("clientId"));
 
   const num = (name: string) => {
@@ -632,6 +699,7 @@ export async function saveNutritionPlanAction(formData: FormData) {
 }
 
 export async function saveClientProfileAction(formData: FormData) {
+  await requireCoach();
   const clientId = Number(formData.get("clientId"));
   const str = (name: string) => String(formData.get(name) || "");
   const numOrNull = (name: string) => {
@@ -666,6 +734,7 @@ export async function saveClientProfileAction(formData: FormData) {
 }
 
 export async function addClientGoalAction(formData: FormData) {
+  await requireCoach();
   const clientId = Number(formData.get("clientId"));
   const term = String(formData.get("term") || "short") as "short" | "long";
   const text = String(formData.get("text") || "").trim();
@@ -675,6 +744,7 @@ export async function addClientGoalAction(formData: FormData) {
 }
 
 export async function toggleClientGoalAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   const done = String(formData.get("done")) === "true";
   setClientGoalDone(id, done);
@@ -682,12 +752,14 @@ export async function toggleClientGoalAction(formData: FormData) {
 }
 
 export async function removeClientGoalAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   removeClientGoal(id);
   revalidatePath("/admin");
 }
 
 export async function addMeetingAction(formData: FormData) {
+  await requireCoach();
   const clientId = Number(formData.get("clientId"));
   const date = String(formData.get("date") || "");
   const time = String(formData.get("time") || "");
@@ -705,6 +777,7 @@ export async function addMeetingAction(formData: FormData) {
 }
 
 export async function setMeetingStatusAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   const status = String(formData.get("status")) as "scheduled" | "completed" | "canceled";
   setMeetingStatus(id, status);
@@ -712,12 +785,14 @@ export async function setMeetingStatusAction(formData: FormData) {
 }
 
 export async function removeMeetingAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   removeMeeting(id);
   revalidatePath("/admin");
 }
 
 export async function addMeetingNoteAction(formData: FormData) {
+  await requireCoach();
   const meetingId = Number(formData.get("meetingId"));
   const text = String(formData.get("text") || "").trim();
   if (!text) return;
@@ -726,17 +801,24 @@ export async function addMeetingNoteAction(formData: FormData) {
 }
 
 export async function removeMeetingNoteAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   removeMeetingNote(id);
   revalidatePath("/admin");
 }
 
 export async function sendChatMessageAction(formData: FormData) {
-  const clientId = Number(formData.get("clientId"));
-  const sender = String(formData.get("sender") || "") as "client" | "coach";
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+
+  // Who you are is decided by your session, not by a form field. Reading
+  // "sender" off the request would let a client post messages that appear
+  // to come from their coach.
+  const user = await getSessionUser();
+  const sender: "client" | "coach" = user?.role === "coach" ? "coach" : "client";
+
   const text = String(formData.get("text") || "").trim();
   const file = formData.get("file") as File | null;
-  if (!clientId || (sender !== "client" && sender !== "coach")) return;
+  if (!clientId) return;
 
   let media: { path: string; type: "image" | "video" } | undefined;
   if (file && file.size > 0) {
@@ -755,12 +837,14 @@ export async function sendChatMessageAction(formData: FormData) {
 // the view changes is a bad place to be mid-submit.
 export async function markNotificationReadAction(id: number) {
   if (!id) return;
+  const owner = getClientIdForNotification(id);
+  if (owner == null || !(await canAccessClient(owner))) return;
   markNotificationRead(id);
   revalidatePath("/client");
 }
 
 export async function markAllNotificationsReadAction(formData: FormData) {
-  const clientId = Number(formData.get("clientId"));
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
   if (!clientId) return;
   markAllNotificationsRead(clientId);
   revalidatePath("/client");
@@ -769,6 +853,7 @@ export async function markAllNotificationsReadAction(formData: FormData) {
 // ---- Reports ----
 
 export async function createReportTemplateAction(formData: FormData) {
+  await requireCoach();
   const name = String(formData.get("name") || "").trim();
   if (!name) return;
   createReportTemplate(name);
@@ -776,12 +861,14 @@ export async function createReportTemplateAction(formData: FormData) {
 }
 
 export async function deleteReportTemplateAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   deleteReportTemplate(id);
   revalidatePath("/admin");
 }
 
 export async function addReportTemplateSectionAction(formData: FormData) {
+  await requireCoach();
   const templateId = Number(formData.get("templateId"));
   const type = String(formData.get("type") || "training") as
     | "training"
@@ -798,6 +885,7 @@ export async function addReportTemplateSectionAction(formData: FormData) {
 }
 
 export async function removeReportTemplateSectionAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   removeReportTemplateSection(id);
   revalidatePath("/admin");
@@ -812,6 +900,7 @@ export async function removeReportTemplateSectionAction(formData: FormData) {
 // a coach with no templates yet, or a client who just needs one different
 // report, isn't blocked on building a template first.
 export async function generateReportAction(formData: FormData) {
+  await requireCoach();
   const clientId = Number(formData.get("clientId"));
   const periodStart = String(formData.get("periodStart") || "");
   const periodEnd = String(formData.get("periodEnd") || "");
@@ -875,6 +964,7 @@ export async function generateReportAction(formData: FormData) {
 }
 
 export async function updateReportSummaryAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   const summary = String(formData.get("summary") || "");
   updateReportSummary(id, summary);
@@ -882,12 +972,14 @@ export async function updateReportSummaryAction(formData: FormData) {
 }
 
 export async function approveReportAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   approveReport(id);
   revalidatePath("/admin");
 }
 
 export async function sendReportAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   sendReport(id);
   revalidatePath("/admin");
@@ -895,6 +987,7 @@ export async function sendReportAction(formData: FormData) {
 }
 
 export async function deleteReportAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   deleteReport(id);
   revalidatePath("/admin");
@@ -904,6 +997,7 @@ export async function deleteReportAction(formData: FormData) {
 // the client's check-in screen. History is untouched either way — hiding a
 // metric stops it being asked for, it doesn't delete what's already logged.
 export async function setMetricVisibleAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   if (!id) return;
   setMetricVisibleToClient(id, formData.get("visible") === "true");
@@ -912,6 +1006,7 @@ export async function setMetricVisibleAction(formData: FormData) {
 }
 
 export async function setMeasurementFieldVisibleAction(formData: FormData) {
+  await requireCoach();
   const id = Number(formData.get("id"));
   if (!id) return;
   setMeasurementFieldVisibleToClient(id, formData.get("visible") === "true");
@@ -920,7 +1015,7 @@ export async function setMeasurementFieldVisibleAction(formData: FormData) {
 }
 
 export async function setClientPreferenceAction(formData: FormData) {
-  const clientId = Number(formData.get("clientId"));
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const key = String(formData.get("key"));
   if (key !== "coach_notes" && key !== "checkin_reminders" && key !== "weekly_digest") return;
   const value = formData.get("value") === "true";
@@ -929,7 +1024,7 @@ export async function setClientPreferenceAction(formData: FormData) {
 }
 
 export async function setClientUnitsAction(formData: FormData) {
-  const clientId = Number(formData.get("clientId"));
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const units = String(formData.get("units"));
   if (units !== "metric" && units !== "imperial") return;
   setClientUnits(clientId, units);
@@ -937,6 +1032,8 @@ export async function setClientUnitsAction(formData: FormData) {
 }
 
 export async function markReportOpenedAction(id: number) {
+  const owner = getClientIdForReport(id);
+  if (owner == null || !(await canAccessClient(owner))) return;
   markReportOpened(id);
   revalidatePath("/client");
 }

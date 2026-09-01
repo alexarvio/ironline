@@ -7,3 +7,4 @@ ironline.json
 /uploads
 public/uploads
 .claude
+.env*.local

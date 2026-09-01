@@ -1,0 +1,47 @@
+import { redirect } from "next/navigation";
+import { loginAction } from "../lib/auth-actions";
+import { getSessionUser } from "../lib/auth";
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  // Already signed in? Send them where they belong rather than showing a
+  // login form they'd have no reason to fill in.
+  const user = await getSessionUser();
+  if (user && !user.must_change_password) {
+    redirect(user.role === "coach" ? "/admin" : "/client");
+  }
+
+  const { error } = await searchParams;
+
+  return (
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-brand">Ironline</div>
+        <h1 className="auth-title">Sign in</h1>
+
+        {error && <p className="auth-error">Wrong email or password.</p>}
+
+        <form action={loginAction} className="auth-form">
+          <label className="auth-field">
+            <span>Email</span>
+            <input name="email" type="email" autoComplete="username" required autoFocus />
+          </label>
+          <label className="auth-field">
+            <span>Password</span>
+            <input name="password" type="password" autoComplete="current-password" required />
+          </label>
+          <button className="btn auth-submit" type="submit">
+            Sign in
+          </button>
+        </form>
+
+        <p className="auth-note">
+          Don&rsquo;t have an account? Your coach creates it for you.
+        </p>
+      </div>
+    </div>
+  );
+}

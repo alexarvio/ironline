@@ -1,3 +1,6 @@
+import { redirect } from "next/navigation";
+import { getSessionUser } from "../lib/auth";
+import { logoutAction } from "../lib/auth-actions";
 import {
   getAssignmentsForDay,
   getClient,
@@ -80,10 +83,25 @@ const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 // "View client app" link carries ?client=<id> and this falls back to the
 // first client on the books — that fallback is why building a program for
 // one client and opening the app showed another's.
-function resolveClientId(raw: string | undefined): number | null {
-  const asked = raw ? Number(raw) : null;
-  if (asked && getClient(asked)) return asked;
-  return listClients()[0]?.id ?? null;
+// Which client this app is showing is now decided ONLY by the signed session
+// cookie. It used to come from ?client=<id>, which meant any logged-in person
+// could read another client's entire app by editing the URL. A coach can
+// still preview a specific client via ?client=, because requireClientAccess
+// grants coaches access to anyone; for a client the parameter is ignored.
+async function resolveClientId(raw: string | undefined): Promise<number | null> {
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+  if (user.must_change_password) redirect("/login/change-password");
+
+  // A coach may preview any client's app, so ?client= still works for them.
+  if (user.role === "coach") {
+    const asked = raw ? Number(raw) : null;
+    return asked && getClient(asked) ? asked : listClients()[0]?.id ?? null;
+  }
+
+  // A client gets their own id and nothing else — the parameter is ignored.
+  if (user.client_id == null) redirect("/login");
+  return user.client_id;
 }
 
 const fmtShortDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -694,9 +712,11 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
         </div>
       </section>
 
-      <button type="button" className="settings-logout-btn">
-        Log out
-      </button>
+      <form action={logoutAction}>
+        <button type="submit" className="settings-logout-btn">
+          Log out
+        </button>
+      </form>
       <div className="settings-footnote">Ironline · Full Potential Coaching</div>
     </div>
   );
@@ -930,7 +950,7 @@ export default async function ClientPage({
   searchParams: Promise<{ client?: string }>;
 }) {
   const params = await searchParams;
-  const CLIENT_ID = resolveClientId(params.client);
+  const CLIENT_ID = await resolveClientId(params.client);
   if (CLIENT_ID == null) {
     return (
       <div className="phone-frame">

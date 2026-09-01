@@ -7,6 +7,8 @@ import StartPagePanel from "./StartPagePanel";
 import TrackerPanel from "./TrackerPanel";
 import ProgramBuilder from "../components/ProgramBuilder";
 import { getClient, getClientHeaderPlans, listClients } from "../lib/queries";
+import { requireCoach } from "../lib/auth";
+import ClientLoginPanel from "./ClientLoginPanel";
 
 // Reads live from the JSON store on every request — without this, Next
 // statically prerenders this page at build time (before any real data
@@ -16,8 +18,14 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ client?: string; tab?: string }>;
+  searchParams: Promise<{
+    client?: string;
+    tab?: string;
+    loginOk?: string;
+    loginError?: string;
+  }>;
 }) {
+  await requireCoach();
   const params = await searchParams;
   const clients = listClients();
   const selectedId = params.client ? Number(params.client) : clients[0]?.id ?? null;
@@ -34,7 +42,13 @@ export default async function AdminPage({
           </p>
         </div>
       ) : (
-        <ClientDashboard clientId={client.id} name={client.name} initialTab={params.tab} />
+        <ClientDashboard
+          clientId={client.id}
+          name={client.name}
+          initialTab={params.tab}
+          loginOk={params.loginOk}
+          loginError={params.loginError}
+        />
       )}
     </AdminShell>
   );
@@ -44,16 +58,34 @@ function ClientDashboard({
   clientId,
   name,
   initialTab,
+  loginOk,
+  loginError,
 }: {
   clientId: number;
   name: string;
   initialTab?: string;
+  loginOk?: string;
+  loginError?: string;
 }) {
   // The core loop, nothing else: say who this client is, build their
   // training, set their nutrition, and define what they log daily and
   // weekly.
   const sections: TabSection[] = [
-    { id: "start", label: "Start Page", content: <StartPagePanel clientId={clientId} name={name} /> },
+    {
+      id: "start",
+      label: "Start Page",
+      content: (
+        <>
+          <StartPagePanel clientId={clientId} name={name} />
+          <ClientLoginPanel
+            clientId={clientId}
+            name={name}
+            ok={loginOk}
+            error={loginError}
+          />
+        </>
+      ),
+    },
     {
       id: "training",
       label: "Training",

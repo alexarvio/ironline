@@ -7671,3 +7671,159 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   padding-right: 10px;
   text-align: right;
 }
+
+/* ---- Login / password-change screens ----
+   Deliberately plain and centered — these are the only pages a logged-out
+   visitor can reach, so they carry the brand and nothing else. */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--paper);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 26px 24px;
+}
+
+.auth-brand {
+  font-family: var(--font-display, inherit);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.auth-title {
+  margin: 14px 0 18px;
+  font-size: 1.5rem;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.auth-field span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--steel);
+}
+
+.auth-field input {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  background: white;
+}
+
+.auth-field input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.auth-submit {
+  margin-top: 4px;
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+}
+
+.auth-error {
+  margin: 0 0 14px;
+  background: #fdecec;
+  border: 1px solid #f0c2c2;
+  color: #9b2c2c;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 0.83rem;
+  font-weight: 600;
+}
+
+.auth-note {
+  margin: 18px 0 0;
+  font-size: 0.78rem;
+  color: var(--steel);
+  text-align: center;
+}
+
+.auth-note-top {
+  margin: -8px 0 16px;
+  text-align: left;
+}
+
+/* ---- Coach-side client login management (admin panel) ---- */
+.client-login-box {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--paper-raised);
+  padding: 14px 16px;
+  margin-top: 14px;
+}
+
+.client-login-box h4 {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
+}
+
+.client-login-status {
+  font-size: 0.8rem;
+  color: var(--steel);
+  margin-bottom: 10px;
+}
+
+.client-login-email {
+  font-weight: 700;
+  color: var(--ink, inherit);
+}
+
+.client-login-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.client-login-form input {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 0.83rem;
+  background: white;
+  min-width: 150px;
+  flex: 1;
+}
+
+.client-login-flash {
+  margin: 0 0 10px;
+  border-radius: 8px;
+  padding: 8px 11px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.client-login-flash.ok {
+  background: #e8f5ec;
+  border: 1px solid #b9dfc6;
+  color: #1f6b3a;
+}
+
+.client-login-flash.err {
+  background: #fdecec;
+  border: 1px solid #f0c2c2;
+  color: #9b2c2c;
+}

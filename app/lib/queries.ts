@@ -665,6 +665,33 @@ export function logSet(
   persist();
 }
 
+// ---- Ownership lookups, used only for authorization ----
+//
+// Some client-callable actions identify their target by a nested id (a
+// workout assignment, a photo slot) rather than by client id. These resolve
+// that id back to the owning client so the action can check the caller is
+// actually allowed to touch it, instead of trusting the form.
+
+export function getClientIdForAssignment(assignmentId: number): number | null {
+  const data = getData();
+  const assignment = data.workout_assignments.find((wa) => wa.id === assignmentId);
+  if (!assignment) return null;
+  const day = data.program_days.find((pd) => pd.id === assignment.program_day_id);
+  return day?.client_id ?? null;
+}
+
+export function getClientIdForPhotoSlot(slotId: number): number | null {
+  return getData().photo_slots.find((s) => s.id === slotId)?.client_id ?? null;
+}
+
+export function getClientIdForNotification(notificationId: number): number | null {
+  return getData().coach_activity.find((a) => a.id === notificationId)?.client_id ?? null;
+}
+
+export function getClientIdForReport(reportId: number): number | null {
+  return getData().client_reports.find((r) => r.id === reportId)?.client_id ?? null;
+}
+
 export function getLogsForAssignment(workoutAssignmentId: number): SetLog[] {
   return getData()
     .set_logs.filter((sl) => sl.workout_assignment_id === workoutAssignmentId)

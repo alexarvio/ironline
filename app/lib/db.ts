@@ -385,7 +385,26 @@ type ClientPreferences = {
   units: "metric" | "imperial";
 };
 
+// Login accounts. Deliberately separate from Client: a Client is the coach's
+// record of a person and exists from the moment the coach creates them (long
+// before, or entirely without, that person ever logging in). A User is a set
+// of credentials. role="client" rows carry the single client_id they're
+// allowed to see — that field is the whole basis of client data isolation, so
+// nothing client-facing may ever take a client id from user input instead.
+type User = {
+  id: number;
+  email: string; // stored lowercased — this is the login lookup key
+  password_hash: string; // scrypt, stored as "salt:derivedKey" in hex
+  role: "coach" | "client";
+  client_id: number | null; // set only for role="client"
+  // Set when a coach hands out a temporary password; the client is forced
+  // through a password change before they can reach any real page.
+  must_change_password: boolean;
+  created_at: string;
+};
+
 type Data = {
+  users: User[];
   clients: Client[];
   exercises: Exercise[];
   program_days: ProgramDay[];
@@ -422,6 +441,7 @@ type Data = {
 
 function emptyData(): Data {
   return {
+    users: [],
     clients: [],
     training_programs: [],
     client_preferences: [],
@@ -469,6 +489,8 @@ function load(): Data {
 }
 
 function save(data: Data) {
+  // On a fresh volume the mount point exists but nothing under it does.
+  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
   fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
 }
 

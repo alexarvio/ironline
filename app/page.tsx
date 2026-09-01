@@ -1,25 +1,12 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getSessionUser } from "./lib/auth";
 
-export default function Home() {
-  return (
-    <div className="shell">
-      <div className="top-nav">
-        <span className="brand">Ironline</span>
-      </div>
-      <h1>Core loop prototype</h1>
-      <p className="subtitle">
-        Build a week as the coach, deploy it, then switch to the client view and log
-        sets against it — watch it show up back on the coach side off the same
-        database.
-      </p>
-      <div style={{ display: "flex", gap: 12 }}>
-        <Link className="btn" href="/admin">
-          Open coach workstation
-        </Link>
-        <Link className="btn secondary" href="/client">
-          Open client app
-        </Link>
-      </div>
-    </div>
-  );
+// There's no public landing page any more — everything behind the door is
+// either the coach's CRM or one client's own app, so the root just routes
+// whoever arrives to wherever they belong.
+export default async function Home() {
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+  if (user.must_change_password) redirect("/login/change-password");
+  redirect(user.role === "coach" ? "/admin" : "/client");
 }

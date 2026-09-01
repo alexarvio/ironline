@@ -34,6 +34,7 @@ import {
   localDateStr,
   slugify,
 } from "../app/lib/queries";
+import { createUser, findUserByEmail } from "../app/lib/auth";
 
 const today = new Date();
 function daysAgo(n: number) {
@@ -454,5 +455,20 @@ function seedLightClient(name: string, opts: { weight: number; goalPhase: string
 seedAlex();
 seedLightClient("Jordan Blake", { weight: 71.2, goalPhase: "Fat loss — 8kg to go", invoiceStatus: "unpaid", meetingTime: "10:00" });
 seedLightClient("Sam Rivera", { weight: 64.8, goalPhase: "Strength & tone", invoiceStatus: "paid", meetingTime: "14:30" });
+
+// Demo logins so a freshly-seeded copy is actually usable. Only ever created
+// by this dev seed script — a real deployment gets its coach account from
+// scripts/create-coach.ts with a password of the coach's own choosing, and
+// client logins from the admin panel's App access box.
+function seedLogin(email: string, password: string, role: "coach" | "client", clientId: number | null) {
+  if (findUserByEmail(email)) return;
+  createUser(email, password, role, clientId, false);
+  console.log(`  login: ${email} / ${password} (${role})`);
+}
+
+console.log("Demo logins:");
+seedLogin("coach@ironline.test", "ironline123", "coach", null);
+const firstClient = getData().clients[0];
+if (firstClient) seedLogin("client@ironline.test", "ironline123", "client", firstClient.id);
 
 console.log("Done.");
