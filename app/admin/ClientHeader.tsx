@@ -1,28 +1,30 @@
-import type { HeaderPlan } from "../lib/queries";
-
-// The identity strip above the section tabs: who this is, the two plans
-// they're currently on, and a way to message them. Everything else a coach
-// might want here lives one click away in the tab it belongs to, or in the
-// rail on the right.
+// The identity strip above the section tabs. Deliberately thin: name, age,
+// how long they've been coached, and a way to message them.
+//
+// The plan read-outs and stat pills that used to sit here moved into the
+// right-hand panel's snapshot. They were competing with the tabs for the
+// coach's eye at the exact moment they'd chosen what to work on.
 export default function ClientHeader({
   name,
-  plans,
+  age,
+  since,
 }: {
   name: string;
-  plans: HeaderPlan[];
+  age: number | null;
+  since: string | null;
 }) {
   return (
     <header className="ad-client-header">
-      <h1 className="ad-client-title">{name}</h1>
-
-      <div className="ad-client-readouts">
-        {plans.map((p) => (
-          <div key={p.id} className="ad-plan">
-            <div className="ad-microlabel">{p.label}</div>
-            <div className="ad-plan-value">{p.value}</div>
-          </div>
-        ))}
+      <div className="ad-client-ident">
+        <h1 className="ad-client-title">
+          {name}
+          {age != null && <span className="ad-client-age">{age}</span>}
+        </h1>
+        {since && <div className="ad-client-since">{since}</div>}
       </div>
+      <button type="button" className="ad-message-btn">
+        Message
+      </button>
     </header>
   );
 }

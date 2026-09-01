@@ -106,6 +106,12 @@ import {
   setBuiltinColumnVisible,
   listPrograms,
   ensureWeekSkeleton,
+  setNutritionDayTargets,
+  setNutritionWater,
+  addSupplementRow,
+  updateSupplementRow,
+  removeSupplementRow,
+  addMetricsFromLibrary,
 } from "./queries";
 import { writeReportNarrative } from "./reportAi";
 import type { ReportSectionType } from "./reportSectionTypes";
@@ -490,13 +496,33 @@ export async function removeSkinfoldEntryAction(formData: FormData) {
   revalidatePath("/admin");
 }
 
+/**
+ * Commits every ticked library item in one go. The picks arrive as a single
+ * JSON field rather than a checkbox per item, because the dropdown is a
+ * client component holding its own selection and one submit is one write.
+ */
+export async function addMetricsFromLibraryAction(formData: FormData) {
+  await requireCoach();
+  const clientId = Number(formData.get("clientId"));
+  let picks: { name: string; unit: string; group: string; cadence: "daily" | "weekly" | "monthly" }[] = [];
+  try {
+    picks = JSON.parse(String(formData.get("picks") || "[]"));
+  } catch {
+    return;
+  }
+  if (!Array.isArray(picks) || picks.length === 0) return;
+  addMetricsFromLibrary(clientId, picks);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
 export async function addMetricDefinitionAction(formData: FormData) {
   await requireCoach();
   const clientId = Number(formData.get("clientId"));
   const category = String(formData.get("category") || "").trim();
   const name = String(formData.get("name") || "").trim();
   const unit = String(formData.get("unit") || "").trim();
-  const frequency = String(formData.get("frequency") || "daily") as "daily" | "weekly";
+  const frequency = String(formData.get("frequency") || "daily") as "daily" | "weekly" | "monthly";
   if (!name) return;
   addMetricDefinition(clientId, category, name, unit, frequency);
   revalidatePath("/admin");
@@ -542,6 +568,7 @@ export async function togglePinMeasurementFieldAction(formData: FormData) {
 export async function addMetricTemplateCategoryAction(formData: FormData) {
   await requireCoach();
   const name = String(formData.get("name") || "").trim();
+  // Templates predate monthly and only carry the two original cadences.
   const frequency = String(formData.get("frequency") || "daily") as "daily" | "weekly";
   if (!name) return;
   addMetricTemplateCategory(name, frequency);
@@ -588,7 +615,7 @@ export async function applyMetricTemplateAction(formData: FormData) {
 export async function logMetricPeriodAction(formData: FormData) {
   // Ignores the posted client id for clients — they always write their own.
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
-  const frequency = String(formData.get("frequency") || "daily") as "daily" | "weekly";
+  const frequency = String(formData.get("frequency") || "daily") as "daily" | "weekly" | "monthly";
   const dateRaw = String(formData.get("date") || "");
   if (!dateRaw) return;
   const period = frequency === "weekly" ? weekStart(dateRaw) : dateRaw;
@@ -671,6 +698,57 @@ export async function uploadProgressPhotoAction(formData: FormData) {
   if (!file || file.size === 0) return;
   const buffer = Buffer.from(await file.arrayBuffer());
   savePhotoUpload(clientId, slotId, buffer, file.type || "image/jpeg");
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function saveNutritionTargetsAction(formData: FormData) {
+  await requireCoach();
+  const clientId = Number(formData.get("clientId"));
+  const num = (k: string) => {
+    const raw = String(formData.get(k) ?? "").trim();
+    return raw === "" ? null : Number(raw);
+  };
+  setNutritionDayTargets(
+    clientId,
+    { protein: num("t_protein"), carbs: num("t_carbs"), fats: num("t_fats") },
+    { protein: num("r_protein"), carbs: num("r_carbs"), fats: num("r_fats") }
+  );
+  logCoachActivity(clientId, "Updated your nutrition targets", { kind: "general", actionTab: "nutrition", actionLabel: "See your targets" });
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function saveWaterGoalAction(formData: FormData) {
+  await requireCoach();
+  const clientId = Number(formData.get("clientId"));
+  const raw = String(formData.get("water") ?? "").trim();
+  setNutritionWater(clientId, raw === "" ? null : Number(raw));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function addSupplementRowAction(formData: FormData) {
+  await requireCoach();
+  addSupplementRow(Number(formData.get("clientId")));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function updateSupplementRowAction(formData: FormData) {
+  await requireCoach();
+  const clientId = Number(formData.get("clientId"));
+  const rowId = Number(formData.get("rowId"));
+  const field = String(formData.get("field") || "");
+  if (field !== "name" && field !== "quantity" && field !== "timing" && field !== "notes") return;
+  updateSupplementRow(clientId, rowId, field, String(formData.get("value") ?? ""));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function removeSupplementRowAction(formData: FormData) {
+  await requireCoach();
+  removeSupplementRow(Number(formData.get("clientId")), Number(formData.get("rowId")));
   revalidatePath("/admin");
   revalidatePath("/client");
 }

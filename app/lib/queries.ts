@@ -80,6 +80,20 @@ export type NutritionPlan = {
   other: Record<string, { amount: string; timing: string }>;
   supplements: Record<string, { quantity: string; timing: string }>;
   coach_notes: string;
+
+  // ---- Day-level targets (the current model) ----
+  // The coach sets one set of macros per day type and the kcal is derived,
+  // rather than filling in six meals. The meal arrays above are kept so
+  // existing plans still read, but nothing writes them any more; the summary
+  // prefers these whenever they're set.
+  day_targets?: {
+    training: { protein: number | null; carbs: number | null; fats: number | null };
+    rest: { protein: number | null; carbs: number | null; fats: number | null };
+  } | null;
+  // A stated goal, not a tracker — deliberately just a number.
+  water_l?: number | null;
+  // A reference list, not a checklist: no state, no ticking.
+  supplement_rows?: { id: number; name: string; quantity: string; timing: string; notes: string }[];
 };
 
 // Fixed lists straight from the coach's original "Voeding en supplementen" tab.
@@ -1208,6 +1222,113 @@ export function getLastActive(clientId: number): string | null {
 }
 
 // A quick client summary for the admin panel header row.
+/**
+ * Everything the right-hand client overview panel shows, assembled in one
+ * pass. Built as a single query rather than a dozen calls from the component
+ * because the panel is on screen for every client, on every tab — the cost of
+ * walking the store repeatedly is paid on every single admin render.
+ */
+export type OverviewPanel = {
+  name: string;
+  initial: string;
+  clientSince: string | null;
+  phase: string | null;
+  snapshot: { label: string; value: string }[];
+  goals: ClientGoal[];
+  memberInfo: { label: string; value: string }[];
+  coachingInfo: { label: string; value: string }[];
+  activity: { id: string; when: string; text: string }[];
+};
+
+export function getOverviewPanel(clientId: number): OverviewPanel {
+  const client = getClient(clientId);
+  const profile = getClientProfile(clientId);
+  const summary = getClientSummary(clientId);
+  const nutrition = getNutritionGoalsSummary(clientId);
+  const weight = getLatestWeight(clientId);
+  const invoices = listInvoices(clientId);
+  const today = localDateStr();
+
+  const dash = (v: string | number | null | undefined) =>
+    v === null || v === undefined || v === "" ? "—" : String(v);
+
+  const nextMeeting = listMeetings(clientId)
+    .filter((m) => m.status === "scheduled" && m.date >= today)
+    .sort((a, b) => (a.date === b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date)))[0];
+
+  const unpaid = invoices.filter((i) => i.status !== "paid").length;
+  const metricCount =
+    listMetricDefinitions(clientId, "daily").length + listMetricDefinitions(clientId, "weekly").length;
+
+  // Workouts done this week against what's owed — the figure a coach glances
+  // at first, so it leads the snapshot.
+  const liveProgram = getDeployedProgram(clientId);
+  const liveWeek = liveProgram ? liveProgram.start_week + getProgramCurrentWeekIndex(liveProgram) - 1 : null;
+  let trained = 0;
+  let planned = 0;
+  if (liveWeek != null) {
+    getWeek(clientId, liveWeek).forEach((d) => {
+      const assignments = getAssignmentsForDay(d.id);
+      if (assignments.length === 0) return;
+      planned++;
+      if (assignments.some((a) => getLogsForAssignment(a.id).length > 0)) trained++;
+    });
+  }
+
+  const fmtDate = (iso: string | null | undefined) =>
+    iso ? new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "—";
+
+  return {
+    name: client?.name ?? "Unknown",
+    initial: (client?.name ?? "?").slice(0, 1).toUpperCase(),
+    clientSince: profile.coaching_start_date ? `Client since ${fmtDate(profile.coaching_start_date)}` : null,
+    phase: profile.goal_phase || null,
+    snapshot: [
+      { label: "Training", value: planned ? `${trained}/${planned}` : "—" },
+      { label: "Calories", value: nutrition.trainingKcal ? `${nutrition.trainingKcal} kcal` : "—" },
+      { label: "Weight", value: weight != null ? `${weight} kg` : "—" },
+      { label: "Metrics", value: String(metricCount) },
+      { label: "Invoices", value: unpaid ? `${unpaid} open` : "All paid" },
+      {
+        label: "Next call",
+        value: nextMeeting
+          ? `${new Date(`${nextMeeting.date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })} ${nextMeeting.time}`
+          : "None booked",
+      },
+    ],
+    goals: listClientGoals(clientId, "short"),
+    memberInfo: [
+      { label: "Birthdate", value: dash(profile.birthdate) },
+      { label: "Gender", value: dash(profile.gender) },
+      { label: "Height", value: profile.height_cm ? `${profile.height_cm} cm` : "—" },
+      { label: "Email", value: dash(profile.email) },
+      { label: "Phone", value: dash(profile.phone) },
+      { label: "Address", value: dash(profile.address) },
+    ],
+    coachingInfo: [
+      { label: "Plan", value: liveProgram?.name || "—" },
+      { label: "Start date", value: dash(profile.coaching_start_date) },
+      { label: "Current week", value: liveWeek != null ? `Week ${liveWeek}` : "—" },
+      { label: "Goal / phase", value: dash(profile.goal_phase) },
+      { label: "Goal date", value: dash(profile.goal_date) },
+      { label: "Check-in day", value: dash(profile.check_in_day) },
+      { label: "Starting weight", value: profile.starting_weight_kg ? `${profile.starting_weight_kg} kg` : "—" },
+      { label: "Current weight", value: weight != null ? `${weight} kg` : "—" },
+    ],
+    activity: getActivityFeed(60)
+      .filter((e) => e.clientId === clientId)
+      .slice(0, 8)
+      .map((e) => ({
+        id: e.id,
+        when: new Date(e.at).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        text:
+          e.type === "set_logged"
+            ? `Logged ${e.exerciseName} — ${e.weightKg ?? "–"}kg × ${e.reps ?? "–"}`
+            : `Invoice ${e.status} — ${e.description}`,
+      })),
+  };
+}
+
 export function getClientSummary(clientId: number) {
   const data = getData();
   const dayIds = new Set(
@@ -1610,7 +1731,11 @@ export type MetricDefinition = {
   category: string;
   name: string;
   unit: string;
-  frequency: "daily" | "weekly";
+  // The rhythm the client is asked for this on. "monthly" is what the
+  // old separate measurements sheet became: cadence is a property of a
+  // metric, which is why Daily Tracker and Weekly Tracker stopped being
+  // their own screens.
+  frequency: MetricCadence;
   order_index: number;
   pinned?: boolean;
   // Deployed to the client's check-in screen; see deployedToClient().
@@ -1623,9 +1748,179 @@ export type MetricEntry = {
   value: number | null;
 };
 
+export type MetricCadence = "daily" | "weekly" | "monthly";
+
+// The groups a metric can belong to, in the order they appear on the coach's
+// own spreadsheets. Group is a first-class property: it drives the band rows
+// above the history tables and the order of the columns beneath them, so
+// three nutrition metrics always sit together under one NUTRITION band.
+export const METRIC_GROUPS = [
+  { key: "body", label: "Body", tint: "#e6ecf3" },
+  { key: "sleep", label: "Sleep", tint: "#e8e6f3" },
+  { key: "activity", label: "Activity", tint: "#e2eee6" },
+  { key: "fatigue", label: "Fatigue", tint: "#f5eade" },
+  { key: "lifestyle", label: "Lifestyle", tint: "#e2eff1" },
+  { key: "stress", label: "Stress", tint: "#f6e3e3" },
+  { key: "nutrition", label: "Nutrition", tint: "#eef0da" },
+  { key: "training", label: "Training", tint: "#e6ecf3" },
+  { key: "wellbeing", label: "General wellbeing", tint: "#eae7f0" },
+  { key: "measurements", label: "Measurements", tint: "#e9ecef" },
+  { key: "optional", label: "Optional", tint: "#f0eeea" },
+  { key: "other", label: "Other", tint: "#edf0f4" },
+] as const;
+
+export function metricGroup(key: string): { key: string; label: string; tint: string } {
+  const found = METRIC_GROUPS.find((g) => g.key === key);
+  if (found) return found;
+
+  // Metrics created before groups were a fixed set carry free-text categories
+  // ("Recovery", "Wellbeing"). Match them by label so existing clients band
+  // correctly instead of every column reading "Other", and fall back to a
+  // couple of known synonyms from the older seeds.
+  const lower = (key ?? "").trim().toLowerCase();
+  const byLabel = METRIC_GROUPS.find((g) => g.label.toLowerCase() === lower);
+  if (byLabel) return byLabel;
+
+  const synonyms: Record<string, string> = {
+    recovery: "sleep",
+    wellbeing: "wellbeing",
+    "general wellbeing": "wellbeing",
+    mood: "wellbeing",
+    measurement: "measurements",
+  };
+  const mapped = synonyms[lower];
+  const bySynonym = mapped ? METRIC_GROUPS.find((g) => g.key === mapped) : undefined;
+  return bySynonym ?? METRIC_GROUPS[METRIC_GROUPS.length - 1];
+}
+
+/**
+ * The metric library: the coach's existing spreadsheets, section for section,
+ * so setting a client up is ticking boxes rather than retyping forty rows.
+ * Translated from the Dutch originals.
+ */
+export type LibraryPack = {
+  id: string;
+  label: string;
+  group: string;
+  cadence: MetricCadence;
+  items: { name: string; unit: string }[];
+};
+
+export const METRIC_LIBRARY: LibraryPack[] = [
+  // ---- Daily sheet ----
+  { id: "d_body", label: "Body", group: "body", cadence: "daily",
+    items: [{ name: "Weight", unit: "kg" }, { name: "Resting HR", unit: "bpm" }] },
+  { id: "d_sleep", label: "Sleep", group: "sleep", cadence: "daily",
+    items: [{ name: "Hours of sleep", unit: "h" }, { name: "Morning energy", unit: "/10" }] },
+  { id: "d_activity", label: "Activity", group: "activity", cadence: "daily",
+    items: [{ name: "Steps", unit: "" }, { name: "Screen time", unit: "h" }] },
+  { id: "d_fatigue", label: "Fatigue", group: "fatigue", cadence: "daily",
+    items: [{ name: "Afternoon", unit: "/10" }, { name: "Early evening", unit: "/10" }] },
+  { id: "d_lifestyle", label: "Lifestyle", group: "lifestyle", cadence: "daily",
+    items: [{ name: "Fluid intake", unit: "L" }, { name: "Daylight", unit: "min" }] },
+
+  // ---- Week tracker (all /10) ----
+  { id: "w_stress", label: "Stress", group: "stress", cadence: "weekly",
+    items: [
+      { name: "Stress factors of the last week", unit: "/10" },
+      { name: "Work", unit: "/10" },
+      { name: "Private", unit: "/10" },
+      { name: "Social", unit: "/10" },
+      { name: "Stress factors getting in the way of goals", unit: "/10" },
+      { name: "Managing stress", unit: "/10" },
+    ] },
+  { id: "w_nutrition", label: "Nutrition", group: "nutrition", cadence: "weekly",
+    items: [
+      { name: "Consistency of meal timing", unit: "/10" },
+      { name: "Quality of nutrition", unit: "/10" },
+      { name: "Bloatedness", unit: "/10" },
+      { name: "Stool", unit: "/10" },
+      { name: "Enjoyment of eating", unit: "/10" },
+      { name: "Cravings", unit: "/10" },
+      { name: "Hunger", unit: "/10" },
+    ] },
+  { id: "w_training", label: "Training", group: "training", cadence: "weekly",
+    items: [
+      { name: "Enjoyment of training", unit: "/10" },
+      { name: "Recovery", unit: "/10" },
+      { name: "Adherence to programme", unit: "/10" },
+      { name: "Fatigue during training", unit: "/10" },
+    ] },
+  { id: "w_wellbeing", label: "General wellbeing", group: "wellbeing", cadence: "weekly",
+    items: [
+      { name: "Happiness", unit: "/10" },
+      { name: "Development", unit: "/10" },
+      { name: "Contribution to goals", unit: "/10" },
+      { name: "Motivation", unit: "/10" },
+      { name: "Habit development", unit: "/10" },
+      { name: "Self satisfaction during the week", unit: "/10" },
+    ] },
+  { id: "w_optional", label: "Optional", group: "optional", cadence: "weekly",
+    items: [{ name: "Menstruation", unit: "/10" }] },
+
+  // ---- Monthly ----
+  { id: "m_measure", label: "Measurements", group: "measurements", cadence: "monthly",
+    items: [
+      { name: "Waist", unit: "cm" },
+      { name: "Hips", unit: "cm" },
+      { name: "Chest", unit: "cm" },
+      { name: "Thigh", unit: "cm" },
+      { name: "Arm", unit: "cm" },
+      { name: "Neck", unit: "cm" },
+      { name: "Body fat", unit: "%" },
+    ] },
+];
+
+/** Every metric on this client, sorted by cadence then group then order. */
+export function listAllMetrics(clientId: number): MetricDefinition[] {
+  const cadenceRank: Record<string, number> = { daily: 0, weekly: 1, monthly: 2 };
+  const groupRank = new Map<string, number>(METRIC_GROUPS.map((g, i) => [g.key as string, i]));
+  return getData()
+    .metric_definitions.filter((m) => m.client_id === clientId)
+    .sort((a, b) => {
+      const c = (cadenceRank[a.frequency] ?? 9) - (cadenceRank[b.frequency] ?? 9);
+      if (c !== 0) return c;
+      const g = (groupRank.get(metricGroup(a.category).key) ?? 99) - (groupRank.get(metricGroup(b.category).key) ?? 99);
+      if (g !== 0) return g;
+      return a.order_index - b.order_index;
+    });
+}
+
+/** Adds every ticked library item that isn't already on this client. */
+export function addMetricsFromLibrary(
+  clientId: number,
+  picks: { name: string; unit: string; group: string; cadence: MetricCadence }[]
+) {
+  const data = getData();
+  const existing = new Set(
+    data.metric_definitions
+      .filter((m) => m.client_id === clientId)
+      .map((m) => `${m.frequency}|${m.name.toLowerCase()}`)
+  );
+  let added = 0;
+  picks.forEach((pick) => {
+    const key = `${pick.cadence}|${pick.name.toLowerCase()}`;
+    if (existing.has(key)) return;
+    existing.add(key);
+    data.metric_definitions.push({
+      id: allocId("metric_definitions"),
+      client_id: clientId,
+      category: pick.group,
+      name: pick.name,
+      unit: pick.unit,
+      frequency: pick.cadence,
+      order_index: data.metric_definitions.filter((m) => m.client_id === clientId).length,
+      visible_to_client: true,
+    });
+    added++;
+  });
+  if (added) persist();
+  return added;
+}
+
 export function listMetricDefinitions(
   clientId: number,
-  frequency: "daily" | "weekly"
+  frequency: MetricCadence
 ): MetricDefinition[] {
   return getData()
     .metric_definitions.filter((m) => m.client_id === clientId && m.frequency === frequency)
@@ -1637,7 +1932,7 @@ export function addMetricDefinition(
   category: string,
   name: string,
   unit: string,
-  frequency: "daily" | "weekly"
+  frequency: MetricCadence
 ) {
   const data = getData();
   const count = data.metric_definitions.filter(
@@ -1747,6 +2042,87 @@ export function getPinnedMetricsSummary(clientId: number): PinnedMetricSummary[]
 
 // Full logged history for one metric, oldest first, ready to hand straight
 // to <LineChart> — used by the per-metric trend view in the Tracker tabs.
+/**
+ * One history table: the client's own entries, newest first, as a grid of
+ * period rows against metric columns.
+ *
+ * Columns arrive already sorted by group (see listAllMetrics), so consecutive
+ * same-group columns can be collapsed into one spanning band above the names
+ * — the same visual logic as the coloured section headers on the coach's
+ * spreadsheet.
+ */
+export type HistoryColumn = { id: number; name: string; unit: string; group: string };
+export type HistoryBand = { group: string; label: string; tint: string; span: number };
+export type HistoryRow = { period: string; label: string; values: (number | null)[] };
+export type HistoryChange = { delta: number | null; pct: number | null; label: string }[];
+
+export type MetricHistory = {
+  columns: HistoryColumn[];
+  bands: HistoryBand[];
+  rows: HistoryRow[];
+  change: HistoryChange;
+};
+
+export function getMetricHistory(clientId: number, cadence: MetricCadence): MetricHistory {
+  const data = getData();
+  const defs = listAllMetrics(clientId).filter((m) => m.frequency === cadence);
+
+  const columns: HistoryColumn[] = defs.map((d) => ({
+    id: d.id,
+    name: d.name,
+    unit: d.unit,
+    group: d.category,
+  }));
+
+  // Collapse runs of the same group into one spanning header.
+  const bands: HistoryBand[] = [];
+  columns.forEach((c) => {
+    const g = metricGroup(c.group);
+    const last = bands[bands.length - 1];
+    if (last && last.group === g.key) {
+      last.span++;
+      return;
+    }
+    bands.push({ group: g.key, label: g.label, tint: g.tint, span: 1 });
+  });
+
+  const ids = new Set(defs.map((d) => d.id));
+  const periods = Array.from(
+    new Set(data.metric_entries.filter((e) => ids.has(e.metric_definition_id)).map((e) => e.period))
+  ).sort((a, b) => b.localeCompare(a));
+
+  const rows: HistoryRow[] = periods.map((period) => ({
+    period,
+    label: new Date(`${period}T00:00:00`).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: cadence === "monthly" ? "numeric" : undefined,
+    }),
+    values: defs.map(
+      (d) =>
+        data.metric_entries.find((e) => e.metric_definition_id === d.id && e.period === period)?.value ?? null
+    ),
+  }));
+
+  // First to latest, per column — the row pinned to the bottom of the table.
+  const change: HistoryChange = defs.map((_, i) => {
+    const withValues = [...rows].reverse().filter((r) => r.values[i] != null);
+    if (withValues.length < 2) return { delta: null, pct: null, label: "—" };
+    const first = withValues[0].values[i]!;
+    const latest = withValues[withValues.length - 1].values[i]!;
+    const delta = latest - first;
+    const pct = first !== 0 ? (delta / first) * 100 : null;
+    const sign = delta > 0 ? "+" : "";
+    return {
+      delta,
+      pct,
+      label: `${sign}${Number(delta.toFixed(1))}${pct != null ? ` (${sign}${pct.toFixed(0)}%)` : ""}`,
+    };
+  });
+
+  return { columns, bands, rows, change };
+}
+
 export function getMetricSeries(metricDefinitionId: number): { date: string; value: number }[] {
   return getData()
     .metric_entries.filter((e) => e.metric_definition_id === metricDefinitionId && e.value != null)
@@ -1806,7 +2182,11 @@ export function listDistinctMeasurementFieldNames(): { name: string; unit: strin
 export type MetricTemplateCategory = {
   id: number;
   name: string;
-  frequency: "daily" | "weekly";
+  // The rhythm the client is asked for this on. "monthly" is what the
+  // old separate measurements sheet became: cadence is a property of a
+  // metric, which is why Daily Tracker and Weekly Tracker stopped being
+  // their own screens.
+  frequency: MetricCadence;
   order_index: number;
 };
 export type MetricTemplateItem = {
@@ -2264,6 +2644,13 @@ export function getWeightSeries(clientId: number, days: number) {
 export type ClientProfile = {
   client_id: number;
   birthdate: string | null;
+  // Optional so the profile rows written before these existed still satisfy
+  // the type — getData()'s schema patch back-fills missing tables, not
+  // missing columns. Read them with ?? null.
+  gender?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
   height_cm: number | null;
   starting_weight_kg: number | null;
   coaching_start_date: string | null;
@@ -2405,11 +2792,75 @@ export type NutritionGoalsSummary = {
   restFats: number;
 };
 
+export function macroKcal(protein: number | null, carbs: number | null, fats: number | null): number {
+  return (protein ?? 0) * 4 + (carbs ?? 0) * 4 + (fats ?? 0) * 9;
+}
+
+export function setNutritionDayTargets(
+  clientId: number,
+  training: { protein: number | null; carbs: number | null; fats: number | null },
+  rest: { protein: number | null; carbs: number | null; fats: number | null }
+) {
+  const plan = getNutritionPlan(clientId);
+  plan.day_targets = { training, rest };
+  saveNutritionPlan(plan);
+}
+
+export function setNutritionWater(clientId: number, litres: number | null) {
+  const plan = getNutritionPlan(clientId);
+  plan.water_l = litres;
+  saveNutritionPlan(plan);
+}
+
+export function addSupplementRow(clientId: number) {
+  const plan = getNutritionPlan(clientId);
+  const rows = plan.supplement_rows ?? [];
+  rows.push({ id: allocId("supplement_rows"), name: "", quantity: "", timing: "", notes: "" });
+  plan.supplement_rows = rows;
+  saveNutritionPlan(plan);
+}
+
+export function updateSupplementRow(
+  clientId: number,
+  rowId: number,
+  field: "name" | "quantity" | "timing" | "notes",
+  value: string
+) {
+  const plan = getNutritionPlan(clientId);
+  const row = (plan.supplement_rows ?? []).find((r) => r.id === rowId);
+  if (!row) return;
+  row[field] = value;
+  saveNutritionPlan(plan);
+}
+
+export function removeSupplementRow(clientId: number, rowId: number) {
+  const plan = getNutritionPlan(clientId);
+  plan.supplement_rows = (plan.supplement_rows ?? []).filter((r) => r.id !== rowId);
+  saveNutritionPlan(plan);
+}
+
 export function getNutritionGoalsSummary(clientId: number): NutritionGoalsSummary {
   const plan = getNutritionPlan(clientId);
   const kcal = (m: MealMacros) => (m.protein ?? 0) * 4 + (m.carbs ?? 0) * 4 + (m.fats ?? 0) * 9;
   const sum = (meals: MealMacros[], field: keyof MealMacros) =>
     meals.reduce((s, m) => s + (m[field] ?? 0), 0);
+
+  // Day-level targets win when the coach has set them. The six-meal arrays
+  // are the older model and stay readable, so a plan built before this still
+  // shows the right numbers on the client's Nutrition screen.
+  const t = plan.day_targets;
+  if (t) {
+    return {
+      trainingKcal: macroKcal(t.training.protein, t.training.carbs, t.training.fats),
+      restKcal: macroKcal(t.rest.protein, t.rest.carbs, t.rest.fats),
+      trainingProtein: t.training.protein ?? 0,
+      trainingCarbs: t.training.carbs ?? 0,
+      trainingFats: t.training.fats ?? 0,
+      restProtein: t.rest.protein ?? 0,
+      restCarbs: t.rest.carbs ?? 0,
+      restFats: t.rest.fats ?? 0,
+    };
+  }
 
   return {
     trainingKcal: plan.training_day_meals.reduce((s, m) => s + kcal(m), 0),

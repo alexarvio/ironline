@@ -114,6 +114,20 @@ type NutritionPlan = {
   other: Record<string, { amount: string; timing: string }>;
   supplements: Record<string, { quantity: string; timing: string }>;
   coach_notes: string;
+
+  // ---- Day-level targets (the current model) ----
+  // The coach sets one set of macros per day type and the kcal is derived,
+  // rather than filling in six meals. The meal arrays above are kept so
+  // existing plans still read, but nothing writes them any more; the summary
+  // prefers these whenever they're set.
+  day_targets?: {
+    training: { protein: number | null; carbs: number | null; fats: number | null };
+    rest: { protein: number | null; carbs: number | null; fats: number | null };
+  } | null;
+  // A stated goal, not a tracker — deliberately just a number.
+  water_l?: number | null;
+  // A reference list, not a checklist: no state, no ticking.
+  supplement_rows?: { id: number; name: string; quantity: string; timing: string; notes: string }[];
 };
 
 // Coach-defined check-in columns (default: Weight/kg, Waist/cm) — the coach
@@ -148,13 +162,19 @@ type SkinfoldEntry = {
   reading_mm: number | null;
 };
 
+type MetricCadence = "daily" | "weekly" | "monthly";
+
 type MetricDefinition = {
   id: number;
   client_id: number;
   category: string;
   name: string;
   unit: string;
-  frequency: "daily" | "weekly";
+  // The rhythm the client is asked for this on. "monthly" is what the
+  // old separate measurements sheet became: cadence is a property of a
+  // metric, which is why Daily Tracker and Weekly Tracker stopped being
+  // their own screens.
+  frequency: MetricCadence;
   order_index: number;
   // Up to 5 per client, surfaced at the top of their Start Page — see
   // PINNED_METRIC_LIMIT in queries.ts. Optional so existing saved data
@@ -180,7 +200,11 @@ type MetricEntry = {
 type MetricTemplateCategory = {
   id: number;
   name: string;
-  frequency: "daily" | "weekly";
+  // The rhythm the client is asked for this on. "monthly" is what the
+  // old separate measurements sheet became: cadence is a property of a
+  // metric, which is why Daily Tracker and Weekly Tracker stopped being
+  // their own screens.
+  frequency: MetricCadence;
   order_index: number;
 };
 type MetricTemplateItem = {
@@ -235,6 +259,16 @@ type PhotoPeriodNote = {
 type ClientProfile = {
   client_id: number;
   birthdate: string | null;
+  // Contact details for the right-hand Member info block. Nullable because a
+  // coach may never fill them in, and the panel shows an em dash rather than
+  // a blank row so the shape of the block stays stable.
+  // Optional so the profile rows written before these existed still satisfy
+  // the type — getData()'s schema patch back-fills missing tables, not
+  // missing columns. Read them with ?? null.
+  gender?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
   height_cm: number | null;
   starting_weight_kg: number | null;
   coaching_start_date: string | null;

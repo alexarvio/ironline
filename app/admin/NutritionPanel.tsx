@@ -1,150 +1,173 @@
-import { saveNutritionPlanAction } from "../lib/actions";
 import {
-  getNutritionPlan,
-  getTrainingDaysBuiltCount,
-  OTHER_ITEMS,
-  slugify,
-  SUPPLEMENT_ITEMS,
-  VITAMIN_ITEMS,
-} from "../lib/queries";
-import NutritionMacrosLive from "./NutritionMacrosLive";
+  addSupplementRowAction,
+  removeSupplementRowAction,
+  saveNutritionTargetsAction,
+  saveWaterGoalAction,
+} from "../lib/actions";
+import { getNutritionGoalsSummary, getNutritionPlan, macroKcal } from "../lib/queries";
+import SupplementCell from "./SupplementCell";
 
-function KeyedTable({
-  title,
-  items,
-  values,
-  prefix,
-  col1Label,
-  col1Field,
-}: {
-  title: string;
-  items: string[];
-  values: Record<string, Record<string, string>>;
-  prefix: string;
-  col1Label: string;
-  col1Field: "quantity" | "amount";
-}) {
-  const nameFrag = col1Field === "amount" ? "amt" : "qty";
-  return (
-    <div className="nutrition-table-wrap">
-      <h3>{title}</h3>
-      <div className="exercise-table-wrap">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th>{col1Label}</th>
-              <th>Timing</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => {
-              const key = slugify(item);
-              const entry = values[key] ?? {};
-              return (
-                <tr key={key}>
-                  <td className="exercise-name-cell">{item}</td>
-                  <td>
-                    <input
-                      name={`${prefix}_${nameFrag}_${key}`}
-                      type="text"
-                      defaultValue={entry[col1Field] ?? ""}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      name={`${prefix}_time_${key}`}
-                      type="text"
-                      defaultValue={entry.timing ?? ""}
-                    />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
+// The daily targets the client sees on their Nutrition screen.
+//
+// Two things this deliberately does NOT do, both of them de-scoped in the
+// design and easy to add back by mistake:
+//   - water is a stated goal, not a tracker
+//   - supplements are a reference list, not a checklist
+// Neither has any per-day state, and neither should grow a tick box.
 export default function NutritionPanel({ clientId }: { clientId: number }) {
   const plan = getNutritionPlan(clientId);
-  const trainingDaysBuilt = getTrainingDaysBuiltCount(clientId);
+
+  // A plan built on the older six-meal model has no day targets yet. Rather
+  // than showing a coach blank fields for macros they already set, the totals
+  // are derived from those meals and pre-filled — saving once makes them
+  // explicit and the meal arrays stop being consulted.
+  const derived = getNutritionGoalsSummary(clientId);
+  const t = plan.day_targets?.training ?? {
+    protein: derived.trainingProtein || null,
+    carbs: derived.trainingCarbs || null,
+    fats: derived.trainingFats || null,
+  };
+  const r = plan.day_targets?.rest ?? {
+    protein: derived.restProtein || null,
+    carbs: derived.restCarbs || null,
+    fats: derived.restFats || null,
+  };
+  const rows = plan.supplement_rows ?? [];
+
+  const trainingKcal = macroKcal(t.protein, t.carbs, t.fats);
+  const restKcal = macroKcal(r.protein, r.carbs, r.fats);
 
   return (
-    <form action={saveNutritionPlanAction} className="nutrition-panel">
-      <input type="hidden" name="clientId" value={clientId} />
+    <div className="nt">
+      {/* Targets: the two day types side by side, so the difference between
+          them — which is the whole point of having two — is one glance. */}
+      <form action={saveNutritionTargetsAction} className="nt-targets">
+        <input type="hidden" name="clientId" value={clientId} />
 
-      <p className="empty-note" style={{ marginBottom: 18 }}>
-        These are the coach&rsquo;s nutrition targets for this client — kcal recalculate live as
-        you type (protein/carbs = 4 kcal/g, fat = 9 kcal/g), and the weekly total uses the
-        training days actually built in the Training tab ({trainingDaysBuilt} right now).
-        Meal-by-meal food logging (what the client actually ate day to day) is a separate
-        feature, not built yet.
-      </p>
+        <div className="nt-day">
+          <div className="nt-day-head">
+            <span className="ad-microlabel">Training day</span>
+            <span className="nt-kcal">{trainingKcal ? `${trainingKcal.toLocaleString()} kcal` : "—"}</span>
+          </div>
+          <div className="nt-macros">
+            {(["protein", "carbs", "fats"] as const).map((m) => (
+              <label key={m} className="nt-macro">
+                <span>{m === "fats" ? "Fat" : m}</span>
+                <input name={`t_${m}`} type="number" min={0} defaultValue={t[m] ?? ""} placeholder="g" />
+              </label>
+            ))}
+          </div>
+        </div>
 
-      {/* One plan per client, renamed as the phase changes. Naming it is what
-          puts it in the header above every tab; leave it blank and the header
-          simply doesn't carry a nutrition slot. */}
-      <div className="nutrition-table-wrap" style={{ marginBottom: 18 }}>
-        <h3 className="builder-pill-heading">Plan name</h3>
-        <input
-          name="plan_name"
-          type="text"
-          defaultValue={plan.name ?? ""}
-          placeholder="e.g. Lean bulk — phase 2"
-          style={{ maxWidth: 320 }}
-        />
-      </div>
+        <div className="nt-day">
+          <div className="nt-day-head">
+            <span className="ad-microlabel">Rest day</span>
+            <span className="nt-kcal">{restKcal ? `${restKcal.toLocaleString()} kcal` : "—"}</span>
+          </div>
+          <div className="nt-macros">
+            {(["protein", "carbs", "fats"] as const).map((m) => (
+              <label key={m} className="nt-macro">
+                <span>{m === "fats" ? "Fat" : m}</span>
+                <input name={`r_${m}`} type="number" min={0} defaultValue={r[m] ?? ""} placeholder="g" />
+              </label>
+            ))}
+          </div>
+        </div>
 
-      <NutritionMacrosLive
-        trainingMeals={plan.training_day_meals}
-        restMeals={plan.rest_day_meals}
-        trainingDaysBuilt={trainingDaysBuilt}
-        maintenanceKcal={plan.maintenance_kcal}
-        ebf={plan.ebf}
-      />
+        <div className="nt-targets-foot">
+          {/* kcal is derived, never typed — a coach entering both macros and
+              a calorie figure can only ever disagree with themselves. */}
+          <span className="nt-derived-note">Calories are worked out from the macros.</span>
+          <button type="submit" className="btn nt-save">
+            Save targets
+          </button>
+        </div>
+      </form>
 
-      <KeyedTable
-        title="Vitamins & minerals"
-        items={VITAMIN_ITEMS}
-        values={plan.vitamins}
-        prefix="vit"
-        col1Label="Quantity"
-        col1Field="quantity"
-      />
-      <KeyedTable
-        title="Other"
-        items={OTHER_ITEMS}
-        values={plan.other}
-        prefix="other"
-        col1Label="Amount"
-        col1Field="amount"
-      />
-      <KeyedTable
-        title="Supplements"
-        items={SUPPLEMENT_ITEMS}
-        values={plan.supplements}
-        prefix="supp"
-        col1Label="Quantity"
-        col1Field="quantity"
-      />
+      {/* Water — one number. */}
+      <form action={saveWaterGoalAction} className="nt-water">
+        <input type="hidden" name="clientId" value={clientId} />
+        <span className="ad-microlabel">Water goal</span>
+        <div className="nt-water-input">
+          <input
+            name="water"
+            type="number"
+            step="0.1"
+            min={0}
+            defaultValue={plan.water_l ?? ""}
+            placeholder="3"
+            aria-label="Water goal in litres"
+          />
+          <span className="nt-water-unit">L a day</span>
+        </div>
+        <button type="submit" className="btn secondary btn-sm">
+          Save
+        </button>
+      </form>
 
-      <div className="nutrition-table-wrap">
-        <h3>Coach notes</h3>
-        <textarea
-          name="coach_notes"
-          defaultValue={plan.coach_notes}
-          rows={3}
-          className="coach-notes-textarea"
-          placeholder="e.g. Keep average kcal intake steady"
-        />
-      </div>
+      {/* Supplements — an editable sheet that starts empty and grows a row at
+          a time, rather than a fixed list of everything a coach might use. */}
+      <section className="nt-supps">
+        <div className="nt-supps-head">
+          <span className="ad-microlabel">Supplements</span>
+          <form action={addSupplementRowAction}>
+            <input type="hidden" name="clientId" value={clientId} />
+            <button type="submit" className="btn secondary btn-sm">
+              Add supplement
+            </button>
+          </form>
+        </div>
 
-      <button className="btn" type="submit" style={{ marginTop: 4 }}>
-        Save nutrition plan
-      </button>
-    </form>
+        {rows.length === 0 ? (
+          <p className="ad-panel-empty">Nothing set — add a row when {`there's`} something to take.</p>
+        ) : (
+          <table className="nt-supp-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Quantity</th>
+                <th>Timing</th>
+                <th>Notes</th>
+                <th aria-hidden="true" />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id}>
+                  {(["name", "quantity", "timing", "notes"] as const).map((field) => (
+                    <td key={field}>
+                      <SupplementCell
+                        clientId={clientId}
+                        rowId={row.id}
+                        field={field}
+                        value={row[field]}
+                        placeholder={
+                          field === "name"
+                            ? "Creatine"
+                            : field === "quantity"
+                            ? "5g"
+                            : field === "timing"
+                            ? "daily, any time"
+                            : "optional"
+                        }
+                      />
+                    </td>
+                  ))}
+                  <td className="nt-supp-remove">
+                    <form action={removeSupplementRowAction}>
+                      <input type="hidden" name="clientId" value={clientId} />
+                      <input type="hidden" name="rowId" value={row.id} />
+                      <button type="submit" aria-label={`Remove ${row.name || "supplement"}`}>
+                        ×
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+    </div>
   );
 }

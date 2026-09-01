@@ -203,30 +203,27 @@ export default function ProgramBuilder({
                   return (
                     <tr key={a.id}>
                       <td className="exercise-name-cell">
+                        {/* Trend hard left, name, demo hard right — the two
+                            marginal facts sit at the edges so the eye runs
+                            down a clean column of exercise names between
+                            them. */}
                         <div className="pb-exercise-title">
+                          {weightTrendPct != null && trendDir && (
+                            <span className={`pb-trend ${trendDir}`}>
+                              {trendDir === "up" ? "▲" : "▼"} {Math.abs(weightTrendPct).toFixed(1)}%
+                            </span>
+                          )}
                           <span className="pb-exercise-name">{a.exercise_name}</span>
                           <DemoUrlChip
                             assignmentId={a.id}
                             exerciseName={a.exercise_name ?? "this exercise"}
                             url={a.demo_url ?? a.exercise_video_url ?? null}
                           />
-                          {weightTrendPct != null && trendDir && (
-                            <span className={`pb-trend ${trendDir}`}>
-                              {trendDir === "up" ? "▲" : "▼"} {Math.abs(weightTrendPct).toFixed(1)}%
-                            </span>
-                          )}
                         </div>
-                        {prevRef && (
-                          <div className="pb-prev-ref">
-                            <span>
-                              <span className="pb-prev-label">last</span>{" "}
-                              {formatTarget(prevRef.sets, prevRef.reps, prevRef.target_weight_kg, prevRef.rpe_target)}
-                            </span>
-                            <span>
-                              <span className="pb-prev-label">actual</span> {formatActualLogs(prevRef.actualLogs)}
-                            </span>
-                          </div>
-                        )}
+                        {/* The old "last … / actual …" prose lived here. The
+                            logged grid on the right now says the same thing
+                            column-aligned and week-labelled, so repeating it
+                            as a sentence only made every row taller. */}
                       </td>
                       {columns.map((col) => {
                         if (col.kind === "custom") {
