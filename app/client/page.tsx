@@ -413,8 +413,15 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
                             />
                           )}
                         </div>
-                        {a.exercise_video_url && (
-                          <a href={a.exercise_video_url} target="_blank" rel="noreferrer" className="video-link">
+                        {/* The coach's demo for this prescription wins; the
+                            exercise library's own video is the fallback. */}
+                        {(a.demo_url || a.exercise_video_url) && (
+                          <a
+                            href={a.demo_url ?? a.exercise_video_url ?? undefined}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="video-link"
+                          >
                             ▶ how to
                           </a>
                         )}

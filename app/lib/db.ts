@@ -71,6 +71,11 @@ type WorkoutAssignment = {
   // assignment is already "this exercise, this day, this week", which is
   // exactly the scope a note has.
   notes: string | null;
+  // A movement demo for THIS prescription, not for the exercise in general:
+  // the coach may want a different cue for the same lift in a different block,
+  // and the exercise library's own video_url stays the fallback. The client
+  // taps it in their app to watch the movement.
+  demo_url: string | null;
   note_kind: "form" | "load" | "tempo" | null;
   note_at: string | null;
   note_read: boolean;

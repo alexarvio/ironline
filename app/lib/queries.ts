@@ -39,6 +39,7 @@ export type WorkoutAssignment = {
   rest_seconds: number | null;
   tempo: string | null;
   notes: string | null;
+  demo_url: string | null;
   note_kind: ExerciseNoteKind | null;
   note_at: string | null;
   note_read: boolean;
@@ -487,6 +488,7 @@ export function getAssignmentsForDay(programDayId: number): WorkoutAssignment[] 
         // Rows written before the note fields existed have them undefined —
         // getData()'s schema patch back-fills missing tables, not missing
         // columns — so they're defaulted on the way out.
+        demo_url: wa.demo_url ?? null,
         note_kind: wa.note_kind ?? null,
         note_at: wa.note_at ?? null,
         note_read: wa.note_read ?? false,
@@ -584,6 +586,7 @@ export function addExerciseToDay(
     rest_seconds: null,
     tempo,
     notes,
+    demo_url: null,
     note_kind: null,
     note_at: notes ? new Date().toISOString() : null,
     note_read: false,
@@ -624,6 +627,15 @@ export function updateAssignmentFields(
   persist();
 }
 
+/** Coach-side: attach (or clear) the demo video the client sees on this row. */
+export function setAssignmentDemoUrl(assignmentId: number, url: string | null) {
+  const data = getData();
+  const assignment = data.workout_assignments.find((wa) => wa.id === assignmentId);
+  if (!assignment) return;
+  assignment.demo_url = url && url.trim() ? url.trim() : null;
+  persist();
+}
+
 /** Coach-side: set which kind of note this is (technique / load / tempo). */
 export function setExerciseNoteKind(assignmentId: number, kind: ExerciseNoteKind | null) {
   const data = getData();
@@ -643,6 +655,77 @@ export function markExerciseNoteRead(assignmentId: number) {
   if (!assignment || !assignment.notes || assignment.note_read) return;
   assignment.note_read = true;
   persist();
+}
+
+/**
+ * One capsule on the week rail. The ticks report what the client ACTUALLY
+ * did, not what was planned — that was the point of the rail. A day the
+ * coach built but the client skipped reads differently from a rest day, so
+ * the coach can see adherence at a glance instead of inferring it.
+ */
+export type WeekRailDay = { dayOfWeek: number; state: "trained" | "missed" | "rest"; title: string };
+export type WeekRailWeek = {
+  weekNumber: number;
+  label: string;
+  days: WeekRailDay[];
+  meta: string;
+  isLive: boolean;
+  hasSplit: boolean;
+};
+
+export function getWeekRail(clientId: number, weekNumbers: number[], liveWeek: number): WeekRailWeek[] {
+  const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+  return weekNumbers.map((weekNumber) => {
+    const days = getWeek(clientId, weekNumber);
+    const railDays: WeekRailDay[] = [];
+
+    for (let dow = 1; dow <= 7; dow++) {
+      const day = days.find((d) => d.day_of_week === dow);
+      const assignments = day ? getAssignmentsForDay(day.id) : [];
+      const name = dayNames[dow - 1];
+
+      if (assignments.length === 0) {
+        railDays.push({ dayOfWeek: dow, state: "rest", title: `${name} — rest day` });
+        continue;
+      }
+      const logged = assignments.some((a) => getLogsForAssignment(a.id).length > 0);
+      railDays.push(
+        logged
+          ? { dayOfWeek: dow, state: "trained", title: `${name} — trained` }
+          : { dayOfWeek: dow, state: "missed", title: `${name} — planned, nothing logged` }
+      );
+    }
+
+    const trained = railDays.filter((d) => d.state === "trained").length;
+    const planned = railDays.filter((d) => d.state !== "rest").length;
+
+    return {
+      weekNumber,
+      label: `Week ${weekNumber}`,
+      days: railDays,
+      // A future week has nothing to report yet, so it states the plan
+      // instead of claiming zero days trained.
+      meta: weekNumber > liveWeek ? `${planned} planned` : `${trained} days trained`,
+      isLive: weekNumber === liveWeek,
+      hasSplit: planned > 0,
+    };
+  });
+}
+
+/**
+ * The most recent week that actually has a split, which is what "copy" on
+ * the add-week popover should clone. Sourcing from the trailing week would
+ * make the option a no-op whenever the last week is still empty — which is
+ * exactly when a coach reaches for it.
+ */
+export function lastBuiltWeek(clientId: number, weekNumbers: number[]): number | null {
+  for (let i = weekNumbers.length - 1; i >= 0; i--) {
+    const week = weekNumbers[i];
+    const hasContent = getWeek(clientId, week).some((d) => getAssignmentsForDay(d.id).length > 0);
+    if (hasContent) return week;
+  }
+  return null;
 }
 
 export type PreviousWeekAssignmentRef = {
@@ -794,10 +877,29 @@ export type TrainingColumn = {
 };
 export type AssignmentCustomValue = { id: number; workout_assignment_id: number; column_id: number; value: string };
 
+// Every prescription column the coach can switch on, in the order they're
+// offered. Notes is deliberately NOT here: it is always rendered on every
+// row, so it is neither toggleable nor counted against the cap — a note is
+// how a coach talks to the client about a movement, not an optional metric.
+export const AVAILABLE_TRAINING_COLUMNS: { key: string; label: string; placeholder: string }[] = [
+  { key: "sets", label: "Sets", placeholder: "3" },
+  { key: "reps", label: "Reps", placeholder: "8-10" },
+  { key: "weight_goal", label: "Weight", placeholder: "kg" },
+  { key: "rpe", label: "RPE", placeholder: "8" },
+  { key: "tempo", label: "Tempo", placeholder: "2-0-2" },
+  { key: "rest", label: "Rest", placeholder: "90s" },
+  { key: "distance", label: "Distance", placeholder: "5km" },
+  { key: "time", label: "Time", placeholder: "20min" },
+];
+
+// Six at once. Past that the grid stops fitting a 1440 canvas beside the
+// logged-sets panel, which is the column that actually matters.
+export const MAX_TRAINING_COLUMNS = 6;
+
 const DEFAULT_TRAINING_COLUMNS: { key: string; label: string }[] = [
   { key: "sets", label: "Sets" },
   { key: "reps", label: "Reps" },
-  { key: "weight_goal", label: "Weight goal" },
+  { key: "weight_goal", label: "Weight" },
   { key: "rpe", label: "RPE" },
   { key: "tempo", label: "Tempo" },
   { key: "notes", label: "Notes" },
@@ -822,6 +924,70 @@ export function listTrainingColumns(clientId: number): TrainingColumn[] {
     return data.training_columns.filter((c) => c.client_id === clientId).sort((a, b) => a.order_index - b.order_index);
   }
   return existing.sort((a, b) => a.order_index - b.order_index);
+}
+
+/**
+ * The columns actually rendered as prescription inputs, in order — Notes
+ * excluded, since it's rendered separately and always.
+ */
+export function listPrescriptionColumns(clientId: number): TrainingColumn[] {
+  return listTrainingColumns(clientId).filter((c) => c.key !== "notes" && c.visible);
+}
+
+/**
+ * Every column the coach can pick from: the ones already on this client
+ * (whatever their visibility) plus any builtin they haven't added yet, so
+ * the chip row shows all eight from the start rather than only what exists.
+ * Notes is filtered out — it isn't a choice.
+ */
+export function listColumnChoices(clientId: number) {
+  const existing = listTrainingColumns(clientId).filter((c) => c.key !== "notes");
+  const byKey = new Map(existing.map((c) => [c.key, c]));
+  const builtins = AVAILABLE_TRAINING_COLUMNS.map((def) => {
+    const row = byKey.get(def.key);
+    return {
+      id: row?.id ?? null,
+      key: def.key,
+      label: row?.label ?? def.label,
+      kind: "builtin" as const,
+      visible: row?.visible ?? false,
+    };
+  });
+  const customs = existing
+    .filter((c) => c.kind === "custom")
+    .map((c) => ({ id: c.id, key: c.key, label: c.label, kind: "custom" as const, visible: c.visible }));
+  return [...builtins, ...customs];
+}
+
+/**
+ * Switch a builtin column on or off, creating the row the first time it's
+ * used. Refuses to exceed MAX_TRAINING_COLUMNS rather than silently
+ * dropping one — the UI greys the remaining chips at the cap, so hitting
+ * this is a race, not a normal path.
+ */
+export function setBuiltinColumnVisible(clientId: number, key: string, visible: boolean) {
+  const data = getData();
+  const all = listTrainingColumns(clientId);
+  if (visible && all.filter((c) => c.key !== "notes" && c.visible).length >= MAX_TRAINING_COLUMNS) return;
+
+  const existing = all.find((c) => c.client_id === clientId && c.key === key);
+  if (existing) {
+    existing.visible = visible;
+    persist();
+    return;
+  }
+  const def = AVAILABLE_TRAINING_COLUMNS.find((d) => d.key === key);
+  if (!def) return;
+  data.training_columns.push({
+    id: allocId("training_columns"),
+    client_id: clientId,
+    key: def.key,
+    label: def.label,
+    kind: "builtin",
+    visible,
+    order_index: AVAILABLE_TRAINING_COLUMNS.findIndex((d) => d.key === key),
+  });
+  persist();
 }
 
 export function updateTrainingColumn(id: number, label: string) {

@@ -102,6 +102,10 @@ import {
   getClientIdForReport,
   markExerciseNoteRead,
   setExerciseNoteKind,
+  setAssignmentDemoUrl,
+  setBuiltinColumnVisible,
+  listPrograms,
+  ensureWeekSkeleton,
 } from "./queries";
 import { writeReportNarrative } from "./reportAi";
 import type { ReportSectionType } from "./reportSectionTypes";
@@ -267,6 +271,31 @@ export async function createProgramAction(formData: FormData) {
   createProgram(clientId, "", 1, startWeek);
   revalidatePath("/admin");
   redirect(weekLinkBase || "/admin");
+}
+
+/**
+ * Appends one week to a programme. Either blank, or a clone of a week that
+ * already has a split — the popover offers the last BUILT week rather than
+ * the trailing one, so "copy" isn't a no-op right after adding an empty week.
+ */
+export async function addProgramWeekAction(formData: FormData) {
+  await requireCoach();
+  const clientId = Number(formData.get("clientId"));
+  const programId = Number(formData.get("programId"));
+  const copyFrom = formData.get("copyFrom") ? Number(formData.get("copyFrom")) : null;
+
+  const program = listPrograms(clientId).find((p) => p.id === programId);
+  if (!program) return;
+
+  const newTotal = program.total_weeks + 1;
+  updateProgramTotalWeeks(programId, newTotal);
+
+  const newWeekNumber = program.start_week + newTotal - 1;
+  ensureWeekSkeleton(clientId, newWeekNumber);
+  if (copyFrom) copyProgramWeek(clientId, copyFrom, newWeekNumber);
+
+  revalidatePath("/admin");
+  revalidatePath("/client");
 }
 
 export async function updateProgramWeeksAction(formData: FormData) {
@@ -1043,6 +1072,25 @@ export async function setClientUnitsAction(formData: FormData) {
  * note on an exercise. Reachable from the client app, so it resolves the
  * owning client from the assignment and checks the session can touch it.
  */
+export async function setDemoUrlAction(formData: FormData) {
+  await requireCoach();
+  const assignmentId = Number(formData.get("assignmentId"));
+  const url = String(formData.get("demoUrl") || "");
+  setAssignmentDemoUrl(assignmentId, url);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function setBuiltinColumnVisibleAction(formData: FormData) {
+  await requireCoach();
+  const clientId = Number(formData.get("clientId"));
+  const key = String(formData.get("key") || "");
+  const visible = formData.get("visible") === "true";
+  setBuiltinColumnVisible(clientId, key, visible);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
 export async function markExerciseNoteReadAction(assignmentId: number) {
   if (!assignmentId) return;
   const owner = getClientIdForAssignment(assignmentId);

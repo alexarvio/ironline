@@ -6,6 +6,7 @@ import {
   getDeployedProgram,
   getDraftProgram,
   getExerciseWeightTrendPct,
+  getLogsForAssignment,
   getLogsForAssignmentByWeek,
   getPreviousWeekAssignmentRef,
   getProgramCurrentWeekIndex,
@@ -13,6 +14,8 @@ import {
   listExercisesByGroup,
   listPrograms,
   listTrainingColumns,
+  listColumnChoices,
+  MAX_TRAINING_COLUMNS,
   localDateStr,
   MUSCLE_GROUPS,
   programWeekLabel,
@@ -28,12 +31,13 @@ import ExercisePicker from "./ExercisePicker";
 import CustomValueInput from "../admin/CustomValueInput";
 import ConfirmDeleteButton from "./ConfirmDeleteButton";
 import AdminDayCard from "./AdminDayCard";
+import DemoUrlChip from "../admin/DemoUrlChip";
+import LoggedSetsGrid, { LoggedWeekRow } from "../admin/LoggedSetsGrid";
 import ProgramBuilderShell, { BuilderProgram, WeekCard } from "../admin/ProgramBuilderShell";
 import ProgramNameForm from "../admin/ProgramNameForm";
 import ProgramWeeksForm from "../admin/ProgramWeeksForm";
 import ProgramDeployControls from "../admin/ProgramDeployControls";
-import TrainingColumnsPanel from "../admin/TrainingColumnsPanel";
-import ColumnPills from "../admin/ColumnPills";
+import ColumnChipRow from "../admin/ColumnChipRow";
 import CopyWeekButton from "../admin/CopyWeekButton";
 import DayRestToggle from "../admin/DayRestToggle";
 
@@ -84,6 +88,7 @@ export default function ProgramBuilder({
 
   const exercisesByGroup = listExercisesByGroup();
   const allColumns = listTrainingColumns(clientId);
+  const columnChoices = listColumnChoices(clientId);
   const columns = allColumns.filter((c) => c.visible);
   const customColumnIds = allColumns.filter((c) => c.kind === "custom").map((c) => c.id);
   const customValues = getCustomValues(customColumnIds);
@@ -146,7 +151,7 @@ export default function ProgramBuilder({
                       {col.label}
                     </th>
                   ))}
-                  <th className="logged-col">Logged by client</th>
+                  <th className="logged-col">What the client did</th>
                   {/* Holds the row delete on an exercise row and the Add button on the
                       add row, so it needs to fit the wider of the two. */}
                   <th aria-hidden="true" style={{ width: "58px" }}></th>
@@ -162,16 +167,49 @@ export default function ProgramBuilder({
                   const prevRef = getPreviousWeekAssignmentRef(clientId, day.week_number, day.day_of_week, a.exercise_id);
                   const weightTrendPct = getExerciseWeightTrendPct(clientId, a.exercise_id, day.week_number);
                   const trendDir = weightTrendPct == null ? null : weightTrendPct > 0 ? "up" : weightTrendPct < 0 ? "down" : null;
+
+                  // This week over last, each judged against the target that
+                  // was live for ITS OWN week — see LoggedSetsGrid for why
+                  // that matters.
+                  const thisWeekSets = weekGroups
+                    .flatMap((wg) => wg.logs)
+                    .map((l) => ({
+                      setNumber: l.set_number,
+                      weightKg: l.weight_kg,
+                      reps: l.reps,
+                      rpe: l.rpe_actual,
+                    }));
+                  const loggedRows: LoggedWeekRow[] = [];
+                  if (prevRef) {
+                    loggedRows.push({
+                      weekLabel: `W${day.week_number - 1}`,
+                      targetWeightKg: prevRef.target_weight_kg,
+                      sets: prevRef.actualLogs.map((l) => ({
+                        setNumber: l.set_number,
+                        weightKg: l.weight_kg,
+                        reps: l.reps,
+                        rpe: l.rpe_actual,
+                      })),
+                      current: false,
+                    });
+                  }
+                  loggedRows.push({
+                    weekLabel: `W${day.week_number}`,
+                    targetWeightKg: a.target_weight_kg,
+                    sets: thisWeekSets,
+                    current: true,
+                  });
+
                   return (
                     <tr key={a.id}>
                       <td className="exercise-name-cell">
                         <div className="pb-exercise-title">
                           <span className="pb-exercise-name">{a.exercise_name}</span>
-                          {a.exercise_video_url && (
-                            <a href={a.exercise_video_url} target="_blank" rel="noreferrer" className="video-link">
-                              ▶ demo
-                            </a>
-                          )}
+                          <DemoUrlChip
+                            assignmentId={a.id}
+                            exerciseName={a.exercise_name ?? "this exercise"}
+                            url={a.demo_url ?? a.exercise_video_url ?? null}
+                          />
                           {weightTrendPct != null && trendDir && (
                             <span className={`pb-trend ${trendDir}`}>
                               {trendDir === "up" ? "▲" : "▼"} {Math.abs(weightTrendPct).toFixed(1)}%
@@ -270,21 +308,7 @@ export default function ProgramBuilder({
                         }
                       })}
                       <td className="logged-col">
-                        {weekGroups.length === 0 ? (
-                          <span className="pb-not-logged">not logged</span>
-                        ) : (
-                          <div className="pb-log-chips">
-                            {weekGroups.flatMap((wg) =>
-                              wg.logs.map((l) => (
-                                <span key={l.id} className="pb-log-chip">
-                                  <span className="pb-log-set">{l.set_number}</span>
-                                  {l.weight_kg ?? "–"}×{l.reps ?? "–"}
-                                  {l.rpe_actual ? ` @${l.rpe_actual}` : ""}
-                                </span>
-                              ))
-                            )}
-                          </div>
-                        )}
+                        <LoggedSetsGrid rows={loggedRows} />
                       </td>
                       <td>
                         <ConfirmDeleteButton
@@ -372,6 +396,7 @@ export default function ProgramBuilder({
     const weekSummaries: Record<number, string> = {};
     const copySlots: Record<number, ReactNode> = {};
     const weekCards: WeekCard[] = [];
+    let copyFromWeek: number | null = null;
 
     for (let i = 0; i < program.total_weeks; i++) {
       const index = i + 1;
@@ -392,18 +417,38 @@ export default function ProgramBuilder({
         ? `${trainingDays} training day${trainingDays === 1 ? "" : "s"}${setsLogged ? ` · ${setsLogged} sets logged` : ""}`
         : `${programWeekLabel(program, weekNumber)} is empty — pick a day and add the first exercise`;
 
-      // Seven slots in weekday order, filled where that day has training.
-      const slots = Array.from({ length: 7 }, (_, di) => {
-        const day = days.find((d) => d.day_of_week === di + 1);
-        return day ? getAssignmentsForDay(day.id).length > 0 : false;
+      // Seven ticks in weekday order reporting what the client actually did:
+      // trained, planned-but-missed, or rest. Planned-vs-actual is the whole
+      // point of the rail — a skipped session must not look like a rest day.
+      const railDays = Array.from({ length: 7 }, (_, di) => {
+        const dow = di + 1;
+        const day = days.find((d) => d.day_of_week === dow);
+        const assignments = day ? getAssignmentsForDay(day.id) : [];
+        const name = DAY_NAMES_FULL[di];
+        if (assignments.length === 0) {
+          return { dayOfWeek: dow, state: "rest" as const, title: `${name} — rest day` };
+        }
+        const logged = assignments.some((a) => getLogsForAssignment(a.id).length > 0);
+        return logged
+          ? { dayOfWeek: dow, state: "trained" as const, title: `${name} — trained` }
+          : { dayOfWeek: dow, state: "missed" as const, title: `${name} — planned, nothing logged` };
       });
+      const trainedDays = railDays.filter((d) => d.state === "trained").length;
+      const isFuture = liveWeekNumber != null && weekNumber > liveWeekNumber;
+
       weekCards.push({
         week: index,
         label: programWeekLabel(program, weekNumber),
-        slots,
+        days: railDays,
         isLive: liveWeekNumber === weekNumber,
-        meta: trainingDays ? `${trainingDays} day${trainingDays === 1 ? "" : "s"}` : "empty",
+        // A future week has nothing to report, so it states the plan rather
+        // than claiming zero days trained.
+        meta: isFuture
+          ? `${trainingDays} planned`
+          : `${trainedDays} day${trainedDays === 1 ? "" : "s"} trained`,
       });
+
+      if (trainingDays > 0) copyFromWeek = index;
 
       if (i > 0) {
         copySlots[index] = (
@@ -435,6 +480,7 @@ export default function ProgramBuilder({
       }`,
       defaultWeek: status === "live" ? getProgramCurrentWeekIndex(program) : 1,
       weekCards,
+      copyFromWeek,
       weekContents,
       weekSummaries,
       copySlots,
@@ -476,7 +522,8 @@ export default function ProgramBuilder({
     <div className="pb">
       <ProgramBuilderShell
         programs={programs}
-        columnsSlot={<ColumnPills key="cols" columns={allColumns} />}
+        clientId={clientId}
+        columnsSlot={<ColumnChipRow key="cols" clientId={clientId} choices={columnChoices} max={MAX_TRAINING_COLUMNS} />}
         newProgramSlot={
           draftProgram ? null : (
             <form key="new-program" action={createProgramAction}>
@@ -491,9 +538,6 @@ export default function ProgramBuilder({
         emptySlot={<p key="empty" className="empty-note">No programs yet — start one and build the first week.</p>}
       />
 
-      <div className="pb-columns-panel">
-        <TrainingColumnsPanel clientId={clientId} columns={allColumns} />
-      </div>
     </div>
   );
 }

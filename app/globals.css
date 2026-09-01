@@ -1,16 +1,29 @@
 @import url("https://fonts.googleapis.com/css2?family=Newsreader:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap");
 
 :root {
-  --ink: #14171c;
-  --paper: #f1f2ed;
-  --paper-raised: #e8e9e2;
-  --steel: #5b6472;
-  --border: #c9ccc2;
-  --accent: #2f6485;
+  /* ---- Coach workstation (/admin) ----
+     Same off-white / navy family as the client app, so the two halves of
+     the product stop reading as different products. */
+  --ink: #14171c;                /* body text */
+  --paper: #f8f9fb;              /* app background (centre column) */
+  --paper-raised: #e8e9e2;       /* left rail and right panel */
+  --surface: #ffffff;            /* cards, inputs, day bodies */
+  --table-head: #edf0f4;         /* table header fill */
+  --logged-head: #eaeef4;        /* "what the client did" header */
+  --logged-band: #f3f6fa;        /* and its column band */
+  --steel: #5b6472;              /* dim / labels, 4.9:1 — do not lighten */
+  --faint: #8b93a0;              /* placeholder, "already added" state */
+  --border: #c2cbd3;             /* hairline */
+  --border-strong: #94a2b0;      /* dashed affordances */
+  --accent: #2f5d8f;
   --accent-fg: #ffffff;
-  --accent-ink: #2f6485;
-  --accent-plate: #a94e26;
-  --good: #3f6e46;
+  --accent-ink: #2f5d8f;
+  --accent-tint: #e6ecf3;        /* cadence pills, icon circles, demo chip */
+  --accent-plate: #9a5a33;       /* warning / under target / destructive */
+  --good: #3f6e46;               /* trained, met target, deploy */
+  --good-tint: #d7e6da;
+  --draft-bg: #f0e6cf;
+  --draft-fg: #8a6d3b;
   --font-serif: "Newsreader", Georgia, serif;
   --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 
@@ -1705,7 +1718,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   aspect-ratio: 393 / 852;
   background: var(--paper);
   border-radius: 55px;
-  border: 12px solid #0b0c09;
+  border: 12px solid #313851;
   box-shadow:
     0 30px 60px rgba(0, 0, 0, 0.4),
     inset 0 0 0 2px #2a2b24;
@@ -7965,4 +7978,349 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   font-size: 0.72rem;
   background: white;
   color: var(--ink);
+}
+
+/* ================= Coach workstation: Training tab =================
+   Dense by intent — this is a tool a coach has open for hours, not a page
+   they visit. Body 11–12.5px, micro-labels 9.5–10px at weight 800. */
+
+/* ---- Column chips: the coach composes the prescription ---- */
+.pb-cols-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.pb-cols-label {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--steel);
+  white-space: nowrap;
+}
+
+.pb-col-chip-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+.pb-col-chip-form,
+.pb-col-chip-x-form {
+  display: inline-flex;
+}
+
+.pb-col-chip {
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  background: var(--surface);
+  color: var(--steel);
+  padding: 3px 9px;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pb-col-chip.on {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+/* At the cap the rest grey out rather than vanishing, so the coach can see
+   what they'd be choosing between. */
+.pb-col-chip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pb-col-chip-x {
+  border: none;
+  background: none;
+  color: var(--steel);
+  font-size: 12px;
+  line-height: 1;
+  padding: 0 4px;
+  cursor: pointer;
+}
+
+.pb-col-add {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px dashed var(--border);
+  border-radius: 99px;
+  padding: 2px 4px 2px 9px;
+}
+
+.pb-col-add input {
+  width: 96px;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 0;
+}
+
+.pb-col-add input:focus { outline: none; }
+
+.pb-col-add button {
+  border: none;
+  border-radius: 99px;
+  background: var(--table-head);
+  color: var(--ink);
+  width: 18px;
+  height: 18px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* ---- Week rail ---- */
+.pb-rail-wrap { position: relative; margin-top: 14px; }
+
+.pb-rail {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 5px;
+  scrollbar-width: none;
+}
+
+.pb-rail::-webkit-scrollbar { display: none; }
+
+.pb-week-capsule {
+  flex: 0 0 92px;
+  height: 67px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 7px 8px 8px;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.pb-week-capsule.selected {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.pb-week-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.pb-week-label { font-size: 11px; font-weight: 800; color: var(--ink); }
+.pb-week-capsule.selected .pb-week-label { color: var(--paper); }
+
+.pb-week-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  background: var(--accent);
+}
+
+.pb-week-capsule.selected .pb-week-dot { background: var(--paper); }
+
+.pb-week-ticks { display: flex; gap: 2px; margin-top: 7px; }
+
+.pb-week-tick { flex: 1; height: 5px; border-radius: 99px; }
+
+/* Trained / planned-but-missed / rest — what happened, not what was planned. */
+.pb-week-tick.trained { background: var(--good); }
+.pb-week-tick.missed { background: var(--border); }
+.pb-week-tick.rest { background: var(--table-head); }
+
+.pb-week-meta { font-size: 10px; color: var(--steel); margin-top: 6px; }
+.pb-week-capsule.selected .pb-week-meta { color: var(--border); }
+
+.pb-week-add {
+  border-style: dashed;
+  background: transparent;
+}
+
+.pb-week-add-label { font-size: 11px; font-weight: 800; color: var(--accent); }
+
+.pb-add-pop {
+  position: absolute;
+  top: 66px;
+  left: 0;
+  z-index: 20;
+  width: 172px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  box-shadow: 0 8px 20px rgba(20, 23, 28, 0.14);
+  padding: 9px 10px 10px;
+}
+
+.pb-add-pop-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.pb-add-pop-title {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--steel);
+}
+
+.pb-add-pop-x {
+  border: none;
+  background: none;
+  color: var(--steel);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.pb-add-pop-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.pb-add-blank,
+.pb-add-copy {
+  border-radius: 6px;
+  padding: 5px 9px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+}
+
+.pb-add-blank {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.pb-add-copy {
+  border: none;
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+/* ---- Demo video chip ---- */
+.pb-demo-chip {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--steel);
+  padding: 2px 6px;
+  font: inherit;
+  font-size: 9.5px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pb-demo-chip.set {
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+
+.pb-demo-form { margin-top: 5px; }
+
+.pb-demo-input {
+  width: 100%;
+  min-width: 0;
+  height: 24px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0 7px;
+  font-size: 10.5px;
+}
+
+/* ---- "What the client did" ---- */
+.pb-logged-grid {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.pb-logged-head {
+  display: flex;
+  background: var(--table-head);
+  border-bottom: 1px solid var(--border);
+}
+
+.pb-logged-row {
+  display: flex;
+  border-top: 1px solid var(--border);
+}
+
+.pb-logged-row:first-of-type { border-top: none; }
+
+.pb-logged-wk {
+  flex-shrink: 0;
+  width: 30px;
+  border-right: 1px solid var(--border);
+  background: var(--table-head);
+  color: var(--steel);
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-align: center;
+  padding: 3px 0;
+}
+
+.pb-logged-cell {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  border-right: 1px solid var(--border);
+  font-family: ui-monospace, Menlo, monospace;
+  /* 9px fits the widest realistic value ("142.5×13") in a four-set row.
+     At 10px it truncated to "142.5×…", losing the reps. */
+  font-size: 9px;
+  letter-spacing: -0.02em;
+  color: var(--steel);
+  padding: 3px 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pb-logged-head .pb-logged-cell {
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+/* The week being edited reads at full contrast; earlier weeks stay dim, so
+   the eye lands on what is current without losing the comparison. */
+.pb-logged-row.current .pb-logged-cell { color: var(--ink); font-weight: 700; }
+
+/* Judged against the target of the week the set belongs to. */
+.pb-logged-cell.met { box-shadow: inset 0 -2px 0 var(--good); }
+.pb-logged-cell.under { box-shadow: inset 0 -2px 0 var(--accent-plate); }
+
+.pb-logged-empty {
+  font-size: 10.5px;
+  color: var(--faint);
 }
