@@ -15,6 +15,8 @@ const MIME_TYPES: Record<string, string> = {
   gif: "image/gif",
   mp4: "video/mp4",
   mov: "video/quicktime",
+  webm: "video/webm",
+  m4v: "video/x-m4v",
 };
 
 export async function GET(
@@ -27,6 +29,7 @@ export async function GET(
   // segment:
   //   uploads/progress/<clientId>/<slotId>/<period>.<ext>
   //   uploads/chat/<clientId>/<filename>
+  //   uploads/demos/<clientId>/<assignmentId>.<ext>
   // Progress photos are about as sensitive as this app gets, and without
   // this check anyone who guessed or was sent a URL could fetch any
   // client's. 404 rather than 403 for an unauthorized caller, since a
@@ -39,7 +42,7 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
   const [kind, clientIdRaw] = segments;
-  if (kind !== "progress" && kind !== "chat") {
+  if (kind !== "progress" && kind !== "chat" && kind !== "demos") {
     return new Response("Not found", { status: 404 });
   }
   const clientId = Number(clientIdRaw);

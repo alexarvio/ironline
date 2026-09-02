@@ -25,13 +25,13 @@ import {
 } from "../lib/queries";
 import { DAY_NAMES_FULL } from "../lib/db";
 import AssignmentFieldInput from "./AssignmentFieldInput";
-import NoteKindSelect from "./NoteKindSelect";
+import ExerciseNoteCell from "./ExerciseNoteCell";
 import DayLabelForm from "./DayLabelForm";
 import ExercisePicker from "./ExercisePicker";
 import CustomValueInput from "../admin/CustomValueInput";
 import ConfirmDeleteButton from "./ConfirmDeleteButton";
 import AdminDayCard from "./AdminDayCard";
-import DemoUrlChip from "../admin/DemoUrlChip";
+import DemoVideoDialog from "../admin/DemoVideoDialog";
 import LoggedSetsGrid, { LoggedWeekRow } from "../admin/LoggedSetsGrid";
 import ProgramBuilderShell, { BuilderProgram, WeekCard } from "../admin/ProgramBuilderShell";
 import ProgramNameForm from "../admin/ProgramNameForm";
@@ -226,10 +226,19 @@ export default function ProgramBuilder({
                             </span>
                           )}
                           <span className="pb-exercise-name">{a.exercise_name}</span>
-                          <DemoUrlChip
+                          {/* The prescription's own demo and the library's
+                              video are passed separately. Collapsing them to
+                              one `url` meant opening the chip on an exercise
+                              with only a library video pre-filled the field
+                              with it — and the old save-on-blur then copied
+                              it onto the prescription, silently, for doing
+                              nothing but looking. */}
+                          <DemoVideoDialog
                             assignmentId={a.id}
+                            clientId={clientId}
                             exerciseName={a.exercise_name ?? "this exercise"}
-                            url={a.demo_url ?? a.exercise_video_url ?? null}
+                            demoUrl={a.demo_url ?? null}
+                            libraryUrl={a.exercise_video_url ?? null}
                           />
                         </div>
                         {/* The old "last … / actual …" prose lived here. The
@@ -299,17 +308,16 @@ export default function ProgramBuilder({
                           case "notes":
                             return (
                               <td key={col.id} className="notes-cell">
-                                <AssignmentFieldInput
+                                {/* A note is prose, so the cell shows what
+                                    fits and opens an editor for the rest. A
+                                    one-line input here showed four words and
+                                    scrolled the remainder somewhere the coach
+                                    could neither read nor edit it. */}
+                                <ExerciseNoteCell
                                   assignmentId={a.id}
-                                  name="notes"
-                                  type="text"
-                                  placeholder="optional"
-                                  defaultValue={a.notes ?? ""}
+                                  exerciseName={a.exercise_name ?? "this exercise"}
+                                  note={a.notes ?? ""}
                                 />
-                                {/* Only worth labelling once something's been
-                                    written — the client only sees a note
-                                    button when there's a note. */}
-                                {a.notes && <NoteKindSelect assignmentId={a.id} value={a.note_kind} />}
                               </td>
                             );
                           default:

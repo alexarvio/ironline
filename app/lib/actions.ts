@@ -72,6 +72,7 @@ import {
   saveNutritionPlan,
   savePhotoPeriodNote,
   savePhotoUpload,
+  saveDemoVideoUpload,
   setAssignmentCustomValue,
   setClientGoalDone,
   setClientPreference,
@@ -1214,13 +1215,62 @@ export async function setClientUnitsAction(formData: FormData) {
  * note on an exercise. Reachable from the client app, so it resolves the
  * owning client from the assignment and checks the session can touch it.
  */
-export async function setDemoUrlAction(formData: FormData) {
+// The three demo-video actions return a message on failure rather than
+// throwing or returning void. The dialog closes on null and shows the string
+// otherwise — an upload that silently did nothing would look like it worked
+// until the coach reopened the chip.
+
+export async function setDemoUrlAction(formData: FormData): Promise<string | null> {
   await requireCoach();
   const assignmentId = Number(formData.get("assignmentId"));
-  const url = String(formData.get("demoUrl") || "");
+  const url = String(formData.get("demoUrl") || "").trim();
+  if (!url) return "Paste a link first.";
+  // Only ever a link the browser will actually open. Without this, a pasted
+  // "javascript:" or "data:" string becomes an anchor href on the client's
+  // own screen.
+  if (!/^https?:\/\//i.test(url)) return "That needs to start with http:// or https://";
   setAssignmentDemoUrl(assignmentId, url);
   revalidatePath("/admin");
   revalidatePath("/client");
+  return null;
+}
+
+export async function clearDemoAction(formData: FormData) {
+  await requireCoach();
+  const assignmentId = Number(formData.get("assignmentId"));
+  setAssignmentDemoUrl(assignmentId, "");
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// 64MB, matching serverActions.bodySizeLimit in next.config.ts. Checked here
+// as well because the config only rejects the request — this is what turns
+// that into a sentence the coach can read.
+const MAX_DEMO_BYTES = 64 * 1024 * 1024;
+
+export async function uploadDemoVideoAction(formData: FormData): Promise<string | null> {
+  await requireCoach();
+  const assignmentId = Number(formData.get("assignmentId"));
+
+  // The client id comes from the assignment, not from the form. A form field
+  // is attacker-controlled, and this one decides which client's folder the
+  // file lands in — and therefore who can read it back.
+  const clientId = getClientIdForAssignment(assignmentId);
+  if (clientId == null) return "That exercise no longer exists.";
+
+  const file = formData.get("file") as File | null;
+  if (!file || file.size === 0) return "Choose a file first.";
+  if (file.size > MAX_DEMO_BYTES) {
+    return `That file is ${(file.size / 1024 / 1024).toFixed(0)}MB — the limit is 64MB. Trim the clip and try again.`;
+  }
+  if (!file.type.startsWith("video/")) return "That doesn't look like a video file.";
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const publicPath = saveDemoVideoUpload(clientId, assignmentId, buffer, file.type);
+  setAssignmentDemoUrl(assignmentId, publicPath);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  return null;
 }
 
 export async function setBuiltinColumnVisibleAction(formData: FormData) {

@@ -13,13 +13,11 @@ import { markExerciseNoteReadAction } from "../lib/actions";
 // tells the server, so it stays cleared on the next load.
 export default function ExerciseCoachNote({
   assignmentId,
-  kindLabel,
   dateLabel,
   text,
   unread,
 }: {
   assignmentId: number;
-  kindLabel: string;
   dateLabel: string;
   text: string;
   unread: boolean;
@@ -64,7 +62,10 @@ export default function ExerciseCoachNote({
       {open && (
         <div className="ex-note-panel">
           <div className="ex-note-panel-top">
-            <span className="ex-note-kind">{kindLabel} · Finlay</span>
+            {/* No kind label. The coach no longer classifies a note as
+                Form / Load / Tempo — it was a second decision per note that
+                changed nothing, and the note itself says what it is. */}
+            <span className="ex-note-kind">Finlay</span>
             <span className="ex-note-date">{dateLabel}</span>
           </div>
           <p className="ex-note-text">{text}</p>

@@ -42,9 +42,14 @@ export default function AutosaveNote({ renderedAt }: { renderedAt: number }) {
     setAt(new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
   }, [renderedAt]);
 
+  // Nothing at rest. A permanent "Saves as you go" was a label on the normal
+  // state, which is exactly the state nobody needs telling about; it only has
+  // something to say while a save is in flight or has just landed. The element
+  // stays mounted with its height reserved so the bar doesn't jump when it
+  // does speak.
   return (
     <span className={`pb-autosave ${state}`} aria-live="polite">
-      {state === "saving" ? "Saving…" : state === "saved" ? `Saved ${at}` : "Saves as you go"}
+      {state === "saving" ? "Saving…" : state === "saved" ? `Saved ${at}` : ""}
     </span>
   );
 }

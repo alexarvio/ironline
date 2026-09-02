@@ -2524,6 +2524,34 @@ export function savePhotoPeriodNote(note: PhotoPeriodNote) {
 // it deals with actual image bytes rather than JSON data. Served back out by
 // the app/uploads/[...path] route handler rather than Next's static /public
 // serving, since DATA_DIR (a mounted volume in production) lives outside it.
+// A demo video the coach uploaded from their own computer, for one
+// prescription. Stored under DATA_DIR like the progress photos — /public
+// is baked into the build, so anything written there vanishes on the next
+// deploy — and served back through the /uploads route.
+//
+// Named by assignment id, so re-uploading replaces rather than accumulating
+// dead files nothing points at.
+export function saveDemoVideoUpload(
+  clientId: number,
+  assignmentId: number,
+  buffer: Buffer,
+  mimeType: string
+): string {
+  const ext = (mimeType.split("/")[1] || "mp4").replace(/[^a-z0-9]/gi, "").slice(0, 5) || "mp4";
+  const dir = path.join(DATA_DIR, "uploads", "demos", String(clientId));
+  fs.mkdirSync(dir, { recursive: true });
+
+  // Drop any previous upload for this assignment whatever its extension —
+  // otherwise switching from .mov to .mp4 leaves the old file orphaned.
+  for (const existing of fs.readdirSync(dir)) {
+    if (existing.startsWith(`${assignmentId}.`)) fs.rmSync(path.join(dir, existing), { force: true });
+  }
+
+  const filename = `${assignmentId}.${ext}`;
+  fs.writeFileSync(path.join(dir, filename), buffer);
+  return `/uploads/demos/${clientId}/${filename}`;
+}
+
 export function savePhotoUpload(clientId: number, slotId: number, buffer: Buffer, mimeType: string): string {
   const period = photoPeriodFor(localDateStr(), getPhotoCadence(clientId));
   const ext = (mimeType.split("/")[1] || "jpg").replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "jpg";

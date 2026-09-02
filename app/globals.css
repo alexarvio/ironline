@@ -6293,8 +6293,11 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 /* (No .plan-weeks-form / .plan-weeks-input — a programme's length is the
    number of weeks on the rail, added one at a time with "+ Add week".) */
 
-/* The builder saves on blur; this says so, and says when it last landed. */
+/* Silent at rest — it speaks only while saving and just after. Height is
+   reserved either way so the editing bar never jumps when it appears. */
 .pb-autosave {
+  display: inline-block;
+  min-height: 15px;
   font-size: 11px;
   color: var(--steel);
   white-space: nowrap;
@@ -6349,6 +6352,11 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--steel);
+  /* Matches .plan-name-input's 8px padding + 1px transparent border, so
+     "EDITING" and the programme name under it start on the same vertical.
+     The input keeps its own padding because that box is its hover and focus
+     affordance; the label moves to meet it. */
+  padding-left: 9px;
 }
 
 /* ---- Program chips ---- */
@@ -6412,7 +6420,13 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 .pb-editing {
   display: flex;
-  align-items: flex-end;
+  /* Centred, with a floor tall enough for the tallest state this bar ever
+     reaches — the date + time inputs revealed by "Schedule for later…".
+     It used to be flex-end with no floor, so opening the scheduler grew the
+     bar and shoved the programme name and the whole week rail downward; the
+     control you just clicked moved out from under the pointer. */
+  align-items: center;
+  min-height: 46px;
   justify-content: space-between;
   gap: 20px;
   margin-top: 16px;
@@ -6441,8 +6455,30 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  /* No wrapping: a wrapped second line is the other way this bar used to
+     change height under the pointer. */
+  flex-wrap: nowrap;
   justify-content: flex-end;
+}
+
+/* One height for everything in the deploy row — buttons and the date/time
+   inputs alike — so swapping the "Schedule for later…" button for the
+   scheduler form is a change of content, not of size. */
+.pb-deploy-row .deploy-btn,
+.pb-deploy-row .btn,
+.pb-deploy-row input[type="date"],
+.pb-deploy-row input[type="time"] {
+  height: 30px;
+  box-sizing: border-box;
+  padding-top: 0;
+  padding-bottom: 0;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.pb-deploy-row .plan-deploy-controls,
+.pb-deploy-row .plan-schedule-form {
+  flex-wrap: nowrap;
 }
 
 .pb-deploy-note {
@@ -7084,7 +7120,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 /* Notes takes what's left, but never so little that it can't hold a phrase. */
 .pb .exercise-table th.notes-cell,
 .pb .exercise-table td.notes-cell {
-  min-width: 96px;
+  min-width: 150px;
 }
 
 /* If a coach switches on all six columns it can still outgrow 1440; the
@@ -7107,10 +7143,79 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 .pb .exercise-table th:last-child,
 .pb .exercise-table td:last-child { width: 30px; min-width: 30px; padding-left: 0; padding-right: 6px; }
 
+/* ---- The prescription cells read as a sheet, not as a form ----
+   Every numeric field used to carry its own border and radius, so each cell
+   contained a smaller box floating inside it: a grid drawn twice, once by the
+   table and once by the inputs. The table's own hairlines are the grid. The
+   input fills its cell edge to edge, transparent, and only shows itself on
+   hover and focus — the way a spreadsheet does. */
 .pb .exercise-table input {
   width: 100%;
   min-width: 0;
+  height: 26px;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  text-align: center;
 }
+
+.pb .exercise-table input:hover { border-color: var(--border); }
+
+.pb .exercise-table input:focus {
+  border-color: var(--accent);
+  background: var(--surface);
+  outline: none;
+}
+
+/* The exercise name and the notes cell are text, so they stay left-aligned. */
+.pb .exercise-table td.notes-cell input,
+.pb .exercise-table td:first-child input { text-align: left; }
+
+/* ---- Notes: what fits, then a proper editor ---- */
+.pb-note-cell {
+  display: block;
+  width: 100%;
+  min-height: 26px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink);
+  padding: 5px 5px;
+  font: inherit;
+  font-size: 11.5px;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+  /* Two lines, then an ellipsis. Enough to recognise which note this is
+     without letting one long note set the height of the whole row. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pb-note-cell:hover { border-color: var(--border); }
+
+.pb-note-placeholder { color: var(--faint); }
+
+.pb-note-area {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 160px;
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 10px 11px;
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.pb-note-area:focus { border-color: var(--accent); outline: none; }
 
 /* One-week programs shouldn't stretch a single card across the whole row. */
 .pb-week {
@@ -8250,18 +8355,220 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   color: var(--accent);
 }
 
-.pb-demo-form { margin-top: 5px; }
+/* The demo editor is a dialog in a portal, not an inline reveal. There is
+   deliberately no `.pb-demo-form` opening inside the exercise cell any more:
+   a field appearing there squeezed the name into a four-line column and
+   wrecked the row it was annotating. Nothing below may lay out inside the
+   table. */
+
+.pb-modal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(20, 23, 28, 0.42);
+}
+
+.pb-modal {
+  width: 100%;
+  max-width: 440px;
+  max-height: 100%;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 18px 44px rgba(20, 23, 28, 0.22);
+  padding: 16px 18px 18px;
+}
+
+.pb-modal-sm { max-width: 360px; }
+
+.pb-confirm-title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.25;
+}
+
+.pb-confirm-body {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--steel);
+}
+
+/* The destructive button reads destructive. It is also NOT the focused
+   control when the dialog opens — Cancel is — so a stray Enter can't delete. */
+.pb-confirm-delete {
+  height: 30px;
+  border: none;
+  border-radius: 7px;
+  background: var(--accent-plate);
+  color: #ffffff;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.pb-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pb-modal-title {
+  margin: 2px 0 0;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+.pb-modal-x {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--steel);
+  font-size: 17px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+
+.pb-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+/* What the client sees right now, including when it comes from the library
+   rather than from this prescription. */
+.pb-demo-current {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--paper);
+  padding: 8px 10px;
+}
+
+.pb-demo-current-label { font-size: 10.5px; color: var(--steel); }
+
+.pb-demo-current-link {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pb-demo-fallback { font-size: 10px; font-style: italic; color: var(--faint); }
+
+.pb-demo-remove {
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--accent-plate);
+  padding: 3px 8px;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pb-demo-tabs {
+  display: flex;
+  gap: 2px;
+  margin-top: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.pb-demo-tab {
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--steel);
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pb-demo-tab.on { color: var(--ink); border-bottom-color: var(--ink); }
+
+.pb-demo-pane { padding-top: 14px; }
 
 .pb-demo-input {
   width: 100%;
   min-width: 0;
-  height: 24px;
-  border: 1px solid var(--accent);
-  border-radius: 6px;
+  height: 32px;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: 7px;
   background: var(--surface);
   color: var(--ink);
-  padding: 0 7px;
+  padding: 0 9px;
+  font: inherit;
+  font-size: 12px;
+}
+
+.pb-demo-input:focus { border-color: var(--accent); outline: none; }
+
+/* The file input itself is hidden; the label is the control, so it can be
+   sized and can show the chosen filename. */
+.pb-demo-file {
+  display: block;
+  border: 1px dashed var(--border-strong);
+  border-radius: 8px;
+  background: var(--paper);
+  padding: 16px 12px;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.pb-demo-file:hover { background: var(--accent-tint); }
+
+.pb-demo-file input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+.pb-demo-hint {
+  margin: 8px 0 0;
   font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--faint);
+}
+
+.pb-demo-error {
+  margin: 12px 0 0;
+  border-radius: 7px;
+  background: var(--accent-tint);
+  color: var(--accent-plate);
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 /* ---- "What the client did" ---- */

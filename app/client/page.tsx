@@ -93,13 +93,6 @@ function weightGoalIsDown(goalPhase: string | null | undefined): boolean {
   return !gaining.some((word) => phase.includes(word));
 }
 
-function noteKindLabel(kind: "form" | "load" | "tempo" | null): string {
-  if (kind === "form") return "Form";
-  if (kind === "load") return "Load";
-  if (kind === "tempo") return "Tempo";
-  return "Note";
-}
-
 function noteDateLabel(at: string | null): string {
   if (!at) return "";
   return new Date(at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -406,7 +399,6 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
                           {a.notes && (
                             <ExerciseCoachNote
                               assignmentId={a.id}
-                              kindLabel={noteKindLabel(a.note_kind)}
                               dateLabel={noteDateLabel(a.note_at)}
                               text={a.notes}
                               unread={!a.note_read}
