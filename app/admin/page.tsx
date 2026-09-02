@@ -1,25 +1,12 @@
 import AdminShell from "./AdminShell";
 import AdminSidebar from "./AdminSidebar";
-import ClientHeader from "./ClientHeader";
 import SectionTabs, { TabSection } from "./SectionTabs";
 import NutritionPanel from "./NutritionPanel";
 import MeasurementsPanel from "./MeasurementsPanel";
 import ClientOverviewPanel from "./ClientOverviewPanel";
 import ProgramBuilder from "../components/ProgramBuilder";
-import { getClient, getClientProfile, getOverviewPanel, listClients } from "../lib/queries";
+import { getClient, getOverviewPanel, listClients } from "../lib/queries";
 
-// Age in whole years, or null when no birthdate is on file — the header
-// simply omits it rather than showing a placeholder beside the name.
-function ageFrom(birthdate: string | null): number | null {
-  if (!birthdate) return null;
-  const born = new Date(`${birthdate}T00:00:00`);
-  if (Number.isNaN(born.getTime())) return null;
-  const now = new Date();
-  let age = now.getFullYear() - born.getFullYear();
-  const before = now.getMonth() < born.getMonth() || (now.getMonth() === born.getMonth() && now.getDate() < born.getDate());
-  if (before) age--;
-  return age >= 0 && age < 130 ? age : null;
-}
 import { requireCoach } from "../lib/auth";
 import ClientLoginPanel from "./ClientLoginPanel";
 
@@ -34,6 +21,10 @@ export default async function AdminPage({
   searchParams: Promise<{
     client?: string;
     tab?: string;
+    /** Set by createClientAction on the redirect after a client is made —
+        opens their card straight into edit mode so the coach fills it in
+        while they're still thinking about the new client. */
+    onboard?: string;
     loginOk?: string;
     loginError?: string;
   }>;
@@ -47,7 +38,15 @@ export default async function AdminPage({
   return (
     <AdminShell
       sidebar={<AdminSidebar selectedId={selectedId} />}
-      panel={client ? <ClientOverviewPanel panel={getOverviewPanel(client.id)} clientId={client.id} /> : undefined}
+      panel={
+        client ? (
+          <ClientOverviewPanel
+            panel={getOverviewPanel(client.id)}
+            clientId={client.id}
+            onboarding={params.onboard === "1"}
+          />
+        ) : undefined
+      }
     >
       {!client ? (
         <div className="ad-pad">
@@ -89,9 +88,6 @@ function ClientDashboard({
   // Three tabs, per the workstation design. Start Page became the right-hand
   // panel, and Daily/Weekly Tracker collapsed into Measurements — a metric's
   // rhythm is a property of the metric, not a reason for its own screen.
-  const profile = getClientProfile(clientId);
-  const overview = getOverviewPanel(clientId);
-
   const sections: TabSection[] = [
     {
       id: "training",
@@ -111,7 +107,10 @@ function ClientDashboard({
 
   return (
     <>
-      <ClientHeader name={name} age={ageFrom(profile.birthdate)} since={overview.clientSince} />
+      {/* No client header strip. Name, age and "client since" are all in the
+          right-hand panel now; printing them twice on one screen made the
+          panel read as an echo of the header rather than the place those
+          facts are kept. The tabs are the top of this column. */}
       <SectionTabs sections={sections} initialId={initialTab} />
     </>
   );

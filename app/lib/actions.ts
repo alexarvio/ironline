@@ -391,7 +391,12 @@ export async function createClientAction(formData: FormData) {
   if (!name) return;
   const client = createClient(name);
   revalidatePath("/admin");
-  redirect(`/admin?client=${client.id}`);
+  // Land on the new client with their card already open for filling in.
+  // Onboarding is not a separate wizard: the fields a coach needs at the
+  // start — birthdate, email, phone, address, start date, goal — are exactly
+  // the fields on the client card, and a second form for the same data would
+  // be a second place for it to go stale.
+  redirect(`/admin?client=${client.id}&onboard=1`);
 }
 
 export async function addInvoiceAction(formData: FormData) {

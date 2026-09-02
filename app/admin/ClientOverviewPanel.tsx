@@ -13,7 +13,17 @@ import ClientCardEditor from "./ClientCardEditor";
 // This replaces the old Start Page tab. Making it a tab meant the facts a
 // coach wants while building a programme were one click away from the
 // programme; as a panel they're simply always there.
-export default function ClientOverviewPanel({ panel, clientId }: { panel: OverviewPanel; clientId: number }) {
+export default function ClientOverviewPanel({
+  panel,
+  clientId,
+  onboarding = false,
+}: {
+  panel: OverviewPanel;
+  clientId: number;
+  /** True right after this client was created — the card opens in edit mode
+      so the coach fills in the details while they still have them to hand. */
+  onboarding?: boolean;
+}) {
   return (
     <div className="ad-panel">
       {/* 1. Profile */}
@@ -90,7 +100,7 @@ export default function ClientOverviewPanel({ panel, clientId }: { panel: Overvi
       {/* 4/5. The client card. Read-only rows until the coach hits Edit —
              most of it is filled at onboarding, but an email or a phase date
              changing must not mean re-creating the client. */}
-      <ClientCardEditor clientId={clientId} panel={panel} />
+      <ClientCardEditor clientId={clientId} panel={panel} onboarding={onboarding} />
 
       {/* 6. Recent activity */}
       <section className="ad-panel-section">

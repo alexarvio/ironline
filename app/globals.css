@@ -7492,17 +7492,6 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 /* ---- Client header ---- */
 
-.ad-client-header {
-  flex-shrink: 0;
-  border-bottom: 1px solid var(--border);
-  padding: 14px 20px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
 /* A plan is a name, not a numeral, so it sits at body size rather than in
    the serif display face the rail's figures use. */
 .ad-plan {
@@ -8591,6 +8580,19 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 .ad-panel-edit:hover { text-decoration: underline; }
 
+/* Shown once, at the top of a brand-new client's card. */
+.ad-onboard-note {
+  margin: 0 0 4px;
+  border: 1px solid var(--accent-tint);
+  border-radius: 8px;
+  background: var(--accent-tint);
+  color: var(--accent);
+  padding: 8px 10px;
+  font-size: 10.5px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
 .ad-fields { display: flex; flex-direction: column; }
 
 /* Same row rhythm as the read-only facts above, so switching to Edit changes
@@ -8674,20 +8676,10 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   min-width: 0;
 }
 
-/* ---- Client header: name, age, since, Message ---- */
-.ad-client-ident { min-width: 0; }
-
-.ad-client-age {
-  margin-left: 8px;
-  font-family: var(--font-sans);
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--steel);
-}
-
-.ad-client-since { font-size: 11.5px; color: var(--steel); margin-top: 2px; }
-
-/* (No .ad-message-btn — coach/client chat is cut from the first beta.) */
+/* The client header strip is gone entirely — no name, age, "client since"
+   or Message button above the tabs. Those facts live in the right-hand panel,
+   which is also where they're edited; showing them twice made the panel read
+   as an echo of the header. The tabs are now the top of the working column. */
 
 
 
