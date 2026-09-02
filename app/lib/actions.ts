@@ -67,6 +67,8 @@ import {
   removePhotoSlot,
   removeSkinfoldEntry,
   saveClientProfile,
+  patchClientProfile,
+  renameClient,
   saveNutritionPlan,
   savePhotoPeriodNote,
   savePhotoUpload,
@@ -305,13 +307,10 @@ export async function addProgramWeekAction(formData: FormData) {
   revalidatePath("/client");
 }
 
-export async function updateProgramWeeksAction(formData: FormData) {
-  await requireCoach();
-  const programId = Number(formData.get("programId"));
-  const totalWeeks = Number(formData.get("totalWeeks"));
-  updateProgramTotalWeeks(programId, totalWeeks);
-  revalidatePath("/admin");
-}
+// NOTE: there is no updateProgramWeeksAction any more. A programme's length
+// used to be a number a coach typed beside its name, which could disagree with
+// the weeks actually on the rail; "+ Add week" (addProgramWeekAction above) is
+// now the only way to make a programme longer.
 
 export async function renameProgramAction(formData: FormData) {
   await requireCoach();
@@ -856,6 +855,52 @@ export async function saveClientProfileAction(formData: FormData) {
     cardio_goal: str("cardio_goal"),
     training_goal: str("training_goal"),
     water_goal: str("water_goal"),
+  });
+
+  revalidatePath("/admin");
+}
+
+// The right-hand client card, saved in place.
+//
+// Distinct from saveClientProfileAction on purpose. That one renders every
+// profile field and replaces the whole row; this form shows the subset a coach
+// corrects after onboarding (a changed email, a new phase date), so it patches
+// and leaves everything it doesn't show alone.
+//
+// Plan, current week and current weight are NOT here. They're derived from the
+// live programme and the client's own logged weight — a typed-over copy would
+// just be a second, wrong answer to the same question.
+export async function saveClientCardAction(formData: FormData) {
+  await requireCoach();
+  const clientId = Number(formData.get("clientId"));
+  if (!Number.isFinite(clientId)) return;
+
+  const str = (name: string) => String(formData.get(name) ?? "").trim();
+  const strOrNull = (name: string) => str(name) || null;
+  const numOrNull = (name: string) => {
+    const raw = str(name);
+    if (!raw) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  // An empty name would leave a nameless row in the client list with no way
+  // back to it, so a blank one keeps the name it has.
+  const name = str("name");
+  if (name) renameClient(clientId, name);
+
+  patchClientProfile(clientId, {
+    birthdate: strOrNull("birthdate"),
+    gender: strOrNull("gender"),
+    height_cm: numOrNull("height_cm"),
+    email: strOrNull("email"),
+    phone: strOrNull("phone"),
+    address: strOrNull("address"),
+    coaching_start_date: strOrNull("coaching_start_date"),
+    goal_phase: str("goal_phase"),
+    goal_date: strOrNull("goal_date"),
+    check_in_day: strOrNull("check_in_day"),
+    starting_weight_kg: numOrNull("starting_weight_kg"),
   });
 
   revalidatePath("/admin");

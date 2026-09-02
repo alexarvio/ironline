@@ -6,11 +6,11 @@
      the product stop reading as different products. */
   --ink: #14171c;                /* body text */
   --paper: #f8f9fb;              /* app background (centre column) */
-  --paper-raised: #e8e9e2;       /* left rail and right panel */
+  --paper-raised: #edf0f4;       /* left rail and right panel */
   --surface: #ffffff;            /* cards, inputs, day bodies */
   --table-head: #edf0f4;         /* table header fill */
   --logged-head: #eaeef4;        /* "what the client did" header */
-  --logged-band: #f6f7f2;        /* and its column band */
+  --logged-band: #f3f6fa;        /* and its column band */
   --steel: #5b6472;              /* dim / labels, 4.9:1 — do not lighten */
   --faint: #8b93a0;              /* placeholder, "already added" state */
   --border: #c2cbd3;             /* hairline */
@@ -22,6 +22,8 @@
   --accent-plate: #9a5a33;       /* warning / under target / destructive */
   --good: #3f6e46;               /* trained, met target, deploy */
   --good-tint: #d7e6da;
+  /* The Draft state's tan. NOT the old cream background — this pair is the
+     prototype's own colour for a programme not yet deployed. */
   --draft-bg: #f0e6cf;
   --draft-fg: #8a6d3b;
   --font-serif: "Newsreader", Georgia, serif;
@@ -6288,22 +6290,18 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   align-self: flex-start;
 }
 
-.plan-weeks-form {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.78rem;
+/* (No .plan-weeks-form / .plan-weeks-input — a programme's length is the
+   number of weeks on the rail, added one at a time with "+ Add week".) */
+
+/* The builder saves on blur; this says so, and says when it last landed. */
+.pb-autosave {
+  font-size: 11px;
   color: var(--steel);
   white-space: nowrap;
 }
 
-.plan-weeks-input {
-  width: 56px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 5px 6px;
-  font-size: 0.85rem;
-}
+.pb-autosave.saving { color: var(--accent); }
+.pb-autosave.saved { color: var(--good); }
 
 /* Per-exercise weight trend — a fast up/down read next to the last-week
    target/actual reference, so the coach doesn't have to open the full
@@ -6331,12 +6329,11 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   padding-right: 20px;
 }
 
-.pb-rail {
-  border-left: 1px solid var(--border);
-  background: var(--paper-raised);
-  padding: 16px 16px 24px;
-  align-self: stretch;
-}
+/* NOTE: the old builder's right-hand rail lived on `.pb-rail` and carried a
+   border, padding and a filled background. That rail is gone; `.pb-rail` is
+   now the week strip, which in the design is a bare row of pills on the page
+   background. Its rules live under "Week rail" further down — nothing may
+   give this class a background again. */
 
 /* The full column editor (rename / add / delete) sits below both columns —
    the toolbar pills cover the common case of just hiding one. */
@@ -7023,11 +7020,6 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   .pb-main {
     padding-right: 0;
   }
-  .pb-rail {
-    border-left: none;
-    border-top: 1px solid var(--border);
-    margin-top: 18px;
-  }
   .pb-columns-panel {
     padding-right: 0;
   }
@@ -7481,18 +7473,11 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   background: var(--accent-plate);
 }
 
-.ad-new-client {
-  padding: 10px 12px;
-  border-top: 1px solid var(--border);
-  display: flex;
-  gap: 6px;
-}
-
-.ad-new-client .ad-input {
-  flex: 1;
-  min-width: 0;
-  height: 30px;
-}
+/* NOTE: an older `.ad-new-client` block sat here and gave the add-client row
+   a `border-top` — a rule from when that row was pinned outside the client
+   list. It now sits inside the same scroll area as the rows above it, where
+   the divider read as a stray line, so it is gone. The live rules are under
+   the sidebar section further down. */
 
 .ad-client-app-link {
   padding: 0 14px 12px;
@@ -8414,7 +8399,18 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   font-weight: 800;
 }
 
-.ad-panel-section { padding-top: 16px; }
+/* A hairline above each block, as the design has it — the panel is six
+   unrelated things stacked, and without dividers the goals ran into the
+   member info. The first block after the profile card keeps its rule too. */
+.ad-panel-section {
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+  padding-top: 14px;
+}
+
+/* Inside the edit form the two blocks are one thing, so only the first
+   carries the divider. */
+.ad-card-form > section.ad-panel-section:first-of-type { border-top: none; margin-top: 0; }
 
 .ad-panel-heading {
   margin: 0 0 8px;
@@ -8427,65 +8423,112 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 .ad-panel-empty { margin: 0; font-size: 11.5px; color: var(--faint); }
 
-/* Equal-size cards, one line each: no sub-labels, since the micro-label
-   above the figure already says what it is. */
+/* One card, one hairline row per figure — label left, value right. These are
+   six one-line facts, not six widgets; boxing each one turned a summary into
+   a dashboard. */
 .ad-snapshot {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-
-.ad-snap-card {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--surface);
-  padding: 8px 10px;
-}
-
-.ad-snap-value {
-  font-family: var(--font-serif);
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--ink);
-  margin-top: 2px;
-  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.ad-goal-list { display: flex; flex-direction: column; gap: 2px; }
-
-.ad-goal-row {
+.ad-snap-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  padding: 8px 12px;
+}
+
+.ad-snap-row:first-child { border-top: none; }
+
+.ad-snap-label {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  color: var(--steel);
+  white-space: nowrap;
+}
+
+/* Figure first, qualifier after it in a lighter weight — "4 of 4" is the
+   answer, "done this week" is only how to read it. */
+.ad-snap-figure {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ad-snap-figure b {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.ad-snap-figure em {
+  flex-shrink: 0;
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--steel);
+  white-space: nowrap;
+}
+
+.ad-goal-list { display: flex; flex-direction: column; }
+
+/* No divider between goals: they're a stated list, not a table of records,
+   and hairlines around two-line goals made the block read as a form. */
+.ad-goal-row {
+  display: flex;
+  align-items: flex-start;
   gap: 8px;
   padding: 5px 0;
-  border-bottom: 1px solid var(--border);
 }
 
-.ad-goal-check {
+.ad-goal-bullet {
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-  border: 1.5px solid var(--border-strong);
-  border-radius: 4px;
-  background: var(--surface);
-  color: var(--accent-fg);
-  font-size: 10px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0;
+  width: 4px;
+  height: 4px;
+  margin-top: 7px;
+  border-radius: 99px;
+  background: var(--steel);
 }
 
-.ad-goal-check.done { background: var(--good); border-color: var(--good); }
+.ad-goal-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--ink);
+}
 
-.ad-goal-text { font-size: 11.5px; color: var(--ink); }
-.ad-goal-text.done { color: var(--faint); text-decoration: line-through; }
+.ad-goal-x {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--steel);
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
 
-.ad-goal-add { margin-top: 8px; }
+.ad-goal-x:hover { color: var(--accent-plate); }
+
+.ad-goal-count { font-size: 10px; color: var(--steel); }
+
+.ad-goal-add { display: flex; gap: 6px; margin-top: 8px; }
 
 .ad-goal-add input {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   height: 28px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -8494,6 +8537,8 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   padding: 0 8px;
   font-size: 11.5px;
 }
+
+.ad-goal-add-btn { flex-shrink: 0; height: 28px; padding: 0 10px; font-size: 10.5px; }
 
 /* One line per fact, never wrapped — a wrapped address would push every
    row below it out of alignment down the whole panel. */
@@ -8520,6 +8565,90 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ---- Client card (Member / Coaching info) ---- */
+
+/* The heading keeps its place; Edit sits on the same baseline rather than
+   under the rows, so the block doesn't reflow when it appears. */
+.ad-panel-heading-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ad-panel-edit {
+  border: none;
+  background: none;
+  color: var(--accent);
+  padding: 0 0 8px;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ad-panel-edit:hover { text-decoration: underline; }
+
+.ad-fields { display: flex; flex-direction: column; }
+
+/* Same row rhythm as the read-only facts above, so switching to Edit changes
+   the controls rather than the shape of the block. */
+.ad-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.ad-field-label { flex-shrink: 0; font-size: 11px; color: var(--steel); }
+
+.ad-field-input {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.ad-field-input input {
+  width: 100%;
+  max-width: 148px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0 7px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.ad-field-input em {
+  flex-shrink: 0;
+  font-style: normal;
+  font-size: 10.5px;
+  color: var(--steel);
+}
+
+.ad-field-note {
+  margin: 8px 0 0;
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--faint);
+}
+
+.ad-card-form-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 12px;
 }
 
 .ad-activity { display: flex; flex-direction: column; }
@@ -8558,19 +8687,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 .ad-client-since { font-size: 11.5px; color: var(--steel); margin-top: 2px; }
 
-.ad-message-btn {
-  flex-shrink: 0;
-  height: 30px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--surface);
-  color: var(--ink);
-  padding: 0 14px;
-  font: inherit;
-  font-size: 11.5px;
-  font-weight: 700;
-  cursor: pointer;
-}
+/* (No .ad-message-btn — coach/client chat is cut from the first beta.) */
 
 
 
@@ -8847,7 +8964,10 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
   gap: 14px;
-  align-items: start;
+  /* Both cards run the full height of the row. The note is the explanation
+     of the numbers beside it, and a short card next to a tall one read as
+     two unrelated things stacked badly rather than one pair. */
+  align-items: stretch;
 }
 
 .nt-card,
@@ -8856,6 +8976,13 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   border-radius: 9px;
   background: var(--surface);
   padding: 13px 15px 14px;
+}
+
+/* The note card is a column so its textarea can absorb whatever height the
+   targets card sets, rather than the card growing a dead gap under it. */
+.nt-note-card {
+  display: flex;
+  flex-direction: column;
 }
 
 .nt-card-head {
@@ -8973,7 +9100,8 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 .nt-note-card textarea {
   width: 100%;
-  min-height: 196px;
+  flex: 1;
+  min-height: 150px;
   margin-top: 8px;
   border: 1px solid var(--border);
   border-radius: 7px;
@@ -9234,7 +9362,6 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 .ms-metric-action { flex-shrink: 0; display: flex; }
 
-.ms-eye,
 .ms-del {
   width: 24px;
   height: 24px;
@@ -9248,7 +9375,6 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   color: var(--faint);
 }
 
-.ms-eye.on { color: var(--accent); }
 .ms-del:hover { color: var(--accent-plate); }
 
 /* ---- VIEW BY ---- */

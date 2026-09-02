@@ -152,6 +152,24 @@ export function createClient(name: string) {
   return client;
 }
 
+export function renameClient(id: number, name: string) {
+  const data = getData();
+  const client = data.clients.find((c) => c.id === id);
+  if (!client) return;
+  client.name = name;
+  persist();
+}
+
+// Write only the keys given, over whatever is already stored.
+//
+// The older saveClientProfile replaces the whole row, which is right for a
+// form that renders every field and wrong for anything that doesn't: a partial
+// form posting through it silently blanks the fields it never showed.
+export function patchClientProfile(clientId: number, patch: Partial<ClientProfile>) {
+  const current = getClientProfile(clientId);
+  saveClientProfile({ ...current, ...patch, client_id: clientId });
+}
+
 export function listExercises(): Exercise[] {
   return [...getData().exercises].sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -1233,11 +1251,34 @@ export type OverviewPanel = {
   initial: string;
   clientSince: string | null;
   phase: string | null;
-  snapshot: { label: string; value: string }[];
+  /** value is the figure; suffix is the unit or qualifier beside it, set
+   *  in a lighter weight so the number reads first. */
+  snapshot: { label: string; value: string; suffix?: string }[];
   goals: ClientGoal[];
   memberInfo: { label: string; value: string }[];
   coachingInfo: { label: string; value: string }[];
   activity: { id: string; when: string; text: string }[];
+  /** The raw, editable values behind the two info blocks.
+   *
+   * The blocks above are formatted for reading ("178 cm", "—"); an edit form
+   * needs what's actually stored, or saving an untouched field would write
+   * the em dash back into the record. Plan, current week and current weight
+   * are deliberately absent: they are derived from the live programme and the
+   * client's own logs, and typing over them would be a lie. */
+  card: {
+    name: string;
+    birthdate: string;
+    gender: string;
+    height_cm: string;
+    email: string;
+    phone: string;
+    address: string;
+    coaching_start_date: string;
+    goal_phase: string;
+    goal_date: string;
+    check_in_day: string;
+    starting_weight_kg: string;
+  };
 };
 
 export function getOverviewPanel(clientId: number): OverviewPanel {
@@ -1284,16 +1325,33 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
     clientSince: profile.coaching_start_date ? `Client since ${fmtDate(profile.coaching_start_date)}` : null,
     phase: profile.goal_phase || null,
     snapshot: [
-      { label: "Training", value: planned ? `${trained}/${planned}` : "—" },
-      { label: "Calories", value: nutrition.trainingKcal ? `${nutrition.trainingKcal} kcal` : "—" },
-      { label: "Weight", value: weight != null ? `${weight} kg` : "—" },
-      { label: "Metrics", value: String(metricCount) },
-      { label: "Invoices", value: unpaid ? `${unpaid} open` : "All paid" },
       {
-        label: "Next call",
+        label: "Training",
+        value: planned ? `${trained} of ${planned}` : "—",
+        suffix: planned ? "done this week" : undefined,
+      },
+      {
+        label: "Next meeting",
         value: nextMeeting
-          ? `${new Date(`${nextMeeting.date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })} ${nextMeeting.time}`
+          ? new Date(`${nextMeeting.date}T00:00:00`).toLocaleDateString("en-US", {
+              weekday: "short",
+              day: "numeric",
+              month: "short",
+            })
           : "None booked",
+        suffix: nextMeeting ? nextMeeting.time : undefined,
+      },
+      {
+        label: "Kcal goal",
+        value: nutrition.trainingKcal ? String(nutrition.trainingKcal) : "—",
+        suffix: nutrition.trainingKcal ? "kcal" : undefined,
+      },
+      { label: "Weight", value: weight != null ? String(weight) : "—", suffix: weight != null ? "kg" : undefined },
+      { label: "Metrics tracked", value: String(metricCount) },
+      {
+        label: "Invoices",
+        value: unpaid ? String(unpaid) : "0",
+        suffix: unpaid ? "outstanding" : "outstanding",
       },
     ],
     goals: listClientGoals(clientId, "short"),
@@ -1326,6 +1384,21 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
             ? `Logged ${e.exerciseName} — ${e.weightKg ?? "–"}kg × ${e.reps ?? "–"}`
             : `Invoice ${e.status} — ${e.description}`,
       })),
+    card: {
+      name: client?.name ?? "",
+      birthdate: profile.birthdate ?? "",
+      gender: profile.gender ?? "",
+      height_cm: profile.height_cm != null ? String(profile.height_cm) : "",
+      email: profile.email ?? "",
+      phone: profile.phone ?? "",
+      address: profile.address ?? "",
+      coaching_start_date: profile.coaching_start_date ?? "",
+      goal_phase: profile.goal_phase ?? "",
+      goal_date: profile.goal_date ?? "",
+      check_in_day: profile.check_in_day ?? "",
+      starting_weight_kg:
+        profile.starting_weight_kg != null ? String(profile.starting_weight_kg) : "",
+    },
   };
 }
 
@@ -3239,11 +3312,17 @@ export function getDueItems(clientId: number): DueItem[] {
   return items;
 }
 
-// A metric or measurement column the coach has built but not deployed to
-// the client. Read as "!== false" so anything saved before the flag existed
-// stays visible — the coach opts OUT, never has to opt every metric in.
-function deployedToClient(x: { visible_to_client?: boolean }): boolean {
-  return x.visible_to_client !== false;
+// Being configured IS being deployed: a column on the coach's check-in list
+// is a column the client is asked for, full stop.
+//
+// There used to be a per-column visibility switch here, and it was a mistake —
+// it created a second, invisible state ("configured but the client can't see
+// it") that a coach had to hold in their head, and the only honest way to stop
+// asking for a column is to remove it. The parameter stays so old rows
+// carrying `visible_to_client: false` don't silently vanish from a client's
+// check-in now that nothing can flip the flag back.
+function deployedToClient(_x: { visible_to_client?: boolean }): boolean {
+  return true;
 }
 
 export function setMetricVisibleToClient(id: number, visible: boolean) {

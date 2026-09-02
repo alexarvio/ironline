@@ -35,7 +35,7 @@ import DemoUrlChip from "../admin/DemoUrlChip";
 import LoggedSetsGrid, { LoggedWeekRow } from "../admin/LoggedSetsGrid";
 import ProgramBuilderShell, { BuilderProgram, WeekCard } from "../admin/ProgramBuilderShell";
 import ProgramNameForm from "../admin/ProgramNameForm";
-import ProgramWeeksForm from "../admin/ProgramWeeksForm";
+import AutosaveNote from "../admin/AutosaveNote";
 import ProgramDeployControls from "../admin/ProgramDeployControls";
 import ColumnChipRow from "../admin/ColumnChipRow";
 import CopyWeekButton from "../admin/CopyWeekButton";
@@ -86,6 +86,11 @@ export default function ProgramBuilder({
   clientName?: string;
   weekLinkBase?: string;
 }) {
+  // Stamped on the server, so it changes exactly when a server action has run
+  // and revalidated this route — which is what lets the autosave note say
+  // "Saved" only once the save has actually landed.
+  const renderedAt = Date.now();
+
   const allPrograms = listPrograms(clientId);
   const deployedProgram = getDeployedProgram(clientId);
   const draftProgram = getDraftProgram(clientId);
@@ -491,7 +496,11 @@ export default function ProgramBuilder({
       nameSlot: (
         <div key={`n${program.id}`} className="pb-name-slot">
           <ProgramNameForm programId={program.id} defaultName={program.name ?? ""} placeholder="Program name" />
-          {status === "draft" && <ProgramWeeksForm programId={program.id} defaultWeeks={program.total_weeks} />}
+          {/* No "N weeks" field. A programme's length is however many weeks
+              are on the rail, and having two places to say it meant the number
+              and the rail could disagree — "+ Add week" is the one way to make
+              the programme longer. */}
+          {status === "draft" && <AutosaveNote renderedAt={renderedAt} />}
         </div>
       ),
       actionsSlot:

@@ -1,7 +1,6 @@
 import {
   addMetricDefinitionAction,
   removeMetricDefinitionAction,
-  setMetricVisibleAction,
 } from "../lib/actions";
 import {
   getMetricHistory,
@@ -67,7 +66,6 @@ export default function MeasurementsPanel({ clientId }: { clientId: number }) {
           <div className="ms-metric-list">
             {metrics.map((m) => {
               const g = metricGroup(m.category);
-              const visible = m.visible_to_client !== false;
               return (
                 <div key={m.id} className="ms-metric-row">
                   {/* Name leads the row; the two pills are fixed width so they
@@ -82,21 +80,11 @@ export default function MeasurementsPanel({ clientId }: { clientId: number }) {
                   </span>
                   <span className="ms-cadence-pill">{CADENCE_LABEL[m.frequency] ?? m.frequency}</span>
 
-                  {/* Hidden metrics stay configured and keep their history;
-                      they just drop off the client's check-in. */}
-                  <form action={setMetricVisibleAction} className="ms-metric-action">
-                    <input type="hidden" name="id" value={m.id} />
-                    <input type="hidden" name="visible" value={visible ? "false" : "true"} />
-                    <button
-                      type="submit"
-                      className={`ms-eye${visible ? " on" : ""}`}
-                      title={visible ? "On the client's check-in — click to hide" : "Hidden from the client — click to show"}
-                      aria-label={visible ? `Hide ${m.name}` : `Show ${m.name}`}
-                    >
-                      {visible ? "◉" : "◌"}
-                    </button>
-                  </form>
-
+                  {/* No per-row visibility toggle. Being on this list IS the
+                      deployment: a column here is a column the client is asked
+                      for. A hide switch made a second, invisible state the
+                      coach had to remember; removing a column is the way to
+                      stop asking for it. */}
                   <form action={removeMetricDefinitionAction} className="ms-metric-action">
                     <input type="hidden" name="id" value={m.id} />
                     <button type="submit" className="ms-del" aria-label={`Delete ${m.name}`} title="Delete this metric and its history">

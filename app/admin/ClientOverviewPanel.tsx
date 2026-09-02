@@ -1,5 +1,6 @@
 import type { OverviewPanel } from "../lib/queries";
-import { addClientGoalAction, toggleClientGoalAction } from "../lib/actions";
+import { addClientGoalAction, removeClientGoalAction } from "../lib/actions";
+import ClientCardEditor from "./ClientCardEditor";
 
 // The right-hand column: everything true about this client that isn't the
 // thing the coach is currently editing.
@@ -27,69 +28,69 @@ export default function ClientOverviewPanel({ panel, clientId }: { panel: Overvi
         </div>
       </section>
 
-      {/* 2. Snapshot — equal-size cards, one line each. No sub-labels: the
-             micro-label above the figure already says what it is. */}
+      {/* 2. Snapshot — one card, one hairline row per figure, label left and
+             value right, as the design has it. The two-column grid of little
+             cards I had here before turned six one-line facts into six boxes
+             and read as a dashboard rather than a summary. */}
       <section className="ad-panel-section">
         <h3 className="ad-panel-heading">Snapshot</h3>
         <div className="ad-snapshot">
           {panel.snapshot.map((s) => (
-            <div key={s.label} className="ad-snap-card">
-              <div className="ad-microlabel">{s.label}</div>
-              <div className="ad-snap-value">{s.value}</div>
+            <div key={s.label} className="ad-snap-row">
+              <span className="ad-snap-label">{s.label}</span>
+              <span className="ad-snap-figure">
+                <b>{s.value}</b>
+                {s.suffix && <em>{s.suffix}</em>}
+              </span>
             </div>
           ))}
         </div>
       </section>
 
-      {/* 3. Goals — set directly here rather than in a tab. */}
+      {/* 3. Goals — stated, not ticked.
+             These are what the coach is steering the block towards, not a
+             checklist: "get to 80kg without losing bench strength" isn't done
+             on a Tuesday afternoon. So each one is a bullet the coach can
+             write and take away again, with no completion state to maintain. */}
       <section className="ad-panel-section">
-        <h3 className="ad-panel-heading">Goals — 3 months</h3>
+        <div className="ad-panel-heading-row">
+          <h3 className="ad-panel-heading">Goals — 3 months</h3>
+          <span className="ad-goal-count">
+            {panel.goals.length} goal{panel.goals.length === 1 ? "" : "s"}
+          </span>
+        </div>
         {panel.goals.length === 0 ? (
           <p className="ad-panel-empty">None set yet.</p>
         ) : (
           <div className="ad-goal-list">
             {panel.goals.map((g) => (
-              <form key={g.id} action={toggleClientGoalAction} className="ad-goal-row">
-                <input type="hidden" name="id" value={g.id} />
-                <button type="submit" className={`ad-goal-check${g.done ? " done" : ""}`} aria-label={`Mark "${g.text}" ${g.done ? "not done" : "done"}`}>
-                  {g.done ? "✓" : ""}
-                </button>
-                <span className={`ad-goal-text${g.done ? " done" : ""}`}>{g.text}</span>
-              </form>
+              <div key={g.id} className="ad-goal-row">
+                <span className="ad-goal-bullet" aria-hidden="true" />
+                <span className="ad-goal-text">{g.text}</span>
+                <form action={removeClientGoalAction}>
+                  <input type="hidden" name="id" value={g.id} />
+                  <button type="submit" className="ad-goal-x" aria-label={`Remove goal "${g.text}"`}>
+                    ×
+                  </button>
+                </form>
+              </div>
             ))}
           </div>
         )}
         <form action={addClientGoalAction} className="ad-goal-add">
           <input type="hidden" name="clientId" value={clientId} />
           <input type="hidden" name="term" value="short" />
-          <input name="text" type="text" placeholder="Add a goal…" aria-label="Add a goal" />
+          <input name="text" type="text" placeholder="Add a goal…" aria-label="Add a goal" required />
+          <button type="submit" className="ad-btn-primary ad-goal-add-btn">
+            Add
+          </button>
         </form>
       </section>
 
-      {/* 4/5. Reference detail — one line per fact, never wrapped. */}
-      <section className="ad-panel-section">
-        <h3 className="ad-panel-heading">Member info</h3>
-        <dl className="ad-facts">
-          {panel.memberInfo.map((f) => (
-            <div key={f.label} className="ad-fact">
-              <dt>{f.label}</dt>
-              <dd>{f.value}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-
-      <section className="ad-panel-section">
-        <h3 className="ad-panel-heading">Coaching info</h3>
-        <dl className="ad-facts">
-          {panel.coachingInfo.map((f) => (
-            <div key={f.label} className="ad-fact">
-              <dt>{f.label}</dt>
-              <dd>{f.value}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
+      {/* 4/5. The client card. Read-only rows until the coach hits Edit —
+             most of it is filled at onboarding, but an email or a phase date
+             changing must not mean re-creating the client. */}
+      <ClientCardEditor clientId={clientId} panel={panel} />
 
       {/* 6. Recent activity */}
       <section className="ad-panel-section">

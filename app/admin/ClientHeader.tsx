@@ -1,9 +1,12 @@
 // The identity strip above the section tabs. Deliberately thin: name, age,
-// how long they've been coached, and a way to message them.
+// and how long they've been coached.
 //
 // The plan read-outs and stat pills that used to sit here moved into the
 // right-hand panel's snapshot. They were competing with the tabs for the
 // coach's eye at the exact moment they'd chosen what to work on.
+//
+// There is no Message button: coach↔client chat is cut from the first beta,
+// on both sides of the product. Nothing here should link to it.
 export default function ClientHeader({
   name,
   age,
@@ -22,9 +25,6 @@ export default function ClientHeader({
         </h1>
         {since && <div className="ad-client-since">{since}</div>}
       </div>
-      <button type="button" className="ad-message-btn">
-        Message
-      </button>
     </header>
   );
 }
