@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { loginAction } from "../lib/auth-actions";
-import { ensureCoachFromEnv, getSessionUser } from "../lib/auth";
+import { ensureCoachFromEnv, getSessionUser, resetCoachFromEnv } from "../lib/auth";
 
 export default async function LoginPage({
   searchParams,
@@ -11,6 +11,8 @@ export default async function LoginPage({
   // request to the login page is where the bootstrap coach gets created
   // from the environment. No-op once any coach exists.
   ensureCoachFromEnv();
+  // Lockout recovery: fires once per new COACH_RESET_TOKEN value, see auth.ts.
+  resetCoachFromEnv();
 
   // Already signed in? Send them where they belong rather than showing a
   // login form they'd have no reason to fill in.

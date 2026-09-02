@@ -485,6 +485,10 @@ type Data = {
   client_reports: ClientReport[];
   training_programs: TrainingProgram[];
   client_preferences: ClientPreferences[];
+  // The last COACH_RESET_TOKEN value that was acted on (see
+  // resetCoachFromEnv in lib/auth.ts), so a reset token left sitting in the
+  // environment only ever fires once.
+  coach_reset_applied?: string;
   _seq: Record<string, number>;
 };
 

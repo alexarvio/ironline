@@ -220,6 +220,37 @@ export function ensureCoachFromEnv() {
   createUser(email, password, "coach", null, true);
 }
 
+/**
+ * Lockout recovery without shell access. ensureCoachFromEnv only runs on an
+ * empty store, so once the coach has changed their password the environment
+ * variables are inert — and if that password is lost there is no reset email
+ * to fall back on. Setting COACH_RESET_TOKEN to any value not seen before
+ * makes the next login-page render set the COACH_EMAIL account's password to
+ * COACH_PASSWORD (creating the coach account if that email has none), with a
+ * forced password change on sign-in so the environment value is only ever a
+ * temporary key. The token is recorded in the store so a variable left in
+ * place doesn't keep re-resetting the account on every boot.
+ */
+export function resetCoachFromEnv() {
+  const token = process.env.COACH_RESET_TOKEN?.trim();
+  const email = process.env.COACH_EMAIL?.trim().toLowerCase();
+  const password = process.env.COACH_PASSWORD;
+  if (!token || !email || !password || password.length < 8) return;
+
+  const data = getData();
+  if (data.coach_reset_applied === token) return;
+
+  const existing = data.users.find((u) => u.email === email);
+  if (existing && existing.role !== "coach") return; // never hijack a client login
+  if (existing) {
+    setPassword(existing.id, password, true);
+  } else {
+    createUser(email, password, "coach", null, true);
+  }
+  data.coach_reset_applied = token;
+  persist();
+}
+
 // ---- User records -------------------------------------------------------
 
 export function findUserByEmail(email: string) {
