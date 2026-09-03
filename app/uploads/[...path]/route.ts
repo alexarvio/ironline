@@ -42,12 +42,17 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
   const [kind, clientIdRaw] = segments;
-  if (kind !== "progress" && kind !== "chat" && kind !== "demos") {
+  // The brand logo is public by nature: it is on the login page before
+  // anyone has a session. Everything else is per-client and checked.
+  const isBranding = kind === "branding";
+  if (!isBranding && kind !== "progress" && kind !== "chat" && kind !== "demos") {
     return new Response("Not found", { status: 404 });
   }
-  const clientId = Number(clientIdRaw);
-  if (!Number.isInteger(clientId) || clientId <= 0 || !(await canAccessClient(clientId))) {
-    return new Response("Not found", { status: 404 });
+  if (!isBranding) {
+    const clientId = Number(clientIdRaw);
+    if (!Number.isInteger(clientId) || clientId <= 0 || !(await canAccessClient(clientId))) {
+      return new Response("Not found", { status: 404 });
+    }
   }
 
   const uploadsRoot = path.join(DATA_DIR, "uploads");
@@ -69,7 +74,7 @@ export async function GET(
   return new Response(new Uint8Array(body), {
     headers: {
       "Content-Type": contentType,
-      "Cache-Control": "private, max-age=3600",
+      "Cache-Control": isBranding ? "public, max-age=86400" : "private, max-age=3600",
     },
   });
 }

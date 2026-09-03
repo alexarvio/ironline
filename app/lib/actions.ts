@@ -122,6 +122,10 @@ import {
   removeSupplementRow,
   addMetricsFromLibrary,
   getNutritionPlan,
+  saveBrandingLogo,
+  removeBrandingLogo,
+  saveCoachName,
+  saveBrandingColor,
 } from "./queries";
 import { writeReportNarrative } from "./reportAi";
 import type { ReportSectionType } from "./reportSectionTypes";
@@ -1400,4 +1404,33 @@ export async function addCalendarEventAction(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/client");
   redirect(`/admin?view=calendar&month=${date.slice(0, 7)}&day=${date}`);
+}
+
+// ---- Branding ------------------------------------------------------------
+
+export async function uploadBrandingLogoAction(formData: FormData) {
+  await requireCoach();
+  const file = formData.get("file") as File | null;
+  if (!file || file.size === 0) return;
+  if (file.size > 4 * 1024 * 1024) return;
+  saveBrandingLogo(Buffer.from(await file.arrayBuffer()), file.type || "image/png");
+  revalidatePath("/", "layout");
+}
+
+export async function removeBrandingLogoAction() {
+  await requireCoach();
+  removeBrandingLogo();
+  revalidatePath("/", "layout");
+}
+
+export async function saveCoachNameAction(formData: FormData) {
+  await requireCoach();
+  saveCoachName(String(formData.get("coachName") || ""));
+  revalidatePath("/", "layout");
+}
+
+export async function saveBrandingColorAction(formData: FormData) {
+  await requireCoach();
+  saveBrandingColor(String(formData.get("colorPrimary") || ""));
+  revalidatePath("/", "layout");
 }

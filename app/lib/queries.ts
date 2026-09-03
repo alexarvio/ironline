@@ -4530,3 +4530,73 @@ export function deleteReport(id: number) {
   data.client_reports = data.client_reports.filter((r) => r.id !== id);
   persist();
 }
+
+// ---- Branding: the coach's logo, accent colour and business name ----------
+
+export type Branding = { logo_path: string | null; color_primary: string | null; coach_name: string | null };
+
+export function getBranding(): Branding {
+  const b = getData().branding;
+  return { logo_path: b?.logo_path ?? null, color_primary: b?.color_primary ?? null, coach_name: b?.coach_name ?? null };
+}
+
+function brandingRow(): Branding {
+  const data = getData();
+  if (!data.branding) data.branding = { logo_path: null, color_primary: null, coach_name: null };
+  return data.branding;
+}
+
+export function saveCoachName(name: string) {
+  brandingRow().coach_name = name.trim() || null;
+  persist();
+}
+
+export function saveBrandingColor(hex: string) {
+  const row = brandingRow();
+  if (hex === "") row.color_primary = null;
+  else if (/^#[0-9a-fA-F]{6}$/.test(hex)) row.color_primary = hex.toLowerCase();
+  persist();
+}
+
+// One slot under DATA_DIR/uploads/branding, replaced on every upload. The
+// public path carries an upload stamp so a browser doesn't keep showing a
+// cached old logo from the same URL.
+export function saveBrandingLogo(buffer: Buffer, mimeType: string): string {
+  const dir = path.join(DATA_DIR, "uploads", "branding");
+  fs.mkdirSync(dir, { recursive: true });
+  const ext = (mimeType.split("/")[1] || "png").replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "png";
+  const row = brandingRow();
+  const previous = row.logo_path;
+  const filename = `logo.${ext}`;
+  fs.writeFileSync(path.join(dir, filename), buffer);
+  const publicPath = `/uploads/branding/${filename}?v=${Date.now()}`;
+  if (previous) {
+    const prevFilename = previous.split("?")[0].split("/").pop();
+    if (prevFilename && prevFilename !== filename) {
+      try {
+        fs.unlinkSync(path.join(dir, prevFilename));
+      } catch {
+        /* already gone */
+      }
+    }
+  }
+  row.logo_path = publicPath;
+  persist();
+  return publicPath;
+}
+
+export function removeBrandingLogo() {
+  const row = brandingRow();
+  if (row.logo_path) {
+    const prevFilename = row.logo_path.split("?")[0].split("/").pop();
+    if (prevFilename) {
+      try {
+        fs.unlinkSync(path.join(DATA_DIR, "uploads", "branding", prevFilename));
+      } catch {
+        /* already gone */
+      }
+    }
+  }
+  row.logo_path = null;
+  persist();
+}

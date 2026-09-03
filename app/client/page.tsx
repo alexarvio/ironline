@@ -11,6 +11,7 @@ import {
   getCheckInSections,
   getCheckInStatus,
   getClientPreferences,
+  getBranding,
   getGraphedSeries,
   listClientReports,
   listPublishedWeekNumbers,
@@ -1074,9 +1075,13 @@ export default async function ClientPage({
     { id: "settings", label: "Settings", icon: <AccountIcon />, content: <SettingsTab CLIENT_ID={CLIENT_ID} /> },
   ];
 
+  const branding = getBranding();
+
   return (
     <AppShell
       clientName={client?.name ?? ""}
+      logoSrc={branding.logo_path}
+      brandName={branding.coach_name}
       tabs={tabs}
       notificationsContent={<NotificationsPanel CLIENT_ID={CLIENT_ID} />}
       hasUnreadNotifications={hasUnreadNotifications}

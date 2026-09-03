@@ -53,6 +53,8 @@ export default function AppShell({
   hasUnreadNotifications,
   clientId,
   checkIn,
+  logoSrc,
+  brandName,
 }: {
   clientName: string;
   tabs: AppTab[];
@@ -61,6 +63,10 @@ export default function AppShell({
   hasUnreadNotifications?: boolean;
   clientId: number;
   checkIn: CheckInProps;
+  /** Coach-uploaded logo; the Ironline mark when unset. */
+  logoSrc?: string | null;
+  /** Coach's business name for the header; "Ironline" when unset. */
+  brandName?: string | null;
 }) {
   const storedTab = useSyncExternalStore(subscribeTab, readTab, () => null);
   const activeId = storedTab && tabs.some((t) => t.id === storedTab) ? storedTab : tabs[0]?.id;
@@ -145,8 +151,13 @@ export default function AppShell({
       <div className="app-screen">
         <header className="app-header dark">
           <span className="app-header-brand">
-            <Image src="/brand/logo.png" alt="" width={15} height={26} className="app-header-logo" priority />
-            Ironline
+            {logoSrc ? (
+              // eslint-disable-next-line @next/next/no-img-element -- coach-uploaded file
+              <img src={logoSrc} alt="" className="app-header-logo" />
+            ) : (
+              <Image src="/brand/logo.png" alt="" width={15} height={26} className="app-header-logo" priority />
+            )}
+            {brandName || "Ironline"}
           </span>
           <div className="app-header-actions">
             <button type="button" className="app-header-icon-btn" onClick={() => setPushView("notifications")} aria-label="Notifications">

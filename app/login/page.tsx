@@ -2,6 +2,7 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { loginAction } from "../lib/auth-actions";
 import { ensureCoachFromEnv, getSessionUser, resetCoachFromEnv, resetWorkspaceFromEnv } from "../lib/auth";
+import { getBranding } from "../lib/queries";
 
 export default async function LoginPage({
   searchParams,
@@ -26,12 +27,19 @@ export default async function LoginPage({
 
   const { error } = await searchParams;
 
+  const branding = getBranding();
+
   return (
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-brand">
-          <Image src="/brand/logo.png" alt="" width={19} height={32} priority />
-          Ironline
+          {branding.logo_path ? (
+            // eslint-disable-next-line @next/next/no-img-element -- coach-uploaded file
+            <img src={branding.logo_path} alt="" className="auth-brand-logo" />
+          ) : (
+            <Image src="/brand/logo.png" alt="" width={19} height={32} priority />
+          )}
+          {branding.coach_name || "Ironline"}
         </div>
         <h1 className="auth-title">Sign in</h1>
 

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { applyDueClientReminders, applyDueProgramDeployments } from "./lib/queries";
+import { applyDueClientReminders, applyDueProgramDeployments, getBranding } from "./lib/queries";
+import { brandCssVars } from "./lib/branding";
 
 export const metadata: Metadata = {
   title: "Ironline",
@@ -32,13 +33,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   applyDueProgramDeployments();
   applyDueClientReminders();
 
-  // Colours are fixed to the design's palette (see the tokens at the top of
-  // globals.css) rather than injected per coach. Coach-configurable branding
-  // is deliberately out for now: one moving accent was enough to make both
-  // apps drift away from the files they were drawn from.
+  // One brand colour, chosen on the Branding page, overrides the accent
+  // tokens for every route; the contrast-safe companions (text on the fill,
+  // the accent as text, the pale tint) are derived, never chosen. With no
+  // colour set nothing is injected and the design's own tokens apply.
+  const branding = getBranding();
+  const overrides = branding.color_primary ? brandCssVars(branding.color_primary) : "";
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {overrides && <style>{`:root { ${overrides} }`}</style>}
+        {children}
+      </body>
     </html>
   );
 }

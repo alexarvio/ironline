@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { createClientAction } from "../lib/actions";
 import { logoutAction } from "../lib/auth-actions";
-import { clientAttention, listClients } from "../lib/queries";
+import { clientAttention, getBranding, listClients } from "../lib/queries";
 
 // The left rail: brand, the coach's two cross-client views, and the client
 // list with a way to add another.
@@ -12,15 +12,21 @@ import { clientAttention, listClients } from "../lib/queries";
 // tabs, not in navigation.
 export default function AdminSidebar({ selectedId }: { selectedId: number | null }) {
   const clients = listClients();
+  const branding = getBranding();
 
   return (
     <>
       <div className="ad-brand">
         <span className="ad-brand-mark">
-          <Image src="/brand/logo.png" alt="" width={14} height={24} priority />
+          {branding.logo_path ? (
+            // eslint-disable-next-line @next/next/no-img-element -- coach-uploaded file
+            <img src={branding.logo_path} alt="" className="ad-brand-logo-img" />
+          ) : (
+            <Image src="/brand/logo.png" alt="" width={14} height={24} priority />
+          )}
         </span>
         <div className="ad-brand-text">
-          <div className="ad-brand-name">Full Potential</div>
+          <div className="ad-brand-name">{branding.coach_name || "Ironline"}</div>
           <div className="ad-brand-sub">Coach workstation</div>
         </div>
       </div>
@@ -44,6 +50,15 @@ export default function AdminSidebar({ selectedId }: { selectedId: number | null
           <span className="ad-nav-label">Calendar</span>
           {/* Scheduling conflicts the coach hasn't resolved. */}
           <span className="ad-nav-badge">2</span>
+        </Link>
+        <Link href="/admin?view=branding" className="ad-nav-row">
+          <span className="ad-nav-icon" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M12 3a9 9 0 1 0 0 18c1.5 0 2-1 2-2s-1-1.5-1-2.5S14 15 15.5 15H17a4 4 0 0 0 4-4c0-5-4-8-9-8Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+              <circle cx="7.5" cy="10.5" r="1" fill="currentColor" /><circle cx="11" cy="7" r="1" fill="currentColor" /><circle cx="15.5" cy="8" r="1" fill="currentColor" />
+            </svg>
+          </span>
+          <span className="ad-nav-label">Branding</span>
         </Link>
       </nav>
 

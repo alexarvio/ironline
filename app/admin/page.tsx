@@ -7,6 +7,7 @@ import ClientOverviewPanel from "./ClientOverviewPanel";
 import FeedPanel from "./FeedPanel";
 import CalendarPanel from "./CalendarPanel";
 import CalendarDayPanel from "./CalendarDayPanel";
+import BrandingPanel from "./BrandingPanel";
 import ProgramBuilder from "../components/ProgramBuilder";
 import { getClient, getOverviewPanel, listClients } from "../lib/queries";
 
@@ -41,7 +42,8 @@ export default async function AdminPage({
   await requireCoach();
   const params = await searchParams;
   const clients = listClients();
-  const view = params.view === "feed" || params.view === "calendar" ? params.view : null;
+  const view =
+    params.view === "feed" || params.view === "calendar" || params.view === "branding" ? params.view : null;
   const selectedId = view ? null : params.client ? Number(params.client) : clients[0]?.id ?? null;
   const client = selectedId ? getClient(selectedId) : undefined;
 
@@ -69,6 +71,10 @@ export default async function AdminPage({
       ) : view === "calendar" ? (
         <div className="ad-pad">
           <CalendarPanel month={params.month} day={params.day} />
+        </div>
+      ) : view === "branding" ? (
+        <div className="ad-pad">
+          <BrandingPanel />
         </div>
       ) : !client ? (
         <div className="ad-pad">

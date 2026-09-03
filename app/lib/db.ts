@@ -454,8 +454,17 @@ type User = {
   created_at: string;
 };
 
+// Coach-wide branding: one row for the whole app. Logo, one accent colour,
+// and the business name shown where "Full Potential" used to be fixed.
+type Branding = {
+  logo_path: string | null;
+  color_primary: string | null;
+  coach_name: string | null;
+};
+
 type Data = {
   users: User[];
+  branding: Branding;
   clients: Client[];
   exercises: Exercise[];
   program_days: ProgramDay[];
@@ -500,6 +509,7 @@ type Data = {
 function emptyData(): Data {
   return {
     users: [],
+    branding: { logo_path: null, color_primary: null, coach_name: null },
     clients: [],
     training_programs: [],
     client_preferences: [],

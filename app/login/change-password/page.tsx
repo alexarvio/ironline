@@ -2,6 +2,7 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { changePasswordAction } from "../../lib/auth-actions";
 import { getSessionUser } from "../../lib/auth";
+import { getBranding } from "../../lib/queries";
 
 // Shown once, after a coach hands out a temporary password. Every guard
 // redirects here while must_change_password is set, so there's no way to
@@ -19,12 +20,19 @@ export default async function ChangePasswordPage({
 
   const { error } = await searchParams;
 
+  const branding = getBranding();
+
   return (
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-brand">
-          <Image src="/brand/logo.png" alt="" width={19} height={32} priority />
-          Ironline
+          {branding.logo_path ? (
+            // eslint-disable-next-line @next/next/no-img-element -- coach-uploaded file
+            <img src={branding.logo_path} alt="" className="auth-brand-logo" />
+          ) : (
+            <Image src="/brand/logo.png" alt="" width={19} height={32} priority />
+          )}
+          {branding.coach_name || "Ironline"}
         </div>
         <h1 className="auth-title">Choose a password</h1>
         <p className="auth-note auth-note-top">
