@@ -48,7 +48,9 @@ export async function GET(
     // signed-in user may watch; nothing about one client is in them.
     if (!(await getSessionUser())) return new Response("Not found", { status: 404 });
   } else {
-    if (kind !== "progress" && kind !== "chat" && kind !== "demos") {
+    // uploads/avatars/<clientId>/avatar.<ext>: the client's profile photo,
+    // per-client and checked like the rest.
+    if (kind !== "progress" && kind !== "chat" && kind !== "demos" && kind !== "avatars") {
       return new Response("Not found", { status: 404 });
     }
     const clientId = Number(clientIdRaw);

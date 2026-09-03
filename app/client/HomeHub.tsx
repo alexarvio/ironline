@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { CalendarIcon, CheckIcon, ChevronDownIcon } from "../components/icons";
 import GoalRow from "../components/GoalRow";
 import { useNavigateTab, useOpenCheckIn } from "./CheckInContext";
@@ -136,7 +135,9 @@ function ProfileCard({
     <section className="hm-card hm-profile">
       <div className="hm-profile-row">
         {photoUrl ? (
-          <Image src={photoUrl} alt="" width={44} height={44} className="hm-avatar-img" />
+          // eslint-disable-next-line @next/next/no-img-element -- served by the
+          // uploads route behind the session; the image optimizer has no cookie.
+          <img src={photoUrl} alt="" width={44} height={44} className="hm-avatar-img" />
         ) : (
           <span className="hm-avatar" aria-hidden="true">
             {initial}
