@@ -28,7 +28,6 @@ export default function ClientGraphsPicker({ choices }: { choices: GraphChoice[]
         <div className="ms-metric-list">
           {choices.map((c) => {
             const blocked = !c.pinned && full;
-            const thin = c.pointCount < 2;
             return (
               <div key={c.key} className={`ms-metric-row cg-row${c.pinned ? " is-on" : ""}`}>
                 <span className="ms-metric-name">
@@ -38,12 +37,6 @@ export default function ClientGraphsPicker({ choices }: { choices: GraphChoice[]
                 <span className="ms-cadence-pill">{c.cadenceLabel}</span>
                 <span className="cg-points" title="Logged values so far">
                   {c.pointCount} {c.pointCount === 1 ? "pt" : "pts"}
-                  {c.pinned && thin && (
-                    <em title="A chart needs at least two logged values before it appears on the client's screen">
-                      {" "}
-                      · needs 2+
-                    </em>
-                  )}
                 </span>
                 <form
                   action={c.kind === "field" ? togglePinMeasurementFieldAction : togglePinMetricAction}

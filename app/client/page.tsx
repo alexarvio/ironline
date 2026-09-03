@@ -264,8 +264,38 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
     series: { date: string; value: number }[],
     goodDown?: boolean
   ): TrendMetric | null => {
-    if (series.length < 2) return null;
     const fmt = (v: number) => (Number.isInteger(v) ? v.toLocaleString("en-US") : v.toFixed(1));
+    // Every figure the coach chose gets a slide, even before there is a
+    // trend to draw: an empty slide says the coach is watching this, and
+    // one entry is shown as a flat line with the value, so the client sees
+    // the chart fill in from the first check-in rather than appearing later.
+    if (series.length === 0) {
+      return {
+        id,
+        name,
+        points: [],
+        currentValueLabel: "",
+        unitLabel: "",
+        trendLabel: "",
+        trendGood: true,
+        rangeLabel: "No entries yet",
+        avgLabel: "Log it at your next check-in",
+      };
+    }
+    if (series.length === 1) {
+      const only = series[0];
+      return {
+        id,
+        name,
+        points: [only, { ...only }],
+        currentValueLabel: fmt(only.value),
+        unitLabel: unit,
+        trendLabel: "",
+        trendGood: true,
+        rangeLabel: `First entry ${fmtShortDate(only.date)}`,
+        avgLabel: "One entry so far",
+      };
+    }
     const average = series.reduce((sum, p) => sum + p.value, 0) / series.length;
     const first = series[0].value;
     const last = series[series.length - 1].value;
