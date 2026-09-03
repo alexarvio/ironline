@@ -74,6 +74,19 @@ if (process.env.SKIP_SEED !== "1" && !fs.existsSync(exercisesMarker)) {
   console.log("[start-server] Exercise library already seeded, skipping.");
 }
 
+// Sam Rivera as a complete, current demo client for walking a coach through
+// the product. Replaces Sam's old single-week training with a deployed
+// 6-week block and fills in metrics, nutrition, goals and a login. Once.
+const samMarker = path.join(DATA_DIR, ".seeded-sam-demo-v1");
+if (process.env.SKIP_SEED !== "1" && !fs.existsSync(samMarker)) {
+  console.log("[start-server] Seeding Sam Rivera demo...");
+  run("npx", ["tsx", "scripts/seed-sam-demo.ts"]);
+  fs.writeFileSync(samMarker, new Date().toISOString());
+  console.log("[start-server] Sam Rivera demo seeded.");
+} else {
+  console.log("[start-server] Sam Rivera demo already seeded, skipping.");
+}
+
 const result = spawnSync("npx", ["next", "start"], { stdio: "inherit", shell: true });
 if (result.error) throw result.error;
 process.exit(result.status ?? 0);
