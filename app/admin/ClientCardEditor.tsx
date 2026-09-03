@@ -129,10 +129,6 @@ export default function ClientCardEditor({
       <section className="ad-panel-section">
         <h3 className="ad-panel-heading">Coaching info</h3>
         <div className="ad-fields">
-          <Field label="Start date" name="coaching_start_date" value={card.coaching_start_date} type="date" />
-          <Field label="Goal / phase" name="goal_phase" value={card.goal_phase} placeholder="-" />
-          <Field label="Goal date" name="goal_date" value={card.goal_date} type="date" />
-          <Field label="Check-in day" name="check_in_day" value={card.check_in_day} placeholder="Monday" />
           {/* Which of the coach's packages (Settings → Packages) this client
               is on. Shown to the client in their app. */}
           <label className="ad-field">
@@ -148,6 +144,10 @@ export default function ClientCardEditor({
               </select>
             </span>
           </label>
+          <Field label="Start date" name="coaching_start_date" value={card.coaching_start_date} type="date" />
+          <Field label="Goal / phase" name="goal_phase" value={card.goal_phase} placeholder="-" />
+          <Field label="Goal date" name="goal_date" value={card.goal_date} type="date" />
+          <Field label="Check-in day" name="check_in_day" value={card.check_in_day} placeholder="Monday" />
           <Field
             label="Starting weight"
             name="starting_weight_kg"
