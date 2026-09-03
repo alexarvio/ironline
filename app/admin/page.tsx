@@ -4,6 +4,8 @@ import SectionTabs, { TabSection } from "./SectionTabs";
 import NutritionPanel from "./NutritionPanel";
 import MeasurementsPanel from "./MeasurementsPanel";
 import ClientOverviewPanel from "./ClientOverviewPanel";
+import FeedPanel from "./FeedPanel";
+import CalendarPanel from "./CalendarPanel";
 import ProgramBuilder from "../components/ProgramBuilder";
 import { getClient, getOverviewPanel, listClients } from "../lib/queries";
 
@@ -26,19 +28,25 @@ export default async function AdminPage({
     onboard?: string;
     loginOk?: string;
     loginError?: string;
+    /** Cross-client views from the rail: "feed" or "calendar". With one of
+        these set the working area shows that view instead of a client, and
+        the client panel is hidden since there is no single client in play. */
+    view?: string;
+    month?: string;
   }>;
 }) {
   await requireCoach();
   const params = await searchParams;
   const clients = listClients();
-  const selectedId = params.client ? Number(params.client) : clients[0]?.id ?? null;
+  const view = params.view === "feed" || params.view === "calendar" ? params.view : null;
+  const selectedId = view ? null : params.client ? Number(params.client) : clients[0]?.id ?? null;
   const client = selectedId ? getClient(selectedId) : undefined;
 
   return (
     <AdminShell
       sidebar={<AdminSidebar selectedId={selectedId} />}
       panel={
-        client ? (
+        view ? undefined : client ? (
           <ClientOverviewPanel
             panel={getOverviewPanel(client.id)}
             clientId={client.id}
@@ -49,7 +57,15 @@ export default async function AdminPage({
         ) : undefined
       }
     >
-      {!client ? (
+      {view === "feed" ? (
+        <div className="ad-pad">
+          <FeedPanel />
+        </div>
+      ) : view === "calendar" ? (
+        <div className="ad-pad">
+          <CalendarPanel month={params.month} />
+        </div>
+      ) : !client ? (
         <div className="ad-pad">
           <p className="ad-empty">
             {clients.length === 0
