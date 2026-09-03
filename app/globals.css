@@ -10656,3 +10656,98 @@ a.cd-entry:hover { border-color: var(--accent); }
 .av-title { font-weight: 700; font-size: 0.94rem; color: var(--fp-text); }
 .av-sub { font-size: 0.78rem; color: var(--fp-dim); margin-top: 2px; }
 .av-remove { margin-top: 6px; padding: 0; border: 0; background: none; color: var(--fp-accent); font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+
+/* ---- Progress pictures (admin): angle rail, and the shared lightbox ---- */
+.pa-rail { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.pa-square {
+  position: relative;
+  width: 118px;
+  height: 118px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.pa-icon { color: var(--steel); display: flex; }
+.pa-name-form { position: absolute; left: 6px; right: 6px; bottom: 6px; }
+.pa-name {
+  width: 100%;
+  height: 24px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-align: center;
+  padding: 0 4px;
+}
+.pa-name:hover, .pa-name:focus { border-color: var(--border); background: var(--paper); outline: none; }
+.pa-delete { position: absolute; top: 4px; right: 4px; opacity: 0; transition: opacity 120ms ease; }
+.pa-square:hover .pa-delete, .pa-delete:focus-within { opacity: 1; }
+.pa-delete .row-icon-btn { width: 20px; height: 20px; border-radius: 6px; background: var(--surface); }
+.pa-delete .row-icon-btn svg { width: 11px; height: 11px; }
+
+.pa-add { border-style: dashed; background: transparent; cursor: pointer; font: inherit; }
+.pa-add:hover { border-color: var(--accent); }
+.pa-add-label { font-size: 12px; font-weight: 800; color: var(--accent); }
+.pa-add-sub { font-size: 10.5px; color: var(--steel); }
+
+.photo-thumb-btn { padding: 0; border: 0; background: none; cursor: zoom-in; display: block; width: 100%; }
+
+.lb-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(20, 23, 28, 0.82);
+}
+.lb-figure { position: relative; margin: 0; max-width: min(92vw, 900px); max-height: 92vh; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.lb-img { max-width: 100%; max-height: 82vh; border-radius: 10px; object-fit: contain; background: #000; }
+.lb-caption { color: #fff; font-size: 13px; font-weight: 700; }
+.lb-close {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 0;
+  background: #fff;
+  color: var(--ink);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* Client tiles: zoom on a filled tile, and the read-only tile as a button. */
+.ci-photo-form { position: relative; }
+.ci-photo-zoom {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 0;
+  background: rgba(20, 23, 28, 0.6);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+button.ci-photo { font: inherit; padding: 0; cursor: zoom-in; }
+button.ci-photo:disabled { cursor: default; }
+
+/* Calendar day panel head: date on one line, status pill on one line. */
+.cd-title { white-space: nowrap; font-size: 1.05rem; }
+.pb-autosave-btn { white-space: nowrap; }

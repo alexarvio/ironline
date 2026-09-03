@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { ChevronLeftIcon } from "../components/icons";
+import PhotoLightbox from "../components/PhotoLightbox";
 import { logMetricPeriodAction, saveMeasurementCheckInAction, uploadProgressPhotoAction } from "../lib/actions";
 
 // Deliberately does NOT import from ../lib/queries (see HomeHub.tsx for why
@@ -130,6 +131,7 @@ export default function CheckInScreen({
   // values back matching (isSaved), which is the moment the save is real.
   const submitted = useRef(false);
   const [justSaved, setJustSaved] = useState(false);
+  const [zoom, setZoom] = useState<CheckInPhotoSlot | null>(null);
   useEffect(() => {
     if (isSaved && submitted.current) {
       submitted.current = false;
@@ -340,23 +342,34 @@ export default function CheckInScreen({
                           type="file"
                           name="file"
                           accept="image/*"
-                          capture="environment"
                           className="ci-photo-input"
                           onChange={(e) => e.currentTarget.form?.requestSubmit()}
                         />
                       </label>
+                      {p.src && (
+                        <button type="button" className="ci-photo-zoom" onClick={() => setZoom(p)} aria-label={`View ${p.label} full size`}>
+                          ⤢
+                        </button>
+                      )}
                     </form>
                   ) : (
-                    <div key={p.id} className={`ci-photo done${p.src ? " filled" : ""}`}>
+                    <button
+                      key={p.id}
+                      type="button"
+                      className={`ci-photo done${p.src ? " filled" : ""}`}
+                      onClick={() => p.src && setZoom(p)}
+                      disabled={!p.src}
+                    >
                       {p.src && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={p.src} alt={p.label} className="ci-photo-img" />
                       )}
                       <span className="ci-photo-label">{p.label}</span>
-                    </div>
+                    </button>
                   )
                 )}
               </div>
+              {zoom?.src && <PhotoLightbox src={zoom.src} caption={zoom.label} onClose={() => setZoom(null)} />}
               <div className="ci-photo-note">
                 {photosDue
                   ? `One set per ${photoPeriodLabel.toLowerCase()}. A new photo replaces this one.`

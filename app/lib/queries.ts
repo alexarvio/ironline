@@ -4640,3 +4640,40 @@ export function removeClientAvatar(clientId: number) {
   client.avatar_path = null;
   persist();
 }
+
+// ---- Progress pictures: status for the client's Home card and date labels ----
+
+export type PhotoStatus = {
+  configured: boolean;
+  due: boolean;
+  uploaded: number;
+  total: number;
+  unit: string; // "Week" | "Check-in" | "Month"
+  periodLabel: string; // "September 2026", "Week of 1 Sep"
+  nextLabel: string;
+};
+
+// Human label for one photo period given the cadence it was taken under.
+export function photoPeriodTitle(period: string, cadence: PhotoCadence): string {
+  const d = new Date(`${period}T12:00:00`);
+  if (cadence === "monthly") return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const day = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return cadence === "weekly" ? `Week of ${day}` : `Check-in from ${day}`;
+}
+
+export function getPhotoStatus(clientId: number): PhotoStatus {
+  const cadence = getPhotoCadence(clientId);
+  const period = photoPeriodFor(localDateStr(), cadence);
+  const slots = listPhotoSlots(clientId);
+  const uploads = listPhotoUploads(slots.map((s) => s.id));
+  const uploaded = slots.filter((s) => uploads.some((u) => u.slot_id === s.id && u.period === period)).length;
+  return {
+    configured: slots.length > 0,
+    due: slots.length > 0 && uploaded < slots.length,
+    uploaded,
+    total: slots.length,
+    unit: PHOTO_PERIOD_UNIT[cadence],
+    periodLabel: photoPeriodTitle(period, cadence),
+    nextLabel: cadence === "monthly" ? "A new set opens next month" : cadence === "biweekly" ? "A new set opens in two weeks" : "A new set opens next week",
+  };
+}

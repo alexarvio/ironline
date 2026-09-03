@@ -13,6 +13,7 @@ import {
   getClientPreferences,
   getBranding,
   getGraphedSeries,
+  getPhotoStatus,
   listClientReports,
   listPublishedWeekNumbers,
   getNotifications,
@@ -360,6 +361,7 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
       upcoming={upcoming}
       coachNotes={coachNotes}
       checkInStatus={checkInStatus}
+      photos={getPhotoStatus(CLIENT_ID)}
     />
   );
 }

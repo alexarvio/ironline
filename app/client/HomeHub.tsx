@@ -46,6 +46,7 @@ export default function HomeHub({
   upcoming,
   coachNotes,
   checkInStatus,
+  photos,
 }: {
   dateLabel: string;
   name: string;
@@ -61,6 +62,8 @@ export default function HomeHub({
   upcoming: UpcomingMeeting;
   coachNotes: CoachNote[];
   checkInStatus: CheckInStatus;
+  /** Progress pictures: its own card, separate from the check-ins. */
+  photos?: { configured: boolean; due: boolean; uploaded: number; total: number; periodLabel: string; nextLabel: string };
 }) {
   // Check-in is a full-screen pushed view owned by AppShell; a due row just
   // asks it to open on that row's section.
@@ -140,6 +143,32 @@ export default function HomeHub({
               aria-hidden="true"
             >
               {checkInStatus.dueTypes.length > 0 ? <ArrowRightIcon /> : <CheckIcon />}
+            </span>
+          </button>
+        </section>
+      )}
+
+      {photos?.configured && (
+        <section className="home-dark-section">
+          <span className="home-dark-section-title">Progress pictures</span>
+          <button type="button" className="home-checkin-row" onClick={() => openCheckIn?.("measurements")}>
+            <div className="home-checkin-body">
+              {photos.due ? (
+                <>
+                  <div className="home-checkin-title">
+                    {photos.uploaded} of {photos.total} photos this set
+                  </div>
+                  <div className="home-checkin-detail due">{photos.periodLabel} · tap to add</div>
+                </>
+              ) : (
+                <>
+                  <div className="home-checkin-title">This set is complete</div>
+                  <div className="home-checkin-detail">{photos.nextLabel}</div>
+                </>
+              )}
+            </div>
+            <span className={`home-checkin-mark${photos.due ? " due" : ""}`} aria-hidden="true">
+              {photos.due ? <ArrowRightIcon /> : <CheckIcon />}
             </span>
           </button>
         </section>

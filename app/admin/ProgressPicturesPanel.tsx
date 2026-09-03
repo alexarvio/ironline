@@ -1,110 +1,102 @@
-import { addPhotoSlotAction } from "../lib/actions";
 import {
+  getClient,
   getPhotoCadence,
   getPhotoPeriodNote,
   listPhotoPeriods,
   listPhotoSlots,
   listPhotoUploads,
-  photoPeriodIndex,
+  photoPeriodTitle,
 } from "../lib/queries";
-import PhotoSlotRow from "./PhotoSlotRow";
+import AutosaveNote from "./AutosaveNote";
+import PhotoAngleRail from "./PhotoAngleRail";
 import PhotoCadenceSelect from "./PhotoCadenceSelect";
 import PhotoPeriodRow from "./PhotoPeriodRow";
 import PhotoCompareView from "./PhotoCompareView";
 
-const PERIOD_UNIT = {
-  weekly: "Week",
-  biweekly: "Check-in",
-  monthly: "Month",
-} as const;
-
+// Progress pictures for one client: how often a fresh sheet opens, which
+// angles it asks for, and every set taken so far as one expandable row per
+// date, newest first, with the coach's notes on each.
 export default function ProgressPicturesPanel({ clientId }: { clientId: number }) {
   const slots = listPhotoSlots(clientId);
-  const uploads = listPhotoUploads(slots.map((s) => s.id));
-  const periods = listPhotoPeriods(slots.map((s) => s.id));
-  const periodIndex = photoPeriodIndex(slots.map((s) => s.id));
+  const slotIds = slots.map((s) => s.id);
+  const uploads = listPhotoUploads(slotIds);
+  const periods = listPhotoPeriods(slotIds);
   const cadence = getPhotoCadence(clientId);
+  const clientName = getClient(clientId)?.name ?? "the client";
+  // eslint-disable-next-line react-hooks/purity -- a server component render is the intended clock here
+  const renderedAt = Date.now();
 
   const photoFor = (slotId: number, period: string) =>
     uploads.find((u) => u.slot_id === slotId && u.period === period)?.file_path ?? null;
 
   return (
-    <div>
-      <p className="empty-note" style={{ marginBottom: 18 }}>
-        Define the angles you want from this client: name each one whatever makes sense
-        (Front, Back, Side, Profile 1, as many as you like), and how often they should get a
-        fresh, empty sheet to fill in. On their end, the client taps a box to shoot or upload a
-        photo for each angle.
-      </p>
-
-      <div className="nutrition-table-wrap builder-card">
-        <h3 className="builder-pill-heading">Photo slots</h3>
-
-        <div style={{ marginBottom: 14 }}>
-          <label className="empty-note" style={{ display: "block", marginBottom: 6 }}>
-            How often should the client get a new sheet?
-          </label>
-          <PhotoCadenceSelect clientId={clientId} cadence={cadence} />
-        </div>
-
-        <form action={addPhotoSlotAction} className="add-invoice-form add-metric-form">
-          <input type="hidden" name="clientId" value={clientId} />
-          <input name="label" type="text" placeholder="Slot name (e.g. Front, Side, Profile 1)" required />
-          <button className="btn" type="submit">
-            Add slot
-          </button>
-        </form>
-        {slots.length > 0 && (
-          <div className="invoice-list" style={{ marginTop: 14 }}>
-            {slots.map((slot) => (
-              <PhotoSlotRow key={slot.id} slot={slot} />
-            ))}
-          </div>
-        )}
+    <div className="pp">
+      <div className="ms-topbar">
+        <span className="ms-topbar-live">
+          <span className="ms-live-dot" aria-hidden="true" />
+          Live in {clientName}&rsquo;s app
+        </span>
+        <AutosaveNote renderedAt={renderedAt} savedText="Up to date" idleText="Up to date" idleAsSaved />
       </div>
 
+      <section className="ms-section">
+        <div className="ms-head">
+          <h3 className="ad-microlabel">Angles</h3>
+          <span className="cid">
+            <span className="cid-label">New set opens</span>
+            <PhotoCadenceSelect clientId={clientId} cadence={cadence} />
+          </span>
+        </div>
+        <p className="ad-field-note" style={{ margin: "0 0 10px" }}>
+          One square per shot you want. The client sees the same squares, empty, each time a new set opens, and fills
+          them from their camera or photo library.
+        </p>
+        <PhotoAngleRail clientId={clientId} slots={slots} />
+      </section>
+
       {slots.length >= 1 && periods.length >= 2 && (
-        <PhotoCompareView
-          periodsData={[...periods]
-            .reverse() // listPhotoPeriods is newest-first; compare wants oldest-first so "Compare" defaults to Week 1
-            .map((period) => ({
+        <section className="ms-section">
+          <PhotoCompareView
+            periodsData={[...periods].reverse().map((period) => ({
               period,
-              label: `${PERIOD_UNIT[cadence]} ${periodIndex[period] ?? "?"}`,
+              label: photoPeriodTitle(period, cadence),
               photos: slots.map((slot) => ({ slotId: slot.id, label: slot.label, src: photoFor(slot.id, period) })),
             }))}
-        />
+          />
+        </section>
       )}
 
-      {slots.length === 0 ? (
-        <p className="empty-note">No photo slots defined yet. Add one above.</p>
-      ) : periods.length === 0 ? (
-        <p className="empty-note">
-          Slots are set up, nothing uploaded yet. Photos will appear here automatically as
-          soon as the client submits one.
-        </p>
-      ) : (
-        <div className="photo-gallery">
-          {periods.map((period) => {
-            const photos = slots.map((slot) => ({
-              slotId: slot.id,
-              label: slot.label,
-              src: photoFor(slot.id, period),
-            }));
-            const uploadedCount = photos.filter((p) => p.src).length;
-            return (
-              <PhotoPeriodRow
-                key={period}
-                clientId={clientId}
-                period={period}
-                title={`${PERIOD_UNIT[cadence]} ${periodIndex[period] ?? "?"}`}
-                subtitle={`${uploadedCount}/${slots.length} photos uploaded · ${period}`}
-                photos={photos}
-                note={getPhotoPeriodNote(clientId, period)}
-              />
-            );
-          })}
+      <section className="ms-section">
+        <div className="ms-head">
+          <h3 className="ad-microlabel">Sets</h3>
+          <span className="cg-count">
+            {periods.length} {periods.length === 1 ? "set" : "sets"}
+          </span>
         </div>
-      )}
+        {slots.length === 0 ? (
+          <p className="ad-panel-empty">Add an angle first. The client&rsquo;s photo sheet is built from them.</p>
+        ) : periods.length === 0 ? (
+          <p className="ad-panel-empty">Nothing uploaded yet. Sets appear here the moment the client submits a photo.</p>
+        ) : (
+          <div className="photo-gallery">
+            {periods.map((period) => {
+              const photos = slots.map((slot) => ({ slotId: slot.id, label: slot.label, src: photoFor(slot.id, period) }));
+              const uploadedCount = photos.filter((p) => p.src).length;
+              return (
+                <PhotoPeriodRow
+                  key={period}
+                  clientId={clientId}
+                  period={period}
+                  title={photoPeriodTitle(period, cadence)}
+                  subtitle={`${uploadedCount} of ${slots.length} photos`}
+                  photos={photos}
+                  note={getPhotoPeriodNote(clientId, period)}
+                />
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

@@ -36,11 +36,6 @@ export default function CalendarPanel({ month, day }: { month?: string; day?: st
           </Link>
         </div>
       </div>
-      <p className="subtitle" style={{ marginBottom: 20 }}>
-        Every meeting across all clients, plus your own blocks of time. Click a date to open it on the
-        right, then click an hour to add something. Overlapping times are flagged automatically so you never
-        double-book.
-      </p>
 
       {conflicts.length > 0 && (
         <div className="conflict-banner" style={{ marginBottom: 20 }}>

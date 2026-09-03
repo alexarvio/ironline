@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { savePhotoPeriodNoteAction } from "../lib/actions";
 import { ChevronDownIcon } from "../components/icons";
+import PhotoLightbox from "../components/PhotoLightbox";
 
 type Photo = { slotId: number; label: string; src: string | null };
 type Note = { shape: string; strengths: string; improvements: string; next_steps: string };
@@ -28,6 +29,8 @@ export default function PhotoPeriodRow({
   note: Note;
 }) {
   const [open, setOpen] = useState(false);
+  const [zoom, setZoom] = useState<Photo | null>(null);
+  const p2 = (s: string) => s;
 
   return (
     <div className="photo-period-row">
@@ -47,8 +50,11 @@ export default function PhotoPeriodRow({
             {photos.map((p) => (
               <div key={p.slotId} className="photo-thumb-card">
                 {p.src ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.src} alt={p.label} className="photo-thumb-img" />
+                  // Click to see it full size.
+                  <button type="button" className="photo-thumb-btn" onClick={() => setZoom(p)} title="View full size">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.src} alt={p.label} className="photo-thumb-img" />
+                  </button>
                 ) : (
                   <div className="photo-thumb-empty">Not uploaded</div>
                 )}
@@ -56,6 +62,7 @@ export default function PhotoPeriodRow({
               </div>
             ))}
           </div>
+          {zoom?.src && <PhotoLightbox src={zoom.src} caption={`${p2(title)} · ${zoom.label}`} onClose={() => setZoom(null)} />}
 
           <form action={savePhotoPeriodNoteAction} className="photo-note-form">
             <input type="hidden" name="clientId" value={clientId} />

@@ -3,6 +3,7 @@ import AdminSidebar from "./AdminSidebar";
 import SectionTabs, { TabSection } from "./SectionTabs";
 import NutritionPanel from "./NutritionPanel";
 import MeasurementsPanel from "./MeasurementsPanel";
+import ProgressPicturesPanel from "./ProgressPicturesPanel";
 import ClientOverviewPanel from "./ClientOverviewPanel";
 import FeedPanel from "./FeedPanel";
 import CalendarPanel from "./CalendarPanel";
@@ -130,6 +131,7 @@ function ClientDashboard({
     },
     { id: "nutrition", label: "Nutrition", content: <NutritionPanel clientId={clientId} /> },
     { id: "measurements", label: "Measurements", content: <MeasurementsPanel clientId={clientId} /> },
+    { id: "photos", label: "Progress pictures", content: <ProgressPicturesPanel clientId={clientId} /> },
   ];
 
 

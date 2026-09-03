@@ -24,11 +24,13 @@ export default function PhotoCadenceSelect({
   cadence: PhotoCadence;
 }) {
   return (
-    <form action={setPhotoCadenceAction} className="add-invoice-form" style={{ paddingTop: 0, borderTop: "none" }}>
+    <form action={setPhotoCadenceAction}>
       <input type="hidden" name="clientId" value={clientId} />
       <select
         name="cadence"
         defaultValue={cadence}
+        className="cid-select"
+        aria-label="How often a new photo set opens"
         onChange={(e) => e.currentTarget.form?.requestSubmit()}
       >
         {OPTIONS.map((c) => (
