@@ -233,19 +233,29 @@ export function ensureCoachFromEnv() {
  */
 export function resetCoachFromEnv() {
   const token = process.env.COACH_RESET_TOKEN?.trim();
+  if (!token) return;
+  // Diagnostics go to the deploy log so a lockout can be debugged from the
+  // Railway dashboard. Never the values themselves — lengths and outcomes only.
+  const log = (msg: string) => console.log(`[coach-reset ${token}] ${msg}`);
+
   const email = process.env.COACH_EMAIL?.trim().toLowerCase();
   const password = process.env.COACH_PASSWORD;
-  if (!token || !email || !password || password.length < 8) return;
+  if (!email) return log("skipped: COACH_EMAIL is empty");
+  if (!password || password.length < 8) {
+    return log(`skipped: COACH_PASSWORD is ${password?.length ?? 0} chars (needs 8+)`);
+  }
 
   const data = getData();
-  if (data.coach_reset_applied === token) return;
+  if (data.coach_reset_applied === token) return; // already done; stay quiet
 
   const existing = data.users.find((u) => u.email === email);
-  if (existing && existing.role !== "coach") return; // never hijack a client login
+  if (existing && existing.role !== "coach") return log("skipped: that email belongs to a client login");
   if (existing) {
     setPassword(existing.id, password, true);
+    log("applied: reset the existing coach's password (change forced at sign-in)");
   } else {
     createUser(email, password, "coach", null, true);
+    log(`applied: created a new coach login (store had ${data.users.filter((u) => u.role === "coach").length - 1} other coach account(s))`);
   }
   data.coach_reset_applied = token;
   persist();
