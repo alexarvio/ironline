@@ -35,7 +35,6 @@ import DemoVideoDialog from "../admin/DemoVideoDialog";
 import LoggedSetsGrid, { LoggedWeekRow } from "../admin/LoggedSetsGrid";
 import ProgramBuilderShell, { BuilderProgram, WeekCard } from "../admin/ProgramBuilderShell";
 import ProgramNameForm from "../admin/ProgramNameForm";
-import AutosaveNote from "../admin/AutosaveNote";
 import ProgramDeployControls from "../admin/ProgramDeployControls";
 import ColumnChipRow from "../admin/ColumnChipRow";
 import CopyWeekButton from "../admin/CopyWeekButton";
@@ -86,11 +85,6 @@ export default function ProgramBuilder({
   clientName?: string;
   weekLinkBase?: string;
 }) {
-  // Stamped on the server, so it changes exactly when a server action has run
-  // and revalidated this route — which is what lets the autosave note say
-  // "Saved" only once the save has actually landed.
-  const renderedAt = Date.now();
-
   const allPrograms = listPrograms(clientId);
   const deployedProgram = getDeployedProgram(clientId);
   const draftProgram = getDraftProgram(clientId);
@@ -530,7 +524,6 @@ export default function ProgramBuilder({
               are on the rail, and having two places to say it meant the number
               and the rail could disagree — "+ Add week" is the one way to make
               the programme longer. */}
-          {status === "draft" && <AutosaveNote renderedAt={renderedAt} />}
         </div>
       ),
       actionsSlot:
