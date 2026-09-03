@@ -12,6 +12,8 @@ export type WeekCard = {
   label: string;
   days: { dayOfWeek: number; state: "trained" | "missed" | "rest"; title: string }[];
   isLive: boolean;
+  /** True when the week is training history (live or past) and must stay. */
+  locked: boolean;
   meta: string;
 };
 
@@ -120,6 +122,8 @@ export default function ProgramBuilderShell({
           days: w.days,
           meta: w.meta,
           isLive: w.isLive,
+          // The only week left can't go either; delete the programme instead.
+          removable: !w.locked && program.weekCards.length > 1,
         }))}
         selectedWeek={activeWeek}
         nextWeekNumber={program.totalWeeks + 1}

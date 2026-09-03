@@ -511,6 +511,41 @@ export function updateProgramTotalWeeks(programId: number, requestedTotal: numbe
   persist();
 }
 
+// Removes one week (1-based index within the programme) and closes the gap:
+// every later week moves up one, so a six-week programme minus week 3 is a
+// five-week programme whose old week 4 is now week 3. The week's days, their
+// exercises, logged sets and custom values go with it. The last remaining
+// week can't be removed; delete the programme for that.
+export function removeProgramWeek(programId: number, weekIndex: number) {
+  const data = getData();
+  const program = data.training_programs.find((p) => p.id === programId);
+  if (!program) return;
+  if (program.total_weeks <= 1) return;
+  if (weekIndex < 1 || weekIndex > program.total_weeks) return;
+  const weekNumber = program.start_week + weekIndex - 1;
+  const lastWeekNumber = program.start_week + program.total_weeks - 1;
+
+  const dayIds = new Set(
+    data.program_days.filter((pd) => pd.client_id === program.client_id && pd.week_number === weekNumber).map((pd) => pd.id)
+  );
+  const assignmentIds = new Set(
+    data.workout_assignments.filter((wa) => dayIds.has(wa.program_day_id)).map((wa) => wa.id)
+  );
+  data.set_logs = data.set_logs.filter((sl) => !assignmentIds.has(sl.workout_assignment_id));
+  data.assignment_custom_values = data.assignment_custom_values.filter((v) => !assignmentIds.has(v.workout_assignment_id));
+  data.workout_assignments = data.workout_assignments.filter((wa) => !assignmentIds.has(wa.id));
+  data.program_days = data.program_days.filter((pd) => !dayIds.has(pd.id));
+
+  // Shift the weeks after it down by one so the programme stays contiguous.
+  data.program_days.forEach((pd) => {
+    if (pd.client_id === program.client_id && pd.week_number > weekNumber && pd.week_number <= lastWeekNumber) {
+      pd.week_number -= 1;
+    }
+  });
+  program.total_weeks -= 1;
+  persist();
+}
+
 export function removeProgram(programId: number) {
   const data = getData();
   const program = data.training_programs.find((p) => p.id === programId);

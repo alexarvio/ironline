@@ -8887,6 +8887,30 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 .ad-panel { padding: 16px 16px 24px; }
 
+/* Week rail: the remove control on a capsule's corner, shown on hover. */
+.pb-week-wrap { position: relative; display: flex; }
+.pb-week-wrap > .pb-week-capsule { flex: 1; }
+
+.pb-week-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.pb-week-wrap:hover .pb-week-remove,
+.pb-week-remove:focus-within { opacity: 1; }
+
+.pb-week-remove .row-icon-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.pb-week-remove .row-icon-btn svg { width: 11px; height: 11px; }
+
 /* Delete client: a labelled danger button at the foot of the overview panel. */
 .ad-panel-danger { padding-top: 6px; }
 

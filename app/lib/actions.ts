@@ -38,6 +38,7 @@ import {
   getReportTemplate,
   renameProgram,
   removeProgram,
+  removeProgramWeek,
   scheduleProgramDeploy,
   updateProgramTotalWeeks,
   listReportTemplateSections,
@@ -111,6 +112,7 @@ import {
   setAssignmentDemoUrl,
   setBuiltinColumnVisible,
   listPrograms,
+  getProgramCurrentWeekIndex,
   ensureWeekSkeleton,
   setNutritionDayTargets,
   setNutritionWater,
@@ -1330,4 +1332,23 @@ export async function deleteClientAction(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/client");
   redirect("/admin");
+}
+
+// Removes one week from a programme; later weeks move up. The confirm is in
+// the rail's dialog. Live and past weeks of a deployed programme are refused
+// here too, not just hidden in the UI, so a stale form can't delete history.
+export async function removeProgramWeekAction(formData: FormData) {
+  await requireCoach();
+  const clientId = Number(formData.get("clientId"));
+  const programId = Number(formData.get("programId"));
+  const week = Number(formData.get("week"));
+  const program = listPrograms(clientId).find((p) => p.id === programId);
+  if (!program || !week) return;
+  if (program.status === "deployed") {
+    const liveIndex = getProgramCurrentWeekIndex(program);
+    if (week <= liveIndex) return;
+  }
+  removeProgramWeek(programId, week);
+  revalidatePath("/admin");
+  revalidatePath("/client");
 }

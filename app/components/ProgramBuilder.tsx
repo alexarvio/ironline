@@ -474,6 +474,10 @@ export default function ProgramBuilder({
         label: programWeekLabel(program, weekNumber),
         days: railDays,
         isLive: liveWeekNumber === weekNumber,
+        // Weeks the client has already reached (or finished) can't be
+        // removed: that is training history. Draft programmes are all fair
+        // game; past programmes are archives and stay as they were.
+        locked: status !== "draft" && (liveWeekNumber == null || weekNumber <= liveWeekNumber),
         // A future week has nothing to report, so it states the plan rather
         // than claiming zero days trained.
         meta: isFuture
