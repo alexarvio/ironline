@@ -557,6 +557,21 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   padding: 6px 6px;
 }
 
+/* The last column (row delete / Add) stays pinned to the right edge while
+   the rest of the table scrolls sideways, so Add is always reachable without
+   scrolling. Opaque backgrounds so scrolled-under cells don't show through;
+   the hairline on the left marks where the pinned cell begins. */
+.exercise-table th:last-child,
+.exercise-table td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+}
+
+.exercise-table .add-exercise-row td:last-child { background: var(--paper); }
+
 .exercise-table input,
 .exercise-table select,
 .data-table input,
@@ -6802,7 +6817,9 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   border: none;
   border-radius: 6px;
   background: var(--good);
-  color: var(--fp-text);
+  /* --fp-text was removed with the dark client theme, so this fell back to
+     the inherited ink and read dark-on-green. White is the intent. */
+  color: #ffffff;
   padding: 0 10px;
   font: inherit;
   font-size: 11px;
