@@ -1207,7 +1207,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   text-transform: uppercase;
   color: var(--steel);
 }
-.cd-title { margin: 2px 0 0; font-family: var(--font-serif); font-size: 1.15rem; font-weight: 600; color: var(--ink); }
+.cd-title { margin: 2px 0 0; font-family: inherit; font-size: 1.15rem; font-weight: 800; letter-spacing: -0.01em; color: var(--ink); }
 .cd-sub { margin-top: 3px; font-size: 11px; color: var(--steel); }
 
 .cd-timeline { display: flex; flex-direction: column; }
@@ -1247,84 +1247,6 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 .cd-event { position: absolute; box-sizing: border-box; padding: 1px 3px 1px 0; pointer-events: auto; }
 .cd-event .cd-entry-wrap, .cd-event .cd-entry { height: 100%; }
 .cd-event .cd-entry { overflow: hidden; }
-
-.cd-entry { flex: 1; min-width: 0; }
-.cd-entry-delete { display: flex; align-items: center; opacity: 0; transition: opacity 120ms ease; }
-.cd-entry-wrap:hover .cd-entry-delete, .cd-entry-delete:focus-within { opacity: 1; }
-.cd-entry-delete .row-icon-btn { width: 22px; height: 22px; border-radius: 6px; }
-.cd-entry-delete .row-icon-btn svg { width: 11px; height: 11px; }
-
-/* Saved-state button in a panel head. It is a status, not an action:
-   "Saving…" while a form is in flight, "All saved" otherwise. */
-.pb-autosave-btn {
-  height: 28px;
-  padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--surface);
-  color: var(--steel);
-  font: inherit;
-  font-size: 11px;
-  font-weight: 800;
-  cursor: default;
-}
-.pb-autosave-btn.saved { color: var(--good); border-color: color-mix(in srgb, var(--good) 45%, transparent); }
-.pb-autosave-btn.saving { color: var(--accent); border-color: var(--accent); }
-
-/* ---- Calendar day panel: hour rows with entries and a + per hour ---- */
-.cd-head { margin-bottom: 12px; }
-.cd-kicker {
-  font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--steel);
-}
-.cd-title { margin: 2px 0 0; font-family: var(--font-serif); font-size: 1.15rem; font-weight: 600; color: var(--ink); }
-.cd-sub { margin-top: 3px; font-size: 11px; color: var(--steel); }
-
-.cd-timeline { display: flex; flex-direction: column; }
-.cd-outside { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
-
-.cd-hour {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  min-height: 34px;
-  border-top: 1px solid var(--border);
-  padding: 4px 0;
-}
-.cd-hour:last-child { border-bottom: 1px solid var(--border); }
-
-.cd-hour-label {
-  flex: 0 0 40px;
-  padding-top: 5px;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--steel);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.cd-hour-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; position: relative; }
-
-.cd-hour-add {
-  align-self: flex-start;
-  width: 100%;
-  min-height: 24px;
-  border: 1px dashed transparent;
-  border-radius: 6px;
-  background: transparent;
-  color: transparent;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  text-align: left;
-  padding: 0 8px;
-}
-.cd-hour:hover .cd-hour-add,
-.cd-hour-add:focus-visible { border-color: var(--border); color: var(--accent); background: var(--surface); }
 
 .cd-entry {
   display: flex;
@@ -6592,9 +6514,10 @@ a.cd-entry:hover { border-color: var(--accent); }
 }
 
 .plan-name-input {
-  font-family: var(--font-serif);
+  font-family: inherit;
   font-size: 1.05rem;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: -0.01em;
   color: var(--ink);
   border: 1px solid transparent;
   border-radius: 6px;
