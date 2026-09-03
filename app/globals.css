@@ -9277,23 +9277,28 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 .ad-activity { display: flex; flex-direction: column; }
 
+/* Text first, then the date and time on one line beneath it. The old side
+   column was 42px wide, so "Aug 28 · 5:51 AM" wrapped onto three lines. */
 .ad-activity-row {
   display: flex;
-  gap: 8px;
-  padding: 5px 0;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 0;
   border-bottom: 1px solid var(--border);
 }
 
 .ad-activity-when {
-  flex-shrink: 0;
-  width: 42px;
-  font-family: ui-monospace, Menlo, monospace;
+  order: 2;
   font-size: 10px;
   color: var(--steel);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .ad-activity-text {
+  order: 1;
   font-size: 11px;
+  line-height: 1.4;
   color: var(--ink);
   min-width: 0;
 }
