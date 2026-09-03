@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { saveClientCardAction } from "../lib/actions";
+import { renameClientAction, saveClientCardAction } from "../lib/actions";
 import type { OverviewPanel } from "../lib/queries";
 
 // Member info and Coaching info — the client card.
@@ -104,7 +104,19 @@ export default function ClientCardEditor({
           </button>
         </div>
         <div className="ad-fields">
-          <Field label="Name" name="name" value={card.name} required />
+          {/* The name saves on its own when the coach leaves the field. It is
+              the one thing on this card that shows elsewhere immediately (the
+              rail, the panel header), and a new client sat as "New client"
+              until Save was found. */}
+          <Field
+            label="Name"
+            name="name"
+            value={card.name}
+            required
+            onBlur={(v) => {
+              if (v.trim() && v.trim() !== card.name) startSaving(() => renameClientAction(clientId, v));
+            }}
+          />
           <Field label="Birthdate" name="birthdate" value={card.birthdate} type="date" />
           <Field label="Gender" name="gender" value={card.gender} placeholder="-" />
           <Field label="Height" name="height_cm" value={card.height_cm} type="number" suffix="cm" />
@@ -159,6 +171,7 @@ function Field({
   suffix,
   placeholder,
   required,
+  onBlur,
 }: {
   label: string;
   name: string;
@@ -168,6 +181,8 @@ function Field({
   suffix?: string;
   placeholder?: string;
   required?: boolean;
+  /** Called with the field's value when focus leaves it. */
+  onBlur?: (value: string) => void;
 }) {
   return (
     <label className="ad-field">
@@ -180,6 +195,7 @@ function Field({
           defaultValue={value}
           placeholder={placeholder}
           required={required}
+          onBlur={onBlur ? (e) => onBlur(e.currentTarget.value) : undefined}
         />
         {suffix && <em>{suffix}</em>}
       </span>

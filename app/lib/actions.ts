@@ -1352,3 +1352,15 @@ export async function removeProgramWeekAction(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/client");
 }
+
+// Name-only save, fired when the coach leaves the Name field on the client
+// card, so the rail and panel header update straight away even if the rest
+// of the card is never saved. Blank names are ignored, same as the full save.
+export async function renameClientAction(clientId: number, name: string) {
+  await requireCoach();
+  const trimmed = name.trim();
+  if (!Number.isFinite(clientId) || !trimmed) return;
+  renameClient(clientId, trimmed);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
