@@ -8939,8 +8939,20 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   text-align: right;
 }
 
+/* Unit suffix (cm, kg) sits INSIDE the input's right edge rather than beside
+   it, so a unit field keeps the same 148px box and right edge as every other
+   row instead of shrinking and drifting left to make room for the label. */
+.ad-field-input { position: relative; }
+
+.ad-field-input.has-suffix input,
+.ad-field-input:has(em) input { padding-right: 30px; }
+
 .ad-field-input em {
-  flex-shrink: 0;
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
   font-style: normal;
   font-size: 10.5px;
   color: var(--steel);

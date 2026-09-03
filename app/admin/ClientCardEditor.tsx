@@ -172,7 +172,7 @@ function Field({
   return (
     <label className="ad-field">
       <span className="ad-field-label">{label}</span>
-      <span className="ad-field-input">
+      <span className={suffix ? "ad-field-input has-suffix" : "ad-field-input"}>
         <input
           name={name}
           type={type}
