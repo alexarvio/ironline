@@ -97,15 +97,10 @@ export default function NutritionPanel({ clientId }: { clientId: number }) {
                       rowId={row.id}
                       field={field}
                       value={row[field]}
-                      placeholder={
-                        field === "name"
-                          ? "Creatine monohydrate"
-                          : field === "quantity"
-                          ? "5g"
-                          : field === "timing"
-                          ? "any time"
-                          : "-"
-                      }
+                      // No example text in empty cells: "Creatine monohydrate /
+                      // 5g / any time" read as values already filled in, so a
+                      // new row looked like it had defaulted to creatine.
+                      placeholder=""
                     />
                   </td>
                 ))}
