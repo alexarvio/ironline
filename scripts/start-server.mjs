@@ -60,6 +60,20 @@ if (process.env.SKIP_SEED !== "1" && !fs.existsSync(templatesMarker)) {
   console.log("[start-server] Metric templates already seeded, skipping.");
 }
 
+// Shared exercise library across the six picker groups. The script only adds
+// names that don't exist yet, so it can't duplicate or overwrite anything a
+// coach has added; the marker just saves the check on every boot. Bump the
+// marker's suffix when the library grows so the new entries get seeded.
+const exercisesMarker = path.join(DATA_DIR, ".seeded-exercises-v1");
+if (process.env.SKIP_SEED !== "1" && !fs.existsSync(exercisesMarker)) {
+  console.log("[start-server] Seeding exercise library...");
+  run("npx", ["tsx", "scripts/seed-exercise-library.ts"]);
+  fs.writeFileSync(exercisesMarker, new Date().toISOString());
+  console.log("[start-server] Exercise library seeded.");
+} else {
+  console.log("[start-server] Exercise library already seeded, skipping.");
+}
+
 const result = spawnSync("npx", ["next", "start"], { stdio: "inherit", shell: true });
 if (result.error) throw result.error;
 process.exit(result.status ?? 0);

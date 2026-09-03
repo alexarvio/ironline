@@ -176,23 +176,51 @@ export function listExercises(): Exercise[] {
 
 // Muscle-group catalog for the exercise picker — coaches browse by group
 // first, then pick (or add) an exercise, instead of scanning one long list.
+// Six broad groups, the way a coach thinks about a session, rather than one
+// per muscle. Shoulders sit under Arms. "Other" is a catch-all for anything
+// tagged outside these and is only shown when it has something in it.
 export const MUSCLE_GROUPS = [
   { slug: "back", label: "Back" },
   { slug: "chest", label: "Chest" },
-  { slug: "shoulders", label: "Shoulders" },
-  { slug: "biceps", label: "Biceps" },
-  { slug: "triceps", label: "Triceps" },
-  { slug: "quads", label: "Quads" },
-  { slug: "hamstrings", label: "Hamstrings" },
-  { slug: "calves", label: "Calves" },
+  { slug: "legs", label: "Legs" },
+  { slug: "arms", label: "Arms" },
   { slug: "abs", label: "Abs" },
-  { slug: "glutes", label: "Glutes" },
+  { slug: "cardio", label: "Cardio" },
   { slug: "other", label: "Other" },
 ] as const;
 
+// Older exercises were tagged per muscle ("quads,glutes", "lats"). Fold those
+// into the six groups so the existing library files itself correctly.
+const TAG_TO_GROUP: Record<string, string> = {
+  back: "back",
+  lats: "back",
+  traps: "back",
+  "rear delts": "back",
+  chest: "chest",
+  pecs: "chest",
+  legs: "legs",
+  quads: "legs",
+  hamstrings: "legs",
+  glutes: "legs",
+  calves: "legs",
+  adductors: "legs",
+  abductors: "legs",
+  arms: "arms",
+  biceps: "arms",
+  triceps: "arms",
+  forearms: "arms",
+  shoulders: "arms",
+  delts: "arms",
+  abs: "abs",
+  core: "abs",
+  obliques: "abs",
+  cardio: "cardio",
+  conditioning: "cardio",
+};
+
 function primaryGroup(exercise: Exercise): string {
-  const first = (exercise.muscle_tags ?? "").split(",")[0]?.trim().toLowerCase();
-  return MUSCLE_GROUPS.some((g) => g.slug === first) ? first : "other";
+  const first = (exercise.muscle_tags ?? "").split(",")[0]?.trim().toLowerCase() ?? "";
+  return TAG_TO_GROUP[first] ?? (MUSCLE_GROUPS.some((g) => g.slug === first) ? first : "other");
 }
 
 export function listExercisesByGroup(): Record<string, Exercise[]> {

@@ -340,7 +340,12 @@ export default function ProgramBuilder({
 
                 <tr className="add-exercise-row">
                   <td>
-                    <ExercisePicker formId={formId} groups={MUSCLE_GROUPS} exercisesByGroup={exercisesByGroup} />
+                    <ExercisePicker
+                      formId={formId}
+                      // "Other" only earns a tile when something is filed there.
+                      groups={MUSCLE_GROUPS.filter((g) => g.slug !== "other" || (exercisesByGroup.other?.length ?? 0) > 0)}
+                      exercisesByGroup={exercisesByGroup}
+                    />
                   </td>
                   {columns.map((col) => {
                     if (col.kind === "custom") {
