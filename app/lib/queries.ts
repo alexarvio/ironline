@@ -1411,6 +1411,7 @@ export function getLastActive(clientId: number): string | null {
 export type OverviewPanel = {
   name: string;
   initial: string;
+  avatarPath: string | null;
   clientSince: string | null;
   phase: string | null;
   /** value is the figure; suffix is the unit or qualifier beside it, set
@@ -1484,6 +1485,7 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
   return {
     name: client?.name ?? "Unknown",
     initial: (client?.name ?? "?").slice(0, 1).toUpperCase(),
+    avatarPath: client?.avatar_path ?? null,
     clientSince: profile.coaching_start_date ? `Client since ${fmtDate(profile.coaching_start_date)}` : null,
     phase: profile.goal_phase || null,
     snapshot: [
@@ -4598,5 +4600,43 @@ export function removeBrandingLogo() {
     }
   }
   row.logo_path = null;
+  persist();
+}
+
+// ---- Client avatar: set by the client, shown to the coach everywhere ------
+
+export function saveClientAvatar(clientId: number, buffer: Buffer, mimeType: string): string {
+  const client = getData().clients.find((c) => c.id === clientId);
+  if (!client) return "";
+  const ext = (mimeType.split("/")[1] || "jpg").replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "jpg";
+  const dir = path.join(DATA_DIR, "uploads", "avatars", String(clientId));
+  fs.mkdirSync(dir, { recursive: true });
+  const filename = `avatar.${ext}`;
+  fs.writeFileSync(path.join(dir, filename), buffer);
+  const previous = client.avatar_path?.split("?")[0].split("/").pop();
+  if (previous && previous !== filename) {
+    try {
+      fs.unlinkSync(path.join(dir, previous));
+    } catch {
+      /* already gone */
+    }
+  }
+  client.avatar_path = `/uploads/avatars/${clientId}/${filename}?v=${Date.now()}`;
+  persist();
+  return client.avatar_path;
+}
+
+export function removeClientAvatar(clientId: number) {
+  const client = getData().clients.find((c) => c.id === clientId);
+  if (!client) return;
+  const previous = client.avatar_path?.split("?")[0].split("/").pop();
+  if (previous) {
+    try {
+      fs.unlinkSync(path.join(DATA_DIR, "uploads", "avatars", String(clientId), previous));
+    } catch {
+      /* already gone */
+    }
+  }
+  client.avatar_path = null;
   persist();
 }

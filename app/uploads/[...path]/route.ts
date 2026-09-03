@@ -45,7 +45,7 @@ export async function GET(
   // The brand logo is public by nature: it is on the login page before
   // anyone has a session. Everything else is per-client and checked.
   const isBranding = kind === "branding";
-  if (!isBranding && kind !== "progress" && kind !== "chat" && kind !== "demos") {
+  if (!isBranding && kind !== "progress" && kind !== "chat" && kind !== "demos" && kind !== "avatars") {
     return new Response("Not found", { status: 404 });
   }
   if (!isBranding) {

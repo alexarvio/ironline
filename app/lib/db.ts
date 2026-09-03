@@ -11,7 +11,13 @@ import path from "path";
 export const DATA_DIR = process.env.DATA_DIR ?? process.cwd();
 const DB_PATH = path.join(DATA_DIR, "ironline.json");
 
-type Client = { id: number; name: string };
+type Client = {
+  id: number;
+  name: string;
+  // Set by the client from their Settings tab; shown wherever the coach sees
+  // them. Absent on rows written before this field existed.
+  avatar_path?: string | null;
+};
 type Exercise = { id: number; name: string; muscle_tags: string | null; video_url: string | null };
 type ProgramDay = {
   id: number;

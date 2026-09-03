@@ -122,6 +122,8 @@ import {
   removeSupplementRow,
   addMetricsFromLibrary,
   getNutritionPlan,
+  saveClientAvatar,
+  removeClientAvatar,
   saveBrandingLogo,
   removeBrandingLogo,
   saveCoachName,
@@ -1433,4 +1435,25 @@ export async function saveBrandingColorAction(formData: FormData) {
   await requireCoach();
   saveBrandingColor(String(formData.get("colorPrimary") || ""));
   revalidatePath("/", "layout");
+}
+
+// ---- Client avatar --------------------------------------------------------
+// The client sets it from Settings; a coach may also set or clear it.
+// requireClientAccess pins a client to their own id regardless of the form.
+
+export async function uploadClientAvatarAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const file = formData.get("file") as File | null;
+  if (!file || file.size === 0 || file.size > 6 * 1024 * 1024) return;
+  if (!file.type.startsWith("image/")) return;
+  saveClientAvatar(clientId, Buffer.from(await file.arrayBuffer()), file.type);
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+export async function removeClientAvatarAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  removeClientAvatar(clientId);
+  revalidatePath("/client");
+  revalidatePath("/admin");
 }

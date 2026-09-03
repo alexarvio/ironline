@@ -82,7 +82,12 @@ export default function AdminSidebar({ selectedId }: { selectedId: number | null
                 className={`ad-client-row${c.id === selectedId ? " active" : ""}`}
               >
                 <span className="ad-client-avatar" aria-hidden="true">
-                  {c.name.slice(0, 1).toUpperCase()}
+                  {c.avatar_path ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
+                    <img src={c.avatar_path} alt="" className="ad-avatar-img" />
+                  ) : (
+                    c.name.slice(0, 1).toUpperCase()
+                  )}
                 </span>
                 <span className="ad-client-name">{c.name}</span>
                 {/* One dot, with the reason in its title — at a glance the
