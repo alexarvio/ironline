@@ -151,7 +151,7 @@ export default function HomeHub({
       {photos?.configured && (
         <section className="home-dark-section">
           <span className="home-dark-section-title">Progress pictures</span>
-          <button type="button" className="home-checkin-row" onClick={() => openCheckIn?.("measurements")}>
+          <button type="button" className="home-checkin-row" onClick={() => openCheckIn?.("photos")}>
             <div className="home-checkin-body">
               {photos.due ? (
                 <>

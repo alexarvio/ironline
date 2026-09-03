@@ -3650,7 +3650,7 @@ export function getDueItems(clientId: number): DueItem[] {
       id: "photos",
       label: "Progress pictures",
       detail: `${uploadedThisPeriod}/${photoSlots.length} uploaded for this ${PHOTO_PERIOD_UNIT[cadence].toLowerCase()}`,
-      targetTab: "measurements",
+      targetTab: "photos",
     });
   }
   return items;
@@ -4542,17 +4542,47 @@ export function deleteReport(id: number) {
 
 // ---- Branding: the coach's logo, accent colour and business name ----------
 
-export type Branding = { logo_path: string | null; color_primary: string | null; coach_name: string | null };
+export type Branding = { logo_path: string | null; color_primary: string | null; coach_name: string | null; currency: string };
 
 export function getBranding(): Branding {
   const b = getData().branding;
-  return { logo_path: b?.logo_path ?? null, color_primary: b?.color_primary ?? null, coach_name: b?.coach_name ?? null };
+  return {
+    logo_path: b?.logo_path ?? null,
+    color_primary: b?.color_primary ?? null,
+    coach_name: b?.coach_name ?? null,
+    currency: b?.currency ?? "EUR",
+  };
 }
 
-function brandingRow(): Branding {
+function brandingRow() {
   const data = getData();
   if (!data.branding) data.branding = { logo_path: null, color_primary: null, coach_name: null };
   return data.branding;
+}
+
+export const CURRENCIES: { code: string; symbol: string; label: string }[] = [
+  { code: "EUR", symbol: "€", label: "Euro (€)" },
+  { code: "GBP", symbol: "£", label: "British pound (£)" },
+  { code: "USD", symbol: "$", label: "US dollar ($)" },
+  { code: "CHF", symbol: "CHF ", label: "Swiss franc (CHF)" },
+  { code: "SEK", symbol: "kr ", label: "Swedish krona (kr)" },
+  { code: "AUD", symbol: "A$", label: "Australian dollar (A$)" },
+];
+
+export function saveBrandingCurrency(code: string) {
+  if (!CURRENCIES.some((c) => c.code === code)) return;
+  brandingRow().currency = code;
+  persist();
+}
+
+// "€150 / month", "£40 / week", "$900 one-off"; empty when no price is set.
+export function formatPackagePrice(pkg: { price: string; period?: string | null }, currency: string): string {
+  const n = Number(pkg.price);
+  if (!pkg.price || !Number.isFinite(n)) return "";
+  const symbol = CURRENCIES.find((c) => c.code === currency)?.symbol ?? "";
+  const amount = Number.isInteger(n) ? String(n) : n.toFixed(2);
+  const period = pkg.period ?? "month";
+  return `${symbol}${amount}${period === "once" ? " one-off" : ` / ${period}`}`;
 }
 
 export function saveCoachName(name: string) {
@@ -4687,7 +4717,7 @@ export function getPhotoStatus(clientId: number): PhotoStatus {
 
 // ---- Coaching packages: what the coach sells --------------------------------
 
-export type CoachPackage = { id: number; name: string; price: string; includes: string; order_index: number };
+export type CoachPackage = { id: number; name: string; price: string; period?: "month" | "week" | "once"; includes: string; order_index: number };
 
 export function listPackages(): CoachPackage[] {
   return [...(getData().coach_packages ?? [])].sort((a, b) => a.order_index - b.order_index);
@@ -4696,17 +4726,25 @@ export function listPackages(): CoachPackage[] {
 export function addPackage(name: string): CoachPackage {
   const data = getData();
   if (!data.coach_packages) data.coach_packages = [];
-  const pkg: CoachPackage = { id: allocId("coach_packages"), name, price: "", includes: "", order_index: data.coach_packages.length };
+  const pkg: CoachPackage = { id: allocId("coach_packages"), name, price: "", period: "month", includes: "", order_index: data.coach_packages.length };
   data.coach_packages.push(pkg);
   persist();
   return pkg;
 }
 
-export function updatePackage(id: number, field: "name" | "price" | "includes", value: string) {
+export function updatePackage(id: number, field: "name" | "price" | "period" | "includes", value: string) {
   const pkg = (getData().coach_packages ?? []).find((k) => k.id === id);
   if (!pkg) return;
   if (field === "name" && !value.trim()) return;
-  pkg[field] = value;
+  if (field === "period") {
+    if (value === "month" || value === "week" || value === "once") pkg.period = value;
+  } else if (field === "price") {
+    // Digits and one decimal point only; anything else is dropped, not stored.
+    const cleaned = value.replace(/[^0-9.]/g, "");
+    pkg.price = cleaned && Number.isFinite(Number(cleaned)) ? cleaned : "";
+  } else {
+    pkg[field] = value;
+  }
   persist();
 }
 

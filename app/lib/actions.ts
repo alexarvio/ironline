@@ -131,6 +131,7 @@ import {
   removeBrandingLogo,
   saveCoachName,
   saveBrandingColor,
+  saveBrandingCurrency,
 } from "./queries";
 import { writeReportNarrative } from "./reportAi";
 import type { ReportSectionType } from "./reportSectionTypes";
@@ -1477,7 +1478,7 @@ export async function updatePackageAction(formData: FormData) {
   await requireCoach();
   const id = Number(formData.get("id"));
   const field = String(formData.get("field") || "");
-  if (field !== "name" && field !== "price" && field !== "includes") return;
+  if (field !== "name" && field !== "price" && field !== "period" && field !== "includes") return;
   updatePackage(id, field, String(formData.get("value") ?? ""));
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -1486,6 +1487,13 @@ export async function updatePackageAction(formData: FormData) {
 export async function removePackageAction(formData: FormData) {
   await requireCoach();
   removePackage(Number(formData.get("id")));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function saveCurrencyAction(formData: FormData) {
+  await requireCoach();
+  saveBrandingCurrency(String(formData.get("currency") || ""));
   revalidatePath("/admin");
   revalidatePath("/client");
 }

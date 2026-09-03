@@ -70,6 +70,7 @@ export default function CheckInScreen({
   coachNote,
   photoHistory,
   onBack,
+  photosOnly = false,
 }: {
   clientId: number;
   dateLabel: string;
@@ -90,6 +91,8 @@ export default function CheckInScreen({
   // that Photos is no longer its own view.
   photoHistory: ReactNode;
   onBack: () => void;
+  /** Progress pictures as their own screen: no tabs, no metric rows, no Save. */
+  photosOnly?: boolean;
 }) {
   const startIndex = Math.max(
     0,
@@ -124,6 +127,9 @@ export default function CheckInScreen({
   const savedSomething = metrics.some((m) => m.value.length > 0);
   const isSaved = !dirty && savedSomething;
   const canSave = dirty && filled.length > 0;
+  // Fully logged and saved: the rows clear and only the done card stays until
+  // the next period opens and the section is empty again.
+  const allDone = isSaved && complete && !photosOnly;
 
   // The confirmation banner shows after a save THIS visit lands — not on
   // merely opening a section that was saved earlier. `submitted` is armed
@@ -166,8 +172,9 @@ export default function CheckInScreen({
         </button>
         <div className="ci-header-titles">
           <div className="ci-kicker">{dateLabel}</div>
-          <div className="ci-title">Check-in</div>
+          <div className="ci-title">{photosOnly ? "Progress pictures" : "Check-in"}</div>
         </div>
+        {!photosOnly && (
         <div className="ci-progress">
           <div className={`ci-progress-count${complete ? " complete" : ""}`}>
             {filled.length}
@@ -175,9 +182,10 @@ export default function CheckInScreen({
           </div>
           <div className="ci-progress-label">logged</div>
         </div>
+        )}
       </header>
 
-      {sections.length > 1 && (
+      {sections.length > 1 && !photosOnly && (
         <div className="ci-tabs">
           {sections.map((s) => (
             <button
@@ -196,6 +204,7 @@ export default function CheckInScreen({
       <div className="ci-scroll">
       {/* One form per section, keyed so switching sections resets the
           uncontrolled bits (the file inputs) rather than carrying them over. */}
+      {!photosOnly && (
       <form
         key={active.id}
         id="ci-form"
@@ -222,6 +231,21 @@ export default function CheckInScreen({
           </div>
         )}
 
+        {allDone ? (
+          <div className="ci-saved-banner ci-all-done" role="status">
+            <span className="ci-saved-icon" aria-hidden="true">
+              ✓
+            </span>
+            <div className="ci-saved-text">
+              <div className="ci-saved-title">All done</div>
+              <div className="ci-saved-sub">Your coach has everything for this {active.id === "daily" ? "day" : active.id === "weekly" ? "week" : "check-in"}. This opens again when the next one is due.</div>
+            </div>
+            <button type="button" className="ci-saved-home" onClick={onBack}>
+              Done
+            </button>
+          </div>
+        ) : (
+          <>
         <p className="ci-intro">{active.intro}</p>
 
         {active.metrics.map((m) => {
@@ -274,11 +298,14 @@ export default function CheckInScreen({
             </div>
           );
         })}
+          </>
+        )}
       </form>
+      )}
 
-      {isMeasurements && (deltas.length > 0 || photoSlots.length > 0) && (
+      {(photosOnly || (isMeasurements && (deltas.length > 0 || photoSlots.length > 0))) && (
         <div className="ci-extras">
-          {deltas.length > 0 && (
+          {deltas.length > 0 && !photosOnly && (
             <section className="ci-section">
               <div className="ci-section-head">
                 <span className="ci-section-title">Since this phase started</span>
@@ -381,7 +408,7 @@ export default function CheckInScreen({
         </div>
       )}
 
-      {coachNote && (
+      {coachNote && !photosOnly && (
         <div className="ci-extras">
           <section className="ci-section">
             <span className="ci-section-title">Coach note</span>
@@ -405,6 +432,7 @@ export default function CheckInScreen({
 
       </div>
 
+      {!photosOnly && !allDone && (
       <div className="ci-footer">
         <div className="ci-footer-labels">
           <div className="ci-footer-kicker">{isSaved ? "Sent" : "Goes to your coach"}</div>
@@ -422,6 +450,7 @@ export default function CheckInScreen({
           {isSaved ? "Saved ✓" : "Save"}
         </button>
       </div>
+      )}
     </div>
   );
 }

@@ -10820,3 +10820,33 @@ button.ci-photo:disabled { cursor: default; }
 .pkg-price { font-weight: 700; font-size: 0.85rem; color: var(--fp-accent); white-space: nowrap; }
 .pkg-mine { display: inline-block; margin-top: 4px; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fp-accent); }
 .pkg-includes { margin: 8px 0 0; padding-left: 18px; font-size: 0.82rem; color: var(--fp-dim); line-height: 1.5; }
+
+/* No client panel on Feed / Settings: the grid drops the third column. */
+.ad-shell.no-panel { grid-template-columns: 216px minmax(0, 1fr); }
+
+/* Settings gets the width of the working column, not a narrow strip. */
+.br.br-wide { max-width: 1040px; }
+
+/* Package price: currency prefix, numeric field, billing period. */
+.pk-price-wrap { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+.pk-currency { font-size: 12px; font-weight: 800; color: var(--accent-ink); }
+.pk-price { flex: 0 0 96px; }
+.pk-price input { width: 96px; font-variant-numeric: tabular-nums; }
+.pk-price input::-webkit-outer-spin-button, .pk-price input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.pk-price input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+.pk-period select {
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--steel);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0 4px;
+}
+.pk-period select:hover, .pk-period select:focus { border-color: var(--border); background: var(--surface); outline: none; }
+.pk-includes textarea { min-height: 110px; }
+
+/* Check-in: the "all done" card when a section is fully saved. */
+.ci-all-done { margin-top: 6px; }

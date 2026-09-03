@@ -8,7 +8,7 @@ import { CheckInProvider, FocusRefProvider, NavigateProvider, NotificationsProvi
 
 export type AppTab = { id: string; label: string; icon: ReactNode; content: ReactNode; footer?: ReactNode };
 
-type PushView = "notifications" | "checkin" | null;
+type PushView = "notifications" | "checkin" | "photos" | null;
 
 // The active bottom tab lives in sessionStorage, not just React state. A full
 // page load — a form that posts before hydration finishes on a slow phone, a
@@ -75,6 +75,12 @@ export default function AppShell({
   // Which check-in section to land on, set by whichever due item opened it.
   const [checkInSection, setCheckInSection] = useState("daily");
   const openCheckIn = (section: string) => {
+    // Progress pictures get their own screen; everything else is a section
+    // of the check-in.
+    if (section === "photos") {
+      setPushView("photos");
+      return;
+    }
     setCheckInSection(section);
     setPushView("checkin");
   };
@@ -97,11 +103,12 @@ export default function AppShell({
     setNavResetKey((k) => k + 1);
   };
 
-  if (pushView === "checkin") {
+  if (pushView === "checkin" || pushView === "photos") {
     return (
       <div className="phone-frame">
         <div className="app-screen cn-screen">
           <CheckInScreen
+            photosOnly={pushView === "photos"}
             clientId={clientId}
             dateLabel={checkIn.dateLabel}
             today={checkIn.today}

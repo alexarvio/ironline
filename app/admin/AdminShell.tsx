@@ -57,7 +57,7 @@ export default function AdminShell({
   const collapsed = !!panel && !panelOpen;
 
   return (
-    <div className={`ad-shell${collapsed ? " panel-collapsed" : ""}`}>
+    <div className={`ad-shell${collapsed ? " panel-collapsed" : ""}${panel ? "" : " no-panel"}`}>
       <aside className="ad-sidebar">{sidebar}</aside>
       <main className="ad-main">{children}</main>
       {panel && (

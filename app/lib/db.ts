@@ -468,6 +468,8 @@ type Branding = {
   logo_path: string | null;
   color_primary: string | null;
   coach_name: string | null;
+  // ISO code for package prices, e.g. "EUR". Defaults to EUR when unset.
+  currency?: string | null;
 };
 
 // A coaching package the coach sells (e.g. "Training only", "Training +
@@ -475,7 +477,8 @@ type Branding = {
 type CoachPackage = {
   id: number;
   name: string;
-  price: string; // free text: "€150 / month", "£40 per week"
+  price: string; // a number as text; the currency lives on branding
+  period?: "month" | "week" | "once";
   includes: string; // one line per item
   order_index: number;
 };

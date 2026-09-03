@@ -13,6 +13,7 @@ import {
   getClientPackage,
   getClientPreferences,
   getBranding,
+  formatPackagePrice,
   getGraphedSeries,
   getPhotoStatus,
   listClientReports,
@@ -681,6 +682,7 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   const profile = getClientProfile(CLIENT_ID);
   const myPackage = getClientPackage(CLIENT_ID);
   const allPackages = listPackages();
+  const currency = getBranding().currency;
   const prefs = getClientPreferences(CLIENT_ID);
 
   const weeksInLabel = (() => {
@@ -765,7 +767,7 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
                 <div key={k.id} className={`pkg-row${mine ? " mine" : ""}`}>
                   <div className="pkg-top">
                     <span className="pkg-name">{k.name}</span>
-                    {k.price && <span className="pkg-price">{k.price}</span>}
+                    {formatPackagePrice(k, currency) && <span className="pkg-price">{formatPackagePrice(k, currency)}</span>}
                   </div>
                   {mine && <span className="pkg-mine">Your package</span>}
                   {k.includes && (

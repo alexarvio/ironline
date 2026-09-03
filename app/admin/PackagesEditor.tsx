@@ -5,12 +5,14 @@ import { createPortal } from "react-dom";
 import { addPackageAction, removePackageAction, updatePackageAction } from "../lib/actions";
 import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
 
-export type PackageRow = { id: number; name: string; price: string; includes: string };
+export type PackageRow = { id: number; name: string; price: string; period: string; includes: string };
 
-// The coach's packages as editable rows: name, price and what is included,
-// each field saving when you leave it. "+ Add package" asks for a name in a
-// dialog; the rest is filled in on the row.
-export default function PackagesEditor({ packages }: { packages: PackageRow[] }) {
+// The coach's packages as editable rows: name, a numeric price with the
+// currency in front and a per-month / per-week / one-off choice, and a
+// roomy box for what is included. Every field saves when you leave it.
+// "+ Add package" asks for a name in a dialog; the rest is filled in on
+// the row.
+export default function PackagesEditor({ packages, currencySymbol }: { packages: PackageRow[]; currencySymbol: string }) {
   const [adding, setAdding] = useState(false);
 
   return (
@@ -23,7 +25,13 @@ export default function PackagesEditor({ packages }: { packages: PackageRow[] })
             <div key={k.id} className="pk-row">
               <div className="pk-top">
                 <Cell id={k.id} field="name" value={k.name} className="pk-name" placeholder="Package name" />
-                <Cell id={k.id} field="price" value={k.price} className="pk-price" placeholder="e.g. €150 / month" />
+                <div className="pk-price-wrap">
+                  <span className="pk-currency" aria-hidden="true">
+                    {currencySymbol.trim()}
+                  </span>
+                  <Cell id={k.id} field="price" value={k.price} className="pk-price" placeholder="0" numeric />
+                  <PeriodSelect id={k.id} value={k.period} />
+                </div>
                 <span className="pk-delete">
                   <ConfirmDeleteButton
                     action={removePackageAction}
@@ -33,7 +41,14 @@ export default function PackagesEditor({ packages }: { packages: PackageRow[] })
                   />
                 </span>
               </div>
-              <Cell id={k.id} field="includes" value={k.includes} className="pk-includes" placeholder="What's included, one item per line" multiline />
+              <Cell
+                id={k.id}
+                field="includes"
+                value={k.includes}
+                className="pk-includes"
+                placeholder={"What's included, one item per line:\nWeekly programme\nFortnightly check-in call\nNutrition targets"}
+                multiline
+              />
             </div>
           ))}
         </div>
@@ -53,6 +68,7 @@ function Cell({
   className,
   placeholder,
   multiline,
+  numeric,
 }: {
   id: number;
   field: "name" | "price" | "includes";
@@ -60,6 +76,7 @@ function Cell({
   className: string;
   placeholder: string;
   multiline?: boolean;
+  numeric?: boolean;
 }) {
   const submitIfChanged = (el: HTMLInputElement | HTMLTextAreaElement) => {
     if (el.value !== value) el.form?.requestSubmit();
@@ -69,10 +86,37 @@ function Cell({
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="field" value={field} />
       {multiline ? (
-        <textarea name="value" defaultValue={value} placeholder={placeholder} rows={3} onBlur={(e) => submitIfChanged(e.currentTarget)} />
+        <textarea name="value" defaultValue={value} placeholder={placeholder} rows={5} onBlur={(e) => submitIfChanged(e.currentTarget)} />
+      ) : numeric ? (
+        // Digits only: type=number blocks letters, and the action strips
+        // anything else before storing.
+        <input
+          name="value"
+          type="number"
+          inputMode="decimal"
+          min={0}
+          step="0.01"
+          defaultValue={value}
+          placeholder={placeholder}
+          onBlur={(e) => submitIfChanged(e.currentTarget)}
+        />
       ) : (
         <input name="value" defaultValue={value} placeholder={placeholder} onBlur={(e) => submitIfChanged(e.currentTarget)} />
       )}
+    </form>
+  );
+}
+
+function PeriodSelect({ id, value }: { id: number; value: string }) {
+  return (
+    <form action={updatePackageAction} className="pk-cell pk-period">
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="field" value="period" />
+      <select name="value" defaultValue={value || "month"} aria-label="Billing period" onChange={(e) => e.currentTarget.form?.requestSubmit()}>
+        <option value="month">/ month</option>
+        <option value="week">/ week</option>
+        <option value="once">one-off</option>
+      </select>
     </form>
   );
 }
