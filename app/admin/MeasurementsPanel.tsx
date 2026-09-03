@@ -3,12 +3,16 @@ import {
   removeMetricDefinitionAction,
 } from "../lib/actions";
 import {
+  getClientProfile,
   getMetricHistory,
   listAllMetrics,
+  listGraphChoices,
   METRIC_GROUPS,
   METRIC_LIBRARY,
   metricGroup,
 } from "../lib/queries";
+import ClientGraphsPicker from "./ClientGraphsPicker";
+import CheckInDaySelect from "./CheckInDaySelect";
 import MetricLibrary, { LibraryPackView } from "./MetricLibrary";
 import MetricHistoryTable from "./MetricHistoryTable";
 import TrackerHistory from "./TrackerHistory";
@@ -55,7 +59,10 @@ export default function MeasurementsPanel({ clientId }: { clientId: number }) {
     <div className="ms">
       {/* ---- 1. What the client is asked to log ---- */}
       <section className="ms-section">
-        <h3 className="ad-microlabel ms-title">Check-in columns</h3>
+        <div className="ms-head">
+          <h3 className="ad-microlabel">Check-in columns</h3>
+          <CheckInDaySelect clientId={clientId} value={getClientProfile(clientId).check_in_day} />
+        </div>
         <MetricLibrary clientId={clientId} packs={packs} />
 
         {metrics.length === 0 ? (
@@ -113,7 +120,12 @@ export default function MeasurementsPanel({ clientId }: { clientId: number }) {
         />
       </section>
 
-      {/* ---- 3. Graph ---- */}
+      {/* ---- 3. What the client sees charted ---- */}
+      <section className="ms-section">
+        <ClientGraphsPicker choices={listGraphChoices(clientId)} />
+      </section>
+
+      {/* ---- 4. Graph (coach's own view) ---- */}
       <section className="ms-section">
         <h3 className="ad-microlabel">Trend</h3>
         <MetricGraphPanel

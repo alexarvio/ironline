@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { ReactNode, useState } from "react";
 import { BellIcon, ChevronLeftIcon } from "../components/icons";
 import CheckInScreen, { CheckInProps } from "./CheckInScreen";
@@ -110,7 +111,10 @@ export default function AppShell({
     <div className="phone-frame">
       <div className="app-screen">
         <header className="app-header dark">
-          <span className="app-header-brand">Ironline</span>
+          <span className="app-header-brand">
+            <Image src="/brand/logo.png" alt="" width={15} height={26} className="app-header-logo" priority />
+            Ironline
+          </span>
           <div className="app-header-actions">
             <button type="button" className="app-header-icon-btn" onClick={() => setPushView("notifications")} aria-label="Notifications">
               <BellIcon />

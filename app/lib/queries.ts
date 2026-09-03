@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { allocId, DATA_DIR, getData, persist } from "./db";
+import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist } from "./db";
 
 // "Today" (or any Date) as a local YYYY-MM-DD calendar-date string. This is
 // deliberately NOT `date.toISOString().slice(0, 10)` — toISOString always
@@ -2113,6 +2113,78 @@ export function getPinnedMetricsSummary(clientId: number): PinnedMetricSummary[]
   });
 }
 
+// ---- Client graphs: which of this client's figures are charted on their
+// Home screen. The coach picks up to PINNED_METRIC_LIMIT (6) across BOTH
+// tracker metrics and measurement fields (Weight lives in the latter), and
+// each pick is one slide of the client's trend carousel. "pinned" is the
+// stored flag; this layer turns it into one flat, ordered list so the admin
+// picker and the client page agree on what is graphed and in what order. ----
+
+export type GraphChoice = {
+  key: string; // "field-<id>" | "metric-<id>", unique across both tables
+  kind: "field" | "metric";
+  id: number;
+  name: string;
+  unit: string;
+  cadenceLabel: string;
+  pinned: boolean;
+  pointCount: number;
+};
+
+export function getMeasurementSeries(fieldId: number): { date: string; value: number }[] {
+  return getMeasurementValues([fieldId])
+    .filter((v) => v.value != null)
+    .sort((a, b) => (a.date < b.date ? -1 : 1))
+    .map((v) => ({ date: v.date, value: v.value as number }));
+}
+
+// Every figure the coach could graph for this client, measurements first
+// (Weight leads) then tracker metrics in their usual display order.
+export function listGraphChoices(clientId: number): GraphChoice[] {
+  const fields: GraphChoice[] = listMeasurementFields(clientId).map((f) => ({
+    key: `field-${f.id}`,
+    kind: "field",
+    id: f.id,
+    name: f.name,
+    unit: f.unit,
+    cadenceLabel: "Check-in",
+    pinned: !!f.pinned,
+    pointCount: getMeasurementSeries(f.id).length,
+  }));
+  const cadence: Record<string, string> = { daily: "Daily", weekly: "Weekly", monthly: "Monthly" };
+  const metrics: GraphChoice[] = listAllMetrics(clientId).map((m) => ({
+    key: `metric-${m.id}`,
+    kind: "metric",
+    id: m.id,
+    name: m.name,
+    unit: m.unit,
+    cadenceLabel: cadence[m.frequency] ?? m.frequency,
+    pinned: !!m.pinned,
+    pointCount: getMetricSeries(m.id).length,
+  }));
+  return [...fields, ...metrics];
+}
+
+// The graphed set with its data, in carousel order. A client whose coach has
+// never picked anything still gets their Weight chart, which is what the
+// Home screen always showed before the picker existed.
+export function getGraphedSeries(
+  clientId: number
+): { key: string; name: string; unit: string; series: { date: string; value: number }[] }[] {
+  const choices = listGraphChoices(clientId);
+  let picked = choices.filter((c) => c.pinned);
+  if (picked.length === 0) {
+    const weight = choices.find((c) => c.kind === "field" && c.name.toLowerCase().includes("weight"));
+    if (weight) picked = [weight];
+  }
+  return picked.map((c) => ({
+    key: c.key,
+    name: c.name,
+    unit: c.unit,
+    series: c.kind === "field" ? getMeasurementSeries(c.id) : getMetricSeries(c.id),
+  }));
+}
+
 // Full logged history for one metric, oldest first, ready to hand straight
 // to <LineChart> — used by the per-metric trend view in the Tracker tabs.
 /**
@@ -3286,6 +3358,29 @@ const PHOTO_PERIOD_UNIT: Record<PhotoCadence, string> = {
 export type DueItem = { id: string; label: string; detail: string; targetTab: string };
 
 
+// The weekday the coach and client agreed on for the weekly check-in, read
+// from the profile's free-text check_in_day ("Sunday", "sun", …). null when
+// unset or unrecognised, which means "open from Monday" — the behaviour
+// before the day was honoured. Monday = 0 … Sunday = 6 to match weekStart.
+export function weeklyCheckInWeekday(clientId: number): number | null {
+  const raw = getClientProfile(clientId).check_in_day?.trim().toLowerCase();
+  if (!raw) return null;
+  const idx = DAY_NAMES_FULL.findIndex((d) => d.toLowerCase().startsWith(raw.slice(0, 3)));
+  return idx >= 0 ? idx : null;
+}
+
+// Whether the weekly check-in window is open today: on or after the agreed
+// day within the current Mon–Sun week. Storage is unchanged (weekly entries
+// are still keyed by the week's Monday), so only WHEN the reminder appears
+// moves — a Sunday check-in shows up on Sunday, not all week.
+export function weeklyCheckInOpen(clientId: number, dateStr = localDateStr()): boolean {
+  const weekday = weeklyCheckInWeekday(clientId);
+  if (weekday == null) return true;
+  const jsDay = new Date(`${dateStr}T00:00:00`).getDay(); // 0 = Sunday
+  const monBased = (jsDay + 6) % 7;
+  return monBased >= weekday;
+}
+
 export function getDueItems(clientId: number): DueItem[] {
   const today = localDateStr();
   const currentWeekStart = weekStart(today);
@@ -3313,7 +3408,7 @@ export function getDueItems(clientId: number): DueItem[] {
       targetTab: "daily",
     });
   }
-  if (weeklyDefs.length > 0 && !weeklyLoggedThisWeek) {
+  if (weeklyDefs.length > 0 && !weeklyLoggedThisWeek && weeklyCheckInOpen(clientId, today)) {
     items.push({
       id: "weekly",
       label: "Weekly check-in",
@@ -3473,7 +3568,9 @@ export function getCheckInStatus(clientId: number): CheckInStatus {
   const dailyDue =
     dailyDefs.length > 0 && listMetricPeriods(dailyDefs.map((d) => d.id), 1)[0] !== today;
   const weeklyDue =
-    weeklyDefs.length > 0 && listMetricPeriods(weeklyDefs.map((d) => d.id), 1)[0] !== thisWeek;
+    weeklyDefs.length > 0 &&
+    listMetricPeriods(weeklyDefs.map((d) => d.id), 1)[0] !== thisWeek &&
+    weeklyCheckInOpen(clientId);
   const measurementsDue = fields.length > 0 && !listMeasurementDates(clientId).includes(today);
 
   const dueTypes: ("daily" | "weekly" | "measurements")[] = [];

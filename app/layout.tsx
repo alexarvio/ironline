@@ -1,10 +1,28 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { applyDueClientReminders, applyDueProgramDeployments } from "./lib/queries";
 
 export const metadata: Metadata = {
   title: "Ironline",
   description: "Coach + client core loop prototype",
+  // "Add to Home Screen" support: the manifest (app/manifest.ts) carries the
+  // name, icons and standalone display for Android/Chrome; iOS ignores most
+  // of the manifest and reads these apple-specific tags instead.
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Ironline",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#2f5d8f",
+  width: "device-width",
+  initialScale: 1,
+  // The client app is a phone UI with its own type sizes; pinch-zoom stays
+  // enabled (maximumScale unset) for accessibility.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

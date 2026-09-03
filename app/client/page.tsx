@@ -11,9 +11,7 @@ import {
   getCheckInSections,
   getCheckInStatus,
   getClientPreferences,
-  getMetricSeries,
-  getPinnedMetricsSummary,
-  getWeightSeries,
+  getGraphedSeries,
   listClientReports,
   listPublishedWeekNumbers,
   getNotifications,
@@ -292,10 +290,21 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
     };
   };
 
-  const trendMetrics: TrendMetric[] = [
-    trendMetric("weight", "Weight", "kg", getWeightSeries(CLIENT_ID, 3650), weightGoalIsDown(profile?.goal_phase)),
-    ...getPinnedMetricsSummary(CLIENT_ID).map(({ def }) => trendMetric(`metric-${def.id}`, def.name, def.unit, getMetricSeries(def.id))),
-  ].filter((m): m is TrendMetric => m !== null);
+  // The coach chooses which figures are graphed (up to six, from the
+  // Measurements tab in the admin); getGraphedSeries falls back to Weight
+  // when nothing has been chosen. Direction-of-good is only known for
+  // weight, read from the goal phase.
+  const trendMetrics: TrendMetric[] = getGraphedSeries(CLIENT_ID)
+    .map((g) =>
+      trendMetric(
+        g.key,
+        g.name,
+        g.unit,
+        g.series,
+        g.name.toLowerCase().includes("weight") ? weightGoalIsDown(profile?.goal_phase) : undefined
+      )
+    )
+    .filter((m): m is TrendMetric => m !== null);
 
   const dateLabel = new Date(`${today}T00:00:00`).toLocaleDateString("en-US", {
     weekday: "long",

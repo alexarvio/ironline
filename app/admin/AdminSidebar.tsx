@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { createClientAction } from "../lib/actions";
 import { clientAttention, listClients } from "../lib/queries";
@@ -14,7 +15,9 @@ export default function AdminSidebar({ selectedId }: { selectedId: number | null
   return (
     <>
       <div className="ad-brand">
-        <span className="ad-brand-mark">FP</span>
+        <span className="ad-brand-mark">
+          <Image src="/brand/logo.png" alt="" width={14} height={24} priority />
+        </span>
         <div className="ad-brand-text">
           <div className="ad-brand-name">Full Potential</div>
           <div className="ad-brand-sub">Coach workstation</div>

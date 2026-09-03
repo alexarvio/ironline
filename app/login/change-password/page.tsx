@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { changePasswordAction } from "../../lib/auth-actions";
 import { getSessionUser } from "../../lib/auth";
@@ -21,7 +22,10 @@ export default async function ChangePasswordPage({
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <div className="auth-brand">Ironline</div>
+        <div className="auth-brand">
+          <Image src="/brand/logo.png" alt="" width={19} height={32} priority />
+          Ironline
+        </div>
         <h1 className="auth-title">Choose a password</h1>
         <p className="auth-note auth-note-top">
           You&rsquo;re signed in with a temporary password. Pick your own to continue.

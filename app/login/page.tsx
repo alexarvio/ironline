@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { loginAction } from "../lib/auth-actions";
 import { ensureCoachFromEnv, getSessionUser, resetCoachFromEnv } from "../lib/auth";
@@ -26,7 +27,10 @@ export default async function LoginPage({
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <div className="auth-brand">Ironline</div>
+        <div className="auth-brand">
+          <Image src="/brand/logo.png" alt="" width={19} height={32} priority />
+          Ironline
+        </div>
         <h1 className="auth-title">Sign in</h1>
 
         {error && <p className="auth-error">Wrong email or password.</p>}

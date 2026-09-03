@@ -66,6 +66,7 @@ import {
   removeMetricTemplateItem,
   removePhotoSlot,
   removeSkinfoldEntry,
+  getClientProfile,
   saveClientProfile,
   patchClientProfile,
   renameClient,
@@ -827,6 +828,18 @@ export async function saveNutritionPlanAction(formData: FormData) {
     actionLabel: "View nutrition",
   });
 
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// One-field save from the Measurements tab: the weekday the weekly check-in
+// opens. Same profile column the full card edit writes, so no second source.
+export async function setCheckInDayAction(formData: FormData) {
+  await requireCoach();
+  const clientId = Number(formData.get("clientId"));
+  const day = String(formData.get("check_in_day") ?? "").trim();
+  if (!clientId) return;
+  saveClientProfile({ ...getClientProfile(clientId), check_in_day: day || null });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
