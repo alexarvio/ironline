@@ -8887,6 +8887,28 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 .ad-panel { padding: 16px 16px 24px; }
 
+/* Delete client: a labelled danger button at the foot of the overview panel. */
+.ad-panel-danger { padding-top: 6px; }
+
+.ad-danger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--accent-plate);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--accent-plate);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ad-danger-btn svg { width: 13px; height: 13px; }
+.ad-danger-btn:hover { background: var(--accent-plate); color: #fff; }
+
 /* App access inside the overview panel: the box loses its own frame (the
    panel is already the raised surface) and the forms stack full-width,
    since the column is 296px and the inline row grammar came from a wider

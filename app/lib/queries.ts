@@ -152,6 +152,57 @@ export function createClient(name: string) {
   return client;
 }
 
+// Deletes a client and everything that hangs off them: programmes, logged
+// sets, check-ins, measurements, photos, invoices, meetings, notes, reports,
+// notifications, preferences and their login. Coach-level things (the
+// exercise library, template packs, report templates) are untouched.
+// Uploaded photo/video files stay on disk; nothing references them after this.
+export function removeClient(clientId: number) {
+  const data = getData();
+  if (!data.clients.some((c) => c.id === clientId)) return;
+
+  const dayIds = new Set(data.program_days.filter((pd) => pd.client_id === clientId).map((pd) => pd.id));
+  const assignmentIds = new Set(
+    data.workout_assignments.filter((wa) => dayIds.has(wa.program_day_id)).map((wa) => wa.id)
+  );
+  const metricIds = new Set(data.metric_definitions.filter((m) => m.client_id === clientId).map((m) => m.id));
+  const fieldIds = new Set(data.measurement_fields.filter((f) => f.client_id === clientId).map((f) => f.id));
+  const slotIds = new Set(data.photo_slots.filter((s) => s.client_id === clientId).map((s) => s.id));
+  const meetingIds = new Set(data.meetings.filter((m) => m.client_id === clientId).map((m) => m.id));
+
+  data.set_logs = data.set_logs.filter((sl) => !assignmentIds.has(sl.workout_assignment_id));
+  data.assignment_custom_values = data.assignment_custom_values.filter((v) => !assignmentIds.has(v.workout_assignment_id));
+  data.workout_assignments = data.workout_assignments.filter((wa) => !assignmentIds.has(wa.id));
+  data.program_days = data.program_days.filter((pd) => !dayIds.has(pd.id));
+  data.training_programs = data.training_programs.filter((p) => p.client_id !== clientId);
+  data.training_columns = data.training_columns.filter((c) => c.client_id !== clientId);
+
+  data.metric_entries = data.metric_entries.filter((e) => !metricIds.has(e.metric_definition_id));
+  data.metric_definitions = data.metric_definitions.filter((m) => m.client_id !== clientId);
+  data.measurement_values = data.measurement_values.filter((v) => !fieldIds.has(v.field_id) && v.client_id !== clientId);
+  data.measurement_fields = data.measurement_fields.filter((f) => f.client_id !== clientId);
+  data.skinfold_entries = data.skinfold_entries.filter((s) => s.client_id !== clientId);
+
+  data.photo_uploads = data.photo_uploads.filter((u) => !slotIds.has(u.slot_id));
+  data.photo_slots = data.photo_slots.filter((s) => s.client_id !== clientId);
+  data.photo_settings = data.photo_settings.filter((s) => s.client_id !== clientId);
+  data.photo_period_notes = data.photo_period_notes.filter((n) => n.client_id !== clientId);
+
+  data.meeting_notes = data.meeting_notes.filter((n) => !meetingIds.has(n.meeting_id));
+  data.meetings = data.meetings.filter((m) => m.client_id !== clientId);
+  data.invoices = data.invoices.filter((i) => i.client_id !== clientId);
+  data.nutrition_plans = data.nutrition_plans.filter((p) => p.client_id !== clientId);
+  data.client_profiles = data.client_profiles.filter((p) => p.client_id !== clientId);
+  data.client_goals = data.client_goals.filter((g) => g.client_id !== clientId);
+  data.client_preferences = data.client_preferences.filter((p) => p.client_id !== clientId);
+  data.client_reports = data.client_reports.filter((r) => r.client_id !== clientId);
+  data.chat_messages = data.chat_messages.filter((m) => m.client_id !== clientId);
+  data.coach_activity = data.coach_activity.filter((a) => a.client_id !== clientId);
+  data.users = data.users.filter((u) => !(u.role === "client" && u.client_id === clientId));
+  data.clients = data.clients.filter((c) => c.id !== clientId);
+  persist();
+}
+
 export function renameClient(id: number, name: string) {
   const data = getData();
   const client = data.clients.find((c) => c.id === id);

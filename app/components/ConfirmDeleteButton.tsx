@@ -19,6 +19,7 @@ export default function ConfirmDeleteButton({
   hiddenFields,
   label,
   description,
+  text,
 }: {
   action: (formData: FormData) => void;
   hiddenFields: Record<string, string | number>;
@@ -27,6 +28,10 @@ export default function ConfirmDeleteButton({
   label: string;
   /** Optional extra line, for anything that takes more with it than itself. */
   description?: string;
+  /** When set, renders a labelled danger button with this text instead of
+      the bare trash icon. For deletes big enough to deserve words, like a
+      whole client. */
+  text?: string;
 }) {
   const [confirming, setConfirming] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -34,14 +39,21 @@ export default function ConfirmDeleteButton({
 
   return (
     <>
-      <button
-        type="button"
-        className="row-icon-btn row-icon-danger"
-        aria-label={label}
-        onClick={() => setConfirming(true)}
-      >
-        <TrashIcon />
-      </button>
+      {text ? (
+        <button type="button" className="ad-danger-btn" onClick={() => setConfirming(true)}>
+          <TrashIcon />
+          <span>{text}</span>
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="row-icon-btn row-icon-danger"
+          aria-label={label}
+          onClick={() => setConfirming(true)}
+        >
+          <TrashIcon />
+        </button>
+      )}
 
       {confirming && mounted &&
         createPortal(

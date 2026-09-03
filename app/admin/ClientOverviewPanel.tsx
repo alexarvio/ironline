@@ -1,5 +1,6 @@
 import type { OverviewPanel } from "../lib/queries";
-import { addClientGoalAction, removeClientGoalAction } from "../lib/actions";
+import { addClientGoalAction, deleteClientAction, removeClientGoalAction } from "../lib/actions";
+import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
 import ClientCardEditor from "./ClientCardEditor";
 import ClientLoginPanel from "./ClientLoginPanel";
 
@@ -114,6 +115,18 @@ export default function ClientOverviewPanel({
       <section className="ad-panel-section">
         <h3 className="ad-panel-heading">App access</h3>
         <ClientLoginPanel clientId={clientId} name={panel.name} ok={loginOk} error={loginError} />
+      </section>
+
+      {/* 8. Delete, at the very bottom and behind a confirm dialog: the one
+             action here that cannot be undone. */}
+      <section className="ad-panel-section ad-panel-danger">
+        <ConfirmDeleteButton
+          action={deleteClientAction}
+          hiddenFields={{ clientId }}
+          label={`Delete ${panel.name}`}
+          description="Removes this client, their login, programmes, logged sets, check-ins, measurements, photos, invoices, meetings, notes and reports."
+          text="Delete client"
+        />
       </section>
 
       {/* 7. Recent activity */}

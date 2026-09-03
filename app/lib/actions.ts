@@ -54,6 +54,7 @@ import {
   sendReport,
   updateReportSummary,
   removeAssignment,
+  removeClient,
   removeClientGoal,
   removeCustomTrainingColumn,
   removeMeasurementCheckIn,
@@ -1317,4 +1318,16 @@ export async function markReportOpenedAction(id: number) {
   if (owner == null || !(await canAccessClient(owner))) return;
   markReportOpened(id);
   revalidatePath("/client");
+}
+
+// Deletes the client and everything attached to them. The confirm lives in
+// the UI (ConfirmDeleteButton); this trusts that the coach meant it.
+export async function deleteClientAction(formData: FormData) {
+  await requireCoach();
+  const clientId = Number(formData.get("clientId"));
+  if (!clientId) return;
+  removeClient(clientId);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  redirect("/admin");
 }
