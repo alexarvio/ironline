@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { cancelProgramScheduleAction, deployProgramAction, scheduleProgramDeployAction } from "../lib/actions";
 
 // Lives in the Draft program card's header: deploy the whole program right
@@ -17,6 +18,8 @@ export default function ProgramDeployControls({
   scheduledAt: string | null;
 }) {
   const [scheduling, setScheduling] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   if (scheduledAt) {
     const when = new Date(scheduledAt);
@@ -45,23 +48,56 @@ export default function ProgramDeployControls({
           Deploy now
         </button>
       </form>
-      {scheduling ? (
-        <form action={scheduleProgramDeployAction} className="plan-schedule-form">
+      <button type="button" className="btn secondary btn-sm" onClick={() => setScheduling(true)}>
+        Schedule for later…
+      </button>
+      {/* The date and time live in a dialog, not inline: expanding here grew
+          the editing bar and shoved the week rail down under the pointer. */}
+      {scheduling &&
+        mounted &&
+        createPortal(<ScheduleDialog programId={programId} onClose={() => setScheduling(false)} />, document.body)}
+    </div>
+  );
+}
+
+function ScheduleDialog({ programId, onClose }: { programId: number; onClose: () => void }) {
+  const dateRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    dateRef.current?.focus();
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="pb-modal-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="pb-modal pb-modal-sm" role="dialog" aria-modal="true" aria-label="Schedule this programme">
+        <h2 className="pb-confirm-title">Schedule this programme</h2>
+        <p className="pb-confirm-body">
+          It goes live for the client at the date and time you pick. Until then it stays a draft you can keep
+          editing.
+        </p>
+        <form action={scheduleProgramDeployAction} className="plan-schedule-form plan-schedule-dialog">
           <input type="hidden" name="programId" value={programId} />
-          <input type="date" name="date" required />
-          <input type="time" name="time" defaultValue="09:00" required />
-          <button className="btn secondary btn-sm" type="submit">
-            Schedule
-          </button>
-          <button type="button" className="btn secondary btn-sm" onClick={() => setScheduling(false)}>
-            Cancel
-          </button>
+          <label className="plan-schedule-field">
+            <span>Date</span>
+            <input ref={dateRef} type="date" name="date" required />
+          </label>
+          <label className="plan-schedule-field">
+            <span>Time</span>
+            <input type="time" name="time" defaultValue="09:00" required />
+          </label>
+          <div className="pb-modal-foot">
+            <button type="button" className="ad-btn-secondary" onClick={onClose}>
+              Cancel
+            </button>
+            <button type="submit" className="ad-btn-primary">
+              Schedule
+            </button>
+          </div>
         </form>
-      ) : (
-        <button type="button" className="btn secondary btn-sm" onClick={() => setScheduling(true)}>
-          Schedule for later…
-        </button>
-      )}
+      </div>
     </div>
   );
 }
