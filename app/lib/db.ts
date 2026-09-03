@@ -489,6 +489,9 @@ type Data = {
   // resetCoachFromEnv in lib/auth.ts), so a reset token left sitting in the
   // environment only ever fires once.
   coach_reset_applied?: string;
+  // Same idea for WORKSPACE_RESET_TOKEN (see resetWorkspaceFromEnv): the last
+  // token value that wiped the client data, so it only ever fires once.
+  workspace_reset_applied?: string;
   _seq: Record<string, number>;
 };
 

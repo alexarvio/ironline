@@ -261,6 +261,56 @@ export function resetCoachFromEnv() {
   persist();
 }
 
+/**
+ * Blank canvas without shell access. Setting WORKSPACE_RESET_TOKEN to a value
+ * not seen before makes the next login-page render delete every client and
+ * everything that hangs off a client: programmes, logs, check-ins, photos,
+ * invoices, meetings, notes, reports, notifications, client logins. What
+ * survives is coach-level setup: coach accounts, the exercise library, the
+ * metric template packs and report templates. The token is recorded so a
+ * variable left in place never fires twice. Deliberately not exposed in the
+ * admin UI: a one-click "delete everything" is not something a coach should
+ * be able to hit by accident.
+ */
+export function resetWorkspaceFromEnv() {
+  const token = process.env.WORKSPACE_RESET_TOKEN?.trim();
+  if (!token) return;
+  const data = getData();
+  if (data.workspace_reset_applied === token) return;
+
+  const before = data.clients.length;
+  data.users = data.users.filter((u) => u.role === "coach");
+  data.clients = [];
+  data.program_days = [];
+  data.workout_assignments = [];
+  data.set_logs = [];
+  data.invoices = [];
+  data.nutrition_plans = [];
+  data.measurement_fields = [];
+  data.measurement_values = [];
+  data.skinfold_entries = [];
+  data.metric_definitions = [];
+  data.metric_entries = [];
+  data.photo_slots = [];
+  data.photo_uploads = [];
+  data.photo_settings = [];
+  data.photo_period_notes = [];
+  data.client_profiles = [];
+  data.client_goals = [];
+  data.meetings = [];
+  data.meeting_notes = [];
+  data.training_columns = [];
+  data.assignment_custom_values = [];
+  data.chat_messages = [];
+  data.coach_activity = [];
+  data.client_reports = [];
+  data.training_programs = [];
+  data.client_preferences = [];
+  data.workspace_reset_applied = token;
+  persist();
+  console.log(`[workspace-reset ${token}] applied: removed ${before} client(s) and their data; kept coach logins, exercises, templates`);
+}
+
 // ---- User records -------------------------------------------------------
 
 export function findUserByEmail(email: string) {

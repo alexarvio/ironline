@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { loginAction } from "../lib/auth-actions";
-import { ensureCoachFromEnv, getSessionUser, resetCoachFromEnv } from "../lib/auth";
+import { ensureCoachFromEnv, getSessionUser, resetCoachFromEnv, resetWorkspaceFromEnv } from "../lib/auth";
 
 export default async function LoginPage({
   searchParams,
@@ -14,6 +14,8 @@ export default async function LoginPage({
   ensureCoachFromEnv();
   // Lockout recovery: fires once per new COACH_RESET_TOKEN value, see auth.ts.
   resetCoachFromEnv();
+  // Blank-canvas wipe: fires once per new WORKSPACE_RESET_TOKEN value, see auth.ts.
+  resetWorkspaceFromEnv();
 
   // Already signed in? Send them where they belong rather than showing a
   // login form they'd have no reason to fill in.
