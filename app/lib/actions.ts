@@ -90,6 +90,7 @@ import {
   setMeasurementValue,
   setMeetingStatus,
   setMetricEntry,
+  setMetricCadence,
   saveChatMedia,
   sendChatMessage,
   setPhotoCadence,
@@ -1361,6 +1362,17 @@ export async function renameClientAction(clientId: number, name: string) {
   const trimmed = name.trim();
   if (!Number.isFinite(clientId) || !trimmed) return;
   renameClient(clientId, trimmed);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// Daily / Weekly / Monthly toggle on a check-in column row.
+export async function setMetricCadenceAction(formData: FormData) {
+  await requireCoach();
+  const id = Number(formData.get("id"));
+  const raw = String(formData.get("frequency") ?? "");
+  if (raw !== "daily" && raw !== "weekly" && raw !== "monthly") return;
+  setMetricCadence(id, raw);
   revalidatePath("/admin");
   revalidatePath("/client");
 }

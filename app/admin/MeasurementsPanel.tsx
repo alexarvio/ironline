@@ -15,6 +15,7 @@ import {
 import ClientGraphsPicker from "./ClientGraphsPicker";
 import CheckInDaySelect from "./CheckInDaySelect";
 import AutosaveNote from "./AutosaveNote";
+import MetricCadenceToggle from "./MetricCadenceToggle";
 import MetricLibrary, { LibraryPackView } from "./MetricLibrary";
 import MetricHistoryTable from "./MetricHistoryTable";
 import TrackerHistory from "./TrackerHistory";
@@ -34,18 +35,26 @@ const CADENCE_LABEL: Record<string, string> = {
 // the two tables below.
 export default function MeasurementsPanel({ clientId }: { clientId: number }) {
   const metrics = listAllMetrics(clientId);
-  const existing = new Set(metrics.map((m) => `${m.frequency}|${m.name.toLowerCase()}`));
+  // A column is identified by its name alone now that cadence is chosen on
+  // the row rather than at add time, so "Sleep" counts as added whichever
+  // rhythm it is on.
+  const existing = new Set(metrics.map((m) => m.name.toLowerCase()));
 
-  const packs: LibraryPackView[] = METRIC_LIBRARY.map((p) => ({
-    id: p.id,
-    label: p.label,
-    group: p.group,
-    cadence: p.cadence,
-    items: p.items.map((i) => ({
-      ...i,
-      already: existing.has(`${p.cadence}|${i.name.toLowerCase()}`),
-    })),
-  }));
+  // The library's packs are defined per cadence (a daily Body pack and a
+  // weekly one, say). Merged by label here so the coach sees one group per
+  // theme, with any same-named item appearing once.
+  const packs: LibraryPackView[] = [];
+  METRIC_LIBRARY.forEach((p) => {
+    let pack = packs.find((x) => x.label === p.label);
+    if (!pack) {
+      pack = { id: p.id, label: p.label, group: p.group, cadence: p.cadence, items: [] };
+      packs.push(pack);
+    }
+    p.items.forEach((i) => {
+      if (pack!.items.some((x) => x.name.toLowerCase() === i.name.toLowerCase())) return;
+      pack!.items.push({ ...i, already: existing.has(i.name.toLowerCase()) });
+    });
+  });
 
   // Daily and weekly readings share a table; monthly measurements get their
   // own. Readings on different rhythms can't be averaged into one grid, and
@@ -111,7 +120,7 @@ export default function MeasurementsPanel({ clientId }: { clientId: number }) {
                   <span className="ms-group-pill" style={{ background: g.tint }}>
                     {g.label}
                   </span>
-                  <span className="ms-cadence-pill">{CADENCE_LABEL[m.frequency] ?? m.frequency}</span>
+                  <MetricCadenceToggle metricId={m.id} value={m.frequency} name={m.name} />
 
                   {/* No per-row visibility toggle. Being on this list IS the
                       deployment: a column here is a column the client is asked

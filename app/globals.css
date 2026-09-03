@@ -10029,6 +10029,40 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   text-align: center;
 }
 
+/* Daily / Weekly / Monthly segmented toggle on a column row. Fixed width so
+   the segments line up down the list like the pills they replace. */
+.ms-cadence-toggle {
+  flex-shrink: 0;
+  display: inline-flex;
+  width: 190px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  padding: 2px;
+  gap: 2px;
+}
+
+.ms-cadence-toggle form { flex: 1; display: flex; }
+
+.ms-cadence-opt {
+  flex: 1;
+  height: 20px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--steel);
+  font: inherit;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.ms-cadence-opt:hover { color: var(--ink); background: var(--paper-raised); }
+.ms-cadence-opt.active { background: var(--accent); color: var(--accent-fg); cursor: default; }
+.ms-cadence-opt:disabled { opacity: 1; }
+
 .ms-metric-action { flex-shrink: 0; display: flex; }
 
 .ms-del {

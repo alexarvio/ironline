@@ -2239,6 +2239,17 @@ export function updateMetricDefinition(id: number, category: string, name: strin
   }
 }
 
+// Change how often a column is asked for. Existing entries keep their period
+// keys (a date for daily, the week's Monday for weekly), so history is never
+// touched; only what the client is asked from now on changes.
+export function setMetricCadence(id: number, frequency: MetricCadence) {
+  const data = getData();
+  const def = data.metric_definitions.find((m) => m.id === id);
+  if (!def || def.frequency === frequency) return;
+  def.frequency = frequency;
+  persist();
+}
+
 export function removeMetricDefinition(id: number) {
   const data = getData();
   data.metric_definitions = data.metric_definitions.filter((m) => m.id !== id);

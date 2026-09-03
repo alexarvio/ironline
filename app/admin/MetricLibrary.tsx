@@ -20,7 +20,6 @@ export type LibraryPackView = {
 export default function MetricLibrary({ clientId, packs }: { clientId: number; packs: LibraryPackView[] }) {
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<Record<string, boolean>>({});
-  const [cadence, setCadence] = useState<"daily" | "weekly" | "monthly">("daily");
   const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,7 +41,8 @@ export default function MetricLibrary({ clientId, packs }: { clientId: number; p
   const selected = packs.flatMap((p) =>
     p.items
       .filter((i) => !i.already && picked[key(p.id, i.name)])
-      .map((i) => ({ name: i.name, unit: i.unit, group: p.group, cadence: p.cadence }))
+      // Everything is added daily; the row toggle changes it afterwards.
+      .map((i) => ({ name: i.name, unit: i.unit, group: p.group, cadence: "daily" as const }))
   );
 
   const setPack = (pack: LibraryPackView, on: boolean) =>
@@ -61,7 +61,10 @@ export default function MetricLibrary({ clientId, packs }: { clientId: number; p
         {/* Manually added metrics land in "Other" — there's no group picker
             here because choosing one is the library's job. */}
         <input type="hidden" name="category" value="other" />
-        <input type="hidden" name="frequency" value={cadence} />
+        {/* Every column starts daily; the Daily / Weekly / Monthly toggle on
+            its row changes that afterwards. Deciding it here as well was a
+            second place for the same choice. */}
+        <input type="hidden" name="frequency" value="daily" />
 
         <div className={`ms-namefield${open ? " open" : ""}`}>
           <input name="name" type="text" placeholder="Column name, or pick from the library" aria-label="Column name" />
@@ -77,21 +80,6 @@ export default function MetricLibrary({ clientId, packs }: { clientId: number; p
         </div>
 
         <input name="unit" type="text" placeholder="Unit (e.g. kg)" aria-label="Unit" className="ms-unitfield" />
-
-        <div className="ms-logged" role="group" aria-label="Logged how often">
-          <span className="ms-logged-label">Logged</span>
-          {(["daily", "weekly", "monthly"] as const).map((c) => (
-            <button
-              key={c}
-              type="button"
-              className={`ms-logged-btn${cadence === c ? " on" : ""}`}
-              onClick={() => setCadence(c)}
-              aria-pressed={cadence === c}
-            >
-              {c[0].toUpperCase() + c.slice(1)}
-            </button>
-          ))}
-        </div>
 
         <button type="submit" className="ad-btn-primary">
           Add column
@@ -124,7 +112,6 @@ export default function MetricLibrary({ clientId, packs }: { clientId: number; p
                 <section key={pack.id} className="ml-group">
                   <div className="ml-group-head">
                     <span className="ml-group-name">{pack.label}</span>
-                    <span className="ml-cadence">{pack.cadence}</span>
                     <span className="ml-rule" />
                     <span className="ml-group-actions">
                       <button type="button" onClick={() => setPack(pack, true)} disabled={available.length === 0}>
