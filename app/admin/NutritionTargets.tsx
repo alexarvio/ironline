@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { saveNutritionTargetsAction } from "../lib/actions";
+import AutosaveNote from "./AutosaveNote";
 
 type Macros = { protein: number | null; carbs: number | null; fats: number | null };
 
@@ -24,10 +25,14 @@ export default function NutritionTargets({
   training,
   rest,
   waterL,
+  renderedAt,
 }: {
   clientId: number;
   training: Macros;
   rest: Macros;
+  /** Server render stamp; lets the note beside Save say "Saved" only once the
+      action has landed. */
+  renderedAt: number;
   waterL: number | null;
 }) {
   const [day, setDay] = useState<"training" | "rest">("training");
@@ -132,6 +137,8 @@ export default function NutritionTargets({
       </div>
 
       <div className="nt-card-foot">
+        {/* Confirmation right where the coach is looking: the button itself. */}
+        <AutosaveNote renderedAt={renderedAt} savedSuffix="· targets live in the client app" />
         <button type="submit" className="ad-btn-primary">
           Save targets
         </button>

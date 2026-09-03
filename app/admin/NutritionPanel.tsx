@@ -3,9 +3,10 @@ import {
   removeSupplementRowAction,
   saveCoachNutritionNoteAction,
 } from "../lib/actions";
-import { getNutritionGoalsSummary, getNutritionPlan } from "../lib/queries";
+import { getClient, getNutritionGoalsSummary, getNutritionPlan } from "../lib/queries";
 import NutritionTargets from "./NutritionTargets";
 import SupplementCell from "./SupplementCell";
+import AutosaveNote from "./AutosaveNote";
 
 // The daily targets the client sees on their Nutrition screen, the note that
 // explains them, and the supplement sheet.
@@ -32,15 +33,36 @@ export default function NutritionPanel({ clientId }: { clientId: number }) {
     fats: derived.restFats || null,
   };
   const rows = plan.supplement_rows ?? [];
+  const clientName = getClient(clientId)?.name ?? "the client";
+  // Server-stamped per render; the note flips to "Saved" only once an action
+  // (Save targets, a supplement cell, the note) has actually run. Same
+  // status bar as the Measurements tab, for the same reason: everything on
+  // this tab is live for the client the moment it saves, and the coach
+  // could not tell.
+  // eslint-disable-next-line react-hooks/purity -- a server component render is the intended clock here
+  const renderedAt = Date.now();
 
   return (
     <div className="nt">
+      <div className="ms-topbar">
+        <span className="ms-topbar-live">
+          <span className="ms-live-dot" aria-hidden="true" />
+          Live in {clientName}&rsquo;s app
+        </span>
+        <AutosaveNote
+          renderedAt={renderedAt}
+          idleText="Targets, note and supplements reach the client as soon as they save."
+          savedSuffix="· live in the client app"
+        />
+      </div>
+
       <div className="nt-top">
         <NutritionTargets
           clientId={clientId}
           training={training}
           rest={rest}
           waterL={plan.water_l ?? null}
+          renderedAt={renderedAt}
         />
 
         <form action={saveCoachNutritionNoteAction} className="nt-note-card">
