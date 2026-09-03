@@ -41,6 +41,32 @@ export default function WeekRail({
 }) {
   const [addOpen, setAddOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const railRef = useRef<HTMLDivElement>(null);
+
+  // When a week is added the rail grows past the right edge and the new
+  // capsule is off screen, so the coach loses count. On growth, scroll the
+  // rail to its end and select the new week so what was just added is what
+  // is being looked at. Tracks the count so a re-render from anything else
+  // (a set logged, a rename) leaves the scroll position alone.
+  const prevCount = useRef(weeks.length);
+  useEffect(() => {
+    if (weeks.length > prevCount.current) {
+      const last = weeks[weeks.length - 1];
+      onSelect(last.weekNumber);
+      setAddOpen(false);
+      const rail = railRef.current;
+      if (rail) {
+        // Now, and again a tick later once the new capsule has its width
+        // (a timeout, not requestAnimationFrame, which never fires while the
+        // tab is in the background).
+        rail.scrollLeft = rail.scrollWidth;
+        setTimeout(() => {
+          rail.scrollLeft = rail.scrollWidth;
+        }, 60);
+      }
+    }
+    prevCount.current = weeks.length;
+  }, [weeks, onSelect]);
 
   // A popover, not an expansion: the rail must never reflow while the coach
   // is aiming at it.
@@ -60,7 +86,7 @@ export default function WeekRail({
 
   return (
     <div className="pb-rail-wrap" ref={wrapRef}>
-      <div className="pb-rail">
+      <div className="pb-rail" ref={railRef}>
         {weeks.map((w) => (
           // Wrapper so the remove control can sit on the capsule's corner
           // without nesting a button inside a button.
