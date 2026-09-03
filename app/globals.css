@@ -557,6 +557,20 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   padding: 6px 6px;
 }
 
+/* "Also add to the remaining weeks" under the exercise picker on the add row. */
+.pb-apply-weeks {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 10.5px;
+  color: var(--steel);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pb-apply-weeks input { margin: 0; accent-color: var(--accent); }
+
 /* The last column (row delete / Add) stays pinned to the right edge while
    the rest of the table scrolls sideways, so Add is always reachable without
    scrolling. Opaque backgrounds so scrolled-under cells don't show through;

@@ -13,6 +13,7 @@ import {
   addCustomTrainingColumn,
   addExercise,
   addExerciseToDay,
+  addExerciseToRemainingWeeks,
   addInvoice,
   addMeasurementField,
   addMeeting,
@@ -139,6 +140,11 @@ export async function addExerciseAction(formData: FormData) {
   const notes = notesRaw || null;
 
   addExerciseToDay(programDayId, exerciseId, sets, reps, targetWeight, rpe, tempo, notes);
+  // "Also add to the remaining weeks": same prescription, same weekday,
+  // every later week of this programme. Opt-in per add, never remembered.
+  if (formData.get("applyToRemainingWeeks") === "1") {
+    addExerciseToRemainingWeeks(programDayId, exerciseId, sets, reps, targetWeight, rpe, tempo, notes);
+  }
   revalidatePath("/client");
   revalidatePath("/admin");
 }

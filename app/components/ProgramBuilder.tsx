@@ -118,6 +118,12 @@ export default function ProgramBuilder({
       const markedRest = day.is_rest === true && assignments.length === 0;
       const isRest = assignments.length === 0;
       const formId = `add-exercise-${day.id}`;
+      // How many weeks of this day's programme come after it, for the
+      // "also add to the remaining weeks" option on the add row.
+      const dayProgram = allPrograms.find(
+        (p) => day.week_number >= p.start_week && day.week_number < p.start_week + p.total_weeks
+      );
+      const remainingWeeks = dayProgram ? dayProgram.start_week + dayProgram.total_weeks - 1 - day.week_number : 0;
       const setsLoggedThisWeek = assignments.reduce((sum, a) => {
         const wg = getLogsForAssignmentByWeek(a.id).find((g) => g.weekStart === currentWeek);
         return sum + (wg ? wg.logs.length : 0);
@@ -346,6 +352,17 @@ export default function ProgramBuilder({
                       groups={MUSCLE_GROUPS.filter((g) => g.slug !== "other" || (exercisesByGroup.other?.length ?? 0) > 0)}
                       exercisesByGroup={exercisesByGroup}
                     />
+                    {/* Mid-programme addition: tick to put the same exercise on
+                        this weekday in every later week too. Only offered when
+                        there are later weeks to fill. */}
+                    {remainingWeeks > 0 && (
+                      <label className="pb-apply-weeks">
+                        <input type="checkbox" name="applyToRemainingWeeks" value="1" form={formId} />
+                        <span>
+                          Also add to the {remainingWeeks} remaining week{remainingWeeks === 1 ? "" : "s"}
+                        </span>
+                      </label>
+                    )}
                   </td>
                   {columns.map((col) => {
                     if (col.kind === "custom") {

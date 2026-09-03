@@ -622,6 +622,54 @@ export function copyProgramWeek(clientId: number, fromWeek: number, toWeek: numb
   persist();
 }
 
+// The programme a given week belongs to, if any: the one whose week span
+// covers it. Programmes don't overlap for one client, so at most one matches.
+export function getProgramForWeek(clientId: number, week: number): TrainingProgram | null {
+  return (
+    getData().training_programs.find(
+      (p) => p.client_id === clientId && week >= p.start_week && week < p.start_week + p.total_weeks
+    ) ?? null
+  );
+}
+
+// Adds the same prescription to the same weekday in every later week of the
+// day's programme. Weeks that don't have their seven days yet get them;
+// a week that already has this exercise on that day is left alone, so the
+// coach can't double up by ticking the box twice. Returns how many weeks
+// were touched.
+export function addExerciseToRemainingWeeks(
+  programDayId: number,
+  exerciseId: number,
+  sets: number,
+  reps: string,
+  targetWeight: number | null,
+  rpeTarget: number | null = null,
+  tempo: string | null = null,
+  notes: string | null = null
+): number {
+  const data = getData();
+  const day = data.program_days.find((pd) => pd.id === programDayId);
+  if (!day) return 0;
+  const program = getProgramForWeek(day.client_id, day.week_number);
+  if (!program) return 0;
+  const lastWeek = program.start_week + program.total_weeks - 1;
+  let touched = 0;
+  for (let week = day.week_number + 1; week <= lastWeek; week++) {
+    ensureWeekSkeleton(day.client_id, week);
+    const target = getData().program_days.find(
+      (pd) => pd.client_id === day.client_id && pd.week_number === week && pd.day_of_week === day.day_of_week
+    );
+    if (!target) continue;
+    const already = getData().workout_assignments.some(
+      (wa) => wa.program_day_id === target.id && wa.exercise_id === exerciseId
+    );
+    if (already) continue;
+    addExerciseToDay(target.id, exerciseId, sets, reps, targetWeight, rpeTarget, tempo, notes);
+    touched += 1;
+  }
+  return touched;
+}
+
 export function addExerciseToDay(
   programDayId: number,
   exerciseId: number,
