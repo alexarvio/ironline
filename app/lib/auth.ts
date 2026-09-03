@@ -250,11 +250,15 @@ export function resetCoachFromEnv() {
 
   const existing = data.users.find((u) => u.email === email);
   if (existing && existing.role !== "coach") return log("skipped: that email belongs to a client login");
+  // No forced change: the whole point of this reset is that the value in
+  // Railway IS the password afterwards, and stays so until the coach changes
+  // it on purpose. Forcing a new one at sign-in made the variable stale
+  // within a minute and the coach locked out again a day later.
   if (existing) {
-    setPassword(existing.id, password, true);
-    log("applied: reset the existing coach's password (change forced at sign-in)");
+    setPassword(existing.id, password, false);
+    log("applied: reset the existing coach's password to COACH_PASSWORD (no forced change)");
   } else {
-    createUser(email, password, "coach", null, true);
+    createUser(email, password, "coach", null, false);
     log(`applied: created a new coach login (store had ${data.users.filter((u) => u.role === "coach").length - 1} other coach account(s))`);
   }
   data.coach_reset_applied = token;
