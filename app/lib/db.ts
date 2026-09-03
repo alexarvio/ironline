@@ -535,7 +535,20 @@ function load(): Data {
   try {
     const parsed = JSON.parse(fs.readFileSync(DB_PATH, "utf-8")) as Partial<Data>;
     // Fill in any fields added since this file was last written.
-    return { ...emptyData(), ...parsed };
+    const data: Data = { ...emptyData(), ...parsed };
+    // One-time tidy: until Sept 2026 every client was auto-seeded with Weight
+    // and Waist measurement fields on first open. Rows that never received a
+    // value are pure leftovers of that, and made a brand-new client's graph
+    // picker list two figures nobody chose. Drop them; anything with data
+    // stays. Safe to run on every load — it only ever removes empty rows.
+    const used = new Set(data.measurement_values.map((v) => v.field_id));
+    const seededNames = new Set(["weight", "waist"]);
+    const before = data.measurement_fields.length;
+    data.measurement_fields = data.measurement_fields.filter(
+      (f) => used.has(f.id) || !seededNames.has(f.name.trim().toLowerCase())
+    );
+    if (data.measurement_fields.length !== before) save(data);
+    return data;
   } catch {
     return emptyData();
   }

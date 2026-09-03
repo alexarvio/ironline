@@ -9821,6 +9821,39 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 .ms-del:hover { color: var(--accent-plate); }
 
+/* ---- Measurements tab status bar: "live for the client" + save state ---- */
+.ms-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.ms-topbar-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.ms-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--good);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 18%, transparent);
+}
+
+.ms-topbar .pb-autosave { text-align: right; }
+
 /* ---- Weekly check-in day, in the Check-in columns header ---- */
 .cid { display: flex; align-items: center; gap: 7px; }
 

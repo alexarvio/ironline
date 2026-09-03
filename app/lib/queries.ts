@@ -1574,33 +1574,31 @@ export type SkinfoldEntry = {
 
 export const SKINFOLD_SITES = ["Suprailiac", "Umbilical", "Thigh"];
 
-const DEFAULT_MEASUREMENT_FIELDS = [
-  { name: "Weight", unit: "kg" },
-  { name: "Waist", unit: "cm" },
-];
-
-// Auto-seeds the default Weight/Waist columns the first time a client's
-// Measurements tab is opened, so existing clients get a sensible starting
-// point without a migration step.
+// Measurement fields are the legacy check-in columns (Weight/Waist). They
+// used to be auto-seeded for every client on first open, which meant every
+// new client came with two figures the coach never chose and could not
+// remove. New clients now start empty and get Weight, Waist and the rest
+// from the metric library like every other column; clients who already had
+// the seeded fields keep them and their history.
 export function listMeasurementFields(clientId: number): MeasurementFieldDef[] {
-  const data = getData();
-  const existing = data.measurement_fields.filter((f) => f.client_id === clientId);
-  if (existing.length === 0) {
-    DEFAULT_MEASUREMENT_FIELDS.forEach((f, i) => {
-      data.measurement_fields.push({
-        id: allocId("measurement_fields"),
-        client_id: clientId,
-        name: f.name,
-        unit: f.unit,
-        order_index: i,
-      });
-    });
-    persist();
-    return getData()
-      .measurement_fields.filter((f) => f.client_id === clientId)
-      .sort((a, b) => a.order_index - b.order_index);
-  }
-  return existing.sort((a, b) => a.order_index - b.order_index);
+  return getData()
+    .measurement_fields.filter((f) => f.client_id === clientId)
+    .sort((a, b) => a.order_index - b.order_index);
+}
+
+// Where this client's weight lives: the legacy Weight measurement field if
+// they have one, otherwise a metric-library "Weight" column (daily first,
+// then weekly, then monthly). Everything that needs "the client's weight" —
+// the Home chart, the snapshot's current weight, the graph fallback — reads
+// through here so the two storage shapes never disagree.
+export function getWeightSeriesAll(clientId: number): { date: string; value: number }[] {
+  const field = listMeasurementFields(clientId).find((f) => f.name.toLowerCase().includes("weight"));
+  if (field) return getMeasurementSeries(field.id);
+  const rank: Record<string, number> = { daily: 0, weekly: 1, monthly: 2 };
+  const def = getData()
+    .metric_definitions.filter((m) => m.client_id === clientId && m.name.toLowerCase().includes("weight"))
+    .sort((a, b) => (rank[a.frequency] ?? 9) - (rank[b.frequency] ?? 9))[0];
+  return def ? getMetricSeries(def.id) : [];
 }
 
 export function addMeasurementField(clientId: number, name: string, unit: string) {
@@ -2166,15 +2164,15 @@ export function listGraphChoices(clientId: number): GraphChoice[] {
 }
 
 // The graphed set with its data, in carousel order. A client whose coach has
-// never picked anything still gets their Weight chart, which is what the
-// Home screen always showed before the picker existed.
+// never picked anything still gets a Weight chart if they track weight at
+// all, which is what the Home screen always showed before the picker existed.
 export function getGraphedSeries(
   clientId: number
 ): { key: string; name: string; unit: string; series: { date: string; value: number }[] }[] {
   const choices = listGraphChoices(clientId);
   let picked = choices.filter((c) => c.pinned);
   if (picked.length === 0) {
-    const weight = choices.find((c) => c.kind === "field" && c.name.toLowerCase().includes("weight"));
+    const weight = choices.find((c) => c.name.toLowerCase().includes("weight"));
     if (weight) picked = [weight];
   }
   return picked.map((c) => ({
@@ -2801,17 +2799,9 @@ export function listLoggedExercisesForClient(clientId: number): { id: number; na
 // same "find the weight column by name" approach as getLatestWeight, since
 // coaches can rename/remove columns and there's no fixed schema to rely on.
 export function getWeightSeries(clientId: number, days: number) {
-  const fields = listMeasurementFields(clientId);
-  const weightField = fields.find((f) => f.name.toLowerCase().includes("weight"));
-  if (!weightField) return [];
-
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
-
-  return getMeasurementValues([weightField.id])
-    .filter((v) => v.value != null && new Date(v.date) >= cutoff)
-    .sort((a, b) => (a.date < b.date ? -1 : 1))
-    .map((v) => ({ date: v.date, value: v.value as number }));
+  return getWeightSeriesAll(clientId).filter((p) => new Date(p.date) >= cutoff);
 }
 
 export type ClientProfile = {
@@ -2896,12 +2886,7 @@ export function getTimeToGoal(profile: ClientProfile): string | null {
 // The client's most recent logged weight from Measurements, so "current
 // weight" on the Start Page always matches what they've actually checked in.
 export function getLatestWeight(clientId: number): number | null {
-  const fields = listMeasurementFields(clientId);
-  const weightField = fields.find((f) => f.name.toLowerCase().includes("weight"));
-  if (!weightField) return null;
-  const values = getMeasurementValues([weightField.id])
-    .filter((v) => v.value != null)
-    .sort((a, b) => (a.date < b.date ? -1 : 1));
+  const values = getWeightSeriesAll(clientId);
   const latest = values.length > 0 ? values[values.length - 1].value : null;
   // Round away float noise (e.g. 71.2 - 0.4 === 70.79999999999999) so the UI
   // never shows a raw binary-floating-point artifact.

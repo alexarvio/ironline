@@ -3,6 +3,7 @@ import {
   removeMetricDefinitionAction,
 } from "../lib/actions";
 import {
+  getClient,
   getClientProfile,
   getMetricHistory,
   listAllMetrics,
@@ -13,6 +14,7 @@ import {
 } from "../lib/queries";
 import ClientGraphsPicker from "./ClientGraphsPicker";
 import CheckInDaySelect from "./CheckInDaySelect";
+import AutosaveNote from "./AutosaveNote";
 import MetricLibrary, { LibraryPackView } from "./MetricLibrary";
 import MetricHistoryTable from "./MetricHistoryTable";
 import TrackerHistory from "./TrackerHistory";
@@ -55,8 +57,32 @@ export default function MeasurementsPanel({ clientId }: { clientId: number }) {
 
   const graphable = metrics.filter((m) => m.frequency !== "monthly" || true);
 
+  const clientName = getClient(clientId)?.name ?? "the client";
+  // Server-stamped on each render; AutosaveNote flips to "Saved" only when
+  // this changes, i.e. after an action has run. Same pattern as ProgramBuilder.
+  // eslint-disable-next-line react-hooks/purity -- a server component render is the intended clock here
+  const renderedAt = Date.now();
+
   return (
     <div className="ms">
+      {/* Every control on this tab saves itself and is live in the client's
+          app at once — there is no publish step, unlike the programme. Said
+          out loud here because a coach setting up columns reasonably asks
+          "has this reached them?", and a tab that saves silently can't
+          answer. renderedAt is stamped on the server so the note only says
+          Saved once the action has actually run. */}
+      <div className="ms-topbar">
+        <span className="ms-topbar-live">
+          <span className="ms-live-dot" aria-hidden="true" />
+          Live in {clientName}&rsquo;s app
+        </span>
+        <AutosaveNote
+          renderedAt={renderedAt}
+          idleText="Changes save as you go and reach the client immediately."
+          savedSuffix="· live in the client app"
+        />
+      </div>
+
       {/* ---- 1. What the client is asked to log ---- */}
       <section className="ms-section">
         <div className="ms-head">

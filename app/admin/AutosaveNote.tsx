@@ -16,7 +16,20 @@ import { useEffect, useRef, useState } from "react";
 // `renderedAt` is stamped on the server, so it changes when, and only when,
 // the action has run and revalidated. If a save fails, this stays on
 // "Saving…" rather than claiming a save that didn't happen.
-export default function AutosaveNote({ renderedAt }: { renderedAt: number }) {
+export default function AutosaveNote({
+  renderedAt,
+  idleText,
+  savedSuffix,
+}: {
+  renderedAt: number;
+  /** Shown at rest. The builder passes nothing (see below); the Measurements
+      tab passes a sentence, because there the coach's question is not "is it
+      saved" but "has the client got it", and that deserves an answer even
+      when nothing is in flight. */
+  idleText?: string;
+  /** Appended after "Saved <time>", e.g. "· live in the client app". */
+  savedSuffix?: string;
+}) {
   const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
   const [at, setAt] = useState<string | null>(null);
   const pending = useRef(false);
@@ -49,7 +62,11 @@ export default function AutosaveNote({ renderedAt }: { renderedAt: number }) {
   // does speak.
   return (
     <span className={`pb-autosave ${state}`} aria-live="polite">
-      {state === "saving" ? "Saving…" : state === "saved" ? `Saved ${at}` : ""}
+      {state === "saving"
+        ? "Saving…"
+        : state === "saved"
+          ? `Saved ${at}${savedSuffix ? ` ${savedSuffix}` : ""}`
+          : idleText ?? ""}
     </span>
   );
 }
