@@ -555,8 +555,16 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   // that still use it. A row with no name is one the coach hasn't filled in.
   const customRows = (plan.supplement_rows ?? [])
     .filter((r) => r.name.trim())
-    .map((r) => ({ item: r.name.trim(), entry: { quantity: r.quantity, timing: r.timing } }));
-  const referenceRows = [...customRows, ...supplementRows, ...vitaminRows];
+    .map((r) => ({ item: r.name.trim(), quantity: r.quantity, timing: r.timing, notes: r.notes?.trim() ?? "" }));
+  const referenceRows = [
+    ...customRows,
+    ...[...supplementRows, ...vitaminRows].map(({ item, entry }) => ({
+      item,
+      quantity: entry!.quantity,
+      timing: entry!.timing ?? "",
+      notes: "",
+    })),
+  ];
   const coachNotes = coachNotesFor(CLIENT_ID, 3);
 
   return (
@@ -589,13 +597,15 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
         <section className="home-dark-section">
           <span className="home-dark-section-title">Supplements</span>
           <div className="home-dark-rows">
-            {referenceRows.map(({ item, entry }) => (
-              <div key={item} className="nd-supp-row">
+            {referenceRows.map(({ item, quantity, timing, notes }) => (
+              <div key={item} className={`nd-supp-row${notes ? " has-note" : ""}`}>
                 <div className="nd-supp-name">{item}</div>
                 <div className="nd-supp-detail">
-                  {entry!.quantity}
-                  {entry!.timing ? ` · ${entry!.timing}` : ""}
+                  {quantity}
+                  {timing ? ` · ${timing}` : ""}
                 </div>
+                {/* The coach's note on this item, e.g. how or when to take it. */}
+                {notes && <div className="nd-supp-note">{notes}</div>}
               </div>
             ))}
           </div>
