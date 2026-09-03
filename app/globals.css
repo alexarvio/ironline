@@ -3539,8 +3539,75 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--fp-dim);
-  min-width: 26px;
+  /* Fixed slot, present even when empty, so every input's right edge lines
+     up regardless of whether the metric has a unit. */
+  width: 34px;
+  min-width: 34px;
+  flex-shrink: 0;
 }
+
+/* Confirmation after a check-in lands: big, unmissable, and says where it
+   went. Replaces relying on the Save button's label quietly turning into
+   "Saved ✓". */
+.ci-saved-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--fp-accent);
+  color: var(--fp-accent-fg);
+}
+
+.ci-saved-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.ci-saved-text { flex: 1; min-width: 0; }
+.ci-saved-title { font-weight: 800; font-size: 0.95rem; }
+.ci-saved-sub { font-size: 0.78rem; opacity: 0.85; margin-top: 1px; }
+
+.ci-saved-home {
+  flex-shrink: 0;
+  height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--fp-accent-fg);
+  color: var(--fp-accent);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* Week switcher: a completed week shows a tick instead of the current dot. */
+.week-done-tick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 999px;
+  background: var(--good);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.week-progress-card.complete { border-color: var(--good); }
+.week-progress-card.complete .week-progress-label { color: var(--good); }
 
 .ci-scale {
   display: flex;

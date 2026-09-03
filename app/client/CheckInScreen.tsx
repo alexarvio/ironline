@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { ChevronLeftIcon } from "../components/icons";
 import { logMetricPeriodAction, saveMeasurementCheckInAction, uploadProgressPhotoAction } from "../lib/actions";
 
@@ -104,6 +104,45 @@ export default function CheckInScreen({
   );
 
   const active = sections.find((s) => s.id === sectionId);
+
+  // Derived from the active section; all computed before the early return
+  // below so the hooks that follow run in the same order on every render.
+  const activeValues = active ? values[active.id] ?? {} : {};
+  const metrics = active?.metrics ?? [];
+  const filled = metrics.filter((m) => (activeValues[m.id] ?? "").length > 0);
+  const complete = filled.length === metrics.length && metrics.length > 0;
+  const isMeasurements = active?.id === "measurements";
+  const remaining = metrics.length - filled.length;
+
+  // m.value is what's actually persisted for this period, so comparing the
+  // two tells us whether there's anything left to send — no separate "saved"
+  // flag to keep in sync, and editing a saved section re-arms Save by
+  // itself. After a submit the server re-renders with the new values, so
+  // this settles into the saved state on its own.
+  const dirty = metrics.some((m) => (activeValues[m.id] ?? "") !== m.value);
+  const savedSomething = metrics.some((m) => m.value.length > 0);
+  const isSaved = !dirty && savedSomething;
+  const canSave = dirty && filled.length > 0;
+
+  // The confirmation banner shows after a save THIS visit lands — not on
+  // merely opening a section that was saved earlier. `submitted` is armed
+  // by the form's submit and disarmed when the server re-render brings the
+  // values back matching (isSaved), which is the moment the save is real.
+  const submitted = useRef(false);
+  const [justSaved, setJustSaved] = useState(false);
+  useEffect(() => {
+    if (isSaved && submitted.current) {
+      submitted.current = false;
+      // Deferred a tick so the state change isn't synchronous inside the effect.
+      const t = setTimeout(() => setJustSaved(true), 0);
+      return () => clearTimeout(t);
+    }
+  }, [isSaved]);
+  const armSubmit = () => {
+    submitted.current = true;
+    setJustSaved(false);
+  };
+
   if (!active) {
     return (
       <div className="ci-screen">
@@ -112,24 +151,10 @@ export default function CheckInScreen({
     );
   }
 
-  const activeValues = values[active.id] ?? {};
-  const setValue = (metricId: string, v: string) =>
+  const setValue = (metricId: string, v: string) => {
+    setJustSaved(false);
     setValues((prev) => ({ ...prev, [active.id]: { ...prev[active.id], [metricId]: v } }));
-
-  const filled = active.metrics.filter((m) => (activeValues[m.id] ?? "").length > 0);
-  const complete = filled.length === active.metrics.length && active.metrics.length > 0;
-  const isMeasurements = active.id === "measurements";
-  const remaining = active.metrics.length - filled.length;
-
-  // m.value is what's actually persisted for this period, so comparing the
-  // two tells us whether there's anything left to send — no separate "saved"
-  // flag to keep in sync, and editing a saved section re-arms Save by
-  // itself. After a submit the server re-renders with the new values, so
-  // this settles into the saved state on its own.
-  const dirty = active.metrics.some((m) => (activeValues[m.id] ?? "") !== m.value);
-  const savedSomething = active.metrics.some((m) => m.value.length > 0);
-  const isSaved = !dirty && savedSomething;
-  const canSave = dirty && filled.length > 0;
+  };
 
   return (
     <div className="ci-screen">
@@ -174,10 +199,26 @@ export default function CheckInScreen({
         id="ci-form"
         className="ci-body"
         action={isMeasurements ? saveMeasurementCheckInAction : logMetricPeriodAction}
+        onSubmit={armSubmit}
       >
         <input type="hidden" name="clientId" value={clientId} />
         <input type="hidden" name="date" value={today} />
         {!isMeasurements && <input type="hidden" name="frequency" value={active.id} />}
+
+        {justSaved && (
+          <div className="ci-saved-banner" role="status" aria-live="polite">
+            <span className="ci-saved-icon" aria-hidden="true">
+              ✓
+            </span>
+            <div className="ci-saved-text">
+              <div className="ci-saved-title">Check-in saved</div>
+              <div className="ci-saved-sub">Your coach can see it now.</div>
+            </div>
+            <button type="button" className="ci-saved-home" onClick={onBack}>
+              Done
+            </button>
+          </div>
+        )}
 
         <p className="ci-intro">{active.intro}</p>
 
@@ -203,8 +244,10 @@ export default function CheckInScreen({
                     aria-label={m.name}
                     className={`ci-input${has ? " filled" : ""}`}
                   />
-                  {m.unit && !m.scaleMax && <span className="ci-metric-unit">{m.unit}</span>}
-                  {m.scaleMax && <span className="ci-metric-unit">/{m.scaleMax}</span>}
+                  {/* Always rendered, fixed width: a metric with no unit
+                      (Steps) keeps the same right edge as one with (kg), so
+                      the numerals line up down the list. */}
+                  <span className="ci-metric-unit">{m.scaleMax ? `/${m.scaleMax}` : m.unit || ""}</span>
                 </div>
               </div>
               {m.scaleMax && (

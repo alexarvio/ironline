@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useSyncExternalStore } from "react";
 import { BellIcon, ChevronLeftIcon } from "../components/icons";
 import CheckInScreen, { CheckInProps } from "./CheckInScreen";
 import { CheckInProvider, FocusRefProvider, NavigateProvider, NotificationsProvider } from "./CheckInContext";
@@ -9,6 +9,37 @@ import { CheckInProvider, FocusRefProvider, NavigateProvider, NotificationsProvi
 export type AppTab = { id: string; label: string; icon: ReactNode; content: ReactNode; footer?: ReactNode };
 
 type PushView = "notifications" | "checkin" | null;
+
+// The active bottom tab lives in sessionStorage, not just React state. A full
+// page load — a form that posts before hydration finishes on a slow phone, a
+// pull-to-refresh, the home-screen app being reopened — would otherwise drop
+// the client back on Home mid-workout. Read through useSyncExternalStore so
+// the server render and the first client render agree (first tab), then the
+// remembered tab applies.
+const TAB_KEY = "ironline.client.tab";
+const TAB_EVENT = "ironline:tab";
+
+function readTab(): string | null {
+  try {
+    return window.sessionStorage.getItem(TAB_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function subscribeTab(onChange: () => void) {
+  window.addEventListener(TAB_EVENT, onChange);
+  return () => window.removeEventListener(TAB_EVENT, onChange);
+}
+
+function writeTab(id: string) {
+  try {
+    window.sessionStorage.setItem(TAB_KEY, id);
+  } catch {
+    /* blocked storage: the tab still switches for this page */
+  }
+  window.dispatchEvent(new Event(TAB_EVENT));
+}
 
 // Top bar is the brand plus a single notifications bell (not a per-tab
 // greeting). Chat is deliberately absent: it's cut from the first beta, so
@@ -31,7 +62,9 @@ export default function AppShell({
   clientId: number;
   checkIn: CheckInProps;
 }) {
-  const [activeId, setActiveId] = useState(tabs[0]?.id);
+  const storedTab = useSyncExternalStore(subscribeTab, readTab, () => null);
+  const activeId = storedTab && tabs.some((t) => t.id === storedTab) ? storedTab : tabs[0]?.id;
+  const setActiveId = (id: string) => writeTab(id);
   const [pushView, setPushView] = useState<PushView>(null);
   // Which check-in section to land on, set by whichever due item opened it.
   const [checkInSection, setCheckInSection] = useState("daily");

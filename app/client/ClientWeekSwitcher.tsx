@@ -13,6 +13,7 @@ export default function ClientWeekSwitcher({
   currentWeek,
   contents,
   weekLabels,
+  completedWeeks = [],
 }: {
   weeks: number[];
   currentWeek: number;
@@ -20,6 +21,9 @@ export default function ClientWeekSwitcher({
   // Program-relative labels ("Week 1".."Week N") — falls back to the raw
   // week number when there's no deployed program to derive them from.
   weekLabels?: Record<number, string>;
+  // Weeks where every planned set on every training day has been logged.
+  // Ticked in the switcher so the client sees the programme filling in.
+  completedWeeks?: number[];
 }) {
   const [selected, setSelected] = useState(currentWeek);
 
@@ -27,17 +31,27 @@ export default function ClientWeekSwitcher({
     <div>
       {weeks.length > 1 && (
         <div className="week-switcher" style={{ marginBottom: 14 }}>
-          {weeks.map((w) => (
-            <button
-              key={w}
-              type="button"
-              className={`toggle-btn${w === selected ? " active" : ""}`}
-              onClick={() => setSelected(w)}
-            >
-              {weekLabels?.[w] ?? `Week ${w}`}
-              {w === currentWeek && <span className="week-current-dot" aria-hidden="true" />}
-            </button>
-          ))}
+          {weeks.map((w) => {
+            const done = completedWeeks.includes(w);
+            return (
+              <button
+                key={w}
+                type="button"
+                className={`toggle-btn${w === selected ? " active" : ""}${done ? " done" : ""}`}
+                onClick={() => setSelected(w)}
+                title={done ? "Week complete — every set logged" : undefined}
+              >
+                {weekLabels?.[w] ?? `Week ${w}`}
+                {done ? (
+                  <span className="week-done-tick" aria-label="Week complete">
+                    ✓
+                  </span>
+                ) : (
+                  w === currentWeek && <span className="week-current-dot" aria-hidden="true" />
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
       {contents[selected]}

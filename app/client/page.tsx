@@ -348,18 +348,20 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
       </p>
 
       {trainingDays.length > 0 && (
-        <div className="week-progress-card">
+        <div className={`week-progress-card${weekPct === 100 ? " complete" : ""}`}>
           <div>
-            <div className="week-progress-label">This week</div>
+            <div className="week-progress-label">{weekPct === 100 ? "Week complete" : "This week"}</div>
             <div className="week-progress-value">
-              {daysFullyDone} of {trainingDays.length} days trained
+              {weekPct === 100
+                ? `All ${trainingDays.length} days trained — nice work`
+                : `${daysFullyDone} of ${trainingDays.length} days trained`}
             </div>
           </div>
           <div
             className="week-progress-ring"
             style={{ background: `conic-gradient(var(--accent) 0deg ${weekPct * 3.6}deg, var(--paper-raised) ${weekPct * 3.6}deg 360deg)` }}
           >
-            <div className="week-progress-ring-inner">{weekPct}%</div>
+            <div className="week-progress-ring-inner">{weekPct === 100 ? "✓" : `${weekPct}%`}</div>
           </div>
         </div>
       )}
@@ -591,11 +593,12 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
         </section>
       )}
 
-      <section className="home-dark-section">
-        <span className="home-dark-section-title">Coach notes</span>
-        {coachNotes.length === 0 ? (
-          <p className="home-dark-empty">No notes yet.</p>
-        ) : (
+      {/* Per-exercise / check-in comments from the coach. Only shown when
+          there are some: with the standing note above, an empty "No notes
+          yet" here read as a contradiction. */}
+      {coachNotes.length > 0 && (
+        <section className="home-dark-section">
+          <span className="home-dark-section-title">Coach notes</span>
           <div className="home-dark-rows">
             {coachNotes.map((n) => (
               <div key={n.id} className="home-dark-note-row">
@@ -610,8 +613,8 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
               </div>
             ))}
           </div>
-        )}
-      </section>
+        </section>
+      )}
 
       <div className="nd-footnote">Meal logging isn&rsquo;t on yet — your coach sets the targets, you hit them.</div>
     </div>
@@ -990,6 +993,15 @@ export default async function ClientPage({
     ? Object.fromEntries(trainingWeeks.map((w) => [w, programWeekLabel(deployedProgram, w)]))
     : undefined;
   const trainingWeekContents = Object.fromEntries(trainingWeeks.map((w) => [w, <TrainingTab key={w} CLIENT_ID={CLIENT_ID} week={w} />]));
+  // A week is complete when every planned set on every training day is
+  // logged — the same rule TrainingTab's progress ring uses for 100%.
+  const completedWeeks = trainingWeeks.filter((w) => {
+    const trainingDays = getWeekDays(CLIENT_ID, w).filter((d) => d.assignments.length > 0);
+    return (
+      trainingDays.length > 0 &&
+      trainingDays.every((d) => d.assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets))
+    );
+  });
 
   const tabs: AppTab[] = [
     { id: "home", label: "Home", icon: <HomeIcon />, content: <HomeTab CLIENT_ID={CLIENT_ID} /> },
@@ -1004,6 +1016,7 @@ export default async function ClientPage({
             currentWeek={currentWeekNum}
             contents={trainingWeekContents}
             weekLabels={trainingWeekLabels}
+            completedWeeks={completedWeeks}
           />
         </div>
       ),
