@@ -896,8 +896,8 @@ function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
         <span className="cn-unread-label">{unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}</span>
         <form action={markAllNotificationsReadAction}>
           <input type="hidden" name="clientId" value={CLIENT_ID} />
-          <button type="submit" className="cn-markall">
-            Mark all read
+          <button type="submit" className="cn-markall" disabled={unreadCount === 0}>
+            Mark all as read
           </button>
         </form>
       </div>

@@ -2285,20 +2285,26 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 }
 
 .cn-markall {
-  min-height: 44px;
-  min-width: 44px;
-  padding: 0 4px;
-  border: none;
-  background: none;
-  color: var(--fp-dim);
-  font-size: 0.76rem;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--fp-accent);
+  border-radius: 999px;
+  background: var(--fp-accent);
+  color: var(--fp-accent-fg);
+  font-size: 0.78rem;
   font-weight: 800;
   cursor: pointer;
   font-family: inherit;
+  white-space: nowrap;
 }
 
-.cn-markall:hover {
-  color: var(--fp-text);
+.cn-markall:hover { filter: brightness(1.08); }
+
+.cn-markall:disabled {
+  background: transparent;
+  border-color: var(--fp-line);
+  color: var(--fp-dim);
+  cursor: default;
 }
 
 .cn-notif-group {
