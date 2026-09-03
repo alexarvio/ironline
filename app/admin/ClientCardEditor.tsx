@@ -133,6 +133,21 @@ export default function ClientCardEditor({
           <Field label="Goal / phase" name="goal_phase" value={card.goal_phase} placeholder="-" />
           <Field label="Goal date" name="goal_date" value={card.goal_date} type="date" />
           <Field label="Check-in day" name="check_in_day" value={card.check_in_day} placeholder="Monday" />
+          {/* Which of the coach's packages (Settings → Packages) this client
+              is on. Shown to the client in their app. */}
+          <label className="ad-field">
+            <span className="ad-field-label">Package</span>
+            <span className="ad-field-input">
+              <select name="package_id" defaultValue={card.package_id} className="ad-field-select">
+                <option value="">None</option>
+                {panel.packages.map((k) => (
+                  <option key={k.id} value={k.id}>
+                    {k.name}
+                  </option>
+                ))}
+              </select>
+            </span>
+          </label>
           <Field
             label="Starting weight"
             name="starting_weight_kg"

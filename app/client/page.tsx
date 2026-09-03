@@ -10,6 +10,7 @@ import {
   getCurrentWeekNumber,
   getCheckInSections,
   getCheckInStatus,
+  getClientPackage,
   getClientPreferences,
   getBranding,
   getGraphedSeries,
@@ -25,6 +26,7 @@ import {
   listClients,
   listClientGoals,
   listMeetings,
+  listPackages,
   listPhotoPeriods,
   listPhotoSlots,
   listPhotoUploads,
@@ -349,7 +351,7 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
     <HomeHub
       dateLabel={dateLabel}
       name={client?.name ?? ""}
-      subLine={`${profile.goal_phase || "No goal phase set yet"}${profile.current_week ? ` · ${profile.current_week}` : ""}`}
+      subLine={[profile.goal_phase || "No goal phase set yet", profile.current_week || null, getClientPackage(CLIENT_ID)?.name ?? null].filter(Boolean).join(" · ")}
       goalNote={goalNote}
       daysTrained={daysTrained}
       totalDays={totalDaysBuilt}
@@ -677,6 +679,8 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
 function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   const client = getClient(CLIENT_ID);
   const profile = getClientProfile(CLIENT_ID);
+  const myPackage = getClientPackage(CLIENT_ID);
+  const allPackages = listPackages();
   const prefs = getClientPreferences(CLIENT_ID);
 
   const weeksInLabel = (() => {
@@ -729,6 +733,7 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
         {profile.coaching_start_date && (
           <span className="home-dark-sub">Client since {fmtShortDate(profile.coaching_start_date)}</span>
         )}
+        {myPackage && <span className="home-dark-goal">{myPackage.name}</span>}
         {weeksInLabel && <span className="home-dark-goal">{weeksInLabel}</span>}
       </div>
 
@@ -749,6 +754,37 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
           <ReportArchiveList reports={reports} />
         )}
       </section>
+
+      {allPackages.length > 0 && (
+        <section className="home-dark-section">
+          <span className="home-dark-section-title">Your coach&rsquo;s packages</span>
+          <div className="pkg-list">
+            {allPackages.map((k) => {
+              const mine = myPackage?.id === k.id;
+              return (
+                <div key={k.id} className={`pkg-row${mine ? " mine" : ""}`}>
+                  <div className="pkg-top">
+                    <span className="pkg-name">{k.name}</span>
+                    {k.price && <span className="pkg-price">{k.price}</span>}
+                  </div>
+                  {mine && <span className="pkg-mine">Your package</span>}
+                  {k.includes && (
+                    <ul className="pkg-includes">
+                      {k.includes
+                        .split(/\r?\n/)
+                        .map((line) => line.trim())
+                        .filter(Boolean)
+                        .map((line) => (
+                        <li key={line}>{line}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <section className="home-dark-section">
         <span className="home-dark-section-title">Preferences</span>

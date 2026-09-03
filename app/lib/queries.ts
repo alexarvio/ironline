@@ -1428,7 +1428,9 @@ export type OverviewPanel = {
    * the em dash back into the record. Plan, current week and current weight
    * are deliberately absent: they are derived from the live programme and the
    * client's own logs, and typing over them would be a lie. */
+  packages: { id: number; name: string }[];
   card: {
+    package_id: string;
     name: string;
     birthdate: string;
     gender: string;
@@ -1528,6 +1530,7 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
       { label: "Address", value: dash(profile.address) },
     ],
     coachingInfo: [
+      { label: "Package", value: getClientPackage(clientId)?.name ?? "-" },
       { label: "Plan", value: liveProgram?.name || "-" },
       { label: "Start date", value: dash(profile.coaching_start_date) },
       { label: "Current week", value: liveWeek != null ? `Week ${liveWeek}` : "-" },
@@ -1548,7 +1551,9 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
             ? `Completed ${e.dayName}${e.dayLabel ? ` · ${e.dayLabel}` : ""} (${e.weekLabel}) · ${e.exerciseCount} exercise${e.exerciseCount === 1 ? "" : "s"}, ${e.setCount} set${e.setCount === 1 ? "" : "s"}`
             : `Invoice ${e.status} · ${e.description}`,
       })),
+    packages: listPackages().map((k) => ({ id: k.id, name: k.name })),
     card: {
+      package_id: profile.package_id != null ? String(profile.package_id) : "",
       name: client?.name ?? "",
       birthdate: profile.birthdate ?? "",
       gender: profile.gender ?? "",
@@ -3043,6 +3048,7 @@ export type ClientProfile = {
   goal_phase_start_date: string | null;
   goal_date: string | null;
   check_in_day: string | null;
+  package_id?: number | null;
   steps_goal: string;
   cardio_goal: string;
   training_goal: string;
@@ -3073,6 +3079,7 @@ export function getClientProfile(clientId: number): ClientProfile {
     goal_phase_start_date: null,
     goal_date: null,
     check_in_day: null,
+    package_id: null,
     steps_goal: "",
     cardio_goal: "",
     training_goal: "",
@@ -4676,4 +4683,45 @@ export function getPhotoStatus(clientId: number): PhotoStatus {
     periodLabel: photoPeriodTitle(period, cadence),
     nextLabel: cadence === "monthly" ? "A new set opens next month" : cadence === "biweekly" ? "A new set opens in two weeks" : "A new set opens next week",
   };
+}
+
+// ---- Coaching packages: what the coach sells --------------------------------
+
+export type CoachPackage = { id: number; name: string; price: string; includes: string; order_index: number };
+
+export function listPackages(): CoachPackage[] {
+  return [...(getData().coach_packages ?? [])].sort((a, b) => a.order_index - b.order_index);
+}
+
+export function addPackage(name: string): CoachPackage {
+  const data = getData();
+  if (!data.coach_packages) data.coach_packages = [];
+  const pkg: CoachPackage = { id: allocId("coach_packages"), name, price: "", includes: "", order_index: data.coach_packages.length };
+  data.coach_packages.push(pkg);
+  persist();
+  return pkg;
+}
+
+export function updatePackage(id: number, field: "name" | "price" | "includes", value: string) {
+  const pkg = (getData().coach_packages ?? []).find((k) => k.id === id);
+  if (!pkg) return;
+  if (field === "name" && !value.trim()) return;
+  pkg[field] = value;
+  persist();
+}
+
+// Clients on the removed package simply have none afterwards.
+export function removePackage(id: number) {
+  const data = getData();
+  data.coach_packages = (data.coach_packages ?? []).filter((k) => k.id !== id);
+  data.client_profiles.forEach((pr) => {
+    if (pr.package_id === id) pr.package_id = null;
+  });
+  persist();
+}
+
+export function getClientPackage(clientId: number): CoachPackage | null {
+  const id = getClientProfile(clientId).package_id;
+  if (id == null) return null;
+  return (getData().coach_packages ?? []).find((k) => k.id === id) ?? null;
 }

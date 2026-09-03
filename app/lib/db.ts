@@ -287,6 +287,8 @@ type ClientProfile = {
   goal_phase_start_date: string | null;
   goal_date: string | null;
   check_in_day: string | null;
+  // Which of the coach's packages this client is on; null when not set.
+  package_id?: number | null;
   steps_goal: string;
   cardio_goal: string;
   training_goal: string;
@@ -468,9 +470,20 @@ type Branding = {
   coach_name: string | null;
 };
 
+// A coaching package the coach sells (e.g. "Training only", "Training +
+// nutrition"). Shown on the client card and in the client's app.
+type CoachPackage = {
+  id: number;
+  name: string;
+  price: string; // free text: "€150 / month", "£40 per week"
+  includes: string; // one line per item
+  order_index: number;
+};
+
 type Data = {
   users: User[];
   branding: Branding;
+  coach_packages: CoachPackage[];
   clients: Client[];
   exercises: Exercise[];
   program_days: ProgramDay[];
@@ -516,6 +529,7 @@ function emptyData(): Data {
   return {
     users: [],
     branding: { logo_path: null, color_primary: null, coach_name: null },
+    coach_packages: [],
     clients: [],
     training_programs: [],
     client_preferences: [],

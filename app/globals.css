@@ -10751,3 +10751,72 @@ button.ci-photo:disabled { cursor: default; }
 /* Calendar day panel head: date on one line, status pill on one line. */
 .cd-title { white-space: nowrap; font-size: 1.05rem; }
 .pb-autosave-btn { white-space: nowrap; }
+
+/* ---- Rail foot nav (Feed / Calendar / Settings above Sign out) ---- */
+.ad-nav-foot { margin-top: auto; border-top: 1px solid var(--border); padding-top: 6px; }
+.ad-signout { margin-top: 0; }
+
+/* ---- Settings page: embedded branding + packages editor ---- */
+.br-embedded { margin-top: 26px; }
+.br-h2 { margin: 0 0 -4px; font-size: 1.05rem; font-weight: 800; color: var(--ink); }
+
+.pk-list { display: flex; flex-direction: column; gap: 8px; }
+.pk-row { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--paper); }
+.pk-top { display: flex; align-items: center; gap: 8px; }
+.pk-cell { display: flex; min-width: 0; }
+.pk-cell input, .pk-cell textarea {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  padding: 4px 6px;
+}
+.pk-cell input:hover, .pk-cell textarea:hover, .pk-cell input:focus, .pk-cell textarea:focus { border-color: var(--border); background: var(--surface); outline: none; }
+.pk-name { flex: 1; }
+.pk-name input { font-size: 13px; font-weight: 800; }
+.pk-price { flex: 0 0 170px; }
+.pk-price input { font-size: 12px; font-weight: 700; color: var(--accent-ink); text-align: right; }
+.pk-includes { margin-top: 4px; }
+.pk-includes textarea { font-size: 12px; line-height: 1.45; color: var(--steel); resize: vertical; }
+.pk-delete .row-icon-btn { width: 22px; height: 22px; border-radius: 6px; }
+.pk-add {
+  margin-top: 10px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px dashed var(--border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.pk-add:hover { border-color: var(--accent); border-style: solid; }
+
+.ad-field-select {
+  width: 100%;
+  max-width: 148px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0 4px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: right;
+}
+
+/* ---- Client app: the coach's packages list in Settings ---- */
+.pkg-list { display: flex; flex-direction: column; gap: 8px; }
+.pkg-row { border: 1px solid var(--fp-line); border-radius: 12px; padding: 12px 14px; }
+.pkg-row.mine { border-color: var(--fp-accent); background: var(--fp-accent-tint); }
+.pkg-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.pkg-name { font-weight: 800; font-size: 0.95rem; color: var(--fp-text); }
+.pkg-price { font-weight: 700; font-size: 0.85rem; color: var(--fp-accent); white-space: nowrap; }
+.pkg-mine { display: inline-block; margin-top: 4px; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fp-accent); }
+.pkg-includes { margin: 8px 0 0; padding-left: 18px; font-size: 0.82rem; color: var(--fp-dim); line-height: 1.5; }

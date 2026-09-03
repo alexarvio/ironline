@@ -31,36 +31,6 @@ export default function AdminSidebar({ selectedId }: { selectedId: number | null
         </div>
       </div>
 
-      <nav className="ad-nav">
-        <Link href="/admin?view=feed" className="ad-nav-row">
-          <span className="ad-nav-icon" aria-hidden="true">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-            </svg>
-          </span>
-          <span className="ad-nav-label">Feed</span>
-        </Link>
-        <Link href="/admin?view=calendar" className="ad-nav-row">
-          <span className="ad-nav-icon" aria-hidden="true">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.6" />
-              <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
-          </span>
-          <span className="ad-nav-label">Calendar</span>
-          {/* Scheduling conflicts the coach hasn't resolved. */}
-          <span className="ad-nav-badge">2</span>
-        </Link>
-        <Link href="/admin?view=branding" className="ad-nav-row">
-          <span className="ad-nav-icon" aria-hidden="true">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M12 3a9 9 0 1 0 0 18c1.5 0 2-1 2-2s-1-1.5-1-2.5S14 15 15.5 15H17a4 4 0 0 0 4-4c0-5-4-8-9-8Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-              <circle cx="7.5" cy="10.5" r="1" fill="currentColor" /><circle cx="11" cy="7" r="1" fill="currentColor" /><circle cx="15.5" cy="8" r="1" fill="currentColor" />
-            </svg>
-          </span>
-          <span className="ad-nav-label">Branding</span>
-        </Link>
-      </nav>
 
       <div className="ad-clients-head">
         <span className="ad-microlabel">Clients</span>
@@ -111,8 +81,39 @@ export default function AdminSidebar({ selectedId }: { selectedId: number | null
         </form>
       </div>
 
-      {/* Pinned to the foot of the rail: the one thing the coach needs when
-          they hand the laptop to someone else or switch accounts. */}
+      {/* Cross-client views and settings sit at the foot of the rail, above
+          Sign out, so the client list is the first thing in view. */}
+      <nav className="ad-nav ad-nav-foot">
+        <Link href="/admin?view=feed" className="ad-nav-row">
+          <span className="ad-nav-icon" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <span className="ad-nav-label">Feed</span>
+        </Link>
+        <Link href="/admin?view=calendar" className="ad-nav-row">
+          <span className="ad-nav-icon" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.6" />
+              <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          </span>
+          <span className="ad-nav-label">Calendar</span>
+          {/* Scheduling conflicts the coach hasn't resolved. */}
+          <span className="ad-nav-badge">2</span>
+        </Link>
+        <Link href="/admin?view=settings" className="ad-nav-row">
+          <span className="ad-nav-icon" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+            </svg>
+          </span>
+          <span className="ad-nav-label">Settings</span>
+        </Link>
+      </nav>
+
       <form action={logoutAction} className="ad-signout">
         <button type="submit" className="ad-signout-btn">
           Sign out

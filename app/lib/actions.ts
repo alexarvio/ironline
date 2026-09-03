@@ -122,6 +122,9 @@ import {
   removeSupplementRow,
   addMetricsFromLibrary,
   getNutritionPlan,
+  addPackage,
+  updatePackage,
+  removePackage,
   saveClientAvatar,
   removeClientAvatar,
   saveBrandingLogo,
@@ -937,6 +940,7 @@ export async function saveClientCardAction(formData: FormData) {
     goal_phase: str("goal_phase"),
     goal_date: strOrNull("goal_date"),
     check_in_day: strOrNull("check_in_day"),
+    package_id: numOrNull("package_id"),
     starting_weight_kg: numOrNull("starting_weight_kg"),
   });
 
@@ -1456,4 +1460,32 @@ export async function removeClientAvatarAction(formData: FormData) {
   removeClientAvatar(clientId);
   revalidatePath("/client");
   revalidatePath("/admin");
+}
+
+// ---- Coaching packages ------------------------------------------------------
+
+export async function addPackageAction(formData: FormData) {
+  await requireCoach();
+  const name = String(formData.get("name") || "").trim();
+  if (!name) return;
+  addPackage(name);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function updatePackageAction(formData: FormData) {
+  await requireCoach();
+  const id = Number(formData.get("id"));
+  const field = String(formData.get("field") || "");
+  if (field !== "name" && field !== "price" && field !== "includes") return;
+  updatePackage(id, field, String(formData.get("value") ?? ""));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function removePackageAction(formData: FormData) {
+  await requireCoach();
+  removePackage(Number(formData.get("id")));
+  revalidatePath("/admin");
+  revalidatePath("/client");
 }

@@ -7,16 +7,13 @@ import BrandingColorForm from "./BrandingColorForm";
 // both the workstation and the client's phone app. Deliberately three
 // things and no more: every extra knob multiplies the combinations that
 // have to stay readable.
-export default function BrandingPanel() {
+export default function BrandingPanel({ embedded = false }: { embedded?: boolean }) {
   const branding = getBranding();
 
   return (
-    <div className="br">
-      <h1 style={{ margin: 0 }}>Branding</h1>
-      <p className="subtitle" style={{ marginBottom: 20 }}>
-        Your name, logo and accent colour, on your workstation and on every client&rsquo;s phone. Changes apply
-        the moment they save.
-      </p>
+    <div className={embedded ? "br-embedded" : "br"}>
+      {!embedded && <h1 style={{ margin: 0 }}>Branding</h1>}
+      {embedded && <h2 className="br-h2">Branding</h2>}
 
       <section className="br-card">
         <h3 className="ad-microlabel">Business name</h3>
