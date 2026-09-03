@@ -28,7 +28,7 @@ export default function ClientLoginPanel({
 
       {ok === "1" && <p className="client-login-flash ok">Login created. Give {name} the email and password.</p>}
       {ok === "reset" && (
-        <p className="client-login-flash ok">Password reset — they&rsquo;ll be asked to choose a new one.</p>
+        <p className="client-login-flash ok">Password reset. They&rsquo;ll be asked to choose a new one.</p>
       )}
       {ok === "removed" && <p className="client-login-flash ok">Login removed.</p>}
       {error === "exists" && <p className="client-login-flash err">This client already has a login.</p>}
@@ -41,7 +41,7 @@ export default function ClientLoginPanel({
         <>
           <div className="client-login-status">
             Signs in as <span className="client-login-email">{user.email}</span>
-            {user.must_change_password && " — hasn't set their own password yet"}
+            {user.must_change_password && " (hasn't set their own password yet)"}
           </div>
           <form action={resetClientPasswordAction} className="client-login-form">
             <input type="hidden" name="clientId" value={clientId} />
@@ -66,7 +66,7 @@ export default function ClientLoginPanel({
       ) : (
         <>
           <div className="client-login-status">
-            No login yet — {name} can&rsquo;t open the app. Set one up and pass it on however you like.
+            No login yet. {name} can&rsquo;t open the app. Set one up and pass it on however you like.
           </div>
           <form action={createClientLoginAction} className="client-login-form">
             <input type="hidden" name="clientId" value={clientId} />

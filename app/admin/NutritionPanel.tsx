@@ -49,7 +49,7 @@ export default function NutritionPanel({ clientId }: { clientId: number }) {
           <textarea
             name="note"
             defaultValue={plan.coach_notes ?? ""}
-            placeholder="Why these numbers — the client reads this under their kcal figure."
+            placeholder="Why these numbers: the client reads this under their kcal figure."
             aria-label="Note on the targets"
           />
           <div className="nt-note-foot">
@@ -84,7 +84,7 @@ export default function NutritionPanel({ clientId }: { clientId: number }) {
               // is visible before there's anything in it.
               <tr>
                 <td className="nt-supp-empty" colSpan={5}>
-                  Nothing set yet — add the first item below.
+                  Nothing set yet. Add the first item below.
                 </td>
               </tr>
             )}
@@ -104,7 +104,7 @@ export default function NutritionPanel({ clientId }: { clientId: number }) {
                           ? "5g"
                           : field === "timing"
                           ? "any time"
-                          : "—"
+                          : "-"
                       }
                     />
                   </td>
@@ -128,7 +128,7 @@ export default function NutritionPanel({ clientId }: { clientId: number }) {
                 <form action={addSupplementRowAction} id={`add-supp-${clientId}`}>
                   <input type="hidden" name="clientId" value={clientId} />
                 </form>
-                <span className="nt-supp-add-hint">Add an item — e.g. Magnesium</span>
+                <span className="nt-supp-add-hint">Add an item, e.g. Magnesium</span>
               </td>
               <td className="nt-supp-remove">
                 <button type="submit" form={`add-supp-${clientId}`} className="ad-btn-primary nt-supp-add-btn">

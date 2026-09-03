@@ -95,7 +95,7 @@ function seedAlex() {
     starting_weight_kg: 88.4,
     coaching_start_date: daysAgo(96),
     current_week: "Week 14",
-    goal_phase: "Lean bulk — phase 2",
+    goal_phase: "Lean bulk, phase 2",
     goal_phase_start_date: null,
     goal_date: daysAgo(-70), // ~10 weeks from now
     check_in_day: "Monday",
@@ -141,7 +141,7 @@ function seedAlex() {
 
   // Tue: Upper push
   const tue = byDow(2);
-  tue.label = "Upper — push";
+  tue.label = "Upper (push)";
   addExerciseToDay(tue.id, inclinePress, 4, "8-10", 55, 8, null, null);
   addExerciseToDay(tue.id, flatPress, 3, "10-12", 50, 8, null, null);
   addExerciseToDay(tue.id, sideRaise, 3, "12-15", 12, null, null, null);
@@ -153,7 +153,7 @@ function seedAlex() {
 
   // Thu: Upper pull
   const thu = byDow(4);
-  thu.label = "Upper — pull";
+  thu.label = "Upper (pull)";
   addExerciseToDay(thu.id, row, 4, "10-12", 60, 8, null, null);
   addExerciseToDay(thu.id, pulldown, 3, "10-12", 55, 8, null, null);
   addExerciseToDay(thu.id, dbCurl, 3, "10-12", 14, null, null, null);
@@ -161,8 +161,8 @@ function seedAlex() {
 
   // Fri: Lower (lighter)
   const fri = byDow(5);
-  fri.label = "Lower — light";
-  addExerciseToDay(fri.id, legPress, 3, "12-15", 110, 6, null, "Deload volume — go lighter");
+  fri.label = "Lower (light)";
+  addExerciseToDay(fri.id, legPress, 3, "12-15", 110, 6, null, "Deload volume, go lighter");
   addExerciseToDay(fri.id, legExt, 3, "15", 35, 6, null, null);
   addExerciseToDay(fri.id, calfPress, 3, "15", 80, null, null, null);
 
@@ -223,7 +223,7 @@ function seedAlex() {
   plan.other[slugify("Fluid intake")] = { amount: "3.5L", timing: "throughout the day" };
   plan.other[slugify("Vegetables")] = { amount: "3+ servings", timing: "lunch & dinner" };
   plan.coach_notes =
-    "Great adherence the last two weeks — keep protein high on training days and don't skip the pre-workout snack, it's been helping your energy in the evening sessions.";
+    "Great adherence the last two weeks. Keep protein high on training days and don't skip the pre-workout snack, it's been helping your energy in the evening sessions.";
   saveNutritionPlan(plan);
 
   // ---- Measurements: 6 weeks of Monday check-ins, trending in the right direction ----
@@ -326,18 +326,18 @@ function seedAlex() {
   if (pastMeeting) {
     pastMeeting.status = "completed";
     persist();
-    addMeetingNote(pastMeeting.id, "Reviewed week 13 — sets logged 11/16, weight trending up nicely.");
+    addMeetingNote(pastMeeting.id, "Reviewed week 13: sets logged 11/16, weight trending up nicely.");
     addMeetingNote(pastMeeting.id, "Agreed to add a pre-workout snack to help evening session energy.");
   }
 
   // ---- Chat (backdated conversation) ----
   const chatSeed: Array<[number, "client" | "coach", string]> = [
-    [3, "client", "Hey! Quick one — is the leg press meant to be 4 sets or 3 this week?"],
+    [3, "client", "Hey! Quick one. Is the leg press meant to be 4 sets or 3 this week?"],
     [3, "coach", "4 sets on Monday, 3 on Friday (that one's the lighter deload day) 👍"],
     [2, "client", "Got it, thanks! Also felt great today, hit all my targets."],
-    [2, "coach", "Love to hear it — logged, looks strong. Keep that up."],
-    [1, "client", "Question about the pre-workout snack — is timing important or just get it in?"],
-    [1, "coach", "Roughly 45-60min before training is ideal, but don't stress if it's a bit off — consistency matters more than precision here."],
+    [2, "coach", "Love to hear it. Logged, looks strong. Keep that up."],
+    [1, "client", "Question about the pre-workout snack. Is timing important or just get it in?"],
+    [1, "coach", "Roughly 45-60min before training is ideal, but don't stress if it's a bit off. Consistency matters more than precision here."],
   ];
   chatSeed.forEach(([daysBack, sender, text], i) => {
     const d = getData();
@@ -354,8 +354,8 @@ function seedAlex() {
   });
 
   // ---- Invoices ----
-  addInvoice(clientId, "Coaching — Month 3", 220, "paid");
-  addInvoice(clientId, "Coaching — Month 4", 220, "sent");
+  addInvoice(clientId, "Coaching, Month 3", 220, "paid");
+  addInvoice(clientId, "Coaching, Month 4", 220, "sent");
 
   // ---- Training columns: touch so defaults are created (visible in admin table config) ----
   listTrainingColumns(clientId);
@@ -435,14 +435,14 @@ function seedLightClient(name: string, opts: { weight: number; goalPhase: string
   setMeasurementValue(weightField.id, weekStart(daysAgo(0)), opts.weight - 0.4);
 
   addMeeting(clientId, daysAgo(-5), opts.meetingTime, "Week 4 check-in call", 30);
-  addInvoice(clientId, "Coaching — Month 1", 180, opts.invoiceStatus);
+  addInvoice(clientId, "Coaching, Month 1", 180, opts.invoiceStatus);
 
   const d = getData();
   d.chat_messages.push({
     id: allocId("chat_messages"),
     client_id: clientId,
     sender: "client",
-    text: "Hey, all set for this week's plan — thanks!",
+    text: "Hey, all set for this week's plan, thanks!",
     media_path: null,
     media_type: null,
     created_at: isoDaysAgo(1, 9, 15),
@@ -453,7 +453,7 @@ function seedLightClient(name: string, opts: { weight: number; goalPhase: string
 }
 
 seedAlex();
-seedLightClient("Jordan Blake", { weight: 71.2, goalPhase: "Fat loss — 8kg to go", invoiceStatus: "unpaid", meetingTime: "10:00" });
+seedLightClient("Jordan Blake", { weight: 71.2, goalPhase: "Fat loss, 8kg to go", invoiceStatus: "unpaid", meetingTime: "10:00" });
 seedLightClient("Sam Rivera", { weight: 64.8, goalPhase: "Strength & tone", invoiceStatus: "paid", meetingTime: "14:30" });
 
 // Demo logins so a freshly-seeded copy is actually usable. Only ever created

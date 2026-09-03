@@ -343,7 +343,7 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
   return (
     <div>
       <p className="app-lead">
-        Your coach&rsquo;s deployed week. Log your sets below — your trainer sees this the moment
+        Your coach&rsquo;s deployed week. Log your sets below. Your trainer sees this the moment
         you save it, no extra step.
       </p>
 
@@ -353,7 +353,7 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
             <div className="week-progress-label">{weekPct === 100 ? "Week complete" : "This week"}</div>
             <div className="week-progress-value">
               {weekPct === 100
-                ? `All ${trainingDays.length} days trained — nice work`
+                ? `All ${trainingDays.length} days trained, nice work`
                 : `${daysFullyDone} of ${trainingDays.length} days trained`}
             </div>
           </div>
@@ -367,10 +367,10 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
       )}
 
       {days.length === 0 ? (
-        <p className="empty-note">Nothing deployed yet — your coach is still building this week.</p>
+        <p className="empty-note">Nothing deployed yet. Your coach is still building this week.</p>
       ) : trainingDays.length === 0 ? (
         <p className="empty-note">
-          Your coach published this week, but hasn&rsquo;t added any exercises yet — it&rsquo;s all
+          Your coach published this week, but hasn&rsquo;t added any exercises yet. It&rsquo;s all
           rest days for now.
         </p>
       ) : (
@@ -454,9 +454,9 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
                             <tbody>
                               <tr className="training-goal-row">
                                 <td className="training-set-cell-num">Goal</td>
-                                <td>{a.target_weight_kg != null ? `${a.target_weight_kg}kg` : "—"}</td>
+                                <td>{a.target_weight_kg != null ? `${a.target_weight_kg}kg` : "-"}</td>
                                 <td>{a.reps}</td>
-                                <td>{a.rpe_target ?? "—"}</td>
+                                <td>{a.rpe_target ?? "-"}</td>
                                 {a.tempo && <td>{a.tempo}</td>}
                                 <td />
                               </tr>
@@ -465,8 +465,8 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
                                   <td className="training-set-cell-num">{l.set_number}</td>
                                   <td>{l.weight_kg}kg</td>
                                   <td>{l.reps}</td>
-                                  <td>{l.rpe_actual ?? "—"}</td>
-                                  {a.tempo && <td>—</td>}
+                                  <td>{l.rpe_actual ?? "-"}</td>
+                                  {a.tempo && <td>-</td>}
                                   <td className="training-set-cell-action">✓</td>
                                 </tr>
                               ))}
@@ -524,7 +524,7 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
       name,
       grams,
       barPct: Math.round((grams / maxGrams) * 100),
-      share: macroKcal > 0 ? `${Math.round(((grams * kcalPerGram) / macroKcal) * 100)}% of kcal` : "—",
+      share: macroKcal > 0 ? `${Math.round(((grams * kcalPerGram) / macroKcal) * 100)}% of kcal` : "-",
     });
     return {
       kcalLabel: kcalTarget.toLocaleString("en-US"),
@@ -618,7 +618,7 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
         </section>
       )}
 
-      <div className="nd-footnote">Meal logging isn&rsquo;t on yet — your coach sets the targets, you hit them.</div>
+      <div className="nd-footnote">Meal logging isn&rsquo;t on yet. Your coach sets the targets, you hit them.</div>
     </div>
   );
 }
@@ -753,7 +753,7 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
           </div>
         </div>
         <div className="home-dark-empty" style={{ marginTop: 12 }}>
-          Health syncing needs the Ironline mobile app — not available on web.
+          Health syncing needs the Ironline mobile app (not available on web).
         </div>
       </section>
 
@@ -942,7 +942,7 @@ export default async function ClientPage({
       <div className="phone-frame">
         <div className="app-screen">
           <p className="app-lead" style={{ padding: 24 }}>
-            No clients yet — add one in the admin panel first.
+            No clients yet. Add one in the admin panel first.
           </p>
         </div>
       </div>

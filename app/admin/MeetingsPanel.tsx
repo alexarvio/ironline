@@ -74,7 +74,7 @@ export default function MeetingsPanel({ clientId }: { clientId: number }) {
   return (
     <div>
       <p className="empty-note" style={{ marginBottom: 18 }}>
-        Schedule check-in calls with this client and keep a running notes log for each one — jot
+        Schedule check-in calls with this client and keep a running notes log for each one. Jot
         something down before, during, or after the call any time. Every meeting also shows up on
         the Calendar, and if a time overlaps with another client you&rsquo;ll see a warning below.
       </p>

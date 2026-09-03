@@ -415,7 +415,7 @@ export async function addInvoiceAction(formData: FormData) {
     | "due";
   if (!description) return;
   addInvoice(clientId, description, amount, status);
-  logCoachActivity(clientId, `Sent a new invoice — "${description}"`, { kind: "general" });
+  logCoachActivity(clientId, `Sent a new invoice: "${description}"`, { kind: "general" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -961,7 +961,7 @@ export async function addMeetingAction(formData: FormData) {
   const topic = String(formData.get("topic") || "").trim();
   if (!date) return;
   addMeeting(clientId, date, time, topic, duration);
-  logCoachActivity(clientId, topic ? `Scheduled a meeting — "${topic}"` : "Scheduled a new meeting", {
+  logCoachActivity(clientId, topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", {
     kind: "general",
     actionTab: "home",
     actionLabel: "View schedule",
@@ -1276,7 +1276,7 @@ export async function uploadDemoVideoAction(formData: FormData): Promise<string 
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return "Choose a file first.";
   if (file.size > MAX_DEMO_BYTES) {
-    return `That file is ${(file.size / 1024 / 1024).toFixed(0)}MB — the limit is 64MB. Trim the clip and try again.`;
+    return `That file is ${(file.size / 1024 / 1024).toFixed(0)}MB. The limit is 64MB. Trim the clip and try again.`;
   }
   if (!file.type.startsWith("video/")) return "That doesn't look like a video file.";
 

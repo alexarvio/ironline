@@ -51,7 +51,7 @@ export default function ClientWeekSwitcher({
                   locked
                     ? "Unlocks when this week starts"
                     : done
-                      ? "Week complete — every set logged"
+                      ? "Week complete, every set logged"
                       : undefined
                 }
               >
@@ -80,7 +80,7 @@ export default function ClientWeekSwitcher({
           <div>
             <div className="week-locked-title">{weekLabels?.[selected] ?? `Week ${selected}`} is locked</div>
             <div className="week-locked-sub">
-              It opens when the week starts. Finish this week&rsquo;s sessions first — your coach builds each
+              It opens when the week starts. Finish this week&rsquo;s sessions first. Your coach builds each
               week on the last.
             </div>
           </div>

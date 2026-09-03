@@ -83,7 +83,7 @@ const newlyAddedIds = new Map<string, number>();
 
 TEMPLATES.forEach(({ category, items }) => {
   if (existing.has(category)) {
-    console.log(`Skipping "${category}" — template already exists.`);
+    console.log(`Skipping "${category}": template already exists.`);
     return;
   }
   const id = addMetricTemplateCategory(category, "weekly");

@@ -8,7 +8,7 @@ import type { ClientReport, ReportSectionData } from "../lib/queries";
 
 const STATUS_LABEL: Record<ClientReport["status"], string> = {
   draft: "draft",
-  approved: "approved — not sent",
+  approved: "approved, not sent",
   sent: "sent",
 };
 
@@ -20,9 +20,9 @@ function reportTitle(clientName: string, periodStart: string, periodEnd: string)
   const end = new Date(periodEnd + "T00:00:00");
   const sameMonth = start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth();
   if (sameMonth) {
-    return `${clientName} — Report for ${start.toLocaleDateString("en-US", { month: "long", year: "numeric" })}`;
+    return `${clientName}: Report for ${start.toLocaleDateString("en-US", { month: "long", year: "numeric" })}`;
   }
-  return `${clientName} — Report (${periodStart} to ${periodEnd})`;
+  return `${clientName}: Report (${periodStart} to ${periodEnd})`;
 }
 
 function statLine(data: Record<string, unknown>) {

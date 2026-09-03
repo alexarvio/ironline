@@ -359,7 +359,7 @@ export default function CheckInScreen({
               </div>
               <div className="ci-photo-note">
                 {photosDue
-                  ? `One set per ${photoPeriodLabel.toLowerCase()} — a new photo replaces this one.`
+                  ? `One set per ${photoPeriodLabel.toLowerCase()}. A new photo replaces this one.`
                   : photosNextLabel}
               </div>
               {photoHistory && <div className="ci-photo-history">{photoHistory}</div>}

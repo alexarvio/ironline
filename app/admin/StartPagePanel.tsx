@@ -57,7 +57,7 @@ function SnapshotGrid({ snapshot }: { snapshot: ClientSnapshot }) {
     <div className="nutrition-table-wrap">
       <h3>Snapshot</h3>
       <p className="empty-note" style={{ marginBottom: 14 }}>
-        A live pulse of every tab — nothing here is entered manually, it all pulls from the tab
+        A live pulse of every tab. Nothing here is entered manually, it all pulls from the tab
         itself.
       </p>
       <div className="snapshot-grid">
@@ -291,7 +291,7 @@ export default function StartPagePanel({ clientId, name }: { clientId: number; n
         <div className="nutrition-table-wrap">
           <h3>Nutrition goals</h3>
           <p className="empty-note" style={{ marginBottom: 14 }}>
-            Pulled live from the Nutrition tab — edit macros there, it updates here automatically.
+            Pulled live from the Nutrition tab. Edit macros there, it updates here automatically.
           </p>
           <div className="exercise-table-wrap">
             <table className="data-table">
@@ -357,8 +357,8 @@ export default function StartPagePanel({ clientId, name }: { clientId: number; n
         </button>
       </form>
 
-      <GoalList clientId={clientId} term="short" title="Short-term goals — 3 months" goals={shortGoals} />
-      <GoalList clientId={clientId} term="long" title="Long-term goals — 6-12 months" goals={longGoals} />
+      <GoalList clientId={clientId} term="short" title="Short-term goals (3 months)" goals={shortGoals} />
+      <GoalList clientId={clientId} term="long" title="Long-term goals (6-12 months)" goals={longGoals} />
     </div>
   );
 }

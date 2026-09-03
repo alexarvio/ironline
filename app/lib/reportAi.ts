@@ -32,7 +32,7 @@ export async function writeReportNarrative(
       system:
         "You write short, warm, specific progress reports from a personal trainer to their client, " +
         "based on real logged data the coach provides. Write in second person, addressed to the client. " +
-        "2-4 short paragraphs. Reference actual numbers given — never invent data not provided. " +
+        "2-4 short paragraphs. Reference actual numbers given. Never invent data not provided. " +
         "If a section has no data, skip it rather than mentioning its absence at length. No headers, no bullet points, plain prose.",
       messages: [
         {
@@ -77,7 +77,7 @@ function fallbackNarrative(
     const parts = Object.entries(s.data)
       .filter(([, v]) => v !== null && v !== undefined && v !== "")
       .map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`);
-    if (parts.length > 0) lines.push(`${s.label} — ${parts.join(", ")}`);
+    if (parts.length > 0) lines.push(`${s.label}: ${parts.join(", ")}`);
   });
   lines.push("", `(AI-written summary unavailable: ${reason}.)`);
   return lines.join("\n");

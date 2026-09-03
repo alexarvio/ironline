@@ -93,7 +93,7 @@ export default function MeasurementsPanel({ clientId }: { clientId: number }) {
 
         {metrics.length === 0 ? (
           <p className="ad-panel-empty">
-            Nothing yet — open the metric library and tick what this client should log.
+            Nothing yet. Open the metric library and tick what this client should log.
           </p>
         ) : (
           <div className="ms-metric-list">
@@ -141,7 +141,7 @@ export default function MeasurementsPanel({ clientId }: { clientId: number }) {
         <h3 className="ad-microlabel">Measurements</h3>
         <MetricHistoryTable
           history={monthly}
-          emptyNote="No monthly measurements configured yet — add them from the library."
+          emptyNote="No monthly measurements configured yet. Add them from the library."
           maxHeight={250}
         />
       </section>

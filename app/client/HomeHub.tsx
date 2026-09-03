@@ -171,7 +171,7 @@ export default function HomeHub({
             </div>
           </div>
         ) : (
-          <p className="home-dark-empty">Nothing scheduled yet — your coach hasn&rsquo;t booked a call.</p>
+          <p className="home-dark-empty">Nothing scheduled yet. Your coach hasn&rsquo;t booked a call.</p>
         )}
       </section>
 

@@ -60,10 +60,10 @@ export default function SetLogForm({
           name="rpe"
           type="number"
           step="0.5"
-          placeholder={targetRpe != null ? String(targetRpe) : "—"}
+          placeholder={targetRpe != null ? String(targetRpe) : "-"}
         />
       </td>
-      {showTempoColumn && <td>—</td>}
+      {showTempoColumn && <td>-</td>}
       <td className="training-set-cell-action">
         <form
           id={formId}

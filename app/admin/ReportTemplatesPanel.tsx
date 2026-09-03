@@ -23,7 +23,7 @@ export default function ReportTemplatesPanel() {
       <h1>Report Templates</h1>
       <p className="empty-note" style={{ marginBottom: 18 }}>
         Build a reusable set of report sections once, then generate a report from it for any
-        client — see the Reports tab on each client&rsquo;s page. Different clients can use the
+        client. See the Reports tab on each client&rsquo;s page. Different clients can use the
         same template even though their actual data differs.
       </p>
 
@@ -38,7 +38,7 @@ export default function ReportTemplatesPanel() {
       </div>
 
       {templates.length === 0 ? (
-        <p className="empty-note">No templates yet — create one above.</p>
+        <p className="empty-note">No templates yet. Create one above.</p>
       ) : (
         templates.map((t) => {
           const sections = listReportTemplateSections(t.id);
@@ -59,7 +59,7 @@ export default function ReportTemplatesPanel() {
                         <strong>{s.label}</strong>{" "}
                         <span className="exercise-meta">
                           ({REPORT_SECTION_TYPE_LABEL[s.type]}
-                          {s.metric_name ? ` — ${s.metric_name}` : ""})
+                          {s.metric_name ? `: ${s.metric_name}` : ""})
                         </span>
                       </span>
                       <ConfirmDeleteButton

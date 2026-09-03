@@ -63,7 +63,7 @@ export default function ColumnChipRow({
                 disabled={disabled}
                 title={
                   disabled
-                    ? `Switch one off first — ${max} columns is the maximum`
+                    ? `Switch one off first. ${max} columns is the maximum`
                     : c.visible
                     ? `Hide the ${c.label} column`
                     : `Show the ${c.label} column`

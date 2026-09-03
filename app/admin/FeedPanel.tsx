@@ -6,7 +6,7 @@ function describe(event: ReturnType<typeof getActivityFeed>[number]) {
     return (
       <>
         <strong>{event.clientName}</strong> completed {event.dayName}
-        {event.dayLabel ? ` · ${event.dayLabel}` : ""} ({event.weekLabel}) — {event.exerciseCount}{" "}
+        {event.dayLabel ? ` · ${event.dayLabel}` : ""} ({event.weekLabel}) · {event.exerciseCount}{" "}
         exercise{event.exerciseCount === 1 ? "" : "s"}, {event.setCount} set{event.setCount === 1 ? "" : "s"}
       </>
     );
@@ -28,12 +28,12 @@ export default function FeedPanel() {
     <div>
       <h1>Feed</h1>
       <p className="subtitle">
-        Live activity across all clients — completed workouts and invoice updates, newest first.
+        Live activity across all clients: completed workouts and invoice updates, newest first.
       </p>
 
       {events.length === 0 ? (
         <p className="empty-note">
-          Nothing yet — once a client finishes a workout or an invoice status changes, it&rsquo;ll
+          Nothing yet. Once a client finishes a workout or an invoice status changes, it&rsquo;ll
           show up here immediately.
         </p>
       ) : (

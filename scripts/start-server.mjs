@@ -22,7 +22,7 @@ function run(command, args) {
 }
 
 if (process.env.SKIP_SEED !== "1" && !fs.existsSync(marker)) {
-  console.log("[start-server] No existing data found — seeding demo data...");
+  console.log("[start-server] No existing data found, seeding demo data...");
   run("node", ["scripts/seed.js"]);
   run("npx", ["tsx", "scripts/seed-rich.ts"]);
   fs.writeFileSync(marker, new Date().toISOString());

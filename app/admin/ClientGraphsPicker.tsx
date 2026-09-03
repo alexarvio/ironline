@@ -59,7 +59,7 @@ export default function ClientGraphsPicker({ choices }: { choices: GraphChoice[]
                     disabled={blocked}
                     title={
                       blocked
-                        ? `Only ${PINNED_METRIC_LIMIT} can be shown at once — turn one off first.`
+                        ? `Only ${PINNED_METRIC_LIMIT} can be shown at once. Turn one off first.`
                         : c.pinned
                           ? "Shown on the client's Home screen"
                           : "Not shown on the client's Home screen"

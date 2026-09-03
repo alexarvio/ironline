@@ -26,7 +26,7 @@ export default function ChatPanel({
     <div className="chat-panel">
       <div className="chat-thread">
         {messages.length === 0 ? (
-          <p className="empty-note">No messages yet — say hello below.</p>
+          <p className="empty-note">No messages yet. Say hello below.</p>
         ) : (
           messages.map((m) => (
             <div key={m.id} className={`chat-bubble-row ${m.sender === viewer ? "mine" : "theirs"}`}>

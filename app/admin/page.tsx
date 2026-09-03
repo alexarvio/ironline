@@ -69,7 +69,7 @@ export default async function AdminPage({
         <div className="ad-pad">
           <p className="ad-empty">
             {clients.length === 0
-              ? "No clients yet — add one from the sidebar to get started."
+              ? "No clients yet. Add one from the sidebar to get started."
               : "Select a client from the sidebar."}
           </p>
         </div>

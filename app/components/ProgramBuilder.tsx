@@ -125,7 +125,7 @@ export default function ProgramBuilder({
       const summary = markedRest
         ? "Rest day"
         : assignments.length === 0
-        ? "Nothing yet — add the first exercise"
+        ? "Nothing yet. Add the first exercise"
         : `${assignments.length} exercise${assignments.length === 1 ? "" : "s"}`;
 
       return (
@@ -432,7 +432,7 @@ export default function ProgramBuilder({
       );
       weekSummaries[index] = trainingDays
         ? `${trainingDays} training day${trainingDays === 1 ? "" : "s"}${setsLogged ? ` · ${setsLogged} sets logged` : ""}`
-        : `${programWeekLabel(program, weekNumber)} is empty — pick a day and add the first exercise`;
+        : `${programWeekLabel(program, weekNumber)} is empty. Pick a day and add the first exercise`;
 
       // Seven ticks in weekday order reporting what the client actually did:
       // trained, planned-but-missed, or rest. Planned-vs-actual is the whole
@@ -443,12 +443,12 @@ export default function ProgramBuilder({
         const assignments = day ? getAssignmentsForDay(day.id) : [];
         const name = DAY_NAMES_FULL[di];
         if (assignments.length === 0) {
-          return { dayOfWeek: dow, state: "rest" as const, title: `${name} — rest day` };
+          return { dayOfWeek: dow, state: "rest" as const, title: `${name}: rest day` };
         }
         const logged = assignments.some((a) => getLogsForAssignment(a.id).length > 0);
         return logged
-          ? { dayOfWeek: dow, state: "trained" as const, title: `${name} — trained` }
-          : { dayOfWeek: dow, state: "missed" as const, title: `${name} — planned, nothing logged` };
+          ? { dayOfWeek: dow, state: "trained" as const, title: `${name}: trained` }
+          : { dayOfWeek: dow, state: "missed" as const, title: `${name}: planned, nothing logged` };
       });
       const trainedDays = railDays.filter((d) => d.state === "trained").length;
       const isFuture = liveWeekNumber != null && weekNumber > liveWeekNumber;
@@ -525,10 +525,10 @@ export default function ProgramBuilder({
         ) : status === "live" ? (
           <div key={`a${program.id}`} className="pb-live-row">
             <span className="pb-live-dot" aria-hidden="true" />
-            <span className="pb-live-text">Live — {clientName || "the client"} can see this now</span>
+            <span className="pb-live-text">Live: {clientName || "the client"} can see this now</span>
           </div>
         ) : (
-          <span key={`a${program.id}`} className="pb-live-text past">Past program — read only for the client</span>
+          <span key={`a${program.id}`} className="pb-live-text past">Past program, read only for the client</span>
         ),
     };
   }
@@ -556,7 +556,7 @@ export default function ProgramBuilder({
             </form>
           )
         }
-        emptySlot={<p key="empty" className="empty-note">No programs yet — start one and build the first week.</p>}
+        emptySlot={<p key="empty" className="empty-note">No programs yet. Start one and build the first week.</p>}
       />
 
     </div>

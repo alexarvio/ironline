@@ -31,7 +31,7 @@ export default function ProgressPicturesPanel({ clientId }: { clientId: number }
   return (
     <div>
       <p className="empty-note" style={{ marginBottom: 18 }}>
-        Define the angles you want from this client — name each one whatever makes sense
+        Define the angles you want from this client: name each one whatever makes sense
         (Front, Back, Side, Profile 1, as many as you like), and how often they should get a
         fresh, empty sheet to fill in. On their end, the client taps a box to shoot or upload a
         photo for each angle.
@@ -76,10 +76,10 @@ export default function ProgressPicturesPanel({ clientId }: { clientId: number }
       )}
 
       {slots.length === 0 ? (
-        <p className="empty-note">No photo slots defined yet — add one above.</p>
+        <p className="empty-note">No photo slots defined yet. Add one above.</p>
       ) : periods.length === 0 ? (
         <p className="empty-note">
-          Slots are set up — nothing uploaded yet. Photos will appear here automatically as
+          Slots are set up, nothing uploaded yet. Photos will appear here automatically as
           soon as the client submits one.
         </p>
       ) : (

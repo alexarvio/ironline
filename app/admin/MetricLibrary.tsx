@@ -64,7 +64,7 @@ export default function MetricLibrary({ clientId, packs }: { clientId: number; p
         <input type="hidden" name="frequency" value={cadence} />
 
         <div className={`ms-namefield${open ? " open" : ""}`}>
-          <input name="name" type="text" placeholder="Column name — or pick from the library" aria-label="Column name" />
+          <input name="name" type="text" placeholder="Column name, or pick from the library" aria-label="Column name" />
           <button
             type="button"
             className={`ms-namechev${open ? " open" : ""}`}

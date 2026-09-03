@@ -35,7 +35,7 @@ export default function CalendarPanel({ month }: { month?: string }) {
       </div>
       <p className="subtitle" style={{ marginBottom: 20 }}>
         Every meeting scheduled across all clients, pulled straight from each client&rsquo;s
-        Meetings tab — nothing is entered here directly. Overlapping times are flagged
+        Meetings tab. Nothing is entered here directly. Overlapping times are flagged
         automatically so you never double-book.
       </p>
 
@@ -47,7 +47,7 @@ export default function CalendarPanel({ month }: { month?: string }) {
           <ul>
             {conflicts.map((c, i) => (
               <li key={i}>
-                {c.a.date} — <strong>{c.a.clientName}</strong> at {c.a.time} ({c.a.duration_minutes}min)
+                {c.a.date}: <strong>{c.a.clientName}</strong> at {c.a.time} ({c.a.duration_minutes}min)
                 overlaps <strong>{c.b.clientName}</strong> at {c.b.time} ({c.b.duration_minutes}min)
               </li>
             ))}

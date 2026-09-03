@@ -57,7 +57,7 @@ const SPLIT: { dayOfWeek: number; label: string; exercises: Prescription[] }[] =
   },
   {
     dayOfWeek: 2,
-    label: "Upper — push",
+    label: "Upper (push)",
     exercises: [
       {
         exerciseId: 4, sets: 4, reps: "8-10", weight: 52.5, step: 2.5, rpe: 8,
@@ -74,7 +74,7 @@ const SPLIT: { dayOfWeek: number; label: string; exercises: Prescription[] }[] =
   },
   {
     dayOfWeek: 4,
-    label: "Upper — pull",
+    label: "Upper (pull)",
     exercises: [
       {
         exerciseId: 6, sets: 4, reps: "10-12", weight: 57.5, step: 2.5, rpe: 8,
@@ -91,13 +91,13 @@ const SPLIT: { dayOfWeek: number; label: string; exercises: Prescription[] }[] =
   },
   {
     dayOfWeek: 6,
-    label: "Full body — light",
+    label: "Full body (light)",
     exercises: [
       { exerciseId: 1, sets: 3, reps: "12-15", weight: 100, step: 5, rpe: 7 },
       { exerciseId: 5, sets: 3, reps: "12-15", weight: 40, step: 2.5, rpe: 7 },
       {
         exerciseId: 7, sets: 3, reps: "12-15", weight: 45, step: 2.5, rpe: 7,
-        note: "Slow it down — three seconds on the way up.",
+        note: "Slow it down. Three seconds on the way up.",
         noteKind: "tempo",
       },
     ],

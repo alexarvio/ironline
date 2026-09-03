@@ -156,11 +156,11 @@ export default function NutritionMacrosLive({
       </div>
 
       <div className="nutrition-table-wrap">
-        <h3>Macros — training day</h3>
+        <h3>Macros (training day)</h3>
         <MacroRows prefix="td" rows={trainingRows} onChange={update(setTrainingRows)} />
       </div>
       <div className="nutrition-table-wrap">
-        <h3>Macros — rest day</h3>
+        <h3>Macros (rest day)</h3>
         <MacroRows prefix="rd" rows={restRows} onChange={update(setRestRows)} />
       </div>
     </>

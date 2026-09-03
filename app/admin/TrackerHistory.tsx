@@ -37,8 +37,8 @@ export default function TrackerHistory({ daily, weekly }: { daily: MetricHistory
         history={grain === "daily" ? daily : weekly}
         emptyNote={
           grain === "daily"
-            ? "No daily metrics configured yet — add some from the library."
-            : "No weekly metrics configured yet — add some from the library."
+            ? "No daily metrics configured yet. Add some from the library."
+            : "No weekly metrics configured yet. Add some from the library."
         }
         maxHeight={290}
         // At weekly grain a daily metric is being averaged, and the header

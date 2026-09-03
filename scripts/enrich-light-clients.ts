@@ -119,7 +119,7 @@ const CONFIGS: LightClientConfig[] = [
     name: "Jordan Blake",
     weight: 71.2,
     waist: 88.5,
-    goalPhase: "Fat loss — 8kg to go",
+    goalPhase: "Fat loss, 8kg to go",
     invoiceStatus: "unpaid",
     meetingTime: "10:00",
     swatch: [170, 140, 120],
@@ -137,7 +137,7 @@ const CONFIGS: LightClientConfig[] = [
       },
       {
         dow: 5,
-        label: "Full body — conditioning",
+        label: "Full body (conditioning)",
         exercises: [
           { name: "Leg Press", sets: 3, reps: "12-15", weight: 85, rpe: 7 },
           { name: "Calf Press", sets: 3, reps: "15", weight: 70, rpe: null },
@@ -156,10 +156,10 @@ const CONFIGS: LightClientConfig[] = [
     extraShortGoal: "Hit 8,000 steps every day this week",
     extraLongGoal: "Fit into pre-2024 wardrobe by December",
     coachNotes:
-      "Good week — weight and waist both trending the right way. Keep protein consistent on rest days, that's the one area slipping a bit.",
+      "Good week. Weight and waist both trending the right way. Keep protein consistent on rest days, that's the one area slipping a bit.",
     chatFollowUp: [
       [4, "client", "Down another 0.6kg this week, feeling good about the plan!"],
-      [4, "coach", "Nice work — waist is tracking with it too. Keep the steps up and we'll reassess calories in 2 weeks."],
+      [4, "coach", "Nice work. Waist is tracking with it too. Keep the steps up and we'll reassess calories in 2 weeks."],
       [1, "client", "Can we push Friday's session to Saturday this week? Travel for work."],
     ],
   },
@@ -202,14 +202,14 @@ const CONFIGS: LightClientConfig[] = [
       { back: 7, w: 64.8, waist: 71.0 },
     ],
     extraShortGoal: "Add 2.5kg to leg press this week",
-    extraLongGoal: "Pull-up progression — first strict rep by spring",
+    extraLongGoal: "Pull-up progression, first strict rep by spring",
     coachNotes:
-      "Strength is climbing steadily on every lift — no changes needed, just keep stacking small weight increases each week.",
+      "Strength is climbing steadily on every lift. No changes needed, just keep stacking small weight increases each week.",
     chatFollowUp: [
       [5, "client", "Leg press felt easy at 70kg today, can we bump it next week?"],
-      [5, "coach", "Yep, let's try 72.5kg for the same rep range — good sign of progress."],
+      [5, "coach", "Yep, let's try 72.5kg for the same rep range, good sign of progress."],
       [2, "client", "Shoulder felt a little tight during side raises, nothing serious though."],
-      [2, "coach", "Noted — let's drop the weight slightly there and keep an eye on it at the next check-in."],
+      [2, "coach", "Noted. Let's drop the weight slightly there and keep an eye on it at the next check-in."],
     ],
   },
 ];
@@ -217,7 +217,7 @@ const CONFIGS: LightClientConfig[] = [
 function enrichClient(cfg: LightClientConfig) {
   const client = listClients().find((c) => c.name === cfg.name);
   if (!client) {
-    console.log(`Skipping ${cfg.name} — no matching client found (run scripts/seed-rich.ts first).`);
+    console.log(`Skipping ${cfg.name}: no matching client found (run scripts/seed-rich.ts first).`);
     return;
   }
   const clientId = client.id;
@@ -324,7 +324,7 @@ function enrichClient(cfg: LightClientConfig) {
     period: weekStart(daysAgo(7)),
     shape: "Visible progress since last check-in.",
     strengths: "Posture and consistency in photo angle are great.",
-    improvements: "Nothing major — keep the same lighting setup.",
+    improvements: "Nothing major. Keep the same lighting setup.",
     next_steps: "Same time, same spot next week.",
   });
   persist();
@@ -339,11 +339,11 @@ function enrichClient(cfg: LightClientConfig) {
   if (pastMeeting) {
     pastMeeting.status = "completed";
     persist();
-    addMeetingNote(pastMeeting.id, "Reviewed week 3 — good adherence, adjusted training slightly.");
+    addMeetingNote(pastMeeting.id, "Reviewed week 3: good adherence, adjusted training slightly.");
   }
 
   // ---- Second invoice ----
-  addInvoice(clientId, "Coaching — Month 2", 180, cfg.invoiceStatus === "unpaid" ? "sent" : "paid");
+  addInvoice(clientId, "Coaching, Month 2", 180, cfg.invoiceStatus === "unpaid" ? "sent" : "paid");
 
   // ---- Chat follow-up ----
   cfg.chatFollowUp.forEach(([daysBack, sender, text], i) => {

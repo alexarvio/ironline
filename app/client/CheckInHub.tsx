@@ -35,9 +35,9 @@ export default function CheckInHub({ dueItems, tabs }: { dueItems: DueItem[]; ta
 
       {active === "today" ? (
         <div>
-          <p className="app-lead">What&rsquo;s due right now — tap one to fill it in.</p>
+          <p className="app-lead">What&rsquo;s due right now. Tap one to fill it in.</p>
           {dueItems.length === 0 ? (
-            <p className="empty-note">All caught up — nothing due today.</p>
+            <p className="empty-note">All caught up, nothing due today.</p>
           ) : (
             <div className="today-list">
               {dueItems.map((item) => (

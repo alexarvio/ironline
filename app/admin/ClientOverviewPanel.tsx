@@ -70,7 +70,7 @@ export default function ClientOverviewPanel({
              write and take away again, with no completion state to maintain. */}
       <section className="ad-panel-section">
         <div className="ad-panel-heading-row">
-          <h3 className="ad-panel-heading">Goals — 3 months</h3>
+          <h3 className="ad-panel-heading">Goals (3 months)</h3>
           <span className="ad-goal-count">
             {panel.goals.length} goal{panel.goals.length === 1 ? "" : "s"}
           </span>

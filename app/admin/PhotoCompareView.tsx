@@ -21,7 +21,7 @@ export default function PhotoCompareView({ periodsData }: { periodsData: PeriodP
     <div className="nutrition-table-wrap builder-card">
       <h3 className="builder-pill-heading">Compare progress</h3>
       <p className="empty-note" style={{ marginBottom: 14 }}>
-        Pick any two check-ins to compare side by side — Week 1 vs Week 8, or whatever you want.
+        Pick any two check-ins to compare side by side: Week 1 vs Week 8, or whatever you want.
       </p>
 
       <div className="photo-compare-controls">

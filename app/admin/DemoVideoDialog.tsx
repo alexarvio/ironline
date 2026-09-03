@@ -52,7 +52,7 @@ export default function DemoVideoDialog({
           demoUrl
             ? `Demo for this prescription: ${demoUrl}`
             : libraryUrl
-            ? "Using the exercise library's video — click to set one for this prescription"
+            ? "Using the exercise library's video. Click to set one for this prescription"
             : `Attach a demo video for ${exerciseName}`
         }
       >
@@ -216,7 +216,7 @@ function DemoDialog({
               <span>{fileName ?? "Choose a video from your computer"}</span>
             </label>
             <p className="pb-demo-hint">
-              Up to 64&nbsp;MB. A phone clip of the movement is usually plenty — trim it before uploading
+              Up to 64&nbsp;MB. A phone clip of the movement is usually plenty. Trim it before uploading
               rather than sending a whole session.
             </p>
             <div className="pb-modal-foot">

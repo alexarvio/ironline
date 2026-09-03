@@ -27,8 +27,8 @@ export default function ReportsPanel({ clientId }: { clientId: number }) {
   return (
     <div>
       <p className="empty-note" style={{ marginBottom: 18 }}>
-        Generate a report from a saved template, or build one from scratch for just this client —
-        review the AI-written draft, edit if needed, then approve and send. Nothing reaches the
+        Generate a report from a saved template, or build one from scratch for just this client.
+        Review the AI-written draft, edit if needed, then approve and send. Nothing reaches the
         client until you send it.
       </p>
 

@@ -128,7 +128,7 @@ export default function GenerateReportForm({
               {customSections.map((s, i) => (
                 <div key={i} className="report-section-checkbox" style={{ justifyContent: "space-between" }}>
                   <span>
-                    {s.label} <span className="exercise-meta">({REPORT_SECTION_TYPE_LABEL[s.type]}{s.metricName ? ` — ${s.metricName}` : ""})</span>
+                    {s.label} <span className="exercise-meta">({REPORT_SECTION_TYPE_LABEL[s.type]}{s.metricName ? `: ${s.metricName}` : ""})</span>
                   </span>
                   <button
                     type="button"

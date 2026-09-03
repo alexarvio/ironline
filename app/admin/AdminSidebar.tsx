@@ -55,7 +55,7 @@ export default function AdminSidebar({ selectedId }: { selectedId: number | null
           the same 36px as the rows above it, rather than pinned outside. */}
       <div className="ad-clients">
         {clients.length === 0 ? (
-          <p className="ad-empty">No clients yet — add your first one below.</p>
+          <p className="ad-empty">No clients yet. Add your first one below.</p>
         ) : (
           clients.map((c) => {
             const attention = clientAttention(c.id);

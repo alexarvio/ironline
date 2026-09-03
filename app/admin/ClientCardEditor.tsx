@@ -92,7 +92,7 @@ export default function ClientCardEditor({
         // matters, because a coach adding a client mid-conversation rarely has
         // the address to hand and shouldn't feel stuck.
         <p className="ad-onboard-note">
-          New client — fill in what you know. Anything you skip can be added later from Edit.
+          New client. Fill in what you know. Anything you skip can be added later from Edit.
         </p>
       )}
 
@@ -106,11 +106,11 @@ export default function ClientCardEditor({
         <div className="ad-fields">
           <Field label="Name" name="name" value={card.name} required />
           <Field label="Birthdate" name="birthdate" value={card.birthdate} type="date" />
-          <Field label="Gender" name="gender" value={card.gender} placeholder="—" />
+          <Field label="Gender" name="gender" value={card.gender} placeholder="-" />
           <Field label="Height" name="height_cm" value={card.height_cm} type="number" suffix="cm" />
-          <Field label="Email" name="email" value={card.email} type="email" placeholder="—" />
-          <Field label="Phone" name="phone" value={card.phone} type="tel" placeholder="—" />
-          <Field label="Address" name="address" value={card.address} placeholder="—" />
+          <Field label="Email" name="email" value={card.email} type="email" placeholder="-" />
+          <Field label="Phone" name="phone" value={card.phone} type="tel" placeholder="-" />
+          <Field label="Address" name="address" value={card.address} placeholder="-" />
         </div>
       </section>
 
@@ -118,7 +118,7 @@ export default function ClientCardEditor({
         <h3 className="ad-panel-heading">Coaching info</h3>
         <div className="ad-fields">
           <Field label="Start date" name="coaching_start_date" value={card.coaching_start_date} type="date" />
-          <Field label="Goal / phase" name="goal_phase" value={card.goal_phase} placeholder="—" />
+          <Field label="Goal / phase" name="goal_phase" value={card.goal_phase} placeholder="-" />
           <Field label="Goal date" name="goal_date" value={card.goal_date} type="date" />
           <Field label="Check-in day" name="check_in_day" value={card.check_in_day} placeholder="Monday" />
           <Field
@@ -134,7 +134,7 @@ export default function ClientCardEditor({
             find out where it comes from rather than assume it's missing. */}
         <p className="ad-field-note">
           Plan, current week and current weight follow the live programme and the client&rsquo;s own
-          check-ins — they can&rsquo;t be typed here.
+          check-ins. They can&rsquo;t be typed here.
         </p>
       </section>
 

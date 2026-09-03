@@ -19,7 +19,7 @@ export default function TrainingColumnsPanel({
       <summary>Customize columns</summary>
       <div className="training-columns-body">
         <p className="empty-note" style={{ marginBottom: 12 }}>
-          Hide any column you don&rsquo;t use, rename the ones you keep, or add your own — this
+          Hide any column you don&rsquo;t use, rename the ones you keep, or add your own. This
           applies to every day in this client&rsquo;s program.
         </p>
         <div className="training-columns-list">

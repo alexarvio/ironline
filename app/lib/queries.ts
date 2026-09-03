@@ -370,7 +370,7 @@ export function deployProgram(programId: number) {
   program.scheduled_at = null;
   for (let i = 0; i < program.total_weeks; i++) publishWeek(program.client_id, program.start_week + i);
   persist();
-  logCoachActivity(program.client_id, `Your coach published a new plan${program.name ? `: ${program.name}` : ""} — check it out`, {
+  logCoachActivity(program.client_id, `Your coach published a new plan${program.name ? `: ${program.name}` : ""}. Check it out`, {
     kind: "programme",
     actionTab: "training",
     actionLabel: "See the week",
@@ -482,7 +482,7 @@ export function applyDueClientReminders() {
           : item.id === "photos"
           ? photoPeriodFor(today, getPhotoCadence(clientId))
           : today;
-      logCoachActivity(clientId, `${item.label} — ${item.detail}`, {
+      logCoachActivity(clientId, `${item.label}: ${item.detail}`, {
         kind: "reminder",
         dedupeKey: `reminder:${item.id}:${clientId}:${periodKey}`,
       });
@@ -718,14 +718,14 @@ export function getWeekRail(clientId: number, weekNumbers: number[], liveWeek: n
       const name = dayNames[dow - 1];
 
       if (assignments.length === 0) {
-        railDays.push({ dayOfWeek: dow, state: "rest", title: `${name} — rest day` });
+        railDays.push({ dayOfWeek: dow, state: "rest", title: `${name}: rest day` });
         continue;
       }
       const logged = assignments.some((a) => getLogsForAssignment(a.id).length > 0);
       railDays.push(
         logged
-          ? { dayOfWeek: dow, state: "trained", title: `${name} — trained` }
-          : { dayOfWeek: dow, state: "missed", title: `${name} — planned, nothing logged` }
+          ? { dayOfWeek: dow, state: "trained", title: `${name}: trained` }
+          : { dayOfWeek: dow, state: "missed", title: `${name}: planned, nothing logged` }
       );
     }
 
@@ -1291,7 +1291,7 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
   const today = localDateStr();
 
   const dash = (v: string | number | null | undefined) =>
-    v === null || v === undefined || v === "" ? "—" : String(v);
+    v === null || v === undefined || v === "" ? "-" : String(v);
 
   const nextMeeting = listMeetings(clientId)
     .filter((m) => m.status === "scheduled" && m.date >= today)
@@ -1317,7 +1317,7 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
   }
 
   const fmtDate = (iso: string | null | undefined) =>
-    iso ? new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "—";
+    iso ? new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "-";
 
   return {
     name: client?.name ?? "Unknown",
@@ -1327,7 +1327,7 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
     snapshot: [
       {
         label: "Training",
-        value: planned ? `${trained} of ${planned}` : "—",
+        value: planned ? `${trained} of ${planned}` : "-",
         suffix: planned ? "done this week" : undefined,
       },
       {
@@ -1343,10 +1343,10 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
       },
       {
         label: "Kcal goal",
-        value: nutrition.trainingKcal ? String(nutrition.trainingKcal) : "—",
+        value: nutrition.trainingKcal ? String(nutrition.trainingKcal) : "-",
         suffix: nutrition.trainingKcal ? "kcal" : undefined,
       },
-      { label: "Weight", value: weight != null ? String(weight) : "—", suffix: weight != null ? "kg" : undefined },
+      { label: "Weight", value: weight != null ? String(weight) : "-", suffix: weight != null ? "kg" : undefined },
       { label: "Metrics tracked", value: String(metricCount) },
       {
         label: "Invoices",
@@ -1358,20 +1358,20 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
     memberInfo: [
       { label: "Birthdate", value: dash(profile.birthdate) },
       { label: "Gender", value: dash(profile.gender) },
-      { label: "Height", value: profile.height_cm ? `${profile.height_cm} cm` : "—" },
+      { label: "Height", value: profile.height_cm ? `${profile.height_cm} cm` : "-" },
       { label: "Email", value: dash(profile.email) },
       { label: "Phone", value: dash(profile.phone) },
       { label: "Address", value: dash(profile.address) },
     ],
     coachingInfo: [
-      { label: "Plan", value: liveProgram?.name || "—" },
+      { label: "Plan", value: liveProgram?.name || "-" },
       { label: "Start date", value: dash(profile.coaching_start_date) },
-      { label: "Current week", value: liveWeek != null ? `Week ${liveWeek}` : "—" },
+      { label: "Current week", value: liveWeek != null ? `Week ${liveWeek}` : "-" },
       { label: "Goal / phase", value: dash(profile.goal_phase) },
       { label: "Goal date", value: dash(profile.goal_date) },
       { label: "Check-in day", value: dash(profile.check_in_day) },
-      { label: "Starting weight", value: profile.starting_weight_kg ? `${profile.starting_weight_kg} kg` : "—" },
-      { label: "Current weight", value: weight != null ? `${weight} kg` : "—" },
+      { label: "Starting weight", value: profile.starting_weight_kg ? `${profile.starting_weight_kg} kg` : "-" },
+      { label: "Current weight", value: weight != null ? `${weight} kg` : "-" },
     ],
     activity: getActivityFeed(60)
       .filter((e) => e.clientId === clientId)
@@ -1381,8 +1381,8 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
         when: feedTimeLabel(e.at),
         text:
           e.type === "workout_completed"
-            ? `Completed ${e.dayName}${e.dayLabel ? ` · ${e.dayLabel}` : ""} (${e.weekLabel}) — ${e.exerciseCount} exercise${e.exerciseCount === 1 ? "" : "s"}, ${e.setCount} set${e.setCount === 1 ? "" : "s"}`
-            : `Invoice ${e.status} — ${e.description}`,
+            ? `Completed ${e.dayName}${e.dayLabel ? ` · ${e.dayLabel}` : ""} (${e.weekLabel}) · ${e.exerciseCount} exercise${e.exerciseCount === 1 ? "" : "s"}, ${e.setCount} set${e.setCount === 1 ? "" : "s"}`
+            : `Invoice ${e.status} · ${e.description}`,
       })),
     card: {
       name: client?.name ?? "",
@@ -2099,7 +2099,7 @@ export function countPinned(clientId: number): number {
   );
 }
 
-const PIN_FULL_REASON = `Only ${PINNED_METRIC_LIMIT} can be pinned at once — unpin one first.`;
+const PIN_FULL_REASON = `Only ${PINNED_METRIC_LIMIT} can be pinned at once. Unpin one first.`;
 
 export function togglePinMetric(id: number): { ok: boolean; reason?: string } {
   const data = getData();
@@ -2295,7 +2295,7 @@ export function getMetricHistory(clientId: number, cadence: MetricCadence): Metr
   // First to latest, per column — the row pinned to the bottom of the table.
   const change: HistoryChange = defs.map((_, i) => {
     const withValues = [...rows].reverse().filter((r) => r.values[i] != null);
-    if (withValues.length < 2) return { delta: null, pct: null, label: "—" };
+    if (withValues.length < 2) return { delta: null, pct: null, label: "-" };
     const first = withValues[0].values[i]!;
     const latest = withValues[withValues.length - 1].values[i]!;
     const delta = latest - first;
@@ -3755,7 +3755,7 @@ export function getCheckInSections(clientId: number): CheckInData {
     sections.push({
       id: "measurements",
       label: "Measure",
-      intro: "Same spots, same time of day — first thing, before food.",
+      intro: "Same spots, same time of day: first thing, before food.",
       metrics: fields.map((f) => {
         const current = valueAt(f.id, today);
         const previous = previousDate ? valueAt(f.id, previousDate) : null;
@@ -3831,7 +3831,7 @@ export function getCheckInSections(clientId: number): CheckInData {
     photoSlots,
     photoPeriodLabel: unit,
     photosDue: photoSlots.length > 0 && photoSlots.some((p) => !p.src),
-    photosNextLabel: `All ${photoSlots.length} taken — the next set opens ${
+    photosNextLabel: `All ${photoSlots.length} taken. The next set opens ${
       cadence === "monthly" ? "next month" : cadence === "biweekly" ? "in two weeks" : "next week"
     }.`,
   };

@@ -95,7 +95,7 @@ export default function MetricGraphPanel({ metrics }: { metrics: MetricChoice[] 
           <p className="ad-panel-empty">Loading…</p>
         ) : shown.length < 2 ? (
           <p className="ad-panel-empty">
-            Not enough readings in this range yet — a line needs at least two.
+            Not enough readings in this range yet. A line needs at least two.
           </p>
         ) : (
           <LineChart points={shown} />

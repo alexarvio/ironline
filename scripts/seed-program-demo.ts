@@ -79,7 +79,7 @@ saveClientProfile({
   starting_weight_kg: 78,
   coaching_start_date: daysAgo(28),
   current_week: "Week 4",
-  goal_phase: "Strength — Foundations phase 1",
+  goal_phase: "Strength, Foundations phase 1",
   goal_phase_start_date: null,
   goal_date: daysAgo(-56),
   check_in_day: "Monday",
@@ -90,7 +90,7 @@ saveClientProfile({
 });
 addClientGoal(CLIENT_ID, "short", "Hit all 4 planned sessions this week");
 addClientGoal(CLIENT_ID, "long", "Add 15kg to leg press over the block");
-addInvoice(CLIENT_ID, "Coaching — Month 1", 180, "paid");
+addInvoice(CLIENT_ID, "Coaching, Month 1", 180, "paid");
 addMeeting(CLIENT_ID, daysAgo(-4), "18:00", "Week 4 check-in call", 30);
 
 const weightField = listMeasurementFields(CLIENT_ID).find((f) => f.name === "Weight")!;
@@ -103,7 +103,7 @@ const waistField = listMeasurementFields(CLIENT_ID).find((f) => f.name === "Wais
 
 // ---- Deployed program: 6 weeks, "live" for 3 weeks already (deployed_at
 // backdated so the calendar-current week lands on week 4) ----
-const deployed = createProgram(CLIENT_ID, "Foundations — Phase 1", 6, 1);
+const deployed = createProgram(CLIENT_ID, "Foundations: Phase 1", 6, 1);
 
 type ExPlan = { name: string; sets: number; reps: string; base: number; step: number; rpe: number; tempo?: string; notes?: string };
 const lowerA: ExPlan[] = [
@@ -125,7 +125,7 @@ const upperPull: ExPlan[] = [
   { name: "Incline Dumbbell Curl", sets: 3, reps: "10-12", base: 10, step: 1, rpe: 8 },
 ];
 const lowerLight: ExPlan[] = [
-  { name: "Leg Press", sets: 3, reps: "12-15", base: 80, step: 3, rpe: 6, notes: "Deload volume — go lighter" },
+  { name: "Leg Press", sets: 3, reps: "12-15", base: 80, step: 3, rpe: 6, notes: "Deload volume, go lighter" },
   { name: "Leg Extension", sets: 3, reps: "15", base: 32, step: 1.5, rpe: 6 },
   { name: "Calf Press", sets: 3, reps: "15", base: 70, step: 3, rpe: 6 },
 ];
@@ -142,17 +142,17 @@ for (let w = 1; w <= 6; w++) {
   lowerA.forEach((p) => addExerciseToDay(mon.id, findExerciseId(p.name), p.sets, p.reps, weightAt(p, w), p.rpe, p.tempo ?? null, p.notes ?? null));
 
   const tue = byDow(2);
-  setDayLabel(tue.id, "Upper — push");
+  setDayLabel(tue.id, "Upper (push)");
   upperPush.forEach((p) => addExerciseToDay(tue.id, findExerciseId(p.name), p.sets, p.reps, weightAt(p, w), p.rpe, p.tempo ?? null, p.notes ?? null));
 
   setDayLabel(byDow(3).id, "Rest");
 
   const thu = byDow(4);
-  setDayLabel(thu.id, "Upper — pull");
+  setDayLabel(thu.id, "Upper (pull)");
   upperPull.forEach((p) => addExerciseToDay(thu.id, findExerciseId(p.name), p.sets, p.reps, weightAt(p, w), p.rpe, p.tempo ?? null, p.notes ?? null));
 
   const fri = byDow(5);
-  setDayLabel(fri.id, "Lower — light");
+  setDayLabel(fri.id, "Lower (light)");
   lowerLight.forEach((p) => addExerciseToDay(fri.id, findExerciseId(p.name), p.sets, p.reps, weightAt(p, w), p.rpe, p.tempo ?? null, p.notes ?? null));
 
   setDayLabel(byDow(6).id, "Rest");
@@ -201,16 +201,16 @@ logFullDay(1, 4, lowerA, 0);
 // ---- Draft program: the next block, still being built (only its first
 // week's Monday/Tuesday are filled in — weeks 2-4 stay blank skeletons,
 // same as a coach genuinely mid-build) ----
-const draft = createProgram(CLIENT_ID, "Phase 2 — Progression", 4, deployed.start_week + 6);
+const draft = createProgram(CLIENT_ID, "Phase 2: Progression", 4, deployed.start_week + 6);
 const draftWeek1 = getWeek(CLIENT_ID, draft.start_week);
 const dMon = draftWeek1.find((d) => d.day_of_week === 1)!;
 setDayLabel(dMon.id, "Lower body");
 lowerA.forEach((p) => addExerciseToDay(dMon.id, findExerciseId(p.name), p.sets, p.reps, weightAt(p, 7), p.rpe, p.tempo ?? null, p.notes ?? null));
 const dTue = draftWeek1.find((d) => d.day_of_week === 2)!;
-setDayLabel(dTue.id, "Upper — push");
+setDayLabel(dTue.id, "Upper (push)");
 upperPush.forEach((p) => addExerciseToDay(dTue.id, findExerciseId(p.name), p.sets, p.reps, weightAt(p, 7), p.rpe, p.tempo ?? null, p.notes ?? null));
 
 console.log("Seeded demo program for Nithit (client_id=3):");
-console.log(`  Deployed: "${deployed.name}" — 6 weeks, currently on week 4, weeks 1-3 fully logged.`);
-console.log(`  Draft: "${draft.name}" — 4 weeks, week 1 partially built (Mon/Tue only).`);
+console.log(`  Deployed: "${deployed.name}", 6 weeks, currently on week 4, weeks 1-3 fully logged.`);
+console.log(`  Draft: "${draft.name}", 4 weeks, week 1 partially built (Mon/Tue only).`);
 console.log("Done.");

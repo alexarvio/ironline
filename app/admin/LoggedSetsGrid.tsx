@@ -75,9 +75,9 @@ export default function LoggedSetsGrid({ rows }: { rows: LoggedWeekRow[] }) {
             const rpePart = set.rpe != null ? ` at RPE ${set.rpe}` : "";
             const title =
               row.targetWeightKg == null
-                ? `Set ${n}: ${set.weightKg ?? "–"}kg × ${set.reps ?? "–"}${rpePart} — no weight target set for ${row.weekLabel}`
-                : `Set ${n}: ${set.weightKg ?? "–"}kg × ${set.reps ?? "–"}${rpePart} — ${
-                    v === "met" ? "met or beat" : "under"
+                ? `Set ${n}: ${set.weightKg ?? "–"}kg × ${set.reps ?? "–"}${rpePart}. No weight target set for ${row.weekLabel}`
+                : `Set ${n}: ${set.weightKg ?? "–"}kg × ${set.reps ?? "–"}${rpePart}. ${
+                    v === "met" ? "Met or beat" : "Under"
                   } the ${row.targetWeightKg}kg target for ${row.weekLabel}`;
             return (
               <span key={n} className={`pb-logged-cell${v ? ` ${v}` : ""}`} title={title}>
