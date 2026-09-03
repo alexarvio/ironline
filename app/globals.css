@@ -9821,6 +9821,19 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 .ms-del:hover { color: var(--accent-plate); }
 
+/* ---- Client Nutrition: the coach's standing note on the targets ---- */
+.nd-coach-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--accent-tint);
+  color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
 /* ---- Measurements tab status bar: "live for the client" + save state ---- */
 .ms-topbar {
   display: flex;

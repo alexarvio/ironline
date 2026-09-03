@@ -556,6 +556,17 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
         <NutritionDayToggle dateLabel={dateLabel} training={training} rest={rest} initialIsTraining={isTrainingDay} />
       )}
 
+      {/* The coach's note on the targets (Nutrition tab → "Note on the
+          targets"). Distinct from the "Coach notes" feed further down, which
+          is per-exercise/check-in commentary; this is the standing guidance
+          that goes with the numbers, so it sits right under them. */}
+      {plan.coach_notes?.trim() && (
+        <section className="home-dark-section">
+          <span className="home-dark-section-title">From your coach</span>
+          <p className="nd-coach-note">{plan.coach_notes}</p>
+        </section>
+      )}
+
       {profile.water_goal && (
         <div className="nd-water-row">
           <span className="nd-water-label">Water goal</span>
