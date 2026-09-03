@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getCalendarMonth, getMeetingConflicts, MeetingWithClient } from "../lib/queries";
+import { getCalendarMonth, getMeetingConflicts, localDateStr, MeetingWithClient } from "../lib/queries";
 
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -7,8 +7,11 @@ function dayNumber(dateStr: string) {
   return Number(dateStr.slice(8, 10));
 }
 
-export default function CalendarPanel({ month }: { month?: string }) {
+export default function CalendarPanel({ month, day }: { month?: string; day?: string }) {
   const calendar = getCalendarMonth(month);
+  // The day open in the right-hand panel; today when none was clicked.
+  const selectedDay = day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : localDateStr();
+  const monthKey = calendar.weeks[1][0].date.slice(0, 7);
   const conflicts = getMeetingConflicts();
   const conflictIds = new Set<number>();
   conflicts.forEach((c) => {
@@ -34,9 +37,9 @@ export default function CalendarPanel({ month }: { month?: string }) {
         </div>
       </div>
       <p className="subtitle" style={{ marginBottom: 20 }}>
-        Every meeting scheduled across all clients, pulled straight from each client&rsquo;s
-        Meetings tab. Nothing is entered here directly. Overlapping times are flagged
-        automatically so you never double-book.
+        Every meeting across all clients, plus your own blocks of time. Click a date to open it on the
+        right, then click an hour to add something. Overlapping times are flagged automatically so you never
+        double-book.
       </p>
 
       {conflicts.length > 0 && (
@@ -68,14 +71,27 @@ export default function CalendarPanel({ month }: { month?: string }) {
             {week.map((cell) => (
               <div
                 key={cell.date}
-                className={`calendar-cell${cell.inMonth ? "" : " outside"}${cell.isToday ? " today" : ""}`}
+                className={`calendar-cell${cell.inMonth ? "" : " outside"}${cell.isToday ? " today" : ""}${
+                  cell.date === selectedDay ? " selected" : ""
+                }`}
               >
-                <span className="calendar-cell-date">{dayNumber(cell.date)}</span>
+                {/* The date opens that day in the right-hand panel. */}
+                <Link
+                  href={`/admin?view=calendar&month=${monthKey}&day=${cell.date}`}
+                  className="calendar-cell-date"
+                  aria-label={`Open ${cell.date}`}
+                >
+                  {dayNumber(cell.date)}
+                </Link>
                 <div className="calendar-cell-meetings">
                   {cell.meetings.slice(0, 3).map((m: MeetingWithClient) => (
                     <Link
                       key={m.id}
-                      href={`/admin?client=${m.client_id}&tab=meetings`}
+                      href={
+                        m.client_id == null
+                          ? `/admin?view=calendar&month=${monthKey}&day=${cell.date}`
+                          : `/admin?client=${m.client_id}&tab=meetings`
+                      }
                       className={`calendar-chip${conflictIds.has(m.id) ? " conflict" : ""}${
                         m.status === "completed" ? " completed" : ""
                       }`}

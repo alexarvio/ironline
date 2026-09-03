@@ -1376,3 +1376,28 @@ export async function setMetricCadenceAction(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/client");
 }
+
+// An entry made from the calendar's day panel: a client meeting when a
+// client is chosen, otherwise the coach's own block of time. Lands back on
+// the same day in the calendar.
+export async function addCalendarEventAction(formData: FormData) {
+  await requireCoach();
+  const date = String(formData.get("date") || "");
+  const time = String(formData.get("time") || "");
+  const duration = Number(formData.get("durationMinutes")) || undefined;
+  const topic = String(formData.get("topic") || "").trim();
+  const rawClient = String(formData.get("clientId") || "");
+  const clientId = rawClient ? Number(rawClient) : null;
+  if (!date || !time) return;
+  addMeeting(clientId, date, time, topic, duration);
+  if (clientId) {
+    logCoachActivity(clientId, topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", {
+      kind: "general",
+      actionTab: "home",
+      actionLabel: "View schedule",
+    });
+  }
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  redirect(`/admin?view=calendar&month=${date.slice(0, 7)}&day=${date}`);
+}

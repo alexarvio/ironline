@@ -298,7 +298,9 @@ type ClientGoal = {
 // Meetings: coach-scheduled check-in calls, each with its own running notes log.
 type Meeting = {
   id: number;
-  client_id: number;
+  // null for the coach's own calendar entries (a block of admin time, a gym
+  // visit) that don't belong to any client.
+  client_id: number | null;
   date: string;
   time: string;
   duration_minutes: number;

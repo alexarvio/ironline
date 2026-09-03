@@ -6,6 +6,7 @@ import MeasurementsPanel from "./MeasurementsPanel";
 import ClientOverviewPanel from "./ClientOverviewPanel";
 import FeedPanel from "./FeedPanel";
 import CalendarPanel from "./CalendarPanel";
+import CalendarDayPanel from "./CalendarDayPanel";
 import ProgramBuilder from "../components/ProgramBuilder";
 import { getClient, getOverviewPanel, listClients } from "../lib/queries";
 
@@ -33,6 +34,8 @@ export default async function AdminPage({
         the client panel is hidden since there is no single client in play. */
     view?: string;
     month?: string;
+    /** Calendar: the day shown in the right-hand panel (YYYY-MM-DD). */
+    day?: string;
   }>;
 }) {
   await requireCoach();
@@ -46,7 +49,9 @@ export default async function AdminPage({
     <AdminShell
       sidebar={<AdminSidebar selectedId={selectedId} />}
       panel={
-        view ? undefined : client ? (
+        view === "calendar" ? (
+          <CalendarDayPanel day={params.day} month={params.month} />
+        ) : view ? undefined : client ? (
           <ClientOverviewPanel
             panel={getOverviewPanel(client.id)}
             clientId={client.id}
@@ -63,7 +68,7 @@ export default async function AdminPage({
         </div>
       ) : view === "calendar" ? (
         <div className="ad-pad">
-          <CalendarPanel month={params.month} />
+          <CalendarPanel month={params.month} day={params.day} />
         </div>
       ) : !client ? (
         <div className="ad-pad">

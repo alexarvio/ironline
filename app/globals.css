@@ -1157,6 +1157,108 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   background: #e9eff3;
 }
 
+/* The day open in the right-hand panel: same frosted blue as the selected
+   week on the builder rail. */
+.calendar-cell.selected {
+  background: color-mix(in srgb, var(--accent) 16%, rgba(255, 255, 255, 0.55));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.calendar-cell-date { text-decoration: none; }
+.calendar-cell-date:hover { color: var(--accent); }
+
+/* ---- Calendar day panel: hour rows with entries and a + per hour ---- */
+.cd-head { margin-bottom: 12px; }
+.cd-kicker {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--steel);
+}
+.cd-title { margin: 2px 0 0; font-family: var(--font-serif); font-size: 1.15rem; font-weight: 600; color: var(--ink); }
+.cd-sub { margin-top: 3px; font-size: 11px; color: var(--steel); }
+
+.cd-timeline { display: flex; flex-direction: column; }
+.cd-outside { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+
+.cd-hour {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 34px;
+  border-top: 1px solid var(--border);
+  padding: 4px 0;
+}
+.cd-hour:last-child { border-bottom: 1px solid var(--border); }
+
+.cd-hour-label {
+  flex: 0 0 40px;
+  padding-top: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--steel);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.cd-hour-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; position: relative; }
+
+.cd-hour-add {
+  align-self: flex-start;
+  width: 100%;
+  min-height: 24px;
+  border: 1px dashed transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+  padding: 0 8px;
+}
+.cd-hour:hover .cd-hour-add,
+.cd-hour-add:focus-visible { border-color: var(--border); color: var(--accent); background: var(--surface); }
+
+.cd-entry {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 6px 8px;
+  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 11px;
+}
+.cd-entry.own { border-style: dashed; border-color: var(--border); background: var(--surface); }
+.cd-entry.done { opacity: 0.6; }
+a.cd-entry:hover { border-color: var(--accent); }
+
+.cd-entry-time { flex: 0 0 auto; display: flex; flex-direction: column; font-weight: 800; font-variant-numeric: tabular-nums; }
+.cd-entry-time em { font-style: normal; font-weight: 500; font-size: 9.5px; color: var(--steel); }
+.cd-entry-text { display: flex; flex-direction: column; min-width: 0; }
+.cd-entry-who { font-weight: 700; }
+.cd-entry-topic { color: var(--steel); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.cd-form { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.cd-form-row { display: flex; gap: 10px; }
+.cd-form-row > * { flex: 1; }
+.cd-form input, .cd-form select {
+  width: 100%;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0 8px;
+  font: inherit;
+  font-size: 13px;
+}
+
 .calendar-cell-date {
   font-size: 0.78rem;
   font-weight: 700;

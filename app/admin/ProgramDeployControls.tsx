@@ -17,9 +17,9 @@ export default function ProgramDeployControls({
   programId: number;
   scheduledAt: string | null;
 }) {
+  // The dialog only exists after a click, so it never renders on the server
+  // and the portal needs no mounted guard.
   const [scheduling, setScheduling] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
 
   if (scheduledAt) {
     const when = new Date(scheduledAt);
@@ -54,7 +54,6 @@ export default function ProgramDeployControls({
       {/* The date and time live in a dialog, not inline: expanding here grew
           the editing bar and shoved the week rail down under the pointer. */}
       {scheduling &&
-        mounted &&
         createPortal(<ScheduleDialog programId={programId} onClose={() => setScheduling(false)} />, document.body)}
     </div>
   );

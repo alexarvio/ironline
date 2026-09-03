@@ -3258,7 +3258,8 @@ export function getNutritionGoalsSummary(clientId: number): NutritionGoalsSummar
 
 export type Meeting = {
   id: number;
-  client_id: number;
+  // null for the coach's own calendar blocks (see addCalendarEventAction).
+  client_id: number | null;
   date: string;
   time: string;
   duration_minutes: number;
@@ -3282,7 +3283,7 @@ export function listMeetings(clientId: number): Meeting[] {
 }
 
 export function addMeeting(
-  clientId: number,
+  clientId: number | null,
   date: string,
   time: string,
   topic: string,
@@ -3351,14 +3352,19 @@ export function listAllMeetings(): MeetingWithClient[] {
   const data = getData();
   return data.meetings
     .map((m) => {
-      const client = data.clients.find((c) => c.id === m.client_id);
+      const client = m.client_id == null ? null : data.clients.find((c) => c.id === m.client_id);
       return {
         ...m,
         duration_minutes: m.duration_minutes || DEFAULT_MEETING_DURATION,
-        clientName: client?.name ?? "Unknown client",
+        clientName: m.client_id == null ? "Just you" : client?.name ?? "Unknown client",
       };
     })
     .sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1));
+}
+
+// One day's entries for the calendar's day panel, in time order.
+export function getCalendarDay(dateStr: string): MeetingWithClient[] {
+  return listAllMeetings().filter((m) => m.date === dateStr && m.status !== "canceled");
 }
 
 function timeToMinutes(t: string): number {
@@ -3381,7 +3387,9 @@ export function getMeetingConflicts(): MeetingConflict[] {
     for (let j = i + 1; j < meetings.length; j++) {
       const a = meetings[i];
       const b = meetings[j];
-      if (a.date !== b.date || a.client_id === b.client_id) continue;
+      // Two entries for the same client are one conversation, not a clash;
+      // two of the coach's own blocks can overlap without anyone double-booked.
+      if (a.date !== b.date || (a.client_id != null && a.client_id === b.client_id) || (a.client_id == null && b.client_id == null)) continue;
       const aStart = timeToMinutes(a.time);
       const aEnd = aStart + a.duration_minutes;
       const bStart = timeToMinutes(b.time);
