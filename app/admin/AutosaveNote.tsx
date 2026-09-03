@@ -20,6 +20,8 @@ export default function AutosaveNote({
   renderedAt,
   idleText,
   savedSuffix,
+  savedText,
+  idleAsSaved,
 }: {
   renderedAt: number;
   /** Shown at rest. The builder passes nothing (see below); the Measurements
@@ -29,6 +31,11 @@ export default function AutosaveNote({
   idleText?: string;
   /** Appended after "Saved <time>", e.g. "· live in the client app". */
   savedSuffix?: string;
+  /** Replaces the whole "Saved <time> …" line, e.g. "Up to date". */
+  savedText?: string;
+  /** Show the idle text in the saved (green) tone rather than grey. For a
+      tab where "nothing in flight" genuinely means "the client has it". */
+  idleAsSaved?: boolean;
 }) {
   const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
   const [at, setAt] = useState<string | null>(null);
@@ -61,11 +68,11 @@ export default function AutosaveNote({
   // stays mounted with its height reserved so the bar doesn't jump when it
   // does speak.
   return (
-    <span className={`pb-autosave ${state}`} aria-live="polite">
+    <span className={`pb-autosave ${state === "idle" && idleAsSaved ? "saved" : state}`} aria-live="polite">
       {state === "saving"
         ? "Saving…"
         : state === "saved"
-          ? `Saved ${at}${savedSuffix ? ` ${savedSuffix}` : ""}`
+          ? savedText ?? `Saved ${at}${savedSuffix ? ` ${savedSuffix}` : ""}`
           : idleText ?? ""}
     </span>
   );

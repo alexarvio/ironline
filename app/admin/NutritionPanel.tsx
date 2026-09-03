@@ -49,11 +49,7 @@ export default function NutritionPanel({ clientId }: { clientId: number }) {
           <span className="ms-live-dot" aria-hidden="true" />
           Live in {clientName}&rsquo;s app
         </span>
-        <AutosaveNote
-          renderedAt={renderedAt}
-          idleText="Targets, note and supplements reach the client as soon as they save."
-          savedSuffix="· live in the client app"
-        />
+        <AutosaveNote renderedAt={renderedAt} savedText="Up to date" idleText="Up to date" idleAsSaved />
       </div>
 
       <div className="nt-top">

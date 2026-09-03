@@ -138,7 +138,7 @@ export default function NutritionTargets({
 
       <div className="nt-card-foot">
         {/* Confirmation right where the coach is looking: the button itself. */}
-        <AutosaveNote renderedAt={renderedAt} savedSuffix="· targets live in the client app" />
+        <AutosaveNote renderedAt={renderedAt} savedText="Up to date" idleText="Up to date" idleAsSaved />
         <button type="submit" className="ad-btn-primary">
           Save targets
         </button>
