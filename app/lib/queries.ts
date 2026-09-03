@@ -3637,14 +3637,6 @@ export function getDueItems(clientId: number): DueItem[] {
       targetTab: "weekly",
     });
   }
-  if (measurementFields.length > 0 && !measurementLoggedToday) {
-    items.push({
-      id: "measurements",
-      label: "Check-in measurements",
-      detail: `Log ${measurementFields.map((f) => f.name).join(", ")}`,
-      targetTab: "measurements",
-    });
-  }
   if (photoSlots.length > 0 && uploadedThisPeriod < photoSlots.length) {
     items.push({
       id: "photos",
@@ -3792,7 +3784,7 @@ export function getCheckInStatus(clientId: number): CheckInStatus {
     weeklyDefs.length > 0 &&
     listMetricPeriods(weeklyDefs.map((d) => d.id), 1)[0] !== thisWeek &&
     weeklyCheckInOpen(clientId);
-  const measurementsDue = fields.length > 0 && !listMeasurementDates(clientId).includes(today);
+  const measurementsDue = false; // Measure is no longer a client check-in
 
   const dueTypes: ("daily" | "weekly" | "measurements")[] = [];
   if (dailyDue) dueTypes.push("daily");
@@ -3848,10 +3840,12 @@ export type CheckInMetric = {
   // client has something to anchor against while typing.
   hint: string | null;
   scaleMax: number | null;
+  // The metric's band (Sleep, General wellbeing), for group headings.
+  category: string;
 };
 
 export type CheckInSection = {
-  id: "daily" | "weekly" | "measurements";
+  id: "daily" | "weekly";
   label: string;
   intro: string;
   metrics: CheckInMetric[];
@@ -3893,7 +3887,19 @@ export function getCheckInSections(clientId: number): CheckInData {
     label: string,
     intro: string
   ): CheckInSection | null => {
-    const defs = listMetricDefinitions(clientId, frequency).filter(deployedToClient);
+    // The client sees two rhythms, daily and weekly. Anything a coach set to
+    // monthly rides along in Weekly so it is still asked for.
+    const groupRank = new Map<string, number>(METRIC_GROUPS.map((g, i) => [g.key as string, i]));
+    const defs = [
+      ...listMetricDefinitions(clientId, frequency),
+      ...(frequency === "weekly" ? listMetricDefinitions(clientId, "monthly") : []),
+    ]
+      .filter(deployedToClient)
+      .sort(
+        (a, b) =>
+          (groupRank.get(metricGroup(a.category).key) ?? 99) - (groupRank.get(metricGroup(b.category).key) ?? 99) ||
+          a.order_index - b.order_index
+      );
     if (defs.length === 0) return null;
     const entries = getMetricEntries(defs.map((d) => d.id));
     return {
@@ -3916,6 +3922,7 @@ export function getCheckInSections(clientId: number): CheckInData {
             ? `${previous.value}${def.unit && !scaleMax ? ` ${def.unit}` : scaleMax ? `/${scaleMax}` : ""} on ${fmtDate(previous.period)}`
             : null,
           scaleMax,
+          category: metricGroup(def.category).label,
         };
       }),
     };
@@ -3942,26 +3949,9 @@ export function getCheckInSections(clientId: number): CheckInData {
   const valueAt = (fieldId: number, date: string) =>
     measurementValues.find((v) => v.field_id === fieldId && v.date === date)?.value ?? null;
 
-  if (fields.length > 0) {
-    sections.push({
-      id: "measurements",
-      label: "Measure",
-      intro: "Same spots, same time of day: first thing, before food.",
-      metrics: fields.map((f) => {
-        const current = valueAt(f.id, today);
-        const previous = previousDate ? valueAt(f.id, previousDate) : null;
-        return {
-          id: String(f.id),
-          name: f.name,
-          unit: f.unit,
-          step: "0.1",
-          value: current != null ? String(current) : "",
-          hint: previous != null ? `${previous}${f.unit ? ` ${f.unit}` : ""} on ${fmtDate(previousDate!)}` : null,
-          scaleMax: null,
-        };
-      }),
-    });
-  }
+  // No Measure section any more: weight and the like are check-in columns
+  // the coach adds from the library (daily or weekly), and progress pictures
+  // have their own screen. Legacy measurement fields keep their history.
 
   // How far each measurement has moved since the current phase began.
   // Phase-to-date, not since the last check-in: a week apart, most of these

@@ -3,10 +3,10 @@ import { setMetricCadenceAction } from "../lib/actions";
 const OPTIONS = [
   { value: "daily", label: "Daily" },
   { value: "weekly", label: "Weekly" },
-  { value: "monthly", label: "Monthly" },
 ] as const;
 
-// Daily / Weekly / Monthly on a check-in column row. Each option is its own
+// Daily / Weekly on a check-in column row. (Monthly was dropped: the client
+// app has two rhythms, and anything still marked monthly rides in Weekly.) Each option is its own
 // small form posting the new cadence, so it works without client JS and
 // saves the moment it is clicked, like everything else on this tab. The
 // current cadence is the filled segment; clicking it again does nothing.

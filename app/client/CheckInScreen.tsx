@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { Fragment, ReactNode, useEffect, useRef, useState } from "react";
 import { ChevronLeftIcon } from "../components/icons";
 import PhotoLightbox from "../components/PhotoLightbox";
 import { logMetricPeriodAction, saveMeasurementCheckInAction, uploadProgressPhotoAction } from "../lib/actions";
@@ -16,9 +16,10 @@ export type CheckInMetric = {
   value: string;
   hint: string | null;
   scaleMax: number | null;
+  category: string;
 };
 export type CheckInSection = {
-  id: "daily" | "weekly" | "measurements";
+  id: "daily" | "weekly";
   label: string;
   intro: string;
   metrics: CheckInMetric[];
@@ -115,7 +116,10 @@ export default function CheckInScreen({
   const metrics = active?.metrics ?? [];
   const filled = metrics.filter((m) => (activeValues[m.id] ?? "").length > 0);
   const complete = filled.length === metrics.length && metrics.length > 0;
-  const isMeasurements = active?.id === "measurements";
+  // Measure is no longer a check-in section (columns are daily or weekly),
+  // so the measurement form path is never taken; kept as a constant so the
+  // extras block below reads the same as before.
+  const isMeasurements = false;
   const remaining = metrics.length - filled.length;
 
   // m.value is what's actually persisted for this period, so comparing the
@@ -248,11 +252,16 @@ export default function CheckInScreen({
           <>
         <p className="ci-intro">{active.intro}</p>
 
-        {active.metrics.map((m) => {
+        {active.metrics.map((m, idx) => {
           const value = activeValues[m.id] ?? "";
           const has = value.length > 0;
+          // A heading whenever the band changes: metrics of one category
+          // sit together under its name.
+          const showHead = idx === 0 || active.metrics[idx - 1].category !== m.category;
           return (
-            <div key={m.id} className="ci-metric">
+            <Fragment key={m.id}>
+            {showHead && <div className="ci-group-head">{m.category}</div>}
+            <div className="ci-metric">
               <div className="ci-metric-top">
                 <div className="ci-metric-labels">
                   <div className="ci-metric-name">{m.name}</div>
@@ -296,6 +305,7 @@ export default function CheckInScreen({
                 </div>
               )}
             </div>
+            </Fragment>
           );
         })}
           </>

@@ -10850,3 +10850,17 @@ button.ci-photo:disabled { cursor: default; }
 
 /* Check-in: the "all done" card when a section is fully saved. */
 .ci-all-done { margin-top: 6px; }
+
+/* Check-in: a heading whenever the metric band changes. */
+.ci-group-head {
+  margin: 16px 0 -6px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fp-accent);
+}
+.ci-intro + .ci-group-head { margin-top: 12px; }
+
+/* Two segments now, not three. */
+.ms-cadence-toggle { width: 132px; }
