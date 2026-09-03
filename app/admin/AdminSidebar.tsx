@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { createClientAction } from "../lib/actions";
+import { logoutAction } from "../lib/auth-actions";
 import { clientAttention, listClients } from "../lib/queries";
 
 // The left rail: brand, the coach's two cross-client views, and the client
@@ -89,6 +90,14 @@ export default function AdminSidebar({ selectedId }: { selectedId: number | null
           </button>
         </form>
       </div>
+
+      {/* Pinned to the foot of the rail: the one thing the coach needs when
+          they hand the laptop to someone else or switch accounts. */}
+      <form action={logoutAction} className="ad-signout">
+        <button type="submit" className="ad-signout-btn">
+          Sign out
+        </button>
+      </form>
     </>
   );
 }

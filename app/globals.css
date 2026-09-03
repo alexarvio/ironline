@@ -9545,6 +9545,28 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   padding: 0 1px;
 }
 
+/* Sign out, at the foot of the rail. */
+.ad-signout {
+  margin-top: auto;
+  padding: 10px 14px 14px;
+  border-top: 1px solid var(--border);
+}
+
+.ad-signout-btn {
+  width: 100%;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--steel);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ad-signout-btn:hover { color: var(--ink); border-color: var(--steel); }
+
 /* "New client  +" as one row-wide rectangle, same height as the client rows. */
 .ad-new-client-btn {
   flex: 1;
