@@ -9965,6 +9965,19 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   font-size: 12px;
 }
 
+/* Category for a typed-in column, same height and face as the unit field. */
+.ms-groupfield {
+  width: 150px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0 7px;
+  font: inherit;
+  font-size: 12px;
+}
+
 .ms-logged {
   display: flex;
   align-items: center;

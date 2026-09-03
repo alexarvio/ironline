@@ -98,7 +98,11 @@ export default function MeasurementsPanel({ clientId }: { clientId: number }) {
           <h3 className="ad-microlabel">Check-in columns</h3>
           <CheckInDaySelect clientId={clientId} value={getClientProfile(clientId).check_in_day} />
         </div>
-        <MetricLibrary clientId={clientId} packs={packs} />
+        <MetricLibrary
+          clientId={clientId}
+          packs={packs}
+          groups={METRIC_GROUPS.map((g) => ({ key: g.key, label: g.label }))}
+        />
 
         {metrics.length === 0 ? (
           <p className="ad-panel-empty">

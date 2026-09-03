@@ -2151,13 +2151,14 @@ export const METRIC_LIBRARY: LibraryPack[] = [
 
 /** Every metric on this client, sorted by cadence then group then order. */
 export function listAllMetrics(clientId: number): MetricDefinition[] {
-  const cadenceRank: Record<string, number> = { daily: 0, weekly: 1, monthly: 2 };
+  // Grouped by category in METRIC_GROUPS order, which puts "Other" last;
+  // within a group, the order they were added. Cadence no longer sorts,
+  // since it is a toggle on the row and a column can change rhythm without
+  // jumping around the list.
   const groupRank = new Map<string, number>(METRIC_GROUPS.map((g, i) => [g.key as string, i]));
   return getData()
     .metric_definitions.filter((m) => m.client_id === clientId)
     .sort((a, b) => {
-      const c = (cadenceRank[a.frequency] ?? 9) - (cadenceRank[b.frequency] ?? 9);
-      if (c !== 0) return c;
       const g = (groupRank.get(metricGroup(a.category).key) ?? 99) - (groupRank.get(metricGroup(b.category).key) ?? 99);
       if (g !== 0) return g;
       return a.order_index - b.order_index;

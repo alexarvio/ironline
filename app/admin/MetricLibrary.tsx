@@ -17,7 +17,16 @@ export type LibraryPackView = {
 // there rather than as a separate button elsewhere means "type a name" and
 // "pick a name" are the same control, which is how the coach thinks about it.
 // The dropdown floats, so nothing below it reflows while they're picking.
-export default function MetricLibrary({ clientId, packs }: { clientId: number; packs: LibraryPackView[] }) {
+export default function MetricLibrary({
+  clientId,
+  packs,
+  groups,
+}: {
+  clientId: number;
+  packs: LibraryPackView[];
+  /** Category choices for a typed-in column, in display order ("Other" last). */
+  groups: { key: string; label: string }[];
+}) {
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<Record<string, boolean>>({});
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -58,9 +67,6 @@ export default function MetricLibrary({ clientId, packs }: { clientId: number; p
     <div className="ms-addrow" ref={wrapRef}>
       <form action={addMetricDefinitionAction} className="ms-addrow-form">
         <input type="hidden" name="clientId" value={clientId} />
-        {/* Manually added metrics land in "Other" — there's no group picker
-            here because choosing one is the library's job. */}
-        <input type="hidden" name="category" value="other" />
         {/* Every column starts daily; the Daily / Weekly / Monthly toggle on
             its row changes that afterwards. Deciding it here as well was a
             second place for the same choice. */}
@@ -80,6 +86,16 @@ export default function MetricLibrary({ clientId, packs }: { clientId: number; p
         </div>
 
         <input name="unit" type="text" placeholder="Unit (e.g. kg)" aria-label="Unit" className="ms-unitfield" />
+
+        {/* Which band a typed-in column files under. Library picks bring
+            their own; a typed one defaults to Other, which sorts last. */}
+        <select name="category" defaultValue="other" aria-label="Category" className="ms-groupfield">
+          {groups.map((g) => (
+            <option key={g.key} value={g.key}>
+              {g.label}
+            </option>
+          ))}
+        </select>
 
         <button type="submit" className="ad-btn-primary">
           Add column
