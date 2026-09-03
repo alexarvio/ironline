@@ -18,7 +18,9 @@ export type DayEntry = {
 
 const FIRST_HOUR = 6;
 const LAST_HOUR = 21;
-const DURATIONS = [15, 30, 45, 60, 90];
+const DURATIONS = [15, 30, 45, 60, 90, 120];
+const SLOT_MIN = 15;
+const SLOT_PX = 18; // one quarter-hour row
 
 function hourLabel(h: number) {
   const suffix = h < 12 ? "AM" : "PM";
@@ -45,9 +47,51 @@ export default function DayTimeline({
   // and the portal needs no mounted guard.
   const [addAt, setAddAt] = useState<string | null>(null);
 
+  // Quarter-hour grid. Each hour is four 15-minute slots; an entry is placed
+  // at its start slot and spans ceil(duration / 15) slots, so a 30-minute
+  // call takes two, a 90-minute block six. Clicking a slot adds something
+  // at that quarter. Entries that overlap share the width side by side.
   const hours = Array.from({ length: LAST_HOUR - FIRST_HOUR + 1 }, (_, i) => FIRST_HOUR + i);
-  const hourOf = (t: string) => Number(t.split(":")[0]);
-  const outside = meetings.filter((m) => !m.time || hourOf(m.time) < FIRST_HOUR || hourOf(m.time) > LAST_HOUR);
+  const toMin = (t: string) => {
+    const [h, m] = t.split(":").map(Number);
+    return (h || 0) * 60 + (m || 0);
+  };
+  const startMin = FIRST_HOUR * 60;
+  const endMin = (LAST_HOUR + 1) * 60;
+  const totalSlots = (endMin - startMin) / SLOT_MIN;
+
+  const outside = meetings.filter((m) => !m.time || toMin(m.time) < startMin || toMin(m.time) >= endMin);
+  const placed = meetings
+    .filter((m) => m.time && toMin(m.time) >= startMin && toMin(m.time) < endMin)
+    .map((m) => {
+      const start = toMin(m.time);
+      const slots = Math.max(1, Math.ceil(m.durationMinutes / SLOT_MIN));
+      return { m, start, end: start + slots * SLOT_MIN, slots, col: 0, cols: 1 };
+    })
+    .sort((a, b) => a.start - b.start || b.end - a.end);
+
+  // Greedy column packing within clusters of overlapping entries.
+  let cluster: typeof placed = [];
+  let clusterEnd = -1;
+  const flush = () => {
+    const cols = Math.max(1, ...cluster.map((p) => p.col + 1));
+    cluster.forEach((p) => (p.cols = cols));
+    cluster = [];
+  };
+  const colEnds: number[] = [];
+  placed.forEach((p) => {
+    if (p.start >= clusterEnd) {
+      flush();
+      colEnds.length = 0;
+    }
+    let col = colEnds.findIndex((e) => e <= p.start);
+    if (col === -1) col = colEnds.length;
+    colEnds[col] = p.end;
+    p.col = col;
+    cluster.push(p);
+    clusterEnd = Math.max(clusterEnd, p.end);
+  });
+  flush();
 
   return (
     <div className="cd-timeline">
@@ -59,29 +103,51 @@ export default function DayTimeline({
         </div>
       )}
 
-      {hours.map((h) => {
-        const inHour = meetings.filter((m) => m.time && hourOf(m.time) === h);
-        const hh = String(h).padStart(2, "0");
-        return (
-          <div key={h} className="cd-hour">
-            <span className="cd-hour-label">{hourLabel(h)}</span>
-            <div className="cd-hour-body">
-              {inHour.map((m) => (
-                <Entry key={m.id} m={m} />
-              ))}
-              <button
-                type="button"
-                className="cd-hour-add"
-                onClick={() => setAddAt(`${hh}:00`)}
-                aria-label={`Add something at ${hourLabel(h)}`}
-                title={`Add something at ${hourLabel(h)}`}
-              >
-                +
-              </button>
+      <div className="cd-grid" style={{ height: totalSlots * SLOT_PX }}>
+        {hours.map((h) => {
+          const hh = String(h).padStart(2, "0");
+          return (
+            <div key={h} className="cd-hour-row" style={{ top: (h - FIRST_HOUR) * 4 * SLOT_PX, height: 4 * SLOT_PX }}>
+              <span className="cd-hour-label">{hourLabel(h)}</span>
+              <div className="cd-quarters">
+                {[0, 15, 30, 45].map((q) => {
+                  const mm = String(q).padStart(2, "0");
+                  return (
+                    <button
+                      key={q}
+                      type="button"
+                      className={`cd-quarter${q === 0 ? " first" : ""}`}
+                      onClick={() => setAddAt(`${hh}:${mm}`)}
+                      aria-label={`Add something at ${hh}:${mm}`}
+                      title={`Add something at ${hh}:${mm}`}
+                    />
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+
+        <div className="cd-events">
+          {placed.map((p) => {
+            const width = 100 / p.cols;
+            return (
+              <div
+                key={p.m.id}
+                className="cd-event"
+                style={{
+                  top: ((p.start - startMin) / SLOT_MIN) * SLOT_PX,
+                  height: p.slots * SLOT_PX,
+                  left: `${p.col * width}%`,
+                  width: `${width}%`,
+                }}
+              >
+                <Entry m={p.m} compact={p.slots < 2} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       {addAt &&
         createPortal(
@@ -92,8 +158,15 @@ export default function DayTimeline({
   );
 }
 
-function Entry({ m }: { m: DayEntry }) {
-  const body = (
+function Entry({ m, compact = false }: { m: DayEntry; compact?: boolean }) {
+  // A one-slot (15 min) entry has room for a single line; longer ones get
+  // the time and length stacked beside the name and topic.
+  const body = compact ? (
+    <span className="cd-entry-line" title={`${m.time} · ${m.durationMinutes} min · ${m.clientName}${m.topic ? ` · ${m.topic}` : ""}`}>
+      <strong>{m.time}</strong> {m.clientName}
+      {m.topic ? ` · ${m.topic}` : ""}
+    </span>
+  ) : (
     <>
       <span className="cd-entry-time">
         {m.time || "–"}
@@ -105,7 +178,7 @@ function Entry({ m }: { m: DayEntry }) {
       </span>
     </>
   );
-  const cls = `cd-entry${m.clientId == null ? " own" : ""}${m.status === "completed" ? " done" : ""}`;
+  const cls = `cd-entry${compact ? " compact" : ""}${m.clientId == null ? " own" : ""}${m.status === "completed" ? " done" : ""}`;
   // A client meeting links to that client's Meetings tab; the coach's own
   // block has nowhere else to go. Either can be deleted from here, behind
   // the shared confirm.

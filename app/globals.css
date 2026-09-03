@@ -1213,6 +1213,79 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 .cd-timeline { display: flex; flex-direction: column; }
 .cd-outside { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
 
+/* Quarter-hour grid: hour rows are absolutely stacked, each holding four
+   slot buttons; entries float in a layer above, sized by their length. */
+.cd-grid { position: relative; border-top: 1px solid var(--border); }
+
+.cd-hour-row { position: absolute; left: 0; right: 0; display: flex; }
+
+.cd-hour-label {
+  flex: 0 0 40px;
+  padding-top: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--steel);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.cd-quarters { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+.cd-quarter {
+  flex: 1;
+  border: 0;
+  border-bottom: 1px dashed color-mix(in srgb, var(--border) 60%, transparent);
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+.cd-quarter:last-child { border-bottom: 1px solid var(--border); }
+.cd-quarter:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.cd-quarter:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.cd-events { position: absolute; top: 0; bottom: 0; left: 40px; right: 0; pointer-events: none; }
+.cd-event { position: absolute; box-sizing: border-box; padding: 1px 3px 1px 0; pointer-events: auto; }
+.cd-event .cd-entry-wrap, .cd-event .cd-entry { height: 100%; }
+.cd-event .cd-entry { overflow: hidden; }
+
+.cd-entry { flex: 1; min-width: 0; }
+.cd-entry-delete { display: flex; align-items: center; opacity: 0; transition: opacity 120ms ease; }
+.cd-entry-wrap:hover .cd-entry-delete, .cd-entry-delete:focus-within { opacity: 1; }
+.cd-entry-delete .row-icon-btn { width: 22px; height: 22px; border-radius: 6px; }
+.cd-entry-delete .row-icon-btn svg { width: 11px; height: 11px; }
+
+/* Saved-state button in a panel head. It is a status, not an action:
+   "Saving…" while a form is in flight, "All saved" otherwise. */
+.pb-autosave-btn {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--steel);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: default;
+}
+.pb-autosave-btn.saved { color: var(--good); border-color: color-mix(in srgb, var(--good) 45%, transparent); }
+.pb-autosave-btn.saving { color: var(--accent); border-color: var(--accent); }
+
+/* ---- Calendar day panel: hour rows with entries and a + per hour ---- */
+.cd-head { margin-bottom: 12px; }
+.cd-kicker {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--steel);
+}
+.cd-title { margin: 2px 0 0; font-family: var(--font-serif); font-size: 1.15rem; font-weight: 600; color: var(--ink); }
+.cd-sub { margin-top: 3px; font-size: 11px; color: var(--steel); }
+
+.cd-timeline { display: flex; flex-direction: column; }
+.cd-outside { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+
 .cd-hour {
   display: flex;
   align-items: flex-start;
@@ -1274,6 +1347,13 @@ a.cd-entry:hover { border-color: var(--accent); }
 .cd-entry-text { display: flex; flex-direction: column; min-width: 0; }
 .cd-entry-who { font-weight: 700; }
 .cd-entry-topic { color: var(--steel); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.cd-entry.compact { padding: 0 6px; align-items: center; }
+.cd-entry-line { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; }
+.cd-entry-line strong { font-variant-numeric: tabular-nums; }
+
+/* Clear the panel's collapse arrow, which sits over the top-left corner. */
+.cd-head { padding-left: 18px; }
 
 .cd-form { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
 .cd-form-row { display: flex; gap: 10px; }
