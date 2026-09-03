@@ -3606,6 +3606,57 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   line-height: 1;
 }
 
+/* Locked future weeks: visible in the switcher, dimmed, with a lock; the
+   body is a single card saying when it opens rather than the programme. */
+.week-switcher .toggle-btn.locked { color: var(--faint); }
+.week-switcher .toggle-btn.locked.active { color: var(--steel); }
+
+.week-lock {
+  display: inline-flex;
+  align-items: center;
+  color: inherit;
+  opacity: 0.8;
+}
+
+.week-locked-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: var(--paper-raised);
+  padding: 16px 18px;
+}
+
+.week-locked-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--steel);
+}
+
+.week-locked-icon svg { width: 15px; height: 15px; }
+
+.week-locked-title {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.week-locked-sub {
+  margin-top: 3px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--steel);
+}
+
 .week-progress-card.complete { border-color: var(--good); }
 .week-progress-card.complete .week-progress-label { color: var(--good); }
 
@@ -8704,7 +8755,10 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   flex: 1;
   min-width: 0;
   text-align: center;
-  font-family: ui-monospace, Menlo, monospace;
+  /* Same face as the rest of the table (the monospace read as code, not as
+     the coach's data); tabular figures keep the columns steady instead. */
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
   /* 9px fits the widest realistic value ("142.5×13") in a four-set row.
      At 10px it truncated to "142.5×…", losing the reps. */
   font-size: 9px;

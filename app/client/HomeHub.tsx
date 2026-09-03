@@ -2,7 +2,7 @@
 
 import { ArrowRightIcon, CalendarIcon, CheckIcon, ClockIcon } from "../components/icons";
 import TrendCarousel, { TrendMetric } from "./TrendCarousel";
-import { useOpenCheckIn, useOpenNotifications } from "./CheckInContext";
+import { useOpenCheckIn } from "./CheckInContext";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
 // CheckInHub.tsx this replaces — a "use client" file importing queries.ts
@@ -65,9 +65,6 @@ export default function HomeHub({
   // Check-in is a full-screen pushed view owned by AppShell; a due row just
   // asks it to open on that row's section.
   const openCheckIn = useOpenCheckIn();
-  // Coach notes are the coach commenting on your work; tapping one opens
-  // the conversation it came from, same as the prototype.
-  const openNotifications = useOpenNotifications();
 
   const dayTarget = totalDays || 7;
 
@@ -178,32 +175,11 @@ export default function HomeHub({
         )}
       </section>
 
-      <section className="home-dark-section">
-        <span className="home-dark-section-title">Coach notes</span>
-        {coachNotes.length === 0 ? (
-          <p className="home-dark-empty">No notes yet — your coach&rsquo;s comments on your work will show up here.</p>
-        ) : (
-          <div className="home-dark-rows">
-            {coachNotes.map((n) => (
-              <button
-                key={n.id}
-                type="button"
-                className="home-dark-note-row tappable"
-                onClick={() => openNotifications?.()}
-              >
-                <span className={`home-dark-note-dot${n.unread ? " unread" : ""}`} aria-hidden="true" />
-                <div className="home-dark-row-body">
-                  <div className="home-dark-note-top">
-                    <span className="home-dark-note-context">{n.context}</span>
-                    <span className="home-dark-note-time">{n.timeLabel}</span>
-                  </div>
-                  <div className="home-dark-note-text">{n.text}</div>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </section>
+      {/* No "Coach notes" section here any more. It listed chat messages from
+          the coach, and chat is cut from this beta, so it could only ever say
+          "No notes yet". The coach's guidance reaches the client through the
+          nutrition note and per-exercise notes instead. coachNotes stays a
+          prop so the bell's unread state keeps working. */}
 
       {goals.length > 0 && (
         <section className="home-dark-section">

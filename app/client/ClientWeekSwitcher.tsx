@@ -27,22 +27,40 @@ export default function ClientWeekSwitcher({
 }) {
   const [selected, setSelected] = useState(currentWeek);
 
+  // Weeks ahead of the current one are locked: the client can see the
+  // programme has a Week 4, but not what is in it until that week arrives.
+  // Training ahead of the plan defeats the coach's progression, and a
+  // visible-but-locked week is a better promise than a hidden one.
+  const isLocked = (w: number) => w > currentWeek;
+
   return (
     <div>
       {weeks.length > 1 && (
         <div className="week-switcher" style={{ marginBottom: 14 }}>
           {weeks.map((w) => {
             const done = completedWeeks.includes(w);
+            const locked = isLocked(w);
             return (
               <button
                 key={w}
                 type="button"
-                className={`toggle-btn${w === selected ? " active" : ""}${done ? " done" : ""}`}
+                className={`toggle-btn${w === selected ? " active" : ""}${done ? " done" : ""}${locked ? " locked" : ""}`}
                 onClick={() => setSelected(w)}
-                title={done ? "Week complete — every set logged" : undefined}
+                aria-disabled={locked}
+                title={
+                  locked
+                    ? "Unlocks when this week starts"
+                    : done
+                      ? "Week complete — every set logged"
+                      : undefined
+                }
               >
                 {weekLabels?.[w] ?? `Week ${w}`}
-                {done ? (
+                {locked ? (
+                  <span className="week-lock" aria-label="Locked until this week starts">
+                    <LockIcon />
+                  </span>
+                ) : done ? (
                   <span className="week-done-tick" aria-label="Week complete">
                     ✓
                   </span>
@@ -54,7 +72,31 @@ export default function ClientWeekSwitcher({
           })}
         </div>
       )}
-      {contents[selected]}
+      {isLocked(selected) ? (
+        <div className="week-locked-card">
+          <span className="week-locked-icon" aria-hidden="true">
+            <LockIcon />
+          </span>
+          <div>
+            <div className="week-locked-title">{weekLabels?.[selected] ?? `Week ${selected}`} is locked</div>
+            <div className="week-locked-sub">
+              It opens when the week starts. Finish this week&rsquo;s sessions first — your coach builds each
+              week on the last.
+            </div>
+          </div>
+        </div>
+      ) : (
+        contents[selected]
+      )}
     </div>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="4" y="11" width="16" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </svg>
   );
 }

@@ -1378,10 +1378,10 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
       .slice(0, 8)
       .map((e) => ({
         id: e.id,
-        when: new Date(e.at).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        when: feedTimeLabel(e.at),
         text:
-          e.type === "set_logged"
-            ? `Logged ${e.exerciseName} — ${e.weightKg ?? "–"}kg × ${e.reps ?? "–"}`
+          e.type === "workout_completed"
+            ? `Completed ${e.dayName}${e.dayLabel ? ` · ${e.dayLabel}` : ""} (${e.weekLabel}) — ${e.exerciseCount} exercise${e.exerciseCount === 1 ? "" : "s"}, ${e.setCount} set${e.setCount === 1 ? "" : "s"}`
             : `Invoice ${e.status} — ${e.description}`,
       })),
     card: {
@@ -1434,14 +1434,19 @@ export function getClientSummary(clientId: number) {
 
 export type FeedEvent =
   | {
-      type: "set_logged";
+      // One event per finished workout day, not per set: the coach's feed
+      // is "what did my clients get done", and nine rows of "9kg × 9" for
+      // one session buried everything else.
+      type: "workout_completed";
       id: string;
       clientId: number;
       clientName: string;
-      exerciseName: string;
-      weightKg: number | null;
-      reps: number | null;
-      at: string;
+      dayName: string; // "Monday"
+      dayLabel: string | null; // coach's label, e.g. "Push A"
+      weekLabel: string; // "Week 3"
+      exerciseCount: number;
+      setCount: number;
+      at: string; // when the last set that completed the day was logged
     }
   | {
       type: "invoice_status";
@@ -1460,25 +1465,53 @@ export function getActivityFeed(limit = 30): FeedEvent[] {
   const daysById = new Map(data.program_days.map((pd) => [pd.id, pd] as const));
   const exercisesById = new Map(data.exercises.map((e) => [e.id, e] as const));
 
-  const setEvents: FeedEvent[] = data.set_logs
-    .map((sl): FeedEvent | null => {
-      const wa = assignmentsById.get(sl.workout_assignment_id);
-      const day = wa ? daysById.get(wa.program_day_id) : undefined;
-      const client = day ? clientsById.get(day.client_id) : undefined;
-      if (!wa || !day || !client) return null;
-      const exercise = exercisesById.get(wa.exercise_id);
-      return {
-        type: "set_logged" as const,
-        id: `set-${sl.id}`,
-        clientId: client.id,
-        clientName: client.name,
-        exerciseName: exercise?.name ?? "an exercise",
-        weightKg: sl.weight_kg,
-        reps: sl.reps,
-        at: sl.logged_at,
-      };
-    })
-    .filter((e): e is FeedEvent => e !== null);
+  void exercisesById;
+
+  // Group set logs by programme day; a day is "completed" once every
+  // exercise on it has at least its prescribed number of sets logged. The
+  // event is stamped with the log that tipped it over the line.
+  const logsByDay = new Map<number, typeof data.set_logs>();
+  data.set_logs.forEach((sl) => {
+    const wa = assignmentsById.get(sl.workout_assignment_id);
+    if (!wa) return;
+    const list = logsByDay.get(wa.program_day_id) ?? [];
+    list.push(sl);
+    logsByDay.set(wa.program_day_id, list);
+  });
+
+  const workoutEvents: FeedEvent[] = [];
+  logsByDay.forEach((logs, dayId) => {
+    const day = daysById.get(dayId);
+    const client = day ? clientsById.get(day.client_id) : undefined;
+    if (!day || !client) return;
+    const assignments = data.workout_assignments.filter((wa) => wa.program_day_id === dayId);
+    if (assignments.length === 0) return;
+    const sorted = [...logs].sort((a, b) => (a.logged_at < b.logged_at ? -1 : 1));
+    // Walk the logs in order and find the first moment every assignment
+    // has reached its set count — that is when the workout was completed.
+    const seen = new Map<number, number>();
+    let completedAt: string | null = null;
+    for (const sl of sorted) {
+      seen.set(sl.workout_assignment_id, (seen.get(sl.workout_assignment_id) ?? 0) + 1);
+      if (assignments.every((wa) => (seen.get(wa.id) ?? 0) >= wa.sets)) {
+        completedAt = sl.logged_at;
+        break;
+      }
+    }
+    if (!completedAt) return;
+    workoutEvents.push({
+      type: "workout_completed",
+      id: `workout-${dayId}`,
+      clientId: client.id,
+      clientName: client.name,
+      dayName: DAY_NAMES_FULL[day.day_of_week - 1] ?? `Day ${day.day_of_week}`,
+      dayLabel: day.label || null,
+      weekLabel: `Week ${day.week_number}`,
+      exerciseCount: assignments.length,
+      setCount: logs.length,
+      at: completedAt,
+    });
+  });
 
   const invoiceEvents: FeedEvent[] = data.invoices
     .map((inv): FeedEvent | null => {
@@ -1496,9 +1529,21 @@ export function getActivityFeed(limit = 30): FeedEvent[] {
     })
     .filter((e): e is FeedEvent => e !== null);
 
-  return [...setEvents, ...invoiceEvents]
+  return [...workoutEvents, ...invoiceEvents]
     .sort((a, b) => (a.at < b.at ? 1 : -1))
     .slice(0, limit);
+}
+
+// "Sep 3 · 14:05" — date and time for feed rows. Logged-at strings are
+// stored as "YYYY-MM-DD HH:MM:SS" (UTC, no zone marker), so append Z before
+// parsing so they render in the coach's local time rather than shifted.
+export function feedTimeLabel(at: string): string {
+  const iso = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(at) ? `${at.replace(" ", "T")}Z` : at;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return at;
+  const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return `${date} · ${time}`;
 }
 
 // ---- Nutrition plan: coach's macro/vitamin/supplement targets for a client ----

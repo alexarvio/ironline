@@ -1,14 +1,13 @@
 import Link from "next/link";
-import { getActivityFeed } from "../lib/queries";
+import { feedTimeLabel, getActivityFeed } from "../lib/queries";
 
 function describe(event: ReturnType<typeof getActivityFeed>[number]) {
-  if (event.type === "set_logged") {
-    const weight = event.weightKg ? `${event.weightKg}kg` : "–";
-    const reps = event.reps ?? "–";
+  if (event.type === "workout_completed") {
     return (
       <>
-        <strong>{event.clientName}</strong> logged a set on {event.exerciseName} — {weight} ×{" "}
-        {reps}
+        <strong>{event.clientName}</strong> completed {event.dayName}
+        {event.dayLabel ? ` · ${event.dayLabel}` : ""} ({event.weekLabel}) — {event.exerciseCount}{" "}
+        exercise{event.exerciseCount === 1 ? "" : "s"}, {event.setCount} set{event.setCount === 1 ? "" : "s"}
       </>
     );
   }
@@ -29,15 +28,13 @@ export default function FeedPanel() {
     <div>
       <h1>Feed</h1>
       <p className="subtitle">
-        Live activity across all clients — set logs and invoice updates right now. As
-        bodyweight, nutrition, and daily check-ins get built on the client side, they&rsquo;ll
-        show up here too.
+        Live activity across all clients — completed workouts and invoice updates, newest first.
       </p>
 
       {events.length === 0 ? (
         <p className="empty-note">
-          Nothing yet — once a client logs a set or an invoice status changes, it&rsquo;ll show up
-          here immediately.
+          Nothing yet — once a client finishes a workout or an invoice status changes, it&rsquo;ll
+          show up here immediately.
         </p>
       ) : (
         <div className="log-list">
@@ -46,7 +43,7 @@ export default function FeedPanel() {
               <span>
                 <Link href={`/admin?client=${event.clientId}`}>{describe(event)}</Link>
               </span>
-              <span className="when">{event.at}</span>
+              <span className="when">{feedTimeLabel(event.at)}</span>
             </div>
           ))}
         </div>
