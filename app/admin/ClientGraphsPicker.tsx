@@ -36,7 +36,7 @@ export default function ClientGraphsPicker({ choices }: { choices: GraphChoice[]
                 </span>
                 <span className="ms-cadence-pill">{c.cadenceLabel}</span>
                 <span className="cg-points" title="Logged values so far">
-                  {c.pointCount} {c.pointCount === 1 ? "pt" : "pts"}
+                  {c.pointCount} {c.pointCount === 1 ? "entry" : "entries"}
                 </span>
                 <form
                   action={c.kind === "field" ? togglePinMeasurementFieldAction : togglePinMetricAction}
