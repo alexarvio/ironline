@@ -1,5 +1,6 @@
 import { getCalendarDay, listClients, localDateStr } from "../lib/queries";
 import DayTimeline from "./DayTimeline";
+import AutosaveNote from "./AutosaveNote";
 
 // The calendar's right-hand panel: one day, hour by hour. Meetings sit in
 // their hour rows; a click on an empty spot creates an entry at that time,
@@ -22,12 +23,23 @@ export default function CalendarDayPanel({ day, month }: { day?: string; month?:
     status: m.status,
   }));
   const clients = listClients().map((c) => ({ id: c.id, name: c.name }));
+  // Server-stamped per render so the saved-state button only says "All
+  // saved" once an add or delete has actually landed.
+  // eslint-disable-next-line react-hooks/purity -- a server component render is the intended clock here
+  const renderedAt = Date.now();
 
   return (
     <div className="ad-panel cd">
       <div className="cd-head">
-        <div className="cd-kicker">{isToday ? "Today" : weekday}</div>
-        <h2 className="cd-title">{long}</h2>
+        <div className="cd-head-row">
+          <div>
+            <div className="cd-kicker">{isToday ? "Today" : weekday}</div>
+            <h2 className="cd-title">{long}</h2>
+          </div>
+          {/* Entries save the moment they are added or deleted; this is the
+              coach's assurance of that, not a step they have to take. */}
+          <AutosaveNote renderedAt={renderedAt} asButton idleAsSaved idleText="All saved" savedText="Saved" />
+        </div>
         <div className="cd-sub">
           {meetings.length === 0
             ? "Nothing booked. Click an hour to add something."

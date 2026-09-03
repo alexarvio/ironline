@@ -22,6 +22,7 @@ export default function AutosaveNote({
   savedSuffix,
   savedText,
   idleAsSaved,
+  asButton,
 }: {
   renderedAt: number;
   /** Shown at rest. The builder passes nothing (see below); the Measurements
@@ -36,6 +37,8 @@ export default function AutosaveNote({
   /** Show the idle text in the saved (green) tone rather than grey. For a
       tab where "nothing in flight" genuinely means "the client has it". */
   idleAsSaved?: boolean;
+  /** Render as a button-shaped status pill rather than plain text. */
+  asButton?: boolean;
 }) {
   const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
   const [at, setAt] = useState<string | null>(null);
@@ -67,13 +70,27 @@ export default function AutosaveNote({
   // something to say while a save is in flight or has just landed. The element
   // stays mounted with its height reserved so the bar doesn't jump when it
   // does speak.
+  const tone = state === "idle" && idleAsSaved ? "saved" : state;
+  const text =
+    state === "saving"
+      ? "Saving…"
+      : state === "saved"
+        ? savedText ?? `Saved ${at}${savedSuffix ? ` ${savedSuffix}` : ""}`
+        : idleText ?? "";
+
+  if (asButton) {
+    // A button that only ever reports. Disabled so it can't be "pressed"
+    // into doing something the autosave hasn't already done.
+    return (
+      <button type="button" className={`pb-autosave-btn ${tone}`} aria-live="polite" disabled>
+        {state === "saving" ? text : `${text} ✓`}
+      </button>
+    );
+  }
+
   return (
-    <span className={`pb-autosave ${state === "idle" && idleAsSaved ? "saved" : state}`} aria-live="polite">
-      {state === "saving"
-        ? "Saving…"
-        : state === "saved"
-          ? savedText ?? `Saved ${at}${savedSuffix ? ` ${savedSuffix}` : ""}`
-          : idleText ?? ""}
+    <span className={`pb-autosave ${tone}`} aria-live="polite">
+      {text}
     </span>
   );
 }

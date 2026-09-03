@@ -1164,8 +1164,39 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
-.calendar-cell-date { text-decoration: none; }
-.calendar-cell-date:hover { color: var(--accent); }
+.calendar-cell { position: relative; cursor: pointer; }
+.calendar-cell:hover { background: #eef1f5; }
+.calendar-cell.selected:hover { background: color-mix(in srgb, var(--accent) 20%, rgba(255, 255, 255, 0.55)); }
+
+/* Stretched link covering the cell; date and chips sit above it. */
+.calendar-cell-link { position: absolute; inset: 0; z-index: 0; border-radius: inherit; }
+.calendar-cell-date, .calendar-cell-meetings { position: relative; z-index: 1; }
+.calendar-cell-date { pointer-events: none; }
+
+/* An entry in the day panel with its delete control alongside. */
+.cd-entry-wrap { display: flex; align-items: stretch; gap: 4px; }
+.cd-entry-wrap > .cd-entry { flex: 1; min-width: 0; }
+.cd-entry-delete { display: flex; align-items: center; opacity: 0; transition: opacity 120ms ease; }
+.cd-entry-wrap:hover .cd-entry-delete, .cd-entry-delete:focus-within { opacity: 1; }
+.cd-entry-delete .row-icon-btn { width: 22px; height: 22px; border-radius: 6px; }
+.cd-entry-delete .row-icon-btn svg { width: 11px; height: 11px; }
+
+/* Saved-state button in a panel head. It is a status, not an action:
+   "Saving…" while a form is in flight, "All saved" otherwise. */
+.pb-autosave-btn {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--steel);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: default;
+}
+.pb-autosave-btn.saved { color: var(--good); border-color: color-mix(in srgb, var(--good) 45%, transparent); }
+.pb-autosave-btn.saving { color: var(--accent); border-color: var(--accent); }
 
 /* ---- Calendar day panel: hour rows with entries and a + per hour ---- */
 .cd-head { margin-bottom: 12px; }
@@ -10539,3 +10570,5 @@ a.cd-entry:hover { border-color: var(--accent); }
 .pb-logged-cell.under { box-shadow: inset 0 -2px 0 var(--accent-plate); }
 
 .pb-logged-empty { font-size: 10.5px; font-style: italic; color: var(--faint); }
+
+.cd-head-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }

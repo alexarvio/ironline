@@ -75,14 +75,15 @@ export default function CalendarPanel({ month, day }: { month?: string; day?: st
                   cell.date === selectedDay ? " selected" : ""
                 }`}
               >
-                {/* The date opens that day in the right-hand panel. */}
+                {/* The whole cell opens that day in the right-hand panel: a
+                    link stretched over the cell, with the meeting chips
+                    layered above it so they keep their own targets. */}
                 <Link
                   href={`/admin?view=calendar&month=${monthKey}&day=${cell.date}`}
-                  className="calendar-cell-date"
+                  className="calendar-cell-link"
                   aria-label={`Open ${cell.date}`}
-                >
-                  {dayNumber(cell.date)}
-                </Link>
+                />
+                <span className="calendar-cell-date">{dayNumber(cell.date)}</span>
                 <div className="calendar-cell-meetings">
                   {cell.meetings.slice(0, 3).map((m: MeetingWithClient) => (
                     <Link

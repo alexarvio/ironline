@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { addCalendarEventAction } from "../lib/actions";
+import { addCalendarEventAction, removeMeetingAction } from "../lib/actions";
+import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
 
 export type DayEntry = {
   id: number;
@@ -106,13 +107,26 @@ function Entry({ m }: { m: DayEntry }) {
   );
   const cls = `cd-entry${m.clientId == null ? " own" : ""}${m.status === "completed" ? " done" : ""}`;
   // A client meeting links to that client's Meetings tab; the coach's own
-  // block has nowhere else to go.
-  return m.clientId != null ? (
-    <Link href={`/admin?client=${m.clientId}&tab=meetings`} className={cls}>
-      {body}
-    </Link>
-  ) : (
-    <div className={cls}>{body}</div>
+  // block has nowhere else to go. Either can be deleted from here, behind
+  // the shared confirm.
+  return (
+    <div className="cd-entry-wrap">
+      {m.clientId != null ? (
+        <Link href={`/admin?client=${m.clientId}&tab=meetings`} className={cls}>
+          {body}
+        </Link>
+      ) : (
+        <div className={cls}>{body}</div>
+      )}
+      <span className="cd-entry-delete">
+        <ConfirmDeleteButton
+          action={removeMeetingAction}
+          hiddenFields={{ id: m.id }}
+          label={`Delete ${m.topic || (m.clientId != null ? `the meeting with ${m.clientName}` : "this block")}`}
+          description={`${m.time || ""} · ${m.clientName}${m.topic ? ` · ${m.topic}` : ""}`}
+        />
+      </span>
+    </div>
   );
 }
 
