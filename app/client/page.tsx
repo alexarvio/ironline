@@ -549,7 +549,14 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   const vitaminRows = VITAMIN_ITEMS.map((item) => ({ item, entry: plan.vitamins[slugify(item)] })).filter(
     (r) => r.entry?.quantity
   );
-  const referenceRows = [...supplementRows, ...vitaminRows];
+  // The coach's own rows from the Nutrition tab's Supplements table (the
+  // "Add an item" list). These are the ones a coach actually types today;
+  // the two fixed lists above are the older preset grid, kept for plans
+  // that still use it. A row with no name is one the coach hasn't filled in.
+  const customRows = (plan.supplement_rows ?? [])
+    .filter((r) => r.name.trim())
+    .map((r) => ({ item: r.name.trim(), entry: { quantity: r.quantity, timing: r.timing } }));
+  const referenceRows = [...customRows, ...supplementRows, ...vitaminRows];
   const coachNotes = coachNotesFor(CLIENT_ID, 3);
 
   return (
