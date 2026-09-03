@@ -533,7 +533,6 @@ export default function ProgramBuilder({
       actionsSlot:
         status === "draft" ? (
           <div key={`a${program.id}`} className="pb-deploy-row">
-            <span className="pb-deploy-note">Nothing sent to {(clientName ?? "").split(" ")[0] || "the client"} yet</span>
             <ProgramDeployControls programId={program.id} scheduledAt={program.scheduled_at} />
             <ConfirmDeleteButton
               action={removeProgramAction}
