@@ -8,7 +8,6 @@ import ProgramBuilder from "../components/ProgramBuilder";
 import { getClient, getOverviewPanel, listClients } from "../lib/queries";
 
 import { requireCoach } from "../lib/auth";
-import ClientLoginPanel from "./ClientLoginPanel";
 
 // Reads live from the JSON store on every request — without this, Next
 // statically prerenders this page at build time (before any real data
@@ -44,6 +43,8 @@ export default async function AdminPage({
             panel={getOverviewPanel(client.id)}
             clientId={client.id}
             onboarding={params.onboard === "1"}
+            loginOk={params.loginOk}
+            loginError={params.loginError}
           />
         ) : undefined
       }

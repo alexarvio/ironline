@@ -8654,13 +8654,89 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 /* ---- Right-hand client overview panel ---- */
 .ad-panel-col {
+  position: relative;
   background: var(--paper-raised);
   border-left: 1px solid var(--border);
-  overflow-y: auto;
+  /* The column itself doesn't scroll — its body does — so the collapse
+     toggle pinned to the column's top-left stays put while the coach
+     scrolls the snapshot, goals and member info underneath it. */
+  overflow: hidden;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ad-panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Collapsed: the third column becomes a 26px strip holding only the toggle,
+   and the working area takes the rest. */
+.ad-shell.panel-collapsed { grid-template-columns: 216px minmax(0, 1fr) 26px; }
+
+.ad-panel-toggle {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  width: 26px;
+  height: 26px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-left: 0;
+  border-radius: 0 7px 7px 0;
+  background: var(--surface);
+  color: var(--steel);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ad-panel-toggle:hover { color: var(--ink); background: var(--paper); }
+.ad-panel-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.ad-shell.panel-collapsed .ad-panel-toggle {
+  left: -1px;
+  border-left: 1px solid var(--border);
+  border-radius: 7px 0 0 7px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .ad-panel { padding: 16px 16px 24px; }
+
+/* App access inside the overview panel: the box loses its own frame (the
+   panel is already the raised surface) and the forms stack full-width,
+   since the column is 296px and the inline row grammar came from a wider
+   card. */
+.ad-panel .client-login-box { border: 0; border-radius: 0; background: transparent; padding: 0; margin-top: 0; }
+.ad-panel .client-login-box h4 { display: none; }
+.ad-panel .client-login-status { font-size: 11px; line-height: 1.45; }
+.ad-panel .client-login-form { flex-direction: column; align-items: stretch; gap: 6px; }
+.ad-panel .client-login-form input {
+  min-width: 0;
+  height: 26px;
+  padding: 0 7px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 11.5px;
+  background: var(--surface);
+}
+.ad-panel .client-login-flash { font-size: 11px; padding: 6px 9px; }
 
 .ad-panel-profile {
   display: flex;
@@ -9253,6 +9329,33 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   gap: 6px;
   margin-top: 5px;
   padding: 0 1px;
+}
+
+/* "New client  +" as one row-wide rectangle, same height as the client rows. */
+.ad-new-client-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  padding: 0 11px;
+  border: 1px dashed var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ad-new-client-btn:hover { border-style: solid; border-color: var(--accent); color: var(--accent); }
+.ad-new-client-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.ad-new-client-plus {
+  font-size: 16px;
+  line-height: 1;
+  color: var(--accent);
 }
 
 .ad-new-client .ad-input {

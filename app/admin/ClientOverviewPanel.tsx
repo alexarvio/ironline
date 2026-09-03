@@ -1,6 +1,7 @@
 import type { OverviewPanel } from "../lib/queries";
 import { addClientGoalAction, removeClientGoalAction } from "../lib/actions";
 import ClientCardEditor from "./ClientCardEditor";
+import ClientLoginPanel from "./ClientLoginPanel";
 
 // The right-hand column: everything true about this client that isn't the
 // thing the coach is currently editing.
@@ -17,12 +18,17 @@ export default function ClientOverviewPanel({
   panel,
   clientId,
   onboarding = false,
+  loginOk,
+  loginError,
 }: {
   panel: OverviewPanel;
   clientId: number;
   /** True right after this client was created — the card opens in edit mode
       so the coach fills in the details while they still have them to hand. */
   onboarding?: boolean;
+  /** Outcome flags from the app-access actions, passed through from the URL. */
+  loginOk?: string;
+  loginError?: string;
 }) {
   return (
     <div className="ad-panel">
@@ -102,7 +108,15 @@ export default function ClientOverviewPanel({
              changing must not mean re-creating the client. */}
       <ClientCardEditor clientId={clientId} panel={panel} onboarding={onboarding} />
 
-      {/* 6. Recent activity */}
+      {/* 6. App access — the client's login, created and reset from here.
+             Lives with the member details because it is one: the email they
+             sign in with and whether they have a way into the app at all. */}
+      <section className="ad-panel-section">
+        <h3 className="ad-panel-heading">App access</h3>
+        <ClientLoginPanel clientId={clientId} name={panel.name} ok={loginOk} error={loginError} />
+      </section>
+
+      {/* 7. Recent activity */}
       <section className="ad-panel-section">
         <h3 className="ad-panel-heading">Recent activity</h3>
         {panel.activity.length === 0 ? (

@@ -389,8 +389,10 @@ export async function logSetAction(formData: FormData) {
 
 export async function createClientAction(formData: FormData) {
   await requireCoach();
-  const name = String(formData.get("name") || "").trim();
-  if (!name) return;
+  // The sidebar button sends no name: the card that opens next is where the
+  // coach types it, alongside the rest of the member info. Until then the
+  // client is listed under a placeholder so they are findable in the rail.
+  const name = String(formData.get("name") || "").trim() || "New client";
   const client = createClient(name);
   revalidatePath("/admin");
   // Land on the new client with their card already open for filling in.

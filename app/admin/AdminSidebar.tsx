@@ -77,10 +77,15 @@ export default function AdminSidebar({ selectedId }: { selectedId: number | null
           })
         )}
 
+        {/* One full-width button, no name field: the name is typed on the
+            card that opens right after, with the rest of the member info,
+            rather than in a second, smaller place here. */}
         <form action={createClientAction} className="ad-new-client">
-          <input name="name" type="text" placeholder="New client" required className="ad-input" />
-          <button className="ad-icon-btn" type="submit" aria-label="Add client">
-            +
+          <button className="ad-new-client-btn" type="submit">
+            <span>New client</span>
+            <span className="ad-new-client-plus" aria-hidden="true">
+              +
+            </span>
           </button>
         </form>
       </div>
