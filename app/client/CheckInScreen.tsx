@@ -458,6 +458,9 @@ export default function CheckInScreen({
 
       </div>
 
+      {/* No footer once the section is folded up: the done card is the whole
+          story, and its own Edit is the way back in. */}
+      {!collapsed && (
       <div className="ci-footer">
         <div className="ci-footer-labels">
           <div className="ci-footer-kicker">{isSaved ? "Sent" : "Goes to your coach"}</div>
@@ -471,11 +474,7 @@ export default function CheckInScreen({
               : `${remaining} still empty`}
           </div>
         </div>
-        {collapsed ? (
-          <button type="button" className="ci-save secondary" onClick={() => setEditing(true)}>
-            Edit
-          </button>
-        ) : isSaved ? (
+        {isSaved ? (
           <button type="button" className="ci-save secondary" onClick={stopEditing}>
             Done
           </button>
@@ -485,6 +484,7 @@ export default function CheckInScreen({
           </button>
         )}
       </div>
+      )}
     </div>
   );
 }
