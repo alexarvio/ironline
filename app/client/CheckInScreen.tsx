@@ -255,8 +255,8 @@ export default function CheckInScreen({
                   {justSaved ? "Your coach can see it now." : "Your coach has it."}
                 </div>
               </div>
-              <button type="button" className="ci-saved-home" onClick={onBack}>
-                Done
+              <button type="button" className="ci-saved-home" onClick={() => setEditing(true)}>
+                Edit
               </button>
             </div>
             <div className="ci-done-list">
@@ -269,9 +269,6 @@ export default function CheckInScreen({
                 </div>
               ))}
             </div>
-            <button type="button" className="ci-done-edit" onClick={() => setEditing(true)}>
-              Typed something wrong? Edit
-            </button>
           </div>
         </div>
       ) : (

@@ -3796,21 +3796,6 @@ a.cd-entry:hover { border-color: var(--accent); }
   color: var(--fp-dim);
 }
 
-.ci-done-edit {
-  display: block;
-  width: 100%;
-  margin-top: 14px;
-  min-height: 44px;
-  border: 1px solid var(--fp-line);
-  border-radius: 12px;
-  background: none;
-  color: var(--fp-text);
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
 /* Week switcher: a completed week shows a tick instead of the current dot. */
 .week-done-tick {
   display: inline-flex;
@@ -7675,7 +7660,6 @@ a.cd-entry:hover { border-color: var(--accent); }
   flex-direction: column;
 }
 
-
 .ad-pad {
   padding: 16px 20px 24px;
 }
@@ -9546,9 +9530,6 @@ a.cd-entry:hover { border-color: var(--accent); }
    or Message button above the tabs. Those facts live in the right-hand panel,
    which is also where they're edited; showing them twice made the panel read
    as an echo of the header. The tabs are now the top of the working column. */
-
-
-
 
 /* ---- History tables ---- */
 .mh-wrap {
