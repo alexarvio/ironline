@@ -53,6 +53,33 @@ export type CheckInProps = {
 // the header's filled/total counter and the per-row underline react as you
 // type; the actual save is a real form post to the same server actions the
 // old separate forms used, so what reaches the coach is unchanged.
+// "82.5", "82,5" and "82.50" are the same reading: the server stores the
+// number, so comparing typed text against the persisted value numerically
+// is what tells us whether anything has actually changed.
+function sameNumber(a: string, b: string) {
+  if (a === b) return true;
+  if (a === "" || b === "") return false;
+  return Number(a.replace(",", ".")) === Number(b.replace(",", "."));
+}
+
+// The input is plain text with a decimal keypad rather than type="number":
+// on phones set to Finnish (and most of Europe) the keypad offers a comma,
+// which a number input silently rejects, so the client could not type
+// decimals. Here the comma becomes a dot and anything else non-numeric is
+// dropped as it's typed. Rating scales take whole numbers only.
+function cleanNumeric(raw: string, wholeOnly: boolean) {
+  let out = "";
+  let seenDot = false;
+  for (const ch of raw) {
+    if (ch >= "0" && ch <= "9") out += ch;
+    else if ((ch === "." || ch === ",") && !wholeOnly && !seenDot) {
+      out += ".";
+      seenDot = true;
+    }
+  }
+  return out;
+}
+
 export default function CheckInScreen({
   clientId,
   dateLabel,
@@ -119,7 +146,7 @@ export default function CheckInScreen({
   // flag to keep in sync, and editing a saved section re-arms Save by
   // itself. After a submit the server re-renders with the new values, so
   // this settles into the saved state on its own.
-  const dirty = metrics.some((m) => (activeValues[m.id] ?? "") !== m.value);
+  const dirty = metrics.some((m) => !sameNumber(activeValues[m.id] ?? "", m.value));
   const savedSomething = metrics.some((m) => m.value.length > 0);
   const isSaved = !dirty && savedSomething;
   const canSave = dirty && filled.length > 0;
@@ -130,14 +157,22 @@ export default function CheckInScreen({
   // values back matching (isSaved), which is the moment the save is real.
   const submitted = useRef(false);
   const [justSaved, setJustSaved] = useState(false);
+  // A saved section shows as a collapsed "done" card rather than the open
+  // form; Edit reopens it (a client may have typed something wrong), and a
+  // fresh save, or Done, folds it back up.
+  const [editing, setEditing] = useState(false);
   useEffect(() => {
     if (isSaved && submitted.current) {
       submitted.current = false;
       // Deferred a tick so the state change isn't synchronous inside the effect.
-      const t = setTimeout(() => setJustSaved(true), 0);
+      const t = setTimeout(() => {
+        setJustSaved(true);
+        setEditing(false);
+      }, 0);
       return () => clearTimeout(t);
     }
   }, [isSaved]);
+  const collapsed = isSaved && !editing;
   const armSubmit = () => {
     submitted.current = true;
     setJustSaved(false);
@@ -155,6 +190,21 @@ export default function CheckInScreen({
     setJustSaved(false);
     setValues((prev) => ({ ...prev, [active.id]: { ...prev[active.id], [metricId]: v } }));
   };
+  const switchSection = (id: CheckInSection["id"]) => {
+    setSectionId(id);
+    setEditing(false);
+    setJustSaved(false);
+  };
+  // Leaving edit mode without saving puts back what the coach actually has.
+  const stopEditing = () => {
+    setValues((prev) => ({
+      ...prev,
+      [active.id]: Object.fromEntries(active.metrics.map((m) => [m.id, m.value])),
+    }));
+    setEditing(false);
+  };
+  const showValue = (m: CheckInMetric) =>
+    m.scaleMax ? `${m.value}/${m.scaleMax}` : `${m.value}${m.unit ? ` ${m.unit}` : ""}`;
 
   return (
     <div className="ci-screen">
@@ -182,7 +232,7 @@ export default function CheckInScreen({
               key={s.id}
               type="button"
               className={`ci-tab${s.id === active.id ? " active" : ""}`}
-              onClick={() => setSectionId(s.id)}
+              onClick={() => switchSection(s.id)}
             >
               {s.label}
               {dueSections.includes(s.id) && <span className="ci-tab-dot" aria-label="Not logged yet" />}
@@ -192,8 +242,41 @@ export default function CheckInScreen({
       )}
 
       <div className="ci-scroll">
-      {/* One form per section, keyed so switching sections resets the
-          uncontrolled bits (the file inputs) rather than carrying them over. */}
+      {collapsed ? (
+        <div className="ci-body">
+          <div className="ci-done" role="status" aria-live="polite">
+            <div className="ci-saved-banner">
+              <span className="ci-saved-icon" aria-hidden="true">
+                ✓
+              </span>
+              <div className="ci-saved-text">
+                <div className="ci-saved-title">{justSaved ? "Check-in saved" : "Already logged"}</div>
+                <div className="ci-saved-sub">
+                  {justSaved ? "Your coach can see it now." : "Your coach has it."}
+                </div>
+              </div>
+              <button type="button" className="ci-saved-home" onClick={onBack}>
+                Done
+              </button>
+            </div>
+            <div className="ci-done-list">
+              {active.metrics.map((m) => (
+                <div key={m.id} className="ci-done-row">
+                  <span className="ci-done-name">{m.name}</span>
+                  <span className={`ci-done-value${m.value ? "" : " empty"}`}>
+                    {m.value ? showValue(m) : "–"}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <button type="button" className="ci-done-edit" onClick={() => setEditing(true)}>
+              Typed something wrong? Edit
+            </button>
+          </div>
+        </div>
+      ) : (
+      /* One form per section, keyed so switching sections resets the
+          uncontrolled bits (the file inputs) rather than carrying them over. */
       <form
         key={active.id}
         id="ci-form"
@@ -204,21 +287,6 @@ export default function CheckInScreen({
         <input type="hidden" name="clientId" value={clientId} />
         <input type="hidden" name="date" value={today} />
         {!isMeasurements && <input type="hidden" name="frequency" value={active.id} />}
-
-        {justSaved && (
-          <div className="ci-saved-banner" role="status" aria-live="polite">
-            <span className="ci-saved-icon" aria-hidden="true">
-              ✓
-            </span>
-            <div className="ci-saved-text">
-              <div className="ci-saved-title">Check-in saved</div>
-              <div className="ci-saved-sub">Your coach can see it now.</div>
-            </div>
-            <button type="button" className="ci-saved-home" onClick={onBack}>
-              Done
-            </button>
-          </div>
-        )}
 
         <p className="ci-intro">{active.intro}</p>
 
@@ -234,13 +302,13 @@ export default function CheckInScreen({
                 </div>
                 <div className="ci-metric-input-wrap">
                   <input
-                    type="number"
-                    step={m.step}
-                    inputMode="decimal"
+                    type="text"
+                    inputMode={m.scaleMax ? "numeric" : "decimal"}
+                    autoComplete="off"
                     name={isMeasurements ? `field_${m.id}` : `metric_${m.id}`}
                     placeholder="–"
                     value={value}
-                    onChange={(e) => setValue(m.id, e.target.value)}
+                    onChange={(e) => setValue(m.id, cleanNumeric(e.target.value, !!m.scaleMax))}
                     aria-label={m.name}
                     className={`ci-input${has ? " filled" : ""}`}
                   />
@@ -273,6 +341,7 @@ export default function CheckInScreen({
           );
         })}
       </form>
+      )}
 
       {isMeasurements && (deltas.length > 0 || photoSlots.length > 0) && (
         <div className="ci-extras">
@@ -405,9 +474,19 @@ export default function CheckInScreen({
               : `${remaining} still empty`}
           </div>
         </div>
-        <button type="submit" form="ci-form" className="ci-save" disabled={!canSave}>
-          {isSaved ? "Saved ✓" : "Save"}
-        </button>
+        {collapsed ? (
+          <button type="button" className="ci-save secondary" onClick={() => setEditing(true)}>
+            Edit
+          </button>
+        ) : isSaved ? (
+          <button type="button" className="ci-save secondary" onClick={stopEditing}>
+            Done
+          </button>
+        ) : (
+          <button type="submit" form="ci-form" className="ci-save" disabled={!canSave}>
+            Save
+          </button>
+        )}
       </div>
     </div>
   );

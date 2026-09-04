@@ -450,7 +450,8 @@ export async function saveMeasurementCheckInAction(formData: FormData) {
   fields.forEach((field) => {
     const raw = formData.get(`field_${field.id}`);
     if (raw === null || raw === "") return;
-    const value = Number(raw);
+    // Phones on European locales type the decimal comma.
+    const value = Number(String(raw).replace(",", "."));
     setMeasurementValue(field.id, date, Number.isFinite(value) ? value : null);
   });
 
@@ -643,7 +644,8 @@ export async function logMetricPeriodAction(formData: FormData) {
   definitions.forEach((def) => {
     const raw = formData.get(`metric_${def.id}`);
     if (raw === null || raw === "") return;
-    const value = Number(raw);
+    // Phones on European locales type the decimal comma.
+    const value = Number(String(raw).replace(",", "."));
     setMetricEntry(def.id, period, Number.isFinite(value) ? value : null);
   });
 

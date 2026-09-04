@@ -3746,6 +3746,71 @@ a.cd-entry:hover { border-color: var(--accent); }
   cursor: pointer;
 }
 
+/* Collapsed "done" card: what was sent, folded up so the section reads as
+   finished, with a way back in if something was typed wrong. */
+.ci-done {
+  padding-top: 4px;
+}
+
+.ci-done .ci-saved-banner {
+  margin-bottom: 0;
+  border-radius: 12px 12px 0 0;
+}
+
+.ci-done-list {
+  border: 1px solid var(--fp-line);
+  border-top: 0;
+  border-radius: 0 0 12px 12px;
+  padding: 4px 14px;
+}
+
+.ci-done-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--fp-line);
+}
+
+.ci-done-row:last-child {
+  border-bottom: 0;
+}
+
+.ci-done-name {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fp-dim);
+}
+
+.ci-done-value {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--fp-text);
+}
+
+.ci-done-value.empty {
+  color: var(--fp-dim);
+}
+
+.ci-done-edit {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  min-height: 44px;
+  border: 1px solid var(--fp-line);
+  border-radius: 12px;
+  background: none;
+  color: var(--fp-text);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* Week switcher: a completed week shows a tick instead of the current dot. */
 .week-done-tick {
   display: inline-flex;
@@ -4108,6 +4173,13 @@ a.cd-entry:hover { border-color: var(--accent); }
   font-weight: 800;
   cursor: pointer;
   font-family: inherit;
+}
+
+/* Edit / Done: an action, but not the one that sends anything. */
+.ci-save.secondary {
+  background: none;
+  border: 1px solid var(--fp-line);
+  color: var(--fp-text);
 }
 
 .ci-save:disabled {
