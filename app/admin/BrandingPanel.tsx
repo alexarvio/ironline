@@ -28,7 +28,7 @@ export default function BrandingPanel({ embedded = false }: { embedded?: boolean
 
       <section className="br-card">
         <h3 className="ad-microlabel">Logo</h3>
-        <p className="br-note">A square PNG or SVG works best. It replaces the Ironline mark everywhere, including the phone icon.</p>
+        <p className="br-note">A square PNG or SVG works best. It shows in the admin panel, on the login page and inside the client app. The Ironline icon on the phone home screen stays as it is.</p>
         <BrandingLogoUpload currentSrc={branding.logo_path} />
       </section>
 
