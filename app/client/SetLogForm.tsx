@@ -3,6 +3,22 @@
 import { useId, useState } from "react";
 import { logSetAction } from "../lib/actions";
 
+// Keeps a decimal field to digits and at most one dot, turning a typed comma
+// into that dot. Uncontrolled input, so the value is rewritten in place.
+function tidyDecimal(e: React.FormEvent<HTMLInputElement>) {
+  const el = e.currentTarget;
+  let out = "";
+  let seenDot = false;
+  for (const ch of el.value) {
+    if (ch >= "0" && ch <= "9") out += ch;
+    else if ((ch === "." || ch === ",") && !seenDot) {
+      out += ".";
+      seenDot = true;
+    }
+  }
+  if (out !== el.value) el.value = out;
+}
+
 // Renders as a single <tr> so it drops straight into the sets <table> next
 // to the already-logged rows, instead of a separate card below it. A <form>
 // can't span table cells by wrapping them, so the visible weight/reps/rpe
@@ -36,11 +52,17 @@ export default function SetLogForm({
     <tr className="training-set-row training-set-row-active">
       <td className="training-set-cell-num">{nextSetNumber}</td>
       <td>
+        {/* Text with a decimal keypad, not type="number": a phone on a
+            European locale offers a comma, which a number input rejects, so
+            22,5 kg could not be logged. Comma becomes dot as it's typed and
+            the server accepts either. */}
         <input
           form={formId}
           name="weight"
-          type="number"
-          step="0.5"
+          type="text"
+          inputMode="decimal"
+          autoComplete="off"
+          onInput={tidyDecimal}
           placeholder={targetWeight != null ? `${targetWeight}kg` : "kg"}
           required
         />
@@ -58,8 +80,10 @@ export default function SetLogForm({
         <input
           form={formId}
           name="rpe"
-          type="number"
-          step="0.5"
+          type="text"
+          inputMode="decimal"
+          autoComplete="off"
+          onInput={tidyDecimal}
           placeholder={targetRpe != null ? String(targetRpe) : "-"}
         />
       </td>

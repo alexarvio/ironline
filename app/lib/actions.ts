@@ -388,9 +388,16 @@ export async function logSetAction(formData: FormData) {
   if (owner == null || !(await canAccessClient(owner))) return;
 
   const setNumber = Number(formData.get("setNumber"));
-  const weight = formData.get("weight") ? Number(formData.get("weight")) : null;
-  const reps = formData.get("reps") ? Number(formData.get("reps")) : null;
-  const rpe = formData.get("rpe") ? Number(formData.get("rpe")) : null;
+  // Decimal comma from European keypads is accepted alongside the dot.
+  const num = (key: string) => {
+    const raw = String(formData.get(key) ?? "").replace(",", ".");
+    if (!raw) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  };
+  const weight = num("weight");
+  const reps = num("reps");
+  const rpe = num("rpe");
 
   logSet(assignmentId, setNumber, weight, reps, rpe);
   revalidatePath("/client");
