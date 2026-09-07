@@ -2750,7 +2750,9 @@ a.cd-entry:hover { border-color: var(--accent); }
   padding: 0 10px 0 8px;
   /* One hairline per week column, anchored to the content box so the
      lines land exactly on the column edges. */
-  background-image: linear-gradient(to right, var(--fp-line) 1px, transparent 1px);
+  /* Line at the right edge of each column, so the first column has none
+     beside the label divider. */
+  background-image: linear-gradient(to right, transparent calc(100% - 1px), var(--fp-line) calc(100% - 1px));
   background-repeat: repeat-x;
   background-origin: content-box;
   background-clip: content-box;
