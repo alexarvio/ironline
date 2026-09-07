@@ -3341,7 +3341,9 @@ a.cd-entry:hover { border-color: var(--accent); }
 }
 
 .training-dark .training-exercise-target {
-  color: var(--fp-dim);
+  color: var(--fp-text);
+  border-color: var(--fp-line);
+  background: var(--fp-raised);
 }
 
 .training-dark .exercise-coach-note {
@@ -5789,11 +5791,46 @@ a.cd-entry:hover { border-color: var(--accent); }
   font-size: 0.9rem;
 }
 
+/* The name takes the slack, so the set chip and the note bubble sit in the
+   same two spots on every row. */
+.training-exercise-name {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Set count as a chip rather than plain text: it was the one number the
+   client needs mid-session and the easiest to miss. */
 .training-exercise-target {
-  color: var(--steel);
-  font-size: 0.82rem;
-  margin-top: 1px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   white-space: nowrap;
+}
+
+/* Bubble with nothing behind it: present, quieter. */
+.ex-note-btn.empty .ex-note-icon {
+  background: none;
+  border: 1px solid var(--fp-line);
+  color: var(--fp-dim);
+}
+
+.ex-note-panel.empty {
+  background: var(--fp-raised);
+  border: 1px dashed var(--fp-line);
+}
+
+.ex-note-empty {
+  margin: 0;
+  color: var(--fp-dim);
 }
 
 .exercise-coach-note {

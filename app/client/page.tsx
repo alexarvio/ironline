@@ -433,22 +433,23 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
                     const doneAllSets = nextSetNumber > a.sets;
                     return (
                       <div key={a.id} className="training-exercise-row">
+                        {/* Name, then the set count as a chip, then the coach
+                            note bubble, in the same three positions on every
+                            row: the count was easy to miss as plain text, and
+                            the bubble came and went with whether a note
+                            existed. Now the bubble is always there and carries
+                            a dot only when the coach has written something. */}
                         <div className="training-exercise-row-top">
-                          <strong>{a.exercise_name}</strong>
+                          <strong className="training-exercise-name">{a.exercise_name}</strong>
                           <span className="training-exercise-target">
                             {a.sets} set{a.sets === 1 ? "" : "s"}
                           </span>
-                          {/* Only exercises the coach actually wrote a note on
-                              render the button — an empty bubble on every row
-                              would be noise. */}
-                          {a.notes && (
-                            <ExerciseCoachNote
-                              assignmentId={a.id}
-                              dateLabel={noteDateLabel(a.note_at)}
-                              text={a.notes}
-                              unread={!a.note_read}
-                            />
-                          )}
+                          <ExerciseCoachNote
+                            assignmentId={a.id}
+                            dateLabel={noteDateLabel(a.note_at)}
+                            text={a.notes}
+                            unread={!!a.notes && !a.note_read}
+                          />
                         </div>
                         {/* The coach's demo for this prescription wins; the
                             exercise library's own video is the fallback. */}
