@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { ArrowRightIcon, CalendarIcon, CheckIcon, ClockIcon } from "../components/icons";
 import TrendCarousel, { TrendMetric } from "./TrendCarousel";
+import PlanBody from "./PlanCard";
+import type { ClientPlanView } from "../lib/queries";
 import { useOpenCheckIn } from "./CheckInContext";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
@@ -35,6 +38,7 @@ export default function HomeHub({
   dateLabel,
   name,
   phase,
+  plan,
   subLine,
   goalNote,
   daysTrained,
@@ -52,6 +56,8 @@ export default function HomeHub({
   name: string;
   /** Goal / phase from the coach's card, e.g. "Fat loss". */
   phase: string;
+  /** The coach's phase timeline, when one exists; drives the plan card. */
+  plan: ClientPlanView | null;
   /** Anything quieter beside it, currently the current-week label. */
   subLine: string;
   goalNote: string | null;
@@ -69,21 +75,43 @@ export default function HomeHub({
   // Check-in is a full-screen pushed view owned by AppShell; a due row just
   // asks it to open on that row's section.
   const openCheckIn = useOpenCheckIn();
+  const [planOpen, setPlanOpen] = useState(false);
 
   const dayTarget = totalDays || 7;
 
   return (
     <div className="home-dark">
       <div className="home-dark-datebar">{dateLabel}</div>
-      <div className="home-dark-name">{name}</div>
-      <div className="home-dark-subrow">
-        {/* The phase is the coach's headline for this block of work, so it
-            leads the row in the text colour, bold and a step larger; the
-            week and the countdown stay quieter beside it. */}
-        <span className="home-dark-phase">{phase}</span>
-        {subLine && <span className="home-dark-sub">{subLine}</span>}
-        {goalNote && <span className="home-dark-goal">{goalNote}</span>}
+      {/* The header is the plan's summary: name, then the phase the coach
+          has them in, the week, and how long the phase has left with what
+          follows. When the coach has drawn a phase timeline, a chevron on
+          the right folds the whole plan out underneath. */}
+      <div className="home-dark-headrow">
+        <div className="home-dark-headmain">
+          <div className="home-dark-name">{name}</div>
+          <div className="home-dark-subrow">
+            <span className="home-dark-phase">{phase}</span>
+            {subLine && <span className="home-dark-sub">{subLine}</span>}
+            {goalNote && <span className="home-dark-goal">{goalNote}</span>}
+            {plan?.next && <span className="home-dark-sub">then {plan.next.name}</span>}
+          </div>
+        </div>
+        {plan && (
+          <button
+            type="button"
+            className={`plan-chevron${planOpen ? " open" : ""}`}
+            onClick={() => setPlanOpen((o) => !o)}
+            aria-expanded={planOpen}
+            aria-controls="plan-body"
+            aria-label={planOpen ? "Hide the full plan" : "See the full plan"}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+        )}
       </div>
+      {plan && planOpen && <PlanBody plan={plan} />}
 
       <div className="home-dark-hr" />
 

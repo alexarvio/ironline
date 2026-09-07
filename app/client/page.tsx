@@ -5,6 +5,7 @@ import {
   getAssignmentsForDay,
   getClient,
   getClientProfile,
+  getClientPlanView,
   getDeployedProgram,
   getLogsForAssignment,
   getCurrentWeekNumber,
@@ -343,13 +344,22 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
     day: "numeric",
   });
 
+  // The coach's phase timeline, if they have drawn one. Its current phase
+  // becomes the headline instead of the hand-typed Goal / phase field.
+  const plan = getClientPlanView(CLIENT_ID);
+
   return (
     <HomeHub
       dateLabel={dateLabel}
       name={client?.name ?? ""}
-      phase={profile.goal_phase || "No goal phase set yet"}
+      phase={plan?.current?.name || profile.goal_phase || "No goal phase set yet"}
+      plan={plan}
+      goalNote={
+        plan?.current
+          ? `${plan.current.weeksLeft} week${plan.current.weeksLeft === 1 ? "" : "s"} to go`
+          : goalNote
+      }
       subLine={profile.current_week ? `· ${profile.current_week}` : ""}
-      goalNote={goalNote}
       daysTrained={daysTrained}
       totalDays={totalDaysBuilt}
       setsThisWeek={setsThisWeek}

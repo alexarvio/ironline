@@ -2682,6 +2682,85 @@ a.cd-entry:hover { border-color: var(--accent); }
   letter-spacing: -0.01em;
 }
 
+/* ---- Plan on Home: the header row carries name, phase, weeks left and
+   what's next; a chevron on the right folds the full plan out underneath
+   as a vertical list per track. ---- */
+.home-dark-headrow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.home-dark-headmain { flex: 1; min-width: 0; }
+.plan-chevron {
+  flex-shrink: 0;
+  margin-top: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--fp-line);
+  background: var(--fp-raised);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fp-text);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.18s ease;
+}
+.plan-chevron.open { transform: rotate(180deg); }
+.plan-body {
+  margin: 12px 0 4px;
+  border: 1px solid var(--fp-line);
+  border-radius: 14px;
+  background: var(--fp-raised);
+  padding: 4px 14px 12px;
+}
+.plan-track { padding-top: 10px; }
+.plan-track-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fp-dim);
+  margin-bottom: 4px;
+}
+.plan-track-list { list-style: none; margin: 0; padding: 0; }
+.plan-phase {
+  position: relative;
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  grid-template-areas: "m name now" "m range now";
+  column-gap: 10px;
+  align-items: center;
+  padding: 7px 0;
+}
+.plan-phase + .plan-phase { border-top: 1px solid var(--fp-line); }
+.plan-phase-marker {
+  grid-area: m;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 2px solid var(--fp-line);
+  background: var(--fp-raised);
+}
+.plan-phase.now .plan-phase-marker { border-color: var(--fp-accent); background: var(--fp-accent); }
+.plan-phase.past .plan-phase-marker { background: var(--fp-line); }
+.plan-phase-name { grid-area: name; font-size: 0.92rem; font-weight: 800; color: var(--fp-text); }
+.plan-phase-range { grid-area: range; font-size: 0.76rem; color: var(--fp-dim); }
+.plan-phase.past .plan-phase-name { color: var(--fp-dim); font-weight: 700; }
+.plan-phase-now {
+  grid-area: now;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fp-accent-fg);
+  background: var(--fp-accent);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
 .home-dark-goal {
   font-size: 0.8rem;
   font-weight: 800;

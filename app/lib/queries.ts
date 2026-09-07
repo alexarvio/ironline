@@ -4634,3 +4634,62 @@ export function getCurrentPhase(clientId: number, track: PhaseTrack): ClientPhas
   const week = weekStart(localDateStr());
   return listClientPhases(clientId).find((p) => p.track === track && p.start_week <= week && p.end_week >= week) ?? null;
 }
+
+// What the client's Home shows of the phase plan: the phase they are in on
+// the nutrition track (the coach's headline), how many weeks it has left,
+// what follows it, and, behind a chevron, every phase on every track with
+// where "now" falls. Vertical and dated, since a week grid is too wide for
+// a phone.
+export type PlanPhaseView = {
+  id: number;
+  name: string;
+  status: "past" | "now" | "next";
+  rangeLabel: string;
+  weeks: number;
+};
+export type PlanTrackView = { track: PhaseTrack; label: string; phases: PlanPhaseView[] };
+export type ClientPlanView = {
+  current: { name: string; weeksLeft: number; endLabel: string } | null;
+  next: { name: string; startLabel: string } | null;
+  tracks: PlanTrackView[];
+};
+
+export function getClientPlanView(clientId: number): ClientPlanView | null {
+  const phases = listClientPhases(clientId);
+  if (phases.length === 0) return null;
+  const week = weekStart(localDateStr());
+  const weeksBetween = (a: string, b: string) =>
+    Math.round((new Date(`${b}T00:00:00`).getTime() - new Date(`${a}T00:00:00`).getTime()) / (7 * 86400000));
+  const endOfWeek = (monday: string) => {
+    const d = new Date(`${monday}T00:00:00`);
+    d.setDate(d.getDate() + 6);
+    return localDateStr(d);
+  };
+  const short = (s: string) => new Date(`${s}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+  const view = (p: ClientPhase): PlanPhaseView => ({
+    id: p.id,
+    name: p.name,
+    status: p.end_week < week ? "past" : p.start_week > week ? "next" : "now",
+    rangeLabel: `${short(p.start_week)} – ${short(endOfWeek(p.end_week))}`,
+    weeks: weeksBetween(p.start_week, p.end_week) + 1,
+  });
+
+  // Headline track: nutrition if it has phases, else whichever track does.
+  const headlineTrack =
+    PHASE_TRACKS.find((t) => t.id === "nutrition" && phases.some((p) => p.track === "nutrition"))?.id ??
+    PHASE_TRACKS.find((t) => phases.some((p) => p.track === t.id))!.id;
+  const onTrack = phases.filter((p) => p.track === headlineTrack);
+  const currentPhase = onTrack.find((p) => p.start_week <= week && p.end_week >= week) ?? null;
+  const nextPhase = onTrack.find((p) => p.start_week > (currentPhase?.end_week ?? week)) ?? null;
+
+  return {
+    current: currentPhase
+      ? { name: currentPhase.name, weeksLeft: weeksBetween(week, currentPhase.end_week) + 1, endLabel: short(endOfWeek(currentPhase.end_week)) }
+      : null,
+    next: nextPhase ? { name: nextPhase.name, startLabel: short(nextPhase.start_week) } : null,
+    tracks: PHASE_TRACKS.map((t) => ({ track: t.id, label: t.label, phases: phases.filter((p) => p.track === t.id).map(view) })).filter(
+      (t) => t.phases.length > 0
+    ),
+  };
+}
