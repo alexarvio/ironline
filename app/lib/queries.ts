@@ -1475,6 +1475,7 @@ export type OverviewPanel = {
     address: string;
     coaching_start_date: string;
     goal_phase: string;
+    goal_phase_from_plan: string | null;
     goal_date: string;
     check_in_day: string;
     starting_weight_kg: string;
@@ -1523,7 +1524,7 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
     name: client?.name ?? "Unknown",
     initial: (client?.name ?? "?").slice(0, 1).toUpperCase(),
     clientSince: profile.coaching_start_date ? `Client since ${fmtDate(profile.coaching_start_date)}` : null,
-    phase: profile.goal_phase || null,
+    phase: effectiveGoalPhase(clientId, profile.goal_phase) || null,
     snapshot: [
       {
         label: "Training",
@@ -1569,7 +1570,7 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
       { label: "Start date", value: dash(profile.coaching_start_date) },
       { label: "Goal date", value: dash(profile.goal_date) },
       { label: "Current week", value: liveWeek != null ? `Week ${liveWeek}` : "-" },
-      { label: "Goal / phase", value: dash(profile.goal_phase) },
+      { label: "Goal / phase", value: dash(effectiveGoalPhase(clientId, profile.goal_phase)) },
       { label: "Check-in day", value: dash(profile.check_in_day) },
       { label: "Starting weight", value: profile.starting_weight_kg ? `${profile.starting_weight_kg} kg` : "-" },
       { label: "Current weight", value: weight != null ? `${weight} kg` : "-" },
@@ -1595,6 +1596,9 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
       address: profile.address ?? "",
       coaching_start_date: profile.coaching_start_date ?? "",
       goal_phase: profile.goal_phase ?? "",
+      // When the Plan tab has a phase running this week, that is the goal /
+      // phase: the card shows it read-only and points at the plan.
+      goal_phase_from_plan: getCurrentPhase(clientId, "nutrition")?.name ?? null,
       goal_date: profile.goal_date ?? "",
       check_in_day: profile.check_in_day ?? "",
       starting_weight_kg:
@@ -4030,8 +4034,9 @@ export function getCheckInSections(clientId: number): CheckInData {
   const phaseLabel =
     deltas.length === 0
       ? null
-      : [profile.goal_phase, baselineDate ? `from ${fmtDate(baselineDate)}` : null].filter(Boolean).join(" · ") ||
-        null;
+      : [effectiveGoalPhase(clientId, profile.goal_phase), baselineDate ? `from ${fmtDate(baselineDate)}` : null]
+          .filter(Boolean)
+          .join(" · ") || null;
 
   const cadence = getPhotoCadence(clientId);
   const photoPeriod = photoPeriodFor(today, cadence);
@@ -4633,6 +4638,14 @@ export function removeClientPhase(phaseId: number) {
 export function getCurrentPhase(clientId: number, track: PhaseTrack): ClientPhase | null {
   const week = weekStart(localDateStr());
   return listClientPhases(clientId).find((p) => p.track === track && p.start_week <= week && p.end_week >= week) ?? null;
+}
+
+// Goal / phase as the app should show it: the nutrition phase running this
+// week on the Plan tab wins, so a plan that goes from Bulk to Cut changes
+// the card, the panel chip and the client's Home on the Monday it turns
+// over. The hand-typed field is the fallback for clients without a plan.
+export function effectiveGoalPhase(clientId: number, typed: string | null | undefined): string {
+  return getCurrentPhase(clientId, "nutrition")?.name ?? typed ?? "";
 }
 
 // What the client's Home shows of the phase plan: the phase they are in on

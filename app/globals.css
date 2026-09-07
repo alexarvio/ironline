@@ -8944,6 +8944,12 @@ a.cd-entry:hover { border-color: var(--accent); }
   text-overflow: ellipsis;
   box-shadow: inset 0 0 0 1px rgba(20, 23, 28, 0.06);
 }
+/* The name sticks to the visible left edge of its bar while the grid is
+   scrolled, so a phase that started weeks ago still says what it is. */
+.ph-bar-name {
+  position: sticky;
+  left: 132px;
+}
 .ph-bar:hover { filter: brightness(0.96); }
 .ph-bar:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .ph-select { width: 100%; height: 32px; font-size: 13px; }
@@ -9806,6 +9812,22 @@ a.cd-entry:hover { border-color: var(--accent); }
 }
 
 .ad-field-label { flex-shrink: 0; font-size: 11px; color: var(--steel); }
+
+/* A card value that comes from elsewhere (the Plan tab) and is shown
+   instead of typed. */
+.ad-field-static {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: right;
+}
+.ad-field-static em { font-style: normal; font-size: 10px; font-weight: 700; color: var(--steel); white-space: nowrap; }
 
 .ad-field-input {
   display: flex;

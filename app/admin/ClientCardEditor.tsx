@@ -131,7 +131,21 @@ export default function ClientCardEditor({
         <div className="ad-fields">
           <Field label="Start date" name="coaching_start_date" value={card.coaching_start_date} type="date" />
           <Field label="Goal date" name="goal_date" value={card.goal_date} type="date" />
-          <Field label="Goal / phase" name="goal_phase" value={card.goal_phase} placeholder="-" />
+          {card.goal_phase_from_plan ? (
+            // Driven by the Plan tab while a nutrition phase is running:
+            // editing it here would be overwritten on the next render, so
+            // the card says where it comes from instead of offering a box.
+            <div className="ad-field">
+              <span className="ad-field-label">Goal / phase</span>
+              <span className="ad-field-static">
+                {card.goal_phase_from_plan}
+                <em>from the Plan tab</em>
+              </span>
+              <input type="hidden" name="goal_phase" value={card.goal_phase} />
+            </div>
+          ) : (
+            <Field label="Goal / phase" name="goal_phase" value={card.goal_phase} placeholder="-" />
+          )}
           <Field label="Check-in day" name="check_in_day" value={card.check_in_day} placeholder="Monday" />
           <Field
             label="Starting weight"
