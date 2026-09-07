@@ -65,7 +65,16 @@ export default function PlanBody({ plan }: { plan: ClientPlanView }) {
 
         {/* Scrolling week columns */}
         <div className="plan-strip" ref={scrollRef}>
-          <div className="plan-sheet-weeks" style={{ gridTemplateColumns: `repeat(${plan.weeks.length}, ${CELL}px)` }}>
+          {/* Vertical grid lines at every week boundary come from a repeating
+              background sized to the cell width, so they run the full height
+              including the gaps between rows. */}
+          <div
+            className="plan-sheet-weeks"
+            style={{
+              gridTemplateColumns: `repeat(${plan.weeks.length}, ${CELL}px)`,
+              backgroundSize: `${CELL}px 100%`,
+            }}
+          >
             {/* One tinted column behind everything for the week the client
                 is in, from the month row down through every track. */}
             <div

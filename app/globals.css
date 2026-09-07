@@ -2748,6 +2748,12 @@ a.cd-entry:hover { border-color: var(--accent); }
   column-gap: 0;
   row-gap: 4px;
   padding: 0 10px 0 8px;
+  /* One hairline per week column, anchored to the content box so the
+     lines land exactly on the column edges. */
+  background-image: linear-gradient(to right, var(--fp-line) 1px, transparent 1px);
+  background-repeat: repeat-x;
+  background-origin: content-box;
+  background-clip: content-box;
 }
 .plan-sheet-r { box-sizing: border-box; }
 .plan-sheet-r-month { height: 16px; }
@@ -2781,7 +2787,6 @@ a.cd-entry:hover { border-color: var(--accent); }
   text-align: center;
   line-height: 24px;
   border-radius: 6px;
-  margin: 0 2px;
 }
 .plan-sheet-week.now {
   color: var(--fp-accent-fg);
@@ -2852,8 +2857,7 @@ a.cd-entry:hover { border-color: var(--accent); }
    gaps, so the highlight runs unbroken from the header to the last track. */
 .plan-sheet-nowcol {
   background: var(--fp-accent-tint);
-  border-radius: 8px;
-  margin: 0 2px;
+  border-radius: 0;
   z-index: 0;
 }
 .plan-sheet-month, .plan-sheet-week { position: relative; z-index: 1; }
