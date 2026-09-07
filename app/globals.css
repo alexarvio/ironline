@@ -2848,8 +2848,11 @@ a.cd-entry:hover { border-color: var(--accent); }
 /* The current week as one column, behind the cells and across the row
    gaps, so the highlight runs unbroken from the header to the last track. */
 .plan-sheet-nowcol {
-  background: var(--fp-accent-tint);
+  /* Same treatment as the live week capsule in the coach's rail. */
+  background: color-mix(in srgb, var(--fp-accent) 16%, rgba(255, 255, 255, 0.55));
+  border: 1px solid color-mix(in srgb, var(--fp-accent) 55%, transparent);
   border-radius: 8px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 2px 8px color-mix(in srgb, var(--fp-accent) 18%, transparent);
   margin: 0 2px;
   z-index: 0;
 }
