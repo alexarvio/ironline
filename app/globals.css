@@ -2752,8 +2752,8 @@ a.cd-entry:hover { border-color: var(--accent); }
 .plan-sheet-r { box-sizing: border-box; }
 .plan-sheet-r-month { height: 16px; }
 .plan-sheet-r-week { height: 24px; }
-.plan-sheet-r-track { height: 22px; }
-.plan-sheet-r-phase { height: 40px; }
+.plan-sheet-r-track { height: 50px; }
+
 .plan-sheet-corner-weeks {
   display: flex;
   align-items: flex-end;
@@ -2786,44 +2786,56 @@ a.cd-entry:hover { border-color: var(--accent); }
   color: var(--fp-accent-fg);
   background: var(--fp-accent);
 }
-.plan-sheet-track {
-  display: inline-flex;
-  align-items: center;
-  height: 22px;
-  padding: 0 8px;
-  border-radius: 6px;
-  font-size: 0.6rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-.plan-sheet-gap.now { background: var(--fp-accent-tint); border-radius: 4px; }
+
+
 .plan-sheet-label {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 3px;
+  gap: 1px;
   padding-right: 10px;
   overflow: hidden;
   background: var(--fp-raised);
 }
 .plan-sheet-label-name {
-  font-size: 12.5px;
-  line-height: 15px;
+  font-size: 13px;
+  line-height: 16px;
   font-weight: 800;
   color: var(--fp-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.plan-sheet-label.past .plan-sheet-label-name { color: var(--fp-dim); font-weight: 700; }
+
 .plan-sheet-label-weeks { font-size: 10px; line-height: 12px; font-weight: 700; color: var(--fp-dim); white-space: nowrap; }
+.plan-sheet-track-name {
+  font-size: 9.5px;
+  line-height: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
 .plan-sheet-cell {
+  position: relative;
   border-radius: 4px;
   background: var(--fp-bg);
+  overflow: visible;
+}
+.plan-sheet-cell.past { opacity: 0.45; }
+.plan-sheet-cell-name {
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  pointer-events: none;
 }
 .plan-sheet-cell.now { background: var(--fp-accent-tint); box-shadow: inset 0 0 0 1.5px var(--fp-accent); }
-.plan-sheet-cell.on.first { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+.plan-sheet-cell.on.first { border-top-left-radius: 8px; border-bottom-left-radius: 8px; margin-left: 2px; }
 .plan-sheet-cell.on.last { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
 .plan-sheet-cell.on.now { box-shadow: inset 0 0 0 2px var(--fp-accent); }
 
