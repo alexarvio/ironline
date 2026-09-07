@@ -7,6 +7,7 @@ import {
   getClientProfile,
   getClientPlanView,
   getCalorieLog,
+  listCalorieLogs,
   getDeployedProgram,
   getLogsForAssignment,
   getCurrentWeekNumber,
@@ -625,12 +626,13 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
       {(() => {
         const dayLabel = (d: string) =>
           new Date(`${d}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-        const recent = Array.from({ length: 7 }, (_, i) => {
-          const dt = new Date(`${today}T00:00:00`);
-          dt.setDate(dt.getDate() - (i + 1));
-          const date = localDateStr(dt);
-          return { date, label: dayLabel(date), kcal: getCalorieLog(CLIENT_ID, date)?.kcal ?? null };
-        });
+        // Only days that were actually logged, the last seven of them before
+        // today: the list fills up as the client logs and then rolls, and
+        // there is nothing to show until the first entry exists.
+        const recent = listCalorieLogs(CLIENT_ID, 8)
+          .filter((c) => c.date < today)
+          .slice(0, 7)
+          .map((c) => ({ date: c.date, label: dayLabel(c.date), kcal: c.kcal as number | null }));
         const targetKcal = hasTargets ? (isTrainingDay ? summary.trainingKcal : summary.restKcal) || null : null;
         return (
           <CalorieLog

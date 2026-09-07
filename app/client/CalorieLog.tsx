@@ -18,7 +18,7 @@ export default function CalorieLog({
 }: {
   clientId: number;
   today: CalorieDay;
-  /** Recent days before today, most recent first. */
+  /** Logged days before today, most recent first, at most seven. */
   days: CalorieDay[];
   /** Today's kcal target, for the "of N" hint. */
   targetKcal: number | null;
