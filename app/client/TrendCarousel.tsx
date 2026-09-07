@@ -63,10 +63,16 @@ export default function TrendCarousel({ metrics }: { metrics: TrendMetric[] }) {
                   <span className="trend-slide-unit">{m.unitLabel}</span>
                 </div>
               </div>
-              <div className="trend-slide-foot">
-                <span>{m.rangeLabel}</span>
-                <span>{m.avgLabel}</span>
-              </div>
+              {/* The from→to range and the average are gone once there is a
+                  real line: the shape says it, and the value and trend above
+                  give the numbers. The foot only stays to explain an empty or
+                  one-point chart. */}
+              {m.points.length < 2 && (
+                <div className="trend-slide-foot">
+                  <span>{m.rangeLabel}</span>
+                  <span>{m.avgLabel}</span>
+                </div>
+              )}
             </div>
           </div>
         ))}
