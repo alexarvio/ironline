@@ -153,7 +153,7 @@ export default function PhaseTimeline({ clientId }: { clientId: number }) {
                             phase={p}
                             bar
                             tone={tone}
-                            label={`${p.name} · ${weeksLong} wk${weeksLong === 1 ? "" : "s"} · ${fmtWeek(p.start_week)} to ${fmtWeek(addWeeks(p.end_week, 1))}`}
+                            label={`${p.name} · ${weeksLong} week${weeksLong === 1 ? "" : "s"} · ${fmtWeek(p.start_week)} to ${fmtWeek(addWeeks(p.end_week, 1))}`}
                           />
                         </div>
                       );

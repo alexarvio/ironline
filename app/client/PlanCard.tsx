@@ -75,7 +75,7 @@ export default function PlanBody({ plan }: { plan: ClientPlanView }) {
                     <span className="plan-sheet-label-name">{at.phase.name}</span>
                     <span className="plan-sheet-label-weeks">
                       {at.relation === "next" ? "next · " : at.relation === "done" ? "ended · " : ""}
-                      {at.phase.weeks} wk{at.phase.weeks === 1 ? "" : "s"}
+                      {at.phase.weeks} week{at.phase.weeks === 1 ? "" : "s"}
                     </span>
                   </>
                 )}
