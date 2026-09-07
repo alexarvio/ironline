@@ -2716,32 +2716,48 @@ a.cd-entry:hover { border-color: var(--accent); }
   background: var(--fp-raised);
   overflow: hidden;
 }
-/* The plan sheet: a label column pinned on the left, one column per week,
-   one row per phase with its weeks filled. Scrolls sideways. */
+/* The plan sheet: a fixed label column beside a scrolling week grid. Row
+   heights are pinned on .plan-sheet-r-* so both columns stay in step. */
+.plan-sheet {
+  display: flex;
+  align-items: flex-start;
+  padding: 10px 0 8px;
+}
+.plan-sheet-labels {
+  flex: 0 0 108px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 12px;
+  box-shadow: 6px 0 10px -8px rgba(0, 0, 0, 0.35);
+  z-index: 1;
+  background: var(--fp-raised);
+}
 .plan-strip {
+  flex: 1;
+  min-width: 0;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
 }
 .plan-strip::-webkit-scrollbar { display: none; }
-.plan-sheet {
+.plan-sheet-weeks {
   display: grid;
   width: max-content;
   column-gap: 2px;
   row-gap: 2px;
-  padding: 10px 10px 8px 0;
+  padding: 0 10px 0 4px;
 }
-.plan-sheet-corner {
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  background: var(--fp-raised);
-}
+.plan-sheet-r { box-sizing: border-box; }
+.plan-sheet-r-month { height: 16px; }
+.plan-sheet-r-week { height: 24px; }
+.plan-sheet-r-track { height: 22px; }
+.plan-sheet-r-phase { height: 34px; }
 .plan-sheet-corner-weeks {
   display: flex;
   align-items: flex-end;
-  padding: 0 0 4px 14px;
+  padding-bottom: 5px;
   font-size: 0.6rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -2755,15 +2771,15 @@ a.cd-entry:hover { border-color: var(--accent); }
   text-transform: uppercase;
   color: var(--fp-dim);
   white-space: nowrap;
-  min-height: 14px;
   padding-left: 2px;
+  line-height: 16px;
 }
 .plan-sheet-week {
   font-size: 0.7rem;
   font-weight: 700;
   color: var(--fp-dim);
   text-align: center;
-  padding: 3px 0 4px;
+  line-height: 24px;
   border-radius: 6px;
 }
 .plan-sheet-week.now {
@@ -2771,13 +2787,9 @@ a.cd-entry:hover { border-color: var(--accent); }
   background: var(--fp-accent);
 }
 .plan-sheet-track {
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   height: 22px;
-  margin-left: 10px;
   padding: 0 8px;
   border-radius: 6px;
   font-size: 0.6rem;
@@ -2785,19 +2797,12 @@ a.cd-entry:hover { border-color: var(--accent); }
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
-.plan-sheet-gap { height: 22px; }
 .plan-sheet-gap.now { background: var(--fp-accent-tint); border-radius: 4px; }
 .plan-sheet-label {
-  position: sticky;
-  left: 0;
-  z-index: 2;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  height: 34px;
-  padding: 0 8px 0 14px;
-  background: var(--fp-raised);
-  box-shadow: 4px 0 8px -6px rgba(0, 0, 0, 0.35);
+  padding-right: 8px;
   line-height: 1.15;
 }
 .plan-sheet-label-name {
@@ -2811,7 +2816,6 @@ a.cd-entry:hover { border-color: var(--accent); }
 .plan-sheet-label.past .plan-sheet-label-name { color: var(--fp-dim); font-weight: 700; }
 .plan-sheet-label-weeks { font-size: 0.64rem; font-weight: 700; color: var(--fp-dim); }
 .plan-sheet-cell {
-  height: 34px;
   border-radius: 4px;
   background: var(--fp-bg);
 }
