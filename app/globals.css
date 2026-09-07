@@ -3239,6 +3239,22 @@ a.cd-entry:hover { border-color: var(--accent); }
   border: 1px solid #2c2c26;
   background: var(--fp-raised);
   color: var(--fp-dim);
+  /* Uniform pills: same height for all, and a floor on width so "Week 1"
+     and "Week 10" line up with the status slot on the right. */
+  min-height: 34px;
+  min-width: 92px;
+  justify-content: space-between;
+}
+
+/* The status slot on every week pill, sized for the largest thing it holds
+   (the 15px tick) so the pill doesn't change size with its state. */
+.week-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
 }
 
 .training-dark .week-switcher .toggle-btn.active {

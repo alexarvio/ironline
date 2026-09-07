@@ -56,17 +56,22 @@ export default function ClientWeekSwitcher({
                 }
               >
                 {weekLabels?.[w] ?? `Week ${w}`}
-                {locked ? (
-                  <span className="week-lock" aria-label="Locked until this week starts">
-                    <LockIcon />
-                  </span>
-                ) : done ? (
-                  <span className="week-done-tick" aria-label="Week complete">
-                    ✓
-                  </span>
-                ) : (
-                  w === currentWeek && <span className="week-current-dot" aria-hidden="true" />
-                )}
+                {/* Always-present, fixed-size slot: a lock, a tick, the
+                    current-week dot or nothing all take the same room, so
+                    every pill is the same size whatever its state. */}
+                <span className="week-status" aria-hidden={!locked && !done ? true : undefined}>
+                  {locked ? (
+                    <span className="week-lock" aria-label="Locked until this week starts">
+                      <LockIcon />
+                    </span>
+                  ) : done ? (
+                    <span className="week-done-tick" aria-label="Week complete">
+                      ✓
+                    </span>
+                  ) : (
+                    w === currentWeek && <span className="week-current-dot" />
+                  )}
+                </span>
               </button>
             );
           })}
