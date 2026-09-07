@@ -6,9 +6,8 @@ import type { ClientPlanView, PlanPhaseView } from "../lib/queries";
 // The full phase plan, folded out under the Home header's chevron. One
 // row per track (Nutrition, Training, Lifestyle: only those the coach has
 // used). Across the row, every week the coach has planned is a filled
-// cell; consecutive phases alternate between two shades of the track's
-// colour and each carries its name on its first cell, so the boundary
-// between them reads at a glance. The label on the left names the phase
+// cell; each phase is one outlined block in the accent colour with its
+// name on its first cell, and the week the client is in is tinted. The label on the left names the phase
 // running now and how long it is; what comes next is read off the cells. This week's column is marked; the strip
 // begins at last week, so there is nothing to scroll back into.
 //
@@ -18,11 +17,6 @@ import type { ClientPlanView, PlanPhaseView } from "../lib/queries";
 
 const CELL = 60;
 
-const TRACK_TONE: Record<string, { a: string; b: string; ink: string }> = {
-  nutrition: { a: "#b9e6d1", b: "#8fd6b8", ink: "#0b4a37" },
-  training: { a: "#cbc7f4", b: "#aea8ec", ink: "#2c2670" },
-  lifestyle: { a: "#dedbd0", b: "#c9c5b6", ink: "#3d3c36" },
-};
 
 export default function PlanBody({ plan }: { plan: ClientPlanView }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -48,12 +42,11 @@ export default function PlanBody({ plan }: { plan: ClientPlanView }) {
           <div className="plan-sheet-r plan-sheet-r-month" />
           <div className="plan-sheet-r plan-sheet-r-week plan-sheet-corner-weeks">Week</div>
           {plan.tracks.map((t) => {
-            const tone = TRACK_TONE[t.track];
             const cur = currentOf(t.phases);
             const upcoming = !!cur && cur.startIndex > plan.nowIndex;
             return (
               <div key={t.track} className="plan-sheet-r plan-sheet-r-track plan-sheet-label">
-                <span className="plan-sheet-track-name" style={{ color: tone.ink }}>
+                <span className="plan-sheet-track-name">
                   {t.label}
                 </span>
                 {cur && (
@@ -88,7 +81,6 @@ export default function PlanBody({ plan }: { plan: ClientPlanView }) {
               </div>
             ))}
             {plan.tracks.map((t, ti) => {
-              const tone = TRACK_TONE[t.track];
               const row = 3 + ti;
               return plan.weeks.map((w, i) => {
                 const pi = t.phases.findIndex((p) => i >= p.startIndex && i < p.startIndex + p.span);
@@ -100,22 +92,10 @@ export default function PlanBody({ plan }: { plan: ClientPlanView }) {
                   <div
                     key={`${t.track}-${i}`}
                     className={`plan-sheet-r plan-sheet-r-track plan-sheet-cell${p ? " on" : ""}${w.now ? " now" : ""}${first ? " first" : ""}${last ? " last" : ""}${past ? " past" : ""}`}
-                    style={{
-                      gridRow: row,
-                      gridColumn: i + 1,
-                      ...(p
-                        ? {
-                            background: past
-                              ? `color-mix(in srgb, ${pi % 2 === 0 ? tone.a : tone.b} 45%, #ffffff)`
-                              : pi % 2 === 0
-                                ? tone.a
-                                : tone.b,
-                          }
-                        : {}),
-                    }}
+                    style={{ gridRow: row, gridColumn: i + 1 }}
                     title={p ? `${p.name} · ${p.rangeLabel}` : undefined}
                   >
-                    {first && <span className="plan-sheet-cell-name" style={{ color: tone.ink }}>{p!.name}</span>}
+                    {first && <span className="plan-sheet-cell-name">{p!.name}</span>}
                   </div>
                 );
               });
