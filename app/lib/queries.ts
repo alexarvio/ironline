@@ -1031,6 +1031,26 @@ export function getLogsForAssignment(workoutAssignmentId: number): SetLog[] {
     .sort((a, b) => a.set_number - b.set_number);
 }
 
+// Who owns a logged set, via its assignment — so the client-side edit action
+// can check the caller before touching it.
+export function getClientIdForSetLog(setLogId: number): number | null {
+  const log = getData().set_logs.find((sl) => sl.id === setLogId);
+  return log ? getClientIdForAssignment(log.workout_assignment_id) : null;
+}
+
+// A set typed wrong gets corrected in place: same row, same set number,
+// new figures. logged_at keeps the original time, since that is when the
+// set was actually done.
+export function updateSetLog(setLogId: number, weightKg: number | null, reps: number | null, rpeActual: number | null) {
+  const data = getData();
+  const log = data.set_logs.find((sl) => sl.id === setLogId);
+  if (!log) return;
+  log.weight_kg = weightKg;
+  log.reps = reps;
+  log.rpe_actual = rpeActual;
+  persist();
+}
+
 export type WeekLogGroup = { weekStart: string; logs: SetLog[] };
 
 // The program itself is a single deployed template (one assignment per

@@ -36,6 +36,7 @@ import {
 } from "../lib/queries";
 import { DAY_NAMES_FULL } from "../lib/db";
 import SetLogForm from "./SetLogForm";
+import LoggedSetRow from "./LoggedSetRow";
 import TrainingDayCard from "./TrainingDayCard";
 import ExerciseCoachNote from "./ExerciseCoachNote";
 import PhotoPeriodHistoryRow from "./PhotoPeriodHistoryRow";
@@ -491,14 +492,15 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
                                 <td />
                               </tr>
                               {logs.map((l) => (
-                                <tr key={l.id} className="training-set-row">
-                                  <td className="training-set-cell-num">{l.set_number}</td>
-                                  <td>{l.weight_kg}kg</td>
-                                  <td>{l.reps}</td>
-                                  <td>{l.rpe_actual ?? "-"}</td>
-                                  {a.tempo && <td>-</td>}
-                                  <td className="training-set-cell-action">✓</td>
-                                </tr>
+                                <LoggedSetRow
+                                  key={l.id}
+                                  setLogId={l.id}
+                                  setNumber={l.set_number}
+                                  weight={l.weight_kg}
+                                  reps={l.reps}
+                                  rpe={l.rpe_actual}
+                                  showTempoColumn={!!a.tempo}
+                                />
                               ))}
                               {!doneAllSets && (
                                 <SetLogForm

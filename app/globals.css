@@ -5861,6 +5861,50 @@ a.cd-entry:hover { border-color: var(--accent); }
   width: 26px;
 }
 
+/* A logged set's tick doubles as the way back in: tap it and the row's
+   figures become inputs. The "Edit" word sits under the tick, small, so the
+   row still reads as done at a glance. */
+.training-set-edit {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  min-height: 34px;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1.1;
+}
+.training-set-edit-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+.training-set-edit-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+.training-set-cancel {
+  border: 0;
+  background: none;
+  color: var(--steel);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.training-dark .training-set-cancel { color: var(--fp-dim); }
+
 .training-set-cell-action {
   width: 44px;
   color: var(--good);

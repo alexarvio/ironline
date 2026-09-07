@@ -105,6 +105,8 @@ import {
   VITAMIN_ITEMS,
   weekStart,
   getClientIdForAssignment,
+  getClientIdForSetLog,
+  updateSetLog,
   getClientIdForPhotoSlot,
   getClientIdForNotification,
   getClientIdForReport,
@@ -400,6 +402,25 @@ export async function logSetAction(formData: FormData) {
   const rpe = num("rpe");
 
   logSet(assignmentId, setNumber, weight, reps, rpe);
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+// Corrects a set the client already logged. Same ownership rule as logging:
+// the set's assignment decides whose data it is, the session decides whether
+// the caller may write it.
+export async function updateSetAction(formData: FormData) {
+  const setLogId = Number(formData.get("setLogId"));
+  const owner = getClientIdForSetLog(setLogId);
+  if (owner == null || !(await canAccessClient(owner))) return;
+
+  const num = (key: string) => {
+    const raw = String(formData.get(key) ?? "").replace(",", ".");
+    if (!raw) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  };
+  updateSetLog(setLogId, num("weight"), num("reps"), num("rpe"));
   revalidatePath("/client");
   revalidatePath("/admin");
 }
