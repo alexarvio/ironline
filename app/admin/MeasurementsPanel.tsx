@@ -1,6 +1,7 @@
 import {
   addMetricDefinitionAction,
   removeMetricDefinitionAction,
+  togglePinMetricAction,
 } from "../lib/actions";
 import {
   getClient,
@@ -11,6 +12,7 @@ import {
   METRIC_GROUPS,
   METRIC_LIBRARY,
   metricGroup,
+  PINNED_METRIC_LIMIT,
 } from "../lib/queries";
 import ClientGraphsPicker from "./ClientGraphsPicker";
 import CheckInDaySelect from "./CheckInDaySelect";
@@ -35,6 +37,10 @@ const CADENCE_LABEL: Record<string, string> = {
 // the two tables below.
 export default function MeasurementsPanel({ clientId }: { clientId: number }) {
   const metrics = listAllMetrics(clientId);
+  // Shared cap with the Client graphs section: metrics and measurement
+  // fields count together, so the row switches must read the same total.
+  const graphChoices = listGraphChoices(clientId);
+  const graphsFull = graphChoices.filter((c) => c.pinned).length >= PINNED_METRIC_LIMIT;
   // A column is identified by its name alone now that cadence is chosen on
   // the row rather than at add time, so "Sleep" counts as added whichever
   // rhythm it is on.
@@ -126,6 +132,32 @@ export default function MeasurementsPanel({ clientId }: { clientId: number }) {
                   </span>
                   <MetricCadenceToggle metricId={m.id} value={m.frequency} name={m.name} />
 
+                  {/* Chart on the client's Home: the same pin the Client
+                      graphs section below toggles, here on the row so the
+                      coach decides it where they set the column up. */}
+                  <form action={togglePinMetricAction} className="ms-metric-action">
+                    <input type="hidden" name="id" value={m.id} />
+                    <button
+                      type="submit"
+                      className={`ms-graph${m.pinned ? " on" : ""}`}
+                      role="switch"
+                      aria-checked={!!m.pinned}
+                      aria-label={`${m.pinned ? "Stop charting" : "Chart"} ${m.name} on the client's Home screen`}
+                      disabled={!m.pinned && graphsFull}
+                      title={
+                        !m.pinned && graphsFull
+                          ? `Only ${PINNED_METRIC_LIMIT} can be shown at once. Turn one off first.`
+                          : m.pinned
+                            ? "Shown as a graph on the client's Home screen"
+                            : "Show as a graph on the client's Home screen"
+                      }
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M3 17l6-6 4 4 8-8" />
+                      </svg>
+                    </button>
+                  </form>
+
                   {/* No per-row visibility toggle. Being on this list IS the
                       deployment: a column here is a column the client is asked
                       for. A hide switch made a second, invisible state the
@@ -161,7 +193,7 @@ export default function MeasurementsPanel({ clientId }: { clientId: number }) {
 
       {/* ---- 3. What the client sees charted ---- */}
       <section className="ms-section">
-        <ClientGraphsPicker choices={listGraphChoices(clientId)} />
+        <ClientGraphsPicker choices={graphChoices} />
       </section>
 
       {/* ---- 4. Graph (coach's own view) ---- */}
