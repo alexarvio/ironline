@@ -4680,11 +4680,12 @@ export function getClientPlanView(clientId: number): ClientPlanView | null {
     return localDateStr(d);
   };
 
-  // The strip runs from the earliest phase to the latest one the coach has
-  // set, always including this week, one column per week.
-  let first = phases.map((p) => p.start_week).reduce((a, b) => (a < b ? a : b));
+  // The strip starts at last week, so the client sees one week of context
+  // and then everything ahead, out to the last phase the coach has set.
+  // Phases that began earlier are clipped to that edge; their label still
+  // says their full length.
+  const first = addWeeks(week, -1);
   let last = phases.map((p) => p.end_week).reduce((a, b) => (a > b ? a : b));
-  if (first > week) first = week;
   if (last < week) last = week;
   const count = weeksBetween(first, last) + 1;
   let lastMonth = "";
@@ -4707,8 +4708,8 @@ export function getClientPlanView(clientId: number): ClientPlanView | null {
     status: p.end_week < week ? "past" : p.start_week > week ? "next" : "now",
     rangeLabel: `${short(p.start_week)} – ${short(endOfWeek(p.end_week))}`,
     weeks: weeksBetween(p.start_week, p.end_week) + 1,
-    startIndex: weeksBetween(first, p.start_week),
-    span: weeksBetween(p.start_week, p.end_week) + 1,
+    startIndex: Math.max(0, weeksBetween(first, p.start_week)),
+    span: weeksBetween(p.start_week < first ? first : p.start_week, p.end_week) + 1,
   });
 
   // Headline track: nutrition if it has phases, else whichever track does.
@@ -4724,7 +4725,12 @@ export function getClientPlanView(clientId: number): ClientPlanView | null {
       ? { name: currentPhase.name, weeksLeft: weeksBetween(week, currentPhase.end_week) + 1, endLabel: short(endOfWeek(currentPhase.end_week)) }
       : null,
     next: nextPhase ? { name: nextPhase.name, startLabel: short(nextPhase.start_week) } : null,
-    tracks: PHASE_TRACKS.map((t) => ({ track: t.id, label: t.label, phases: phases.filter((p) => p.track === t.id).map(view) })).filter(
+    // Phases that ended before last week are history and stay off the phone.
+    tracks: PHASE_TRACKS.map((t) => ({
+      track: t.id,
+      label: t.label,
+      phases: phases.filter((p) => p.track === t.id && p.end_week >= first).map(view),
+    })).filter(
       (t) => t.phases.length > 0
     ),
     weeks,

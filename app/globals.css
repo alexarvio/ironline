@@ -2753,7 +2753,7 @@ a.cd-entry:hover { border-color: var(--accent); }
 .plan-sheet-r-month { height: 16px; }
 .plan-sheet-r-week { height: 24px; }
 .plan-sheet-r-track { height: 22px; }
-.plan-sheet-r-phase { height: 34px; }
+.plan-sheet-r-phase { height: 36px; }
 .plan-sheet-corner-weeks {
   display: flex;
   align-items: flex-end;
@@ -2802,11 +2802,12 @@ a.cd-entry:hover { border-color: var(--accent); }
   display: flex;
   flex-direction: column;
   justify-content: center;
+  gap: 2px;
   padding-right: 8px;
-  line-height: 1.15;
 }
 .plan-sheet-label-name {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
+  line-height: 14px;
   font-weight: 800;
   color: var(--fp-text);
   white-space: nowrap;
@@ -2814,7 +2815,7 @@ a.cd-entry:hover { border-color: var(--accent); }
   text-overflow: ellipsis;
 }
 .plan-sheet-label.past .plan-sheet-label-name { color: var(--fp-dim); font-weight: 700; }
-.plan-sheet-label-weeks { font-size: 0.64rem; font-weight: 700; color: var(--fp-dim); }
+.plan-sheet-label-weeks { font-size: 0.62rem; line-height: 11px; font-weight: 700; color: var(--fp-dim); }
 .plan-sheet-cell {
   border-radius: 4px;
   background: var(--fp-bg);
@@ -2823,19 +2824,6 @@ a.cd-entry:hover { border-color: var(--accent); }
 .plan-sheet-cell.on.first { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
 .plan-sheet-cell.on.last { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
 .plan-sheet-cell.on.now { box-shadow: inset 0 0 0 2px var(--fp-accent); }
-
-.plan-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 14px;
-  padding: 6px 14px 12px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: var(--fp-dim);
-}
-.plan-legend-item { display: inline-flex; align-items: center; gap: 6px; }
-.plan-legend-swatch { width: 12px; height: 12px; border-radius: 4px; }
-.plan-legend-swatch.now { background: var(--fp-accent-tint); box-shadow: inset 0 0 0 1.5px var(--fp-accent); }
 
 .home-dark-goal {
   font-size: 0.8rem;

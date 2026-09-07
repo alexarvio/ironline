@@ -8,7 +8,8 @@ import type { ClientPlanView } from "../lib/queries";
 // left, and the weeks it covers filled in across a strip that scrolls
 // sideways from the first phase the coach set to the last. Only what the
 // coach has drawn is shown; a track without phases has no rows. This
-// week's column is marked and the strip opens scrolled to it.
+// week's column is marked; the strip begins at last week, so there is
+// nothing to scroll back into.
 //
 // Two columns side by side: the labels live outside the scroller so they
 // never move, and every row has a fixed height (set in CSS) so the two
@@ -25,11 +26,10 @@ const TRACK_TONE: Record<string, { fill: string; past: string; ink: string }> = 
 export default function PlanBody({ plan }: { plan: ClientPlanView }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Open on this week, with a week and a half of the past showing.
+  // The strip starts at last week (the server builds it that way), so it
+  // opens at the left edge: one week of context, then everything ahead.
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollLeft = Math.max(0, plan.nowIndex * CELL - CELL * 1.5);
+    if (scrollRef.current) scrollRef.current.scrollLeft = 0;
   }, [plan.nowIndex]);
 
   const nowMonday = plan.weeks[plan.nowIndex]?.monday ?? "";
@@ -54,7 +54,7 @@ export default function PlanBody({ plan }: { plan: ClientPlanView }) {
                   <div key={p.id} className={`plan-sheet-r plan-sheet-r-phase plan-sheet-label ${p.status}`} title={p.rangeLabel}>
                     <span className="plan-sheet-label-name">{p.name}</span>
                     <span className="plan-sheet-label-weeks">
-                      {p.span} wk{p.span === 1 ? "" : "s"}
+                      {p.weeks} wk{p.weeks === 1 ? "" : "s"}
                     </span>
                   </div>
                 ))}
@@ -119,13 +119,6 @@ export default function PlanBody({ plan }: { plan: ClientPlanView }) {
             })()}
           </div>
         </div>
-      </div>
-      <div className="plan-legend">
-        <span className="plan-legend-item">
-          <span className="plan-legend-swatch now" aria-hidden="true" />
-          This week
-        </span>
-        <span className="plan-legend-item">Swipe to see what comes next</span>
       </div>
     </div>
   );
