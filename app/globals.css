@@ -2714,52 +2714,124 @@ a.cd-entry:hover { border-color: var(--accent); }
   border: 1px solid var(--fp-line);
   border-radius: 14px;
   background: var(--fp-raised);
-  padding: 4px 14px 12px;
+  overflow: hidden;
 }
-.plan-track { padding-top: 10px; }
-.plan-track-label {
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--fp-dim);
-  margin-bottom: 4px;
+/* The plan sheet: a label column pinned on the left, one column per week,
+   one row per phase with its weeks filled. Scrolls sideways. */
+.plan-strip {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
-.plan-track-list { list-style: none; margin: 0; padding: 0; }
-.plan-phase {
-  position: relative;
+.plan-strip::-webkit-scrollbar { display: none; }
+.plan-sheet {
   display: grid;
-  grid-template-columns: 14px 1fr auto;
-  grid-template-areas: "m name now" "m range now";
-  column-gap: 10px;
-  align-items: center;
-  padding: 7px 0;
+  width: max-content;
+  column-gap: 2px;
+  row-gap: 2px;
+  padding: 10px 10px 8px 0;
 }
-.plan-phase + .plan-phase { border-top: 1px solid var(--fp-line); }
-.plan-phase-marker {
-  grid-area: m;
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  border: 2px solid var(--fp-line);
+.plan-sheet-corner {
+  position: sticky;
+  left: 0;
+  z-index: 2;
   background: var(--fp-raised);
 }
-.plan-phase.now .plan-phase-marker { border-color: var(--fp-accent); background: var(--fp-accent); }
-.plan-phase.past .plan-phase-marker { background: var(--fp-line); }
-.plan-phase-name { grid-area: name; font-size: 0.92rem; font-weight: 800; color: var(--fp-text); }
-.plan-phase-range { grid-area: range; font-size: 0.76rem; color: var(--fp-dim); }
-.plan-phase.past .plan-phase-name { color: var(--fp-dim); font-weight: 700; }
-.plan-phase-now {
-  grid-area: now;
-  font-size: 0.62rem;
+.plan-sheet-corner-weeks {
+  display: flex;
+  align-items: flex-end;
+  padding: 0 0 4px 14px;
+  font-size: 0.6rem;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  color: var(--fp-dim);
+}
+.plan-sheet-month {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fp-dim);
+  white-space: nowrap;
+  min-height: 14px;
+  padding-left: 2px;
+}
+.plan-sheet-week {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--fp-dim);
+  text-align: center;
+  padding: 3px 0 4px;
+  border-radius: 6px;
+}
+.plan-sheet-week.now {
   color: var(--fp-accent-fg);
   background: var(--fp-accent);
-  border-radius: 999px;
-  padding: 3px 8px;
 }
+.plan-sheet-track {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  height: 22px;
+  margin-left: 10px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.plan-sheet-gap { height: 22px; }
+.plan-sheet-gap.now { background: var(--fp-accent-tint); border-radius: 4px; }
+.plan-sheet-label {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 34px;
+  padding: 0 8px 0 14px;
+  background: var(--fp-raised);
+  box-shadow: 4px 0 8px -6px rgba(0, 0, 0, 0.35);
+  line-height: 1.15;
+}
+.plan-sheet-label-name {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--fp-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.plan-sheet-label.past .plan-sheet-label-name { color: var(--fp-dim); font-weight: 700; }
+.plan-sheet-label-weeks { font-size: 0.64rem; font-weight: 700; color: var(--fp-dim); }
+.plan-sheet-cell {
+  height: 34px;
+  border-radius: 4px;
+  background: var(--fp-bg);
+}
+.plan-sheet-cell.now { background: var(--fp-accent-tint); box-shadow: inset 0 0 0 1.5px var(--fp-accent); }
+.plan-sheet-cell.on.first { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+.plan-sheet-cell.on.last { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
+.plan-sheet-cell.on.now { box-shadow: inset 0 0 0 2px var(--fp-accent); }
+
+.plan-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding: 6px 14px 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--fp-dim);
+}
+.plan-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.plan-legend-swatch { width: 12px; height: 12px; border-radius: 4px; }
+.plan-legend-swatch.now { background: var(--fp-accent-tint); box-shadow: inset 0 0 0 1.5px var(--fp-accent); }
 
 .home-dark-goal {
   font-size: 0.8rem;

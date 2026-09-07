@@ -4646,12 +4646,20 @@ export type PlanPhaseView = {
   status: "past" | "now" | "next";
   rangeLabel: string;
   weeks: number;
+  // Position on the plan's week strip: first column and how many it spans.
+  startIndex: number;
+  span: number;
 };
 export type PlanTrackView = { track: PhaseTrack; label: string; phases: PlanPhaseView[] };
+// One column of the week strip. monthLabel is set on the first week of
+// each month only, so the strip can print the month once above its weeks.
+export type PlanWeekView = { monday: string; num: number; monthLabel: string | null; now: boolean };
 export type ClientPlanView = {
   current: { name: string; weeksLeft: number; endLabel: string } | null;
   next: { name: string; startLabel: string } | null;
   tracks: PlanTrackView[];
+  weeks: PlanWeekView[];
+  nowIndex: number;
 };
 
 export function getClientPlanView(clientId: number): ClientPlanView | null {
@@ -4666,6 +4674,32 @@ export function getClientPlanView(clientId: number): ClientPlanView | null {
     return localDateStr(d);
   };
   const short = (s: string) => new Date(`${s}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const addWeeks = (monday: string, n: number) => {
+    const d = new Date(`${monday}T00:00:00`);
+    d.setDate(d.getDate() + n * 7);
+    return localDateStr(d);
+  };
+
+  // The strip runs from the earliest phase to the latest one the coach has
+  // set, always including this week, one column per week.
+  let first = phases.map((p) => p.start_week).reduce((a, b) => (a < b ? a : b));
+  let last = phases.map((p) => p.end_week).reduce((a, b) => (a > b ? a : b));
+  if (first > week) first = week;
+  if (last < week) last = week;
+  const count = weeksBetween(first, last) + 1;
+  let lastMonth = "";
+  const weeks: PlanWeekView[] = Array.from({ length: count }, (_, i) => {
+    const monday = addWeeks(first, i);
+    const d = new Date(`${monday}T00:00:00`);
+    const thursday = new Date(d);
+    thursday.setDate(d.getDate() + 3);
+    const jan1 = new Date(thursday.getFullYear(), 0, 1);
+    const num = Math.floor((thursday.getTime() - jan1.getTime()) / 86400000 / 7) + 1;
+    const month = d.toLocaleDateString("en-US", { month: "short" });
+    const monthLabel = month !== lastMonth ? month : null;
+    lastMonth = month;
+    return { monday, num, monthLabel, now: monday === week };
+  });
 
   const view = (p: ClientPhase): PlanPhaseView => ({
     id: p.id,
@@ -4673,6 +4707,8 @@ export function getClientPlanView(clientId: number): ClientPlanView | null {
     status: p.end_week < week ? "past" : p.start_week > week ? "next" : "now",
     rangeLabel: `${short(p.start_week)} – ${short(endOfWeek(p.end_week))}`,
     weeks: weeksBetween(p.start_week, p.end_week) + 1,
+    startIndex: weeksBetween(first, p.start_week),
+    span: weeksBetween(p.start_week, p.end_week) + 1,
   });
 
   // Headline track: nutrition if it has phases, else whichever track does.
@@ -4691,5 +4727,7 @@ export function getClientPlanView(clientId: number): ClientPlanView | null {
     tracks: PHASE_TRACKS.map((t) => ({ track: t.id, label: t.label, phases: phases.filter((p) => p.track === t.id).map(view) })).filter(
       (t) => t.phases.length > 0
     ),
+    weeks,
+    nowIndex: weeksBetween(first, week),
   };
 }
