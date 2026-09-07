@@ -113,20 +113,21 @@ function ClientDashboard({
   // rhythm is a property of the metric, not a reason for its own screen.
   const sections: TabSection[] = [
     {
+      // The plan spans nutrition, training and lifestyle, so it belongs to
+      // neither tab: it is the first thing the coach sees for a client.
+      id: "plan",
+      label: "Plan",
+      content: <PhaseTimeline clientId={clientId} />,
+    },
+    {
       id: "training",
       label: "Training",
       content: (
-        <>
-          {/* The block the client is in, until when, and what comes after:
-              the coach's planning-sheet timeline, above the programme so
-              the weeks read in the same direction. */}
-          <PhaseTimeline clientId={clientId} />
-          <ProgramBuilder
-            clientId={clientId}
-            clientName={name}
-            weekLinkBase={`/admin?client=${clientId}&tab=training`}
-          />
-        </>
+        <ProgramBuilder
+          clientId={clientId}
+          clientName={name}
+          weekLinkBase={`/admin?client=${clientId}&tab=training`}
+        />
       ),
     },
     { id: "nutrition", label: "Nutrition", content: <NutritionPanel clientId={clientId} /> },
