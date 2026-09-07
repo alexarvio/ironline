@@ -66,6 +66,13 @@ export default function PlanBody({ plan }: { plan: ClientPlanView }) {
         {/* Scrolling week columns */}
         <div className="plan-strip" ref={scrollRef}>
           <div className="plan-sheet-weeks" style={{ gridTemplateColumns: `repeat(${plan.weeks.length}, ${CELL}px)` }}>
+            {/* One tinted column behind everything for the week the client
+                is in, from the month row down through every track. */}
+            <div
+              className="plan-sheet-nowcol"
+              style={{ gridRow: `1 / ${3 + plan.tracks.length}`, gridColumn: plan.nowIndex + 1 }}
+              aria-hidden="true"
+            />
             {plan.weeks.map((w, i) => (
               <div key={`m${i}`} className="plan-sheet-r plan-sheet-r-month plan-sheet-month" style={{ gridRow: 1, gridColumn: i + 1 }}>
                 {w.monthLabel ?? ""}

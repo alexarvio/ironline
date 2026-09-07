@@ -2845,7 +2845,15 @@ a.cd-entry:hover { border-color: var(--accent); }
 }
 .plan-sheet-cell.on:not(.first) { box-shadow: inset 1px 0 0 var(--fp-line); }
 .plan-sheet-cell.on.now { background: var(--fp-accent-tint); }
-.plan-sheet-cell.now:not(.on) { background: var(--fp-accent-tint); border-radius: 8px; }
+/* The current week as one column, behind the cells and across the row
+   gaps, so the highlight runs unbroken from the header to the last track. */
+.plan-sheet-nowcol {
+  background: var(--fp-accent-tint);
+  border-radius: 8px;
+  margin: 0 2px;
+  z-index: 0;
+}
+.plan-sheet-month, .plan-sheet-week { position: relative; z-index: 1; }
 .plan-sheet-cell-name {
   position: absolute;
   left: 10px;
