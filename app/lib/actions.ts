@@ -107,6 +107,7 @@ import {
   getClientIdForAssignment,
   getClientIdForSetLog,
   updateSetLog,
+  publishWeek,
   getClientIdForPhotoSlot,
   getClientIdForNotification,
   getClientIdForReport,
@@ -316,6 +317,10 @@ export async function addProgramWeekAction(formData: FormData) {
   const newWeekNumber = program.start_week + newTotal - 1;
   ensureWeekSkeleton(clientId, newWeekNumber);
   if (copyFrom) copyProgramWeek(clientId, copyFrom, newWeekNumber);
+  // A week added to a programme the client already has must go out with
+  // it: new days are created as drafts, and the client's Training tab shows
+  // published days only, so without this the new week arrived empty.
+  if (program.status === "deployed") publishWeek(clientId, newWeekNumber);
 
   revalidatePath("/admin");
   revalidatePath("/client");

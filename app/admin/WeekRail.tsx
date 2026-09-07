@@ -90,7 +90,7 @@ export default function WeekRail({
         {weeks.map((w) => (
           // Wrapper so the remove control can sit on the capsule's corner
           // without nesting a button inside a button.
-          <div key={w.weekNumber} className="pb-week-wrap">
+          <div key={w.weekNumber} className={`pb-week-wrap${w.weekNumber === selectedWeek ? " selected" : ""}`}>
             <button
               type="button"
               className={`pb-week-capsule${w.weekNumber === selectedWeek ? " selected" : ""}`}

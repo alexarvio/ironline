@@ -564,6 +564,23 @@ export function applyDueProgramDeployments() {
   const now = new Date().toISOString();
   const due = data.training_programs.filter((p) => p.status === "draft" && p.scheduled_at && p.scheduled_at <= now);
   due.forEach((program) => deployProgram(program.id));
+
+  // Repair for weeks added to a deployed programme before addProgramWeekAction
+  // published them: any draft day inside a deployed programme's range is
+  // published. Idempotent and cheap, so it rides along on every request.
+  let healed = false;
+  data.training_programs
+    .filter((p) => p.status === "deployed")
+    .forEach((p) => {
+      const last = p.start_week + p.total_weeks - 1;
+      data.program_days.forEach((pd) => {
+        if (pd.client_id === p.client_id && pd.week_number >= p.start_week && pd.week_number <= last && pd.status !== "published") {
+          pd.status = "published";
+          healed = true;
+        }
+      });
+    });
+  if (healed) persist();
 }
 
 // Same lazy-catch-up pattern as applyDueProgramDeployments (no background

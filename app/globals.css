@@ -9166,7 +9166,10 @@ a.cd-entry:hover { border-color: var(--accent); }
   transition: opacity 120ms ease;
 }
 
+/* Shown on hover, and always on the selected week: hover alone hid the
+   control well enough that removing a week looked impossible. */
 .pb-week-wrap:hover .pb-week-remove,
+.pb-week-wrap.selected .pb-week-remove,
 .pb-week-remove:focus-within { opacity: 1; }
 
 .pb-week-remove .row-icon-btn {
