@@ -72,7 +72,7 @@ export default function PlanBody({ plan }: { plan: ClientPlanView }) {
             className="plan-sheet-weeks"
             style={{
               gridTemplateColumns: `repeat(${plan.weeks.length}, ${CELL}px)`,
-              backgroundSize: `${CELL}px 100%`,
+              backgroundSize: `${CELL}px calc(100% - 20px)`,
             }}
           >
             {/* One tinted column behind everything for the week the client

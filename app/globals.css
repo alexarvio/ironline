@@ -2754,6 +2754,9 @@ a.cd-entry:hover { border-color: var(--accent); }
   background-repeat: repeat-x;
   background-origin: content-box;
   background-clip: content-box;
+  /* Start below the month row (16px) and its gap (4px), so the lines run
+     from the week numbers down, not through the month names. */
+  background-position: 0 20px;
 }
 .plan-sheet-r { box-sizing: border-box; }
 .plan-sheet-r-month { height: 16px; }
