@@ -11038,3 +11038,81 @@ a.cd-entry:hover { border-color: var(--accent); }
 .pb-logged-empty { font-size: 10.5px; font-style: italic; color: var(--faint); }
 
 .cd-head-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+
+/* ---- Calorie log: the client's own kcal for the day under the targets. ---- */
+.cl-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 10px;
+}
+.cl-field { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cl-field-label {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fp-dim);
+}
+.cl-input-wrap { display: flex; align-items: baseline; gap: 6px; }
+.cl-input {
+  width: 100%;
+  max-width: 160px;
+  min-height: 44px;
+  border: none;
+  border-bottom: 2px solid var(--fp-input);
+  background: none;
+  color: var(--fp-text);
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  font-weight: 600;
+  padding: 0 2px 2px 0;
+}
+.cl-input::placeholder { color: var(--fp-input); }
+.cl-input:focus { outline: none; border-bottom-color: var(--fp-accent); }
+.cl-unit { font-size: 0.8rem; font-weight: 700; color: var(--fp-dim); }
+.cl-save {
+  flex-shrink: 0;
+  min-height: 44px;
+  border: none;
+  border-radius: 12px;
+  padding: 0 20px;
+  background: var(--fp-accent);
+  color: var(--fp-accent-fg);
+  font-size: 0.86rem;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+}
+.cl-save:disabled { opacity: 0.6; cursor: default; }
+/* The last few days: tap one to log or change it. */
+.cl-days { margin-top: 12px; display: flex; flex-direction: column; }
+.cl-day {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 2px;
+  border: 0;
+  border-top: 1px solid var(--fp-line);
+  background: none;
+  color: var(--fp-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cl-day-label { font-size: 0.82rem; font-weight: 700; color: var(--fp-dim); }
+.cl-day-value { font-size: 0.86rem; font-weight: 800; }
+.cl-day.empty .cl-day-value { color: var(--fp-dim); font-weight: 600; }
+.cl-day.editing { color: var(--fp-accent); }
+.cl-day.editing .cl-day-label { color: var(--fp-accent); }
+
+/* Coach side: the logged days as a sheet, read against the day's target. */
+.nt-cal { margin-bottom: 18px; }
+.nt-cal-table td { font-size: 12px; }
+.nt-cal-kcal { font-weight: 700; white-space: nowrap; }
+.nt-cal-diff { margin-left: 8px; font-size: 11px; font-weight: 700; color: var(--steel); }
+.nt-cal-diff.over { color: var(--accent-plate, #a32d2d); }
+.nt-cal-diff.under { color: var(--good); }
+.nt-cal-day { color: var(--steel); }

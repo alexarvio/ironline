@@ -3,7 +3,15 @@ import {
   removeSupplementRowAction,
   saveCoachNutritionNoteAction,
 } from "../lib/actions";
-import { getClient, getNutritionGoalsSummary, getNutritionPlan } from "../lib/queries";
+import {
+  getAssignmentsForDay,
+  getClient,
+  getCurrentWeekNumber,
+  getNutritionGoalsSummary,
+  getNutritionPlan,
+  getWeek,
+  listCalorieLogs,
+} from "../lib/queries";
 import NutritionTargets from "./NutritionTargets";
 import SupplementCell from "./SupplementCell";
 import AutosaveNote from "./AutosaveNote";
@@ -34,6 +42,15 @@ export default function NutritionPanel({ clientId }: { clientId: number }) {
   };
   const rows = plan.supplement_rows ?? [];
   const clientName = getClient(clientId)?.name ?? "the client";
+  // The client's reported calories, most recent first, and which weekdays
+  // are training days this week so each row can be read against the right
+  // target.
+  const calorieLogs = listCalorieLogs(clientId, 30);
+  const trainingDows = new Set(
+    getWeek(clientId, getCurrentWeekNumber(clientId))
+      .filter((d) => getAssignmentsForDay(d.id).length > 0)
+      .map((d) => d.day_of_week)
+  );
   // Server-stamped per render; the note flips to "Saved" only once an action
   // (Save targets, a supplement cell, the note) has actually run. Same
   // status bar as the Measurements tab, for the same reason: everything on
@@ -77,6 +94,51 @@ export default function NutritionPanel({ clientId }: { clientId: number }) {
           </div>
         </form>
       </div>
+
+      {/* What the client reported eating, day by day. A sheet, not a chart:
+          the coach reads it against the targets above. */}
+      <section className="nt-supps nt-cal">
+        <div className="nt-supps-head">
+          <span className="ad-microlabel">Calories logged</span>
+          <span className="nt-supps-count">
+            {calorieLogs.length === 0 ? "nothing yet" : `last ${calorieLogs.length} day${calorieLogs.length === 1 ? "" : "s"} logged`}
+          </span>
+        </div>
+        {calorieLogs.length === 0 ? (
+          <p className="ad-panel-empty">Nothing logged yet. The client enters this under their targets on the Nutrition tab.</p>
+        ) : (
+          <table className="nt-supp-table nt-cal-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Calories</th>
+                <th>Day</th>
+              </tr>
+            </thead>
+            <tbody>
+              {calorieLogs.map((c) => {
+                const isTraining = trainingDows.has(new Date(`${c.date}T00:00:00`).getDay() || 7);
+                const target = isTraining ? derived.trainingKcal : derived.restKcal;
+                const diff = target ? c.kcal - target : null;
+                return (
+                  <tr key={c.id}>
+                    <td>{new Date(`${c.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</td>
+                    <td className="nt-cal-kcal">
+                      {c.kcal.toLocaleString("en-US")} kcal
+                      {diff != null && (
+                        <span className={`nt-cal-diff${diff > 0 ? " over" : diff < 0 ? " under" : ""}`}>
+                          {diff === 0 ? "on target" : `${diff > 0 ? "+" : ""}${diff.toLocaleString("en-US")}`}
+                        </span>
+                      )}
+                    </td>
+                    <td className="nt-cal-day">{isTraining ? "Training" : "Rest"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </section>
 
       <section className="nt-supps">
         <div className="nt-supps-head">

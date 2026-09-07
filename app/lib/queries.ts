@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist } from "./db";
-import type { ClientPhase, PhaseTrack } from "./db";
+import type { CalorieLog, ClientPhase, PhaseTrack } from "./db";
 
 // "Today" (or any Date) as a local YYYY-MM-DD calendar-date string. This is
 // deliberately NOT `date.toISOString().slice(0, 10)` — toISOString always
@@ -4749,4 +4749,36 @@ export function getClientPlanView(clientId: number): ClientPlanView | null {
     weeks,
     nowIndex: weeksBetween(first, week),
   };
+}
+
+// ---- Calorie log: the client's own daily kcal, reported on the Nutrition
+// tab. A single number per day, kept separate from the check-in metrics
+// because it belongs with the targets it is measured against. ----
+
+export type { CalorieLog } from "./db";
+
+export function getCalorieLog(clientId: number, date: string): CalorieLog | null {
+  return getData().calorie_logs.find((c) => c.client_id === clientId && c.date === date) ?? null;
+}
+
+// Most recent first.
+export function listCalorieLogs(clientId: number, limit = 30): CalorieLog[] {
+  return getData()
+    .calorie_logs.filter((c) => c.client_id === clientId)
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+    .slice(0, limit);
+}
+
+// null clears the day.
+export function setCalorieLog(clientId: number, date: string, kcal: number | null) {
+  const data = getData();
+  const existing = data.calorie_logs.find((c) => c.client_id === clientId && c.date === date);
+  if (kcal == null) {
+    if (existing) data.calorie_logs = data.calorie_logs.filter((c) => c !== existing);
+  } else if (existing) {
+    existing.kcal = kcal;
+  } else {
+    data.calorie_logs.push({ id: allocId("calorie_logs"), client_id: clientId, date, kcal });
+  }
+  persist();
 }

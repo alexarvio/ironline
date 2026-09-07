@@ -130,6 +130,7 @@ import {
   removeClientPhase,
   getClientIdForPhase,
   PHASE_TRACKS,
+  setCalorieLog,
 } from "./queries";
 import { writeReportNarrative } from "./reportAi";
 import type { ReportSectionType } from "./reportSectionTypes";
@@ -1482,4 +1483,19 @@ export async function removeClientPhaseAction(formData: FormData) {
   removeClientPhase(id);
   revalidatePath("/admin");
   revalidatePath("/client");
+}
+
+// ---- Calorie log (client's own daily kcal) --------------------------------
+
+export async function logCaloriesAction(formData: FormData) {
+  // Clients always write their own; the posted id is ignored for them.
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const date = String(formData.get("date") ?? "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+  const raw = String(formData.get("kcal") ?? "").replace(",", ".").trim();
+  const kcal = raw === "" ? null : Math.round(Number(raw));
+  if (kcal != null && (!Number.isFinite(kcal) || kcal < 0 || kcal > 20000)) return;
+  setCalorieLog(clientId, date, kcal);
+  revalidatePath("/client");
+  revalidatePath("/admin");
 }

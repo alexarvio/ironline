@@ -57,6 +57,14 @@ type TrainingProgram = {
 // is the Monday of the last week the phase covers. The coach's planning
 // sheet has a row per track and a coloured bar per phase; this is that.
 export type PhaseTrack = "nutrition" | "training" | "lifestyle";
+// One day's calories as the client reports them on the Nutrition tab. One
+// row per client per date; re-logging a day overwrites it.
+export type CalorieLog = {
+  id: number;
+  client_id: number;
+  date: string; // YYYY-MM-DD
+  kcal: number;
+};
 export type ClientPhase = {
   id: number;
   client_id: number;
@@ -501,6 +509,7 @@ type Data = {
   training_programs: TrainingProgram[];
   client_preferences: ClientPreferences[];
   client_phases: ClientPhase[];
+  calorie_logs: CalorieLog[];
   // The last COACH_RESET_TOKEN value that was acted on (see
   // resetCoachFromEnv in lib/auth.ts), so a reset token left sitting in the
   // environment only ever fires once.
@@ -518,6 +527,7 @@ function emptyData(): Data {
     training_programs: [],
     client_preferences: [],
     client_phases: [],
+    calorie_logs: [],
     exercises: [],
     program_days: [],
     workout_assignments: [],

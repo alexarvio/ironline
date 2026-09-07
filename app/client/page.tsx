@@ -6,6 +6,7 @@ import {
   getClient,
   getClientProfile,
   getClientPlanView,
+  getCalorieLog,
   getDeployedProgram,
   getLogsForAssignment,
   getCurrentWeekNumber,
@@ -44,6 +45,7 @@ import PhotoPeriodHistoryRow from "./PhotoPeriodHistoryRow";
 import HomeHub, { UpcomingMeeting } from "./HomeHub";
 import { TrendMetric } from "./TrendCarousel";
 import NutritionDayToggle, { NutritionTargetSet } from "./NutritionDayToggle";
+import CalorieLog from "./CalorieLog";
 import ReportArchiveList, { ArchiveReport } from "./ReportArchiveList";
 import NotificationRow from "./NotificationRow";
 import ClientWeekSwitcher from "./ClientWeekSwitcher";
@@ -618,6 +620,27 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
       ) : (
         <NutritionDayToggle dateLabel={dateLabel} training={training} rest={rest} initialIsTraining={isTrainingDay} />
       )}
+
+      {/* The client's own calories, day by day, right under the targets. */}
+      {(() => {
+        const dayLabel = (d: string) =>
+          new Date(`${d}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+        const recent = Array.from({ length: 7 }, (_, i) => {
+          const dt = new Date(`${today}T00:00:00`);
+          dt.setDate(dt.getDate() - (i + 1));
+          const date = localDateStr(dt);
+          return { date, label: dayLabel(date), kcal: getCalorieLog(CLIENT_ID, date)?.kcal ?? null };
+        });
+        const targetKcal = hasTargets ? (isTrainingDay ? summary.trainingKcal : summary.restKcal) || null : null;
+        return (
+          <CalorieLog
+            clientId={CLIENT_ID}
+            today={{ date: today, label: dayLabel(today), kcal: getCalorieLog(CLIENT_ID, today)?.kcal ?? null }}
+            days={recent}
+            targetKcal={targetKcal}
+          />
+        );
+      })()}
 
       {/* The coach's note on the targets (Nutrition tab → "Note on the
           targets"). Distinct from the "Coach notes" feed further down, which
