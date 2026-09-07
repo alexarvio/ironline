@@ -87,7 +87,7 @@ export default function NutritionTargets({
       <div className="nt-kcal-block">
         <span className="ad-microlabel">Calories</span>
         <div className="nt-kcal-row">
-          <span className="nt-kcal-value">{kcal.toLocaleString()}</span>
+          <span className="nt-kcal-value">{kcal.toLocaleString("en-US")}</span>
           <span className="nt-kcal-unit">kcal</span>
         </div>
       </div>
