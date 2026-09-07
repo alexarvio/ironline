@@ -347,7 +347,8 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
     <HomeHub
       dateLabel={dateLabel}
       name={client?.name ?? ""}
-      subLine={`${profile.goal_phase || "No goal phase set yet"}${profile.current_week ? ` · ${profile.current_week}` : ""}`}
+      phase={profile.goal_phase || "No goal phase set yet"}
+      subLine={profile.current_week ? `· ${profile.current_week}` : ""}
       goalNote={goalNote}
       daysTrained={daysTrained}
       totalDays={totalDaysBuilt}

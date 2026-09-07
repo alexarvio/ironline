@@ -2674,6 +2674,14 @@ a.cd-entry:hover { border-color: var(--accent); }
   color: var(--fp-dim);
 }
 
+/* Goal / phase: the coach's headline for the block, so it reads as one. */
+.home-dark-phase {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--fp-text);
+  letter-spacing: -0.01em;
+}
+
 .home-dark-goal {
   font-size: 0.8rem;
   font-weight: 800;

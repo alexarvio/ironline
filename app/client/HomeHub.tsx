@@ -34,6 +34,7 @@ export type { TrendMetric };
 export default function HomeHub({
   dateLabel,
   name,
+  phase,
   subLine,
   goalNote,
   daysTrained,
@@ -49,6 +50,9 @@ export default function HomeHub({
 }: {
   dateLabel: string;
   name: string;
+  /** Goal / phase from the coach's card, e.g. "Fat loss". */
+  phase: string;
+  /** Anything quieter beside it, currently the current-week label. */
   subLine: string;
   goalNote: string | null;
   daysTrained: number;
@@ -73,7 +77,11 @@ export default function HomeHub({
       <div className="home-dark-datebar">{dateLabel}</div>
       <div className="home-dark-name">{name}</div>
       <div className="home-dark-subrow">
-        <span className="home-dark-sub">{subLine}</span>
+        {/* The phase is the coach's headline for this block of work, so it
+            leads the row in the text colour, bold and a step larger; the
+            week and the countdown stay quieter beside it. */}
+        <span className="home-dark-phase">{phase}</span>
+        {subLine && <span className="home-dark-sub">{subLine}</span>}
         {goalNote && <span className="home-dark-goal">{goalNote}</span>}
       </div>
 
