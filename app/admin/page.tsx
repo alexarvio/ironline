@@ -8,6 +8,7 @@ import FeedPanel from "./FeedPanel";
 import CalendarPanel from "./CalendarPanel";
 import CalendarDayPanel from "./CalendarDayPanel";
 import ProgramBuilder from "../components/ProgramBuilder";
+import PhaseTimeline from "./PhaseTimeline";
 import { getClient, getOverviewPanel, listClients } from "../lib/queries";
 
 import { requireCoach } from "../lib/auth";
@@ -115,11 +116,17 @@ function ClientDashboard({
       id: "training",
       label: "Training",
       content: (
-        <ProgramBuilder
-          clientId={clientId}
-          clientName={name}
-          weekLinkBase={`/admin?client=${clientId}&tab=training`}
-        />
+        <>
+          {/* The block the client is in, until when, and what comes after:
+              the coach's planning-sheet timeline, above the programme so
+              the weeks read in the same direction. */}
+          <PhaseTimeline clientId={clientId} />
+          <ProgramBuilder
+            clientId={clientId}
+            clientName={name}
+            weekLinkBase={`/admin?client=${clientId}&tab=training`}
+          />
+        </>
       ),
     },
     { id: "nutrition", label: "Nutrition", content: <NutritionPanel clientId={clientId} /> },

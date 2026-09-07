@@ -52,6 +52,19 @@ type TrainingProgram = {
   deployed_at: string | null;
   scheduled_at: string | null;
 };
+// One block on the coach's phase timeline: "Bulk" on the nutrition track
+// from one week to another. Weeks are Monday dates (YYYY-MM-DD); end_week
+// is the Monday of the last week the phase covers. The coach's planning
+// sheet has a row per track and a coloured bar per phase; this is that.
+export type PhaseTrack = "nutrition" | "training" | "lifestyle";
+export type ClientPhase = {
+  id: number;
+  client_id: number;
+  track: PhaseTrack;
+  name: string;
+  start_week: string;
+  end_week: string;
+};
 type WorkoutAssignment = {
   id: number;
   program_day_id: number;
@@ -487,6 +500,7 @@ type Data = {
   client_reports: ClientReport[];
   training_programs: TrainingProgram[];
   client_preferences: ClientPreferences[];
+  client_phases: ClientPhase[];
   // The last COACH_RESET_TOKEN value that was acted on (see
   // resetCoachFromEnv in lib/auth.ts), so a reset token left sitting in the
   // environment only ever fires once.
@@ -503,6 +517,7 @@ function emptyData(): Data {
     clients: [],
     training_programs: [],
     client_preferences: [],
+    client_phases: [],
     exercises: [],
     program_days: [],
     workout_assignments: [],

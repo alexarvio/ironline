@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist } from "./db";
+import type { ClientPhase, PhaseTrack } from "./db";
 
 // "Today" (or any Date) as a local YYYY-MM-DD calendar-date string. This is
 // deliberately NOT `date.toISOString().slice(0, 10)` — toISOString always
@@ -4567,4 +4568,69 @@ export function deleteReport(id: number) {
   const data = getData();
   data.client_reports = data.client_reports.filter((r) => r.id !== id);
   persist();
+}
+
+// ---- Phase timeline: the coach's "what block are we in, until when, and
+// what comes after" view, one row per track, one bar per phase. Mirrors
+// the planning sheet the coach kept before the app. ----
+
+export type { ClientPhase, PhaseTrack } from "./db";
+
+export const PHASE_TRACKS: { id: PhaseTrack; label: string }[] = [
+  { id: "nutrition", label: "Nutrition" },
+  { id: "training", label: "Training" },
+  { id: "lifestyle", label: "Lifestyle" },
+];
+
+export function listClientPhases(clientId: number): ClientPhase[] {
+  return getData()
+    .client_phases.filter((p) => p.client_id === clientId)
+    .sort((a, b) => (a.start_week < b.start_week ? -1 : a.start_week > b.start_week ? 1 : 0));
+}
+
+export function getClientIdForPhase(phaseId: number): number | null {
+  return getData().client_phases.find((p) => p.id === phaseId)?.client_id ?? null;
+}
+
+// Weeks are snapped to their Monday so two phases entered on different
+// weekdays still line up in whole-week columns.
+export function addClientPhase(clientId: number, track: PhaseTrack, name: string, startDate: string, endDate: string) {
+  const data = getData();
+  const start = weekStart(startDate);
+  const end = weekStart(endDate);
+  data.client_phases.push({
+    id: allocId("client_phases"),
+    client_id: clientId,
+    track,
+    name: name.trim(),
+    start_week: start <= end ? start : end,
+    end_week: start <= end ? end : start,
+  });
+  persist();
+}
+
+export function updateClientPhase(phaseId: number, track: PhaseTrack, name: string, startDate: string, endDate: string) {
+  const data = getData();
+  const phase = data.client_phases.find((p) => p.id === phaseId);
+  if (!phase) return;
+  const start = weekStart(startDate);
+  const end = weekStart(endDate);
+  phase.track = track;
+  phase.name = name.trim();
+  phase.start_week = start <= end ? start : end;
+  phase.end_week = start <= end ? end : start;
+  persist();
+}
+
+export function removeClientPhase(phaseId: number) {
+  const data = getData();
+  data.client_phases = data.client_phases.filter((p) => p.id !== phaseId);
+  persist();
+}
+
+// The phase a track is in this week, if any: what the client's Home line
+// and the card's Goal / phase fact can read off instead of retyping.
+export function getCurrentPhase(clientId: number, track: PhaseTrack): ClientPhase | null {
+  const week = weekStart(localDateStr());
+  return listClientPhases(clientId).find((p) => p.track === track && p.start_week <= week && p.end_week >= week) ?? null;
 }

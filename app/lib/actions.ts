@@ -125,6 +125,11 @@ import {
   removeSupplementRow,
   addMetricsFromLibrary,
   getNutritionPlan,
+  addClientPhase,
+  updateClientPhase,
+  removeClientPhase,
+  getClientIdForPhase,
+  PHASE_TRACKS,
 } from "./queries";
 import { writeReportNarrative } from "./reportAi";
 import type { ReportSectionType } from "./reportSectionTypes";
@@ -1435,4 +1440,46 @@ export async function addCalendarEventAction(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/client");
   redirect(`/admin?view=calendar&month=${date.slice(0, 7)}&day=${date}`);
+}
+
+// ---- Phase timeline (coach only) ----------------------------------------
+
+function readPhaseForm(formData: FormData) {
+  const trackRaw = String(formData.get("track") ?? "");
+  const track = PHASE_TRACKS.find((t) => t.id === trackRaw)?.id ?? null;
+  const name = String(formData.get("name") ?? "").trim();
+  const start = String(formData.get("start") ?? "");
+  const end = String(formData.get("end") ?? "");
+  const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
+  if (!track || !name || !isDate(start) || !isDate(end)) return null;
+  return { track, name, start, end };
+}
+
+export async function addClientPhaseAction(formData: FormData) {
+  await requireCoach();
+  const clientId = Number(formData.get("clientId"));
+  const fields = readPhaseForm(formData);
+  if (!clientId || !fields) return;
+  addClientPhase(clientId, fields.track, fields.name, fields.start, fields.end);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function updateClientPhaseAction(formData: FormData) {
+  await requireCoach();
+  const id = Number(formData.get("id"));
+  const fields = readPhaseForm(formData);
+  if (!id || getClientIdForPhase(id) == null || !fields) return;
+  updateClientPhase(id, fields.track, fields.name, fields.start, fields.end);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function removeClientPhaseAction(formData: FormData) {
+  await requireCoach();
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  removeClientPhase(id);
+  revalidatePath("/admin");
+  revalidatePath("/client");
 }

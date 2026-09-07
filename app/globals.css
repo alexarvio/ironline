@@ -8691,6 +8691,119 @@ a.cd-entry:hover { border-color: var(--accent); }
 }
 
 /* ---- Week rail ---- */
+/* ---- Phase timeline: calendar weeks across, one row per track, a bar per
+   phase. Sits above the programme builder on the Training tab. ---- */
+.ph { margin-bottom: 18px; }
+.ph-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.ph-sub { margin-top: 2px; font-size: 12px; color: var(--steel); }
+.ph-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  scrollbar-width: thin;
+}
+.ph-grid {
+  display: grid;
+  align-items: stretch;
+  min-width: 100%;
+}
+.ph-corner {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+.ph-corner-weeks {
+  padding: 4px 10px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--steel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+}
+.ph-month {
+  padding: 6px 8px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  border-left: 1px solid var(--border);
+  white-space: nowrap;
+}
+.ph-week {
+  padding: 3px 4px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--steel);
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+.ph-week.now {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.ph-track {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+.ph-cell {
+  min-height: 44px;
+  border-top: 1px solid var(--border);
+  border-left: 1px dashed color-mix(in srgb, var(--border) 70%, transparent);
+}
+.ph-cell.now { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+/* Bars are placed on the same grid row as their track's cells: the slot
+   spans its weeks and floats above the cells (which own the borders). */
+.ph-bar-slot {
+  align-self: stretch;
+  z-index: 1;
+  padding: 0 3px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+.ph-bar {
+  width: 100%;
+  height: 26px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  box-shadow: inset 0 0 0 1px rgba(20, 23, 28, 0.06);
+}
+.ph-bar:hover { filter: brightness(0.96); }
+.ph-bar:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ph-select { width: 100%; height: 32px; font-size: 13px; }
+.ph-delete { margin-right: auto; color: var(--accent-plate, #a32d2d); }
+
 .pb-rail-wrap { position: relative; margin-top: 14px; }
 
 .pb-rail {
