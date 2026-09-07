@@ -130,8 +130,8 @@ export default function ClientCardEditor({
         <h3 className="ad-panel-heading">Coaching info</h3>
         <div className="ad-fields">
           <Field label="Start date" name="coaching_start_date" value={card.coaching_start_date} type="date" />
-          <Field label="Goal / phase" name="goal_phase" value={card.goal_phase} placeholder="-" />
           <Field label="Goal date" name="goal_date" value={card.goal_date} type="date" />
+          <Field label="Goal / phase" name="goal_phase" value={card.goal_phase} placeholder="-" />
           <Field label="Check-in day" name="check_in_day" value={card.check_in_day} placeholder="Monday" />
           <Field
             label="Starting weight"

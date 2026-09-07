@@ -1564,10 +1564,11 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
     ],
     coachingInfo: [
       { label: "Plan", value: liveProgram?.name || "-" },
+      // The two dates sit together: the block a client is in reads as a span.
       { label: "Start date", value: dash(profile.coaching_start_date) },
+      { label: "Goal date", value: dash(profile.goal_date) },
       { label: "Current week", value: liveWeek != null ? `Week ${liveWeek}` : "-" },
       { label: "Goal / phase", value: dash(profile.goal_phase) },
-      { label: "Goal date", value: dash(profile.goal_date) },
       { label: "Check-in day", value: dash(profile.check_in_day) },
       { label: "Starting weight", value: profile.starting_weight_kg ? `${profile.starting_weight_kg} kg` : "-" },
       { label: "Current weight", value: weight != null ? `${weight} kg` : "-" },
