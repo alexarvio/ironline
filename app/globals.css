@@ -2729,7 +2729,7 @@ a.cd-entry:hover { border-color: var(--accent); }
   flex-direction: column;
   gap: 2px;
   padding-left: 12px;
-  box-shadow: 6px 0 10px -8px rgba(0, 0, 0, 0.35);
+  border-right: 1px solid var(--fp-line);
   z-index: 1;
   background: var(--fp-raised);
 }
@@ -2747,7 +2747,7 @@ a.cd-entry:hover { border-color: var(--accent); }
   width: max-content;
   column-gap: 2px;
   row-gap: 2px;
-  padding: 0 10px 0 4px;
+  padding: 0 10px 0 8px;
 }
 .plan-sheet-r { box-sizing: border-box; }
 .plan-sheet-r-month { height: 16px; }
