@@ -1749,7 +1749,7 @@ export function getActivityFeed(limit = 30): FeedEvent[] {
   const calorieEvents: FeedEvent[] = data.calorie_logs
     .map((c): FeedEvent | null => {
       const client = clientsById.get(c.client_id);
-      if (!client || !c.logged_at) return null;
+      if (!client) return null;
       return {
         type: "calories_logged" as const,
         id: `calories-${c.id}-${c.logged_at}`,
@@ -1757,7 +1757,8 @@ export function getActivityFeed(limit = 30): FeedEvent[] {
         clientName: client.name,
         dateLabel: new Date(`${c.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
         kcal: c.kcal,
-        at: c.logged_at,
+        // Entries saved before timestamps existed fall back to their day.
+        at: c.logged_at ?? `${c.date}T12:00:00.000Z`,
       };
     })
     .filter((e): e is FeedEvent => e !== null);
