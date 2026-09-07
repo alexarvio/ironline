@@ -14,7 +14,6 @@ import {
   metricGroup,
   PINNED_METRIC_LIMIT,
 } from "../lib/queries";
-import ClientGraphsPicker from "./ClientGraphsPicker";
 import CheckInDaySelect from "./CheckInDaySelect";
 import AutosaveNote from "./AutosaveNote";
 import MetricCadenceToggle from "./MetricCadenceToggle";
@@ -37,10 +36,9 @@ const CADENCE_LABEL: Record<string, string> = {
 // the two tables below.
 export default function MeasurementsPanel({ clientId }: { clientId: number }) {
   const metrics = listAllMetrics(clientId);
-  // Shared cap with the Client graphs section: metrics and measurement
-  // fields count together, so the row switches must read the same total.
-  const graphChoices = listGraphChoices(clientId);
-  const graphsFull = graphChoices.filter((c) => c.pinned).length >= PINNED_METRIC_LIMIT;
+  // The six-graph cap counts metrics and any legacy pinned measurement
+  // fields together, so the row buttons read the same total the store does.
+  const graphsFull = listGraphChoices(clientId).filter((c) => c.pinned).length >= PINNED_METRIC_LIMIT;
   // A column is identified by its name alone now that cadence is chosen on
   // the row rather than at add time, so "Sleep" counts as added whichever
   // rhythm it is on.
@@ -191,12 +189,8 @@ export default function MeasurementsPanel({ clientId }: { clientId: number }) {
         />
       </section>
 
-      {/* ---- 3. What the client sees charted ---- */}
-      <section className="ms-section">
-        <ClientGraphsPicker choices={graphChoices} />
-      </section>
-
-      {/* ---- 4. Graph (coach's own view) ---- */}
+      {/* ---- 3. Graph (coach's own view). What the client sees charted is
+              chosen per row in the check-in columns above. ---- */}
       <section className="ms-section">
         <h3 className="ad-microlabel">Trend</h3>
         {/* Keyed by client: the panel keeps its chosen metric in state, and
