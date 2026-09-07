@@ -22,6 +22,22 @@ function niceTicks(min: number, max: number, count = 4): number[] {
   return ticks;
 }
 
+// The number as the client typed it: 77.6 stays 77.6, 78 stays 78. Rounding
+// to a whole number here once showed "78" over a point the axis itself
+// labelled 77.6.
+function formatValue(v: number) {
+  return String(Math.round(v * 100) / 100);
+}
+
+// Breathing room above and below the data so the line never sits on the
+// top gridline or the axis itself: a tenth of the range each side, or a
+// little either way when every point is the same value.
+function paddedRange(min: number, max: number): [number, number] {
+  const span = max - min;
+  const pad = span > 0 ? span * 0.1 : Math.max(Math.abs(max) * 0.02, 0.5);
+  return [min - pad, max + pad];
+}
+
 // Short "Aug 17"-style label for an x-axis tick — dates are stored as
 // plain YYYY-MM-DD strings, so pin the time to noon local rather than
 // midnight UTC to dodge any timezone rollover onto the wrong day.
@@ -73,8 +89,10 @@ export function LineChart({
     const height = 200;
     const pad = 8;
     const values = points.map((p) => p.value);
-    const lo = values.length > 0 ? Math.min(...values) : 0;
-    const hi = values.length > 0 ? Math.max(...values) : 1;
+    const [lo, hi] = paddedRange(
+      values.length > 0 ? Math.min(...values) : 0,
+      values.length > 0 ? Math.max(...values) : 1
+    );
     const span = hi - lo || 1;
     const yFor = (v: number) => pad + (height - pad * 2) - ((v - lo) / span) * (height - pad * 2);
     const stepX = points.length > 1 ? (width - pad * 2) / (points.length - 1) : 0;
@@ -110,9 +128,13 @@ export function LineChart({
   const dataMax = values.length > 0 ? Math.max(...values) : 1;
   const dataMin = values.length > 0 ? Math.min(...values) : 0;
 
-  const ticks = yRange ? niceTicks(yRange[0], yRange[1]) : niceTicks(dataMin, dataMax);
-  const axisMin = yRange ? yRange[0] : Math.min(...ticks, dataMin);
-  const axisMax = yRange ? yRange[1] : Math.max(...ticks, dataMax);
+  // A fixed yRange (a /10 rating) is bounded by nature and keeps its ends;
+  // an auto-fitted axis gets breathing room before the ticks are chosen, so
+  // the gridlines round outwards past the data rather than landing on it.
+  const [fitMin, fitMax] = paddedRange(dataMin, dataMax);
+  const ticks = yRange ? niceTicks(yRange[0], yRange[1]) : niceTicks(fitMin, fitMax);
+  const axisMin = yRange ? yRange[0] : Math.min(...ticks, fitMin);
+  const axisMax = yRange ? yRange[1] : Math.max(...ticks, fitMax);
   const span = axisMax - axisMin || 1;
 
   const yFor = (v: number) => paddingTop + plotHeight - ((v - axisMin) / span) * plotHeight;
@@ -165,7 +187,7 @@ export function LineChart({
         ))}
       {!sparkline && coords.length > 0 && (
         <text x={coords[coords.length - 1].x} y={coords[coords.length - 1].y - 10} className="chart-endpoint-label">
-          {Math.round(coords[coords.length - 1].value)}
+          {formatValue(coords[coords.length - 1].value)}
         </text>
       )}
     </svg>

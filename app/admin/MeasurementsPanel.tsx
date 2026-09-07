@@ -167,7 +167,12 @@ export default function MeasurementsPanel({ clientId }: { clientId: number }) {
       {/* ---- 4. Graph (coach's own view) ---- */}
       <section className="ms-section">
         <h3 className="ad-microlabel">Trend</h3>
+        {/* Keyed by client: the panel keeps its chosen metric in state, and
+            without the key that metric id (another client's) survived a
+            switch in the rail and its series drew under the new client's
+            name. */}
         <MetricGraphPanel
+          key={clientId}
           metrics={graphable.map((m) => ({
             id: m.id,
             name: m.name,
