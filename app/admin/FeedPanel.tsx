@@ -11,6 +11,13 @@ function describe(event: ReturnType<typeof getActivityFeed>[number]) {
       </>
     );
   }
+  if (event.type === "calories_logged") {
+    return (
+      <>
+        <strong>{event.clientName}</strong> logged {event.kcal.toLocaleString("en-US")} kcal for {event.dateLabel}
+      </>
+    );
+  }
   return (
     <>
       <strong>{event.clientName}</strong>&rsquo;s invoice &ldquo;{event.description}&rdquo; marked{" "}
@@ -28,7 +35,7 @@ export default function FeedPanel() {
     <div>
       <h1>Feed</h1>
       <p className="subtitle">
-        Live activity across all clients: completed workouts and invoice updates, newest first.
+        Live activity across all clients: completed workouts, calories logged and invoice updates, newest first.
       </p>
 
       {events.length === 0 ? (

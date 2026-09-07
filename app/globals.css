@@ -11085,6 +11085,7 @@ a.cd-entry:hover { border-color: var(--accent); }
   font-family: inherit;
 }
 .cl-save:disabled { opacity: 0.6; cursor: default; }
+.cl-save.saved:disabled { opacity: 1; background: var(--fp-accent); }
 /* The last few days: tap one to log or change it. */
 .cl-days { margin-top: 12px; display: flex; flex-direction: column; }
 .cl-day {

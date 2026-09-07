@@ -64,6 +64,8 @@ export type CalorieLog = {
   client_id: number;
   date: string; // YYYY-MM-DD
   kcal: number;
+  // When it was last saved (ISO); drives the coach's feed row.
+  logged_at?: string;
 };
 export type ClientPhase = {
   id: number;

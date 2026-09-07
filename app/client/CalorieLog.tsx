@@ -30,9 +30,15 @@ export default function CalorieLog({
   const [editingDate, setEditingDate] = useState(today.date);
   const editing = editingDate === today.date ? today : (days.find((d) => d.date === editingDate) ?? today);
   const [pending, setPending] = useState(false);
-  const [savedFor, setSavedFor] = useState<string | null>(null);
+  // What the client has typed but not saved; null means the field shows the
+  // stored value. Saved state is derived from the two matching, so reopening
+  // the app on a logged day reads "Saved ✓" rather than inviting a re-save.
+  const [draft, setDraft] = useState<string | null>(null);
 
   const isToday = editing.date === today.date;
+  const stored = editing.kcal != null ? String(editing.kcal) : "";
+  const value = draft ?? stored;
+  const isSaved = value !== "" && value === stored;
 
   return (
     <section className="home-dark-section cl">
@@ -48,7 +54,8 @@ export default function CalorieLog({
           setPending(true);
           await logCaloriesAction(formData);
           setPending(false);
-          setSavedFor(editing.date);
+          // The server re-renders with the stored value; the draft is done.
+          setDraft(null);
         }}
       >
         <input type="hidden" name="clientId" value={clientId} />
@@ -62,21 +69,16 @@ export default function CalorieLog({
               inputMode="numeric"
               autoComplete="off"
               placeholder="–"
-              defaultValue={editing.kcal ?? ""}
-              onInput={(e) => {
-                const el = e.currentTarget;
-                const clean = el.value.replace(/[^\d]/g, "");
-                if (clean !== el.value) el.value = clean;
-                setSavedFor(null);
-              }}
+              value={value}
+              onChange={(e) => setDraft(e.target.value.replace(/[^\d]/g, ""))}
               aria-label={`Calories eaten ${isToday ? "today" : editing.label}`}
               className="cl-input"
             />
             <span className="cl-unit">kcal</span>
           </span>
         </label>
-        <button type="submit" className="cl-save" disabled={pending}>
-          {pending ? "…" : savedFor === editing.date ? "Saved ✓" : "Save"}
+        <button type="submit" className={`cl-save${isSaved ? " saved" : ""}`} disabled={pending || isSaved || value === ""}>
+          {pending ? "…" : isSaved ? "Saved ✓" : "Save"}
         </button>
       </form>
 
@@ -88,7 +90,7 @@ export default function CalorieLog({
               type="button"
               className={`cl-day${editing.date === d.date ? " editing" : ""}${d.kcal == null ? " empty" : ""}`}
               onClick={() => {
-                setSavedFor(null);
+                setDraft(null);
                 setEditingDate(editing.date === d.date ? today.date : d.date);
               }}
               aria-label={`${d.label}: ${d.kcal != null ? `${d.kcal} kcal` : "not logged"}. Tap to ${d.kcal != null ? "change" : "log"}`}

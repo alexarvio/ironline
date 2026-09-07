@@ -1584,7 +1584,9 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
         text:
           e.type === "workout_completed"
             ? `Completed ${e.dayName}${e.dayLabel ? ` · ${e.dayLabel}` : ""} (${e.weekLabel}) · ${e.exerciseCount} exercise${e.exerciseCount === 1 ? "" : "s"}, ${e.setCount} set${e.setCount === 1 ? "" : "s"}`
-            : `Invoice ${e.status} · ${e.description}`,
+            : e.type === "calories_logged"
+              ? `Logged ${e.kcal.toLocaleString("en-US")} kcal for ${e.dateLabel}`
+              : `Invoice ${e.status} · ${e.description}`,
       })),
     card: {
       name: client?.name ?? "",
@@ -1652,6 +1654,16 @@ export type FeedEvent =
       exerciseCount: number;
       setCount: number;
       at: string; // when the last set that completed the day was logged
+    }
+  | {
+      // The client reported a day's calories on their Nutrition tab.
+      type: "calories_logged";
+      id: string;
+      clientId: number;
+      clientName: string;
+      dateLabel: string; // "Mon, Sep 7"
+      kcal: number;
+      at: string;
     }
   | {
       type: "invoice_status";
@@ -1734,7 +1746,23 @@ export function getActivityFeed(limit = 30): FeedEvent[] {
     })
     .filter((e): e is FeedEvent => e !== null);
 
-  return [...workoutEvents, ...invoiceEvents]
+  const calorieEvents: FeedEvent[] = data.calorie_logs
+    .map((c): FeedEvent | null => {
+      const client = clientsById.get(c.client_id);
+      if (!client || !c.logged_at) return null;
+      return {
+        type: "calories_logged" as const,
+        id: `calories-${c.id}-${c.logged_at}`,
+        clientId: client.id,
+        clientName: client.name,
+        dateLabel: new Date(`${c.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
+        kcal: c.kcal,
+        at: c.logged_at,
+      };
+    })
+    .filter((e): e is FeedEvent => e !== null);
+
+  return [...workoutEvents, ...invoiceEvents, ...calorieEvents]
     .sort((a, b) => (a.at < b.at ? 1 : -1))
     .slice(0, limit);
 }
@@ -4777,8 +4805,9 @@ export function setCalorieLog(clientId: number, date: string, kcal: number | nul
     if (existing) data.calorie_logs = data.calorie_logs.filter((c) => c !== existing);
   } else if (existing) {
     existing.kcal = kcal;
+    existing.logged_at = new Date().toISOString();
   } else {
-    data.calorie_logs.push({ id: allocId("calorie_logs"), client_id: clientId, date, kcal });
+    data.calorie_logs.push({ id: allocId("calorie_logs"), client_id: clientId, date, kcal, logged_at: new Date().toISOString() });
   }
   persist();
 }
