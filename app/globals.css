@@ -2708,23 +2708,76 @@ a.cd-entry:hover { border-color: var(--accent); }
   gap: 12px;
 }
 .home-dark-headmain { flex: 1; min-width: 0; }
-.plan-chevron {
-  flex-shrink: 0;
-  margin-top: 8px;
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
-  border: 1px solid var(--fp-line);
-  background: var(--fp-raised);
+
+/* ---- Plan rows under the name: one per track, the phase running now
+   with a day-by-day progress bar, and what follows it. Track colours
+   match the coach's phase timeline. ---- */
+.home-plan-rows {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--fp-text);
-  cursor: pointer;
-  padding: 0;
-  transition: transform 0.18s ease;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
 }
-.plan-chevron.open { transform: rotate(180deg); }
+.home-plan-row { --pr-bg: #efede6; --pr-fg: #4a4a45; }
+.home-plan-row.nutrition { --pr-bg: #dff3ea; --pr-fg: #0f5c46; }
+.home-plan-row.training { --pr-bg: #e6e4fa; --pr-fg: #3a3390; }
+.home-plan-row.lifestyle { --pr-bg: #efede6; --pr-fg: #4a4a45; }
+.home-plan-row-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.home-plan-tag {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--pr-bg);
+  color: var(--pr-fg);
+}
+.home-plan-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--fp-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.home-plan-left {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--pr-fg);
+  text-align: right;
+}
+.home-plan-bar {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--pr-bg);
+  margin-top: 7px;
+  overflow: hidden;
+}
+.home-plan-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--pr-fg);
+  transition: width 300ms ease;
+}
+.home-plan-row-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 5px;
+  font-size: 11px;
+  color: var(--fp-dim);
+}
+.home-plan-row-foot b { font-weight: 800; color: var(--fp-text); }
 .plan-body {
   margin: 12px 0 4px;
   border: 1px solid var(--fp-line);

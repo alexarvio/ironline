@@ -4806,6 +4806,9 @@ export type PlanPhaseView = {
   // Position on the plan's week strip: first column and how many it spans.
   startIndex: number;
   span: number;
+  /** ISO Mondays of the phase's first and last week. */
+  startWeek: string;
+  endWeek: string;
 };
 export type PlanTrackView = { track: PhaseTrack; label: string; phases: PlanPhaseView[] };
 // One column of the week strip. monthLabel is set on the first week of
@@ -4817,6 +4820,8 @@ export type ClientPlanView = {
   tracks: PlanTrackView[];
   weeks: PlanWeekView[];
   nowIndex: number;
+  /** Server-local date, so the phone's day maths agree with the server's. */
+  today: string;
 };
 
 export function getClientPlanView(clientId: number): ClientPlanView | null {
@@ -4867,6 +4872,8 @@ export function getClientPlanView(clientId: number): ClientPlanView | null {
     weeks: weeksBetween(p.start_week, p.end_week) + 1,
     startIndex: Math.max(0, weeksBetween(first, p.start_week)),
     span: weeksBetween(p.start_week < first ? first : p.start_week, p.end_week) + 1,
+    startWeek: p.start_week,
+    endWeek: p.end_week,
   });
 
   // Headline track: nutrition if it has phases, else whichever track does.
@@ -4892,6 +4899,7 @@ export function getClientPlanView(clientId: number): ClientPlanView | null {
     ),
     weeks,
     nowIndex: weeksBetween(first, week),
+    today: localDateStr(),
   };
 }
 

@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { ArrowRightIcon, CalendarIcon, CheckIcon, ClockIcon } from "../components/icons";
 import TrendCarousel, { TrendMetric } from "./TrendCarousel";
-import PlanBody from "./PlanCard";
-import type { ClientPlanView } from "../lib/queries";
+import type { ClientPlanView, PlanPhaseView, PlanTrackView } from "../lib/queries";
 import { useOpenCheckIn } from "./CheckInContext";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
@@ -75,7 +73,6 @@ export default function HomeHub({
   // Check-in is a full-screen pushed view owned by AppShell; a due row just
   // asks it to open on that row's section.
   const openCheckIn = useOpenCheckIn();
-  const [planOpen, setPlanOpen] = useState(false);
 
   const dayTarget = totalDays || 7;
 
@@ -83,9 +80,9 @@ export default function HomeHub({
     <div className="home-dark">
       <div className="home-dark-datebar">{dateLabel}</div>
       {/* The header is the plan's summary: name, then the phase the coach
-          has them in, the week, and how long the phase has left with what
-          follows. When the coach has drawn a phase timeline, a chevron on
-          the right folds the whole plan out underneath. */}
+          has them in and the week. When the coach has drawn a phase
+          timeline, one row per track sits under it: the phase running now,
+          how far through it they are, and what follows. */}
       <div className="home-dark-headrow">
         <div className="home-dark-headmain">
           <div className="home-dark-name">{name}</div>
@@ -93,25 +90,10 @@ export default function HomeHub({
             <span className="home-dark-phase">{phase}</span>
             {subLine && <span className="home-dark-sub">{subLine}</span>}
             {goalNote && <span className="home-dark-goal">{goalNote}</span>}
-            {plan?.next && <span className="home-dark-sub">then {plan.next.name}</span>}
           </div>
         </div>
-        {plan && (
-          <button
-            type="button"
-            className={`plan-chevron${planOpen ? " open" : ""}`}
-            onClick={() => setPlanOpen((o) => !o)}
-            aria-expanded={planOpen}
-            aria-controls="plan-body"
-            aria-label={planOpen ? "Hide the full plan" : "See the full plan"}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-          </button>
-        )}
       </div>
-      {plan && planOpen && <PlanBody plan={plan} />}
+      {plan && <PlanRows plan={plan} />}
 
       <div className="home-dark-hr" />
 
@@ -230,6 +212,101 @@ export default function HomeHub({
           </div>
         </section>
       )}
+    </div>
+  );
+}
+
+// ---- Plan rows: one per track with phases, under the name. ----
+
+const TRACK_ORDER = ["nutrition", "training", "lifestyle"];
+
+const DAY = 86400000;
+const parse = (iso: string) => new Date(`${iso}T00:00:00`);
+/** Whole days from a to b (b - a), both ISO dates. */
+const daysBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / DAY);
+const addDays = (iso: string, n: number) => {
+  const d = parse(iso);
+  d.setDate(d.getDate() + n);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}-${String(d.getDate()).padStart(2, "0")}`;
+};
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+/** "8 weeks" from 7+ days, rounded up; "6 days" under a week. */
+const spanWords = (days: number) => (days >= 7 ? plural(Math.ceil(days / 7), "week") : plural(days, "day"));
+
+function PlanRows({ plan }: { plan: ClientPlanView }) {
+  const today = plan.today;
+  const rows = TRACK_ORDER.map((id) => plan.tracks.find((t) => t.track === id))
+    .filter((t): t is PlanTrackView => !!t)
+    .map((t) => {
+      const sorted = [...t.phases].sort((a, b) => (a.startWeek < b.startWeek ? -1 : 1));
+      // The phase running this week, else the next one coming up.
+      const running = sorted.find((p) => p.startWeek <= today && addDays(p.endWeek, 6) >= today) ?? null;
+      const shown = running ?? sorted.find((p) => p.startWeek > today) ?? null;
+      if (!shown) return null;
+      const upNext = sorted.find((p) => p.startWeek > shown.endWeek) ?? null;
+      return { track: t, phase: shown, running: !!running, upNext };
+    })
+    .filter((r): r is NonNullable<typeof r> => !!r);
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="home-plan-rows">
+      {rows.map(({ track, phase, running, upNext }) => (
+        <PlanRow key={track.track} track={track} phase={phase} running={running} upNext={upNext} today={today} />
+      ))}
+    </div>
+  );
+}
+
+function PlanRow({
+  track,
+  phase,
+  running,
+  upNext,
+  today,
+}: {
+  track: PlanTrackView;
+  phase: PlanPhaseView;
+  running: boolean;
+  upNext: PlanPhaseView | null;
+  today: string;
+}) {
+  const totalWeeks = phase.weeks;
+  const totalDays = totalWeeks * 7;
+  const endDate = addDays(phase.endWeek, 6);
+
+  let timeLeft: string;
+  let doneDays = 0;
+  if (running) {
+    // Days left counts today through the phase's last Sunday.
+    const remaining = daysBetween(today, endDate) + 1;
+    timeLeft = remaining <= 1 ? "Last day" : `${spanWords(remaining)} to go`;
+    doneDays = Math.min(totalDays, Math.max(0, daysBetween(phase.startWeek, today)));
+  } else {
+    timeLeft = `Starts in ${spanWords(daysBetween(today, phase.startWeek))}`;
+  }
+  const weekNow = Math.min(totalWeeks, Math.floor(doneDays / 7) + 1);
+
+  return (
+    <div className={`home-plan-row ${track.track}`}>
+      <div className="home-plan-row-head">
+        <span className="home-plan-tag">{track.label}</span>
+        <span className="home-plan-name">{phase.name}</span>
+        <span className="home-plan-left">{timeLeft}</span>
+      </div>
+      <div className="home-plan-bar">
+        <div className="home-plan-bar-fill" style={{ width: `${(doneDays / totalDays) * 100}%` }} />
+      </div>
+      <div className="home-plan-row-foot">
+        <span>{running ? `Week ${weekNow} of ${totalWeeks}` : plural(totalWeeks, "week")}</span>
+        {upNext && (
+          <span>
+            Up next: <b>{upNext.name}</b>
+          </span>
+        )}
+      </div>
     </div>
   );
 }
