@@ -60,9 +60,9 @@ export default function ProgramBuilderShell({
   newProgramSlot: ReactNode;
   emptySlot: ReactNode;
 }) {
-  // Default to the draft if there is one — that's the thing a coach opens
-  // this screen to work on — otherwise whatever is live.
-  const initial = programs.find((p) => p.status === "draft") ?? programs[0];
+  // Open on whatever is live: that is what the client is doing right now,
+  // and the first thing a coach wants to see. Drafts are one click away.
+  const initial = programs.find((p) => p.status === "live") ?? programs.find((p) => p.status === "draft") ?? programs[0];
   const [programId, setProgramId] = useState<number | null>(initial?.id ?? null);
   const program = programs.find((p) => p.id === programId) ?? initial;
   const [week, setWeek] = useState(initial?.defaultWeek ?? 1);
