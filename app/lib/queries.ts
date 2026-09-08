@@ -582,6 +582,23 @@ export function applyDueProgramDeployments() {
     .filter((p) => (p.status === "deployed" || p.scheduled_at) && !data.client_phases.some((ph) => ph.program_id === p.id))
     .forEach((p) => syncProgramPhase(p.id));
 
+  // Training phases drawn on the Plan tab before phases and programmes were
+  // linked: give each upcoming one its draft, so it can be built. Past ones
+  // are history and stay as they are.
+  const thisWeek = weekStart(localDateStr());
+  data.client_phases
+    .filter((ph) => ph.track === "training" && !ph.program_id && ph.end_week >= thisWeek)
+    .forEach((ph) => {
+      const weeks = Math.max(
+        1,
+        Math.round((new Date(`${ph.end_week}T00:00:00`).getTime() - new Date(`${ph.start_week}T00:00:00`).getTime()) / (7 * 86400000)) + 1
+      );
+      const existingWeeks = listWeekNumbers(ph.client_id);
+      const startWeek = (existingWeeks.length > 0 ? Math.max(...existingWeeks) : 0) + 1;
+      ph.program_id = createProgram(ph.client_id, ph.name, weeks, startWeek).id;
+      persist();
+    });
+
   // Repair for weeks added to a deployed programme before addProgramWeekAction
   // published them: any draft day inside a deployed programme's range is
   // published. Idempotent and cheap, so it rides along on every request.
@@ -4662,22 +4679,13 @@ export function addClientPhase(clientId: number, track: PhaseTrack, name: string
     start_week: first,
     end_week: last,
   };
-  // A training phase is a programme: adding one on the Plan tab makes the
+  // A training phase is a programme: adding one on the Plan tab makes a
   // draft, named and sized to match, ready to build in the Training tab.
-  // Only one draft can exist per client; if there is one already, the
-  // phase links to it rather than making a second.
   if (track === "training") {
     const weeks = Math.max(1, Math.round((new Date(`${last}T00:00:00`).getTime() - new Date(`${first}T00:00:00`).getTime()) / (7 * 86400000)) + 1);
-    let draft = getDraftProgram(clientId);
-    if (!draft) {
-      const existingWeeks = listWeekNumbers(clientId);
-      const startWeek = (existingWeeks.length > 0 ? Math.max(...existingWeeks) : 0) + 1;
-      draft = createProgram(clientId, phase.name, weeks, startWeek);
-    } else if (!data.client_phases.some((p) => p.program_id === draft!.id)) {
-      renameProgram(draft.id, phase.name || draft.name || "");
-      if (weeks > draft.total_weeks) updateProgramTotalWeeks(draft.id, weeks);
-    }
-    phase.program_id = draft.id;
+    const existingWeeks = listWeekNumbers(clientId);
+    const startWeek = (existingWeeks.length > 0 ? Math.max(...existingWeeks) : 0) + 1;
+    phase.program_id = createProgram(clientId, phase.name, weeks, startWeek).id;
   }
   getData().client_phases.push(phase);
   persist();

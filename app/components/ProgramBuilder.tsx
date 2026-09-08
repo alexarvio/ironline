@@ -4,7 +4,6 @@ import {
   getAssignmentsForDay,
   getCustomValues,
   getDeployedProgram,
-  getDraftProgram,
   getExerciseWeightTrendPct,
   getLogsForAssignment,
   getLogsForAssignmentByWeek,
@@ -89,7 +88,9 @@ export default function ProgramBuilder({
 }) {
   const allPrograms = listPrograms(clientId);
   const deployedProgram = getDeployedProgram(clientId);
-  const draftProgram = getDraftProgram(clientId);
+  // Every draft, in the order they will run: the Plan tab can hold several
+  // future blocks, each a draft here until it is deployed.
+  const draftPrograms = allPrograms.filter((p) => p.status === "draft");
   const pastPrograms = allPrograms
     .filter((p) => p.status === "deployed" && p.id !== deployedProgram?.id)
     .sort((a, b) => b.start_week - a.start_week);
@@ -589,7 +590,7 @@ export default function ProgramBuilder({
 
   const programs: BuilderProgram[] = [
     ...(deployedProgram ? [buildProgram(deployedProgram, "live")] : []),
-    ...(draftProgram ? [buildProgram(draftProgram, "draft")] : []),
+    ...draftPrograms.map((p) => buildProgram(p, "draft")),
     ...pastPrograms.map((p) => buildProgram(p, "past")),
   ];
 
@@ -600,7 +601,7 @@ export default function ProgramBuilder({
         clientId={clientId}
         columnsSlot={<ColumnChipRow key="cols" clientId={clientId} choices={columnChoices} max={MAX_TRAINING_COLUMNS} />}
         newProgramSlot={
-          draftProgram ? null : (
+          (
             <form key="new-program" action={createProgramAction}>
               <input type="hidden" name="clientId" value={clientId} />
               <input type="hidden" name="weekLinkBase" value={weekLinkBase} />
