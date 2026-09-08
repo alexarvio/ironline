@@ -18,7 +18,7 @@ export default function AddExerciseRow({
 }) {
   const pending = usePendingDay();
   const [picked, setPicked] = useState<ExerciseOption | null>(null);
-  const [fields, setFields] = useState<Record<FieldKey, string>>({ sets: "3", reps: "8-10", targetWeight: "", rpe: "", tempo: "", notes: "" });
+  const [fields, setFields] = useState<Record<FieldKey, string>>({ sets: "", reps: "", targetWeight: "", rpe: "", tempo: "", notes: "" });
   const [pickerKey, setPickerKey] = useState(0);
   const set = (key: FieldKey, value: string) => setFields((f) => ({ ...f, [key]: value }));
 
@@ -26,10 +26,11 @@ export default function AddExerciseRow({
     if (!pending || !picked) return;
     pending.add({ exerciseId: picked.id, exerciseName: picked.name, fields });
     setPicked(null);
-    setFields({ sets: "3", reps: "8-10", targetWeight: "", rpe: "", tempo: "", notes: "" });
+    setFields({ sets: "", reps: "", targetWeight: "", rpe: "", tempo: "", notes: "" });
     setPickerKey((k) => k + 1);
   };
 
+  // Nothing pre-filled: the coach types every target for the new row.
   const input = (key: FieldKey, props: { type?: "text" | "number"; step?: string; min?: number; placeholder?: string }) => (
     <input
       {...props}
