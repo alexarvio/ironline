@@ -141,7 +141,10 @@ function ClientDashboard({
           right-hand panel now; printing them twice on one screen made the
           panel read as an echo of the header rather than the place those
           facts are kept. The tabs are the top of this column. */}
-      <SectionTabs sections={sections} initialId={initialTab} />
+      {/* Keyed by client and requested tab: switching client lands on Plan,
+          and a deep link such as the feed's "See the week" opens its tab
+          even when this client is already on screen. */}
+      <SectionTabs key={`${clientId}:${initialTab ?? ""}`} sections={sections} initialId={initialTab} />
     </>
   );
 }
