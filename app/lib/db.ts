@@ -580,6 +580,20 @@ function load(): Data {
       (f) => used.has(f.id) || !seededNames.has(f.name.trim().toLowerCase())
     );
     if (data.measurement_fields.length !== before) save(data);
+    // One-time rename: the library item "Self satisfaction during the week"
+    // became "Satisfaction with the week" (Sept 2026). Metrics already added
+    // under the old name follow, so the coach's list and the client's
+    // check-in read the new wording without anyone retyping it.
+    let renamed = false;
+    for (const list of [data.metric_definitions, data.metric_template_items] as { name: string }[][]) {
+      for (const row of list) {
+        if (row.name === "Self satisfaction during the week") {
+          row.name = "Satisfaction with the week";
+          renamed = true;
+        }
+      }
+    }
+    if (renamed) save(data);
     return data;
   } catch {
     return emptyData();

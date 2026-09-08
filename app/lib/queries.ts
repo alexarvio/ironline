@@ -2203,7 +2203,7 @@ export const METRIC_LIBRARY: LibraryPack[] = [
       { name: "Contribution to goals", unit: "/10" },
       { name: "Motivation", unit: "/10" },
       { name: "Habit development", unit: "/10" },
-      { name: "Self satisfaction during the week", unit: "/10" },
+      { name: "Satisfaction with the week", unit: "/10" },
     ] },
   { id: "w_optional", label: "Optional", group: "optional", cadence: "weekly",
     items: [{ name: "Menstruation", unit: "/10" }] },

@@ -69,7 +69,7 @@ const TEMPLATES: Array<{ category: string; items: string[] }> = [
       "Contribution to goals",
       "Motivation",
       "Habit development",
-      "Self satisfaction during the week",
+      "Satisfaction with the week",
     ],
   },
   {
