@@ -11171,10 +11171,23 @@ a.cd-entry:hover { border-color: var(--accent); }
   line-height: 1;
 }
 .pb-row:hover .pb-grip { color: var(--steel); }
-.pb-row.dragging { opacity: 0.45; }
-.pb-row.dragging .pb-grip { cursor: grabbing; }
-/* Drop indicator: a line along the top edge of the row the drag is over. */
-.pb-row.drop-target td { box-shadow: inset 0 2px 0 var(--accent); }
+.pb-grip { touch-action: none; }
+/* While a row is being carried, the others slide into place; the carried
+   one rides above them with a lift. Table rows accept transforms in every
+   browser that matters here. */
+.pb-reordering .pb-row { transition: transform 160ms ease; }
+.pb-reordering .pb-row.lifted {
+  transition: none;
+  position: relative;
+  z-index: 5;
+  cursor: grabbing;
+}
+.pb-reordering .pb-row.lifted td {
+  background: var(--surface);
+  box-shadow: 0 6px 18px rgba(20, 23, 28, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+.pb-reordering .pb-row.lifted .pb-grip { color: var(--accent); cursor: grabbing; }
+.pb-reordering { user-select: none; }
 
 /* Copy a day to another day of the same week (day card header). */
 .pb-copy-day { display: flex; align-items: center; gap: 6px; }
