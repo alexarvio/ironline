@@ -153,7 +153,9 @@ export default function ReorderableRows({
       {pending?.draft.added.map((n) => (
         <tr key={`new-${n.tempId}`} className="pb-row pb-row-new">
           <td className="pb-grip-cell" aria-hidden="true"></td>
-          <td colSpan={columnCount}>
+          {/* grip + this + the undo cell must equal a normal row: exercise,
+              every column, and the logged column fold into this one. */}
+          <td colSpan={columnCount - 1}>
             <span className="pb-row-new-name">{n.exerciseName}</span>
             <span className="pb-row-new-meta">
               {[
