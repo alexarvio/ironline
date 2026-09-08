@@ -11202,21 +11202,18 @@ a.cd-entry:hover { border-color: var(--accent); }
   padding: 0 6px;
 }
 
-/* Nutrition targets: copy the other day type's macros into this one. */
-.nt-copy-day {
-  align-self: flex-start;
+/* Nutrition targets: link the two day types so one set of macros serves both. */
+.nt-link-days {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   margin: 6px 0 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--accent-ink, var(--accent));
-  font: inherit;
   font-size: 11px;
   font-weight: 700;
+  color: var(--steel);
   cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
 }
+.nt-link-days input { margin: 0; accent-color: var(--accent); width: 13px; height: 13px; }
 
 /* Picker popup text starts at the left, whatever the table cell around it
    does; the add-new form's video attaches as a chip. */

@@ -37,6 +37,11 @@ export default function NutritionTargets({
 }) {
   const [day, setDay] = useState<"training" | "rest">("training");
   const [values, setValues] = useState({ training, rest });
+  // Linked days: one set of macros for both. Starts on when the two already
+  // match; turning it on copies the day being edited onto the other, and
+  // while it is on every edit lands on both.
+  const same = (a: Macros, b: Macros) => a.protein === b.protein && a.carbs === b.carbs && a.fats === b.fats;
+  const [linked, setLinked] = useState(() => same(training, rest));
 
   const current = values[day];
   const kcal =
@@ -48,7 +53,10 @@ export default function NutritionTargets({
 
   const set = (key: "protein" | "carbs" | "fats", raw: string) => {
     const n = raw.trim() === "" ? null : Number(raw);
-    setValues((v) => ({ ...v, [day]: { ...v[day], [key]: n } }));
+    setValues((v) => {
+      const next = { ...v[day], [key]: n };
+      return linked ? { training: next, rest: next } : { ...v, [day]: next };
+    });
   };
 
   return (
@@ -84,15 +92,20 @@ export default function NutritionTargets({
         </div>
       </div>
 
-      {/* Same numbers both days: one click copies the other day type's
-          macros into this one, then Save as usual. */}
-      <button
-        type="button"
-        className="nt-copy-day"
-        onClick={() => setValues((v) => ({ ...v, [day]: { ...v[day === "training" ? "rest" : "training"] } }))}
-      >
-        {day === "training" ? "Same as rest day" : "Same as training day"}
-      </button>
+      {/* One switch links the two day types: on, the macros are the same on
+          both and editing either changes both. */}
+      <label className="nt-link-days">
+        <input
+          type="checkbox"
+          checked={linked}
+          onChange={(e) => {
+            const on = e.target.checked;
+            setLinked(on);
+            if (on) setValues((v) => ({ training: { ...v[day] }, rest: { ...v[day] } }));
+          }}
+        />
+        <span>Same macros on training and rest days</span>
+      </label>
 
       <div className="nt-kcal-block">
         <span className="ad-microlabel">Calories</span>
