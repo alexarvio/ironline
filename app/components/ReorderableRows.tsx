@@ -2,7 +2,7 @@
 
 import { ReactNode, useRef, useState } from "react";
 import { applyDayOrderToLaterWeeksAction, reorderAssignmentsAction } from "../lib/actions";
-import { usePendingDay } from "./DayPending";
+import { FieldKey, usePendingDay } from "./DayPending";
 
 // The exercise rows of one programme day, reorderable by dragging the grip
 // at the left of a row. The cells themselves are rendered on the server and
@@ -150,33 +150,49 @@ export default function ReorderableRows({
           </tr>
         );
       })}
-      {pending?.draft.added.map((n) => (
-        <tr key={`new-${n.tempId}`} className="pb-row pb-row-new">
-          <td className="pb-grip-cell" aria-hidden="true"></td>
-          {/* grip + this + the undo cell must equal a normal row: exercise,
-              every column, and the logged column fold into this one. */}
-          <td colSpan={columnCount - 1}>
-            <span className="pb-row-new-name">{n.exerciseName}</span>
-            <span className="pb-row-new-meta">
-              {[
-                n.fields.sets && `${n.fields.sets} sets`,
-                n.fields.reps && `${n.fields.reps} reps`,
-                n.fields.targetWeight && `${n.fields.targetWeight} kg`,
-                n.fields.rpe && `RPE ${n.fields.rpe}`,
-                n.fields.tempo && `tempo ${n.fields.tempo}`,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-              {" · "}added, not saved yet
-            </span>
-          </td>
-          <td>
-            <button type="button" className="row-icon-btn" aria-label={`Undo adding ${n.exerciseName}`} title="Undo" onClick={() => pending.unadd(n.tempId)}>
-              ×
-            </button>
-          </td>
-        </tr>
-      ))}
+      {/* Exercises added on the bar: a full row like any other, with its
+          targets editable in place, until Apply makes it real. The bar is
+          what says it is not saved yet; the row itself does not nag. */}
+      {pending?.draft.added.map((n) => {
+        const field = (key: FieldKey, props: { type?: "text" | "number"; step?: string; min?: number; placeholder?: string }) => (
+          <input {...props} value={n.fields[key]} onChange={(e) => pending.setAddedField(n.tempId, key, e.target.value)} />
+        );
+        return (
+          <tr key={`new-${n.tempId}`} className="pb-row pb-row-new">
+            <td className="pb-grip-cell" aria-hidden="true"></td>
+            <td className="exercise-name-cell">
+              <div className="pb-exercise-title">
+                <span className="pb-row-new-name">{n.exerciseName}</span>
+              </div>
+            </td>
+            {pending.columns.map((col) => {
+              if (col.kind === "custom") return <td key={col.id}></td>;
+              switch (col.key) {
+                case "sets":
+                  return <td key={col.id}>{field("sets", { type: "number", min: 1 })}</td>;
+                case "reps":
+                  return <td key={col.id}>{field("reps", { type: "text" })}</td>;
+                case "weight_goal":
+                  return <td key={col.id}>{field("targetWeight", { type: "number", step: "0.5", placeholder: "kg" })}</td>;
+                case "rpe":
+                  return <td key={col.id}>{field("rpe", { type: "number", step: "0.5", placeholder: "RPE" })}</td>;
+                case "tempo":
+                  return <td key={col.id}>{field("tempo", { type: "text", placeholder: "e.g. 3-1-1" })}</td>;
+                case "notes":
+                  return <td key={col.id}>{field("notes", { type: "text", placeholder: "Add a note" })}</td>;
+                default:
+                  return <td key={col.id}>–</td>;
+              }
+            })}
+            <td className="logged-col"></td>
+            <td>
+              <button type="button" className="row-icon-btn" aria-label={`Undo adding ${n.exerciseName}`} title="Undo" onClick={() => pending.unadd(n.tempId)}>
+                ×
+              </button>
+            </td>
+          </tr>
+        );
+      })}
       {offer !== "none" && (
         <tr className="pb-order-offer-row">
           <td colSpan={columnCount + 1}>

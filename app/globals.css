@@ -11368,9 +11368,8 @@ a.cd-entry:hover { border-color: var(--accent); }
 }
 
 /* An exercise added on the bar, waiting for Apply. */
-.pb-row-new td { background: #eef2fa; white-space: normal !important; }
-.pb-row-new-name { font-weight: 600; margin-right: 8px; }
-.pb-row-new-meta { color: var(--steel); font-size: 11.5px; }
+.pb .exercise-table .pb-row-new td { background: #eef2fa; }
+.pb-row-new-name { font-weight: 600; }
 
 @media (max-width: 760px) {
   .pb-pending { flex-wrap: wrap; }
