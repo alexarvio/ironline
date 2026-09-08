@@ -96,7 +96,7 @@ export default function ReorderableRows({
       const [moved] = next.splice(drag.from, 1);
       next.splice(drag.to, 0, moved);
       if (pending) {
-        pending.setOrder(next);
+        pending.setOrder(next, moved);
       } else {
         setChosen(next);
         void reorderAssignmentsAction(programDayId, next);

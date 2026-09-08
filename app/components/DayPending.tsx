@@ -29,11 +29,13 @@ type Draft = {
   removed: number[];
   added: NewExercise[];
   order: number[] | null;
+  /** The rows the coach has dragged, in drag order; one entry per row. */
+  moved: number[];
   label: string | null;
   rest: boolean | null;
 };
 
-const EMPTY: Draft = { fields: {}, custom: {}, removed: [], added: [], order: null, label: null, rest: null };
+const EMPTY: Draft = { fields: {}, custom: {}, removed: [], added: [], order: null, moved: [], label: null, rest: null };
 
 export const FIELD_LABEL: Record<FieldKey, string> = {
   sets: "sets",
@@ -76,7 +78,7 @@ type Ctx = {
   add: (ex: Omit<NewExercise, "tempId">) => void;
   unadd: (tempId: number) => void;
   setAddedField: (tempId: number, key: FieldKey, value: string) => void;
-  setOrder: (ids: number[]) => void;
+  setOrder: (ids: number[], movedId: number) => void;
   setLabel: (v: string) => void;
   setRest: (v: boolean) => void;
   apply: () => void;
@@ -185,10 +187,13 @@ export function DayPendingProvider({
   const unadd = (tempId: number) => setDraft((d) => ({ ...d, added: d.added.filter((a) => a.tempId !== tempId) }));
   const setAddedField = (tempId: number, key: FieldKey, value: string) =>
     setDraft((d) => ({ ...d, added: d.added.map((a) => (a.tempId === tempId ? { ...a, fields: { ...a.fields, [key]: value } } : a)) }));
-  const setOrder = (ids: number[]) =>
+  const setOrder = (ids: number[], movedId: number) =>
     setDraft((d) => {
       const same = ids.length === baseOrder.length && ids.every((id, i) => id === baseOrder[i]);
-      return { ...d, order: same ? null : ids };
+      // Back where it started: the whole reorder falls out of the draft.
+      if (same) return { ...d, order: null, moved: [] };
+      const moved = d.moved.includes(movedId) ? d.moved : [...d.moved, movedId];
+      return { ...d, order: ids, moved };
     });
   const setLabel = (v: string) => setDraft((d) => ({ ...d, label: v === label ? null : v }));
   const setRest = (v: boolean) => setDraft((d) => ({ ...d, rest: v === isRest ? null : v }));
@@ -215,18 +220,14 @@ export function DayPendingProvider({
     }
     draft.added.forEach((n) => out.push(`${n.exerciseName} added`));
     if (draft.order) {
-      // One entry for the reorder, named after the row that travelled
-      // furthest: dragging one row displaces its neighbours too, and
-      // listing each of those would triple-count a single drag.
-      const kept = baseOrder.filter((id) => !draft.removed.includes(id));
-      let best: { id: number; to: number; dist: number } | null = null;
-      draft.order.forEach((id, i) => {
-        const dist = Math.abs(kept.indexOf(id) - i);
-        if (dist > 0 && (!best || dist > best.dist)) best = { id, to: i, dist };
+      // One entry per row the coach dragged, at wherever it sits now. The
+      // neighbours a drag shoves aside are not listed: they did not move
+      // on their own account.
+      draft.moved.forEach((id) => {
+        const a = byId.get(id);
+        const at = draft.order!.indexOf(id);
+        if (a && at >= 0 && !draft.removed.includes(id)) out.push(`${a.exerciseName} moved to #${at + 1}`);
       });
-      const moved = best as { id: number; to: number; dist: number } | null;
-      const a = moved ? byId.get(moved.id) : undefined;
-      if (moved && a) out.push(`${a.exerciseName} moved to #${moved.to + 1}`);
     }
     if (draft.label != null) out.push(draft.label ? `Session renamed to "${draft.label}"` : "Session label cleared");
     if (draft.rest != null) out.push(`${dayName} → ${draft.rest ? "Rest day" : "Workout"}`);
