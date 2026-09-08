@@ -384,6 +384,10 @@ export function listPrograms(clientId: number): TrainingProgram[] {
     .sort((a, b) => a.start_week - b.start_week);
 }
 
+export function findProgramById(programId: number): TrainingProgram | null {
+  return getData().training_programs.find((p) => p.id === programId) ?? null;
+}
+
 export function getDeployedProgram(clientId: number): TrainingProgram | null {
   const deployed = listPrograms(clientId).filter((p) => p.status === "deployed");
   if (deployed.length === 0) return null;
@@ -439,6 +443,7 @@ export function renameProgram(programId: number, name: string) {
   if (!program) return;
   program.name = name.trim() || null;
   persist();
+  syncProgramPhase(programId);
 }
 
 export function deployProgram(programId: number) {
@@ -450,6 +455,7 @@ export function deployProgram(programId: number) {
   program.scheduled_at = null;
   for (let i = 0; i < program.total_weeks; i++) publishWeek(program.client_id, program.start_week + i);
   persist();
+  syncProgramPhase(programId);
   logCoachActivity(program.client_id, `Your coach published a new plan${program.name ? `: ${program.name}` : ""}. Check it out`, {
     kind: "programme",
     actionTab: "training",
@@ -463,6 +469,7 @@ export function scheduleProgramDeploy(programId: number, scheduledAt: string | n
   if (!program) return;
   program.scheduled_at = scheduledAt;
   persist();
+  syncProgramPhase(programId);
 }
 
 // Deletes a draft program and every one of its (still-empty-or-not)
@@ -510,6 +517,7 @@ export function updateProgramTotalWeeks(programId: number, requestedTotal: numbe
   }
   program.total_weeks = newTotal;
   persist();
+  syncProgramPhase(programId);
 }
 
 // Removes one week (1-based index within the programme) and closes the gap:
@@ -545,6 +553,7 @@ export function removeProgramWeek(programId: number, weekIndex: number) {
   });
   program.total_weeks -= 1;
   persist();
+  syncProgramPhase(programId);
 }
 
 export function removeProgram(programId: number) {
@@ -553,6 +562,7 @@ export function removeProgram(programId: number) {
   if (!program) return;
   for (let i = 0; i < program.total_weeks; i++) removeWeek(program.client_id, program.start_week + i);
   data.training_programs = data.training_programs.filter((p) => p.id !== programId);
+  data.client_phases = data.client_phases.filter((ph) => ph.program_id !== programId);
   persist();
 }
 
@@ -565,6 +575,12 @@ export function applyDueProgramDeployments() {
   const now = new Date().toISOString();
   const due = data.training_programs.filter((p) => p.status === "draft" && p.scheduled_at && p.scheduled_at <= now);
   due.forEach((program) => deployProgram(program.id));
+
+  // Programmes that went live or were scheduled before phases existed get
+  // their Plan-tab phase now. syncProgramPhase is a no-op once it exists.
+  data.training_programs
+    .filter((p) => (p.status === "deployed" || p.scheduled_at) && !data.client_phases.some((ph) => ph.program_id === p.id))
+    .forEach((p) => syncProgramPhase(p.id));
 
   // Repair for weeks added to a deployed programme before addProgramWeekAction
   // published them: any draft day inside a deployed programme's range is
@@ -4636,14 +4652,34 @@ export function addClientPhase(clientId: number, track: PhaseTrack, name: string
   const data = getData();
   const start = weekStart(startDate);
   const end = weekStart(endDate);
-  data.client_phases.push({
+  const first = start <= end ? start : end;
+  const last = start <= end ? end : start;
+  const phase: ClientPhase = {
     id: allocId("client_phases"),
     client_id: clientId,
     track,
     name: name.trim(),
-    start_week: start <= end ? start : end,
-    end_week: start <= end ? end : start,
-  });
+    start_week: first,
+    end_week: last,
+  };
+  // A training phase is a programme: adding one on the Plan tab makes the
+  // draft, named and sized to match, ready to build in the Training tab.
+  // Only one draft can exist per client; if there is one already, the
+  // phase links to it rather than making a second.
+  if (track === "training") {
+    const weeks = Math.max(1, Math.round((new Date(`${last}T00:00:00`).getTime() - new Date(`${first}T00:00:00`).getTime()) / (7 * 86400000)) + 1);
+    let draft = getDraftProgram(clientId);
+    if (!draft) {
+      const existingWeeks = listWeekNumbers(clientId);
+      const startWeek = (existingWeeks.length > 0 ? Math.max(...existingWeeks) : 0) + 1;
+      draft = createProgram(clientId, phase.name, weeks, startWeek);
+    } else if (!data.client_phases.some((p) => p.program_id === draft!.id)) {
+      renameProgram(draft.id, phase.name || draft.name || "");
+      if (weeks > draft.total_weeks) updateProgramTotalWeeks(draft.id, weeks);
+    }
+    phase.program_id = draft.id;
+  }
+  getData().client_phases.push(phase);
   persist();
 }
 
@@ -4653,16 +4689,83 @@ export function updateClientPhase(phaseId: number, track: PhaseTrack, name: stri
   if (!phase) return;
   const start = weekStart(startDate);
   const end = weekStart(endDate);
-  phase.track = track;
+  // A programme's phase stays on the training track; its name is the
+  // programme's name, so a rename here renames the programme.
+  phase.track = phase.program_id ? "training" : track;
   phase.name = name.trim();
   phase.start_week = start <= end ? start : end;
   phase.end_week = start <= end ? end : start;
   persist();
+  if (phase.program_id) {
+    const program = data.training_programs.find((p) => p.id === phase.program_id);
+    if (program) {
+      program.name = phase.name || program.name;
+      // A draft's length follows the phase; a live or scheduled programme's
+      // dates come from its deploy, so the phase snaps back to them.
+      if (program.status === "draft" && !program.scheduled_at) {
+        const weeks = Math.max(1, Math.round((new Date(`${phase.end_week}T00:00:00`).getTime() - new Date(`${phase.start_week}T00:00:00`).getTime()) / (7 * 86400000)) + 1);
+        if (weeks > program.total_weeks) updateProgramTotalWeeks(program.id, weeks);
+        persist();
+      } else {
+        persist();
+        syncProgramPhase(program.id);
+      }
+    }
+  }
 }
 
 export function removeClientPhase(phaseId: number) {
   const data = getData();
+  const phase = data.client_phases.find((p) => p.id === phaseId);
+  if (!phase) return;
   data.client_phases = data.client_phases.filter((p) => p.id !== phaseId);
+  persist();
+  // Removing a programme's phase: an unbuilt draft goes with it, since it
+  // only existed for the phase. Anything built, scheduled or live stays in
+  // the Training tab, unlinked.
+  if (phase.program_id) {
+    const program = data.training_programs.find((p) => p.id === phase.program_id);
+    if (program && program.status === "draft" && !program.scheduled_at) {
+      const built = getWeek(program.client_id, program.start_week).some((d) => getAssignmentsForDay(d.id).length > 0) ||
+        Array.from({ length: program.total_weeks }, (_, i) => program.start_week + i).some((w) =>
+          getWeek(program.client_id, w).some((d) => getAssignmentsForDay(d.id).length > 0)
+        );
+      if (!built) removeProgram(program.id);
+    }
+  }
+}
+
+// Keeps a programme's phase in step with the programme. A deployed or
+// scheduled programme always has one, dated from its deploy or scheduled
+// date and as long as its weeks. A plain draft only has one if it was made
+// from the Plan tab, and then only the name follows.
+export function syncProgramPhase(programId: number) {
+  const data = getData();
+  const program = data.training_programs.find((p) => p.id === programId);
+  if (!program) return;
+  const anchor = program.status === "deployed" ? program.deployed_at : program.scheduled_at;
+  let phase = data.client_phases.find((p) => p.program_id === programId);
+  const name = program.name?.trim() || "Untitled programme";
+  if (!anchor) {
+    if (phase && phase.name !== name) {
+      phase.name = name;
+      persist();
+    }
+    return;
+  }
+  const start = weekStart(anchor.slice(0, 10));
+  const endDate = new Date(`${start}T00:00:00`);
+  endDate.setDate(endDate.getDate() + (program.total_weeks - 1) * 7);
+  const end = localDateStr(endDate);
+  if (!phase) {
+    phase = { id: allocId("client_phases"), client_id: program.client_id, track: "training", name, start_week: start, end_week: end, program_id: programId };
+    data.client_phases.push(phase);
+  } else {
+    phase.track = "training";
+    phase.name = name;
+    phase.start_week = start;
+    phase.end_week = end;
+  }
   persist();
 }
 

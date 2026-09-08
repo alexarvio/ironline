@@ -74,6 +74,11 @@ export type ClientPhase = {
   name: string;
   start_week: string;
   end_week: string;
+  // Set when this phase IS a training programme: created from a deploy or
+  // schedule, or from the Plan tab (which makes the draft). Name and length
+  // follow the programme; the programme's dates follow the phase until it
+  // is deployed or scheduled.
+  program_id?: number | null;
 };
 type WorkoutAssignment = {
   id: number;

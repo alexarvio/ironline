@@ -135,6 +135,7 @@ import {
   copyProgramDay,
   copyProgramDayToLaterWeeks,
   clearProgramDay,
+  findProgramById,
   setExerciseVideoUrl,
   saveLibraryVideoUpload,
   getExerciseIdForAssignment,
@@ -358,6 +359,9 @@ export async function renameProgramAction(formData: FormData) {
 export async function deployProgramAction(formData: FormData) {
   await requireCoach();
   const programId = Number(formData.get("programId"));
+  // The name is what the client sees as their phase, so an unnamed
+  // programme can't go out. The button is disabled too; this is the backstop.
+  if (!programHasName(programId)) return;
   deployProgram(programId);
   revalidatePath("/client");
   revalidatePath("/admin");
@@ -373,6 +377,7 @@ export async function scheduleProgramDeployAction(formData: FormData) {
   const programId = Number(formData.get("programId"));
   const date = String(formData.get("date") || "");
   const time = String(formData.get("time") || "");
+  if (!programHasName(programId)) return;
   if (date && time) {
     const when = new Date(`${date}T${time}:00`);
     if (!Number.isNaN(when.getTime())) {
@@ -380,6 +385,10 @@ export async function scheduleProgramDeployAction(formData: FormData) {
     }
   }
   revalidatePath("/admin");
+}
+
+function programHasName(programId: number): boolean {
+  return !!findProgramById(programId)?.name?.trim();
 }
 
 export async function cancelProgramScheduleAction(formData: FormData) {

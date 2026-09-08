@@ -569,7 +569,7 @@ export default function ProgramBuilder({
       actionsSlot:
         status === "draft" ? (
           <div key={`a${program.id}`} className="pb-deploy-row">
-            <ProgramDeployControls programId={program.id} scheduledAt={program.scheduled_at} />
+            <ProgramDeployControls programId={program.id} scheduledAt={program.scheduled_at} hasName={!!program.name?.trim()} />
             <ConfirmDeleteButton
               action={removeProgramAction}
               hiddenFields={{ programId: program.id, weekLinkBase }}

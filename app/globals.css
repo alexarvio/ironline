@@ -11212,3 +11212,5 @@ a.cd-entry:hover { border-color: var(--accent); }
 
 .pb-copy-day-weeks { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--steel); white-space: nowrap; }
 .pb-copy-day-weeks input { margin: 0; accent-color: var(--accent); }
+
+.deploy-btn:disabled { opacity: 0.45; cursor: not-allowed; }

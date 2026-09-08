@@ -13,9 +13,12 @@ import { cancelProgramScheduleAction, deployProgramAction, scheduleProgramDeploy
 export default function ProgramDeployControls({
   programId,
   scheduledAt,
+  hasName,
 }: {
   programId: number;
   scheduledAt: string | null;
+  /** Deploying or scheduling needs a name: it is the client's phase label. */
+  hasName: boolean;
 }) {
   // The dialog only exists after a click, so it never renders on the server
   // and the portal needs no mounted guard.
@@ -40,17 +43,25 @@ export default function ProgramDeployControls({
     );
   }
 
+  const needName = !hasName;
   return (
     <div className="plan-deploy-controls">
       <form action={deployProgramAction}>
         <input type="hidden" name="programId" value={programId} />
-        <button className="deploy-btn" type="submit">
+        <button className="deploy-btn" type="submit" disabled={needName} title={needName ? "Name the programme first" : undefined}>
           Deploy now
         </button>
       </form>
-      <button type="button" className="btn secondary btn-sm" onClick={() => setScheduling(true)}>
+      <button
+        type="button"
+        className="btn secondary btn-sm"
+        onClick={() => setScheduling(true)}
+        disabled={needName}
+        title={needName ? "Name the programme first" : undefined}
+      >
         Schedule for later…
       </button>
+      {needName && <span className="plan-scheduled-note">Name it to deploy or schedule</span>}
       {/* The date and time live in a dialog, not inline: expanding here grew
           the editing bar and shoved the week rail down under the pointer. */}
       {scheduling &&
