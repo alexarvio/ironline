@@ -133,6 +133,7 @@ import {
   setCalorieLog,
   reorderAssignments,
   copyProgramDay,
+  copyProgramDayToLaterWeeks,
   setExerciseVideoUrl,
   saveLibraryVideoUpload,
   getExerciseIdForAssignment,
@@ -1533,6 +1534,8 @@ export async function copyProgramDayAction(formData: FormData) {
   const toDayId = Number(formData.get("toDayId"));
   if (!fromDayId || !toDayId) return;
   copyProgramDay(fromDayId, toDayId);
+  // Opt-in per copy: the same weekday in every later week of the programme.
+  if (formData.get("applyToRemainingWeeks") === "1") copyProgramDayToLaterWeeks(fromDayId, toDayId);
   revalidatePath("/client");
   revalidatePath("/admin");
 }

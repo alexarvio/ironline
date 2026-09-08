@@ -5,13 +5,18 @@ import { copyProgramDayAction } from "../lib/actions";
 
 // Copies this day's exercises (and label) onto another day of the same
 // week. Pick the target, then Copy; if the target already has exercises
-// the button says Replace, since that is what happens.
+// the button says Replace, since that is what happens. When the programme
+// has later weeks, a tick also puts the copy on that weekday in each of
+// them.
 export default function CopyDayMenu({
   fromDayId,
   targets,
+  remainingWeeks,
 }: {
   fromDayId: number;
   targets: { id: number; name: string; hasExercises: boolean }[];
+  /** How many weeks of the programme come after this one. */
+  remainingWeeks: number;
 }) {
   const [open, setOpen] = useState(false);
   const [targetId, setTargetId] = useState<number | null>(targets[0]?.id ?? null);
@@ -44,6 +49,14 @@ export default function CopyDayMenu({
           </option>
         ))}
       </select>
+      {remainingWeeks > 0 && (
+        <label className="pb-copy-day-weeks">
+          <input type="checkbox" name="applyToRemainingWeeks" value="1" />
+          <span>
+            + the {remainingWeeks} remaining week{remainingWeeks === 1 ? "" : "s"}
+          </span>
+        </label>
+      )}
       <button type="submit" className={`pb-toolbar-btn${target?.hasExercises ? " danger" : ""}`}>
         {target?.hasExercises ? "Replace" : "Copy"}
       </button>

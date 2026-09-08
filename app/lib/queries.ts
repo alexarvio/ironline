@@ -4882,3 +4882,24 @@ export function saveLibraryVideoUpload(exerciseId: number, buffer: Buffer, mimeT
   fs.writeFileSync(path.join(dir, filename), buffer);
   return `/uploads/library/${filename}`;
 }
+
+// After copying a day within a week, the coach can push the same day onto
+// the same weekday of every later week of the programme too. Each later
+// week's day is replaced the same way copyProgramDay replaces its target.
+export function copyProgramDayToLaterWeeks(fromDayId: number, toDayId: number): number {
+  const data = getData();
+  const dest = data.program_days.find((d) => d.id === toDayId);
+  if (!dest) return 0;
+  const program = listPrograms(dest.client_id).find(
+    (p) => dest.week_number >= p.start_week && dest.week_number < p.start_week + p.total_weeks
+  );
+  if (!program) return 0;
+  let touched = 0;
+  for (let week = dest.week_number + 1; week < program.start_week + program.total_weeks; week++) {
+    const target = getWeek(dest.client_id, week).find((d) => d.day_of_week === dest.day_of_week);
+    if (!target) continue;
+    copyProgramDay(fromDayId, target.id);
+    touched += 1;
+  }
+  return touched;
+}

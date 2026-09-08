@@ -148,6 +148,7 @@ export default function ProgramBuilder({
             assignments.length > 0 ? (
               <CopyDayMenu
                 fromDayId={day.id}
+                remainingWeeks={remainingWeeks}
                 targets={days
                   .filter((d) => d.id !== day.id)
                   .map((d) => ({

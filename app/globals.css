@@ -11199,3 +11199,6 @@ a.cd-entry:hover { border-color: var(--accent); }
 }
 .exercise-picker-video .pb-demo-chip { margin-left: 0; }
 .exercise-picker-video-name { font-size: 0.74rem; color: var(--steel); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.pb-copy-day-weeks { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--steel); white-space: nowrap; }
+.pb-copy-day-weeks input { margin: 0; accent-color: var(--accent); }
