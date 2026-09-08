@@ -134,6 +134,7 @@ import {
   reorderAssignments,
   copyProgramDay,
   copyProgramDayToLaterWeeks,
+  clearProgramDay,
   setExerciseVideoUrl,
   saveLibraryVideoUpload,
   getExerciseIdForAssignment,
@@ -1558,4 +1559,13 @@ export async function uploadExerciseVideoAction(formData: FormData): Promise<str
   revalidatePath("/admin");
   revalidatePath("/client");
   return null;
+}
+
+export async function clearProgramDayAction(formData: FormData) {
+  await requireCoach();
+  const programDayId = Number(formData.get("programDayId"));
+  if (!programDayId) return;
+  clearProgramDay(programDayId);
+  revalidatePath("/client");
+  revalidatePath("/admin");
 }

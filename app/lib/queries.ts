@@ -4903,3 +4903,16 @@ export function copyProgramDayToLaterWeeks(fromDayId: number, toDayId: number): 
   }
   return touched;
 }
+
+// Empties a day in one go: every exercise on it, with the sets logged
+// against them and their custom-column values. The day itself stays, with
+// its label, so it can be rebuilt or marked rest.
+export function clearProgramDay(programDayId: number) {
+  const data = getData();
+  const ids = data.workout_assignments.filter((wa) => wa.program_day_id === programDayId).map((wa) => wa.id);
+  if (ids.length === 0) return;
+  data.set_logs = data.set_logs.filter((sl) => !ids.includes(sl.workout_assignment_id));
+  data.assignment_custom_values = data.assignment_custom_values.filter((v) => !ids.includes(v.workout_assignment_id));
+  data.workout_assignments = data.workout_assignments.filter((wa) => !ids.includes(wa.id));
+  persist();
+}

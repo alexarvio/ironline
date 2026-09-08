@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { addExerciseAction, createProgramAction, removeExerciseAction, removeProgramAction } from "../lib/actions";
+import { addExerciseAction, clearProgramDayAction, createProgramAction, removeExerciseAction, removeProgramAction } from "../lib/actions";
 import {
   getAssignmentsForDay,
   getCustomValues,
@@ -146,6 +146,7 @@ export default function ProgramBuilder({
           }
           copySlot={
             assignments.length > 0 ? (
+              <>
               <CopyDayMenu
                 fromDayId={day.id}
                 remainingWeeks={remainingWeeks}
@@ -157,6 +158,14 @@ export default function ProgramBuilder({
                     hasExercises: getAssignmentsForDay(d.id).length > 0,
                   }))}
               />
+              {/* Whole day at once, rather than exercise by exercise. */}
+              <ConfirmDeleteButton
+                action={clearProgramDayAction}
+                hiddenFields={{ programDayId: day.id }}
+                label={`Clear ${DAY_NAMES_FULL[day.day_of_week - 1]}`}
+                description="Every exercise on this day goes, with anything the client logged against them. The day itself stays."
+              />
+              </>
             ) : undefined
           }
           statusPill={
