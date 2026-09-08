@@ -61,7 +61,9 @@ export default function ExerciseCoachNote({
             />
           </svg>
         </span>
-        {hasNote && !seen && <span className="ex-note-dot" aria-hidden="true" />}
+        {/* The dot marks that a note exists, read or not: the client wants to
+            see at a glance which exercises the coach has written on. */}
+        {hasNote && <span className={`ex-note-dot${seen ? " seen" : ""}`} aria-hidden="true" />}
       </button>
 
       {open && (

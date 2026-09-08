@@ -25,6 +25,14 @@ export default function TrainingDayCard({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const allDone = totalCount > 0 && doneCount === totalCount;
+  // The moment the last set lands and the day flips to complete, the card
+  // folds shut: the session is over, and an open sheet of finished rows
+  // only asks to be scrolled past. Tapping the header reopens it.
+  const [wasDone, setWasDone] = useState(allDone);
+  if (allDone !== wasDone) {
+    setWasDone(allDone);
+    if (allDone) setOpen(false);
+  }
 
   return (
     <div className="training-day-card">
