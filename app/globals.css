@@ -11183,3 +11183,19 @@ a.cd-entry:hover { border-color: var(--accent); }
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+/* Picker popup text starts at the left, whatever the table cell around it
+   does; the add-new form's video attaches as a chip. */
+.exercise-picker-pop { text-align: left; }
+/* Outranks the table's centred-input rule. */
+.exercise-table td .exercise-picker-pop input,
+.exercise-table td .exercise-picker-pop select,
+.exercise-picker-pop input,
+.exercise-picker-pop select { text-align: left; }
+.exercise-picker-video {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.exercise-picker-video .pb-demo-chip { margin-left: 0; }
+.exercise-picker-video-name { font-size: 0.74rem; color: var(--steel); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

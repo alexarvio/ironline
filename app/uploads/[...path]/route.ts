@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { DATA_DIR } from "../../lib/db";
-import { canAccessClient } from "../../lib/auth";
+import { canAccessClient, getSessionUser } from "../../lib/auth";
 
 // Serves files written by savePhotoUpload/saveChatMedia in queries.ts. Those
 // live under DATA_DIR/uploads rather than /public/uploads so they survive on
@@ -42,12 +42,19 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
   const [kind, clientIdRaw] = segments;
-  if (kind !== "progress" && kind !== "chat" && kind !== "demos") {
-    return new Response("Not found", { status: 404 });
-  }
-  const clientId = Number(clientIdRaw);
-  if (!Number.isInteger(clientId) || clientId <= 0 || !(await canAccessClient(clientId))) {
-    return new Response("Not found", { status: 404 });
+  if (kind === "library") {
+    // uploads/library/<exerciseId>.<ext>: the exercise library's own demo
+    // videos, shared by every client the exercise is prescribed to. Any
+    // signed-in user may watch; nothing about one client is in them.
+    if (!(await getSessionUser())) return new Response("Not found", { status: 404 });
+  } else {
+    if (kind !== "progress" && kind !== "chat" && kind !== "demos") {
+      return new Response("Not found", { status: 404 });
+    }
+    const clientId = Number(clientIdRaw);
+    if (!Number.isInteger(clientId) || clientId <= 0 || !(await canAccessClient(clientId))) {
+      return new Response("Not found", { status: 404 });
+    }
   }
 
   const uploadsRoot = path.join(DATA_DIR, "uploads");

@@ -17,10 +17,10 @@ import { clearDemoAction, setDemoUrlAction, uploadDemoVideoAction } from "../lib
 // a Drive share) or a file straight off their computer. A link costs nothing
 // to store and is the common case, so it leads.
 //
-// Per prescription, not per exercise: the same lift can carry a different cue
-// in a different block. The library's own video is the fallback and is shown
-// as such — never silently copied onto the prescription, which is what the
-// old save-on-blur did the moment the field was focused.
+// Per exercise, not per prescription: set once, the video follows the
+// exercise onto every client's sheet until the coach changes it, so a demo
+// is never attached twice. A prescription's own older video is kept only as
+// a fallback for rows set up before this.
 export default function DemoVideoDialog({
   assignmentId,
   clientId,
@@ -36,11 +36,11 @@ export default function DemoVideoDialog({
   /** The exercise library's video, used when the prescription has none. */
   libraryUrl: string | null;
 }) {
+  // The dialog only ever opens from a click, so it is never in the server
+  // render and the portal needs no mount guard.
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
 
-  const effective = demoUrl || libraryUrl;
+  const effective = libraryUrl || demoUrl;
 
   return (
     <>
@@ -49,24 +49,21 @@ export default function DemoVideoDialog({
         className={`pb-demo-chip${effective ? " set" : ""}`}
         onClick={() => setOpen(true)}
         title={
-          demoUrl
-            ? `Demo for this prescription: ${demoUrl}`
-            : libraryUrl
-            ? "Using the exercise library's video. Click to set one for this prescription"
+          effective
+            ? `Demo video for ${exerciseName}, shown wherever it is prescribed. Click to change it`
             : `Attach a demo video for ${exerciseName}`
         }
       >
         {effective ? "▶ Demo" : "Add demo"}
       </button>
 
-      {open && mounted &&
+      {open &&
         createPortal(
           <DemoDialog
             assignmentId={assignmentId}
             clientId={clientId}
             exerciseName={exerciseName}
-            demoUrl={demoUrl}
-            libraryUrl={libraryUrl}
+            effective={effective}
             onClose={() => setOpen(false)}
           />,
           document.body
@@ -79,15 +76,14 @@ function DemoDialog({
   assignmentId,
   clientId,
   exerciseName,
-  demoUrl,
-  libraryUrl,
+  effective,
   onClose,
 }: {
   assignmentId: number;
   clientId: number;
   exerciseName: string;
-  demoUrl: string | null;
-  libraryUrl: string | null;
+  /** What the client sees now: the library video, else an older per-row one. */
+  effective: string | null;
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<"link" | "file">("link");
@@ -104,8 +100,6 @@ function DemoDialog({
     cardRef.current?.querySelector("input")?.focus();
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
-
-  const uploaded = demoUrl?.startsWith("/uploads/") ?? false;
 
   const run = (fn: () => Promise<string | null>) =>
     start(async () => {
@@ -131,26 +125,19 @@ function DemoDialog({
         {/* What the client sees right now, stated plainly — including when it
             comes from the library rather than from this prescription. */}
         <div className="pb-demo-current">
-          {demoUrl ? (
+          {effective ? (
             <>
               <span className="pb-demo-current-label">Client sees</span>
-              <a href={demoUrl} target="_blank" rel="noreferrer" className="pb-demo-current-link">
-                {uploaded ? "Uploaded file" : demoUrl}
+              <a href={effective} target="_blank" rel="noreferrer" className="pb-demo-current-link">
+                {effective.startsWith("/uploads/") ? "Uploaded file" : effective}
               </a>
+              <span className="pb-demo-fallback">on every client&rsquo;s sheet that has {exerciseName}</span>
               <form action={clearDemoAction}>
                 <input type="hidden" name="assignmentId" value={assignmentId} />
                 <button type="submit" className="pb-demo-remove">
                   Remove
                 </button>
               </form>
-            </>
-          ) : libraryUrl ? (
-            <>
-              <span className="pb-demo-current-label">Client sees</span>
-              <a href={libraryUrl} target="_blank" rel="noreferrer" className="pb-demo-current-link">
-                {libraryUrl}
-              </a>
-              <span className="pb-demo-fallback">from the exercise library</span>
             </>
           ) : (
             <span className="pb-demo-current-label">Nothing attached yet.</span>
@@ -180,7 +167,7 @@ function DemoDialog({
             <input
               name="demoUrl"
               type="url"
-              defaultValue={uploaded ? "" : demoUrl ?? ""}
+              defaultValue={effective && !effective.startsWith("/uploads/") ? effective : ""}
               placeholder="https://youtube.com/watch?v=…"
               aria-label={`Demo video link for ${exerciseName}`}
               className="pb-demo-input"

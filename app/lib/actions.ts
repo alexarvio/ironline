@@ -133,6 +133,9 @@ import {
   setCalorieLog,
   reorderAssignments,
   copyProgramDay,
+  setExerciseVideoUrl,
+  saveLibraryVideoUpload,
+  getExerciseIdForAssignment,
 } from "./queries";
 import { writeReportNarrative } from "./reportAi";
 import type { ReportSectionType } from "./reportSectionTypes";
@@ -1309,6 +1312,8 @@ export async function setDemoUrlAction(formData: FormData): Promise<string | nul
 export async function clearDemoAction(formData: FormData) {
   await requireCoach();
   const assignmentId = Number(formData.get("assignmentId"));
+  const exerciseId = getExerciseIdForAssignment(assignmentId);
+  if (exerciseId != null) setExerciseVideoUrl(exerciseId, null);
   setAssignmentDemoUrl(assignmentId, "");
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -1337,8 +1342,14 @@ export async function uploadDemoVideoAction(formData: FormData): Promise<string 
   if (!file.type.startsWith("video/")) return "That doesn't look like a video file.";
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const publicPath = saveDemoVideoUpload(clientId, assignmentId, buffer, file.type);
-  setAssignmentDemoUrl(assignmentId, publicPath);
+  // Stored against the exercise itself, so every client who is prescribed
+  // it gets the same clip. clientId is still checked above so a stale form
+  // can't upload against a deleted prescription.
+  const exerciseId = getExerciseIdForAssignment(assignmentId);
+  if (exerciseId == null) return "That exercise no longer exists.";
+  const publicPath = saveLibraryVideoUpload(exerciseId, buffer, file.type);
+  setExerciseVideoUrl(exerciseId, publicPath);
+  setAssignmentDemoUrl(assignmentId, "");
   revalidatePath("/admin");
   revalidatePath("/client");
   return null;
@@ -1524,4 +1535,24 @@ export async function copyProgramDayAction(formData: FormData) {
   copyProgramDay(fromDayId, toDayId);
   revalidatePath("/client");
   revalidatePath("/admin");
+}
+
+
+// ---- Library video straight from the exercise picker's add-new form -------
+
+export async function uploadExerciseVideoAction(formData: FormData): Promise<string | null> {
+  await requireCoach();
+  const exerciseId = Number(formData.get("exerciseId"));
+  if (!exerciseId) return "That exercise no longer exists.";
+  const file = formData.get("file") as File | null;
+  if (!file || file.size === 0) return "Choose a file first.";
+  if (file.size > MAX_DEMO_BYTES) {
+    return `That file is ${(file.size / 1024 / 1024).toFixed(0)}MB. The limit is 64MB. Trim the clip and try again.`;
+  }
+  if (!file.type.startsWith("video/")) return "That doesn't look like a video file.";
+  const buffer = Buffer.from(await file.arrayBuffer());
+  setExerciseVideoUrl(exerciseId, saveLibraryVideoUpload(exerciseId, buffer, file.type));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  return null;
 }

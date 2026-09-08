@@ -1031,6 +1031,10 @@ export function getClientIdForAssignment(assignmentId: number): number | null {
   return day?.client_id ?? null;
 }
 
+export function getExerciseIdForAssignment(assignmentId: number): number | null {
+  return getData().workout_assignments.find((wa) => wa.id === assignmentId)?.exercise_id ?? null;
+}
+
 export function getClientIdForPhotoSlot(slotId: number): number | null {
   return getData().photo_slots.find((s) => s.id === slotId)?.client_id ?? null;
 }
@@ -4852,4 +4856,29 @@ export function copyProgramDay(fromDayId: number, toDayId: number) {
     }
   }
   persist();
+}
+
+
+// ---- Exercise library videos: one demo per exercise, shared everywhere it
+// is prescribed. Set once, it follows the exercise onto every client's
+// sheet until the coach changes it. ----
+
+export function setExerciseVideoUrl(exerciseId: number, url: string | null) {
+  const data = getData();
+  const exercise = data.exercises.find((e) => e.id === exerciseId);
+  if (!exercise) return;
+  exercise.video_url = url && url.trim() ? url.trim() : null;
+  persist();
+}
+
+export function saveLibraryVideoUpload(exerciseId: number, buffer: Buffer, mimeType: string): string {
+  const ext = (mimeType.split("/")[1] || "mp4").replace(/[^a-z0-9]/gi, "").slice(0, 5) || "mp4";
+  const dir = path.join(DATA_DIR, "uploads", "library");
+  fs.mkdirSync(dir, { recursive: true });
+  for (const existing of fs.readdirSync(dir)) {
+    if (existing.startsWith(`${exerciseId}.`)) fs.rmSync(path.join(dir, existing), { force: true });
+  }
+  const filename = `${exerciseId}.${ext}`;
+  fs.writeFileSync(path.join(dir, filename), buffer);
+  return `/uploads/library/${filename}`;
 }

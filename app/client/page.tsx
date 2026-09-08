@@ -468,7 +468,7 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
                             exercise library's own video is the fallback. */}
                         {(a.demo_url || a.exercise_video_url) && (
                           <a
-                            href={a.demo_url ?? a.exercise_video_url ?? undefined}
+                            href={a.exercise_video_url ?? a.demo_url ?? undefined}
                             target="_blank"
                             rel="noreferrer"
                             className="video-link"
