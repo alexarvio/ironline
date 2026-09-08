@@ -136,6 +136,7 @@ import {
   copyProgramDayToLaterWeeks,
   clearProgramDay,
   findProgramById,
+  applyDayOrderToLaterWeeks,
   setExerciseVideoUrl,
   saveLibraryVideoUpload,
   getExerciseIdForAssignment,
@@ -1575,6 +1576,15 @@ export async function clearProgramDayAction(formData: FormData) {
   const programDayId = Number(formData.get("programDayId"));
   if (!programDayId) return;
   clearProgramDay(programDayId);
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+// Called from the reorder bar after a drop, with no form.
+export async function applyDayOrderToLaterWeeksAction(programDayId: number) {
+  await requireCoach();
+  if (!Number.isInteger(programDayId)) return;
+  applyDayOrderToLaterWeeks(programDayId);
   revalidatePath("/client");
   revalidatePath("/admin");
 }

@@ -11238,3 +11238,8 @@ a.cd-entry:hover { border-color: var(--accent); }
 .pb-copy-day-weeks input { margin: 0; accent-color: var(--accent); }
 
 .deploy-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* After a reorder: offer the same order to the later weeks. */
+.pb-order-offer-row td { padding: 6px 10px !important; background: var(--accent-tint); white-space: normal !important; }
+.pb-order-offer { display: flex; align-items: center; gap: 10px; font-size: 11.5px; color: var(--ink); }
+.pb-order-offer-dismiss { margin-left: auto; border: 0; background: none; color: var(--steel); font: inherit; font-size: 14px; cursor: pointer; }

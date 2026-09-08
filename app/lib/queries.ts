@@ -5027,3 +5027,36 @@ export function clearProgramDay(programDayId: number) {
   data.workout_assignments = data.workout_assignments.filter((wa) => !ids.includes(wa.id));
   persist();
 }
+
+// After the coach reorders a day, the same order can be pushed onto that
+// weekday in every later week of the programme. Matched by exercise: rows
+// for exercises the source day has take its order; anything else on the
+// later day keeps its relative place after them.
+export function applyDayOrderToLaterWeeks(programDayId: number): number {
+  const data = getData();
+  const src = data.program_days.find((d) => d.id === programDayId);
+  if (!src) return 0;
+  const program = listPrograms(src.client_id).find(
+    (p) => src.week_number >= p.start_week && src.week_number < p.start_week + p.total_weeks
+  );
+  if (!program) return 0;
+  const sequence = data.workout_assignments
+    .filter((wa) => wa.program_day_id === src.id)
+    .sort((a, b) => a.order_index - b.order_index)
+    .map((wa) => wa.exercise_id);
+  let touched = 0;
+  for (let week = src.week_number + 1; week < program.start_week + program.total_weeks; week++) {
+    const day = getWeek(src.client_id, week).find((d) => d.day_of_week === src.day_of_week);
+    if (!day) continue;
+    const rows = data.workout_assignments.filter((wa) => wa.program_day_id === day.id).sort((a, b) => a.order_index - b.order_index);
+    if (rows.length === 0) continue;
+    const rank = (wa: WorkoutAssignment) => {
+      const i = sequence.indexOf(wa.exercise_id);
+      return i < 0 ? sequence.length + wa.order_index : i;
+    };
+    [...rows].sort((a, b) => rank(a) - rank(b)).forEach((wa, i) => (wa.order_index = i));
+    touched += 1;
+  }
+  if (touched > 0) persist();
+  return touched;
+}

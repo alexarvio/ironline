@@ -202,6 +202,8 @@ export default function ProgramBuilder({
               </thead>
               <ReorderableRows
                 programDayId={day.id}
+                remainingWeeks={remainingWeeks}
+                columnCount={columns.length + 3}
                 footer={
                 <tr className="add-exercise-row">
                   <td aria-hidden="true"></td>

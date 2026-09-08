@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useRef, useState } from "react";
-import { reorderAssignmentsAction } from "../lib/actions";
+import { applyDayOrderToLaterWeeksAction, reorderAssignmentsAction } from "../lib/actions";
 
 // The exercise rows of one programme day, reorderable by dragging the grip
 // at the left of a row. The cells themselves are rendered on the server and
@@ -16,11 +16,17 @@ export default function ReorderableRows({
   programDayId,
   rows,
   footer,
+  remainingWeeks,
+  columnCount,
 }: {
   programDayId: number;
   rows: { id: number; cells: ReactNode }[];
   /** The add-exercise row, kept at the bottom and not draggable. */
   footer: ReactNode;
+  /** Later weeks of the programme the new order could be pushed onto. */
+  remainingWeeks: number;
+  /** Cells per row, so the offer row can span the table. */
+  columnCount: number;
 }) {
   // The last order the coach chose here; reconciled against the rows the
   // server currently has, so an exercise added or removed elsewhere shows up
@@ -32,6 +38,9 @@ export default function ReorderableRows({
 
   // Live drag state. `from` is the grabbed row's index in `order`, `to` is
   // where it currently sits, `dy` is how far the pointer has moved.
+  // After a drop, offer the same order to the later weeks; "applied" once
+  // taken up, cleared by the next drag.
+  const [offer, setOffer] = useState<"none" | "offer" | "applying" | "applied">("none");
   const [drag, setDrag] = useState<{ from: number; to: number; dy: number; height: number } | null>(null);
   const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map());
   const startY = useRef(0);
@@ -42,6 +51,7 @@ export default function ReorderableRows({
     e.preventDefault();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     startY.current = e.clientY;
+    setOffer("none");
     // Row midpoints at grab time decide when the grabbed row has passed a
     // neighbour; measured once so layout isn't read on every move.
     const rects = order.map((id) => rowRefs.current.get(id)?.getBoundingClientRect());
@@ -79,6 +89,7 @@ export default function ReorderableRows({
       next.splice(drag.to, 0, moved);
       setChosen(next);
       void reorderAssignmentsAction(programDayId, next);
+      if (remainingWeeks > 0) setOffer("offer");
     }
     setDrag(null);
   };
@@ -127,6 +138,36 @@ export default function ReorderableRows({
           </tr>
         );
       })}
+      {offer !== "none" && (
+        <tr className="pb-order-offer-row">
+          <td colSpan={columnCount + 1}>
+            <div className="pb-order-offer">
+              {offer === "applied" ? (
+                <span>Order applied to the {remainingWeeks} remaining week{remainingWeeks === 1 ? "" : "s"}.</span>
+              ) : (
+                <>
+                  <span>Order saved for this week.</span>
+                  <button
+                    type="button"
+                    className="pb-toolbar-btn"
+                    disabled={offer === "applying"}
+                    onClick={async () => {
+                      setOffer("applying");
+                      await applyDayOrderToLaterWeeksAction(programDayId);
+                      setOffer("applied");
+                    }}
+                  >
+                    {offer === "applying" ? "Applying…" : `Also apply to the ${remainingWeeks} remaining week${remainingWeeks === 1 ? "" : "s"}`}
+                  </button>
+                  <button type="button" className="pb-order-offer-dismiss" onClick={() => setOffer("none")} aria-label="Dismiss">
+                    ×
+                  </button>
+                </>
+              )}
+            </div>
+          </td>
+        </tr>
+      )}
       {footer}
     </tbody>
   );
