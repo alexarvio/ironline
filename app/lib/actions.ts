@@ -200,14 +200,17 @@ export async function updateAssignmentAction(formData: FormData) {
   revalidatePath("/admin");
 }
 
-export async function addExerciseToLibraryAction(formData: FormData) {
+// Returns the new exercise so the picker can select it for the row it was
+// added from, without waiting for the refreshed library to come back.
+export async function addExerciseToLibraryAction(formData: FormData): Promise<{ id: number; name: string } | null> {
   await requireCoach();
   const name = String(formData.get("name") || "").trim();
   const muscleGroup = String(formData.get("muscleGroup") || "other");
   const videoUrl = String(formData.get("videoUrl") || "").trim() || null;
-  if (!name) return;
-  addExercise(name, muscleGroup, videoUrl);
+  if (!name) return null;
+  const exercise = addExercise(name, muscleGroup, videoUrl);
   revalidatePath("/admin");
+  return { id: exercise.id, name: exercise.name };
 }
 
 export async function updateTrainingColumnAction(formData: FormData) {
