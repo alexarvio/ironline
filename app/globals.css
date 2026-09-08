@@ -461,10 +461,13 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 }
 
 .admin-day-summary {
-  font-size: 0.76rem;
-  color: var(--steel);
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--ink);
   white-space: nowrap;
 }
+/* Rest and empty days keep the quiet grey; only a built day is loud. */
+.admin-day-card.rest .admin-day-summary { font-weight: 600; color: var(--steel); }
 
 .admin-day-chevron-btn {
   border: none;
@@ -7798,8 +7801,9 @@ a.cd-entry:hover { border-color: var(--accent); }
   padding: 7px 6px;
 }
 
-.pb .exercise-table td:first-child,
-.pb .exercise-table th:first-child {
+/* The exercise column is the second one now that a grip column leads. */
+.pb .exercise-table td:nth-child(2),
+.pb .exercise-table th:nth-child(2) {
   padding-left: 10px;
   white-space: normal;
 }
@@ -7814,9 +7818,15 @@ a.cd-entry:hover { border-color: var(--accent); }
 
 /* Exercise names need room for the trend badge and last-week reference
    underneath; Notes takes whatever is left over. */
-.pb .exercise-table th:first-child {
+.pb .exercise-table th:nth-child(2) {
   width: 210px;
   min-width: 210px;
+}
+.pb .exercise-table th:first-child,
+.pb .exercise-table td:first-child {
+  width: 22px;
+  min-width: 22px;
+  padding: 0;
 }
 
 /* Notes takes what's left, but never so little that it can't hold a phrase. */
@@ -7872,7 +7882,7 @@ a.cd-entry:hover { border-color: var(--accent); }
 
 /* The exercise name and the notes cell are text, so they stay left-aligned. */
 .pb .exercise-table td.notes-cell input,
-.pb .exercise-table td:first-child input { text-align: left; }
+.pb .exercise-table td:nth-child(2) input { text-align: left; }
 
 /* ---- Notes: what fits, then a proper editor ---- */
 .pb-note-cell {

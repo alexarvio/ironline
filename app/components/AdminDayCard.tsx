@@ -17,6 +17,7 @@ export default function AdminDayCard({
   labelSlot,
   restSlot,
   copySlot,
+  dangerSlot,
   statusPill,
   summary,
   isRest,
@@ -28,6 +29,8 @@ export default function AdminDayCard({
   restSlot?: ReactNode;
   /** "Copy to…" another day of the week; only for days with exercises. */
   copySlot?: ReactNode;
+  /** Clear the day; always the last thing in the header. */
+  dangerSlot?: ReactNode;
   statusPill?: ReactNode;
   summary: string;
   isRest: boolean;
@@ -80,10 +83,12 @@ export default function AdminDayCard({
           <div className="inline-row" onClick={(e) => e.stopPropagation()}>
             {labelSlot}
           </div>
-        </div>
-        <div className="admin-day-card-head-right">
+          {/* What is on the day sits with its name, where the eye lands; the
+              controls keep to the right. */}
           <span className="admin-day-summary">{summary}</span>
           {statusPill}
+        </div>
+        <div className="admin-day-card-head-right">
           {copySlot && (
             <div className="inline-row" onClick={(e) => e.stopPropagation()}>
               {copySlot}
@@ -92,6 +97,11 @@ export default function AdminDayCard({
           {restSlot && (
             <div className="inline-row" onClick={(e) => e.stopPropagation()}>
               {restSlot}
+            </div>
+          )}
+          {dangerSlot && (
+            <div className="inline-row" onClick={(e) => e.stopPropagation()}>
+              {dangerSlot}
             </div>
           )}
         </div>
