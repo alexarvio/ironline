@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { addExerciseToLibraryAction, uploadExerciseVideoAction } from "../lib/actions";
 
-type Group = { slug: string; label: string };
-type ExerciseOption = { id: number; name: string };
+export type Group = { slug: string; label: string };
+export type ExerciseOption = { id: number; name: string };
 // A video waiting to be attached to the exercise being created: a link, or
 // a file that is uploaded once the exercise exists and has an id.
 type PendingVideo = { kind: "link"; url: string } | { kind: "file"; file: File };
@@ -22,10 +22,14 @@ export default function ExercisePicker({
   formId,
   groups,
   exercisesByGroup,
+  onPick,
 }: {
-  formId: string;
+  /** Form the hidden exerciseId input belongs to, when posting a form. */
+  formId?: string;
   groups: readonly Group[];
   exercisesByGroup: Record<string, ExerciseOption[]>;
+  /** Called with the chosen exercise instead of, or as well as, the hidden input. */
+  onPick?: (ex: ExerciseOption) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -48,6 +52,7 @@ export default function ExercisePicker({
   const pick = (ex: ExerciseOption) => {
     setSelectedId(ex.id);
     setSelectedName(ex.name);
+    onPick?.(ex);
     setOpen(false);
     setActiveGroup(null);
     setAddingNew(false);
@@ -98,7 +103,7 @@ export default function ExercisePicker({
 
   return (
     <div className="exercise-picker">
-      <input type="hidden" name="exerciseId" form={formId} value={selectedId ?? ""} />
+      {formId && <input type="hidden" name="exerciseId" form={formId} value={selectedId ?? ""} />}
       <button ref={triggerRef} type="button" className="exercise-picker-trigger" onClick={toggleOpen}>
         {selectedName || "Add exercise…"}
       </button>

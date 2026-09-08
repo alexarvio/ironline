@@ -405,7 +405,9 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   border: 1px solid var(--border);
   border-radius: 8px;
   background: white;
-  overflow: hidden;
+  /* clip, not hidden: hidden makes the card a scroll container and the
+     pending-changes bar would then stick to the card instead of the page. */
+  overflow: clip;
 }
 
 .admin-day-card + .admin-day-card {
@@ -11240,3 +11242,137 @@ a.cd-entry:hover { border-color: var(--accent); }
 .pb-order-offer-row td { padding: 6px 10px !important; background: var(--accent-tint); white-space: normal !important; }
 .pb-order-offer { display: flex; align-items: center; gap: 10px; font-size: 11.5px; color: var(--ink); }
 .pb-order-offer-dismiss { margin-left: auto; border: 0; background: none; color: var(--steel); font: inherit; font-size: 14px; cursor: pointer; }
+
+
+/* ---- Pending-changes bar (one per programme-day card) ------------------
+   Sticks to the bottom of the card's scroll parent while the day is in
+   view, so a long day can be edited from the top and applied from wherever
+   the coach is. Navy, not the page's accent, so it reads as "unsaved state"
+   rather than as one more button row. */
+.pb-pending {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 52px;
+  padding: 12px 18px;
+  background: #1e3a6e;
+  color: #fff;
+  font-size: 13px;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  animation: pb-pending-in 150ms ease-out;
+}
+.pb-pending.failed { background: #7a2430; }
+@keyframes pb-pending-in {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.pb-pending-count {
+  flex: none;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-weight: 600;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.pb-pending-count.pulse { animation: pb-pending-pulse 320ms ease-out; }
+@keyframes pb-pending-pulse {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.12); background: rgba(255, 255, 255, 0.34); }
+  100% { transform: scale(1); }
+}
+.pb-pending-summary {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: #fff;
+  cursor: pointer;
+}
+.pb-pending-summary.expanded { white-space: normal; }
+.pb-pending-list { display: flex; flex-direction: column; gap: 2px; }
+.pb-pending-more { color: #c8d3ea; }
+.pb-pending-right {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+.pb-pending-status { color: #c8d3ea; white-space: nowrap; }
+.pb-pending.failed .pb-pending-status { color: #ffd6dc; }
+.pb-pending-ghost {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  color: #fff;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.pb-pending-ghost:hover { background: rgba(255, 255, 255, 0.1); }
+.pb-pending-also {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #c8d3ea;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pb-pending-also input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: #fff;
+}
+.pb-pending-apply {
+  border: 0;
+  background: #fff;
+  color: #1e3a6e;
+  border-radius: 6px;
+  padding: 6px 16px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pb-pending-apply:hover { background: #eef2fa; }
+.pb-pending-apply:disabled, .pb-pending-ghost:disabled { opacity: 0.6; cursor: default; }
+.pb-pending-notice {
+  padding: 8px 18px;
+  font-size: 12.5px;
+  color: var(--steel);
+  background: var(--paper-raised);
+  border-top: 1px solid var(--border);
+}
+
+/* A field whose value is queued but not saved. */
+.pb .exercise-table input.pb-changed,
+.pb .day-label-input.pb-changed,
+.pb .pb-note-cell.pb-changed {
+  box-shadow: inset 0 0 0 1.5px #1e3a6e;
+  background: #eef2fa;
+}
+
+/* An exercise added on the bar, waiting for Apply. */
+.pb-row-new td { background: #eef2fa; white-space: normal !important; }
+.pb-row-new-name { font-weight: 600; margin-right: 8px; }
+.pb-row-new-meta { color: var(--steel); font-size: 11.5px; }
+
+@media (max-width: 760px) {
+  .pb-pending { flex-wrap: wrap; }
+  .pb-pending-right { margin-left: 0; width: 100%; justify-content: flex-end; flex-wrap: wrap; }
+}

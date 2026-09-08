@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { addExerciseAction, clearProgramDayAction, createProgramAction, removeExerciseAction, removeProgramAction } from "../lib/actions";
+import { clearProgramDayAction, createProgramAction, removeProgramAction } from "../lib/actions";
 import {
   getAssignmentsForDay,
   getCustomValues,
@@ -26,8 +26,9 @@ import { DAY_NAMES_FULL } from "../lib/db";
 import AssignmentFieldInput from "./AssignmentFieldInput";
 import ExerciseNoteCell from "./ExerciseNoteCell";
 import DayLabelForm from "./DayLabelForm";
-import ExercisePicker from "./ExercisePicker";
 import ReorderableRows from "./ReorderableRows";
+import AddExerciseRow from "./AddExerciseRow";
+import { DayPendingProvider, PendingChangesBar, PendingRemoveButton, type PendingAssignment } from "./DayPending";
 import CopyDayMenu from "../admin/CopyDayMenu";
 import CustomValueInput from "../admin/CustomValueInput";
 import ConfirmDeleteButton from "./ConfirmDeleteButton";
@@ -114,7 +115,6 @@ export default function ProgramBuilder({
       // visually but still invites the first exercise.
       const markedRest = day.is_rest === true && assignments.length === 0;
       const isRest = assignments.length === 0;
-      const formId = `add-exercise-${day.id}`;
       // How many weeks of this day's programme come after it, for the
       // "also add to the remaining weeks" option on the add row.
       const dayProgram = allPrograms.find(
@@ -131,9 +131,44 @@ export default function ProgramBuilder({
         ? "Nothing yet. Add the first exercise"
         : `${assignments.length} exercise${assignments.length === 1 ? "" : "s"}`;
 
+      // Everything the pending-changes bar needs to show a diff against:
+      // the saved value of every editable field on the day.
+      const pendingAssignments: PendingAssignment[] = assignments.map((a) => ({
+        id: a.id,
+        exerciseId: a.exercise_id,
+        exerciseName: a.exercise_name ?? "Exercise",
+        fields: {
+          sets: String(a.sets),
+          reps: a.reps ?? "",
+          targetWeight: a.target_weight_kg == null ? "" : String(a.target_weight_kg),
+          rpe: a.rpe_target == null ? "" : String(a.rpe_target),
+          tempo: a.tempo ?? "",
+          notes: a.notes ?? "",
+        },
+        custom: Object.fromEntries(columns.filter((c) => c.kind === "custom").map((c) => [c.id, customValueFor(a.id, c.id)])),
+      }));
+      const weekIdx = dayProgram ? day.week_number - dayProgram.start_week + 1 : day.week_number;
+      const remainingLabel =
+        remainingWeeks <= 0
+          ? ""
+          : remainingWeeks === 1
+          ? `W${weekIdx + 1}`
+          : `W${weekIdx + 1}–W${weekIdx + remainingWeeks}`;
+
       return (
-        <AdminDayCard
+        <DayPendingProvider
           key={day.id}
+          dayId={day.id}
+          dayName={DAY_NAMES_FULL[day.day_of_week - 1]}
+          weekLabel={`W${weekIdx}`}
+          remainingCount={remainingWeeks}
+          remainingLabel={remainingLabel}
+          columns={columns.map((c) => ({ id: c.id, kind: c.kind, key: c.key, label: c.label }))}
+          assignments={pendingAssignments}
+          label={day.label ?? ""}
+          isRest={markedRest}
+        >
+        <AdminDayCard
           dayName={DAY_NAMES_FULL[day.day_of_week - 1]}
           labelSlot={
             <DayLabelForm
@@ -181,6 +216,7 @@ export default function ProgramBuilder({
           summary={summary}
           isRest={isRest}
           defaultOpen={!isRest}
+          footSlot={<PendingChangesBar />}
         >
           <div className="exercise-table-wrap">
             <table className="exercise-table">
@@ -205,79 +241,12 @@ export default function ProgramBuilder({
                 remainingWeeks={remainingWeeks}
                 columnCount={columns.length + 3}
                 footer={
-                <tr className="add-exercise-row">
-                  <td aria-hidden="true"></td>
-                  <td>
-                    <ExercisePicker
-                      formId={formId}
-                      // "Other" only earns a tile when something is filed there.
-                      groups={MUSCLE_GROUPS.filter((g) => g.slug !== "other" || (exercisesByGroup.other?.length ?? 0) > 0)}
-                      exercisesByGroup={exercisesByGroup}
-                    />
-                    {/* Mid-programme addition: tick to put the same exercise on
-                        this weekday in every later week too. Only offered when
-                        there are later weeks to fill. */}
-                    {remainingWeeks > 0 && (
-                      <label className="pb-apply-weeks">
-                        <input type="checkbox" name="applyToRemainingWeeks" value="1" form={formId} />
-                        <span>
-                          Also add to the {remainingWeeks} remaining week{remainingWeeks === 1 ? "" : "s"}
-                        </span>
-                      </label>
-                    )}
-                  </td>
-                  {columns.map((col) => {
-                    if (col.kind === "custom") {
-                      return <td key={col.id} aria-hidden="true"></td>;
-                    }
-                    switch (col.key) {
-                      case "sets":
-                        return (
-                          <td key={col.id}>
-                            <input name="sets" form={formId} type="number" min={1} defaultValue={3} />
-                          </td>
-                        );
-                      case "reps":
-                        return (
-                          <td key={col.id}>
-                            <input name="reps" form={formId} type="text" defaultValue="8-10" />
-                          </td>
-                        );
-                      case "weight_goal":
-                        return (
-                          <td key={col.id}>
-                            <input name="targetWeight" form={formId} type="number" step="0.5" placeholder="kg" />
-                          </td>
-                        );
-                      case "rpe":
-                        return (
-                          <td key={col.id}>
-                            <input name="rpe" form={formId} type="number" step="0.5" placeholder="RPE" />
-                          </td>
-                        );
-                      case "tempo":
-                        return (
-                          <td key={col.id}>
-                            <input name="tempo" form={formId} type="text" placeholder="e.g. 3-1-1" />
-                          </td>
-                        );
-                      case "notes":
-                        return (
-                          <td key={col.id}>
-                            <input name="notes" form={formId} type="text" placeholder="optional" />
-                          </td>
-                        );
-                      default:
-                        return <td key={col.id} aria-hidden="true"></td>;
-                    }
-                  })}
-                  <td aria-hidden="true"></td>
-                  <td>
-                    <button className="pb-add-btn" type="submit" form={formId}>
-                      Add
-                    </button>
-                  </td>
-                </tr>
+                  <AddExerciseRow
+                    columns={columns.map((c) => ({ id: c.id, kind: c.kind, key: c.key, label: c.label }))}
+                    // "Other" only earns a tile when something is filed there.
+                    groups={MUSCLE_GROUPS.filter((g) => g.slug !== "other" || (exercisesByGroup.other?.length ?? 0) > 0)}
+                    exercisesByGroup={exercisesByGroup}
+                  />
                 }
                 rows={assignments.map((a) => {
                   const weekGroups = getLogsForAssignmentByWeek(a.id);
@@ -439,11 +408,7 @@ export default function ProgramBuilder({
                         <LoggedSetsGrid rows={loggedRows} />
                       </td>
                       <td>
-                        <ConfirmDeleteButton
-                          action={removeExerciseAction}
-                          hiddenFields={{ assignmentId: a.id }}
-                          label={`Delete ${a.exercise_name}`}
-                        />
+                        <PendingRemoveButton assignmentId={a.id} exerciseName={a.exercise_name ?? "this exercise"} />
                       </td>
                     </>
                     ),
@@ -453,10 +418,8 @@ export default function ProgramBuilder({
             </table>
           </div>
 
-          <form id={formId} action={addExerciseAction} style={{ display: "none" }}>
-            <input type="hidden" name="programDayId" value={day.id} />
-          </form>
         </AdminDayCard>
+        </DayPendingProvider>
       );
     });
   }

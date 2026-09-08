@@ -18,6 +18,7 @@ export default function AdminDayCard({
   restSlot,
   copySlot,
   dangerSlot,
+  footSlot,
   statusPill,
   summary,
   isRest,
@@ -31,6 +32,8 @@ export default function AdminDayCard({
   copySlot?: ReactNode;
   /** Clear the day; always the last thing in the header. */
   dangerSlot?: ReactNode;
+  /** Rendered under the body, open or closed: the pending-changes bar. */
+  footSlot?: ReactNode;
   statusPill?: ReactNode;
   summary: string;
   isRest: boolean;
@@ -107,6 +110,7 @@ export default function AdminDayCard({
         </div>
       </div>
       {open && <div className="admin-day-card-body">{children}</div>}
+      {footSlot}
     </div>
   );
 }

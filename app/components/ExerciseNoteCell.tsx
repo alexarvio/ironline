@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { updateAssignmentAction } from "../lib/actions";
+import { usePendingDay } from "./DayPending";
 
 // The coach's note on one prescribed exercise.
 //
@@ -27,16 +28,19 @@ export default function ExerciseNoteCell({
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  // Inside a day card the note is queued on the pending-changes bar.
+  const pending = usePendingDay();
+  const shown = pending ? pending.fieldValue(assignmentId, "notes") : note;
 
   return (
     <>
       <button
         type="button"
-        className={`pb-note-cell${note ? " set" : ""}`}
+        className={`pb-note-cell${shown ? " set" : ""}${shown !== note ? " pb-changed" : ""}`}
         onClick={() => setOpen(true)}
-        title={note || `Add a note for ${exerciseName}`}
+        title={shown || `Add a note for ${exerciseName}`}
       >
-        {note || <span className="pb-note-placeholder">Add a note</span>}
+        {shown || <span className="pb-note-placeholder">Add a note</span>}
       </button>
 
       {open && mounted &&
@@ -44,8 +48,9 @@ export default function ExerciseNoteCell({
           <NoteDialog
             assignmentId={assignmentId}
             exerciseName={exerciseName}
-            note={note}
+            note={shown}
             onClose={() => setOpen(false)}
+            onQueue={pending ? (text) => pending.setField(assignmentId, "notes", text) : undefined}
           />,
           document.body
         )}
@@ -58,11 +63,14 @@ function NoteDialog({
   exerciseName,
   note,
   onClose,
+  onQueue,
 }: {
   assignmentId: number;
   exerciseName: string;
   note: string;
   onClose: () => void;
+  /** When set, Save hands the text here instead of posting it. */
+  onQueue?: (text: string) => void;
 }) {
   const [pending, start] = useTransition();
   const areaRef = useRef<HTMLTextAreaElement>(null);
@@ -94,12 +102,17 @@ function NoteDialog({
         </div>
 
         <form
-          action={(fd) =>
+          action={(fd) => {
+            if (onQueue) {
+              onQueue(String(fd.get("notes") ?? "").trim());
+              onClose();
+              return;
+            }
             start(async () => {
               await updateAssignmentAction(fd);
               onClose();
-            })
-          }
+            });
+          }}
         >
           <input type="hidden" name="assignmentId" value={assignmentId} />
           <textarea

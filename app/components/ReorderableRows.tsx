@@ -2,6 +2,7 @@
 
 import { ReactNode, useRef, useState } from "react";
 import { applyDayOrderToLaterWeeksAction, reorderAssignmentsAction } from "../lib/actions";
+import { usePendingDay } from "./DayPending";
 
 // The exercise rows of one programme day, reorderable by dragging the grip
 // at the left of a row. The cells themselves are rendered on the server and
@@ -9,9 +10,13 @@ import { applyDayOrderToLaterWeeksAction, reorderAssignmentsAction } from "../li
 //
 // The drag is pointer-driven rather than HTML5 drag-and-drop, so it looks
 // like picking the row up: the grabbed row lifts and follows the pointer,
-// and the rows it passes slide out of its way as it goes. On release the
-// order is committed locally at once and posted, so the sheet never waits
-// on the round trip.
+// and the rows it passes slide out of its way as it goes.
+//
+// Inside a day card (pending-changes provider present) a drop only queues
+// the new order on the bar; rows the coach has removed are hidden and
+// exercises they have added appear at the foot, all until Apply. Without a
+// provider the old behaviour stands: commit at once and offer the order to
+// the later weeks.
 export default function ReorderableRows({
   programDayId,
   rows,
@@ -28,12 +33,15 @@ export default function ReorderableRows({
   /** Cells per row, so the offer row can span the table. */
   columnCount: number;
 }) {
+  const pending = usePendingDay();
   // The last order the coach chose here; reconciled against the rows the
   // server currently has, so an exercise added or removed elsewhere shows up
   // without an effect: kept rows stay in the chosen order, new ones go last.
   const [chosen, setChosen] = useState<number[]>([]);
   const ids = rows.map((r) => r.id);
-  const order = [...chosen.filter((id) => ids.includes(id)), ...ids.filter((id) => !chosen.includes(id))];
+  const order = pending
+    ? pending.order.filter((id) => ids.includes(id))
+    : [...chosen.filter((id) => ids.includes(id)), ...ids.filter((id) => !chosen.includes(id))];
   const byId = new Map(rows.map((r) => [r.id, r] as const));
 
   // Live drag state. `from` is the grabbed row's index in `order`, `to` is
@@ -87,9 +95,13 @@ export default function ReorderableRows({
       const next = [...order];
       const [moved] = next.splice(drag.from, 1);
       next.splice(drag.to, 0, moved);
-      setChosen(next);
-      void reorderAssignmentsAction(programDayId, next);
-      if (remainingWeeks > 0) setOffer("offer");
+      if (pending) {
+        pending.setOrder(next);
+      } else {
+        setChosen(next);
+        void reorderAssignmentsAction(programDayId, next);
+        if (remainingWeeks > 0) setOffer("offer");
+      }
     }
     setDrag(null);
   };
@@ -138,6 +150,31 @@ export default function ReorderableRows({
           </tr>
         );
       })}
+      {pending?.draft.added.map((n) => (
+        <tr key={`new-${n.tempId}`} className="pb-row pb-row-new">
+          <td className="pb-grip-cell" aria-hidden="true"></td>
+          <td colSpan={columnCount}>
+            <span className="pb-row-new-name">{n.exerciseName}</span>
+            <span className="pb-row-new-meta">
+              {[
+                n.fields.sets && `${n.fields.sets} sets`,
+                n.fields.reps && `${n.fields.reps} reps`,
+                n.fields.targetWeight && `${n.fields.targetWeight} kg`,
+                n.fields.rpe && `RPE ${n.fields.rpe}`,
+                n.fields.tempo && `tempo ${n.fields.tempo}`,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+              {" · "}added, not saved yet
+            </span>
+          </td>
+          <td>
+            <button type="button" className="row-icon-btn" aria-label={`Undo adding ${n.exerciseName}`} title="Undo" onClick={() => pending.unadd(n.tempId)}>
+              ×
+            </button>
+          </td>
+        </tr>
+      ))}
       {offer !== "none" && (
         <tr className="pb-order-offer-row">
           <td colSpan={columnCount + 1}>

@@ -13,6 +13,8 @@ import {
   addCustomTrainingColumn,
   addExercise,
   addExerciseToDay,
+  applyDayChanges,
+  type DayChanges,
   addExerciseToRemainingWeeks,
   addInvoice,
   addMeasurementField,
@@ -1587,4 +1589,33 @@ export async function applyDayOrderToLaterWeeksAction(programDayId: number) {
   applyDayOrderToLaterWeeks(programDayId);
   revalidatePath("/client");
   revalidatePath("/admin");
+}
+
+// The pending-changes bar posts every queued edit on a day card at once.
+export type { DayFieldKey } from "./queries";
+export type DayChangesPayload = DayChanges;
+
+export async function applyDayChangesAction(
+  payload: DayChangesPayload
+): Promise<{ ok: true; skipped: string[] } | { ok: false; error: string }> {
+  await requireCoach();
+  if (!Number.isInteger(payload?.programDayId)) return { ok: false, error: "Unknown day" };
+  try {
+    const { skipped } = applyDayChanges({
+      programDayId: payload.programDayId,
+      alsoRemaining: !!payload.alsoRemaining,
+      label: typeof payload.label === "string" ? payload.label.trim() : null,
+      rest: typeof payload.rest === "boolean" ? payload.rest : null,
+      fields: payload.fields ?? {},
+      custom: payload.custom ?? {},
+      removed: (payload.removed ?? []).filter((id) => Number.isInteger(id)),
+      added: (payload.added ?? []).filter((a) => Number.isInteger(a.exerciseId)),
+      order: Array.isArray(payload.order) ? payload.order.filter((id) => Number.isInteger(id)) : null,
+    });
+    revalidatePath("/client");
+    revalidatePath("/admin");
+    return { ok: true, skipped };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Something went wrong" };
+  }
 }

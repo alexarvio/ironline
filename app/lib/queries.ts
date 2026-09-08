@@ -5060,3 +5060,187 @@ export function applyDayOrderToLaterWeeks(programDayId: number): number {
   if (touched > 0) persist();
   return touched;
 }
+
+// ---------------------------------------------------------------------------
+// Pending-changes bar: one day's queued edits, applied together.
+//
+// Everything the coach changed on a day card since the last Apply arrives
+// as one payload and lands in one persist. With `alsoRemaining`, the same
+// weekday in each later week of the programme gets the same treatment,
+// matched by exercise rather than by row, except weeks the client has
+// already logged sets against: those are left alone and reported back by
+// their programme-relative label ("W3").
+
+export type DayFieldKey = "sets" | "reps" | "targetWeight" | "rpe" | "tempo" | "notes";
+export type DayFieldValues = Partial<Record<DayFieldKey, string>>;
+
+export type DayChanges = {
+  programDayId: number;
+  alsoRemaining: boolean;
+  label: string | null;
+  rest: boolean | null;
+  /** assignment id -> changed fields, as the coach typed them. */
+  fields: Record<string, DayFieldValues>;
+  /** assignment id -> column id -> value. */
+  custom: Record<string, Record<string, string>>;
+  removed: number[];
+  added: { exerciseId: number; fields: DayFieldValues }[];
+  /** Full order of the surviving assignment ids, or null if untouched. */
+  order: number[] | null;
+};
+
+function typedDayFields(raw: DayFieldValues) {
+  const out: Partial<Pick<WorkoutAssignment, "sets" | "reps" | "target_weight_kg" | "rpe_target" | "tempo" | "notes">> = {};
+  const num = (v: string | undefined) => {
+    const t = (v ?? "").trim().replace(",", ".");
+    return t ? Number(t) : null;
+  };
+  if (raw.sets != null) out.sets = Math.max(1, Number(raw.sets) || 1);
+  if (raw.reps != null) out.reps = String(raw.reps);
+  if (raw.targetWeight != null) out.target_weight_kg = num(raw.targetWeight);
+  if (raw.rpe != null) out.rpe_target = num(raw.rpe);
+  if (raw.tempo != null) out.tempo = raw.tempo.trim() || null;
+  if (raw.notes != null) out.notes = raw.notes.trim() || null;
+  return out;
+}
+
+export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
+  const data = getData();
+  const src = data.program_days.find((d) => d.id === changes.programDayId);
+  if (!src) return { skipped: [] };
+
+  // Remember which exercise each removed row was, so later weeks can drop
+  // the same exercise rather than a row id they do not have.
+  const removedExerciseIds = changes.removed
+    .map((id) => data.workout_assignments.find((wa) => wa.id === id)?.exercise_id)
+    .filter((x): x is number => typeof x === "number");
+
+  const applyTo = (day: ProgramDay, mirror: boolean) => {
+    const rows = () => data.workout_assignments.filter((wa) => wa.program_day_id === day.id);
+    const byExercise = (exerciseId: number) =>
+      rows()
+        .sort((a, b) => a.order_index - b.order_index)
+        .find((wa) => wa.exercise_id === exerciseId);
+
+    if (changes.label != null) day.label = changes.label;
+
+    // Removals first, so a rest toggle on a now-empty day can take.
+    const dropIds = mirror
+      ? rows().filter((wa) => removedExerciseIds.includes(wa.exercise_id)).map((wa) => wa.id)
+      : changes.removed;
+    if (dropIds.length) {
+      data.set_logs = data.set_logs.filter((sl) => !dropIds.includes(sl.workout_assignment_id));
+      data.assignment_custom_values = data.assignment_custom_values.filter((v) => !dropIds.includes(v.workout_assignment_id));
+      data.workout_assignments = data.workout_assignments.filter((wa) => !dropIds.includes(wa.id));
+    }
+
+    for (const [idStr, raw] of Object.entries(changes.fields)) {
+      const srcRow = data.workout_assignments.find((wa) => wa.id === Number(idStr));
+      const target = mirror ? (srcRow ? byExercise(srcRow.exercise_id) : undefined) : srcRow;
+      if (!target || target.program_day_id !== day.id) continue;
+      const typed = typedDayFields(raw);
+      if ("notes" in typed && typed.notes !== target.notes) {
+        target.note_at = typed.notes ? new Date().toISOString() : null;
+        target.note_read = false;
+        if (!typed.notes) target.note_kind = null;
+      }
+      Object.assign(target, typed);
+    }
+
+    for (const [idStr, cols] of Object.entries(changes.custom)) {
+      const srcRow = data.workout_assignments.find((wa) => wa.id === Number(idStr));
+      const target = mirror ? (srcRow ? byExercise(srcRow.exercise_id) : undefined) : srcRow;
+      if (!target || target.program_day_id !== day.id) continue;
+      for (const [colStr, value] of Object.entries(cols)) {
+        const columnId = Number(colStr);
+        const existing = data.assignment_custom_values.find(
+          (v) => v.workout_assignment_id === target.id && v.column_id === columnId
+        );
+        if (existing) existing.value = value;
+        else
+          data.assignment_custom_values.push({
+            id: allocId("assignment_custom_values"),
+            workout_assignment_id: target.id,
+            column_id: columnId,
+            value,
+          });
+      }
+    }
+
+    for (const add of changes.added) {
+      if (mirror && byExercise(add.exerciseId)) continue;
+      const typed = typedDayFields({ sets: "3", reps: "", targetWeight: "", rpe: "", tempo: "", notes: "", ...add.fields });
+      data.workout_assignments.push({
+        id: allocId("workout_assignments"),
+        program_day_id: day.id,
+        exercise_id: add.exerciseId,
+        order_index: rows().length,
+        sets: typed.sets ?? 3,
+        reps: typed.reps ?? "",
+        target_weight_kg: typed.target_weight_kg ?? null,
+        rpe_target: typed.rpe_target ?? null,
+        rest_seconds: null,
+        tempo: typed.tempo ?? null,
+        notes: typed.notes ?? null,
+        demo_url: null,
+        note_kind: null,
+        note_at: typed.notes ? new Date().toISOString() : null,
+        note_read: false,
+      });
+    }
+
+    if (changes.order) {
+      const onDay = rows();
+      if (mirror) {
+        // Same exercise sequence as the source day; strangers keep their place after.
+        const sequence = data.workout_assignments
+          .filter((wa) => wa.program_day_id === src.id)
+          .sort((a, b) => a.order_index - b.order_index)
+          .map((wa) => wa.exercise_id);
+        const rank = (wa: WorkoutAssignment) => {
+          const i = sequence.indexOf(wa.exercise_id);
+          return i < 0 ? sequence.length + wa.order_index : i;
+        };
+        [...onDay].sort((a, b) => rank(a) - rank(b)).forEach((wa, i) => (wa.order_index = i));
+      } else {
+        const wanted = changes.order;
+        const rest = onDay.filter((wa) => !wanted.includes(wa.id)).sort((a, b) => a.order_index - b.order_index);
+        const sequence = [
+          ...wanted.map((id) => onDay.find((wa) => wa.id === id)).filter((wa): wa is WorkoutAssignment => !!wa),
+          ...rest,
+        ];
+        sequence.forEach((wa, i) => (wa.order_index = i));
+      }
+    }
+
+    // Rest only sticks on an empty day; a day with exercises stays a workout.
+    if (changes.rest != null) {
+      if (changes.rest && rows().length > 0) day.is_rest = false;
+      else day.is_rest = changes.rest;
+    }
+  };
+
+  applyTo(src, false);
+
+  const skipped: string[] = [];
+  if (changes.alsoRemaining) {
+    const program = listPrograms(src.client_id).find(
+      (p) => src.week_number >= p.start_week && src.week_number < p.start_week + p.total_weeks
+    );
+    if (program) {
+      for (let week = src.week_number + 1; week < program.start_week + program.total_weeks; week++) {
+        const day = getWeek(src.client_id, week).find((d) => d.day_of_week === src.day_of_week);
+        if (!day) continue;
+        const ids = data.workout_assignments.filter((wa) => wa.program_day_id === day.id).map((wa) => wa.id);
+        if (data.set_logs.some((sl) => ids.includes(sl.workout_assignment_id))) {
+          skipped.push(`W${week - program.start_week + 1}`);
+          continue;
+        }
+        applyTo(day, true);
+      }
+    }
+  }
+
+  persist();
+  return { skipped };
+}
