@@ -564,6 +564,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 .pb-apply-weeks {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   margin-top: 6px;
   font-size: 10.5px;
@@ -572,7 +573,17 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   white-space: nowrap;
 }
 
-.pb-apply-weeks input { margin: 0; accent-color: var(--accent); }
+/* The table's input rule would stretch the box to the full cell width and
+   push the label away; keep it a plain 14px checkbox beside its text. */
+.pb .exercise-table .pb-apply-weeks input,
+.pb-apply-weeks input {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--accent);
+}
 
 /* The last column (row delete / Add) stays pinned to the right edge while
    the rest of the table scrolls sideways, so Add is always reachable without

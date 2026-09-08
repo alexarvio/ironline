@@ -27,7 +27,7 @@ export default function CopyDayMenu({
   if (!open) {
     return (
       <button type="button" className="pb-toolbar-btn" onClick={() => setOpen(true)}>
-        Copy to…
+        Copy
       </button>
     );
   }
