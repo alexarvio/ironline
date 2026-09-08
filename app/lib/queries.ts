@@ -4812,3 +4812,44 @@ export function setCalorieLog(clientId: number, date: string, kcal: number | nul
   }
   persist();
 }
+
+// ---- Reordering and copying within a day / week ----
+
+// Sets the order of a day's exercises to the given assignment ids; anything
+// on the day but not in the list keeps its place after them.
+export function reorderAssignments(programDayId: number, orderedIds: number[]) {
+  const data = getData();
+  const onDay = data.workout_assignments.filter((wa) => wa.program_day_id === programDayId);
+  const rest = onDay.filter((wa) => !orderedIds.includes(wa.id)).sort((a, b) => a.order_index - b.order_index);
+  const sequence = [...orderedIds.map((id) => onDay.find((wa) => wa.id === id)).filter((wa): wa is WorkoutAssignment => !!wa), ...rest];
+  sequence.forEach((wa, i) => (wa.order_index = i));
+  persist();
+}
+
+// Copies one day's label, rest flag and exercises onto another day of the
+// same client. Replaces what was there, so copying twice doesn't double up.
+export function copyProgramDay(fromDayId: number, toDayId: number) {
+  if (fromDayId === toDayId) return;
+  const data = getData();
+  const src = data.program_days.find((d) => d.id === fromDayId);
+  const dest = data.program_days.find((d) => d.id === toDayId);
+  if (!src || !dest || src.client_id !== dest.client_id) return;
+
+  dest.label = src.label;
+  dest.is_rest = src.is_rest ?? false;
+  const replacedIds = data.workout_assignments.filter((wa) => wa.program_day_id === dest.id).map((wa) => wa.id);
+  data.workout_assignments = data.workout_assignments.filter((wa) => wa.program_day_id !== dest.id);
+  data.assignment_custom_values = data.assignment_custom_values.filter((v) => !replacedIds.includes(v.workout_assignment_id));
+
+  const srcAssignments = data.workout_assignments
+    .filter((wa) => wa.program_day_id === src.id)
+    .sort((a, b) => a.order_index - b.order_index);
+  for (const wa of srcAssignments) {
+    const id = allocId("workout_assignments");
+    data.workout_assignments.push({ ...wa, id, program_day_id: dest.id });
+    for (const v of data.assignment_custom_values.filter((v) => v.workout_assignment_id === wa.id)) {
+      data.assignment_custom_values.push({ ...v, id: allocId("assignment_custom_values"), workout_assignment_id: id });
+    }
+  }
+  persist();
+}

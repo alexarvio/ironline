@@ -16,6 +16,7 @@ export default function AdminDayCard({
   dayName,
   labelSlot,
   restSlot,
+  copySlot,
   statusPill,
   summary,
   isRest,
@@ -25,6 +26,8 @@ export default function AdminDayCard({
   dayName: string;
   labelSlot: ReactNode;
   restSlot?: ReactNode;
+  /** "Copy to…" another day of the week; only for days with exercises. */
+  copySlot?: ReactNode;
   statusPill?: ReactNode;
   summary: string;
   isRest: boolean;
@@ -81,6 +84,11 @@ export default function AdminDayCard({
         <div className="admin-day-card-head-right">
           <span className="admin-day-summary">{summary}</span>
           {statusPill}
+          {copySlot && (
+            <div className="inline-row" onClick={(e) => e.stopPropagation()}>
+              {copySlot}
+            </div>
+          )}
           {restSlot && (
             <div className="inline-row" onClick={(e) => e.stopPropagation()}>
               {restSlot}

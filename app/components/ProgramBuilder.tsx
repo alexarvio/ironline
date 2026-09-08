@@ -28,6 +28,8 @@ import AssignmentFieldInput from "./AssignmentFieldInput";
 import ExerciseNoteCell from "./ExerciseNoteCell";
 import DayLabelForm from "./DayLabelForm";
 import ExercisePicker from "./ExercisePicker";
+import ReorderableRows from "./ReorderableRows";
+import CopyDayMenu from "../admin/CopyDayMenu";
 import CustomValueInput from "../admin/CustomValueInput";
 import ConfirmDeleteButton from "./ConfirmDeleteButton";
 import AdminDayCard from "./AdminDayCard";
@@ -142,6 +144,20 @@ export default function ProgramBuilder({
           restSlot={
             <DayRestToggle programDayId={day.id} isRest={markedRest} hasExercises={assignments.length > 0} />
           }
+          copySlot={
+            assignments.length > 0 ? (
+              <CopyDayMenu
+                fromDayId={day.id}
+                targets={days
+                  .filter((d) => d.id !== day.id)
+                  .map((d) => ({
+                    id: d.id,
+                    name: DAY_NAMES_FULL[d.day_of_week - 1],
+                    hasExercises: getAssignmentsForDay(d.id).length > 0,
+                  }))}
+              />
+            ) : undefined
+          }
           statusPill={
             setsLoggedThisWeek > 0 ? (
               <span className="pb-logged-pill">
@@ -157,6 +173,8 @@ export default function ProgramBuilder({
             <table className="exercise-table">
               <thead>
                 <tr>
+                  {/* Grip column for drag-to-reorder. */}
+                  <th aria-hidden="true" style={{ width: "22px" }}></th>
                   <th>Exercise</th>
                   {columns.map((col) => (
                     <th key={col.id} style={{ width: COLUMN_WIDTH[col.key] ?? "90px" }}>
@@ -169,8 +187,84 @@ export default function ProgramBuilder({
                   <th aria-hidden="true" style={{ width: "58px" }}></th>
                 </tr>
               </thead>
-              <tbody>
-                {assignments.map((a) => {
+              <ReorderableRows
+                programDayId={day.id}
+                footer={
+                <tr className="add-exercise-row">
+                  <td aria-hidden="true"></td>
+                  <td>
+                    <ExercisePicker
+                      formId={formId}
+                      // "Other" only earns a tile when something is filed there.
+                      groups={MUSCLE_GROUPS.filter((g) => g.slug !== "other" || (exercisesByGroup.other?.length ?? 0) > 0)}
+                      exercisesByGroup={exercisesByGroup}
+                    />
+                    {/* Mid-programme addition: tick to put the same exercise on
+                        this weekday in every later week too. Only offered when
+                        there are later weeks to fill. */}
+                    {remainingWeeks > 0 && (
+                      <label className="pb-apply-weeks">
+                        <input type="checkbox" name="applyToRemainingWeeks" value="1" form={formId} />
+                        <span>
+                          Also add to the {remainingWeeks} remaining week{remainingWeeks === 1 ? "" : "s"}
+                        </span>
+                      </label>
+                    )}
+                  </td>
+                  {columns.map((col) => {
+                    if (col.kind === "custom") {
+                      return <td key={col.id} aria-hidden="true"></td>;
+                    }
+                    switch (col.key) {
+                      case "sets":
+                        return (
+                          <td key={col.id}>
+                            <input name="sets" form={formId} type="number" min={1} defaultValue={3} />
+                          </td>
+                        );
+                      case "reps":
+                        return (
+                          <td key={col.id}>
+                            <input name="reps" form={formId} type="text" defaultValue="8-10" />
+                          </td>
+                        );
+                      case "weight_goal":
+                        return (
+                          <td key={col.id}>
+                            <input name="targetWeight" form={formId} type="number" step="0.5" placeholder="kg" />
+                          </td>
+                        );
+                      case "rpe":
+                        return (
+                          <td key={col.id}>
+                            <input name="rpe" form={formId} type="number" step="0.5" placeholder="RPE" />
+                          </td>
+                        );
+                      case "tempo":
+                        return (
+                          <td key={col.id}>
+                            <input name="tempo" form={formId} type="text" placeholder="e.g. 3-1-1" />
+                          </td>
+                        );
+                      case "notes":
+                        return (
+                          <td key={col.id}>
+                            <input name="notes" form={formId} type="text" placeholder="optional" />
+                          </td>
+                        );
+                      default:
+                        return <td key={col.id} aria-hidden="true"></td>;
+                    }
+                  })}
+                  <td aria-hidden="true"></td>
+                  <td>
+                    <button className="pb-add-btn" type="submit" form={formId}>
+                      Add
+                    </button>
+                  </td>
+                </tr>
+                }
+                rows={assignments.map((a) => {
                   const weekGroups = getLogsForAssignmentByWeek(a.id);
                   // Two independent facts about this exercise, both shown when
                   // there's history for them: how the client is trending on it
@@ -212,8 +306,10 @@ export default function ProgramBuilder({
                     current: true,
                   });
 
-                  return (
-                    <tr key={a.id}>
+                  return {
+                    id: a.id,
+                    cells: (
+                    <>
                       <td className="exercise-name-cell">
                         {/* Trend hard left, name, demo hard right — the two
                             marginal facts sit at the edges so the eye runs
@@ -334,83 +430,11 @@ export default function ProgramBuilder({
                           label={`Delete ${a.exercise_name}`}
                         />
                       </td>
-                    </tr>
-                  );
+                    </>
+                    ),
+                  };
                 })}
-
-                <tr className="add-exercise-row">
-                  <td>
-                    <ExercisePicker
-                      formId={formId}
-                      // "Other" only earns a tile when something is filed there.
-                      groups={MUSCLE_GROUPS.filter((g) => g.slug !== "other" || (exercisesByGroup.other?.length ?? 0) > 0)}
-                      exercisesByGroup={exercisesByGroup}
-                    />
-                    {/* Mid-programme addition: tick to put the same exercise on
-                        this weekday in every later week too. Only offered when
-                        there are later weeks to fill. */}
-                    {remainingWeeks > 0 && (
-                      <label className="pb-apply-weeks">
-                        <input type="checkbox" name="applyToRemainingWeeks" value="1" form={formId} />
-                        <span>
-                          Also add to the {remainingWeeks} remaining week{remainingWeeks === 1 ? "" : "s"}
-                        </span>
-                      </label>
-                    )}
-                  </td>
-                  {columns.map((col) => {
-                    if (col.kind === "custom") {
-                      return <td key={col.id} aria-hidden="true"></td>;
-                    }
-                    switch (col.key) {
-                      case "sets":
-                        return (
-                          <td key={col.id}>
-                            <input name="sets" form={formId} type="number" min={1} defaultValue={3} />
-                          </td>
-                        );
-                      case "reps":
-                        return (
-                          <td key={col.id}>
-                            <input name="reps" form={formId} type="text" defaultValue="8-10" />
-                          </td>
-                        );
-                      case "weight_goal":
-                        return (
-                          <td key={col.id}>
-                            <input name="targetWeight" form={formId} type="number" step="0.5" placeholder="kg" />
-                          </td>
-                        );
-                      case "rpe":
-                        return (
-                          <td key={col.id}>
-                            <input name="rpe" form={formId} type="number" step="0.5" placeholder="RPE" />
-                          </td>
-                        );
-                      case "tempo":
-                        return (
-                          <td key={col.id}>
-                            <input name="tempo" form={formId} type="text" placeholder="e.g. 3-1-1" />
-                          </td>
-                        );
-                      case "notes":
-                        return (
-                          <td key={col.id}>
-                            <input name="notes" form={formId} type="text" placeholder="optional" />
-                          </td>
-                        );
-                      default:
-                        return <td key={col.id} aria-hidden="true"></td>;
-                    }
-                  })}
-                  <td aria-hidden="true"></td>
-                  <td>
-                    <button className="pb-add-btn" type="submit" form={formId}>
-                      Add
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
+              />
             </table>
           </div>
 

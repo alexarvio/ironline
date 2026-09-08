@@ -11137,3 +11137,49 @@ a.cd-entry:hover { border-color: var(--accent); }
 .nt-cal-diff.over { color: var(--accent-plate, #a32d2d); }
 .nt-cal-diff.under { color: var(--good); }
 .nt-cal-day { color: var(--steel); }
+
+/* ---- Drag-to-reorder exercises: grip cell at the left of each row. ---- */
+.pb-grip-cell { width: 22px; padding: 0 !important; text-align: center; vertical-align: middle; }
+.pb-grip {
+  display: inline-block;
+  color: var(--faint);
+  font-size: 13px;
+  letter-spacing: -3px;
+  cursor: grab;
+  user-select: none;
+  line-height: 1;
+}
+.pb-row:hover .pb-grip { color: var(--steel); }
+.pb-row.dragging { opacity: 0.45; }
+.pb-row.dragging .pb-grip { cursor: grabbing; }
+/* Drop indicator: a line along the top edge of the row the drag is over. */
+.pb-row.drop-target td { box-shadow: inset 0 2px 0 var(--accent); }
+
+/* Copy a day to another day of the same week (day card header). */
+.pb-copy-day { display: flex; align-items: center; gap: 6px; }
+.pb-copy-day-select {
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 11px;
+  padding: 0 6px;
+}
+
+/* Nutrition targets: copy the other day type's macros into this one. */
+.nt-copy-day {
+  align-self: flex-start;
+  margin: 6px 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-ink, var(--accent));
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

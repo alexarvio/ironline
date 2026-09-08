@@ -131,6 +131,8 @@ import {
   getClientIdForPhase,
   PHASE_TRACKS,
   setCalorieLog,
+  reorderAssignments,
+  copyProgramDay,
 } from "./queries";
 import { writeReportNarrative } from "./reportAi";
 import type { ReportSectionType } from "./reportSectionTypes";
@@ -1499,6 +1501,27 @@ export async function logCaloriesAction(formData: FormData) {
   const kcal = raw === "" ? null : Math.round(Number(raw));
   if (kcal != null && (!Number.isFinite(kcal) || kcal < 0 || kcal > 20000)) return;
   setCalorieLog(clientId, date, kcal);
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+// ---- Reorder / copy within a day --------------------------------------------
+
+// Called directly from the drag handler with the new order, not via a form.
+export async function reorderAssignmentsAction(programDayId: number, orderedIds: number[]) {
+  await requireCoach();
+  if (!Number.isInteger(programDayId) || !Array.isArray(orderedIds)) return;
+  reorderAssignments(programDayId, orderedIds.map(Number).filter((n) => Number.isInteger(n)));
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+export async function copyProgramDayAction(formData: FormData) {
+  await requireCoach();
+  const fromDayId = Number(formData.get("fromDayId"));
+  const toDayId = Number(formData.get("toDayId"));
+  if (!fromDayId || !toDayId) return;
+  copyProgramDay(fromDayId, toDayId);
   revalidatePath("/client");
   revalidatePath("/admin");
 }

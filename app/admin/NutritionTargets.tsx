@@ -84,6 +84,16 @@ export default function NutritionTargets({
         </div>
       </div>
 
+      {/* Same numbers both days: one click copies the other day type's
+          macros into this one, then Save as usual. */}
+      <button
+        type="button"
+        className="nt-copy-day"
+        onClick={() => setValues((v) => ({ ...v, [day]: { ...v[day === "training" ? "rest" : "training"] } }))}
+      >
+        {day === "training" ? "Same as rest day" : "Same as training day"}
+      </button>
+
       <div className="nt-kcal-block">
         <span className="ad-microlabel">Calories</span>
         <div className="nt-kcal-row">
