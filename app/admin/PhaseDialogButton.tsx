@@ -242,21 +242,29 @@ function PhaseDialog({
             <label className="ph-adjust">
               <input type="checkbox" checked={adjust} onChange={(e) => setAdjust(e.target.checked)} />
               <span>
-                Also add {weekDelta} week{weekDelta === 1 ? "" : "s"} to the training programme (copies of week 1, ready to edit)
+                <strong>
+                  Also add {weekDelta} week{weekDelta === 1 ? "" : "s"} to the training programme
+                </strong>
+                New weeks are copies of week 1, ready to edit on the Training tab.
               </span>
             </label>
           )}
           {program && weekDelta < 0 && (
-            <label className="ph-adjust">
+            <label className={removable === 0 ? "ph-adjust off" : "ph-adjust"}>
               <input type="checkbox" checked={adjust && removable > 0} disabled={removable === 0} onChange={(e) => setAdjust(e.target.checked)} />
               <span>
                 {removable > 0 ? (
                   <>
-                    Also delete {removeLabel} from the training programme
-                    {removable < -weekDelta && " (the rest have logged sets and stay)"}
+                    <strong>Also delete {removeLabel} from the training programme</strong>
+                    {removable < -weekDelta
+                      ? "The other weeks past the new end have logged sets and stay."
+                      : "Everything built for those weeks goes with them."}
                   </>
                 ) : (
-                  "The weeks past this date have logged sets, so the programme keeps them"
+                  <>
+                    <strong>The programme keeps its weeks</strong>
+                    The weeks past the new end have logged sets, so they can't be deleted.
+                  </>
                 )}
               </span>
             </label>
