@@ -74,6 +74,13 @@ export type ClientPhase = {
   name: string;
   start_week: string;
   end_week: string;
+  // A nutrition phase's own daily targets and note, so the coach can set a
+  // future block's numbers before it starts. The client sees the running
+  // phase's; a phase without them shows the client-level plan.
+  nutrition?: {
+    day_targets: { training: MealMacros; rest: MealMacros };
+    coach_notes: string;
+  } | null;
   // Set when this phase IS a training programme: created from a deploy or
   // schedule, or from the Plan tab (which makes the draft). Name and length
   // follow the programme; the programme's dates follow the phase until it

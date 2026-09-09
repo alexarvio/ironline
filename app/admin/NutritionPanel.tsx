@@ -11,8 +11,11 @@ import {
   getNutritionPlan,
   getWeek,
   listCalorieLogs,
+  listNutritionPhases,
+  getStoredNutritionPlan,
 } from "../lib/queries";
 import NutritionTargets from "./NutritionTargets";
+import NutritionPhaseShell from "./NutritionPhaseShell";
 import SupplementCell from "./SupplementCell";
 import AutosaveNote from "./AutosaveNote";
 
@@ -25,6 +28,8 @@ import AutosaveNote from "./AutosaveNote";
 // any per-day state, and neither should grow a tick box.
 export default function NutritionPanel({ clientId }: { clientId: number }) {
   const plan = getNutritionPlan(clientId);
+  const stored = getStoredNutritionPlan(clientId);
+  const phases = listNutritionPhases(clientId);
 
   // A plan built on the older six-meal model has no day targets yet. Rather
   // than showing a coach blank fields for macros they already set, the totals
@@ -46,6 +51,7 @@ export default function NutritionPanel({ clientId }: { clientId: number }) {
   // are training days this week so each row can be read against the right
   // target.
   const calorieLogs = listCalorieLogs(clientId, 30);
+  const fmtDate = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   const trainingDows = new Set(
     getWeek(clientId, getCurrentWeekNumber(clientId))
       .filter((d) => getAssignmentsForDay(d.id).length > 0)
@@ -61,39 +67,58 @@ export default function NutritionPanel({ clientId }: { clientId: number }) {
 
   return (
     <div className="nt">
-      <div className="ms-topbar">
-        <span className="ms-topbar-live">
-          <span className="ms-live-dot" aria-hidden="true" />
-          Live in {clientName}&rsquo;s app
-        </span>
-        <AutosaveNote renderedAt={renderedAt} savedText="Up to date" idleText="Up to date" idleAsSaved />
-      </div>
-
-      <div className="nt-top">
-        <NutritionTargets
-          clientId={clientId}
-          training={training}
-          rest={rest}
-          waterL={plan.water_l ?? null}
-          renderedAt={renderedAt}
-        />
-
-        <form action={saveCoachNutritionNoteAction} className="nt-note-card">
-          <input type="hidden" name="clientId" value={clientId} />
-          <span className="ad-microlabel">Note on the targets</span>
-          <textarea
-            name="note"
-            defaultValue={plan.coach_notes ?? ""}
-            placeholder="Why these numbers: the client reads this under their kcal figure."
-            aria-label="Note on the targets"
-          />
-          <div className="nt-note-foot">
-            <button type="submit" className="ad-btn-secondary">
-              Save note
-            </button>
-          </div>
-        </form>
-      </div>
+      {/* One editor per nutrition phase on the Plan tab, so a coming block's
+          numbers can be set before it starts; the chips switch between them
+          and the client only ever sees the running one's. With no phases,
+          the single client-level plan, as before. */}
+      <NutritionPhaseShell
+        clientName={clientName}
+        renderedAt={renderedAt}
+        phases={phases.map((p) => ({
+          id: p.id,
+          name: p.name,
+          status: p.status,
+          range: `${fmtDate(p.start_week)} – ${fmtDate(new Date(new Date(`${p.end_week}T00:00:00`).getTime() + 6 * 86400000).toISOString().slice(0, 10))}`,
+        }))}
+        editors={Object.fromEntries(
+          (phases.length ? phases.map((p) => [p.id, p] as const) : [[0, null] as const]).map(([id, p]) => {
+            // A phase without its own numbers starts from the client-level
+            // plan, so the coach adjusts rather than retypes.
+            const t = p?.nutrition?.day_targets.training ?? (p ? stored.day_targets?.training ?? training : training);
+            const r = p?.nutrition?.day_targets.rest ?? (p ? stored.day_targets?.rest ?? rest : rest);
+            const note = p ? p.nutrition?.coach_notes ?? stored.coach_notes ?? "" : plan.coach_notes ?? "";
+            return [
+              id,
+              <div className="nt-top" key={id}>
+                <NutritionTargets
+                  clientId={clientId}
+                  phaseId={p ? p.id : null}
+                  training={t}
+                  rest={r}
+                  waterL={stored.water_l ?? null}
+                  renderedAt={renderedAt}
+                />
+                <form action={saveCoachNutritionNoteAction} className="nt-note-card">
+                  <input type="hidden" name="clientId" value={clientId} />
+                  {p && <input type="hidden" name="phaseId" value={p.id} />}
+                  <span className="ad-microlabel">Note on the targets</span>
+                  <textarea
+                    name="note"
+                    defaultValue={note}
+                    placeholder="Why these numbers: the client reads this under their kcal figure."
+                    aria-label="Note on the targets"
+                  />
+                  <div className="nt-note-foot">
+                    <button type="submit" className="ad-btn-secondary">
+                      Save note
+                    </button>
+                  </div>
+                </form>
+              </div>,
+            ];
+          })
+        )}
+      />
 
       {/* What the client reported eating, day by day. A sheet, not a chart:
           the coach reads it against the targets above. */}

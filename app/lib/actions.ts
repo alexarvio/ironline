@@ -121,6 +121,7 @@ import {
   getProgramCurrentWeekIndex,
   ensureWeekSkeleton,
   setNutritionDayTargets,
+  setNutritionNote,
   setNutritionWater,
   addSupplementRow,
   updateSupplementRow,
@@ -791,10 +792,13 @@ export async function saveNutritionTargetsAction(formData: FormData) {
     const raw = String(formData.get(k) ?? "").trim();
     return raw === "" ? null : Number(raw);
   };
+  const phaseRaw = Number(formData.get("phaseId"));
+  const phaseId = Number.isInteger(phaseRaw) && phaseRaw > 0 ? phaseRaw : null;
   setNutritionDayTargets(
     clientId,
     { protein: num("t_protein"), carbs: num("t_carbs"), fats: num("t_fats") },
-    { protein: num("r_protein"), carbs: num("r_carbs"), fats: num("r_fats") }
+    { protein: num("r_protein"), carbs: num("r_carbs"), fats: num("r_fats") },
+    phaseId
   );
   // Water rides along on the same form — it's one row inside the same card,
   // and a second Save button for a single number would be silly.
@@ -841,9 +845,8 @@ export async function removeSupplementRowAction(formData: FormData) {
 export async function saveCoachNutritionNoteAction(formData: FormData) {
   await requireCoach();
   const clientId = Number(formData.get("clientId"));
-  const plan = getNutritionPlan(clientId);
-  plan.coach_notes = String(formData.get("note") ?? "");
-  saveNutritionPlan(plan);
+  const phaseRaw = Number(formData.get("phaseId"));
+  setNutritionNote(clientId, String(formData.get("note") ?? ""), Number.isInteger(phaseRaw) && phaseRaw > 0 ? phaseRaw : null);
   revalidatePath("/admin");
   revalidatePath("/client");
 }

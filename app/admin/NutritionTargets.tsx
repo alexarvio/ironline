@@ -26,10 +26,13 @@ export default function NutritionTargets({
   rest,
   waterL,
   renderedAt,
+  phaseId = null,
 }: {
   clientId: number;
   training: Macros;
   rest: Macros;
+  /** The nutrition phase these targets belong to; null for the client-level plan. */
+  phaseId?: number | null;
   /** Server render stamp; lets the note beside Save say "Saved" only once the
       action has landed. */
   renderedAt: number;
@@ -62,6 +65,7 @@ export default function NutritionTargets({
   return (
     <form action={saveNutritionTargetsAction} className="nt-card">
       <input type="hidden" name="clientId" value={clientId} />
+      {phaseId != null && <input type="hidden" name="phaseId" value={phaseId} />}
       {/* Both day types post every time, so switching tabs mid-edit never
           silently drops the half you can't see. */}
       {(["training", "rest"] as const).map((d) =>

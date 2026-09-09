@@ -1822,7 +1822,9 @@ export function feedTimeLabel(at: string): string {
 // the coach's target plan, not a food diary — actual meal-by-meal logging by
 // the client is a separate, not-yet-built feature.
 
-export function getNutritionPlan(clientId: number): NutritionPlan {
+// The client-level plan as stored: what writers edit. Reads go through
+// getNutritionPlan, which lays the running nutrition phase's targets on top.
+export function getStoredNutritionPlan(clientId: number): NutritionPlan {
   const existing = getData().nutrition_plans.find((p) => p.client_id === clientId);
   if (existing) return existing;
   return {
@@ -1837,6 +1839,51 @@ export function getNutritionPlan(clientId: number): NutritionPlan {
     supplements: emptyKeyedMap(SUPPLEMENT_ITEMS, ["quantity", "timing"]),
     coach_notes: "",
   };
+}
+
+// What the client is on right now: the stored plan, with the targets and
+// note of the nutrition phase running this week laid over it when that
+// phase has its own. Water and supplements stay client-level.
+export function getNutritionPlan(clientId: number): NutritionPlan {
+  const stored = getStoredNutritionPlan(clientId);
+  const phase = getCurrentPhase(clientId, "nutrition");
+  if (!phase?.nutrition) return stored;
+  return { ...stored, name: phase.name, day_targets: phase.nutrition.day_targets, coach_notes: phase.nutrition.coach_notes };
+}
+
+// Nutrition phases the coach can still set numbers for: the running one and
+// everything ahead, plus last week's for context. Oldest first.
+export function listNutritionPhases(clientId: number): (ClientPhase & { status: "past" | "now" | "next" })[] {
+  const week = weekStart(localDateStr());
+  const d = new Date(`${week}T00:00:00`);
+  d.setDate(d.getDate() - 7);
+  const lastWeek = localDateStr(d);
+  return listClientPhases(clientId)
+    .filter((p) => p.track === "nutrition" && p.end_week >= lastWeek)
+    .map((p) => ({ ...p, status: p.end_week < week ? "past" : p.start_week > week ? "next" : "now" }));
+}
+
+function nutritionPhaseFor(clientId: number, phaseId: number): ClientPhase | null {
+  const phase = getData().client_phases.find((p) => p.id === phaseId);
+  return phase && phase.client_id === clientId && phase.track === "nutrition" ? phase : null;
+}
+
+// The note under the targets: on a phase when one is named, else client-level.
+export function setNutritionNote(clientId: number, note: string, phaseId: number | null = null) {
+  const phase = phaseId ? nutritionPhaseFor(clientId, phaseId) : null;
+  if (phase) {
+    const current = phase.nutrition ?? { day_targets: getStoredNutritionPlan(clientId).day_targets ?? emptyDayTargets(), coach_notes: "" };
+    phase.nutrition = { ...current, coach_notes: note };
+    persist();
+    return;
+  }
+  const plan = getStoredNutritionPlan(clientId);
+  plan.coach_notes = note;
+  saveNutritionPlan(plan);
+}
+
+function emptyDayTargets() {
+  return { training: { protein: null, carbs: null, fats: null }, rest: { protein: null, carbs: null, fats: null } };
 }
 
 export function saveNutritionPlan(plan: NutritionPlan) {
@@ -3282,24 +3329,35 @@ export function macroKcal(protein: number | null, carbs: number | null, fats: nu
   return (protein ?? 0) * 4 + (carbs ?? 0) * 4 + (fats ?? 0) * 9;
 }
 
+// With a phase id the targets belong to that nutrition phase; without one
+// they are the client-level plan.
 export function setNutritionDayTargets(
   clientId: number,
   training: { protein: number | null; carbs: number | null; fats: number | null },
-  rest: { protein: number | null; carbs: number | null; fats: number | null }
+  rest: { protein: number | null; carbs: number | null; fats: number | null },
+  phaseId: number | null = null
 ) {
-  const plan = getNutritionPlan(clientId);
+  const phase = phaseId ? nutritionPhaseFor(clientId, phaseId) : null;
+  if (phase) {
+    // A phase saved for the first time starts as a copy of the client-level
+    // plan, note included, so what the coach saw in the box is what sticks.
+    phase.nutrition = { day_targets: { training, rest }, coach_notes: phase.nutrition?.coach_notes ?? getStoredNutritionPlan(clientId).coach_notes ?? "" };
+    persist();
+    return;
+  }
+  const plan = getStoredNutritionPlan(clientId);
   plan.day_targets = { training, rest };
   saveNutritionPlan(plan);
 }
 
 export function setNutritionWater(clientId: number, litres: number | null) {
-  const plan = getNutritionPlan(clientId);
+  const plan = getStoredNutritionPlan(clientId);
   plan.water_l = litres;
   saveNutritionPlan(plan);
 }
 
 export function addSupplementRow(clientId: number) {
-  const plan = getNutritionPlan(clientId);
+  const plan = getStoredNutritionPlan(clientId);
   const rows = plan.supplement_rows ?? [];
   rows.push({ id: allocId("supplement_rows"), name: "", quantity: "", timing: "", notes: "" });
   plan.supplement_rows = rows;
@@ -3312,7 +3370,7 @@ export function updateSupplementRow(
   field: "name" | "quantity" | "timing" | "notes",
   value: string
 ) {
-  const plan = getNutritionPlan(clientId);
+  const plan = getStoredNutritionPlan(clientId);
   const row = (plan.supplement_rows ?? []).find((r) => r.id === rowId);
   if (!row) return;
   row[field] = value;
@@ -3320,7 +3378,7 @@ export function updateSupplementRow(
 }
 
 export function removeSupplementRow(clientId: number, rowId: number) {
-  const plan = getNutritionPlan(clientId);
+  const plan = getStoredNutritionPlan(clientId);
   plan.supplement_rows = (plan.supplement_rows ?? []).filter((r) => r.id !== rowId);
   saveNutritionPlan(plan);
 }
