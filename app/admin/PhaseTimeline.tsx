@@ -1,4 +1,5 @@
-import { listClientPhases, localDateStr, PHASE_TRACKS, weekStart, type ClientPhase } from "../lib/queries";
+import { listClientPhases, listPrograms, localDateStr, PHASE_TRACKS, programLoggedWeekIndexes, weekStart, type ClientPhase } from "../lib/queries";
+import type { PhaseProgramInfo } from "./PhaseDialogButton";
 import PhaseDialogButton from "./PhaseDialogButton";
 
 // The coach's phase timeline for one client: calendar weeks across, one
@@ -49,6 +50,18 @@ const TRACK_TONE: Record<string, { bg: string; fg: string }> = {
 export default function PhaseTimeline({ clientId }: { clientId: number }) {
   const phases = listClientPhases(clientId);
   const thisWeek = weekStart(localDateStr());
+  const today = localDateStr();
+  const programs = listPrograms(clientId);
+  // What the edit dialog says about a phase that is a training programme.
+  const programInfo = (p: ClientPhase): PhaseProgramInfo | undefined => {
+    const program = p.program_id ? programs.find((x) => x.id === p.program_id) : undefined;
+    if (!program) return undefined;
+    return {
+      status: program.status === "deployed" ? "live" : program.scheduled_at ? "scheduled" : "draft",
+      totalWeeks: program.total_weeks,
+      loggedWeeks: programLoggedWeekIndexes(program.id),
+    };
+  };
 
   // Window: from the earliest phase (or two weeks back) to the latest one
   // (or eight weeks ahead), always including the current week, so an empty
@@ -151,6 +164,8 @@ export default function PhaseTimeline({ clientId }: { clientId: number }) {
                           <PhaseDialogButton
                             clientId={clientId}
                             phase={p}
+                            program={programInfo(p)}
+                            today={today}
                             bar
                             tone={tone}
                             label={`${p.name} · ${weeksLong} week${weeksLong === 1 ? "" : "s"} · ${fmtWeek(p.start_week)} to ${fmtWeek(addWeeks(p.end_week, 1))}`}

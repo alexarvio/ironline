@@ -443,7 +443,7 @@ export function renameProgram(programId: number, name: string) {
   if (!program) return;
   program.name = name.trim() || null;
   persist();
-  syncProgramPhase(programId);
+  syncProgramPhase(programId, false);
 }
 
 export function deployProgram(programId: number) {
@@ -4691,35 +4691,74 @@ export function addClientPhase(clientId: number, track: PhaseTrack, name: string
   persist();
 }
 
-export function updateClientPhase(phaseId: number, track: PhaseTrack, name: string, startDate: string, endDate: string) {
+// `adjustProgram`: for a phase that is a training programme, also make the
+// programme the phase's length in weeks: add weeks at the end, or remove
+// trailing weeks that have nothing logged in them. Without it the phase
+// keeps the coach's dates and the programme is left as it is.
+export function updateClientPhase(
+  phaseId: number,
+  track: PhaseTrack,
+  name: string,
+  startDate: string,
+  endDate: string,
+  adjustProgram = false
+) {
   const data = getData();
   const phase = data.client_phases.find((p) => p.id === phaseId);
   if (!phase) return;
-  const start = weekStart(startDate);
-  const end = weekStart(endDate);
+  let start = weekStart(startDate);
+  let end = weekStart(endDate);
+  if (start > end) [start, end] = [end, start];
+  const program = phase.program_id ? data.training_programs.find((p) => p.id === phase.program_id) : undefined;
+  // A live or scheduled programme starts on its deploy week, whatever the
+  // form says; the end is the coach's to move.
+  const anchor = program ? (program.status === "deployed" ? program.deployed_at : program.scheduled_at) : null;
+  if (anchor) {
+    start = weekStart(anchor.slice(0, 10));
+    if (end < start) end = start;
+  }
   // A programme's phase stays on the training track; its name is the
   // programme's name, so a rename here renames the programme.
-  phase.track = phase.program_id ? "training" : track;
+  phase.track = program ? "training" : track;
   phase.name = name.trim();
-  phase.start_week = start <= end ? start : end;
-  phase.end_week = start <= end ? end : start;
+  phase.start_week = start;
+  phase.end_week = end;
   persist();
-  if (phase.program_id) {
-    const program = data.training_programs.find((p) => p.id === phase.program_id);
-    if (program) {
-      program.name = phase.name || program.name;
-      // A draft's length follows the phase; a live or scheduled programme's
-      // dates come from its deploy, so the phase snaps back to them.
-      if (program.status === "draft" && !program.scheduled_at) {
-        const weeks = Math.max(1, Math.round((new Date(`${phase.end_week}T00:00:00`).getTime() - new Date(`${phase.start_week}T00:00:00`).getTime()) / (7 * 86400000)) + 1);
-        if (weeks > program.total_weeks) updateProgramTotalWeeks(program.id, weeks);
-        persist();
-      } else {
-        persist();
-        syncProgramPhase(program.id);
-      }
+  if (!program) return;
+  program.name = phase.name || program.name;
+  persist();
+  if (!adjustProgram) return;
+  const weeks = Math.max(1, Math.round((new Date(`${end}T00:00:00`).getTime() - new Date(`${start}T00:00:00`).getTime()) / (7 * 86400000)) + 1);
+  if (weeks > program.total_weeks) {
+    updateProgramTotalWeeks(program.id, weeks);
+  } else if (weeks < program.total_weeks) {
+    // Trailing weeks go one at a time from the end, stopping at the first
+    // that has logged sets: a week the client trained is never deleted.
+    const logged = programLoggedWeekIndexes(program.id);
+    for (let i = program.total_weeks; i > weeks; i--) {
+      if (logged.includes(i)) break;
+      removeProgramWeek(program.id, i);
     }
+    // The phase follows the programme only as far as it could be trimmed.
+    syncProgramPhase(program.id);
   }
+}
+
+// 1-based indexes of the programme's weeks that have at least one logged set.
+export function programLoggedWeekIndexes(programId: number): number[] {
+  const data = getData();
+  const program = data.training_programs.find((p) => p.id === programId);
+  if (!program) return [];
+  const out: number[] = [];
+  for (let i = 1; i <= program.total_weeks; i++) {
+    const weekNumber = program.start_week + i - 1;
+    const dayIds = new Set(
+      data.program_days.filter((pd) => pd.client_id === program.client_id && pd.week_number === weekNumber).map((pd) => pd.id)
+    );
+    const assignmentIds = new Set(data.workout_assignments.filter((wa) => dayIds.has(wa.program_day_id)).map((wa) => wa.id));
+    if (data.set_logs.some((sl) => assignmentIds.has(sl.workout_assignment_id))) out.push(i);
+  }
+  return out;
 }
 
 export function removeClientPhase(phaseId: number) {
@@ -4747,14 +4786,17 @@ export function removeClientPhase(phaseId: number) {
 // scheduled programme always has one, dated from its deploy or scheduled
 // date and as long as its weeks. A plain draft only has one if it was made
 // from the Plan tab, and then only the name follows.
-export function syncProgramPhase(programId: number) {
+// `dates` false keeps the phase's dates as the coach set them and only
+// carries the name across (a rename); true re-derives them from the deploy
+// week and the programme's length (deploy, schedule, weeks added/removed).
+export function syncProgramPhase(programId: number, dates = true) {
   const data = getData();
   const program = data.training_programs.find((p) => p.id === programId);
   if (!program) return;
   const anchor = program.status === "deployed" ? program.deployed_at : program.scheduled_at;
   let phase = data.client_phases.find((p) => p.program_id === programId);
   const name = program.name?.trim() || "Untitled programme";
-  if (!anchor) {
+  if (!anchor || (!dates && phase)) {
     if (phase && phase.name !== name) {
       phase.name = name;
       persist();

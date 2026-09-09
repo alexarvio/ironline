@@ -1501,7 +1501,7 @@ export async function updateClientPhaseAction(formData: FormData) {
   const id = Number(formData.get("id"));
   const fields = readPhaseForm(formData);
   if (!id || getClientIdForPhase(id) == null || !fields) return;
-  updateClientPhase(id, fields.track, fields.name, fields.start, fields.end);
+  updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1");
   revalidatePath("/admin");
   revalidatePath("/client");
 }
