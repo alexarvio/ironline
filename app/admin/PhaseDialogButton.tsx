@@ -78,7 +78,7 @@ export default function PhaseDialogButton({
         </button>
       ) : (
         <button type="button" className="ad-btn-secondary" onClick={() => setOpen(true)}>
-          + Add phase
+          {phase ? "Edit dates" : "+ Add phase"}
         </button>
       )}
       {open && (

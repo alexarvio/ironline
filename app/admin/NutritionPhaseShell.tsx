@@ -2,6 +2,8 @@
 
 import { ReactNode, useState } from "react";
 import AutosaveNote from "./AutosaveNote";
+import PhaseDialogButton from "./PhaseDialogButton";
+import type { ClientPhase } from "../lib/db";
 
 type PhaseChip = { id: number; name: string; status: "past" | "now" | "next"; range: string };
 
@@ -9,11 +11,19 @@ type PhaseChip = { id: number; name: string; status: "past" | "now" | "next"; ra
 // is rendered on the server and handed in; this only decides which one
 // shows and says whether the client is looking at it right now.
 export default function NutritionPhaseShell({
+  clientId,
+  today,
+  phaseData,
   clientName,
   renderedAt,
   phases,
   editors,
 }: {
+  clientId: number;
+  /** Server-local date, for the "this phase is live" check in the edit dialog. */
+  today: string;
+  /** The phases themselves, so the dialog can edit the selected one from here. */
+  phaseData: Record<number, ClientPhase>;
   clientName: string;
   renderedAt: number;
   phases: PhaseChip[];
@@ -55,6 +65,13 @@ export default function NutritionPhaseShell({
               <span className="pb-program-weeks">{p.range}</span>
             </button>
           ))}
+          {/* Same dialog as the Plan tab, for the selected phase, so its dates
+              can be changed without leaving this tab. */}
+          {selected && phaseData[selected.id] && (
+            <span className="nt-phase-edit">
+              <PhaseDialogButton clientId={clientId} phase={phaseData[selected.id]} today={today} />
+            </span>
+          )}
         </div>
       )}
 

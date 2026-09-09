@@ -13,6 +13,7 @@ import {
   listCalorieLogs,
   listNutritionPhases,
   getStoredNutritionPlan,
+  localDateStr,
 } from "../lib/queries";
 import NutritionTargets from "./NutritionTargets";
 import NutritionPhaseShell from "./NutritionPhaseShell";
@@ -72,6 +73,9 @@ export default function NutritionPanel({ clientId }: { clientId: number }) {
           and the client only ever sees the running one's. With no phases,
           the single client-level plan, as before. */}
       <NutritionPhaseShell
+        clientId={clientId}
+        today={localDateStr()}
+        phaseData={Object.fromEntries(phases.map((p) => [p.id, p]))}
         clientName={clientName}
         renderedAt={renderedAt}
         phases={phases.map((p) => ({

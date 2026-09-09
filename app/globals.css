@@ -11482,3 +11482,6 @@ a.cd-entry:hover { border-color: var(--accent); }
 .nt-phases { margin-bottom: 14px; }
 .ms-topbar-live.muted { color: var(--steel); }
 .ms-topbar-live.muted .ms-live-dot { background: var(--steel); }
+
+/* "Edit dates" sits at the end of the nutrition phase chips. */
+.nt-phase-edit { margin-left: auto; }
