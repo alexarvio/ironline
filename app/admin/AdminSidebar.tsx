@@ -42,8 +42,6 @@ export default function AdminSidebar({ selectedId }: { selectedId: number | null
             </svg>
           </span>
           <span className="ad-nav-label">Calendar</span>
-          {/* Scheduling conflicts the coach hasn't resolved. */}
-          <span className="ad-nav-badge">2</span>
         </Link>
       </nav>
 
