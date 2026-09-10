@@ -30,7 +30,15 @@ export default function SectionTabs({
             role="tab"
             aria-selected={s.id === activeId}
             className={`ad-tab${s.id === activeId ? " active" : ""}`}
-            onClick={() => setActiveId(s.id)}
+            onClick={() => {
+              setActiveId(s.id);
+              // The tab lives in the address too, so a reload (a deploy landing
+              // mid-edit, a refresh, a shared link) comes back to the same
+              // section rather than the first one.
+              const url = new URL(window.location.href);
+              url.searchParams.set("tab", s.id);
+              window.history.replaceState(window.history.state, "", url);
+            }}
           >
             {s.label}
           </button>
