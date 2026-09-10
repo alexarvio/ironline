@@ -34,7 +34,7 @@ import CustomValueInput from "../admin/CustomValueInput";
 import ConfirmDeleteButton from "./ConfirmDeleteButton";
 import AdminDayCard from "./AdminDayCard";
 import DemoVideoDialog from "../admin/DemoVideoDialog";
-import LoggedSetsGrid, { LoggedWeekRow } from "../admin/LoggedSetsGrid";
+import LoggedSetsGrid, { repsLowOf, type PreviousLane } from "../admin/LoggedSetsGrid";
 import ProgramBuilderShell, { BuilderProgram, WeekCard } from "../admin/ProgramBuilderShell";
 import ProgramNameForm from "../admin/ProgramNameForm";
 import ProgramDeployControls from "../admin/ProgramDeployControls";
@@ -230,7 +230,15 @@ export default function ProgramBuilder({
                       {col.label}
                     </th>
                   ))}
-                  <th className="logged-col">What the client did</th>
+                  <th className="logged-col">
+                    <span className="pb-log-head">
+                      <span>What the client did</span>
+                      <span className="pb-log-legend">
+                        <span className="met">● target met</span>
+                        <span className="under">● under</span>
+                      </span>
+                    </span>
+                  </th>
                   {/* Holds the row delete on an exercise row and the Add button on the
                       add row, so it needs to fit the wider of the two. */}
                   <th aria-hidden="true" style={{ width: "58px" }}></th>
@@ -269,26 +277,25 @@ export default function ProgramBuilder({
                       reps: l.reps,
                       rpe: l.rpe_actual,
                     }));
-                  const loggedRows: LoggedWeekRow[] = [];
-                  if (prevRef) {
-                    loggedRows.push({
-                      weekLabel: `W${day.week_number - 1}`,
-                      targetWeightKg: prevRef.target_weight_kg,
-                      sets: prevRef.actualLogs.map((l) => ({
-                        setNumber: l.set_number,
-                        weightKg: l.weight_kg,
-                        reps: l.reps,
-                        rpe: l.rpe_actual,
-                      })),
-                      current: false,
-                    });
-                  }
-                  loggedRows.push({
-                    weekLabel: `W${day.week_number}`,
-                    targetWeightKg: a.target_weight_kg,
-                    sets: thisWeekSets,
-                    current: true,
-                  });
+                  // Last week's lane: the same exercise on the same day a week
+                  // earlier. No lane at all when there is no earlier week; "new
+                  // this week" when the week exists but the exercise wasn't on it.
+                  const hasPrevWeek = day.week_number > 1 && getWeek(clientId, day.week_number - 1).length > 0;
+                  const previous: PreviousLane | null = !hasPrevWeek
+                    ? null
+                    : prevRef
+                    ? {
+                        kind: "logged",
+                        targetWeightKg: prevRef.target_weight_kg,
+                        repsLow: repsLowOf(prevRef.reps),
+                        sets: prevRef.actualLogs.map((l) => ({
+                          setNumber: l.set_number,
+                          weightKg: l.weight_kg,
+                          reps: l.reps,
+                          rpe: l.rpe_actual,
+                        })),
+                      }
+                    : { kind: "absent" };
 
                   return {
                     id: a.id,
@@ -405,7 +412,14 @@ export default function ProgramBuilder({
                         }
                       })}
                       <td className="logged-col">
-                        <LoggedSetsGrid rows={loggedRows} />
+                        <LoggedSetsGrid
+                          weekNumber={day.week_number}
+                          targetWeightKg={a.target_weight_kg}
+                          repsLow={repsLowOf(a.reps)}
+                          plannedSets={a.sets}
+                          sets={thisWeekSets}
+                          previous={previous}
+                        />
                       </td>
                       <td>
                         <PendingRemoveButton assignmentId={a.id} exerciseName={a.exercise_name ?? "this exercise"} />

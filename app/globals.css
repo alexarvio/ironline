@@ -11485,3 +11485,62 @@ a.cd-entry:hover { border-color: var(--accent); }
 
 /* "Edit dates" sits at the end of the nutrition phase chips. */
 .nt-phase-edit { margin-left: auto; }
+
+/* ---- "What the client did": two lanes, this week over last ------------
+   30px week tag | the sets | 120px verdict. Row 1 is this week at full
+   contrast, row 2 last week in grey; colours are the palette's green and
+   orange, judged per set against the target of the week it belongs to. */
+.pb .exercise-table td.logged-col { padding: 8px 12px; }
+.pb-log {
+  display: grid;
+  grid-template-columns: 30px 1fr 120px;
+  column-gap: 10px;
+  row-gap: 3px;
+  align-items: center;
+}
+.pb-log-wk {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 18px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #8b93a1;
+  background: #eef0f3;
+}
+.pb-log-wk.now { color: #fff; background: #1e3a6e; }
+.pb-log-sets { display: flex; gap: 4px; min-width: 0; }
+.pb-log-set {
+  flex: 1;
+  min-width: 0;
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 1px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  background: #eef0f3;
+  color: var(--ink);
+}
+.pb-log-set .pb-log-reps { font-size: 11px; font-weight: 700; }
+.pb-log-set.met { background: #e3f2e6; color: #2f7a3f; }
+.pb-log-set.under { background: #fbe9e0; color: #b3471d; }
+.pb-log-set .pb-log-reps.short { text-decoration: underline dotted #b3471d; text-underline-offset: 2px; }
+.pb-log-set.planned { background: transparent; border: 1px dashed #c3c9d2; color: #c3c9d2; font-weight: 700; }
+.pb-log-set.dim { background: transparent; color: #8b93a1; font-size: 11.5px; font-weight: 700; padding: 3px 6px; }
+.pb-log-set.dim .pb-log-reps { font-size: 10.5px; }
+.pb-log-note { font-size: 11px; font-weight: 700; color: #8b93a1; padding: 3px 0; }
+.pb-log-verdict { font-size: 11px; font-weight: 800; white-space: nowrap; text-align: right; }
+.pb-log-delta { font-size: 10.5px; font-weight: 700; white-space: nowrap; text-align: right; }
+.pb-log-verdict.met, .pb-log-delta.met { color: #2f7a3f; }
+.pb-log-verdict.under, .pb-log-delta.under { color: #b3471d; }
+.pb-log-verdict.none, .pb-log-delta.none { color: #8b93a1; }
+.pb-log-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.pb-log-legend { display: inline-flex; gap: 10px; font-size: 11px; font-weight: 700; text-transform: none; letter-spacing: 0; }
+.pb-log-legend .met { color: #2f7a3f; }
+.pb-log-legend .under { color: #b3471d; }

@@ -1047,6 +1047,40 @@ export function logSet(
     logged_at: new Date().toISOString().replace("T", " ").slice(0, 19),
   });
   persist();
+  progressTargetFromLogs(workoutAssignmentId);
+}
+
+// The weight goal writes itself forward. When a client's best set of the
+// week meets or beats the coach's target, next week's target for the same
+// exercise on the same day becomes that weight (or stays higher if the
+// coach already planned more). A week they fell short leaves next week's
+// target exactly as the coach set it. Nothing moves once next week has
+// logs of its own.
+export function progressTargetFromLogs(workoutAssignmentId: number) {
+  const data = getData();
+  const wa = data.workout_assignments.find((x) => x.id === workoutAssignmentId);
+  if (!wa || wa.target_weight_kg == null) return;
+  const day = data.program_days.find((pd) => pd.id === wa.program_day_id);
+  if (!day) return;
+  const weights = data.set_logs
+    .filter((sl) => sl.workout_assignment_id === wa.id)
+    .map((sl) => sl.weight_kg)
+    .filter((w): w is number => w != null);
+  if (weights.length === 0) return;
+  const bestWeight = Math.max(...weights);
+  if (bestWeight < wa.target_weight_kg) return;
+
+  const nextDay = data.program_days.find(
+    (pd) => pd.client_id === day.client_id && pd.week_number === day.week_number + 1 && pd.day_of_week === day.day_of_week
+  );
+  if (!nextDay) return;
+  const next = data.workout_assignments.find((x) => x.program_day_id === nextDay.id && x.exercise_id === wa.exercise_id);
+  if (!next) return;
+  if (data.set_logs.some((sl) => sl.workout_assignment_id === next.id)) return;
+  const target = Math.max(next.target_weight_kg ?? 0, bestWeight);
+  if (target === next.target_weight_kg) return;
+  next.target_weight_kg = target;
+  persist();
 }
 
 // ---- Ownership lookups, used only for authorization ----
@@ -1104,6 +1138,7 @@ export function updateSetLog(setLogId: number, weightKg: number | null, reps: nu
   log.reps = reps;
   log.rpe_actual = rpeActual;
   persist();
+  progressTargetFromLogs(log.workout_assignment_id);
 }
 
 export type WeekLogGroup = { weekStart: string; logs: SetLog[] };
