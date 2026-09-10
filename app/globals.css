@@ -11728,3 +11728,20 @@ a.cd-entry:hover { border-color: var(--accent); }
 .ts-actions { display: flex; flex-direction: column; gap: 6px; }
 .ts-cancel { border: 0; background: none; font: inherit; font-size: 12px; font-weight: 700; color: #5b6472; padding: 6px; cursor: pointer; }
 .ts-all-logged { margin-top: 12px; text-align: center; font-size: 12px; font-weight: 700; color: #2f7a3f; }
+
+/* The coach-note panel is a sibling of its button inside the tools slot;
+   the header wraps so the open panel drops onto its own full-width line
+   under the name instead of squeezing in beside it. */
+.ts-card-head { flex-wrap: wrap; }
+.ts-card-name { flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The tools slot dissolves so its children lay out on the header row:
+   name, note bubble, chevron; the open note panel wraps under all three. */
+.ts-card-tools { display: contents; }
+.ts-card-tools .ex-note-btn { order: 1; }
+.ts-card-tools .ts-chev { order: 2; }
+.ts-card-tools .ex-note-panel { order: 3; flex: 1 0 100%; margin-top: 10px; }
+
+/* The day header folds; the chevron says so. */
+.ts-day-head-right { display: inline-flex; align-items: center; gap: 10px; flex: none; }
+.ts-day-head-right .ts-chev { color: #5b6472; transition: transform 0.18s ease; }
+.ts-day-head-right .ts-chev svg { width: 18px; height: 18px; }

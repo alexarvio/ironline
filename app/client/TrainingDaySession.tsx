@@ -94,8 +94,13 @@ export default function TrainingDaySession({
             {dayDone ? "Session complete" : position > 0 ? `Exercise ${position} of ${exercises.length}` : `${exercises.length} exercises`}
           </div>
         </div>
-        <span className={`ts-day-pill${dayDone ? " done" : ""}`}>
-          {logged} / {planned} sets
+        <span className="ts-day-head-right">
+          <span className={`ts-day-pill${dayDone ? " done" : ""}`}>
+            {logged} / {planned} sets
+          </span>
+          <span className={`ts-chev${open ? " up" : ""}`} aria-hidden="true">
+            <ChevronDownIcon />
+          </span>
         </span>
       </button>
 
