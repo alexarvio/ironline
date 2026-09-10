@@ -490,10 +490,11 @@ export default function ProgramBuilder({
         label: programWeekLabel(program, weekNumber),
         days: railDays,
         isLive: liveWeekNumber === weekNumber,
-        // Weeks the client has already reached (or finished) can't be
-        // removed: that is training history. Draft programmes are all fair
-        // game; past programmes are archives and stay as they were.
-        locked: status !== "draft" && (liveWeekNumber == null || weekNumber <= liveWeekNumber),
+        // A week the client has trained in is history and stays. Anything
+        // with nothing logged, the live week included, can go: a coach who
+        // wants to shorten a block before the client starts it should not
+        // have to wait for it to pass. Past programmes are archives.
+        locked: status === "past" || (status !== "draft" && liveWeekNumber == null) || trainedDays > 0,
         // A future week has nothing to report, so it states the plan rather
         // than claiming zero days trained.
         meta: isFuture

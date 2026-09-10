@@ -14,6 +14,7 @@ import {
   addExercise,
   addExerciseToDay,
   applyDayChanges,
+  programLoggedWeekIndexes,
   type DayChanges,
   addExerciseToRemainingWeeks,
   addInvoice,
@@ -1419,10 +1420,8 @@ export async function removeProgramWeekAction(formData: FormData) {
   const week = Number(formData.get("week"));
   const program = listPrograms(clientId).find((p) => p.id === programId);
   if (!program || !week) return;
-  if (program.status === "deployed") {
-    const liveIndex = getProgramCurrentWeekIndex(program);
-    if (week <= liveIndex) return;
-  }
+  // A week with logged sets is training history; it never goes from here.
+  if (programLoggedWeekIndexes(programId).includes(week)) return;
   removeProgramWeek(programId, week);
   revalidatePath("/admin");
   revalidatePath("/client");
