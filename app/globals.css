@@ -11544,3 +11544,22 @@ a.cd-entry:hover { border-color: var(--accent); }
 .pb-log-legend { display: inline-flex; gap: 10px; font-size: 11px; font-weight: 700; text-transform: none; letter-spacing: 0; }
 .pb-log-legend .met { color: #2f7a3f; }
 .pb-log-legend .under { color: #b3471d; }
+
+/* ---- Uniform rows: every exercise row is the same height whatever it
+   holds, so the day cards read as one grid rather than a stack of
+   differently sized boxes. Names clamp to two lines and notes already
+   clamp to two; the logged cell centres its one or two lanes. ---- */
+.pb .exercise-table tbody tr.pb-row > td {
+  height: 76px;
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+.pb .exercise-table .pb-exercise-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.25;
+}
+.pb .exercise-table .exercise-name-cell { max-width: 220px; }
+.pb .exercise-table td.logged-col .pb-log { align-content: center; }
