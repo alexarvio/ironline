@@ -53,6 +53,7 @@ function SetChip({
     <span className={`pb-log-set${dim ? " dim" : met == null ? "" : met ? " met" : " under"}`} title={title}>
       {set.weightKg ?? "–"}
       <span className={`pb-log-reps${repsShort ? " short" : ""}`}>×{set.reps ?? "–"}</span>
+      {set.rpe != null && <span className="pb-log-rpe">@{set.rpe}</span>}
     </span>
   );
 }

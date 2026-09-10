@@ -11563,3 +11563,7 @@ a.cd-entry:hover { border-color: var(--accent); }
 }
 .pb .exercise-table .exercise-name-cell { max-width: 220px; }
 .pb .exercise-table td.logged-col .pb-log { align-content: center; }
+
+/* RPE rides on the set chip, small and after the reps: "90×8 @7". */
+.pb-log-set .pb-log-rpe { font-size: 10px; font-weight: 700; opacity: 0.75; margin-left: 3px; }
+.pb-log-set.dim .pb-log-rpe { font-size: 9.5px; }
