@@ -576,6 +576,12 @@ export function applyDueProgramDeployments() {
   const due = data.training_programs.filter((p) => p.status === "draft" && p.scheduled_at && p.scheduled_at <= now);
   due.forEach((program) => deployProgram(program.id));
 
+  // Goals progress from what was logged before the rule existed too: every
+  // assignment with logs gets one pass. Cheap, idempotent, and a no-op for
+  // a next week that already has logs of its own.
+  const loggedAssignmentIds = new Set(data.set_logs.map((sl) => sl.workout_assignment_id));
+  loggedAssignmentIds.forEach((id) => progressTargetFromLogs(id));
+
   // Programmes that went live or were scheduled before phases existed get
   // their Plan-tab phase now. syncProgramPhase is a no-op once it exists.
   data.training_programs
