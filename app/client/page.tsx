@@ -38,9 +38,7 @@ import {
   VITAMIN_ITEMS,
 } from "../lib/queries";
 import { DAY_NAMES_FULL } from "../lib/db";
-import SetLogForm from "./SetLogForm";
-import LoggedSetRow from "./LoggedSetRow";
-import TrainingDayCard from "./TrainingDayCard";
+import TrainingDaySession from "./TrainingDaySession";
 import ExerciseCoachNote from "./ExerciseCoachNote";
 import PhotoPeriodHistoryRow from "./PhotoPeriodHistoryRow";
 import HomeHub, { UpcomingMeeting } from "./HomeHub";
@@ -428,118 +426,41 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
           const firstOpenIndex = trainingDays.findIndex(
             ({ assignments }) => !assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets)
           );
-          return trainingDays.map(({ day, assignments }, i) => {
-            const doneCount = assignments.filter((a) => getLogsForAssignment(a.id).length >= a.sets).length;
-            return (
-              <TrainingDayCard
-                key={day.id}
-                name={DAY_NAMES_FULL[day.day_of_week - 1]}
-                label={day.label}
-                doneCount={doneCount}
-                totalCount={assignments.length}
-                defaultOpen={i === firstOpenIndex}
-              >
-                <div className="training-exercise-table">
-                  {assignments.map((a) => {
-                    const logs = getLogsForAssignment(a.id);
-                    const nextSetNumber = logs.length + 1;
-                    const doneAllSets = nextSetNumber > a.sets;
-                    return (
-                      <div key={a.id} className="training-exercise-row">
-                        {/* Name, then the set count as a chip, then the coach
-                            note bubble, in the same three positions on every
-                            row: the count was easy to miss as plain text, and
-                            the bubble came and went with whether a note
-                            existed. Now the bubble is always there and carries
-                            a dot only when the coach has written something. */}
-                        <div className="training-exercise-row-top">
-                          <strong className="training-exercise-name">{a.exercise_name}</strong>
-                          <span className="training-exercise-target">
-                            {a.sets} set{a.sets === 1 ? "" : "s"}
-                          </span>
-                          <ExerciseCoachNote
-                            assignmentId={a.id}
-                            dateLabel={noteDateLabel(a.note_at)}
-                            text={a.notes}
-                            unread={!!a.notes && !a.note_read}
-                          />
-                        </div>
-                        {/* The coach's demo for this prescription wins; the
-                            exercise library's own video is the fallback. */}
-                        {(a.demo_url || a.exercise_video_url) && (
-                          <a
-                            href={a.exercise_video_url ?? a.demo_url ?? undefined}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="video-link"
-                          >
-                            ▶ how to
-                          </a>
-                        )}
-
-                        {/* Coach's target laid out as the first row of the same
-                            table the client logs into below, instead of a
-                            separate row of badges — so "what to aim for" and
-                            "what I actually did" line up column-by-column.
-                            Tempo only gets its own column when the coach set
-                            one; the wrap scrolls horizontally rather than
-                            squeezing columns if it (or future metrics) don't
-                            fit the phone width. */}
-                        <div className="training-set-table-wrap">
-                          <table className="training-set-table">
-                            <thead>
-                              <tr>
-                                <th>Set</th>
-                                <th>Weight</th>
-                                <th>Reps</th>
-                                <th>RPE</th>
-                                {a.tempo && <th>Tempo</th>}
-                                <th />
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr className="training-goal-row">
-                                <td className="training-set-cell-num">Goal</td>
-                                <td>{a.target_weight_kg != null ? `${a.target_weight_kg}kg` : "-"}</td>
-                                <td>{a.reps}</td>
-                                <td>{a.rpe_target ?? "-"}</td>
-                                {a.tempo && <td>{a.tempo}</td>}
-                                <td />
-                              </tr>
-                              {logs.map((l) => (
-                                <LoggedSetRow
-                                  key={l.id}
-                                  setLogId={l.id}
-                                  setNumber={l.set_number}
-                                  weight={l.weight_kg}
-                                  reps={l.reps}
-                                  rpe={l.rpe_actual}
-                                  showTempoColumn={!!a.tempo}
-                                />
-                              ))}
-                              {!doneAllSets && (
-                                <SetLogForm
-                                  assignmentId={a.id}
-                                  nextSetNumber={nextSetNumber}
-                                  targetWeight={a.target_weight_kg}
-                                  targetReps={a.reps}
-                                  targetRpe={a.rpe_target}
-                                  showTempoColumn={!!a.tempo}
-                                />
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
-                        {doneAllSets && (
-                          <div className="exercise-meta training-exercise-done">✓ All sets logged for today</div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </TrainingDayCard>
-            );
-          });
+          return trainingDays.map(({ day, assignments }, i) => (
+            <TrainingDaySession
+              key={day.id}
+              dayName={DAY_NAMES_FULL[day.day_of_week - 1]}
+              label={day.label}
+              defaultOpen={i === firstOpenIndex}
+              exercises={assignments.map((a) => ({
+                id: a.id,
+                name: a.exercise_name ?? "Exercise",
+                sets: a.sets,
+                reps: a.reps,
+                targetWeight: a.target_weight_kg,
+                targetRpe: a.rpe_target,
+                tempo: a.tempo,
+                // The coach's demo for this prescription wins; the exercise
+                // library's own video is the fallback.
+                videoUrl: a.exercise_video_url ?? a.demo_url ?? null,
+                logs: getLogsForAssignment(a.id).map((l) => ({
+                  id: l.id,
+                  setNumber: l.set_number,
+                  weight: l.weight_kg,
+                  reps: l.reps,
+                  rpe: l.rpe_actual,
+                })),
+                note: (
+                  <ExerciseCoachNote
+                    assignmentId={a.id}
+                    dateLabel={noteDateLabel(a.note_at)}
+                    text={a.notes}
+                    unread={!!a.notes && !a.note_read}
+                  />
+                ),
+              }))}
+            />
+          ));
         })()
       )}
     </div>

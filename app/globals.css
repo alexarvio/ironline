@@ -11567,3 +11567,164 @@ a.cd-entry:hover { border-color: var(--accent); }
 /* RPE rides on the set chip, small and after the reps: "90×8 @7". */
 .pb-log-set .pb-log-rpe { font-size: 10px; font-weight: 700; opacity: 0.75; margin-left: 3px; }
 .pb-log-set.dim .pb-log-rpe { font-size: 9.5px; }
+
+/* ---- Training tab, focus mode: one exercise open at a time ------------ */
+.ts-day { margin-bottom: 14px; }
+.ts-day-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 0;
+  background: none;
+  padding: 4px 0 10px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.ts-day-head-main { min-width: 0; }
+.ts-day-title { font-size: 20px; font-weight: 800; color: #313851; letter-spacing: -0.01em; line-height: 1.2; }
+.ts-day-sub { font-size: 13px; color: #5b6472; margin-top: 2px; }
+.ts-day-pill {
+  flex: none;
+  font-size: 12px;
+  font-weight: 800;
+  color: #5b6472;
+  background: #e6ecf3;
+  border-radius: 999px;
+  padding: 5px 11px;
+  white-space: nowrap;
+}
+.ts-day-pill.done { color: #2f7a3f; background: #e3f2e6; }
+.ts-list { display: flex; flex-direction: column; gap: 10px; }
+
+/* Collapsed exercise rows. */
+.ts-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid #dfe3e8;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+.ts-row.active { border: 1.5px solid #2f5d8f; padding: 11.5px 13.5px; }
+.ts-circle {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: #8b93a1;
+  border: 1.5px solid #c2cbd3;
+  box-sizing: border-box;
+}
+.ts-circle.done, .ts-row.done .ts-circle { background: #2f7a3f; border-color: #2f7a3f; color: #fff; }
+.ts-circle.active, .ts-row.active .ts-circle { background: #2f5d8f; border-color: #2f5d8f; color: #fff; }
+.ts-row-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 800; color: #313851; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ts-row.idle .ts-row-name { color: #8b93a1; }
+.ts-row.done .ts-row-name { color: #5b6472; }
+.ts-row-count { font-size: 11px; font-weight: 800; color: #8b93a1; }
+.ts-row.done .ts-row-count { color: #2f7a3f; }
+.ts-row.active .ts-row-count { color: #2f5d8f; }
+.ts-chev { display: inline-flex; color: #8b93a1; border: 0; background: none; padding: 0; cursor: pointer; }
+.ts-chev svg { width: 16px; height: 16px; }
+.ts-chev.up { transform: rotate(180deg); }
+
+/* The open exercise. */
+.ts-card {
+  background: #fff;
+  border-radius: 18px;
+  padding: 16px 14px 14px;
+  border: 1.5px solid #2f5d8f;
+  box-shadow: 0 12px 28px rgba(47, 93, 143, 0.14);
+}
+.ts-card.done { border-color: #2f7a3f; box-shadow: none; }
+.ts-card-head { display: flex; align-items: center; gap: 10px; }
+.ts-card-name { flex: 1; min-width: 0; font-size: 18px; font-weight: 800; color: #313851; letter-spacing: -0.01em; }
+.ts-card-tools { display: inline-flex; align-items: center; gap: 8px; }
+.ts-video { display: inline-block; margin-top: 4px; font-size: 12px; font-weight: 700; color: #2f5d8f; text-decoration: none; }
+
+.ts-grid {
+  display: grid;
+  grid-template-columns: 34px 1fr 1fr 1fr 44px;
+  align-items: center;
+  text-align: center;
+}
+.ts-target {
+  margin-top: 12px;
+  background: #e6ecf3;
+  border-radius: 10px;
+  padding: 8px 0 9px;
+  text-align: center;
+}
+.ts-target-label { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #2f5d8f; }
+.ts-target-line { margin-top: 2px; }
+.ts-target b, .ts-target-tempo b { font-size: 15px; font-weight: 800; color: #2f5d8f; }
+.ts-target small, .ts-target-tempo small { font-size: 10px; font-weight: 700; color: #2f5d8f; }
+.ts-target-tempo { margin-top: 2px; }
+
+.ts-cols {
+  margin-top: 12px;
+  padding: 6px 0;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8b93a1;
+  border-bottom: 1px solid #eef1f4;
+}
+.ts-set { padding: 8px 0; border-bottom: 1px solid #eef1f4; font-size: 15px; font-weight: 800; }
+.ts-set .ts-circle { margin: 0 auto; }
+.ts-set.logged { color: #2f7a3f; }
+.ts-set.upcoming { color: #a0a7b3; font-weight: 700; }
+.ts-set.active { padding: 6px 0; }
+.ts-edit { border: 0; background: none; font: inherit; font-size: 11px; font-weight: 800; color: #2f5d8f; cursor: pointer; padding: 6px 0; }
+.ts-input {
+  width: calc(100% - 8px);
+  margin: 0 4px;
+  box-sizing: border-box;
+  padding: 9px 4px;
+  border-radius: 8px;
+  border: 1px solid #c2cbd3;
+  background: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  color: #313851;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+.ts-input::-webkit-outer-spin-button, .ts-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.ts-input.reps { border: 1.5px solid #2f5d8f; }
+.ts-input::placeholder { color: #a0a7b3; font-weight: 700; }
+
+.ts-primary {
+  display: block;
+  width: 100%;
+  height: 44px;
+  margin-top: 12px;
+  border: 0;
+  border-radius: 10px;
+  background: #2f5d8f;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.ts-primary:disabled { opacity: 0.45; cursor: default; }
+.ts-actions { display: flex; flex-direction: column; gap: 6px; }
+.ts-cancel { border: 0; background: none; font: inherit; font-size: 12px; font-weight: 700; color: #5b6472; padding: 6px; cursor: pointer; }
+.ts-all-logged { margin-top: 12px; text-align: center; font-size: 12px; font-weight: 700; color: #2f7a3f; }
