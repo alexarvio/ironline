@@ -1645,7 +1645,7 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
         suffix: unpaid ? "outstanding" : "outstanding",
       },
     ],
-    goals: listClientGoals(clientId, "short"),
+    goals: listClientGoals(clientId),
     memberInfo: [
       { label: "Birthdate", value: dash(profile.birthdate) },
       { label: "Gender", value: dash(profile.gender) },
@@ -3332,9 +3332,11 @@ export type ClientGoal = {
   tracked_by?: GoalTracking | null;
 };
 
-export function listClientGoals(clientId: number, term: "short" | "long"): ClientGoal[] {
+// One list of goals per client. The stored `term` field is a leftover of
+// the short/long split the old Start Page drew; nothing reads it now.
+export function listClientGoals(clientId: number): ClientGoal[] {
   return getData()
-    .client_goals.filter((g) => g.client_id === clientId && g.term === term)
+    .client_goals.filter((g) => g.client_id === clientId)
     .sort((a, b) => a.order_index - b.order_index);
 }
 
@@ -5403,13 +5405,13 @@ import type { GoalContext, GoalTracking, GoalView, LoggedSet, SeriesPoint } from
 import { computeGoalView, describeTracking } from "./goalView";
 export type { GoalTracking, GoalView } from "./goalView";
 
-export function addClientGoal(clientId: number, term: "short" | "long", text: string, tracking: GoalTracking | null = null) {
+export function addClientGoal(clientId: number, text: string, tracking: GoalTracking | null = null) {
   const data = getData();
-  const count = data.client_goals.filter((g) => g.client_id === clientId && g.term === term).length;
+  const count = data.client_goals.filter((g) => g.client_id === clientId).length;
   data.client_goals.push({
     id: allocId("client_goals"),
     client_id: clientId,
-    term,
+    term: "short",
     text,
     done: false,
     order_index: count,
@@ -5492,14 +5494,14 @@ export function goalContext(clientId: number, goal: ClientGoal): GoalContext {
 
 /** Goal rows as the client sees them, open goals first, done text goals last. */
 export function getGoalViews(clientId: number): GoalView[] {
-  return [...listClientGoals(clientId, "short"), ...listClientGoals(clientId, "long")]
+  return listClientGoals(clientId)
     .filter((g) => !g.done || !g.tracked_by)
     .map((g) => computeGoalView({ id: g.id, text: g.text, done: g.done, tracking: g.tracked_by ?? null }, goalContext(clientId, g)));
 }
 
-/** The coach's list: each goal with its tracking in words. */
+/** The coach's list: every goal the client sees, with its tracking in words. */
 export function getGoalSummaries(clientId: number): { goal: ClientGoal; view: GoalView; tracking: string }[] {
-  return listClientGoals(clientId, "short").map((g) => {
+  return listClientGoals(clientId).map((g) => {
     const t = g.tracked_by ?? null;
     const names: { metric?: string; unit?: string; exercise?: string; habit?: string } = {};
     if (t?.kind === "metric") {
@@ -5567,7 +5569,7 @@ export type DataTile = {
 
 export function getHomeDataTiles(clientId: number, weightGoalIsDown: boolean | null): DataTile[] {
   const today = localDateStr();
-  const goals = listClientGoals(clientId, "short").filter((g) => !g.done && g.tracked_by?.kind === "metric");
+  const goals = listClientGoals(clientId).filter((g) => !g.done && g.tracked_by?.kind === "metric");
   const choices = listGraphChoices(clientId).filter((c) => c.pointCount > 0);
   const picked = (choices.some((c) => c.pinned) ? choices.filter((c) => c.pinned) : choices).slice(0, 6);
   const fmt = (n: number) => (Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10));

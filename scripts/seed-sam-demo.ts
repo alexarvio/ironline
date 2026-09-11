@@ -295,7 +295,7 @@ for (let wk = 1; wk <= 5; wk++) {
 {
   const have = new Set(getData().client_goals.filter((g) => g.client_id === clientId).map((g) => g.text.toLowerCase()));
   const add = (term: "short" | "long", text: string) => {
-    if (!have.has(text.toLowerCase())) addClientGoal(clientId, term, text);
+    if (!have.has(text.toLowerCase())) addClientGoal(clientId, text);
   };
   add("short", "Hit all 4 sessions every week this block");
   add("short", "Leg press 80kg for 10 clean reps");

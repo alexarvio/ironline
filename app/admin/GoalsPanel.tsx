@@ -180,7 +180,6 @@ function GoalEditor({
   return (
     <form action={submit} className="ge-editor">
       {goal ? <input type="hidden" name="id" value={goal.id} /> : <input type="hidden" name="clientId" value={clientId} />}
-      <input type="hidden" name="term" value="short" />
       <input type="hidden" name="tracking" value={kind === "none" ? "" : JSON.stringify(tracking ?? {})} />
 
       <label className="ge-field">

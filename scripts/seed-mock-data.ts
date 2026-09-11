@@ -123,12 +123,12 @@ function enrichAlex() {
     water_goal: "3.5L/day",
   });
 
-  addClientGoal(clientId, "short", "Hit 3/4 planned sessions this week");
-  addClientGoal(clientId, "short", "Log weight + waist every Monday");
-  addClientGoal(clientId, "short", "Hit protein target 6/7 days");
+  addClientGoal(clientId, "Hit 3/4 planned sessions this week");
+  addClientGoal(clientId, "Log weight + waist every Monday");
+  addClientGoal(clientId, "Hit protein target 6/7 days");
   setClientGoalDone(1, true); // first short goal — client_goals table was empty, so this is id 1
-  addClientGoal(clientId, "long", "Reach 92kg bodyweight while keeping waist under 84cm");
-  addClientGoal(clientId, "long", "Bench press 100kg x 5 clean reps");
+  addClientGoal(clientId, "Reach 92kg bodyweight while keeping waist under 84cm");
+  addClientGoal(clientId, "Bench press 100kg x 5 clean reps");
 
   // ---- Nutrition (table was empty) ----
   const plan = getNutritionPlan(clientId);
@@ -325,8 +325,8 @@ function seedLightClient(name: string, opts: { weight: number; goalPhase: string
     water_goal: "2.5L/day",
   });
 
-  addClientGoal(clientId, "short", "Log all check-ins this week");
-  addClientGoal(clientId, "long", opts.goalPhase);
+  addClientGoal(clientId, "Log all check-ins this week");
+  addClientGoal(clientId, opts.goalPhase);
 
   ensureWeekSkeleton(clientId, 1);
   const week = getData().program_days.filter((d) => d.client_id === clientId && d.week_number === 1);

@@ -255,7 +255,7 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   // "set Sep 3 · review Sep 20": when the goals were written, and the next
   // call they will be looked at on.
   const goalsMeta = (() => {
-    const open = listClientGoals(CLIENT_ID, "short").filter((g) => !g.done);
+    const open = listClientGoals(CLIENT_ID).filter((g) => !g.done);
     const earliest = open.map((g) => g.created_at).filter((d): d is string => !!d).sort()[0];
     const set = earliest ? `set ${fmtShortDate(earliest)}` : "";
     const review = upcomingMeeting ? `${set ? " · " : ""}review ${fmtShortDate(upcomingMeeting.date)}` : "";

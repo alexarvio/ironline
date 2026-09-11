@@ -330,8 +330,8 @@ function enrichClient(cfg: LightClientConfig) {
   persist();
 
   // ---- Extra goals ----
-  addClientGoal(clientId, "short", cfg.extraShortGoal);
-  addClientGoal(clientId, "long", cfg.extraLongGoal);
+  addClientGoal(clientId, cfg.extraShortGoal);
+  addClientGoal(clientId, cfg.extraLongGoal);
 
   // ---- A completed past meeting with notes ----
   addMeeting(clientId, daysAgo(7), cfg.meetingTime, "Week 3 check-in call", 30);

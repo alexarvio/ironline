@@ -1012,10 +1012,9 @@ export async function saveClientCardAction(formData: FormData) {
 export async function addClientGoalAction(formData: FormData) {
   await requireCoach();
   const clientId = Number(formData.get("clientId"));
-  const term = String(formData.get("term") || "short") as "short" | "long";
   const text = String(formData.get("text") || "").trim();
   if (!text) return;
-  addClientGoal(clientId, term, text, parseGoalTracking(formData.get("tracking")));
+  addClientGoal(clientId, text, parseGoalTracking(formData.get("tracking")));
   revalidatePath("/admin");
   revalidatePath("/client");
 }

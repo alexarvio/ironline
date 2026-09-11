@@ -88,8 +88,8 @@ saveClientProfile({
   training_goal: "4x/week upper-lower split",
   water_goal: "3L/day",
 });
-addClientGoal(CLIENT_ID, "short", "Hit all 4 planned sessions this week");
-addClientGoal(CLIENT_ID, "long", "Add 15kg to leg press over the block");
+addClientGoal(CLIENT_ID, "Hit all 4 planned sessions this week");
+addClientGoal(CLIENT_ID, "Add 15kg to leg press over the block");
 addInvoice(CLIENT_ID, "Coaching, Month 1", 180, "paid");
 addMeeting(CLIENT_ID, daysAgo(-4), "18:00", "Week 4 check-in call", 30);
 
