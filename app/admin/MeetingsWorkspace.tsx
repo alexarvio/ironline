@@ -263,7 +263,7 @@ export default function MeetingsWorkspace(p: MeetingsWorkspaceProps) {
                   onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
                   onBlur={(e) => setForm((f) => ({ ...f, time: tidyTime(e.target.value) }))}
                   onKeyDown={(e) => e.key === "Enter" && setForm((f) => ({ ...f, time: tidyTime(f.time) }))}
-                  pattern="([01]?d|2[0-3]):[0-5]d"
+                  pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
                   title="24-hour time, e.g. 14:30"
                 />
               </label>
