@@ -86,18 +86,19 @@ export function GoalEditor({
   const [text, setText] = useState(goal?.text ?? "");
   const [kind, setKind] = useState<Kind>(t?.kind ?? "none");
   // Metric
-  const [metricKey, setMetricKey] = useState(t?.kind === "metric" ? t.metricKey : options.metrics[0]?.key ?? "");
+  // Nothing preselected: a new goal starts with the search box empty.
+  const [metricKey, setMetricKey] = useState(t?.kind === "metric" ? t.metricKey : "");
   const [op, setOp] = useState<"<=" | ">=">(t?.kind === "metric" ? t.op : "<=");
   const [target, setTarget] = useState(t?.kind === "metric" ? String(t.target) : "");
   const [byMode, setByMode] = useState<"phase" | "custom">(t?.kind === "metric" && t.byDate !== options.phaseEnd ? "custom" : options.phaseEnd ? "phase" : "custom");
   const [byDate, setByDate] = useState(t?.kind === "metric" ? t.byDate : options.phaseEnd ?? "");
   // Exercise
-  const [exerciseId, setExerciseId] = useState(t?.kind === "exercise" ? t.exerciseId : options.exercises[0]?.id ?? 0);
+  const [exerciseId, setExerciseId] = useState(t?.kind === "exercise" ? t.exerciseId : 0);
   const [weight, setWeight] = useState(t?.kind === "exercise" ? String(t.weight) : "");
   const [reps, setReps] = useState(t?.kind === "exercise" ? String(t.reps) : "");
   const [maxRpe, setMaxRpe] = useState(t?.kind === "exercise" && t.maxRpe != null ? String(t.maxRpe) : "");
   // Habit
-  const [habitId, setHabitId] = useState(t?.kind === "habit" ? t.metricId : options.habits[0]?.id ?? 0);
+  const [habitId, setHabitId] = useState(t?.kind === "habit" ? t.metricId : 0);
   const [hop, setHop] = useState<"<=" | ">=">(t?.kind === "habit" ? t.op : ">=");
   const [hvalue, setHvalue] = useState(t?.kind === "habit" ? String(t.value) : "");
   const [daysPerWeek, setDaysPerWeek] = useState(t?.kind === "habit" ? String(t.daysPerWeek) : "5");
@@ -141,6 +142,9 @@ export function GoalEditor({
 
   // Helper lines under the fields.
   const helper = (() => {
+    if (kind === "metric" && !metric) return "Pick a metric to track this goal by.";
+    if (kind === "exercise" && !exercise) return "Pick an exercise to track this goal by.";
+    if (kind === "habit" && !habit) return options.habits.length ? "Pick a daily check-in field to count." : "Add a daily check-in field first.";
     if (kind === "metric" && metric) {
       const latest = metric.series[metric.series.length - 1];
       if (!latest) return `Nothing logged for ${metric.name} yet.`;
