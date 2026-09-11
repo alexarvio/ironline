@@ -9,6 +9,7 @@ import {
   getCalorieLog,
   listCalorieLogs,
   getDeployedProgram,
+  getClientExerciseNotes,
   getLogsForAssignment,
   getCurrentWeekNumber,
   getCheckInSections,
@@ -426,6 +427,7 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
           const firstOpenIndex = trainingDays.findIndex(
             ({ assignments }) => !assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets)
           );
+          const myNotes = getClientExerciseNotes(CLIENT_ID);
           return trainingDays.map(({ day, assignments }, i) => (
             <TrainingDaySession
               key={day.id}
@@ -443,6 +445,7 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
                 // The coach's demo for this prescription wins; the exercise
                 // library's own video is the fallback.
                 videoUrl: a.exercise_video_url ?? a.demo_url ?? null,
+                myNote: myNotes.get(a.exercise_id) ?? "",
                 logs: getLogsForAssignment(a.id).map((l) => ({
                   id: l.id,
                   setNumber: l.set_number,

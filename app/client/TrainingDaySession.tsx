@@ -1,7 +1,7 @@
 "use client";
 
-import { ReactNode, useEffect, useId, useRef, useState } from "react";
-import { logSetAction, updateSetAction } from "../lib/actions";
+import { ReactNode, useEffect, useId, useRef, useState, useTransition } from "react";
+import { logSetAction, saveExerciseNoteAction, updateSetAction } from "../lib/actions";
 import { ChevronDownIcon } from "../components/icons";
 
 // One training day, logged in focus mode: one exercise open at a time,
@@ -23,6 +23,8 @@ export type SessionExercise = {
   logs: SessionSet[];
   /** The coach-note bubble, rendered by the server page. */
   note: ReactNode;
+  /** The client's own note on this exercise: settings, cues. */
+  myNote: string;
 };
 
 // Digits and one dot; a typed comma becomes the dot.
@@ -298,6 +300,8 @@ function ExpandedExercise({ exercise, onCollapse }: { exercise: SessionExercise;
         </div>
       )}
 
+      <MyNote assignmentId={exercise.id} text={exercise.myNote} />
+
       <div className="ts-grid ts-cols">
         <span>Set</span>
         <span>Kg</span>
@@ -391,5 +395,57 @@ function ExpandedExercise({ exercise, onCollapse }: { exercise: SessionExercise;
         </button>
       )}
     </div>
+  );
+}
+
+// The client's own note on an exercise: seat height, grip width, a cue that
+// helps. Reads as one line until tapped; saves on blur or Save.
+function MyNote({ assignmentId, text }: { assignmentId: number; text: string }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(text);
+  const [saving, start] = useTransition();
+  const save = () => {
+    const next = draft.trim();
+    setEditing(false);
+    if (next === text.trim()) return;
+    const fd = new FormData();
+    fd.set("assignmentId", String(assignmentId));
+    fd.set("text", next);
+    start(() => saveExerciseNoteAction(fd));
+  };
+  if (editing) {
+    return (
+      <div className="ts-mynote editing">
+        <span className="ts-mynote-label">My notes</span>
+        <textarea
+          className="ts-mynote-input"
+          value={draft}
+          autoFocus
+          rows={2}
+          placeholder="Seat 4, handles narrow, slow on the way down…"
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={save}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              setDraft(text);
+              setEditing(false);
+            }
+          }}
+        />
+        <span className="ts-mynote-hint">Only you see this. It stays with the exercise, every week.</span>
+      </div>
+    );
+  }
+  return (
+    <button type="button" className={`ts-mynote${text ? "" : " empty"}`} onClick={() => setEditing(true)}>
+      {text ? (
+        <>
+          <span className="ts-mynote-label">My notes{saving ? " · saving…" : ""}</span>
+          <span className="ts-mynote-text">{text}</span>
+        </>
+      ) : (
+        <span className="ts-mynote-add">+ Add a note for yourself (settings, cues)</span>
+      )}
+    </button>
   );
 }
