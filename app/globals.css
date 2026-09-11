@@ -12122,3 +12122,14 @@ a.cd-entry:hover { border-color: var(--accent); }
 .ph-goals .ge { margin-top: 10px; }
 .ad-goal-plan-link { display: inline-block; margin-top: 8px; font-size: 10.5px; font-weight: 800; color: #1e3a6e; text-decoration: none; }
 .ad-goal-plan-link:hover { text-decoration: underline; }
+
+/* Mini calendar: the picked day's bookings. */
+.mw-cal-day { margin-top: 8px; padding-top: 8px; border-top: 1px solid #eceff3; }
+.mw-cal-day-head { font-size: 11px; font-weight: 800; color: #313851; margin-bottom: 4px; }
+.mw-cal-day-empty { font-size: 11.5px; color: #8b93a1; }
+.mw-cal-day-row { display: flex; align-items: baseline; gap: 8px; padding: 3px 0; font-size: 11.5px; color: #5b6474; }
+.mw-cal-day-row.mine { color: #1e3a6e; font-weight: 700; }
+.mw-cal-day-row.done { color: #2f7a3f; }
+.mw-cal-day-time { flex: none; font-variant-numeric: tabular-nums; font-weight: 700; min-width: 92px; }
+.mw-cal-day-who { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mw-cal-day-tick { flex: none; font-weight: 800; }

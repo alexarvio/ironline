@@ -50,7 +50,7 @@ export type WsMeeting = {
   goals: WsGoal[];
 };
 export type WsOther = { date: string; time: string; durationMinutes: number; name: string };
-export type WsDot = { date: string; mine: boolean; completed: boolean };
+export type WsDot = { date: string; time: string; durationMinutes: number; name: string; topic: string; mine: boolean; completed: boolean };
 
 export type MeetingsWorkspaceProps = {
   clientId: number;
@@ -649,6 +649,27 @@ function MiniCalendar({ today, selected, dots, onPick }: { today: string; select
           ) : (
             <span key={i} />
           )
+        )}
+      </div>
+      {/* What is already booked on the picked day, so a slot is chosen
+          around it rather than on top of it. */}
+      <div className="mw-cal-day">
+        <div className="mw-cal-day-head">{parse(selected).toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "short" })}</div>
+        {(byDate.get(selected) ?? []).length === 0 ? (
+          <div className="mw-cal-day-empty">Nothing booked</div>
+        ) : (
+          [...(byDate.get(selected) ?? [])]
+            .sort((a, b) => (a.time < b.time ? -1 : 1))
+            .map((e, i) => (
+              <div key={i} className={`mw-cal-day-row${e.mine ? " mine" : ""}${e.completed ? " done" : ""}`}>
+                <span className="mw-cal-day-time">{e.time ? `${e.time} – ${endTime(e.time, e.durationMinutes)}` : "no time"}</span>
+                <span className="mw-cal-day-who">
+                  {e.name}
+                  {e.topic ? ` · ${e.topic}` : ""}
+                </span>
+                {e.completed && <span className="mw-cal-day-tick">✓</span>}
+              </div>
+            ))
         )}
       </div>
       <div className="mw-cal-legend">

@@ -5722,9 +5722,19 @@ export function getMeetingsWorkspaceData(clientId: number) {
     upcoming: scheduled[0] ? view(scheduled[0]) : null,
     alsoScheduled: scheduled.slice(1).map(view),
     past: past.map(view),
+    // Every booking on the calendar, so a day can list what is already
+    // taken before the coach picks a time.
     dots: all
       .filter((m) => m.status !== "cancelled")
-      .map((m) => ({ date: m.date, mine: m.client_id === clientId, completed: m.status === "completed" })),
+      .map((m) => ({
+        date: m.date,
+        time: m.time,
+        durationMinutes: m.duration_minutes,
+        name: m.clientName,
+        topic: m.topic,
+        mine: m.client_id === clientId,
+        completed: m.status === "completed",
+      })),
     others: all
       .filter((m) => m.status === "scheduled" && m.time && m.client_id != null && m.client_id !== clientId)
       .map((m) => ({ date: m.date, time: m.time, durationMinutes: m.duration_minutes, name: m.clientName })),
