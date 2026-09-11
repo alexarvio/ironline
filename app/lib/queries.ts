@@ -1045,6 +1045,17 @@ export function logSet(
   rpeActual: number | null
 ) {
   const data = getData();
+  // Logging a set number that already has a row corrects that row rather
+  // than adding a twin: a double tap or a retry must not count as two sets.
+  const existing = data.set_logs.find((sl) => sl.workout_assignment_id === workoutAssignmentId && sl.set_number === setNumber);
+  if (existing) {
+    existing.weight_kg = weightKg;
+    existing.reps = reps;
+    existing.rpe_actual = rpeActual;
+    persist();
+    progressTargetFromLogs(workoutAssignmentId);
+    return;
+  }
   data.set_logs.push({
     id: allocId("set_logs"),
     workout_assignment_id: workoutAssignmentId,

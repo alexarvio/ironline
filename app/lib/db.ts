@@ -643,6 +643,19 @@ function load(): Data {
       }
     }
     if (respelled) save(data);
+    // Twin set logs (same assignment, same set number) from double taps:
+    // keep the most recent row for each set, drop the rest.
+    const latestBySet = new Map<string, (typeof data.set_logs)[number]>();
+    for (const sl of data.set_logs) {
+      const key = `${sl.workout_assignment_id}:${sl.set_number}`;
+      const cur = latestBySet.get(key);
+      if (!cur || sl.logged_at > cur.logged_at || (sl.logged_at === cur.logged_at && sl.id > cur.id)) latestBySet.set(key, sl);
+    }
+    if (latestBySet.size !== data.set_logs.length) {
+      const keep = new Set([...latestBySet.values()].map((sl) => sl.id));
+      data.set_logs = data.set_logs.filter((sl) => keep.has(sl.id));
+      save(data);
+    }
     return data;
   } catch {
     return emptyData();
