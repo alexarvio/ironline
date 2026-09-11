@@ -12,14 +12,14 @@ Two faces, loaded from Google Fonts at the top of `globals.css`.
 
 | Role | Face | Weights loaded | Where |
 |---|---|---|---|
-| Everything | **EB Garamond** | 400–800 (variable) | body, tables, buttons, pills, inputs, eyebrows |
-| Display only | **Instrument Serif** | 400 (regular + italic) | the client's name on Home, a few big headings |
+| Everything | **Manrope** | 400 500 600 700 800 | body, tables, buttons, pills, inputs, eyebrows |
+| Display only | **Newsreader** (serif) | 500 600 700 | the client's name on Home, a few big headings |
 
 Rules
 
-- EB Garamond is the default. If you have not got a reason, it is EB Garamond.
-- Instrument Serif is for one line per screen at most, at 22 px or larger, and never in a table, button, pill or input. It has one weight, so do not ask it for 700 or 800.
-- Fallbacks: `Garamond, Georgia, serif` for EB Garamond; `"EB Garamond", Georgia, serif` for Instrument Serif.
+- Manrope is the default. If you have not got a reason, it is Manrope.
+- Newsreader is for one line per screen at most, at 22 px or larger, and never in a table, button, pill or input.
+- Fallbacks stay as declared: `ui-sans-serif, system-ui, -apple-system, "Segoe UI"` for Manrope, `Georgia, serif` for Newsreader.
 - Numbers that sit in columns (kcal, kg, sets, dates) get `font-variant-numeric: tabular-nums` so they line up.
 
 ## 2 · Type scale
@@ -146,7 +146,7 @@ An 2 px grid with these stops: 4, 6, 8, 10, 12, 14, 16, 18, 22. Gaps between con
 
 ## 8 · Client app
 
-Same faces, same status colours, same pills. Differences: the Home screen uses the "home-dark" tokens (`--fp-*`) with Text `#313851` and Dim `#5b6472` (these are the same greys, just older names), and Instrument Serif for the client's name. Anything new on the client side should read this doc, not copy an older client screen.
+Same faces, same status colours, same pills. Differences: the Home screen uses the "home-dark" tokens (`--fp-*`) with Text `#313851` and Dim `#5b6472` (these are the same greys, just older names), and Newsreader for the client's name. Anything new on the client side should read this doc, not copy an older client screen.
 
 ## 9 · Browser floor
 
@@ -158,4 +158,4 @@ iOS Safari 15.6 and up (a live tester is on iOS 16.1). No CSS that needs newer t
 
 1. Collapse the half-pixel font sizes as files are touched — yes / no.
 2. Retire the duplicate greys, greens and oranges per the table in §3 — yes / no.
-3. Keep Instrument Serif for the client's name only, or let it onto more headings.
+3. Keep Newsreader for the client's name only, or drop the serif entirely.

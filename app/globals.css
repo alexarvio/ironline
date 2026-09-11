@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=EB+Garamond:ital,wght@0,400..800;1,400..800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Newsreader:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap");
 
 :root {
   /* ---- Coach workstation (/admin) ----
@@ -26,8 +26,8 @@
      prototype's own colour for a programme not yet deployed. */
   --draft-bg: #f0e6cf;
   --draft-fg: #8a6d3b;
-  --font-serif: "Instrument Serif", "EB Garamond", Georgia, serif;
-  --font-sans: "EB Garamond", Garamond, Georgia, serif;
+  --font-serif: "Newsreader", Georgia, serif;
+  --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 
   /* ---- Client app (/client): "Sand" — off-white / navy ----
      Replaces the black + lime direction. Every client-only rule below reads
@@ -68,7 +68,9 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  /* EB Garamond everywhere; Instrument Serif for display lines only. */
+  /* Manrope is the typeface both designs are drawn in; this was falling back
+     to the OS system font, which is the single biggest reason the admin
+     didn't look like the handoff. */
   font-family: var(--font-sans);
   line-height: 1.5;
 }
