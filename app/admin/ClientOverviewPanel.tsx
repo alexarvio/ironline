@@ -1,7 +1,6 @@
 import type { OverviewPanel } from "../lib/queries";
-import { getGoalEditorOptions, getGoalSummaries } from "../lib/queries";
+import { getGoalSummaries } from "../lib/queries";
 import { deleteClientAction } from "../lib/actions";
-import GoalsPanel from "./GoalsPanel";
 import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
 import ClientCardEditor from "./ClientCardEditor";
 import ClientLoginPanel from "./ClientLoginPanel";
@@ -78,17 +77,27 @@ export default function ClientOverviewPanel({
             {panel.goals.length} goal{panel.goals.length === 1 ? "" : "s"}
           </span>
         </div>
-        <GoalsPanel
-          clientId={clientId}
-          goals={getGoalSummaries(clientId).map(({ goal, tracking }) => ({
-            id: goal.id,
-            text: goal.text,
-            done: goal.done,
-            tracking: goal.tracked_by ?? null,
-            label: tracking,
-          }))}
-          options={getGoalEditorOptions(clientId)}
-        />
+        {(() => {
+          const rows = getGoalSummaries(clientId);
+          return rows.length === 0 ? (
+            <p className="ad-panel-empty">None set yet.</p>
+          ) : (
+            <div className="ad-goal-list">
+              {rows.map(({ goal, view, tracking }) => (
+                <div key={goal.id} className={`ad-goal-row${goal.done ? " done" : ""}`}>
+                  <span className={`mw-dot ${goal.done ? "green" : view.tone}`} aria-hidden="true" />
+                  <span className="ad-goal-main">
+                    <span className="ad-goal-text">{goal.text}</span>
+                    <span className="ad-goal-kind">{tracking}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+        <a href={`/admin?client=${clientId}&tab=plan`} className="ad-goal-plan-link">
+          Edit on the Plan tab →
+        </a>
       </section>
 
       {/* 4/5. The client card. Read-only rows until the coach hits Edit —

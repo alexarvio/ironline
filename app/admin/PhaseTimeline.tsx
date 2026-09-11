@@ -1,4 +1,15 @@
-import { listClientPhases, listPrograms, localDateStr, PHASE_TRACKS, programLoggedWeekIndexes, weekStart, type ClientPhase } from "../lib/queries";
+import {
+  getGoalEditorOptions,
+  getGoalSummaries,
+  listClientPhases,
+  listPrograms,
+  localDateStr,
+  PHASE_TRACKS,
+  programLoggedWeekIndexes,
+  weekStart,
+  type ClientPhase,
+} from "../lib/queries";
+import GoalsPanel from "./GoalsPanel";
 import type { PhaseProgramInfo } from "./PhaseDialogButton";
 import PhaseDialogButton from "./PhaseDialogButton";
 
@@ -180,6 +191,41 @@ export default function PhaseTimeline({ clientId }: { clientId: number }) {
           })()}
         </div>
       </div>
+    </section>
+  );
+}
+
+// Goals belong with the plan: what the phases are steering toward. One
+// list, edited here; the Meetings tab reads the same goals as "goals to
+// review", and the client sees them on Home with live progress.
+export function PlanGoals({ clientId }: { clientId: number }) {
+  const summaries = getGoalSummaries(clientId);
+  const open = summaries.filter((s) => !s.goal.done).length;
+  return (
+    <section className="ph ph-goals">
+      <div className="ph-head">
+        <div>
+          <div className="pb-eyebrow">Goals</div>
+          <div className="ph-sub">
+            What the block is steering toward. Link a goal to a check-in figure, an exercise or a daily habit and the client sees live
+            progress; every goal comes up for review on the next call.
+          </div>
+        </div>
+        <span className="ad-goal-count">
+          {open} open · {summaries.length - open} done
+        </span>
+      </div>
+      <GoalsPanel
+        clientId={clientId}
+        goals={summaries.map(({ goal, tracking }) => ({
+          id: goal.id,
+          text: goal.text,
+          done: goal.done,
+          tracking: goal.tracked_by ?? null,
+          label: tracking,
+        }))}
+        options={getGoalEditorOptions(clientId)}
+      />
     </section>
   );
 }

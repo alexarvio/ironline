@@ -12116,3 +12116,9 @@ a.cd-entry:hover { border-color: var(--accent); }
 .mw-goal:hover .mw-goal-tools { opacity: 1; }
 .mw-goal-editing { padding: 6px 0; border-top: 1px solid #eceff3; }
 .mw-add-goal:disabled { opacity: 0.4; cursor: default; }
+
+/* Plan tab: the goals section under the timeline; the side panel only points here. */
+.ph-goals { margin-top: 22px; }
+.ph-goals .ge { margin-top: 10px; }
+.ad-goal-plan-link { display: inline-block; margin-top: 8px; font-size: 10.5px; font-weight: 800; color: #1e3a6e; text-decoration: none; }
+.ad-goal-plan-link:hover { text-decoration: underline; }
