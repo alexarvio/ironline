@@ -3531,6 +3531,10 @@ export function removeMeeting(id: number) {
   const data = getData();
   data.meetings = data.meetings.filter((m) => m.id !== id);
   data.meeting_notes = data.meeting_notes.filter((n) => n.meeting_id !== id);
+  // Goals set in the meeting stay; they just stop pointing at it.
+  data.client_goals.forEach((g) => {
+    if (g.meeting_id === id) g.meeting_id = null;
+  });
   persist();
 }
 

@@ -6,10 +6,12 @@ import {
   addMeetingNoteAction,
   completeMeetingAction,
   removeMeetingAction,
+  removeClientGoalAction,
   removeMeetingNoteAction,
   setMeetingStatusAction,
   updateMeetingAction,
 } from "../lib/actions";
+import type { GoalTracking } from "../lib/goalView";
 import type { GoalEditorOptions } from "../lib/queries";
 import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
 import MeetingStatusSelect, { type MeetingStatus } from "./MeetingStatusSelect";
@@ -30,6 +32,7 @@ export type WsGoal = {
   def: string;
   done: boolean;
   meetingId: number | null;
+  tracking: GoalTracking | null;
 };
 export type WsNote = { id: number; text: string; createdAt: string };
 export type WsMeeting = {
@@ -76,7 +79,31 @@ const toMin = (t: string) => {
   return h * 60 + m;
 };
 const fromMin = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+/** "9" → "09:00", "930" → "09:30", "14.30" → "14:30"; anything unreadable is left as typed. */
+const tidyTime = (raw: string): string => {
+  const digits = raw.replace(/[^0-9]/g, "");
+  if (!digits) return "";
+  let h: number;
+  let m: number;
+  if (digits.length <= 2) {
+    h = Number(digits);
+    m = 0;
+  } else {
+    h = Number(digits.slice(0, digits.length - 2));
+    m = Number(digits.slice(-2));
+  }
+  if (h > 23 || m > 59) return raw;
+  return fromMin(h * 60 + m);
+};
 const endTime = (time: string, dur: number) => (time ? fromMin(toMin(time) + dur) : "");
+const agoLabel = (today: string, date: string) => {
+  const n = daysBetween(date, today);
+  if (n <= 0) return "today";
+  if (n === 1) return "yesterday";
+  if (n < 7) return `${n} days ago`;
+  const w = Math.round(n / 7);
+  return `${w} week${w === 1 ? "" : "s"} ago`;
+};
 const inDaysLabel = (today: string, date: string) => {
   const n = daysBetween(today, date);
   return n <= 0 ? "today" : n === 1 ? "tomorrow" : `in ${n} days`;
@@ -108,7 +135,7 @@ export default function MeetingsWorkspace(p: MeetingsWorkspaceProps) {
   });
   const formRef = useRef<HTMLDivElement>(null);
   const [pending, start] = useTransition();
-  const [addingGoal, setAddingGoal] = useState(false);
+  const [goalEditing, setGoalEditing] = useState<"new" | number | null>(null);
 
   const reschedule = (m: WsMeeting) => {
     setForm({ rescheduleId: m.id, date: m.date, time: m.time, duration: m.durationMinutes, topic: m.topic, link: m.link ?? "" });
@@ -141,11 +168,24 @@ export default function MeetingsWorkspace(p: MeetingsWorkspaceProps) {
             goals={p.goals}
             goalsSetLabel={p.goalsSetLabel}
             onReschedule={() => reschedule(p.upcoming!)}
-            addingGoal={addingGoal}
-            onAddGoal={() => setAddingGoal(true)}
+            goalEditing={goalEditing}
+            onEditGoal={setGoalEditing}
             goalEditor={
-              addingGoal ? (
-                <GoalEditor clientId={p.clientId} goal={null} options={p.goalOptions} meetingId={p.upcoming.id} onClose={() => setAddingGoal(false)} />
+              goalEditing != null ? (
+                <GoalEditor
+                  clientId={p.clientId}
+                  goal={
+                    goalEditing === "new"
+                      ? null
+                      : (() => {
+                          const g = p.goals.find((x) => x.id === goalEditing);
+                          return g ? { id: g.id, text: g.text, done: g.done, tracking: g.tracking, label: g.def } : null;
+                        })()
+                  }
+                  options={p.goalOptions}
+                  meetingId={goalEditing === "new" ? p.upcoming.id : null}
+                  onClose={() => setGoalEditing(null)}
+                />
               ) : null
             }
           />
@@ -184,7 +224,7 @@ export default function MeetingsWorkspace(p: MeetingsWorkspaceProps) {
           </section>
         )}
 
-        <PastMeetings past={p.past} />
+        <PastMeetings past={p.past} today={p.today} />
       </div>
 
       <div className="mw-right">
@@ -207,7 +247,21 @@ export default function MeetingsWorkspace(p: MeetingsWorkspaceProps) {
               </label>
               <label className="mw-field">
                 <span>Time</span>
-                <input name="time" type="time" value={form.time} onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))} />
+                {/* A plain text field, not type="time": on a 12-hour locale the
+                    native one shows an AM/PM slot and rejects the value until
+                    it is filled. Typed as 24-hour, tidied on blur: 9 → 09:00,
+                    930 → 09:30, 14.30 → 14:30. */}
+                <input
+                  name="time"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="14:30"
+                  value={form.time}
+                  onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
+                  onBlur={(e) => setForm((f) => ({ ...f, time: tidyTime(e.target.value) }))}
+                  pattern="([01]?d|2[0-3]):[0-5]d"
+                  title="24-hour time, e.g. 14:30"
+                />
               </label>
             </div>
             <div className="mw-field">
@@ -265,8 +319,8 @@ function UpcomingCard({
   goals,
   goalsSetLabel,
   onReschedule,
-  addingGoal,
-  onAddGoal,
+  goalEditing,
+  onEditGoal,
   goalEditor,
 }: {
   m: WsMeeting;
@@ -274,8 +328,8 @@ function UpcomingCard({
   goals: WsGoal[];
   goalsSetLabel: string;
   onReschedule: () => void;
-  addingGoal: boolean;
-  onAddGoal: () => void;
+  goalEditing: "new" | number | null;
+  onEditGoal: (which: "new" | number | null) => void;
   goalEditor: React.ReactNode;
 }) {
   const [topic, setTopic] = useState(m.topic);
@@ -390,17 +444,27 @@ function UpcomingCard({
             <span className="mw-label-right">{goalsSetLabel}</span>
           </div>
           {goals.length === 0 && <p className="mw-muted">No goals yet.</p>}
-          {goals.map((g) => (
-            <div key={g.id} className="mw-goal">
-              <span className={`mw-dot ${g.tone}`} />
-              <span className="mw-goal-text">{g.text}</span>
-              <span className={`mw-goal-status ${g.tone}`}>{g.status}</span>
-            </div>
-          ))}
-          {addingGoal ? (
+          {goals.map((g) =>
+            goalEditing === g.id ? (
+              <div key={g.id} className="mw-goal-editing">{goalEditor}</div>
+            ) : (
+              <div key={g.id} className="mw-goal">
+                <span className={`mw-dot ${g.tone}`} />
+                <span className="mw-goal-text">{g.text}</span>
+                <span className={`mw-goal-status ${g.tone}`}>{g.status}</span>
+                <span className="mw-goal-tools">
+                  <button type="button" className="ad-goal-edit" onClick={() => onEditGoal(g.id)}>
+                    Edit
+                  </button>
+                  <ConfirmDeleteButton action={removeClientGoalAction} hiddenFields={{ id: g.id }} label={`Delete goal: ${g.text}`} />
+                </span>
+              </div>
+            )
+          )}
+          {goalEditing === "new" ? (
             goalEditor
           ) : (
-            <button type="button" className="mw-add-goal" onClick={onAddGoal}>
+            <button type="button" className="mw-add-goal" onClick={() => onEditGoal("new")} disabled={goalEditing != null}>
               + Add goal
             </button>
           )}
@@ -440,7 +504,7 @@ function UpcomingCard({
   );
 }
 
-function PastMeetings({ past }: { past: WsMeeting[] }) {
+function PastMeetings({ past, today }: { past: WsMeeting[]; today: string }) {
   const [openId, setOpenId] = useState<number | null>(past[0]?.id ?? null);
   return (
     <section className="mw-past">
@@ -467,7 +531,7 @@ function PastMeetings({ past }: { past: WsMeeting[] }) {
               </span>
               <span className={`mw-pill ${m.status}`}>{STATUS_LABEL[m.status]}</span>
               <span className="mw-row-summary">
-                {m.goals.length} goal{m.goals.length === 1 ? "" : "s"} set · {m.notes.length} note{m.notes.length === 1 ? "" : "s"}
+                {agoLabel(today, m.date)} · {m.goals.length} goal{m.goals.length === 1 ? "" : "s"} set · {m.notes.length} note{m.notes.length === 1 ? "" : "s"}
               </span>
               <span className={`mw-chev${open ? " up" : ""}`}>⌄</span>
             </button>

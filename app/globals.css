@@ -12110,3 +12110,9 @@ a.cd-entry:hover { border-color: var(--accent); }
 .mw-info.warn { background: #fbe9e0; color: #b3471d; font-weight: 700; }
 .mw-form-foot { display: flex; gap: 8px; align-items: center; }
 .mw-form-foot .mw-ghost { flex: none; }
+
+/* Goals to review: edit and delete sit at the end of the row, faint until hovered. */
+.mw-goal-tools { flex: none; display: inline-flex; align-items: center; gap: 2px; opacity: 0.35; transition: opacity 0.12s; }
+.mw-goal:hover .mw-goal-tools { opacity: 1; }
+.mw-goal-editing { padding: 6px 0; border-top: 1px solid #eceff3; }
+.mw-add-goal:disabled { opacity: 0.4; cursor: default; }

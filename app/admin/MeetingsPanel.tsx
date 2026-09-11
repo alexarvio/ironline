@@ -17,7 +17,7 @@ export default function MeetingsPanel({ clientId }: { clientId: number }) {
     } else if (view.kind === "exercise") status = (view.right ?? "").replace(/^best /, "");
     else if (view.kind === "habit") status = `${view.segments?.done ?? 0} of ${view.segments?.total ?? 0} · ${view.tone === "green" ? "on track" : "behind"}`;
     else status = goal.done ? "done" : "text";
-    return { id: goal.id, text: goal.text, tone: view.tone, status, def: tracking, done: goal.done, meetingId: goal.meeting_id ?? null };
+    return { id: goal.id, text: goal.text, tone: view.tone, status, def: tracking, done: goal.done, meetingId: goal.meeting_id ?? null, tracking: goal.tracked_by ?? null };
   });
   const active = goals.filter((g) => !g.done);
   const earliest = active.length ? getGoalSummaries(clientId).map((s) => s.goal.created_at).filter((d): d is string => !!d).sort()[0] : null;
