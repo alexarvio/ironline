@@ -61,8 +61,15 @@ export default function MetricHistoryTable({
             </tr>
           ) : (
             history.rows.map((row) => (
-              <tr key={row.period}>
-                <td className="mh-date">{row.label}</td>
+              <tr key={row.period} className={row.note ? "mh-has-note" : undefined}>
+                <td className="mh-date">
+                  {row.label}
+                  {row.note && (
+                    <span className="mh-note" title={row.note}>
+                      “{row.note}”
+                    </span>
+                  )}
+                </td>
                 {row.values.map((v, i) => (
                   <td key={i} className={`mh-cell${v == null ? " missing" : ""}`}>
                     {v == null ? "·" : v}

@@ -12365,3 +12365,24 @@ a.cd-entry:hover { border-color: var(--accent); }
 .pl-tr.is-queued { background: #f4f6fa; }
 .pl-tr.is-done.is-queued { opacity: 0.8; }
 .pl-pending { border-radius: 0 0 12px 12px; }
+
+/* ---- Notes from the client ------------------------------------------- */
+.cl-form { flex-wrap: wrap; }
+.cl-note, .cl-note-add { flex-basis: 100%; }
+.cl-note { grid-column: 1 / -1; width: 100%; box-sizing: border-box; margin-top: 8px; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--fp-line); background: var(--fp-raised); font: inherit; font-size: 13px; line-height: 1.4; color: var(--fp-text); resize: vertical; }
+.cl-note-add { grid-column: 1 / -1; justify-self: start; margin-top: 6px; border: 0; background: none; padding: 0; font: inherit; font-size: 12px; font-weight: 700; color: var(--fp-accent); cursor: pointer; }
+.cl-day-note { display: block; font-size: 11px; color: var(--fp-dim); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ci-notefield { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+.ci-notefield-label { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fp-dim); }
+.ci-notefield textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--fp-line); background: var(--fp-raised); font: inherit; font-size: 14px; line-height: 1.4; color: var(--fp-text); resize: vertical; }
+.ci-done-note { display: flex; flex-direction: column; gap: 2px; padding: 10px 0; border-bottom: 1px solid var(--fp-line); }
+.ci-done-note-label { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fp-dim); }
+.ci-done-note-text { font-size: 13.5px; color: var(--fp-text); line-height: 1.4; }
+.nt-cal-note { font-size: 11px; color: var(--steel); font-style: italic; margin-top: 2px; white-space: normal; }
+.feed-note { font-style: italic; color: var(--steel); }
+.mh-note { display: block; font-size: 10.5px; font-weight: 500; font-style: italic; color: var(--steel); max-width: 220px; white-space: normal; }
+.ms-notes { margin-top: 18px; }
+.ms-notes-list { display: flex; flex-direction: column; margin-top: 6px; }
+.ms-note { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; border-top: 1px solid var(--border); }
+.ms-note-meta { font-size: 10.5px; font-weight: 700; color: var(--steel); }
+.ms-note-text { font-size: 12.5px; color: var(--ink); line-height: 1.4; }

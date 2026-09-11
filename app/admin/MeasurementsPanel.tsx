@@ -7,6 +7,7 @@ import {
   getClient,
   getClientProfile,
   getMetricHistory,
+  listCheckInNotes,
   listAllMetrics,
   listGraphChoices,
   METRIC_GROUPS,
@@ -191,6 +192,28 @@ export default function MeasurementsPanel({ clientId }: { clientId: number }) {
 
       {/* ---- 3. Graph (coach's own view). What the client sees charted is
               chosen per row in the check-in columns above. ---- */}
+      {/* What the client wrote beside their numbers: why a day was off,
+          what the figures don't say. Newest first, every section. */}
+      {(() => {
+        const notes = listCheckInNotes(clientId, 12);
+        if (notes.length === 0) return null;
+        const kindLabel = { daily: "Daily check-in", weekly: "Weekly check-in", measurements: "Measurements" } as const;
+        return (
+          <section className="ms-notes">
+            <h3 className="ad-microlabel">Notes from the client</h3>
+            <div className="ms-notes-list">
+              {notes.map((n) => (
+                <div key={n.id} className="ms-note">
+                  <span className="ms-note-meta">
+                    {new Date(`${n.period}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} · {kindLabel[n.kind]}
+                  </span>
+                  <span className="ms-note-text">{n.text}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      })()}
       <section className="ms-section">
         <h3 className="ad-microlabel">Trend</h3>
         {/* Keyed by client: the panel keeps its chosen metric in state, and

@@ -20,6 +20,8 @@ export type CheckInSection = {
   id: "daily" | "weekly" | "measurements";
   label: string;
   intro: string;
+  /** The client's note for this period, if they wrote one. */
+  note: string | null;
   metrics: CheckInMetric[];
 };
 export type CheckInDelta = { name: string; value: string; unit: string };
@@ -135,6 +137,10 @@ export default function CheckInScreen({
   // Derived from the active section; all computed before the early return
   // below so the hooks that follow run in the same order on every render.
   const activeValues = active ? values[active.id] ?? {} : {};
+  // The note for the coach, per section, edited alongside the numbers.
+  const [notes, setNotes] = useState<Record<string, string>>(() => Object.fromEntries(sections.map((s) => [s.id, s.note ?? ""])));
+  const activeNote = active ? notes[active.id] ?? "" : "";
+  const noteDirty = !!active && activeNote.trim() !== (active.note ?? "").trim();
   const metrics = active?.metrics ?? [];
   const filled = metrics.filter((m) => (activeValues[m.id] ?? "").length > 0);
   const complete = filled.length === metrics.length && metrics.length > 0;
@@ -146,10 +152,12 @@ export default function CheckInScreen({
   // flag to keep in sync, and editing a saved section re-arms Save by
   // itself. After a submit the server re-renders with the new values, so
   // this settles into the saved state on its own.
-  const dirty = metrics.some((m) => !sameNumber(activeValues[m.id] ?? "", m.value));
+  const dirty = metrics.some((m) => !sameNumber(activeValues[m.id] ?? "", m.value)) || noteDirty;
   const savedSomething = metrics.some((m) => m.value.length > 0);
   const isSaved = !dirty && savedSomething;
-  const canSave = dirty && filled.length > 0;
+  // A note on its own is fine once the numbers are in; it just can't be the
+  // only thing sent for a period with nothing logged.
+  const canSave = dirty && (filled.length > 0 || (noteDirty && savedSomething));
 
   // The confirmation banner shows after a save THIS visit lands — not on
   // merely opening a section that was saved earlier. `submitted` is armed
@@ -260,6 +268,12 @@ export default function CheckInScreen({
               </button>
             </div>
             <div className="ci-done-list">
+              {(active.note ?? "").trim() !== "" && (
+                <div className="ci-done-note">
+                  <span className="ci-done-note-label">Your note</span>
+                  <span className="ci-done-note-text">{active.note}</span>
+                </div>
+              )}
               {active.metrics.map((m) => (
                 <div key={m.id} className="ci-done-row">
                   <span className="ci-done-name">{m.name}</span>
@@ -337,6 +351,18 @@ export default function CheckInScreen({
             </div>
           );
         })}
+
+        <label className="ci-notefield">
+          <span className="ci-notefield-label">Note for your coach</span>
+          <textarea
+            name="note"
+            value={activeNote}
+            onChange={(e) => setNotes((n) => ({ ...n, [active.id]: e.target.value }))}
+            placeholder="Anything the numbers don't say: a tennis session, a bad night, a day off…"
+            maxLength={500}
+            rows={2}
+          />
+        </label>
       </form>
       )}
 
