@@ -198,6 +198,13 @@ function ExpandedExercise({ exercise, onCollapse }: { exercise: SessionExercise;
     }
   };
 
+  // A prefilled figure is a suggestion: tapping into the field selects it,
+  // so typing replaces it instead of appending to it.
+  const selectAll = (e: React.SyntheticEvent<HTMLInputElement>) => {
+    const el = e.currentTarget;
+    // iOS applies the selection only once the tap has finished.
+    setTimeout(() => el.select(), 0);
+  };
   const inputs = (defaults: { weight: string; reps: string; rpe: string }, key: string) => (
     <>
       <input
@@ -207,6 +214,8 @@ function ExpandedExercise({ exercise, onCollapse }: { exercise: SessionExercise;
         type="text"
         inputMode="decimal"
         autoComplete="off"
+        onFocus={selectAll}
+        onClick={selectAll}
         onInput={tidyDecimal}
         defaultValue={defaults.weight}
         aria-label="Weight in kg"
@@ -221,6 +230,8 @@ function ExpandedExercise({ exercise, onCollapse }: { exercise: SessionExercise;
         inputMode="numeric"
         min={0}
         placeholder={exercise.reps || "reps"}
+        onFocus={selectAll}
+        onClick={selectAll}
         value={reps}
         onChange={(e) => setReps(e.target.value)}
         aria-label="Reps"
@@ -234,6 +245,8 @@ function ExpandedExercise({ exercise, onCollapse }: { exercise: SessionExercise;
         type="text"
         inputMode="decimal"
         autoComplete="off"
+        onFocus={selectAll}
+        onClick={selectAll}
         onInput={tidyDecimal}
         defaultValue={defaults.rpe}
         aria-label="RPE"
