@@ -119,7 +119,13 @@ export function computeGoalView(
     // yet, the last one before it, so day one already shows the full road.
     const after = series.filter((p) => p.date >= ctx.createdAt);
     const start = (after[0] ?? series[series.length - 1]).value;
-    const reachedAt = after.find((p) => meets(t.op, p.value, t.target)) ?? (meets(t.op, latest.value, t.target) ? latest : null);
+    // A goal never closes itself. Reaching the target is judged on the
+    // latest figure, so a weight that dipped under the line and came back
+    // reads as slipped, not done; only the coach removes a goal.
+    const firstHit = after.find((p) => meets(t.op, p.value, t.target)) ?? null;
+    const reachedNow = meets(t.op, latest.value, t.target);
+    const slipped = !!firstHit && !reachedNow;
+    const reachedAt = reachedNow ? firstHit ?? latest : null;
     const span = start - t.target;
     const progress = span === 0 ? 1 : Math.max(0, Math.min(1, (start - latest.value) / span));
     const toGo = Math.abs(t.target - latest.value);
@@ -130,12 +136,14 @@ export function computeGoalView(
     return {
       ...base,
       kind: "metric",
-      tone: reached || onPace !== false ? "green" : "orange",
+      tone: reached ? "green" : slipped ? "orange" : onPace !== false ? "green" : "orange",
       reached,
       bar: reached ? 1 : progress,
       barLabel: reached ? `${fmtNum(latest.value)} ${unit}`.trim() : `${fmtNum(latest.value)} ${unit} · ${fmtNum(toGo)} to go`.replace("  ", " "),
       sub: reached
         ? `Reached ${fmtDate(reachedAt!.date)}`
+        : slipped
+        ? `Reached ${fmtDate(firstHit!.date)} · slipped, ${fmtNum(toGo)} ${unit} to go`.replace("  ", " ")
         : onPace === true
         ? `${name} · on pace for ${fmtDate(t.byDate)}`
         : onPace === false
