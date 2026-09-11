@@ -205,14 +205,12 @@ export function GoalEditor({
         <div className="ge-grid">
           <label className="ge-field ge-span2">
             <span>Metric</span>
-            <select value={metricKey} onChange={(e) => setMetricKey(e.target.value)}>
-              {options.metrics.map((m) => (
-                <option key={m.key} value={m.key}>
-                  {m.name}
-                  {m.unit ? ` (${m.unit})` : ""}
-                </option>
-              ))}
-            </select>
+            <SearchPick
+              value={metricKey}
+              items={options.metrics.map((m) => ({ id: m.key, label: m.name, hint: m.unit }))}
+              onPick={setMetricKey}
+              placeholder="Search metrics…"
+            />
           </label>
           <label className="ge-field">
             <span>Reach</span>
@@ -256,13 +254,12 @@ export function GoalEditor({
         <div className="ge-grid">
           <label className="ge-field ge-span2">
             <span>Exercise</span>
-            <select value={exerciseId} onChange={(e) => setExerciseId(Number(e.target.value))}>
-              {options.exercises.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.name}
-                </option>
-              ))}
-            </select>
+            <SearchPick
+              value={String(exerciseId)}
+              items={options.exercises.map((e) => ({ id: String(e.id), label: e.name, hint: e.sets.length ? `${e.sets.length} sets logged` : "" }))}
+              onPick={(id) => setExerciseId(Number(id))}
+              placeholder="Search exercises…"
+            />
           </label>
           <label className="ge-field">
             <span>Weight (kg)</span>
@@ -283,13 +280,12 @@ export function GoalEditor({
         <div className="ge-grid">
           <label className="ge-field ge-span2">
             <span>Check-in field</span>
-            <select value={habitId} onChange={(e) => setHabitId(Number(e.target.value))}>
-              {options.habits.map((h) => (
-                <option key={h.id} value={h.id}>
-                  {h.name}
-                </option>
-              ))}
-            </select>
+            <SearchPick
+              value={String(habitId)}
+              items={options.habits.map((h) => ({ id: String(h.id), label: h.name, hint: "daily" }))}
+              onPick={(id) => setHabitId(Number(id))}
+              placeholder="Search check-in fields…"
+            />
           </label>
           <label className="ge-field">
             <span>Counts if</span>
@@ -327,5 +323,90 @@ export function GoalEditor({
         </button>
       </div>
     </form>
+  );
+}
+
+// A select you can type into: the field shows the current choice; typing
+// filters the list underneath; a click or Enter picks. Escape or clicking
+// away puts the current choice back.
+function SearchPick({
+  value,
+  items,
+  onPick,
+  placeholder,
+}: {
+  value: string;
+  items: { id: string; label: string; hint?: string }[];
+  onPick: (id: string) => void;
+  placeholder: string;
+}) {
+  const current = items.find((i) => i.id === value) ?? null;
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [cursor, setCursor] = useState(0);
+  const q = query.trim().toLowerCase();
+  const matches = (q ? items.filter((i) => i.label.toLowerCase().includes(q) || (i.hint ?? "").toLowerCase().includes(q)) : items).slice(0, 12);
+
+  const pick = (id: string) => {
+    onPick(id);
+    setOpen(false);
+    setQuery("");
+  };
+
+  return (
+    <div className="ge-pick">
+      <input
+        type="text"
+        value={open ? query : current ? `${current.label}${current.hint ? ` (${current.hint})` : ""}` : ""}
+        placeholder={placeholder}
+        onFocus={() => {
+          setOpen(true);
+          setQuery("");
+          setCursor(0);
+        }}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setCursor(0);
+        }}
+        onBlur={() => setTimeout(() => setOpen(false), 120)}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setCursor((c) => Math.min(matches.length - 1, c + 1));
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setCursor((c) => Math.max(0, c - 1));
+          } else if (e.key === "Enter") {
+            e.preventDefault();
+            if (matches[cursor]) pick(matches[cursor].id);
+          } else if (e.key === "Escape") {
+            setOpen(false);
+            (e.currentTarget as HTMLInputElement).blur();
+          }
+        }}
+        autoComplete="off"
+        role="combobox"
+        aria-expanded={open}
+      />
+      {open && (
+        <div className="ge-pick-list" role="listbox">
+          {matches.length === 0 && <div className="ge-pick-empty">Nothing matches</div>}
+          {matches.map((i, idx) => (
+            <button
+              key={i.id}
+              type="button"
+              role="option"
+              aria-selected={i.id === value}
+              className={`ge-pick-item${idx === cursor ? " cursor" : ""}${i.id === value ? " current" : ""}`}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => pick(i.id)}
+            >
+              <span>{i.label}</span>
+              {i.hint && <small>{i.hint}</small>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
