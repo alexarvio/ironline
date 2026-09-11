@@ -45,7 +45,8 @@ export default function CalorieLog({
   const storedNote = editing.note ?? "";
   const noteValue = noteDraft ?? storedNote;
   const showNote = noteOpen || storedNote !== "" || (noteDraft ?? "") !== "";
-  const isSaved = value !== "" && value === stored && noteValue === storedNote;
+  const isSaved = value !== "" && value === stored;
+  const noteSaved = noteValue.trim() === storedNote.trim();
 
   return (
     <section className="home-dark-section cl">
@@ -89,16 +90,25 @@ export default function CalorieLog({
           {pending ? "…" : isSaved ? "Saved ✓" : "Save"}
         </button>
         {showNote ? (
-          <textarea
-            name="note"
-            className="cl-note"
-            value={noteValue}
-            onChange={(e) => setNoteDraft(e.target.value)}
-            placeholder="A note for your coach: ate out, rough estimate, felt low on energy…"
-            aria-label="Note for your coach"
-            maxLength={500}
-            rows={2}
-          />
+          <div className="cl-notebox">
+            <span className="cl-field-label">Note for your coach</span>
+            <div className="cl-notebox-row">
+              <textarea
+                name="note"
+                className="cl-note"
+                value={noteValue}
+                onChange={(e) => setNoteDraft(e.target.value)}
+                placeholder="Ate out, rough estimate, felt low on energy…"
+                aria-label="Note for your coach"
+                maxLength={500}
+                rows={2}
+              />
+              <button type="submit" className={`cl-save cl-note-save${noteSaved ? " saved" : ""}`} disabled={pending || noteSaved || value === ""}>
+                {pending ? "…" : noteSaved ? "Saved ✓" : "Save"}
+              </button>
+            </div>
+            {value === "" && !noteSaved && <span className="cl-note-hint">Enter your calories above first — the note is saved with them.</span>}
+          </div>
         ) : (
           <button type="button" className="cl-note-add" onClick={() => setNoteOpen(true)}>
             + Add a note for your coach
