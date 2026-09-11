@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import {
   addMeetingAction,
   addMeetingNoteAction,
@@ -16,7 +17,7 @@ import type { GoalTracking } from "../lib/goalView";
 import type { GoalEditorOptions } from "../lib/queries";
 import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
 import DragList from "../components/DragList";
-import MeetingStatusSelect, { type MeetingStatus } from "./MeetingStatusSelect";
+import type { MeetingStatus } from "./MeetingStatusSelect";
 import { GoalEditor } from "./GoalsPanel";
 
 // The Meetings tab: the next call with everything to prepare it, the past
@@ -390,6 +391,10 @@ function UpcomingCard({
     setEditingLink(false);
     if (link.trim() !== (m.link ?? "")) start(() => save({ link: link.trim() }));
   };
+  const cancelLink = () => {
+    setEditingLink(false);
+    setLink(m.link ?? "");
+  };
 
   return (
     <div className="mw-card mw-upcoming">
@@ -415,18 +420,10 @@ function UpcomingCard({
           </div>
         </div>
         <div className="mw-band-right">
-          {editingLink ? (
-            <input
-              className="mw-link-input"
-              value={link}
-              onChange={(e) => setLink(e.target.value)}
-              onBlur={commitLink}
-              onKeyDown={(e) => e.key === "Enter" && commitLink()}
-              placeholder="https://meet.google.com/…"
-              autoFocus
-              aria-label="Meeting link"
-            />
-          ) : m.link ? (
+          {editingLink && (
+            <LinkDialog value={link} onChange={setLink} onSave={commitLink} onCancel={cancelLink} hasLink={!!m.link} />
+          )}
+          {m.link ? (
             <>
               <a className="mw-join" href={m.link} target="_blank" rel="noopener noreferrer">
                 <CameraIcon /> Join {m.provider}
@@ -540,7 +537,7 @@ function PastMeetings({ past, today }: { past: WsMeeting[]; today: string }) {
                   {m.time ? ` ${m.time}` : ""} · {m.durationMinutes} min · {m.provider}
                 </span>
               </span>
-              <span className={`mw-pill ${m.status}`}>{STATUS_LABEL[m.status]}</span>
+              {m.status !== "scheduled" && <span className={`mw-pill ${m.status}`}>{STATUS_LABEL[m.status]}</span>}
               <span className="mw-row-summary">
                 {agoLabel(today, m.date)} · {m.goals.length} goal{m.goals.length === 1 ? "" : "s"} set · {m.notes.length} note{m.notes.length === 1 ? "" : "s"}
               </span>
@@ -549,7 +546,6 @@ function PastMeetings({ past, today }: { past: WsMeeting[]; today: string }) {
             {open && (
               <div className="mw-past-body">
                 <div className="mw-past-tools">
-                  <MeetingStatusSelect meetingId={m.id} status={m.status} />
                   <ConfirmDeleteButton action={removeMeetingAction} hiddenFields={{ id: m.id }} label={`Delete meeting on ${m.date}`} />
                 </div>
                 <div className="mw-past-cols">
@@ -694,5 +690,71 @@ function MiniCalendar({ today, selected, dots, onPick }: { today: string; select
         </a>
       </div>
     </div>
+  );
+}
+
+// The meeting link, set in a small dialog rather than an inline field, so
+// pasting a long URL has room and the provider is read back before saving.
+function LinkDialog({
+  value,
+  onChange,
+  onSave,
+  onCancel,
+  hasLink,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  hasLink: boolean;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onCancel();
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+  const provider = (() => {
+    try {
+      const host = new URL(value.trim()).hostname.toLowerCase();
+      if (host.endsWith("meet.google.com")) return "Google Meet";
+      if (host.endsWith("zoom.us")) return "Zoom";
+      if (host.endsWith("teams.microsoft.com") || host.endsWith("teams.live.com")) return "Teams";
+      return "Join call";
+    } catch {
+      return null;
+    }
+  })();
+  const valid = value.trim() === "" || provider != null;
+  return createPortal(
+    <div className="pb-modal-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onCancel()}>
+      <div className="pb-modal pb-modal-sm" role="dialog" aria-modal="true" aria-label="Meeting link">
+        <h2 className="pb-confirm-title">{hasLink ? "Meeting link" : "Add a meeting link"}</h2>
+        <p className="pb-confirm-body">Paste the call URL. The client gets a Join button for it on their Home.</p>
+        <form
+          className="cd-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (valid) onSave();
+          }}
+        >
+          <label className="plan-schedule-field">
+            <span>Link</span>
+            <input type="url" value={value} onChange={(e) => onChange(e.target.value)} placeholder="https://meet.google.com/abc-defg-hij" autoFocus />
+          </label>
+          <p className="ph-note">
+            {value.trim() === "" ? (hasLink ? "Leave it empty to remove the link." : "Google Meet, Zoom and Teams are recognised; any other URL shows as \"Join call\".") : provider ? `Shows as "Join ${provider}".` : "That does not look like a link yet."}
+          </p>
+          <div className="pb-modal-foot">
+            <button type="button" className="ad-btn-secondary" onClick={onCancel}>
+              Cancel
+            </button>
+            <button type="submit" className="ad-btn-primary" disabled={!valid}>
+              {hasLink ? (value.trim() ? "Save link" : "Remove link") : "Add link"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body
   );
 }
