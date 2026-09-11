@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { removeClientGoalAction, toggleClientGoalAction } from "../lib/actions";
+import { applyGoalDoneChangesAction, removeClientGoalAction } from "../lib/actions";
 import type { GoalEditorOptions, PlanGoalRow } from "../lib/queries";
 import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
 import { GoalEditor } from "./GoalsPanel";
@@ -37,10 +37,29 @@ export default function PlanGoalsCard({
   options: GoalEditorOptions;
 }) {
   const [filter, setFilter] = useState<"open" | "done" | "all">("open");
+  // Done-ticks queue here and land together from the bar at the foot of
+  // the card, the same way edits queue on a programme day.
+  const [pendingDone, setPendingDone] = useState<Record<number, boolean>>({});
+  const [applying, startApply] = useTransition();
+  const doneOf = (g: PlanGoalRow) => pendingDone[g.id] ?? g.done;
+  const toggleDone = (g: PlanGoalRow) =>
+    setPendingDone((p) => {
+      const next = { ...p };
+      const want = !doneOf(g);
+      if (want === g.done) delete next[g.id];
+      else next[g.id] = want;
+      return next;
+    });
+  const pendingList = Object.entries(pendingDone).map(([id, done]) => ({ id: Number(id), done }));
+  const applyPending = () =>
+    startApply(async () => {
+      await applyGoalDoneChangesAction(pendingList);
+      setPendingDone({});
+    });
   const [editing, setEditing] = useState<"new" | number | null>(null);
   const open = goals.filter((g) => !g.done).length;
   const done = goals.length - open;
-  const rows = goals.filter((g) => (filter === "all" ? true : filter === "done" ? g.done : !g.done));
+  const rows = goals.filter((g) => (filter === "all" ? true : pendingDone[g.id] != null ? true : filter === "done" ? g.done : !g.done));
   const current = typeof editing === "number" ? goals.find((g) => g.id === editing) ?? null : null;
 
   return (
@@ -95,17 +114,18 @@ export default function PlanGoalsCard({
         </div>
         {rows.length === 0 && <div className="pl-empty-row">{filter === "done" ? "Nothing closed yet." : "No goals yet. Add the first one."}</div>}
         {rows.map((g) => {
-          const dotClass = g.done ? "done" : g.kind === "none" ? "hollow" : g.tone === "orange" ? "orange" : "green";
+          const isDone = doneOf(g);
+          const queued = pendingDone[g.id] != null;
+          const dotClass = isDone ? "done" : g.kind === "none" ? "hollow" : g.tone === "orange" ? "orange" : "green";
           const pill = KIND_PILL[g.kind];
           return (
-            <div key={g.id} className={`pl-tr${g.done ? " is-done" : ""}`}>
+            <div key={g.id} className={`pl-tr${isDone ? " is-done" : ""}${queued ? " is-queued" : ""}`}>
               <span className="pl-td-dot">
                 {g.kind === "none" ? (
-                  <form action={toggleClientGoalAction}>
-                    <input type="hidden" name="id" value={g.id} />
-                    <input type="hidden" name="done" value={(!g.done).toString()} />
-                    <button type="submit" className={`pl-dot ${dotClass} clickable`} aria-label={g.done ? "Mark not done" : "Mark done"} title={g.done ? "Mark not done" : "Mark done"} />
-                  </form>
+                  <label className="pl-check" title={isDone ? "Mark not done" : "Mark done"}>
+                    <input type="checkbox" checked={isDone} onChange={() => toggleDone(g)} aria-label={isDone ? "Mark not done" : "Mark done"} />
+                    <span className="pl-check-box" aria-hidden="true">{isDone ? "✓" : ""}</span>
+                  </label>
                 ) : (
                   <span className={`pl-dot ${dotClass}`} />
                 )}
@@ -146,8 +166,30 @@ export default function PlanGoalsCard({
             </div>
           );
         })}
-        <div className="pl-tfoot">Linked goals update themselves from check-ins and logged sets. Text-only goals are closed by hand — tick the dot.</div>
+        <div className="pl-tfoot">Linked goals update themselves from check-ins and logged sets. Text-only goals are closed by hand — tick the box.</div>
       </div>
+
+      {pendingList.length > 0 && (
+        <div className="pb-pending pl-pending" role="status" aria-live="polite">
+          <span className="pb-pending-count">
+            {pendingList.length} change{pendingList.length === 1 ? "" : "s"}
+          </span>
+          <span className="pb-pending-summary">
+            {pendingList
+              .map((c) => `${goals.find((g) => g.id === c.id)?.text ?? "Goal"} ${c.done ? "marked done" : "reopened"}`)
+              .join(" · ")}
+          </span>
+          <div className="pb-pending-right">
+            <span className="pb-pending-status">{applying ? "Saving…" : "Unsaved"}</span>
+            <button type="button" className="pb-pending-ghost" onClick={() => setPendingDone({})} disabled={applying}>
+              Discard
+            </button>
+            <button type="button" className="pb-pending-apply" onClick={applyPending} disabled={applying}>
+              {applying ? "Applying…" : "Apply"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {editing != null &&
         createPortal(

@@ -45,7 +45,8 @@ export default function PlanPhasesCard({
   const [win, setWin] = useState<Window>(13);
   const [dialog, setDialog] = useState<{ phase?: PlanPhaseRow; track?: PhaseTrack } | null>(null);
   // While an edge is being dragged, the bar previews its new span here.
-  const [drag, setDrag] = useState<{ id: number; edge: "start" | "end"; start: string; end: string; moved: boolean } | null>(null);
+  // "move" drags the whole bar by its body; the edges change one end.
+  const [drag, setDrag] = useState<{ id: number; edge: "start" | "end" | "move"; start: string; end: string; moved: boolean; origStart: string; origEnd: string; anchor: string | null } | null>(null);
   // A finished drag waits here for the coach's confirmation; the bar keeps
   // previewing the new span until they save or cancel.
   const [pending, setPending] = useState<{ id: number; start: string; end: string } | null>(null);
@@ -94,11 +95,12 @@ export default function PlanPhasesCard({
     const idx = Math.max(0, Math.min(count - 1, Math.floor(((clientX - r.left) / r.width) * count)));
     return weeks[idx];
   };
-  const beginDrag = (e: React.PointerEvent, p: PlanPhaseRow, edge: "start" | "end") => {
+  const beginDrag = (e: React.PointerEvent, p: PlanPhaseRow, edge: "start" | "end" | "move") => {
+    if (e.button !== 0 && e.pointerType === "mouse") return;
     e.preventDefault();
     e.stopPropagation();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    setDrag({ id: p.id, edge, start: p.start_week, end: p.end_week, moved: false });
+    setDrag({ id: p.id, edge, start: p.start_week, end: p.end_week, moved: false, origStart: p.start_week, origEnd: p.end_week, anchor: edge === "move" ? weekAt(e.clientX) : null });
   };
   const moveDrag = (e: React.PointerEvent) => {
     if (!drag) return;
@@ -106,7 +108,12 @@ export default function PlanPhasesCard({
     if (!w) return;
     setDrag((d) => {
       if (!d) return d;
-      const next = d.edge === "start" ? { ...d, start: w <= d.end ? w : d.end } : { ...d, end: w >= d.start ? w : d.start };
+      let next = d;
+      if (d.edge === "move" && d.anchor) {
+        const delta = weeksBetween(d.anchor, w);
+        next = { ...d, start: addWeeks(d.origStart, delta), end: addWeeks(d.origEnd, delta) };
+      } else if (d.edge === "start") next = { ...d, start: w <= d.end ? w : d.end };
+      else next = { ...d, end: w >= d.start ? w : d.start };
       return { ...next, moved: next.start !== d.start || next.end !== d.end || d.moved };
     });
   };
@@ -271,6 +278,10 @@ export default function PlanPhasesCard({
                           background: draft ? "#fff" : tone.bg,
                           borderColor: tone.mid,
                           color: tone.fg,
+                        }}
+                        onPointerDown={(e) => {
+                          if ((e.target as HTMLElement).classList.contains("pl-bar-edge")) return;
+                          beginDrag(e, p, "move");
                         }}
                         onClick={() => {
                           if (justDragged.current || drag || pending) return;

@@ -1097,6 +1097,17 @@ export async function toggleClientGoalAction(formData: FormData) {
   revalidatePath("/admin");
 }
 
+// The Plan tab queues done-ticks on a pending bar and applies them together.
+export async function applyGoalDoneChangesAction(changes: { id: number; done: boolean }[]) {
+  await requireCoach();
+  if (!Array.isArray(changes)) return;
+  for (const c of changes) {
+    if (Number.isInteger(c?.id) && typeof c.done === "boolean") setClientGoalDone(c.id, c.done);
+  }
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
 export async function removeClientGoalAction(formData: FormData) {
   await requireCoach();
   const id = Number(formData.get("id"));
