@@ -4,8 +4,7 @@ import { useState, useTransition } from "react";
 import { addClientGoalAction, removeClientGoalAction, reorderClientGoalsAction, toggleClientGoalAction, updateClientGoalAction } from "../lib/actions";
 import DragList from "../components/DragList";
 import type { GoalEditorOptions } from "../lib/queries";
-import { computeGoalView, fmtDate, fmtNum, metricPace, type GoalContext, type GoalTracking } from "../lib/goalView";
-import GoalRow from "../components/GoalRow";
+import { fmtDate, fmtNum, metricPace, type GoalTracking } from "../lib/goalView";
 import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
 
 // The coach's goals for one client: the list, and the editor that adds or
@@ -13,7 +12,7 @@ import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
 // daily habit; the "Client sees" preview at the foot of the editor is the
 // exact row the client gets, from the same function.
 
-export type GoalListItem = { id: number; text: string; done: boolean; tracking: GoalTracking | null; label: string };
+export type GoalListItem = { id: number; text: string; done: boolean; tracking: GoalTracking | null; label: string; createdAt?: string | null };
 
 type Kind = "metric" | "exercise" | "habit" | "none";
 
@@ -80,6 +79,7 @@ export function GoalEditor({
   options,
   onClose,
   meetingId = null,
+  heading,
 }: {
   clientId: number;
   goal: GoalListItem | null;
@@ -87,6 +87,8 @@ export function GoalEditor({
   onClose: () => void;
   /** The meeting this goal is being set in, when added from one. */
   meetingId?: number | null;
+  /** Shown above the fields when the editor is a dialog. */
+  heading?: { title: string; subtitle?: string };
 }) {
   const t = goal?.tracking ?? null;
   const [text, setText] = useState(goal?.text ?? "");
@@ -109,6 +111,8 @@ export function GoalEditor({
   const [hvalue, setHvalue] = useState(t?.kind === "habit" ? String(t.value) : "");
   const [daysPerWeek, setDaysPerWeek] = useState(t?.kind === "habit" ? String(t.daysPerWeek) : "5");
   const [pending, start] = useTransition();
+  // Progress counts from this date and the metric's value on it.
+  const [startDate, setStartDate] = useState(goal?.createdAt ?? options.today);
 
   const num = (s: string) => {
     const n = Number(s.replace(",", "."));
@@ -140,11 +144,6 @@ export function GoalEditor({
   })();
   const complete = text.trim() !== "" && (kind === "none" || tracking != null);
 
-  const ctx: GoalContext = { today: options.today, createdAt: goal ? options.today : options.today };
-  if (metric) ctx.metric = metric;
-  if (exercise) ctx.exercise = exercise;
-  if (habit) ctx.habit = habit;
-  const preview = computeGoalView({ id: goal?.id ?? 0, text: text || "Your goal", done: false, tracking }, ctx);
 
   // Helper lines under the fields.
   const helper = (() => {
@@ -160,10 +159,19 @@ export function GoalEditor({
       const weeks = effectiveBy ? Math.max(1, Math.round((new Date(`${effectiveBy}T00:00:00`).getTime() - new Date(`${options.today}T00:00:00`).getTime()) / (7 * 86400000))) : null;
       const needs = tg != null && weeks ? (tg - latest.value) / weeks : null;
       const u = metric.unit ? ` ${metric.unit}` : "";
+      let verdict = "";
+      if (tg != null && effectiveBy && paceWeek != null && weeks) {
+        const projected = latest.value + paceWeek * weeks;
+        const ok = op === ">=" ? projected >= tg : projected <= tg;
+        const later = new Date(`${effectiveBy}T00:00:00`);
+        later.setDate(later.getDate() + 7);
+        const laterIso = `${later.getFullYear()}-${String(later.getMonth() + 1).padStart(2, "0")}-${String(later.getDate()).padStart(2, "0")}`;
+        verdict = ok ? " → on pace." : ` → behind. Consider ${fmtDate(laterIso)} or ${fmtNum(Math.round(projected * 2) / 2)}${u}.`;
+      }
       return (
         `Now ${fmtNum(latest.value)}${u}` +
         (needs != null && tg != null && effectiveBy ? ` · needs ${needs >= 0 ? "+" : ""}${fmtNum(needs)}${u}/week to hit ${fmtNum(tg)} by ${fmtDate(effectiveBy)}.` : ".") +
-        (paceWeek != null ? ` Current pace ${paceWeek >= 0 ? "+" : ""}${fmtNum(paceWeek)}${u}/week.` : " No pace yet.")
+        (paceWeek != null ? ` Current pace ${paceWeek >= 0 ? "+" : ""}${fmtNum(paceWeek)}${u}/week${verdict}` : " No pace yet.")
       );
     }
     if (kind === "exercise" && exercise) {
@@ -192,7 +200,14 @@ export function GoalEditor({
 
   return (
     <form action={submit} className="ge-editor">
+      {heading && (
+        <div className="ge-head">
+          <h2 className="pb-confirm-title">{heading.title}</h2>
+          {heading.subtitle && <div className="ge-head-sub">{heading.subtitle}</div>}
+        </div>
+      )}
       {goal ? <input type="hidden" name="id" value={goal.id} /> : <input type="hidden" name="clientId" value={clientId} />}
+      <input type="hidden" name="start" value={startDate} />
       <input type="hidden" name="tracking" value={kind === "none" ? "" : JSON.stringify(tracking ?? {})} />
       {meetingId != null && <input type="hidden" name="meetingId" value={meetingId} />}
 
@@ -221,6 +236,7 @@ export function GoalEditor({
               onPick={setMetricKey}
               placeholder="Search metrics…"
             />
+            <small>{options.metrics.length} metrics deployed to this client</small>
           </label>
           <label className="ge-field">
             <span>Reach</span>
@@ -315,14 +331,21 @@ export function GoalEditor({
         </div>
       )}
 
-      <p className="ge-helper">{helper}</p>
-
-      <div className="ge-preview">
-        <span className="ad-microlabel">Client sees</span>
-        <div className="ge-preview-card">
-          <GoalRow goal={preview} />
+      {kind !== "none" && (
+        <div className="ge-grid">
+          <label className="ge-field">
+            <span>Start</span>
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            {kind === "metric" && metric && (() => {
+              const at = [...metric.series].filter((p) => p.date >= startDate)[0] ?? metric.series[metric.series.length - 1];
+              return at ? <small>value then: {fmtNum(at.value)}{metric.unit ? ` ${metric.unit}` : ""}</small> : null;
+            })()}
+          </label>
+          {kind !== "metric" && <span />}
         </div>
-      </div>
+      )}
+
+      <p className="ge-helper">{helper}</p>
 
       <div className="ge-foot">
         <button type="button" className="ad-btn-secondary" onClick={onClose} disabled={pending}>

@@ -9,7 +9,7 @@ import FeedPanel from "./FeedPanel";
 import CalendarPanel from "./CalendarPanel";
 import CalendarDayPanel from "./CalendarDayPanel";
 import ProgramBuilder from "../components/ProgramBuilder";
-import PhaseTimeline, { PlanGoals } from "./PhaseTimeline";
+import PhaseTimeline from "./PhaseTimeline";
 import { getClient, getOverviewPanel, listClients } from "../lib/queries";
 
 import { requireCoach } from "../lib/auth";
@@ -118,12 +118,7 @@ function ClientDashboard({
       // neither tab: it is the first thing the coach sees for a client.
       id: "plan",
       label: "Plan",
-      content: (
-        <>
-          <PhaseTimeline clientId={clientId} />
-          <PlanGoals clientId={clientId} />
-        </>
-      ),
+      content: <PhaseTimeline clientId={clientId} />,
     },
     {
       id: "training",

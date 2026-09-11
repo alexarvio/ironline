@@ -1,5 +1,4 @@
 import type { OverviewPanel } from "../lib/queries";
-import { getGoalSummaries } from "../lib/queries";
 import { deleteClientAction } from "../lib/actions";
 import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
 import ClientCardEditor from "./ClientCardEditor";
@@ -65,40 +64,6 @@ export default function ClientOverviewPanel({
         </div>
       </section>
 
-      {/* 3. Goals — stated, not ticked.
-             These are what the coach is steering the block towards, not a
-             checklist: "get to 80kg without losing bench strength" isn't done
-             on a Tuesday afternoon. So each one is a bullet the coach can
-             write and take away again, with no completion state to maintain. */}
-      <section className="ad-panel-section">
-        <div className="ad-panel-heading-row">
-          <h3 className="ad-panel-heading">Goals</h3>
-          <span className="ad-goal-count">
-            {panel.goals.length} goal{panel.goals.length === 1 ? "" : "s"}
-          </span>
-        </div>
-        {(() => {
-          const rows = getGoalSummaries(clientId);
-          return rows.length === 0 ? (
-            <p className="ad-panel-empty">None set yet.</p>
-          ) : (
-            <div className="ad-goal-list">
-              {rows.map(({ goal, view, tracking }) => (
-                <div key={goal.id} className={`ad-goal-row${goal.done ? " done" : ""}`}>
-                  <span className={`mw-dot ${goal.done ? "green" : view.tone}`} aria-hidden="true" />
-                  <span className="ad-goal-main">
-                    <span className="ad-goal-text">{goal.text}</span>
-                    <span className="ad-goal-kind">{tracking}</span>
-                  </span>
-                </div>
-              ))}
-            </div>
-          );
-        })()}
-        <a href={`/admin?client=${clientId}&tab=plan`} className="ad-goal-plan-link">
-          Edit on the Plan tab →
-        </a>
-      </section>
 
       {/* 4/5. The client card. Read-only rows until the coach hits Edit —
              most of it is filled at onboarding, but an email or a phase date

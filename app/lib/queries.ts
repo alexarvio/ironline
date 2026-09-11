@@ -4787,7 +4787,9 @@ export function getClientIdForPhase(phaseId: number): number | null {
 
 // Weeks are snapped to their Monday so two phases entered on different
 // weekdays still line up in whole-week columns.
-export function addClientPhase(clientId: number, track: PhaseTrack, name: string, startDate: string, endDate: string) {
+// `programId`: for a training phase, an existing programme to be the plan
+// for instead of a fresh draft.
+export function addClientPhase(clientId: number, track: PhaseTrack, name: string, startDate: string, endDate: string, programId: number | null = null): ClientPhase {
   const data = getData();
   const start = weekStart(startDate);
   const end = weekStart(endDate);
@@ -4803,7 +4805,7 @@ export function addClientPhase(clientId: number, track: PhaseTrack, name: string
   };
   // A training phase is a programme: adding one on the Plan tab makes a
   // draft, named and sized to match, ready to build in the Training tab.
-  if (track === "training") {
+  if (track === "training" && programId == null) {
     const weeks = Math.max(1, Math.round((new Date(`${last}T00:00:00`).getTime() - new Date(`${first}T00:00:00`).getTime()) / (7 * 86400000)) + 1);
     const existingWeeks = listWeekNumbers(clientId);
     const startWeek = (existingWeeks.length > 0 ? Math.max(...existingWeeks) : 0) + 1;
@@ -4811,6 +4813,8 @@ export function addClientPhase(clientId: number, track: PhaseTrack, name: string
   }
   getData().client_phases.push(phase);
   persist();
+  if (track === "training" && programId != null) linkPhaseToProgram(phase.id, programId);
+  return phase;
 }
 
 // `adjustProgram`: for a phase that is a training programme, also make the
@@ -5778,4 +5782,163 @@ export function getMeetingsWorkspaceData(clientId: number) {
       .map((m) => ({ date: m.date, time: m.time, durationMinutes: m.duration_minutes, name: m.clientName })),
     lastLink,
   };
+}
+
+
+// ---------------------------------------------------------------------------
+// Plan tab: the phases grid and the goals table, gathered for the two cards.
+
+export type PlanProgramStatus = "live" | "scheduled" | "draft";
+export type PlanPhaseRow = {
+  id: number;
+  track: PhaseTrack;
+  name: string;
+  start_week: string;
+  end_week: string;
+  program: { id: number; status: PlanProgramStatus; totalWeeks: number; loggedWeeks: number[] } | null;
+};
+export type PlanProgramOption = { id: number; name: string; status: PlanProgramStatus; weeks: number; linked: boolean };
+export type PlanGoalRow = {
+  id: number;
+  text: string;
+  done: boolean;
+  kind: "metric" | "exercise" | "habit" | "none";
+  tone: "green" | "orange" | "muted";
+  live: string;
+  pct: number;
+  rule: string;
+  setIn: { meetingId: number; topic: string } | null;
+  setDate: string | null;
+  by: string | null;
+  tracking: GoalTracking | null;
+};
+
+function programStatus(p: TrainingProgram): PlanProgramStatus {
+  return p.status === "deployed" ? "live" : p.scheduled_at ? "scheduled" : "draft";
+}
+
+export function getPlanData(clientId: number) {
+  const today = localDateStr();
+  const thisWeek = weekStart(today);
+  const programs = listPrograms(clientId);
+  const phases: PlanPhaseRow[] = listClientPhases(clientId).map((p) => {
+    const program = p.program_id ? programs.find((x) => x.id === p.program_id) : undefined;
+    return {
+      id: p.id,
+      track: p.track,
+      name: p.name,
+      start_week: p.start_week,
+      end_week: p.end_week,
+      program: program
+        ? { id: program.id, status: programStatus(program), totalWeeks: program.total_weeks, loggedWeeks: programLoggedWeekIndexes(program.id) }
+        : null,
+    };
+  });
+  const linked = new Set(phases.map((p) => p.program?.id).filter((x): x is number => x != null));
+  const programOptions: PlanProgramOption[] = programs.map((p) => ({
+    id: p.id,
+    name: p.name?.trim() || "Untitled programme",
+    status: programStatus(p),
+    weeks: p.total_weeks,
+    linked: linked.has(p.id),
+  }));
+
+  // The goals table.
+  const fmtShort = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { day: "numeric", month: "short" });
+  const meetingsById = new Map(listMeetings(clientId).map((m) => [m.id, m] as const));
+  const goals: PlanGoalRow[] = getGoalSummaries(clientId).map(({ goal, view }) => {
+    const t = goal.tracked_by ?? null;
+    let live = "";
+    let pct = goal.done ? 100 : 0;
+    let rule = "Text only";
+    let by: string | null = null;
+    if (view.kind === "metric" && t?.kind === "metric") {
+      const figure = (view.barLabel ?? "").split(" · ")[0];
+      live = `${figure} · ${view.reached ? "reached" : (view.sub ?? "").includes("on pace") ? "on pace" : (view.sub ?? "").includes("behind") ? "behind" : (view.sub ?? "").includes("slipped") ? "slipped" : "tracking"}`;
+      pct = Math.round((view.bar ?? 0) * 100);
+      const s = seriesForKey(clientId, t.metricKey);
+      rule = `Metric · ${s?.name ?? "Metric"} ${t.op} ${fmtNumber(t.target)}${s?.unit ? ` ${s.unit}` : ""} · by ${fmtShort(t.byDate)}`;
+      by = fmtShort(t.byDate);
+    } else if (view.kind === "exercise" && t?.kind === "exercise") {
+      live = (view.right ?? "").replace(/^best /, "");
+      const name = getData().exercises.find((e) => e.id === t.exerciseId)?.name ?? "Exercise";
+      const sets = loggedSetsForExercise(clientId, t.exerciseId).filter((s) => s.weight != null);
+      const best = sets.length ? Math.max(...sets.map((s) => s.weight as number)) : 0;
+      pct = view.reached ? 100 : Math.max(0, Math.min(99, Math.round((best / t.weight) * 100)));
+      rule = `Exercise · ${name} · ${fmtNumber(t.weight)} × ${t.reps}${t.maxRpe != null ? ` @ ≤${t.maxRpe}` : ""}`;
+      by = "ongoing";
+    } else if (view.kind === "habit" && t?.kind === "habit") {
+      live = `${view.segments?.done ?? 0} of ${view.segments?.total ?? 0} · ${view.tone === "green" ? "on track" : "behind"}`;
+      pct = Math.round(((view.segments?.done ?? 0) / Math.max(1, view.segments?.total ?? 1)) * 100);
+      const name = getData().metric_definitions.find((m) => m.id === t.metricId)?.name ?? "Check-in";
+      rule = `Habit · ${name} ${t.op} ${t.value.toLocaleString("en-US")} · ${t.daysPerWeek} / wk`;
+      by = "ongoing";
+    }
+    const meeting = goal.meeting_id ? meetingsById.get(goal.meeting_id) : undefined;
+    return {
+      id: goal.id,
+      text: goal.text,
+      done: goal.done,
+      kind: view.kind,
+      tone: view.tone,
+      live,
+      pct,
+      rule,
+      setIn: meeting ? { meetingId: meeting.id, topic: meeting.topic || "Check-in call" } : null,
+      setDate: goal.created_at ?? null,
+      by,
+      tracking: t,
+    };
+  });
+
+  const next = listMeetings(clientId)
+    .filter((m) => m.status === "scheduled" && m.date >= today)
+    .sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1))[0];
+  const currentPhase = getCurrentPhase(clientId, "nutrition") ?? getCurrentPhase(clientId, "training");
+  return {
+    today,
+    thisWeek,
+    clientName: getClient(clientId)?.name ?? "Client",
+    currentPhaseName: currentPhase?.name ?? null,
+    phases,
+    programs: programOptions,
+    goals,
+    nextReview: next ? { id: next.id, date: next.date, topic: next.topic || "Check-in call" } : null,
+    goalOptions: getGoalEditorOptions(clientId),
+  };
+}
+
+function fmtNumber(n: number) {
+  return Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10);
+}
+
+/** Links a training phase to an existing programme instead of a new draft. */
+export function linkPhaseToProgram(phaseId: number, programId: number) {
+  const data = getData();
+  const phase = data.client_phases.find((p) => p.id === phaseId);
+  const program = data.training_programs.find((p) => p.id === programId);
+  if (!phase || !program || phase.client_id !== program.client_id) return;
+  // The old draft made for this phase, if any, has no other reason to exist.
+  if (phase.program_id && phase.program_id !== programId) {
+    const old = data.training_programs.find((p) => p.id === phase.program_id);
+    if (old && old.status === "draft" && !old.scheduled_at) removeProgram(old.id);
+  }
+  phase.program_id = programId;
+  phase.track = "training";
+  persist();
+  // A live or scheduled programme dictates the dates; a draft follows the phase.
+  if (program.status === "deployed" || program.scheduled_at) syncProgramPhase(programId);
+  else if (program.name?.trim()) {
+    phase.name = phase.name || program.name;
+    persist();
+  }
+}
+
+/** The goal's starting line moves with it: progress counts from this date. */
+export function setClientGoalStart(id: number, startDate: string) {
+  const data = getData();
+  const goal = data.client_goals.find((g) => g.id === id);
+  if (!goal) return;
+  goal.created_at = startDate;
+  persist();
 }

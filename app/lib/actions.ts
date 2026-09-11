@@ -10,8 +10,10 @@ import {
 } from "./auth";
 import {
   addClientGoal,
+  listClientGoals,
   updateClientGoal,
   reorderClientGoals,
+  setClientGoalStart,
   getClientIdForGoal,
   type GoalTracking,
   addCustomTrainingColumn,
@@ -1021,6 +1023,12 @@ export async function addClientGoalAction(formData: FormData) {
   if (!text) return;
   const meetingRaw = Number(formData.get("meetingId"));
   addClientGoal(clientId, text, parseGoalTracking(formData.get("tracking")), Number.isInteger(meetingRaw) && meetingRaw > 0 ? meetingRaw : null);
+  const startRaw = String(formData.get("start") ?? "");
+  if (/^\d{4}-\d{2}-\d{2}$/.test(startRaw)) {
+    const mine = listClientGoals(clientId);
+    const newest = mine[mine.length - 1];
+    if (newest) setClientGoalStart(newest.id, startRaw);
+  }
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1075,6 +1083,8 @@ export async function updateClientGoalAction(formData: FormData) {
   const text = String(formData.get("text") || "").trim();
   if (!id || !text || getClientIdForGoal(id) == null) return;
   updateClientGoal(id, text, parseGoalTracking(formData.get("tracking")));
+  const startRaw = String(formData.get("start") ?? "");
+  if (/^\d{4}-\d{2}-\d{2}$/.test(startRaw)) setClientGoalStart(id, startRaw);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1591,7 +1601,9 @@ export async function addClientPhaseAction(formData: FormData) {
   const clientId = Number(formData.get("clientId"));
   const fields = readPhaseForm(formData);
   if (!clientId || !fields) return;
-  addClientPhase(clientId, fields.track, fields.name, fields.start, fields.end);
+  const rawProgram = String(formData.get("programId") ?? "");
+  const programId = /^\d+$/.test(rawProgram) ? Number(rawProgram) : null;
+  addClientPhase(clientId, fields.track, fields.name, fields.start, fields.end, programId);
   revalidatePath("/admin");
   revalidatePath("/client");
 }

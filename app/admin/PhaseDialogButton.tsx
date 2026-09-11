@@ -11,6 +11,12 @@ const TRACKS: { id: PhaseTrack; label: string }[] = [
   { id: "lifestyle", label: "Lifestyle" },
 ];
 
+export const TRACK_TONE: Record<PhaseTrack, { bg: string; fg: string; mid: string }> = {
+  nutrition: { bg: "#dff3ea", fg: "#0f5c46", mid: "#9fd3bb" },
+  training: { bg: "#e6e4fa", fg: "#3a3390", mid: "#b9b4ec" },
+  lifestyle: { bg: "#efede6", fg: "#4a4a45", mid: "#cfcbbd" },
+};
+
 /** What the dialog knows about the programme behind a training phase. */
 export type PhaseProgramInfo = {
   status: "live" | "scheduled" | "draft";
@@ -18,15 +24,17 @@ export type PhaseProgramInfo = {
   /** 1-based programme weeks with logged sets: these can't be removed. */
   loggedWeeks: number[];
 };
+/** Another phase on the plan, for the overlap warning. */
+export type PhaseNeighbour = { id: number; track: PhaseTrack; name: string; start_week: string; end_week: string };
+/** A programme a new training phase could be the plan for. */
+export type PhaseProgramOption = { id: number; name: string; status: "live" | "scheduled" | "draft"; weeks: number; linked: boolean };
 
 const DAY = 86400000;
 const parse = (iso: string) => new Date(`${iso}T00:00:00`);
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-/** Monday of the week the date falls in. */
 const mondayOf = (date: string) => {
   const d = parse(date);
-  const day = (d.getDay() + 6) % 7;
-  d.setDate(d.getDate() - day);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
   return iso(d);
 };
 const addDays = (date: string, n: number) => {
@@ -35,86 +43,48 @@ const addDays = (date: string, n: number) => {
   return iso(d);
 };
 const weeksBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / (7 * DAY));
+export const isoWeek = (monday: string) => {
+  const d = parse(monday);
+  const thursday = new Date(d);
+  thursday.setDate(d.getDate() + 3);
+  const jan1 = new Date(thursday.getFullYear(), 0, 1);
+  return Math.floor((thursday.getTime() - jan1.getTime()) / DAY / 7) + 1;
+};
 
-// Either the "+ Add phase" button in the timeline head, or a phase bar in
-// the grid; both open the same dialog. With `phase` set, the dialog edits
-// (and can delete) that phase; without it, it adds one.
-export default function PhaseDialogButton({
-  clientId,
-  phase,
-  program,
-  today,
-  bar = false,
-  tone,
-  label,
-  defaultStart,
-  defaultEnd,
-}: {
+// Either the "+ Add phase" button in the card header, or a bar in the grid;
+// both open the same dialog. With `phase` set, the dialog edits (and can
+// delete) that phase; without it, it adds one.
+export default function PhaseDialogButton(props: Omit<PhaseDialogProps, "onClose"> & { label?: string; className?: string }) {
+  const [open, setOpen] = useState(false);
+  const { label, className, ...dialog } = props;
+  return (
+    <>
+      <button type="button" className={className ?? "pl-primary"} onClick={() => setOpen(true)}>
+        {label ?? (dialog.phase ? "Edit phase" : "+ Add phase")}
+      </button>
+      {open && <PhaseDialog {...dialog} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+export type PhaseDialogProps = {
   clientId: number;
   phase?: ClientPhase;
   program?: PhaseProgramInfo;
   /** Server-local date, so "is this live" agrees with the timeline. */
   today?: string;
-  bar?: boolean;
-  tone?: { bg: string; fg: string };
-  label?: string;
+  defaultTrack?: PhaseTrack;
   defaultStart?: string;
   defaultEnd?: string;
-}) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <>
-      {bar && phase ? (
-        <button
-          type="button"
-          className="ph-bar"
-          style={tone ? { background: tone.bg, color: tone.fg } : undefined}
-          onClick={() => setOpen(true)}
-          title={label}
-          aria-label={`Edit ${phase.name}`}
-        >
-          <span className="ph-bar-name">{phase.name}</span>
-        </button>
-      ) : (
-        <button type="button" className="ad-btn-secondary" onClick={() => setOpen(true)}>
-          {phase ? "Edit dates" : "+ Add phase"}
-        </button>
-      )}
-      {open && (
-        <PhaseDialog
-          clientId={clientId}
-          phase={phase}
-          program={program}
-          today={today}
-          defaultStart={defaultStart}
-          defaultEnd={defaultEnd}
-          onClose={() => setOpen(false)}
-        />
-      )}
-    </>
-  );
-}
-
-function PhaseDialog({
-  clientId,
-  phase,
-  program,
-  today,
-  defaultStart,
-  defaultEnd,
-  onClose,
-}: {
-  clientId: number;
-  phase?: ClientPhase;
-  program?: PhaseProgramInfo;
-  today?: string;
-  defaultStart?: string;
-  defaultEnd?: string;
+  /** The other phases, for the overlap warning. */
+  others?: PhaseNeighbour[];
+  /** Programmes a new training phase could be linked to. */
+  programs?: PhaseProgramOption[];
   onClose: () => void;
-}) {
+};
+
+export function PhaseDialog({ clientId, phase, program, today, defaultTrack, defaultStart, defaultEnd, others = [], programs = [], onClose }: PhaseDialogProps) {
   const ref = useRef<HTMLInputElement>(null);
-  const formRef = useRef<HTMLFormElement>(null);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
@@ -125,24 +95,23 @@ function PhaseDialog({
   const editing = !!phase;
   const [start, setStart] = useState(phase?.start_week ?? defaultStart ?? "");
   const [end, setEnd] = useState(phase?.end_week ?? defaultEnd ?? "");
-  const [track, setTrack] = useState<PhaseTrack>(phase?.track ?? "nutrition");
+  const [track, setTrack] = useState<PhaseTrack>(phase?.track ?? defaultTrack ?? "nutrition");
+  const [programChoice, setProgramChoice] = useState<string>("new");
   const [adjust, setAdjust] = useState(true);
-  // "Are you sure" step for a phase the client is in right now.
   const [confirming, setConfirming] = useState(false);
 
+  const tone = TRACK_TONE[track];
   // A live or scheduled programme starts on its deploy week; only the end moves.
   const startLocked = !!program && program.status !== "draft";
   const live = !!phase && !!today && phase.start_week <= today && addDays(phase.end_week, 6) >= today;
 
-  // Where the dates will land once snapped, and what that means for the
-  // programme behind a training phase.
   const snappedStart = start ? mondayOf(start) : "";
   const snappedEnd = end ? mondayOf(end) : "";
-  const newWeeks = snappedStart && snappedEnd ? Math.abs(weeksBetween(snappedStart, snappedEnd)) + 1 : 0;
+  const ordered = snappedStart && snappedEnd ? (snappedStart <= snappedEnd ? [snappedStart, snappedEnd] : [snappedEnd, snappedStart]) : null;
+  const newWeeks = ordered ? weeksBetween(ordered[0], ordered[1]) + 1 : 0;
   const datesChanged = !!phase && (snappedStart !== phase.start_week || snappedEnd !== phase.end_week);
   const trackChanged = !!phase && track !== phase.track;
   const weekDelta = program ? newWeeks - program.totalWeeks : 0;
-  // Trailing weeks that can actually go: from the end, until a logged one.
   let removable = 0;
   if (program && weekDelta < 0) {
     for (let i = program.totalWeeks; i > newWeeks; i--) {
@@ -151,15 +120,21 @@ function PhaseDialog({
     }
   }
   const removeFrom = program ? program.totalWeeks - removable + 1 : 0;
-  const removeLabel =
-    removable === 0
-      ? null
-      : removable === 1
-      ? `week ${program!.totalWeeks}`
-      : `weeks ${removeFrom}–${program!.totalWeeks}`;
+  const removeLabel = removable === 0 ? null : removable === 1 ? `week ${program!.totalWeeks}` : `weeks ${removeFrom}–${program!.totalWeeks}`;
+
+  // Another phase on the same track sharing weeks with this one.
+  const overlap = (() => {
+    if (!ordered) return null;
+    for (const o of others) {
+      if (o.track !== track || (phase && o.id === phase.id)) continue;
+      const lo = ordered[0] > o.start_week ? ordered[0] : o.start_week;
+      const hi = ordered[1] < o.end_week ? ordered[1] : o.end_week;
+      if (lo <= hi) return { name: o.name, weeks: weeksBetween(lo, hi) + 1 };
+    }
+    return null;
+  })();
 
   const submit = (e: React.FormEvent<HTMLFormElement>) => {
-    // A live phase asks once before its dates or track change; a rename alone doesn't.
     if (live && (datesChanged || trackChanged) && !confirming) {
       e.preventDefault();
       setConfirming(true);
@@ -168,53 +143,51 @@ function PhaseDialog({
     setTimeout(onClose, 0);
   };
 
+  const available = programs.filter((p) => !p.linked);
+
   return createPortal(
     <div className="pb-modal-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="pb-modal pb-modal-sm" role="dialog" aria-modal="true" aria-label={editing ? "Edit phase" : "Add phase"}>
-        <h2 className="pb-confirm-title">{editing ? "Edit phase" : "Add phase"}</h2>
-        <p className="pb-confirm-body">
-          A block on one track, from one week to another. Dates snap to the Monday of their week.
-        </p>
-        <form
-          ref={formRef}
-          action={editing ? updateClientPhaseAction : addClientPhaseAction}
-          className="cd-form"
-          onSubmit={submit}
-        >
+      <div className="pb-modal pb-modal-sm pl-dialog" role="dialog" aria-modal="true" aria-label={editing ? "Edit phase" : "New phase"} style={{ borderTop: `4px solid ${tone.fg}` }}>
+        <div className="pl-dialog-head">
+          <h2 className="pb-confirm-title">{editing ? "Edit phase" : "New phase"}</h2>
+          <span className="pl-track-tag" style={{ background: tone.bg, color: tone.fg }}>
+            {TRACKS.find((t) => t.id === track)?.label}
+          </span>
+        </div>
+        <form action={editing ? updateClientPhaseAction : addClientPhaseAction} className="cd-form" onSubmit={submit}>
           {editing ? <input type="hidden" name="id" value={phase.id} /> : <input type="hidden" name="clientId" value={clientId} />}
+          <input type="hidden" name="track" value={program ? "training" : track} />
           {program && weekDelta !== 0 && adjust && <input type="hidden" name="adjustProgram" value="1" />}
-          <label className="plan-schedule-field">
+          {!editing && track === "training" && <input type="hidden" name="programId" value={programChoice} />}
+
+          <div className="plan-schedule-field">
             <span>Track</span>
-            <select
-              name="track"
-              value={track}
-              onChange={(e) => setTrack(e.target.value as PhaseTrack)}
-              className="ph-select"
-              disabled={!!program}
-            >
-              {TRACKS.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-            {program && <input type="hidden" name="track" value="training" />}
-          </label>
+            <div className="pl-chips">
+              {TRACKS.map((t) => {
+                const tt = TRACK_TONE[t.id];
+                const active = t.id === track;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className={`pl-chip${active ? " active" : ""}`}
+                    style={active ? { background: tt.bg, color: tt.fg, borderColor: tt.fg } : undefined}
+                    onClick={() => setTrack(t.id)}
+                    disabled={!!program}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <label className="plan-schedule-field">
-            <span>Phase</span>
-            <input
-              ref={ref}
-              name="name"
-              type="text"
-              placeholder="Bulk, Cut, Hypertrophy, Morning routine…"
-              defaultValue={phase?.name ?? ""}
-              required
-              maxLength={40}
-            />
+            <span>Name</span>
+            <input ref={ref} name="name" type="text" placeholder="Bulk, Cut, Hypertrophy, Morning routine…" defaultValue={phase?.name ?? ""} required maxLength={40} />
           </label>
           <div className="cd-form-row">
             <label className="plan-schedule-field">
-              <span>From (week of)</span>
+              <span>Start week</span>
               <input
                 name="start"
                 type="date"
@@ -226,18 +199,46 @@ function PhaseDialog({
               />
             </label>
             <label className="plan-schedule-field">
-              <span>To (week of)</span>
+              <span>End week</span>
               <input name="end" type="date" value={end} onChange={(e) => setEnd(e.target.value)} required />
             </label>
           </div>
+          {ordered && (
+            <div className="pl-summary">
+              <span>
+                <b>
+                  {newWeeks} week{newWeeks === 1 ? "" : "s"}
+                </b>{" "}
+                · W{isoWeek(ordered[0])} → W{isoWeek(ordered[1])}
+              </span>
+              {overlap && (
+                <span className="pl-overlap">
+                  Overlaps {overlap.name} by {overlap.weeks} week{overlap.weeks === 1 ? "" : "s"}
+                </span>
+              )}
+            </div>
+          )}
           {startLocked && (
             <p className="ph-note">
               This is the {program.status === "live" ? "live" : "scheduled"} training programme. It starts on its deploy week; move the end to shorten or extend it.
             </p>
           )}
 
-          {/* A training phase is a programme: offer to make the programme
-              match the new length, and say what that means. */}
+          {!editing && track === "training" && (
+            <label className="plan-schedule-field">
+              <span>Programme</span>
+              <select value={programChoice} onChange={(e) => setProgramChoice(e.target.value)} className="ph-select">
+                <option value="new">Create new programme (draft) · {newWeeks || "?"} weeks</option>
+                {available.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} · {p.status} · {p.weeks} wk
+                  </option>
+                ))}
+              </select>
+              <small className="pl-hint">Deploy later from Training.</small>
+            </label>
+          )}
+
           {program && weekDelta > 0 && (
             <label className="ph-adjust">
               <input type="checkbox" checked={adjust} onChange={(e) => setAdjust(e.target.checked)} />
@@ -256,14 +257,12 @@ function PhaseDialog({
                 {removable > 0 ? (
                   <>
                     <strong>Also delete {removeLabel} from the training programme</strong>
-                    {removable < -weekDelta
-                      ? "The other weeks past the new end have logged sets and stay."
-                      : "Everything built for those weeks goes with them."}
+                    {removable < -weekDelta ? "The other weeks past the new end have logged sets and stay." : "Everything built for those weeks goes with them."}
                   </>
                 ) : (
                   <>
                     <strong>The programme keeps its weeks</strong>
-                    The weeks past the new end have logged sets, so they can't be deleted.
+                    The weeks past the new end have logged sets, so they can&rsquo;t be deleted.
                   </>
                 )}
               </span>
@@ -294,7 +293,7 @@ function PhaseDialog({
                 Cancel
               </button>
               <button type="submit" className="ad-btn-primary">
-                {editing ? "Save" : "Add"}
+                {editing ? "Save" : "Add phase"}
               </button>
             </div>
           )}
