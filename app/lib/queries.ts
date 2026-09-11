@@ -2472,7 +2472,7 @@ export function removeMetricDefinition(id: number) {
 // weekly metric or measurement field qualifies, and the cap is shared across
 // all three — the coach picks six things total, not six of each. Six is what
 // fits the rail's three-column grid in two clean rows.
-export const PINNED_METRIC_LIMIT = 6;
+export const PINNED_METRIC_LIMIT = 4;
 
 export function countPinned(clientId: number): number {
   const data = getData();
@@ -2540,7 +2540,7 @@ export function getPinnedMetricsSummary(clientId: number): PinnedMetricSummary[]
 }
 
 // ---- Client graphs: which of this client's figures are charted on their
-// Home screen. The coach picks up to PINNED_METRIC_LIMIT (6) across BOTH
+// Home screen. The coach picks up to PINNED_METRIC_LIMIT (4) across BOTH
 // tracker metrics and measurement fields (Weight lives in the latter), and
 // each pick is one slide of the client's trend carousel. "pinned" is the
 // stored flag; this layer turns it into one flat, ordered list so the admin
@@ -5609,7 +5609,7 @@ export function getHomeDataTiles(clientId: number, weightGoalIsDown: boolean | n
   const today = localDateStr();
   const goals = listClientGoals(clientId).filter((g) => !g.done && g.tracked_by?.kind === "metric");
   const choices = listGraphChoices(clientId).filter((c) => c.pointCount > 0);
-  const picked = (choices.some((c) => c.pinned) ? choices.filter((c) => c.pinned) : choices).slice(0, 6);
+  const picked = (choices.some((c) => c.pinned) ? choices.filter((c) => c.pinned) : choices).slice(0, PINNED_METRIC_LIMIT);
   const fmt = (n: number) => (Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10));
   return picked.map((c) => {
     const series = c.kind === "field" ? getMeasurementSeries(c.id) : getMetricSeries(c.id);

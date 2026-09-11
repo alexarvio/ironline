@@ -255,9 +255,10 @@ function PlanRow({
   );
 }
 
-// ---- Data: the coach's chosen figures, a tile each and one swipeable
-// bar chart underneath. Tapping a tile scrolls the chart to it; swiping
-// the chart selects the tile. ----
+// ---- Data: the coach's chosen figures (up to four) in one card: a strip
+// of stat columns across the top, one swipeable bar chart underneath.
+// Tapping a column selects it and slides the chart to it; swiping the
+// chart selects the column it lands on. ----
 
 function DataSection({ tiles }: { tiles: DataTile[] }) {
   const [index, setIndex] = useState(0);
@@ -282,64 +283,67 @@ function DataSection({ tiles }: { tiles: DataTile[] }) {
         <span className="home-data-title">Data</span>
         <span className="home-data-sub">Last 7 days</span>
       </div>
-      <div className="home-data-tiles">
-        {tiles.map((t, i) => (
-          <button key={t.key} type="button" className={`home-data-tile${i === index ? " selected" : ""}`} onClick={() => goTo(i)}>
-            <span className="home-data-tile-label">{t.name}</span>
-            <span className="home-data-tile-value">
-              {t.valueLabel}
-              {t.unit && <small>{t.unit}</small>}
-            </span>
-            <span className={`home-data-tile-trend ${t.trendTone}`}>{t.trendLabel}</span>
-          </button>
-        ))}
-      </div>
+      <div className="home-data-card">
+        <div className="home-data-strip" style={{ gridAutoColumns: `calc(100% / ${Math.min(4, tiles.length)})` }}>
+          {tiles.map((t, i) => (
+            <button key={t.key} type="button" className={`home-data-col${i === index ? " selected" : ""}`} onClick={() => goTo(i)}>
+              <span className="home-data-col-label">{t.name}</span>
+              <span className="home-data-col-value">
+                {t.valueLabel}
+                {t.unit && <small>{t.unit}</small>}
+              </span>
+              <span className={`home-data-col-trend ${t.trendTone}`}>{t.trendLabel}</span>
+              <span className="home-data-col-line" aria-hidden="true" />
+            </button>
+          ))}
+        </div>
 
-      <div className="home-data-graph">
-        <div className="home-data-graph-head">
-          <span>{tile.name} · 8 weeks</span>
-          <span>
-            {tile.firstLabel} → {tile.lastLabel}
-          </span>
-        </div>
-        <div className="home-data-track" ref={trackRef} onScroll={onScroll}>
-          {tiles.map((t) => {
-            const values = t.bars.filter((b): b is number => b != null);
-            const all = t.goal != null ? [...values, t.goal] : values;
-            const min = all.length ? Math.min(...all) : 0;
-            const max = all.length ? Math.max(...all) : 1;
-            const pad = max === min ? Math.max(1, Math.abs(max) * 0.1) : (max - min) * 0.3;
-            const lo = min - pad;
-            const hi = max + pad;
-            const pct = (v: number) => Math.max(0, Math.min(1, (v - lo) / (hi - lo)));
-            return (
-              <div key={t.key} className="home-data-pane">
-                <div className="home-data-bars">
-                  {t.bars.map((b, i) => (
-                    <span
-                      key={i}
-                      className={`home-data-bar${i === t.bars.length - 1 ? " last" : ""}${b == null ? " empty" : ""}`}
-                      style={{ height: b == null ? "2px" : `${Math.max(4, pct(b) * 100)}%` }}
-                      title={b == null ? "Nothing logged" : `${b}${t.unit ? ` ${t.unit}` : ""}`}
-                    />
-                  ))}
-                  {t.goal != null && (
-                    <span className="home-data-goal" style={{ bottom: `${pct(t.goal) * 100}%` }}>
-                      <em>goal {t.goal}</em>
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        {tiles.length > 1 && (
-          <div className="home-data-dots">
-            {tiles.map((t, i) => (
-              <button key={t.key} type="button" className={`home-data-dot${i === index ? " on" : ""}`} onClick={() => goTo(i)} aria-label={t.name} />
-            ))}
+        <div className="home-data-graph">
+          <div className="home-data-graph-head">
+            <span>{tile.name} · 8 weeks</span>
+            <span>
+              {tile.firstLabel} → {tile.lastLabel}
+            </span>
           </div>
-        )}
+          <div className="home-data-track" ref={trackRef} onScroll={onScroll}>
+            {tiles.map((t) => {
+              const values = t.bars.filter((b): b is number => b != null);
+              const all = t.goal != null ? [...values, t.goal] : values;
+              const min = all.length ? Math.min(...all) : 0;
+              const max = all.length ? Math.max(...all) : 1;
+              const pad = max === min ? Math.max(1, Math.abs(max) * 0.1) : (max - min) * 0.3;
+              const lo = min - pad;
+              const hi = max + pad;
+              const pct = (v: number) => Math.max(0, Math.min(1, (v - lo) / (hi - lo)));
+              return (
+                <div key={t.key} className="home-data-pane">
+                  <div className="home-data-bars">
+                    {t.bars.map((b, i) => (
+                      <span
+                        key={i}
+                        className={`home-data-bar${i === t.bars.length - 1 ? " last" : ""}${b == null ? " empty" : ""}`}
+                        style={{ height: b == null ? "2px" : `${Math.max(4, pct(b) * 100)}%` }}
+                        title={b == null ? "Nothing logged" : `${b}${t.unit ? ` ${t.unit}` : ""}`}
+                      />
+                    ))}
+                    {t.goal != null && (
+                      <span className="home-data-goal" style={{ bottom: `${pct(t.goal) * 100}%` }}>
+                        <em>goal {t.goal}</em>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {tiles.length > 1 && (
+            <div className="home-data-dots">
+              {tiles.map((t, i) => (
+                <button key={t.key} type="button" className={`home-data-dot${i === index ? " on" : ""}`} onClick={() => goTo(i)} aria-label={t.name} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );

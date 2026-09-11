@@ -12161,3 +12161,44 @@ a.cd-entry:hover { border-color: var(--accent); }
 .mw-goal .mw-dot { margin-top: 0; }
 .ad-goal-list .ad-goal-row { align-items: center; }
 .ad-goal-list .ad-goal-bullet, .ad-goal-list .ge-done { margin-top: 0; }
+
+/* ---- Home Data: one card, stat strip over the graph ------------------ */
+.home-data-card { background: #fff; border: 1px solid #e3e6ea; border-radius: 14px; overflow: hidden; }
+.home-data-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 25%;
+  border-bottom: 1px solid #eef1f4;
+}
+.home-data-col {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  padding: 12px 10px 14px;
+  border: 0;
+  border-right: 1px solid #eef1f4;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.home-data-col:last-child { border-right: 0; }
+.home-data-col.selected { background: #f4f6fa; }
+.home-data-col-label { max-width: 100%; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.home-data-col-value { font-family: var(--font-serif); font-size: 19px; font-weight: 600; color: #313851; line-height: 1.1; transition: font-size 0.2s ease; white-space: nowrap; }
+.home-data-col.selected .home-data-col-value { font-size: 22px; }
+.home-data-col-value small { font-family: var(--font-sans); font-size: 10px; font-weight: 700; color: #8b93a1; margin-left: 2px; }
+.home-data-col-trend { font-size: 10.5px; font-weight: 800; color: #5b6472; white-space: nowrap; }
+.home-data-col-trend.green { color: #2f7a3f; }
+.home-data-col-trend.orange { color: #b3471d; }
+/* The underline slides in: width grows from the centre on selection. */
+.home-data-col-line { position: absolute; left: 50%; right: 50%; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: #313851; transition: left 0.25s ease, right 0.25s ease; }
+.home-data-col.selected .home-data-col-line { left: 12px; right: 12px; }
+.home-data-card .home-data-graph { margin-top: 0; border: 0; border-radius: 0; }
+/* At most four figures, so the strip never needs to scroll. */
+.home-data-strip { overflow: hidden; }
