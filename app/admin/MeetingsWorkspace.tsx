@@ -152,6 +152,9 @@ export default function MeetingsWorkspace(p: MeetingsWorkspaceProps) {
 
   const submit = (fd: FormData) =>
     start(async () => {
+      // Whatever was typed for the time is tidied here too, in case the
+      // field never lost focus before Schedule was pressed.
+      fd.set("time", tidyTime(String(fd.get("time") ?? "")));
       if (form.rescheduleId != null) await updateMeetingAction(fd);
       else await addMeetingAction(fd);
       setForm({ rescheduleId: null, date: form.date, time: "", duration: 30, topic: "", link: "" });
@@ -259,6 +262,7 @@ export default function MeetingsWorkspace(p: MeetingsWorkspaceProps) {
                   value={form.time}
                   onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
                   onBlur={(e) => setForm((f) => ({ ...f, time: tidyTime(e.target.value) }))}
+                  onKeyDown={(e) => e.key === "Enter" && setForm((f) => ({ ...f, time: tidyTime(f.time) }))}
                   pattern="([01]?d|2[0-3]):[0-5]d"
                   title="24-hour time, e.g. 14:30"
                 />
