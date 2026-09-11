@@ -12220,3 +12220,9 @@ a.cd-entry:hover { border-color: var(--accent); }
    point; the buttons stay pinned to the column's bottom edge either way. */
 .mw-upcoming-body .mw-col > .mw-prep { flex: 0 1 auto; min-height: 180px; max-height: 340px; }
 .mw-upcoming-body .mw-prep-foot { margin-top: auto; padding-top: 10px; }
+/* Past row: "2 weeks ago · 1 goal set" sits after the title; the status pill goes to the far right. */
+.mw-past-head .mw-row-summary { flex: none; margin-right: auto; }
+.mw-past-head .mw-row-main { flex: 0 1 auto; }
+.mw-past-head .mw-pill { margin-left: 8px; }
+/* Narrow tab: the summary gives way before the chevron is pushed off the row. */
+.mw-past-head .mw-row-summary { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -537,10 +537,10 @@ function PastMeetings({ past, today }: { past: WsMeeting[]; today: string }) {
                   {m.time ? ` ${m.time}` : ""} · {m.durationMinutes} min · {m.provider}
                 </span>
               </span>
-              {m.status !== "scheduled" && <span className={`mw-pill ${m.status}`}>{STATUS_LABEL[m.status]}</span>}
               <span className="mw-row-summary">
-                {agoLabel(today, m.date)} · {m.goals.length} goal{m.goals.length === 1 ? "" : "s"} set · {m.notes.length} note{m.notes.length === 1 ? "" : "s"}
+                {agoLabel(today, m.date)} · {m.goals.length} goal{m.goals.length === 1 ? "" : "s"} set
               </span>
+              {m.status !== "scheduled" && <span className={`mw-pill ${m.status}`}>{STATUS_LABEL[m.status]}</span>}
               <span className={`mw-chev${open ? " up" : ""}`}>⌄</span>
             </button>
             {open && (
