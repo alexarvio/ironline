@@ -504,7 +504,9 @@ function copyWeekOneInto(clientId: number, startWeek: number, toWeek: number) {
 // 12 weeks after building out Week 1 gives 12 working weeks to start
 // adjusting from, not 11 empty ones. Requesting a number no bigger than
 // the current length is just a no-op.
-export function updateProgramTotalWeeks(programId: number, requestedTotal: number) {
+// New weeks start as copies of week 1 unless `seedFromWeekOne` is false, in
+// which case they are bare: seven days, nothing on them.
+export function updateProgramTotalWeeks(programId: number, requestedTotal: number, seedFromWeekOne = true) {
   const data = getData();
   const program = data.training_programs.find((p) => p.id === programId);
   if (!program) return;
@@ -513,7 +515,7 @@ export function updateProgramTotalWeeks(programId: number, requestedTotal: numbe
   for (let i = program.total_weeks; i < newTotal; i++) {
     const weekNumber = program.start_week + i;
     ensureWeekSkeleton(program.client_id, weekNumber);
-    if (weekNumber !== program.start_week) copyWeekOneInto(program.client_id, program.start_week, weekNumber);
+    if (seedFromWeekOne && weekNumber !== program.start_week) copyWeekOneInto(program.client_id, program.start_week, weekNumber);
   }
   program.total_weeks = newTotal;
   persist();
@@ -1076,17 +1078,27 @@ export function progressTargetFromLogs(workoutAssignmentId: number) {
   const bestWeight = Math.max(...weights);
   if (bestWeight < wa.target_weight_kg) return;
 
-  const nextDay = data.program_days.find(
-    (pd) => pd.client_id === day.client_id && pd.week_number === day.week_number + 1 && pd.day_of_week === day.day_of_week
-  );
-  if (!nextDay) return;
-  const next = data.workout_assignments.find((x) => x.program_day_id === nextDay.id && x.exercise_id === wa.exercise_id);
-  if (!next) return;
-  if (data.set_logs.some((sl) => sl.workout_assignment_id === next.id)) return;
-  const target = Math.max(next.target_weight_kg ?? 0, bestWeight);
-  if (target === next.target_weight_kg) return;
-  next.target_weight_kg = target;
-  persist();
+  // Every later occurrence of the same exercise for this client moves up:
+  // the same weekday next week, but also a second session later this week
+  // that repeats it, and every week after. "Later" is by day: a later week,
+  // or a later weekday of the same week. Occurrences the client has already
+  // logged against are left alone, and a target the coach planned higher
+  // than the logged weight stays.
+  const days = new Map(data.program_days.filter((pd) => pd.client_id === day.client_id).map((pd) => [pd.id, pd] as const));
+  const isLater = (pd: ProgramDay) =>
+    pd.week_number > day.week_number || (pd.week_number === day.week_number && pd.day_of_week > day.day_of_week);
+  let changed = false;
+  for (const other of data.workout_assignments) {
+    if (other.id === wa.id || other.exercise_id !== wa.exercise_id) continue;
+    const otherDay = days.get(other.program_day_id);
+    if (!otherDay || !isLater(otherDay)) continue;
+    if (data.set_logs.some((sl) => sl.workout_assignment_id === other.id)) continue;
+    const target = Math.max(other.target_weight_kg ?? 0, bestWeight);
+    if (target === other.target_weight_kg) continue;
+    other.target_weight_kg = target;
+    changed = true;
+  }
+  if (changed) persist();
 }
 
 // ---- Ownership lookups, used only for authorization ----

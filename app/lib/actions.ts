@@ -334,7 +334,9 @@ export async function addProgramWeekAction(formData: FormData) {
   if (!program) return;
 
   const newTotal = program.total_weeks + 1;
-  updateProgramTotalWeeks(programId, newTotal);
+  // "Blank week" means blank: the copy-from-week-1 seeding is only for
+  // lengthening from the Plan tab. The copy option overwrites anyway.
+  updateProgramTotalWeeks(programId, newTotal, false);
 
   const newWeekNumber = program.start_week + newTotal - 1;
   ensureWeekSkeleton(clientId, newWeekNumber);
