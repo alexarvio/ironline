@@ -135,6 +135,7 @@ import {
   getClientIdForPhase,
   PHASE_TRACKS,
   setCalorieLog,
+  setCheckInNote,
   reorderAssignments,
   copyProgramDay,
   copyProgramDayToLaterWeeks,
@@ -519,6 +520,7 @@ export async function saveMeasurementCheckInAction(formData: FormData) {
     const value = Number(String(raw).replace(",", "."));
     setMeasurementValue(field.id, date, Number.isFinite(value) ? value : null);
   });
+  if (formData.has("note")) setCheckInNote(clientId, "measurements", date, String(formData.get("note") ?? "").slice(0, 500));
 
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -713,6 +715,9 @@ export async function logMetricPeriodAction(formData: FormData) {
     const value = Number(String(raw).replace(",", "."));
     setMetricEntry(def.id, period, Number.isFinite(value) ? value : null);
   });
+  if (formData.has("note") && (frequency === "daily" || frequency === "weekly")) {
+    setCheckInNote(clientId, frequency, period, String(formData.get("note") ?? "").slice(0, 500));
+  }
 
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -1529,7 +1534,8 @@ export async function logCaloriesAction(formData: FormData) {
   const raw = String(formData.get("kcal") ?? "").replace(",", ".").trim();
   const kcal = raw === "" ? null : Math.round(Number(raw));
   if (kcal != null && (!Number.isFinite(kcal) || kcal < 0 || kcal > 20000)) return;
-  setCalorieLog(clientId, date, kcal);
+  const note = formData.has("note") ? String(formData.get("note") ?? "").trim().slice(0, 500) || null : undefined;
+  setCalorieLog(clientId, date, kcal, note);
   revalidatePath("/client");
   revalidatePath("/admin");
 }

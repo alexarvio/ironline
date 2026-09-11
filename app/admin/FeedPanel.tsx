@@ -15,6 +15,7 @@ function describe(event: ReturnType<typeof getActivityFeed>[number]) {
     return (
       <>
         <strong>{event.clientName}</strong> logged {event.kcal.toLocaleString("en-US")} kcal for {event.dateLabel}
+        {event.note && <span className="feed-note"> · “{event.note}”</span>}
       </>
     );
   }

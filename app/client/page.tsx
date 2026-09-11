@@ -553,12 +553,12 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
         const recent = listCalorieLogs(CLIENT_ID, 8)
           .filter((c) => c.date < today)
           .slice(0, 7)
-          .map((c) => ({ date: c.date, label: dayLabel(c.date), kcal: c.kcal as number | null }));
+          .map((c) => ({ date: c.date, label: dayLabel(c.date), kcal: c.kcal as number | null, note: c.note ?? null }));
         const targetKcal = hasTargets ? (isTrainingDay ? summary.trainingKcal : summary.restKcal) || null : null;
         return (
           <CalorieLog
             clientId={CLIENT_ID}
-            today={{ date: today, label: dayLabel(today), kcal: getCalorieLog(CLIENT_ID, today)?.kcal ?? null }}
+            today={{ date: today, label: dayLabel(today), kcal: getCalorieLog(CLIENT_ID, today)?.kcal ?? null, note: getCalorieLog(CLIENT_ID, today)?.note ?? null }}
             days={recent}
             targetKcal={targetKcal}
           />

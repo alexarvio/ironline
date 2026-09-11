@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist } from "./db";
-import type { CalorieLog, ClientPhase, PhaseTrack } from "./db";
+import type { CalorieLog, CheckInNote, ClientPhase, PhaseTrack } from "./db";
 
 // "Today" (or any Date) as a local YYYY-MM-DD calendar-date string. This is
 // deliberately NOT `date.toISOString().slice(0, 10)` — toISOString always
@@ -1764,6 +1764,7 @@ export type FeedEvent =
       clientName: string;
       dateLabel: string; // "Mon, Sep 7"
       kcal: number;
+      note: string | null;
       at: string;
     }
   | {
@@ -1858,6 +1859,7 @@ export function getActivityFeed(limit = 30): FeedEvent[] {
         clientName: client.name,
         dateLabel: new Date(`${c.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
         kcal: c.kcal,
+        note: c.note ?? null,
         // Entries saved before timestamps existed fall back to their day.
         at: c.logged_at ?? `${c.date}T12:00:00.000Z`,
       };
@@ -2635,7 +2637,7 @@ export function getGraphedSeries(
  */
 export type HistoryColumn = { id: number; name: string; unit: string; group: string };
 export type HistoryBand = { group: string; label: string; tint: string; span: number };
-export type HistoryRow = { period: string; label: string; values: (number | null)[] };
+export type HistoryRow = { period: string; label: string; values: (number | null)[]; note: string | null };
 export type HistoryChange = { delta: number | null; pct: number | null; label: string }[];
 
 export type MetricHistory = {
@@ -2673,8 +2675,10 @@ export function getMetricHistory(clientId: number, cadence: MetricCadence): Metr
     new Set(data.metric_entries.filter((e) => ids.has(e.metric_definition_id)).map((e) => e.period))
   ).sort((a, b) => b.localeCompare(a));
 
+  const noteKind: CheckInNote["kind"] | null = cadence === "daily" ? "daily" : cadence === "weekly" ? "weekly" : null;
   const rows: HistoryRow[] = periods.map((period) => ({
     period,
+    note: noteKind ? getCheckInNote(clientId, noteKind, period) : null,
     label: new Date(`${period}T00:00:00`).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
@@ -4076,6 +4080,7 @@ export type CheckInSection = {
   id: "daily" | "weekly" | "measurements";
   label: string;
   intro: string;
+  note: string | null;
   metrics: CheckInMetric[];
 };
 
@@ -4122,6 +4127,7 @@ export function getCheckInSections(clientId: number): CheckInData {
       id: frequency,
       label,
       intro,
+      note: getCheckInNote(clientId, frequency, period),
       metrics: defs.map((def) => {
         const current = entries.find((e) => e.metric_definition_id === def.id && e.period === period);
         const previous = entries
@@ -4167,6 +4173,7 @@ export function getCheckInSections(clientId: number): CheckInData {
   if (fields.length > 0) {
     sections.push({
       id: "measurements",
+      note: getCheckInNote(clientId, "measurements", today),
       label: "Measure",
       intro: "Same spots, same time of day: first thing, before food.",
       metrics: fields.map((f) => {
@@ -5086,7 +5093,7 @@ export function listCalorieLogs(clientId: number, limit = 30): CalorieLog[] {
 }
 
 // null clears the day.
-export function setCalorieLog(clientId: number, date: string, kcal: number | null) {
+export function setCalorieLog(clientId: number, date: string, kcal: number | null, note: string | null | undefined = undefined) {
   const data = getData();
   const existing = data.calorie_logs.find((c) => c.client_id === clientId && c.date === date);
   if (kcal == null) {
@@ -5094,10 +5101,40 @@ export function setCalorieLog(clientId: number, date: string, kcal: number | nul
   } else if (existing) {
     existing.kcal = kcal;
     existing.logged_at = new Date().toISOString();
+    if (note !== undefined) existing.note = note;
   } else {
-    data.calorie_logs.push({ id: allocId("calorie_logs"), client_id: clientId, date, kcal, logged_at: new Date().toISOString() });
+    data.calorie_logs.push({ id: allocId("calorie_logs"), client_id: clientId, date, kcal, logged_at: new Date().toISOString(), note: note ?? null });
   }
   persist();
+}
+
+// ---- Check-in notes: the client's own words beside the numbers ----
+
+export function setCheckInNote(clientId: number, kind: CheckInNote["kind"], period: string, text: string) {
+  const data = getData();
+  const clean = text.trim();
+  const existing = data.check_in_notes.find((n) => n.client_id === clientId && n.kind === kind && n.period === period);
+  if (!clean) {
+    if (existing) data.check_in_notes = data.check_in_notes.filter((n) => n !== existing);
+  } else if (existing) {
+    existing.text = clean;
+    existing.created_at = new Date().toISOString();
+  } else {
+    data.check_in_notes.push({ id: allocId("check_in_notes"), client_id: clientId, kind, period, text: clean, created_at: new Date().toISOString() });
+  }
+  persist();
+}
+
+export function getCheckInNote(clientId: number, kind: CheckInNote["kind"], period: string): string | null {
+  return getData().check_in_notes.find((n) => n.client_id === clientId && n.kind === kind && n.period === period)?.text ?? null;
+}
+
+/** Newest first, for the coach. */
+export function listCheckInNotes(clientId: number, limit = 20): CheckInNote[] {
+  return getData()
+    .check_in_notes.filter((n) => n.client_id === clientId)
+    .sort((a, b) => (a.period < b.period ? 1 : a.period > b.period ? -1 : a.created_at < b.created_at ? 1 : -1))
+    .slice(0, limit);
 }
 
 // ---- Reordering and copying within a day / week ----

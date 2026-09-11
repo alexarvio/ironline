@@ -66,6 +66,18 @@ export type CalorieLog = {
   kcal: number;
   // When it was last saved (ISO); drives the coach's feed row.
   logged_at?: string;
+  /** A line for the coach: "ate out, estimate". */
+  note?: string | null;
+};
+// A client's note on a check-in: why yesterday's steps were low, what
+// the weekly numbers don't say. One per section per period.
+export type CheckInNote = {
+  id: number;
+  client_id: number;
+  kind: "daily" | "weekly" | "measurements";
+  period: string;
+  text: string;
+  created_at: string;
 };
 export type ClientPhase = {
   id: number;
@@ -524,6 +536,7 @@ type Data = {
   client_preferences: ClientPreferences[];
   client_phases: ClientPhase[];
   calorie_logs: CalorieLog[];
+  check_in_notes: CheckInNote[];
   // The last COACH_RESET_TOKEN value that was acted on (see
   // resetCoachFromEnv in lib/auth.ts), so a reset token left sitting in the
   // environment only ever fires once.
@@ -542,6 +555,7 @@ function emptyData(): Data {
     client_preferences: [],
     client_phases: [],
     calorie_logs: [],
+    check_in_notes: [],
     exercises: [],
     program_days: [],
     workout_assignments: [],

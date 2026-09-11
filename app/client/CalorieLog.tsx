@@ -8,7 +8,7 @@ import { logCaloriesAction } from "../lib/actions";
 // days so a missed day is visible and can be filled in by tapping it.
 //
 // Deliberately does NOT import from ../lib/queries (see HomeHub.tsx).
-export type CalorieDay = { date: string; label: string; kcal: number | null };
+export type CalorieDay = { date: string; label: string; kcal: number | null; note: string | null };
 
 export default function CalorieLog({
   clientId,
@@ -34,11 +34,18 @@ export default function CalorieLog({
   // stored value. Saved state is derived from the two matching, so reopening
   // the app on a logged day reads "Saved ✓" rather than inviting a re-save.
   const [draft, setDraft] = useState<string | null>(null);
+  // The note field opens when there is something to say; stays open once
+  // a note exists for the day being edited.
+  const [noteDraft, setNoteDraft] = useState<string | null>(null);
+  const [noteOpen, setNoteOpen] = useState(false);
 
   const isToday = editing.date === today.date;
   const stored = editing.kcal != null ? String(editing.kcal) : "";
   const value = draft ?? stored;
-  const isSaved = value !== "" && value === stored;
+  const storedNote = editing.note ?? "";
+  const noteValue = noteDraft ?? storedNote;
+  const showNote = noteOpen || storedNote !== "" || (noteDraft ?? "") !== "";
+  const isSaved = value !== "" && value === stored && noteValue === storedNote;
 
   return (
     <section className="home-dark-section cl">
@@ -56,6 +63,7 @@ export default function CalorieLog({
           setPending(false);
           // The server re-renders with the stored value; the draft is done.
           setDraft(null);
+          setNoteDraft(null);
         }}
       >
         <input type="hidden" name="clientId" value={clientId} />
@@ -80,6 +88,22 @@ export default function CalorieLog({
         <button type="submit" className={`cl-save${isSaved ? " saved" : ""}`} disabled={pending || isSaved || value === ""}>
           {pending ? "…" : isSaved ? "Saved ✓" : "Save"}
         </button>
+        {showNote ? (
+          <textarea
+            name="note"
+            className="cl-note"
+            value={noteValue}
+            onChange={(e) => setNoteDraft(e.target.value)}
+            placeholder="A note for your coach: ate out, rough estimate, felt low on energy…"
+            aria-label="Note for your coach"
+            maxLength={500}
+            rows={2}
+          />
+        ) : (
+          <button type="button" className="cl-note-add" onClick={() => setNoteOpen(true)}>
+            + Add a note for your coach
+          </button>
+        )}
       </form>
 
       {days.length > 0 && (
@@ -91,12 +115,15 @@ export default function CalorieLog({
               className={`cl-day${editing.date === d.date ? " editing" : ""}${d.kcal == null ? " empty" : ""}`}
               onClick={() => {
                 setDraft(null);
+                setNoteDraft(null);
+                setNoteOpen(false);
                 setEditingDate(editing.date === d.date ? today.date : d.date);
               }}
               aria-label={`${d.label}: ${d.kcal != null ? `${d.kcal} kcal` : "not logged"}. Tap to ${d.kcal != null ? "change" : "log"}`}
             >
               <span className="cl-day-label">{d.label}</span>
               <span className="cl-day-value">{d.kcal != null ? `${d.kcal.toLocaleString("en-US")} kcal` : "not logged"}</span>
+              {d.note && <span className="cl-day-note">{d.note}</span>}
             </button>
           ))}
         </div>

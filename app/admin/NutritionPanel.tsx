@@ -160,7 +160,10 @@ export default function NutritionPanel({ clientId }: { clientId: number }) {
                         </span>
                       )}
                     </td>
-                    <td className="nt-cal-day">{isTraining ? "Training" : "Rest"}</td>
+                    <td className="nt-cal-day">
+                      {isTraining ? "Training" : "Rest"}
+                      {c.note && <div className="nt-cal-note">“{c.note}”</div>}
+                    </td>
                   </tr>
                 );
               })}
