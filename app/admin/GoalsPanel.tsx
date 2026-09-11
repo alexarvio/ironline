@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { addClientGoalAction, removeClientGoalAction, toggleClientGoalAction, updateClientGoalAction } from "../lib/actions";
+import { addClientGoalAction, removeClientGoalAction, reorderClientGoalsAction, toggleClientGoalAction, updateClientGoalAction } from "../lib/actions";
+import DragList from "../components/DragList";
 import type { GoalEditorOptions } from "../lib/queries";
 import { computeGoalView, fmtDate, fmtNum, metricPace, type GoalContext, type GoalTracking } from "../lib/goalView";
 import GoalRow from "../components/GoalRow";
@@ -24,9 +25,13 @@ export default function GoalsPanel({ clientId, goals, options }: { clientId: num
     <div className="ge">
       {goals.length === 0 && editing == null && <p className="ad-panel-empty">None set yet.</p>}
       {goals.length > 0 && (
-        <div className="ad-goal-list">
-          {goals.map((g) => (
-            <div key={g.id} className={`ad-goal-row${g.done ? " done" : ""}`}>
+        <DragList
+          className="ad-goal-list"
+          onReorder={(ids) => void reorderClientGoalsAction(clientId, ids)}
+          items={goals.map((g) => ({
+            id: g.id,
+            node: (
+            <div className={`ad-goal-row${g.done ? " done" : ""}`}>
               {g.tracking == null ? (
                 <form action={toggleClientGoalAction} className="ge-done-form">
                   <input type="hidden" name="id" value={g.id} />
@@ -47,8 +52,9 @@ export default function GoalsPanel({ clientId, goals, options }: { clientId: num
               </button>
               <ConfirmDeleteButton action={removeClientGoalAction} hiddenFields={{ id: g.id }} label={`Delete goal: ${g.text}`} />
             </div>
-          ))}
-        </div>
+            ),
+          }))}
+        />
       )}
 
       {editing == null ? (

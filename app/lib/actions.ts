@@ -11,6 +11,7 @@ import {
 import {
   addClientGoal,
   updateClientGoal,
+  reorderClientGoals,
   getClientIdForGoal,
   type GoalTracking,
   addCustomTrainingColumn,
@@ -1057,6 +1058,15 @@ function parseGoalTracking(raw: FormDataEntryValue | null): GoalTracking | null 
     /* fall through */
   }
   return null;
+}
+
+// Called from a drag in the goals list, with no form.
+export async function reorderClientGoalsAction(clientId: number, orderedIds: number[]) {
+  await requireCoach();
+  if (!Number.isInteger(clientId) || !Array.isArray(orderedIds)) return;
+  reorderClientGoals(clientId, orderedIds.filter((id) => Number.isInteger(id)));
+  revalidatePath("/admin");
+  revalidatePath("/client");
 }
 
 export async function updateClientGoalAction(formData: FormData) {

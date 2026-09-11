@@ -7,6 +7,7 @@ import {
   completeMeetingAction,
   removeMeetingAction,
   removeClientGoalAction,
+  reorderClientGoalsAction,
   removeMeetingNoteAction,
   setMeetingStatusAction,
   updateMeetingAction,
@@ -14,6 +15,7 @@ import {
 import type { GoalTracking } from "../lib/goalView";
 import type { GoalEditorOptions } from "../lib/queries";
 import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
+import DragList from "../components/DragList";
 import MeetingStatusSelect, { type MeetingStatus } from "./MeetingStatusSelect";
 import { GoalEditor } from "./GoalsPanel";
 
@@ -166,6 +168,7 @@ export default function MeetingsWorkspace(p: MeetingsWorkspaceProps) {
       <div className="mw-left">
         {p.upcoming ? (
           <UpcomingCard
+            clientId={p.clientId}
             m={p.upcoming}
             today={p.today}
             goals={p.goals}
@@ -318,6 +321,7 @@ export default function MeetingsWorkspace(p: MeetingsWorkspaceProps) {
 }
 
 function UpcomingCard({
+  clientId,
   m,
   today,
   goals,
@@ -327,6 +331,7 @@ function UpcomingCard({
   onEditGoal,
   goalEditor,
 }: {
+  clientId: number;
   m: WsMeeting;
   today: string;
   goals: WsGoal[];
@@ -448,23 +453,28 @@ function UpcomingCard({
             <span className="mw-label-right">{goalsSetLabel}</span>
           </div>
           {goals.length === 0 && <p className="mw-muted">No goals yet.</p>}
-          {goals.map((g) =>
-            goalEditing === g.id ? (
-              <div key={g.id} className="mw-goal-editing">{goalEditor}</div>
-            ) : (
-              <div key={g.id} className="mw-goal">
-                <span className={`mw-dot ${g.tone}`} />
-                <span className="mw-goal-text">{g.text}</span>
-                <span className={`mw-goal-status ${g.tone}`}>{g.status}</span>
-                <span className="mw-goal-tools">
-                  <button type="button" className="ad-goal-edit" onClick={() => onEditGoal(g.id)}>
-                    Edit
-                  </button>
-                  <ConfirmDeleteButton action={removeClientGoalAction} hiddenFields={{ id: g.id }} label={`Delete goal: ${g.text}`} />
-                </span>
-              </div>
-            )
-          )}
+          <DragList
+            onReorder={(ids) => void reorderClientGoalsAction(clientId, ids)}
+            items={goals.map((g) => ({
+              id: g.id,
+              node:
+                goalEditing === g.id ? (
+                  <div className="mw-goal-editing">{goalEditor}</div>
+                ) : (
+                  <div className="mw-goal">
+                    <span className={`mw-dot ${g.tone}`} />
+                    <span className="mw-goal-text">{g.text}</span>
+                    {g.status && <span className={`mw-goal-status ${g.tone}`}>{g.status}</span>}
+                    <span className="mw-goal-tools">
+                      <button type="button" className="ad-goal-edit" onClick={() => onEditGoal(g.id)}>
+                        Edit
+                      </button>
+                      <ConfirmDeleteButton action={removeClientGoalAction} hiddenFields={{ id: g.id }} label={`Delete goal: ${g.text}`} />
+                    </span>
+                  </div>
+                ),
+            }))}
+          />
           {goalEditing === "new" ? (
             goalEditor
           ) : (

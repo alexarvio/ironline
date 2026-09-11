@@ -16,7 +16,7 @@ export default function MeetingsPanel({ clientId }: { clientId: number }) {
       status = `${figure} · ${view.reached ? "reached" : (view.sub ?? "").includes("on pace") ? "on pace" : (view.sub ?? "").includes("behind") ? "behind" : "tracking"}`;
     } else if (view.kind === "exercise") status = (view.right ?? "").replace(/^best /, "");
     else if (view.kind === "habit") status = `${view.segments?.done ?? 0} of ${view.segments?.total ?? 0} · ${view.tone === "green" ? "on track" : "behind"}`;
-    else status = goal.done ? "done" : "text";
+    else status = goal.done ? "done" : "";
     return { id: goal.id, text: goal.text, tone: view.tone, status, def: tracking, done: goal.done, meetingId: goal.meeting_id ?? null, tracking: goal.tracked_by ?? null };
   });
   const active = goals.filter((g) => !g.done);

@@ -5432,6 +5432,16 @@ export function addClientGoal(clientId: number, text: string, tracking: GoalTrac
   persist();
 }
 
+/** Sets the order of a client's goals; ids not listed keep their place after. */
+export function reorderClientGoals(clientId: number, orderedIds: number[]) {
+  const data = getData();
+  const mine = data.client_goals.filter((g) => g.client_id === clientId);
+  const rest = mine.filter((g) => !orderedIds.includes(g.id)).sort((a, b) => a.order_index - b.order_index);
+  const sequence = [...orderedIds.map((id) => mine.find((g) => g.id === id)).filter((g): g is ClientGoal => !!g), ...rest];
+  sequence.forEach((g, i) => (g.order_index = i));
+  persist();
+}
+
 export function updateClientGoal(id: number, text: string, tracking: GoalTracking | null) {
   const data = getData();
   const goal = data.client_goals.find((g) => g.id === id);
