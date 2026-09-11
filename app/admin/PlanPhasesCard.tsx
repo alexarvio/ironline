@@ -45,7 +45,12 @@ export default function PlanPhasesCard({
   const [win, setWin] = useState<Window>(13);
   const [dialog, setDialog] = useState<{ phase?: PlanPhaseRow; track?: PhaseTrack } | null>(null);
   // While an edge is being dragged, the bar previews its new span here.
-  const [drag, setDrag] = useState<{ id: number; edge: "start" | "end"; start: string; end: string } | null>(null);
+  const [drag, setDrag] = useState<{ id: number; edge: "start" | "end"; start: string; end: string; moved: boolean } | null>(null);
+  // A finished drag waits here for the coach's confirmation; the bar keeps
+  // previewing the new span until they save or cancel.
+  const [pending, setPending] = useState<{ id: number; start: string; end: string } | null>(null);
+  // The click that ends a drag must not open the edit dialog.
+  const justDragged = useRef(false);
   const [, start] = useTransition();
   const areaRef = useRef<HTMLDivElement>(null);
 
@@ -93,7 +98,7 @@ export default function PlanPhasesCard({
     e.preventDefault();
     e.stopPropagation();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    setDrag({ id: p.id, edge, start: p.start_week, end: p.end_week });
+    setDrag({ id: p.id, edge, start: p.start_week, end: p.end_week, moved: false });
   };
   const moveDrag = (e: React.PointerEvent) => {
     if (!drag) return;
@@ -101,8 +106,8 @@ export default function PlanPhasesCard({
     if (!w) return;
     setDrag((d) => {
       if (!d) return d;
-      if (d.edge === "start") return { ...d, start: w <= d.end ? w : d.end };
-      return { ...d, end: w >= d.start ? w : d.start };
+      const next = d.edge === "start" ? { ...d, start: w <= d.end ? w : d.end } : { ...d, end: w >= d.start ? w : d.start };
+      return { ...next, moved: next.start !== d.start || next.end !== d.end || d.moved };
     });
   };
   const endDrag = (e: React.PointerEvent) => {
@@ -111,20 +116,34 @@ export default function PlanPhasesCard({
     const p = phases.find((x) => x.id === drag.id);
     const d = drag;
     setDrag(null);
+    if (d.moved) {
+      justDragged.current = true;
+      setTimeout(() => (justDragged.current = false), 300);
+    }
     if (!p || (d.start === p.start_week && d.end === p.end_week)) return;
+    setPending({ id: p.id, start: d.start, end: d.end });
+  };
+  const savePending = () => {
+    if (!pending) return;
+    const p = phases.find((x) => x.id === pending.id);
+    if (!p) return setPending(null);
     const fd = new FormData();
     fd.set("id", String(p.id));
     fd.set("track", p.track);
     fd.set("name", p.name);
-    fd.set("start", d.start);
-    fd.set("end", d.end);
+    fd.set("start", pending.start);
+    fd.set("end", pending.end);
     if (p.program) fd.set("adjustProgram", "1");
-    start(() => updateClientPhaseAction(fd));
+    start(async () => {
+      await updateClientPhaseAction(fd);
+      setPending(null);
+    });
   };
 
   const span = (p: PlanPhaseRow) => {
-    const s = drag?.id === p.id ? drag.start : p.start_week;
-    const e = drag?.id === p.id ? drag.end : p.end_week;
+    const live = drag?.id === p.id ? drag : pending?.id === p.id ? pending : null;
+    const s = live ? live.start : p.start_week;
+    const e = live ? live.end : p.end_week;
     const a = Math.max(0, weeksBetween(first, s));
     const b = Math.min(count - 1, weeksBetween(first, e));
     // An edge outside the window is not draggable: dragging what looks like
@@ -253,7 +272,10 @@ export default function PlanPhasesCard({
                           borderColor: tone.mid,
                           color: tone.fg,
                         }}
-                        onClick={() => !drag && setDialog({ phase: p })}
+                        onClick={() => {
+                          if (justDragged.current || drag || pending) return;
+                          setDialog({ phase: p });
+                        }}
                         title={`${p.name} · click to edit`}
                       >
                         {!draft && isRunning && <span className="pl-bar-progress" style={{ width: `${(done / total) * 100}%`, background: tone.fg }} />}
@@ -297,6 +319,47 @@ export default function PlanPhasesCard({
         </div>
       </div>
 
+      {pending &&
+        (() => {
+          const p = phases.find((x) => x.id === pending.id);
+          if (!p) return null;
+          const weeksOf = (a: string, b: string) => weeksBetween(a, b) + 1;
+          const isLive = p.start_week <= thisWeek && p.end_week >= thisWeek;
+          const startChanged = pending.start !== p.start_week;
+          const endChanged = pending.end !== p.end_week;
+          return (
+            <div className="pb-modal-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && setPending(null)}>
+              <div className="pb-modal pb-modal-sm" role="dialog" aria-modal="true" aria-label="Confirm the new dates">
+                <h2 className="pb-confirm-title">Move {p.name}?</h2>
+                <p className="pb-confirm-body">
+                  {startChanged && (
+                    <>
+                      Start: {shortDate(p.start_week)} → <b>{shortDate(pending.start)}</b>
+                      <br />
+                    </>
+                  )}
+                  {endChanged && (
+                    <>
+                      End: {shortDate(addWeeks(p.end_week, 1))} → <b>{shortDate(addWeeks(pending.end, 1))}</b>
+                      <br />
+                    </>
+                  )}
+                  {weeksOf(p.start_week, p.end_week)} weeks → <b>{weeksOf(pending.start, pending.end)} weeks</b>.
+                  {p.program && " The training programme changes with it."}
+                  {isLive && " This phase is live: the client's app changes as soon as you save."}
+                </p>
+                <div className="pb-modal-foot">
+                  <button type="button" className="ad-btn-secondary" onClick={() => setPending(null)}>
+                    Cancel
+                  </button>
+                  <button type="button" className="ad-btn-primary" onClick={savePending}>
+                    Save new dates
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       {dialog && (
         <PhaseDialog
           clientId={clientId}

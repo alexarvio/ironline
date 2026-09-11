@@ -12346,3 +12346,12 @@ a.cd-entry:hover { border-color: var(--accent); }
   .pl-tr { grid-template-columns: 24px 1fr auto; row-gap: 6px; }
   .pl-tr > span:nth-child(3), .pl-tr > span:nth-child(4), .pl-tr > span:nth-child(5), .pl-tr > span:nth-child(6), .pl-tr > span:nth-child(7) { grid-column: 2 / 4; }
 }
+
+/* Wider grab zones on the bar edges, shown on hover. */
+.pl-bar-edge { width: 14px; }
+.pl-bar-edge::after { content: ""; position: absolute; top: 9px; bottom: 9px; width: 3px; border-radius: 2px; background: currentColor; opacity: 0; transition: opacity 0.12s; }
+.pl-bar-edge.left::after { left: 4px; }
+.pl-bar-edge.right::after { right: 4px; }
+.pl-bar:hover .pl-bar-edge::after { opacity: 0.45; }
+.pl-bar-edge:hover::after { opacity: 0.9; }
+.pl-bar { padding: 0 14px; }
