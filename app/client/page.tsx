@@ -176,24 +176,14 @@ function getWeekDays(CLIENT_ID: number, week?: number) {
 }
 
 // This week's training in two figures, for the top of the Training tab:
-// days trained of the days built, and sets logged of the sets planned,
-// with volume against last week.
+// days trained of the days built, and sets logged of the sets planned.
 function weekStats(CLIENT_ID: number, week: number) {
   const days = getWeekDays(CLIENT_ID, week);
   const daysTrained = days.filter((d) => d.assignments.some((a) => getLogsForAssignment(a.id).length > 0)).length;
   const totalDays = days.filter((d) => d.assignments.length > 0).length;
   const setsThisWeek = days.reduce((sum, d) => sum + d.assignments.reduce((s, a) => s + getLogsForAssignment(a.id).length, 0), 0);
   const setsPlanned = days.reduce((sum, d) => sum + d.assignments.reduce((s, a) => s + a.sets, 0), 0);
-  const volumeOf = (weekDays: ReturnType<typeof getWeekDays>) =>
-    weekDays.reduce(
-      (sum, d) => sum + d.assignments.reduce((s, a) => s + getLogsForAssignment(a.id).reduce((v, l) => v + (l.weight_kg ?? 0) * (l.reps ?? 0), 0), 0),
-      0
-    );
-  const volumeThisWeek = volumeOf(days);
-  const volumePrevWeek = volumeOf(getWeekDays(CLIENT_ID, week - 1));
-  const volumeTrendPct = volumePrevWeek > 0 ? ((volumeThisWeek - volumePrevWeek) / volumePrevWeek) * 100 : null;
-  const volumeTrendLabel = volumeTrendPct == null ? null : `${volumeTrendPct >= 0 ? "+" : ""}${Math.round(volumeTrendPct)}% vol`;
-  return { daysTrained, totalDays, setsThisWeek, setsPlanned, volumeTrendLabel };
+  return { daysTrained, totalDays, setsThisWeek, setsPlanned };
 }
 
 function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
@@ -331,7 +321,6 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
             <div className="home-dark-stat-label">Sets logged</div>
             <div className="home-dark-stat-value-row">
               <span className="home-dark-stat-value">{stats.setsThisWeek}</span>
-              {stats.volumeTrendLabel && <span className="home-dark-stat-delta">{stats.volumeTrendLabel}</span>}
             </div>
             <div className="home-dark-bar">
               <div
