@@ -12207,3 +12207,16 @@ a.cd-entry:hover { border-color: var(--accent); }
    values sit in the true centre of the card instead of leaning left. */
 .ts-grid { grid-template-columns: 34px 1fr 1fr 1fr 34px; }
 .ts-edit { padding: 6px 0; }
+
+/* Upcoming card: the prep notes fill their column and the buttons sit on
+   the bottom edge, level with "+ Add goal" on the left. */
+.mw-upcoming-body .mw-col { display: flex; flex-direction: column; }
+.mw-upcoming-body .mw-col > .mw-prep { flex: 1; min-height: 180px; }
+.mw-upcoming-body .mw-prep-foot { margin-top: 10px; justify-content: flex-end; }
+/* Past meetings: goals on the left, notes on the right, same as upcoming. */
+.mw-past-cols .mw-col:first-child { order: 2; }
+.mw-past-cols .mw-col:last-child { order: 1; }
+/* Bigger, not endless: the notes box grows with the goals list up to a
+   point; the buttons stay pinned to the column's bottom edge either way. */
+.mw-upcoming-body .mw-col > .mw-prep { flex: 0 1 auto; min-height: 180px; max-height: 340px; }
+.mw-upcoming-body .mw-prep-foot { margin-top: auto; padding-top: 10px; }

@@ -486,13 +486,10 @@ function UpcomingCard({
         <div className="mw-col">
           <div className="mw-label-row">
             <span className="mw-label">Prep notes</span>
-            <span className="mw-label-right">private</span>
+            {prepState !== "saved" && <span className="mw-label-right">{prepState === "saving" ? "Saving…" : "Typing…"}</span>}
           </div>
           <textarea className="mw-prep" value={prep} onChange={(e) => setPrep(e.target.value)} placeholder="What to cover, what to ask, what changed since last time…" />
           <div className="mw-prep-foot">
-            <span className="mw-muted">
-              {prepState === "saved" ? "Saved" : prepState === "saving" ? "Saving…" : "Typing…"} · shows to client: <b>date, time, topic, link</b>
-            </span>
             <span className="mw-prep-actions">
               <form action={setMeetingStatusAction}>
                 <input type="hidden" name="id" value={m.id} />
