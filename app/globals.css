@@ -12202,3 +12202,8 @@ a.cd-entry:hover { border-color: var(--accent); }
 .home-data-card .home-data-graph { margin-top: 0; border: 0; border-radius: 0; }
 /* At most four figures, so the strip never needs to scroll. */
 .home-data-strip { overflow: hidden; }
+
+/* Set rows: the Edit column matches the set-number column, so the three
+   values sit in the true centre of the card instead of leaning left. */
+.ts-grid { grid-template-columns: 34px 1fr 1fr 1fr 34px; }
+.ts-edit { padding: 6px 0; }
