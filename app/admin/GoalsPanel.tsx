@@ -1,0 +1,317 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { addClientGoalAction, removeClientGoalAction, toggleClientGoalAction, updateClientGoalAction } from "../lib/actions";
+import type { GoalEditorOptions } from "../lib/queries";
+import { computeGoalView, fmtDate, fmtNum, metricPace, type GoalContext, type GoalTracking } from "../lib/goalView";
+import GoalRow from "../components/GoalRow";
+import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
+
+// The coach's goals for one client: the list, and the editor that adds or
+// changes one. A goal can be tied to a check-in figure, an exercise or a
+// daily habit; the "Client sees" preview at the foot of the editor is the
+// exact row the client gets, from the same function.
+
+export type GoalListItem = { id: number; text: string; done: boolean; tracking: GoalTracking | null; label: string };
+
+type Kind = "metric" | "exercise" | "habit" | "none";
+
+export default function GoalsPanel({ clientId, goals, options }: { clientId: number; goals: GoalListItem[]; options: GoalEditorOptions }) {
+  const [editing, setEditing] = useState<"new" | number | null>(null);
+  const current = typeof editing === "number" ? goals.find((g) => g.id === editing) ?? null : null;
+
+  return (
+    <div className="ge">
+      {goals.length === 0 && editing == null && <p className="ad-panel-empty">None set yet.</p>}
+      {goals.length > 0 && (
+        <div className="ad-goal-list">
+          {goals.map((g) => (
+            <div key={g.id} className={`ad-goal-row${g.done ? " done" : ""}`}>
+              {g.tracking == null ? (
+                <form action={toggleClientGoalAction} className="ge-done-form">
+                  <input type="hidden" name="id" value={g.id} />
+                  <input type="hidden" name="done" value={(!g.done).toString()} />
+                  <button type="submit" className={`ge-done${g.done ? " on" : ""}`} aria-label={g.done ? "Mark not done" : "Mark done"}>
+                    {g.done ? "✓" : ""}
+                  </button>
+                </form>
+              ) : (
+                <span className="ad-goal-bullet" aria-hidden="true" />
+              )}
+              <span className="ad-goal-main">
+                <span className="ad-goal-text">{g.text}</span>
+                <span className="ad-goal-kind">{g.label}</span>
+              </span>
+              <button type="button" className="ad-goal-edit" onClick={() => setEditing(g.id)}>
+                Edit
+              </button>
+              <ConfirmDeleteButton action={removeClientGoalAction} hiddenFields={{ id: g.id }} label={`Delete goal: ${g.text}`} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {editing == null ? (
+        <button type="button" className="ad-btn-secondary ge-add-btn" onClick={() => setEditing("new")}>
+          + Add goal
+        </button>
+      ) : (
+        <GoalEditor
+          key={typeof editing === "number" ? editing : "new"}
+          clientId={clientId}
+          goal={current}
+          options={options}
+          onClose={() => setEditing(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function GoalEditor({
+  clientId,
+  goal,
+  options,
+  onClose,
+}: {
+  clientId: number;
+  goal: GoalListItem | null;
+  options: GoalEditorOptions;
+  onClose: () => void;
+}) {
+  const t = goal?.tracking ?? null;
+  const [text, setText] = useState(goal?.text ?? "");
+  const [kind, setKind] = useState<Kind>(t?.kind ?? "none");
+  // Metric
+  const [metricKey, setMetricKey] = useState(t?.kind === "metric" ? t.metricKey : options.metrics[0]?.key ?? "");
+  const [op, setOp] = useState<"<=" | ">=">(t?.kind === "metric" ? t.op : "<=");
+  const [target, setTarget] = useState(t?.kind === "metric" ? String(t.target) : "");
+  const [byMode, setByMode] = useState<"phase" | "custom">(t?.kind === "metric" && t.byDate !== options.phaseEnd ? "custom" : options.phaseEnd ? "phase" : "custom");
+  const [byDate, setByDate] = useState(t?.kind === "metric" ? t.byDate : options.phaseEnd ?? "");
+  // Exercise
+  const [exerciseId, setExerciseId] = useState(t?.kind === "exercise" ? t.exerciseId : options.exercises[0]?.id ?? 0);
+  const [weight, setWeight] = useState(t?.kind === "exercise" ? String(t.weight) : "");
+  const [reps, setReps] = useState(t?.kind === "exercise" ? String(t.reps) : "");
+  const [maxRpe, setMaxRpe] = useState(t?.kind === "exercise" && t.maxRpe != null ? String(t.maxRpe) : "");
+  // Habit
+  const [habitId, setHabitId] = useState(t?.kind === "habit" ? t.metricId : options.habits[0]?.id ?? 0);
+  const [hop, setHop] = useState<"<=" | ">=">(t?.kind === "habit" ? t.op : ">=");
+  const [hvalue, setHvalue] = useState(t?.kind === "habit" ? String(t.value) : "");
+  const [daysPerWeek, setDaysPerWeek] = useState(t?.kind === "habit" ? String(t.daysPerWeek) : "5");
+  const [pending, start] = useTransition();
+
+  const num = (s: string) => {
+    const n = Number(s.replace(",", "."));
+    return s.trim() === "" || !Number.isFinite(n) ? null : n;
+  };
+  const effectiveBy = byMode === "phase" && options.phaseEnd ? options.phaseEnd : byDate;
+
+  const metric = options.metrics.find((m) => m.key === metricKey) ?? null;
+  const exercise = options.exercises.find((e) => e.id === Number(exerciseId)) ?? null;
+  const habit = options.habits.find((h) => h.id === Number(habitId)) ?? null;
+
+  // The tracking as it stands, or null while a required figure is missing.
+  const tracking: GoalTracking | null = (() => {
+    if (kind === "metric") {
+      const tg = num(target);
+      return metric && tg != null && effectiveBy ? { kind: "metric", metricKey, op, target: tg, byDate: effectiveBy } : null;
+    }
+    if (kind === "exercise") {
+      const w = num(weight);
+      const r = num(reps);
+      return exercise && w != null && r != null ? { kind: "exercise", exerciseId: exercise.id, weight: w, reps: r, maxRpe: num(maxRpe) } : null;
+    }
+    if (kind === "habit") {
+      const v = num(hvalue);
+      const d = num(daysPerWeek);
+      return habit && v != null && d != null ? { kind: "habit", metricId: habit.id, op: hop, value: v, daysPerWeek: Math.max(1, Math.min(7, Math.round(d))) } : null;
+    }
+    return null;
+  })();
+  const complete = text.trim() !== "" && (kind === "none" || tracking != null);
+
+  const ctx: GoalContext = { today: options.today, createdAt: goal ? options.today : options.today };
+  if (metric) ctx.metric = metric;
+  if (exercise) ctx.exercise = exercise;
+  if (habit) ctx.habit = habit;
+  const preview = computeGoalView({ id: goal?.id ?? 0, text: text || "Your goal", done: false, tracking }, ctx);
+
+  // Helper lines under the fields.
+  const helper = (() => {
+    if (kind === "metric" && metric) {
+      const latest = metric.series[metric.series.length - 1];
+      if (!latest) return `Nothing logged for ${metric.name} yet.`;
+      const tg = num(target);
+      const pace = metricPace(metric.series, options.today);
+      const paceWeek = pace == null ? null : pace * 7;
+      const weeks = effectiveBy ? Math.max(1, Math.round((new Date(`${effectiveBy}T00:00:00`).getTime() - new Date(`${options.today}T00:00:00`).getTime()) / (7 * 86400000))) : null;
+      const needs = tg != null && weeks ? (tg - latest.value) / weeks : null;
+      const u = metric.unit ? ` ${metric.unit}` : "";
+      return (
+        `Now ${fmtNum(latest.value)}${u}` +
+        (needs != null && tg != null && effectiveBy ? ` · needs ${needs >= 0 ? "+" : ""}${fmtNum(needs)}${u}/week to hit ${fmtNum(tg)} by ${fmtDate(effectiveBy)}.` : ".") +
+        (paceWeek != null ? ` Current pace ${paceWeek >= 0 ? "+" : ""}${fmtNum(paceWeek)}${u}/week.` : " No pace yet.")
+      );
+    }
+    if (kind === "exercise" && exercise) {
+      const sets = exercise.sets.filter((s) => s.weight != null && s.reps != null);
+      const best = sets.slice().sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0) || (b.reps ?? 0) - (a.reps ?? 0))[0];
+      if (!best) return `No sets logged for ${exercise.name} yet.`;
+      const day = new Date(`${best.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+      return `Best logged so far: ${fmtNum(best.weight!)} × ${best.reps}${best.rpe != null ? ` @${best.rpe}` : ""} (${day}).`;
+    }
+    if (kind === "habit") return habit ? `Counts each day ${habit.name} is logged ${hop} the value.` : "Add a daily check-in field first.";
+    return "Shown as text only. You mark it done by hand.";
+  })();
+
+  const submit = (formData: FormData) =>
+    start(async () => {
+      if (goal) await updateClientGoalAction(formData);
+      else await addClientGoalAction(formData);
+      onClose();
+    });
+
+  const chip = (k: Kind, label: string, enabled = true) => (
+    <button type="button" className={`ge-chip${kind === k ? " active" : ""}`} onClick={() => setKind(k)} disabled={!enabled} title={enabled ? undefined : "Nothing to track yet"}>
+      {label}
+    </button>
+  );
+
+  return (
+    <form action={submit} className="ge-editor">
+      {goal ? <input type="hidden" name="id" value={goal.id} /> : <input type="hidden" name="clientId" value={clientId} />}
+      <input type="hidden" name="term" value="short" />
+      <input type="hidden" name="tracking" value={kind === "none" ? "" : JSON.stringify(tracking ?? {})} />
+
+      <label className="ge-field">
+        <span>Goal</span>
+        <input name="text" type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Get to 80 kg without losing bench strength" required maxLength={120} autoFocus />
+      </label>
+
+      <div className="ge-field">
+        <span>Track with</span>
+        <div className="ge-chips">
+          {chip("metric", "Metric", options.metrics.length > 0)}
+          {chip("exercise", "Exercise", options.exercises.length > 0)}
+          {chip("habit", "Habit", options.habits.length > 0)}
+          {chip("none", "Nothing")}
+        </div>
+      </div>
+
+      {kind === "metric" && (
+        <div className="ge-grid">
+          <label className="ge-field ge-span2">
+            <span>Metric</span>
+            <select value={metricKey} onChange={(e) => setMetricKey(e.target.value)}>
+              {options.metrics.map((m) => (
+                <option key={m.key} value={m.key}>
+                  {m.name}
+                  {m.unit ? ` (${m.unit})` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="ge-field">
+            <span>Reach</span>
+            <select value={op} onChange={(e) => setOp(e.target.value as "<=" | ">=")}>
+              <option value="<=">≤ at most</option>
+              <option value=">=">≥ at least</option>
+            </select>
+          </label>
+          <label className="ge-field">
+            <span>Target{metric?.unit ? ` (${metric.unit})` : ""}</span>
+            <input type="text" inputMode="decimal" value={target} onChange={(e) => setTarget(e.target.value)} placeholder="75" />
+          </label>
+          <label className="ge-field">
+            <span>By</span>
+            <select value={byMode} onChange={(e) => setByMode(e.target.value as "phase" | "custom")}>
+              {options.phaseEnd && <option value="phase">End of phase · {fmtDate(options.phaseEnd)}</option>}
+              <option value="custom">Custom date</option>
+            </select>
+          </label>
+          {byMode === "custom" && (
+            <label className="ge-field">
+              <span>Date</span>
+              <input type="date" value={byDate} onChange={(e) => setByDate(e.target.value)} />
+            </label>
+          )}
+        </div>
+      )}
+
+      {kind === "exercise" && (
+        <div className="ge-grid">
+          <label className="ge-field ge-span2">
+            <span>Exercise</span>
+            <select value={exerciseId} onChange={(e) => setExerciseId(Number(e.target.value))}>
+              {options.exercises.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="ge-field">
+            <span>Weight (kg)</span>
+            <input type="text" inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="100" />
+          </label>
+          <label className="ge-field">
+            <span>Reps</span>
+            <input type="text" inputMode="numeric" value={reps} onChange={(e) => setReps(e.target.value)} placeholder="5" />
+          </label>
+          <label className="ge-field">
+            <span>Max RPE (optional)</span>
+            <input type="text" inputMode="decimal" value={maxRpe} onChange={(e) => setMaxRpe(e.target.value)} placeholder="8" />
+          </label>
+        </div>
+      )}
+
+      {kind === "habit" && (
+        <div className="ge-grid">
+          <label className="ge-field ge-span2">
+            <span>Check-in field</span>
+            <select value={habitId} onChange={(e) => setHabitId(Number(e.target.value))}>
+              {options.habits.map((h) => (
+                <option key={h.id} value={h.id}>
+                  {h.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="ge-field">
+            <span>Counts if</span>
+            <select value={hop} onChange={(e) => setHop(e.target.value as "<=" | ">=")}>
+              <option value=">=">≥ at least</option>
+              <option value="<=">≤ at most</option>
+            </select>
+          </label>
+          <label className="ge-field">
+            <span>Value</span>
+            <input type="text" inputMode="decimal" value={hvalue} onChange={(e) => setHvalue(e.target.value)} placeholder="8000" />
+          </label>
+          <label className="ge-field">
+            <span>Days / week</span>
+            <input type="text" inputMode="numeric" value={daysPerWeek} onChange={(e) => setDaysPerWeek(e.target.value)} placeholder="5" />
+          </label>
+        </div>
+      )}
+
+      <p className="ge-helper">{helper}</p>
+
+      <div className="ge-preview">
+        <span className="ad-microlabel">Client sees</span>
+        <div className="ge-preview-card">
+          <GoalRow goal={preview} />
+        </div>
+      </div>
+
+      <div className="ge-foot">
+        <button type="button" className="ad-btn-secondary" onClick={onClose} disabled={pending}>
+          Cancel
+        </button>
+        <button type="submit" className="ad-btn-primary" disabled={pending || !complete}>
+          {pending ? "Saving…" : goal ? "Save goal" : "Add goal"}
+        </button>
+      </div>
+    </form>
+  );
+}

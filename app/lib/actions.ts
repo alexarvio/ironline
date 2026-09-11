@@ -10,6 +10,9 @@ import {
 } from "./auth";
 import {
   addClientGoal,
+  updateClientGoal,
+  getClientIdForGoal,
+  type GoalTracking,
   addCustomTrainingColumn,
   addExercise,
   addExerciseToDay,
@@ -1012,8 +1015,54 @@ export async function addClientGoalAction(formData: FormData) {
   const term = String(formData.get("term") || "short") as "short" | "long";
   const text = String(formData.get("text") || "").trim();
   if (!text) return;
-  addClientGoal(clientId, term, text);
+  addClientGoal(clientId, term, text, parseGoalTracking(formData.get("tracking")));
   revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// The tracking arrives as JSON from the goal editor; anything malformed
+// becomes "text only" rather than a half-tracked goal.
+function parseGoalTracking(raw: FormDataEntryValue | null): GoalTracking | null {
+  if (!raw) return null;
+  try {
+    const t = JSON.parse(String(raw));
+    const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+    const op = (v: unknown) => (v === "<=" || v === ">=" ? v : null);
+    if (t?.kind === "metric") {
+      const target = num(t.target);
+      const o = op(t.op);
+      if (typeof t.metricKey !== "string" || target == null || !o || !/^\d{4}-\d{2}-\d{2}$/.test(String(t.byDate))) return null;
+      return { kind: "metric", metricKey: t.metricKey, op: o, target, byDate: String(t.byDate) };
+    }
+    if (t?.kind === "exercise") {
+      const exerciseId = num(t.exerciseId);
+      const weight = num(t.weight);
+      const reps = num(t.reps);
+      if (exerciseId == null || weight == null || reps == null) return null;
+      return { kind: "exercise", exerciseId, weight, reps, maxRpe: num(t.maxRpe) };
+    }
+    if (t?.kind === "habit") {
+      const metricId = num(t.metricId);
+      const value = num(t.value);
+      const days = num(t.daysPerWeek);
+      const o = op(t.op);
+      if (metricId == null || value == null || days == null || !o) return null;
+      return { kind: "habit", metricId, op: o, value, daysPerWeek: Math.max(1, Math.min(7, Math.round(days))) };
+    }
+  } catch {
+    /* fall through */
+  }
+  return null;
+}
+
+export async function updateClientGoalAction(formData: FormData) {
+  await requireCoach();
+  const id = Number(formData.get("id"));
+  const text = String(formData.get("text") || "").trim();
+  if (!id || !text || getClientIdForGoal(id) == null) return;
+  updateClientGoal(id, text, parseGoalTracking(formData.get("tracking")));
+  revalidatePath("/admin");
+  revalidatePath("/client");
 }
 
 export async function toggleClientGoalAction(formData: FormData) {

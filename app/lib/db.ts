@@ -1,4 +1,5 @@
 import fs from "fs";
+import type { GoalTracking } from "./goalView";
 import path from "path";
 
 // Pure-JS JSON file store — no native module, no compiler, works identically
@@ -328,6 +329,10 @@ type ClientGoal = {
   text: string;
   done: boolean;
   order_index: number;
+  /** ISO date the goal was written; the tracking's starting line. */
+  created_at?: string;
+  /** What the app measures it by, or null for a plain sentence. */
+  tracked_by?: GoalTracking | null;
 };
 
 // Meetings: coach-scheduled check-in calls, each with its own running notes log.
@@ -606,6 +611,23 @@ function load(): Data {
       }
     }
     if (renamed) save(data);
+    // Goals written before tracking existed: dated today, tracked by nothing.
+    let dated = false;
+    const todayIso = (() => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    })();
+    for (const g of data.client_goals) {
+      if (!g.created_at) {
+        g.created_at = todayIso;
+        dated = true;
+      }
+      if (g.tracked_by === undefined) {
+        g.tracked_by = null;
+        dated = true;
+      }
+    }
+    if (dated) save(data);
     return data;
   } catch {
     return emptyData();

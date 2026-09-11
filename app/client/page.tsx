@@ -14,7 +14,6 @@ import {
   getCheckInSections,
   getCheckInStatus,
   getClientPreferences,
-  getGraphedSeries,
   listClientReports,
   listPublishedWeekNumbers,
   getNotifications,
@@ -25,6 +24,8 @@ import {
   getPublishedWeek,
   listClients,
   listClientGoals,
+  getGoalViews,
+  getHomeDataTiles,
   listMeetings,
   listPhotoPeriods,
   listPhotoSlots,
@@ -42,7 +43,6 @@ import TrainingDaySession from "./TrainingDaySession";
 import ExerciseCoachNote from "./ExerciseCoachNote";
 import PhotoPeriodHistoryRow from "./PhotoPeriodHistoryRow";
 import HomeHub, { UpcomingMeeting } from "./HomeHub";
-import { TrendMetric } from "./TrendCarousel";
 import NutritionDayToggle, { NutritionTargetSet } from "./NutritionDayToggle";
 import CalorieLog from "./CalorieLog";
 import ReportArchiveList, { ArchiveReport } from "./ReportArchiveList";
@@ -174,6 +174,27 @@ function getWeekDays(CLIENT_ID: number, week?: number) {
   return publishedDays.map((day) => ({ day, assignments: getAssignmentsForDay(day.id) }));
 }
 
+// This week's training in two figures, for the top of the Training tab:
+// days trained of the days built, and sets logged of the sets planned,
+// with volume against last week.
+function weekStats(CLIENT_ID: number, week: number) {
+  const days = getWeekDays(CLIENT_ID, week);
+  const daysTrained = days.filter((d) => d.assignments.some((a) => getLogsForAssignment(a.id).length > 0)).length;
+  const totalDays = days.filter((d) => d.assignments.length > 0).length;
+  const setsThisWeek = days.reduce((sum, d) => sum + d.assignments.reduce((s, a) => s + getLogsForAssignment(a.id).length, 0), 0);
+  const setsPlanned = days.reduce((sum, d) => sum + d.assignments.reduce((s, a) => s + a.sets, 0), 0);
+  const volumeOf = (weekDays: ReturnType<typeof getWeekDays>) =>
+    weekDays.reduce(
+      (sum, d) => sum + d.assignments.reduce((s, a) => s + getLogsForAssignment(a.id).reduce((v, l) => v + (l.weight_kg ?? 0) * (l.reps ?? 0), 0), 0),
+      0
+    );
+  const volumeThisWeek = volumeOf(days);
+  const volumePrevWeek = volumeOf(getWeekDays(CLIENT_ID, week - 1));
+  const volumeTrendPct = volumePrevWeek > 0 ? ((volumeThisWeek - volumePrevWeek) / volumePrevWeek) * 100 : null;
+  const volumeTrendLabel = volumeTrendPct == null ? null : `${volumeTrendPct >= 0 ? "+" : ""}${Math.round(volumeTrendPct)}% vol`;
+  return { daysTrained, totalDays, setsThisWeek, setsPlanned, volumeTrendLabel };
+}
+
 function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   const client = getClient(CLIENT_ID);
   const profile = getClientProfile(CLIENT_ID);
@@ -192,36 +213,6 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
     const weeks = Math.floor(days / 7);
     return `${weeks} week${weeks === 1 ? "" : "s"} to goal`;
   })();
-  const goals = [...listClientGoals(CLIENT_ID, "short"), ...listClientGoals(CLIENT_ID, "long")]
-    .filter((g) => !g.done)
-    .map((g) => g.text);
-
-  const days = getWeekDays(CLIENT_ID);
-  const daysTrained = days.filter((d) => d.assignments.some((a) => getLogsForAssignment(a.id).length > 0)).length;
-  const totalDaysBuilt = days.filter((d) => d.assignments.length > 0).length;
-  const setsThisWeek = days.reduce(
-    (sum, d) => sum + d.assignments.reduce((s, a) => s + getLogsForAssignment(a.id).length, 0),
-    0
-  );
-  const setsPlannedThisWeek = days.reduce((sum, d) => sum + d.assignments.reduce((s, a) => s + a.sets, 0), 0);
-
-  // Week-over-week volume trend for the "Sets logged" stat — same
-  // weight*reps volume measure the report/admin panels already use.
-  const volumeOf = (weekDays: ReturnType<typeof getWeekDays>) =>
-    weekDays.reduce(
-      (sum, d) =>
-        sum +
-        d.assignments.reduce(
-          (s, a) => s + getLogsForAssignment(a.id).reduce((v, l) => v + (l.weight_kg ?? 0) * (l.reps ?? 0), 0),
-          0
-        ),
-      0
-    );
-  const currentWeekNumber = getCurrentWeekNumber(CLIENT_ID);
-  const volumeThisWeek = volumeOf(days);
-  const volumePrevWeek = volumeOf(getWeekDays(CLIENT_ID, currentWeekNumber - 1));
-  const volumeTrendPct = volumePrevWeek > 0 ? ((volumeThisWeek - volumePrevWeek) / volumePrevWeek) * 100 : null;
-  const volumeTrendLabel = volumeTrendPct == null ? null : `${volumeTrendPct >= 0 ? "+" : ""}${Math.round(volumeTrendPct)}% vol`;
 
   const today = localDateStr();
 
@@ -251,94 +242,6 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
 
   const coachNotes = coachNotesFor(CLIENT_ID, 5);
 
-  // One swipeable carousel of trend panels: Weight plus whatever the coach
-  // has pinned (that pin toggle lives in the admin Tracker tabs only — "any
-  // metric the coach wants" graphed is just "any metric they've pinned").
-  // Each entry needs >=2 points to plot a shape and compute a trend, so
-  // anything thinner than that is left out rather than shown as an empty
-  // slide. goodDown says which direction of change is the good one — known
-  // for weight (down is good); left undefined for coach-pinned metrics
-  // since there's no way to know that generically, and guessing would risk
-  // coloring a genuinely good change red.
-  const trendMetric = (
-    id: string,
-    name: string,
-    unit: string,
-    series: { date: string; value: number }[],
-    goodDown?: boolean
-  ): TrendMetric | null => {
-    const fmt = (v: number) => (Number.isInteger(v) ? v.toLocaleString("en-US") : v.toFixed(1));
-    // Every figure the coach chose gets a slide, even before there is a
-    // trend to draw: an empty slide says the coach is watching this, and
-    // one entry is shown as a flat line with the value, so the client sees
-    // the chart fill in from the first check-in rather than appearing later.
-    if (series.length === 0) {
-      return {
-        id,
-        name,
-        points: [],
-        currentValueLabel: "",
-        unitLabel: "",
-        trendLabel: "",
-        trendGood: true,
-        rangeLabel: "No entries yet",
-        avgLabel: "Log it at your next check-in",
-      };
-    }
-    if (series.length === 1) {
-      const only = series[0];
-      return {
-        id,
-        name,
-        points: [only, { ...only }],
-        currentValueLabel: fmt(only.value),
-        unitLabel: unit,
-        trendLabel: "",
-        trendGood: true,
-        rangeLabel: `First entry ${fmtShortDate(only.date)}`,
-        avgLabel: "One entry so far",
-      };
-    }
-    const average = series.reduce((sum, p) => sum + p.value, 0) / series.length;
-    const first = series[0].value;
-    const last = series[series.length - 1].value;
-    const pct = first !== 0 ? ((last - first) / first) * 100 : null;
-    const improving = pct == null || goodDown == null ? null : goodDown ? pct < 0 : pct > 0;
-    const weeksSpan = Math.max(
-      1,
-      Math.round(
-        (new Date(series[series.length - 1].date).getTime() - new Date(series[0].date).getTime()) / (7 * 86400000)
-      )
-    );
-    return {
-      id,
-      name,
-      points: series,
-      currentValueLabel: fmt(last),
-      unitLabel: unit,
-      trendLabel: pct == null ? "" : `${pct > 0 ? "▲" : "▼"} ${Math.abs(pct).toFixed(1)}%`,
-      trendGood: improving ?? true,
-      rangeLabel: `${fmt(first)}${unit} → ${fmt(last)}${unit} · ${weeksSpan} week${weeksSpan === 1 ? "" : "s"}`,
-      avgLabel: `avg ${fmt(average)}${unit ? ` ${unit}` : ""}`,
-    };
-  };
-
-  // The coach chooses which figures are graphed (up to six, from the
-  // Measurements tab in the admin); getGraphedSeries falls back to Weight
-  // when nothing has been chosen. Direction-of-good is only known for
-  // weight, read from the goal phase.
-  const trendMetrics: TrendMetric[] = getGraphedSeries(CLIENT_ID)
-    .map((g) =>
-      trendMetric(
-        g.key,
-        g.name,
-        g.unit,
-        g.series,
-        g.name.toLowerCase().includes("weight") ? weightGoalIsDown(profile?.goal_phase) : undefined
-      )
-    )
-    .filter((m): m is TrendMetric => m !== null);
-
   const dateLabel = new Date(`${today}T00:00:00`).toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -348,6 +251,16 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   // The coach's phase timeline, if they have drawn one. Its current phase
   // becomes the headline instead of the hand-typed Goal / phase field.
   const plan = getClientPlanView(CLIENT_ID);
+
+  // "set Sep 3 · review Sep 20": when the goals were written, and the next
+  // call they will be looked at on.
+  const goalsMeta = (() => {
+    const open = listClientGoals(CLIENT_ID, "short").filter((g) => !g.done);
+    const earliest = open.map((g) => g.created_at).filter((d): d is string => !!d).sort()[0];
+    const set = earliest ? `set ${fmtShortDate(earliest)}` : "";
+    const review = upcomingMeeting ? `${set ? " · " : ""}review ${fmtShortDate(upcomingMeeting.date)}` : "";
+    return set + review;
+  })();
 
   return (
     <HomeHub
@@ -361,13 +274,9 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
           : goalNote
       }
       subLine={profile.current_week ? `· ${profile.current_week}` : ""}
-      daysTrained={daysTrained}
-      totalDays={totalDaysBuilt}
-      setsThisWeek={setsThisWeek}
-      setsPlanned={setsPlannedThisWeek}
-      volumeTrendLabel={volumeTrendLabel}
-      trendMetrics={trendMetrics}
-      goals={goals}
+      goals={getGoalViews(CLIENT_ID)}
+      goalsMeta={goalsMeta}
+      data={getHomeDataTiles(CLIENT_ID, weightGoalIsDown(profile?.goal_phase))}
       upcoming={upcoming}
       coachNotes={coachNotes}
       checkInStatus={checkInStatus}
@@ -378,10 +287,8 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
 function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
   const days = getWeekDays(CLIENT_ID, week);
   const trainingDays = days.filter((d) => d.assignments.length > 0);
-  const daysFullyDone = trainingDays.filter((d) =>
-    d.assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets)
-  ).length;
-  const weekPct = trainingDays.length > 0 ? Math.round((daysFullyDone / trainingDays.length) * 100) : 0;
+  const stats = weekStats(CLIENT_ID, week);
+  const dayTarget = stats.totalDays || 7;
 
   return (
     <div>
@@ -391,20 +298,38 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
       </p>
 
       {trainingDays.length > 0 && (
-        <div className={`week-progress-card${weekPct === 100 ? " complete" : ""}`}>
-          <div>
-            <div className="week-progress-label">{weekPct === 100 ? "Week complete" : "This week"}</div>
-            <div className="week-progress-value">
-              {weekPct === 100
-                ? `All ${trainingDays.length} days trained, nice work`
-                : `${daysFullyDone} of ${trainingDays.length} days trained`}
+        <div className="training-stats home-dark-stats">
+          <div className="home-dark-stat">
+            <div className="home-dark-stat-label">Days trained</div>
+            <div className="home-dark-stat-value-row">
+              <span className="home-dark-stat-value">{stats.daysTrained}</span>
+              <span className="home-dark-stat-of">of {dayTarget}</span>
+            </div>
+            <div className="home-dark-segments">
+              {Array.from({ length: dayTarget }, (_, i) => (
+                <span key={i} className={`home-dark-segment${i < stats.daysTrained ? " filled" : ""}`} />
+              ))}
+            </div>
+            <div className="home-dark-stat-caption">
+              {stats.daysTrained >= dayTarget ? "Week complete" : `${dayTarget - stats.daysTrained} left this week`}
             </div>
           </div>
-          <div
-            className="week-progress-ring"
-            style={{ background: `conic-gradient(var(--accent) 0deg ${weekPct * 3.6}deg, var(--paper-raised) ${weekPct * 3.6}deg 360deg)` }}
-          >
-            <div className="week-progress-ring-inner">{weekPct === 100 ? "✓" : `${weekPct}%`}</div>
+          <div className="home-dark-stat-divider" />
+          <div className="home-dark-stat">
+            <div className="home-dark-stat-label">Sets logged</div>
+            <div className="home-dark-stat-value-row">
+              <span className="home-dark-stat-value">{stats.setsThisWeek}</span>
+              {stats.volumeTrendLabel && <span className="home-dark-stat-delta">{stats.volumeTrendLabel}</span>}
+            </div>
+            <div className="home-dark-bar">
+              <div
+                className="home-dark-bar-fill"
+                style={{ width: `${stats.setsPlanned > 0 ? Math.min(1, stats.setsThisWeek / stats.setsPlanned) * 100 : 0}%` }}
+              />
+            </div>
+            <div className="home-dark-stat-caption">
+              {stats.setsPlanned > 0 ? `${stats.setsThisWeek} of ${stats.setsPlanned} planned` : "Nothing planned this week"}
+            </div>
           </div>
         </div>
       )}

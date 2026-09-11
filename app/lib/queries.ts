@@ -3328,26 +3328,14 @@ export type ClientGoal = {
   text: string;
   done: boolean;
   order_index: number;
+  created_at?: string;
+  tracked_by?: GoalTracking | null;
 };
 
 export function listClientGoals(clientId: number, term: "short" | "long"): ClientGoal[] {
   return getData()
     .client_goals.filter((g) => g.client_id === clientId && g.term === term)
     .sort((a, b) => a.order_index - b.order_index);
-}
-
-export function addClientGoal(clientId: number, term: "short" | "long", text: string) {
-  const data = getData();
-  const count = data.client_goals.filter((g) => g.client_id === clientId && g.term === term).length;
-  data.client_goals.push({
-    id: allocId("client_goals"),
-    client_id: clientId,
-    term,
-    text,
-    done: false,
-    order_index: count,
-  });
-  persist();
 }
 
 export function setClientGoalDone(id: number, done: boolean) {
@@ -5404,4 +5392,226 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
 
   persist();
   return { skipped };
+}
+
+
+// ---------------------------------------------------------------------------
+// Goals with tracking: the numbers behind each goal, gathered here and
+// judged by app/lib/goalView.ts, which the coach's preview shares.
+
+import type { GoalContext, GoalTracking, GoalView, LoggedSet, SeriesPoint } from "./goalView";
+import { computeGoalView, describeTracking } from "./goalView";
+export type { GoalTracking, GoalView } from "./goalView";
+
+export function addClientGoal(clientId: number, term: "short" | "long", text: string, tracking: GoalTracking | null = null) {
+  const data = getData();
+  const count = data.client_goals.filter((g) => g.client_id === clientId && g.term === term).length;
+  data.client_goals.push({
+    id: allocId("client_goals"),
+    client_id: clientId,
+    term,
+    text,
+    done: false,
+    order_index: count,
+    created_at: localDateStr(),
+    tracked_by: tracking,
+  });
+  persist();
+}
+
+export function updateClientGoal(id: number, text: string, tracking: GoalTracking | null) {
+  const data = getData();
+  const goal = data.client_goals.find((g) => g.id === id);
+  if (!goal) return;
+  goal.text = text;
+  goal.tracked_by = tracking;
+  persist();
+}
+
+export function getClientIdForGoal(id: number): number | null {
+  return getData().client_goals.find((g) => g.id === id)?.client_id ?? null;
+}
+
+/** Series for a graph-choice key ("field-3" / "metric-7"). */
+function seriesForKey(clientId: number, key: string): { name: string; unit: string; series: SeriesPoint[] } | null {
+  const choice = listGraphChoices(clientId).find((c) => c.key === key);
+  if (!choice) return null;
+  return { name: choice.name, unit: choice.unit, series: choice.kind === "field" ? getMeasurementSeries(choice.id) : getMetricSeries(choice.id) };
+}
+
+/** Every exercise on any of the client's days, once each, by name. */
+export function listClientExercises(clientId: number): { id: number; name: string }[] {
+  const data = getData();
+  const dayIds = new Set(data.program_days.filter((pd) => pd.client_id === clientId).map((pd) => pd.id));
+  const ids = new Set(data.workout_assignments.filter((wa) => dayIds.has(wa.program_day_id)).map((wa) => wa.exercise_id));
+  return data.exercises
+    .filter((e) => ids.has(e.id))
+    .map((e) => ({ id: e.id, name: e.name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** Every set the client has logged on one exercise, across every week. */
+export function loggedSetsForExercise(clientId: number, exerciseId: number): LoggedSet[] {
+  const data = getData();
+  const dayIds = new Set(data.program_days.filter((pd) => pd.client_id === clientId).map((pd) => pd.id));
+  const waIds = new Set(
+    data.workout_assignments.filter((wa) => dayIds.has(wa.program_day_id) && wa.exercise_id === exerciseId).map((wa) => wa.id)
+  );
+  return data.set_logs
+    .filter((sl) => waIds.has(sl.workout_assignment_id))
+    .map((sl) => ({ weight: sl.weight_kg, reps: sl.reps, rpe: sl.rpe_actual, date: sl.logged_at.slice(0, 10) }));
+}
+
+/** This Monday-to-Sunday week's values of a daily metric. */
+function habitWeekValues(metricId: number, today: string): SeriesPoint[] {
+  const monday = weekStart(today);
+  const sunday = (() => {
+    const d = new Date(`${monday}T00:00:00`);
+    d.setDate(d.getDate() + 6);
+    return localDateStr(d);
+  })();
+  return getMetricSeries(metricId).filter((p) => p.date >= monday && p.date <= sunday);
+}
+
+export function goalContext(clientId: number, goal: ClientGoal): GoalContext {
+  const today = localDateStr();
+  const ctx: GoalContext = { today, createdAt: goal.created_at ?? today };
+  const t = goal.tracked_by ?? null;
+  if (t?.kind === "metric") {
+    const s = seriesForKey(clientId, t.metricKey);
+    if (s) ctx.metric = s;
+  } else if (t?.kind === "exercise") {
+    const name = getData().exercises.find((e) => e.id === t.exerciseId)?.name ?? "Exercise";
+    ctx.exercise = { name, sets: loggedSetsForExercise(clientId, t.exerciseId) };
+  } else if (t?.kind === "habit") {
+    const name = getData().metric_definitions.find((m) => m.id === t.metricId)?.name ?? "Check-in";
+    ctx.habit = { name, weekValues: habitWeekValues(t.metricId, today) };
+  }
+  return ctx;
+}
+
+/** Goal rows as the client sees them, open goals first, done text goals last. */
+export function getGoalViews(clientId: number): GoalView[] {
+  return [...listClientGoals(clientId, "short"), ...listClientGoals(clientId, "long")]
+    .filter((g) => !g.done || !g.tracked_by)
+    .map((g) => computeGoalView({ id: g.id, text: g.text, done: g.done, tracking: g.tracked_by ?? null }, goalContext(clientId, g)));
+}
+
+/** The coach's list: each goal with its tracking in words. */
+export function getGoalSummaries(clientId: number): { goal: ClientGoal; view: GoalView; tracking: string }[] {
+  return listClientGoals(clientId, "short").map((g) => {
+    const t = g.tracked_by ?? null;
+    const names: { metric?: string; unit?: string; exercise?: string; habit?: string } = {};
+    if (t?.kind === "metric") {
+      const s = seriesForKey(clientId, t.metricKey);
+      names.metric = s?.name;
+      names.unit = s?.unit;
+    } else if (t?.kind === "exercise") names.exercise = getData().exercises.find((e) => e.id === t.exerciseId)?.name;
+    else if (t?.kind === "habit") names.habit = getData().metric_definitions.find((m) => m.id === t.metricId)?.name;
+    return {
+      goal: g,
+      view: computeGoalView({ id: g.id, text: g.text, done: g.done, tracking: t }, goalContext(clientId, g)),
+      tracking: describeTracking(t, names),
+    };
+  });
+}
+
+/** Everything the coach's goal editor needs to offer and preview. */
+export type GoalEditorOptions = {
+  today: string;
+  phaseEnd: string | null;
+  metrics: { key: string; name: string; unit: string; series: SeriesPoint[] }[];
+  exercises: { id: number; name: string; sets: LoggedSet[] }[];
+  habits: { id: number; name: string; weekValues: SeriesPoint[] }[];
+};
+
+export function getGoalEditorOptions(clientId: number): GoalEditorOptions {
+  const today = localDateStr();
+  const phase = getCurrentPhase(clientId, "nutrition") ?? getCurrentPhase(clientId, "training");
+  const phaseEnd = phase
+    ? (() => {
+        const d = new Date(`${phase.end_week}T00:00:00`);
+        d.setDate(d.getDate() + 6);
+        return localDateStr(d);
+      })()
+    : null;
+  return {
+    today,
+    phaseEnd,
+    metrics: listGraphChoices(clientId).map((c) => ({
+      key: c.key,
+      name: c.name,
+      unit: c.unit,
+      series: c.kind === "field" ? getMeasurementSeries(c.id) : getMetricSeries(c.id),
+    })),
+    exercises: listClientExercises(clientId).map((e) => ({ ...e, sets: loggedSetsForExercise(clientId, e.id) })),
+    habits: listMetricDefinitions(clientId, "daily").map((m) => ({ id: m.id, name: m.name, weekValues: habitWeekValues(m.id, today) })),
+  };
+}
+
+// ---- Home "Data" tiles: the coach's chosen figures, last 7 days and 8 weeks.
+
+export type DataTile = {
+  key: string;
+  name: string;
+  unit: string;
+  valueLabel: string;
+  trendLabel: string;
+  trendTone: "green" | "orange" | "neutral";
+  /** Eight weekly values, oldest first; null where nothing was logged. */
+  bars: (number | null)[];
+  goal: number | null;
+  firstLabel: string;
+  lastLabel: string;
+};
+
+export function getHomeDataTiles(clientId: number, weightGoalIsDown: boolean | null): DataTile[] {
+  const today = localDateStr();
+  const goals = listClientGoals(clientId, "short").filter((g) => !g.done && g.tracked_by?.kind === "metric");
+  const choices = listGraphChoices(clientId).filter((c) => c.pointCount > 0);
+  const picked = (choices.some((c) => c.pinned) ? choices.filter((c) => c.pinned) : choices).slice(0, 6);
+  const fmt = (n: number) => (Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10));
+  return picked.map((c) => {
+    const series = c.kind === "field" ? getMeasurementSeries(c.id) : getMetricSeries(c.id);
+    const latest = series[series.length - 1];
+    const weekAgo = (() => {
+      const cutoff = (() => {
+        const d = new Date(`${today}T00:00:00`);
+        d.setDate(d.getDate() - 7);
+        return localDateStr(d);
+      })();
+      const before = series.filter((p) => p.date <= cutoff);
+      return before[before.length - 1] ?? null;
+    })();
+    const delta = weekAgo ? latest.value - weekAgo.value : null;
+    const linked = goals.find((g) => g.tracked_by?.kind === "metric" && g.tracked_by.metricKey === c.key)?.tracked_by;
+    const goodDown =
+      linked?.kind === "metric" ? linked.op === "<=" : c.name.toLowerCase().includes("weight") ? weightGoalIsDown : null;
+    const trendTone: DataTile["trendTone"] =
+      delta == null || delta === 0 || goodDown == null ? "neutral" : (delta < 0) === goodDown ? "green" : "orange";
+    const bars: (number | null)[] = [];
+    for (let i = 7; i >= 0; i--) {
+      const d = new Date(`${weekStart(today)}T00:00:00`);
+      d.setDate(d.getDate() - i * 7);
+      const monday = localDateStr(d);
+      const e = new Date(d);
+      e.setDate(e.getDate() + 6);
+      const sunday = localDateStr(e);
+      const inWeek = series.filter((p) => p.date >= monday && p.date <= sunday);
+      bars.push(inWeek.length ? inWeek[inWeek.length - 1].value : null);
+    }
+    const present = bars.filter((b): b is number => b != null);
+    return {
+      key: c.key,
+      name: c.name,
+      unit: c.unit,
+      valueLabel: fmt(latest.value),
+      trendLabel: delta == null ? "–" : delta === 0 ? "= 7 days" : `${delta > 0 ? "▲" : "▼"} ${fmt(Math.abs(delta))}${c.unit ? ` ${c.unit}` : ""}`,
+      trendTone,
+      bars,
+      goal: linked?.kind === "metric" ? linked.target : null,
+      firstLabel: present.length ? fmt(present[0]) : "–",
+      lastLabel: present.length ? fmt(present[present.length - 1]) : "–",
+    };
+  });
 }

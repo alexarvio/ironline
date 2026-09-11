@@ -1,8 +1,9 @@
 "use client";
 
-import { ArrowRightIcon, CalendarIcon, CheckIcon, ClockIcon } from "../components/icons";
-import TrendCarousel, { TrendMetric } from "./TrendCarousel";
-import type { ClientPlanView, PlanPhaseView, PlanTrackView } from "../lib/queries";
+import { useRef, useState } from "react";
+import { ArrowRightIcon, CheckIcon } from "../components/icons";
+import GoalRow from "../components/GoalRow";
+import type { ClientPlanView, DataTile, GoalView, PlanPhaseView, PlanTrackView } from "../lib/queries";
 import { useOpenCheckIn } from "./CheckInContext";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
@@ -26,7 +27,6 @@ export type UpcomingMeeting = {
   durationLabel: string;
 } | null;
 export type CoachNote = { id: number; context: string; timeLabel: string; text: string; unread: boolean };
-export type { TrendMetric };
 
 // Home used to be its own tab with Check-ins as a separate one; they're
 // merged here so the client has one landing screen (profile + what's due
@@ -39,15 +39,10 @@ export default function HomeHub({
   plan,
   subLine,
   goalNote,
-  daysTrained,
-  totalDays,
-  setsThisWeek,
-  setsPlanned,
-  volumeTrendLabel,
-  trendMetrics,
   goals,
+  goalsMeta,
+  data,
   upcoming,
-  coachNotes,
   checkInStatus,
 }: {
   dateLabel: string;
@@ -59,13 +54,10 @@ export default function HomeHub({
   /** Anything quieter beside it, currently the current-week label. */
   subLine: string;
   goalNote: string | null;
-  daysTrained: number;
-  totalDays: number;
-  setsThisWeek: number;
-  setsPlanned: number;
-  volumeTrendLabel: string | null;
-  trendMetrics: TrendMetric[];
-  goals: string[];
+  goals: GoalView[];
+  /** "set Sep 3 · review Sep 20" */
+  goalsMeta: string;
+  data: DataTile[];
   upcoming: UpcomingMeeting;
   coachNotes: CoachNote[];
   checkInStatus: CheckInStatus;
@@ -73,8 +65,6 @@ export default function HomeHub({
   // Check-in is a full-screen pushed view owned by AppShell; a due row just
   // asks it to open on that row's section.
   const openCheckIn = useOpenCheckIn();
-
-  const dayTarget = totalDays || 7;
 
   return (
     <div className="home-dark">
@@ -95,44 +85,36 @@ export default function HomeHub({
       </div>
       {plan && <PlanRows plan={plan} />}
 
-      <div className="home-dark-hr" />
-
-      <div className="home-dark-stats">
-        <div className="home-dark-stat">
-          <div className="home-dark-stat-label">Days trained</div>
-          <div className="home-dark-stat-value-row">
-            <span className="home-dark-stat-value">{daysTrained}</span>
-            <span className="home-dark-stat-of">of {dayTarget}</span>
+      {/* The next call, when one is booked. No empty state: nothing booked
+          is simply nothing here. */}
+      {upcoming && (
+        <div className="home-meeting-card">
+          <div className="home-meeting-tile">
+            <div className="home-meeting-tile-month">{upcoming.monthCap}</div>
+            <div className="home-meeting-tile-day">{upcoming.dayNumber}</div>
           </div>
-          <div className="home-dark-segments">
-            {Array.from({ length: dayTarget }, (_, i) => (
-              <span key={i} className={`home-dark-segment${i < daysTrained ? " filled" : ""}`} />
-            ))}
+          <div className="home-meeting-card-body">
+            <div className="home-meeting-eyebrow">Next with your coach</div>
+            <div className="home-meeting-topic">{upcoming.topic}</div>
+            <div className="home-meeting-when">
+              {upcoming.whenLabel} · {upcoming.durationLabel}
+            </div>
           </div>
-          <div className="home-dark-stat-caption">
-            {daysTrained >= dayTarget ? "Week complete" : `${dayTarget - daysTrained} left this week`}
-          </div>
+          <span className="home-meeting-pill">{upcoming.inLabel.toLowerCase()}</span>
         </div>
-        <div className="home-dark-stat-divider" />
-        <div className="home-dark-stat">
-          <div className="home-dark-stat-label">Sets logged</div>
-          <div className="home-dark-stat-value-row">
-            <span className="home-dark-stat-value">{setsThisWeek}</span>
-            {volumeTrendLabel && <span className="home-dark-stat-delta">{volumeTrendLabel}</span>}
-          </div>
-          <div className="home-dark-bar">
-            <div
-              className="home-dark-bar-fill"
-              style={{ width: `${setsPlanned > 0 ? Math.min(1, setsThisWeek / setsPlanned) * 100 : 0}%` }}
-            />
-          </div>
-          <div className="home-dark-stat-caption">
-            {setsPlanned > 0 ? `${setsThisWeek} of ${setsPlanned} planned` : "Nothing planned this week"}
-          </div>
-        </div>
-      </div>
+      )}
 
-      <TrendCarousel metrics={trendMetrics} />
+      {goals.length > 0 && (
+        <section className="home-goals-card">
+          <div className="home-goals-head">
+            <span className="home-goals-title">Goals</span>
+            {goalsMeta && <span className="home-goals-meta">{goalsMeta}</span>}
+          </div>
+          {goals.map((g) => (
+            <GoalRow key={g.id} goal={g} />
+          ))}
+        </section>
+      )}
 
       {checkInStatus.configuredCount > 0 && (
         <section className="home-dark-section">
@@ -163,55 +145,9 @@ export default function HomeHub({
         </section>
       )}
 
-      <section className="home-dark-section">
-        <span className="home-dark-section-title">Next with your coach</span>
-        {upcoming ? (
-          <div className="home-meeting-row">
-            <div className="home-meeting-date">
-              <div className="home-meeting-month">{upcoming.monthCap}</div>
-              <div className="home-meeting-day">{upcoming.dayNumber}</div>
-            </div>
-            <div className="home-meeting-body">
-              <div className="home-meeting-title-row">
-                <span className="home-meeting-title">{upcoming.topic}</span>
-                <span className="home-meeting-in">{upcoming.inLabel}</span>
-              </div>
-              <div className="home-meeting-meta">
-                <span className="home-meeting-meta-item">
-                  <CalendarIcon />
-                  {upcoming.whenLabel}
-                </span>
-                <span className="home-meeting-meta-item">
-                  <ClockIcon />
-                  {upcoming.durationLabel}
-                </span>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <p className="home-dark-empty">Nothing scheduled yet. Your coach hasn&rsquo;t booked a call.</p>
-        )}
-      </section>
+      <div className="home-dark-hr" />
 
-      {/* No "Coach notes" section here any more. It listed chat messages from
-          the coach, and chat is cut from this beta, so it could only ever say
-          "No notes yet". The coach's guidance reaches the client through the
-          nutrition note and per-exercise notes instead. coachNotes stays a
-          prop so the bell's unread state keeps working. */}
-
-      {goals.length > 0 && (
-        <section className="home-dark-section">
-          <span className="home-dark-section-title">Goals</span>
-          <div className="home-dark-rows">
-            {goals.map((g, i) => (
-              <div key={i} className="home-dark-goal-row">
-                <span className="home-dark-goal-index">{String(i + 1).padStart(2, "0")}</span>
-                <span className="home-dark-goal-text">{g}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      <DataSection tiles={data} />
     </div>
   );
 }
@@ -308,5 +244,95 @@ function PlanRow({
         )}
       </div>
     </div>
+  );
+}
+
+// ---- Data: the coach's chosen figures, a tile each and one swipeable
+// bar chart underneath. Tapping a tile scrolls the chart to it; swiping
+// the chart selects the tile. ----
+
+function DataSection({ tiles }: { tiles: DataTile[] }) {
+  const [index, setIndex] = useState(0);
+  const trackRef = useRef<HTMLDivElement>(null);
+  if (tiles.length === 0) return null;
+  const goTo = (i: number) => {
+    setIndex(i);
+    const el = trackRef.current;
+    if (el) el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
+  };
+  const onScroll = () => {
+    const el = trackRef.current;
+    if (!el) return;
+    const i = Math.round(el.scrollLeft / (el.clientWidth || 1));
+    if (i !== index && i >= 0 && i < tiles.length) setIndex(i);
+  };
+  const tile = tiles[Math.min(index, tiles.length - 1)];
+
+  return (
+    <section className="home-data">
+      <div className="home-data-head">
+        <span className="home-data-title">Data</span>
+        <span className="home-data-sub">Last 7 days</span>
+      </div>
+      <div className="home-data-tiles">
+        {tiles.map((t, i) => (
+          <button key={t.key} type="button" className={`home-data-tile${i === index ? " selected" : ""}`} onClick={() => goTo(i)}>
+            <span className="home-data-tile-label">{t.name}</span>
+            <span className="home-data-tile-value">
+              {t.valueLabel}
+              {t.unit && <small>{t.unit}</small>}
+            </span>
+            <span className={`home-data-tile-trend ${t.trendTone}`}>{t.trendLabel}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="home-data-graph">
+        <div className="home-data-graph-head">
+          <span>{tile.name} · 8 weeks</span>
+          <span>
+            {tile.firstLabel} → {tile.lastLabel}
+          </span>
+        </div>
+        <div className="home-data-track" ref={trackRef} onScroll={onScroll}>
+          {tiles.map((t) => {
+            const values = t.bars.filter((b): b is number => b != null);
+            const all = t.goal != null ? [...values, t.goal] : values;
+            const min = all.length ? Math.min(...all) : 0;
+            const max = all.length ? Math.max(...all) : 1;
+            const pad = max === min ? Math.max(1, Math.abs(max) * 0.1) : (max - min) * 0.3;
+            const lo = min - pad;
+            const hi = max + pad;
+            const pct = (v: number) => Math.max(0, Math.min(1, (v - lo) / (hi - lo)));
+            return (
+              <div key={t.key} className="home-data-pane">
+                <div className="home-data-bars">
+                  {t.bars.map((b, i) => (
+                    <span
+                      key={i}
+                      className={`home-data-bar${i === t.bars.length - 1 ? " last" : ""}${b == null ? " empty" : ""}`}
+                      style={{ height: b == null ? "2px" : `${Math.max(4, pct(b) * 100)}%` }}
+                      title={b == null ? "Nothing logged" : `${b}${t.unit ? ` ${t.unit}` : ""}`}
+                    />
+                  ))}
+                  {t.goal != null && (
+                    <span className="home-data-goal" style={{ bottom: `${pct(t.goal) * 100}%` }}>
+                      <em>goal {t.goal}</em>
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {tiles.length > 1 && (
+          <div className="home-data-dots">
+            {tiles.map((t, i) => (
+              <button key={t.key} type="button" className={`home-data-dot${i === index ? " on" : ""}`} onClick={() => goTo(i)} aria-label={t.name} />
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

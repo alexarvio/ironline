@@ -1,5 +1,7 @@
 import type { OverviewPanel } from "../lib/queries";
-import { addClientGoalAction, deleteClientAction, removeClientGoalAction } from "../lib/actions";
+import { getGoalEditorOptions, getGoalSummaries } from "../lib/queries";
+import { deleteClientAction } from "../lib/actions";
+import GoalsPanel from "./GoalsPanel";
 import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
 import ClientCardEditor from "./ClientCardEditor";
 import ClientLoginPanel from "./ClientLoginPanel";
@@ -76,32 +78,17 @@ export default function ClientOverviewPanel({
             {panel.goals.length} goal{panel.goals.length === 1 ? "" : "s"}
           </span>
         </div>
-        {panel.goals.length === 0 ? (
-          <p className="ad-panel-empty">None set yet.</p>
-        ) : (
-          <div className="ad-goal-list">
-            {panel.goals.map((g) => (
-              <div key={g.id} className="ad-goal-row">
-                <span className="ad-goal-bullet" aria-hidden="true" />
-                <span className="ad-goal-text">{g.text}</span>
-                <form action={removeClientGoalAction}>
-                  <input type="hidden" name="id" value={g.id} />
-                  <button type="submit" className="ad-goal-x" aria-label={`Remove goal "${g.text}"`}>
-                    ×
-                  </button>
-                </form>
-              </div>
-            ))}
-          </div>
-        )}
-        <form action={addClientGoalAction} className="ad-goal-add">
-          <input type="hidden" name="clientId" value={clientId} />
-          <input type="hidden" name="term" value="short" />
-          <input name="text" type="text" placeholder="Add a goal…" aria-label="Add a goal" required />
-          <button type="submit" className="ad-btn-primary ad-goal-add-btn">
-            Add
-          </button>
-        </form>
+        <GoalsPanel
+          clientId={clientId}
+          goals={getGoalSummaries(clientId).map(({ goal, tracking }) => ({
+            id: goal.id,
+            text: goal.text,
+            done: goal.done,
+            tracking: goal.tracked_by ?? null,
+            label: tracking,
+          }))}
+          options={getGoalEditorOptions(clientId)}
+        />
       </section>
 
       {/* 4/5. The client card. Read-only rows until the coach hits Edit —
