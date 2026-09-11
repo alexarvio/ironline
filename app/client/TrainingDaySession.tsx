@@ -404,6 +404,10 @@ function MyNote({ assignmentId, text }: { assignmentId: number; text: string }) 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(text);
   const [saving, start] = useTransition();
+  const cancel = () => {
+    setDraft(text);
+    setEditing(false);
+  };
   const save = () => {
     const next = draft.trim();
     setEditing(false);
@@ -424,15 +428,21 @@ function MyNote({ assignmentId, text }: { assignmentId: number; text: string }) 
           rows={2}
           placeholder="Seat 4, handles narrow, slow on the way down…"
           onChange={(e) => setDraft(e.target.value)}
-          onBlur={save}
           onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              setDraft(text);
-              setEditing(false);
-            }
+            if (e.key === "Escape") cancel();
           }}
         />
-        <span className="ts-mynote-hint">Only you see this. It stays with the exercise, every week.</span>
+        <div className="ts-mynote-foot">
+          <span className="ts-mynote-hint">Only you see this. It stays with the exercise, every week.</span>
+          <span className="ts-mynote-btns">
+            <button type="button" className="ts-mynote-cancel" onClick={cancel}>
+              Cancel
+            </button>
+            <button type="button" className="ts-mynote-save" onClick={save}>
+              Save
+            </button>
+          </span>
+        </div>
       </div>
     );
   }

@@ -11776,3 +11776,7 @@ a.cd-entry:hover { border-color: var(--accent); }
 .ts-mynote-add { font-size: 12px; font-weight: 700; color: #2f5d8f; }
 .ts-mynote-input { width: 100%; box-sizing: border-box; border: 0; padding: 0; margin-top: 2px; font: inherit; font-size: 14px; line-height: 1.4; color: #313851; background: transparent; resize: vertical; outline: none; }
 .ts-mynote-hint { font-size: 11px; color: #8b93a1; }
+.ts-mynote-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+.ts-mynote-btns { display: inline-flex; gap: 8px; margin-left: auto; }
+.ts-mynote-cancel { border: 1px solid #c3c9d2; background: #fff; color: #5b6474; border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.ts-mynote-save { border: 0; background: #2f5d8f; color: #fff; border-radius: 999px; padding: 7px 16px; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
