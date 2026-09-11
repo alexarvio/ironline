@@ -12153,3 +12153,11 @@ a.cd-entry:hover { border-color: var(--accent); }
 .dl-dragging .dl-row.lifted .dl-grip { color: #1e3a6e; cursor: grabbing; }
 .ad-goal-list .dl-row .ad-goal-row { flex: 1; }
 .mw-goal .mw-goal-tools { margin-left: 4px; }
+
+/* Goal rows: grip, dot, text and tools on one centred line. */
+.dl-row { align-items: center; }
+.dl-grip { margin-top: 0; }
+.mw-goal { align-items: center; }
+.mw-goal .mw-dot { margin-top: 0; }
+.ad-goal-list .ad-goal-row { align-items: center; }
+.ad-goal-list .ad-goal-bullet, .ad-goal-list .ge-done { margin-top: 0; }
