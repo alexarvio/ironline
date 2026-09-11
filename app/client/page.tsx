@@ -24,6 +24,7 @@ import {
   getPublishedWeek,
   listClients,
   listClientGoals,
+  meetingProvider,
   getGoalViews,
   getHomeDataTiles,
   listMeetings,
@@ -223,7 +224,18 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
     if (!upcomingMeeting) return null;
     const when = new Date(`${upcomingMeeting.date}T00:00:00`);
     const days = Math.round((when.getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000);
+    // "Starting now" from ten minutes before the start until the end.
+    const startingNow = (() => {
+      if (upcomingMeeting.date !== today || !upcomingMeeting.time) return false;
+      const [h, mi] = upcomingMeeting.time.split(":").map((n) => Number(n) || 0);
+      const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+      const start = h * 60 + mi;
+      return nowMin >= start - 10 && nowMin <= start + upcomingMeeting.duration_minutes;
+    })();
     return {
+      link: upcomingMeeting.link ?? null,
+      provider: meetingProvider(upcomingMeeting.link),
+      startingNow,
       monthCap: when.toLocaleDateString("en-US", { month: "short" }),
       dayNumber: String(when.getDate()),
       topic: upcomingMeeting.topic || "Check-in call",

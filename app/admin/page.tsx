@@ -2,6 +2,7 @@ import AdminShell from "./AdminShell";
 import AdminSidebar from "./AdminSidebar";
 import SectionTabs, { TabSection } from "./SectionTabs";
 import NutritionPanel from "./NutritionPanel";
+import MeetingsPanel from "./MeetingsPanel";
 import MeasurementsPanel from "./MeasurementsPanel";
 import ClientOverviewPanel from "./ClientOverviewPanel";
 import FeedPanel from "./FeedPanel";
@@ -132,6 +133,7 @@ function ClientDashboard({
     },
     { id: "nutrition", label: "Nutrition", content: <NutritionPanel clientId={clientId} /> },
     { id: "measurements", label: "Measurements", content: <MeasurementsPanel clientId={clientId} /> },
+    { id: "meetings", label: "Meetings", content: <MeetingsPanel clientId={clientId} /> },
   ];
 
 

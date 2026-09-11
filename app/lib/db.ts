@@ -333,6 +333,8 @@ type ClientGoal = {
   created_at?: string;
   /** What the app measures it by, or null for a plain sentence. */
   tracked_by?: GoalTracking | null;
+  /** The meeting it was set in, when added from one. */
+  meeting_id?: number | null;
 };
 
 // Meetings: coach-scheduled check-in calls, each with its own running notes log.
@@ -345,7 +347,11 @@ type Meeting = {
   time: string;
   duration_minutes: number;
   topic: string;
-  status: "scheduled" | "completed" | "canceled";
+  status: "scheduled" | "completed" | "no-show" | "cancelled";
+  /** Any call URL; the provider is read off its host. */
+  link?: string | null;
+  /** Coach-only notes written before the call. Never sent to the client. */
+  prep_notes?: string | null;
 };
 type MeetingNote = {
   id: number;
@@ -628,6 +634,15 @@ function load(): Data {
       }
     }
     if (dated) save(data);
+    // "canceled" became "cancelled" when no-show joined the statuses.
+    let respelled = false;
+    for (const m of data.meetings as { status: string }[]) {
+      if (m.status === "canceled") {
+        m.status = "cancelled";
+        respelled = true;
+      }
+    }
+    if (respelled) save(data);
     return data;
   } catch {
     return emptyData();

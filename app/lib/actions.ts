@@ -23,6 +23,10 @@ import {
   addInvoice,
   addMeasurementField,
   addMeeting,
+  updateMeeting,
+  completeMeeting,
+  getClientIdForMeeting,
+  DEFAULT_MEETING_DURATION,
   addMeetingNote,
   addMetricDefinition,
   addMetricTemplateCategory,
@@ -1014,7 +1018,8 @@ export async function addClientGoalAction(formData: FormData) {
   const clientId = Number(formData.get("clientId"));
   const text = String(formData.get("text") || "").trim();
   if (!text) return;
-  addClientGoal(clientId, text, parseGoalTracking(formData.get("tracking")));
+  const meetingRaw = Number(formData.get("meetingId"));
+  addClientGoal(clientId, text, parseGoalTracking(formData.get("tracking")), Number.isInteger(meetingRaw) && meetingRaw > 0 ? meetingRaw : null);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1086,8 +1091,9 @@ export async function addMeetingAction(formData: FormData) {
   const time = String(formData.get("time") || "");
   const duration = Number(formData.get("durationMinutes")) || undefined;
   const topic = String(formData.get("topic") || "").trim();
+  const link = String(formData.get("link") || "").trim();
   if (!date) return;
-  addMeeting(clientId, date, time, topic, duration);
+  addMeeting(clientId, date, time, topic, duration, link || null);
   logCoachActivity(clientId, topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", {
     kind: "general",
     actionTab: "home",
@@ -1100,9 +1106,41 @@ export async function addMeetingAction(formData: FormData) {
 export async function setMeetingStatusAction(formData: FormData) {
   await requireCoach();
   const id = Number(formData.get("id"));
-  const status = String(formData.get("status")) as "scheduled" | "completed" | "canceled";
+  const raw = String(formData.get("status"));
+  const status = raw === "completed" || raw === "no-show" || raw === "cancelled" ? raw : "scheduled";
   setMeetingStatus(id, status);
   revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// Autosaves from the Meetings tab (topic, link, prep notes) and a
+// reschedule (date, time, duration): only the fields present are written.
+export async function updateMeetingAction(formData: FormData) {
+  await requireCoach();
+  const id = Number(formData.get("id"));
+  if (!id || getClientIdForMeeting(id) == null) return;
+  const patch: Parameters<typeof updateMeeting>[1] = {};
+  if (formData.has("topic")) patch.topic = String(formData.get("topic") ?? "").trim();
+  if (formData.has("link")) patch.link = String(formData.get("link") ?? "").trim() || null;
+  if (formData.has("prepNotes")) patch.prep_notes = String(formData.get("prepNotes") ?? "");
+  if (formData.has("date")) {
+    const date = String(formData.get("date") ?? "");
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) patch.date = date;
+  }
+  if (formData.has("time")) patch.time = String(formData.get("time") ?? "");
+  if (formData.has("durationMinutes")) patch.duration_minutes = Number(formData.get("durationMinutes")) || DEFAULT_MEETING_DURATION;
+  updateMeeting(id, patch);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function completeMeetingAction(formData: FormData) {
+  await requireCoach();
+  const id = Number(formData.get("id"));
+  if (!id) return;
+  completeMeeting(id);
+  revalidatePath("/admin");
+  revalidatePath("/client");
 }
 
 export async function removeMeetingAction(formData: FormData) {

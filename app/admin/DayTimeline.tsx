@@ -13,7 +13,7 @@ export type DayEntry = {
   topic: string;
   clientId: number | null;
   clientName: string;
-  status: "scheduled" | "completed" | "canceled";
+  status: "scheduled" | "completed" | "no-show" | "cancelled";
 };
 
 const FIRST_HOUR = 6;

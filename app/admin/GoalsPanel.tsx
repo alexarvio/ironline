@@ -68,16 +68,19 @@ export default function GoalsPanel({ clientId, goals, options }: { clientId: num
   );
 }
 
-function GoalEditor({
+export function GoalEditor({
   clientId,
   goal,
   options,
   onClose,
+  meetingId = null,
 }: {
   clientId: number;
   goal: GoalListItem | null;
   options: GoalEditorOptions;
   onClose: () => void;
+  /** The meeting this goal is being set in, when added from one. */
+  meetingId?: number | null;
 }) {
   const t = goal?.tracking ?? null;
   const [text, setText] = useState(goal?.text ?? "");
@@ -181,6 +184,7 @@ function GoalEditor({
     <form action={submit} className="ge-editor">
       {goal ? <input type="hidden" name="id" value={goal.id} /> : <input type="hidden" name="clientId" value={clientId} />}
       <input type="hidden" name="tracking" value={kind === "none" ? "" : JSON.stringify(tracking ?? {})} />
+      {meetingId != null && <input type="hidden" name="meetingId" value={meetingId} />}
 
       <label className="ge-field">
         <span>Goal</span>

@@ -3330,6 +3330,7 @@ export type ClientGoal = {
   order_index: number;
   created_at?: string;
   tracked_by?: GoalTracking | null;
+  meeting_id?: number | null;
 };
 
 // One list of goals per client. The stored `term` field is a leftover of
@@ -3474,7 +3475,9 @@ export type Meeting = {
   time: string;
   duration_minutes: number;
   topic: string;
-  status: "scheduled" | "completed" | "canceled";
+  status: "scheduled" | "completed" | "no-show" | "cancelled";
+  link?: string | null;
+  prep_notes?: string | null;
 };
 export type MeetingNote = {
   id: number;
@@ -3497,7 +3500,8 @@ export function addMeeting(
   date: string,
   time: string,
   topic: string,
-  durationMinutes: number = DEFAULT_MEETING_DURATION
+  durationMinutes: number = DEFAULT_MEETING_DURATION,
+  link: string | null = null
 ) {
   const data = getData();
   data.meetings.push({
@@ -3508,6 +3512,8 @@ export function addMeeting(
     duration_minutes: durationMinutes || DEFAULT_MEETING_DURATION,
     topic,
     status: "scheduled",
+    link: link || null,
+    prep_notes: null,
   });
   persist();
 }
@@ -3574,7 +3580,7 @@ export function listAllMeetings(): MeetingWithClient[] {
 
 // One day's entries for the calendar's day panel, in time order.
 export function getCalendarDay(dateStr: string): MeetingWithClient[] {
-  return listAllMeetings().filter((m) => m.date === dateStr && m.status !== "canceled");
+  return listAllMeetings().filter((m) => m.date === dateStr && m.status !== "cancelled");
 }
 
 function timeToMinutes(t: string): number {
@@ -3621,7 +3627,7 @@ export type CalendarDay = { date: string; meetings: MeetingWithClient[] };
 // grid — this is a coaching schedule, not a general calendar app, so an
 // agenda list reads better than a grid full of empty days.
 export function getUpcomingCalendarDays(daysBack = 7, daysForward = 60): CalendarDay[] {
-  const all = listAllMeetings().filter((m) => m.status !== "canceled");
+  const all = listAllMeetings().filter((m) => m.status !== "cancelled");
   const today = new Date();
   const start = new Date(today);
   start.setDate(start.getDate() - daysBack);
@@ -3674,7 +3680,7 @@ export function getCalendarMonth(monthStr?: string): CalendarMonth {
   const todayStr = localDateStr(now);
   const meetingsByDate = new Map<string, MeetingWithClient[]>();
   listAllMeetings()
-    .filter((m) => m.status !== "canceled")
+    .filter((m) => m.status !== "cancelled")
     .forEach((m) => {
       if (!meetingsByDate.has(m.date)) meetingsByDate.set(m.date, []);
       meetingsByDate.get(m.date)!.push(m);
@@ -5405,7 +5411,7 @@ import type { GoalContext, GoalTracking, GoalView, LoggedSet, SeriesPoint } from
 import { computeGoalView, describeTracking } from "./goalView";
 export type { GoalTracking, GoalView } from "./goalView";
 
-export function addClientGoal(clientId: number, text: string, tracking: GoalTracking | null = null) {
+export function addClientGoal(clientId: number, text: string, tracking: GoalTracking | null = null, meetingId: number | null = null) {
   const data = getData();
   const count = data.client_goals.filter((g) => g.client_id === clientId).length;
   data.client_goals.push({
@@ -5417,6 +5423,7 @@ export function addClientGoal(clientId: number, text: string, tracking: GoalTrac
     order_index: count,
     created_at: localDateStr(),
     tracked_by: tracking,
+    meeting_id: meetingId,
   });
   persist();
 }
@@ -5616,4 +5623,107 @@ export function getHomeDataTiles(clientId: number, weightGoalIsDown: boolean | n
       lastLabel: present.length ? fmt(present[present.length - 1]) : "–",
     };
   });
+}
+
+
+// ---------------------------------------------------------------------------
+// Meetings tab: links, prep notes, and everything the workspace shows.
+
+/** "Google Meet" / "Zoom" / "Teams" from the link, else "Join call". */
+export function meetingProvider(link: string | null | undefined): string {
+  if (!link) return "Join call";
+  try {
+    const host = new URL(link).hostname.toLowerCase();
+    if (host.endsWith("meet.google.com")) return "Google Meet";
+    if (host.endsWith("zoom.us")) return "Zoom";
+    if (host.endsWith("teams.microsoft.com") || host.endsWith("teams.live.com")) return "Teams";
+  } catch {
+    /* not a URL */
+  }
+  return "Join call";
+}
+
+function linkHost(link: string): string {
+  try {
+    const u = new URL(link);
+    return `${u.hostname}${u.pathname === "/" ? "" : u.pathname}`.slice(0, 40);
+  } catch {
+    return link.slice(0, 40);
+  }
+}
+
+export function updateMeeting(
+  id: number,
+  patch: Partial<Pick<Meeting, "topic" | "link" | "prep_notes" | "date" | "time" | "duration_minutes">>
+) {
+  const data = getData();
+  const m = data.meetings.find((x) => x.id === id);
+  if (!m) return;
+  Object.assign(m, patch);
+  persist();
+}
+
+/** Completed, with the prep notes carried into the notes log so nothing is lost. */
+export function completeMeeting(id: number) {
+  const data = getData();
+  const m = data.meetings.find((x) => x.id === id);
+  if (!m) return;
+  m.status = "completed";
+  const prep = (m.prep_notes ?? "").trim();
+  if (prep && !data.meeting_notes.some((n) => n.meeting_id === id && n.text === prep)) {
+    data.meeting_notes.push({ id: allocId("meeting_notes"), meeting_id: id, text: prep, created_at: new Date().toISOString().replace("T", " ").slice(0, 16) });
+  }
+  persist();
+}
+
+export function getClientIdForMeeting(id: number): number | null {
+  return getData().meetings.find((m) => m.id === id)?.client_id ?? null;
+}
+
+export type WorkspaceMeeting = {
+  id: number;
+  date: string;
+  time: string;
+  durationMinutes: number;
+  topic: string;
+  status: Meeting["status"];
+  link: string | null;
+  provider: string;
+  host: string;
+  prepNotes: string;
+  notes: { id: number; text: string; createdAt: string }[];
+};
+
+export function getMeetingsWorkspaceData(clientId: number) {
+  const today = localDateStr();
+  const all = listAllMeetings();
+  const view = (m: Meeting): WorkspaceMeeting => ({
+    id: m.id,
+    date: m.date,
+    time: m.time,
+    durationMinutes: m.duration_minutes,
+    topic: m.topic,
+    status: m.status,
+    link: m.link ?? null,
+    provider: meetingProvider(m.link),
+    host: m.link ? linkHost(m.link) : "",
+    prepNotes: m.prep_notes ?? "",
+    notes: listMeetingNotes(m.id).map((n) => ({ id: n.id, text: n.text, createdAt: n.created_at })),
+  });
+  const mine = listMeetings(clientId);
+  const scheduled = mine.filter((m) => m.status === "scheduled" && m.date >= today).sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1));
+  const past = mine.filter((m) => !(m.status === "scheduled" && m.date >= today));
+  const lastLink = [...mine].sort((a, b) => (a.date < b.date ? 1 : -1)).find((m) => m.link)?.link ?? null;
+  return {
+    upcoming: scheduled[0] ? view(scheduled[0]) : null,
+    alsoScheduled: scheduled.slice(1).map(view),
+    past: past.map(view),
+    dots: all
+      .filter((m) => m.status !== "cancelled")
+      .map((m) => ({ date: m.date, mine: m.client_id === clientId, completed: m.status === "completed" })),
+    others: all
+      .filter((m) => m.status === "scheduled" && m.time && m.client_id != null && m.client_id !== clientId)
+      .map((m) => ({ date: m.date, time: m.time, durationMinutes: m.duration_minutes, name: m.clientName })),
+    lastLink,
+  };
 }

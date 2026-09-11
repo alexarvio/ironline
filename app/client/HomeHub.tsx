@@ -19,6 +19,9 @@ export type CheckInStatus = {
   nextLabel: string;
 };
 export type UpcomingMeeting = {
+  link: string | null;
+  provider: string;
+  startingNow: boolean;
   monthCap: string;
   dayNumber: string;
   topic: string;
@@ -99,8 +102,13 @@ export default function HomeHub({
             <div className="home-meeting-when">
               {upcoming.whenLabel} · {upcoming.durationLabel}
             </div>
+            {upcoming.link && (
+              <a className={`home-meeting-join${upcoming.startingNow ? " live" : ""}`} href={upcoming.link} target="_blank" rel="noopener noreferrer">
+                Join {upcoming.provider}
+              </a>
+            )}
           </div>
-          <span className="home-meeting-pill">{upcoming.inLabel.toLowerCase()}</span>
+          <span className={`home-meeting-pill${upcoming.startingNow ? " live" : ""}`}>{upcoming.startingNow ? "Starting now" : upcoming.inLabel.toLowerCase()}</span>
         </div>
       )}
 
