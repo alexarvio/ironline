@@ -12487,3 +12487,13 @@ a.cd-entry:hover { border-color: var(--accent); }
   .nw-supp-cols { grid-template-columns: 1fr 90px 1fr 32px; }
   .nw-supp-cols > :nth-child(4) { display: none; }
 }
+
+/* ---- The client's own exercise notes ---- */
+.ts-mynote { display: flex; flex-direction: column; gap: 3px; width: 100%; box-sizing: border-box; margin-top: 10px; padding: 9px 12px; border-radius: 10px; border: 1px dashed #c3c9d2; background: #fafbfc; text-align: left; font: inherit; cursor: text; }
+.ts-mynote.empty { padding: 8px 12px; }
+.ts-mynote.editing { border-style: solid; border-color: #2f5d8f; background: #fff; cursor: auto; }
+.ts-mynote-label { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
+.ts-mynote-text { font-size: 13.5px; line-height: 1.4; color: #313851; white-space: pre-wrap; }
+.ts-mynote-add { font-size: 12px; font-weight: 700; color: #2f5d8f; }
+.ts-mynote-input { width: 100%; box-sizing: border-box; border: 0; padding: 0; margin-top: 2px; font: inherit; font-size: 14px; line-height: 1.4; color: #313851; background: transparent; resize: vertical; outline: none; }
+.ts-mynote-hint { font-size: 11px; color: #8b93a1; }

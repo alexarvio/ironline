@@ -72,6 +72,17 @@ export type CalorieLog = {
 };
 // A client's note on a check-in: why yesterday's steps were low, what
 // the weekly numbers don't say. One per section per period.
+// The client's own note on an exercise: machine settings, technical cues.
+// Keyed by exercise, not by assignment, so it follows the exercise across
+// weeks and programmes. Private to the client; the coach does not read it.
+export type ClientExerciseNote = {
+  id: number;
+  client_id: number;
+  exercise_id: number;
+  text: string;
+  updated_at: string;
+};
+
 export type CheckInNote = {
   id: number;
   client_id: number;
@@ -550,6 +561,7 @@ type Data = {
   client_phases: ClientPhase[];
   calorie_logs: CalorieLog[];
   check_in_notes: CheckInNote[];
+  client_exercise_notes: ClientExerciseNote[];
   // The last COACH_RESET_TOKEN value that was acted on (see
   // resetCoachFromEnv in lib/auth.ts), so a reset token left sitting in the
   // environment only ever fires once.
@@ -569,6 +581,7 @@ function emptyData(): Data {
     client_phases: [],
     calorie_logs: [],
     check_in_notes: [],
+    client_exercise_notes: [],
     exercises: [],
     program_days: [],
     workout_assignments: [],

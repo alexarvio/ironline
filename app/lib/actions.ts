@@ -147,6 +147,7 @@ import {
   PHASE_TRACKS,
   setCalorieLog,
   setCheckInNote,
+  setClientExerciseNote,
   reorderAssignments,
   copyProgramDay,
   copyProgramDayToLaterWeeks,
@@ -427,6 +428,18 @@ export async function removeProgramAction(formData: FormData) {
   removeProgram(programId);
   revalidatePath("/admin");
   redirect(weekLinkBase || "/admin");
+}
+
+// The client's own note on an exercise (machine settings, cues). The
+// assignment says which exercise and whose; the note is stored per exercise.
+export async function saveExerciseNoteAction(formData: FormData) {
+  const assignmentId = Number(formData.get("assignmentId"));
+  const owner = getClientIdForAssignment(assignmentId);
+  if (owner == null || !(await canAccessClient(owner))) return;
+  const exerciseId = getExerciseIdForAssignment(assignmentId);
+  if (exerciseId == null) return;
+  setClientExerciseNote(owner, exerciseId, String(formData.get("text") ?? ""));
+  revalidatePath("/client");
 }
 
 export async function logSetAction(formData: FormData) {

@@ -5142,6 +5142,31 @@ export function setCheckInNote(clientId: number, kind: CheckInNote["kind"], peri
   persist();
 }
 
+// ---- The client's own exercise notes ----------------------------------
+
+/** exercise_id -> note text, for one client. */
+export function getClientExerciseNotes(clientId: number): Map<number, string> {
+  const out = new Map<number, string>();
+  for (const n of getData().client_exercise_notes ?? []) if (n.client_id === clientId) out.set(n.exercise_id, n.text);
+  return out;
+}
+
+export function setClientExerciseNote(clientId: number, exerciseId: number, text: string) {
+  const data = getData();
+  if (!data.client_exercise_notes) data.client_exercise_notes = [];
+  const clean = text.trim();
+  const existing = data.client_exercise_notes.find((n) => n.client_id === clientId && n.exercise_id === exerciseId);
+  if (!clean) {
+    if (existing) data.client_exercise_notes = data.client_exercise_notes.filter((n) => n !== existing);
+  } else if (existing) {
+    existing.text = clean;
+    existing.updated_at = new Date().toISOString();
+  } else {
+    data.client_exercise_notes.push({ id: allocId("client_exercise_notes"), client_id: clientId, exercise_id: exerciseId, text: clean, updated_at: new Date().toISOString() });
+  }
+  persist();
+}
+
 export function getCheckInNote(clientId: number, kind: CheckInNote["kind"], period: string): string | null {
   return getData().check_in_notes.find((n) => n.client_id === clientId && n.kind === kind && n.period === period)?.text ?? null;
 }
