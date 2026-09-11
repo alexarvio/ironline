@@ -95,6 +95,7 @@ export type NutritionPlan = {
   water_l?: number | null;
   // A reference list, not a checklist: no state, no ticking.
   supplement_rows?: { id: number; name: string; quantity: string; timing: string; notes: string }[];
+  supplements_visible?: boolean;
 };
 
 // Fixed lists straight from the coach's original "Voeding en supplementen" tab.
@@ -3409,6 +3410,12 @@ export function setNutritionDayTargets(
   saveNutritionPlan(plan);
 }
 
+export function setSupplementsVisible(clientId: number, visible: boolean) {
+  const plan = getStoredNutritionPlan(clientId);
+  plan.supplements_visible = visible;
+  persist();
+}
+
 export function setNutritionWater(clientId: number, litres: number | null) {
   const plan = getStoredNutritionPlan(clientId);
   plan.water_l = litres;
@@ -4843,11 +4850,17 @@ export function updateClientPhase(
   let end = weekStart(endDate);
   if (start > end) [start, end] = [end, start];
   const program = phase.program_id ? data.training_programs.find((p) => p.id === phase.program_id) : undefined;
-  // A live or scheduled programme starts on its deploy week, whatever the
-  // form says; the end is the coach's to move.
+  // A programme starts on its deploy week. Moving the phase's start moves
+  // that week with it, unless the client has already trained in the
+  // programme: then the start stays put and only the end can move.
   const anchor = program ? (program.status === "deployed" ? program.deployed_at : program.scheduled_at) : null;
-  if (anchor) {
-    start = weekStart(anchor.slice(0, 10));
+  if (anchor && program) {
+    const anchored = weekStart(anchor.slice(0, 10));
+    if (start !== anchored) {
+      if (programLoggedWeekIndexes(program.id).length > 0) start = anchored;
+      else if (program.status === "deployed") program.deployed_at = `${start}${anchor.slice(10)}`;
+      else program.scheduled_at = `${start}${anchor.slice(10)}`;
+    }
     if (end < start) end = start;
   }
   // A programme's phase stays on the training track; its name is the

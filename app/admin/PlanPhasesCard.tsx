@@ -80,12 +80,6 @@ export default function PlanPhasesCard({
   const running = (track: PhaseTrack) => phases.find((p) => p.track === track && p.start_week <= thisWeek && p.end_week >= thisWeek) ?? null;
   const upcoming = phases.filter((p) => p.start_week > thisWeek).sort((a, b) => (a.start_week < b.start_week ? -1 : 1))[0] ?? null;
   const wk = (p: PlanPhaseRow) => ({ n: weeksBetween(p.start_week, thisWeek) + 1, total: weeksBetween(p.start_week, p.end_week) + 1 });
-  const nut = running("nutrition");
-  const tr = running("training");
-  const parts: string[] = [];
-  if (nut) parts.push(`${nut.name} · week ${wk(nut).n} of ${wk(nut).total}`);
-  if (tr) parts.push(`${tr.name} week ${wk(tr).n} of ${wk(tr).total}`);
-  const tail = upcoming ? `${upcoming.name} starts Mon ${shortDate(upcoming.start_week)}` : "";
 
   // Edge drag: the pointer's column decides the new start or end week.
   const weekAt = (clientX: number) => {
@@ -165,10 +159,6 @@ export default function PlanPhasesCard({
       <div className="pl-band">
         <div className="pl-band-left">
           <div className="pl-eyebrow">Phases</div>
-          <div className="pl-summary-line">
-            {parts.length ? parts.join(" · ") : "No phase running"}
-            {tail && <span className="pl-summary-tail"> · {tail}</span>}
-          </div>
         </div>
         <div className="pl-band-right">
           <div className="pl-switch" role="tablist">
@@ -281,16 +271,18 @@ export default function PlanPhasesCard({
                         }}
                         onPointerDown={(e) => {
                           if ((e.target as HTMLElement).classList.contains("pl-bar-edge")) return;
+                          // A programme the client already trained in keeps its start.
+                          if (p.program && p.program.loggedWeeks.length > 0) return;
                           beginDrag(e, p, "move");
                         }}
                         onClick={() => {
                           if (justDragged.current || drag || pending) return;
                           setDialog({ phase: p });
                         }}
-                        title={`${p.name} · click to edit`}
+                        title={p.program && p.program.loggedWeeks.length > 0 ? `${p.name} · click to edit · the client trained in this programme, so its start stays; drag the right edge to change the end` : `${p.name} · click to edit · drag to move`}
                       >
                         {!draft && isRunning && <span className="pl-bar-progress" style={{ width: `${(done / total) * 100}%`, background: tone.fg }} />}
-                        {!sp.clippedStart && <span className="pl-bar-edge left" onPointerDown={(e) => beginDrag(e, p, "start")} onClick={(e) => e.stopPropagation()} />}
+                        {!sp.clippedStart && !(p.program && p.program.loggedWeeks.length > 0) && <span className="pl-bar-edge left" onPointerDown={(e) => beginDrag(e, p, "start")} onClick={(e) => e.stopPropagation()} />}
                         {!sp.clippedEnd && <span className="pl-bar-edge right" onPointerDown={(e) => beginDrag(e, p, "end")} onClick={(e) => e.stopPropagation()} />}
                         <span className="pl-bar-main">
                           <span className="pl-bar-name">{p.name}</span>
@@ -356,7 +348,7 @@ export default function PlanPhasesCard({
                     </>
                   )}
                   {weeksOf(p.start_week, p.end_week)} weeks → <b>{weeksOf(pending.start, pending.end)} weeks</b>.
-                  {p.program && " The training programme changes with it."}
+                  {p.program && (startChanged ? " The training programme moves with it, deploy week included." : " The training programme changes with it.")}
                   {isLive && " This phase is live: the client's app changes as soon as you save."}
                 </p>
                 <div className="pb-modal-foot">

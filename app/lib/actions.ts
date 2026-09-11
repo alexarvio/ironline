@@ -133,6 +133,7 @@ import {
   ensureWeekSkeleton,
   setNutritionDayTargets,
   setNutritionNote,
+  setSupplementsVisible,
   setNutritionWater,
   addSupplementRow,
   updateSupplementRow,
@@ -856,6 +857,13 @@ export async function updateSupplementRowAction(formData: FormData) {
 export async function removeSupplementRowAction(formData: FormData) {
   await requireCoach();
   removeSupplementRow(Number(formData.get("clientId")), Number(formData.get("rowId")));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function setSupplementsVisibleAction(formData: FormData) {
+  await requireCoach();
+  setSupplementsVisible(Number(formData.get("clientId")), formData.get("visible") === "1");
   revalidatePath("/admin");
   revalidatePath("/client");
 }

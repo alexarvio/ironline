@@ -18,7 +18,6 @@ const KIND_PILL: Record<PlanGoalRow["kind"], { label: string; bg: string; fg: st
   none: { label: "—", bg: "#eef0f3", fg: "#8b93a1" },
 };
 
-const fmtDay = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" });
 const fmtShort = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { day: "numeric", month: "short" });
 
 export default function PlanGoalsCard({
@@ -67,25 +66,6 @@ export default function PlanGoalsCard({
       <div className="pl-band">
         <div className="pl-band-left">
           <div className="pl-eyebrow">Goals</div>
-          <div className="pl-summary-line">
-            {open} open · {done} done
-            <span className="pl-summary-tail">
-              {nextReview ? (
-                <>
-                  {" "}
-                  · next review {fmtDay(nextReview.date)} with the {nextReview.topic}
-                </>
-              ) : (
-                <>
-                  {" "}
-                  · no review booked —{" "}
-                  <a href={`/admin?client=${clientId}&tab=meetings`} className="pl-band-link">
-                    schedule a meeting
-                  </a>
-                </>
-              )}
-            </span>
-          </div>
         </div>
         <div className="pl-band-right">
           <div className="pl-switch" role="tablist">

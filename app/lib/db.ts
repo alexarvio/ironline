@@ -176,6 +176,8 @@ type NutritionPlan = {
   water_l?: number | null;
   // A reference list, not a checklist: no state, no ticking.
   supplement_rows?: { id: number; name: string; quantity: string; timing: string; notes: string }[];
+  // Whether the client sees the supplements list at all. Undefined = shown.
+  supplements_visible?: boolean;
 };
 
 // Coach-defined check-in columns (default: Weight/kg, Waist/cm) — the coach
