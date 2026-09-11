@@ -40,7 +40,13 @@ function tidyDecimal(e: React.FormEvent<HTMLInputElement>) {
   if (out !== el.value) el.value = out;
 }
 
-const isDone = (ex: SessionExercise) => ex.logs.length >= ex.sets;
+const hasSet = (ex: SessionExercise, n: number) => ex.logs.some((l) => l.setNumber === n);
+const nextMissing = (ex: SessionExercise) => {
+  for (let n = 1; n <= ex.sets; n++) if (!hasSet(ex, n)) return n;
+  return ex.sets + 1;
+};
+const loggedCount = (ex: SessionExercise) => Array.from({ length: ex.sets }, (_, i) => i + 1).filter((n) => hasSet(ex, n)).length;
+const isDone = (ex: SessionExercise) => nextMissing(ex) > ex.sets;
 const firstUnfinished = (list: SessionExercise[]) => list.find((ex) => !isDone(ex))?.id ?? null;
 
 export default function TrainingDaySession({
@@ -55,7 +61,7 @@ export default function TrainingDaySession({
   defaultOpen: boolean;
 }) {
   const planned = exercises.reduce((s, ex) => s + ex.sets, 0);
-  const logged = exercises.reduce((s, ex) => s + Math.min(ex.logs.length, ex.sets), 0);
+  const logged = exercises.reduce((s, ex) => s + loggedCount(ex), 0);
   const dayDone = exercises.length > 0 && exercises.every(isDone);
 
   const [open, setOpen] = useState(defaultOpen);
@@ -148,7 +154,7 @@ function CollapsedExercise({
       <span className="ts-circle">{done ? "✓" : index}</span>
       <span className="ts-row-name">{exercise.name}</span>
       <span className="ts-row-count">
-        {Math.min(exercise.logs.length, exercise.sets)}/{exercise.sets}
+        {loggedCount(exercise)}/{exercise.sets}
       </span>
       <span className="ts-chev">
         <ChevronDownIcon />
@@ -159,7 +165,7 @@ function CollapsedExercise({
 
 function ExpandedExercise({ exercise, onCollapse }: { exercise: SessionExercise; onCollapse: () => void }) {
   const done = isDone(exercise);
-  const nextSet = exercise.logs.length + 1;
+  const nextSet = nextMissing(exercise);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [pending, setPending] = useState(false);
   // The bottom button only wakes up once reps has a value.
