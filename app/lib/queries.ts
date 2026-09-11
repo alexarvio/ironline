@@ -5445,8 +5445,22 @@ export function getClientIdForGoal(id: number): number | null {
   return getData().client_goals.find((g) => g.id === id)?.client_id ?? null;
 }
 
-/** Series for a graph-choice key ("field-3" / "metric-7"). */
+// The client's own calorie log is a figure a goal can track too ("Drop kcal
+// to 2,400"), though it is not a check-in metric. One point per logged day.
+export const KCAL_GOAL_KEY = "kcal";
+function calorieSeries(clientId: number): { name: string; unit: string; series: SeriesPoint[] } {
+  return {
+    name: "Calories logged",
+    unit: "kcal",
+    series: listCalorieLogs(clientId, 100000)
+      .map((c) => ({ date: c.date, value: c.kcal }))
+      .sort((a, b) => (a.date < b.date ? -1 : 1)),
+  };
+}
+
+/** Series for a graph-choice key ("field-3" / "metric-7"), or the calorie log. */
 function seriesForKey(clientId: number, key: string): { name: string; unit: string; series: SeriesPoint[] } | null {
+  if (key === KCAL_GOAL_KEY) return calorieSeries(clientId);
   const choice = listGraphChoices(clientId).find((c) => c.key === key);
   if (!choice) return null;
   return { name: choice.name, unit: choice.unit, series: choice.kind === "field" ? getMeasurementSeries(choice.id) : getMetricSeries(choice.id) };
@@ -5551,12 +5565,15 @@ export function getGoalEditorOptions(clientId: number): GoalEditorOptions {
   return {
     today,
     phaseEnd,
-    metrics: listGraphChoices(clientId).map((c) => ({
-      key: c.key,
-      name: c.name,
-      unit: c.unit,
-      series: c.kind === "field" ? getMeasurementSeries(c.id) : getMetricSeries(c.id),
-    })),
+    metrics: [
+      ...listGraphChoices(clientId).map((c) => ({
+        key: c.key,
+        name: c.name,
+        unit: c.unit,
+        series: c.kind === "field" ? getMeasurementSeries(c.id) : getMetricSeries(c.id),
+      })),
+      { key: KCAL_GOAL_KEY, ...calorieSeries(clientId) },
+    ],
     exercises: listClientExercises(clientId).map((e) => ({ ...e, sets: loggedSetsForExercise(clientId, e.id) })),
     habits: listMetricDefinitions(clientId, "daily").map((m) => ({ id: m.id, name: m.name, weekValues: habitWeekValues(m.id, today) })),
   };

@@ -225,16 +225,27 @@ export function GoalEditor({
             <span>Target{metric?.unit ? ` (${metric.unit})` : ""}</span>
             <input type="text" inputMode="decimal" value={target} onChange={(e) => setTarget(e.target.value)} placeholder="75" />
           </label>
-          <label className="ge-field">
-            <span>By</span>
-            <select value={byMode} onChange={(e) => setByMode(e.target.value as "phase" | "custom")}>
-              {options.phaseEnd && <option value="phase">End of phase · {fmtDate(options.phaseEnd)}</option>}
-              <option value="custom">Custom date</option>
-            </select>
-          </label>
-          {byMode === "custom" && (
-            <label className="ge-field">
-              <span>Date</span>
+          {/* With a phase running, "By" offers its end or a date of your own;
+              without one there is nothing to choose, so it is just a date. */}
+          {options.phaseEnd ? (
+            <>
+              <label className="ge-field">
+                <span>By</span>
+                <select value={byMode} onChange={(e) => setByMode(e.target.value as "phase" | "custom")}>
+                  <option value="phase">End of phase · {fmtDate(options.phaseEnd)}</option>
+                  <option value="custom">Custom date</option>
+                </select>
+              </label>
+              {byMode === "custom" && (
+                <label className="ge-field">
+                  <span>Date</span>
+                  <input type="date" value={byDate} onChange={(e) => setByDate(e.target.value)} />
+                </label>
+              )}
+            </>
+          ) : (
+            <label className="ge-field ge-span2">
+              <span>By date</span>
               <input type="date" value={byDate} onChange={(e) => setByDate(e.target.value)} />
             </label>
           )}
