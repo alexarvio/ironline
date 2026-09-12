@@ -52,14 +52,15 @@ const isDone = (ex: SessionExercise) => nextMissing(ex) > ex.sets;
 const firstUnfinished = (list: SessionExercise[]) => list.find((ex) => !isDone(ex))?.id ?? null;
 
 export default function TrainingDaySession({
-  dayName,
-  label,
+  title,
   exercises,
   open,
   onToggle,
 }: {
-  dayName: string;
-  label: string | null;
+  /** The coach's name for the session, e.g. "Push day". Never a weekday:
+      the client trains it whenever they can, so "Tuesday" would be a lie by
+      Wednesday. The weekday stays on the coach's side. */
+  title: string;
   exercises: SessionExercise[];
   /** Owned by TrainingDayList so only one day is open at a time. */
   open: boolean;
@@ -96,10 +97,7 @@ export default function TrainingDaySession({
     <section className={`ts-day${dayDone ? " done" : ""}`}>
       <button type="button" className="ts-day-head" onClick={onToggle} aria-expanded={open}>
         <div className="ts-day-head-main">
-          <div className="ts-day-title">
-            {dayName}
-            {label ? ` · ${label}` : ""}
-          </div>
+          <div className="ts-day-title">{title}</div>
           <div className="ts-day-sub">
             {dayDone ? "Session complete" : position > 0 ? `Exercise ${position} of ${exercises.length}` : `${exercises.length} exercises`}
           </div>

@@ -5,8 +5,7 @@ import TrainingDaySession, { SessionExercise } from "./TrainingDaySession";
 
 export type TrainingDayProps = {
   key: number;
-  dayName: string;
-  label: string | null;
+  title: string;
   exercises: SessionExercise[];
   /** The day the week should land on: the first one not fully logged. */
   defaultOpen: boolean;
@@ -22,8 +21,7 @@ export default function TrainingDayList({ days }: { days: TrainingDayProps[] }) 
       {days.map((d) => (
         <TrainingDaySession
           key={d.key}
-          dayName={d.dayName}
-          label={d.label}
+          title={d.title}
           exercises={d.exercises}
           open={openKey === d.key}
           onToggle={() => setOpenKey((k) => (k === d.key ? null : d.key))}

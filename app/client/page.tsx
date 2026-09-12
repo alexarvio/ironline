@@ -39,7 +39,6 @@ import {
   SUPPLEMENT_ITEMS,
   VITAMIN_ITEMS,
 } from "../lib/queries";
-import { DAY_NAMES_FULL } from "../lib/db";
 import TrainingDayList from "./TrainingDayList";
 import ExerciseCoachNote from "./ExerciseCoachNote";
 import PhotoPeriodHistoryRow from "./PhotoPeriodHistoryRow";
@@ -319,8 +318,11 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
             <TrainingDayList
               days={trainingDays.map(({ day, assignments }, i) => ({
                 key: day.id,
-                dayName: DAY_NAMES_FULL[day.day_of_week - 1],
-                label: day.label,
+                // The coach's own name for the session. Without one it is
+                // numbered by its place in the week; the weekday is never
+                // shown here, so a session skipped to another day still
+                // reads correctly.
+                title: day.label || `Session ${i + 1}`,
                 defaultOpen: i === firstOpenIndex,
                 exercises: assignments.map((a) => ({
                   id: a.id,
