@@ -27,7 +27,7 @@ const TRACKS: { id: PhaseTrack; label: string }[] = [
   { id: "lifestyle", label: "Lifestyle" },
 ];
 
-type Window = 13 | 26 | 0;
+type Window = 13 | 26;
 
 export default function PlanPhasesCard({
   clientId,
@@ -55,17 +55,9 @@ export default function PlanPhasesCard({
   const [, start] = useTransition();
   const areaRef = useRef<HTMLDivElement>(null);
 
-  // The window: the current week sits around column six; "All" stretches
-  // to cover every phase on the plan.
-  const earliest = phases.map((p) => p.start_week).sort()[0];
-  const latest = phases.map((p) => p.end_week).sort().reverse()[0];
-  let first = addWeeks(thisWeek, -5);
-  let count = win === 0 ? 0 : win;
-  if (win === 0) {
-    if (earliest && earliest < first) first = earliest;
-    const last = latest && latest > addWeeks(thisWeek, 7) ? latest : addWeeks(thisWeek, 7);
-    count = weeksBetween(first, last) + 1;
-  }
+  // The window: the current week sits around column six.
+  const first = addWeeks(thisWeek, -5);
+  const count = win;
   const weeks = Array.from({ length: count }, (_, i) => addWeeks(first, i));
   const nowIdx = weeksBetween(first, thisWeek);
   const months: { label: string; span: number }[] = [];
@@ -162,9 +154,9 @@ export default function PlanPhasesCard({
         </div>
         <div className="pl-band-right">
           <div className="pl-switch" role="tablist">
-            {([13, 26, 0] as Window[]).map((w) => (
+            {([13, 26] as Window[]).map((w) => (
               <button key={w} type="button" className={`pl-switch-opt${win === w ? " active" : ""}`} onClick={() => setWin(w)}>
-                {w === 0 ? "All" : `${w} weeks`}
+                {w} weeks
               </button>
             ))}
           </div>
@@ -302,7 +294,7 @@ export default function PlanPhasesCard({
           })}
 
           {nowIdx >= 0 && nowIdx < count && (
-            <div className="pl-now" style={{ left: `calc(110px + (100% - 110px) * ${nowIdx / count})` }} aria-hidden="true">
+            <div className="pl-now-label" style={{ left: `calc(110px + (100% - 110px) * ${(nowIdx + 0.5) / count})` }} aria-hidden="true">
               <span className="pl-now-pill">Now · W{isoWeek(thisWeek)}</span>
             </div>
           )}

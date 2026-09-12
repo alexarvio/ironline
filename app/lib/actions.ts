@@ -1200,6 +1200,12 @@ export async function completeMeetingAction(formData: FormData) {
   await requireCoach();
   const id = Number(formData.get("id"));
   if (!id) return;
+  // Closing the call is the moment the coach remembers what was agreed, so
+  // the recap is written here. It reaches the client's Home; the prep notes
+  // and the notes log stay on the coach's side.
+  if (formData.has("summary")) {
+    updateMeeting(id, { summary: String(formData.get("summary") ?? "").trim() || null });
+  }
   completeMeeting(id);
   revalidatePath("/admin");
   revalidatePath("/client");

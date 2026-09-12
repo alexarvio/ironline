@@ -349,6 +349,9 @@ function UpcomingCard({
   const [editingLink, setEditingLink] = useState(false);
   const [prep, setPrep] = useState(m.prepNotes);
   const [prepState, setPrepState] = useState<"saved" | "typing" | "saving">("saved");
+  // Closing a call opens the recap box rather than just filing it away.
+  const [completing, setCompleting] = useState(false);
+  const [recap, setRecap] = useState(m.summary);
   const [, start] = useTransition();
 
   const save = (fields: Record<string, string>) => {
@@ -500,16 +503,28 @@ function UpcomingCard({
               <button type="button" className="mw-ghost" onClick={onReschedule}>
                 Reschedule
               </button>
-              <form action={completeMeetingAction}>
-                <input type="hidden" name="id" value={m.id} />
-                <button type="submit" className="mw-complete">
-                  Mark completed
-                </button>
-              </form>
+              <button type="button" className="mw-complete" onClick={() => setCompleting(true)}>
+                Mark completed
+              </button>
             </span>
           </div>
         </div>
       </div>
+
+      {completing && (
+        <CompleteDialog
+          value={recap}
+          onChange={setRecap}
+          onCancel={() => setCompleting(false)}
+          onComplete={(withRecap) => {
+            const fd = new FormData();
+            fd.set("id", String(m.id));
+            if (withRecap) fd.set("summary", recap);
+            setCompleting(false);
+            start(() => completeMeetingAction(fd));
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -714,6 +729,59 @@ function MiniCalendar({ today, selected, dots, onPick }: { today: string; select
 
 // The meeting link, set in a small dialog rather than an inline field, so
 // pasting a long URL has room and the provider is read back before saving.
+// Marking a call completed: the last chance to tell the client what came
+// out of it, so the box is here rather than only on the past row.
+function CompleteDialog({
+  value,
+  onChange,
+  onCancel,
+  onComplete,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onCancel: () => void;
+  onComplete: (withRecap: boolean) => void;
+}) {
+  return createPortal(
+    <div className="pb-modal-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onCancel()}>
+      <div className="pb-modal pb-modal-sm" role="dialog" aria-modal="true" aria-label="Mark the call completed">
+        <h2 className="pb-confirm-title">How did the call go?</h2>
+        <p className="pb-confirm-body">
+          What you write here reaches the client on their Home, under their next meeting. Your prep notes and the
+          notes log stay yours.
+        </p>
+        <form
+          className="cd-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            onComplete(true);
+          }}
+        >
+          <label className="plan-schedule-field">
+            <span>Recap for the client</span>
+            <textarea
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              rows={4}
+              placeholder="What you covered and what you agreed…"
+              autoFocus
+            />
+          </label>
+          <div className="pb-modal-foot">
+            <button type="button" className="ad-btn-secondary" onClick={() => onComplete(false)}>
+              Complete without one
+            </button>
+            <button type="submit" className="ad-btn-primary" disabled={!value.trim()}>
+              Save and complete
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 function LinkDialog({
   value,
   onChange,

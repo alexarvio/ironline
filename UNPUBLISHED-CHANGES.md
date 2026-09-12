@@ -83,6 +83,8 @@ scannable without losing anything.
 - [ ] Keep  [ ] Drop — **Current goals**: open goals only, in the order the coach dragged them into. Completed ones no longer clutter the list.
 - [ ] Keep  [ ] Drop — **Drag to reorder on the Plan tab**: every goal row has a grip, and the order the coach drops them into is the order the client sees. The drag queues on the same pending bar as the done-ticks, so it saves on Apply and Discard puts it back. Dragging inside the Open filter leaves the closed ones behind it.
 - [ ] Keep  [ ] Drop — **A reached goal no longer draws a full green bar**, which read as finished. It shows its figure and "On target since 26 Aug" instead. The coach’s table still reads 100%.
+- [ ] Keep  [ ] Drop — **Mark completed asks for the recap**: closing a call opens a box for what was covered and agreed, which goes straight to the client. "Complete without one" skips it.
+- [ ] Keep  [ ] Drop — **Plan tab phases**: the full-height now line is gone, only the Now pill over the shaded current week remains. The range switch is 13 or 26 weeks; All is gone.
 - [ ] Keep  [ ] Drop — **Reserved**: a dashed empty slot held for a bodyweight sparkline.
 - [ ] Keep  [ ] Drop — **Header** is a white band now: 26px logo, "Ironline" in Newsreader navy, and a 34px circular button carrying an accent dot when notifications are unread.
 
