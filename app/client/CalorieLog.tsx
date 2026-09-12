@@ -15,6 +15,7 @@ export default function CalorieLog({
   today,
   days,
   targetKcal,
+  between,
 }: {
   clientId: number;
   today: CalorieDay;
@@ -22,6 +23,8 @@ export default function CalorieLog({
   days: CalorieDay[];
   /** Today's kcal target, for the "of N" hint. */
   targetKcal: number | null;
+  /** Rendered between today's entry and the days already logged. */
+  between?: React.ReactNode;
 }) {
   // Which day the input is editing: today by default, or a recent day the
   // client tapped to fill in. Held as a date and looked up from props on
@@ -137,6 +140,8 @@ export default function CalorieLog({
           )}
         </section>
       </form>
+
+      {between}
 
       {days.length > 0 && (
         <div className="cl-days">

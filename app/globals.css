@@ -4700,6 +4700,9 @@ a.cd-entry:hover { border-color: var(--accent); }
     width: 100%;
     max-width: none;
     height: 100vh;
+    /* The visible viewport, not the one behind the browser bars: with 100vh
+       the page itself scrolled and the header slid under the status bar. */
+    height: 100dvh;
     aspect-ratio: auto;
     border-radius: 0;
     border: none;
@@ -13278,6 +13281,6 @@ a.cd-entry:hover { border-color: var(--accent); }
 /* The phone screen is a stack: the tab in the base layer, a pushed view
    (check-in, notifications) laid over it. The base stays mounted so its
    scroll and open state survive the round trip. */
-.app-stack { position: relative; }
-.app-layer { position: absolute; inset: 0; display: flex; flex-direction: column; min-height: 0; }
+.app-stack { display: grid; grid-template-rows: minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); }
+.app-layer { grid-area: 1 / 1; display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; }
 .app-layer-push { z-index: 5; background: var(--paper); }

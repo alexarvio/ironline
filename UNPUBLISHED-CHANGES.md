@@ -170,6 +170,11 @@ Commit `a10ba40`, ported from `next` and pushed on its own.
 
 - [x] Check-in and Notifications open as layers over the tab instead of replacing it, so closing them returns to the same scroll and the same open day. Tapping the tab you are already on does nothing rather than rebuilding it.
 
+## 25 · Nutrition: supplements above the logged days; phone screen sized to the visible viewport — ✅ LIVE 12 Sep
+
+- [x] Supplements sit between today’s calorie entry and the list of days already logged.
+- [x] On a phone the screen is sized to the visible viewport (dvh) and the tab layers are stacked with grid, so the page itself never scrolls and the header no longer slides under the status bar.
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.

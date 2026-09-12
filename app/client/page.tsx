@@ -560,6 +560,28 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
             today={{ date: today, label: dayLabel(today), kcal: getCalorieLog(CLIENT_ID, today)?.kcal ?? null, note: getCalorieLog(CLIENT_ID, today)?.note ?? null }}
             days={recent}
             targetKcal={targetKcal}
+            between={
+              <>
+              {referenceRows.length > 0 && (
+                <section className="home-dark-section">
+                  <span className="home-dark-section-title">Supplements</span>
+                  <div className="home-dark-rows">
+                    {referenceRows.map(({ item, quantity, timing, notes }) => (
+                      <div key={item} className={`nd-supp-row${notes ? " has-note" : ""}`}>
+                        <div className="nd-supp-name">{item}</div>
+                        <div className="nd-supp-detail">
+                          {quantity}
+                          {timing ? ` · ${timing}` : ""}
+                        </div>
+                        {/* The coach's note on this item, e.g. how or when to take it. */}
+                        {notes && <div className="nd-supp-note">{notes}</div>}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+              </>
+            }
           />
         );
       })()}
@@ -569,25 +591,6 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
           <span className="nd-water-label">Water goal</span>
           <span className="nd-water-value">{profile.water_goal}</span>
         </div>
-      )}
-
-      {referenceRows.length > 0 && (
-        <section className="home-dark-section">
-          <span className="home-dark-section-title">Supplements</span>
-          <div className="home-dark-rows">
-            {referenceRows.map(({ item, quantity, timing, notes }) => (
-              <div key={item} className={`nd-supp-row${notes ? " has-note" : ""}`}>
-                <div className="nd-supp-name">{item}</div>
-                <div className="nd-supp-detail">
-                  {quantity}
-                  {timing ? ` · ${timing}` : ""}
-                </div>
-                {/* The coach's note on this item, e.g. how or when to take it. */}
-                {notes && <div className="nd-supp-note">{notes}</div>}
-              </div>
-            ))}
-          </div>
-        </section>
       )}
 
       {/* Per-exercise / check-in comments from the coach. Only shown when
