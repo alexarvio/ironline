@@ -13128,7 +13128,8 @@ a.cd-entry:hover { border-color: var(--accent); }
    sessions. Save and Cancel appear once the text differs from what is
    saved. */
 .ts-prognote { display: flex; flex-direction: column; gap: 4px; margin: 0 0 16px; padding: 12px 14px; border-radius: 14px; border: 1px solid #e3e6ea; background: #fff; }
-.ts-prognote.dirty { border-color: #2f5d8f; }
+.ts-prognote { cursor: text; }
+.ts-prognote.open { border-color: #2f5d8f; cursor: auto; }
 .ts-prognote-label { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
 .ts-prognote-input { width: 100%; box-sizing: border-box; border: 0; padding: 0; margin-top: 2px; font: inherit; font-size: 14px; line-height: 1.4; color: #313851; background: transparent; resize: none; outline: none; }
 .ts-prognote-input::placeholder { color: #a0a7b3; }
