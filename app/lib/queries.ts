@@ -5825,8 +5825,11 @@ export type MeetingRecap = {
 /** The last call the coach wrote a client-facing recap for, if any. */
 export function getLastMeetingRecap(clientId: number): MeetingRecap | null {
   const today = localDateStr();
+  // A call the coach has marked completed counts whatever its date says:
+  // calls get closed early, and the recap is written at that moment. A
+  // past-dated call with a recap counts too, even if never formally closed.
   const m = listMeetings(clientId)
-    .filter((x) => x.date <= today && (x.summary ?? "").trim() && x.status !== "cancelled")
+    .filter((x) => (x.summary ?? "").trim() && x.status !== "cancelled" && (x.status === "completed" || x.date <= today))
     .sort((a, b) => (a.date === b.date ? (a.time < b.time ? 1 : -1) : a.date < b.date ? 1 : -1))[0];
   if (!m) return null;
   const d = new Date(`${m.date}T12:00:00`);
