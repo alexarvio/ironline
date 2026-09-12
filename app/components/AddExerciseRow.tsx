@@ -18,7 +18,7 @@ export default function AddExerciseRow({
 }) {
   const pending = usePendingDay();
   const [picked, setPicked] = useState<ExerciseOption | null>(null);
-  const [fields, setFields] = useState<Record<FieldKey, string>>({ sets: "", reps: "", targetWeight: "", rpe: "", tempo: "", rest: "", notes: "" });
+  const [fields, setFields] = useState<Record<FieldKey, string>>({ sets: "", reps: "", targetWeight: "", rpe: "", tempo: "", rest: "", distance: "", time: "", notes: "" });
   const [pickerKey, setPickerKey] = useState(0);
   const set = (key: FieldKey, value: string) => setFields((f) => ({ ...f, [key]: value }));
 
@@ -26,7 +26,7 @@ export default function AddExerciseRow({
     if (!pending || !picked) return;
     pending.add({ exerciseId: picked.id, exerciseName: picked.name, fields });
     setPicked(null);
-    setFields({ sets: "", reps: "", targetWeight: "", rpe: "", tempo: "", rest: "", notes: "" });
+    setFields({ sets: "", reps: "", targetWeight: "", rpe: "", tempo: "", rest: "", distance: "", time: "", notes: "" });
     setPickerKey((k) => k + 1);
   };
 
@@ -66,6 +66,10 @@ export default function AddExerciseRow({
             return <td key={col.id}>{input("tempo", { type: "text", placeholder: "e.g. 3-1-1" })}</td>;
           case "rest":
             return <td key={col.id}>{input("rest", { type: "text", placeholder: "90s" })}</td>;
+          case "distance":
+            return <td key={col.id}>{input("distance", { type: "text", placeholder: "5 km" })}</td>;
+          case "time":
+            return <td key={col.id}>{input("time", { type: "text", placeholder: "20 min" })}</td>;
           case "notes":
             return <td key={col.id}>{input("notes", { type: "text", placeholder: "optional" })}</td>;
           default:

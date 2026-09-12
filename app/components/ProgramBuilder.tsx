@@ -146,6 +146,8 @@ export default function ProgramBuilder({
           rpe: a.rpe_target == null ? "" : String(a.rpe_target),
           tempo: a.tempo ?? "",
           rest: formatRestSeconds(a.rest_seconds),
+          distance: a.distance ?? "",
+          time: a.time ?? "",
           notes: a.notes ?? "",
         },
         custom: Object.fromEntries(columns.filter((c) => c.kind === "custom").map((c) => [c.id, customValueFor(a.id, c.id)])),
@@ -405,6 +407,18 @@ export default function ProgramBuilder({
                                   placeholder="90s"
                                   defaultValue={formatRestSeconds(a.rest_seconds)}
                                 />
+                              </td>
+                            );
+                          case "distance":
+                            return (
+                              <td key={col.id}>
+                                <AssignmentFieldInput assignmentId={a.id} name="distance" type="text" placeholder="5 km" defaultValue={a.distance ?? ""} />
+                              </td>
+                            );
+                          case "time":
+                            return (
+                              <td key={col.id}>
+                                <AssignmentFieldInput assignmentId={a.id} name="time" type="text" placeholder="20 min" defaultValue={a.time ?? ""} />
                               </td>
                             );
                           case "notes":

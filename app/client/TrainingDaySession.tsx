@@ -21,6 +21,8 @@ export type SessionExercise = {
   tempo: string | null;
   /** Prescribed rest between sets, in seconds. */
   rest: number | null;
+  distance: string | null;
+  time: string | null;
   videoUrl: string | null;
   logs: SessionSet[];
   /** The coach-note bubble, rendered by the server page. */
@@ -189,6 +191,8 @@ function ExpandedExercise({ exercise, index, onCollapse }: { exercise: SessionEx
     exercise.targetWeight != null ? { value: `${exercise.targetWeight}`, unit: "kg" } : null,
     exercise.reps ? { value: exercise.reps, unit: "reps" } : null,
     exercise.targetRpe != null ? { value: `${exercise.targetRpe}`, unit: "rpe" } : null,
+    exercise.distance ? { value: exercise.distance, unit: "distance" } : null,
+    exercise.time ? { value: exercise.time, unit: "time" } : null,
     exercise.rest != null ? { value: exercise.rest < 60 ? `${exercise.rest}s` : `${Math.floor(exercise.rest / 60)}:${String(exercise.rest % 60).padStart(2, "0")}`, unit: "rest" } : null,
   ].filter((t): t is { value: string; unit: string } => !!t);
   // The client fills in only what the coach asked for. Reps are always

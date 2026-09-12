@@ -180,6 +180,10 @@ export default function ReorderableRows({
                   return <td key={col.id}>{field("tempo", { type: "text", placeholder: "e.g. 3-1-1" })}</td>;
                 case "rest":
                   return <td key={col.id}>{field("rest", { type: "text", placeholder: "90s" })}</td>;
+                case "distance":
+                  return <td key={col.id}>{field("distance", { type: "text", placeholder: "5 km" })}</td>;
+                case "time":
+                  return <td key={col.id}>{field("time", { type: "text", placeholder: "20 min" })}</td>;
                 case "notes":
                   return <td key={col.id}>{field("notes", { type: "text", placeholder: "Add a note" })}</td>;
                 default:

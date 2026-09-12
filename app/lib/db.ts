@@ -138,6 +138,11 @@ type WorkoutAssignment = {
   rpe_target: number | null;
   rest_seconds: number | null;
   tempo: string | null;
+  // Distance and time as the coach types them ("5 km", "20 min"): free
+  // text, because a run is in km and a plank is in seconds. Optional: rows
+  // written before these columns existed have no key.
+  distance?: string | null;
+  time?: string | null;
   // The coach's note on this exercise for this week. `notes` is the text and
   // long predates the rest; the three fields beside it turn that plain string
   // into something the client app can present properly — a labelled, dated,
