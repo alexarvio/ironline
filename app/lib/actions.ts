@@ -136,6 +136,8 @@ import {
   setNutritionNote,
   setNutritionWater,
   addSupplementRow,
+  applySupplementChanges,
+  type SupplementChanges,
   updateSupplementRow,
   removeSupplementRow,
   addMetricsFromLibrary,
@@ -857,6 +859,13 @@ export async function saveWaterGoalAction(formData: FormData) {
   const clientId = Number(formData.get("clientId"));
   const raw = String(formData.get("water") ?? "").trim();
   setNutritionWater(clientId, raw === "" ? null : Number(raw));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function applySupplementChangesAction(clientId: number, changes: SupplementChanges) {
+  await requireCoach();
+  applySupplementChanges(clientId, changes);
   revalidatePath("/admin");
   revalidatePath("/client");
 }

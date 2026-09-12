@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import {
-  addSupplementRowAction,
-  removeSupplementRowAction,
+  applySupplementChangesAction,
   saveCoachNutritionNoteAction,
   saveNutritionTargetsAction,
-  updateSupplementRowAction,
 } from "../lib/actions";
 import type { ClientPhase } from "../lib/db";
 import { PhaseDialog } from "./PhaseDialogButton";
+import DragList from "../components/DragList";
 
 // The Nutrition tab: three navy-banded cards. Daily targets per nutrition
 // phase with the note beside them, the supplements sheet, and the calories
@@ -267,17 +267,81 @@ function TargetsCard({ p, phase, onPickPhase, onEditPhase }: { p: NutritionWorks
 
 // ---- 2 · Supplements -----------------------------------------------------
 
-const TIMING_TONE = (t: string) => {
-  const s = t.trim().toLowerCase();
-  if (!s) return null;
-  if (s.includes("post") || s.includes("after")) return { bg: "#e6e4fa", fg: "#3a3390" };
-  if (s.includes("breakfast") || s.includes("morning")) return { bg: "#fff3dc", fg: "#8a5a12" };
-  if (s.includes("bed") || s.includes("night") || s.includes("evening")) return { bg: "#eef0f3", fg: "#5b6474" };
-  return { bg: "#dff3ea", fg: "#0f5c46" };
-};
-
 function SupplementsCard({ p }: { p: NutritionWorkspaceProps }) {
-  const addId = `nw-add-supp-${p.clientId}`;
+  // The sheet is edited as a draft. Nothing lands until Apply on the bar at
+  // the foot, the same way every other table in the admin saves: the coach
+  // can add three items and fix a quantity, see "4 changes", and land them
+  // together or throw them away.
+  type Row = NwSupplement & { isNew?: boolean; removed?: boolean };
+  const fromProps = (): Row[] => p.supplements.map((r) => ({ ...r }));
+  const [rows, setRows] = useState<Row[]>(fromProps);
+  const [seed, setSeed] = useState(JSON.stringify(p.supplements));
+  // Fresh data from the server (after Apply) replaces the draft.
+  const incoming = JSON.stringify(p.supplements);
+  if (incoming !== seed) {
+    setSeed(incoming);
+    setRows(fromProps());
+  }
+  const [applying, startApply] = useTransition();
+  const [confirmId, setConfirmId] = useState<number | null>(null);
+  // A dragged order queues on the bar too; bumping dragKey remounts the
+  // list so Discard puts the rows back where they were.
+  const [pendingOrder, setPendingOrder] = useState<number[] | null>(null);
+  const [dragKey, setDragKey] = useState(0);
+  const nextTemp = useRef(-1);
+  const focusId = useRef<number | null>(null);
+  const nameRefs = useRef<Map<number, HTMLInputElement>>(new Map());
+  useEffect(() => {
+    if (focusId.current == null) return;
+    nameRefs.current.get(focusId.current)?.focus();
+    focusId.current = null;
+  });
+
+  const saved = new Map(p.supplements.map((r) => [r.id, r]));
+  const edit = (id: number, field: keyof NwSupplement, value: string) =>
+    setRows((rs) => rs.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
+  const addRow = () => {
+    const id = nextTemp.current--;
+    focusId.current = id;
+    setRows((rs) => [...rs, { id, name: "", quantity: "", timing: "", notes: "", isNew: true }]);
+  };
+  const removeRow = (id: number) => {
+    setConfirmId(null);
+    setRows((rs) => (rs.find((r) => r.id === id)?.isNew ? rs.filter((r) => r.id !== id) : rs.map((r) => (r.id === id ? { ...r, removed: true } : r))));
+  };
+
+  const same = (a: NwSupplement, b: NwSupplement) =>
+    a.name.trim() === b.name.trim() && a.quantity.trim() === b.quantity.trim() && a.timing.trim() === b.timing.trim() && a.notes.trim() === b.notes.trim();
+  const added = rows.filter((r) => r.isNew && r.name.trim());
+  const removed = rows.filter((r) => r.removed);
+  const updated = rows.filter((r) => !r.isNew && !r.removed && saved.has(r.id) && !same(r, saved.get(r.id)!));
+  const changeCount = added.length + removed.length + updated.length + (pendingOrder ? 1 : 0);
+  const summary = [
+    ...(pendingOrder ? ["Order changed"] : []),
+    ...added.map((r) => `${r.name.trim()} added`),
+    ...updated.map((r) => `${r.name.trim() || "Item"} changed`),
+    ...removed.map((r) => `${r.name || "Item"} removed`),
+  ].join(" · ");
+  const discard = () => {
+    setRows(fromProps());
+    setPendingOrder(null);
+    setDragKey((k) => k + 1);
+  };
+  const apply = () =>
+    startApply(async () => {
+      await applySupplementChangesAction(p.clientId, {
+        added: added.map(({ name, quantity, timing, notes }) => ({ name, quantity, timing, notes })),
+        updated: updated.map(({ id, name, quantity, timing, notes }) => ({ id, name, quantity, timing, notes })),
+        removedIds: removed.map((r) => r.id),
+        order: pendingOrder?.filter((id) => id > 0) ?? undefined,
+      });
+      setPendingOrder(null);
+      setDragKey((k) => k + 1);
+    });
+
+  const visible = rows.filter((r) => !r.removed);
+  const confirming = confirmId != null ? rows.find((r) => r.id === confirmId) ?? null : null;
+
   return (
     <section className="pl-card">
       <div className="pl-band">
@@ -289,7 +353,7 @@ function SupplementsCard({ p }: { p: NutritionWorkspaceProps }) {
           </div>
         </div>
         <div className="pl-band-right">
-          <button type="submit" form={addId} className="pl-primary">
+          <button type="button" className="pl-primary" onClick={addRow}>
             + Add item
           </button>
         </div>
@@ -303,94 +367,100 @@ function SupplementsCard({ p }: { p: NutritionWorkspaceProps }) {
           <span>Notes</span>
           <span />
         </div>
-        {p.supplements.length === 0 && <div className="pl-empty-row">Nothing set yet. Add the first item below.</div>}
-        {p.supplements.map((row) => (
-          <div key={row.id} className="nw-tr nw-supp-cols">
-            <Cell clientId={p.clientId} rowId={row.id} field="name" value={row.name} placeholder="Name" className="nw-cell-item" />
-            <Cell clientId={p.clientId} rowId={row.id} field="quantity" value={row.quantity} placeholder="e.g. 5g" className="nw-cell-qty" />
-            <TimingCell clientId={p.clientId} rowId={row.id} value={row.timing} />
-            <Cell clientId={p.clientId} rowId={row.id} field="notes" value={row.notes} placeholder="Optional" className="nw-cell-notes" />
-            <form action={removeSupplementRowAction} className="nw-remove">
-              <input type="hidden" name="clientId" value={p.clientId} />
-              <input type="hidden" name="rowId" value={row.id} />
-              <button type="submit" aria-label={`Remove ${row.name || "supplement"}`}>
-                ×
-              </button>
-            </form>
-          </div>
-        ))}
-        <div className="nw-tfoot nw-supp-foot">
-          <form action={addSupplementRowAction} id={addId}>
-            <input type="hidden" name="clientId" value={p.clientId} />
-            <input name="name" type="text" placeholder="Add an item, e.g. Magnesium" className="nw-add-input" aria-label="New supplement" />
-          </form>
-          <span className="nw-hint">Quantity and timing can be filled in after</span>
-          <button type="submit" form={addId} className="ad-btn-primary nw-add-btn">
-            Add
-          </button>
-        </div>
+        {visible.length === 0 && <div className="pl-empty-row">Nothing set yet. Use + Add item.</div>}
+        <DragList
+          key={dragKey}
+          className="nw-draglist"
+          onReorder={(ids) => setPendingOrder(ids)}
+          items={visible.map((row) => {
+          const dirty = row.isNew || (saved.has(row.id) && !same(row, saved.get(row.id)!));
+          return {
+            id: row.id,
+            node: (
+            <div className={`nw-tr nw-supp-cols${dirty ? " is-queued" : ""}`}>
+              <span className="nw-cell-item">
+                <input
+                  ref={(el) => {
+                    if (el) nameRefs.current.set(row.id, el);
+                    else nameRefs.current.delete(row.id);
+                  }}
+                  className="nw-cell-input"
+                  type="text"
+                  value={row.name}
+                  placeholder="Name"
+                  aria-label="name"
+                  onChange={(e) => edit(row.id, "name", e.target.value)}
+                />
+              </span>
+              <span className="nw-cell-qty">
+                <input className="nw-cell-input" type="text" value={row.quantity} placeholder="e.g. 5g" aria-label="quantity" onChange={(e) => edit(row.id, "quantity", e.target.value)} />
+              </span>
+              <span>
+                <input className="nw-cell-input" type="text" value={row.timing} placeholder="Set timing" aria-label="timing" onChange={(e) => edit(row.id, "timing", e.target.value)} />
+              </span>
+              <span className="nw-cell-notes">
+                <input className="nw-cell-input" type="text" value={row.notes} placeholder="Optional" aria-label="notes" onChange={(e) => edit(row.id, "notes", e.target.value)} />
+              </span>
+              <span className="nw-remove">
+                <button type="button" className="nw-remove-btn" onClick={() => setConfirmId(row.id)} aria-label={`Remove ${row.name || "item"}`} title="Remove">
+                  <TrashIcon />
+                </button>
+              </span>
+            </div>
+            ),
+          };
+        })}
+        />
       </div>
+
+      {changeCount > 0 && (
+        <div className="pb-pending pl-pending" role="status" aria-live="polite">
+          <span className="pb-pending-count">
+            {changeCount} change{changeCount === 1 ? "" : "s"}
+          </span>
+          <span className="pb-pending-summary">{summary}</span>
+          <div className="pb-pending-right">
+            <span className="pb-pending-status">{applying ? "Saving…" : "Unsaved"}</span>
+            <button type="button" className="pb-pending-ghost" onClick={discard} disabled={applying}>
+              Discard
+            </button>
+            <button type="button" className="pb-pending-apply" onClick={apply} disabled={applying}>
+              {applying ? "Applying…" : "Apply"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {confirming &&
+        createPortal(
+          <div className="pb-modal-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && setConfirmId(null)}>
+            <div className="pb-modal pb-modal-sm" role="dialog" aria-modal="true" aria-label="Remove this item">
+              <h2 className="pb-confirm-title">Remove {confirming.name.trim() || "this item"}?</h2>
+              <p className="pb-confirm-body">It comes off the client&rsquo;s list when you Apply. Until then you can still Discard.</p>
+              <div className="pb-modal-foot">
+                <button type="button" className="ad-btn-secondary" onClick={() => setConfirmId(null)}>
+                  Keep it
+                </button>
+                <button type="button" className="pb-confirm-delete" onClick={() => removeRow(confirming.id)}>
+                  Remove
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </section>
   );
 }
 
-function Cell({ clientId, rowId, field, value, placeholder, className }: { clientId: number; rowId: number; field: "name" | "quantity" | "notes"; value: string; placeholder?: string; className?: string }) {
+function TrashIcon() {
   return (
-    <form action={updateSupplementRowAction} className={className}>
-      <input type="hidden" name="clientId" value={clientId} />
-      <input type="hidden" name="rowId" value={rowId} />
-      <input type="hidden" name="field" value={field} />
-      <input
-        name="value"
-        type="text"
-        defaultValue={value}
-        placeholder={placeholder}
-        aria-label={field}
-        className="nw-cell-input"
-        onBlur={(e) => {
-          if (e.currentTarget.value !== value) e.currentTarget.form?.requestSubmit();
-        }}
-      />
-    </form>
-  );
-}
-
-function TimingCell({ clientId, rowId, value }: { clientId: number; rowId: number; value: string }) {
-  const [editing, setEditing] = useState(false);
-  const tone = TIMING_TONE(value);
-  if (!editing) {
-    return (
-      <button type="button" className="nw-timing-btn" onClick={() => setEditing(true)} title="Click to change">
-        {tone ? (
-          <span className="nw-timing-pill" style={{ background: tone.bg, color: tone.fg }}>
-            {value}
-          </span>
-        ) : (
-          <span className="nw-timing-empty">Set timing</span>
-        )}
-      </button>
-    );
-  }
-  return (
-    <form action={updateSupplementRowAction} onSubmit={() => setTimeout(() => setEditing(false), 0)}>
-      <input type="hidden" name="clientId" value={clientId} />
-      <input type="hidden" name="rowId" value={rowId} />
-      <input type="hidden" name="field" value="timing" />
-      <input
-        name="value"
-        type="text"
-        defaultValue={value}
-        placeholder="Post-workout, with breakfast, before bed…"
-        aria-label="timing"
-        className="nw-cell-input editing"
-        autoFocus
-        onBlur={(e) => {
-          if (e.currentTarget.value !== value) e.currentTarget.form?.requestSubmit();
-          else setEditing(false);
-        }}
-        onKeyDown={(e) => e.key === "Escape" && setEditing(false)}
-      />
-    </form>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
   );
 }
 
@@ -411,8 +481,6 @@ function CaloriesCard({ p }: { p: NutritionWorkspaceProps }) {
     if (Math.abs(diff) <= 0) return "on target";
     return `${n(Math.abs(diff))} kcal ${diff > 0 ? "over" : "under"}`;
   };
-  const cap = 3000;
-  const strip = [...days].reverse();
 
   return (
     <section className="pl-card">
@@ -436,15 +504,6 @@ function CaloriesCard({ p }: { p: NutritionWorkspaceProps }) {
             ))}
           </div>
         </div>
-      </div>
-
-      <div className="nw-strip">
-        {strip.map((d) => (
-          <div key={d.date} className="nw-strip-day" title={d.kcal != null ? `${n(d.kcal)} kcal` : "not logged"}>
-            <span className={`nw-strip-bar ${tone(d)}`} style={{ height: d.kcal != null ? `${Math.max(6, Math.min(100, (d.kcal / cap) * 100))}%` : "4px" }} />
-            <span className="nw-strip-label">{fmtDate(d.date, { weekday: "short" })}</span>
-          </div>
-        ))}
       </div>
 
       <div className="nw-table">

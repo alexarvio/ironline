@@ -3427,6 +3427,38 @@ export function setNutritionWater(clientId: number, litres: number | null) {
   saveNutritionPlan(plan);
 }
 
+export type SupplementChanges = {
+  added: { name: string; quantity: string; timing: string; notes: string }[];
+  updated: { id: number; name: string; quantity: string; timing: string; notes: string }[];
+  removedIds: number[];
+  /** Existing ids in the order the coach dragged them into; new rows follow. */
+  order?: number[];
+};
+
+/** Everything the coach queued on the supplements sheet, landed at once. */
+export function applySupplementChanges(clientId: number, changes: SupplementChanges) {
+  const plan = getStoredNutritionPlan(clientId);
+  let rows = plan.supplement_rows ?? [];
+  rows = rows.filter((r) => !changes.removedIds.includes(r.id));
+  for (const u of changes.updated) {
+    const row = rows.find((r) => r.id === u.id);
+    if (row) Object.assign(row, { name: u.name.trim(), quantity: u.quantity.trim(), timing: u.timing.trim(), notes: u.notes.trim() });
+  }
+  for (const a of changes.added) {
+    if (!a.name.trim()) continue;
+    rows.push({ id: allocId("supplement_rows"), name: a.name.trim(), quantity: a.quantity.trim(), timing: a.timing.trim(), notes: a.notes.trim() });
+  }
+  if (changes.order) {
+    const pos = new Map(changes.order.map((id, i) => [id, i]));
+    rows = rows
+      .map((r, i) => ({ r, key: pos.has(r.id) ? pos.get(r.id)! : changes.order!.length + i }))
+      .sort((a, b) => a.key - b.key)
+      .map((x) => x.r);
+  }
+  plan.supplement_rows = rows;
+  saveNutritionPlan(plan);
+}
+
 export function addSupplementRow(clientId: number, name = "") {
   const plan = getStoredNutritionPlan(clientId);
   const rows = plan.supplement_rows ?? [];

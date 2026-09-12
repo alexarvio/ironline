@@ -109,6 +109,11 @@ Look: `/client` Home.
 - [x] **Start on Home** opens the Training tab with that session open and scrolled to the top of the screen.
 - [x] The "Only you see this" hint under the exercise note is gone.
 
+## 13 · Supplements sheet on the pending bar; calories strip gone — ✅ LIVE 12 Sep
+
+- [x] **Supplements**: edited as a draft. + Add item opens a blank row with the cursor in it; every cell is a plain input; a trash button on the row’s right asks before removing; rows drag by a grip. All of it queues on the bar at the foot ("3 changes · Zinc added · Creatine changed · Order changed") and lands on Apply or goes on Discard. The footer add box is gone.
+- [x] **Calories logged**: the weekday bar strip above the table is gone; the table carries it.
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.

@@ -13176,3 +13176,20 @@ a.cd-entry:hover { border-color: var(--accent); }
 .pl-maingoal-row input { flex: 1; min-width: 0; padding: 9px 12px; border: 1px solid #dfe3e8; border-radius: 8px; font: inherit; font-size: 14px; font-weight: 600; color: #141a24; }
 .pl-maingoal-row input:focus { outline: none; border-color: #2f5d8f; }
 .pl-maingoal-row input::placeholder { font-weight: 500; color: #a0a7b3; }
+
+
+/* Supplements sheet: the delete control at the row's end, and a queued
+   row's tint while it waits on the bar. */
+.nw-remove { display: flex; justify-content: flex-end; }
+.nw-remove-btn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #8b93a1; cursor: pointer; }
+.nw-remove-btn:hover { border-color: #dfe3e8; color: #a32d2d; background: #fbeaea; }
+.nw-tr.is-queued { background: #f4f6fa; }
+
+/* Supplement rows drag by a grip in the row's left padding, as on the Plan
+   tab's goals table, so the columns still line up with the header. */
+.nw-draglist .dl-row { position: relative; display: block; }
+.nw-draglist .dl-grip { position: absolute; left: 1px; top: 50%; margin: 0; transform: translateY(-50%); z-index: 1; padding: 8px 6px; font-size: 14px; color: #c3c9d2; }
+.nw-draglist .dl-row:hover .dl-grip { color: #8b93a1; }
+.nw-draglist .dl-body { min-width: 0; }
+.nw-draglist .dl-row.lifted { z-index: 2; }
+.nw-draglist .dl-row.lifted .nw-tr { background: #ffffff; box-shadow: 0 8px 24px -12px rgba(20, 26, 36, 0.35); }
