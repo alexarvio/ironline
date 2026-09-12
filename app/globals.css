@@ -12630,13 +12630,6 @@ a.cd-entry:hover { border-color: var(--accent); }
 
 .hm-maingoal.unset { font-weight: 500; color: #8b93a1; }
 
-.hm-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 12px;
-}
-
 .hm-chip {
   font-size: 11px;
   font-weight: 800;
@@ -12741,17 +12734,6 @@ a.cd-entry:hover { border-color: var(--accent); }
 
 .hm-today-eyebrow { color: rgba(255, 255, 255, 0.7); }
 
-.hm-today-pill {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  color: #ffffff;
-}
-
 .hm-session {
   display: flex;
   align-items: center;
@@ -12829,36 +12811,25 @@ a.cd-entry:hover { border-color: var(--accent); }
   box-shadow: 0 0 0 3px rgba(251, 233, 224, 0.25);
 }
 
-.hm-checkin-body { flex: 1; min-width: 0; }
-.hm-checkin-eyebrow { display: block; color: rgba(255, 255, 255, 0.7); }
-
-.hm-checkin-line {
+.hm-checkin-tick {
+  flex: none;
   display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin-top: 3px;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: #dff3ea;
 }
 
-.hm-checkin-names {
+.hm-checkin-tick svg { width: 14px; height: 14px; }
+
+.hm-checkin-body { flex: 1; min-width: 0; }
+
+.hm-checkin-title {
   display: block;
-  margin-top: 3px;
   font-size: 13.5px;
   font-weight: 800;
   color: #ffffff;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hm-checkin-line .hm-checkin-names { margin-top: 0; min-width: 0; }
-
-/* Never truncated: it is the bit that says there is more to see. */
-.hm-checkin-more {
-  flex: none;
-  font-size: 12px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.7);
-  white-space: nowrap;
 }
 
 .hm-checkin-chev {
@@ -12926,7 +12897,11 @@ a.cd-entry:hover { border-color: var(--accent); }
   gap: 8px;
 }
 
-.hm-meeting-top .hm-eyebrow { line-height: 1.25; }
+/* The eyebrow, the pill and the 52px leaf need 227px on one line and the
+   row has exactly that at 390px. Ten pixels is still inside the eyebrow
+   token and buys the slack; below about 380px it wraps to a tidy two-line
+   block, which only shorter copy would avoid. */
+.hm-meeting-top .hm-eyebrow { font-size: 10px; line-height: 1.25; }
 
 .hm-meeting-pill {
   flex: none;
@@ -12965,25 +12940,8 @@ a.cd-entry:hover { border-color: var(--accent); }
   border-top: 1px solid #eceff3;
 }
 
-.hm-note {
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: #f8f9fb;
-}
-
-.hm-note-text {
-  margin: 4px 0 0;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.45;
-  color: #313851;
-}
-
-.hm-note-text.muted { margin: 0; color: #8b93a1; }
-
 .hm-join {
   display: block;
-  margin-top: 12px;
   padding: 11px;
   border-radius: 8px;
   background: #1e3a6e;
@@ -12992,6 +12950,37 @@ a.cd-entry:hover { border-color: var(--accent); }
   font-weight: 700;
   text-align: center;
   text-decoration: none;
+}
+
+/* The last call's outcome, in the coach's own words. Sits under the next
+   meeting in the same card, because the two are one conversation. */
+.hm-recap.attached {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #eceff3;
+}
+
+.hm-recap-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hm-recap-date {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8b93a1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.hm-recap-text {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #313851;
 }
 
 /* ---- 4 · Goals ---- */
@@ -13050,3 +13039,21 @@ a.cd-entry:hover { border-color: var(--accent); }
 }
 
 .hm-reserved-label { color: #8b93a1; }
+
+
+/* Recap the coach writes for the client, on a past meeting row. */
+.mw-recap { margin-bottom: 14px; }
+.mw-recap-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.mw-recap-hint { font-size: 11px; font-weight: 500; color: #8b93a1; }
+.mw-recap textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #dfe3e8;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13px;
+  color: #313851;
+  resize: vertical;
+}
+.mw-recap textarea:focus { outline: none; border-color: #2f5d8f; }
+.mw-recap button { margin-top: 8px; }

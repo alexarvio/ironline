@@ -380,10 +380,11 @@ type Meeting = {
   link?: string | null;
   /** Coach-only notes written before the call. Never sent to the client. */
   prep_notes?: string | null;
-  /** What to expect, written FOR the client and shown on their Home. A
-      separate field from prep_notes on purpose: prep_notes is where the
-      coach is candid, and it must never reach the client. */
-  client_note?: string | null;
+  /** The coach's recap of what was covered and agreed, written FOR the
+      client and shown on their Home under the next meeting. Distinct from
+      prep_notes and from the meeting_notes log, both of which are the
+      coach's own. */
+  summary?: string | null;
 };
 type MeetingNote = {
   id: number;

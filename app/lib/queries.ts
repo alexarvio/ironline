@@ -3504,10 +3504,10 @@ export type Meeting = {
   topic: string;
   status: "scheduled" | "completed" | "no-show" | "cancelled";
   link?: string | null;
-  /** Coach-only. Never sent to the client; see client_note for that. */
+  /** Coach-only. Never sent to the client. */
   prep_notes?: string | null;
-  /** Written for the client, shown on their Home under the meeting. */
-  client_note?: string | null;
+  /** The coach's recap of the call, written for the client. */
+  summary?: string | null;
 };
 export type MeetingNote = {
   id: number;
@@ -3932,8 +3932,6 @@ export function setMeasurementFieldVisibleToClient(id: number, visible: boolean)
 // (this cycle). Progress pictures aren't a fourth type: they're submitted
 // as part of the measurements check-in, so they don't get their own row.
 export type CheckInStatus = {
-  /** Names of the metrics inside the due sections, in the order asked. */
-  dueItemNames: string[];
   // Zero when the coach hasn't configured any check-ins at all, which is
   // the signal to hide the section rather than claim everything's done.
   configuredCount: number;
@@ -4051,18 +4049,10 @@ export function getCheckInStatus(clientId: number): CheckInStatus {
       ? parts[0].charAt(0).toUpperCase() + parts[0].slice(1)
       : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
 
-  // The count stays the number of due sections; the names come from the
-  // metrics inside them, which is what the client actually recognises.
-  const dueItemNames: string[] = [];
-  if (dailyDue) dueItemNames.push(...dailyDefs.map((d) => d.name));
-  if (weeklyDue) dueItemNames.push(...weeklyDefs.map((d) => d.name));
-  if (measurementsDue) dueItemNames.push(...fields.map((f) => f.name));
-
   return {
     configuredCount: [dailyDefs.length, weeklyDefs.length, fields.length].filter((n) => n > 0).length,
     dueTypes,
     dueNames,
-    dueItemNames,
     nextLabel: dailyDefs.length
       ? "Next daily check-in opens tomorrow"
       : weeklyDefs.length
@@ -5636,9 +5626,10 @@ export function goalContext(clientId: number, goal: ClientGoal): GoalContext {
 }
 
 /** Goal rows as the client sees them, open goals first, done text goals last. */
+/** The client's current goals: open only, in the coach's own order. */
 export function getGoalViews(clientId: number): GoalView[] {
   return listClientGoals(clientId)
-    .filter((g) => !g.done || !g.tracked_by)
+    .filter((g) => !g.done)
     .map((g) => computeGoalView({ id: g.id, text: g.text, done: g.done, tracking: g.tracked_by ?? null }, goalContext(clientId, g)));
 }
 
@@ -5769,13 +5760,29 @@ export function getHomeDataTiles(clientId: number, weightGoalIsDown: boolean | n
 // Meetings tab: links, prep notes, and everything the workspace shows.
 
 /** "Google Meet" / "Zoom" / "Teams" from the link, else "Join call". */
+export type MeetingRecap = {
+  /** "11 Sep" — when the call was. */
+  dateLabel: string;
+  text: string;
+};
+
+/** The last call the coach wrote a client-facing recap for, if any. */
+export function getLastMeetingRecap(clientId: number): MeetingRecap | null {
+  const today = localDateStr();
+  const m = listMeetings(clientId)
+    .filter((x) => x.date <= today && (x.summary ?? "").trim() && x.status !== "cancelled")
+    .sort((a, b) => (a.date === b.date ? (a.time < b.time ? 1 : -1) : a.date < b.date ? 1 : -1))[0];
+  if (!m) return null;
+  const d = new Date(`${m.date}T12:00:00`);
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return { dateLabel: `${d.getDate()} ${MONTHS[d.getMonth()]}`, text: (m.summary ?? "").trim() };
+}
+
 export type UpNextSession = {
   /** The coach's name for it, or its place in the week when unnamed. */
   name: string;
   exercises: number;
   sets: number;
-  /** Rounded to five minutes; work plus the prescribed rest. */
-  minutes: number;
 };
 
 // The session Home offers to start: the first one this week that is not
@@ -5792,15 +5799,10 @@ export function getUpNextSession(clientId: number): UpNextSession | null {
   );
   if (index < 0) return null;
   const { day, assignments } = days[index];
-  const sets = assignments.reduce((sum, a) => sum + a.sets, 0);
-  // A set is roughly 45 seconds of work plus its prescribed rest; 90
-  // seconds when the coach has not set one.
-  const seconds = assignments.reduce((sum, a) => sum + a.sets * (45 + (a.rest_seconds ?? 90)), 0);
   return {
     name: day.label || `Session ${index + 1}`,
     exercises: assignments.length,
-    sets,
-    minutes: Math.max(5, Math.round(seconds / 60 / 5) * 5),
+    sets: assignments.reduce((sum, a) => sum + a.sets, 0),
   };
 }
 
@@ -5828,7 +5830,7 @@ function linkHost(link: string): string {
 
 export function updateMeeting(
   id: number,
-  patch: Partial<Pick<Meeting, "topic" | "link" | "prep_notes" | "date" | "time" | "duration_minutes">>
+  patch: Partial<Pick<Meeting, "topic" | "link" | "prep_notes" | "summary" | "date" | "time" | "duration_minutes">>
 ) {
   const data = getData();
   const m = data.meetings.find((x) => x.id === id);
@@ -5865,6 +5867,7 @@ export type WorkspaceMeeting = {
   provider: string;
   host: string;
   prepNotes: string;
+  summary: string;
   notes: { id: number; text: string; createdAt: string }[];
 };
 
@@ -5882,6 +5885,7 @@ export function getMeetingsWorkspaceData(clientId: number) {
     provider: meetingProvider(m.link),
     host: m.link ? linkHost(m.link) : "",
     prepNotes: m.prep_notes ?? "",
+    summary: m.summary ?? "",
     notes: listMeetingNotes(m.id).map((n) => ({ id: n.id, text: n.text, createdAt: n.created_at })),
   });
   const mine = listMeetings(clientId);

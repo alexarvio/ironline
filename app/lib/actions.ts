@@ -1184,6 +1184,7 @@ export async function updateMeetingAction(formData: FormData) {
   if (formData.has("topic")) patch.topic = String(formData.get("topic") ?? "").trim();
   if (formData.has("link")) patch.link = String(formData.get("link") ?? "").trim() || null;
   if (formData.has("prepNotes")) patch.prep_notes = String(formData.get("prepNotes") ?? "");
+  if (formData.has("summary")) patch.summary = String(formData.get("summary") ?? "").trim() || null;
   if (formData.has("date")) {
     const date = String(formData.get("date") ?? "");
     if (/^\d{4}-\d{2}-\d{2}$/.test(date)) patch.date = date;

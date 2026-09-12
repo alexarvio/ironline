@@ -49,6 +49,8 @@ export type WsMeeting = {
   provider: string;
   host: string;
   prepNotes: string;
+  /** Recap for the client; shows on their Home. */
+  summary: string;
   notes: WsNote[];
   goals: WsGoal[];
 };
@@ -548,6 +550,23 @@ function PastMeetings({ past, today }: { past: WsMeeting[]; today: string }) {
                 <div className="mw-past-tools">
                   <ConfirmDeleteButton action={removeMeetingAction} hiddenFields={{ id: m.id }} label={`Delete meeting on ${m.date}`} />
                 </div>
+                <form action={updateMeetingAction} className="mw-recap">
+                  <input type="hidden" name="id" value={m.id} />
+                  <div className="mw-recap-head">
+                    <span className="mw-label">Recap for the client</span>
+                    <span className="mw-recap-hint">Shows on their Home under the next meeting</span>
+                  </div>
+                  <textarea
+                    name="summary"
+                    defaultValue={m.summary}
+                    rows={2}
+                    placeholder="What you covered and what you agreed…"
+                    aria-label="Recap for the client"
+                  />
+                  <button type="submit" className="mw-ghost">
+                    Save recap
+                  </button>
+                </form>
                 <div className="mw-past-cols">
                   <div className="mw-col">
                     <div className="mw-label">Meeting notes</div>

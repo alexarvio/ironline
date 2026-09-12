@@ -6,6 +6,7 @@ import {
   getClient,
   getClientProfile,
   getClientPlanView,
+  getLastMeetingRecap,
   getUpNextSession,
   getCalorieLog,
   listCalorieLogs,
@@ -276,9 +277,6 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
       ]
         .filter(Boolean)
         .join(" ") + ` · ${upcomingMeeting.duration_minutes} min`,
-      // The client-facing note only. prep_notes is the coach's own and
-      // never leaves the admin side.
-      clientNote: upcomingMeeting.client_note?.trim() || null,
     };
   })();
 
@@ -323,6 +321,7 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
       goals={getGoalViews(CLIENT_ID)}
       goalsMeta={goalsMeta}
       upcoming={upcoming}
+      recap={getLastMeetingRecap(CLIENT_ID)}
       checkInStatus={checkInStatus}
     />
   );

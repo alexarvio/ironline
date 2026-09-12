@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { ChevronDownIcon } from "../components/icons";
+import { CheckIcon, ChevronDownIcon } from "../components/icons";
 import GoalRow from "../components/GoalRow";
 import { useNavigateTab, useOpenCheckIn } from "./CheckInContext";
 
@@ -15,8 +15,6 @@ export type CheckInStatus = {
   configuredCount: number;
   dueTypes: ("daily" | "weekly" | "measurements")[];
   dueNames: string;
-  /** Names of the metrics inside the due sections: "Bodyweight", "Sleep". */
-  dueItemNames: string[];
   nextLabel: string;
 };
 
@@ -39,7 +37,6 @@ export type HomeSession = {
   name: string;
   exercises: number;
   sets: number;
-  minutes: number;
 } | null;
 
 export type UpcomingMeeting = {
@@ -54,9 +51,10 @@ export type UpcomingMeeting = {
   inLabel: string;
   /** "Sunday 18:00 · 30 min". */
   whenLabel: string;
-  /** Written for the client. Never the coach's private prep notes. */
-  clientNote: string | null;
 } | null;
+
+/** The coach's recap of the last call, written for the client. */
+export type MeetingRecap = { dateLabel: string; text: string } | null;
 
 export type GoalRowView = Parameters<typeof GoalRow>[0]["goal"];
 
@@ -73,6 +71,7 @@ export default function HomeHub({
   goals,
   goalsMeta,
   upcoming,
+  recap,
   checkInStatus,
 }: {
   dateLabel: string;
@@ -86,6 +85,7 @@ export default function HomeHub({
   goals: GoalRowView[];
   goalsMeta: string;
   upcoming: UpcomingMeeting;
+  recap: MeetingRecap;
   checkInStatus: CheckInStatus;
 }) {
   return (
@@ -99,7 +99,7 @@ export default function HomeHub({
         tracks={tracks}
       />
       <TodayCard session={session} checkInStatus={checkInStatus} hasPlan={tracks.length > 0} />
-      {upcoming && <MeetingCard m={upcoming} />}
+      {(upcoming || recap) && <MeetingCard m={upcoming} recap={recap} />}
       {goals.length > 0 && <GoalsCard goals={goals} meta={goalsMeta} />}
       <div className="hm-reserved">
         <span className="hm-eyebrow hm-reserved-label">Reserved</span>
@@ -162,16 +162,6 @@ function ProfileCard({
         {mainGoal ?? "Your coach hasn’t set your main goal yet"}
       </p>
 
-      {canExpand && !open && (
-        <div className="hm-chips">
-          {tracks.map((t) => (
-            <span key={t.track} className={`hm-chip ${t.track}`}>
-              {t.label} {t.weekNow}/{t.weekTotal}
-            </span>
-          ))}
-        </div>
-      )}
-
       {canExpand && open && (
         <div className="hm-tracks">
           {tracks.map((t) => (
@@ -222,17 +212,10 @@ function TodayCard({
   const hasCheckIns = checkInStatus.configuredCount > 0;
   if (!session && !hasCheckIns && !hasPlan) return null;
 
-  // At most three names, so a client with eight daily metrics still gets a
-  // line rather than a paragraph.
-  const names = checkInStatus.dueItemNames;
-  const shown = names.slice(0, 3).join(" · ");
-  const rest = Math.max(0, names.length - 3);
-
   return (
     <section className="hm-today">
       <div className="hm-today-top">
-        <span className="hm-eyebrow hm-today-eyebrow">Today</span>
-        {session && <span className="hm-today-pill">Up next</span>}
+        <span className="hm-eyebrow hm-today-eyebrow">Up next</span>
       </div>
 
       {session ? (
@@ -240,8 +223,7 @@ function TodayCard({
           <span className="hm-session-body">
             <span className="hm-session-name">{session.name}</span>
             <span className="hm-session-meta">
-              {session.exercises} exercise{session.exercises === 1 ? "" : "s"} · {session.sets} sets · ~
-              {session.minutes} min
+              {session.exercises} exercise{session.exercises === 1 ? "" : "s"} · {session.sets} sets
             </span>
           </span>
           <span className="hm-session-start">Start</span>
@@ -256,19 +238,19 @@ function TodayCard({
           className="hm-checkin"
           onClick={() => openCheckIn?.(checkInStatus.dueTypes[0] ?? "daily")}
         >
-          {dueCount > 0 && <span className="hm-checkin-dot" aria-hidden="true" />}
-          <span className="hm-checkin-body">
-            <span className="hm-eyebrow hm-checkin-eyebrow">
-              {dueCount > 0 ? `${dueCount} check-in${dueCount === 1 ? "" : "s"} due` : "Check-ins"}
+          {dueCount > 0 ? (
+            <span className="hm-checkin-dot" aria-hidden="true" />
+          ) : (
+            <span className="hm-checkin-tick" aria-hidden="true">
+              <CheckIcon />
             </span>
-            {dueCount > 0 ? (
-              <span className="hm-checkin-line">
-                <span className="hm-checkin-names">{shown}</span>
-                {rest > 0 && <span className="hm-checkin-more">+{rest} more</span>}
-              </span>
-            ) : (
-              <span className="hm-checkin-names">Nothing due today</span>
-            )}
+          )}
+          <span className="hm-checkin-body">
+            <span className="hm-checkin-title">
+              {dueCount > 0
+                ? `${dueCount} check-in${dueCount === 1 ? "" : "s"} due`
+                : "All check-ins done"}
+            </span>
           </span>
           <span className="hm-checkin-chev" aria-hidden="true">
             <ChevronDownIcon />
@@ -281,10 +263,16 @@ function TodayCard({
 
 // ---- 3 · Next meeting ----------------------------------------------------
 
-function MeetingCard({ m }: { m: NonNullable<UpcomingMeeting> }) {
+// The next call, and under it what the last one settled. The recap is the
+// coach's own words to the client, so it is always visible rather than
+// hidden behind the chevron.
+function MeetingCard({ m, recap }: { m: UpcomingMeeting; recap: MeetingRecap }) {
   const [open, setOpen] = useState(false);
+  // Nothing to reveal without a link: no chevron, no expanded half.
+  const canExpand = !!m?.link;
   return (
     <section className="hm-card hm-meeting">
+      {m && (
       <div className="hm-meeting-row">
         <span className="hm-leaf" aria-hidden="true">
           <span className="hm-leaf-month">{m.monthCap}</span>
@@ -301,31 +289,35 @@ function MeetingCard({ m }: { m: NonNullable<UpcomingMeeting> }) {
           <div className="hm-meeting-topic">{m.topic}</div>
           <div className="hm-meeting-when">{m.whenLabel}</div>
         </div>
-        <button
-          type="button"
-          className={`hm-chev-btn${open ? " open" : ""}`}
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-          aria-label={open ? "Hide the details" : "Show the details"}
-        >
-          <ChevronDownIcon />
-        </button>
+        {canExpand && (
+          <button
+            type="button"
+            className={`hm-chev-btn${open ? " open" : ""}`}
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            aria-label={open ? "Hide the call link" : "Show the call link"}
+          >
+            <ChevronDownIcon />
+          </button>
+        )}
       </div>
+      )}
 
-      {open && (
+      {canExpand && open && (
         <div className="hm-meeting-more">
-          {m.clientNote && (
-            <div className="hm-note">
-              <span className="hm-eyebrow">From your coach</span>
-              <p className="hm-note-text">{m.clientNote}</p>
-            </div>
-          )}
-          {m.link && (
-            <a className="hm-join" href={m.link} target="_blank" rel="noopener noreferrer">
-              Join call
-            </a>
-          )}
-          {!m.clientNote && !m.link && <p className="hm-note-text muted">Nothing else to share yet.</p>}
+          <a className="hm-join" href={m!.link!} target="_blank" rel="noopener noreferrer">
+            Join call
+          </a>
+        </div>
+      )}
+
+      {recap && (
+        <div className={`hm-recap${m ? " attached" : ""}`}>
+          <div className="hm-recap-head">
+            <span className="hm-eyebrow">From the last meeting</span>
+            <span className="hm-recap-date">{recap.dateLabel}</span>
+          </div>
+          <p className="hm-recap-text">{recap.text}</p>
         </div>
       )}
     </section>
@@ -338,7 +330,7 @@ function GoalsCard({ goals, meta }: { goals: GoalRowView[]; meta: string }) {
   return (
     <section className="hm-card hm-goals">
       <div className="hm-goals-head">
-        <span className="hm-eyebrow">Goals</span>
+        <span className="hm-eyebrow">Current goals</span>
         {meta && <span className="hm-goals-meta">{meta}</span>}
       </div>
       {goals.map((g) => (
