@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { CheckIcon, ChevronDownIcon } from "../components/icons";
+import { CalendarIcon, CheckIcon, ChevronDownIcon } from "../components/icons";
 import GoalRow from "../components/GoalRow";
 import { useNavigateTab, useOpenCheckIn } from "./CheckInContext";
 
@@ -100,7 +100,7 @@ export default function HomeHub({
         tracks={tracks}
       />
       <TodayCard session={session} checkInStatus={checkInStatus} hasPlan={tracks.length > 0} />
-      {(upcoming || recap) && <MeetingCard m={upcoming} recap={recap} />}
+      <MeetingCard m={upcoming} recap={recap} />
       {goals.length > 0 && <GoalsCard goals={goals} meta={goalsMeta} />}
       <div className="hm-reserved">
         <span className="hm-eyebrow hm-reserved-label">Reserved</span>
@@ -266,13 +266,29 @@ function TodayCard({
 
 // The next call, and under it what the last one settled. The recap is the
 // coach's own words to the client, so it is always visible rather than
-// hidden behind the chevron.
+// hidden behind the chevron. With nothing booked the card still stands,
+// with a calendar in place of the date leaf, so a new client sees the slot
+// their coach will fill rather than a gap.
 function MeetingCard({ m, recap }: { m: UpcomingMeeting; recap: MeetingRecap }) {
   const [open, setOpen] = useState(false);
   // Nothing to reveal without a link: no chevron, no expanded half.
   const canExpand = !!m?.link;
   return (
     <section className="hm-card hm-meeting">
+      {!m && (
+        <div className="hm-meeting-row">
+          <span className="hm-leaf hm-leaf-empty" aria-hidden="true">
+            <CalendarIcon />
+          </span>
+          <div className="hm-meeting-main">
+            <div className="hm-meeting-top">
+              <span className="hm-eyebrow">Next with your coach</span>
+            </div>
+            <div className="hm-meeting-topic muted">Nothing booked yet</div>
+            <div className="hm-meeting-when">Your coach sets the next call.</div>
+          </div>
+        </div>
+      )}
       {m && (
       <div className="hm-meeting-row">
         <span className="hm-leaf" aria-hidden="true">

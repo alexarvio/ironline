@@ -13193,3 +13193,8 @@ a.cd-entry:hover { border-color: var(--accent); }
 .nw-draglist .dl-body { min-width: 0; }
 .nw-draglist .dl-row.lifted { z-index: 2; }
 .nw-draglist .dl-row.lifted .nw-tr { background: #ffffff; box-shadow: 0 8px 24px -12px rgba(20, 26, 36, 0.35); }
+
+/* Meeting card with nothing booked: a calendar where the date leaf goes. */
+.hm-leaf-empty { display: flex; align-items: center; justify-content: center; height: 58px; color: #8b93a1; background: #f8f9fb; }
+.hm-leaf-empty svg { width: 22px; height: 22px; }
+.hm-meeting-topic.muted { color: #5b6474; }
