@@ -46,13 +46,8 @@ Commits `3c42851`, `3213446`, `70667f7`, `c8fd5d7`, `dd09703` (part)
 
 Look: `/admin?client=5&tab=plan`.
 
-## 5 · Client notes to the coach
-Commit `fea5a08`
-
-- [ ] Keep  [ ] Drop — Client can add a note when logging kcal ("+ Add a note for your coach") and on daily / weekly / measurement check-ins.
-- [ ] Keep  [ ] Drop — Coach sees the notes on the Nutrition calorie table, the metric history table, Measurements ("Notes from the client") and the Feed.
-
-Look: `/client` Nutrition and Check-in; `/admin?client=5&tab=measurements`.
+## 5 · Client notes to the coach — already live
+Commit `fea5a08`, pushed live on its own as `7566593`. Nothing left to decide here.
 
 ## 6 · Admin Nutrition tab redesign
 Commit `dd09703`
@@ -71,10 +66,22 @@ Commits `d36a12f`, `c39e672`
 
 Look: `/client` Training tab.
 
+## 8 · Client Home reordered around one main goal
+Commit `f0b6a02` (12 Sep)
+
+- [ ] Keep  [ ] Drop — **Main goal under the name** replaces the nutrition phase. New `main_goal` on the client profile, written by the coach from the Plan tab. The Plan-tab control is still to be designed; the store, the action and the client side are in. Until one is set the line reads "Your coach hasn't set your main goal yet", quietly.
+- [ ] Keep  [ ] Drop — **New order**: name and main goal, plan rows, next meeting, Check-ins, then Goals. Goals are the coach's short-term ones, also to be set from the Plan tab.
+- [ ] Keep  [ ] Drop — **Data card off Home** for now.
+- [ ] Keep  [ ] Drop — **Training tab**: "Days trained" only. "Sets logged" is gone, it told the client nothing they could act on.
+
+Look: `/client` Home and Training tabs.
+
 ---
 
 ## Already live (for reference, nothing to decide)
-`ee73997` tapping a prefilled kg / RPE selects it · `ad6fd95` logging the same set twice no longer counts as two.
+`ee73997` tapping a prefilled kg / RPE selects it · `ad6fd95` logging the same set twice no longer counts as two · `7566593` client notes on calories and check-ins · `ba42d54` the client's own note per exercise · group 5 below, pushed as its own hotfix.
+
+Pushed live 12 Sep as `hotfix-training`: one training day open at a time, the open exercise card carries its number, and the centred set rows from `d36a12f` (so group 7's first line is live; its second line is not).
 
 ## How dropping works
 Each group is a run of commits, so a whole group can be reverted cleanly. Dropping a single line inside a group is usually possible too, but groups 1–4 share the goals data model, so dropping "Goals are one list" would also take the Meetings and Plan goal work with it.
