@@ -43,6 +43,7 @@ export const FIELD_LABEL: Record<FieldKey, string> = {
   targetWeight: "weight",
   rpe: "RPE",
   tempo: "tempo",
+  rest: "rest",
   notes: "note",
 };
 

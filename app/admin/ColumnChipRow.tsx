@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   addTrainingColumnAction,
   removeCustomTrainingColumnAction,
@@ -33,6 +34,7 @@ export default function ColumnChipRow({
 }) {
   const activeCount = choices.filter((c) => c.visible).length;
   const atCap = activeCount >= max;
+  const [adding, setAdding] = useState(false);
 
   return (
     <div className="pb-cols-row">
@@ -85,13 +87,24 @@ export default function ColumnChipRow({
         );
       })}
 
-      <form action={addTrainingColumnAction} className="pb-col-add">
-        <input type="hidden" name="clientId" value={clientId} />
-        <input name="label" type="text" placeholder="Custom column" aria-label="New custom column" />
-        <button type="submit" aria-label="Add custom column">
-          +
+      {/* A chip like the others until tapped; then the name box, so the
+          coach is not left guessing that a placeholder is an input. */}
+      {adding ? (
+        <form action={addTrainingColumnAction} className="pb-col-add" onSubmit={() => setAdding(false)}>
+          <input type="hidden" name="clientId" value={clientId} />
+          <input name="label" type="text" placeholder="Name, e.g. Band" aria-label="New custom column" autoFocus maxLength={20} onKeyDown={(e) => e.key === "Escape" && setAdding(false)} />
+          <button type="submit" aria-label="Add custom column">
+            Add
+          </button>
+          <button type="button" className="pb-col-add-cancel" onClick={() => setAdding(false)} aria-label="Cancel">
+            ×
+          </button>
+        </form>
+      ) : (
+        <button type="button" className="pb-col-chip pb-col-chip-add" onClick={() => setAdding(true)} disabled={atCap} title={atCap ? `Switch one off first. ${max} columns is the maximum` : "Add a column of your own"}>
+          + Custom column
         </button>
-      </form>
+      )}
     </div>
   );
 }

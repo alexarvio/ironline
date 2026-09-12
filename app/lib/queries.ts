@@ -860,7 +860,7 @@ export function removeAssignment(assignmentId: number) {
 // week's targets far more tedious than it needed to be.
 export function updateAssignmentFields(
   assignmentId: number,
-  fields: Partial<Pick<WorkoutAssignment, "sets" | "reps" | "target_weight_kg" | "rpe_target" | "tempo" | "notes">>
+  fields: Partial<Pick<WorkoutAssignment, "sets" | "reps" | "target_weight_kg" | "rpe_target" | "tempo" | "rest_seconds" | "notes">>
 ) {
   const data = getData();
   const assignment = data.workout_assignments.find((wa) => wa.id === assignmentId);
@@ -1254,9 +1254,39 @@ export function listTrainingColumns(clientId: number): TrainingColumn[] {
       });
     });
     persist();
-    return data.training_columns.filter((c) => c.client_id === clientId).sort((a, b) => a.order_index - b.order_index);
+    return data.training_columns.filter((c) => c.client_id === clientId).sort(columnOrder);
   }
-  return existing.sort((a, b) => a.order_index - b.order_index);
+  return existing.sort(columnOrder);
+}
+
+// Notes is prose and reads last whatever order the other columns were
+// switched on in; a column added later would otherwise land after it.
+function columnOrder(a: TrainingColumn, b: TrainingColumn) {
+  const an = a.key === "notes" ? 1 : 0;
+  const bn = b.key === "notes" ? 1 : 0;
+  return an - bn || a.order_index - b.order_index;
+}
+
+/** "90s", "1:30", "2 min", "120" → seconds; blank → null. */
+export function parseRestSeconds(raw: string): number | null {
+  const t = raw.trim().toLowerCase().replace(",", ".");
+  if (!t) return null;
+  const mmss = t.match(/^(\d+):(\d{1,2})$/);
+  if (mmss) return Number(mmss[1]) * 60 + Number(mmss[2]);
+  const m = t.match(/^(\d+(?:\.\d+)?)\s*(s|sec|secs|seconds?|m|min|mins|minutes?)?$/);
+  if (!m) return null;
+  const n = Number(m[1]);
+  const unit = m[2] ?? "s";
+  return Math.round(unit.startsWith("m") ? n * 60 : n);
+}
+
+/** Seconds → "90s" or "2:30" for the coach's cell; "" for none. */
+export function formatRestSeconds(seconds: number | null | undefined): string {
+  if (seconds == null) return "";
+  if (seconds < 60 || seconds % 30 !== 0) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const sec = seconds % 60;
+  return sec ? `${m}:${String(sec).padStart(2, "0")}` : `${m} min`;
 }
 
 /**
@@ -5388,7 +5418,7 @@ export function applyDayOrderToLaterWeeks(programDayId: number): number {
 // already logged sets against: those are left alone and reported back by
 // their programme-relative label ("W3").
 
-export type DayFieldKey = "sets" | "reps" | "targetWeight" | "rpe" | "tempo" | "notes";
+export type DayFieldKey = "sets" | "reps" | "targetWeight" | "rpe" | "tempo" | "rest" | "notes";
 export type DayFieldValues = Partial<Record<DayFieldKey, string>>;
 
 export type DayChanges = {
@@ -5407,7 +5437,7 @@ export type DayChanges = {
 };
 
 function typedDayFields(raw: DayFieldValues) {
-  const out: Partial<Pick<WorkoutAssignment, "sets" | "reps" | "target_weight_kg" | "rpe_target" | "tempo" | "notes">> = {};
+  const out: Partial<Pick<WorkoutAssignment, "sets" | "reps" | "target_weight_kg" | "rpe_target" | "tempo" | "rest_seconds" | "notes">> = {};
   const num = (v: string | undefined) => {
     const t = (v ?? "").trim().replace(",", ".");
     return t ? Number(t) : null;
@@ -5417,6 +5447,7 @@ function typedDayFields(raw: DayFieldValues) {
   if (raw.targetWeight != null) out.target_weight_kg = num(raw.targetWeight);
   if (raw.rpe != null) out.rpe_target = num(raw.rpe);
   if (raw.tempo != null) out.tempo = raw.tempo.trim() || null;
+  if (raw.rest != null) out.rest_seconds = parseRestSeconds(raw.rest);
   if (raw.notes != null) out.notes = raw.notes.trim() || null;
   return out;
 }
@@ -5486,7 +5517,7 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
 
     for (const add of changes.added) {
       if (mirror && byExercise(add.exerciseId)) continue;
-      const typed = typedDayFields({ sets: "3", reps: "", targetWeight: "", rpe: "", tempo: "", notes: "", ...add.fields });
+      const typed = typedDayFields({ sets: "3", reps: "", targetWeight: "", rpe: "", tempo: "", rest: "", notes: "", ...add.fields });
       data.workout_assignments.push({
         id: allocId("workout_assignments"),
         program_day_id: day.id,
@@ -5496,7 +5527,7 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
         reps: typed.reps ?? "",
         target_weight_kg: typed.target_weight_kg ?? null,
         rpe_target: typed.rpe_target ?? null,
-        rest_seconds: null,
+        rest_seconds: typed.rest_seconds ?? null,
         tempo: typed.tempo ?? null,
         notes: typed.notes ?? null,
         demo_url: null,
