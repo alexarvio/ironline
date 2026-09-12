@@ -183,7 +183,7 @@ export default function ReorderableRows({
                 case "distance":
                   return <td key={col.id}>{field("distance", { type: "text", placeholder: "5 km" })}</td>;
                 case "time":
-                  return <td key={col.id}>{field("time", { type: "text", placeholder: "20 min" })}</td>;
+                  return <td key={col.id}>{field("time", { type: "text" })}</td>;
                 case "notes":
                   return <td key={col.id}>{field("notes", { type: "text", placeholder: "Add a note" })}</td>;
                 default:
