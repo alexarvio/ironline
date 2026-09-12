@@ -13315,14 +13315,14 @@ a.cd-entry:hover { border-color: var(--accent); }
 .app-layer-push { z-index: 5; background: var(--paper); }
 
 /* Cardio on a programme day: coach side, under the exercise table. */
-.pb-cardio { margin: 12px 0 0; padding: 0 0 4px; border-top: 1px dashed #dfe3e8; }
+.pb-cardio { margin: 0; padding: 0; }
 .pb-cardio-head { display: flex; align-items: baseline; gap: 10px; padding: 12px 22px 2px; }
 .pb-cardio-title { font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
 .pb-cardio-hint { font-size: 11px; font-weight: 500; color: #8b93a1; }
 /* The cardio table borrows the exercise table's skeleton so the cells line
    up; the wrap keeps the same gutters as the exercise table above. */
 .pb-cardio .exercise-table-wrap { margin: 0; }
-.pb-cardio-table thead th { padding-top: 8px; }
+.pb-cardio-table thead th { border-top: 1px solid var(--border); }
 .pb-cardio-overflow { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; min-height: 0; }
 .pb-cardio-overflow:empty { display: none; }
 .pb-cardio-inline { display: inline-flex; align-items: center; gap: 6px; }
