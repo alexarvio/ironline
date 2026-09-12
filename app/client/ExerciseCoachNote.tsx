@@ -19,7 +19,8 @@ export default function ExerciseCoachNote({
   text,
   unread,
 }: {
-  assignmentId: number;
+  /** null: a note with no read tracking (cardio); the dot is never "unread". */
+  assignmentId: number | null;
   dateLabel: string;
   text: string | null;
   unread: boolean;
@@ -36,7 +37,7 @@ export default function ExerciseCoachNote({
       // Fire and forget: the dot is already gone locally, and a failed write
       // only means it comes back on the next load — better than blocking the
       // panel from opening.
-      void markExerciseNoteReadAction(assignmentId);
+      if (assignmentId != null) void markExerciseNoteReadAction(assignmentId);
     }
   };
 
@@ -75,7 +76,7 @@ export default function ExerciseCoachNote({
                     Form / Load / Tempo — it was a second decision per note that
                     changed nothing, and the note itself says what it is. */}
                 <span className="ex-note-kind">Finlay</span>
-                <span className="ex-note-date">{dateLabel}</span>
+                {dateLabel && <span className="ex-note-date">{dateLabel}</span>}
               </div>
               <p className="ex-note-text">{text}</p>
             </>

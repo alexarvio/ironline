@@ -9,6 +9,8 @@ import {
   requireCoach,
 } from "./auth";
 import {
+  getClientIdForCardio,
+  setCardioDone,
   addClientGoal,
   listClientGoals,
   updateClientGoal,
@@ -1588,6 +1590,17 @@ export async function setBuiltinColumnVisibleAction(formData: FormData) {
   setBuiltinColumnVisible(clientId, key, visible);
   revalidatePath("/admin");
   revalidatePath("/client");
+}
+
+// The client ticks a cardio entry off (or back on). Same ownership rule as
+// logging a set: the entry says whose it is, the session says who may write.
+export async function setCardioDoneAction(entryId: number, done: boolean) {
+  if (!entryId) return;
+  const owner = getClientIdForCardio(entryId);
+  if (owner == null || !(await canAccessClient(owner))) return;
+  setCardioDone(entryId, done);
+  revalidatePath("/client");
+  revalidatePath("/admin");
 }
 
 export async function markExerciseNoteReadAction(assignmentId: number) {

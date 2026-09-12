@@ -5509,6 +5509,30 @@ export type CardioChanges = {
   added: Record<CardioFieldKey, string>[];
 };
 
+export function getClientIdForCardio(entryId: number): number | null {
+  const data = getData();
+  const entry = (data.cardio_entries ?? []).find((c) => c.id === entryId);
+  if (!entry) return null;
+  return data.program_days.find((pd) => pd.id === entry.program_day_id)?.client_id ?? null;
+}
+
+export function isCardioDone(entryId: number): boolean {
+  return (getData().cardio_logs ?? []).some((l) => l.cardio_entry_id === entryId);
+}
+
+// Tick or untick a cardio entry. A double tap is idempotent either way.
+export function setCardioDone(entryId: number, done: boolean) {
+  const data = getData();
+  data.cardio_logs = data.cardio_logs ?? [];
+  const clientId = getClientIdForCardio(entryId);
+  if (clientId == null) return;
+  const has = data.cardio_logs.some((l) => l.cardio_entry_id === entryId);
+  if (done && !has) data.cardio_logs.push({ id: allocId("cardio_logs"), cardio_entry_id: entryId, client_id: clientId, done_at: localStamp() });
+  else if (!done && has) data.cardio_logs = data.cardio_logs.filter((l) => l.cardio_entry_id !== entryId);
+  else return;
+  persist();
+}
+
 export function listCardioForDay(programDayId: number): CardioEntry[] {
   return (getData().cardio_entries ?? [])
     .filter((c) => c.program_day_id === programDayId)
