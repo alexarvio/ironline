@@ -151,28 +151,27 @@ export default function TrainingDaySession({
                 <span className="ts-cardio-tag">Cardio</span>
                 <span className="ts-cardio-name">{c.name}</span>
               </div>
-              <div className="ts-cardio-line">
-                {c.time && (
-                  <span>
-                    <b>{c.time}</b> <small>time</small>
-                  </span>
-                )}
-                {c.pace && (
-                  <span>
-                    <b>{c.pace}</b> <small>pace</small>
-                  </span>
-                )}
-                {c.incline && (
-                  <span>
-                    <b>{c.incline}</b> <small>incline</small>
-                  </span>
-                )}
-                {c.distance && (
-                  <span>
-                    <b>{c.distance}</b> <small>distance</small>
-                  </span>
-                )}
-              </div>
+              {/* The targets as a grid of tiles, one per filled field. */}
+              {(() => {
+                const cells = (
+                  [
+                    ["Time", c.time],
+                    ["Pace", c.pace],
+                    ["Incline", c.incline],
+                    ["Distance", c.distance],
+                  ] as const
+                ).filter(([, v]) => v);
+                return cells.length ? (
+                  <div className="ts-cardio-grid" style={{ gridTemplateColumns: `repeat(${cells.length}, minmax(0, 1fr))` }}>
+                    {cells.map(([label, v]) => (
+                      <div key={label} className="ts-cardio-cell">
+                        <b>{v}</b>
+                        <small>{label}</small>
+                      </div>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
               {c.notes && <div className="ts-cardio-note">{c.notes}</div>}
             </div>
           ))}
