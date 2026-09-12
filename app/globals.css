@@ -13202,3 +13202,13 @@ a.cd-entry:hover { border-color: var(--accent); }
 .hm-leaf-empty { display: flex; align-items: center; justify-content: center; height: 58px; color: #8b93a1; background: #f8f9fb; }
 .hm-leaf-empty svg { width: 22px; height: 22px; }
 .hm-meeting-topic.muted { color: #5b6474; }
+
+/* The calorie note uses the programme-note box; it sits full width under
+   the kcal row inside the form. */
+.cl-prognote { flex-basis: 100%; grid-column: 1 / -1; margin: 10px 0 0; }
+
+/* The programme's name above the week strip on the client's Training tab. */
+.ts-program-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 2px 0 12px; }
+.ts-program-eyebrow { font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; flex-basis: 100%; }
+.ts-program-name { font-size: 22px; font-weight: 800; line-height: 1.2; letter-spacing: -0.01em; color: #141a24; }
+.ts-program-meta { font-size: 12.5px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }

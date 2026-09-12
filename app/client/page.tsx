@@ -23,6 +23,7 @@ import {
   getNotifications,
   getNutritionGoalsSummary,
   getNutritionPlan,
+  getCurrentPhase,
   getPhotoCadence,
   getPhotoPeriodNote,
   getPublishedWeek,
@@ -509,8 +510,17 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   ];
   const coachNotes = coachNotesFor(CLIENT_ID, 3);
 
+  // The nutrition phase the client is in, named the way the coach named it
+  // on the Plan tab, above the targets it sets.
+  const nutritionPhase = getCurrentPhase(CLIENT_ID, "nutrition");
   return (
     <div className="nutrition-dark">
+      {nutritionPhase && (
+        <div className="ts-program-head">
+          <span className="ts-program-eyebrow">Nutrition phase</span>
+          <span className="ts-program-name">{nutritionPhase.name}</span>
+        </div>
+      )}
       {!hasTargets ? (
         <p className="empty-note">Your coach hasn&rsquo;t set up nutrition targets yet.</p>
       ) : (
@@ -994,6 +1004,15 @@ export default async function ClientPage({
       icon: <DumbbellIcon />,
       content: (
         <div className="training-dark">
+          {/* The programme's name: the coach had to give it one to deploy it,
+              and the client should see what the block is called. */}
+          {deployedProgram?.name && (
+            <div className="ts-program-head">
+              <span className="ts-program-eyebrow">Programme</span>
+              <span className="ts-program-name">{deployedProgram.name}</span>
+              <span className="ts-program-meta">{deployedProgram.total_weeks} week{deployedProgram.total_weeks === 1 ? "" : "s"}</span>
+            </div>
+          )}
           <ClientWeekSwitcher
             weeks={trainingWeeks}
             currentWeek={currentWeekNum}

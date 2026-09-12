@@ -44,7 +44,6 @@ export default function CalorieLog({
   const value = draft ?? stored;
   const storedNote = editing.note ?? "";
   const noteValue = noteDraft ?? storedNote;
-  const showNote = noteOpen || storedNote !== "" || (noteDraft ?? "") !== "";
   const isSaved = value !== "" && value === stored;
   const noteSaved = noteValue.trim() === storedNote.trim();
 
@@ -89,31 +88,54 @@ export default function CalorieLog({
         <button type="submit" className={`cl-save${isSaved ? " saved" : ""}`} disabled={pending || isSaved || value === ""}>
           {pending ? "…" : isSaved ? "Saved ✓" : "Save"}
         </button>
-        {showNote ? (
-          <div className="cl-notebox">
-            <span className="cl-field-label">Note for your coach</span>
-            <div className="cl-notebox-row">
-              <textarea
-                name="note"
-                className="cl-note"
-                value={noteValue}
-                onChange={(e) => setNoteDraft(e.target.value)}
-                placeholder="Ate out, rough estimate, felt low on energy…"
-                aria-label="Note for your coach"
-                maxLength={500}
-                rows={2}
-              />
-              <button type="submit" className={`cl-save cl-note-save${noteSaved ? " saved" : ""}`} disabled={pending || noteSaved || value === ""}>
-                {pending ? "…" : noteSaved ? "Saved ✓" : "Save"}
-              </button>
+        {/* Same box as the programme note on the Training tab: tap to open,
+            Cancel and Save from the first tap. The note is stored with the
+            day's calories, so Save is the form's submit. */}
+        <section
+          className={`ts-prognote cl-prognote${noteOpen ? " open" : ""}`}
+          onClick={() => {
+            if (!noteOpen) setNoteOpen(true);
+          }}
+        >
+          <span className="ts-prognote-label">Note for your coach{pending ? " · saving…" : ""}</span>
+          <textarea
+            name="note"
+            className="ts-prognote-input"
+            value={noteValue}
+            rows={noteOpen ? 4 : 2}
+            onFocus={() => setNoteOpen(true)}
+            onChange={(e) => setNoteDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setNoteDraft(null);
+                setNoteOpen(false);
+              }
+            }}
+            placeholder="Ate out, rough estimate, felt low on energy…"
+            aria-label="Note for your coach"
+            maxLength={500}
+          />
+          {noteOpen && (
+            <div className="ts-prognote-foot">
+              {value === "" && <span className="ts-prognote-hint">Enter your calories first — the note is saved with them.</span>}
+              <span className="ts-mynote-btns">
+                <button
+                  type="button"
+                  className="ts-mynote-cancel"
+                  onClick={() => {
+                    setNoteDraft(null);
+                    setNoteOpen(false);
+                  }}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="ts-mynote-save" disabled={pending || noteSaved || value === ""} onClick={() => setNoteOpen(false)}>
+                  Save
+                </button>
+              </span>
             </div>
-            {value === "" && !noteSaved && <span className="cl-note-hint">Enter your calories above first — the note is saved with them.</span>}
-          </div>
-        ) : (
-          <button type="button" className="cl-note-add" onClick={() => setNoteOpen(true)}>
-            + Add a note for your coach
-          </button>
-        )}
+          )}
+        </section>
       </form>
 
       {days.length > 0 && (

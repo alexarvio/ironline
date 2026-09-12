@@ -126,6 +126,12 @@ Look: `/client` Home.
 
 - [x] The main goal is set in the display serif at title size, so it reads as what the programme is for. The Up next card grew: bigger session name, a larger Start button, a taller check-in row.
 
+## 17 · Calorie note box, programme and phase titles — ✅ LIVE 12 Sep
+
+- [x] The calorie note for the coach is the same tap-to-open box as the programme note: Cancel and Save from the first tap, and a line saying the note saves with the calories while the kcal field is empty.
+- [x] The client’s Training tab shows the programme’s name above the week strip, with its length.
+- [x] The client’s Nutrition tab shows the current nutrition phase’s name above the targets, when the coach has one on the plan.
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.
