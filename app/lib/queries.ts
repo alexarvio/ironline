@@ -3890,13 +3890,9 @@ export function sendChatMessage(
   });
   persist();
   if (sender === "coach" && getClientPreferences(clientId).coach_notes) {
-    const preview = text.length > 80 ? `${text.slice(0, 77)}…` : text;
-    // No action link: this used to deep-link into the chat thread, which is
-    // cut from the first beta. The notification still tells them a message
-    // arrived; there is just nowhere to send them yet.
-    logCoachActivity(clientId, preview ? `Your coach sent you a message: "${preview}"` : "Your coach sent you a message", {
-      kind: "coach_note",
-    });
+    // The notification is the message. There is no chat screen in this
+    // beta, so the client reads it in full right there.
+    logCoachActivity(clientId, text || "Your coach sent you a message", { kind: "coach_note" });
   }
 }
 

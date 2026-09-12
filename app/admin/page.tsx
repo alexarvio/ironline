@@ -3,6 +3,7 @@ import AdminSidebar from "./AdminSidebar";
 import SectionTabs, { TabSection } from "./SectionTabs";
 import NutritionPanel from "./NutritionPanel";
 import MeetingsPanel from "./MeetingsPanel";
+import MessagesPanel from "./MessagesPanel";
 import MeasurementsPanel from "./MeasurementsPanel";
 import ClientOverviewPanel from "./ClientOverviewPanel";
 import FeedPanel from "./FeedPanel";
@@ -134,6 +135,8 @@ function ClientDashboard({
     { id: "nutrition", label: "Nutrition", content: <NutritionPanel clientId={clientId} /> },
     { id: "measurements", label: "Measurements", content: <MeasurementsPanel clientId={clientId} /> },
     { id: "meetings", label: "Meetings", content: <MeetingsPanel clientId={clientId} /> },
+    // Messages is always the last tab. New sections go before it.
+    { id: "messages", label: "Messages", content: <MessagesPanel clientId={clientId} /> },
   ];
 
 
