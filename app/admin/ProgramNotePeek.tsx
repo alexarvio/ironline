@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
-// The client's note about the programme, folded into a card on the week
-// row. A dot on the card says there is text the coach has not opened yet;
-// opening it marks that version seen (per browser, keyed by when the note
-// was last written), so an edited note lights the dot again.
+// The client's note about the programme, as a card on the week row the
+// same height as the week pills. Tapping it opens the note in a dialog,
+// so the row keeps its shape. A dot on the card says there is text the
+// coach has not opened yet; opening marks that version seen (per browser,
+// keyed by when the note was last written), so an edited note lights the
+// dot again.
 export default function ProgramNotePeek({
   programId,
   note,
@@ -51,9 +54,25 @@ export default function ProgramNotePeek({
           <span className="pb-note-peek-label">{note ? `Note from ${note.from}` : "No note from the client"}</span>
           <span className="pb-note-peek-sub">{note ? (unseen ? `New · ${when}` : `About this programme · ${when}`) : "About this programme"}</span>
         </span>
-        {note && <span className={`pb-note-peek-chev${open ? " up" : ""}`} aria-hidden="true">⌄</span>}
+        {note && <span className="pb-note-peek-chev" aria-hidden="true">›</span>}
       </button>
-      {open && note && <p className="pb-note-peek-body">{note.text}</p>}
+      {open &&
+        note &&
+        createPortal(
+          <div className="pb-modal-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}>
+            <div className="pb-modal pb-modal-sm" role="dialog" aria-modal="true" aria-label={`Note from ${note.from}`}>
+              <h2 className="pb-confirm-title">Note from {note.from}</h2>
+              <p className="pb-confirm-body pb-note-modal-meta">About this programme · written {when}</p>
+              <p className="pb-note-modal-text">{note.text}</p>
+              <div className="pb-modal-foot">
+                <button type="button" className="ad-btn-primary" onClick={() => setOpen(false)}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

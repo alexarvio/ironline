@@ -175,6 +175,11 @@ Commit `a10ba40`, ported from `next` and pushed on its own.
 - [x] Supplements sit between today’s calorie entry and the list of days already logged.
 - [x] On a phone the screen is sized to the visible viewport (dvh) and the tab layers are stacked with grid, so the page itself never scrolls and the header no longer slides under the status bar.
 
+## 26 · Programme note as a dialog; nutrition cards keep only their titles — ✅ LIVE 12 Sep
+
+- [x] The client’s programme note card matches the week pills’ height and opens the note in a dialog rather than expanding in place. A long programme no longer scrolls the whole page sideways; only the week rail scrolls.
+- [x] The Daily targets, Supplements and Calories logged cards show just their titles; the summary line under each is gone.
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.
