@@ -274,7 +274,10 @@ export default function PlanPhasesCard({
                         }}
                         title={p.program && p.program.loggedWeeks.length > 0 ? `${p.name} · click to edit · the client trained in this programme, so its start stays; drag the right edge to change the end` : `${p.name} · click to edit · drag to move`}
                       >
-                        {!draft && isRunning && <span className="pl-bar-progress" style={{ width: `${(done / total) * 100}%`, background: tone.fg }} />}
+                        {/* The fill covers the done weeks that are inside the window: a phase
+                            that started before the window is clipped, so done/total would
+                            paint the wrong share of the stub that is showing. */}
+                        {!draft && isRunning && <span className="pl-bar-progress" style={{ width: `${(Math.max(0, Math.min(sp.b - sp.a + 1, nowIdx - sp.a)) / (sp.b - sp.a + 1)) * 100}%`, background: tone.fg }} />}
                         {!sp.clippedStart && !(p.program && p.program.loggedWeeks.length > 0) && <span className="pl-bar-edge left" onPointerDown={(e) => beginDrag(e, p, "start")} onClick={(e) => e.stopPropagation()} />}
                         {!sp.clippedEnd && <span className="pl-bar-edge right" onPointerDown={(e) => beginDrag(e, p, "end")} onClick={(e) => e.stopPropagation()} />}
                         <span className="pl-bar-main">
