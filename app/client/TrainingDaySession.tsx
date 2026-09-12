@@ -11,7 +11,7 @@ import { ChevronDownIcon } from "../components/icons";
 // nothing about what is stored changes.
 
 export type SessionSet = { id: number; setNumber: number; weight: number | null; reps: number | null; rpe: number | null };
-export type SessionCardio = { id: number; name: string; time: string; pace: string; incline: string; notes: string };
+export type SessionCardio = { id: number; name: string; time: string; pace: string; incline: string; distance: string; notes: string };
 
 export type SessionExercise = {
   id: number;
@@ -165,6 +165,11 @@ export default function TrainingDaySession({
                 {c.incline && (
                   <span>
                     <b>{c.incline}</b> <small>incline</small>
+                  </span>
+                )}
+                {c.distance && (
+                  <span>
+                    <b>{c.distance}</b> <small>distance</small>
                   </span>
                 )}
               </div>

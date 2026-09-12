@@ -13297,7 +13297,8 @@ a.cd-entry:hover { border-color: var(--accent); }
    up; the wrap keeps the same gutters as the exercise table above. */
 .pb-cardio .exercise-table-wrap { margin: 0; }
 .pb-cardio-table thead th { padding-top: 8px; }
-.pb-cardio-overflow { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+.pb-cardio-overflow { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; min-height: 0; }
+.pb-cardio-overflow:empty { display: none; }
 .pb-cardio-inline { display: inline-flex; align-items: center; gap: 6px; }
 .pb-cardio-inline span { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; }
 .pb-cardio-inline input { width: 64px; }

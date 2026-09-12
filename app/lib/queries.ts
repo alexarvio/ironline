@@ -5455,7 +5455,7 @@ export function applyDayOrderToLaterWeeks(programDayId: number): number {
 export type DayFieldKey = "sets" | "reps" | "targetWeight" | "rpe" | "tempo" | "rest" | "distance" | "time" | "notes";
 export type DayFieldValues = Partial<Record<DayFieldKey, string>>;
 
-export type CardioFieldKey = "name" | "time" | "pace" | "incline" | "notes";
+export type CardioFieldKey = "name" | "time" | "pace" | "incline" | "distance" | "notes";
 export type CardioFieldValues = Partial<Record<CardioFieldKey, string>>;
 export type CardioChanges = {
   /** entry id -> changed fields. */
@@ -5628,7 +5628,7 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
     for (const [idStr, raw] of Object.entries(changes.cardio.fields)) {
       const target = cardioTarget(Number(idStr));
       if (!target || target.program_day_id !== day.id) continue;
-      for (const k of ["name", "time", "pace", "incline", "notes"] as const) if (raw[k] != null) target[k] = raw[k]!.trim();
+      for (const k of ["name", "time", "pace", "incline", "distance", "notes"] as const) if (raw[k] != null) target[k] = raw[k]!.trim();
     }
     for (const add of changes.cardio.added) {
       const name = (add.name ?? "").trim();
@@ -5641,6 +5641,7 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
         time: (add.time ?? "").trim(),
         pace: (add.pace ?? "").trim(),
         incline: (add.incline ?? "").trim(),
+        distance: (add.distance ?? "").trim(),
         notes: (add.notes ?? "").trim(),
         order_index: cardioRows().length,
       });

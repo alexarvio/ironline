@@ -102,6 +102,8 @@ export type CardioEntry = {
   time: string;
   pace: string;
   incline: string;
+  /** Added after the first cardio rows existed; older rows read as "". */
+  distance?: string;
   notes: string;
   order_index: number;
 };

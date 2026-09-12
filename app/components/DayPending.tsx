@@ -22,10 +22,10 @@ export type PendingAssignment = {
 };
 export type NewExercise = { tempId: number; exerciseId: number; exerciseName: string; fields: Record<FieldKey, string> };
 export type DayColumn = { id: number; kind: "builtin" | "custom"; key: string; label: string };
-export type CardioKey = "name" | "time" | "pace" | "incline" | "notes";
+export type CardioKey = "name" | "time" | "pace" | "incline" | "distance" | "notes";
 export type PendingCardio = { id: number; fields: Record<CardioKey, string> };
 export type NewCardio = { tempId: number; fields: Record<CardioKey, string> };
-export const EMPTY_CARDIO: Record<CardioKey, string> = { name: "", time: "", pace: "", incline: "", notes: "" };
+export const EMPTY_CARDIO: Record<CardioKey, string> = { name: "", time: "", pace: "", incline: "", distance: "", notes: "" };
 
 type Draft = {
   fields: Record<number, Partial<Record<FieldKey, string>>>;

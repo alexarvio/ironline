@@ -407,7 +407,7 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
                 // reads correctly.
                 title: day.label || `Session ${i + 1}`,
                 defaultOpen: i === firstOpenIndex,
-                cardio: listCardioForDay(day.id).map((c) => ({ id: c.id, name: c.name, time: c.time, pace: c.pace, incline: c.incline, notes: c.notes })),
+                cardio: listCardioForDay(day.id).map((c) => ({ id: c.id, name: c.name, time: c.time, pace: c.pace, incline: c.incline, distance: c.distance ?? "", notes: c.notes })),
                 exercises: assignments.map((a) => ({
                   id: a.id,
                   name: a.exercise_name ?? "Exercise",
