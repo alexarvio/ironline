@@ -99,6 +99,10 @@ client. `getUpNextSession()` picks the session Home offers to start.
 
 Look: `/client` Home.
 
+## 11 · Plan tab goals table: Live figure only — ✅ LIVE 12 Sep
+
+- [x] The Progress column is gone. Live shows the current figure alone ("90 kg", "3 of 7"), with no "reached" or "on pace" after it; the rule underneath the goal already says what it is measured against.
+
 ## Still to build
 
 1. **The Plan-tab control that writes the main goal.** The field, the server action and the client side are in. There is no way for the coach to set it yet, so every client currently reads "Your coach hasn't set your main goal yet". This is the first thing to do.

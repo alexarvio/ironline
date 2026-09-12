@@ -6010,13 +6010,14 @@ export function getPlanData(clientId: number) {
     let by: string | null = null;
     if (view.kind === "metric" && t?.kind === "metric") {
       const figure = (view.barLabel ?? "").split(" · ")[0];
-      live = `${figure} · ${view.reached ? "reached" : (view.sub ?? "").includes("on pace") ? "on pace" : (view.sub ?? "").includes("behind") ? "behind" : (view.sub ?? "").includes("slipped") ? "slipped" : "tracking"}`;
+      // The figure alone: the coach reads it against the rule underneath.
+      live = figure;
       pct = view.reached ? 100 : Math.round((view.bar ?? 0) * 100);
       const s = seriesForKey(clientId, t.metricKey);
       rule = `Metric · ${s?.name ?? "Metric"} ${t.op} ${fmtNumber(t.target)}${s?.unit ? ` ${s.unit}` : ""} · by ${fmtShort(t.byDate)}`;
       by = fmtShort(t.byDate);
     } else if (view.kind === "exercise" && t?.kind === "exercise") {
-      live = (view.right ?? "").replace(/^best /, "");
+      live = (view.right ?? "").replace(/^best /, "").split(" · ")[0];
       const name = getData().exercises.find((e) => e.id === t.exerciseId)?.name ?? "Exercise";
       const sets = loggedSetsForExercise(clientId, t.exerciseId).filter((s) => s.weight != null);
       const best = sets.length ? Math.max(...sets.map((s) => s.weight as number)) : 0;
@@ -6024,7 +6025,7 @@ export function getPlanData(clientId: number) {
       rule = `Exercise · ${name} · ${fmtNumber(t.weight)} × ${t.reps}${t.maxRpe != null ? ` @ ≤${t.maxRpe}` : ""}`;
       by = "ongoing";
     } else if (view.kind === "habit" && t?.kind === "habit") {
-      live = `${view.segments?.done ?? 0} of ${view.segments?.total ?? 0} · ${view.tone === "green" ? "on track" : "behind"}`;
+      live = `${view.segments?.done ?? 0} of ${view.segments?.total ?? 0}`;
       pct = Math.round(((view.segments?.done ?? 0) / Math.max(1, view.segments?.total ?? 1)) * 100);
       const name = getData().metric_definitions.find((m) => m.id === t.metricId)?.name ?? "Check-in";
       rule = `Habit · ${name} ${t.op} ${t.value.toLocaleString("en-US")} · ${t.daysPerWeek} / wk`;

@@ -112,7 +112,6 @@ export default function PlanGoalsCard({
           <span>Goal</span>
           <span>Tracks</span>
           <span>Live</span>
-          <span>Progress</span>
           <span>Set in</span>
           <span>By</span>
           <span />
@@ -151,12 +150,6 @@ export default function PlanGoalsCard({
                 </span>
               </span>
               <span className={`pl-live ${dotClass}`}>{g.live || (g.done ? "done" : "")}</span>
-              <span className="pl-td-progress">
-                <span className="pl-progress">
-                  <span className={`pl-progress-fill ${dotClass}`} style={{ width: `${Math.max(0, Math.min(100, g.pct))}%` }} />
-                </span>
-                <span className="pl-pct">{Math.max(0, Math.min(100, g.pct))}%</span>
-              </span>
               <span className="pl-td-setin">
                 {g.setIn ? (
                   <a href={`/admin?client=${clientId}&tab=meetings`} className="pl-link">

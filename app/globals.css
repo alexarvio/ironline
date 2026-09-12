@@ -12328,7 +12328,7 @@ a.cd-entry:hover { border-color: var(--accent); }
 
 /* Goals table */
 .pl-table { display: flex; flex-direction: column; }
-.pl-thead, .pl-tr { display: grid; grid-template-columns: 32px 1.8fr 130px 1.4fr 1fr 150px 110px 64px; align-items: center; gap: 10px; }
+.pl-thead, .pl-tr { display: grid; grid-template-columns: 32px 2fr 130px 1.2fr 150px 110px 64px; align-items: center; gap: 10px; }
 .pl-thead { padding: 10px 22px; background: #fafbfc; border-bottom: 1px solid #dfe3e8; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #5b6474; }
 .pl-tr { padding: 12px 22px; border-bottom: 1px solid #eceff3; font-size: 13.5px; }
 .pl-tr.is-done { opacity: 0.55; }
