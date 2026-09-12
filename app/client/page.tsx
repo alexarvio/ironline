@@ -39,7 +39,7 @@ import {
   VITAMIN_ITEMS,
 } from "../lib/queries";
 import { DAY_NAMES_FULL } from "../lib/db";
-import TrainingDaySession from "./TrainingDaySession";
+import TrainingDayList from "./TrainingDayList";
 import ExerciseCoachNote from "./ExerciseCoachNote";
 import PhotoPeriodHistoryRow from "./PhotoPeriodHistoryRow";
 import HomeHub, { UpcomingMeeting } from "./HomeHub";
@@ -428,42 +428,44 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
             ({ assignments }) => !assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets)
           );
           const myNotes = getClientExerciseNotes(CLIENT_ID);
-          return trainingDays.map(({ day, assignments }, i) => (
-            <TrainingDaySession
-              key={day.id}
-              dayName={DAY_NAMES_FULL[day.day_of_week - 1]}
-              label={day.label}
-              defaultOpen={i === firstOpenIndex}
-              exercises={assignments.map((a) => ({
-                id: a.id,
-                name: a.exercise_name ?? "Exercise",
-                sets: a.sets,
-                reps: a.reps,
-                targetWeight: a.target_weight_kg,
-                targetRpe: a.rpe_target,
-                tempo: a.tempo,
-                // The coach's demo for this prescription wins; the exercise
-                // library's own video is the fallback.
-                videoUrl: a.exercise_video_url ?? a.demo_url ?? null,
-                myNote: myNotes.get(a.exercise_id) ?? "",
-                logs: getLogsForAssignment(a.id).map((l) => ({
-                  id: l.id,
-                  setNumber: l.set_number,
-                  weight: l.weight_kg,
-                  reps: l.reps,
-                  rpe: l.rpe_actual,
-                })),
-                note: (
-                  <ExerciseCoachNote
-                    assignmentId={a.id}
-                    dateLabel={noteDateLabel(a.note_at)}
-                    text={a.notes}
-                    unread={!!a.notes && !a.note_read}
-                  />
-                ),
+          return (
+            <TrainingDayList
+              days={trainingDays.map(({ day, assignments }, i) => ({
+                key: day.id,
+                dayName: DAY_NAMES_FULL[day.day_of_week - 1],
+                label: day.label,
+                defaultOpen: i === firstOpenIndex,
+                exercises: assignments.map((a) => ({
+                  id: a.id,
+                  name: a.exercise_name ?? "Exercise",
+                  sets: a.sets,
+                  reps: a.reps,
+                  targetWeight: a.target_weight_kg,
+                  targetRpe: a.rpe_target,
+                  tempo: a.tempo,
+                  // The coach's demo for this prescription wins; the exercise
+                  // library's own video is the fallback.
+                  videoUrl: a.exercise_video_url ?? a.demo_url ?? null,
+                  myNote: myNotes.get(a.exercise_id) ?? "",
+                  logs: getLogsForAssignment(a.id).map((l) => ({
+                    id: l.id,
+                    setNumber: l.set_number,
+                    weight: l.weight_kg,
+                    reps: l.reps,
+                    rpe: l.rpe_actual,
+                  })),
+                  note: (
+                    <ExerciseCoachNote
+                      assignmentId={a.id}
+                      dateLabel={noteDateLabel(a.note_at)}
+                      text={a.notes}
+                      unread={!!a.notes && !a.note_read}
+                    />
+                  ),
+              })),
               }))}
             />
-          ));
+          );
         })()
       )}
     </div>
