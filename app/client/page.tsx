@@ -388,14 +388,9 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
         </p>
       ) : (
         (() => {
-          // Auto-open the first day that isn't fully logged yet, so the
-          // client lands on today's (or the next outstanding) workout
-          // instead of a wall of collapsed containers. A completed day is
-          // always closed — including when every day is done, in which case
-          // nothing opens and the week reads as finished.
-          const firstOpenIndex = trainingDays.findIndex(
-            ({ assignments }) => !assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets)
-          );
+          // Every session starts folded. The only thing that opens one is
+          // Home's "Start", which hands TrainingDayList the day to land on.
+          const firstOpenIndex = -1;
           const myNotes = getClientExerciseNotes(CLIENT_ID);
           return (
             <TrainingDayList
