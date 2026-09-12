@@ -230,7 +230,9 @@ export default function ProgramBuilder({
           }
           summary={summary}
           isRest={isRest}
-          defaultOpen={!isRest}
+          // Every day starts folded; the coach opens the one they are working
+          // on, or Expand all. Keyed by day, so an open day survives an Apply.
+          defaultOpen={false}
           footSlot={<PendingChangesBar />}
         >
           <div key="table" className="exercise-table-wrap">
