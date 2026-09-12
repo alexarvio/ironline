@@ -6,8 +6,8 @@ import ExercisePicker from "./ExercisePicker";
 
 // Cardio for the day, under the exercise table and built on the same
 // column skeleton, so its cells line up with the exercise cells above:
-// grip, activity, then the day's prescription columns with Time, Pace and
-// Incline taking the first three slots and Notes its own, then the logged
+// grip, activity, then the day's prescription columns with Time, Pace,
+// Incline and Distance taking the first four slots and Notes its own, then the logged
 // band and the action column. The activity comes from the library's cardio
 // group through the same picker the exercise rows use.
 type ExerciseOption = { id: number; name: string };
@@ -18,6 +18,7 @@ const CARDIO_FIELDS: { key: CardioKey; label: string }[] = [
   { key: "time", label: "Time" },
   { key: "pace", label: "Pace" },
   { key: "incline", label: "Incline" },
+  { key: "distance", label: "Distance" },
 ];
 
 // Which cardio field, if any, a given exercise column slot carries.
@@ -45,7 +46,7 @@ export default function CardioBlock({
   if (!pending) return null;
   const columns = pending.columns;
   const slots = slotFor(columns);
-  // Fields with no column slot (a day with fewer than three prescription
+  // Fields with no column slot (a day with fewer than four prescription
   // columns) fall into the logged band, so nothing is ever unreachable.
   const overflow = CARDIO_FIELDS.filter((f) => !slots.includes(f.key));
   const hasNotesSlot = slots.includes("notes");
@@ -84,7 +85,8 @@ export default function CardioBlock({
     );
 
   const overflowCell = (value: (k: CardioKey) => string, set: (k: CardioKey, v: string) => void, changed: (k: CardioKey) => boolean, onEnter?: () => void) => (
-    <td className="logged-col pb-cardio-overflow">
+    <td className="logged-col">
+      <div className="pb-cardio-overflow">
       {overflow.map((f) => (
         <label key={f.key} className="pb-cardio-inline">
           <span>{f.label}</span>
@@ -97,6 +99,7 @@ export default function CardioBlock({
           <input type="text" value={value("notes")} onChange={(e) => set("notes", e.target.value)} onKeyDown={onEnter ? (e) => e.key === "Enter" && onEnter() : undefined} aria-label="Notes" className={changed("notes") ? "pb-changed" : undefined} />
         </label>
       )}
+      </div>
     </td>
   );
 
@@ -113,7 +116,7 @@ export default function CardioBlock({
                 {slots[i] ? labelOf(slots[i]!) : ""}
               </th>
             ))}
-            <th className="logged-col">{overflow.length || !hasNotesSlot ? "" : ""}</th>
+            <th className="logged-col"></th>
             <th aria-hidden="true" style={{ width: "58px" }}></th>
           </tr>
         </thead>

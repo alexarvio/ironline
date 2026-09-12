@@ -179,7 +179,7 @@ export default function ProgramBuilder({
           remainingLabel={remainingLabel}
           columns={columns.map((c) => ({ id: c.id, kind: c.kind, key: c.key, label: c.label }))}
           assignments={pendingAssignments}
-          cardio={listCardioForDay(day.id).map((c) => ({ id: c.id, fields: { name: c.name, time: c.time, pace: c.pace, incline: c.incline, notes: c.notes } }))}
+          cardio={listCardioForDay(day.id).map((c) => ({ id: c.id, fields: { name: c.name, time: c.time, pace: c.pace, incline: c.incline, distance: c.distance ?? "", notes: c.notes } }))}
           label={day.label ?? ""}
           isRest={markedRest}
         >
