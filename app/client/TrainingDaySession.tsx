@@ -1,7 +1,8 @@
 "use client";
 
 import { ReactNode, useEffect, useId, useRef, useState, useTransition } from "react";
-import { logSetAction, saveExerciseNoteAction, updateSetAction } from "../lib/actions";
+import { logSetAction, saveExerciseNoteAction, setCardioDoneAction, updateSetAction } from "../lib/actions";
+import ExerciseCoachNote from "./ExerciseCoachNote";
 import { ChevronDownIcon } from "../components/icons";
 
 // One training day, logged in focus mode: one exercise open at a time,
@@ -11,7 +12,7 @@ import { ChevronDownIcon } from "../components/icons";
 // nothing about what is stored changes.
 
 export type SessionSet = { id: number; setNumber: number; weight: number | null; reps: number | null; rpe: number | null };
-export type SessionCardio = { id: number; name: string; time: string; pace: string; incline: string; distance: string; notes: string };
+export type SessionCardio = { id: number; name: string; time: string; pace: string; incline: string; distance: string; notes: string; done: boolean };
 
 export type SessionExercise = {
   id: number;
@@ -77,7 +78,7 @@ export default function TrainingDaySession({
 }) {
   const planned = exercises.reduce((s, ex) => s + ex.sets, 0);
   const logged = exercises.reduce((s, ex) => s + loggedCount(ex), 0);
-  const dayDone = exercises.length > 0 && exercises.every(isDone);
+  const dayDone = exercises.length + cardio.length > 0 && exercises.every(isDone) && cardio.every((c) => c.done);
 
   // Which exercise is expanded; starts on the first with sets still to log.
   const [expandedId, setExpandedId] = useState<number | null>(() => firstUnfinished(exercises) ?? exercises[0]?.id ?? null);
@@ -145,39 +146,57 @@ export default function TrainingDaySession({
               />
             )
           )}
-          {cardio.map((c) => (
-            <div key={`c${c.id}`} className="ts-cardio">
-              <div className="ts-cardio-head">
-                <span className="ts-cardio-tag">Cardio</span>
-                <span className="ts-cardio-name">{c.name}</span>
-              </div>
-              {/* The targets as a grid of tiles, one per filled field. */}
-              {(() => {
-                const cells = (
-                  [
-                    ["Time", c.time],
-                    ["Pace", c.pace],
-                    ["Incline", c.incline],
-                    ["Distance", c.distance],
-                  ] as const
-                ).filter(([, v]) => v);
-                return cells.length ? (
-                  <div className="ts-cardio-grid" style={{ gridTemplateColumns: `repeat(${cells.length}, minmax(0, 1fr))` }}>
-                    {cells.map(([label, v]) => (
-                      <div key={label} className="ts-cardio-cell">
-                        <b>{v}</b>
-                        <small>{label}</small>
-                      </div>
-                    ))}
-                  </div>
-                ) : null;
-              })()}
-              {c.notes && <div className="ts-cardio-note">{c.notes}</div>}
-            </div>
+          {cardio.map((c, i) => (
+            <CardioCard key={`c${c.id}`} cardio={c} index={exercises.length + i + 1} />
           ))}
         </div>
       )}
     </section>
+  );
+}
+
+// Cardio on the same card as an exercise: number, name, the coach's note
+// top right, the targets as tiles, and one button to tick it off. There
+// are no sets to log, so done is a single tap, and a second tap undoes it.
+function CardioCard({ cardio, index }: { cardio: SessionCardio; index: number }) {
+  const [pending, startTransition] = useTransition();
+  const done = cardio.done;
+  const cells = (
+    [
+      ["Time", cardio.time],
+      ["Pace", cardio.pace],
+      ["Incline", cardio.incline],
+      ["Distance", cardio.distance],
+    ] as const
+  ).filter(([, v]) => v);
+  return (
+    <div className={`ts-card ts-cardio${done ? " done" : ""}`}>
+      <div className="ts-card-head">
+        <span className={`ts-circle ${done ? "done" : "active"}`}>{done ? "✓" : index}</span>
+        <span className="ts-card-name">{cardio.name}</span>
+        <span className="ts-card-tools">
+          <ExerciseCoachNote assignmentId={null} dateLabel="" text={cardio.notes || null} unread={false} />
+        </span>
+      </div>
+      {cells.length > 0 && (
+        <div className="ts-cardio-grid" style={{ gridTemplateColumns: `repeat(${cells.length}, minmax(0, 1fr))` }}>
+          {cells.map(([label, v]) => (
+            <div key={label} className="ts-cardio-cell">
+              <b>{v}</b>
+              <small>{label}</small>
+            </div>
+          ))}
+        </div>
+      )}
+      <button
+        type="button"
+        className={`ts-cardio-done${done ? " is-done" : ""}`}
+        disabled={pending}
+        onClick={() => startTransition(() => setCardioDoneAction(cardio.id, !done))}
+      >
+        {done ? "Done ✓ · tap to undo" : "Mark as done"}
+      </button>
+    </div>
   );
 }
 

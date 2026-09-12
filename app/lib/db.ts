@@ -108,6 +108,16 @@ export type CardioEntry = {
   order_index: number;
 };
 
+/** The client ticked a cardio entry off. One row per entry; removing the
+    row un-ticks it. The entry belongs to one programme week, so the week
+    is implied. */
+export type CardioLog = {
+  id: number;
+  cardio_entry_id: number;
+  client_id: number;
+  done_at: string;
+};
+
 export type ClientProgramNote = {
   id: number;
   client_id: number;
@@ -610,6 +620,7 @@ type Data = {
   client_exercise_notes: ClientExerciseNote[];
   client_program_notes: ClientProgramNote[];
   cardio_entries: CardioEntry[];
+  cardio_logs: CardioLog[];
   // The last COACH_RESET_TOKEN value that was acted on (see
   // resetCoachFromEnv in lib/auth.ts), so a reset token left sitting in the
   // environment only ever fires once.
@@ -632,6 +643,7 @@ function emptyData(): Data {
     client_exercise_notes: [],
     client_program_notes: [],
     cardio_entries: [],
+    cardio_logs: [],
     exercises: [],
     program_days: [],
     workout_assignments: [],
