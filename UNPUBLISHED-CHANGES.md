@@ -81,6 +81,7 @@ scannable without losing anything.
 - [ ] Keep  [ ] Drop — **Next meeting** with a calendar-leaf tile and a status pill that turns green ten minutes before the call. The chevron shows only when the coach has set a call link, and reveals nothing but the Join button.
 - [ ] Keep  [ ] Drop — **From the last meeting**: a recap the coach writes for the client, attached under the next meeting in the same card. Written from a box on the coach's past-meeting row.
 - [ ] Keep  [ ] Drop — **Current goals**: open goals only, in the order the coach dragged them into. Completed ones no longer clutter the list.
+- [ ] Keep  [ ] Drop — **Drag to reorder on the Plan tab**: every goal row has a grip, and the order the coach drops them into is the order the client sees. Dragging inside the Open filter leaves the closed ones behind it.
 - [ ] Keep  [ ] Drop — **Reserved**: a dashed empty slot held for a bodyweight sparkline.
 - [ ] Keep  [ ] Drop — **Header** is a white band now: 26px logo, "Ironline" in Newsreader navy, and a 34px circular button carrying an accent dot when notifications are unread.
 

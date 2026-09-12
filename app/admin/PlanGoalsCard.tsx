@@ -2,14 +2,16 @@
 
 import { useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { applyGoalDoneChangesAction, removeClientGoalAction } from "../lib/actions";
+import { applyGoalDoneChangesAction, removeClientGoalAction, reorderClientGoalsAction } from "../lib/actions";
 import type { GoalEditorOptions, PlanGoalRow } from "../lib/queries";
 import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
+import DragList from "../components/DragList";
 import { GoalEditor } from "./GoalsPanel";
 
 // The goals card on the Plan tab: every goal as a table row with its live
 // standing, progress and where it was set. One list per client; the
-// Meetings tab and the client's Home read the same goals.
+// Meetings tab and the client's Home read the same goals, in the order
+// the coach drags them into here.
 
 const KIND_PILL: Record<PlanGoalRow["kind"], { label: string; bg: string; fg: string }> = {
   metric: { label: "Metric", bg: "#dff3ea", fg: "#0f5c46" },
@@ -93,13 +95,18 @@ export default function PlanGoalsCard({
           <span />
         </div>
         {rows.length === 0 && <div className="pl-empty-row">{filter === "done" ? "Nothing closed yet." : "No goals yet. Add the first one."}</div>}
-        {rows.map((g) => {
+        <DragList
+          className="pl-draglist"
+          onReorder={(ids) => void reorderClientGoalsAction(clientId, ids)}
+          items={rows.map((g) => {
           const isDone = doneOf(g);
           const queued = pendingDone[g.id] != null;
           const dotClass = isDone ? "done" : g.kind === "none" ? "hollow" : g.tone === "orange" ? "orange" : "green";
           const pill = KIND_PILL[g.kind];
-          return (
-            <div key={g.id} className={`pl-tr${isDone ? " is-done" : ""}${queued ? " is-queued" : ""}`}>
+          return {
+            id: g.id,
+            node: (
+            <div className={`pl-tr${isDone ? " is-done" : ""}${queued ? " is-queued" : ""}`}>
               <span className="pl-td-dot">
                 {g.kind === "none" ? (
                   <label className="pl-check" title={isDone ? "Mark not done" : "Mark done"}>
@@ -144,9 +151,11 @@ export default function PlanGoalsCard({
                 <ConfirmDeleteButton action={removeClientGoalAction} hiddenFields={{ id: g.id }} label={`Delete goal: ${g.text}`} />
               </span>
             </div>
-          );
+            ),
+          };
         })}
-        <div className="pl-tfoot">Linked goals update themselves from check-ins and logged sets. Text-only goals are closed by hand — tick the box.</div>
+        />
+        <div className="pl-tfoot">Drag a row by its grip to change the order the client sees. Linked goals update themselves from check-ins and logged sets. Text-only goals are closed by hand — tick the box.</div>
       </div>
 
       {pendingList.length > 0 && (

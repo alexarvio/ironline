@@ -12388,6 +12388,26 @@ a.cd-entry:hover { border-color: var(--accent); }
 .pl-check-box { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid #c3c9d2; background: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: #fff; box-sizing: border-box; transition: background 0.12s, border-color 0.12s; }
 .pl-check input:checked + .pl-check-box { background: #2f7a3f; border-color: #2f7a3f; }
 .pl-check input:focus-visible + .pl-check-box { outline: 2px solid #1e3a6e; outline-offset: 2px; }
+/* Reorderable goal rows. The grip sits inside the row's 22px left padding
+   rather than taking a column, so the grid still matches the header. */
+.pl-draglist .dl-row { position: relative; display: block; }
+.pl-draglist .dl-grip {
+  position: absolute;
+  left: 1px;
+  top: 50%;
+  margin: 0;
+  transform: translateY(-50%);
+  z-index: 1;
+  /* The glyph is only 7px wide; the padding is the actual grab target. */
+  padding: 8px 6px;
+  font-size: 14px;
+  color: #c3c9d2;
+}
+.pl-draglist .dl-row:hover .dl-grip { color: #8b93a1; }
+.pl-draglist .dl-body { min-width: 0; }
+.pl-draglist .dl-row.lifted { position: relative; z-index: 2; }
+.pl-draglist .dl-row.lifted .pl-tr { background: #ffffff; box-shadow: 0 8px 24px -12px rgba(20, 26, 36, 0.35); }
+
 .pl-tr.is-queued { background: #f4f6fa; }
 .pl-tr.is-done.is-queued { opacity: 0.8; }
 .pl-pending { border-radius: 0 0 12px 12px; }
