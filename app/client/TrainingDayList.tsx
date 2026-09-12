@@ -21,8 +21,14 @@ export default function TrainingDayList({ days }: { days: TrainingDayProps[] }) 
   // the screen, so the client lands on the session rather than above it.
   const focus = useFocusRef();
   const rowRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  // Applied once per arrival. Every saved set re-renders the list with a
+  // fresh days array, and re-running this would drag the client back to the
+  // Start day: closing the day they had moved to and scrolling away from the
+  // set they were logging.
+  const applied = useRef<number | null>(null);
   useEffect(() => {
-    if (focus == null || !days.some((d) => d.key === focus)) return;
+    if (focus == null || applied.current === focus || !days.some((d) => d.key === focus)) return;
+    applied.current = focus;
     setOpenKey(focus);
     const t = setTimeout(() => rowRefs.current.get(focus)?.scrollIntoView({ block: "start", behavior: "smooth" }), 60);
     return () => clearTimeout(t);
