@@ -22,6 +22,10 @@ export type PendingAssignment = {
 };
 export type NewExercise = { tempId: number; exerciseId: number; exerciseName: string; fields: Record<FieldKey, string> };
 export type DayColumn = { id: number; kind: "builtin" | "custom"; key: string; label: string };
+export type CardioKey = "name" | "time" | "pace" | "incline" | "notes";
+export type PendingCardio = { id: number; fields: Record<CardioKey, string> };
+export type NewCardio = { tempId: number; fields: Record<CardioKey, string> };
+export const EMPTY_CARDIO: Record<CardioKey, string> = { name: "", time: "", pace: "", incline: "", notes: "" };
 
 type Draft = {
   fields: Record<number, Partial<Record<FieldKey, string>>>;
@@ -33,9 +37,10 @@ type Draft = {
   moved: number[];
   label: string | null;
   rest: boolean | null;
+  cardio: { fields: Record<number, Partial<Record<CardioKey, string>>>; removed: number[]; added: NewCardio[] };
 };
 
-const EMPTY: Draft = { fields: {}, custom: {}, removed: [], added: [], order: null, moved: [], label: null, rest: null };
+const EMPTY: Draft = { fields: {}, custom: {}, removed: [], added: [], order: null, moved: [], label: null, rest: null, cardio: { fields: {}, removed: [], added: [] } };
 
 export const FIELD_LABEL: Record<FieldKey, string> = {
   sets: "sets",
@@ -86,6 +91,15 @@ type Ctx = {
   setRest: (v: boolean) => void;
   apply: () => void;
   discard: () => void;
+  cardio: PendingCardio[];
+  cardioValue: (id: number, key: CardioKey) => string;
+  isCardioRemoved: (id: number) => boolean;
+  setCardioField: (id: number, key: CardioKey, value: string) => void;
+  removeCardio: (id: number) => void;
+  restoreCardio: (id: number) => void;
+  addCardio: (fields: Record<CardioKey, string>) => void;
+  unaddCardio: (tempId: number) => void;
+  setAddedCardioField: (tempId: number, key: CardioKey, value: string) => void;
 };
 
 const PendingContext = createContext<Ctx | null>(null);
@@ -108,6 +122,7 @@ export function DayPendingProvider({
   remainingLabel,
   columns,
   assignments,
+  cardio = [],
   label,
   isRest,
   children,
@@ -119,6 +134,7 @@ export function DayPendingProvider({
   remainingLabel: string;
   columns: DayColumn[];
   assignments: PendingAssignment[];
+  cardio?: PendingCardio[];
   label: string;
   isRest: boolean;
   children: ReactNode;
@@ -199,6 +215,30 @@ export function DayPendingProvider({
       return { ...d, order: ids, moved };
     });
   const setLabel = (v: string) => setDraft((d) => ({ ...d, label: v === label ? null : v }));
+
+  // Cardio rows: same shape as the exercise rows, kept apart because they
+  // are a different thing with different columns.
+  const cardioById = useMemo(() => new Map(cardio.map((c) => [c.id, c] as const)), [cardio]);
+  const cardioValue = (id: number, key: CardioKey) => draft.cardio.fields[id]?.[key] ?? cardioById.get(id)?.fields[key] ?? "";
+  const isCardioRemoved = (id: number) => draft.cardio.removed.includes(id);
+  const setCardioField = (id: number, key: CardioKey, value: string) =>
+    setDraft((d) => {
+      const saved = cardioById.get(id)?.fields[key] ?? "";
+      const next = { ...(d.cardio.fields[id] ?? {}) };
+      if (value === saved) delete next[key];
+      else next[key] = value;
+      const fields = { ...d.cardio.fields };
+      if (Object.keys(next).length === 0) delete fields[id];
+      else fields[id] = next;
+      return { ...d, cardio: { ...d.cardio, fields } };
+    });
+  const removeCardio = (id: number) => setDraft((d) => (d.cardio.removed.includes(id) ? d : { ...d, cardio: { ...d.cardio, removed: [...d.cardio.removed, id] } }));
+  const restoreCardio = (id: number) => setDraft((d) => ({ ...d, cardio: { ...d.cardio, removed: d.cardio.removed.filter((x) => x !== id) } }));
+  const addCardio = (fields: Record<CardioKey, string>) =>
+    setDraft((d) => ({ ...d, cardio: { ...d.cardio, added: [...d.cardio.added, { tempId: tempSeq.current--, fields }] } }));
+  const unaddCardio = (tempId: number) => setDraft((d) => ({ ...d, cardio: { ...d.cardio, added: d.cardio.added.filter((a) => a.tempId !== tempId) } }));
+  const setAddedCardioField = (tempId: number, key: CardioKey, value: string) =>
+    setDraft((d) => ({ ...d, cardio: { ...d.cardio, added: d.cardio.added.map((a) => (a.tempId === tempId ? { ...a, fields: { ...a.fields, [key]: value } } : a)) } }));
   const setRest = (v: boolean) => setDraft((d) => ({ ...d, rest: v === isRest ? null : v }));
 
   // One line per exercise, whatever was touched on it; then structure.
@@ -232,10 +272,20 @@ export function DayPendingProvider({
         if (a && at >= 0 && !draft.removed.includes(id)) out.push(`${a.exerciseName} moved to #${at + 1}`);
       });
     }
+    for (const c of cardio) {
+      if (draft.cardio.removed.includes(c.id)) {
+        out.push(`${c.fields.name || "Cardio"} removed`);
+        continue;
+      }
+      const f = draft.cardio.fields[c.id] ?? {};
+      const parts = (Object.keys(f) as CardioKey[]).map((k) => (k === "notes" ? "note changed" : `${k} ${show(c.fields[k])} → ${show(f[k] ?? "")}`));
+      if (parts.length) out.push(`${c.fields.name || "Cardio"}: ${parts.join(", ")}`);
+    }
+    draft.cardio.added.forEach((n) => out.push(`${n.fields.name.trim() || "Cardio"} added`));
     if (draft.label != null) out.push(draft.label ? `Session renamed to "${draft.label}"` : "Session label cleared");
     if (draft.rest != null) out.push(`${dayName} → ${draft.rest ? "Rest day" : "Workout"}`);
     return out;
-  }, [draft, assignments, columns, dayName, baseOrder, byId]);
+  }, [draft, assignments, cardio, columns, dayName, baseOrder, byId]);
   const count = entries.length;
 
   const discard = useCallback(() => {
@@ -258,6 +308,11 @@ export function DayPendingProvider({
       removed: draft.removed,
       added: draft.added.map((n) => ({ exerciseId: n.exerciseId, fields: n.fields })),
       order: draft.order ? order : null,
+      cardio: {
+        fields: Object.fromEntries(Object.entries(draft.cardio.fields).map(([id, f]) => [id, f])),
+        removed: draft.cardio.removed,
+        added: draft.cardio.added.map((n) => n.fields),
+      },
     };
     const result = await applyDayChangesAction(payload);
     if (!result.ok) {
@@ -328,6 +383,15 @@ export function DayPendingProvider({
     setRest,
     apply,
     discard,
+    cardio,
+    cardioValue,
+    isCardioRemoved,
+    setCardioField,
+    removeCardio,
+    restoreCardio,
+    addCardio,
+    unaddCardio,
+    setAddedCardioField,
   };
 
   return <PendingContext.Provider value={value}>{children}</PendingContext.Provider>;

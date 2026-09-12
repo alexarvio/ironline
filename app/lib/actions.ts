@@ -1820,6 +1820,11 @@ export async function applyDayChangesAction(
       rest: typeof payload.rest === "boolean" ? payload.rest : null,
       fields: payload.fields ?? {},
       custom: payload.custom ?? {},
+      cardio: {
+        fields: payload.cardio?.fields ?? {},
+        removed: (payload.cardio?.removed ?? []).filter((id) => Number.isInteger(id)),
+        added: payload.cardio?.added ?? [],
+      },
       removed: (payload.removed ?? []).filter((id) => Number.isInteger(id)),
       added: (payload.added ?? []).filter((a) => Number.isInteger(a.exerciseId)),
       order: Array.isArray(payload.order) ? payload.order.filter((id) => Number.isInteger(id)) : null,

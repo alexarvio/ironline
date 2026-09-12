@@ -180,6 +180,11 @@ Commit `a10ba40`, ported from `next` and pushed on its own.
 - [x] The client’s programme note card matches the week pills’ height and opens the note in a dialog rather than expanding in place. A long programme no longer scrolls the whole page sideways; only the week rail scrolls.
 - [x] The Daily targets, Supplements and Calories logged cards show just their titles; the summary line under each is gone.
 
+## 27 · Cardio on a programme day — ✅ LIVE 12 Sep
+
+- [x] Under each day’s exercise table the coach can add cardio rows with their own columns: activity (free text), time, pace, incline, notes. They queue on the day’s pending bar with everything else, mirror to later weeks with “Also apply”, and count toward the day (a day with only cardio is a workout, not rest).
+- [x] The client sees each cardio entry as a card after the day’s exercises, with the targets and the note. Nothing is logged against cardio yet.
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.

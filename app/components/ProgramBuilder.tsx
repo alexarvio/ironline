@@ -5,6 +5,7 @@ import {
   getCustomValues,
   getDeployedProgram,
   getTrainedWeekdays,
+  listCardioForDay,
   formatRestSeconds,
   getClientProgramNoteMeta,
   getExerciseWeightTrendPct,
@@ -36,6 +37,7 @@ import CopyDayMenu from "../admin/CopyDayMenu";
 import CustomValueInput from "../admin/CustomValueInput";
 import ConfirmDeleteButton from "./ConfirmDeleteButton";
 import AdminDayCard from "./AdminDayCard";
+import CardioBlock from "./CardioBlock";
 import DemoVideoDialog from "../admin/DemoVideoDialog";
 import LoggedSetsGrid, { repsLowOf, type PreviousLane } from "../admin/LoggedSetsGrid";
 import ProgramBuilderShell, { BuilderProgram, WeekCard } from "../admin/ProgramBuilderShell";
@@ -116,8 +118,9 @@ export default function ProgramBuilder({
       const assignments = getAssignmentsForDay(day.id);
       // Marked rest is the coach saying so; an empty day reads the same way
       // visually but still invites the first exercise.
-      const markedRest = day.is_rest === true && assignments.length === 0;
-      const isRest = assignments.length === 0;
+      const cardioCount = listCardioForDay(day.id).length;
+      const markedRest = day.is_rest === true && assignments.length === 0 && cardioCount === 0;
+      const isRest = assignments.length === 0 && cardioCount === 0;
       // How many weeks of this day's programme come after it, for the
       // "also add to the remaining weeks" option on the add row.
       const dayProgram = allPrograms.find(
@@ -130,9 +133,14 @@ export default function ProgramBuilder({
       }, 0);
       const summary = markedRest
         ? "Rest day"
-        : assignments.length === 0
+        : assignments.length === 0 && cardioCount === 0
         ? "Nothing yet. Add the first exercise"
-        : `${assignments.length} exercise${assignments.length === 1 ? "" : "s"}`;
+        : [
+            assignments.length ? `${assignments.length} exercise${assignments.length === 1 ? "" : "s"}` : null,
+            cardioCount ? `${cardioCount} cardio` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ");
 
       // Everything the pending-changes bar needs to show a diff against:
       // the saved value of every editable field on the day.
@@ -171,6 +179,7 @@ export default function ProgramBuilder({
           remainingLabel={remainingLabel}
           columns={columns.map((c) => ({ id: c.id, kind: c.kind, key: c.key, label: c.label }))}
           assignments={pendingAssignments}
+          cardio={listCardioForDay(day.id).map((c) => ({ id: c.id, fields: { name: c.name, time: c.time, pace: c.pace, incline: c.incline, notes: c.notes } }))}
           label={day.label ?? ""}
           isRest={markedRest}
         >
@@ -224,7 +233,7 @@ export default function ProgramBuilder({
           defaultOpen={!isRest}
           footSlot={<PendingChangesBar />}
         >
-          <div className="exercise-table-wrap">
+          <div key="table" className="exercise-table-wrap">
             <table className="exercise-table">
               <thead>
                 <tr>
@@ -461,6 +470,7 @@ export default function ProgramBuilder({
               />
             </table>
           </div>
+          <CardioBlock key="cardio" />
 
         </AdminDayCard>
         </DayPendingProvider>
