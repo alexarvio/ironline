@@ -11680,7 +11680,7 @@ a.cd-entry:hover { border-color: var(--accent); }
   display: grid;
   /* The Edit column matches the set-number column, so the three values
      sit in the true centre of the card instead of leaning left. */
-  grid-template-columns: 34px 1fr 1fr 1fr 34px;
+  grid-template-columns: 34px repeat(var(--ts-n, 3), 1fr) 34px;
   align-items: center;
   text-align: center;
 }
@@ -11692,7 +11692,8 @@ a.cd-entry:hover { border-color: var(--accent); }
   text-align: center;
 }
 .ts-target-label { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #2f5d8f; }
-.ts-target-line { margin-top: 2px; }
+/* Targets sit evenly across the middle whatever their count. */
+.ts-target-line { margin-top: 2px; display: flex; justify-content: space-evenly; align-items: baseline; gap: 12px; }
 .ts-target b, .ts-target-tempo b { font-size: 15px; font-weight: 800; color: #2f5d8f; }
 .ts-target small, .ts-target-tempo small { font-size: 10px; font-weight: 700; color: #2f5d8f; }
 .ts-target-tempo { margin-top: 2px; }
@@ -11715,7 +11716,10 @@ a.cd-entry:hover { border-color: var(--accent); }
 .ts-edit { border: 0; background: none; font: inherit; font-size: 11px; font-weight: 800; color: #2f5d8f; cursor: pointer; padding: 6px 0; }
 .ts-input {
   width: calc(100% - 8px);
-  margin: 0 4px;
+  /* One or two fields get a wide box, not a full-width slab. */
+  max-width: 170px;
+  margin: 0 auto;
+  display: block;
   box-sizing: border-box;
   padding: 9px 4px;
   border-radius: 8px;
@@ -12231,7 +12235,7 @@ a.cd-entry:hover { border-color: var(--accent); }
 
 /* Set rows: the Edit column matches the set-number column, so the three
    values sit in the true centre of the card instead of leaning left. */
-.ts-grid { grid-template-columns: 34px 1fr 1fr 1fr 34px; }
+.ts-grid { grid-template-columns: 34px repeat(var(--ts-n, 3), 1fr) 34px; }
 .ts-edit { padding: 6px 0; }
 
 /* Upcoming card: the prep notes fill their column and the buttons sit on
@@ -13094,6 +13098,7 @@ a.cd-entry:hover { border-color: var(--accent); }
 /* Days trained on the client's Training tab: a ring, with the figures
    beside it. Accent while the week is in progress, green once complete. */
 .ts-days { display: flex; align-items: center; gap: 16px; }
+.ts-days-ring { order: 2; margin-left: auto; }
 .ts-days-ring {
   flex: none;
   width: 64px;
@@ -13119,8 +13124,16 @@ a.cd-entry:hover { border-color: var(--accent); }
 .ts-days-ring.complete .ts-days-ring-inner { color: #2f7a3f; }
 .ts-days-body { flex: 1; min-width: 0; }
 
-/* The client's programme note sits under the weeks, full width. */
-.ts-prognote { width: 100%; margin-top: 18px; }
+/* The client's programme note: a box between the week's figures and its
+   sessions. Save and Cancel appear once the text differs from what is
+   saved. */
+.ts-prognote { display: flex; flex-direction: column; gap: 4px; margin: 0 0 16px; padding: 12px 14px; border-radius: 14px; border: 1px solid #e3e6ea; background: #fff; }
+.ts-prognote.dirty { border-color: #2f5d8f; }
+.ts-prognote-label { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
+.ts-prognote-input { width: 100%; box-sizing: border-box; border: 0; padding: 0; margin-top: 2px; font: inherit; font-size: 14px; line-height: 1.4; color: #313851; background: transparent; resize: none; outline: none; }
+.ts-prognote-input::placeholder { color: #a0a7b3; }
+.ts-prognote-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+.ts-prognote-hint { font-size: 11px; color: #8b93a1; }
 
 /* Coach side: the client's programme note, above the builder and outside
    every day, so it reads as being about all of them. */

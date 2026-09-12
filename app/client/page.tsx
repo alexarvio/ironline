@@ -331,6 +331,9 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
 
 function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
   const days = getWeekDays(CLIENT_ID, week);
+  // The client's note about the whole programme sits between the week's
+  // figures and its sessions, outside any day.
+  const program = getDeployedProgram(CLIENT_ID);
   const trainingDays = days.filter((d) => d.assignments.length > 0);
   const stats = weekStats(CLIENT_ID, week);
   const dayTarget = stats.totalDays || 7;
@@ -370,6 +373,8 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
           </div>
         </div>
       )}
+
+      {program && <ProgramNote programId={program.id} text={getClientProgramNote(CLIENT_ID, program.id)} />}
 
       {days.length === 0 ? (
         <p className="empty-note">Nothing deployed yet. Your coach is still building this week.</p>
@@ -996,9 +1001,6 @@ export default async function ClientPage({
             weekLabels={trainingWeekLabels}
             completedWeeks={completedWeeks}
           />
-          {/* One note for the whole programme, not a week or a day: it sits
-              under the weeks so it is clearly about all of them. */}
-          {deployedProgram && <ProgramNote programId={deployedProgram.id} text={getClientProgramNote(CLIENT_ID, deployedProgram.id)} />}
         </div>
       ),
     },

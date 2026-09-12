@@ -188,6 +188,12 @@ function ExpandedExercise({ exercise, index, onCollapse }: { exercise: SessionEx
     exercise.reps ? { value: exercise.reps, unit: "reps" } : null,
     exercise.targetRpe != null ? { value: `${exercise.targetRpe}`, unit: "rpe" } : null,
   ].filter((t): t is { value: string; unit: string } => !!t);
+  // The client fills in only what the coach asked for. Reps are always
+  // asked; kg and RPE only when a target exists. The grid takes as many
+  // columns as that, centred, so one field is one wide box in the middle.
+  const askWeight = exercise.targetWeight != null;
+  const askRpe = exercise.targetRpe != null;
+  const colCount = 1 + (askWeight ? 1 : 0) + (askRpe ? 1 : 0);
 
   const submit = async (formData: FormData) => {
     setPending(true);
@@ -210,6 +216,7 @@ function ExpandedExercise({ exercise, index, onCollapse }: { exercise: SessionEx
   };
   const inputs = (defaults: { weight: string; reps: string; rpe: string }, key: string) => (
     <>
+      {askWeight && (
       <input
         key={`w-${key}`}
         form={formId}
@@ -225,6 +232,7 @@ function ExpandedExercise({ exercise, index, onCollapse }: { exercise: SessionEx
         className="ts-input"
         required
       />
+      )}
       <input
         key={`r-${key}`}
         form={formId}
@@ -241,6 +249,7 @@ function ExpandedExercise({ exercise, index, onCollapse }: { exercise: SessionEx
         className="ts-input reps"
         required
       />
+      {askRpe && (
       <input
         key={`p-${key}`}
         form={formId}
@@ -255,11 +264,12 @@ function ExpandedExercise({ exercise, index, onCollapse }: { exercise: SessionEx
         aria-label="RPE"
         className="ts-input"
       />
+      )}
     </>
   );
 
   return (
-    <div className={`ts-card${done ? " done" : ""}`}>
+    <div className={`ts-card${done ? " done" : ""}`} style={{ "--ts-n": colCount } as React.CSSProperties}>
       <div className="ts-card-head">
         <span className={`ts-circle ${done ? "done" : "active"}`}>{done ? "✓" : index}</span>
         <span className="ts-card-name">{exercise.name}</span>
@@ -280,17 +290,12 @@ function ExpandedExercise({ exercise, index, onCollapse }: { exercise: SessionEx
         <div className="ts-target">
           <div className="ts-target-label">Target</div>
           {targets.length > 0 && (
-            <div className="ts-grid ts-target-line">
-              <span />
+            <div className="ts-target-line">
               {targets.map((t) => (
                 <span key={t.unit}>
                   <b>{t.value}</b> <small>{t.unit}</small>
                 </span>
               ))}
-              {Array.from({ length: 3 - targets.length }, (_, i) => (
-                <span key={`pad-${i}`} />
-              ))}
-              <span />
             </div>
           )}
           {exercise.tempo && (
@@ -305,9 +310,9 @@ function ExpandedExercise({ exercise, index, onCollapse }: { exercise: SessionEx
 
       <div className="ts-grid ts-cols">
         <span>Set</span>
-        <span>Kg</span>
+        {askWeight && <span>Kg</span>}
         <span>Reps</span>
-        <span>Rpe</span>
+        {askRpe && <span>Rpe</span>}
         <span />
       </div>
 
@@ -316,9 +321,9 @@ function ExpandedExercise({ exercise, index, onCollapse }: { exercise: SessionEx
           return (
             <div key={n} className="ts-grid ts-set logged">
               <span className="ts-circle done">✓</span>
-              <span>{log.weight ?? "–"}</span>
+              {askWeight && <span>{log.weight ?? "–"}</span>}
               <span>{log.reps ?? "–"}</span>
-              <span>{log.rpe ?? "–"}</span>
+              {askRpe && <span>{log.rpe ?? "–"}</span>}
               <button
                 type="button"
                 className="ts-edit"
@@ -360,9 +365,9 @@ function ExpandedExercise({ exercise, index, onCollapse }: { exercise: SessionEx
         return (
           <div key={n} className="ts-grid ts-set upcoming">
             <span className="ts-circle">{n}</span>
-            <span>{exercise.targetWeight ?? ""}</span>
+            {askWeight && <span>{exercise.targetWeight}</span>}
             <span>{exercise.reps}</span>
-            <span>{exercise.targetRpe ?? ""}</span>
+            {askRpe && <span>{exercise.targetRpe}</span>}
             <span />
           </div>
         );
