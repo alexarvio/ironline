@@ -11,6 +11,8 @@ import { ChevronDownIcon } from "../components/icons";
 // nothing about what is stored changes.
 
 export type SessionSet = { id: number; setNumber: number; weight: number | null; reps: number | null; rpe: number | null };
+export type SessionCardio = { id: number; name: string; time: string; pace: string; incline: string; notes: string };
+
 export type SessionExercise = {
   id: number;
   name: string;
@@ -58,6 +60,7 @@ const firstUnfinished = (list: SessionExercise[]) => list.find((ex) => !isDone(e
 export default function TrainingDaySession({
   title,
   exercises,
+  cardio = [],
   open,
   onToggle,
 }: {
@@ -66,6 +69,8 @@ export default function TrainingDaySession({
       Wednesday. The weekday stays on the coach's side. */
   title: string;
   exercises: SessionExercise[];
+  /** Cardio the coach put on the day, shown after the exercises. */
+  cardio?: SessionCardio[];
   /** Owned by TrainingDayList so only one day is open at a time. */
   open: boolean;
   onToggle: () => void;
@@ -103,7 +108,11 @@ export default function TrainingDaySession({
         <div className="ts-day-head-main">
           <div className="ts-day-title">{title}</div>
           <div className="ts-day-sub">
-            {dayDone ? "Session complete" : position > 0 ? `Exercise ${position} of ${exercises.length}` : `${exercises.length} exercises`}
+            {dayDone
+              ? "Session complete"
+              : position > 0
+              ? `Exercise ${position} of ${exercises.length}`
+              : [exercises.length ? `${exercises.length} exercises` : null, cardio.length ? `${cardio.length} cardio` : null].filter(Boolean).join(" · ")}
           </div>
         </div>
         <span className="ts-day-head-right">
@@ -136,6 +145,32 @@ export default function TrainingDaySession({
               />
             )
           )}
+          {cardio.map((c) => (
+            <div key={`c${c.id}`} className="ts-cardio">
+              <div className="ts-cardio-head">
+                <span className="ts-cardio-tag">Cardio</span>
+                <span className="ts-cardio-name">{c.name}</span>
+              </div>
+              <div className="ts-cardio-line">
+                {c.time && (
+                  <span>
+                    <b>{c.time}</b> <small>time</small>
+                  </span>
+                )}
+                {c.pace && (
+                  <span>
+                    <b>{c.pace}</b> <small>pace</small>
+                  </span>
+                )}
+                {c.incline && (
+                  <span>
+                    <b>{c.incline}</b> <small>incline</small>
+                  </span>
+                )}
+              </div>
+              {c.notes && <div className="ts-cardio-note">{c.notes}</div>}
+            </div>
+          ))}
         </div>
       )}
     </section>

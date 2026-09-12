@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist } from "./db";
+import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, CardioEntry } from "./db";
 import type { CalorieLog, CheckInNote, ClientPhase, PhaseTrack } from "./db";
 
 // "Today" (or any Date) as a local YYYY-MM-DD calendar-date string. This is
@@ -5455,11 +5455,27 @@ export function applyDayOrderToLaterWeeks(programDayId: number): number {
 export type DayFieldKey = "sets" | "reps" | "targetWeight" | "rpe" | "tempo" | "rest" | "distance" | "time" | "notes";
 export type DayFieldValues = Partial<Record<DayFieldKey, string>>;
 
+export type CardioFieldKey = "name" | "time" | "pace" | "incline" | "notes";
+export type CardioFieldValues = Partial<Record<CardioFieldKey, string>>;
+export type CardioChanges = {
+  /** entry id -> changed fields. */
+  fields: Record<string, CardioFieldValues>;
+  removed: number[];
+  added: Record<CardioFieldKey, string>[];
+};
+
+export function listCardioForDay(programDayId: number): CardioEntry[] {
+  return (getData().cardio_entries ?? [])
+    .filter((c) => c.program_day_id === programDayId)
+    .sort((a, b) => a.order_index - b.order_index);
+}
+
 export type DayChanges = {
   programDayId: number;
   alsoRemaining: boolean;
   label: string | null;
   rest: boolean | null;
+  cardio: CardioChanges;
   /** assignment id -> changed fields, as the coach typed them. */
   fields: Record<string, DayFieldValues>;
   /** assignment id -> column id -> value. */
@@ -5599,9 +5615,41 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
       }
     }
 
-    // Rest only sticks on an empty day; a day with exercises stays a workout.
+    // Cardio: by id on the source day, by name on a mirrored one.
+    if (!data.cardio_entries) data.cardio_entries = [];
+    const cardioRows = () => data.cardio_entries.filter((c) => c.program_day_id === day.id);
+    const cardioTarget = (id: number) => {
+      const srcRow = data.cardio_entries.find((c) => c.id === id);
+      if (!srcRow) return undefined;
+      return mirror ? cardioRows().find((c) => c.name.trim().toLowerCase() === srcRow.name.trim().toLowerCase()) : srcRow;
+    };
+    const dropCardio = changes.cardio.removed.map((id) => cardioTarget(id)?.id).filter((x): x is number => typeof x === "number");
+    if (dropCardio.length) data.cardio_entries = data.cardio_entries.filter((c) => !dropCardio.includes(c.id));
+    for (const [idStr, raw] of Object.entries(changes.cardio.fields)) {
+      const target = cardioTarget(Number(idStr));
+      if (!target || target.program_day_id !== day.id) continue;
+      for (const k of ["name", "time", "pace", "incline", "notes"] as const) if (raw[k] != null) target[k] = raw[k]!.trim();
+    }
+    for (const add of changes.cardio.added) {
+      const name = (add.name ?? "").trim();
+      if (!name) continue;
+      if (mirror && cardioRows().some((c) => c.name.trim().toLowerCase() === name.toLowerCase())) continue;
+      data.cardio_entries.push({
+        id: allocId("cardio_entries"),
+        program_day_id: day.id,
+        name,
+        time: (add.time ?? "").trim(),
+        pace: (add.pace ?? "").trim(),
+        incline: (add.incline ?? "").trim(),
+        notes: (add.notes ?? "").trim(),
+        order_index: cardioRows().length,
+      });
+    }
+
+    // Rest only sticks on an empty day; a day with exercises or cardio
+    // stays a workout.
     if (changes.rest != null) {
-      if (changes.rest && rows().length > 0) day.is_rest = false;
+      if (changes.rest && (rows().length > 0 || cardioRows().length > 0)) day.is_rest = false;
       else day.is_rest = changes.rest;
     }
   };

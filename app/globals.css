@@ -13287,3 +13287,19 @@ a.cd-entry:hover { border-color: var(--accent); }
 .app-stack { display: grid; grid-template-rows: minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); }
 .app-layer { grid-area: 1 / 1; display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; }
 .app-layer-push { z-index: 5; background: var(--paper); }
+
+/* Cardio on a programme day: coach side, under the exercise table. */
+.pb-cardio { margin: 12px 0 0; padding: 0 0 4px; border-top: 1px dashed #dfe3e8; }
+.pb-cardio-head { display: flex; align-items: baseline; gap: 10px; padding: 12px 22px 2px; }
+.pb-cardio-title { font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
+.pb-cardio-hint { font-size: 11px; font-weight: 500; color: #8b93a1; }
+
+/* Client side: a cardio card after the exercises. */
+.ts-cardio { margin-top: 10px; padding: 12px 14px; border: 1px solid #e3e6ea; border-radius: 14px; background: #fff; }
+.ts-cardio-head { display: flex; align-items: center; gap: 10px; }
+.ts-cardio-tag { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; padding: 3px 8px; border-radius: 6px; background: #dff3ea; color: #0f5c46; }
+.ts-cardio-name { font-size: 15px; font-weight: 800; color: #313851; }
+.ts-cardio-line { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; }
+.ts-cardio-line b { font-size: 15px; font-weight: 800; color: #2f5d8f; }
+.ts-cardio-line small { font-size: 10px; font-weight: 700; color: #2f5d8f; }
+.ts-cardio-note { margin-top: 8px; font-size: 13px; line-height: 1.4; color: #5b6474; }

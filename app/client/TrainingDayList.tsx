@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import TrainingDaySession, { SessionExercise } from "./TrainingDaySession";
+import TrainingDaySession, { SessionCardio, SessionExercise } from "./TrainingDaySession";
 import { useFocusRef } from "./CheckInContext";
 
 export type TrainingDayProps = {
   key: number;
   title: string;
   exercises: SessionExercise[];
+  cardio: SessionCardio[];
   /** The day the week should land on: the first one not fully logged. */
   defaultOpen: boolean;
 };
@@ -47,6 +48,7 @@ export default function TrainingDayList({ days }: { days: TrainingDayProps[] }) 
         <TrainingDaySession
           title={d.title}
           exercises={d.exercises}
+          cardio={d.cardio}
           open={openKey === d.key}
           onToggle={() => setOpenKey((k) => (k === d.key ? null : d.key))}
         />
