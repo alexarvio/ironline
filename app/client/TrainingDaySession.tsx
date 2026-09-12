@@ -55,18 +55,20 @@ export default function TrainingDaySession({
   dayName,
   label,
   exercises,
-  defaultOpen,
+  open,
+  onToggle,
 }: {
   dayName: string;
   label: string | null;
   exercises: SessionExercise[];
-  defaultOpen: boolean;
+  /** Owned by TrainingDayList so only one day is open at a time. */
+  open: boolean;
+  onToggle: () => void;
 }) {
   const planned = exercises.reduce((s, ex) => s + ex.sets, 0);
   const logged = exercises.reduce((s, ex) => s + loggedCount(ex), 0);
   const dayDone = exercises.length > 0 && exercises.every(isDone);
 
-  const [open, setOpen] = useState(defaultOpen);
   // Which exercise is expanded; starts on the first with sets still to log.
   const [expandedId, setExpandedId] = useState<number | null>(() => firstUnfinished(exercises) ?? exercises[0]?.id ?? null);
   const activeId = firstUnfinished(exercises);
@@ -92,7 +94,7 @@ export default function TrainingDaySession({
 
   return (
     <section className={`ts-day${dayDone ? " done" : ""}`}>
-      <button type="button" className="ts-day-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+      <button type="button" className="ts-day-head" onClick={onToggle} aria-expanded={open}>
         <div className="ts-day-head-main">
           <div className="ts-day-title">
             {dayName}
@@ -119,6 +121,7 @@ export default function TrainingDaySession({
               <ExpandedExercise
                 key={ex.id}
                 exercise={ex}
+                index={i + 1}
                 onCollapse={() => setExpandedId(null)}
               />
             ) : (
@@ -165,7 +168,7 @@ function CollapsedExercise({
   );
 }
 
-function ExpandedExercise({ exercise, onCollapse }: { exercise: SessionExercise; onCollapse: () => void }) {
+function ExpandedExercise({ exercise, index, onCollapse }: { exercise: SessionExercise; index: number; onCollapse: () => void }) {
   const done = isDone(exercise);
   const nextSet = nextMissing(exercise);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -260,7 +263,7 @@ function ExpandedExercise({ exercise, onCollapse }: { exercise: SessionExercise;
   return (
     <div className={`ts-card${done ? " done" : ""}`}>
       <div className="ts-card-head">
-        {done && <span className="ts-circle done">✓</span>}
+        <span className={`ts-circle ${done ? "done" : "active"}`}>{done ? "✓" : index}</span>
         <span className="ts-card-name">{exercise.name}</span>
         <span className="ts-card-tools">
           {exercise.note}

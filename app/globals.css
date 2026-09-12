@@ -11658,12 +11658,17 @@ a.cd-entry:hover { border-color: var(--accent); }
 .ts-card.done { border-color: #2f7a3f; box-shadow: none; }
 .ts-card-head { display: flex; align-items: center; gap: 10px; }
 .ts-card-name { flex: 1; min-width: 0; font-size: 18px; font-weight: 800; color: #313851; letter-spacing: -0.01em; }
+/* The open card keeps its place in the day's order, same circle as the
+   collapsed rows, so "Exercise 2 of 5" up top and the card agree. */
+.ts-card-head > .ts-circle { flex: 0 0 auto; margin-right: 10px; }
 .ts-card-tools { display: inline-flex; align-items: center; gap: 8px; }
 .ts-video { display: inline-block; margin-top: 4px; font-size: 12px; font-weight: 700; color: #2f5d8f; text-decoration: none; }
 
 .ts-grid {
   display: grid;
-  grid-template-columns: 34px 1fr 1fr 1fr 44px;
+  /* The Edit column matches the set-number column, so the three values
+     sit in the true centre of the card instead of leaning left. */
+  grid-template-columns: 34px 1fr 1fr 1fr 34px;
   align-items: center;
   text-align: center;
 }
