@@ -29,7 +29,7 @@ export type NwPhase = {
   phase: ClientPhase;
 };
 export type NwSupplement = { id: number; name: string; quantity: string; timing: string; notes: string };
-export type NwLogDay = { date: string; kcal: number | null; isTraining: boolean; target: number | null; note: string | null };
+export type NwLogDay = { date: string; kcal: number | null; isTraining: boolean; target: number | null; note: string | null; phase: string | null };
 
 export type NutritionWorkspaceProps = {
   clientId: number;
@@ -40,7 +40,7 @@ export type NutritionWorkspaceProps = {
   waterL: number | null;
   latestWeightKg: number | null;
   supplements: NwSupplement[];
-  /** The last 30 days, today first, one entry per day, missed days included. */
+  /** Every day back to the first calorie entry, today first, missed days included. */
   logs: NwLogDay[];
   liveSince: string | null;
 };
@@ -466,9 +466,13 @@ function TrashIcon() {
 
 // ---- 3 · Calories logged -------------------------------------------------
 
+const PAGE = 15;
+
 function CaloriesCard({ p }: { p: NutritionWorkspaceProps }) {
-  const [win, setWin] = useState<7 | 30>(7);
-  const days = p.logs.slice(0, win);
+  // Fifteen days a page, newest first; the pager sits under the table.
+  const [page, setPage] = useState(0);
+  const pageCount = Math.max(1, Math.ceil(p.logs.length / PAGE));
+  const days = p.logs.slice(page * PAGE, page * PAGE + PAGE);
   const logged = days.filter((d) => d.kcal != null);
   const avg = logged.length ? Math.round(logged.reduce((s, d) => s + (d.kcal ?? 0), 0) / logged.length) : null;
   const withTarget = logged.filter((d) => d.target != null);
@@ -489,13 +493,7 @@ function CaloriesCard({ p }: { p: NutritionWorkspaceProps }) {
           <div className="pl-eyebrow">Calories logged</div>
         </div>
         <div className="pl-band-right">
-          <div className="pl-switch" role="tablist">
-            {([7, 30] as const).map((w) => (
-              <button key={w} type="button" className={`pl-switch-opt${win === w ? " active" : ""}`} onClick={() => setWin(w)}>
-                {w} days
-              </button>
-            ))}
-          </div>
+          <span className="pl-band-note">{p.logs.length} days</span>
         </div>
       </div>
 
@@ -505,6 +503,7 @@ function CaloriesCard({ p }: { p: NutritionWorkspaceProps }) {
           <span>Logged</span>
           <span>Day</span>
           <span>vs target</span>
+          <span>Phase</span>
           <span>Client note</span>
         </div>
         {days.map((d) => (
@@ -515,10 +514,28 @@ function CaloriesCard({ p }: { p: NutritionWorkspaceProps }) {
               <span className={`nw-daypill ${d.isTraining ? "training" : "rest"}`}>{d.isTraining ? "Training" : "Rest"}</span>
             </span>
             <span className={`nw-cal-vs ${tone(d)}`}>{vs(d)}</span>
+            <span className="nw-cal-phase">{d.phase ?? "—"}</span>
             <span className="nw-cal-note">{d.note ?? "—"}</span>
           </div>
         ))}
-        <div className="nw-tfoot">Logged by the client under their targets. Missed days show as a gap — nothing is filled in for them.</div>
+        <div className="nw-tfoot nw-cal-foot">
+          <span>Logged by the client under their targets. Missed days show as a gap — nothing is filled in for them.</span>
+          {pageCount > 1 && (
+            <nav className="nw-pager" aria-label="Pages">
+              <button type="button" className="nw-page" onClick={() => setPage((x) => Math.max(0, x - 1))} disabled={page === 0} aria-label="Previous page">
+                ‹
+              </button>
+              {Array.from({ length: pageCount }, (_, i) => (
+                <button key={i} type="button" className={`nw-page${i === page ? " active" : ""}`} onClick={() => setPage(i)} aria-current={i === page ? "page" : undefined}>
+                  {i + 1}
+                </button>
+              ))}
+              <button type="button" className="nw-page" onClick={() => setPage((x) => Math.min(pageCount - 1, x + 1))} disabled={page === pageCount - 1} aria-label="Next page">
+                ›
+              </button>
+            </nav>
+          )}
+        </div>
       </div>
     </section>
   );
