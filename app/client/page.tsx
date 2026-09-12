@@ -462,7 +462,7 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
                       unread={!!a.notes && !a.note_read}
                     />
                   ),
-              })),
+                })),
               }))}
             />
           );
