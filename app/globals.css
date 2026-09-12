@@ -12304,10 +12304,6 @@ a.cd-entry:hover { border-color: var(--accent); }
 .pl-bar-edge.left { left: 0; }
 .pl-bar-edge.right { right: 0; }
 .pl-bar-edge:hover { background: rgba(0, 0, 0, 0.06); }
-/* Only the label now: the shaded current-week column marks where "now" is,
-   and a full-height rule cut straight through the phase bars. */
-.pl-now-label { position: absolute; top: 0; width: 0; pointer-events: none; z-index: 2; }
-.pl-now-pill { position: absolute; top: -18px; left: 0; transform: translateX(-50%); font-size: 9.5px; font-weight: 800; color: #fff; background: #1e3a6e; padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
 .pl-body { padding-top: 16px; }
 .pl-legend { display: flex; align-items: center; gap: 16px; margin-top: 12px; font-size: 11px; font-weight: 700; color: #5b6474; flex-wrap: wrap; }
 .pl-legend span { display: inline-flex; align-items: center; gap: 6px; }

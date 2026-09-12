@@ -55,8 +55,9 @@ export default function PlanPhasesCard({
   const [, start] = useTransition();
   const areaRef = useRef<HTMLDivElement>(null);
 
-  // The window: the current week sits around column six.
-  const first = addWeeks(thisWeek, -5);
+  // The window: last week for context, then the current week in the second
+  // column, so most of the grid is what is coming rather than what is done.
+  const first = addWeeks(thisWeek, -1);
   const count = win;
   const weeks = Array.from({ length: count }, (_, i) => addWeeks(first, i));
   const nowIdx = weeksBetween(first, thisWeek);
@@ -293,11 +294,6 @@ export default function PlanPhasesCard({
             );
           })}
 
-          {nowIdx >= 0 && nowIdx < count && (
-            <div className="pl-now-label" style={{ left: `calc(110px + (100% - 110px) * ${(nowIdx + 0.5) / count})` }} aria-hidden="true">
-              <span className="pl-now-pill">Now · W{isoWeek(thisWeek)}</span>
-            </div>
-          )}
         </div>
 
         <div className="pl-legend">
