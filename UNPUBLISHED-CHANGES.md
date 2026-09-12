@@ -132,6 +132,12 @@ Look: `/client` Home.
 - [x] The client’s Training tab shows the programme’s name above the week strip, with its length.
 - [x] The client’s Nutrition tab shows the current nutrition phase’s name above the targets, when the coach has one on the plan.
 
+## 18 · Check-in trends — LOCAL ONLY, not pushed
+
+- [ ] Keep  [ ] Drop — Under every check-in metric with two or more readings, a small chart of its movement inside the current phase: the change since the phase began on the right, the start and latest readings under the line, and a tap opens the readings as a list. The phase is the running nutrition phase on the Plan tab; with none, the card’s phase start, then the start of coaching. The last reading before the phase began carries over as its starting line, drawn as a hollow dot. Shows in the open form and on the saved card.
+
+Look: `/client` Home → check-in row.
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.

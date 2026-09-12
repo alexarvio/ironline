@@ -4109,11 +4109,26 @@ function ratingScaleMax(unit: string): number | null {
   return max >= 2 && max <= 10 ? max : null;
 }
 
+/** A metric's movement inside the current phase, for the client. */
+export type CheckInTrend = {
+  /** Oldest first. The first point may be the last reading of the phase
+      before, carried over as this phase's starting line. */
+  points: { date: string; value: number; carried?: boolean }[];
+  phaseName: string | null;
+  /** "from 3 Aug" */
+  startLabel: string;
+  first: number;
+  latest: number;
+  change: number;
+};
+
 export type CheckInMetric = {
   id: string;
   name: string;
   unit: string;
   step: string;
+  /** Movement inside the current phase, or null with fewer than two readings. */
+  trend: CheckInTrend | null;
   // Value already logged for the period being edited, so reopening the
   // screen shows what was sent rather than an empty form.
   value: string;
@@ -4159,6 +4174,32 @@ export function getCheckInSections(clientId: number): CheckInData {
   const fmtDate = (iso: string) =>
     new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
+  // Trends are phase-scoped: the block of work the client is in is the
+  // stretch they care about. The phase is the running nutrition phase on
+  // the coach's plan; without one, the card's phase start or the start of
+  // coaching. The last reading before the phase began carries over as its
+  // starting line, so a new phase does not open with an empty chart.
+  const trendPhase = getCurrentPhase(clientId, "nutrition");
+  const trendProfile = getClientProfile(clientId);
+  const trendStart = trendPhase?.start_week ?? trendProfile.goal_phase_start_date ?? trendProfile.coaching_start_date ?? null;
+  const trendFor = (series: { date: string; value: number }[]): CheckInTrend | null => {
+    const upTo = series.filter((pt) => pt.date <= today);
+    const inPhase = trendStart ? upTo.filter((pt) => pt.date >= trendStart) : upTo.slice(-12);
+    const before = trendStart ? upTo.filter((pt) => pt.date < trendStart).slice(-1) : [];
+    const points = [...before.map((pt) => ({ ...pt, carried: true })), ...inPhase];
+    if (points.length < 2) return null;
+    const first = points[0].value;
+    const latest = points[points.length - 1].value;
+    return {
+      points,
+      phaseName: trendPhase?.name ?? null,
+      startLabel: `from ${fmtDate(trendStart ?? points[0].date)}`,
+      first,
+      latest,
+      change: Math.round((latest - first) * 10) / 10,
+    };
+  };
+
   // A tracker metric's row: what's logged for the current period, plus the
   // most recent entry from any earlier period as the hint.
   const trackerSection = (
@@ -4191,6 +4232,7 @@ export function getCheckInSections(clientId: number): CheckInData {
             ? `${previous.value}${def.unit && !scaleMax ? ` ${def.unit}` : scaleMax ? `/${scaleMax}` : ""} on ${fmtDate(previous.period)}`
             : null,
           scaleMax,
+          trend: trendFor(getMetricSeries(def.id)),
         };
       }),
     };
@@ -4234,6 +4276,7 @@ export function getCheckInSections(clientId: number): CheckInData {
           value: current != null ? String(current) : "",
           hint: previous != null ? `${previous}${f.unit ? ` ${f.unit}` : ""} on ${fmtDate(previousDate!)}` : null,
           scaleMax: null,
+          trend: trendFor(getMeasurementSeries(f.id)),
         };
       }),
     });

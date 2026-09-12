@@ -7,6 +7,14 @@ import { logMetricPeriodAction, saveMeasurementCheckInAction, uploadProgressPhot
 // Deliberately does NOT import from ../lib/queries (see HomeHub.tsx for why
 // a "use client" file importing queries.ts breaks the dev server). All data
 // comes in as plain props, computed server-side by getCheckInSections().
+export type CheckInTrend = {
+  points: { date: string; value: number; carried?: boolean }[];
+  phaseName: string | null;
+  startLabel: string;
+  first: number;
+  latest: number;
+  change: number;
+};
 export type CheckInMetric = {
   id: string;
   name: string;
@@ -15,6 +23,8 @@ export type CheckInMetric = {
   value: string;
   hint: string | null;
   scaleMax: number | null;
+  /** The metric's movement inside the current phase; null until two readings. */
+  trend: CheckInTrend | null;
 };
 export type CheckInSection = {
   id: "daily" | "weekly" | "measurements";
@@ -275,11 +285,14 @@ export default function CheckInScreen({
                 </div>
               )}
               {active.metrics.map((m) => (
-                <div key={m.id} className="ci-done-row">
-                  <span className="ci-done-name">{m.name}</span>
-                  <span className={`ci-done-value${m.value ? "" : " empty"}`}>
-                    {m.value ? showValue(m) : "–"}
-                  </span>
+                <div key={m.id} className="ci-done-row-wrap">
+                  <div className="ci-done-row">
+                    <span className="ci-done-name">{m.name}</span>
+                    <span className={`ci-done-value${m.value ? "" : " empty"}`}>
+                      {m.value ? showValue(m) : "–"}
+                    </span>
+                  </div>
+                  {m.trend && <MetricTrend trend={m.trend} unit={m.unit} scaleMax={m.scaleMax} />}
                 </div>
               ))}
             </div>
@@ -348,6 +361,7 @@ export default function CheckInScreen({
                   })}
                 </div>
               )}
+              {m.trend && <MetricTrend trend={m.trend} unit={m.unit} scaleMax={m.scaleMax} />}
             </div>
           );
         })}
@@ -510,6 +524,74 @@ export default function CheckInScreen({
           </button>
         )}
       </div>
+      )}
+    </div>
+  );
+}
+
+// ---- A metric's movement inside the current phase -------------------------
+// A sparkline with the start and latest readings and the change between
+// them. Tapping it opens the readings as a list. The first point can be the
+// last reading of the phase before, carried over as this phase's starting
+// line; it is drawn hollow so the client can tell.
+function MetricTrend({ trend, unit, scaleMax }: { trend: CheckInTrend; unit: string; scaleMax: number | null }) {
+  const [open, setOpen] = useState(false);
+  const W = 240;
+  const H = 40;
+  const PAD = 4;
+  const values = trend.points.map((pt) => pt.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const x = (i: number) => (trend.points.length === 1 ? W / 2 : PAD + (i / (trend.points.length - 1)) * (W - PAD * 2));
+  const y = (v: number) => H - PAD - ((v - min) / span) * (H - PAD * 2);
+  const path = trend.points.map((pt, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)} ${y(pt.value).toFixed(1)}`).join(" ");
+  const fmt = (v: number) => (scaleMax ? `${v}/${scaleMax}` : `${v}${unit ? ` ${unit}` : ""}`);
+  const sign = trend.change > 0 ? "+" : trend.change < 0 ? "\u2212" : "";
+  const changeText = trend.change === 0 ? "no change" : `${sign}${Math.abs(trend.change)}${scaleMax ? "" : unit ? ` ${unit}` : ""}`;
+  const dateLabel = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return (
+    <div className={`ci-trend${open ? " open" : ""}`}>
+      <button type="button" className="ci-trend-btn" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <div className="ci-trend-head">
+          <span className="ci-trend-scope">
+            {trend.phaseName ? `${trend.phaseName} · ` : "This phase · "}
+            {trend.startLabel}
+          </span>
+          <span className={`ci-trend-change${trend.change === 0 ? " flat" : ""}`}>{changeText}</span>
+        </div>
+        <svg className="ci-trend-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
+          <path d={path} fill="none" stroke="#2f5d8f" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+        </svg>
+        <div className="ci-trend-dots" aria-hidden="true">
+          {trend.points.map((pt, i) => (
+            <span
+              key={pt.date}
+              className={`ci-trend-dot${pt.carried ? " carried" : ""}${i === trend.points.length - 1 ? " last" : ""}`}
+              style={{ left: `${(x(i) / W) * 100}%`, top: `${(y(pt.value) / H) * 100}%` }}
+            />
+          ))}
+        </div>
+        <div className="ci-trend-ends">
+          <span>
+            {fmt(trend.first)}
+            {trend.points[0].carried ? " · before this phase" : ""}
+          </span>
+          <span>{fmt(trend.latest)}</span>
+        </div>
+      </button>
+      {open && (
+        <ul className="ci-trend-list">
+          {[...trend.points].reverse().map((pt) => (
+            <li key={pt.date}>
+              <span className="ci-trend-list-date">
+                {dateLabel(pt.date)}
+                {pt.carried ? " · before this phase" : ""}
+              </span>
+              <span className="ci-trend-list-value">{fmt(pt.value)}</span>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

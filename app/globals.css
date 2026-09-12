@@ -13212,3 +13212,27 @@ a.cd-entry:hover { border-color: var(--accent); }
 .ts-program-eyebrow { font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; flex-basis: 100%; }
 .ts-program-name { font-size: 22px; font-weight: 800; line-height: 1.2; letter-spacing: -0.01em; color: #141a24; }
 .ts-program-meta { font-size: 12.5px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
+
+
+/* ==== Check-in: a metric's movement inside the current phase ============= */
+.ci-trend { margin-top: 10px; }
+.ci-trend-btn { display: block; width: 100%; padding: 10px 12px 8px; border: 1px solid #eceff3; border-radius: 10px; background: #fafbfc; text-align: left; font: inherit; color: inherit; cursor: pointer; position: relative; }
+.ci-trend.open .ci-trend-btn { border-color: #dfe3e8; background: #fff; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.ci-trend-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.ci-trend-scope { font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ci-trend-change { flex: none; font-size: 12.5px; font-weight: 800; color: #2f5d8f; font-variant-numeric: tabular-nums; }
+.ci-trend-change.flat { color: #8b93a1; font-weight: 600; }
+.ci-trend-svg { display: block; width: 100%; height: 40px; margin-top: 6px; }
+.ci-trend-dots { position: absolute; left: 12px; right: 12px; top: 33px; height: 40px; pointer-events: none; }
+.ci-trend-dot { position: absolute; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 999px; background: #2f5d8f; }
+.ci-trend-dot.carried { background: #fff; border: 1.5px solid #2f5d8f; box-sizing: border-box; }
+.ci-trend-dot.last { width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.15); }
+.ci-trend-ends { display: flex; justify-content: space-between; gap: 10px; margin-top: 4px; font-size: 11.5px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
+.ci-trend-list { margin: 0; padding: 4px 12px 6px; list-style: none; border: 1px solid #dfe3e8; border-top: 0; border-radius: 0 0 10px 10px; background: #fff; }
+.ci-trend-list li { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid #eceff3; font-size: 12.5px; }
+.ci-trend-list li:first-child { border-top: 0; }
+.ci-trend-list-date { color: #5b6474; }
+.ci-trend-list-value { font-weight: 800; color: #141a24; font-variant-numeric: tabular-nums; }
+.ci-done-row-wrap + .ci-done-row-wrap { border-top: 1px solid #eceff3; }
+.ci-done-row-wrap .ci-done-row { border: 0; }
+.ci-done-row-wrap .ci-trend { margin: 0 0 10px; }
