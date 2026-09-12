@@ -59,15 +59,15 @@ export default function AddExerciseRow({
           case "reps":
             return <td key={col.id}>{input("reps", { type: "text" })}</td>;
           case "weight_goal":
-            return <td key={col.id}>{input("targetWeight", { type: "number", step: "0.5", placeholder: "kg" })}</td>;
+            return <td key={col.id}>{input("targetWeight", { type: "number", step: "0.5" })}</td>;
           case "rpe":
-            return <td key={col.id}>{input("rpe", { type: "number", step: "0.5", placeholder: "RPE" })}</td>;
+            return <td key={col.id}>{input("rpe", { type: "number", step: "0.5" })}</td>;
           case "tempo":
-            return <td key={col.id}>{input("tempo", { type: "text", placeholder: "e.g. 3-1-1" })}</td>;
+            return <td key={col.id}>{input("tempo", { type: "text" })}</td>;
           case "rest":
-            return <td key={col.id}>{input("rest", { type: "text", placeholder: "90s" })}</td>;
+            return <td key={col.id}>{input("rest", { type: "text" })}</td>;
           case "distance":
-            return <td key={col.id}>{input("distance", { type: "text", placeholder: "5 km" })}</td>;
+            return <td key={col.id}>{input("distance", { type: "text" })}</td>;
           case "time":
             return <td key={col.id}>{input("time", { type: "text" })}</td>;
           case "notes":
