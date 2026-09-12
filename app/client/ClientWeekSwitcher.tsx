@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 
 // Read-only week switcher for the client's own Training tab — every
 // existing week's content is pre-rendered server-side (see TrainingTab in
@@ -26,6 +26,18 @@ export default function ClientWeekSwitcher({
   completedWeeks?: number[];
 }) {
   const [selected, setSelected] = useState(currentWeek);
+  // The strip opens with last week at the left edge, so the current week
+  // sits second and the rest of the row is what is coming. Near the end of
+  // the programme the strip cannot scroll that far, so the current week
+  // drifts right on its own.
+  const stripRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const strip = stripRef.current;
+    if (!strip) return;
+    const anchor = strip.querySelector<HTMLElement>(`[data-week="${currentWeek - 1}"]`) ?? strip.querySelector<HTMLElement>(`[data-week="${currentWeek}"]`);
+    if (!anchor) return;
+    strip.scrollLeft = anchor.getBoundingClientRect().left - strip.getBoundingClientRect().left;
+  }, [currentWeek]);
 
   // Weeks ahead of the current one are locked: the client can see the
   // programme has a Week 4, but not what is in it until that week arrives.
@@ -36,7 +48,7 @@ export default function ClientWeekSwitcher({
   return (
     <div>
       {weeks.length > 1 && (
-        <div className="week-switcher" style={{ marginBottom: 14 }}>
+        <div className="week-switcher" style={{ marginBottom: 14 }} ref={stripRef}>
           {weeks.map((w) => {
             const done = completedWeeks.includes(w);
             const locked = isLocked(w);
@@ -44,6 +56,7 @@ export default function ClientWeekSwitcher({
               <button
                 key={w}
                 type="button"
+                data-week={w}
                 className={`toggle-btn${w === selected ? " active" : ""}${done ? " done" : ""}${locked ? " locked" : ""}`}
                 onClick={() => setSelected(w)}
                 aria-disabled={locked}

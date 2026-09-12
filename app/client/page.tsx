@@ -6,6 +6,7 @@ import {
   getClient,
   getClientProfile,
   getClientPlanView,
+  getClientProgramNote,
   getLastMeetingRecap,
   getUpNextSession,
   getCalorieLog,
@@ -50,6 +51,7 @@ import CalorieLog from "./CalorieLog";
 import ReportArchiveList, { ArchiveReport } from "./ReportArchiveList";
 import NotificationRow from "./NotificationRow";
 import ClientWeekSwitcher from "./ClientWeekSwitcher";
+import ProgramNote from "./ProgramNote";
 import AppShell, { AppTab } from "./AppShell";
 import {
   AccountIcon,
@@ -341,17 +343,26 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
       </p>
 
       {trainingDays.length > 0 && (
-        <div className="training-stats home-dark-stats">
-          <div className="home-dark-stat">
+        <div className="training-stats ts-days">
+          {(() => {
+            const pct = Math.round((Math.min(stats.daysTrained, dayTarget) / dayTarget) * 100);
+            const complete = stats.daysTrained >= dayTarget;
+            return (
+              <div
+                className={`ts-days-ring${complete ? " complete" : ""}`}
+                style={{ background: `conic-gradient(${complete ? "#2f7a3f" : "#2f5d8f"} ${pct}%, #eceff3 0)` }}
+                role="img"
+                aria-label={`${pct}% of this week's sessions done`}
+              >
+                <span className="ts-days-ring-inner">{pct}%</span>
+              </div>
+            );
+          })()}
+          <div className="ts-days-body">
             <div className="home-dark-stat-label">Days trained</div>
             <div className="home-dark-stat-value-row">
               <span className="home-dark-stat-value">{stats.daysTrained}</span>
               <span className="home-dark-stat-of">of {dayTarget}</span>
-            </div>
-            <div className="home-dark-segments">
-              {Array.from({ length: dayTarget }, (_, i) => (
-                <span key={i} className={`home-dark-segment${i < stats.daysTrained ? " filled" : ""}`} />
-              ))}
             </div>
             <div className="home-dark-stat-caption">
               {stats.daysTrained >= dayTarget ? "Week complete" : `${dayTarget - stats.daysTrained} left this week`}
@@ -985,6 +996,9 @@ export default async function ClientPage({
             weekLabels={trainingWeekLabels}
             completedWeeks={completedWeeks}
           />
+          {/* One note for the whole programme, not a week or a day: it sits
+              under the weeks so it is clearly about all of them. */}
+          {deployedProgram && <ProgramNote programId={deployedProgram.id} text={getClientProgramNote(CLIENT_ID, deployedProgram.id)} />}
         </div>
       ),
     },

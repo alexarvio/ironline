@@ -83,6 +83,16 @@ export type ClientExerciseNote = {
   updated_at: string;
 };
 
+// The client's note about a whole programme, for the coach. One per
+// programme; edited in place.
+export type ClientProgramNote = {
+  id: number;
+  client_id: number;
+  program_id: number;
+  text: string;
+  updated_at: string;
+};
+
 export type CheckInNote = {
   id: number;
   client_id: number;
@@ -570,6 +580,7 @@ type Data = {
   calorie_logs: CalorieLog[];
   check_in_notes: CheckInNote[];
   client_exercise_notes: ClientExerciseNote[];
+  client_program_notes: ClientProgramNote[];
   // The last COACH_RESET_TOKEN value that was acted on (see
   // resetCoachFromEnv in lib/auth.ts), so a reset token left sitting in the
   // environment only ever fires once.
@@ -590,6 +601,7 @@ function emptyData(): Data {
     calorie_logs: [],
     check_in_notes: [],
     client_exercise_notes: [],
+    client_program_notes: [],
     exercises: [],
     program_days: [],
     workout_assignments: [],

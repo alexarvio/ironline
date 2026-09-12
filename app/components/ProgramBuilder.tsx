@@ -4,6 +4,7 @@ import {
   getAssignmentsForDay,
   getCustomValues,
   getDeployedProgram,
+  getClientProgramNote,
   getExerciseWeightTrendPct,
   getLogsForAssignment,
   getLogsForAssignmentByWeek,
@@ -574,8 +575,16 @@ export default function ProgramBuilder({
     ...pastPrograms.map((p) => buildProgram(p, "past")),
   ];
 
+  const programNote = deployedProgram ? getClientProgramNote(clientId, deployedProgram.id) : "";
+
   return (
     <div className="pb">
+      {programNote && (
+        <section className="pb-client-note" aria-label="Note from the client about the programme">
+          <span className="pb-client-note-label">Note from {clientName || "the client"} · about the whole programme</span>
+          <p className="pb-client-note-text">{programNote}</p>
+        </section>
+      )}
       <ProgramBuilderShell
         programs={programs}
         clientId={clientId}

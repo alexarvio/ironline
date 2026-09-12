@@ -148,6 +148,8 @@ import {
   setCalorieLog,
   setCheckInNote,
   setClientExerciseNote,
+  setClientProgramNote,
+  getClientIdForProgram,
   reorderAssignments,
   copyProgramDay,
   copyProgramDayToLaterWeeks,
@@ -440,6 +442,16 @@ export async function saveExerciseNoteAction(formData: FormData) {
   if (exerciseId == null) return;
   setClientExerciseNote(owner, exerciseId, String(formData.get("text") ?? ""));
   revalidatePath("/client");
+}
+
+// The client's note about the whole programme; the programme says whose.
+export async function saveProgramNoteAction(formData: FormData) {
+  const programId = Number(formData.get("programId"));
+  const owner = getClientIdForProgram(programId);
+  if (owner == null || !(await canAccessClient(owner))) return;
+  setClientProgramNote(owner, programId, String(formData.get("text") ?? ""));
+  revalidatePath("/client");
+  revalidatePath("/admin");
 }
 
 export async function logSetAction(formData: FormData) {

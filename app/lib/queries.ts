@@ -5175,6 +5175,30 @@ export function setClientExerciseNote(clientId: number, exerciseId: number, text
   persist();
 }
 
+export function getClientProgramNote(clientId: number, programId: number): string {
+  return (getData().client_program_notes ?? []).find((n) => n.client_id === clientId && n.program_id === programId)?.text ?? "";
+}
+
+export function getClientIdForProgram(programId: number): number | null {
+  return getData().training_programs.find((p) => p.id === programId)?.client_id ?? null;
+}
+
+export function setClientProgramNote(clientId: number, programId: number, text: string) {
+  const data = getData();
+  if (!data.client_program_notes) data.client_program_notes = [];
+  const clean = text.trim();
+  const existing = data.client_program_notes.find((n) => n.client_id === clientId && n.program_id === programId);
+  if (!clean) {
+    if (existing) data.client_program_notes = data.client_program_notes.filter((n) => n !== existing);
+  } else if (existing) {
+    existing.text = clean;
+    existing.updated_at = new Date().toISOString();
+  } else {
+    data.client_program_notes.push({ id: allocId("client_program_notes"), client_id: clientId, program_id: programId, text: clean, updated_at: new Date().toISOString() });
+  }
+  persist();
+}
+
 export function getCheckInNote(clientId: number, kind: CheckInNote["kind"], period: string): string | null {
   return getData().check_in_notes.find((n) => n.client_id === clientId && n.kind === kind && n.period === period)?.text ?? null;
 }
