@@ -43,7 +43,6 @@ export default function ProgramNote({ programId, text }: { programId: number; te
       />
       {open && (
         <div className="ts-prognote-foot">
-          <span className="ts-prognote-hint">About the whole programme, not one day.</span>
           <span className="ts-mynote-btns">
             <button type="button" className="ts-mynote-cancel" onClick={cancel}>
               Cancel
