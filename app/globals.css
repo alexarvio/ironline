@@ -13282,3 +13282,21 @@ a.cd-entry:hover { border-color: var(--accent); }
 /* Column chips: the "add your own" chip, and the small form it opens. */
 .pb-col-chip-add { border-style: dashed; }
 .pb-col-add-cancel { border: 0; background: none; color: #8b93a1; font: inherit; font-size: 14px; cursor: pointer; padding: 0 4px; }
+
+/* The week row: the rail takes the width, the client's note card sits at
+   the far right and grows downward when opened. */
+.pb-rail-row { display: flex; align-items: flex-start; gap: 12px; }
+.pb-rail-row .pb-rail { flex: 1; min-width: 0; }
+.pb-note-peek { flex: none; margin-left: auto; width: 260px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; }
+.pb-note-peek.empty { border-style: dashed; }
+.pb-note-peek-head { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: 0; background: none; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.pb-note-peek-head:disabled { cursor: default; }
+.pb-note-peek-icon { position: relative; flex: none; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 999px; background: #e6ecf3; color: #2f5d8f; }
+.pb-note-peek.empty .pb-note-peek-icon { background: #f8f9fb; color: #a0a7b3; }
+.pb-note-peek-dot { position: absolute; top: -1px; right: -1px; width: 9px; height: 9px; border-radius: 999px; background: #b3471d; border: 2px solid #fff; box-sizing: content-box; }
+.pb-note-peek-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.pb-note-peek-label { font-size: 12.5px; font-weight: 800; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-note-peek-sub { font-size: 11px; font-weight: 600; color: #8b93a1; }
+.pb-note-peek-chev { flex: none; color: #8b93a1; transition: transform 160ms ease; }
+.pb-note-peek-chev.up { transform: rotate(180deg); }
+.pb-note-peek-body { margin: 0; padding: 0 12px 12px 52px; font-size: 13px; font-weight: 500; line-height: 1.45; color: #313851; white-space: pre-wrap; }
