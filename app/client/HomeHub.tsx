@@ -84,30 +84,6 @@ export default function HomeHub({
       </div>
       {plan && <PlanRows plan={plan} />}
 
-      {/* The next call, when one is booked. No empty state: nothing booked
-          is simply nothing here. */}
-      {upcoming && (
-        <div className="home-meeting-card">
-          <div className="home-meeting-tile">
-            <div className="home-meeting-tile-month">{upcoming.monthCap}</div>
-            <div className="home-meeting-tile-day">{upcoming.dayNumber}</div>
-          </div>
-          <div className="home-meeting-card-body">
-            <div className="home-meeting-eyebrow">Next with your coach</div>
-            <div className="home-meeting-topic">{upcoming.topic}</div>
-            <div className="home-meeting-when">
-              {upcoming.whenLabel} · {upcoming.durationLabel}
-            </div>
-            {upcoming.link && (
-              <a className={`home-meeting-join${upcoming.startingNow ? " live" : ""}`} href={upcoming.link} target="_blank" rel="noopener noreferrer">
-                Join {upcoming.provider}
-              </a>
-            )}
-          </div>
-          <span className={`home-meeting-pill${upcoming.startingNow ? " live" : ""}`}>{upcoming.startingNow ? "Starting now" : upcoming.inLabel.toLowerCase()}</span>
-        </div>
-      )}
-
       {checkInStatus.configuredCount > 0 && (
         <section className="home-dark-section">
           <span className="home-dark-section-title">Check-ins</span>
@@ -135,6 +111,31 @@ export default function HomeHub({
             </span>
           </button>
         </section>
+      )}
+
+      {/* The next call, sitting under the check-in row: what's due today
+          comes first, the call after it. No empty state — nothing booked is
+          simply nothing here. */}
+      {upcoming && (
+        <div className="home-meeting-card">
+          <div className="home-meeting-tile">
+            <div className="home-meeting-tile-month">{upcoming.monthCap}</div>
+            <div className="home-meeting-tile-day">{upcoming.dayNumber}</div>
+          </div>
+          <div className="home-meeting-card-body">
+            <div className="home-meeting-eyebrow">Next with your coach</div>
+            <div className="home-meeting-topic">{upcoming.topic}</div>
+            <div className="home-meeting-when">
+              {upcoming.whenLabel} · {upcoming.durationLabel}
+            </div>
+            {upcoming.link && (
+              <a className={`home-meeting-join${upcoming.startingNow ? " live" : ""}`} href={upcoming.link} target="_blank" rel="noopener noreferrer">
+                Join {upcoming.provider}
+              </a>
+            )}
+          </div>
+          <span className={`home-meeting-pill${upcoming.startingNow ? " live" : ""}`}>{upcoming.startingNow ? "Starting now" : upcoming.inLabel.toLowerCase()}</span>
+        </div>
       )}
 
       {goals.length > 0 && (
