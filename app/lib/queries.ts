@@ -928,28 +928,43 @@ export type WeekRailWeek = {
   hasSplit: boolean;
 };
 
+// Which weekdays (1 = Monday) the client actually trained a programme
+// week's sessions on, read from when each set was logged rather than the
+// day it was planned for. A Tuesday session done on Wednesday lights
+// Wednesday; a week trained late still lights the days it was done.
+export function getTrainedWeekdays(clientId: number, weekNumber: number): Set<number> {
+  const data = getData();
+  const dayIds = new Set(getWeek(clientId, weekNumber).map((d) => d.id));
+  const assignmentIds = new Set(data.workout_assignments.filter((a) => dayIds.has(a.program_day_id)).map((a) => a.id));
+  const out = new Set<number>();
+  for (const log of data.set_logs) {
+    if (!assignmentIds.has(log.workout_assignment_id)) continue;
+    const js = new Date(`${log.logged_at.slice(0, 10)}T00:00:00`).getDay();
+    out.add(((js + 6) % 7) + 1);
+  }
+  return out;
+}
+
 export function getWeekRail(clientId: number, weekNumbers: number[], liveWeek: number): WeekRailWeek[] {
   const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
   return weekNumbers.map((weekNumber) => {
     const days = getWeek(clientId, weekNumber);
     const railDays: WeekRailDay[] = [];
+    // The day a set was actually logged is what lights a tick; the planned
+    // day only says whether an unlit one was a miss or a rest.
+    const actual = getTrainedWeekdays(clientId, weekNumber);
 
     for (let dow = 1; dow <= 7; dow++) {
       const day = days.find((d) => d.day_of_week === dow);
       const assignments = day ? getAssignmentsForDay(day.id) : [];
       const name = dayNames[dow - 1];
+      const planned = assignments.length > 0;
+      const trained = actual.has(dow);
 
-      if (assignments.length === 0) {
-        railDays.push({ dayOfWeek: dow, state: "rest", title: `${name}: rest day` });
-        continue;
-      }
-      const logged = assignments.some((a) => getLogsForAssignment(a.id).length > 0);
-      railDays.push(
-        logged
-          ? { dayOfWeek: dow, state: "trained", title: `${name}: trained` }
-          : { dayOfWeek: dow, state: "missed", title: `${name}: planned, nothing logged` }
-      );
+      if (trained) railDays.push({ dayOfWeek: dow, state: "trained", title: planned ? `${name}: trained` : `${name}: trained (moved from another day)` });
+      else if (planned) railDays.push({ dayOfWeek: dow, state: "missed", title: `${name}: planned, nothing logged` });
+      else railDays.push({ dayOfWeek: dow, state: "rest", title: `${name}: rest day` });
     }
 
     const trained = railDays.filter((d) => d.state === "trained").length;
