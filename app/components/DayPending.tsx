@@ -44,6 +44,8 @@ export const FIELD_LABEL: Record<FieldKey, string> = {
   rpe: "RPE",
   tempo: "tempo",
   rest: "rest",
+  distance: "distance",
+  time: "time",
   notes: "note",
 };
 

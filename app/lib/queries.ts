@@ -39,6 +39,8 @@ export type WorkoutAssignment = {
   rpe_target: number | null;
   rest_seconds: number | null;
   tempo: string | null;
+  distance?: string | null;
+  time?: string | null;
   notes: string | null;
   demo_url: string | null;
   note_kind: ExerciseNoteKind | null;
@@ -860,7 +862,7 @@ export function removeAssignment(assignmentId: number) {
 // week's targets far more tedious than it needed to be.
 export function updateAssignmentFields(
   assignmentId: number,
-  fields: Partial<Pick<WorkoutAssignment, "sets" | "reps" | "target_weight_kg" | "rpe_target" | "tempo" | "rest_seconds" | "notes">>
+  fields: Partial<Pick<WorkoutAssignment, "sets" | "reps" | "target_weight_kg" | "rpe_target" | "tempo" | "rest_seconds" | "distance" | "time" | "notes">>
 ) {
   const data = getData();
   const assignment = data.workout_assignments.find((wa) => wa.id === assignmentId);
@@ -5463,7 +5465,7 @@ export function applyDayOrderToLaterWeeks(programDayId: number): number {
 // already logged sets against: those are left alone and reported back by
 // their programme-relative label ("W3").
 
-export type DayFieldKey = "sets" | "reps" | "targetWeight" | "rpe" | "tempo" | "rest" | "notes";
+export type DayFieldKey = "sets" | "reps" | "targetWeight" | "rpe" | "tempo" | "rest" | "distance" | "time" | "notes";
 export type DayFieldValues = Partial<Record<DayFieldKey, string>>;
 
 export type DayChanges = {
@@ -5482,7 +5484,7 @@ export type DayChanges = {
 };
 
 function typedDayFields(raw: DayFieldValues) {
-  const out: Partial<Pick<WorkoutAssignment, "sets" | "reps" | "target_weight_kg" | "rpe_target" | "tempo" | "rest_seconds" | "notes">> = {};
+  const out: Partial<Pick<WorkoutAssignment, "sets" | "reps" | "target_weight_kg" | "rpe_target" | "tempo" | "rest_seconds" | "distance" | "time" | "notes">> = {};
   const num = (v: string | undefined) => {
     const t = (v ?? "").trim().replace(",", ".");
     return t ? Number(t) : null;
@@ -5493,6 +5495,8 @@ function typedDayFields(raw: DayFieldValues) {
   if (raw.rpe != null) out.rpe_target = num(raw.rpe);
   if (raw.tempo != null) out.tempo = raw.tempo.trim() || null;
   if (raw.rest != null) out.rest_seconds = parseRestSeconds(raw.rest);
+  if (raw.distance != null) out.distance = raw.distance.trim() || null;
+  if (raw.time != null) out.time = raw.time.trim() || null;
   if (raw.notes != null) out.notes = raw.notes.trim() || null;
   return out;
 }
@@ -5562,7 +5566,7 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
 
     for (const add of changes.added) {
       if (mirror && byExercise(add.exerciseId)) continue;
-      const typed = typedDayFields({ sets: "3", reps: "", targetWeight: "", rpe: "", tempo: "", rest: "", notes: "", ...add.fields });
+      const typed = typedDayFields({ sets: "3", reps: "", targetWeight: "", rpe: "", tempo: "", rest: "", distance: "", time: "", notes: "", ...add.fields });
       data.workout_assignments.push({
         id: allocId("workout_assignments"),
         program_day_id: day.id,
@@ -5573,6 +5577,8 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
         target_weight_kg: typed.target_weight_kg ?? null,
         rpe_target: typed.rpe_target ?? null,
         rest_seconds: typed.rest_seconds ?? null,
+        distance: typed.distance ?? null,
+        time: typed.time ?? null,
         tempo: typed.tempo ?? null,
         notes: typed.notes ?? null,
         demo_url: null,
