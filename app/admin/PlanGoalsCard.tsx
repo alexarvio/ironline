@@ -41,6 +41,11 @@ export default function PlanGoalsCard({
   // Done-ticks queue here and land together from the bar at the foot of
   // the card, the same way edits queue on a programme day.
   const [pendingDone, setPendingDone] = useState<Record<number, boolean>>({});
+  // A dragged order waits on the same bar as the done-ticks: nothing about
+  // this table saves on its own. Bumping dragKey remounts DragList, which
+  // owns the order it is showing, so Discard really does put it back.
+  const [pendingOrder, setPendingOrder] = useState<number[] | null>(null);
+  const [dragKey, setDragKey] = useState(0);
   const [applying, startApply] = useTransition();
   const doneOf = (g: PlanGoalRow) => pendingDone[g.id] ?? g.done;
   const toggleDone = (g: PlanGoalRow) =>
@@ -52,15 +57,33 @@ export default function PlanGoalsCard({
       return next;
     });
   const pendingList = Object.entries(pendingDone).map(([id, done]) => ({ id: Number(id), done }));
+  const changeCount = pendingList.length + (pendingOrder ? 1 : 0);
+  const discardPending = () => {
+    setPendingDone({});
+    setPendingOrder(null);
+    setDragKey((k) => k + 1);
+  };
   const applyPending = () =>
     startApply(async () => {
-      await applyGoalDoneChangesAction(pendingList);
+      if (pendingOrder) await reorderClientGoalsAction(clientId, pendingOrder);
+      if (pendingList.length > 0) await applyGoalDoneChangesAction(pendingList);
       setPendingDone({});
+      setPendingOrder(null);
+      setDragKey((k) => k + 1);
     });
   const [editing, setEditing] = useState<"new" | number | null>(null);
   const open = goals.filter((g) => !g.done).length;
   const done = goals.length - open;
-  const rows = goals.filter((g) => (filter === "all" ? true : pendingDone[g.id] != null ? true : filter === "done" ? g.done : !g.done));
+  const visible = goals.filter((g) => (filter === "all" ? true : pendingDone[g.id] != null ? true : filter === "done" ? g.done : !g.done));
+  // While an order is queued the table shows it, so the coach sees what
+  // Apply will save.
+  const rows = pendingOrder
+    ? [...visible].sort((a, b) => {
+        const ia = pendingOrder.indexOf(a.id);
+        const ib = pendingOrder.indexOf(b.id);
+        return (ia < 0 ? Number.MAX_SAFE_INTEGER : ia) - (ib < 0 ? Number.MAX_SAFE_INTEGER : ib);
+      })
+    : visible;
   const current = typeof editing === "number" ? goals.find((g) => g.id === editing) ?? null : null;
 
   return (
@@ -96,8 +119,9 @@ export default function PlanGoalsCard({
         </div>
         {rows.length === 0 && <div className="pl-empty-row">{filter === "done" ? "Nothing closed yet." : "No goals yet. Add the first one."}</div>}
         <DragList
+          key={dragKey}
           className="pl-draglist"
-          onReorder={(ids) => void reorderClientGoalsAction(clientId, ids)}
+          onReorder={(ids) => setPendingOrder(ids)}
           items={rows.map((g) => {
           const isDone = doneOf(g);
           const queued = pendingDone[g.id] != null;
@@ -155,22 +179,23 @@ export default function PlanGoalsCard({
           };
         })}
         />
-        <div className="pl-tfoot">Drag a row by its grip to change the order the client sees. Linked goals update themselves from check-ins and logged sets. Text-only goals are closed by hand — tick the box.</div>
+        <div className="pl-tfoot">Drag a row by its grip to change the order the client sees, then Apply. Linked goals update themselves from check-ins and logged sets. Text-only goals are closed by hand — tick the box.</div>
       </div>
 
-      {pendingList.length > 0 && (
+      {changeCount > 0 && (
         <div className="pb-pending pl-pending" role="status" aria-live="polite">
           <span className="pb-pending-count">
-            {pendingList.length} change{pendingList.length === 1 ? "" : "s"}
+            {changeCount} change{changeCount === 1 ? "" : "s"}
           </span>
           <span className="pb-pending-summary">
-            {pendingList
-              .map((c) => `${goals.find((g) => g.id === c.id)?.text ?? "Goal"} ${c.done ? "marked done" : "reopened"}`)
-              .join(" · ")}
+            {[
+              ...(pendingOrder ? ["Order changed"] : []),
+              ...pendingList.map((c) => `${goals.find((g) => g.id === c.id)?.text ?? "Goal"} ${c.done ? "marked done" : "reopened"}`),
+            ].join(" · ")}
           </span>
           <div className="pb-pending-right">
             <span className="pb-pending-status">{applying ? "Saving…" : "Unsaved"}</span>
-            <button type="button" className="pb-pending-ghost" onClick={() => setPendingDone({})} disabled={applying}>
+            <button type="button" className="pb-pending-ghost" onClick={discardPending} disabled={applying}>
               Discard
             </button>
             <button type="button" className="pb-pending-apply" onClick={applyPending} disabled={applying}>

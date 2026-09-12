@@ -5987,7 +5987,7 @@ export function getPlanData(clientId: number) {
     if (view.kind === "metric" && t?.kind === "metric") {
       const figure = (view.barLabel ?? "").split(" · ")[0];
       live = `${figure} · ${view.reached ? "reached" : (view.sub ?? "").includes("on pace") ? "on pace" : (view.sub ?? "").includes("behind") ? "behind" : (view.sub ?? "").includes("slipped") ? "slipped" : "tracking"}`;
-      pct = Math.round((view.bar ?? 0) * 100);
+      pct = view.reached ? 100 : Math.round((view.bar ?? 0) * 100);
       const s = seriesForKey(clientId, t.metricKey);
       rule = `Metric · ${s?.name ?? "Metric"} ${t.op} ${fmtNumber(t.target)}${s?.unit ? ` ${s.unit}` : ""} · by ${fmtShort(t.byDate)}`;
       by = fmtShort(t.byDate);

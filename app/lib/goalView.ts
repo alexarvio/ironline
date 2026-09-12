@@ -138,10 +138,10 @@ export function computeGoalView(
       kind: "metric",
       tone: reached ? "green" : slipped ? "orange" : onPace !== false ? "green" : "orange",
       reached,
-      bar: reached ? 1 : progress,
+      bar: reached ? null : progress,
       barLabel: reached ? `${fmtNum(latest.value)} ${unit}`.trim() : `${fmtNum(latest.value)} ${unit} · ${fmtNum(toGo)} to go`.replace("  ", " "),
       sub: reached
-        ? `Reached ${fmtDate(reachedAt!.date)}`
+        ? `On target since ${fmtDate(reachedAt!.date)}`
         : slipped
         ? `Reached ${fmtDate(firstHit!.date)} · slipped, ${fmtNum(toGo)} ${unit} to go`.replace("  ", " ")
         : onPace === true
