@@ -737,6 +737,34 @@ export async function applyMetricTemplateAction(formData: FormData) {
 // Logs every metric field present on the form for one period at once — the
 // "log today" / "log this week" form submits all currently-defined metrics
 // in a single action rather than one action per field.
+// The whole check-in in one post: today's daily metrics, this week's weekly
+// ones when their window is open, today's measurements, and one note. The
+// screen shows them as one list, so they save as one.
+export async function saveCheckInAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const date = String(formData.get("date") || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+  const num = (raw: FormDataEntryValue | null) => {
+    if (raw === null || raw === "") return undefined;
+    const v = Number(String(raw).replace(",", "."));
+    return Number.isFinite(v) ? v : null;
+  };
+  for (const freq of ["daily", "weekly"] as const) {
+    const period = freq === "weekly" ? weekStart(date) : date;
+    for (const def of listMetricDefinitions(clientId, freq)) {
+      const v = num(formData.get(`metric_${def.id}`));
+      if (v !== undefined) setMetricEntry(def.id, period, v);
+    }
+  }
+  for (const field of listMeasurementFields(clientId)) {
+    const v = num(formData.get(`field_${field.id}`));
+    if (v !== undefined) setMeasurementValue(field.id, date, v);
+  }
+  if (formData.has("note")) setCheckInNote(clientId, "daily", date, String(formData.get("note") ?? "").slice(0, 500));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
 export async function logMetricPeriodAction(formData: FormData) {
   // Ignores the posted client id for clients — they always write their own.
   const clientId = await requireClientAccess(Number(formData.get("clientId")));

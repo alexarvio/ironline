@@ -132,7 +132,9 @@ Look: `/client` Home.
 - [x] The client’s Training tab shows the programme’s name above the week strip, with its length.
 - [x] The client’s Nutrition tab shows the current nutrition phase’s name above the targets, when the coach has one on the plan.
 
-## 18 · Check-in trends — LOCAL ONLY, not pushed
+## 18 · Check-in rebuilt: one list, then Your progress — LOCAL ONLY, not pushed
+
+- [ ] Keep  [ ] Drop — **One list, no tabs.** Dailies every day, weekly metrics join once their window opens (the coach’s check-in day onwards) under a "This week" caption, measurements under theirs. One Save posts everything; one note for the coach.
 
 - [ ] Keep  [ ] Drop — Under every check-in metric with two or more readings, a small chart of its movement inside the current phase: the change since the phase began on the right, the start and latest readings under the line, and a tap opens the readings as a list. The phase is the running nutrition phase on the Plan tab; with none, the card’s phase start, then the start of coaching. The last reading before the phase began carries over as its starting line, drawn as a hollow dot. Shows in the open form and on the saved card.
 

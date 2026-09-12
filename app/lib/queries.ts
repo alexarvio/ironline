@@ -4242,12 +4242,14 @@ export function getCheckInSections(clientId: number): CheckInData {
   const daily = trackerSection(
     "daily",
     today,
-    "Daily",
+    "Every day",
     "What your coach asked you to log every day. Takes about twenty seconds."
   );
   if (daily) sections.push(daily);
 
-  const weekly = trackerSection("weekly", thisWeek, "Weekly", "One entry covers the whole week.");
+  // Weekly metrics join the list only once their window opens (the coach's
+  // check-in day onwards), so most days the client sees just the dailies.
+  const weekly = weeklyCheckInOpen(clientId, today) ? trackerSection("weekly", thisWeek, "This week", "One entry covers the whole week.") : null;
   if (weekly) sections.push(weekly);
 
   // ---- Measurements ----
@@ -4263,7 +4265,7 @@ export function getCheckInSections(clientId: number): CheckInData {
     sections.push({
       id: "measurements",
       note: getCheckInNote(clientId, "measurements", today),
-      label: "Measure",
+      label: "Measurements",
       intro: "Same spots, same time of day: first thing, before food.",
       metrics: fields.map((f) => {
         const current = valueAt(f.id, today);

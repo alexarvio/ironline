@@ -2,7 +2,7 @@
 
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { ChevronLeftIcon } from "../components/icons";
-import { logMetricPeriodAction, saveMeasurementCheckInAction, uploadProgressPhotoAction } from "../lib/actions";
+import { saveCheckInAction, uploadProgressPhotoAction } from "../lib/actions";
 
 // Deliberately does NOT import from ../lib/queries (see HomeHub.tsx for why
 // a "use client" file importing queries.ts breaks the dev server). All data
@@ -97,12 +97,8 @@ export default function CheckInScreen({
   dateLabel,
   today,
   sections,
-  initialSection,
-  phaseLabel,
-  deltas,
   photoSlots,
   photoPeriodLabel,
-  dueSections,
   photosDue,
   photosNextLabel,
   coachNote,
@@ -113,6 +109,7 @@ export default function CheckInScreen({
   dateLabel: string;
   today: string;
   sections: CheckInSection[];
+  /** Kept for the caller; the screen is one list now, so nothing opens on a section. */
   initialSection: string;
   phaseLabel: string | null;
   deltas: CheckInDelta[];
@@ -122,67 +119,36 @@ export default function CheckInScreen({
   photosDue: boolean;
   photosNextLabel: string;
   coachNote: CheckInCoachNote;
-  // Past photo periods and the coach's written feedback on them, rendered
-  // server-side and passed through. Not in the Check-in mockup, but it's
-  // existing client-facing functionality that has nowhere else to live now
-  // that Photos is no longer its own view.
   photoHistory: ReactNode;
   onBack: () => void;
 }) {
-  const startIndex = Math.max(
-    0,
-    sections.findIndex((s) => s.id === initialSection)
+  // One list: every metric the coach asked for that is due now. Dailies
+  // every day, weeklies once their window opens, measurements alongside.
+  // A metric id can repeat across kinds (metric 1, field 1), so state is
+  // keyed by kind and id together.
+  type Row = CheckInMetric & { kind: CheckInSection["id"]; group: string; key: string };
+  const rows: Row[] = sections.flatMap((sec) =>
+    sec.metrics.map((m) => ({ ...m, kind: sec.id, group: sec.label, key: `${sec.id}:${m.id}` }))
   );
-  const [sectionId, setSectionId] = useState(sections[startIndex]?.id ?? sections[0]?.id);
-  // Seeded from what's already logged for the current period, so reopening
-  // the screen shows what was sent rather than blanking it out.
-  const [values, setValues] = useState<Record<string, Record<string, string>>>(() =>
-    Object.fromEntries(
-      sections.map((s) => [s.id, Object.fromEntries(s.metrics.map((m) => [m.id, m.value]))])
-    )
-  );
+  const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(rows.map((r) => [r.key, r.value])));
+  const savedNote = (sections.find((sec) => sec.id === "daily") ?? sections[0])?.note ?? "";
+  const [note, setNote] = useState(savedNote);
+  const noteDirty = note.trim() !== savedNote.trim();
 
-  const active = sections.find((s) => s.id === sectionId);
-
-  // Derived from the active section; all computed before the early return
-  // below so the hooks that follow run in the same order on every render.
-  const activeValues = active ? values[active.id] ?? {} : {};
-  // The note for the coach, per section, edited alongside the numbers.
-  const [notes, setNotes] = useState<Record<string, string>>(() => Object.fromEntries(sections.map((s) => [s.id, s.note ?? ""])));
-  const activeNote = active ? notes[active.id] ?? "" : "";
-  const noteDirty = !!active && activeNote.trim() !== (active.note ?? "").trim();
-  const metrics = active?.metrics ?? [];
-  const filled = metrics.filter((m) => (activeValues[m.id] ?? "").length > 0);
-  const complete = filled.length === metrics.length && metrics.length > 0;
-  const isMeasurements = active?.id === "measurements";
-  const remaining = metrics.length - filled.length;
-
-  // m.value is what's actually persisted for this period, so comparing the
-  // two tells us whether there's anything left to send — no separate "saved"
-  // flag to keep in sync, and editing a saved section re-arms Save by
-  // itself. After a submit the server re-renders with the new values, so
-  // this settles into the saved state on its own.
-  const dirty = metrics.some((m) => !sameNumber(activeValues[m.id] ?? "", m.value)) || noteDirty;
-  const savedSomething = metrics.some((m) => m.value.length > 0);
+  const filled = rows.filter((r) => (values[r.key] ?? "").length > 0);
+  const complete = filled.length === rows.length && rows.length > 0;
+  const remaining = rows.length - filled.length;
+  const dirty = rows.some((r) => !sameNumber(values[r.key] ?? "", r.value)) || noteDirty;
+  const savedSomething = rows.some((r) => r.value.length > 0);
   const isSaved = !dirty && savedSomething;
-  // A note on its own is fine once the numbers are in; it just can't be the
-  // only thing sent for a period with nothing logged.
   const canSave = dirty && (filled.length > 0 || (noteDirty && savedSomething));
 
-  // The confirmation banner shows after a save THIS visit lands — not on
-  // merely opening a section that was saved earlier. `submitted` is armed
-  // by the form's submit and disarmed when the server re-render brings the
-  // values back matching (isSaved), which is the moment the save is real.
   const submitted = useRef(false);
   const [justSaved, setJustSaved] = useState(false);
-  // A saved section shows as a collapsed "done" card rather than the open
-  // form; Edit reopens it (a client may have typed something wrong), and a
-  // fresh save, or Done, folds it back up.
   const [editing, setEditing] = useState(false);
   useEffect(() => {
     if (isSaved && submitted.current) {
       submitted.current = false;
-      // Deferred a tick so the state change isn't synchronous inside the effect.
       const t = setTimeout(() => {
         setJustSaved(true);
         setEditing(false);
@@ -196,33 +162,40 @@ export default function CheckInScreen({
     setJustSaved(false);
   };
 
-  if (!active) {
+  if (rows.length === 0) {
     return (
       <div className="ci-screen">
+        <header className="ci-header">
+          <button type="button" className="ci-back" onClick={onBack} aria-label="Back to home">
+            <ChevronLeftIcon />
+          </button>
+          <div className="ci-header-titles">
+            <div className="ci-kicker">{dateLabel}</div>
+            <div className="ci-title">Check-in</div>
+          </div>
+        </header>
         <p className="ci-empty">Your coach hasn&rsquo;t set up any check-in metrics yet.</p>
       </div>
     );
   }
 
-  const setValue = (metricId: string, v: string) => {
+  const setValue = (key: string, v: string) => {
     setJustSaved(false);
-    setValues((prev) => ({ ...prev, [active.id]: { ...prev[active.id], [metricId]: v } }));
+    setValues((prev) => ({ ...prev, [key]: v }));
   };
-  const switchSection = (id: CheckInSection["id"]) => {
-    setSectionId(id);
-    setEditing(false);
-    setJustSaved(false);
-  };
-  // Leaving edit mode without saving puts back what the coach actually has.
   const stopEditing = () => {
-    setValues((prev) => ({
-      ...prev,
-      [active.id]: Object.fromEntries(active.metrics.map((m) => [m.id, m.value])),
-    }));
+    setValues(Object.fromEntries(rows.map((r) => [r.key, r.value])));
+    setNote(savedNote);
     setEditing(false);
   };
   const showValue = (m: CheckInMetric) =>
     m.scaleMax ? `${m.value}/${m.scaleMax}` : `${m.value}${m.unit ? ` ${m.unit}` : ""}`;
+  const inputName = (r: Row) => (r.kind === "measurements" ? `field_${r.id}` : `metric_${r.id}`);
+  // A group caption only where a second kind joins the dailies, so the
+  // client knows why a row is here today.
+  const groups = Array.from(new Set(rows.map((r) => r.group)));
+  const withTrend = rows.filter((r) => r.trend);
+  const trendScope = withTrend[0]?.trend ?? null;
 
   return (
     <div className="ci-screen">
@@ -237,27 +210,11 @@ export default function CheckInScreen({
         <div className="ci-progress">
           <div className={`ci-progress-count${complete ? " complete" : ""}`}>
             {filled.length}
-            <span className="ci-progress-total">/{active.metrics.length}</span>
+            <span className="ci-progress-total">/{rows.length}</span>
           </div>
           <div className="ci-progress-label">logged</div>
         </div>
       </header>
-
-      {sections.length > 1 && (
-        <div className="ci-tabs">
-          {sections.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              className={`ci-tab${s.id === active.id ? " active" : ""}`}
-              onClick={() => switchSection(s.id)}
-            >
-              {s.label}
-              {dueSections.includes(s.id) && <span className="ci-tab-dot" aria-label="Not logged yet" />}
-            </button>
-          ))}
-        </div>
-      )}
 
       <div className="ci-scroll">
       {collapsed ? (
@@ -269,109 +226,92 @@ export default function CheckInScreen({
               </span>
               <div className="ci-saved-text">
                 <div className="ci-saved-title">{justSaved ? "Check-in saved" : "Already logged"}</div>
-                <div className="ci-saved-sub">
-                  {justSaved ? "Your coach can see it now." : "Your coach has it."}
-                </div>
+                <div className="ci-saved-sub">{justSaved ? "Your coach can see it now." : "Your coach has it."}</div>
               </div>
               <button type="button" className="ci-saved-home" onClick={() => setEditing(true)}>
                 Edit
               </button>
             </div>
             <div className="ci-done-list">
-              {(active.note ?? "").trim() !== "" && (
+              {savedNote.trim() !== "" && (
                 <div className="ci-done-note">
                   <span className="ci-done-note-label">Your note</span>
-                  <span className="ci-done-note-text">{active.note}</span>
+                  <span className="ci-done-note-text">{savedNote}</span>
                 </div>
               )}
-              {active.metrics.map((m) => (
-                <div key={m.id} className="ci-done-row-wrap">
-                  <div className="ci-done-row">
-                    <span className="ci-done-name">{m.name}</span>
-                    <span className={`ci-done-value${m.value ? "" : " empty"}`}>
-                      {m.value ? showValue(m) : "–"}
-                    </span>
-                  </div>
-                  {m.trend && <MetricTrend trend={m.trend} unit={m.unit} scaleMax={m.scaleMax} />}
+              {rows.map((r) => (
+                <div key={r.key} className="ci-done-row">
+                  <span className="ci-done-name">{r.name}</span>
+                  <span className={`ci-done-value${r.value ? "" : " empty"}`}>{r.value ? showValue(r) : "–"}</span>
                 </div>
               ))}
             </div>
           </div>
         </div>
       ) : (
-      /* One form per section, keyed so switching sections resets the
-          uncontrolled bits (the file inputs) rather than carrying them over. */
-      <form
-        key={active.id}
-        id="ci-form"
-        className="ci-body"
-        action={isMeasurements ? saveMeasurementCheckInAction : logMetricPeriodAction}
-        onSubmit={armSubmit}
-      >
+      <form id="ci-form" className="ci-body" action={saveCheckInAction} onSubmit={armSubmit}>
         <input type="hidden" name="clientId" value={clientId} />
         <input type="hidden" name="date" value={today} />
-        {!isMeasurements && <input type="hidden" name="frequency" value={active.id} />}
 
-        <p className="ci-intro">{active.intro}</p>
-
-        {active.metrics.map((m) => {
-          const value = activeValues[m.id] ?? "";
-          const has = value.length > 0;
-          return (
-            <div key={m.id} className="ci-metric">
-              <div className="ci-metric-top">
-                <div className="ci-metric-labels">
-                  <div className="ci-metric-name">{m.name}</div>
-                  {m.hint && <div className="ci-metric-hint">{m.hint}</div>}
+        {groups.map((group) => (
+          <div key={group} className="ci-group">
+            {groups.length > 1 && <div className="ci-group-label">{group}</div>}
+            {rows.filter((r) => r.group === group).map((m) => {
+              const value = values[m.key] ?? "";
+              const has = value.length > 0;
+              return (
+                <div key={m.key} className="ci-metric">
+                  <div className="ci-metric-top">
+                    <div className="ci-metric-labels">
+                      <div className="ci-metric-name">{m.name}</div>
+                      {m.hint && <div className="ci-metric-hint">{m.hint}</div>}
+                    </div>
+                    <div className="ci-metric-input-wrap">
+                      <input
+                        type="text"
+                        inputMode={m.scaleMax ? "numeric" : "decimal"}
+                        autoComplete="off"
+                        name={inputName(m)}
+                        placeholder="–"
+                        value={value}
+                        onChange={(e) => setValue(m.key, cleanNumeric(e.target.value, !!m.scaleMax))}
+                        aria-label={m.name}
+                        className={`ci-input${has ? " filled" : ""}`}
+                      />
+                      <span className="ci-metric-unit">{m.scaleMax ? `/${m.scaleMax}` : m.unit || ""}</span>
+                    </div>
+                  </div>
+                  {m.scaleMax && (
+                    <div className="ci-scale">
+                      {Array.from({ length: m.scaleMax }, (_, i) => {
+                        const n = String(i + 1);
+                        const on = value === n;
+                        return (
+                          <button
+                            key={n}
+                            type="button"
+                            className={`ci-scale-btn${on ? " active" : ""}`}
+                            onClick={() => setValue(m.key, on ? "" : n)}
+                            aria-pressed={on}
+                          >
+                            {n}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-                <div className="ci-metric-input-wrap">
-                  <input
-                    type="text"
-                    inputMode={m.scaleMax ? "numeric" : "decimal"}
-                    autoComplete="off"
-                    name={isMeasurements ? `field_${m.id}` : `metric_${m.id}`}
-                    placeholder="–"
-                    value={value}
-                    onChange={(e) => setValue(m.id, cleanNumeric(e.target.value, !!m.scaleMax))}
-                    aria-label={m.name}
-                    className={`ci-input${has ? " filled" : ""}`}
-                  />
-                  {/* Always rendered, fixed width: a metric with no unit
-                      (Steps) keeps the same right edge as one with (kg), so
-                      the numerals line up down the list. */}
-                  <span className="ci-metric-unit">{m.scaleMax ? `/${m.scaleMax}` : m.unit || ""}</span>
-                </div>
-              </div>
-              {m.scaleMax && (
-                <div className="ci-scale">
-                  {Array.from({ length: m.scaleMax }, (_, i) => {
-                    const n = String(i + 1);
-                    const on = value === n;
-                    return (
-                      <button
-                        key={n}
-                        type="button"
-                        className={`ci-scale-btn${on ? " active" : ""}`}
-                        onClick={() => setValue(m.id, on ? "" : n)}
-                        aria-pressed={on}
-                      >
-                        {n}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              {m.trend && <MetricTrend trend={m.trend} unit={m.unit} scaleMax={m.scaleMax} />}
-            </div>
-          );
-        })}
+              );
+            })}
+          </div>
+        ))}
 
         <label className="ci-notefield">
           <span className="ci-notefield-label">Note for your coach</span>
           <textarea
             name="note"
-            value={activeNote}
-            onChange={(e) => setNotes((n) => ({ ...n, [active.id]: e.target.value }))}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
             placeholder="Anything the numbers don't say: a tennis session, a bad night, a day off…"
             maxLength={500}
             rows={2}
@@ -380,97 +320,85 @@ export default function CheckInScreen({
       </form>
       )}
 
-      {isMeasurements && (deltas.length > 0 || photoSlots.length > 0) && (
+      {withTrend.length > 0 && (
         <div className="ci-extras">
-          {deltas.length > 0 && (
-            <section className="ci-section">
-              <div className="ci-section-head">
-                <span className="ci-section-title">Since this phase started</span>
-                {phaseLabel && <span className="ci-section-meta">{phaseLabel}</span>}
-              </div>
-              <div className="ci-deltas">
-                {deltas.map((d) => (
-                  <div key={d.name} className="ci-delta">
-                    <div className="ci-delta-name">{d.name}</div>
-                    <div className="ci-delta-value-row">
-                      <span className="ci-delta-value">{d.value}</span>
-                      {d.unit && <span className="ci-delta-unit">{d.unit}</span>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {photoSlots.length > 0 && (
-            <section className="ci-section">
-              <div className="ci-section-head">
-                <span className="ci-section-title">Progress pictures</span>
-                <span
-                  className={`ci-section-count${
-                    photoSlots.every((p) => p.src) ? " complete" : ""
-                  }`}
-                >
-                  {photoSlots.filter((p) => p.src).length} of {photoSlots.length}
+          <section className="ci-section">
+            <div className="ci-section-head">
+              <span className="ci-section-title">Your progress</span>
+              {trendScope && (
+                <span className="ci-section-meta">
+                  {trendScope.phaseName ?? "This phase"} · {trendScope.startLabel}
                 </span>
-              </div>
-              <div className="ci-photos">
-                {photoSlots.map((p) =>
-                  // Uploading is only offered while this period's set is
-                  // still incomplete — once it's full there's nothing for
-                  // the client to do, so the tiles go read-only rather than
-                  // inviting a pointless re-shoot.
-                  photosDue ? (
-                    <form key={p.id} action={uploadProgressPhotoAction} className="ci-photo-form">
-                      <input type="hidden" name="clientId" value={clientId} />
-                      <input type="hidden" name="slotId" value={p.id} />
-                      <label className={`ci-photo${p.src ? " filled" : ""}`}>
-                        {p.src ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={p.src} alt={p.label} className="ci-photo-img" />
-                        ) : (
-                          <span className="ci-photo-icon" aria-hidden="true">
-                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                              <path
-                                d="M2.5 6.2a1 1 0 0 1 1-1h1.7l.9-1.5h3.8l.9 1.5H15a1 1 0 0 1 1 1v7.3a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V6.2z"
-                                stroke="currentColor"
-                                strokeWidth="1.3"
-                                strokeLinejoin="round"
-                              />
-                              <circle cx="9" cy="10" r="2.6" stroke="currentColor" strokeWidth="1.3" />
-                            </svg>
-                          </span>
-                        )}
-                        <span className="ci-photo-label">{p.label}</span>
-                        <input
-                          type="file"
-                          name="file"
-                          accept="image/*"
-                          capture="environment"
-                          className="ci-photo-input"
-                          onChange={(e) => e.currentTarget.form?.requestSubmit()}
-                        />
-                      </label>
-                    </form>
-                  ) : (
-                    <div key={p.id} className={`ci-photo done${p.src ? " filled" : ""}`}>
-                      {p.src && (
+              )}
+            </div>
+            <div className="ci-trends">
+              {withTrend.map((m) => (
+                <MetricTrend key={m.key} name={m.name} trend={m.trend!} unit={m.unit} scaleMax={m.scaleMax} />
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
+
+      {photoSlots.length > 0 && (
+        <div className="ci-extras">
+          <section className="ci-section">
+            <div className="ci-section-head">
+              <span className="ci-section-title">Progress pictures</span>
+              <span className={`ci-section-count${photoSlots.every((p) => p.src) ? " complete" : ""}`}>
+                {photoSlots.filter((p) => p.src).length} of {photoSlots.length}
+              </span>
+            </div>
+            <div className="ci-photos">
+              {photoSlots.map((p) =>
+                photosDue ? (
+                  <form key={p.id} action={uploadProgressPhotoAction} className="ci-photo-form">
+                    <input type="hidden" name="clientId" value={clientId} />
+                    <input type="hidden" name="slotId" value={p.id} />
+                    <label className={`ci-photo${p.src ? " filled" : ""}`}>
+                      {p.src ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={p.src} alt={p.label} className="ci-photo-img" />
+                      ) : (
+                        <span className="ci-photo-icon" aria-hidden="true">
+                          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                            <path
+                              d="M2.5 6.2a1 1 0 0 1 1-1h1.7l.9-1.5h3.8l.9 1.5H15a1 1 0 0 1 1 1v7.3a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V6.2z"
+                              stroke="currentColor"
+                              strokeWidth="1.3"
+                              strokeLinejoin="round"
+                            />
+                            <circle cx="9" cy="10" r="2.6" stroke="currentColor" strokeWidth="1.3" />
+                          </svg>
+                        </span>
                       )}
                       <span className="ci-photo-label">{p.label}</span>
-                    </div>
-                  )
-                )}
-              </div>
-              <div className="ci-photo-note">
-                {photosDue
-                  ? `One set per ${photoPeriodLabel.toLowerCase()}. A new photo replaces this one.`
-                  : photosNextLabel}
-              </div>
-              {photoHistory && <div className="ci-photo-history">{photoHistory}</div>}
-            </section>
-          )}
+                      <input
+                        type="file"
+                        name="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="ci-photo-input"
+                        onChange={(e) => e.currentTarget.form?.requestSubmit()}
+                      />
+                    </label>
+                  </form>
+                ) : (
+                  <div key={p.id} className={`ci-photo done${p.src ? " filled" : ""}`}>
+                    {p.src && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.src} alt={p.label} className="ci-photo-img" />
+                    )}
+                    <span className="ci-photo-label">{p.label}</span>
+                  </div>
+                )
+              )}
+            </div>
+            <div className="ci-photo-note">
+              {photosDue ? `One set per ${photoPeriodLabel.toLowerCase()}. A new photo replaces this one.` : photosNextLabel}
+            </div>
+            {photoHistory && <div className="ci-photo-history">{photoHistory}</div>}
+          </section>
         </div>
       )}
 
@@ -481,11 +409,6 @@ export default function CheckInScreen({
             <div className="ci-note">
               <span className="ci-note-dot" aria-hidden="true" />
               <div className="ci-note-body">
-                {/* The section heading above already says "Coach note", so the
-                    row itself only carries the timestamp — unlike the mockup,
-                    where this slot named the exercise the note was about.
-                    Coach notes here are chat messages, which have no such
-                    subject to show. */}
                 <div className="ci-note-top">
                   <span className="ci-note-time">{coachNote.timeLabel}</span>
                 </div>
@@ -495,23 +418,14 @@ export default function CheckInScreen({
           </section>
         </div>
       )}
-
       </div>
 
-      {/* No footer once the section is folded up: the done card is the whole
-          story, and its own Edit is the way back in. */}
       {!collapsed && (
       <div className="ci-footer">
         <div className="ci-footer-labels">
           <div className="ci-footer-kicker">{isSaved ? "Sent" : "Goes to your coach"}</div>
           <div className={`ci-footer-label${isSaved ? " sent" : complete ? " complete" : ""}`}>
-            {isSaved
-              ? complete
-                ? "All updated"
-                : "Your coach has it"
-              : complete
-              ? "Everything filled in"
-              : `${remaining} still empty`}
+            {isSaved ? (complete ? "All updated" : "Your coach has it") : complete ? "Everything filled in" : `${remaining} still empty`}
           </div>
         </div>
         {isSaved ? (
@@ -530,54 +444,49 @@ export default function CheckInScreen({
 }
 
 // ---- A metric's movement inside the current phase -------------------------
-// A sparkline with the start and latest readings and the change between
-// them. Tapping it opens the readings as a list. The first point can be the
-// last reading of the phase before, carried over as this phase's starting
-// line; it is drawn hollow so the client can tell.
-function MetricTrend({ trend, unit, scaleMax }: { trend: CheckInTrend; unit: string; scaleMax: number | null }) {
+// One card per metric: the name and latest reading up top, a bar per
+// reading underneath (the latest in the accent, the rest quiet), and the
+// change since the phase began. Tapping opens the readings as a list. The
+// first bar can be the last reading of the phase before, carried over as
+// this phase's starting line; it is drawn outlined so the client can tell.
+function MetricTrend({ name, trend, unit, scaleMax }: { name: string; trend: CheckInTrend; unit: string; scaleMax: number | null }) {
   const [open, setOpen] = useState(false);
-  const W = 240;
-  const H = 40;
-  const PAD = 4;
   const values = trend.points.map((pt) => pt.value);
   const min = Math.min(...values);
   const max = Math.max(...values);
-  const span = max - min || 1;
-  const x = (i: number) => (trend.points.length === 1 ? W / 2 : PAD + (i / (trend.points.length - 1)) * (W - PAD * 2));
-  const y = (v: number) => H - PAD - ((v - min) / span) * (H - PAD * 2);
-  const path = trend.points.map((pt, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)} ${y(pt.value).toFixed(1)}`).join(" ");
+  // Bars need headroom and a floor, or a steady weight reads as a flat
+  // wall and a small dip as a cliff. Scales run from zero.
+  const pad = scaleMax ? 0 : max === min ? Math.max(1, Math.abs(max) * 0.05) : (max - min) * 0.6;
+  const lo = scaleMax ? 0 : min - pad;
+  const hi = scaleMax ? scaleMax : max + pad;
+  const pct = (v: number) => Math.max(0.08, Math.min(1, (v - lo) / (hi - lo || 1)));
   const fmt = (v: number) => (scaleMax ? `${v}/${scaleMax}` : `${v}${unit ? ` ${unit}` : ""}`);
   const sign = trend.change > 0 ? "+" : trend.change < 0 ? "\u2212" : "";
-  const changeText = trend.change === 0 ? "no change" : `${sign}${Math.abs(trend.change)}${scaleMax ? "" : unit ? ` ${unit}` : ""}`;
+  const changeText = trend.change === 0 ? "No change" : `${sign}${Math.abs(trend.change)}${scaleMax ? "" : unit ? ` ${unit}` : ""}`;
   const dateLabel = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const shown = trend.points.slice(-12);
   return (
     <div className={`ci-trend${open ? " open" : ""}`}>
       <button type="button" className="ci-trend-btn" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <div className="ci-trend-head">
-          <span className="ci-trend-scope">
-            {trend.phaseName ? `${trend.phaseName} · ` : "This phase · "}
-            {trend.startLabel}
-          </span>
-          <span className={`ci-trend-change${trend.change === 0 ? " flat" : ""}`}>{changeText}</span>
+          <span className="ci-trend-name">{name}</span>
+          <span className="ci-trend-latest">{fmt(trend.latest)}</span>
         </div>
-        <svg className="ci-trend-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
-          <path d={path} fill="none" stroke="#2f5d8f" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-        </svg>
-        <div className="ci-trend-dots" aria-hidden="true">
-          {trend.points.map((pt, i) => (
+        <div className="ci-trend-bars" aria-hidden="true">
+          {shown.map((pt, i) => (
             <span
               key={pt.date}
-              className={`ci-trend-dot${pt.carried ? " carried" : ""}${i === trend.points.length - 1 ? " last" : ""}`}
-              style={{ left: `${(x(i) / W) * 100}%`, top: `${(y(pt.value) / H) * 100}%` }}
+              className={`ci-trend-bar${i === shown.length - 1 ? " last" : ""}${pt.carried ? " carried" : ""}`}
+              style={{ height: `${pct(pt.value) * 100}%` }}
+              title={`${dateLabel(pt.date)} · ${fmt(pt.value)}`}
             />
           ))}
         </div>
-        <div className="ci-trend-ends">
-          <span>
-            {fmt(trend.first)}
-            {trend.points[0].carried ? " · before this phase" : ""}
+        <div className="ci-trend-foot">
+          <span className="ci-trend-from">
+            {fmt(trend.first)} {trend.startLabel}
           </span>
-          <span>{fmt(trend.latest)}</span>
+          <span className={`ci-trend-change${trend.change === 0 ? " flat" : ""}`}>{changeText}</span>
         </div>
       </button>
       {open && (
