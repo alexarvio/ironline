@@ -513,7 +513,9 @@ export default function ProgramBuilder({
         if (planned) return { dayOfWeek: dow, state: "missed" as const, title: `${name}: planned, nothing logged` };
         return { dayOfWeek: dow, state: "rest" as const, title: `${name}: rest day` };
       });
-      const trainedDays = railDays.filter((d) => d.state === "trained").length;
+      // Sessions done, not days lit: a session logged across two days is
+      // still one session, and the client's app counts the same way.
+      const trainedDays = perDay.filter((a) => a.length > 0 && a.some((x) => getLogsForAssignment(x.id).length > 0)).length;
       const isFuture = liveWeekNumber != null && weekNumber > liveWeekNumber;
 
       weekCards.push({
@@ -530,7 +532,7 @@ export default function ProgramBuilder({
         // than claiming zero days trained.
         meta: isFuture
           ? `${trainingDays} planned`
-          : `${trainedDays} day${trainedDays === 1 ? "" : "s"} trained`,
+          : `${trainedDays} of ${trainingDays} session${trainingDays === 1 ? "" : "s"}`,
       });
 
       if (trainingDays > 0) copyFromWeek = index;

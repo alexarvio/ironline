@@ -967,8 +967,12 @@ export function getWeekRail(clientId: number, weekNumbers: number[], liveWeek: n
       else railDays.push({ dayOfWeek: dow, state: "rest", title: `${name}: rest day` });
     }
 
-    const trained = railDays.filter((d) => d.state === "trained").length;
-    const planned = railDays.filter((d) => d.state !== "rest").length;
+    // Sessions done, not days lit: a session logged across two days is one.
+    const planned = days.filter((d) => getAssignmentsForDay(d.id).length > 0).length;
+    const trained = days.filter((d) => {
+      const as = getAssignmentsForDay(d.id);
+      return as.length > 0 && as.some((a) => getLogsForAssignment(a.id).length > 0);
+    }).length;
 
     return {
       weekNumber,
@@ -976,7 +980,7 @@ export function getWeekRail(clientId: number, weekNumbers: number[], liveWeek: n
       days: railDays,
       // A future week has nothing to report yet, so it states the plan
       // instead of claiming zero days trained.
-      meta: weekNumber > liveWeek ? `${planned} planned` : `${trained} days trained`,
+      meta: weekNumber > liveWeek ? `${planned} planned` : `${trained} of ${planned} session${planned === 1 ? "" : "s"}`,
       isLive: weekNumber === liveWeek,
       hasSplit: planned > 0,
     };
