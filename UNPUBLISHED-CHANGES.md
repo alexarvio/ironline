@@ -156,6 +156,11 @@ Commit `a10ba40`, ported from `next` and pushed on its own.
 
 - [x] A green tick means a set was logged on that weekday, wherever the session was planned. A planned day with nothing logged stays grey. A session moved to another day lights the day it was done, with "moved from another day" on hover.
 
+## 22 · Programme note inside its programme; set times in local time — ✅ LIVE 12 Sep
+
+- [x] The client’s programme note is a card at the far right of the week row, inside the programme it is about. A dot marks a note the coach has not opened yet; opening it shows the text and clears the dot until the note changes.
+- [x] Set logs are stamped in the server’s local time like every other date, instead of UTC. Live runs in UTC with no timezone set, so a session before 7am Bangkok time was landing on the previous day.
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.

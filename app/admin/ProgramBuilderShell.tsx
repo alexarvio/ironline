@@ -3,6 +3,7 @@
 import { ReactNode, useState } from "react";
 import { ExpandProvider } from "./BuilderContext";
 import WeekRail from "./WeekRail";
+import ProgramNotePeek from "./ProgramNotePeek";
 
 // One capsule on the week rail. The seven ticks report what the client
 // ACTUALLY trained — trained / planned-but-missed / rest — rather than what
@@ -40,6 +41,8 @@ export type BuilderProgram = {
   copySlots: Record<number, ReactNode>;
   /** The last week that has a split — what "copy" on the rail should clone. */
   copyFromWeek: number | null;
+  /** The client's note about this programme, with when it was last written. */
+  clientNote?: { text: string; updatedAt: string; from: string } | null;
 };
 
 // The Program Builder's interactive frame: which program you're editing,
@@ -115,6 +118,7 @@ export default function ProgramBuilderShell({
         <div className="pb-editing-actions">{program.actionsSlot}</div>
       </div>
 
+      <div className="pb-rail-row">
       <WeekRail
         weeks={program.weekCards.map((w) => ({
           weekNumber: w.week,
@@ -135,6 +139,8 @@ export default function ProgramBuilderShell({
         clientId={clientId}
         programId={program.id}
       />
+      <ProgramNotePeek programId={program.id} note={program.clientNote ?? null} />
+      </div>
 
       <div className="pb-toolbar">
         <div className="pb-toolbar-left">

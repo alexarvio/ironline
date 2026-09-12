@@ -6,7 +6,7 @@ import {
   getDeployedProgram,
   getTrainedWeekdays,
   formatRestSeconds,
-  getClientProgramNote,
+  getClientProgramNoteMeta,
   getExerciseWeightTrendPct,
   getLogsForAssignment,
   getLogsForAssignmentByWeek,
@@ -605,18 +605,15 @@ export default function ProgramBuilder({
     ...(deployedProgram ? [buildProgram(deployedProgram, "live")] : []),
     ...draftPrograms.map((p) => buildProgram(p, "draft")),
     ...pastPrograms.map((p) => buildProgram(p, "past")),
-  ];
-
-  const programNote = deployedProgram ? getClientProgramNote(clientId, deployedProgram.id) : "";
+  ].map((bp) => {
+    // The client's note about this programme rides with it, so it shows
+    // inside the programme it is about rather than above all of them.
+    const note = getClientProgramNoteMeta(clientId, bp.id);
+    return { ...bp, clientNote: note ? { ...note, from: (clientName || "the client").split(" ")[0] } : null };
+  });
 
   return (
     <div className="pb">
-      {programNote && (
-        <section className="pb-client-note" aria-label="Note from the client about the programme">
-          <span className="pb-client-note-label">Note from {clientName || "the client"} · about the whole programme</span>
-          <p className="pb-client-note-text">{programNote}</p>
-        </section>
-      )}
       <ProgramBuilderShell
         programs={programs}
         clientId={clientId}

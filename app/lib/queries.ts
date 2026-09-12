@@ -11,6 +11,12 @@ import type { CalorieLog, CheckInNote, ClientPhase, PhaseTrack } from "./db";
 // and several components (each with its own toISOString-based todayStr()),
 // producing wrong week-bucket labels and off-by-one check-in/meeting dates.
 // Use this everywhere a *calendar date* (not a precise instant) is needed.
+/** "YYYY-MM-DD HH:MM:SS" in server-local time, matching localDateStr(). */
+export function localStamp(d: Date = new Date()): string {
+  const t = (n: number) => String(n).padStart(2, "0");
+  return `${localDateStr(d)} ${t(d.getHours())}:${t(d.getMinutes())}:${t(d.getSeconds())}`;
+}
+
 export function localDateStr(d: Date = new Date()): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -1084,7 +1090,9 @@ export function logSet(
     weight_kg: weightKg,
     reps,
     rpe_actual: rpeActual,
-    logged_at: new Date().toISOString().replace("T", " ").slice(0, 19),
+    // Local server time, the same clock localDateStr() reads: an ISO/UTC stamp
+    // put a 6am session on the previous day for anyone east of Greenwich.
+    logged_at: localStamp(),
   });
   persist();
   progressTargetFromLogs(workoutAssignmentId);
@@ -5262,6 +5270,11 @@ export function setClientExerciseNote(clientId: number, exerciseId: number, text
 
 export function getClientProgramNote(clientId: number, programId: number): string {
   return (getData().client_program_notes ?? []).find((n) => n.client_id === clientId && n.program_id === programId)?.text ?? "";
+}
+
+export function getClientProgramNoteMeta(clientId: number, programId: number): { text: string; updatedAt: string } | null {
+  const n = (getData().client_program_notes ?? []).find((x) => x.client_id === clientId && x.program_id === programId);
+  return n && n.text.trim() ? { text: n.text, updatedAt: n.updated_at } : null;
 }
 
 export function getClientIdForProgram(programId: number): number | null {
