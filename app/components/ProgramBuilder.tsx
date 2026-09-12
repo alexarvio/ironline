@@ -418,7 +418,7 @@ export default function ProgramBuilder({
                           case "time":
                             return (
                               <td key={col.id}>
-                                <AssignmentFieldInput assignmentId={a.id} name="time" type="text" placeholder="20 min" defaultValue={a.time ?? ""} />
+                                <AssignmentFieldInput assignmentId={a.id} name="time" type="text" defaultValue={a.time ?? ""} />
                               </td>
                             );
                           case "notes":
