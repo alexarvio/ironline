@@ -152,6 +152,10 @@ Commit `a10ba40`, ported from `next` and pushed on its own.
 - [x] The "5 training days · 50 sets logged" line is gone from the toolbar.
 - [x] Custom column is a dashed "+ Custom column" chip that opens a name box, instead of a bare input that read as a label.
 
+## 21 · Week rail lights the days actually trained — ✅ LIVE 12 Sep
+
+- [x] A green tick means a set was logged on that weekday, wherever the session was planned. A planned day with nothing logged stays grey. A session moved to another day lights the day it was done, with "moved from another day" on hover.
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.

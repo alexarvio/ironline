@@ -4,6 +4,7 @@ import {
   getAssignmentsForDay,
   getCustomValues,
   getDeployedProgram,
+  getTrainedWeekdays,
   formatRestSeconds,
   getClientProgramNote,
   getExerciseWeightTrendPct,
@@ -498,18 +499,19 @@ export default function ProgramBuilder({
       // Seven ticks in weekday order reporting what the client actually did:
       // trained, planned-but-missed, or rest. Planned-vs-actual is the whole
       // point of the rail — a skipped session must not look like a rest day.
+      // The day a set was actually logged is what lights a tick; the planned
+      // day only says whether an unlit one was a miss or a rest.
+      const actual = getTrainedWeekdays(clientId, weekNumber);
       const railDays = Array.from({ length: 7 }, (_, di) => {
         const dow = di + 1;
         const day = days.find((d) => d.day_of_week === dow);
         const assignments = day ? getAssignmentsForDay(day.id) : [];
         const name = DAY_NAMES_FULL[di];
-        if (assignments.length === 0) {
-          return { dayOfWeek: dow, state: "rest" as const, title: `${name}: rest day` };
-        }
-        const logged = assignments.some((a) => getLogsForAssignment(a.id).length > 0);
-        return logged
-          ? { dayOfWeek: dow, state: "trained" as const, title: `${name}: trained` }
-          : { dayOfWeek: dow, state: "missed" as const, title: `${name}: planned, nothing logged` };
+        const planned = assignments.length > 0;
+        const trained = actual.has(dow);
+        if (trained) return { dayOfWeek: dow, state: "trained" as const, title: planned ? `${name}: trained` : `${name}: trained (moved from another day)` };
+        if (planned) return { dayOfWeek: dow, state: "missed" as const, title: `${name}: planned, nothing logged` };
+        return { dayOfWeek: dow, state: "rest" as const, title: `${name}: rest day` };
       });
       const trainedDays = railDays.filter((d) => d.state === "trained").length;
       const isFuture = liveWeekNumber != null && weekNumber > liveWeekNumber;
