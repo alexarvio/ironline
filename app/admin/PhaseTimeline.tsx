@@ -1,6 +1,7 @@
 import { getPlanData } from "../lib/queries";
 import PlanPhasesCard from "./PlanPhasesCard";
 import PlanGoalsCard from "./PlanGoalsCard";
+import PlanMainGoalCard from "./PlanMainGoalCard";
 
 // The Plan tab: two cards. The phases grid answers what block the client
 // is in, until when, and what comes after; the goals table is what those
@@ -10,6 +11,7 @@ export default function PhaseTimeline({ clientId }: { clientId: number }) {
   const data = getPlanData(clientId);
   return (
     <div className="pl">
+      <PlanMainGoalCard clientId={clientId} clientName={data.clientName} value={data.mainGoal} />
       <PlanPhasesCard clientId={clientId} today={data.today} thisWeek={data.thisWeek} phases={data.phases} programs={data.programs} />
       <PlanGoalsCard
         clientId={clientId}

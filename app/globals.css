@@ -13162,3 +13162,17 @@ a.cd-entry:hover { border-color: var(--accent); }
   color: #313851;
   white-space: pre-wrap;
 }
+
+/* Scroll target for a day opened from Home; leaves a breath above the header. */
+.ts-day-anchor { scroll-margin-top: 12px; }
+
+/* Plan tab: the main goal, one line above the phases. */
+.pl-maingoal { padding: 14px 22px; }
+.pl-maingoal.dirty { border-color: #2f5d8f; }
+.pl-maingoal-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.pl-maingoal-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #5b6474; }
+.pl-maingoal-hint { font-size: 11.5px; font-weight: 500; color: #8b93a1; }
+.pl-maingoal-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.pl-maingoal-row input { flex: 1; min-width: 0; padding: 9px 12px; border: 1px solid #dfe3e8; border-radius: 8px; font: inherit; font-size: 14px; font-weight: 600; color: #141a24; }
+.pl-maingoal-row input:focus { outline: none; border-color: #2f5d8f; }
+.pl-maingoal-row input::placeholder { font-weight: 500; color: #a0a7b3; }

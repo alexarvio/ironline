@@ -439,7 +439,6 @@ function MyNote({ assignmentId, text }: { assignmentId: number; text: string }) 
           }}
         />
         <div className="ts-mynote-foot">
-          <span className="ts-mynote-hint">Only you see this. It stays with the exercise, every week.</span>
           <span className="ts-mynote-btns">
             <button type="button" className="ts-mynote-cancel" onClick={cancel}>
               Cancel

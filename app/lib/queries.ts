@@ -5803,6 +5803,8 @@ export function getLastMeetingRecap(clientId: number): MeetingRecap | null {
 }
 
 export type UpNextSession = {
+  /** The programme day, so the Training tab can scroll straight to it. */
+  dayId: number;
   /** The coach's name for it, or its place in the week when unnamed. */
   name: string;
   exercises: number;
@@ -5824,6 +5826,7 @@ export function getUpNextSession(clientId: number): UpNextSession | null {
   if (index < 0) return null;
   const { day, assignments } = days[index];
   return {
+    dayId: day.id,
     name: day.label || `Session ${index + 1}`,
     exercises: assignments.length,
     sets: assignments.reduce((sum, a) => sum + a.sets, 0),
@@ -6062,6 +6065,7 @@ export function getPlanData(clientId: number) {
     goals,
     nextReview: next ? { id: next.id, date: next.date, topic: next.topic || "Check-in call" } : null,
     goalOptions: getGoalEditorOptions(clientId),
+    mainGoal: getClientProfile(clientId).main_goal ?? "",
   };
 }
 

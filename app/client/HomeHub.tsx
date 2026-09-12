@@ -34,6 +34,7 @@ export type HomeTrack = {
 };
 
 export type HomeSession = {
+  dayId: number;
   name: string;
   exercises: number;
   sets: number;
@@ -219,7 +220,7 @@ function TodayCard({
       </div>
 
       {session ? (
-        <button type="button" className="hm-session" onClick={() => goToTab?.("training")}>
+        <button type="button" className="hm-session" onClick={() => goToTab?.("training", session.dayId)}>
           <span className="hm-session-body">
             <span className="hm-session-name">{session.name}</span>
             <span className="hm-session-meta">

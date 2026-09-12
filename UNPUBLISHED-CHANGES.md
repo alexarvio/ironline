@@ -103,9 +103,14 @@ Look: `/client` Home.
 
 - [x] The Progress column is gone. Live shows the current figure alone ("90 kg", "3 of 7"), with no "reached" or "on pace" after it; the rule underneath the goal already says what it is measured against.
 
+## 12 · Main goal control, Start scrolls to the session — ✅ LIVE 12 Sep
+
+- [x] **Main goal** is set from the top of the Plan tab: one line above the phases, Save and Cancel once it differs. It shows under the client’s name on Home.
+- [x] **Start on Home** opens the Training tab with that session open and scrolled to the top of the screen.
+- [x] The "Only you see this" hint under the exercise note is gone.
+
 ## Still to build
 
-1. **The Plan-tab control that writes the main goal.** The field, the server action and the client side are in. There is no way for the coach to set it yet, so every client currently reads "Your coach hasn't set your main goal yet". This is the first thing to do.
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.
 3. **What else belongs beside "Days trained"** on the client's Training tab, if anything. Left as the single figure for now.
 
