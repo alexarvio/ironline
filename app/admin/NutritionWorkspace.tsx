@@ -83,8 +83,6 @@ function TargetsCard({ p, phase, onPickPhase, onEditPhase }: { p: NutritionWorks
   const [water, setWater] = useState(p.waterL != null ? String(p.waterL) : "");
   const [saving, startSave] = useTransition();
   const [note, setNote] = useState(phase.note);
-  const [noteSaving, startNote] = useTransition();
-  const [noteSavedAt, setNoteSavedAt] = useState<number | null>(null);
 
   const current = values[day];
   const kcal = kcalOf(current);
@@ -96,10 +94,46 @@ function TargetsCard({ p, phase, onPickPhase, onEditPhase }: { p: NutritionWorks
       return linked ? { training: next, rest: next } : { ...old, [day]: next };
     });
   };
-  const dirty = !same(values.training, phase.training) || !same(values.rest, phase.rest) || water !== (p.waterL != null ? String(p.waterL) : "");
+  // Everything on this card queues on the bar at the foot, the same way
+  // every other table in the admin saves: macros, water and the note land
+  // together on Apply, or go together on Discard.
+  const savedWater = p.waterL != null ? String(p.waterL) : "";
+  const trainingDirty = !same(values.training, phase.training);
+  const restDirty = !same(values.rest, phase.rest);
+  const waterDirty = water !== savedWater;
+  const noteDirty = note.trim() !== phase.note.trim();
+  const changes = [
+    trainingDirty ? `Training day ${n(kcalOf(values.training))} kcal` : null,
+    restDirty ? `Rest day ${n(kcalOf(values.rest))} kcal` : null,
+    waterDirty ? (water ? `Water ${water} L` : "Water cleared") : null,
+    noteDirty ? "Note changed" : null,
+  ].filter((x): x is string => !!x);
+  const discard = () => {
+    setValues({ training: phase.training, rest: phase.rest });
+    setLinked(same(phase.training, phase.rest));
+    setWater(savedWater);
+    setNote(phase.note);
+  };
+  const apply = () =>
+    startSave(async () => {
+      if (trainingDirty || restDirty || waterDirty) {
+        const fd = new FormData();
+        fd.set("clientId", String(p.clientId));
+        if (phase.id !== 0) fd.set("phaseId", String(phase.id));
+        for (const d of ["training", "rest"] as const)
+          for (const m of ["protein", "carbs", "fats"] as const) fd.set(`${d === "training" ? "t" : "r"}_${m}`, values[d][m] == null ? "" : String(values[d][m]));
+        fd.set("water", water);
+        await saveNutritionTargetsAction(fd);
+      }
+      if (noteDirty) {
+        const fd = new FormData();
+        fd.set("clientId", String(p.clientId));
+        if (phase.id !== 0) fd.set("phaseId", String(phase.id));
+        fd.set("note", note);
+        await saveCoachNutritionNoteAction(fd);
+      }
+    });
   const live = phase.status === "now" || phase.id === 0;
-  const formId = `nt-targets-${phase.id}`;
-  const noteFormId = `nt-note-${phase.id}`;
 
   const summary = [
     `${n(kcalOf(values.training))} kcal training`,
@@ -138,31 +172,11 @@ function TargetsCard({ p, phase, onPickPhase, onEditPhase }: { p: NutritionWorks
               Edit dates
             </button>
           )}
-          <button type="submit" form={formId} className="pl-primary" disabled={saving}>
-            {saving ? "Saving…" : "Save targets"}
-          </button>
         </div>
       </div>
 
       <div className="nw-targets">
-        <form
-          id={formId}
-          className="nw-editor"
-          action={(fd) =>
-            startSave(async () => {
-              await saveNutritionTargetsAction(fd);
-            })
-          }
-        >
-          <input type="hidden" name="clientId" value={p.clientId} />
-          {phase.id !== 0 && <input type="hidden" name="phaseId" value={phase.id} />}
-          {(["training", "rest"] as const).map((d) =>
-            (["protein", "carbs", "fats"] as const).map((m) => (
-              <input key={`${d}_${m}`} type="hidden" name={`${d === "training" ? "t" : "r"}_${m}`} value={values[d][m] ?? ""} />
-            ))
-          )}
-          <input type="hidden" name="water" value={water} />
-
+        <div className="nw-editor">
           <div className="nw-editor-top">
             <div className="nw-daytoggle" role="group" aria-label="Day type">
               {(["training", "rest"] as const).map((d) => (
@@ -233,34 +247,34 @@ function TargetsCard({ p, phase, onPickPhase, onEditPhase }: { p: NutritionWorks
             <span className="nw-water-unit">L a day</span>
             <span className="nw-hint">Shown as a goal on the client&rsquo;s Nutrition tab — not tracked</span>
           </div>
-          {dirty && !saving && <div className="nw-unsaved">Unsaved changes — Save targets is at the top of the card</div>}
-        </form>
+        </div>
 
-        <form
-          id={noteFormId}
-          className="nw-note"
-          action={(fd) =>
-            startNote(async () => {
-              await saveCoachNutritionNoteAction(fd);
-              setNoteSavedAt(Date.now());
-            })
-          }
-        >
-          <input type="hidden" name="clientId" value={p.clientId} />
-          {phase.id !== 0 && <input type="hidden" name="phaseId" value={phase.id} />}
+        <div className="nw-note">
           <div className="nw-note-head">
             <span className="nw-label">Note on the targets</span>
             <span className="nw-hint">Client reads this under the kcal figure</span>
           </div>
           <textarea name="note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Why these numbers: what to keep steady, what to push, what to watch." />
-          <div className="nw-note-foot">
-            <span className="nw-hint">{noteSaving ? "Saving…" : noteSavedAt ? "Saved just now" : note === phase.note ? "Saved" : "Unsaved"}</span>
-            <button type="submit" className="ad-btn-secondary" disabled={noteSaving || note === phase.note}>
-              Save note
+        </div>
+      </div>
+
+      {changes.length > 0 && (
+        <div className="pb-pending pl-pending" role="status" aria-live="polite">
+          <span className="pb-pending-count">
+            {changes.length} change{changes.length === 1 ? "" : "s"}
+          </span>
+          <span className="pb-pending-summary">{changes.join(" · ")}</span>
+          <div className="pb-pending-right">
+            <span className="pb-pending-status">{saving ? "Saving…" : "Unsaved"}</span>
+            <button type="button" className="pb-pending-ghost" onClick={discard} disabled={saving}>
+              Discard
+            </button>
+            <button type="button" className="pb-pending-apply" onClick={apply} disabled={saving}>
+              {saving ? "Applying…" : "Apply"}
             </button>
           </div>
-        </form>
-      </div>
+        </div>
+      )}
     </section>
   );
 }

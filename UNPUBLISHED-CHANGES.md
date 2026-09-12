@@ -118,6 +118,10 @@ Look: `/client` Home.
 
 - [x] With nothing booked, Home still shows "Next with your coach · Nothing booked yet" with a calendar icon where the date leaf goes, so a new client sees the slot rather than a gap.
 
+## 15 · Daily targets on the pending bar — ✅ LIVE 12 Sep
+
+- [x] The Save targets button in the band and the Save note button under the note are gone. Macros, water and the note all queue on the bar at the foot ("3 changes · Training day 2,949 kcal · Water 3.5 L · Note changed") and land on Apply or go on Discard.
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.
