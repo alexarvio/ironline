@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CardioKey, EMPTY_CARDIO, usePendingDay } from "./DayPending";
 import ExercisePicker from "./ExercisePicker";
+import { TrashIcon } from "./icons";
 
 // Cardio for the day, under the exercise table and built on the same
 // column skeleton, so its cells line up with the exercise cells above:
@@ -144,8 +145,8 @@ export default function CardioBlock({
                 (k) => pending.draft.cardio.fields[c.id]?.[k] != null
               )}
               <td>
-                <button type="button" className="row-icon-btn row-icon-danger" aria-label={`Remove ${pending.cardioValue(c.id, "name") || "cardio"}`} title="Remove" onClick={() => pending.removeCardio(c.id)}>
-                  ×
+                <button type="button" className="row-icon-btn row-icon-danger" aria-label={`Remove ${pending.cardioValue(c.id, "name") || "cardio"}`} title="Remove (applies with the other changes)" onClick={() => pending.removeCardio(c.id)}>
+                  <TrashIcon />
                 </button>
               </td>
             </tr>
@@ -173,8 +174,8 @@ export default function CardioBlock({
                 () => true
               )}
               <td>
-                <button type="button" className="row-icon-btn" aria-label={`Undo adding ${n.fields.name}`} title="Undo" onClick={() => pending.unaddCardio(n.tempId)}>
-                  ×
+                <button type="button" className="row-icon-btn row-icon-danger" aria-label={`Undo adding ${n.fields.name}`} title="Undo" onClick={() => pending.unaddCardio(n.tempId)}>
+                  <TrashIcon />
                 </button>
               </td>
             </tr>
