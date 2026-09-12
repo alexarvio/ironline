@@ -368,7 +368,7 @@ export default function ProgramBuilder({
                                   name="targetWeight"
                                   type="number"
                                   step={0.5}
-                                  placeholder="kg"
+                                 
                                   defaultValue={a.target_weight_kg ?? ""}
                                 />
                               </td>
@@ -381,7 +381,7 @@ export default function ProgramBuilder({
                                   name="rpe"
                                   type="number"
                                   step={0.5}
-                                  placeholder="RPE"
+                                 
                                   defaultValue={a.rpe_target ?? ""}
                                 />
                               </td>
@@ -393,7 +393,7 @@ export default function ProgramBuilder({
                                   assignmentId={a.id}
                                   name="tempo"
                                   type="text"
-                                  placeholder="e.g. 3-1-1"
+                                 
                                   defaultValue={a.tempo ?? ""}
                                 />
                               </td>
@@ -405,7 +405,7 @@ export default function ProgramBuilder({
                                   assignmentId={a.id}
                                   name="rest"
                                   type="text"
-                                  placeholder="90s"
+                                 
                                   defaultValue={formatRestSeconds(a.rest_seconds)}
                                 />
                               </td>
@@ -413,7 +413,7 @@ export default function ProgramBuilder({
                           case "distance":
                             return (
                               <td key={col.id}>
-                                <AssignmentFieldInput assignmentId={a.id} name="distance" type="text" placeholder="5 km" defaultValue={a.distance ?? ""} />
+                                <AssignmentFieldInput assignmentId={a.id} name="distance" type="text" defaultValue={a.distance ?? ""} />
                               </td>
                             );
                           case "time":
