@@ -282,7 +282,7 @@ function ExpandedExercise({ exercise, index, onCollapse }: { exercise: SessionEx
       </div>
       {exercise.videoUrl && (
         <a href={exercise.videoUrl} target="_blank" rel="noreferrer" className="ts-video">
-          ▶ how to
+          ▶ Demo
         </a>
       )}
 
