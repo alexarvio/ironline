@@ -146,16 +146,6 @@ function TargetsCard({ p, phase, onPickPhase, onEditPhase }: { p: NutritionWorks
       <div className="pl-band">
         <div className="pl-band-left">
           <div className="pl-eyebrow">Daily targets</div>
-          <div className="pl-summary-line">
-            {summary.join(" · ")}
-            <span className="pl-summary-tail">
-              {live
-                ? ` · live for ${p.clientName.split(" ")[0]}${p.liveSince ? ` since ${fmtDate(p.liveSince, { day: "numeric", month: "short" })}` : ""}`
-                : phase.status === "next"
-                ? ` · ${phase.name} starts ${phase.startLabel} · not live yet`
-                : ` · ${phase.name} has ended`}
-            </span>
-          </div>
         </div>
         <div className="pl-band-right">
           {p.phases.length > 1 && (
@@ -361,10 +351,6 @@ function SupplementsCard({ p }: { p: NutritionWorkspaceProps }) {
       <div className="pl-band">
         <div className="pl-band-left">
           <div className="pl-eyebrow">Supplements</div>
-          <div className="pl-summary-line">
-            {p.supplements.length} item{p.supplements.length === 1 ? "" : "s"}
-            <span className="pl-summary-tail"> · shown as a reference list on the client&rsquo;s app, no tick boxes</span>
-          </div>
         </div>
         <div className="pl-band-right">
           <button type="button" className="pl-primary" onClick={addRow}>
@@ -501,13 +487,6 @@ function CaloriesCard({ p }: { p: NutritionWorkspaceProps }) {
       <div className="pl-band">
         <div className="pl-band-left">
           <div className="pl-eyebrow">Calories logged</div>
-          <div className="pl-summary-line">
-            {logged.length} of last {win} days
-            <span className="pl-summary-tail">
-              {avg != null ? ` · avg ${n(avg)} kcal` : ""}
-              {avgDiff != null ? ` · ${n(Math.abs(avgDiff))} kcal ${avgDiff >= 0 ? "over" : "under"} target on average` : ""}
-            </span>
-          </div>
         </div>
         <div className="pl-band-right">
           <div className="pl-switch" role="tablist">
