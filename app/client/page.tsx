@@ -6,6 +6,7 @@ import {
   getClient,
   getClientProfile,
   getClientPlanView,
+  getUpNextSession,
   getCalorieLog,
   listCalorieLogs,
   getDeployedProgram,
@@ -42,7 +43,7 @@ import {
 import TrainingDayList from "./TrainingDayList";
 import ExerciseCoachNote from "./ExerciseCoachNote";
 import PhotoPeriodHistoryRow from "./PhotoPeriodHistoryRow";
-import HomeHub, { UpcomingMeeting } from "./HomeHub";
+import HomeHub, { HomeTrack, UpcomingMeeting } from "./HomeHub";
 import NutritionDayToggle, { NutritionTargetSet } from "./NutritionDayToggle";
 import CalorieLog from "./CalorieLog";
 import ReportArchiveList, { ArchiveReport } from "./ReportArchiveList";
@@ -111,7 +112,62 @@ async function resolveClientId(raw: string | undefined): Promise<number | null> 
   return user.client_id;
 }
 
-const fmtShortDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const MONTH_CAP = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const fmtShortDate = (iso: string) => {
+  const d = new Date(`${iso}T12:00:00`);
+  return `${d.getDate()} ${MONTH_CAP[d.getMonth()]}`;
+};
+
+// ---- The coach's plan, flattened for Home's profile card ----------------
+// One row per track in a fixed order, each showing the phase running now
+// (or the next one due to start) with how far through it the client is.
+const HOME_TRACK_ORDER = ["nutrition", "training", "lifestyle"] as const;
+const DAY_MS = 86400000;
+const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const daysApart = (a: string, b: string) =>
+  Math.round((new Date(`${b}T00:00:00`).getTime() - new Date(`${a}T00:00:00`).getTime()) / DAY_MS);
+const addDaysIso = (iso: string, n: number) => {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setDate(d.getDate() + n);
+  return isoDay(d);
+};
+const countWord = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+/** "8 weeks" from a week or more, rounded up; "6 days" under one. */
+const spanWords = (days: number) => (days >= 7 ? countWord(Math.ceil(days / 7), "week") : countWord(days, "day"));
+
+function homeTracks(plan: ReturnType<typeof getClientPlanView>): HomeTrack[] {
+  if (!plan) return [];
+  const today = plan.today;
+  return HOME_TRACK_ORDER.map((id) => {
+    const t = plan.tracks.find((x) => x.track === id);
+    if (!t) return null;
+    const sorted = [...t.phases].sort((a, b) => (a.startWeek < b.startWeek ? -1 : 1));
+    const running = sorted.find((ph) => ph.startWeek <= today && addDaysIso(ph.endWeek, 6) >= today) ?? null;
+    const shown = running ?? sorted.find((ph) => ph.startWeek > today) ?? null;
+    if (!shown) return null;
+    const weekTotal = shown.weeks;
+    const totalDays = weekTotal * 7;
+    let timeLeft: string;
+    let doneDays = 0;
+    if (running) {
+      const remaining = daysApart(today, addDaysIso(shown.endWeek, 6)) + 1;
+      timeLeft = remaining <= 1 ? "Last day" : `${spanWords(remaining)} to go`;
+      doneDays = Math.min(totalDays, Math.max(0, daysApart(shown.startWeek, today)));
+    } else {
+      timeLeft = `Starts in ${spanWords(daysApart(today, shown.startWeek))}`;
+    }
+    return {
+      track: id,
+      label: t.label,
+      phaseName: shown.name,
+      timeLeft,
+      weekNow: Math.min(weekTotal, Math.floor(doneDays / 7) + 1),
+      weekTotal,
+      progress: totalDays > 0 ? doneDays / totalDays : 0,
+      upNext: sorted.find((ph) => ph.startWeek > shown.endWeek)?.name ?? null,
+    };
+  }).filter((r): r is HomeTrack => !!r);
+}
 
 // Settings' progress-report list is the only place reports appear — a sent
 // report's sections_snapshot parsed, plus up to 3 stat deltas derived from
@@ -209,12 +265,20 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
       link: upcomingMeeting.link ?? null,
       provider: meetingProvider(upcomingMeeting.link),
       startingNow,
-      monthCap: when.toLocaleDateString("en-US", { month: "short" }),
+      monthCap: MONTH_CAP[when.getMonth()],
       dayNumber: String(when.getDate()),
+      weekdayCap: DAY_LABELS[when.getDay()],
       topic: upcomingMeeting.topic || "Check-in call",
       inLabel: days <= 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days} days`,
-      whenLabel: `${DAY_LABELS[when.getDay()]}${upcomingMeeting.time ? ` ${upcomingMeeting.time}` : ""}`,
-      durationLabel: `${upcomingMeeting.duration_minutes} min`,
+      whenLabel: [
+        when.toLocaleDateString("en-US", { weekday: "long" }),
+        upcomingMeeting.time || null,
+      ]
+        .filter(Boolean)
+        .join(" ") + ` · ${upcomingMeeting.duration_minutes} min`,
+      // The client-facing note only. prep_notes is the coach's own and
+      // never leaves the admin side.
+      clientNote: upcomingMeeting.client_note?.trim() || null,
     };
   })();
 
@@ -242,22 +306,23 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   const goalsMeta = (() => {
     const open = listClientGoals(CLIENT_ID).filter((g) => !g.done);
     const earliest = open.map((g) => g.created_at).filter((d): d is string => !!d).sort()[0];
-    const set = earliest ? `set ${fmtShortDate(earliest)}` : "";
-    const review = upcomingMeeting ? `${set ? " · " : ""}review ${fmtShortDate(upcomingMeeting.date)}` : "";
+    const set = earliest ? `Set ${fmtShortDate(earliest)}` : "";
+    const review = upcomingMeeting ? `${set ? " · " : ""}Review ${fmtShortDate(upcomingMeeting.date)}` : "";
     return set + review;
   })();
 
   return (
     <HomeHub
       dateLabel={dateLabel}
-      name={client?.name ?? ""}
+      firstName={(client?.name ?? "").trim().split(/\s+/)[0] || "there"}
+      photoUrl={null}
+      initial={(client?.name ?? "?").trim().charAt(0).toUpperCase() || "?"}
       mainGoal={profile.main_goal ?? null}
-      plan={plan}
-      goalNote={goalNote}
+      tracks={homeTracks(plan)}
+      session={getUpNextSession(CLIENT_ID)}
       goals={getGoalViews(CLIENT_ID)}
       goalsMeta={goalsMeta}
       upcoming={upcoming}
-      coachNotes={coachNotes}
       checkInStatus={checkInStatus}
     />
   );

@@ -1,249 +1,349 @@
 "use client";
 
-import { ArrowRightIcon, CheckIcon } from "../components/icons";
+import { useState } from "react";
+import Image from "next/image";
+import { ChevronDownIcon } from "../components/icons";
 import GoalRow from "../components/GoalRow";
-import type { ClientPlanView, GoalView, PlanPhaseView, PlanTrackView } from "../lib/queries";
-import { useOpenCheckIn } from "./CheckInContext";
+import { useNavigateTab, useOpenCheckIn } from "./CheckInContext";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
 // CheckInHub.tsx this replaces — a "use client" file importing queries.ts
 // breaks the dev server at runtime). All data comes in as plain props,
-// computed server-side in page.tsx.
-// Home reports check-in status as one line — it no longer enumerates each
-// outstanding item, so it needs the counts, not the items.
+// computed server-side in page.tsx. The types below mirror the ones there.
+
 export type CheckInStatus = {
   configuredCount: number;
   dueTypes: ("daily" | "weekly" | "measurements")[];
   dueNames: string;
+  /** Names of the metrics inside the due sections: "Bodyweight", "Sleep". */
+  dueItemNames: string[];
   nextLabel: string;
 };
+
+/** One track of the coach's plan, flattened for the profile card. */
+export type HomeTrack = {
+  track: "nutrition" | "training" | "lifestyle";
+  /** "Nutrition" — the chip and tag text. */
+  label: string;
+  phaseName: string;
+  /** "2 weeks to go", or "Starts in 3 weeks" before it begins. */
+  timeLeft: string;
+  weekNow: number;
+  weekTotal: number;
+  /** 0..1 for the bar. */
+  progress: number;
+  upNext: string | null;
+};
+
+export type HomeSession = {
+  name: string;
+  exercises: number;
+  sets: number;
+  minutes: number;
+} | null;
+
 export type UpcomingMeeting = {
   link: string | null;
   provider: string;
   startingNow: boolean;
   monthCap: string;
   dayNumber: string;
+  /** "SUN" under the day number on the calendar leaf. */
+  weekdayCap: string;
   topic: string;
   inLabel: string;
+  /** "Sunday 18:00 · 30 min". */
   whenLabel: string;
-  durationLabel: string;
+  /** Written for the client. Never the coach's private prep notes. */
+  clientNote: string | null;
 } | null;
-export type CoachNote = { id: number; context: string; timeLabel: string; text: string; unread: boolean };
 
-// Home used to be its own tab with Check-ins as a separate one; they're
-// merged here so the client has one landing screen (profile + what's due
-// today) and taps into a due item only when they actually need the fuller
-// Tracker/Measurements/Photos view behind it.
+export type GoalRowView = Parameters<typeof GoalRow>[0]["goal"];
+
+// Home is the client's landing screen: who they are and where they are in
+// the plan, then the one thing to do now, then what is coming.
 export default function HomeHub({
   dateLabel,
-  name,
+  firstName,
+  photoUrl,
+  initial,
   mainGoal,
-  plan,
-  goalNote,
+  tracks,
+  session,
   goals,
   goalsMeta,
   upcoming,
   checkInStatus,
 }: {
   dateLabel: string;
-  name: string;
-  /** The coach's headline goal for this client, written on the Plan tab. */
+  firstName: string;
+  /** Null until client profile photos land; the initial stands in. */
+  photoUrl: string | null;
+  initial: string;
   mainGoal: string | null;
-  /** The coach's phase timeline, when one exists; drives the plan rows. */
-  plan: ClientPlanView | null;
-  /** "11 weeks to goal", from the card's goal date. */
-  goalNote: string | null;
-  goals: GoalView[];
-  /** "set Sep 3 · review Sep 20" */
+  tracks: HomeTrack[];
+  session: HomeSession;
+  goals: GoalRowView[];
   goalsMeta: string;
   upcoming: UpcomingMeeting;
-  coachNotes: CoachNote[];
   checkInStatus: CheckInStatus;
 }) {
-  // Check-in is a full-screen pushed view owned by AppShell; a due row just
-  // asks it to open on that row's section.
-  const openCheckIn = useOpenCheckIn();
-
   return (
-    <div className="home-dark">
-      <div className="home-dark-datebar">{dateLabel}</div>
-      {/* The header: name, then the one goal the coach has written for
-          them. When the coach has drawn a phase timeline, one row per track
-          sits under it: the phase running now, how far through it they
-          are, and what follows. */}
-      <div className="home-dark-headrow">
-        <div className="home-dark-headmain">
-          <div className="home-dark-name">{name}</div>
-          <div className="home-dark-subrow">
-            <span className={`home-dark-phase${mainGoal ? "" : " unset"}`}>
-              {mainGoal ?? "Your coach hasn\u2019t set your main goal yet"}
-            </span>
-            {mainGoal && goalNote && <span className="home-dark-goal">{goalNote}</span>}
-          </div>
-        </div>
+    <div className="hm">
+      <ProfileCard
+        dateLabel={dateLabel}
+        firstName={firstName}
+        photoUrl={photoUrl}
+        initial={initial}
+        mainGoal={mainGoal}
+        tracks={tracks}
+      />
+      <TodayCard session={session} checkInStatus={checkInStatus} hasPlan={tracks.length > 0} />
+      {upcoming && <MeetingCard m={upcoming} />}
+      {goals.length > 0 && <GoalsCard goals={goals} meta={goalsMeta} />}
+      <div className="hm-reserved">
+        <span className="hm-eyebrow hm-reserved-label">Reserved</span>
       </div>
-      {plan && <PlanRows plan={plan} />}
-
-      {checkInStatus.configuredCount > 0 && (
-        <section className="home-dark-section">
-          <span className="home-dark-section-title">Check-ins</span>
-          <button type="button" className="home-checkin-row" onClick={() => openCheckIn?.(checkInStatus.dueTypes[0] ?? "daily")}>
-            <div className="home-checkin-body">
-              {checkInStatus.dueTypes.length > 0 ? (
-                <>
-                  <div className="home-checkin-title">
-                    {checkInStatus.dueTypes.length} check-in{checkInStatus.dueTypes.length === 1 ? "" : "s"} due
-                  </div>
-                  <div className="home-checkin-detail due">{checkInStatus.dueNames} · tap to log</div>
-                </>
-              ) : (
-                <>
-                  <div className="home-checkin-title">All check-ins up to date</div>
-                  <div className="home-checkin-detail">{checkInStatus.nextLabel}</div>
-                </>
-              )}
-            </div>
-            <span
-              className={`home-checkin-mark${checkInStatus.dueTypes.length > 0 ? " due" : ""}`}
-              aria-hidden="true"
-            >
-              {checkInStatus.dueTypes.length > 0 ? <ArrowRightIcon /> : <CheckIcon />}
-            </span>
-          </button>
-        </section>
-      )}
-
-      {/* The next call, sitting under the check-in row: what's due today
-          comes first, the call after it. No empty state — nothing booked is
-          simply nothing here. */}
-      {upcoming && (
-        <div className="home-meeting-card">
-          <div className="home-meeting-tile">
-            <div className="home-meeting-tile-month">{upcoming.monthCap}</div>
-            <div className="home-meeting-tile-day">{upcoming.dayNumber}</div>
-          </div>
-          <div className="home-meeting-card-body">
-            <div className="home-meeting-eyebrow">Next with your coach</div>
-            <div className="home-meeting-topic">{upcoming.topic}</div>
-            <div className="home-meeting-when">
-              {upcoming.whenLabel} · {upcoming.durationLabel}
-            </div>
-            {upcoming.link && (
-              <a className={`home-meeting-join${upcoming.startingNow ? " live" : ""}`} href={upcoming.link} target="_blank" rel="noopener noreferrer">
-                Join {upcoming.provider}
-              </a>
-            )}
-          </div>
-          <span className={`home-meeting-pill${upcoming.startingNow ? " live" : ""}`}>{upcoming.startingNow ? "Starting now" : upcoming.inLabel.toLowerCase()}</span>
-        </div>
-      )}
-
-      {goals.length > 0 && (
-        <section className="home-goals-card">
-          <div className="home-goals-head">
-            <span className="home-goals-title">Goals</span>
-            {goalsMeta && <span className="home-goals-meta">{goalsMeta}</span>}
-          </div>
-          {goals.map((g) => (
-            <GoalRow key={g.id} goal={g} />
-          ))}
-        </section>
-      )}
     </div>
   );
 }
 
-// ---- Plan rows: one per track with phases, under the name. ----
+// ---- 1 · Profile card ----------------------------------------------------
+// Collapsed it still says all three tracks are being managed, because that
+// is the point of showing them at all; expanded it gives each one its own
+// row. Anything longer than a phrase lives behind the chevron.
 
-const TRACK_ORDER = ["nutrition", "training", "lifestyle"];
-
-const DAY = 86400000;
-const parse = (iso: string) => new Date(`${iso}T00:00:00`);
-/** Whole days from a to b (b - a), both ISO dates. */
-const daysBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / DAY);
-const addDays = (iso: string, n: number) => {
-  const d = parse(iso);
-  d.setDate(d.getDate() + n);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  return `${y}-${m}-${String(d.getDate()).padStart(2, "0")}`;
-};
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-/** "8 weeks" from 7+ days, rounded up; "6 days" under a week. */
-const spanWords = (days: number) => (days >= 7 ? plural(Math.ceil(days / 7), "week") : plural(days, "day"));
-
-function PlanRows({ plan }: { plan: ClientPlanView }) {
-  const today = plan.today;
-  const rows = TRACK_ORDER.map((id) => plan.tracks.find((t) => t.track === id))
-    .filter((t): t is PlanTrackView => !!t)
-    .map((t) => {
-      const sorted = [...t.phases].sort((a, b) => (a.startWeek < b.startWeek ? -1 : 1));
-      // The phase running this week, else the next one coming up.
-      const running = sorted.find((p) => p.startWeek <= today && addDays(p.endWeek, 6) >= today) ?? null;
-      const shown = running ?? sorted.find((p) => p.startWeek > today) ?? null;
-      if (!shown) return null;
-      const upNext = sorted.find((p) => p.startWeek > shown.endWeek) ?? null;
-      return { track: t, phase: shown, running: !!running, upNext };
-    })
-    .filter((r): r is NonNullable<typeof r> => !!r);
-  if (rows.length === 0) return null;
-
-  return (
-    <div className="home-plan-rows">
-      {rows.map(({ track, phase, running, upNext }) => (
-        <PlanRow key={track.track} track={track} phase={phase} running={running} upNext={upNext} today={today} />
-      ))}
-    </div>
-  );
-}
-
-function PlanRow({
-  track,
-  phase,
-  running,
-  upNext,
-  today,
+function ProfileCard({
+  dateLabel,
+  firstName,
+  photoUrl,
+  initial,
+  mainGoal,
+  tracks,
 }: {
-  track: PlanTrackView;
-  phase: PlanPhaseView;
-  running: boolean;
-  upNext: PlanPhaseView | null;
-  today: string;
+  dateLabel: string;
+  firstName: string;
+  photoUrl: string | null;
+  initial: string;
+  mainGoal: string | null;
+  tracks: HomeTrack[];
 }) {
-  const totalWeeks = phase.weeks;
-  const totalDays = totalWeeks * 7;
-  const endDate = addDays(phase.endWeek, 6);
-
-  let timeLeft: string;
-  let doneDays = 0;
-  if (running) {
-    // Days left counts today through the phase's last Sunday.
-    const remaining = daysBetween(today, endDate) + 1;
-    timeLeft = remaining <= 1 ? "Last day" : `${spanWords(remaining)} to go`;
-    doneDays = Math.min(totalDays, Math.max(0, daysBetween(phase.startWeek, today)));
-  } else {
-    timeLeft = `Starts in ${spanWords(daysBetween(today, phase.startWeek))}`;
-  }
-  const weekNow = Math.min(totalWeeks, Math.floor(doneDays / 7) + 1);
+  const [open, setOpen] = useState(false);
+  const canExpand = tracks.length > 0;
 
   return (
-    <div className={`home-plan-row ${track.track}`}>
-      <div className="home-plan-row-head">
-        <span className="home-plan-tag">{track.label}</span>
-        <span className="home-plan-name">{phase.name}</span>
-        <span className="home-plan-left">{timeLeft}</span>
-      </div>
-      <div className="home-plan-bar">
-        <div className="home-plan-bar-fill" style={{ width: `${(doneDays / totalDays) * 100}%` }} />
-      </div>
-      <div className="home-plan-row-foot">
-        <span>{running ? `Week ${weekNow} of ${totalWeeks}` : plural(totalWeeks, "week")}</span>
-        {upNext && (
-          <span>
-            Up next: <b>{upNext.name}</b>
+    <section className="hm-card hm-profile">
+      <div className="hm-profile-row">
+        {photoUrl ? (
+          <Image src={photoUrl} alt="" width={44} height={44} className="hm-avatar-img" />
+        ) : (
+          <span className="hm-avatar" aria-hidden="true">
+            {initial}
           </span>
         )}
+        <div className="hm-profile-main">
+          <div className="hm-eyebrow">{dateLabel}</div>
+          <div className="hm-name">{firstName}</div>
+        </div>
+        {canExpand && (
+          <button
+            type="button"
+            className={`hm-chev-btn${open ? " open" : ""}`}
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            aria-label={open ? "Hide the plan" : "Show the plan"}
+          >
+            <ChevronDownIcon />
+          </button>
+        )}
       </div>
-    </div>
+
+      <p className={`hm-maingoal${mainGoal ? "" : " unset"}`}>
+        {mainGoal ?? "Your coach hasn’t set your main goal yet"}
+      </p>
+
+      {canExpand && !open && (
+        <div className="hm-chips">
+          {tracks.map((t) => (
+            <span key={t.track} className={`hm-chip ${t.track}`}>
+              {t.label} {t.weekNow}/{t.weekTotal}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {canExpand && open && (
+        <div className="hm-tracks">
+          {tracks.map((t) => (
+            <div key={t.track} className="hm-track">
+              <div className="hm-track-head">
+                <span className={`hm-chip ${t.track}`}>{t.label}</span>
+                <span className="hm-track-name">{t.phaseName}</span>
+                <span className={`hm-track-left ${t.track}`}>{t.timeLeft}</span>
+              </div>
+              <div className={`hm-track-bar ${t.track}`}>
+                <div className="hm-track-bar-fill" style={{ width: `${Math.round(t.progress * 100)}%` }} />
+              </div>
+              <div className="hm-track-foot">
+                <span>
+                  Week <b>{t.weekNow}</b> of <b>{t.weekTotal}</b>
+                </span>
+                {t.upNext && (
+                  <span>
+                    Up next · <b>{t.upNext}</b>
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ---- 2 · Today -----------------------------------------------------------
+// The only navy card on the screen, because it is the only one that asks
+// for something. A session is never titled by a weekday: the client trains
+// it when they can, so "Tuesday" would be wrong by Wednesday.
+
+function TodayCard({
+  session,
+  checkInStatus,
+  hasPlan,
+}: {
+  session: HomeSession;
+  checkInStatus: CheckInStatus;
+  hasPlan: boolean;
+}) {
+  const openCheckIn = useOpenCheckIn();
+  const goToTab = useNavigateTab();
+  const dueCount = checkInStatus.dueTypes.length;
+  const hasCheckIns = checkInStatus.configuredCount > 0;
+  if (!session && !hasCheckIns && !hasPlan) return null;
+
+  // At most three names, so a client with eight daily metrics still gets a
+  // line rather than a paragraph.
+  const names = checkInStatus.dueItemNames;
+  const shown = names.slice(0, 3).join(" · ");
+  const rest = Math.max(0, names.length - 3);
+
+  return (
+    <section className="hm-today">
+      <div className="hm-today-top">
+        <span className="hm-eyebrow hm-today-eyebrow">Today</span>
+        {session && <span className="hm-today-pill">Up next</span>}
+      </div>
+
+      {session ? (
+        <button type="button" className="hm-session" onClick={() => goToTab?.("training")}>
+          <span className="hm-session-body">
+            <span className="hm-session-name">{session.name}</span>
+            <span className="hm-session-meta">
+              {session.exercises} exercise{session.exercises === 1 ? "" : "s"} · {session.sets} sets · ~
+              {session.minutes} min
+            </span>
+          </span>
+          <span className="hm-session-start">Start</span>
+        </button>
+      ) : (
+        <p className="hm-session-empty">No session left this week</p>
+      )}
+
+      {hasCheckIns && (
+        <button
+          type="button"
+          className="hm-checkin"
+          onClick={() => openCheckIn?.(checkInStatus.dueTypes[0] ?? "daily")}
+        >
+          {dueCount > 0 && <span className="hm-checkin-dot" aria-hidden="true" />}
+          <span className="hm-checkin-body">
+            <span className="hm-eyebrow hm-checkin-eyebrow">
+              {dueCount > 0 ? `${dueCount} check-in${dueCount === 1 ? "" : "s"} due` : "Check-ins"}
+            </span>
+            {dueCount > 0 ? (
+              <span className="hm-checkin-line">
+                <span className="hm-checkin-names">{shown}</span>
+                {rest > 0 && <span className="hm-checkin-more">+{rest} more</span>}
+              </span>
+            ) : (
+              <span className="hm-checkin-names">Nothing due today</span>
+            )}
+          </span>
+          <span className="hm-checkin-chev" aria-hidden="true">
+            <ChevronDownIcon />
+          </span>
+        </button>
+      )}
+    </section>
+  );
+}
+
+// ---- 3 · Next meeting ----------------------------------------------------
+
+function MeetingCard({ m }: { m: NonNullable<UpcomingMeeting> }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="hm-card hm-meeting">
+      <div className="hm-meeting-row">
+        <span className="hm-leaf" aria-hidden="true">
+          <span className="hm-leaf-month">{m.monthCap}</span>
+          <span className="hm-leaf-day">{m.dayNumber}</span>
+          <span className="hm-leaf-weekday">{m.weekdayCap}</span>
+        </span>
+        <div className="hm-meeting-main">
+          <div className="hm-meeting-top">
+            <span className="hm-eyebrow">Next with your coach</span>
+            <span className={`hm-meeting-pill${m.startingNow ? " live" : ""}`}>
+              {m.startingNow ? "Starting now" : m.inLabel}
+            </span>
+          </div>
+          <div className="hm-meeting-topic">{m.topic}</div>
+          <div className="hm-meeting-when">{m.whenLabel}</div>
+        </div>
+        <button
+          type="button"
+          className={`hm-chev-btn${open ? " open" : ""}`}
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-label={open ? "Hide the details" : "Show the details"}
+        >
+          <ChevronDownIcon />
+        </button>
+      </div>
+
+      {open && (
+        <div className="hm-meeting-more">
+          {m.clientNote && (
+            <div className="hm-note">
+              <span className="hm-eyebrow">From your coach</span>
+              <p className="hm-note-text">{m.clientNote}</p>
+            </div>
+          )}
+          {m.link && (
+            <a className="hm-join" href={m.link} target="_blank" rel="noopener noreferrer">
+              Join call
+            </a>
+          )}
+          {!m.clientNote && !m.link && <p className="hm-note-text muted">Nothing else to share yet.</p>}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ---- 4 · Goals -----------------------------------------------------------
+
+function GoalsCard({ goals, meta }: { goals: GoalRowView[]; meta: string }) {
+  return (
+    <section className="hm-card hm-goals">
+      <div className="hm-goals-head">
+        <span className="hm-eyebrow">Goals</span>
+        {meta && <span className="hm-goals-meta">{meta}</span>}
+      </div>
+      {goals.map((g) => (
+        <GoalRow key={g.id} goal={g} />
+      ))}
+    </section>
   );
 }

@@ -10,15 +10,18 @@ export default function GoalRow({ goal }: { goal: GoalView }) {
         {goal.done && goal.kind === "none" ? "✓" : ""}
       </span>
       <div className="gr-body">
-        <div className="gr-text">{goal.text}</div>
+        <div className="gr-head">
+          <div className="gr-text">{goal.text}</div>
+          {goal.kind === "metric" && goal.barLabel && (
+            <span className={`gr-figure ${goal.tone}`}>{goal.barLabel}</span>
+          )}
+          {goal.kind === "habit" && goal.right && <span className="gr-muted">{goal.right}</span>}
+        </div>
 
         {goal.kind === "metric" && goal.bar != null && (
-          <>
-            <div className={`gr-bar ${goal.tone}`}>
-              <div className="gr-bar-fill" style={{ width: `${Math.round(goal.bar * 100)}%` }} />
-            </div>
-            {goal.barLabel && <div className={`gr-figure ${goal.tone}`}>{goal.barLabel}</div>}
-          </>
+          <div className={`gr-bar ${goal.tone}`}>
+            <div className="gr-bar-fill" style={{ width: `${Math.round(goal.bar * 100)}%` }} />
+          </div>
         )}
 
         {goal.kind === "exercise" && (
@@ -29,14 +32,11 @@ export default function GoalRow({ goal }: { goal: GoalView }) {
         )}
 
         {goal.kind === "habit" && goal.segments && (
-          <div className="gr-split">
-            <span className={`gr-segments ${goal.tone}`} aria-hidden="true">
-              {Array.from({ length: goal.segments.total }, (_, i) => (
-                <span key={i} className={`gr-seg${i < goal.segments!.done ? " on" : ""}`} />
-              ))}
-            </span>
-            <span className={`gr-figure ${goal.tone}`}>{goal.right}</span>
-          </div>
+          <span className={`gr-segments ${goal.tone}`} aria-hidden="true">
+            {Array.from({ length: goal.segments.total }, (_, i) => (
+              <span key={i} className={`gr-seg${i < goal.segments!.done ? " on" : ""}`} />
+            ))}
+          </span>
         )}
 
         {goal.sub && <div className={`gr-sub${goal.reached && goal.kind === "metric" ? " green" : ""}`}>{goal.sub}</div>}

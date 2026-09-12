@@ -70,9 +70,28 @@ Commit `4c1e7a0`, pushed as `hotfix-training`
 
 ---
 
+## 10 · Client Home rebuilt to design "2a" — LOCAL ONLY, not pushed
+
+Five blocks instead of six, three of them expandable, so the screen is
+scannable without losing anything.
+
+- [ ] Keep  [ ] Drop — **Profile card**: 44px avatar (navy circle with the initial; a photo slots in when client photos land), date eyebrow over the first name in Newsreader, the main goal underneath. Collapsed it shows one chip per track reading "TRAINING 1/1"; the chevron expands to a row per track with the phase name, time left, a progress bar, the week position and what is up next.
+- [ ] Keep  [ ] Drop — **Today**, the only navy card: the next session titled by the coach's own name, with exercise count, set count and an estimated duration, and a Start button that opens the Training tab on that session. A check-in row underneath names what is due, capped at three names plus "+N more".
+- [ ] Keep  [ ] Drop — **Next meeting** with a calendar-leaf tile, a status pill that turns green ten minutes before the call, and a chevron revealing the coach's note and a Join button.
+- [ ] Keep  [ ] Drop — **Goals** with the figure moved onto the goal's own line instead of under its bar.
+- [ ] Keep  [ ] Drop — **Reserved**: a dashed empty slot held for a bodyweight sparkline.
+- [ ] Keep  [ ] Drop — **Header** is a white band now: 26px logo, "Ironline" in Newsreader navy, and a 34px circular button carrying an accent dot when notifications are unread.
+
+New data: `client_note` on a meeting, written for the client and kept
+separate from `prep_notes`, which stays coach-only. `getUpNextSession()`
+picks the session and estimates its length.
+
+Look: `/client` Home.
+
 ## Still to build
 
 1. **The Plan-tab control that writes the main goal.** The field, the server action and the client side are in. There is no way for the coach to set it yet, so every client currently reads "Your coach hasn't set your main goal yet". This is the first thing to do.
+1b. **The admin control that writes a meeting's `client_note`.** Same shape of gap: the field and the client-side display exist, the coach has no box to type it in, so the expanded meeting says "Nothing else to share yet".
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.
 3. **What else belongs beside "Days trained"** on the client's Training tab, if anything. Left as the single figure for now.
 

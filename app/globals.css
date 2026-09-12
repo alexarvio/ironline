@@ -2600,32 +2600,44 @@ a.cd-entry:hover { border-color: var(--accent); }
    scoping approach as the Chat and Notifications section above. ---- */
 
 .app-header.dark {
-  background: var(--fp-bg);
-  border-bottom-color: var(--fp-line);
+  background: #ffffff;
+  border-bottom-color: #eceff3;
 }
 
 .app-header.dark .app-header-brand {
-  color: var(--fp-text);
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #1e3a6e;
 }
 
+.app-header.dark .app-header-logo { height: 26px; }
+
 .app-header.dark .app-header-icon-btn {
-  border-color: #2c2c26;
-  background: var(--fp-raised);
-  color: var(--fp-text);
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid #dfe3e8;
+  background: #ffffff;
+  color: #5b6474;
 }
 
 .app-header.dark .app-header-icon-btn:hover {
-  background: #1b1b16;
+  background: #f8f9fb;
 }
 
+/* Unread: one accent dot inside the circle, nothing when there is none. */
 .app-header.dark .app-header-icon-badge {
-  background: var(--fp-accent);
-  border-color: var(--fp-bg);
+  width: 8px;
+  height: 8px;
+  border: 0;
+  background: #2f5d8f;
 }
 
 .app-content.dark {
-  background: var(--fp-bg);
-  padding: 6px 18px 24px;
+  background: #f8f9fb;
+  padding: 16px 16px 24px;
 }
 
 .app-bottom-nav.dark {
@@ -11838,6 +11850,10 @@ a.cd-entry:hover { border-color: var(--accent); }
 .gr-dot.muted { background: transparent; border: 1.5px solid #c2cbd3; box-sizing: border-box; }
 .gr-dot.done { background: #2f7a3f; width: 12px; height: 12px; margin-top: 3px; font-size: 8px; line-height: 12px; }
 .gr-body { flex: 1; min-width: 0; }
+.gr-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.gr-head .gr-text { flex: 1; min-width: 0; }
+.gr-head .gr-figure { flex: none; margin-top: 0; }
+.gr-head .gr-muted { flex: none; }
 .gr-text { font-size: 13.5px; font-weight: 700; color: #313851; line-height: 1.3; }
 .gr.is-done .gr-text { text-decoration: line-through; color: #8b93a1; }
 .gr-bar { height: 4px; border-radius: 999px; background: #e3f2e6; margin-top: 7px; overflow: hidden; }
@@ -11849,7 +11865,7 @@ a.cd-entry:hover { border-color: var(--accent); }
 .gr-split { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
 .gr-split .gr-figure { margin-top: 0; }
 .gr-muted { font-size: 10.5px; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.gr-segments { display: inline-flex; gap: 3px; }
+.gr-segments { display: inline-flex; gap: 3px; margin-top: 7px; }
 .gr-seg { width: 14px; height: 5px; border-radius: 2px; background: #fbe9e0; }
 .gr-seg.on { background: #b3471d; }
 .gr-segments.green .gr-seg { background: #e3f2e6; }
@@ -12518,3 +12534,519 @@ a.cd-entry:hover { border-color: var(--accent); }
 .ts-mynote-btns { display: inline-flex; gap: 8px; margin-left: auto; }
 .ts-mynote-cancel { border: 1px solid #c3c9d2; background: #fff; color: #5b6474; border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 .ts-mynote-save { border: 0; background: #2f5d8f; color: #fff; border-radius: 999px; padding: 7px 16px; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+
+
+/* ==== Client Home, design "2a" ==========================================
+   Five blocks: who they are and where they are in the plan, the one thing
+   to do now, what is coming, the goals, and a slot held open. Every block
+   hides itself when it has nothing to say. Colours, radii and spacing come
+   from docs/UI-GUIDELINES.md; no new hexes are invented here. */
+
+.hm {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.hm-eyebrow {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #5b6474;
+}
+
+.hm-card {
+  background: #ffffff;
+  border: 1px solid #dfe3e8;
+  border-radius: 12px;
+  padding: 16px 22px;
+}
+
+/* ---- 1 · Profile ---- */
+
+.hm-profile-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hm-avatar,
+.hm-avatar-img {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+}
+
+.hm-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1e3a6e;
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.hm-avatar-img { object-fit: cover; }
+
+.hm-profile-main { flex: 1; min-width: 0; }
+
+.hm-name {
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: #141a24;
+  margin-top: 4px;
+}
+
+.hm-chev-btn {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #dfe3e8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #5b6474;
+  cursor: pointer;
+}
+
+.hm-chev-btn svg { transition: transform 160ms ease; }
+.hm-chev-btn.open svg { transform: rotate(180deg); }
+
+.hm-maingoal {
+  margin: 12px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #313851;
+}
+
+.hm-maingoal.unset { font-weight: 500; color: #8b93a1; }
+
+.hm-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.hm-chip {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.hm-chip.nutrition { background: #dff3ea; color: #0f5c46; }
+.hm-chip.training  { background: #e6e4fa; color: #3a3390; }
+.hm-chip.lifestyle { background: #efede6; color: #4a4a45; }
+
+.hm-tracks {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #eceff3;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hm-track-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* The phase name wraps rather than truncating: it is the coach's own
+   wording and a clipped half-sentence helps nobody. */
+.hm-track-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: #141a24;
+}
+
+.hm-track-left {
+  flex: none;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.hm-track-left.nutrition { color: #0f5c46; }
+.hm-track-left.training  { color: #3a3390; }
+.hm-track-left.lifestyle { color: #4a4a45; }
+
+.hm-track-bar {
+  height: 6px;
+  border-radius: 999px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.hm-track-bar.nutrition { background: #dff3ea; }
+.hm-track-bar.training  { background: #e6e4fa; }
+.hm-track-bar.lifestyle { background: #efede6; }
+
+.hm-track-bar-fill { height: 100%; border-radius: 999px; }
+.hm-track-bar.nutrition .hm-track-bar-fill { background: #0f5c46; }
+.hm-track-bar.training .hm-track-bar-fill  { background: #3a3390; }
+.hm-track-bar.lifestyle .hm-track-bar-fill { background: #4a4a45; }
+
+.hm-track-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #5b6474;
+  font-variant-numeric: tabular-nums;
+}
+
+.hm-track-foot b { font-weight: 700; color: #313851; }
+
+/* ---- 2 · Today: the only navy card, because it is the only one that
+   asks for something. ---- */
+
+.hm-today {
+  background: #1e3a6e;
+  border-radius: 12px;
+  padding: 16px 0 0;
+  color: #ffffff;
+  box-shadow: 0 8px 24px -12px rgba(30, 58, 110, 0.55);
+  overflow: hidden;
+}
+
+.hm-today-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 22px;
+}
+
+.hm-today-eyebrow { color: rgba(255, 255, 255, 0.7); }
+
+.hm-today-pill {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.hm-session {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 22px 16px;
+  border: 0;
+  background: none;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.hm-session-body { flex: 1; min-width: 0; }
+
+.hm-session-name {
+  display: block;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #ffffff;
+}
+
+.hm-session-meta {
+  display: block;
+  margin-top: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.75);
+  font-variant-numeric: tabular-nums;
+}
+
+.hm-session-start {
+  flex: none;
+  padding: 11px 18px;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1e3a6e;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* Muted white rather than the grey from the palette: #8b93a1 on this navy
+   is about 3.3:1, under the floor the guidelines hold everywhere else. */
+.hm-session-empty {
+  margin: 6px 0 16px;
+  padding: 0 22px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.hm-checkin {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 22px;
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.hm-checkin-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #fbe9e0;
+  box-shadow: 0 0 0 3px rgba(251, 233, 224, 0.25);
+}
+
+.hm-checkin-body { flex: 1; min-width: 0; }
+.hm-checkin-eyebrow { display: block; color: rgba(255, 255, 255, 0.7); }
+
+.hm-checkin-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+.hm-checkin-names {
+  display: block;
+  margin-top: 3px;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #ffffff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hm-checkin-line .hm-checkin-names { margin-top: 0; min-width: 0; }
+
+/* Never truncated: it is the bit that says there is more to see. */
+.hm-checkin-more {
+  flex: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+}
+
+.hm-checkin-chev {
+  flex: none;
+  display: flex;
+  color: rgba(255, 255, 255, 0.7);
+  transform: rotate(-90deg);
+}
+
+/* ---- 3 · Next meeting ---- */
+
+.hm-meeting-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.hm-leaf {
+  flex: none;
+  width: 52px;
+  border: 1px solid #dfe3e8;
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: center;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(20, 26, 36, 0.06);
+}
+
+.hm-leaf-month {
+  display: block;
+  padding: 4px 3px;
+  background: #1e3a6e;
+  color: #ffffff;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hm-leaf-day {
+  display: block;
+  padding-top: 3px;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #141a24;
+  font-variant-numeric: tabular-nums;
+}
+
+.hm-leaf-weekday {
+  display: block;
+  padding-bottom: 5px;
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #8b93a1;
+}
+
+.hm-meeting-main { flex: 1; min-width: 0; }
+
+.hm-meeting-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hm-meeting-top .hm-eyebrow { line-height: 1.25; }
+
+.hm-meeting-pill {
+  flex: none;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #eef0f3;
+  color: #5b6474;
+  white-space: nowrap;
+}
+
+.hm-meeting-pill.live { background: #dff3ea; color: #2f7a3f; }
+
+.hm-meeting-topic {
+  margin-top: 5px;
+  font-size: 13.5px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: #141a24;
+}
+
+.hm-meeting-when {
+  margin-top: 3px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #5b6474;
+  font-variant-numeric: tabular-nums;
+}
+
+.hm-meeting-more {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #eceff3;
+}
+
+.hm-note {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f8f9fb;
+}
+
+.hm-note-text {
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #313851;
+}
+
+.hm-note-text.muted { margin: 0; color: #8b93a1; }
+
+.hm-join {
+  display: block;
+  margin-top: 12px;
+  padding: 11px;
+  border-radius: 8px;
+  background: #1e3a6e;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}
+
+/* ---- 4 · Goals ---- */
+
+.hm-goals-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 4px;
+}
+
+.hm-goals-meta {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8b93a1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* GoalRow is shared with the coach's "client sees" preview, so Home's
+   sizing is scoped here rather than changed in the component. */
+.hm-goals .gr { padding: 14px 0; border-top: 1px solid #eceff3; }
+.hm-goals .gr:last-child { padding-bottom: 0; }
+.hm-goals .gr-text { font-size: 13.5px; font-weight: 800; color: #141a24; }
+.hm-goals .gr-figure { font-size: 13px; font-weight: 800; }
+.hm-goals .gr-bar { height: 6px; background: #eceff3; margin-top: 8px; }
+.hm-goals .gr-bar.orange { background: #eceff3; }
+.hm-goals .gr-muted { font-size: 12px; color: #5b6474; }
+.hm-goals .gr-sub { font-size: 12px; font-weight: 500; }
+.hm-goals .gr-seg { width: 8px; height: 8px; border-radius: 999px; background: #eceff3; }
+.hm-goals .gr-seg.on { background: #2f5d8f; }
+.hm-goals .gr-segments.green .gr-seg { background: #eceff3; }
+.hm-goals .gr-segments.green .gr-seg.on { background: #2f5d8f; }
+
+.hm-goals .gr-dot.done {
+  width: 22px;
+  height: 22px;
+  margin-top: 0;
+  background: #dff3ea;
+  color: #2f7a3f;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 22px;
+}
+
+/* ---- 5 · Reserved ---- */
+
+.hm-reserved {
+  min-height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #dfe3e8;
+  border-radius: 12px;
+}
+
+.hm-reserved-label { color: #8b93a1; }

@@ -159,7 +159,9 @@ export default function AppShell({
         <main className="app-content dark" key={`${activeId}-${navResetKey}`}>
           <CheckInProvider value={openCheckIn}>
             <NotificationsProvider value={() => setPushView("notifications")}>
-              <FocusRefProvider value={focusRef}>{active?.content}</FocusRefProvider>
+              <NavigateProvider value={goToTab}>
+                <FocusRefProvider value={focusRef}>{active?.content}</FocusRefProvider>
+              </NavigateProvider>
             </NotificationsProvider>
           </CheckInProvider>
         </main>
