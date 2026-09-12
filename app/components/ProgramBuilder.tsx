@@ -470,7 +470,12 @@ export default function ProgramBuilder({
               />
             </table>
           </div>
-          <CardioBlock key="cardio" />
+          <CardioBlock
+            key="cardio"
+            groups={MUSCLE_GROUPS.filter((g) => g.slug === "cardio")}
+            exercisesByGroup={{ cardio: exercisesByGroup.cardio ?? [] }}
+            widths={COLUMN_WIDTH}
+          />
 
         </AdminDayCard>
         </DayPendingProvider>
