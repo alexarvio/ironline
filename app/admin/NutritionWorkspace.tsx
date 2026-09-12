@@ -6,7 +6,6 @@ import {
   removeSupplementRowAction,
   saveCoachNutritionNoteAction,
   saveNutritionTargetsAction,
-  setSupplementsVisibleAction,
   updateSupplementRowAction,
 } from "../lib/actions";
 import type { ClientPhase } from "../lib/db";
@@ -41,7 +40,6 @@ export type NutritionWorkspaceProps = {
   waterL: number | null;
   latestWeightKg: number | null;
   supplements: NwSupplement[];
-  supplementsVisible: boolean;
   /** The last 30 days, today first, one entry per day, missed days included. */
   logs: NwLogDay[];
   liveSince: string | null;
@@ -279,8 +277,6 @@ const TIMING_TONE = (t: string) => {
 };
 
 function SupplementsCard({ p }: { p: NutritionWorkspaceProps }) {
-  const [visible, setVisible] = useState(p.supplementsVisible);
-  const [, start] = useTransition();
   const addId = `nw-add-supp-${p.clientId}`;
   return (
     <section className="pl-card">
@@ -293,21 +289,6 @@ function SupplementsCard({ p }: { p: NutritionWorkspaceProps }) {
           </div>
         </div>
         <div className="pl-band-right">
-          <label className="nw-band-check">
-            <input
-              type="checkbox"
-              checked={visible}
-              onChange={(e) => {
-                const on = e.target.checked;
-                setVisible(on);
-                const fd = new FormData();
-                fd.set("clientId", String(p.clientId));
-                fd.set("visible", on ? "1" : "0");
-                start(() => setSupplementsVisibleAction(fd));
-              }}
-            />
-            <span>Show in app</span>
-          </label>
           <button type="submit" form={addId} className="pl-primary">
             + Add item
           </button>
@@ -325,8 +306,8 @@ function SupplementsCard({ p }: { p: NutritionWorkspaceProps }) {
         {p.supplements.length === 0 && <div className="pl-empty-row">Nothing set yet. Add the first item below.</div>}
         {p.supplements.map((row) => (
           <div key={row.id} className="nw-tr nw-supp-cols">
-            <Cell clientId={p.clientId} rowId={row.id} field="name" value={row.name} className="nw-cell-item" />
-            <Cell clientId={p.clientId} rowId={row.id} field="quantity" value={row.quantity} className="nw-cell-qty" />
+            <Cell clientId={p.clientId} rowId={row.id} field="name" value={row.name} placeholder="Name" className="nw-cell-item" />
+            <Cell clientId={p.clientId} rowId={row.id} field="quantity" value={row.quantity} placeholder="e.g. 5g" className="nw-cell-qty" />
             <TimingCell clientId={p.clientId} rowId={row.id} value={row.timing} />
             <Cell clientId={p.clientId} rowId={row.id} field="notes" value={row.notes} placeholder="Optional" className="nw-cell-notes" />
             <form action={removeSupplementRowAction} className="nw-remove">

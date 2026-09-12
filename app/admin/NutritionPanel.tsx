@@ -94,7 +94,6 @@ export default function NutritionPanel({ clientId }: { clientId: number }) {
       waterL={stored.water_l ?? null}
       latestWeightKg={getLatestWeight(clientId)}
       supplements={(stored.supplement_rows ?? []).map((r) => ({ id: r.id, name: r.name, quantity: r.quantity, timing: r.timing, notes: r.notes }))}
-      supplementsVisible={stored.supplements_visible !== false}
       logs={logs}
       liveSince={running?.start_week ?? null}
     />

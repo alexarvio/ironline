@@ -475,7 +475,7 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
         </div>
       )}
 
-      {referenceRows.length > 0 && plan.supplements_visible !== false && (
+      {referenceRows.length > 0 && (
         <section className="home-dark-section">
           <span className="home-dark-section-title">Supplements</span>
           <div className="home-dark-rows">

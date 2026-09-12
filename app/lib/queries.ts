@@ -95,7 +95,6 @@ export type NutritionPlan = {
   water_l?: number | null;
   // A reference list, not a checklist: no state, no ticking.
   supplement_rows?: { id: number; name: string; quantity: string; timing: string; notes: string }[];
-  supplements_visible?: boolean;
 };
 
 // Fixed lists straight from the coach's original "Voeding en supplementen" tab.
@@ -3422,22 +3421,16 @@ export function setNutritionDayTargets(
   saveNutritionPlan(plan);
 }
 
-export function setSupplementsVisible(clientId: number, visible: boolean) {
-  const plan = getStoredNutritionPlan(clientId);
-  plan.supplements_visible = visible;
-  persist();
-}
-
 export function setNutritionWater(clientId: number, litres: number | null) {
   const plan = getStoredNutritionPlan(clientId);
   plan.water_l = litres;
   saveNutritionPlan(plan);
 }
 
-export function addSupplementRow(clientId: number) {
+export function addSupplementRow(clientId: number, name = "") {
   const plan = getStoredNutritionPlan(clientId);
   const rows = plan.supplement_rows ?? [];
-  rows.push({ id: allocId("supplement_rows"), name: "", quantity: "", timing: "", notes: "" });
+  rows.push({ id: allocId("supplement_rows"), name: name.trim(), quantity: "", timing: "", notes: "" });
   plan.supplement_rows = rows;
   saveNutritionPlan(plan);
 }

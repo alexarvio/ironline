@@ -134,7 +134,6 @@ import {
   ensureWeekSkeleton,
   setNutritionDayTargets,
   setNutritionNote,
-  setSupplementsVisible,
   setNutritionWater,
   addSupplementRow,
   updateSupplementRow,
@@ -852,7 +851,9 @@ export async function saveWaterGoalAction(formData: FormData) {
 
 export async function addSupplementRowAction(formData: FormData) {
   await requireCoach();
-  addSupplementRow(Number(formData.get("clientId")));
+  // The name typed in the footer box starts the row off; an empty box still
+  // adds a blank row, which is how "+ Add item" in the band works.
+  addSupplementRow(Number(formData.get("clientId")), String(formData.get("name") ?? ""));
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -871,13 +872,6 @@ export async function updateSupplementRowAction(formData: FormData) {
 export async function removeSupplementRowAction(formData: FormData) {
   await requireCoach();
   removeSupplementRow(Number(formData.get("clientId")), Number(formData.get("rowId")));
-  revalidatePath("/admin");
-  revalidatePath("/client");
-}
-
-export async function setSupplementsVisibleAction(formData: FormData) {
-  await requireCoach();
-  setSupplementsVisible(Number(formData.get("clientId")), formData.get("visible") === "1");
   revalidatePath("/admin");
   revalidatePath("/client");
 }
