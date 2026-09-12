@@ -54,6 +54,7 @@ import NotificationRow from "./NotificationRow";
 import ClientWeekSwitcher from "./ClientWeekSwitcher";
 import ProgramNote from "./ProgramNote";
 import AppShell, { AppTab } from "./AppShell";
+import AvatarUpload from "./AvatarUpload";
 import {
   AccountIcon,
   AppleIcon,
@@ -316,7 +317,7 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
     <HomeHub
       dateLabel={dateLabel}
       firstName={(client?.name ?? "").trim().split(/\s+/)[0] || "there"}
-      photoUrl={null}
+      photoUrl={client?.avatar_path ?? null}
       initial={(client?.name ?? "?").trim().charAt(0).toUpperCase() || "?"}
       mainGoal={profile.main_goal ?? null}
       tracks={homeTracks(plan)}
@@ -675,6 +676,10 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
       <div className="home-dark-hr" />
 
       <section className="home-dark-section" style={{ paddingTop: 18 }}>
+        <AvatarUpload clientId={CLIENT_ID} name={client?.name ?? ""} avatarPath={client?.avatar_path ?? null} />
+      </section>
+
+      <section className="home-dark-section">
         <div className="home-dark-section-head">
           <span className="home-dark-section-title">Progress reports</span>
           {reports.length > 0 && <span className="home-dark-section-count">{reportCountLabel}</span>}

@@ -36,7 +36,12 @@ export default function ClientOverviewPanel({
       {/* 1. Profile */}
       <section className="ad-panel-profile">
         <span className="ad-panel-avatar" aria-hidden="true">
-          {panel.initial}
+          {panel.avatarPath ? (
+            // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
+            <img src={panel.avatarPath} alt="" className="ad-avatar-img" />
+          ) : (
+            panel.initial
+          )}
         </span>
         <div className="ad-panel-ident">
           <div className="ad-panel-name">{panel.name}</div>
