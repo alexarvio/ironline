@@ -13278,3 +13278,7 @@ a.cd-entry:hover { border-color: var(--accent); }
 .av-title { font-weight: 700; font-size: 0.94rem; color: var(--fp-text); }
 .av-sub { font-size: 0.78rem; color: var(--fp-dim); margin-top: 2px; }
 .av-remove { margin-top: 6px; padding: 0; border: 0; background: none; color: var(--fp-accent); font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+
+/* Column chips: the "add your own" chip, and the small form it opens. */
+.pb-col-chip-add { border-style: dashed; }
+.pb-col-add-cancel { border: 0; background: none; color: #8b93a1; font: inherit; font-size: 14px; cursor: pointer; padding: 0 4px; }

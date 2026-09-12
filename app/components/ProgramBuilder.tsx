@@ -4,6 +4,7 @@ import {
   getAssignmentsForDay,
   getCustomValues,
   getDeployedProgram,
+  formatRestSeconds,
   getClientProgramNote,
   getExerciseWeightTrendPct,
   getLogsForAssignment,
@@ -144,6 +145,7 @@ export default function ProgramBuilder({
           targetWeight: a.target_weight_kg == null ? "" : String(a.target_weight_kg),
           rpe: a.rpe_target == null ? "" : String(a.rpe_target),
           tempo: a.tempo ?? "",
+          rest: formatRestSeconds(a.rest_seconds),
           notes: a.notes ?? "",
         },
         custom: Object.fromEntries(columns.filter((c) => c.kind === "custom").map((c) => [c.id, customValueFor(a.id, c.id)])),
@@ -390,6 +392,18 @@ export default function ProgramBuilder({
                                   type="text"
                                   placeholder="e.g. 3-1-1"
                                   defaultValue={a.tempo ?? ""}
+                                />
+                              </td>
+                            );
+                          case "rest":
+                            return (
+                              <td key={col.id}>
+                                <AssignmentFieldInput
+                                  assignmentId={a.id}
+                                  name="rest"
+                                  type="text"
+                                  placeholder="90s"
+                                  defaultValue={formatRestSeconds(a.rest_seconds)}
                                 />
                               </td>
                             );

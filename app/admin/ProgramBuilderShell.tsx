@@ -141,7 +141,6 @@ export default function ProgramBuilderShell({
           {columnsSlot}
         </div>
         <div className="pb-toolbar-right">
-          <span className="pb-week-summary">{program.weekSummaries[activeWeek]}</span>
           <button
             type="button"
             className="pb-toolbar-btn"

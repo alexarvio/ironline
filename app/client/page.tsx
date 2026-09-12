@@ -414,6 +414,7 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
                   targetWeight: a.target_weight_kg,
                   targetRpe: a.rpe_target,
                   tempo: a.tempo,
+                  rest: a.rest_seconds ?? null,
                   // The coach's demo for this prescription wins; the exercise
                   // library's own video is the fallback.
                   videoUrl: a.exercise_video_url ?? a.demo_url ?? null,

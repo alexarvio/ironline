@@ -145,6 +145,13 @@ Commit `a10ba40`, ported from `next` and pushed on its own.
 
 - [x] The client sets a photo from Settings (tap the circle; Remove underneath). It shows on their Home profile card, in the coach’s client rail and at the top of the client panel. The initial stands in until one is set.
 
+## 20 · Builder: Rest column editable, Notes always last, summary gone — ✅ LIVE 12 Sep
+
+- [x] The Rest column takes a value ("90s", "1:30", "2 min") and saves through the pending bar like the others; the client sees it in the exercise’s target box.
+- [x] Notes is always the last column, whatever order columns were switched on in.
+- [x] The "5 training days · 50 sets logged" line is gone from the toolbar.
+- [x] Custom column is a dashed "+ Custom column" chip that opens a name box, instead of a bare input that read as a label.
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.
