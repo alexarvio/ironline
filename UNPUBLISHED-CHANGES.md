@@ -166,6 +166,10 @@ Commit `a10ba40`, ported from `next` and pushed on its own.
 - [x] Every night at 03:15 server time, and a minute after each start, the store is copied as a dated snapshot (thirty kept) plus `latest.json`, and the uploads folder is mirrored, to the `ironline-backups` Railway bucket (region ams). Coach can POST `/api/backup` for one on demand. Dev machines with no `BACKUP_*` variables never upload.
 - [x] Live runs in Europe/Amsterdam (`TZ` on the Railway service), so check-in dates, set times and the week rail read that clock.
 
+## 24 · No more jumping to the top — ✅ LIVE 12 Sep
+
+- [x] Check-in and Notifications open as layers over the tab instead of replacing it, so closing them returns to the same scroll and the same open day. Tapping the tab you are already on does nothing rather than rebuilding it.
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.

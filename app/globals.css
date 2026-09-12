@@ -13300,3 +13300,10 @@ a.cd-entry:hover { border-color: var(--accent); }
 .pb-note-peek-chev { flex: none; color: #8b93a1; transition: transform 160ms ease; }
 .pb-note-peek-chev.up { transform: rotate(180deg); }
 .pb-note-peek-body { margin: 0; padding: 0 12px 12px 52px; font-size: 13px; font-weight: 500; line-height: 1.45; color: #313851; white-space: pre-wrap; }
+
+/* The phone screen is a stack: the tab in the base layer, a pushed view
+   (check-in, notifications) laid over it. The base stays mounted so its
+   scroll and open state survive the round trip. */
+.app-stack { position: relative; }
+.app-layer { position: absolute; inset: 0; display: flex; flex-direction: column; min-height: 0; }
+.app-layer-push { z-index: 5; background: var(--paper); }

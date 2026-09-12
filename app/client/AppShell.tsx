@@ -72,11 +72,9 @@ export default function AppShell({
     setCheckInSection(section);
     setPushView("checkin");
   };
-  // Bumped on every bottom-nav tap (including tapping the already-active
-  // tab) and used as a key on the content below, so tapping Home while
-  // already on Home resets HomeHub's internal sub-view instead of doing
-  // nothing — there's no in-page back link otherwise, so this is how "go
-  // home" works from a sub-view like Photos or Tracker.
+  // Bumped when the tab changes and used as a key on the content below, so
+  // a tab comes up fresh when switched to. A tap on the tab already showing
+  // is ignored: rebuilding it read as the screen jumping to the top.
   const [navResetKey, setNavResetKey] = useState(0);
   // Which row the tab we're switching to should open on arrival, set only by
   // a notification's deep link and cleared by any ordinary nav tap.
@@ -91,58 +89,52 @@ export default function AppShell({
     setNavResetKey((k) => k + 1);
   };
 
-  if (pushView === "checkin") {
-    return (
-      <div className="phone-frame">
-        <div className="app-screen cn-screen">
-          <CheckInScreen
-            clientId={clientId}
-            dateLabel={checkIn.dateLabel}
-            today={checkIn.today}
-            sections={checkIn.sections}
-            initialSection={checkInSection}
-            phaseLabel={checkIn.phaseLabel}
-            deltas={checkIn.deltas}
-            photoSlots={checkIn.photoSlots}
-            photoPeriodLabel={checkIn.photoPeriodLabel}
-            dueSections={checkIn.dueSections}
-            photosDue={checkIn.photosDue}
-            photosNextLabel={checkIn.photosNextLabel}
-            coachNote={checkIn.coachNote}
-            photoHistory={checkIn.photoHistory}
-            onBack={() => setPushView(null)}
-          />
-        </div>
+  const pushedLayer =
+    pushView === "checkin" ? (
+      <div className="app-layer app-layer-push cn-screen">
+        <CheckInScreen
+          clientId={clientId}
+          dateLabel={checkIn.dateLabel}
+          today={checkIn.today}
+          sections={checkIn.sections}
+          initialSection={checkInSection}
+          phaseLabel={checkIn.phaseLabel}
+          deltas={checkIn.deltas}
+          photoSlots={checkIn.photoSlots}
+          photoPeriodLabel={checkIn.photoPeriodLabel}
+          dueSections={checkIn.dueSections}
+          photosDue={checkIn.photosDue}
+          photosNextLabel={checkIn.photosNextLabel}
+          coachNote={checkIn.coachNote}
+          photoHistory={checkIn.photoHistory}
+          onBack={() => setPushView(null)}
+        />
       </div>
-    );
-  }
-
-  if (pushView) {
-    return (
-      <div className="phone-frame">
-        <div className="app-screen cn-screen">
-          <header className="cn-header">
-            <button type="button" className="cn-icon-btn" onClick={() => setPushView(null)} aria-label="Back">
-              <ChevronLeftIcon />
-            </button>
-            <div className="cn-header-titles">
-              <div className="cn-kicker">Activity</div>
-              <div className="cn-title">Notifications</div>
-            </div>
-            {/* No right-hand action: that slot was the chat toggle. */}
-            <span className="cn-icon-spacer" aria-hidden="true" />
-          </header>
-          <main className="cn-body">
-            <NavigateProvider value={goToTab}>{notificationsContent}</NavigateProvider>
-          </main>
-        </div>
+    ) : pushView ? (
+      <div className="app-layer app-layer-push cn-screen">
+        <header className="cn-header">
+          <button type="button" className="cn-icon-btn" onClick={() => setPushView(null)} aria-label="Back">
+            <ChevronLeftIcon />
+          </button>
+          <div className="cn-header-titles">
+            <div className="cn-kicker">Activity</div>
+            <div className="cn-title">Notifications</div>
+          </div>
+          <span className="cn-icon-spacer" aria-hidden="true" />
+        </header>
+        <main className="cn-body">
+          <NavigateProvider value={goToTab}>{notificationsContent}</NavigateProvider>
+        </main>
       </div>
-    );
-  }
+    ) : null;
 
   return (
     <div className="phone-frame">
-      <div className="app-screen">
+      <div className="app-screen app-stack">
+        {/* The tab stays mounted under a pushed view, so closing the view
+            comes back to the same scroll and the same open day. inert keeps
+            it out of reach of taps and the keyboard while covered. */}
+        <div className="app-layer app-layer-main" inert={pushView ? true : undefined} aria-hidden={pushView ? true : undefined}>
         <header className="app-header dark">
           <span className="app-header-brand">
             <Image src="/brand/logo.png" alt="" width={15} height={26} className="app-header-logo" priority />
@@ -175,6 +167,9 @@ export default function AppShell({
               type="button"
               className={`app-tab-btn${t.id === activeId ? " active" : ""}`}
               onClick={() => {
+                // A tap on the tab already showing does nothing. It used to
+                // rebuild the tab, which read as the screen jumping to the top.
+                if (t.id === activeId) return;
                 setActiveId(t.id);
                 setFocusRef(null);
                 setNavResetKey((k) => k + 1);
@@ -186,6 +181,8 @@ export default function AppShell({
             </button>
           ))}
         </nav>
+        </div>
+        {pushedLayer}
       </div>
     </div>
   );
