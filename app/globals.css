@@ -12642,15 +12642,19 @@ a.cd-entry:hover { border-color: var(--accent); }
 .hm-chev-btn svg { transition: transform 160ms ease; }
 .hm-chev-btn.open svg { transform: rotate(180deg); }
 
+/* The main goal is what the whole programme points at, so it reads as a
+   headline: display serif, title size, ink. Unset stays quiet. */
 .hm-maingoal {
   margin: 12px 0 0;
-  font-size: 13px;
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 22px;
   font-weight: 600;
-  line-height: 1.45;
-  color: #313851;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: #141a24;
 }
 
-.hm-maingoal.unset { font-weight: 500; color: #8b93a1; }
+.hm-maingoal.unset { font-family: var(--font-sans); font-size: 13px; font-weight: 500; line-height: 1.45; letter-spacing: 0; color: #8b93a1; }
 
 .hm-chip {
   font-size: 11px;
@@ -12740,7 +12744,7 @@ a.cd-entry:hover { border-color: var(--accent); }
 .hm-today {
   background: #1e3a6e;
   border-radius: 12px;
-  padding: 16px 0 0;
+  padding: 20px 0 0;
   color: #ffffff;
   box-shadow: 0 8px 24px -12px rgba(30, 58, 110, 0.55);
   overflow: hidden;
@@ -12761,7 +12765,7 @@ a.cd-entry:hover { border-color: var(--accent); }
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 10px 22px 16px;
+  padding: 12px 22px 20px;
   border: 0;
   background: none;
   text-align: left;
@@ -12774,7 +12778,7 @@ a.cd-entry:hover { border-color: var(--accent); }
 
 .hm-session-name {
   display: block;
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 800;
   line-height: 1.2;
   color: #ffffff;
@@ -12782,8 +12786,8 @@ a.cd-entry:hover { border-color: var(--accent); }
 
 .hm-session-meta {
   display: block;
-  margin-top: 4px;
-  font-size: 12.5px;
+  margin-top: 6px;
+  font-size: 13.5px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.75);
   font-variant-numeric: tabular-nums;
@@ -12791,11 +12795,11 @@ a.cd-entry:hover { border-color: var(--accent); }
 
 .hm-session-start {
   flex: none;
-  padding: 11px 18px;
-  border-radius: 8px;
+  padding: 14px 24px;
+  border-radius: 10px;
   background: #ffffff;
   color: #1e3a6e;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 800;
 }
 
@@ -12814,7 +12818,7 @@ a.cd-entry:hover { border-color: var(--accent); }
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 12px 22px;
+  padding: 16px 22px;
   border: 0;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.08);
@@ -12849,7 +12853,7 @@ a.cd-entry:hover { border-color: var(--accent); }
 
 .hm-checkin-title {
   display: block;
-  font-size: 13.5px;
+  font-size: 15px;
   font-weight: 800;
   color: #ffffff;
 }
