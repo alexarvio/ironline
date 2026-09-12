@@ -12273,6 +12273,7 @@ a.cd-entry:hover { border-color: var(--accent); }
 .pl-band-right { flex: none; display: flex; align-items: center; gap: 10px; }
 .pl-switch { display: inline-flex; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 999px; padding: 3px; }
 .pl-switch-opt { border: 0; background: transparent; color: rgba(255, 255, 255, 0.75); font: inherit; font-size: 12px; font-weight: 700; padding: 4px 11px; border-radius: 999px; cursor: pointer; }
+.pl-band-note { font-size: 12px; font-weight: 700; color: rgba(255, 255, 255, 0.75); }
 .pl-switch-opt.active { background: #fff; color: #1e3a6e; font-weight: 800; }
 .pl-primary { border: 0; background: #fff; color: #1e3a6e; font: inherit; font-size: 13px; font-weight: 800; padding: 8px 14px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
 .pl-track-tag { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; padding: 3px 8px; border-radius: 5px; }
@@ -12521,7 +12522,14 @@ a.cd-entry:hover { border-color: var(--accent); }
 .nw-strip-bar.green { background: #2f7a3f; }
 .nw-strip-bar.orange { background: #b3471d; }
 .nw-strip-label { font-size: 10px; font-weight: 800; color: #8b93a1; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; }
-.nw-cal-cols { grid-template-columns: 150px 130px 110px 1fr 150px; }
+.nw-cal-cols { grid-template-columns: 150px 130px 110px 1fr 170px 150px; }
+.nw-cal-phase { font-size: 12px; font-weight: 700; color: #5b6474; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nw-cal-foot { justify-content: space-between; flex-wrap: wrap; }
+.nw-pager { display: inline-flex; align-items: center; gap: 4px; }
+.nw-page { min-width: 28px; height: 28px; padding: 0 8px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; color: #313851; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.nw-page:hover { background: #f6f7f9; }
+.nw-page.active { background: #1e3a6e; border-color: #1e3a6e; color: #fff; font-weight: 800; }
+.nw-page:disabled { opacity: 0.4; cursor: default; }
 .nw-tr.nw-cal-cols { padding: 10px 22px; font-size: 13px; }
 .nw-cal-date { font-weight: 700; color: #141a24; }
 .nw-cal-kcal { font-weight: 800; font-variant-numeric: tabular-nums; color: #141a24; }
