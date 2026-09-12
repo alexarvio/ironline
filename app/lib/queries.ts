@@ -3265,6 +3265,7 @@ export type ClientProfile = {
   goal_phase: string;
   goal_phase_start_date: string | null;
   goal_date: string | null;
+  main_goal?: string | null;
   check_in_day: string | null;
   steps_goal: string;
   cardio_goal: string;
@@ -3306,9 +3307,20 @@ export function getClientProfile(clientId: number): ClientProfile {
 export function saveClientProfile(profile: ClientProfile) {
   const data = getData();
   const idx = data.client_profiles.findIndex((p) => p.client_id === profile.client_id);
-  if (idx >= 0) data.client_profiles[idx] = profile;
-  else data.client_profiles.push(profile);
+  // The card form doesn't carry main_goal (it's set from the Plan tab), so a
+  // card save keeps whatever is already stored.
+  const main_goal =
+    profile.main_goal !== undefined ? profile.main_goal : idx >= 0 ? (data.client_profiles[idx].main_goal ?? null) : null;
+  const next = { ...profile, main_goal };
+  if (idx >= 0) data.client_profiles[idx] = next;
+  else data.client_profiles.push(next);
   persist();
+}
+
+/** The coach's headline goal for the client; empty clears it. */
+export function setClientMainGoal(clientId: number, text: string) {
+  const profile = getClientProfile(clientId);
+  saveClientProfile({ ...profile, main_goal: text.trim() || null });
 }
 
 // Days between today and the profile's goal date — computed live rather than

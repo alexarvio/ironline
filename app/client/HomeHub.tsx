@@ -1,9 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
 import { ArrowRightIcon, CheckIcon } from "../components/icons";
 import GoalRow from "../components/GoalRow";
-import type { ClientPlanView, DataTile, GoalView, PlanPhaseView, PlanTrackView } from "../lib/queries";
+import type { ClientPlanView, GoalView, PlanPhaseView, PlanTrackView } from "../lib/queries";
 import { useOpenCheckIn } from "./CheckInContext";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
@@ -38,29 +37,25 @@ export type CoachNote = { id: number; context: string; timeLabel: string; text: 
 export default function HomeHub({
   dateLabel,
   name,
-  phase,
+  mainGoal,
   plan,
-  subLine,
   goalNote,
   goals,
   goalsMeta,
-  data,
   upcoming,
   checkInStatus,
 }: {
   dateLabel: string;
   name: string;
-  /** Goal / phase from the coach's card, e.g. "Fat loss". */
-  phase: string;
-  /** The coach's phase timeline, when one exists; drives the plan card. */
+  /** The coach's headline goal for this client, written on the Plan tab. */
+  mainGoal: string | null;
+  /** The coach's phase timeline, when one exists; drives the plan rows. */
   plan: ClientPlanView | null;
-  /** Anything quieter beside it, currently the current-week label. */
-  subLine: string;
+  /** "11 weeks to goal", from the card's goal date. */
   goalNote: string | null;
   goals: GoalView[];
   /** "set Sep 3 · review Sep 20" */
   goalsMeta: string;
-  data: DataTile[];
   upcoming: UpcomingMeeting;
   coachNotes: CoachNote[];
   checkInStatus: CheckInStatus;
@@ -72,17 +67,18 @@ export default function HomeHub({
   return (
     <div className="home-dark">
       <div className="home-dark-datebar">{dateLabel}</div>
-      {/* The header is the plan's summary: name, then the phase the coach
-          has them in and the week. When the coach has drawn a phase
-          timeline, one row per track sits under it: the phase running now,
-          how far through it they are, and what follows. */}
+      {/* The header: name, then the one goal the coach has written for
+          them. When the coach has drawn a phase timeline, one row per track
+          sits under it: the phase running now, how far through it they
+          are, and what follows. */}
       <div className="home-dark-headrow">
         <div className="home-dark-headmain">
           <div className="home-dark-name">{name}</div>
           <div className="home-dark-subrow">
-            <span className="home-dark-phase">{phase}</span>
-            {subLine && <span className="home-dark-sub">{subLine}</span>}
-            {goalNote && <span className="home-dark-goal">{goalNote}</span>}
+            <span className={`home-dark-phase${mainGoal ? "" : " unset"}`}>
+              {mainGoal ?? "Your coach hasn\u2019t set your main goal yet"}
+            </span>
+            {mainGoal && goalNote && <span className="home-dark-goal">{goalNote}</span>}
           </div>
         </div>
       </div>
@@ -110,18 +106,6 @@ export default function HomeHub({
           </div>
           <span className={`home-meeting-pill${upcoming.startingNow ? " live" : ""}`}>{upcoming.startingNow ? "Starting now" : upcoming.inLabel.toLowerCase()}</span>
         </div>
-      )}
-
-      {goals.length > 0 && (
-        <section className="home-goals-card">
-          <div className="home-goals-head">
-            <span className="home-goals-title">Goals</span>
-            {goalsMeta && <span className="home-goals-meta">{goalsMeta}</span>}
-          </div>
-          {goals.map((g) => (
-            <GoalRow key={g.id} goal={g} />
-          ))}
-        </section>
       )}
 
       {checkInStatus.configuredCount > 0 && (
@@ -153,9 +137,17 @@ export default function HomeHub({
         </section>
       )}
 
-      <div className="home-dark-hr" />
-
-      <DataSection tiles={data} />
+      {goals.length > 0 && (
+        <section className="home-goals-card">
+          <div className="home-goals-head">
+            <span className="home-goals-title">Goals</span>
+            {goalsMeta && <span className="home-goals-meta">{goalsMeta}</span>}
+          </div>
+          {goals.map((g) => (
+            <GoalRow key={g.id} goal={g} />
+          ))}
+        </section>
+      )}
     </div>
   );
 }
@@ -252,99 +244,5 @@ function PlanRow({
         )}
       </div>
     </div>
-  );
-}
-
-// ---- Data: the coach's chosen figures (up to four) in one card: a strip
-// of stat columns across the top, one swipeable bar chart underneath.
-// Tapping a column selects it and slides the chart to it; swiping the
-// chart selects the column it lands on. ----
-
-function DataSection({ tiles }: { tiles: DataTile[] }) {
-  const [index, setIndex] = useState(0);
-  const trackRef = useRef<HTMLDivElement>(null);
-  if (tiles.length === 0) return null;
-  const goTo = (i: number) => {
-    setIndex(i);
-    const el = trackRef.current;
-    if (el) el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
-  };
-  const onScroll = () => {
-    const el = trackRef.current;
-    if (!el) return;
-    const i = Math.round(el.scrollLeft / (el.clientWidth || 1));
-    if (i !== index && i >= 0 && i < tiles.length) setIndex(i);
-  };
-  const tile = tiles[Math.min(index, tiles.length - 1)];
-
-  return (
-    <section className="home-data">
-      <div className="home-data-head">
-        <span className="home-data-title">Data</span>
-        <span className="home-data-sub">Last 7 days</span>
-      </div>
-      <div className="home-data-card">
-        <div className="home-data-strip" style={{ gridAutoColumns: `calc(100% / ${Math.min(4, tiles.length)})` }}>
-          {tiles.map((t, i) => (
-            <button key={t.key} type="button" className={`home-data-col${i === index ? " selected" : ""}`} onClick={() => goTo(i)}>
-              <span className="home-data-col-label">{t.name}</span>
-              <span className="home-data-col-value">
-                {t.valueLabel}
-                {t.unit && <small>{t.unit}</small>}
-              </span>
-              <span className={`home-data-col-trend ${t.trendTone}`}>{t.trendLabel}</span>
-              <span className="home-data-col-line" aria-hidden="true" />
-            </button>
-          ))}
-        </div>
-
-        <div className="home-data-graph">
-          <div className="home-data-graph-head">
-            <span>{tile.name} · 8 weeks</span>
-            <span>
-              {tile.firstLabel} → {tile.lastLabel}
-            </span>
-          </div>
-          <div className="home-data-track" ref={trackRef} onScroll={onScroll}>
-            {tiles.map((t) => {
-              const values = t.bars.filter((b): b is number => b != null);
-              const all = t.goal != null ? [...values, t.goal] : values;
-              const min = all.length ? Math.min(...all) : 0;
-              const max = all.length ? Math.max(...all) : 1;
-              const pad = max === min ? Math.max(1, Math.abs(max) * 0.1) : (max - min) * 0.3;
-              const lo = min - pad;
-              const hi = max + pad;
-              const pct = (v: number) => Math.max(0, Math.min(1, (v - lo) / (hi - lo)));
-              return (
-                <div key={t.key} className="home-data-pane">
-                  <div className="home-data-bars">
-                    {t.bars.map((b, i) => (
-                      <span
-                        key={i}
-                        className={`home-data-bar${i === t.bars.length - 1 ? " last" : ""}${b == null ? " empty" : ""}`}
-                        style={{ height: b == null ? "2px" : `${Math.max(4, pct(b) * 100)}%` }}
-                        title={b == null ? "Nothing logged" : `${b}${t.unit ? ` ${t.unit}` : ""}`}
-                      />
-                    ))}
-                    {t.goal != null && (
-                      <span className="home-data-goal" style={{ bottom: `${pct(t.goal) * 100}%` }}>
-                        <em>goal {t.goal}</em>
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {tiles.length > 1 && (
-            <div className="home-data-dots">
-              {tiles.map((t, i) => (
-                <button key={t.key} type="button" className={`home-data-dot${i === index ? " on" : ""}`} onClick={() => goTo(i)} aria-label={t.name} />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </section>
   );
 }

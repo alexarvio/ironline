@@ -27,7 +27,6 @@ import {
   listClientGoals,
   meetingProvider,
   getGoalViews,
-  getHomeDataTiles,
   listMeetings,
   listPhotoPeriods,
   listPhotoSlots,
@@ -81,21 +80,6 @@ const PERIOD_UNIT = {
 
 // A note with no kind set still needs a header — "Note" is the honest
 // fallback rather than guessing which of the three it is.
-// Which way weight should be moving for this athlete. Hardcoding "down is
-// better" told a client on a lean bulk they were going the wrong way, in
-// warning colour, on their own Home screen.
-//
-// This is a heuristic over the coach's free-text phase because that's the
-// only place the intent is recorded today — there's no structured "direction"
-// field. It errs toward "down is better", which matches most coaching
-// phases; if it guesses wrong the only cost is the colour of one percentage.
-// Worth replacing with a real field on the profile when one exists.
-function weightGoalIsDown(goalPhase: string | null | undefined): boolean {
-  const phase = (goalPhase ?? "").toLowerCase();
-  const gaining = ["bulk", "gain", "mass", "build", "bulking", "surplus"];
-  return !gaining.some((word) => phase.includes(word));
-}
-
 function noteDateLabel(at: string | null): string {
   if (!at) return "";
   return new Date(at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -176,15 +160,14 @@ function getWeekDays(CLIENT_ID: number, week?: number) {
   return publishedDays.map((day) => ({ day, assignments: getAssignmentsForDay(day.id) }));
 }
 
-// This week's training in two figures, for the top of the Training tab:
-// days trained of the days built, and sets logged of the sets planned.
+// This week's training in one figure, for the top of the Training tab:
+// days trained of the days built. (Sets logged used to sit beside it; it
+// told the client nothing they could act on, so it went.)
 function weekStats(CLIENT_ID: number, week: number) {
   const days = getWeekDays(CLIENT_ID, week);
   const daysTrained = days.filter((d) => d.assignments.some((a) => getLogsForAssignment(a.id).length > 0)).length;
   const totalDays = days.filter((d) => d.assignments.length > 0).length;
-  const setsThisWeek = days.reduce((sum, d) => sum + d.assignments.reduce((s, a) => s + getLogsForAssignment(a.id).length, 0), 0);
-  const setsPlanned = days.reduce((sum, d) => sum + d.assignments.reduce((s, a) => s + a.sets, 0), 0);
-  return { daysTrained, totalDays, setsThisWeek, setsPlanned };
+  return { daysTrained, totalDays };
 }
 
 function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
@@ -251,8 +234,8 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
     day: "numeric",
   });
 
-  // The coach's phase timeline, if they have drawn one. Its current phase
-  // becomes the headline instead of the hand-typed Goal / phase field.
+  // The coach's phase timeline, if they have drawn one, drives the plan
+  // rows under the header. The headline itself is the coach's main goal.
   const plan = getClientPlanView(CLIENT_ID);
 
   // "set Sep 3 · review Sep 20": when the goals were written, and the next
@@ -269,17 +252,11 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
     <HomeHub
       dateLabel={dateLabel}
       name={client?.name ?? ""}
-      phase={plan?.current?.name || profile.goal_phase || "No goal phase set yet"}
+      mainGoal={profile.main_goal ?? null}
       plan={plan}
-      goalNote={
-        plan?.current
-          ? `${plan.current.weeksLeft} week${plan.current.weeksLeft === 1 ? "" : "s"} to go`
-          : goalNote
-      }
-      subLine={profile.current_week ? `· ${profile.current_week}` : ""}
+      goalNote={goalNote}
       goals={getGoalViews(CLIENT_ID)}
       goalsMeta={goalsMeta}
-      data={getHomeDataTiles(CLIENT_ID, weightGoalIsDown(profile?.goal_phase))}
       upcoming={upcoming}
       coachNotes={coachNotes}
       checkInStatus={checkInStatus}
@@ -315,22 +292,6 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
             </div>
             <div className="home-dark-stat-caption">
               {stats.daysTrained >= dayTarget ? "Week complete" : `${dayTarget - stats.daysTrained} left this week`}
-            </div>
-          </div>
-          <div className="home-dark-stat-divider" />
-          <div className="home-dark-stat">
-            <div className="home-dark-stat-label">Sets logged</div>
-            <div className="home-dark-stat-value-row">
-              <span className="home-dark-stat-value">{stats.setsThisWeek}</span>
-            </div>
-            <div className="home-dark-bar">
-              <div
-                className="home-dark-bar-fill"
-                style={{ width: `${stats.setsPlanned > 0 ? Math.min(1, stats.setsThisWeek / stats.setsPlanned) * 100 : 0}%` }}
-              />
-            </div>
-            <div className="home-dark-stat-caption">
-              {stats.setsPlanned > 0 ? `${stats.setsThisWeek} of ${stats.setsPlanned} planned` : "Nothing planned this week"}
             </div>
           </div>
         </div>

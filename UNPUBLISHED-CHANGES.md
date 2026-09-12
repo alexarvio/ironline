@@ -1,6 +1,6 @@
 # Unpublished changes — review list
 
-Everything below is on localhost only. Live (Railway) is at commit `ee73997`; localhost is 27 commits ahead.
+Everything below is on localhost only. Live (Railway) is at commit `ecd69ca` (the client-notes and exercise-note hotfixes went live on their own); localhost is 34 commits ahead.
 Tick **Keep** or **Drop** per item. Items in the same group lean on each other, so dropping one usually means dropping the group.
 
 Where to look: coach side at `localhost:3000/admin`, client side at `localhost:3000/client` (Sam Rivera, client 5, has the most data).

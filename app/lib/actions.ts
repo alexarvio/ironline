@@ -84,6 +84,7 @@ import {
   removeSkinfoldEntry,
   getClientProfile,
   saveClientProfile,
+  setClientMainGoal,
   patchClientProfile,
   renameClient,
   saveNutritionPlan,
@@ -994,6 +995,15 @@ export async function saveClientProfileAction(formData: FormData) {
   });
 
   revalidatePath("/admin");
+}
+
+// Main goal: one sentence under the client's name on Home. Written from
+// the Plan tab; the card's own save leaves it alone.
+export async function setClientMainGoalAction(clientId: number, text: string) {
+  await requireCoach();
+  setClientMainGoal(clientId, text);
+  revalidatePath("/admin");
+  revalidatePath("/client");
 }
 
 // The right-hand client card, saved in place.

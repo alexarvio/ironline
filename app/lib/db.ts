@@ -341,6 +341,11 @@ type ClientProfile = {
   // client still in their first one.
   goal_phase_start_date: string | null;
   goal_date: string | null;
+  // The one headline goal the coach writes for the client, shown under
+  // their name on Home. Set from the Plan tab, not the card, so the card's
+  // save must not touch it (see saveClientProfile). Optional: older
+  // profiles have no key.
+  main_goal?: string | null;
   check_in_day: string | null;
   steps_goal: string;
   cardio_goal: string;

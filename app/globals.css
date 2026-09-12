@@ -2961,6 +2961,11 @@ a.cd-entry:hover { border-color: var(--accent); }
   margin: 18px 0 16px;
 }
 
+.home-dark-phase.unset {
+  font-weight: 500;
+  color: var(--fp-dim);
+}
+
 .home-dark-stats {
   display: flex;
   align-items: flex-start;
