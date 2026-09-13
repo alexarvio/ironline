@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // PGlite (a Postgres that runs in-process, used for local testing of the
+  // Postgres store) ships a WebAssembly build that must not be bundled.
+  serverExternalPackages: ["@electric-sql/pglite"],
   experimental: {
     serverActions: {
       // Coaches attach demo videos by uploading a clip from their phone or

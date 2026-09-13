@@ -13,8 +13,11 @@ const marker = path.join(DATA_DIR, ".seeded");
 
 // shell: true so this resolves "npx"/"node" correctly on Windows (where the
 // real binaries are .cmd shims) as well as Linux (Railway's runtime).
+// The seed scripts always write ironline.json (STORE=json), even when the app
+// runs on Postgres: on a fresh install the app imports that file into the
+// empty database when it starts.
 function run(command, args) {
-  const result = spawnSync(command, args, { stdio: "inherit", shell: true });
+  const result = spawnSync(command, args, { stdio: "inherit", shell: true, env: { ...process.env, STORE: "json" } });
   if (result.error) throw result.error;
   if (result.status !== 0) {
     process.exit(result.status ?? 1);

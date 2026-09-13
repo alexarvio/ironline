@@ -11,6 +11,10 @@ export const onRequestError = Sentry.captureRequestError;
 export async function register() {
   Sentry.init(sentryOptions);
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
+  // Postgres mode (STORE=postgres) loads the data before the server takes
+  // any request; in JSON mode this does nothing.
+  const { initStore } = await import("./app/lib/pg/runtime");
+  await initStore();
   const { runBackup, msUntilNextRun, backupConfigured } = await import("./app/lib/backup");
   if (!backupConfigured()) return;
 

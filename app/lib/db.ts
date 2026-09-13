@@ -617,7 +617,7 @@ type User = {
   created_at: string;
 };
 
-type Data = {
+export type Data = {
   users: User[];
   clients: Client[];
   exercises: Exercise[];
@@ -712,10 +712,33 @@ function emptyData(): Data {
   };
 }
 
-function load(): Data {
-  if (!fs.existsSync(DB_PATH)) return emptyData();
+/** The JSON file's contents, or null when there is no file or it can't be read. */
+export function readJsonFile(): Partial<Data> | null {
+  if (!fs.existsSync(DB_PATH)) return null;
   try {
-    const parsed = JSON.parse(fs.readFileSync(DB_PATH, "utf-8")) as Partial<Data>;
+    return JSON.parse(fs.readFileSync(DB_PATH, "utf-8")) as Partial<Data>;
+  } catch {
+    return null;
+  }
+}
+
+function load(): Data {
+  const parsed = readJsonFile();
+  if (!parsed) return emptyData();
+  const { data, changed } = prepareStore(parsed);
+  if (changed) save(data);
+  return data;
+}
+
+/**
+ * Turns stored data into the store the app works on: fills in collections
+ * added since it was written and runs the one-time tidies. Both stores load
+ * through this, the JSON file and Postgres; `changed` says whether the
+ * result needs saving back.
+ */
+export function prepareStore(parsed: Partial<Data>): { data: Data; changed: boolean } {
+  {
+    let changed = false;
     // Fill in any fields added since this file was last written.
     const data: Data = { ...emptyData(), ...parsed };
     // One-time tidy: until Sept 2026 every client was auto-seeded with Weight
@@ -729,7 +752,7 @@ function load(): Data {
     data.measurement_fields = data.measurement_fields.filter(
       (f) => used.has(f.id) || !seededNames.has(f.name.trim().toLowerCase())
     );
-    if (data.measurement_fields.length !== before) save(data);
+    if (data.measurement_fields.length !== before) changed = true;
     // One-time rename: the library item "Self satisfaction during the week"
     // became "Satisfaction with the week" (Sept 2026). Metrics already added
     // under the old name follow, so the coach's list and the client's
@@ -743,7 +766,7 @@ function load(): Data {
         }
       }
     }
-    if (renamed) save(data);
+    if (renamed) changed = true;
     // Goals written before tracking existed: dated today, tracked by nothing.
     let dated = false;
     const todayIso = (() => {
@@ -760,7 +783,7 @@ function load(): Data {
         dated = true;
       }
     }
-    if (dated) save(data);
+    if (dated) changed = true;
     // "canceled" became "cancelled" when no-show joined the statuses.
     let respelled = false;
     for (const m of data.meetings as { status: string }[]) {
@@ -769,7 +792,7 @@ function load(): Data {
         respelled = true;
       }
     }
-    if (respelled) save(data);
+    if (respelled) changed = true;
     // Twin set logs (same assignment, same set number) from double taps:
     // keep the most recent row for each set, drop the rest.
     const latestBySet = new Map<string, (typeof data.set_logs)[number]>();
@@ -781,12 +804,10 @@ function load(): Data {
     if (latestBySet.size !== data.set_logs.length) {
       const keep = new Set([...latestBySet.values()].map((sl) => sl.id));
       data.set_logs = data.set_logs.filter((sl) => keep.has(sl.id));
-      save(data);
+      changed = true;
     }
-    if (claimUnownedRows(data) > 0) save(data);
-    return data;
-  } catch {
-    return emptyData();
+    if (claimUnownedRows(data) > 0) changed = true;
+    return { data, changed };
   }
 }
 
@@ -824,21 +845,41 @@ export function claimUnownedRows(data: Data = globalForDb._jsonDb!): number {
   return claimed;
 }
 
+// Where the data lives between restarts. Postgres only when STORE=postgres
+// AND DATABASE_URL are both set; the JSON file otherwise (local dev, and
+// production until the switch). Either way the app works on one in-memory
+// copy through getData().
+export const STORE_MODE: "json" | "postgres" =
+  process.env.STORE === "postgres" && process.env.DATABASE_URL ? "postgres" : "json";
+
 // Reuse one in-memory copy across hot reloads in dev, always synced to disk on write.
-const globalForDb = globalThis as unknown as { _jsonDb?: Data; _ownersClaimed?: boolean };
-if (!globalForDb._jsonDb) {
+const globalForDb = globalThis as unknown as { _jsonDb?: Data; _ownersClaimed?: boolean; _pgSave?: (data: Data) => void };
+// JSON: the file loads right here. Postgres: pg/runtime.ts loads the data
+// (asynchronously) from instrumentation.ts before the first request and
+// hands it over with installStore().
+if (!globalForDb._jsonDb && STORE_MODE === "json") {
   globalForDb._jsonDb = load();
   globalForDb._ownersClaimed = true;
 }
 
+/** Postgres mode: the loaded store, and how a save reaches the database. */
+export function installStore(data: Data, pgSave: (data: Data) => void) {
+  globalForDb._jsonDb = data;
+  globalForDb._ownersClaimed = true;
+  globalForDb._pgSave = pgSave;
+}
+
 function nextId(table: string): number {
-  const data = globalForDb._jsonDb!;
+  const data = getData();
   data._seq[table] = (data._seq[table] ?? 0) + 1;
   return data._seq[table];
 }
 
 export function getData(): Data {
-  const data = globalForDb._jsonDb!;
+  const data = globalForDb._jsonDb;
+  if (!data) {
+    throw new Error("The store isn't loaded yet: in Postgres mode, initStore() (instrumentation.ts) has to finish before anything reads data.");
+  }
   // Self-heal: a dev server keeps this object in memory across hot reloads
   // (Node's globalThis survives module swaps), so a field added to the
   // schema after the server started would otherwise be missing until a full
@@ -855,13 +896,17 @@ export function getData(): Data {
   // no coach in memory; claim them once rather than asking for a restart.
   if (!globalForDb._ownersClaimed) {
     globalForDb._ownersClaimed = true;
-    if (claimUnownedRows(data) > 0) save(data);
+    if (claimUnownedRows(data) > 0) persist();
   }
   return data;
 }
 
 export function persist() {
-  save(globalForDb._jsonDb!);
+  const data = getData();
+  // The JSON file is written in both modes: it is the store in JSON mode, and
+  // in Postgres mode a safety copy while the switch settles.
+  save(data);
+  globalForDb._pgSave?.(data);
 }
 
 export function allocId(table: string): number {

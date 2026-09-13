@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { PutObjectCommand, HeadObjectCommand, ListObjectsV2Command, DeleteObjectsCommand, S3Client } from "@aws-sdk/client-s3";
-import { DATA_DIR } from "./db";
+import { DATA_DIR, getData } from "./db";
 
 // Nightly copy of everything on the volume to a bucket that is not the
 // volume: the JSON store as a dated snapshot, the uploads folder mirrored
@@ -67,8 +67,10 @@ export async function runBackup(): Promise<BackupResult | null> {
   const day = localDate();
 
   // 1. The store itself, as today's snapshot and as latest.
-  const dbPath = path.join(DATA_DIR, "ironline.json");
-  const body = fs.readFileSync(dbPath);
+  // Exported from the in-memory store rather than read from ironline.json, so
+  // it is the same complete snapshot whether the data lives in the file or
+  // in Postgres.
+  const body = Buffer.from(JSON.stringify(getData(), null, 2));
   const snapshot = `snapshots/${day}/ironline.json`;
   await s3.send(new PutObjectCommand({ Bucket: bucket, Key: snapshot, Body: body, ContentType: "application/json" }));
   await s3.send(new PutObjectCommand({ Bucket: bucket, Key: "latest.json", Body: body, ContentType: "application/json" }));
