@@ -11616,6 +11616,8 @@ a.cd-entry:hover { border-color: var(--accent); }
   line-height: 1.45;
 }
 .ph-warn .pb-modal-foot { margin-top: 10px; }
+.ad-btn-primary.ph-delete-confirm { background: #a32d2d; border-color: #a32d2d; color: #fff; }
+.ad-btn-primary.ph-delete-confirm:hover { background: #8a2424; border-color: #8a2424; }
 
 /* Nutrition tab: the phase chips sit between the live line and the editor. */
 .nt-phases { margin-bottom: 14px; }

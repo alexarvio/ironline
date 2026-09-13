@@ -1,7 +1,15 @@
-// Runs once when the server starts. Schedules the nightly backup and, if
-// the bucket has no snapshot for today yet, takes one shortly after boot,
-// so a deploy never leaves a day uncovered.
+import * as Sentry from "@sentry/nextjs";
+import { sentryOptions } from "./app/lib/sentryOptions";
+
+// Errors thrown while rendering, in server actions and in route handlers go
+// to Sentry (settings in app/lib/sentryOptions.ts).
+export const onRequestError = Sentry.captureRequestError;
+
+// Runs once when the server starts. Starts Sentry, then schedules the nightly
+// backup and, if the bucket has no snapshot for today yet, takes one shortly
+// after boot, so a deploy never leaves a day uncovered.
 export async function register() {
+  Sentry.init(sentryOptions);
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   const { runBackup, msUntilNextRun, backupConfigured } = await import("./app/lib/backup");
   if (!backupConfigured()) return;

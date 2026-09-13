@@ -99,6 +99,8 @@ export function PhaseDialog({ clientId, phase, program, today, defaultTrack, def
   const [programChoice, setProgramChoice] = useState<string>("new");
   const [adjust, setAdjust] = useState(true);
   const [confirming, setConfirming] = useState(false);
+  // Delete asks first: one click used to remove the phase outright.
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const tone = TRACK_TONE[track];
   // A live or scheduled programme starts on its deploy week; only the end moves.
@@ -135,6 +137,10 @@ export function PhaseDialog({ clientId, phase, program, today, defaultTrack, def
   })();
 
   const submit = (e: React.FormEvent<HTMLFormElement>) => {
+    if (confirmingDelete) {
+      setTimeout(onClose, 0);
+      return;
+    }
     if (live && (datesChanged || trackChanged) && !confirming) {
       e.preventDefault();
       setConfirming(true);
@@ -269,7 +275,26 @@ export function PhaseDialog({ clientId, phase, program, today, defaultTrack, def
             </label>
           )}
 
-          {confirming ? (
+          {confirmingDelete && phase ? (
+            <div className="ph-warn" role="alert">
+              <strong>Delete {phase.name}?</strong>
+              {live && " The client is in this phase right now."}
+              {phase.track === "nutrition"
+                ? " Its daily targets and note go with it."
+                : phase.program_id
+                ? " A programme with nothing built yet goes with it; anything built, scheduled or live stays on the Training tab."
+                : ""}{" "}
+              This can&rsquo;t be undone.
+              <div className="pb-modal-foot">
+                <button type="button" className="ad-btn-secondary" onClick={() => setConfirmingDelete(false)}>
+                  Back
+                </button>
+                <button type="submit" formAction={removeClientPhaseAction} className="ad-btn-primary ph-delete-confirm" formNoValidate>
+                  Yes, delete
+                </button>
+              </div>
+            </div>
+          ) : confirming ? (
             <div className="ph-warn" role="alert">
               <strong>This phase is live.</strong> The client is in it right now, and their app changes as soon as you save.
               {program && weekDelta !== 0 && adjust && " The training programme changes with it."} Are you sure?
@@ -285,7 +310,7 @@ export function PhaseDialog({ clientId, phase, program, today, defaultTrack, def
           ) : (
             <div className="pb-modal-foot">
               {editing && (
-                <button type="submit" formAction={removeClientPhaseAction} className="ad-btn-secondary ph-delete" formNoValidate>
+                <button type="button" className="ad-btn-secondary ph-delete" onClick={() => setConfirmingDelete(true)}>
                   Delete
                 </button>
               )}
