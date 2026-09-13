@@ -219,11 +219,6 @@ export default function PhotoGallery({
                       ))}
                     </span>
                   )}
-                  <span className="pp-tile-dots" aria-hidden="true">
-                    {s.cells.map((c) => (
-                      <span key={c.slotId} className={`pp-tile-dot${c.src ? " in" : ""}`} />
-                    ))}
-                  </span>
                   <span className={`pp-chevron${open ? " open" : ""}`} aria-hidden="true">
                     <ChevronDownIcon />
                   </span>

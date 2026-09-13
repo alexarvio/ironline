@@ -260,6 +260,9 @@ type MeasurementValue = {
   field_id: number;
   date: string;
   value: number | null;
+  // When the client last saved it from their check-in (ISO); drives the
+  // coach's feed. Missing on values saved before the stamp existed.
+  logged_at?: string;
 };
 type SkinfoldEntry = {
   id: number;
@@ -298,6 +301,8 @@ type MetricEntry = {
   metric_definition_id: number;
   period: string; // exact date for a daily metric; Monday of the week for a weekly one
   value: number | null;
+  // Same stamp as MeasurementValue.logged_at.
+  logged_at?: string;
 };
 
 // Coach-level (not tied to any one client) reusable metric presets — build a

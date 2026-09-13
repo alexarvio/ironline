@@ -94,6 +94,8 @@ Pills that classify rather than judge use tints, not status colours.
 | With breakfast / draft programme | `#fff3dc` | `#8a5a12` |
 | Metric / nutrition track | `#dff3ea` | `#0f5c46` |
 | Habit / lifestyle track | `#efede6` | `#4a4a45` |
+| Feed: Measurements (check-ins, measurements, progress pictures) | `#e3edf7` | `#24507c` |
+| Feed: client Note (and the count on the Notes filter); the note text itself sits in `#fff8ea`, border `#f3e2bd`, text `#4a3a1a` | `#fff3dc` | `#8a5a12` |
 
 Macro bars: protein `#2f5d8f`, carbs `#3f6e46`, fat `#9a5a33`. These are chart colours only.
 

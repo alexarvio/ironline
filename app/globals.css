@@ -1096,9 +1096,6 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 .pp-tile-title { font-size: 13px; font-weight: 800; color: #141a24; white-space: nowrap; }
 .pp-tile-badge { font-size: 10px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #8b93a1; }
 .pp-tile-badge.open { color: #2f5d8f; }
-.pp-tile-dots { display: flex; gap: 4px; }
-.pp-tile-dot { width: 4px; height: 4px; border-radius: 999px; background: #e4e8ee; }
-.pp-tile-dot.in { background: #2f5d8f; }
 .pp-tile-foot { display: flex; justify-content: space-between; gap: 6px; font-size: 11px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; }
 
 /* Viewer */
@@ -12550,7 +12547,48 @@ a.cd-entry:hover { border-color: var(--accent); }
 .ci-done-note-label { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fp-dim); }
 .ci-done-note-text { font-size: 13.5px; color: var(--fp-text); line-height: 1.4; }
 .nt-cal-note { font-size: 11px; color: var(--steel); font-style: italic; margin-top: 2px; white-space: normal; }
-.feed-note { font-style: italic; color: var(--steel); }
+/* ---- Admin Feed (fd-*) ----
+   Every client log across clients, grouped by day. Category pills follow the
+   tints in docs/UI-GUIDELINES.md; a client's own words sit in a warm note box
+   so they stand out wherever they appear. */
+.fd { max-width: 920px; }
+.fd-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+.fd-title { margin: 0; }
+.fd-filters { display: inline-flex; gap: 4px; padding: 4px; background: #eef0f3; border-radius: 8px; overflow-x: auto; max-width: 100%; }
+.fd-filter { display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 800; color: #5b6474; text-decoration: none; white-space: nowrap; }
+.fd-filter:hover { color: #141a24; }
+.fd-filter.active { background: #fff; color: #141a24; box-shadow: 0 1px 2px rgba(20, 26, 36, 0.12); }
+.fd-filter:focus-visible { outline: 2px solid #2f5d8f; outline-offset: 2px; }
+.fd-filter-count { min-width: 18px; padding: 1px 6px; border-radius: 999px; background: #fff3dc; color: #8a5a12; font-size: 11px; text-align: center; font-variant-numeric: tabular-nums; }
+.fd-empty { margin: 24px 0; font-size: 13px; color: #5b6474; }
+.fd-day + .fd-day { margin-top: 18px; }
+.fd-day-label { margin: 0 0 8px; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #5b6474; }
+.fd-card { overflow: hidden; background: #fff; border: 1px solid #dfe3e8; border-radius: 12px; }
+.fd-row { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 11px 16px; color: #141a24; text-decoration: none; }
+.fd-row + .fd-row { border-top: 1px solid #eceff3; }
+.fd-row:hover { background: #f8f9fb; }
+.fd-row:focus-visible { outline: 2px solid #2f5d8f; outline-offset: -2px; }
+.fd-cat { justify-self: start; margin-top: 1px; padding: 3px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
+.fd-cat-training { background: #e6e4fa; color: #3a3390; }
+.fd-cat-nutrition { background: #dff3ea; color: #0f5c46; }
+.fd-cat-measurements { background: #e3edf7; color: #24507c; }
+.fd-cat-notes { background: #fff3dc; color: #8a5a12; }
+.fd-cat-billing { background: #eef0f3; color: #5b6474; }
+.fd-main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.fd-text { font-size: 13px; line-height: 1.45; color: #2a3140; overflow-wrap: anywhere; }
+.fd-text strong { font-weight: 800; color: #141a24; }
+.fd-note { align-self: start; max-width: 100%; padding: 7px 10px; border-radius: 8px; background: #fff8ea; border: 1px solid #f3e2bd; font-size: 13px; line-height: 1.45; color: #4a3a1a; white-space: pre-wrap; overflow-wrap: anywhere; }
+.fd-thumbs { display: flex; gap: 6px; }
+.fd-thumb { width: 40px; height: 52px; border-radius: 6px; object-fit: cover; background: #eef0f3; }
+.fd-when { font-size: 12px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fd-more-row { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+.fd-more { padding: 8px 16px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; font-size: 13px; font-weight: 800; color: #141a24; text-decoration: none; }
+.fd-more:hover { background: #f8f9fb; }
+.fd-more-count { font-size: 12px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) {
+  .fd-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .fd-cat { grid-column: 1 / -1; }
+}
 .mh-note { display: block; font-size: 10.5px; font-weight: 500; font-style: italic; color: var(--steel); max-width: 220px; white-space: normal; }
 .ms-notes { margin-top: 18px; }
 .ms-notes-list { display: flex; flex-direction: column; margin-top: 6px; }
@@ -12577,7 +12615,9 @@ a.cd-entry:hover { border-color: var(--accent); }
 
 .nw-kcal { display: flex; flex-direction: column; gap: 8px; }
 .nw-kcal-figure { display: flex; flex-direction: column; gap: 2px; }
-.nw-kcal-value { font-size: 40px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; color: #141a24; font-variant-numeric: tabular-nums; }
+/* Figures use the client app's serif numbers (.nd-kcal), so a target reads
+   the same on both sides. */
+.nw-kcal-value { font-family: var(--font-serif); font-size: 44px; font-weight: 600; line-height: 1; color: #141a24; font-variant-numeric: tabular-nums; }
 .nw-kcal-value small { font-size: 13px; font-weight: 700; color: #8b93a1; letter-spacing: 0; margin-left: 2px; }
 .nw-share { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: #eceff3; }
 .nw-share span { display: block; height: 100%; transition: width 0.15s ease; }
@@ -12588,7 +12628,7 @@ a.cd-entry:hover { border-color: var(--accent); }
 .nw-macro-label { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 .nw-macro-pct { font-size: 11px; font-weight: 800; color: #8b93a1; white-space: nowrap; }
 .nw-macro-input { display: flex; align-items: baseline; gap: 4px; }
-.nw-macro-input input { width: 100%; min-width: 0; border: 1px solid transparent; border-radius: 6px; padding: 2px 4px; margin-left: -4px; font-size: 22px; font-weight: 800; color: #141a24; background: transparent; font-variant-numeric: tabular-nums; }
+.nw-macro-input input { width: 100%; min-width: 0; border: 1px solid transparent; border-radius: 6px; padding: 2px 4px; margin-left: -4px; font-family: var(--font-serif); font-size: 26px; font-weight: 600; color: #141a24; background: transparent; font-variant-numeric: tabular-nums; }
 .nw-macro-input input:hover, .nw-macro-input input:focus { border-color: #dfe3e8; outline: none; background: #fff; }
 .nw-macro-input span { font-size: 12px; font-weight: 700; color: #8b93a1; }
 .nw-macro-bar { height: 5px; border-radius: 999px; background: #eceff3; overflow: hidden; }
@@ -12597,7 +12637,7 @@ a.cd-entry:hover { border-color: var(--accent); }
 
 .nw-water { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid #eceff3; }
 .nw-water-label { font-size: 13px; font-weight: 700; color: #141a24; }
-.nw-water-input { width: 64px; border: 1px solid #dfe3e8; border-radius: 8px; padding: 6px 8px; font-size: 14px; font-weight: 800; text-align: center; }
+.nw-water-input { width: 64px; border: 1px solid #dfe3e8; border-radius: 8px; padding: 5px 8px; font-family: var(--font-serif); font-size: 16px; font-weight: 600; text-align: center; }
 .nw-water-unit { font-size: 12.5px; font-weight: 600; color: #5b6474; margin-right: 6px; }
 .nw-unsaved { font-size: 11px; font-weight: 700; color: #b3471d; }
 
@@ -12646,7 +12686,7 @@ a.cd-entry:hover { border-color: var(--accent); }
 .nw-page:disabled { opacity: 0.4; cursor: default; }
 .nw-tr.nw-cal-cols { padding: 10px 22px; font-size: 13px; }
 .nw-cal-date { font-weight: 700; color: #141a24; }
-.nw-cal-kcal { font-weight: 800; font-variant-numeric: tabular-nums; color: #141a24; }
+.nw-cal-kcal { font-family: var(--font-serif); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; color: #141a24; }
 .nw-daypill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 800; }
 .nw-daypill.training { background: #e6e4fa; color: #3a3390; }
 .nw-daypill.rest { background: #eef0f3; color: #5b6474; }
@@ -12951,9 +12991,6 @@ a.cd-entry:hover { border-color: var(--accent); }
 .pp-app-history { display: flex; flex-direction: column; gap: 10px; }
 .pp-app-past { overflow: hidden; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; }
 .pp-app-past-head { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; box-sizing: border-box; padding: 13px 16px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.pp-app-past-thumbs { flex: none; display: flex; gap: 4px; }
-.pp-app-past-thumb { display: block; width: 22px; height: 29px; box-sizing: border-box; border: 1px solid #dfe3e8; border-radius: 5px; object-fit: cover; }
-.pp-app-past-thumb.empty { background: #f8f9fb; }
 .pp-app-past-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .pp-app-past-title { font-size: 13.5px; font-weight: 800; line-height: 1.25; color: #141a24; }
 .pp-app-past-meta { font-size: 11.5px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
@@ -12962,7 +12999,19 @@ a.cd-entry:hover { border-color: var(--accent); }
 .pp-app-past-body { padding: 14px 16px; border-top: 1px solid #eceff3; }
 .pp-app-past-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .pp-app-past-cell { margin: 0; min-width: 0; }
-.pp-app-past-photo { display: block; aspect-ratio: 3 / 4; box-sizing: border-box; overflow: hidden; border-radius: 10px; background: #f8f9fb; }
+.pp-app-past-photo { display: block; width: 100%; aspect-ratio: 3 / 4; box-sizing: border-box; overflow: hidden; padding: 0; border: 0; border-radius: 10px; background: #f8f9fb; cursor: zoom-in; -webkit-tap-highlight-color: transparent; }
+/* Full-screen photo viewer, inside the app so there is always a way back. */
+.pp-app-viewer { position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column; background: #0d1118; color: #fff; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); touch-action: pan-y pinch-zoom; }
+.pp-app-viewer-bar { flex: none; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 8px 12px; }
+.pp-app-viewer-close { justify-self: start; display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 12px 0 6px; border: 0; border-radius: 10px; background: rgba(255, 255, 255, 0.12); font: inherit; font-size: 14px; font-weight: 800; color: #fff; cursor: pointer; }
+.pp-app-viewer-title { display: flex; flex-direction: column; align-items: center; font-size: 14px; font-weight: 800; text-align: center; }
+.pp-app-viewer-count { font-size: 11.5px; font-weight: 600; color: rgba(255, 255, 255, 0.65); font-variant-numeric: tabular-nums; }
+.pp-app-viewer-stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 0 12px; }
+.pp-app-viewer-img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; }
+.pp-app-viewer-nav { flex: none; display: flex; justify-content: center; gap: 16px; padding: 12px; }
+.pp-app-viewer-step { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.12); color: #fff; cursor: pointer; }
+.pp-app-viewer-step.next svg { transform: rotate(180deg); }
+.pp-app-viewer-step:disabled { opacity: 0.35; cursor: default; }
 .pp-app-past-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .pp-app-past-photo.empty { display: flex; align-items: center; justify-content: center; border: 1px dashed #dfe3e8; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #8b93a1; }
 .pp-app-past-name { margin-top: 6px; font-size: 12px; font-weight: 800; color: #141a24; }

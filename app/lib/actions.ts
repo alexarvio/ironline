@@ -559,12 +559,13 @@ export async function saveMeasurementCheckInAction(formData: FormData) {
   if (!date) return;
 
   const fields = listMeasurementFields(clientId);
+  const loggedAt = new Date().toISOString();
   fields.forEach((field) => {
     const raw = formData.get(`field_${field.id}`);
     if (raw === null || raw === "") return;
     // Phones on European locales type the decimal comma.
     const value = Number(String(raw).replace(",", "."));
-    setMeasurementValue(field.id, date, Number.isFinite(value) ? value : null);
+    setMeasurementValue(field.id, date, Number.isFinite(value) ? value : null, loggedAt);
   });
   if (formData.has("note")) setCheckInNote(clientId, "measurements", date, String(formData.get("note") ?? "").slice(0, 500));
 
@@ -754,12 +755,13 @@ export async function logMetricPeriodAction(formData: FormData) {
   const period = frequency === "weekly" ? weekStart(dateRaw) : dateRaw;
 
   const definitions = listMetricDefinitions(clientId, frequency);
+  const loggedAt = new Date().toISOString();
   definitions.forEach((def) => {
     const raw = formData.get(`metric_${def.id}`);
     if (raw === null || raw === "") return;
     // Phones on European locales type the decimal comma.
     const value = Number(String(raw).replace(",", "."));
-    setMetricEntry(def.id, period, Number.isFinite(value) ? value : null);
+    setMetricEntry(def.id, period, Number.isFinite(value) ? value : null, loggedAt);
   });
   if (formData.has("note") && (frequency === "daily" || frequency === "weekly")) {
     setCheckInNote(clientId, frequency, period, String(formData.get("note") ?? "").slice(0, 500));

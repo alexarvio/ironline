@@ -1736,18 +1736,13 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
       { label: "Starting weight", value: profile.starting_weight_kg ? `${profile.starting_weight_kg} kg` : "-" },
       { label: "Current weight", value: weight != null ? `${weight} kg` : "-" },
     ],
-    activity: getActivityFeed(60)
+    activity: getActivityFeed()
       .filter((e) => e.clientId === clientId)
       .slice(0, 8)
       .map((e) => ({
         id: e.id,
-        when: feedTimeLabel(e.at),
-        text:
-          e.type === "workout_completed"
-            ? `Completed ${e.dayName}${e.dayLabel ? ` · ${e.dayLabel}` : ""} (${e.weekLabel}) · ${e.exerciseCount} exercise${e.exerciseCount === 1 ? "" : "s"}, ${e.setCount} set${e.setCount === 1 ? "" : "s"}`
-            : e.type === "calories_logged"
-              ? `Logged ${e.kcal.toLocaleString("en-US")} kcal for ${e.dateLabel}`
-              : `Invoice ${e.status} · ${e.description}`,
+        when: feedTimeLabel(e.at, e.timeKnown),
+        text: e.text.charAt(0).toUpperCase() + e.text.slice(1),
       })),
     card: {
       name: client?.name ?? "",
@@ -1796,59 +1791,79 @@ export function getClientSummary(clientId: number) {
 
 // ---- Cross-client activity feed ----
 // Every event here is sourced from real, timestamped writes elsewhere in the
-// store — nothing here is synthesized. As more client-facing logging gets
-// built (bodyweight, nutrition, check-ins), add another branch here rather
-// than faking events in the UI.
+// store — nothing here is synthesized. When a new kind of client logging is
+// built, add a branch here rather than faking events in the UI.
 
-export type FeedEvent =
-  | {
-      // One event per finished workout day, not per set: the coach's feed
-      // is "what did my clients get done", and nine rows of "9kg × 9" for
-      // one session buried everything else.
-      type: "workout_completed";
-      id: string;
-      clientId: number;
-      clientName: string;
-      dayName: string; // "Monday"
-      dayLabel: string | null; // coach's label, e.g. "Push A"
-      weekLabel: string; // "Week 3"
-      exerciseCount: number;
-      setCount: number;
-      at: string; // when the last set that completed the day was logged
-    }
-  | {
-      // The client reported a day's calories on their Nutrition tab.
-      type: "calories_logged";
-      id: string;
-      clientId: number;
-      clientName: string;
-      dateLabel: string; // "Mon, Sep 7"
-      kcal: number;
-      note: string | null;
-      at: string;
-    }
-  | {
-      type: "invoice_status";
-      id: string;
-      clientId: number;
-      clientName: string;
-      description: string;
-      status: Invoice["status"];
-      at: string;
-    };
+export type FeedCategory = "training" | "nutrition" | "measurements" | "notes" | "billing";
 
-export function getActivityFeed(limit = 30): FeedEvent[] {
+export type FeedEvent = {
+  id: string;
+  category: FeedCategory;
+  clientId: number;
+  clientName: string;
+  /** Epoch ms, so every kind of stamp orders and groups together. */
+  at: number;
+  /** False for check-in values saved before they carried a time: the day
+      is known, the hour is not. */
+  timeKnown: boolean;
+  /** The admin tab the row opens on. */
+  tab: string;
+  /** What happened, written to follow the client's name. */
+  text: string;
+  /** The client's own words, when the event carries them. */
+  note: string | null;
+  /** Progress picture thumbnails. */
+  thumbs: string[];
+};
+
+// Stamps come in two shapes: ISO instants, and "YYYY-MM-DD HH:MM:SS" in
+// server-local time (set logs, cardio; see localStamp). Reading the second
+// as UTC put every workout two hours late in Amsterdam.
+function stampMs(at: string): number {
+  const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/.exec(at);
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime();
+  return new Date(at).getTime();
+}
+// A day with no time: midday, so it files under its own day.
+const middayMs = (day: string) => stampMs(`${day} 12:00:00`);
+const latestOf = (a: string | null, b: string | undefined) => (b && (!a || stampMs(b) > stampMs(a)) ? b : a);
+
+const feedDay = (day: string) =>
+  new Date(`${day}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const feedValue = (v: number) => String(Math.round(v * 10) / 10);
+
+/** Everything, newest first. The Feed page filters and pages it. */
+export function getActivityFeed(): FeedEvent[] {
   const data = getData();
   const clientsById = new Map(data.clients.map((c) => [c.id, c] as const));
   const assignmentsById = new Map(data.workout_assignments.map((wa) => [wa.id, wa] as const));
   const daysById = new Map(data.program_days.map((pd) => [pd.id, pd] as const));
   const exercisesById = new Map(data.exercises.map((e) => [e.id, e] as const));
 
-  void exercisesById;
+  const events: FeedEvent[] = [];
+  const add = (
+    clientId: number,
+    e: Pick<FeedEvent, "id" | "category" | "at" | "tab" | "text"> & Partial<Pick<FeedEvent, "note" | "thumbs" | "timeKnown">>
+  ) => {
+    const client = clientsById.get(clientId);
+    if (!client || !Number.isFinite(e.at)) return;
+    events.push({ note: null, thumbs: [], timeKnown: true, ...e, clientId, clientName: client.name });
+  };
 
-  // Group set logs by programme day; a day is "completed" once every
-  // exercise on it has at least its prescribed number of sets logged. The
-  // event is stamped with the log that tipped it over the line.
+  // "Monday · Push A (Week 3)", with the week counted inside its programme.
+  const dayTitle = (day: { client_id: number; week_number: number; day_of_week: number; label: string | null }) => {
+    const program = data.training_programs.find(
+      (p) => p.client_id === day.client_id && day.week_number >= p.start_week && day.week_number < p.start_week + p.total_weeks
+    );
+    const week = program ? programWeekLabel(program, day.week_number) : `Week ${day.week_number}`;
+    return `${DAY_NAMES_FULL[day.day_of_week - 1] ?? `Day ${day.day_of_week}`}${day.label ? ` · ${day.label}` : ""} (${week})`;
+  };
+
+  // ---- Training ----
+  // A workout shows once, when the whole day is done: every exercise on it
+  // has at least its prescribed sets logged. Stamped with the set that
+  // finished it. A half-done session is not news.
   const logsByDay = new Map<number, typeof data.set_logs>();
   data.set_logs.forEach((sl) => {
     const wa = assignmentsById.get(sl.workout_assignment_id);
@@ -1857,17 +1872,12 @@ export function getActivityFeed(limit = 30): FeedEvent[] {
     list.push(sl);
     logsByDay.set(wa.program_day_id, list);
   });
-
-  const workoutEvents: FeedEvent[] = [];
   logsByDay.forEach((logs, dayId) => {
     const day = daysById.get(dayId);
-    const client = day ? clientsById.get(day.client_id) : undefined;
-    if (!day || !client) return;
+    if (!day) return;
     const assignments = data.workout_assignments.filter((wa) => wa.program_day_id === dayId);
     if (assignments.length === 0) return;
-    const sorted = [...logs].sort((a, b) => (a.logged_at < b.logged_at ? -1 : 1));
-    // Walk the logs in order and find the first moment every assignment
-    // has reached its set count — that is when the workout was completed.
+    const sorted = [...logs].sort((a, b) => stampMs(a.logged_at) - stampMs(b.logged_at));
     const seen = new Map<number, number>();
     let completedAt: string | null = null;
     for (const sl of sorted) {
@@ -1878,69 +1888,180 @@ export function getActivityFeed(limit = 30): FeedEvent[] {
       }
     }
     if (!completedAt) return;
-    workoutEvents.push({
-      type: "workout_completed",
+    add(day.client_id, {
       id: `workout-${dayId}`,
-      clientId: client.id,
-      clientName: client.name,
-      dayName: DAY_NAMES_FULL[day.day_of_week - 1] ?? `Day ${day.day_of_week}`,
-      dayLabel: day.label || null,
-      weekLabel: `Week ${day.week_number}`,
-      exerciseCount: assignments.length,
-      setCount: logs.length,
-      at: completedAt,
+      category: "training",
+      at: stampMs(completedAt),
+      tab: "training",
+      text: `completed ${dayTitle(day)} · ${plural(assignments.length, "exercise")}, ${plural(logs.length, "set")}`,
     });
   });
 
-  const invoiceEvents: FeedEvent[] = data.invoices
-    .map((inv): FeedEvent | null => {
-      const client = clientsById.get(inv.client_id);
-      if (!client) return null;
-      return {
-        type: "invoice_status" as const,
-        id: `invoice-${inv.id}-${inv.updated_at}`,
-        clientId: client.id,
-        clientName: client.name,
-        description: inv.description,
-        status: inv.status,
-        at: inv.updated_at,
-      };
-    })
-    .filter((e): e is FeedEvent => e !== null);
+  for (const log of data.cardio_logs ?? []) {
+    const entry = (data.cardio_entries ?? []).find((c) => c.id === log.cardio_entry_id);
+    const day = entry ? daysById.get(entry.program_day_id) : undefined;
+    const what = entry ? [entry.name, entry.time, entry.distance].filter((s) => s && s.trim()).join(", ") : "";
+    add(log.client_id, {
+      id: `cardio-${log.id}`,
+      category: "training",
+      at: stampMs(log.done_at),
+      tab: "training",
+      text: `ticked off cardio${what ? `: ${what}` : ""}${day ? ` · ${dayTitle(day)}` : ""}`,
+    });
+  }
 
-  const calorieEvents: FeedEvent[] = data.calorie_logs
-    .map((c): FeedEvent | null => {
-      const client = clientsById.get(c.client_id);
-      if (!client) return null;
-      return {
-        type: "calories_logged" as const,
-        id: `calories-${c.id}-${c.logged_at}`,
-        clientId: client.id,
-        clientName: client.name,
-        dateLabel: new Date(`${c.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
-        kcal: c.kcal,
-        note: c.note ?? null,
-        // Entries saved before timestamps existed fall back to their day.
-        at: c.logged_at ?? `${c.date}T12:00:00.000Z`,
-      };
-    })
-    .filter((e): e is FeedEvent => e !== null);
+  // ---- Nutrition ----
+  for (const c of data.calorie_logs) {
+    add(c.client_id, {
+      id: `calories-${c.id}`,
+      category: "nutrition",
+      // Entries saved before timestamps existed fall back to their day.
+      at: c.logged_at ? stampMs(c.logged_at) : middayMs(c.date),
+      timeKnown: !!c.logged_at,
+      tab: "nutrition",
+      text: `logged ${c.kcal.toLocaleString("en-GB")} kcal for ${feedDay(c.date)}`,
+      note: c.note?.trim() || null,
+    });
+  }
 
-  return [...workoutEvents, ...invoiceEvents, ...calorieEvents]
-    .sort((a, b) => (a.at < b.at ? 1 : -1))
-    .slice(0, limit);
+  // ---- Measurements: check-ins, measurements, progress pictures ----
+  // One row per check-in, not per number: the daily check-in for a day, the
+  // weekly one for a week, the measurements for a date. The client's note on
+  // that check-in rides on the same row.
+  type CheckIn = {
+    clientId: number;
+    kind: "daily" | "weekly" | "monthly" | "measurements";
+    period: string;
+    count: number;
+    values: { order: number; text: string }[];
+    latest: string | null;
+    note: string | null;
+  };
+  const checkIns = new Map<string, CheckIn>();
+  const checkIn = (clientId: number, kind: CheckIn["kind"], period: string) => {
+    const key = `${clientId}:${kind}:${period}`;
+    let c = checkIns.get(key);
+    if (!c) {
+      c = { clientId, kind, period, count: 0, values: [], latest: null, note: null };
+      checkIns.set(key, c);
+    }
+    return c;
+  };
+
+  const metricDefs = new Map(data.metric_definitions.map((d) => [d.id, d] as const));
+  for (const e of data.metric_entries) {
+    const def = metricDefs.get(e.metric_definition_id);
+    if (!def || e.value == null) continue;
+    const c = checkIn(def.client_id, def.frequency, e.period);
+    c.count++;
+    c.latest = latestOf(c.latest, e.logged_at);
+  }
+  const fields = new Map(data.measurement_fields.map((f) => [f.id, f] as const));
+  for (const v of data.measurement_values) {
+    const field = fields.get(v.field_id);
+    if (!field || v.value == null) continue;
+    const c = checkIn(field.client_id, "measurements", v.date);
+    c.count++;
+    c.values.push({ order: field.order_index, text: `${field.name} ${feedValue(v.value)}${field.unit ? ` ${field.unit}` : ""}` });
+    c.latest = latestOf(c.latest, v.logged_at);
+  }
+  for (const n of data.check_in_notes) {
+    const c = checkIn(n.client_id, n.kind, n.period);
+    c.note = n.text;
+    c.latest = latestOf(c.latest, n.created_at);
+  }
+
+  checkIns.forEach((c) => {
+    const when =
+      c.kind === "weekly" ? `the week of ${feedDay(c.period)}` : c.kind === "monthly" ? c.period.slice(0, 7) : feedDay(c.period);
+    const name = c.kind === "measurements" ? "measurements" : `${c.kind} check-in`;
+    let text: string;
+    if (c.count === 0) text = `left a note on the ${name} for ${when}`;
+    else if (c.kind === "measurements")
+      text = `logged measurements for ${when}: ${c.values.sort((a, b) => a.order - b.order).map((v) => v.text).join(", ")}`;
+    else text = `did the ${name} for ${when} · ${plural(c.count, "metric")}`;
+    add(c.clientId, {
+      id: `checkin-${c.clientId}-${c.kind}-${c.period}`,
+      // A note with no numbers is a note, first and foremost.
+      category: c.count === 0 ? "notes" : "measurements",
+      at: c.latest ? stampMs(c.latest) : middayMs(c.period),
+      timeKnown: !!c.latest,
+      tab: "measurements",
+      text,
+      note: c.note,
+    });
+  });
+
+  const slotsById = new Map(data.photo_slots.map((s) => [s.id, s] as const));
+  const sheets = new Map<string, { clientId: number; period: string; photos: { order: number; src: string }[]; latest: string | null }>();
+  for (const u of data.photo_uploads) {
+    const slot = slotsById.get(u.slot_id);
+    if (!slot) continue;
+    const key = `${slot.client_id}:${u.period}`;
+    const sheet = sheets.get(key) ?? { clientId: slot.client_id, period: u.period, photos: [], latest: null };
+    sheet.photos.push({ order: slot.order_index, src: u.file_path });
+    sheet.latest = latestOf(sheet.latest, u.uploaded_at);
+    sheets.set(key, sheet);
+  }
+  sheets.forEach((s) => {
+    add(s.clientId, {
+      id: `photos-${s.clientId}-${s.period}`,
+      category: "measurements",
+      at: s.latest ? stampMs(s.latest) : middayMs(s.period),
+      tab: "photos",
+      text: `sent ${plural(s.photos.length, "progress picture")} for the sheet of ${feedDay(s.period)}`,
+      thumbs: s.photos.sort((a, b) => a.order - b.order).map((p) => p.src),
+    });
+  });
+
+  // ---- Notes the client writes outside a check-in ----
+  for (const n of data.client_program_notes ?? []) {
+    if (!n.text.trim()) continue;
+    const program = data.training_programs.find((p) => p.id === n.program_id);
+    add(n.client_id, {
+      id: `program-note-${n.id}`,
+      category: "notes",
+      at: stampMs(n.updated_at),
+      tab: "training",
+      text: `wrote a note on ${program?.name || "their programme"}`,
+      note: n.text,
+    });
+  }
+  for (const n of data.client_exercise_notes ?? []) {
+    if (!n.text.trim()) continue;
+    add(n.client_id, {
+      id: `exercise-note-${n.id}`,
+      category: "notes",
+      at: stampMs(n.updated_at),
+      tab: "training",
+      text: `wrote a note on ${exercisesById.get(n.exercise_id)?.name ?? "an exercise"}`,
+      note: n.text,
+    });
+  }
+
+  // ---- Billing ----
+  for (const inv of data.invoices) {
+    add(inv.client_id, {
+      id: `invoice-${inv.id}-${inv.updated_at}`,
+      category: "billing",
+      at: stampMs(inv.updated_at),
+      tab: "plan",
+      text: `had their invoice “${inv.description}” marked ${inv.status}`,
+    });
+  }
+
+  return events.sort((a, b) => b.at - a.at || (a.id < b.id ? -1 : 1));
 }
 
-// "Sep 3 · 14:05" — date and time for feed rows. Logged-at strings are
-// stored as "YYYY-MM-DD HH:MM:SS" (UTC, no zone marker), so append Z before
-// parsing so they render in the coach's local time rather than shifted.
-export function feedTimeLabel(at: string): string {
-  const iso = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(at) ? `${at.replace(" ", "T")}Z` : at;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return at;
-  const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  return `${date} · ${time}`;
+/** "14:05" in the coach's clock. */
+export function feedClock(at: number): string {
+  return new Date(at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+}
+
+/** "3 Sep · 14:05", or just "3 Sep" when the time was never recorded. */
+export function feedTimeLabel(at: number, timeKnown = true): string {
+  const date = new Date(at).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return timeKnown ? `${date} · ${feedClock(at)}` : date;
 }
 
 // ---- Nutrition plan: coach's macro/vitamin/supplement targets for a client ----
@@ -2127,13 +2248,15 @@ export function getMeasurementValues(fieldIds: number[]): MeasurementValue[] {
 
 // Upsert: logging the same field for the same date again overwrites the
 // value rather than creating a duplicate row.
-export function setMeasurementValue(fieldId: number, date: string, value: number | null) {
+// loggedAt is passed by the client's check-in, so the coach's feed knows when.
+export function setMeasurementValue(fieldId: number, date: string, value: number | null, loggedAt?: string) {
   const data = getData();
   const existing = data.measurement_values.find(
     (v) => v.field_id === fieldId && v.date === date
   );
   if (existing) {
     existing.value = value;
+    if (loggedAt) existing.logged_at = loggedAt;
   } else {
     data.measurement_values.push({
       id: allocId("measurement_values"),
@@ -2141,6 +2264,7 @@ export function setMeasurementValue(fieldId: number, date: string, value: number
       field_id: fieldId,
       date,
       value,
+      ...(loggedAt ? { logged_at: loggedAt } : {}),
     });
   }
   persist();
@@ -2911,19 +3035,21 @@ export function applyMetricTemplateToClient(clientId: number, templateCategoryId
 
 // Upsert: logging the same metric for the same period again overwrites the
 // value rather than creating a duplicate row.
-export function setMetricEntry(metricDefinitionId: number, period: string, value: number | null) {
+export function setMetricEntry(metricDefinitionId: number, period: string, value: number | null, loggedAt?: string) {
   const data = getData();
   const existing = data.metric_entries.find(
     (e) => e.metric_definition_id === metricDefinitionId && e.period === period
   );
   if (existing) {
     existing.value = value;
+    if (loggedAt) existing.logged_at = loggedAt;
   } else {
     data.metric_entries.push({
       id: allocId("metric_entries"),
       metric_definition_id: metricDefinitionId,
       period,
       value,
+      ...(loggedAt ? { logged_at: loggedAt } : {}),
     });
   }
   persist();

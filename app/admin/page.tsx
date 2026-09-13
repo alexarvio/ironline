@@ -37,6 +37,9 @@ export default async function AdminPage({
         these set the working area shows that view instead of a client, and
         the client panel is hidden since there is no single client in play. */
     view?: string;
+    /** Feed: the category filter, and how many rows are shown. */
+    cat?: string;
+    show?: string;
     month?: string;
     /** Calendar: the day shown in the right-hand panel (YYYY-MM-DD). */
     day?: string;
@@ -68,7 +71,7 @@ export default async function AdminPage({
     >
       {view === "feed" ? (
         <div className="ad-pad">
-          <FeedPanel />
+          <FeedPanel category={params.cat} show={params.show} />
         </div>
       ) : view === "calendar" ? (
         <div className="ad-pad">

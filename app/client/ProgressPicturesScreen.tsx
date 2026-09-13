@@ -201,19 +201,13 @@ function OpenSheet({
   if (collapsed) {
     return (
       <section>
-        <div className="pp-app-section-head">
-          <span className="pp-app-section-title">This sheet</span>
-          <span className="pp-app-section-meta" role="status" aria-live="polite">
-            {justSaved ? "Just sent to your coach" : "Sent to your coach"}
-          </span>
-        </div>
         <PhotoPeriodHistoryRow
           title={sheet.title}
           photos={sheet.slots.map((s) => ({ slotId: s.id, label: s.label, src: s.src }))}
           note={NO_NOTE}
           open={sentOpen}
           onToggle={() => setSentOpen((o) => !o)}
-          metaExtra="sent"
+          metaExtra={justSaved ? "just sent" : "sent"}
           footer={
             <button
               type="button"

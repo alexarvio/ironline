@@ -31,7 +31,6 @@ import {
   getPhotoPeriodNote,
   getPublishedWeek,
   listClients,
-  listClientGoals,
   meetingProvider,
   getGoalViews,
   listMeetings,
@@ -117,7 +116,6 @@ async function resolveClientId(raw: string | undefined): Promise<number | null> 
 }
 
 const MONTH_CAP = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const COUNT_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
 const fmtShortDate = (iso: string) => {
   const d = new Date(`${iso}T12:00:00`);
   return `${d.getDate()} ${MONTH_CAP[d.getMonth()]}`;
@@ -301,16 +299,6 @@ function HomeTab({ CLIENT_ID, photos }: { CLIENT_ID: number; photos: HomePhotos 
   // rows under the header. The headline itself is the coach's main goal.
   const plan = getClientPlanView(CLIENT_ID);
 
-  // "set Sep 3 · review Sep 20": when the goals were written, and the next
-  // call they will be looked at on.
-  const goalsMeta = (() => {
-    const open = listClientGoals(CLIENT_ID).filter((g) => !g.done);
-    const earliest = open.map((g) => g.created_at).filter((d): d is string => !!d).sort()[0];
-    const set = earliest ? `Set ${fmtShortDate(earliest)}` : "";
-    const review = upcomingMeeting ? `${set ? " · " : ""}Review ${fmtShortDate(upcomingMeeting.date)}` : "";
-    return set + review;
-  })();
-
   return (
     <HomeHub
       dateLabel={dateLabel}
@@ -321,7 +309,6 @@ function HomeTab({ CLIENT_ID, photos }: { CLIENT_ID: number; photos: HomePhotos 
       tracks={homeTracks(plan)}
       session={getUpNextSession(CLIENT_ID)}
       goals={getGoalViews(CLIENT_ID)}
-      goalsMeta={goalsMeta}
       upcoming={upcoming}
       recap={getLastMeetingRecap(CLIENT_ID)}
       checkInStatus={checkInStatus}
@@ -942,7 +929,7 @@ export default async function ClientPage({
     : photoCount > 0 && checkInData.photoSlots.every((p) => p.src)
     ? {
         state: "done",
-        summary: `${photoCount === 1 ? "Sent" : photoCount === 2 ? "Both" : `All ${COUNT_WORDS[photoCount] ?? photoCount}`} · next sheet ${fmtShortDate(
+        summary: `${photoCount}/${photoCount} · next sheet ${fmtShortDate(
           upcomingPhotoSheets(CLIENT_ID, localDateStr(), 1)[0]
         )}`,
       }

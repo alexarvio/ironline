@@ -73,7 +73,6 @@ export default function HomeHub({
   tracks,
   session,
   goals,
-  goalsMeta,
   upcoming,
   recap,
   checkInStatus,
@@ -88,7 +87,6 @@ export default function HomeHub({
   tracks: HomeTrack[];
   session: HomeSession;
   goals: GoalRowView[];
-  goalsMeta: string;
   upcoming: UpcomingMeeting;
   recap: MeetingRecap;
   checkInStatus: CheckInStatus;
@@ -107,7 +105,7 @@ export default function HomeHub({
       <TodayCard session={session} checkInStatus={checkInStatus} hasPlan={tracks.length > 0} />
       <PhotosCard photos={photos} />
       <MeetingCard m={upcoming} recap={recap} />
-      {goals.length > 0 && <GoalsCard goals={goals} meta={goalsMeta} />}
+      {goals.length > 0 && <GoalsCard goals={goals} />}
       <div className="hm-reserved">
         <span className="hm-eyebrow hm-reserved-label">Reserved</span>
       </div>
@@ -389,12 +387,11 @@ function MeetingCard({ m, recap }: { m: UpcomingMeeting; recap: MeetingRecap }) 
 
 // ---- 5 · Goals -----------------------------------------------------------
 
-function GoalsCard({ goals, meta }: { goals: GoalRowView[]; meta: string }) {
+function GoalsCard({ goals }: { goals: GoalRowView[] }) {
   return (
     <section className="hm-card hm-goals">
       <div className="hm-goals-head">
         <span className="hm-eyebrow">Current goals</span>
-        {meta && <span className="hm-goals-meta">{meta}</span>}
       </div>
       {goals.map((g) => (
         <GoalRow key={g.id} goal={g} />
