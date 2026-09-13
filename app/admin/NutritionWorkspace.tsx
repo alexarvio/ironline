@@ -55,6 +55,13 @@ const kcalOf = (m: Macros) => (m.protein ?? 0) * KCAL.protein + (m.carbs ?? 0) *
 const same = (a: Macros, b: Macros) => a.protein === b.protein && a.carbs === b.carbs && a.fats === b.fats;
 const fmtDate = (iso: string, opts: Intl.DateTimeFormatOptions) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", opts);
 const n = (v: number) => v.toLocaleString("en-US");
+// The same pills as the programmes on Training. A scheduled phase needs no
+// deploy (it starts on its date), so it is not the orange draft pill.
+const PHASE_STATUS = {
+  now: { label: "Live", pill: "live" },
+  next: { label: "Scheduled", pill: "scheduled" },
+  past: { label: "Past", pill: "past" },
+} as const;
 
 export default function NutritionWorkspace(p: NutritionWorkspaceProps) {
   const initial = p.phases.find((x) => x.status === "now") ?? p.phases.find((x) => x.status === "next") ?? p.phases[0];
@@ -133,7 +140,8 @@ function TargetsCard({ p, phase, onPickPhase, onEditPhase }: { p: NutritionWorks
         await saveCoachNutritionNoteAction(fd);
       }
     });
-  const live = phase.status === "now" || phase.id === 0;
+  const hasPhases = phase.id !== 0;
+  const firstName = p.clientName.trim().split(/\s+/)[0] || "The client";
 
   const summary = [
     `${n(kcalOf(values.training))} kcal training`,
@@ -147,23 +155,47 @@ function TargetsCard({ p, phase, onPickPhase, onEditPhase }: { p: NutritionWorks
         <div className="pl-band-left">
           <div className="pl-eyebrow">Daily targets</div>
         </div>
-        <div className="pl-band-right">
-          {p.phases.length > 1 && (
-            <div className="pl-switch" role="tablist">
-              {p.phases.map((ph) => (
-                <button key={ph.id} type="button" className={`pl-switch-opt${ph.id === phase.id ? " active" : ""}`} onClick={() => onPickPhase(ph.id)} title={ph.range}>
-                  {ph.status === "next" ? `${ph.name} · ${ph.startLabel}` : ph.name}
-                </button>
-              ))}
-            </div>
-          )}
-          {phase.id !== 0 && (
+        {hasPhases && (
+          <div className="pl-band-right">
             <button type="button" className="pl-switch-opt nw-edit-phase" onClick={onEditPhase}>
               Edit dates
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
+
+      {/* Every nutrition phase from the Plan tab, like the programmes on
+          Training: the running one and any scheduled after it. The numbers
+          below belong to the chip that is selected, and the line under the
+          chips says when the client gets them. */}
+      {hasPhases && (
+        <div className="nw-phases">
+          <div className="nw-phase-chips" role="tablist" aria-label="Nutrition phases">
+            {p.phases.map((ph) => (
+              <button
+                key={ph.id}
+                type="button"
+                role="tab"
+                aria-selected={ph.id === phase.id}
+                className={`pb-program-chip${ph.id === phase.id ? " active" : ""}`}
+                onClick={() => onPickPhase(ph.id)}
+              >
+                <span className="pb-program-name">{ph.name}</span>
+                <span className={`status-pill ${PHASE_STATUS[ph.status].pill}`}>{PHASE_STATUS[ph.status].label}</span>
+                <span className="pb-program-weeks">{ph.range}</span>
+              </button>
+            ))}
+          </div>
+          <div className={`nw-phase-line ${phase.status}`} role="status">
+            <span className="nw-phase-dot" aria-hidden="true" />
+            {phase.status === "now"
+              ? `Live: ${firstName} sees these targets now`
+              : phase.status === "next"
+              ? `Scheduled: ${firstName} gets these targets on ${phase.startLabel}`
+              : `Past phase: ${firstName} no longer sees these`}
+          </div>
+        </div>
+      )}
 
       <div className="nw-targets">
         <div className="nw-editor">
@@ -253,7 +285,10 @@ function TargetsCard({ p, phase, onPickPhase, onEditPhase }: { p: NutritionWorks
           <span className="pb-pending-count">
             {changes.length} change{changes.length === 1 ? "" : "s"}
           </span>
-          <span className="pb-pending-summary">{changes.join(" · ")}</span>
+          <span className="pb-pending-summary">
+            {hasPhases && <b>{phase.name}: </b>}
+            {changes.join(" · ")}
+          </span>
           <div className="pb-pending-right">
             <span className="pb-pending-status">{saving ? "Saving…" : "Unsaved"}</span>
             <button type="button" className="pb-pending-ghost" onClick={discard} disabled={saving}>

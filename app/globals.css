@@ -12398,6 +12398,20 @@ a.cd-entry:hover { border-color: var(--accent); }
 .pl-seg-btn:focus-visible { outline: 2px solid #2f5d8f; outline-offset: 2px; }
 .pl-btn { display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; padding: 9px 14px; font: inherit; font-size: 12px; font-weight: 800; text-decoration: none; cursor: pointer; white-space: nowrap; }
 .pl-btn.navy { background: #1e3a6e; color: #fff; }
+/* Card header still used by the Nutrition tab's cards (and pl-primary by the
+   phase dialog): the same white head as .pl-card-head, not the old navy band. */
+.pl-band { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 16px 22px 12px; }
+.pl-band-left { min-width: 0; }
+.pl-band-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pl-band-note { font-size: 12px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.pl-switch { display: inline-flex; gap: 4px; padding: 4px; background: #eef0f3; border-radius: 8px; }
+.pl-switch-opt { border: 0; background: transparent; border-radius: 6px; padding: 6px 12px; font: inherit; font-size: 12px; font-weight: 800; color: #5b6474; cursor: pointer; white-space: nowrap; }
+.pl-switch-opt:hover { color: #141a24; }
+.pl-switch-opt.active { background: #fff; color: #141a24; box-shadow: 0 1px 2px rgba(20, 26, 36, 0.12); }
+.pl-switch-opt:focus-visible, .pl-primary:focus-visible { outline: 2px solid #2f5d8f; outline-offset: 2px; }
+.pl-primary { border: 0; border-radius: 8px; padding: 9px 14px; background: #1e3a6e; color: #fff; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.pl-primary:hover { background: #274a8a; }
+.pl-empty-row { padding: 16px 22px; font-size: 12.5px; color: #8b93a1; border-bottom: 1px solid #eceff3; }
 .pl-text-btn { border: 0; background: none; padding: 4px 6px; font: inherit; font-size: 12px; font-weight: 800; color: #2f5d8f; cursor: pointer; }
 .pl-text-btn:hover { text-decoration: underline; }
 .pl-text-btn.danger { color: #a32d2d; }
@@ -12600,7 +12614,18 @@ a.cd-entry:hover { border-color: var(--accent); }
 .nw .pl-card + .pl-card { margin-top: 18px; }
 .nw-band-check { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,0.9); cursor: pointer; margin-right: 4px; }
 .nw-band-check input { accent-color: #fff; width: 15px; height: 15px; }
-.nw-edit-phase { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.28); border-radius: 999px; color: #fff; }
+.nw-edit-phase { background: #fff; border: 1px solid #dfe3e8; border-radius: 8px; color: #2f5d8f; }
+.nw-edit-phase:hover { background: #f8f9fb; color: #1e3a6e; }
+/* Phase chips on the Daily targets card, styled as Training's programme chips. */
+.nw-phases { display: flex; flex-direction: column; gap: 10px; padding: 0 22px 14px; border-bottom: 1px solid #eceff3; }
+.nw-phase-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.nw-phase-chips .pb-program-chip { font: inherit; cursor: pointer; }
+.status-pill.scheduled { background: #e6edf6; color: #2f5d8f; }
+.nw-phase-line { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; }
+.nw-phase-dot { flex: none; width: 7px; height: 7px; border-radius: 999px; background: currentColor; }
+.nw-phase-line.now { color: #2f7a3f; }
+.nw-phase-line.next { color: #2f5d8f; }
+.nw-phase-line.past { color: #5b6474; }
 .nw-hint { font-size: 11px; color: #8b93a1; font-weight: 500; }
 .nw-label { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
 
