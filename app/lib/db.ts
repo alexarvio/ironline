@@ -849,8 +849,14 @@ export function claimUnownedRows(data: Data = globalForDb._jsonDb!): number {
 // AND DATABASE_URL are both set; the JSON file otherwise (local dev, and
 // production until the switch). Either way the app works on one in-memory
 // copy through getData().
+//
+// Never during `next build`: Railway hands the service's variables to the
+// build too, but instrumentation.ts (which loads the Postgres store) only runs
+// when the server starts. Pages rendered while building therefore read the
+// JSON store, which is empty in the build container, as it always was.
+const BUILDING = process.env.NEXT_PHASE === "phase-production-build";
 export const STORE_MODE: "json" | "postgres" =
-  process.env.STORE === "postgres" && process.env.DATABASE_URL ? "postgres" : "json";
+  !BUILDING && process.env.STORE === "postgres" && process.env.DATABASE_URL ? "postgres" : "json";
 
 // Reuse one in-memory copy across hot reloads in dev, always synced to disk on write.
 const globalForDb = globalThis as unknown as { _jsonDb?: Data; _ownersClaimed?: boolean; _pgSave?: (data: Data) => void };
