@@ -1861,7 +1861,6 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
   const clientsById = new Map(data.clients.filter((c) => c.coach_id === coachId).map((c) => [c.id, c] as const));
   const assignmentsById = new Map(data.workout_assignments.map((wa) => [wa.id, wa] as const));
   const daysById = new Map(data.program_days.map((pd) => [pd.id, pd] as const));
-  const exercisesById = new Map(data.exercises.map((e) => [e.id, e] as const));
 
   const events: FeedEvent[] = [];
   const add = (
@@ -2049,17 +2048,8 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       note: n.text,
     });
   }
-  for (const n of data.client_exercise_notes ?? []) {
-    if (!n.text.trim()) continue;
-    add(n.client_id, {
-      id: `exercise-note-${n.id}`,
-      category: "notes",
-      at: stampMs(n.updated_at),
-      tab: "training",
-      text: `wrote a note on ${exercisesById.get(n.exercise_id)?.name ?? "an exercise"}`,
-      note: n.text,
-    });
-  }
+  // Not the client's "My notes" on an exercise (client_exercise_notes): those
+  // are their own reminders, private to them, and never shown to the coach.
 
   // ---- Billing ----
   for (const inv of data.invoices) {

@@ -318,7 +318,7 @@ function HomeTab({ CLIENT_ID, photos }: { CLIENT_ID: number; photos: HomePhotos 
   );
 }
 
-function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
+function TrainingTab({ CLIENT_ID, week, showMyNotes }: { CLIENT_ID: number; week: number; showMyNotes: boolean }) {
   const days = getWeekDays(CLIENT_ID, week);
   // The client's note about the whole programme sits between the week's
   // figures and its sessions, outside any day.
@@ -377,7 +377,9 @@ function TrainingTab({ CLIENT_ID, week }: { CLIENT_ID: number; week: number }) {
           // Every session starts folded. The only thing that opens one is
           // Home's "Start", which hands TrainingDayList the day to land on.
           const firstOpenIndex = -1;
-          const myNotes = getClientExerciseNotes(CLIENT_ID);
+          // "My notes" are private to the client: a coach previewing the app
+          // gets empty ones.
+          const myNotes = showMyNotes ? getClientExerciseNotes(CLIENT_ID) : new Map<number, string>();
           return (
             <TrainingDayList
               days={trainingDays.map(({ day, assignments }, i) => ({
@@ -903,6 +905,9 @@ export default async function ClientPage({
 }) {
   const params = await searchParams;
   const CLIENT_ID = await resolveClientId(params.client);
+  // Only the client themselves sees their private "My notes", never a coach
+  // previewing the app.
+  const viewerIsClient = (await getSessionUser())?.role === "client";
   if (CLIENT_ID == null) {
     return (
       <div className="phone-frame">
@@ -962,7 +967,7 @@ export default async function ClientPage({
   const trainingWeekLabels = deployedProgram
     ? Object.fromEntries(trainingWeeks.map((w) => [w, programWeekLabel(deployedProgram, w)]))
     : undefined;
-  const trainingWeekContents = Object.fromEntries(trainingWeeks.map((w) => [w, <TrainingTab key={w} CLIENT_ID={CLIENT_ID} week={w} />]));
+  const trainingWeekContents = Object.fromEntries(trainingWeeks.map((w) => [w, <TrainingTab key={w} CLIENT_ID={CLIENT_ID} week={w} showMyNotes={viewerIsClient} />]));
   // A week is complete when every planned set on every training day is
   // logged — the same rule TrainingTab's progress ring uses for 100%.
   const completedWeeks = trainingWeeks.filter((w) => {

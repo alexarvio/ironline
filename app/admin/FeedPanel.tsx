@@ -24,8 +24,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 // The page renders per request, so reading the clock here is the point.
 const now = () => Date.now();
 
-// Notes is every row with the client's own words on it, wherever they wrote
-// them: a check-in, a calorie day, a programme, an exercise.
+// Notes is every row with words the client wrote for the coach: a check-in,
+// a calorie day, a programme. Their private exercise notes are not in the feed.
 const matches = (e: FeedEvent, filter: FilterId) =>
   filter === "all" || (filter === "notes" ? e.category === "notes" || !!e.note : e.category === filter);
 

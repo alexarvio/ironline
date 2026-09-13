@@ -468,6 +468,9 @@ export async function removeProgramAction(formData: FormData) {
 export async function saveExerciseNoteAction(formData: FormData) {
   const assignmentId = Number(formData.get("assignmentId"));
   const owner = getClientIdForAssignment(assignmentId);
+  // "My notes" are the client's own and private: only the client writes them,
+  // not a coach previewing their app.
+  if ((await getSessionUser())?.role !== "client") return;
   if (owner == null || !(await canAccessClient(owner))) return;
   const exerciseId = getExerciseIdForAssignment(assignmentId);
   if (exerciseId == null) return;
