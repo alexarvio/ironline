@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, CardioEntry } from "./db";
 import type { CalorieLog, CheckInNote, ClientPhase, PhaseTrack } from "./db";
+import { coachIdOfClient } from "./tenancy";
 
 // "Today" (or any Date) as a local YYYY-MM-DD calendar-date string. This is
 // deliberately NOT `date.toISOString().slice(0, 10)` — toISOString always
@@ -24,7 +25,7 @@ export function localDateStr(d: Date = new Date()): string {
   return `${y}-${m}-${day}`;
 }
 
-export type Exercise = { id: number; name: string; muscle_tags: string | null; video_url: string | null };
+export type Exercise = { id: number; name: string; muscle_tags: string | null; video_url: string | null; coach_id?: number };
 export type ProgramDay = {
   id: number;
   client_id: number;
@@ -52,6 +53,7 @@ export type WorkoutAssignment = {
   note_kind: ExerciseNoteKind | null;
   note_at: string | null;
   note_read: boolean;
+  target_set_at?: string | null;
   exercise_name?: string;
   exercise_video_url?: string | null;
 };
@@ -149,13 +151,18 @@ export function getClient(id: number) {
   return getData().clients.find((c) => c.id === id);
 }
 
-export function listClients() {
-  return [...getData().clients].sort((a, b) => a.name.localeCompare(b.name));
+/** One coach's clients, by name. Coaches never see each other's. */
+export function listClients(coachId: number) {
+  return getData()
+    .clients.filter((c) => c.coach_id === coachId)
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function createClient(name: string) {
+// coachId is always set from the app. Seed scripts on a fresh store pass null
+// when no coach exists yet; the first coach account claims those clients.
+export function createClient(name: string, coachId: number | null) {
   const data = getData();
-  const client = { id: allocId("clients"), name };
+  const client = { id: allocId("clients"), name, ...(coachId != null ? { coach_id: coachId } : {}) };
   data.clients.push(client);
   persist();
   return client;
@@ -230,8 +237,11 @@ export function patchClientProfile(clientId: number, patch: Partial<ClientProfil
   saveClientProfile({ ...current, ...patch, client_id: clientId });
 }
 
-export function listExercises(): Exercise[] {
-  return [...getData().exercises].sort((a, b) => a.name.localeCompare(b.name));
+/** One coach's own exercise library. */
+export function listExercises(coachId: number): Exercise[] {
+  return getData()
+    .exercises.filter((e) => e.coach_id === coachId)
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // Muscle-group catalog for the exercise picker — coaches browse by group
@@ -283,15 +293,15 @@ function primaryGroup(exercise: Exercise): string {
   return TAG_TO_GROUP[first] ?? (MUSCLE_GROUPS.some((g) => g.slug === first) ? first : "other");
 }
 
-export function listExercisesByGroup(): Record<string, Exercise[]> {
-  const all = listExercises();
+export function listExercisesByGroup(coachId: number): Record<string, Exercise[]> {
+  const all = listExercises(coachId);
   const byGroup: Record<string, Exercise[]> = {};
   MUSCLE_GROUPS.forEach((g) => (byGroup[g.slug] = []));
   all.forEach((e) => byGroup[primaryGroup(e)].push(e));
   return byGroup;
 }
 
-export function addExercise(name: string, muscleGroup: string, videoUrl: string | null): Exercise {
+export function addExercise(coachId: number, name: string, muscleGroup: string, videoUrl: string | null): Exercise {
   const data = getData();
   const group = MUSCLE_GROUPS.some((g) => g.slug === muscleGroup) ? muscleGroup : "other";
   const exercise: Exercise = {
@@ -299,6 +309,7 @@ export function addExercise(name: string, muscleGroup: string, videoUrl: string 
     name,
     muscle_tags: group,
     video_url: videoUrl && videoUrl.trim() ? videoUrl.trim() : null,
+    coach_id: coachId,
   };
   data.exercises.push(exercise);
   persist();
@@ -882,6 +893,10 @@ export function updateAssignmentFields(
     assignment.note_read = false;
     if (!text) assignment.note_kind = null;
   }
+  // A weight the coach types is theirs: see progressTargetFromLogs.
+  if ("target_weight_kg" in fields && fields.target_weight_kg !== assignment.target_weight_kg) {
+    assignment.target_set_at = new Date().toISOString();
+  }
 
   Object.assign(assignment, fields);
   persist();
@@ -1103,19 +1118,23 @@ export function logSet(
 // coach already planned more). A week they fell short leaves next week's
 // target exactly as the coach set it. Nothing moves once next week has
 // logs of its own.
+//
+// A target the coach typed by hand after those sets were logged is left as
+// they set it. This runs on every request (applyDueProgramDeployments), so
+// without that a coach lowering next week's weight below a weight already
+// logged (a typo like 1230, or a deliberate deload) saw it jump straight back.
 export function progressTargetFromLogs(workoutAssignmentId: number) {
   const data = getData();
   const wa = data.workout_assignments.find((x) => x.id === workoutAssignmentId);
   if (!wa || wa.target_weight_kg == null) return;
   const day = data.program_days.find((pd) => pd.id === wa.program_day_id);
   if (!day) return;
-  const weights = data.set_logs
-    .filter((sl) => sl.workout_assignment_id === wa.id)
-    .map((sl) => sl.weight_kg)
-    .filter((w): w is number => w != null);
+  const logs = data.set_logs.filter((sl) => sl.workout_assignment_id === wa.id);
+  const weights = logs.map((sl) => sl.weight_kg).filter((w): w is number => w != null);
   if (weights.length === 0) return;
   const bestWeight = Math.max(...weights);
   if (bestWeight < wa.target_weight_kg) return;
+  const lastLoggedMs = Math.max(...logs.map((sl) => stampMs(sl.logged_at)));
 
   // Every later occurrence of the same exercise for this client moves up:
   // the same weekday next week, but also a second session later this week
@@ -1132,6 +1151,8 @@ export function progressTargetFromLogs(workoutAssignmentId: number) {
     const otherDay = days.get(other.program_day_id);
     if (!otherDay || !isLater(otherDay)) continue;
     if (data.set_logs.some((sl) => sl.workout_assignment_id === other.id)) continue;
+    // The coach set this one by hand after these sets were logged: theirs.
+    if (other.target_set_at && stampMs(other.target_set_at) >= lastLoggedMs) continue;
     const target = Math.max(other.target_weight_kg ?? 0, bestWeight);
     if (target === other.target_weight_kg) continue;
     other.target_weight_kg = target;
@@ -1736,7 +1757,7 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
       { label: "Starting weight", value: profile.starting_weight_kg ? `${profile.starting_weight_kg} kg` : "-" },
       { label: "Current weight", value: weight != null ? `${weight} kg` : "-" },
     ],
-    activity: getActivityFeed()
+    activity: getActivityFeed(coachIdOfClient(clientId) ?? 0)
       .filter((e) => e.clientId === clientId)
       .slice(0, 8)
       .map((e) => ({
@@ -1833,10 +1854,11 @@ const feedDay = (day: string) =>
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const feedValue = (v: number) => String(Math.round(v * 10) / 10);
 
-/** Everything, newest first. The Feed page filters and pages it. */
-export function getActivityFeed(): FeedEvent[] {
+/** Everything one coach's clients logged, newest first. The Feed page filters and pages it. */
+export function getActivityFeed(coachId: number): FeedEvent[] {
   const data = getData();
-  const clientsById = new Map(data.clients.map((c) => [c.id, c] as const));
+  // Only this coach's clients: an event for anyone else is dropped in add().
+  const clientsById = new Map(data.clients.filter((c) => c.coach_id === coachId).map((c) => [c.id, c] as const));
   const assignmentsById = new Map(data.workout_assignments.map((wa) => [wa.id, wa] as const));
   const daysById = new Map(data.program_days.map((pd) => [pd.id, pd] as const));
   const exercisesById = new Map(data.exercises.map((e) => [e.id, e] as const));
@@ -2900,29 +2922,35 @@ export function getMetricSeries(metricDefinitionId: number): { date: string; val
     .sort((a, b) => (a.date < b.date ? -1 : 1));
 }
 
-// Distinct category/name values already in use ACROSS ALL CLIENTS (plus any
-// coach-saved template categories/items), so the "Add a metric" form can
-// offer a dropdown of things already set up elsewhere instead of the coach
-// retyping "Sleep" or "Stress" from scratch for every new client. The coach
-// can still type a brand-new value — this only supplies suggestions.
-export function listDistinctMetricCategories(frequency: "daily" | "weekly"): string[] {
+// Distinct category/name values already in use across ONE COACH'S clients
+// (plus that coach's template categories/items), so the "Add a metric" form
+// can offer a dropdown of things already set up elsewhere instead of the
+// coach retyping "Sleep" or "Stress" from scratch for every new client. The
+// coach can still type a brand-new value — this only supplies suggestions.
+function coachClientIds(coachId: number): Set<number> {
+  return new Set(getData().clients.filter((c) => c.coach_id === coachId).map((c) => c.id));
+}
+
+export function listDistinctMetricCategories(coachId: number, frequency: "daily" | "weekly"): string[] {
   const data = getData();
-  const fromDefs = data.metric_definitions.filter((d) => d.frequency === frequency).map((d) => d.category);
-  const fromTemplates = data.metric_template_categories.filter((t) => t.frequency === frequency).map((t) => t.name);
+  const mine = coachClientIds(coachId);
+  const fromDefs = data.metric_definitions.filter((d) => mine.has(d.client_id) && d.frequency === frequency).map((d) => d.category);
+  const fromTemplates = data.metric_template_categories.filter((t) => t.coach_id === coachId && t.frequency === frequency).map((t) => t.name);
   return [...new Set([...fromDefs, ...fromTemplates])].filter(Boolean).sort((a, b) => a.localeCompare(b));
 }
 
-export function listDistinctMetricNames(frequency: "daily" | "weekly"): { name: string; unit: string }[] {
+export function listDistinctMetricNames(coachId: number, frequency: "daily" | "weekly"): { name: string; unit: string }[] {
   const data = getData();
+  const mine = coachClientIds(coachId);
   const seen = new Map<string, string>();
   data.metric_definitions
-    .filter((d) => d.frequency === frequency)
+    .filter((d) => mine.has(d.client_id) && d.frequency === frequency)
     .forEach((d) => {
       if (!seen.has(d.name)) seen.set(d.name, d.unit);
     });
   data.metric_template_items.forEach((item) => {
     const cat = data.metric_template_categories.find((c) => c.id === item.template_category_id);
-    if (cat && cat.frequency === frequency && !seen.has(item.name)) seen.set(item.name, item.unit);
+    if (cat && cat.coach_id === coachId && cat.frequency === frequency && !seen.has(item.name)) seen.set(item.name, item.unit);
   });
   return [...seen.entries()]
     .map(([name, unit]) => ({ name, unit }))
@@ -2932,11 +2960,12 @@ export function listDistinctMetricNames(frequency: "daily" | "weekly"): { name: 
 // Same idea for Measurement check-in columns (Weight, Waist, Body fat %,
 // etc.) — these don't have a "category", just a name + unit, so one
 // dropdown of names already used across every client is enough.
-export function listDistinctMeasurementFieldNames(): { name: string; unit: string }[] {
+export function listDistinctMeasurementFieldNames(coachId: number): { name: string; unit: string }[] {
   const data = getData();
+  const mine = coachClientIds(coachId);
   const seen = new Map<string, string>();
   data.measurement_fields.forEach((f) => {
-    if (!seen.has(f.name)) seen.set(f.name, f.unit);
+    if (mine.has(f.client_id) && !seen.has(f.name)) seen.set(f.name, f.unit);
   });
   return [...seen.entries()]
     .map(([name, unit]) => ({ name, unit }))
@@ -2958,6 +2987,7 @@ export type MetricTemplateCategory = {
   // their own screens.
   frequency: MetricCadence;
   order_index: number;
+  coach_id?: number;
 };
 export type MetricTemplateItem = {
   id: number;
@@ -2967,9 +2997,9 @@ export type MetricTemplateItem = {
   order_index: number;
 };
 
-export function listMetricTemplateCategories(frequency?: "daily" | "weekly"): MetricTemplateCategory[] {
+export function listMetricTemplateCategories(coachId: number, frequency?: "daily" | "weekly"): MetricTemplateCategory[] {
   return getData()
-    .metric_template_categories.filter((t) => !frequency || t.frequency === frequency)
+    .metric_template_categories.filter((t) => t.coach_id === coachId && (!frequency || t.frequency === frequency))
     .sort((a, b) => a.order_index - b.order_index);
 }
 
@@ -2979,11 +3009,12 @@ export function listMetricTemplateItems(templateCategoryId: number): MetricTempl
     .sort((a, b) => a.order_index - b.order_index);
 }
 
-export function addMetricTemplateCategory(name: string, frequency: "daily" | "weekly") {
+// coachId null only from a seed script on a store with no coach yet (see createClient).
+export function addMetricTemplateCategory(coachId: number | null, name: string, frequency: "daily" | "weekly") {
   const data = getData();
-  const count = data.metric_template_categories.filter((t) => t.frequency === frequency).length;
+  const count = data.metric_template_categories.filter((t) => t.coach_id === (coachId ?? undefined) && t.frequency === frequency).length;
   const id = allocId("metric_template_categories");
-  data.metric_template_categories.push({ id, name, frequency, order_index: count });
+  data.metric_template_categories.push({ id, name, frequency, order_index: count, ...(coachId != null ? { coach_id: coachId } : {}) });
   persist();
   return id;
 }
@@ -3021,7 +3052,8 @@ export function removeMetricTemplateItem(id: number) {
 export function applyMetricTemplateToClient(clientId: number, templateCategoryId: number) {
   const data = getData();
   const template = data.metric_template_categories.find((t) => t.id === templateCategoryId);
-  if (!template) return;
+  // A template only applies to a client of the coach who owns it.
+  if (!template || template.coach_id !== coachIdOfClient(clientId)) return;
   const items = listMetricTemplateItems(templateCategoryId);
   const existing = listMetricDefinitions(clientId, template.frequency);
   items.forEach((item) => {
@@ -3902,12 +3934,15 @@ export function addMeeting(
   time: string,
   topic: string,
   durationMinutes: number = DEFAULT_MEETING_DURATION,
-  link: string | null = null
+  link: string | null = null,
+  /** The coach whose calendar a personal block (no client) goes on. */
+  blockCoachId: number | null = null
 ) {
   const data = getData();
   data.meetings.push({
     id: allocId("meetings"),
     client_id: clientId,
+    coach_id: clientId == null ? blockCoachId : null,
     date,
     time,
     duration_minutes: durationMinutes || DEFAULT_MEETING_DURATION,
@@ -3969,9 +4004,12 @@ export function removeMeetingNote(id: number) {
 
 export type MeetingWithClient = Meeting & { clientName: string };
 
-export function listAllMeetings(): MeetingWithClient[] {
+/** One coach's calendar: their clients' meetings and their own blocks. */
+export function listAllMeetings(coachId: number): MeetingWithClient[] {
   const data = getData();
+  const mine = coachClientIds(coachId);
   return data.meetings
+    .filter((m) => (m.client_id != null ? mine.has(m.client_id) : m.coach_id === coachId))
     .map((m) => {
       const client = m.client_id == null ? null : data.clients.find((c) => c.id === m.client_id);
       return {
@@ -3984,8 +4022,8 @@ export function listAllMeetings(): MeetingWithClient[] {
 }
 
 // One day's entries for the calendar's day panel, in time order.
-export function getCalendarDay(dateStr: string): MeetingWithClient[] {
-  return listAllMeetings().filter((m) => m.date === dateStr && m.status !== "cancelled");
+export function getCalendarDay(coachId: number, dateStr: string): MeetingWithClient[] {
+  return listAllMeetings(coachId).filter((m) => m.date === dateStr && m.status !== "cancelled");
 }
 
 function timeToMinutes(t: string): number {
@@ -4001,8 +4039,8 @@ export type MeetingConflict = { a: MeetingWithClient; b: MeetingWithClient };
 // always sees current conflicts — schedule, edit, or cancel a meeting and
 // the warning appears or clears automatically, no separate notification
 // state to keep in sync.
-export function getMeetingConflicts(): MeetingConflict[] {
-  const meetings = listAllMeetings().filter((m) => m.status === "scheduled" && m.time);
+export function getMeetingConflicts(coachId: number): MeetingConflict[] {
+  const meetings = listAllMeetings(coachId).filter((m) => m.status === "scheduled" && m.time);
   const conflicts: MeetingConflict[] = [];
   for (let i = 0; i < meetings.length; i++) {
     for (let j = i + 1; j < meetings.length; j++) {
@@ -4022,7 +4060,9 @@ export function getMeetingConflicts(): MeetingConflict[] {
 }
 
 export function getConflictsForClient(clientId: number): MeetingConflict[] {
-  return getMeetingConflicts().filter((c) => c.a.client_id === clientId || c.b.client_id === clientId);
+  const coachId = coachIdOfClient(clientId);
+  if (coachId == null) return [];
+  return getMeetingConflicts(coachId).filter((c) => c.a.client_id === clientId || c.b.client_id === clientId);
 }
 
 export type CalendarDay = { date: string; meetings: MeetingWithClient[] };
@@ -4031,8 +4071,8 @@ export type CalendarDay = { date: string; meetings: MeetingWithClient[] };
 // the calendar can render a simple day-by-day agenda without a full month
 // grid — this is a coaching schedule, not a general calendar app, so an
 // agenda list reads better than a grid full of empty days.
-export function getUpcomingCalendarDays(daysBack = 7, daysForward = 60): CalendarDay[] {
-  const all = listAllMeetings().filter((m) => m.status !== "cancelled");
+export function getUpcomingCalendarDays(coachId: number, daysBack = 7, daysForward = 60): CalendarDay[] {
+  const all = listAllMeetings(coachId).filter((m) => m.status !== "cancelled");
   const today = new Date();
   const start = new Date(today);
   start.setDate(start.getDate() - daysBack);
@@ -4069,7 +4109,7 @@ export type CalendarMonth = {
 // of the app already uses via weekStart()) — six rows of seven days so every
 // month lays out the same height, with padding days from the neighboring
 // months included (but dimmed) so the grid never has ragged edges.
-export function getCalendarMonth(monthStr?: string): CalendarMonth {
+export function getCalendarMonth(coachId: number, monthStr?: string): CalendarMonth {
   const now = new Date();
   const valid = monthStr && /^\d{4}-\d{2}$/.test(monthStr);
   const year = valid ? Number(monthStr!.slice(0, 4)) : now.getFullYear();
@@ -4084,7 +4124,7 @@ export function getCalendarMonth(monthStr?: string): CalendarMonth {
 
   const todayStr = localDateStr(now);
   const meetingsByDate = new Map<string, MeetingWithClient[]>();
-  listAllMeetings()
+  listAllMeetings(coachId)
     .filter((m) => m.status !== "cancelled")
     .forEach((m) => {
       if (!meetingsByDate.has(m.date)) meetingsByDate.set(m.date, []);
@@ -4859,14 +4899,16 @@ export type ReportTemplateSection = {
   order_index: number;
 };
 
-export function listReportTemplates(): ReportTemplate[] {
-  return [...getData().report_templates].sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
+export function listReportTemplates(coachId: number): ReportTemplate[] {
+  return getData()
+    .report_templates.filter((t) => t.coach_id === coachId)
+    .sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
 }
 
-export function createReportTemplate(name: string): number {
+export function createReportTemplate(coachId: number, name: string): number {
   const data = getData();
   const id = allocId("report_templates");
-  data.report_templates.push({ id, name, created_at: new Date().toISOString() });
+  data.report_templates.push({ id, name, created_at: new Date().toISOString(), coach_id: coachId });
   persist();
   return id;
 }
@@ -5809,9 +5851,16 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
   const src = data.program_days.find((d) => d.id === changes.programDayId);
   if (!src) return { skipped: [] };
 
+  // Only rows on this day can be removed from it. Without this a removed id
+  // from anywhere (another day, another client) was deleted with its logged
+  // sets.
+  const removed = changes.removed.filter((id) =>
+    data.workout_assignments.some((wa) => wa.id === id && wa.program_day_id === src.id)
+  );
+
   // Remember which exercise each removed row was, so later weeks can drop
   // the same exercise rather than a row id they do not have.
-  const removedExerciseIds = changes.removed
+  const removedExerciseIds = removed
     .map((id) => data.workout_assignments.find((wa) => wa.id === id)?.exercise_id)
     .filter((x): x is number => typeof x === "number");
 
@@ -5827,7 +5876,7 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
     // Removals first, so a rest toggle on a now-empty day can take.
     const dropIds = mirror
       ? rows().filter((wa) => removedExerciseIds.includes(wa.exercise_id)).map((wa) => wa.id)
-      : changes.removed;
+      : removed;
     if (dropIds.length) {
       data.set_logs = data.set_logs.filter((sl) => !dropIds.includes(sl.workout_assignment_id));
       data.assignment_custom_values = data.assignment_custom_values.filter((v) => !dropIds.includes(v.workout_assignment_id));
@@ -5843,6 +5892,10 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
         target.note_at = typed.notes ? new Date().toISOString() : null;
         target.note_read = false;
         if (!typed.notes) target.note_kind = null;
+      }
+      // A weight the coach types is theirs: see progressTargetFromLogs.
+      if ("target_weight_kg" in typed && typed.target_weight_kg !== target.target_weight_kg) {
+        target.target_set_at = new Date().toISOString();
       }
       Object.assign(target, typed);
     }
@@ -5888,6 +5941,8 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
         note_kind: null,
         note_at: typed.notes ? new Date().toISOString() : null,
         note_read: false,
+        // A weight typed on a new row is the coach's own: see progressTargetFromLogs.
+        target_set_at: typed.target_weight_kg != null ? new Date().toISOString() : null,
       });
     }
 
@@ -6355,7 +6410,7 @@ export type WorkspaceMeeting = {
 
 export function getMeetingsWorkspaceData(clientId: number) {
   const today = localDateStr();
-  const all = listAllMeetings();
+  const all = listAllMeetings(coachIdOfClient(clientId) ?? 0);
   const view = (m: Meeting): WorkspaceMeeting => ({
     id: m.id,
     date: m.date,

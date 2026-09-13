@@ -49,8 +49,8 @@ function shift(dateStr: string, days: number): string {
 const weekMonday = (weeksBack: number) => shift(thisMonday, -7 * weeksBack);
 
 // ---- Client ----
-let client = listClients().find((c) => c.name.toLowerCase() === NAME.toLowerCase());
-if (!client) client = createClient(NAME);
+let client = getData().clients.find((c) => c.name.toLowerCase() === NAME.toLowerCase());
+if (!client) client = createClient(NAME, getData().users.find((u) => u.role === "coach")?.id ?? null);
 const clientId = client.id;
 const log = (m: string) => console.log(`[seed-sam-demo] ${m}`);
 
@@ -94,7 +94,7 @@ const LIVE_WEEK = 3; // deployed two weeks ago
 const program = createProgram(clientId, "Strength & Tone Block", TOTAL_WEEKS, 1);
 
 const exerciseId = (name: string) => {
-  const ex = listExercises().find((e) => e.name.toLowerCase() === name.toLowerCase());
+  const ex = getData().exercises.find((e) => e.name.toLowerCase() === name.toLowerCase());
   if (!ex) throw new Error(`Exercise not in library: ${name}`);
   return ex.id;
 };

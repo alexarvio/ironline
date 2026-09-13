@@ -10,8 +10,8 @@ import { clientAttention, listClients } from "../lib/queries";
 // Only Feed and Calendar live in the nav. Report templates and Branding were
 // cut, and nothing else belongs here — the per-client work happens in the
 // tabs, not in navigation.
-export default function AdminSidebar({ selectedId }: { selectedId: number | null }) {
-  const clients = listClients();
+export default function AdminSidebar({ coachId, selectedId }: { coachId: number; selectedId: number | null }) {
+  const clients = listClients(coachId);
 
   return (
     <>

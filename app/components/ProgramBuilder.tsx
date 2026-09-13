@@ -27,6 +27,7 @@ import {
   TrainingProgram,
 } from "../lib/queries";
 import { DAY_NAMES_FULL } from "../lib/db";
+import { coachIdOfClient } from "../lib/tenancy";
 import AssignmentFieldInput from "./AssignmentFieldInput";
 import ExerciseNoteCell from "./ExerciseNoteCell";
 import DayLabelForm from "./DayLabelForm";
@@ -101,7 +102,8 @@ export default function ProgramBuilder({
     .filter((p) => p.status === "deployed" && p.id !== deployedProgram?.id)
     .sort((a, b) => b.start_week - a.start_week);
 
-  const exercisesByGroup = listExercisesByGroup();
+  // The client's coach's own library; another coach's exercises never show.
+  const exercisesByGroup = listExercisesByGroup(coachIdOfClient(clientId) ?? 0);
   const allColumns = listTrainingColumns(clientId);
   const columnChoices = listColumnChoices(clientId);
   const columns = allColumns.filter((c) => c.visible);

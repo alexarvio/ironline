@@ -104,10 +104,11 @@ async function resolveClientId(raw: string | undefined): Promise<number | null> 
   if (!user) redirect("/login");
   if (user.must_change_password) redirect("/login/change-password");
 
-  // A coach may preview any client's app, so ?client= still works for them.
+  // A coach may preview their own clients' apps, so ?client= still works for
+  // them, but only for a client of theirs.
   if (user.role === "coach") {
     const asked = raw ? Number(raw) : null;
-    return asked && getClient(asked) ? asked : listClients()[0]?.id ?? null;
+    return asked && getClient(asked)?.coach_id === user.id ? asked : listClients(user.id)[0]?.id ?? null;
   }
 
   // A client gets their own id and nothing else — the parameter is ignored.

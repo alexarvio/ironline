@@ -2,12 +2,12 @@
 
 import { redirect } from "next/navigation";
 import {
+  coachForClient,
   createUser,
   endSession,
   findUserByEmail,
   getSessionUser,
   getUserForClient,
-  requireCoach,
   setPassword,
   startSession,
   verifyPassword,
@@ -58,9 +58,8 @@ export async function changePasswordAction(formData: FormData) {
 // ---- Coach-side account management --------------------------------------
 
 export async function createClientLoginAction(formData: FormData) {
-  await requireCoach();
-
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) redirect("/admin");
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
@@ -81,9 +80,8 @@ export async function createClientLoginAction(formData: FormData) {
 }
 
 export async function resetClientPasswordAction(formData: FormData) {
-  await requireCoach();
-
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) redirect("/admin");
   const password = String(formData.get("password") ?? "");
 
   const user = getUserForClient(clientId);
@@ -98,9 +96,8 @@ export async function resetClientPasswordAction(formData: FormData) {
 }
 
 export async function removeClientLoginAction(formData: FormData) {
-  await requireCoach();
-
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) redirect("/admin");
   deleteUserForClient(clientId);
   redirect(`/admin?client=${clientId}&loginOk=removed`);
 }

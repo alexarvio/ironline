@@ -1,4 +1,5 @@
 import { getClient, listClientReports, listMetricDefinitions, listReportTemplates, listReportTemplateSections, localDateStr } from "../lib/queries";
+import { coachIdOfClient } from "../lib/tenancy";
 import GenerateReportForm from "./GenerateReportForm";
 import ReportCard from "./ReportCard";
 
@@ -13,7 +14,7 @@ function defaultPeriod() {
 
 export default function ReportsPanel({ clientId }: { clientId: number }) {
   const client = getClient(clientId);
-  const templates = listReportTemplates().map((t) => ({ id: t.id, name: t.name, sections: listReportTemplateSections(t.id) }));
+  const templates = listReportTemplates(coachIdOfClient(clientId) ?? 0).map((t) => ({ id: t.id, name: t.name, sections: listReportTemplateSections(t.id) }));
   const reports = listClientReports(clientId);
   const { start, end } = defaultPeriod();
 

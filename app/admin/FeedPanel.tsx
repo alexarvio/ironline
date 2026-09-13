@@ -38,8 +38,8 @@ function dayHeading(day: string, today: string, yesterday: string) {
 // Everything clients log, across all clients, newest first and grouped by
 // day. The filters narrow it to one kind; Notes gathers the client's words
 // from anywhere so none sit unread.
-export default function FeedPanel({ category, show }: { category?: string; show?: string }) {
-  const all = getActivityFeed();
+export default function FeedPanel({ coachId, category, show }: { coachId: number; category?: string; show?: string }) {
+  const all = getActivityFeed(coachId);
   const filter: FilterId = FILTERS.some((f) => f.id === category) ? (category as FilterId) : "all";
   const events = all.filter((e) => matches(e, filter));
   const limit = Math.max(PAGE, Math.floor(Number(show)) || PAGE);

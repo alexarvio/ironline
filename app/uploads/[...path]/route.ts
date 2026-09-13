@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { DATA_DIR } from "../../lib/db";
 import { canAccessClient, getSessionUser } from "../../lib/auth";
+import { coachIdOfClient, coachOwnsExercise } from "../../lib/tenancy";
 
 // Serves files written by savePhotoUpload/saveChatMedia in queries.ts. Those
 // live under DATA_DIR/uploads rather than /public/uploads so they survive on
@@ -43,10 +44,13 @@ export async function GET(
   }
   const [kind, clientIdRaw] = segments;
   if (kind === "library") {
-    // uploads/library/<exerciseId>.<ext>: the exercise library's own demo
-    // videos, shared by every client the exercise is prescribed to. Any
-    // signed-in user may watch; nothing about one client is in them.
-    if (!(await getSessionUser())) return new Response("Not found", { status: 404 });
+    // uploads/library/<exerciseId>.<ext>: a coach's library demo videos,
+    // shared by every client the exercise is prescribed to. The coach who
+    // owns the exercise may watch, and so may that coach's clients.
+    const user = await getSessionUser();
+    const exerciseId = Number.parseInt(clientIdRaw, 10);
+    const coachId = !user ? null : user.role === "coach" ? user.id : coachIdOfClient(user.client_id);
+    if (coachId == null || !coachOwnsExercise(coachId, exerciseId)) return new Response("Not found", { status: 404 });
   } else {
     // uploads/avatars/<clientId>/avatar.<ext>: the client's profile photo,
     // per-client and checked like the rest.

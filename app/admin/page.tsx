@@ -13,6 +13,7 @@ import CalendarDayPanel from "./CalendarDayPanel";
 import ProgramBuilder from "../components/ProgramBuilder";
 import PhaseTimeline from "./PhaseTimeline";
 import { getClient, getOverviewPanel, listClients } from "../lib/queries";
+import { coachOwnsClient } from "../lib/tenancy";
 
 import { requireCoach } from "../lib/auth";
 
@@ -45,19 +46,22 @@ export default async function AdminPage({
     day?: string;
   }>;
 }) {
-  await requireCoach();
+  const coach = await requireCoach();
   const params = await searchParams;
-  const clients = listClients();
+  const clients = listClients(coach.id);
   const view = params.view === "feed" || params.view === "calendar" ? params.view : null;
-  const selectedId = view ? null : params.client ? Number(params.client) : clients[0]?.id ?? null;
+  // ?client= only opens one of this coach's own clients; anything else lands
+  // on their first client, as if no client had been asked for.
+  const asked = params.client ? Number(params.client) : null;
+  const selectedId = view ? null : asked != null && coachOwnsClient(coach.id, asked) ? asked : clients[0]?.id ?? null;
   const client = selectedId ? getClient(selectedId) : undefined;
 
   return (
     <AdminShell
-      sidebar={<AdminSidebar selectedId={selectedId} />}
+      sidebar={<AdminSidebar coachId={coach.id} selectedId={selectedId} />}
       panel={
         view === "calendar" ? (
-          <CalendarDayPanel day={params.day} month={params.month} />
+          <CalendarDayPanel coachId={coach.id} day={params.day} month={params.month} />
         ) : view ? undefined : client ? (
           <ClientOverviewPanel
             panel={getOverviewPanel(client.id)}
@@ -71,11 +75,11 @@ export default async function AdminPage({
     >
       {view === "feed" ? (
         <div className="ad-pad">
-          <FeedPanel category={params.cat} show={params.show} />
+          <FeedPanel coachId={coach.id} category={params.cat} show={params.show} />
         </div>
       ) : view === "calendar" ? (
         <div className="ad-pad">
-          <CalendarPanel month={params.month} day={params.day} />
+          <CalendarPanel coachId={coach.id} month={params.month} day={params.day} />
         </div>
       ) : !client ? (
         <div className="ad-pad">

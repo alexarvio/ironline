@@ -78,7 +78,7 @@ function logSetAt(
 }
 
 function findExerciseId(name: string): number {
-  const ex = listExercises().find((e) => e.name === name);
+  const ex = getData().exercises.find((e) => e.name === name);
   if (!ex) throw new Error(`Exercise not found: ${name}. Run scripts/seed.js first.`);
   return ex.id;
 }
@@ -305,7 +305,7 @@ function enrichAlex() {
 // seedLightClient(), no collision risk since they get fresh ids.
 // ---------------------------------------------------------------------
 function seedLightClient(name: string, opts: { weight: number; goalPhase: string; invoiceStatus: "unpaid" | "paid"; meetingTime: string }) {
-  const client = createClient(name);
+  const client = createClient(name, getData().users.find((u) => u.role === "coach")?.id ?? null);
   const clientId = client.id;
 
   saveClientProfile({

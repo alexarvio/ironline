@@ -2,13 +2,15 @@ import crypto from "crypto";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { allocId, getData, persist } from "./db";
+import { allocId, claimUnownedRows, getData, persist } from "./db";
+import { coachOwnsClient, seedCoachLibrary } from "./tenancy";
 
 // Authentication and authorization for Ironline.
 //
 // Two roles, and the distinction matters for every query in the app:
-//   - "coach"  — Finlay. Full access to the CRM (/admin, /coach) and to every
-//                client's data.
+//   - "coach"  — one coach account (Finlay is one of them). Access to the CRM
+//                (/admin) for their OWN clients only; see tenancy.ts. There
+//                can be several coaches and none sees another's clients.
 //   - "client" — one person, pinned to exactly one Client record via
 //                user.client_id. They may only ever see and mutate that one
 //                client's data.
@@ -169,30 +171,44 @@ export async function requireClient(): Promise<SessionUser & { clientId: number 
 }
 
 /**
+ * Coach-only, for one client: the coach session when this client is theirs,
+ * otherwise null so the caller quietly does nothing. Every coach action that
+ * touches a client's data resolves the client from the row it acts on and
+ * passes it here. Non-coaches are redirected, as with requireCoach.
+ */
+export async function coachForClient(clientId: number | null | undefined): Promise<SessionUser | null> {
+  const coach = await requireCoach();
+  return coachOwnsClient(coach.id, clientId) ? coach : null;
+}
+
+/**
  * Either role, but resolved to a specific client. Coaches pass the client id
- * they're acting on (they may act on anyone); clients get their own and the
- * requested id is ignored entirely. This is what actions shared between the
- * two sides (e.g. sending a chat message) should use.
+ * they're acting on, which must be one of their own clients; clients get their
+ * own and the requested id is ignored entirely. This is what actions shared
+ * between the two sides (e.g. sending a chat message) should use.
  */
 export async function requireClientAccess(requestedClientId: number): Promise<number> {
   const user = await getSessionUser();
   if (!user) redirect("/login");
   if (user.must_change_password) redirect("/login/change-password");
-  if (user.role === "coach") return requestedClientId;
+  if (user.role === "coach") {
+    if (!coachOwnsClient(user.id, requestedClientId)) redirect("/admin");
+    return requestedClientId;
+  }
   if (user.client_id == null) redirect("/login");
   return user.client_id;
 }
 
 /**
- * Assert the current session may act on this client. Coaches may act on
- * anyone; a client only on themselves. Returns false rather than throwing so
- * callers can quietly no-op — an action that silently does nothing gives a
+ * Assert the current session may act on this client. A coach may act on their
+ * own clients; a client only on themselves. Returns false rather than throwing
+ * so callers can quietly no-op — an action that silently does nothing gives a
  * prober less to work with than one that errors differently per case.
  */
 export async function canAccessClient(clientId: number): Promise<boolean> {
   const user = await getSessionUser();
   if (!user || user.must_change_password) return false;
-  if (user.role === "coach") return true;
+  if (user.role === "coach") return coachOwnsClient(user.id, clientId);
   return user.client_id === clientId;
 }
 
@@ -349,6 +365,12 @@ export function createUser(
   };
   data.users.push(user);
   persist();
+  if (role === "coach") {
+    // The first coach on a fresh store takes the seeded clients and library;
+    // any coach starts with their own copy of the presets.
+    if (claimUnownedRows() > 0) persist();
+    seedCoachLibrary(user.id);
+  }
   return user;
 }
 

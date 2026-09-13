@@ -4,10 +4,26 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import {
   canAccessClient,
+  coachForClient,
   getSessionUser,
   requireClientAccess,
   requireCoach,
 } from "./auth";
+import {
+  clientIdForInvoice,
+  clientIdForMeasurementField,
+  clientIdForMetricDefinition,
+  clientIdForProgramDay,
+  clientIdForSkinfold,
+  clientIdForTrainingColumn,
+  coachOwnsExercise,
+  coachOwnsMeeting,
+  coachOwnsMetricTemplate,
+  coachOwnsMetricTemplateItem,
+  coachOwnsReportTemplate,
+  coachOwnsReportTemplateSection,
+  meetingIdForNote,
+} from "./tenancy";
 import {
   getClientIdForCardio,
   setCardioDone,
@@ -173,12 +189,16 @@ import {
 import { writeReportNarrative } from "./reportAi";
 import type { ReportSectionType } from "./reportSectionTypes";
 
-const CLIENT_ID = 3;
+// OWNERSHIP RULE for every coach action below: a coach may only touch their
+// own clients (and their own library). Each action works out the client from
+// the row it acts on and passes it to coachForClient, which gives back the
+// coach or null; on null the action quietly does nothing. See tenancy.ts.
 
 export async function addExerciseAction(formData: FormData) {
-  await requireCoach();
   const programDayId = Number(formData.get("programDayId"));
   const exerciseId = Number(formData.get("exerciseId"));
+  const coach = await coachForClient(clientIdForProgramDay(programDayId));
+  if (!coach || !coachOwnsExercise(coach.id, exerciseId)) return;
   const sets = Number(formData.get("sets")) || 3;
   const reps = String(formData.get("reps") || "8-10");
   const targetWeightRaw = formData.get("targetWeight");
@@ -201,8 +221,8 @@ export async function addExerciseAction(formData: FormData) {
 }
 
 export async function removeExerciseAction(formData: FormData) {
-  await requireCoach();
   const assignmentId = Number(formData.get("assignmentId"));
+  if (!(await coachForClient(getClientIdForAssignment(assignmentId)))) return;
   removeAssignment(assignmentId);
   revalidatePath("/client");
   revalidatePath("/admin");
@@ -213,8 +233,8 @@ export async function removeExerciseAction(formData: FormData) {
 // submits itself on blur with only its own name present, so this only ever
 // touches the one field that changed.
 export async function updateAssignmentAction(formData: FormData) {
-  await requireCoach();
   const assignmentId = Number(formData.get("assignmentId"));
+  if (!(await coachForClient(getClientIdForAssignment(assignmentId)))) return;
   const fields: Parameters<typeof updateAssignmentFields>[1] = {};
   if (formData.has("sets")) fields.sets = Math.max(1, Number(formData.get("sets")) || 1);
   if (formData.has("reps")) fields.reps = String(formData.get("reps") || "");
@@ -241,19 +261,19 @@ export async function updateAssignmentAction(formData: FormData) {
 // Returns the new exercise so the picker can select it for the row it was
 // added from, without waiting for the refreshed library to come back.
 export async function addExerciseToLibraryAction(formData: FormData): Promise<{ id: number; name: string } | null> {
-  await requireCoach();
+  const coach = await requireCoach();
   const name = String(formData.get("name") || "").trim();
   const muscleGroup = String(formData.get("muscleGroup") || "other");
   const videoUrl = String(formData.get("videoUrl") || "").trim() || null;
   if (!name) return null;
-  const exercise = addExercise(name, muscleGroup, videoUrl);
+  const exercise = addExercise(coach.id, name, muscleGroup, videoUrl);
   revalidatePath("/admin");
   return { id: exercise.id, name: exercise.name };
 }
 
 export async function updateTrainingColumnAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
+  if (!(await coachForClient(clientIdForTrainingColumn(id)))) return;
   const label = String(formData.get("label") || "").trim();
   if (!label) return;
   updateTrainingColumn(id, label);
@@ -261,16 +281,16 @@ export async function updateTrainingColumnAction(formData: FormData) {
 }
 
 export async function setTrainingColumnVisibleAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
+  if (!(await coachForClient(clientIdForTrainingColumn(id)))) return;
   const visible = formData.get("visible") === "true";
   setTrainingColumnVisible(id, visible);
   revalidatePath("/admin");
 }
 
 export async function addTrainingColumnAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
   const label = String(formData.get("label") || "").trim();
   if (!label) return;
   addCustomTrainingColumn(clientId, label);
@@ -278,16 +298,17 @@ export async function addTrainingColumnAction(formData: FormData) {
 }
 
 export async function removeCustomTrainingColumnAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
+  if (!(await coachForClient(clientIdForTrainingColumn(id)))) return;
   removeCustomTrainingColumn(id);
   revalidatePath("/admin");
 }
 
 export async function setAssignmentCustomValueAction(formData: FormData) {
-  await requireCoach();
   const assignmentId = Number(formData.get("assignmentId"));
   const columnId = Number(formData.get("columnId"));
+  const owner = getClientIdForAssignment(assignmentId);
+  if (owner !== clientIdForTrainingColumn(columnId) || !(await coachForClient(owner))) return;
   const value = String(formData.get("value") || "");
   setAssignmentCustomValue(assignmentId, columnId, value);
   revalidatePath("/admin");
@@ -295,8 +316,8 @@ export async function setAssignmentCustomValueAction(formData: FormData) {
 }
 
 export async function setDayRestAction(formData: FormData) {
-  await requireCoach();
   const programDayId = Number(formData.get("programDayId"));
+  if (!(await coachForClient(clientIdForProgramDay(programDayId)))) return;
   const isRest = formData.get("isRest") === "true";
   setDayRest(programDayId, isRest);
   revalidatePath("/client");
@@ -307,8 +328,8 @@ export async function setDayRestAction(formData: FormData) {
 // week's plan onto the one being edited so a coach progressing a block
 // isn't retyping seven days of exercises.
 export async function copyProgramWeekAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
   const fromWeek = Number(formData.get("fromWeek"));
   const toWeek = Number(formData.get("toWeek"));
   if (!clientId || !fromWeek || !toWeek) return;
@@ -318,8 +339,8 @@ export async function copyProgramWeekAction(formData: FormData) {
 }
 
 export async function setLabelAction(formData: FormData) {
-  await requireCoach();
   const programDayId = Number(formData.get("programDayId"));
+  if (!(await coachForClient(clientIdForProgramDay(programDayId)))) return;
   const label = String(formData.get("label") || "");
   setDayLabel(programDayId, label);
   revalidatePath("/client");
@@ -334,8 +355,8 @@ export async function setLabelAction(formData: FormData) {
 // week-at-a-time model), but always displays as "Week 1" — see
 // programWeekLabel.
 export async function createProgramAction(formData: FormData) {
-  await requireCoach();
-  const clientId = Number(formData.get("clientId")) || CLIENT_ID;
+  const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
   const weekLinkBase = String(formData.get("weekLinkBase") || "/admin");
   const existingWeeks = listWeekNumbers(clientId);
   const startWeek = (existingWeeks.length > 0 ? Math.max(...existingWeeks) : 0) + 1;
@@ -350,8 +371,8 @@ export async function createProgramAction(formData: FormData) {
  * the trailing one, so "copy" isn't a no-op right after adding an empty week.
  */
 export async function addProgramWeekAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
   const programId = Number(formData.get("programId"));
   const copyFrom = formData.get("copyFrom") ? Number(formData.get("copyFrom")) : null;
 
@@ -381,16 +402,16 @@ export async function addProgramWeekAction(formData: FormData) {
 // now the only way to make a programme longer.
 
 export async function renameProgramAction(formData: FormData) {
-  await requireCoach();
   const programId = Number(formData.get("programId"));
+  if (!(await coachForClient(getClientIdForProgram(programId)))) return;
   const name = String(formData.get("name") || "");
   renameProgram(programId, name);
   revalidatePath("/admin");
 }
 
 export async function deployProgramAction(formData: FormData) {
-  await requireCoach();
   const programId = Number(formData.get("programId"));
+  if (!(await coachForClient(getClientIdForProgram(programId)))) return;
   // The name is what the client sees as their phase, so an unnamed
   // programme can't go out. The button is disabled too; this is the backstop.
   if (!programHasName(programId)) return;
@@ -405,8 +426,8 @@ export async function deployProgramAction(formData: FormData) {
 // applyDueProgramDeployments. Silently no-ops on a missing/invalid date or
 // time rather than scheduling for "right now".
 export async function scheduleProgramDeployAction(formData: FormData) {
-  await requireCoach();
   const programId = Number(formData.get("programId"));
+  if (!(await coachForClient(getClientIdForProgram(programId)))) return;
   const date = String(formData.get("date") || "");
   const time = String(formData.get("time") || "");
   if (!programHasName(programId)) return;
@@ -424,8 +445,8 @@ function programHasName(programId: number): boolean {
 }
 
 export async function cancelProgramScheduleAction(formData: FormData) {
-  await requireCoach();
   const programId = Number(formData.get("programId"));
+  if (!(await coachForClient(getClientIdForProgram(programId)))) return;
   scheduleProgramDeploy(programId, null);
   revalidatePath("/admin");
 }
@@ -434,8 +455,8 @@ export async function cancelProgramScheduleAction(formData: FormData) {
 // of reach of this action entirely, so there's no risk of pulling a program
 // out from under a client who's already seen it.
 export async function removeProgramAction(formData: FormData) {
-  await requireCoach();
   const programId = Number(formData.get("programId"));
+  if (!(await coachForClient(getClientIdForProgram(programId)))) return;
   const weekLinkBase = String(formData.get("weekLinkBase") || "/admin");
   removeProgram(programId);
   revalidatePath("/admin");
@@ -510,12 +531,12 @@ export async function updateSetAction(formData: FormData) {
 }
 
 export async function createClientAction(formData: FormData) {
-  await requireCoach();
+  const coach = await requireCoach();
   // The sidebar button sends no name: the card that opens next is where the
   // coach types it, alongside the rest of the member info. Until then the
   // client is listed under a placeholder so they are findable in the rail.
   const name = String(formData.get("name") || "").trim() || "New client";
-  const client = createClient(name);
+  const client = createClient(name, coach.id);
   revalidatePath("/admin");
   // Land on the new client with their card already open for filling in.
   // Onboarding is not a separate wizard: the fields a coach needs at the
@@ -526,8 +547,8 @@ export async function createClientAction(formData: FormData) {
 }
 
 export async function addInvoiceAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
   const description = String(formData.get("description") || "").trim();
   const amount = Number(formData.get("amount")) || 0;
   const status = String(formData.get("status") || "unpaid") as
@@ -543,8 +564,8 @@ export async function addInvoiceAction(formData: FormData) {
 }
 
 export async function setInvoiceStatusAction(formData: FormData) {
-  await requireCoach();
   const invoiceId = Number(formData.get("invoiceId"));
+  if (!(await coachForClient(clientIdForInvoice(invoiceId)))) return;
   const status = String(formData.get("status")) as "unpaid" | "sent" | "paid" | "due";
   setInvoiceStatus(invoiceId, status);
   revalidatePath("/admin");
@@ -574,8 +595,8 @@ export async function saveMeasurementCheckInAction(formData: FormData) {
 }
 
 export async function removeMeasurementCheckInAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
   const date = String(formData.get("date") || "");
   removeMeasurementCheckIn(clientId, date);
   revalidatePath("/admin");
@@ -583,8 +604,8 @@ export async function removeMeasurementCheckInAction(formData: FormData) {
 }
 
 export async function addMeasurementFieldAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
   const name = String(formData.get("name") || "").trim();
   const unit = String(formData.get("unit") || "").trim();
   if (!name) return;
@@ -594,8 +615,8 @@ export async function addMeasurementFieldAction(formData: FormData) {
 }
 
 export async function updateMeasurementFieldAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
+  if (!(await coachForClient(clientIdForMeasurementField(id)))) return;
   const name = String(formData.get("name") || "").trim();
   const unit = String(formData.get("unit") || "").trim();
   if (!name) return;
@@ -605,16 +626,16 @@ export async function updateMeasurementFieldAction(formData: FormData) {
 }
 
 export async function removeMeasurementFieldAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
+  if (!(await coachForClient(clientIdForMeasurementField(id)))) return;
   removeMeasurementField(id);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
 
 export async function addSkinfoldEntryAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
   const date = String(formData.get("date") || "");
   const site = String(formData.get("site") || "");
   if (!date || !site) return;
@@ -624,8 +645,8 @@ export async function addSkinfoldEntryAction(formData: FormData) {
 }
 
 export async function removeSkinfoldEntryAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
+  if (!(await coachForClient(clientIdForSkinfold(id)))) return;
   removeSkinfoldEntry(id);
   revalidatePath("/admin");
 }
@@ -636,8 +657,8 @@ export async function removeSkinfoldEntryAction(formData: FormData) {
  * client component holding its own selection and one submit is one write.
  */
 export async function addMetricsFromLibraryAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
   let picks: { name: string; unit: string; group: string; cadence: "daily" | "weekly" | "monthly" }[] = [];
   try {
     picks = JSON.parse(String(formData.get("picks") || "[]"));
@@ -651,8 +672,8 @@ export async function addMetricsFromLibraryAction(formData: FormData) {
 }
 
 export async function addMetricDefinitionAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
   const category = String(formData.get("category") || "").trim();
   const name = String(formData.get("name") || "").trim();
   const unit = String(formData.get("unit") || "").trim();
@@ -664,8 +685,8 @@ export async function addMetricDefinitionAction(formData: FormData) {
 }
 
 export async function updateMetricDefinitionAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
+  if (!(await coachForClient(clientIdForMetricDefinition(id)))) return;
   const category = String(formData.get("category") || "").trim();
   const name = String(formData.get("name") || "").trim();
   const unit = String(formData.get("unit") || "").trim();
@@ -676,23 +697,23 @@ export async function updateMetricDefinitionAction(formData: FormData) {
 }
 
 export async function removeMetricDefinitionAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
+  if (!(await coachForClient(clientIdForMetricDefinition(id)))) return;
   removeMetricDefinition(id);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
 
 export async function togglePinMetricAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
+  if (!(await coachForClient(clientIdForMetricDefinition(id)))) return;
   togglePinMetric(id);
   revalidatePath("/admin");
 }
 
 export async function togglePinMeasurementFieldAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
+  if (!(await coachForClient(clientIdForMeasurementField(id)))) return;
   togglePinMeasurementField(id);
   revalidatePath("/admin");
 }
@@ -700,25 +721,27 @@ export async function togglePinMeasurementFieldAction(formData: FormData) {
 // ---- Tracker metric templates: coach-level presets applied to a client ----
 
 export async function addMetricTemplateCategoryAction(formData: FormData) {
-  await requireCoach();
+  const coach = await requireCoach();
   const name = String(formData.get("name") || "").trim();
   // Templates predate monthly and only carry the two original cadences.
   const frequency = String(formData.get("frequency") || "daily") as "daily" | "weekly";
   if (!name) return;
-  addMetricTemplateCategory(name, frequency);
+  addMetricTemplateCategory(coach.id, name, frequency);
   revalidatePath("/admin");
 }
 
 export async function removeMetricTemplateCategoryAction(formData: FormData) {
-  await requireCoach();
+  const coach = await requireCoach();
   const id = Number(formData.get("id"));
+  if (!coachOwnsMetricTemplate(coach.id, id)) return;
   removeMetricTemplateCategory(id);
   revalidatePath("/admin");
 }
 
 export async function addMetricTemplateItemAction(formData: FormData) {
-  await requireCoach();
+  const coach = await requireCoach();
   const templateCategoryId = Number(formData.get("templateCategoryId"));
+  if (!coachOwnsMetricTemplate(coach.id, templateCategoryId)) return;
   const name = String(formData.get("name") || "").trim();
   const unit = String(formData.get("unit") || "").trim();
   if (!name) return;
@@ -727,17 +750,18 @@ export async function addMetricTemplateItemAction(formData: FormData) {
 }
 
 export async function removeMetricTemplateItemAction(formData: FormData) {
-  await requireCoach();
+  const coach = await requireCoach();
   const id = Number(formData.get("id"));
+  if (!coachOwnsMetricTemplateItem(coach.id, id)) return;
   removeMetricTemplateItem(id);
   revalidatePath("/admin");
 }
 
 export async function applyMetricTemplateAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
   const templateCategoryId = Number(formData.get("templateCategoryId"));
-  if (!templateCategoryId) return;
+  const coach = await coachForClient(clientId);
+  if (!coach || !coachOwnsMetricTemplate(coach.id, templateCategoryId)) return;
   applyMetricTemplateToClient(clientId, templateCategoryId);
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -772,8 +796,8 @@ export async function logMetricPeriodAction(formData: FormData) {
 }
 
 export async function addPhotoSlotAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
   const label = String(formData.get("label") || "").trim();
   if (!label) return;
   addPhotoSlot(clientId, label);
@@ -782,8 +806,8 @@ export async function addPhotoSlotAction(formData: FormData) {
 }
 
 export async function updatePhotoSlotAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
+  if (!(await coachForClient(getClientIdForPhotoSlot(id)))) return;
   const label = String(formData.get("label") || "").trim();
   if (!label) return;
   updatePhotoSlot(id, label);
@@ -792,16 +816,16 @@ export async function updatePhotoSlotAction(formData: FormData) {
 }
 
 export async function removePhotoSlotAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
+  if (!(await coachForClient(getClientIdForPhotoSlot(id)))) return;
   removePhotoSlot(id);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
 
 export async function setPhotoCadenceAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
   const raw = String(formData.get("cadence") || "weekly");
   const cadence = (["weekly", "biweekly", "monthly", "sixweekly"] as const).find((c) => c === raw);
   if (!cadence) return;
@@ -811,16 +835,14 @@ export async function setPhotoCadenceAction(formData: FormData) {
 }
 
 export async function setPhotoSlotPausedAction(id: number, paused: boolean) {
-  await requireCoach();
-  if (!Number.isInteger(id)) return;
+  if (!Number.isInteger(id) || !(await coachForClient(getClientIdForPhotoSlot(id)))) return;
   setPhotoSlotPaused(id, paused === true);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
 
 export async function reorderPhotoSlotsAction(clientId: number, orderedIds: number[]) {
-  await requireCoach();
-  if (!Number.isInteger(clientId) || !Array.isArray(orderedIds)) return;
+  if (!Number.isInteger(clientId) || !Array.isArray(orderedIds) || !(await coachForClient(clientId))) return;
   reorderPhotoSlots(clientId, orderedIds.map(Number).filter((n) => Number.isInteger(n)));
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -833,8 +855,7 @@ export async function savePhotoScheduleAction(
   clientId: number,
   schedule: { startDate: string; cadence: string; instructions: string }
 ) {
-  await requireCoach();
-  if (!Number.isInteger(clientId) || !schedule) return;
+  if (!Number.isInteger(clientId) || !schedule || !(await coachForClient(clientId))) return;
   const cadence = (["weekly", "biweekly", "monthly", "sixweekly"] as const).find((c) => c === schedule.cadence);
   const startDate = /^\d{4}-\d{2}-\d{2}$/.test(schedule.startDate) ? schedule.startDate : null;
   if (!cadence || (schedule.startDate && !startDate)) return;
@@ -846,8 +867,8 @@ export async function savePhotoScheduleAction(
 }
 
 export async function savePhotoPeriodNoteAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
   const period = String(formData.get("period") || "");
   if (!period) return;
   savePhotoPeriodNote({
@@ -880,8 +901,8 @@ export async function uploadProgressPhotoAction(formData: FormData) {
 }
 
 export async function saveNutritionTargetsAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
   const num = (k: string) => {
     const raw = String(formData.get(k) ?? "").trim();
     return raw === "" ? null : Number(raw);
@@ -903,8 +924,8 @@ export async function saveNutritionTargetsAction(formData: FormData) {
 }
 
 export async function saveWaterGoalAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
   const raw = String(formData.get("water") ?? "").trim();
   setNutritionWater(clientId, raw === "" ? null : Number(raw));
   revalidatePath("/admin");
@@ -912,14 +933,14 @@ export async function saveWaterGoalAction(formData: FormData) {
 }
 
 export async function applySupplementChangesAction(clientId: number, changes: SupplementChanges) {
-  await requireCoach();
+  if (!(await coachForClient(clientId))) return;
   applySupplementChanges(clientId, changes);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
 
 export async function addSupplementRowAction(formData: FormData) {
-  await requireCoach();
+  if (!(await coachForClient(Number(formData.get("clientId"))))) return;
   // The name typed in the footer box starts the row off; an empty box still
   // adds a blank row, which is how "+ Add item" in the band works.
   addSupplementRow(Number(formData.get("clientId")), String(formData.get("name") ?? ""));
@@ -928,8 +949,8 @@ export async function addSupplementRowAction(formData: FormData) {
 }
 
 export async function updateSupplementRowAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
   const rowId = Number(formData.get("rowId"));
   const field = String(formData.get("field") || "");
   if (field !== "name" && field !== "quantity" && field !== "timing" && field !== "notes") return;
@@ -939,15 +960,15 @@ export async function updateSupplementRowAction(formData: FormData) {
 }
 
 export async function removeSupplementRowAction(formData: FormData) {
-  await requireCoach();
+  if (!(await coachForClient(Number(formData.get("clientId"))))) return;
   removeSupplementRow(Number(formData.get("clientId")), Number(formData.get("rowId")));
   revalidatePath("/admin");
   revalidatePath("/client");
 }
 
 export async function saveCoachNutritionNoteAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
   const phaseRaw = Number(formData.get("phaseId"));
   setNutritionNote(clientId, String(formData.get("note") ?? ""), Number.isInteger(phaseRaw) && phaseRaw > 0 ? phaseRaw : null);
   revalidatePath("/admin");
@@ -955,8 +976,8 @@ export async function saveCoachNutritionNoteAction(formData: FormData) {
 }
 
 export async function saveNutritionPlanAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
 
   const num = (name: string) => {
     const raw = formData.get(name);
@@ -1016,18 +1037,17 @@ export async function saveNutritionPlanAction(formData: FormData) {
 // One-field save from the Measurements tab: the weekday the weekly check-in
 // opens. Same profile column the full card edit writes, so no second source.
 export async function setCheckInDayAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
   const day = String(formData.get("check_in_day") ?? "").trim();
-  if (!clientId) return;
+  if (!(await coachForClient(clientId))) return;
   saveClientProfile({ ...getClientProfile(clientId), check_in_day: day || null });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
 
 export async function saveClientProfileAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
   const str = (name: string) => String(formData.get(name) || "");
   const numOrNull = (name: string) => {
     const raw = formData.get(name);
@@ -1063,7 +1083,7 @@ export async function saveClientProfileAction(formData: FormData) {
 // Main goal: one sentence under the client's name on Home. Written from
 // the Plan tab; the card's own save leaves it alone.
 export async function setClientMainGoalAction(clientId: number, text: string) {
-  await requireCoach();
+  if (!(await coachForClient(clientId))) return;
   setClientMainGoal(clientId, text);
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -1080,9 +1100,8 @@ export async function setClientMainGoalAction(clientId: number, text: string) {
 // live programme and the client's own logged weight — a typed-over copy would
 // just be a second, wrong answer to the same question.
 export async function saveClientCardAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
-  if (!Number.isFinite(clientId)) return;
+  if (!(await coachForClient(clientId))) return;
 
   const str = (name: string) => String(formData.get(name) ?? "").trim();
   const strOrNull = (name: string) => str(name) || null;
@@ -1116,12 +1135,15 @@ export async function saveClientCardAction(formData: FormData) {
 }
 
 export async function addClientGoalAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  const coach = await coachForClient(clientId);
+  if (!coach) return;
   const text = String(formData.get("text") || "").trim();
   if (!text) return;
   const meetingRaw = Number(formData.get("meetingId"));
-  addClientGoal(clientId, text, parseGoalTracking(formData.get("tracking")), Number.isInteger(meetingRaw) && meetingRaw > 0 ? meetingRaw : null);
+  // The meeting a goal was set in must be one of this client's.
+  const meetingId = Number.isInteger(meetingRaw) && meetingRaw > 0 && getClientIdForMeeting(meetingRaw) === clientId ? meetingRaw : null;
+  addClientGoal(clientId, text, trackingFor(clientId, coach.id, parseGoalTracking(formData.get("tracking"))), meetingId);
   const startRaw = String(formData.get("start") ?? "");
   if (/^\d{4}-\d{2}-\d{2}$/.test(startRaw)) {
     const mine = listClientGoals(clientId);
@@ -1167,21 +1189,36 @@ function parseGoalTracking(raw: FormDataEntryValue | null): GoalTracking | null 
   return null;
 }
 
+// A tracked goal may only measure this client's own metrics and the coach's
+// own exercises; anything else becomes a plain sentence rather than reading
+// another client's numbers into this one's goal.
+function trackingFor(clientId: number, coachId: number, tracking: GoalTracking | null): GoalTracking | null {
+  if (!tracking) return null;
+  if (tracking.kind === "exercise") return coachOwnsExercise(coachId, tracking.exerciseId) ? tracking : null;
+  if (tracking.kind === "habit") return clientIdForMetricDefinition(tracking.metricId) === clientId ? tracking : null;
+  const ref = /^(field|metric)-(\d+)$/.exec(tracking.metricKey);
+  if (ref) {
+    const owner = ref[1] === "field" ? clientIdForMeasurementField(Number(ref[2])) : clientIdForMetricDefinition(Number(ref[2]));
+    if (owner !== clientId) return null;
+  }
+  return tracking;
+}
+
 // Called from a drag in the goals list, with no form.
 export async function reorderClientGoalsAction(clientId: number, orderedIds: number[]) {
-  await requireCoach();
-  if (!Number.isInteger(clientId) || !Array.isArray(orderedIds)) return;
+  if (!Number.isInteger(clientId) || !Array.isArray(orderedIds) || !(await coachForClient(clientId))) return;
   reorderClientGoals(clientId, orderedIds.filter((id) => Number.isInteger(id)));
   revalidatePath("/admin");
   revalidatePath("/client");
 }
 
 export async function updateClientGoalAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
   const text = String(formData.get("text") || "").trim();
-  if (!id || !text || getClientIdForGoal(id) == null) return;
-  updateClientGoal(id, text, parseGoalTracking(formData.get("tracking")));
+  const clientId = getClientIdForGoal(id);
+  const coach = await coachForClient(clientId);
+  if (!id || !text || clientId == null || !coach) return;
+  updateClientGoal(id, text, trackingFor(clientId, coach.id, parseGoalTracking(formData.get("tracking"))));
   const startRaw = String(formData.get("start") ?? "");
   if (/^\d{4}-\d{2}-\d{2}$/.test(startRaw)) setClientGoalStart(id, startRaw);
   revalidatePath("/admin");
@@ -1189,8 +1226,8 @@ export async function updateClientGoalAction(formData: FormData) {
 }
 
 export async function toggleClientGoalAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
+  if (!(await coachForClient(getClientIdForGoal(id)))) return;
   const done = String(formData.get("done")) === "true";
   setClientGoalDone(id, done);
   revalidatePath("/admin");
@@ -1198,25 +1235,27 @@ export async function toggleClientGoalAction(formData: FormData) {
 
 // The Plan tab queues done-ticks on a pending bar and applies them together.
 export async function applyGoalDoneChangesAction(changes: { id: number; done: boolean }[]) {
-  await requireCoach();
+  const coach = await requireCoach();
   if (!Array.isArray(changes)) return;
   for (const c of changes) {
-    if (Number.isInteger(c?.id) && typeof c.done === "boolean") setClientGoalDone(c.id, c.done);
+    if (!Number.isInteger(c?.id) || typeof c.done !== "boolean") continue;
+    if (await coachForClient(getClientIdForGoal(c.id))) setClientGoalDone(c.id, c.done);
   }
+  void coach;
   revalidatePath("/admin");
   revalidatePath("/client");
 }
 
 export async function removeClientGoalAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
+  if (!(await coachForClient(getClientIdForGoal(id)))) return;
   removeClientGoal(id);
   revalidatePath("/admin");
 }
 
 export async function addMeetingAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
   const date = String(formData.get("date") || "");
   const time = String(formData.get("time") || "");
   const duration = Number(formData.get("durationMinutes")) || undefined;
@@ -1234,8 +1273,9 @@ export async function addMeetingAction(formData: FormData) {
 }
 
 export async function setMeetingStatusAction(formData: FormData) {
-  await requireCoach();
+  const coach = await requireCoach();
   const id = Number(formData.get("id"));
+  if (!coachOwnsMeeting(coach.id, id)) return;
   const raw = String(formData.get("status"));
   const status = raw === "completed" || raw === "no-show" || raw === "cancelled" ? raw : "scheduled";
   setMeetingStatus(id, status);
@@ -1246,9 +1286,9 @@ export async function setMeetingStatusAction(formData: FormData) {
 // Autosaves from the Meetings tab (topic, link, prep notes) and a
 // reschedule (date, time, duration): only the fields present are written.
 export async function updateMeetingAction(formData: FormData) {
-  await requireCoach();
+  const coach = await requireCoach();
   const id = Number(formData.get("id"));
-  if (!id || getClientIdForMeeting(id) == null) return;
+  if (!id || getClientIdForMeeting(id) == null || !coachOwnsMeeting(coach.id, id)) return;
   const patch: Parameters<typeof updateMeeting>[1] = {};
   if (formData.has("topic")) patch.topic = String(formData.get("topic") ?? "").trim();
   if (formData.has("link")) patch.link = String(formData.get("link") ?? "").trim() || null;
@@ -1266,9 +1306,9 @@ export async function updateMeetingAction(formData: FormData) {
 }
 
 export async function completeMeetingAction(formData: FormData) {
-  await requireCoach();
+  const coach = await requireCoach();
   const id = Number(formData.get("id"));
-  if (!id) return;
+  if (!id || !coachOwnsMeeting(coach.id, id)) return;
   // Closing the call is the moment the coach remembers what was agreed, so
   // the recap is written here. It reaches the client's Home; the prep notes
   // and the notes log stay on the coach's side.
@@ -1281,15 +1321,17 @@ export async function completeMeetingAction(formData: FormData) {
 }
 
 export async function removeMeetingAction(formData: FormData) {
-  await requireCoach();
+  const coach = await requireCoach();
   const id = Number(formData.get("id"));
+  if (!coachOwnsMeeting(coach.id, id)) return;
   removeMeeting(id);
   revalidatePath("/admin");
 }
 
 export async function addMeetingNoteAction(formData: FormData) {
-  await requireCoach();
+  const coach = await requireCoach();
   const meetingId = Number(formData.get("meetingId"));
+  if (!coachOwnsMeeting(coach.id, meetingId)) return;
   const text = String(formData.get("text") || "").trim();
   if (!text) return;
   addMeetingNote(meetingId, text);
@@ -1297,8 +1339,10 @@ export async function addMeetingNoteAction(formData: FormData) {
 }
 
 export async function removeMeetingNoteAction(formData: FormData) {
-  await requireCoach();
+  const coach = await requireCoach();
   const id = Number(formData.get("id"));
+  const meetingId = meetingIdForNote(id);
+  if (meetingId == null || !coachOwnsMeeting(coach.id, meetingId)) return;
   removeMeetingNote(id);
   revalidatePath("/admin");
 }
@@ -1349,23 +1393,25 @@ export async function markAllNotificationsReadAction(formData: FormData) {
 // ---- Reports ----
 
 export async function createReportTemplateAction(formData: FormData) {
-  await requireCoach();
+  const coach = await requireCoach();
   const name = String(formData.get("name") || "").trim();
   if (!name) return;
-  createReportTemplate(name);
+  createReportTemplate(coach.id, name);
   revalidatePath("/admin");
 }
 
 export async function deleteReportTemplateAction(formData: FormData) {
-  await requireCoach();
+  const coach = await requireCoach();
   const id = Number(formData.get("id"));
+  if (!coachOwnsReportTemplate(coach.id, id)) return;
   deleteReportTemplate(id);
   revalidatePath("/admin");
 }
 
 export async function addReportTemplateSectionAction(formData: FormData) {
-  await requireCoach();
+  const coach = await requireCoach();
   const templateId = Number(formData.get("templateId"));
+  if (!coachOwnsReportTemplate(coach.id, templateId)) return;
   const type = String(formData.get("type") || "training") as
     | "training"
     | "nutrition"
@@ -1381,8 +1427,9 @@ export async function addReportTemplateSectionAction(formData: FormData) {
 }
 
 export async function removeReportTemplateSectionAction(formData: FormData) {
-  await requireCoach();
+  const coach = await requireCoach();
   const id = Number(formData.get("id"));
+  if (!coachOwnsReportTemplateSection(coach.id, id)) return;
   removeReportTemplateSection(id);
   revalidatePath("/admin");
 }
@@ -1396,15 +1443,16 @@ export async function removeReportTemplateSectionAction(formData: FormData) {
 // a coach with no templates yet, or a client who just needs one different
 // report, isn't blocked on building a template first.
 export async function generateReportAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  const coach = await coachForClient(clientId);
   const periodStart = String(formData.get("periodStart") || "");
   const periodEnd = String(formData.get("periodEnd") || "");
   const client = getClient(clientId);
-  if (!clientId || !client || !periodStart || !periodEnd) return;
+  if (!coach || !client || !periodStart || !periodEnd) return;
 
   const templateIdRaw = formData.get("templateId");
   const templateId = templateIdRaw ? Number(templateIdRaw) : null;
+  if (templateId != null && !coachOwnsReportTemplate(coach.id, templateId)) return;
   const customSectionsRaw = String(formData.get("customSections") || "");
 
   let sectionsToRun: { id: number; template_id: number; type: ReportSectionType; label: string; metric_name: string | null; order_index: number }[] = [];
@@ -1460,31 +1508,31 @@ export async function generateReportAction(formData: FormData) {
 }
 
 export async function updateReportSummaryAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
+  if (!(await coachForClient(getClientIdForReport(id)))) return;
   const summary = String(formData.get("summary") || "");
   updateReportSummary(id, summary);
   revalidatePath("/admin");
 }
 
 export async function approveReportAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
+  if (!(await coachForClient(getClientIdForReport(id)))) return;
   approveReport(id);
   revalidatePath("/admin");
 }
 
 export async function sendReportAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
+  if (!(await coachForClient(getClientIdForReport(id)))) return;
   sendReport(id);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
 
 export async function deleteReportAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
+  if (!(await coachForClient(getClientIdForReport(id)))) return;
   deleteReport(id);
   revalidatePath("/admin");
 }
@@ -1493,18 +1541,16 @@ export async function deleteReportAction(formData: FormData) {
 // the client's check-in screen. History is untouched either way — hiding a
 // metric stops it being asked for, it doesn't delete what's already logged.
 export async function setMetricVisibleAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
-  if (!id) return;
+  if (!id || !(await coachForClient(clientIdForMetricDefinition(id)))) return;
   setMetricVisibleToClient(id, formData.get("visible") === "true");
   revalidatePath("/admin");
   revalidatePath("/client");
 }
 
 export async function setMeasurementFieldVisibleAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
-  if (!id) return;
+  if (!id || !(await coachForClient(clientIdForMeasurementField(id)))) return;
   setMeasurementFieldVisibleToClient(id, formData.get("visible") === "true");
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -1538,8 +1584,8 @@ export async function setClientUnitsAction(formData: FormData) {
 // until the coach reopened the chip.
 
 export async function setDemoUrlAction(formData: FormData): Promise<string | null> {
-  await requireCoach();
   const assignmentId = Number(formData.get("assignmentId"));
+  if (!(await coachForClient(getClientIdForAssignment(assignmentId)))) return "That exercise no longer exists.";
   const url = String(formData.get("demoUrl") || "").trim();
   if (!url) return "Paste a link first.";
   // Only ever a link the browser will actually open. Without this, a pasted
@@ -1553,10 +1599,11 @@ export async function setDemoUrlAction(formData: FormData): Promise<string | nul
 }
 
 export async function clearDemoAction(formData: FormData) {
-  await requireCoach();
   const assignmentId = Number(formData.get("assignmentId"));
+  const coach = await coachForClient(getClientIdForAssignment(assignmentId));
+  if (!coach) return;
   const exerciseId = getExerciseIdForAssignment(assignmentId);
-  if (exerciseId != null) setExerciseVideoUrl(exerciseId, null);
+  if (exerciseId != null && coachOwnsExercise(coach.id, exerciseId)) setExerciseVideoUrl(exerciseId, null);
   setAssignmentDemoUrl(assignmentId, "");
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -1568,14 +1615,12 @@ export async function clearDemoAction(formData: FormData) {
 const MAX_DEMO_BYTES = 64 * 1024 * 1024;
 
 export async function uploadDemoVideoAction(formData: FormData): Promise<string | null> {
-  await requireCoach();
   const assignmentId = Number(formData.get("assignmentId"));
 
-  // The client id comes from the assignment, not from the form. A form field
-  // is attacker-controlled, and this one decides which client's folder the
-  // file lands in — and therefore who can read it back.
-  const clientId = getClientIdForAssignment(assignmentId);
-  if (clientId == null) return "That exercise no longer exists.";
+  // The client comes from the assignment, not from the form, and must be one
+  // of this coach's; the clip lands on the coach's own library exercise.
+  const coach = await coachForClient(getClientIdForAssignment(assignmentId));
+  if (!coach) return "That exercise no longer exists.";
 
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return "Choose a file first.";
@@ -1589,7 +1634,7 @@ export async function uploadDemoVideoAction(formData: FormData): Promise<string 
   // it gets the same clip. clientId is still checked above so a stale form
   // can't upload against a deleted prescription.
   const exerciseId = getExerciseIdForAssignment(assignmentId);
-  if (exerciseId == null) return "That exercise no longer exists.";
+  if (exerciseId == null || !coachOwnsExercise(coach.id, exerciseId)) return "That exercise no longer exists.";
   const publicPath = saveLibraryVideoUpload(exerciseId, buffer, file.type);
   setExerciseVideoUrl(exerciseId, publicPath);
   setAssignmentDemoUrl(assignmentId, "");
@@ -1599,8 +1644,8 @@ export async function uploadDemoVideoAction(formData: FormData): Promise<string 
 }
 
 export async function setBuiltinColumnVisibleAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
   const key = String(formData.get("key") || "");
   const visible = formData.get("visible") === "true";
   setBuiltinColumnVisible(clientId, key, visible);
@@ -1637,9 +1682,8 @@ export async function markReportOpenedAction(id: number) {
 // Deletes the client and everything attached to them. The confirm lives in
 // the UI (ConfirmDeleteButton); this trusts that the coach meant it.
 export async function deleteClientAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
-  if (!clientId) return;
+  if (!(await coachForClient(clientId))) return;
   removeClient(clientId);
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -1650,8 +1694,8 @@ export async function deleteClientAction(formData: FormData) {
 // the rail's dialog. Live and past weeks of a deployed programme are refused
 // here too, not just hidden in the UI, so a stale form can't delete history.
 export async function removeProgramWeekAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
   const programId = Number(formData.get("programId"));
   const week = Number(formData.get("week"));
   const program = listPrograms(clientId).find((p) => p.id === programId);
@@ -1667,9 +1711,8 @@ export async function removeProgramWeekAction(formData: FormData) {
 // card, so the rail and panel header update straight away even if the rest
 // of the card is never saved. Blank names are ignored, same as the full save.
 export async function renameClientAction(clientId: number, name: string) {
-  await requireCoach();
   const trimmed = name.trim();
-  if (!Number.isFinite(clientId) || !trimmed) return;
+  if (!trimmed || !(await coachForClient(clientId))) return;
   renameClient(clientId, trimmed);
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -1677,8 +1720,8 @@ export async function renameClientAction(clientId: number, name: string) {
 
 // Daily / Weekly / Monthly toggle on a check-in column row.
 export async function setMetricCadenceAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
+  if (!(await coachForClient(clientIdForMetricDefinition(id)))) return;
   const raw = String(formData.get("frequency") ?? "");
   if (raw !== "daily" && raw !== "weekly" && raw !== "monthly") return;
   setMetricCadence(id, raw);
@@ -1690,7 +1733,7 @@ export async function setMetricCadenceAction(formData: FormData) {
 // client is chosen, otherwise the coach's own block of time. Lands back on
 // the same day in the calendar.
 export async function addCalendarEventAction(formData: FormData) {
-  await requireCoach();
+  const coach = await requireCoach();
   const date = String(formData.get("date") || "");
   const time = String(formData.get("time") || "");
   const duration = Number(formData.get("durationMinutes")) || undefined;
@@ -1698,7 +1741,10 @@ export async function addCalendarEventAction(formData: FormData) {
   const rawClient = String(formData.get("clientId") || "");
   const clientId = rawClient ? Number(rawClient) : null;
   if (!date || !time) return;
-  addMeeting(clientId, date, time, topic, duration);
+  // A client meeting only for one of this coach's clients; otherwise a block
+  // on this coach's own calendar.
+  if (clientId != null && !(await coachForClient(clientId))) return;
+  addMeeting(clientId, date, time, topic, duration, null, coach.id);
   if (clientId) {
     logCoachActivity(clientId, topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", {
       kind: "general",
@@ -1725,31 +1771,29 @@ function readPhaseForm(formData: FormData) {
 }
 
 export async function addClientPhaseAction(formData: FormData) {
-  await requireCoach();
   const clientId = Number(formData.get("clientId"));
   const fields = readPhaseForm(formData);
-  if (!clientId || !fields) return;
+  if (!fields || !(await coachForClient(clientId))) return;
   const rawProgram = String(formData.get("programId") ?? "");
-  const programId = /^\d+$/.test(rawProgram) ? Number(rawProgram) : null;
+  // Only one of this client's own programmes can be linked.
+  const programId = /^\d+$/.test(rawProgram) && getClientIdForProgram(Number(rawProgram)) === clientId ? Number(rawProgram) : null;
   addClientPhase(clientId, fields.track, fields.name, fields.start, fields.end, programId);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
 
 export async function updateClientPhaseAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
   const fields = readPhaseForm(formData);
-  if (!id || getClientIdForPhase(id) == null || !fields) return;
+  if (!id || !fields || !(await coachForClient(getClientIdForPhase(id)))) return;
   updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1");
   revalidatePath("/admin");
   revalidatePath("/client");
 }
 
 export async function removeClientPhaseAction(formData: FormData) {
-  await requireCoach();
   const id = Number(formData.get("id"));
-  if (!id) return;
+  if (!id || !(await coachForClient(getClientIdForPhase(id)))) return;
   removeClientPhase(id);
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -1775,18 +1819,18 @@ export async function logCaloriesAction(formData: FormData) {
 
 // Called directly from the drag handler with the new order, not via a form.
 export async function reorderAssignmentsAction(programDayId: number, orderedIds: number[]) {
-  await requireCoach();
   if (!Number.isInteger(programDayId) || !Array.isArray(orderedIds)) return;
+  if (!(await coachForClient(clientIdForProgramDay(programDayId)))) return;
   reorderAssignments(programDayId, orderedIds.map(Number).filter((n) => Number.isInteger(n)));
   revalidatePath("/client");
   revalidatePath("/admin");
 }
 
 export async function copyProgramDayAction(formData: FormData) {
-  await requireCoach();
   const fromDayId = Number(formData.get("fromDayId"));
   const toDayId = Number(formData.get("toDayId"));
-  if (!fromDayId || !toDayId) return;
+  const owner = clientIdForProgramDay(fromDayId);
+  if (!fromDayId || !toDayId || owner !== clientIdForProgramDay(toDayId) || !(await coachForClient(owner))) return;
   copyProgramDay(fromDayId, toDayId);
   // Opt-in per copy: the same weekday in every later week of the programme.
   if (formData.get("applyToRemainingWeeks") === "1") copyProgramDayToLaterWeeks(fromDayId, toDayId);
@@ -1798,9 +1842,9 @@ export async function copyProgramDayAction(formData: FormData) {
 // ---- Library video straight from the exercise picker's add-new form -------
 
 export async function uploadExerciseVideoAction(formData: FormData): Promise<string | null> {
-  await requireCoach();
+  const coach = await requireCoach();
   const exerciseId = Number(formData.get("exerciseId"));
-  if (!exerciseId) return "That exercise no longer exists.";
+  if (!exerciseId || !coachOwnsExercise(coach.id, exerciseId)) return "That exercise no longer exists.";
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return "Choose a file first.";
   if (file.size > MAX_DEMO_BYTES) {
@@ -1815,9 +1859,8 @@ export async function uploadExerciseVideoAction(formData: FormData): Promise<str
 }
 
 export async function clearProgramDayAction(formData: FormData) {
-  await requireCoach();
   const programDayId = Number(formData.get("programDayId"));
-  if (!programDayId) return;
+  if (!programDayId || !(await coachForClient(clientIdForProgramDay(programDayId)))) return;
   clearProgramDay(programDayId);
   revalidatePath("/client");
   revalidatePath("/admin");
@@ -1825,8 +1868,7 @@ export async function clearProgramDayAction(formData: FormData) {
 
 // Called from the reorder bar after a drop, with no form.
 export async function applyDayOrderToLaterWeeksAction(programDayId: number) {
-  await requireCoach();
-  if (!Number.isInteger(programDayId)) return;
+  if (!Number.isInteger(programDayId) || !(await coachForClient(clientIdForProgramDay(programDayId)))) return;
   applyDayOrderToLaterWeeks(programDayId);
   revalidatePath("/client");
   revalidatePath("/admin");
@@ -1839,8 +1881,11 @@ export type DayChangesPayload = DayChanges;
 export async function applyDayChangesAction(
   payload: DayChangesPayload
 ): Promise<{ ok: true; skipped: string[] } | { ok: false; error: string }> {
-  await requireCoach();
   if (!Number.isInteger(payload?.programDayId)) return { ok: false, error: "Unknown day" };
+  const coach = await coachForClient(clientIdForProgramDay(payload.programDayId));
+  if (!coach) return { ok: false, error: "Unknown day" };
+  // Exercises added to the day must come from this coach's own library.
+  if ((payload.added ?? []).some((a) => !coachOwnsExercise(coach.id, a.exerciseId))) return { ok: false, error: "Unknown exercise" };
   try {
     const { skipped } = applyDayChanges({
       programDayId: payload.programDayId,

@@ -12,10 +12,10 @@ import {
 import AddReportSectionForm from "./AddReportSectionForm";
 import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
 
-export default function ReportTemplatesPanel() {
-  const templates = listReportTemplates();
+export default function ReportTemplatesPanel({ coachId }: { coachId: number }) {
+  const templates = listReportTemplates(coachId);
   const knownMetricNames = [
-    ...new Set([...listDistinctMetricNames("daily"), ...listDistinctMetricNames("weekly")].map((m) => m.name)),
+    ...new Set([...listDistinctMetricNames(coachId, "daily"), ...listDistinctMetricNames(coachId, "weekly")].map((m) => m.name)),
   ];
 
   return (

@@ -47,7 +47,7 @@ function isoDaysAgo(n: number, hour = 17, minute = 0) {
 }
 
 function findExerciseId(name: string): number {
-  const ex = listExercises().find((e) => e.name === name);
+  const ex = getData().exercises.find((e) => e.name === name);
   if (!ex) throw new Error(`Exercise not found: ${name}. Run scripts/seed.js first.`);
   return ex.id;
 }

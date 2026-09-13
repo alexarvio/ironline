@@ -70,7 +70,7 @@ function logSetAt(
 }
 
 function findExerciseId(name: string): number {
-  const ex = listExercises().find((e) => e.name === name);
+  const ex = getData().exercises.find((e) => e.name === name);
   if (!ex) throw new Error(`Exercise not found: ${name}. Run scripts/seed.js first.`);
   return ex.id;
 }
@@ -215,7 +215,7 @@ const CONFIGS: LightClientConfig[] = [
 ];
 
 function enrichClient(cfg: LightClientConfig) {
-  const client = listClients().find((c) => c.name === cfg.name);
+  const client = getData().clients.find((c) => c.name === cfg.name);
   if (!client) {
     console.log(`Skipping ${cfg.name}: no matching client found (run scripts/seed-rich.ts first).`);
     return;

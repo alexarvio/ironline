@@ -7,12 +7,12 @@ function dayNumber(dateStr: string) {
   return Number(dateStr.slice(8, 10));
 }
 
-export default function CalendarPanel({ month, day }: { month?: string; day?: string }) {
-  const calendar = getCalendarMonth(month);
+export default function CalendarPanel({ coachId, month, day }: { coachId: number; month?: string; day?: string }) {
+  const calendar = getCalendarMonth(coachId, month);
   // The day open in the right-hand panel; today when none was clicked.
   const selectedDay = day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : localDateStr();
   const monthKey = calendar.weeks[1][0].date.slice(0, 7);
-  const conflicts = getMeetingConflicts();
+  const conflicts = getMeetingConflicts(coachId);
   const conflictIds = new Set<number>();
   conflicts.forEach((c) => {
     conflictIds.add(c.a.id);

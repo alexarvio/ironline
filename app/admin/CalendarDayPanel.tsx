@@ -6,14 +6,14 @@ import AutosaveNote from "./AutosaveNote";
 // their hour rows; a click on an empty spot creates an entry at that time,
 // with or without a client. `day` comes from the URL (the cell the coach
 // clicked) and defaults to today.
-export default function CalendarDayPanel({ day, month }: { day?: string; month?: string }) {
+export default function CalendarDayPanel({ coachId, day, month }: { coachId: number; day?: string; month?: string }) {
   const date = day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : localDateStr();
   const d = new Date(`${date}T12:00:00`);
   const weekday = d.toLocaleDateString("en-US", { weekday: "long" });
   const long = d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
   const isToday = date === localDateStr();
 
-  const meetings = getCalendarDay(date).map((m) => ({
+  const meetings = getCalendarDay(coachId, date).map((m) => ({
     id: m.id,
     time: m.time,
     durationMinutes: m.duration_minutes,
@@ -22,7 +22,7 @@ export default function CalendarDayPanel({ day, month }: { day?: string; month?:
     clientName: m.clientName,
     status: m.status,
   }));
-  const clients = listClients().map((c) => ({ id: c.id, name: c.name }));
+  const clients = listClients(coachId).map((c) => ({ id: c.id, name: c.name }));
   // Server-stamped per render so the saved-state button only says "All
   // saved" once an add or delete has actually landed.
   // eslint-disable-next-line react-hooks/purity -- a server component render is the intended clock here

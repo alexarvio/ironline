@@ -15,11 +15,17 @@ const DB_PATH = path.join(DATA_DIR, "ironline.json");
 type Client = {
   id: number;
   name: string;
+  // The coach account (users.id) this client belongs to. Coaches only ever
+  // see their own clients. Optional only for rows from before multi-coach;
+  // claimUnownedRows fills it when the store loads.
+  coach_id?: number;
   // Set by the client from their Settings tab; shown wherever the coach sees
   // them. Absent on rows written before this field existed.
   avatar_path?: string | null;
 };
-type Exercise = { id: number; name: string; muscle_tags: string | null; video_url: string | null };
+// Each coach has their own library (seeded from presets.ts), so coach_id is
+// the owner. Optional only for rows from before multi-coach.
+type Exercise = { id: number; name: string; muscle_tags: string | null; video_url: string | null; coach_id?: number };
 type ProgramDay = {
   id: number;
   client_id: number;
@@ -186,6 +192,10 @@ type WorkoutAssignment = {
   note_kind: "form" | "load" | "tempo" | null;
   note_at: string | null;
   note_read: boolean;
+  // When the coach last set target_weight_kg by hand (ISO). The weight goal
+  // only writes itself forward from sets logged after this, so a target the
+  // coach lowers stays lowered. Missing on rows never edited by hand.
+  target_set_at?: string | null;
 };
 type SetLog = {
   id: number;
@@ -318,6 +328,8 @@ type MetricTemplateCategory = {
   // their own screens.
   frequency: MetricCadence;
   order_index: number;
+  // Owning coach; items belong to it through template_category_id.
+  coach_id?: number;
 };
 type MetricTemplateItem = {
   id: number;
@@ -438,6 +450,9 @@ type Meeting = {
   // null for the coach's own calendar entries (a block of admin time, a gym
   // visit) that don't belong to any client.
   client_id: number | null;
+  // The coach whose calendar a personal block (client_id null) sits on. A
+  // client meeting belongs to the client's coach, so it is not needed there.
+  coach_id?: number | null;
   date: string;
   time: string;
   duration_minutes: number;
@@ -531,6 +546,8 @@ type ReportTemplate = {
   id: number;
   name: string;
   created_at: string;
+  // Owning coach; sections belong to it through template_id.
+  coach_id?: number;
 };
 type ReportTemplateSection = {
   id: number;
@@ -766,6 +783,7 @@ function load(): Data {
       data.set_logs = data.set_logs.filter((sl) => keep.has(sl.id));
       save(data);
     }
+    if (claimUnownedRows(data) > 0) save(data);
     return data;
   } catch {
     return emptyData();
@@ -778,9 +796,40 @@ function save(data: Data) {
   fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
 }
 
+// Multi-coach ownership for rows that have none: clients, library exercises,
+// template packs, report templates and personal calendar blocks from before
+// coach_id existed, and those the seed scripts write. They go to the first
+// coach account (Finlay on the existing install). Runs when the store loads
+// and when a coach account is created, not on every write: app code sets the
+// owner itself, so a row that misses one stays a visible bug rather than
+// quietly landing in the wrong coach's account.
+export function claimUnownedRows(data: Data = globalForDb._jsonDb!): number {
+  const firstCoach = data.users
+    .filter((u) => u.role === "coach")
+    .map((u) => u.id)
+    .sort((a, b) => a - b)[0];
+  if (firstCoach == null) return 0;
+  let claimed = 0;
+  const claim = (row: { coach_id?: number | null }) => {
+    if (row.coach_id == null) {
+      row.coach_id = firstCoach;
+      claimed += 1;
+    }
+  };
+  data.clients.forEach(claim);
+  data.exercises.forEach(claim);
+  data.metric_template_categories.forEach(claim);
+  data.report_templates.forEach(claim);
+  data.meetings.forEach((m) => m.client_id == null && claim(m));
+  return claimed;
+}
+
 // Reuse one in-memory copy across hot reloads in dev, always synced to disk on write.
-const globalForDb = globalThis as unknown as { _jsonDb?: Data };
-if (!globalForDb._jsonDb) globalForDb._jsonDb = load();
+const globalForDb = globalThis as unknown as { _jsonDb?: Data; _ownersClaimed?: boolean };
+if (!globalForDb._jsonDb) {
+  globalForDb._jsonDb = load();
+  globalForDb._ownersClaimed = true;
+}
 
 function nextId(table: string): number {
   const data = globalForDb._jsonDb!;
@@ -802,6 +851,12 @@ export function getData(): Data {
       (data as Record<keyof Data, unknown>)[key] = defaults[key];
     }
   });
+  // A dev server that was running before ownership existed holds rows with
+  // no coach in memory; claim them once rather than asking for a restart.
+  if (!globalForDb._ownersClaimed) {
+    globalForDb._ownersClaimed = true;
+    if (claimUnownedRows(data) > 0) save(data);
+  }
   return data;
 }
 

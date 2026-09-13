@@ -14,8 +14,8 @@
 
    Run with: npx tsx scripts/seed-metric-templates.ts
 */
+import { getData } from "../app/lib/db";
 import {
-  listMetricTemplateCategories,
   addMetricTemplateCategory,
   addMetricTemplateItem,
   listClients,
@@ -78,7 +78,14 @@ const TEMPLATES: Array<{ category: string; items: string[] }> = [
   },
 ];
 
-const existing = new Set(listMetricTemplateCategories("weekly").map((t) => t.name));
+// Runs on a fresh store, usually before any coach exists: the templates are
+// written without an owner and the first coach account claims them.
+const coachId = getData().users.find((u) => u.role === "coach")?.id ?? null;
+const existing = new Set(
+  getData()
+    .metric_template_categories.filter((t) => t.frequency === "weekly" && (t.coach_id ?? null) === coachId)
+    .map((t) => t.name)
+);
 const newlyAddedIds = new Map<string, number>();
 
 TEMPLATES.forEach(({ category, items }) => {
@@ -86,7 +93,7 @@ TEMPLATES.forEach(({ category, items }) => {
     console.log(`Skipping "${category}": template already exists.`);
     return;
   }
-  const id = addMetricTemplateCategory(category, "weekly");
+  const id = addMetricTemplateCategory(coachId, category, "weekly");
   items.forEach((item) => addMetricTemplateItem(id, item, "/10"));
   newlyAddedIds.set(category, id);
   console.log(`Added template "${category}" with ${items.length} metrics.`);
@@ -95,7 +102,7 @@ TEMPLATES.forEach(({ category, items }) => {
 // Demo: apply Stress + General Wellbeing to Alex with a few weeks of sample
 // ratings, so the coach sees the "avg" badge working the first time they
 // open the Weekly Tracker instead of an empty template with nothing logged.
-const alex = listClients().find((c) => c.name === "Alex");
+const alex = getData().clients.find((c) => c.name === "Alex");
 if (alex) {
   ["Stress", "General Wellbeing"].forEach((category) => {
     const templateId = newlyAddedIds.get(category);
