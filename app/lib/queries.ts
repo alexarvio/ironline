@@ -661,13 +661,12 @@ export function applyDueClientReminders() {
         item.id === "weekly"
           ? weekKey
           : item.id === "photos"
-          ? photoPeriodFor(today, getPhotoCadence(clientId))
+          ? photoSheetFor(clientId, today) ?? today
           : today;
       logCoachActivity(clientId, `${item.label}: ${item.detail}`, {
         kind: "reminder",
         dedupeKey: `reminder:${item.id}:${clientId}:${periodKey}`,
-      });
-    });
+      });    });
   });
 }
 
@@ -2952,7 +2951,7 @@ export function listMetricPeriods(metricDefinitionIds: number[], limit = 500): s
 // 1, anything) — not a fixed set. The client uploads one photo per slot per
 // week; uploading again the same week replaces that week's photo.
 
-export type PhotoSlot = { id: number; client_id: number; label: string; order_index: number };
+export type PhotoSlot = { id: number; client_id: number; label: string; order_index: number; paused?: boolean };
 export type PhotoUpload = {
   id: number;
   slot_id: number;
@@ -2961,12 +2960,20 @@ export type PhotoUpload = {
   uploaded_at: string;
 };
 
-export type PhotoCadence = "weekly" | "biweekly" | "monthly";
+export type PhotoCadence = "weekly" | "biweekly" | "monthly" | "sixweekly";
 
 export const PHOTO_CADENCE_LABELS: Record<PhotoCadence, string> = {
   weekly: "Every week",
   biweekly: "Every 2 weeks",
   monthly: "Every month",
+  sixweekly: "Every 6 weeks",
+};
+
+// Weeks per sheet for the week-based cadences. Monthly is calendar-based.
+const PHOTO_WEEKS_PER_SHEET: Record<Exclude<PhotoCadence, "monthly">, number> = {
+  weekly: 1,
+  biweekly: 2,
+  sixweekly: 6,
 };
 
 // A fixed reference Monday, used only to keep biweekly bucket boundaries
@@ -2996,13 +3003,112 @@ export function setPhotoCadence(clientId: number, cadence: PhotoCadence) {
 export function photoPeriodFor(dateStr: string, cadence: PhotoCadence): string {
   if (cadence === "monthly") return `${dateStr.slice(0, 7)}-01`;
   const monday = weekStart(dateStr);
-  if (cadence === "weekly") return monday;
+  const span = PHOTO_WEEKS_PER_SHEET[cadence];
+  if (span === 1) return monday;
+  // Six-weekly buckets use the same fixed epoch as biweekly ones.
   const epoch = new Date(`${PHOTO_BIWEEKLY_EPOCH}T00:00:00`);
   const cur = new Date(`${monday}T00:00:00`);
   const weeksSinceEpoch = Math.round((cur.getTime() - epoch.getTime()) / (7 * 86400000));
-  const bucketWeeks = weeksSinceEpoch - (((weeksSinceEpoch % 2) + 2) % 2);
+  const bucketWeeks = weeksSinceEpoch - (((weeksSinceEpoch % span) + span) % span);
   const bucketDate = new Date(epoch.getTime() + bucketWeeks * 7 * 86400000);
   return localDateStr(bucketDate);
+}
+
+// The day the sheet after `period` opens, on the calendar buckets.
+export function nextPhotoPeriodStart(period: string, cadence: PhotoCadence): string {
+  const d = new Date(`${period}T00:00:00`);
+  if (cadence === "monthly") return localDateStr(new Date(d.getFullYear(), d.getMonth() + 1, 1));
+  d.setDate(d.getDate() + 7 * PHOTO_WEEKS_PER_SHEET[cadence]);
+  return localDateStr(d);
+}
+
+// ---- Sheet dates anchored on the coach's start date ----
+// With a start date the first sheet opens on it and every later one a
+// cadence step on (1 Oct + monthly gives 1 Nov, 1 Dec), whenever the cadence
+// was picked. Without one, photoPeriodFor's calendar buckets still apply,
+// which is also what sheets uploaded before the date existed are keyed on.
+
+export function getPhotoStartDate(clientId: number): string | null {
+  return getData().photo_settings.find((s) => s.client_id === clientId)?.photo_start_date ?? null;
+}
+
+export function setPhotoStartDate(clientId: number, date: string | null) {
+  const data = getData();
+  let row = data.photo_settings.find((s) => s.client_id === clientId);
+  if (!row) {
+    row = { client_id: clientId, cadence: "weekly" };
+    data.photo_settings.push(row);
+  }
+  row.photo_start_date = date;
+  persist();
+}
+
+// The coach's note on how to take the pictures; null when there is none.
+export function getPhotoInstructions(clientId: number): string | null {
+  return getData().photo_settings.find((s) => s.client_id === clientId)?.photo_instructions?.trim() || null;
+}
+
+export function setPhotoInstructions(clientId: number, text: string) {
+  const data = getData();
+  let row = data.photo_settings.find((s) => s.client_id === clientId);
+  if (!row) {
+    row = { client_id: clientId, cadence: "weekly" };
+    data.photo_settings.push(row);
+  }
+  row.photo_instructions = text.trim() || null;
+  persist();
+}
+
+// The day sheet n (0 = the first) opens. Monthly keeps the start's day of
+// the month, clamped in shorter months: 31 Jan, 28 Feb, 31 Mar.
+function photoSheetOpening(start: string, cadence: PhotoCadence, n: number): string {
+  const [y, m, d] = start.split("-").map(Number);
+  if (cadence === "monthly") {
+    const daysInMonth = new Date(y, m + n, 0).getDate();
+    return localDateStr(new Date(y, m - 1 + n, Math.min(d, daysInMonth)));
+  }
+  return localDateStr(new Date(y, m - 1, d + 7 * PHOTO_WEEKS_PER_SHEET[cadence] * n));
+}
+
+// Which sheet number a day falls in; negative before the start date.
+function photoSheetNumber(start: string, cadence: PhotoCadence, day: string): number {
+  if (cadence === "monthly") {
+    const [sy, sm] = start.split("-").map(Number);
+    const [y, m] = day.split("-").map(Number);
+    const n = (y - sy) * 12 + (m - sm);
+    return photoSheetOpening(start, cadence, n) > day ? n - 1 : n;
+  }
+  const days = Math.round((new Date(`${day}T00:00:00`).getTime() - new Date(`${start}T00:00:00`).getTime()) / 86400000);
+  return Math.floor(days / (7 * PHOTO_WEEKS_PER_SHEET[cadence]));
+}
+
+// The sheet a day belongs to, keyed by the day it opened. null before the
+// coach's first sheet date: nothing is open yet.
+export function photoSheetFor(clientId: number, day: string): string | null {
+  const cadence = getPhotoCadence(clientId);
+  const start = getPhotoStartDate(clientId);
+  if (!start) return photoPeriodFor(day, cadence);
+  if (day < start) return null;
+  return photoSheetOpening(start, cadence, photoSheetNumber(start, cadence, day));
+}
+
+// The next `count` days a sheet opens after `day`, starting with the first
+// sheet itself while `day` is still before it.
+export function upcomingPhotoSheets(clientId: number, day: string, count: number): string[] {
+  const cadence = getPhotoCadence(clientId);
+  const start = getPhotoStartDate(clientId);
+  const out: string[] = [];
+  if (!start) {
+    let next = nextPhotoPeriodStart(photoPeriodFor(day, cadence), cadence);
+    while (out.length < count) {
+      out.push(next);
+      next = nextPhotoPeriodStart(next, cadence);
+    }
+    return out;
+  }
+  const first = day < start ? 0 : photoSheetNumber(start, cadence, day) + 1;
+  for (let n = first; out.length < count; n++) out.push(photoSheetOpening(start, cadence, n));
+  return out;
 }
 
 export function listPhotoSlots(clientId: number): PhotoSlot[] {
@@ -3075,6 +3181,7 @@ export type PhotoPeriodNote = {
   strengths: string;
   improvements: string;
   next_steps: string;
+  saved_at?: string | null;
 };
 
 export function getPhotoPeriodNote(clientId: number, period: string): PhotoPeriodNote {
@@ -3091,6 +3198,42 @@ export function savePhotoPeriodNote(note: PhotoPeriodNote) {
   if (idx >= 0) data.photo_period_notes[idx] = note;
   else data.photo_period_notes.push(note);
   persist();
+}
+
+// The angles new sheets ask for. Paused ones stay in listPhotoSlots so the
+// sheets they were already on still show them.
+export function listActivePhotoSlots(clientId: number): PhotoSlot[] {
+  return listPhotoSlots(clientId).filter((s) => !s.paused);
+}
+
+export function setPhotoSlotPaused(id: number, paused: boolean) {
+  const data = getData();
+  const slot = data.photo_slots.find((s) => s.id === id);
+  if (!slot) return;
+  slot.paused = paused;
+  persist();
+}
+
+export function reorderPhotoSlots(clientId: number, orderedIds: number[]) {
+  const data = getData();
+  const mine = data.photo_slots.filter((s) => s.client_id === clientId);
+  const rest = mine.filter((s) => !orderedIds.includes(s.id)).sort((a, b) => a.order_index - b.order_index);
+  const sequence = [...orderedIds.map((id) => mine.find((s) => s.id === id)).filter((s): s is PhotoSlot => !!s), ...rest];
+  sequence.forEach((s, i) => (s.order_index = i));
+  persist();
+}
+
+// When the client was last reminded about this sheet. Photo reminders carry
+// a reminder:photos… dedupe key that ends in the client and period.
+export function lastPhotoReminderAt(clientId: number, period: string): string | null {
+  const tail = `:${clientId}:${period}`;
+  const stamps = getData()
+    .coach_activity.filter(
+      (a) => a.client_id === clientId && a.kind === "reminder" && !!a.dedupe_key?.startsWith("reminder:photos") && a.dedupe_key.includes(tail)
+    )
+    .map((a) => a.created_at)
+    .sort();
+  return stamps[stamps.length - 1] ?? null;
 }
 
 // Writes the uploaded file under DATA_DIR/uploads and records it — this is
@@ -3127,7 +3270,9 @@ export function saveDemoVideoUpload(
 }
 
 export function savePhotoUpload(clientId: number, slotId: number, buffer: Buffer, mimeType: string): string {
-  const period = photoPeriodFor(localDateStr(), getPhotoCadence(clientId));
+  const period = photoSheetFor(clientId, localDateStr());
+  // Before the coach's first sheet date there is no sheet to file it in.
+  if (!period) return "";
   const ext = (mimeType.split("/")[1] || "jpg").replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "jpg";
   const dir = path.join(DATA_DIR, "uploads", "progress", String(clientId), String(slotId));
   fs.mkdirSync(dir, { recursive: true });
@@ -3326,6 +3471,7 @@ export type ClientProfile = {
   goal_phase_start_date: string | null;
   goal_date: string | null;
   main_goal?: string | null;
+  main_goal_saved_at?: string | null;
   check_in_day: string | null;
   steps_goal: string;
   cardio_goal: string;
@@ -3371,7 +3517,13 @@ export function saveClientProfile(profile: ClientProfile) {
   // card save keeps whatever is already stored.
   const main_goal =
     profile.main_goal !== undefined ? profile.main_goal : idx >= 0 ? (data.client_profiles[idx].main_goal ?? null) : null;
-  const next = { ...profile, main_goal };
+  const main_goal_saved_at =
+    profile.main_goal_saved_at !== undefined
+      ? profile.main_goal_saved_at
+      : idx >= 0
+      ? (data.client_profiles[idx].main_goal_saved_at ?? null)
+      : null;
+  const next = { ...profile, main_goal, main_goal_saved_at };
   if (idx >= 0) data.client_profiles[idx] = next;
   else data.client_profiles.push(next);
   persist();
@@ -3380,7 +3532,7 @@ export function saveClientProfile(profile: ClientProfile) {
 /** The coach's headline goal for the client; empty clears it. */
 export function setClientMainGoal(clientId: number, text: string) {
   const profile = getClientProfile(clientId);
-  saveClientProfile({ ...profile, main_goal: text.trim() || null });
+  saveClientProfile({ ...profile, main_goal: text.trim() || null, main_goal_saved_at: new Date().toISOString() });
 }
 
 // Days between today and the profile's goal date — computed live rather than
@@ -3904,6 +4056,7 @@ const PHOTO_PERIOD_UNIT: Record<PhotoCadence, string> = {
   weekly: "Week",
   biweekly: "Check-in",
   monthly: "Month",
+  sixweekly: "Block",
 };
 
 export type DueItem = { id: string; label: string; detail: string; targetTab: string };
@@ -3944,9 +4097,9 @@ export function getDueItems(clientId: number): DueItem[] {
   const measurementFields = listMeasurementFields(clientId).filter(deployedToClient);
   const measurementLoggedToday = listMeasurementDates(clientId).includes(today);
 
-  const photoSlots = listPhotoSlots(clientId);
+  const photoSlots = listActivePhotoSlots(clientId);
   const cadence = getPhotoCadence(clientId);
-  const currentPeriod = photoPeriodFor(today, cadence);
+  const currentPeriod = photoSheetFor(clientId, today);
   const photoUploads = listPhotoUploads(photoSlots.map((s) => s.id));
   const uploadedThisPeriod = photoUploads.filter((u) => u.period === currentPeriod).length;
 
@@ -3975,7 +4128,7 @@ export function getDueItems(clientId: number): DueItem[] {
       targetTab: "measurements",
     });
   }
-  if (photoSlots.length > 0 && uploadedThisPeriod < photoSlots.length) {
+  if (currentPeriod && photoSlots.length > 0 && uploadedThisPeriod < photoSlots.length) {
     items.push({
       id: "photos",
       label: "Progress pictures",
@@ -4166,26 +4319,11 @@ function ratingScaleMax(unit: string): number | null {
   return max >= 2 && max <= 10 ? max : null;
 }
 
-/** A metric's movement inside the current phase, for the client. */
-export type CheckInTrend = {
-  /** Oldest first. The first point may be the last reading of the phase
-      before, carried over as this phase's starting line. */
-  points: { date: string; value: number; carried?: boolean }[];
-  phaseName: string | null;
-  /** "from 3 Aug" */
-  startLabel: string;
-  first: number;
-  latest: number;
-  change: number;
-};
-
 export type CheckInMetric = {
   id: string;
   name: string;
   unit: string;
   step: string;
-  /** Movement inside the current phase, or null with fewer than two readings. */
-  trend: CheckInTrend | null;
   // Value already logged for the period being edited, so reopening the
   // screen shows what was sent rather than an empty form.
   value: string;
@@ -4231,32 +4369,6 @@ export function getCheckInSections(clientId: number): CheckInData {
   const fmtDate = (iso: string) =>
     new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-  // Trends are phase-scoped: the block of work the client is in is the
-  // stretch they care about. The phase is the running nutrition phase on
-  // the coach's plan; without one, the card's phase start or the start of
-  // coaching. The last reading before the phase began carries over as its
-  // starting line, so a new phase does not open with an empty chart.
-  const trendPhase = getCurrentPhase(clientId, "nutrition");
-  const trendProfile = getClientProfile(clientId);
-  const trendStart = trendPhase?.start_week ?? trendProfile.goal_phase_start_date ?? trendProfile.coaching_start_date ?? null;
-  const trendFor = (series: { date: string; value: number }[]): CheckInTrend | null => {
-    const upTo = series.filter((pt) => pt.date <= today);
-    const inPhase = trendStart ? upTo.filter((pt) => pt.date >= trendStart) : upTo.slice(-12);
-    const before = trendStart ? upTo.filter((pt) => pt.date < trendStart).slice(-1) : [];
-    const points = [...before.map((pt) => ({ ...pt, carried: true })), ...inPhase];
-    if (points.length < 2) return null;
-    const first = points[0].value;
-    const latest = points[points.length - 1].value;
-    return {
-      points,
-      phaseName: trendPhase?.name ?? null,
-      startLabel: `from ${fmtDate(trendStart ?? points[0].date)}`,
-      first,
-      latest,
-      change: Math.round((latest - first) * 10) / 10,
-    };
-  };
-
   // A tracker metric's row: what's logged for the current period, plus the
   // most recent entry from any earlier period as the hint.
   const trackerSection = (
@@ -4289,7 +4401,6 @@ export function getCheckInSections(clientId: number): CheckInData {
             ? `${previous.value}${def.unit && !scaleMax ? ` ${def.unit}` : scaleMax ? `/${scaleMax}` : ""} on ${fmtDate(previous.period)}`
             : null,
           scaleMax,
-          trend: trendFor(getMetricSeries(def.id)),
         };
       }),
     };
@@ -4299,14 +4410,12 @@ export function getCheckInSections(clientId: number): CheckInData {
   const daily = trackerSection(
     "daily",
     today,
-    "Every day",
+    "Daily",
     "What your coach asked you to log every day. Takes about twenty seconds."
   );
   if (daily) sections.push(daily);
 
-  // Weekly metrics join the list only once their window opens (the coach's
-  // check-in day onwards), so most days the client sees just the dailies.
-  const weekly = weeklyCheckInOpen(clientId, today) ? trackerSection("weekly", thisWeek, "This week", "One entry covers the whole week.") : null;
+  const weekly = trackerSection("weekly", thisWeek, "Weekly", "One entry covers the whole week.");
   if (weekly) sections.push(weekly);
 
   // ---- Measurements ----
@@ -4322,7 +4431,7 @@ export function getCheckInSections(clientId: number): CheckInData {
     sections.push({
       id: "measurements",
       note: getCheckInNote(clientId, "measurements", today),
-      label: "Measurements",
+      label: "Measure",
       intro: "Same spots, same time of day: first thing, before food.",
       metrics: fields.map((f) => {
         const current = valueAt(f.id, today);
@@ -4335,7 +4444,6 @@ export function getCheckInSections(clientId: number): CheckInData {
           value: current != null ? String(current) : "",
           hint: previous != null ? `${previous}${f.unit ? ` ${f.unit}` : ""} on ${fmtDate(previousDate!)}` : null,
           scaleMax: null,
-          trend: trendFor(getMeasurementSeries(f.id)),
         };
       }),
     });
@@ -4383,8 +4491,8 @@ export function getCheckInSections(clientId: number): CheckInData {
           .join(" · ") || null;
 
   const cadence = getPhotoCadence(clientId);
-  const photoPeriod = photoPeriodFor(today, cadence);
-  const slots = listPhotoSlots(clientId);
+  const photoPeriod = photoSheetFor(clientId, today);
+  const slots = listActivePhotoSlots(clientId);
   const uploads = listPhotoUploads(slots.map((s) => s.id));
 
   const photoSlots = slots.map((s) => ({
@@ -4400,10 +4508,11 @@ export function getCheckInSections(clientId: number): CheckInData {
     deltas,
     photoSlots,
     photoPeriodLabel: unit,
-    photosDue: photoSlots.length > 0 && photoSlots.some((p) => !p.src),
-    photosNextLabel: `All ${photoSlots.length} taken. The next set opens ${
-      cadence === "monthly" ? "next month" : cadence === "biweekly" ? "in two weeks" : "next week"
-    }.`,
+    // Nothing to upload before the coach's first sheet date.
+    photosDue: photoPeriod != null && photoSlots.length > 0 && photoSlots.some((p) => !p.src),
+    photosNextLabel: photoPeriod
+      ? `All ${photoSlots.length} taken. The next set opens ${fmtDate(upcomingPhotoSheets(clientId, today, 1)[0])}.`
+      : `The first set opens ${fmtDate(upcomingPhotoSheets(clientId, today, 1)[0])}.`,
   };
 }
 
@@ -4542,7 +4651,7 @@ export function getClientSnapshot(clientId: number): ClientSnapshot {
   const weightField = measurementFields.find((f) => f.name.toLowerCase().includes("weight"));
   const change = getMeasurementChangeSummary(clientId);
 
-  const photoSlots = listPhotoSlots(clientId);
+  const photoSlots = listActivePhotoSlots(clientId);
   const photoUploads = listPhotoUploads(photoSlots.map((s) => s.id));
   const currentWeek = weekStart(localDateStr());
   const uploadedThisWeek = photoUploads.filter((u) => u.period === currentWeek).length;
@@ -6186,7 +6295,7 @@ export type PlanGoalRow = {
   live: string;
   pct: number;
   rule: string;
-  setIn: { meetingId: number; topic: string } | null;
+  setIn: { meetingId: number; topic: string; date: string } | null;
   setDate: string | null;
   by: string | null;
   tracking: GoalTracking | null;
@@ -6264,7 +6373,7 @@ export function getPlanData(clientId: number) {
       live,
       pct,
       rule,
-      setIn: meeting ? { meetingId: meeting.id, topic: meeting.topic || "Check-in call" } : null,
+      setIn: meeting ? { meetingId: meeting.id, topic: meeting.topic || "Check-in call", date: meeting.date } : null,
       setDate: goal.created_at ?? null,
       by,
       tracking: t,
@@ -6286,6 +6395,7 @@ export function getPlanData(clientId: number) {
     nextReview: next ? { id: next.id, date: next.date, topic: next.topic || "Check-in call" } : null,
     goalOptions: getGoalEditorOptions(clientId),
     mainGoal: getClientProfile(clientId).main_goal ?? "",
+    mainGoalSavedAt: getClientProfile(clientId).main_goal_saved_at ?? null,
   };
 }
 

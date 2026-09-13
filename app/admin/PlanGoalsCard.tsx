@@ -9,25 +9,26 @@ import DragList from "../components/DragList";
 import { GoalEditor } from "./GoalsPanel";
 
 // The goals card on the Plan tab: every goal as a table row with its live
-// standing, progress and where it was set. One list per client; the
-// Meetings tab and the client's Home read the same goals, in the order
-// the coach drags them into here.
+// standing and where it was set. One list per client; the Meetings tab and
+// the client's Home read the same goals, in the order the coach drags them
+// into here.
 
-const KIND_PILL: Record<PlanGoalRow["kind"], { label: string; bg: string; fg: string }> = {
-  metric: { label: "Metric", bg: "#dff3ea", fg: "#0f5c46" },
-  exercise: { label: "Exercise", bg: "#e6e4fa", fg: "#3a3390" },
-  habit: { label: "Habit", bg: "#efede6", fg: "#4a4a45" },
-  none: { label: "—", bg: "#eef0f3", fg: "#8b93a1" },
+// What a goal tracks. A kind, not a status, so it is always grey.
+const KIND_LABEL: Record<PlanGoalRow["kind"], string> = {
+  metric: "Metric",
+  exercise: "Exercise",
+  habit: "Habit",
+  none: "Text",
 };
 
-const fmtShort = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { day: "numeric", month: "short" });
+const dayMonth = (iso: string) =>
+  new Date(`${iso.slice(0, 10)}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
 export default function PlanGoalsCard({
   clientId,
   clientName,
   currentPhaseName,
   goals,
-  nextReview,
   options,
 }: {
   clientId: number;
@@ -72,8 +73,6 @@ export default function PlanGoalsCard({
       setDragKey((k) => k + 1);
     });
   const [editing, setEditing] = useState<"new" | number | null>(null);
-  const open = goals.filter((g) => !g.done).length;
-  const done = goals.length - open;
   const visible = goals.filter((g) => (filter === "all" ? true : pendingDone[g.id] != null ? true : filter === "done" ? g.done : !g.done));
   // While an order is queued the table shows it, so the coach sees what
   // Apply will save.
@@ -88,91 +87,119 @@ export default function PlanGoalsCard({
 
   return (
     <section className="pl-card">
-      <div className="pl-band">
-        <div className="pl-band-left">
-          <div className="pl-eyebrow">Goals</div>
+      <div className="pl-card-head">
+        <div className="pl-card-titles">
+          <span className="pl-eyebrow">Goals</span>
+          <span className="pl-helper">Set in meetings · linked goals update themselves</span>
         </div>
-        <div className="pl-band-right">
-          <div className="pl-switch" role="tablist">
+        <div className="pl-card-tools">
+          <div className="pl-seg" role="radiogroup" aria-label="Which goals to show">
             {(["open", "done", "all"] as const).map((f) => (
-              <button key={f} type="button" className={`pl-switch-opt${filter === f ? " active" : ""}`} onClick={() => setFilter(f)}>
+              <button
+                key={f}
+                type="button"
+                role="radio"
+                aria-checked={filter === f}
+                className={`pl-seg-btn${filter === f ? " active" : ""}`}
+                onClick={() => setFilter(f)}
+              >
                 {f === "open" ? "Open" : f === "done" ? "Done" : "All"}
               </button>
             ))}
           </div>
-          <button type="button" className="pl-primary" onClick={() => setEditing("new")}>
-            + Add goal
+          <button type="button" className="pl-btn navy" onClick={() => setEditing("new")}>
+            Add goal
           </button>
         </div>
       </div>
 
-      <div className="pl-table">
-        <div className="pl-thead">
-          <span />
-          <span>Goal</span>
-          <span>Tracks</span>
-          <span>Live</span>
-          <span>Set in</span>
-          <span>By</span>
-          <span />
+      <div className="pl-goals-scroll">
+        <div className="pl-goals">
+          <div className="pl-goals-head">
+            <span />
+            <span>Goal</span>
+            <span>Tracks</span>
+            <span>Live</span>
+            <span>Set in</span>
+            <span>By</span>
+            <span />
+          </div>
+          {rows.length === 0 && (
+            <div className="pl-goals-empty">{filter === "done" ? "Nothing closed yet." : "No goals yet. Add the first one."}</div>
+          )}
+          <DragList
+            key={dragKey}
+            className="pl-draglist"
+            onReorder={(ids) => setPendingOrder(ids)}
+            items={rows.map((g) => {
+              const isDone = doneOf(g);
+              const queued = pendingDone[g.id] != null;
+              const textOnly = g.kind === "none";
+              return {
+                id: g.id,
+                node: (
+                  <div className={`pl-goal-row${isDone ? " is-done" : ""}${queued ? " is-queued" : ""}`}>
+                    <span className="pl-goal-status">
+                      {textOnly ? (
+                        <label className="pl-check" title={isDone ? "Mark not done" : "Mark done"}>
+                          <input type="checkbox" checked={isDone} onChange={() => toggleDone(g)} aria-label={isDone ? "Mark not done" : "Mark done"} />
+                          <span className="pl-check-box" aria-hidden="true">
+                            {isDone ? "✓" : ""}
+                          </span>
+                        </label>
+                      ) : (
+                        <span
+                          className={`pl-mark ${isDone ? "done" : g.tone === "green" ? "on" : "off"}`}
+                          title={isDone ? "Done" : g.tone === "green" ? "On track" : "Not on track yet"}
+                        />
+                      )}
+                    </span>
+                    <span className="pl-goal-main">
+                      <span className="pl-goal-name">{g.text}</span>
+                      <span className="pl-goal-rule">{textOnly ? "Text only · closed by hand" : g.rule}</span>
+                    </span>
+                    <span>
+                      <span className="pl-kind">{KIND_LABEL[g.kind]}</span>
+                    </span>
+                    <span className={`pl-live ${textOnly ? "none" : g.tone}`}>{textOnly ? "—" : g.live || "—"}</span>
+                    <span className="pl-setin">
+                      {g.setIn ? (
+                        <>
+                          <a href={`/admin?client=${clientId}&tab=meetings`} className="pl-setin-link">
+                            {g.setIn.topic}
+                          </a>
+                          <span className="pl-setin-date">{dayMonth(g.setIn.date)}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="pl-dash">—</span>
+                          {g.setDate && <span className="pl-setin-date">Set {dayMonth(g.setDate)}</span>}
+                        </>
+                      )}
+                    </span>
+                    <span className="pl-by">{g.by ?? "—"}</span>
+                    <span className="pl-goal-actions">
+                      <button type="button" className="pl-text-btn" onClick={() => setEditing(g.id)}>
+                        Edit
+                      </button>
+                      <ConfirmDeleteButton
+                        action={removeClientGoalAction}
+                        hiddenFields={{ id: g.id }}
+                        label={`Remove goal: ${g.text}`}
+                        text="Remove"
+                        textClassName="pl-text-btn danger"
+                      />
+                    </span>
+                  </div>
+                ),
+              };
+            })}
+          />
+          <p className="pl-goals-foot">
+            Drag a row by its grip to change the order the client sees, then Apply. Linked goals update themselves from
+            check-ins and logged sets. Text-only goals are closed by hand — tick the box.
+          </p>
         </div>
-        {rows.length === 0 && <div className="pl-empty-row">{filter === "done" ? "Nothing closed yet." : "No goals yet. Add the first one."}</div>}
-        <DragList
-          key={dragKey}
-          className="pl-draglist"
-          onReorder={(ids) => setPendingOrder(ids)}
-          items={rows.map((g) => {
-          const isDone = doneOf(g);
-          const queued = pendingDone[g.id] != null;
-          const dotClass = isDone ? "done" : g.kind === "none" ? "hollow" : g.tone === "orange" ? "orange" : "green";
-          const pill = KIND_PILL[g.kind];
-          return {
-            id: g.id,
-            node: (
-            <div className={`pl-tr${isDone ? " is-done" : ""}${queued ? " is-queued" : ""}`}>
-              <span className="pl-td-dot">
-                {g.kind === "none" ? (
-                  <label className="pl-check" title={isDone ? "Mark not done" : "Mark done"}>
-                    <input type="checkbox" checked={isDone} onChange={() => toggleDone(g)} aria-label={isDone ? "Mark not done" : "Mark done"} />
-                    <span className="pl-check-box" aria-hidden="true">{isDone ? "✓" : ""}</span>
-                  </label>
-                ) : (
-                  <span className={`pl-dot ${dotClass}`} />
-                )}
-              </span>
-              <span className="pl-td-goal">
-                <span className="pl-goal-text">{g.text}</span>
-                <span className="pl-goal-rule">{g.rule}</span>
-              </span>
-              <span>
-                <span className="pl-kind" style={{ background: pill.bg, color: pill.fg }}>
-                  {pill.label}
-                </span>
-              </span>
-              <span className={`pl-live ${dotClass}`}>{g.live || (g.done ? "done" : "")}</span>
-              <span className="pl-td-setin">
-                {g.setIn ? (
-                  <a href={`/admin?client=${clientId}&tab=meetings`} className="pl-link">
-                    {g.setIn.topic}
-                  </a>
-                ) : (
-                  <span className="pl-dash">—</span>
-                )}
-                {g.setDate && <span className="pl-goal-rule">{fmtShort(g.setDate)}</span>}
-              </span>
-              <span className="pl-td-by">{g.by ?? "—"}</span>
-              <span className="pl-td-tools">
-                <button type="button" className="pl-link-btn" onClick={() => setEditing(g.id)}>
-                  Edit
-                </button>
-                <ConfirmDeleteButton action={removeClientGoalAction} hiddenFields={{ id: g.id }} label={`Delete goal: ${g.text}`} />
-              </span>
-            </div>
-            ),
-          };
-        })}
-        />
-        <div className="pl-tfoot">Drag a row by its grip to change the order the client sees, then Apply. Linked goals update themselves from check-ins and logged sets. Text-only goals are closed by hand — tick the box.</div>
       </div>
 
       {changeCount > 0 && (

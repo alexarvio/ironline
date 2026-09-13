@@ -20,8 +20,9 @@ export default function SectionTabs({
   );
   const active = sections.find((s) => s.id === activeId) ?? sections[0];
 
+  // One white card: the tabs across its top, the active section below.
   return (
-    <>
+    <div className="ad-tabs">
       <div className="ad-tabbar" role="tablist">
         {sections.map((s) => (
           <button
@@ -45,6 +46,6 @@ export default function SectionTabs({
         ))}
       </div>
       <div className="ad-tab-panel">{active?.content}</div>
-    </>
+    </div>
   );
 }

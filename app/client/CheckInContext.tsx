@@ -16,6 +16,16 @@ export function useOpenCheckIn() {
   return useContext(CheckInContext);
 }
 
+// Same bridge for the Progress pictures push view, opened from Home's
+// pictures card and from the row under the Account tab.
+const PhotosContext = createContext<(() => void) | null>(null);
+
+export const PhotosProvider = PhotosContext.Provider;
+
+export function useOpenPhotos() {
+  return useContext(PhotosContext);
+}
+
 // Same bridge for the Notifications push view. Home's coach-note rows used
 // to open the chat thread the note came from; with chat cut from the first
 // beta they open Notifications instead, which is where coach activity now

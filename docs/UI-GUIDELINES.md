@@ -89,6 +89,7 @@ Pills that classify rather than judge use tints, not status colours.
 | Category | Tint | Text |
 |---|---|---|
 | Training day / Exercise / Post-workout | `#e6e4fa` | `#3a3390` |
+| Progress pictures identity, off the training tint (Home upload card, open sheet on the Progress pictures screen; nowhere else in the client app) | `#f1f0fc`, border `#d9d6f5`, rule `#e6e3f7` | `#211d5e`; eyebrow `#6b64ab`; button / filled bar `#3a3390`; uploading `#8b84d6`; missing `#ddd9f4` |
 | Rest day / neutral / Before bed | `#eef0f3` | `#5b6474` |
 | With breakfast / draft programme | `#fff3dc` | `#8a5a12` |
 | Metric / nutrition track | `#dff3ea` | `#0f5c46` |

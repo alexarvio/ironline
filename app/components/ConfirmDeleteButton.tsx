@@ -20,6 +20,7 @@ export default function ConfirmDeleteButton({
   label,
   description,
   text,
+  textClassName,
 }: {
   action: (formData: FormData) => void;
   hiddenFields: Record<string, string | number>;
@@ -32,6 +33,9 @@ export default function ConfirmDeleteButton({
       the bare trash icon. For deletes big enough to deserve words, like a
       whole client. */
   text?: string;
+  /** With `text`, render a plain text button with this class instead of the
+      danger button, for a table row's quiet "Remove". */
+  textClassName?: string;
 }) {
   const [confirming, setConfirming] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -39,7 +43,11 @@ export default function ConfirmDeleteButton({
 
   return (
     <>
-      {text ? (
+      {text && textClassName ? (
+        <button type="button" className={textClassName} onClick={() => setConfirming(true)}>
+          {text}
+        </button>
+      ) : text ? (
         <button type="button" className="ad-danger-btn" onClick={() => setConfirming(true)}>
           <TrashIcon />
           <span>{text}</span>

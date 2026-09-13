@@ -27,6 +27,7 @@ import {
   getNutritionPlan,
   getCurrentPhase,
   getPhotoCadence,
+  getPhotoInstructions,
   getPhotoPeriodNote,
   getPublishedWeek,
   listClients,
@@ -38,8 +39,8 @@ import {
   listPhotoSlots,
   listPhotoUploads,
   localDateStr,
-  photoPeriodFor,
-  photoPeriodIndex,
+  photoSheetFor,
+  upcomingPhotoSheets,
   programWeekLabel,
   slugify,
   SUPPLEMENT_ITEMS,
@@ -47,8 +48,8 @@ import {
 } from "../lib/queries";
 import TrainingDayList from "./TrainingDayList";
 import ExerciseCoachNote from "./ExerciseCoachNote";
-import PhotoPeriodHistoryRow from "./PhotoPeriodHistoryRow";
-import HomeHub, { HomeTrack, UpcomingMeeting } from "./HomeHub";
+import { ProgressPicturesRow, type ProgressPicturesProps } from "./ProgressPicturesScreen";
+import HomeHub, { HomePhotos, HomeTrack, UpcomingMeeting } from "./HomeHub";
 import NutritionDayToggle, { NutritionTargetSet } from "./NutritionDayToggle";
 import CalorieLog from "./CalorieLog";
 import ReportArchiveList, { ArchiveReport } from "./ReportArchiveList";
@@ -79,11 +80,7 @@ import {
 // exists) and freezes that empty snapshot in the deployed build forever.
 export const dynamic = "force-dynamic";
 
-const PERIOD_UNIT = {
-  weekly: "Week",
-  biweekly: "Check-in",
-  monthly: "Month",
-} as const;
+const MONTH_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 // A note with no kind set still needs a header — "Note" is the honest
 // fallback rather than guessing which of the three it is.
@@ -120,6 +117,7 @@ async function resolveClientId(raw: string | undefined): Promise<number | null> 
 }
 
 const MONTH_CAP = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const COUNT_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
 const fmtShortDate = (iso: string) => {
   const d = new Date(`${iso}T12:00:00`);
   return `${d.getDate()} ${MONTH_CAP[d.getMonth()]}`;
@@ -232,7 +230,7 @@ function weekStats(CLIENT_ID: number, week: number) {
   return { daysTrained, totalDays };
 }
 
-function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
+function HomeTab({ CLIENT_ID, photos }: { CLIENT_ID: number; photos: HomePhotos }) {
   const client = getClient(CLIENT_ID);
   const profile = getClientProfile(CLIENT_ID);
   // Home's header keeps the goal countdown to whole weeks ("11 weeks to
@@ -327,6 +325,7 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
       upcoming={upcoming}
       recap={getLastMeetingRecap(CLIENT_ID)}
       checkInStatus={checkInStatus}
+      photos={photos}
     />
   );
 }
@@ -658,6 +657,12 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
       </section>
 
       <section className="home-dark-section">
+        <div className="home-dark-rows">
+          <ProgressPicturesRow />
+        </div>
+      </section>
+
+      <section className="home-dark-section">
         <div className="home-dark-section-head">
           <span className="home-dark-section-title">Progress reports</span>
           {reports.length > 0 && <span className="home-dark-section-count">{reportCountLabel}</span>}
@@ -846,46 +851,61 @@ function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
   );
 }
 
-// Past photo periods and the coach's written feedback on each. The
-// current period's upload slots moved into the Check-in screen's
-// measurements section; this is the history that sat below them, kept
-// reachable there rather than dropped.
-function PhotoHistory({ CLIENT_ID }: { CLIENT_ID: number }) {
-  const photoSlots = listPhotoSlots(CLIENT_ID);
-  const photoUploads = listPhotoUploads(photoSlots.map((s) => s.id));
+// ---- Progress pictures screen --------------------------------------------
+// Everything the pushed Progress pictures screen shows, from the sheet
+// schedule the coach set: the sheet open now with its angles, and every
+// earlier sheet with the coach's notes on it.
+
+// "September sheet" on a monthly schedule; the opening day otherwise.
+function sheetTitle(period: string, cadence: ReturnType<typeof getPhotoCadence>) {
+  const d = new Date(`${period}T00:00:00`);
+  return cadence === "monthly" ? `${MONTH_LONG[d.getMonth()]} sheet` : `Sheet of ${d.getDate()} ${MONTH_CAP[d.getMonth()]}`;
+}
+
+function progressPicturesData(CLIENT_ID: number): ProgressPicturesProps {
   const cadence = getPhotoCadence(CLIENT_ID);
-  const currentPeriod = photoPeriodFor(localDateStr(), cadence);
+  const today = localDateStr();
+  const slots = listPhotoSlots(CLIENT_ID);
+  const active = slots.filter((s) => !s.paused);
+  const uploads = listPhotoUploads(slots.map((s) => s.id));
+  const srcFor = (slotId: number, period: string) =>
+    uploads.find((u) => u.slot_id === slotId && u.period === period)?.file_path ?? null;
+  const noteFor = (period: string) => {
+    const n = getPhotoPeriodNote(CLIENT_ID, period);
+    return { shape: n.shape, strengths: n.strengths, improvements: n.improvements, next_steps: n.next_steps };
+  };
 
-  const pastPeriods = listPhotoPeriods(photoSlots.map((s) => s.id)).filter((p) => p !== currentPeriod);
-  const periodIndex = photoPeriodIndex(photoSlots.map((s) => s.id));
-  if (pastPeriods.length === 0) return null;
+  const openPeriod = active.length > 0 ? photoSheetFor(CLIENT_ID, today) : null;
+  const earlier = listPhotoPeriods(slots.map((s) => s.id))
+    .filter((p) => p !== openPeriod)
+    .map((period) => ({
+      period,
+      title: sheetTitle(period, cadence),
+      // A sheet keeps any paused angle it already has a photo for.
+      photos: slots
+        .filter((s) => !s.paused || srcFor(s.id, period))
+        .map((s) => ({ slotId: s.id, label: s.label, src: srcFor(s.id, period) })),
+      note: noteFor(period),
+    }));
+  const oldest = earlier[earlier.length - 1];
+  const next = active.length > 0 ? upcomingPhotoSheets(CLIENT_ID, today, 1)[0] : null;
 
-  return (
-    <div>
-      <div className="ci-section-title" style={{ display: "block", marginBottom: 8 }}>
-        Earlier sets
-      </div>
-      <div className="photo-gallery">
-        {pastPeriods.map((period) => {
-          const photos = photoSlots.map((slot) => ({
-            slotId: slot.id,
-            label: slot.label,
-            src: photoUploads.find((u) => u.slot_id === slot.id && u.period === period)?.file_path ?? null,
-          }));
-          const uploadedCount = photos.filter((p) => p.src).length;
-          return (
-            <PhotoPeriodHistoryRow
-              key={period}
-              title={`${PERIOD_UNIT[cadence]} ${periodIndex[period] ?? "?"}`}
-              subtitle={`${uploadedCount}/${photoSlots.length} photos · ${period}`}
-              photos={photos}
-              note={getPhotoPeriodNote(CLIENT_ID, period)}
-            />
-          );
-        })}
-      </div>
-    </div>
-  );
+  return {
+    clientId: CLIENT_ID,
+    openSheet: openPeriod
+      ? {
+          period: openPeriod,
+          title: sheetTitle(openPeriod, cadence),
+          openedLabel: fmtShortDate(openPeriod),
+          slots: active.map((s) => ({ id: s.id, label: s.label, src: srcFor(s.id, openPeriod) })),
+          instructions: getPhotoInstructions(CLIENT_ID),
+        }
+      : null,
+    earlier,
+    earlierSince: oldest ? MONTH_LONG[new Date(`${oldest.period}T00:00:00`).getMonth()] : null,
+    nextLabel: next ? fmtShortDate(next) : null,
+    hasAngles: slots.length > 0,
+  };
 }
 
 export default async function ClientPage({
@@ -913,6 +933,20 @@ export default async function ClientPage({
   const checkInData = getCheckInSections(CLIENT_ID);
   // Same source Home reads, so the tab dots and Home's count can't disagree.
   const checkInStatusForScreen = getCheckInStatus(CLIENT_ID);
+  // Home's progress-pictures card, from the same sheet the check-in shows:
+  // a prompt while it is missing photos, "sent" once every angle is in, and
+  // nothing when no sheet is open (no photo is ever filed outside one).
+  const photoCount = checkInData.photoSlots.length;
+  const homePhotos: HomePhotos = checkInData.photosDue
+    ? { state: "due" }
+    : photoCount > 0 && checkInData.photoSlots.every((p) => p.src)
+    ? {
+        state: "done",
+        summary: `${photoCount === 1 ? "Sent" : photoCount === 2 ? "Both" : `All ${COUNT_WORDS[photoCount] ?? photoCount}`} · next sheet ${fmtShortDate(
+          upcomingPhotoSheets(CLIENT_ID, localDateStr(), 1)[0]
+        )}`,
+      }
+    : null;
   const checkIn = {
     dateLabel: new Date(`${localDateStr()}T00:00:00`).toLocaleDateString("en-US", {
       weekday: "long",
@@ -921,15 +955,9 @@ export default async function ClientPage({
     }),
     today: localDateStr(),
     sections: checkInData.sections,
-    phaseLabel: checkInData.phaseLabel,
-    deltas: checkInData.deltas,
-    photoSlots: checkInData.photoSlots,
-    photoPeriodLabel: checkInData.photoPeriodLabel,
-    photosDue: checkInData.photosDue,
-    photosNextLabel: checkInData.photosNextLabel,
     dueSections: checkInStatusForScreen.dueTypes as string[],
-    photoHistory: <PhotoHistory CLIENT_ID={CLIENT_ID} />,
   };
+  const progressPictures = progressPicturesData(CLIENT_ID);
   const hasUnreadNotifications = getNotifications(CLIENT_ID).some((n) => !n.read);
 
   const currentWeekNum = getCurrentWeekNumber(CLIENT_ID);
@@ -958,7 +986,7 @@ export default async function ClientPage({
   });
 
   const tabs: AppTab[] = [
-    { id: "home", label: "Home", icon: <HomeIcon />, content: <HomeTab CLIENT_ID={CLIENT_ID} /> },
+    { id: "home", label: "Home", icon: <HomeIcon />, content: <HomeTab CLIENT_ID={CLIENT_ID} photos={homePhotos} /> },
     {
       id: "training",
       label: "Training",
@@ -996,6 +1024,7 @@ export default async function ClientPage({
       hasUnreadNotifications={hasUnreadNotifications}
       clientId={CLIENT_ID}
       checkIn={checkIn}
+      photos={progressPictures}
     />
   );
 }

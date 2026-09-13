@@ -327,6 +327,9 @@ type PhotoSlot = {
   client_id: number;
   label: string;
   order_index: number;
+  // A paused angle is left off new sheets but still shows on the sheets it
+  // was already part of. Missing on older rows, which means asking.
+  paused?: boolean;
 };
 // "period" is the start-date of whatever bucket the coach's chosen upload
 // cadence puts this photo in — a Monday for weekly/biweekly, the 1st of the
@@ -343,10 +346,16 @@ type PhotoUpload = {
 // setting per client, applying to all of their photo slots at once. Default
 // is weekly when no row exists yet (mirrors every other coach-configurable
 // default in this file).
-type PhotoCadence = "weekly" | "biweekly" | "monthly";
+type PhotoCadence = "weekly" | "biweekly" | "monthly" | "sixweekly";
 type PhotoSettings = {
   client_id: number;
   cadence: PhotoCadence;
+  // The day the first sheet opens; every later sheet opens a cadence step on
+  // from it. Missing on older rows, which keeps the calendar buckets.
+  photo_start_date?: string | null;
+  // The coach's note on how to take the pictures (light, distance, pose),
+  // shown on the client's open sheet.
+  photo_instructions?: string | null;
 };
 
 // The coach's written feedback on one period's photo set — shape, what's
@@ -360,6 +369,9 @@ type PhotoPeriodNote = {
   strengths: string;
   improvements: string;
   next_steps: string;
+  // When the coach last saved these notes. Missing on notes saved before
+  // the stamp existed.
+  saved_at?: string | null;
 };
 
 // Start Page: the coach's "Startpagina" tab — member info, coaching info, and goals.
@@ -392,6 +404,8 @@ type ClientProfile = {
   // save must not touch it (see saveClientProfile). Optional: older
   // profiles have no key.
   main_goal?: string | null;
+  // When the coach last saved main_goal on the Plan tab.
+  main_goal_saved_at?: string | null;
   check_in_day: string | null;
   steps_goal: string;
   cardio_goal: string;

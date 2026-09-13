@@ -1,74 +1,93 @@
 "use client";
 
-import { useState } from "react";
 import { ChevronDownIcon } from "../components/icons";
 
 type Photo = { slotId: number; label: string; src: string | null };
-type Note = { shape: string; strengths: string; improvements: string; next_steps: string };
+export type HistoryNote = { shape: string; strengths: string; improvements: string; next_steps: string };
 
-const NOTE_LABELS: { key: keyof Note; label: string }[] = [
+export const NOTE_LABELS: { key: keyof HistoryNote; label: string }[] = [
   { key: "shape", label: "Shape" },
   { key: "strengths", label: "What's strong" },
   { key: "improvements", label: "What to improve" },
   { key: "next_steps", label: "Next steps" },
 ];
 
-// Read-only mirror of the coach's PhotoPeriodRow — the client can look back
-// at past check-ins and see the coach's written feedback, but can't edit it.
+// Read-only view of one earlier photo sheet on the Progress pictures screen.
+// Collapsed it is a strip of thumbnails, the title and counts; open, the
+// photos and whatever the coach wrote about them, empty fields skipped.
+// The screen owns which row is open, so only one is at a time.
 export default function PhotoPeriodHistoryRow({
   title,
-  subtitle,
   photos,
   note,
+  open,
+  onToggle,
 }: {
   title: string;
-  subtitle: string;
   photos: Photo[];
-  note: Note;
+  note: HistoryNote;
+  open: boolean;
+  onToggle: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const hasNote = NOTE_LABELS.some(({ key }) => note[key].trim());
+  const notes = NOTE_LABELS.filter(({ key }) => note[key].trim());
+  const inCount = photos.filter((p) => p.src).length;
 
   return (
-    <div className="photo-period-row">
-      <button type="button" className="photo-period-header" onClick={() => setOpen((o) => !o)}>
-        <span className="photo-period-heading">
-          <span className="photo-period-title">{title}</span>
-          <span className="photo-period-subtitle">{subtitle}</span>
+    <article className="pp-app-past">
+      <button type="button" className="pp-app-past-head" aria-expanded={open} onClick={onToggle}>
+        <span className="pp-app-past-thumbs" aria-hidden="true">
+          {photos.slice(0, 4).map((p) =>
+            p.src ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={p.slotId} src={p.src} alt="" className="pp-app-past-thumb" />
+            ) : (
+              <span key={p.slotId} className="pp-app-past-thumb empty" />
+            )
+          )}
         </span>
-        <span className={`photo-period-chevron${open ? " open" : ""}`}>
+        <span className="pp-app-past-text">
+          <span className="pp-app-past-title">{title}</span>
+          <span className="pp-app-past-meta">
+            {inCount} of {photos.length}
+            {notes.length > 0 && " · coach replied"}
+          </span>
+        </span>
+        <span className={`pp-app-past-chevron${open ? " open" : ""}`} aria-hidden="true">
           <ChevronDownIcon />
         </span>
       </button>
 
       {open && (
-        <div className="photo-period-body">
-          <div className="photo-slot-grid">
+        <div className="pp-app-past-body">
+          <div className="pp-app-past-grid">
             {photos.map((p) => (
-              <div key={p.slotId} className="photo-thumb-card">
+              <figure key={p.slotId} className="pp-app-past-cell">
                 {p.src ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.src} alt={p.label} className="photo-thumb-img" />
+                  <a href={p.src} target="_blank" rel="noopener noreferrer" className="pp-app-past-photo" aria-label={`${p.label}, full size`}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.src} alt={p.label} />
+                  </a>
                 ) : (
-                  <div className="photo-thumb-empty">Not uploaded</div>
+                  <span className="pp-app-past-photo empty">Not sent</span>
                 )}
-                <div className="photo-thumb-label">{p.label}</div>
-              </div>
+                <figcaption className="pp-app-past-name">{p.label}</figcaption>
+              </figure>
             ))}
           </div>
 
-          {hasNote && (
-            <div className="photo-note-readonly">
-              {NOTE_LABELS.filter(({ key }) => note[key].trim()).map(({ key, label }) => (
-                <div key={key} className="photo-note-readonly-field">
-                  <div className="photo-note-readonly-label">{label}</div>
-                  <div className="photo-note-readonly-text">{note[key]}</div>
+          {notes.length > 0 && (
+            <div className="pp-app-notes">
+              <span className="pp-app-notes-label">What your coach said</span>
+              {notes.map(({ key, label }) => (
+                <div key={key}>
+                  <div className="pp-app-note-label">{label}</div>
+                  <div className="pp-app-note-text">{note[key]}</div>
                 </div>
               ))}
             </div>
           )}
         </div>
       )}
-    </div>
+    </article>
   );
 }

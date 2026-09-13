@@ -4,11 +4,12 @@ import Image from "next/image";
 import { ReactNode, useState, useSyncExternalStore } from "react";
 import { BellIcon, ChevronLeftIcon } from "../components/icons";
 import CheckInScreen, { CheckInProps } from "./CheckInScreen";
-import { CheckInProvider, FocusRefProvider, NavigateProvider, NotificationsProvider } from "./CheckInContext";
+import ProgressPicturesScreen, { type ProgressPicturesProps } from "./ProgressPicturesScreen";
+import { CheckInProvider, FocusRefProvider, NavigateProvider, NotificationsProvider, PhotosProvider } from "./CheckInContext";
 
 export type AppTab = { id: string; label: string; icon: ReactNode; content: ReactNode; footer?: ReactNode };
 
-type PushView = "notifications" | "checkin" | null;
+type PushView = "notifications" | "checkin" | "photos" | null;
 
 // The active bottom tab lives in sessionStorage, not just React state. A full
 // page load — a form that posts before hydration finishes on a slow phone, a
@@ -53,6 +54,7 @@ export default function AppShell({
   hasUnreadNotifications,
   clientId,
   checkIn,
+  photos,
 }: {
   clientName: string;
   tabs: AppTab[];
@@ -61,6 +63,7 @@ export default function AppShell({
   hasUnreadNotifications?: boolean;
   clientId: number;
   checkIn: CheckInProps;
+  photos: ProgressPicturesProps;
 }) {
   const storedTab = useSyncExternalStore(subscribeTab, readTab, () => null);
   const activeId = storedTab && tabs.some((t) => t.id === storedTab) ? storedTab : tabs[0]?.id;
@@ -98,16 +101,13 @@ export default function AppShell({
           today={checkIn.today}
           sections={checkIn.sections}
           initialSection={checkInSection}
-          phaseLabel={checkIn.phaseLabel}
-          deltas={checkIn.deltas}
-          photoSlots={checkIn.photoSlots}
-          photoPeriodLabel={checkIn.photoPeriodLabel}
           dueSections={checkIn.dueSections}
-          photosDue={checkIn.photosDue}
-          photosNextLabel={checkIn.photosNextLabel}
-          photoHistory={checkIn.photoHistory}
           onBack={() => setPushView(null)}
         />
+      </div>
+    ) : pushView === "photos" ? (
+      <div className="app-layer app-layer-push pp-app-screen">
+        <ProgressPicturesScreen data={photos} onBack={() => setPushView(null)} />
       </div>
     ) : pushView ? (
       <div className="app-layer app-layer-push cn-screen">
@@ -149,11 +149,13 @@ export default function AppShell({
 
         <main className="app-content dark" key={`${activeId}-${navResetKey}`}>
           <CheckInProvider value={openCheckIn}>
-            <NotificationsProvider value={() => setPushView("notifications")}>
-              <NavigateProvider value={goToTab}>
-                <FocusRefProvider value={focusRef}>{active?.content}</FocusRefProvider>
-              </NavigateProvider>
-            </NotificationsProvider>
+            <PhotosProvider value={() => setPushView("photos")}>
+              <NotificationsProvider value={() => setPushView("notifications")}>
+                <NavigateProvider value={goToTab}>
+                  <FocusRefProvider value={focusRef}>{active?.content}</FocusRefProvider>
+                </NavigateProvider>
+              </NotificationsProvider>
+            </PhotosProvider>
           </CheckInProvider>
         </main>
 

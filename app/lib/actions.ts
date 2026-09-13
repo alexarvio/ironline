@@ -37,6 +37,10 @@ import {
   addMetricTemplateCategory,
   addMetricTemplateItem,
   addPhotoSlot,
+  reorderPhotoSlots,
+  setPhotoInstructions,
+  setPhotoStartDate,
+  setPhotoSlotPaused,
   addReportTemplateSection,
   addSkinfoldEntry,
   applyMetricTemplateToClient,
@@ -741,34 +745,6 @@ export async function applyMetricTemplateAction(formData: FormData) {
 // Logs every metric field present on the form for one period at once — the
 // "log today" / "log this week" form submits all currently-defined metrics
 // in a single action rather than one action per field.
-// The whole check-in in one post: today's daily metrics, this week's weekly
-// ones when their window is open, today's measurements, and one note. The
-// screen shows them as one list, so they save as one.
-export async function saveCheckInAction(formData: FormData) {
-  const clientId = await requireClientAccess(Number(formData.get("clientId")));
-  const date = String(formData.get("date") || "");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
-  const num = (raw: FormDataEntryValue | null) => {
-    if (raw === null || raw === "") return undefined;
-    const v = Number(String(raw).replace(",", "."));
-    return Number.isFinite(v) ? v : null;
-  };
-  for (const freq of ["daily", "weekly"] as const) {
-    const period = freq === "weekly" ? weekStart(date) : date;
-    for (const def of listMetricDefinitions(clientId, freq)) {
-      const v = num(formData.get(`metric_${def.id}`));
-      if (v !== undefined) setMetricEntry(def.id, period, v);
-    }
-  }
-  for (const field of listMeasurementFields(clientId)) {
-    const v = num(formData.get(`field_${field.id}`));
-    if (v !== undefined) setMeasurementValue(field.id, date, v);
-  }
-  if (formData.has("note")) setCheckInNote(clientId, "daily", date, String(formData.get("note") ?? "").slice(0, 500));
-  revalidatePath("/admin");
-  revalidatePath("/client");
-}
-
 export async function logMetricPeriodAction(formData: FormData) {
   // Ignores the posted client id for clients — they always write their own.
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
@@ -824,8 +800,47 @@ export async function removePhotoSlotAction(formData: FormData) {
 export async function setPhotoCadenceAction(formData: FormData) {
   await requireCoach();
   const clientId = Number(formData.get("clientId"));
-  const cadence = String(formData.get("cadence") || "weekly") as "weekly" | "biweekly" | "monthly";
+  const raw = String(formData.get("cadence") || "weekly");
+  const cadence = (["weekly", "biweekly", "monthly", "sixweekly"] as const).find((c) => c === raw);
+  if (!cadence) return;
   setPhotoCadence(clientId, cadence);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function setPhotoSlotPausedAction(id: number, paused: boolean) {
+  await requireCoach();
+  if (!Number.isInteger(id)) return;
+  setPhotoSlotPaused(id, paused === true);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function reorderPhotoSlotsAction(clientId: number, orderedIds: number[]) {
+  await requireCoach();
+  if (!Number.isInteger(clientId) || !Array.isArray(orderedIds)) return;
+  reorderPhotoSlots(clientId, orderedIds.map(Number).filter((n) => Number.isInteger(n)));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// The day the first photo sheet opens. An empty value clears it, which goes
+// back to the calendar buckets.
+export async function setPhotoStartDateAction(clientId: number, date: string) {
+  await requireCoach();
+  if (!Number.isInteger(clientId)) return;
+  const value = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null;
+  if (date && !value) return;
+  setPhotoStartDate(clientId, value);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// The coach's note on how to take the pictures. Empty clears it.
+export async function setPhotoInstructionsAction(clientId: number, text: string) {
+  await requireCoach();
+  if (!Number.isInteger(clientId) || typeof text !== "string") return;
+  setPhotoInstructions(clientId, text.slice(0, 600));
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -842,6 +857,7 @@ export async function savePhotoPeriodNoteAction(formData: FormData) {
     strengths: String(formData.get("strengths") || ""),
     improvements: String(formData.get("improvements") || ""),
     next_steps: String(formData.get("next_steps") || ""),
+    saved_at: new Date().toISOString(),
   });
   revalidatePath("/admin");
   revalidatePath("/client");

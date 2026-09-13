@@ -1,42 +1,50 @@
 "use client";
 
+import { useOptimistic, useTransition } from "react";
 import { setPhotoCadenceAction } from "../lib/actions";
 
 // Kept local (not imported from ../lib/queries) so this client component's
 // bundle doesn't pull in queries.ts's server-only fs/path dependencies.
-type PhotoCadence = "weekly" | "biweekly" | "monthly";
+type PhotoCadence = "weekly" | "biweekly" | "monthly" | "sixweekly";
 
-const PHOTO_CADENCE_LABELS: Record<PhotoCadence, string> = {
-  weekly: "Every week",
-  biweekly: "Every 2 weeks",
-  monthly: "Every month",
-};
+const OPTIONS: { value: PhotoCadence; label: string }[] = [
+  { value: "weekly", label: "Week" },
+  { value: "biweekly", label: "Two weeks" },
+  { value: "monthly", label: "Month" },
+  { value: "sixweekly", label: "Six weeks" },
+];
 
-const OPTIONS: PhotoCadence[] = ["weekly", "biweekly", "monthly"];
+// A segmented control that saves on tap. The chosen segment moves at once;
+// the server catches up behind it.
+export default function PhotoCadenceSelect({ clientId, cadence }: { clientId: number; cadence: PhotoCadence }) {
+  const [shown, setShown] = useOptimistic(cadence);
+  const [, startSaving] = useTransition();
 
-// Auto-submits on change, same pattern as the invoice status dropdown — no
-// separate "Save" button needed for a single setting like this.
-export default function PhotoCadenceSelect({
-  clientId,
-  cadence,
-}: {
-  clientId: number;
-  cadence: PhotoCadence;
-}) {
+  const pick = (next: PhotoCadence) => {
+    if (next === shown) return;
+    startSaving(async () => {
+      setShown(next);
+      const fd = new FormData();
+      fd.set("clientId", String(clientId));
+      fd.set("cadence", next);
+      await setPhotoCadenceAction(fd);
+    });
+  };
+
   return (
-    <form action={setPhotoCadenceAction} className="add-invoice-form" style={{ paddingTop: 0, borderTop: "none" }}>
-      <input type="hidden" name="clientId" value={clientId} />
-      <select
-        name="cadence"
-        defaultValue={cadence}
-        onChange={(e) => e.currentTarget.form?.requestSubmit()}
-      >
-        {OPTIONS.map((c) => (
-          <option key={c} value={c}>
-            {PHOTO_CADENCE_LABELS[c]}
-          </option>
-        ))}
-      </select>
-    </form>
+    <div className="pp-seg" role="radiogroup" aria-label="How often a new sheet opens">
+      {OPTIONS.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          role="radio"
+          aria-checked={shown === o.value}
+          className={`pp-seg-btn${shown === o.value ? " active" : ""}`}
+          onClick={() => pick(o.value)}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
   );
 }

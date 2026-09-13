@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CalendarIcon, CheckIcon, ChevronDownIcon } from "../components/icons";
 import GoalRow from "../components/GoalRow";
-import { useNavigateTab, useOpenCheckIn } from "./CheckInContext";
+import { useNavigateTab, useOpenCheckIn, useOpenPhotos } from "./CheckInContext";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
 // CheckInHub.tsx this replaces — a "use client" file importing queries.ts
@@ -56,6 +56,10 @@ export type UpcomingMeeting = {
 /** The coach's recap of the last call, written for the client. */
 export type MeetingRecap = { dateLabel: string; text: string } | null;
 
+/** The progress-pictures slot: a sheet open and missing photos, a sheet with
+    every angle in ("All four · next sheet 7 Oct"), or no sheet open. */
+export type HomePhotos = { state: "due" } | { state: "done"; summary: string } | null;
+
 export type GoalRowView = Parameters<typeof GoalRow>[0]["goal"];
 
 // Home is the client's landing screen: who they are and where they are in
@@ -73,6 +77,7 @@ export default function HomeHub({
   upcoming,
   recap,
   checkInStatus,
+  photos,
 }: {
   dateLabel: string;
   firstName: string;
@@ -87,6 +92,7 @@ export default function HomeHub({
   upcoming: UpcomingMeeting;
   recap: MeetingRecap;
   checkInStatus: CheckInStatus;
+  photos: HomePhotos;
 }) {
   return (
     <div className="hm">
@@ -99,6 +105,7 @@ export default function HomeHub({
         tracks={tracks}
       />
       <TodayCard session={session} checkInStatus={checkInStatus} hasPlan={tracks.length > 0} />
+      <PhotosCard photos={photos} />
       <MeetingCard m={upcoming} recap={recap} />
       {goals.length > 0 && <GoalsCard goals={goals} meta={goalsMeta} />}
       <div className="hm-reserved">
@@ -263,7 +270,45 @@ function TodayCard({
   );
 }
 
-// ---- 3 · Next meeting ----------------------------------------------------
+// ---- 3 · Progress pictures -----------------------------------------------
+// One thing to say, so one tap: the whole card is the button, and it opens
+// the Progress pictures screen. Nothing at all when no sheet is open.
+
+function PhotosCard({ photos }: { photos: HomePhotos }) {
+  const openPhotos = useOpenPhotos();
+  if (!photos) return null;
+
+  if (photos.state === "due") {
+    return (
+      <button type="button" className="hm-photos" onClick={() => openPhotos?.()}>
+        <span className="hm-photos-text">
+          <span className="hm-photos-eyebrow">Progress pictures</span>
+          <span className="hm-photos-line">Upload your progress pictures</span>
+        </span>
+        <span className="hm-photos-upload" aria-hidden="true">
+          Upload
+        </span>
+      </button>
+    );
+  }
+
+  return (
+    <button type="button" className="hm-photos-done" onClick={() => openPhotos?.()}>
+      <span className="hm-photos-done-tick" aria-hidden="true">
+        <CheckIcon />
+      </span>
+      <span className="hm-photos-text">
+        <span className="hm-photos-done-title">Pictures sent</span>
+        <span className="hm-photos-done-meta">{photos.summary}</span>
+      </span>
+      <span className="hm-photos-view" aria-hidden="true">
+        View
+      </span>
+    </button>
+  );
+}
+
+// ---- 4 · Next meeting ----------------------------------------------------
 
 // The next call, and under it what the last one settled. The recap is the
 // coach's own words to the client, so it is always visible rather than
@@ -342,7 +387,7 @@ function MeetingCard({ m, recap }: { m: UpcomingMeeting; recap: MeetingRecap }) 
   );
 }
 
-// ---- 4 · Goals -----------------------------------------------------------
+// ---- 5 · Goals -----------------------------------------------------------
 
 function GoalsCard({ goals, meta }: { goals: GoalRowView[]; meta: string }) {
   return (
