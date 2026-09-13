@@ -36,7 +36,6 @@ export type CheckInSection = {
 };
 export type CheckInDelta = { name: string; value: string; unit: string };
 export type CheckInPhotoSlot = { id: number; label: string; src: string | null };
-export type CheckInCoachNote = { timeLabel: string; text: string } | null;
 // Everything the screen needs, computed server-side by getCheckInSections()
 // and handed down through AppShell.
 export type CheckInProps = {
@@ -56,7 +55,6 @@ export type CheckInProps = {
   // the next one opens.
   photosDue: boolean;
   photosNextLabel: string;
-  coachNote: CheckInCoachNote;
   photoHistory: ReactNode;
 };
 
@@ -101,7 +99,6 @@ export default function CheckInScreen({
   photoPeriodLabel,
   photosDue,
   photosNextLabel,
-  coachNote,
   photoHistory,
   onBack,
 }: {
@@ -118,7 +115,6 @@ export default function CheckInScreen({
   dueSections: string[];
   photosDue: boolean;
   photosNextLabel: string;
-  coachNote: CheckInCoachNote;
   photoHistory: ReactNode;
   onBack: () => void;
 }) {
@@ -402,22 +398,6 @@ export default function CheckInScreen({
         </div>
       )}
 
-      {coachNote && (
-        <div className="ci-extras">
-          <section className="ci-section">
-            <span className="ci-section-title">Coach note</span>
-            <div className="ci-note">
-              <span className="ci-note-dot" aria-hidden="true" />
-              <div className="ci-note-body">
-                <div className="ci-note-top">
-                  <span className="ci-note-time">{coachNote.timeLabel}</span>
-                </div>
-                <div className="ci-note-text">{coachNote.text}</div>
-              </div>
-            </div>
-          </section>
-        </div>
-      )}
       </div>
 
       {!collapsed && (

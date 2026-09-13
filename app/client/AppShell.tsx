@@ -105,7 +105,6 @@ export default function AppShell({
           dueSections={checkIn.dueSections}
           photosDue={checkIn.photosDue}
           photosNextLabel={checkIn.photosNextLabel}
-          coachNote={checkIn.coachNote}
           photoHistory={checkIn.photoHistory}
           onBack={() => setPushView(null)}
         />
