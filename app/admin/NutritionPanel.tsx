@@ -9,7 +9,6 @@ import {
   getWeek,
   listCalorieLogs,
   listClientPhases,
-  getClientProfile,
   listNutritionPhases,
   localDateStr,
 } from "../lib/queries";
@@ -69,21 +68,15 @@ export default function NutritionPanel({ clientId }: { clientId: number }) {
       ];
   const running = nutritionPhases.find((p) => p.status === "now") ?? null;
 
-  // The calorie log, one entry per day back to the client's first entry (at
-  // least 15 days, so the first page is full), judged against that weekday's
-  // training or rest target. Each day names the nutrition phase it fell in.
+  // The calorie log: only the days the client actually logged, newest first,
+  // each judged against that weekday's training or rest target and naming the
+  // nutrition phase it fell in. Days with nothing logged are not listed.
   const trainingDows = new Set(
     getWeek(clientId, getCurrentWeekNumber(clientId))
       .filter((d) => getAssignmentsForDay(d.id).length > 0)
       .map((d) => d.day_of_week)
   );
   const allLogs = listCalorieLogs(clientId, 10000);
-  const byDate = new Map(allLogs.map((c) => [c.date, c] as const));
-  // Back to the first entry or the day coaching started, whichever is earlier.
-  const coachingStart = getClientProfile(clientId).coaching_start_date || null;
-  const firstLog = allLogs.length ? allLogs[allLogs.length - 1].date : today;
-  const earliest = coachingStart && coachingStart < firstLog ? coachingStart : firstLog;
-  const spanDays = Math.round((new Date(`${today}T00:00:00`).getTime() - new Date(`${earliest}T00:00:00`).getTime()) / 86400000) + 1;
   const nutritionAll = listClientPhases(clientId).filter((ph) => ph.track === "nutrition");
   // A phase's end_week is the Monday of its last week, so the week runs six more days.
   const phaseOn = (date: string) => {
@@ -94,15 +87,13 @@ export default function NutritionPanel({ clientId }: { clientId: number }) {
     });
     return hit?.name ?? null;
   };
-  const logs: NwLogDay[] = Array.from({ length: Math.max(15, spanDays) }, (_, i) => {
-    const d = new Date(`${today}T00:00:00`);
-    d.setDate(d.getDate() - i);
-    const date = localDateStr(d);
-    const isTraining = trainingDows.has(d.getDay() || 7);
-    const target = (isTraining ? derived.trainingKcal : derived.restKcal) || null;
-    const c = byDate.get(date);
-    return { date, kcal: c?.kcal ?? null, isTraining, target, note: c?.note ?? null, phase: phaseOn(date) };
-  });
+  const logs: NwLogDay[] = [...allLogs]
+    .sort((a, b) => (a.date < b.date ? 1 : -1))
+    .map((c) => {
+      const isTraining = trainingDows.has(new Date(`${c.date}T00:00:00`).getDay() || 7);
+      const target = (isTraining ? derived.trainingKcal : derived.restKcal) || null;
+      return { date: c.date, kcal: c.kcal, isTraining, target, note: c.note ?? null, phase: phaseOn(c.date) };
+    });
 
   return (
     <NutritionWorkspace

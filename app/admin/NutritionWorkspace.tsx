@@ -40,7 +40,7 @@ export type NutritionWorkspaceProps = {
   waterL: number | null;
   latestWeightKg: number | null;
   supplements: NwSupplement[];
-  /** Every day back to the first calorie entry, today first, missed days included. */
+  /** The days the client logged calories, newest first. */
   logs: NwLogDay[];
   liveSince: string | null;
 };
@@ -508,10 +508,6 @@ function CaloriesCard({ p }: { p: NutritionWorkspaceProps }) {
   const [page, setPage] = useState(0);
   const pageCount = Math.max(1, Math.ceil(p.logs.length / PAGE));
   const days = p.logs.slice(page * PAGE, page * PAGE + PAGE);
-  const logged = days.filter((d) => d.kcal != null);
-  const avg = logged.length ? Math.round(logged.reduce((s, d) => s + (d.kcal ?? 0), 0) / logged.length) : null;
-  const withTarget = logged.filter((d) => d.target != null);
-  const avgDiff = withTarget.length ? Math.round(withTarget.reduce((s, d) => s + ((d.kcal ?? 0) - (d.target ?? 0)), 0) / withTarget.length) : null;
   const tone = (d: NwLogDay) => (d.kcal == null || d.target == null ? "none" : Math.abs(d.kcal - d.target) <= 150 ? "green" : "orange");
   const vs = (d: NwLogDay) => {
     if (d.kcal == null) return "—";
@@ -528,7 +524,9 @@ function CaloriesCard({ p }: { p: NutritionWorkspaceProps }) {
           <div className="pl-eyebrow">Calories logged</div>
         </div>
         <div className="pl-band-right">
-          <span className="pl-band-note">{p.logs.length} days</span>
+          <span className="pl-band-note">
+            {p.logs.length} {p.logs.length === 1 ? "day" : "days"} logged
+          </span>
         </div>
       </div>
 
@@ -541,8 +539,9 @@ function CaloriesCard({ p }: { p: NutritionWorkspaceProps }) {
           <span>Phase</span>
           <span>Client note</span>
         </div>
+        {days.length === 0 && <div className="pl-empty-row">No calories logged yet.</div>}
         {days.map((d) => (
-          <div key={d.date} className={`nw-tr nw-cal-cols${d.kcal == null ? " missed" : ""}`}>
+          <div key={d.date} className="nw-tr nw-cal-cols">
             <span className="nw-cal-date">{fmtDate(d.date, { weekday: "short", day: "numeric", month: "short" })}</span>
             <span className="nw-cal-kcal">{d.kcal != null ? `${n(d.kcal)} kcal` : "not logged"}</span>
             <span>
@@ -554,7 +553,7 @@ function CaloriesCard({ p }: { p: NutritionWorkspaceProps }) {
           </div>
         ))}
         <div className="nw-tfoot nw-cal-foot">
-          <span>Logged by the client under their targets. Missed days show as a gap — nothing is filled in for them.</span>
+          <span>Only the days the client logged, against that day&rsquo;s target.</span>
           {pageCount > 1 && (
             <nav className="nw-pager" aria-label="Pages">
               <button type="button" className="nw-page" onClick={() => setPage((x) => Math.max(0, x - 1))} disabled={page === 0} aria-label="Previous page">
