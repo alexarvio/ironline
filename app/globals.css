@@ -3419,68 +3419,6 @@ a.cd-entry:hover { border-color: var(--accent); }
   flex-shrink: 0;
 }
 
-.home-dark-note-row {
-  display: flex;
-  gap: 10px;
-  border-top: 1px solid var(--fp-line);
-  padding: 13px 0;
-}
-
-/* Tapping a note opens the conversation it came from. */
-.home-dark-note-row.tappable {
-  width: 100%;
-  text-align: left;
-  border-left: none;
-  border-right: none;
-  border-bottom: none;
-  background: none;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-  min-height: 44px;
-}
-
-.home-dark-note-dot {
-  flex-shrink: 0;
-  width: 7px;
-  height: 7px;
-  margin-top: 7px;
-  border-radius: 999px;
-  background: var(--fp-input);
-}
-
-.home-dark-note-dot.unread {
-  background: var(--fp-accent);
-}
-
-.home-dark-note-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.home-dark-note-context {
-  font-size: 0.66rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--fp-dim);
-}
-
-.home-dark-note-time {
-  flex-shrink: 0;
-  color: var(--fp-dim);
-  font-size: 0.7rem;
-}
-
-.home-dark-note-text {
-  font-size: 0.9rem;
-  color: var(--fp-text);
-  margin-top: 3px;
-  line-height: 1.4;
-}
-
 .home-dark-goal-row {
   display: flex;
   align-items: flex-start;
@@ -4362,56 +4300,6 @@ a.cd-entry:hover { border-color: var(--accent); }
 
 .ci-photo-history {
   margin-top: 18px;
-}
-
-.ci-note {
-  display: flex;
-  gap: 10px;
-  border-top: 1px solid var(--fp-line);
-  margin-top: 6px;
-  padding-top: 13px;
-}
-
-.ci-note-dot {
-  flex-shrink: 0;
-  width: 7px;
-  height: 7px;
-  margin-top: 7px;
-  border-radius: 999px;
-  background: var(--fp-accent);
-}
-
-.ci-note-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.ci-note-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.ci-note-context {
-  font-size: 0.66rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--fp-dim);
-}
-
-.ci-note-time {
-  flex-shrink: 0;
-  color: var(--fp-dim);
-  font-size: 0.7rem;
-}
-
-.ci-note-text {
-  font-size: 0.9rem;
-  color: var(--fp-text);
-  margin-top: 3px;
-  line-height: 1.4;
 }
 
 /* Sticky action bar — the client can save from anywhere in a long section

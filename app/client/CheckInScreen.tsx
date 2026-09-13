@@ -26,7 +26,6 @@ export type CheckInSection = {
 };
 export type CheckInDelta = { name: string; value: string; unit: string };
 export type CheckInPhotoSlot = { id: number; label: string; src: string | null };
-export type CheckInCoachNote = { timeLabel: string; text: string } | null;
 // Everything the screen needs, computed server-side by getCheckInSections()
 // and handed down through AppShell.
 export type CheckInProps = {
@@ -46,7 +45,6 @@ export type CheckInProps = {
   // the next one opens.
   photosDue: boolean;
   photosNextLabel: string;
-  coachNote: CheckInCoachNote;
   photoHistory: ReactNode;
 };
 
@@ -95,7 +93,6 @@ export default function CheckInScreen({
   dueSections,
   photosDue,
   photosNextLabel,
-  coachNote,
   photoHistory,
   onBack,
 }: {
@@ -111,7 +108,6 @@ export default function CheckInScreen({
   dueSections: string[];
   photosDue: boolean;
   photosNextLabel: string;
-  coachNote: CheckInCoachNote;
   // Past photo periods and the coach's written feedback on them, rendered
   // server-side and passed through. Not in the Check-in mockup, but it's
   // existing client-facing functionality that has nowhere else to live now
@@ -457,28 +453,6 @@ export default function CheckInScreen({
               {photoHistory && <div className="ci-photo-history">{photoHistory}</div>}
             </section>
           )}
-        </div>
-      )}
-
-      {coachNote && (
-        <div className="ci-extras">
-          <section className="ci-section">
-            <span className="ci-section-title">Coach note</span>
-            <div className="ci-note">
-              <span className="ci-note-dot" aria-hidden="true" />
-              <div className="ci-note-body">
-                {/* The section heading above already says "Coach note", so the
-                    row itself only carries the timestamp — unlike the mockup,
-                    where this slot named the exercise the note was about.
-                    Coach notes here are chat messages, which have no such
-                    subject to show. */}
-                <div className="ci-note-top">
-                  <span className="ci-note-time">{coachNote.timeLabel}</span>
-                </div>
-                <div className="ci-note-text">{coachNote.text}</div>
-              </div>
-            </div>
-          </section>
         </div>
       )}
 

@@ -293,8 +293,6 @@ function HomeTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   // still needed here directly for the Tracker sub-tab below.
   const checkInStatus = getCheckInStatus(CLIENT_ID);
 
-  const coachNotes = coachNotesFor(CLIENT_ID, 5);
-
   const dateLabel = new Date(`${today}T00:00:00`).toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -510,7 +508,6 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
       notes: "",
     })),
   ];
-  const coachNotes = coachNotesFor(CLIENT_ID, 3);
 
   // The nutrition phase the client is in, named the way the coach named it
   // on the Plan tab, above the targets it sets.
@@ -589,29 +586,6 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
           <span className="nd-water-label">Water goal</span>
           <span className="nd-water-value">{profile.water_goal}</span>
         </div>
-      )}
-
-      {/* Per-exercise / check-in comments from the coach. Only shown when
-          there are some: with the standing note above, an empty "No notes
-          yet" here read as a contradiction. */}
-      {coachNotes.length > 0 && (
-        <section className="home-dark-section">
-          <span className="home-dark-section-title">Coach notes</span>
-          <div className="home-dark-rows">
-            {coachNotes.map((n) => (
-              <div key={n.id} className="home-dark-note-row">
-                <span className={`home-dark-note-dot${n.unread ? " unread" : ""}`} aria-hidden="true" />
-                <div className="home-dark-row-body">
-                  <div className="home-dark-note-top">
-                    <span className="home-dark-note-context">{n.context}</span>
-                    <span className="home-dark-note-time">{n.timeLabel}</span>
-                  </div>
-                  <div className="home-dark-note-text">{n.text}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
       )}
 
       <div className="nd-footnote">Meal logging isn&rsquo;t on yet. Your coach sets the targets, you hit them.</div>
@@ -815,22 +789,6 @@ function notificationTimeLabel(iso: string) {
     : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-// Coach chat messages, same feed the Notifications screen shows (kind
-// "coach_note"), filtered down to just those so a tab reads as "what has my
-// coach said about my work" — shared by Home and Nutrition's "Coach notes".
-function coachNotesFor(CLIENT_ID: number, limit: number) {
-  return getNotifications(CLIENT_ID)
-    .filter((n) => n.kind === "coach_note")
-    .slice(0, limit)
-    .map((n) => ({
-      id: n.id,
-      context: "Coach note",
-      timeLabel: notificationTimeLabel(n.created_at),
-      text: n.message,
-      unread: !n.read,
-    }));
-}
-
 // Notifications sub-view — grouped Today/Earlier, each row a self-submitting
 // form (mark-read on tap, same auto-submit pattern used elsewhere in this
 // app, e.g. PhotoUploadBox) rather than client-side state.
@@ -955,9 +913,6 @@ export default async function ClientPage({
   const checkInData = getCheckInSections(CLIENT_ID);
   // Same source Home reads, so the tab dots and Home's count can't disagree.
   const checkInStatusForScreen = getCheckInStatus(CLIENT_ID);
-  // Most recent coach note, shown at the foot of the check-in the same way
-  // Home surfaces them — reusing the notification feed, not a new store.
-  const latestCoachNote = coachNotesFor(CLIENT_ID, 1)[0] ?? null;
   const checkIn = {
     dateLabel: new Date(`${localDateStr()}T00:00:00`).toLocaleDateString("en-US", {
       weekday: "long",
@@ -973,9 +928,6 @@ export default async function ClientPage({
     photosDue: checkInData.photosDue,
     photosNextLabel: checkInData.photosNextLabel,
     dueSections: checkInStatusForScreen.dueTypes as string[],
-    coachNote: latestCoachNote
-      ? { timeLabel: latestCoachNote.timeLabel, text: latestCoachNote.text }
-      : null,
     photoHistory: <PhotoHistory CLIENT_ID={CLIENT_ID} />,
   };
   const hasUnreadNotifications = getNotifications(CLIENT_ID).some((n) => !n.read);
