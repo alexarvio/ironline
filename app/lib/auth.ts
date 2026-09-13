@@ -170,6 +170,68 @@ export async function requireClient(): Promise<SessionUser & { clientId: number 
   return { ...user, clientId: user.client_id };
 }
 
+// ---- Owner -----------------------------------------------------------------
+//
+// The owner is one coach account, the one whose email is OWNER_EMAIL. It works
+// like any coach (its own clients, its own library) and can also manage coach
+// accounts: add, give a temporary password, remove. It sees each coach's email
+// and how many clients they have, never another coach's clients.
+
+export function ownerEmail(): string | null {
+  return process.env.OWNER_EMAIL?.trim().toLowerCase() || null;
+}
+
+export function isOwner(user: { role: Role; email: string } | null | undefined): boolean {
+  const owner = ownerEmail();
+  return !!owner && !!user && user.role === "coach" && user.email === owner;
+}
+
+/** Owner-only. Anyone else is sent back to their admin. */
+export async function requireOwner(): Promise<SessionUser> {
+  const coach = await requireCoach();
+  if (!isOwner(coach)) redirect("/admin");
+  return coach;
+}
+
+/**
+ * Creates the owner's login from OWNER_EMAIL / OWNER_PASSWORD, once, if that
+ * email has no account yet. Like ensureCoachFromEnv, the password must be
+ * changed at first sign-in, so the value in the environment is only ever a
+ * temporary key.
+ */
+export function ensureOwnerFromEnv() {
+  const email = ownerEmail();
+  const password = process.env.OWNER_PASSWORD;
+  if (!email || !password || password.length < 8) return;
+  if (getData().users.some((u) => u.email === email)) return;
+  createUser(email, password, "coach", null, true);
+  console.log("[owner] created the owner's coach login from OWNER_EMAIL (password change required at first sign-in)");
+}
+
+/**
+ * Deletes a coach account that has no clients, with its own library (exercises,
+ * template packs, report templates, personal calendar blocks). A coach with
+ * clients is refused: their clients' data must never be left without a coach.
+ */
+export function deleteCoachAccount(coachId: number): boolean {
+  const data = getData();
+  const coach = data.users.find((u) => u.id === coachId && u.role === "coach");
+  if (!coach || data.clients.some((c) => c.coach_id === coachId)) return false;
+  const templateIds = new Set(data.metric_template_categories.filter((t) => t.coach_id === coachId).map((t) => t.id));
+  const reportIds = new Set(data.report_templates.filter((t) => t.coach_id === coachId).map((t) => t.id));
+  const blockIds = new Set(data.meetings.filter((m) => m.client_id == null && m.coach_id === coachId).map((m) => m.id));
+  data.metric_template_items = data.metric_template_items.filter((i) => !templateIds.has(i.template_category_id));
+  data.metric_template_categories = data.metric_template_categories.filter((t) => t.coach_id !== coachId);
+  data.report_template_sections = data.report_template_sections.filter((s) => !reportIds.has(s.template_id));
+  data.report_templates = data.report_templates.filter((t) => t.coach_id !== coachId);
+  data.exercises = data.exercises.filter((e) => e.coach_id !== coachId);
+  data.meeting_notes = data.meeting_notes.filter((n) => !blockIds.has(n.meeting_id));
+  data.meetings = data.meetings.filter((m) => !blockIds.has(m.id));
+  data.users = data.users.filter((u) => u.id !== coachId);
+  persist();
+  return true;
+}
+
 /**
  * Coach-only, for one client: the coach session when this client is theirs,
  * otherwise null so the caller quietly does nothing. Every coach action that

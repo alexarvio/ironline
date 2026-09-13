@@ -4,14 +4,17 @@ import { redirect } from "next/navigation";
 import {
   coachForClient,
   createUser,
+  deleteCoachAccount,
   endSession,
   findUserByEmail,
   getSessionUser,
   getUserForClient,
+  requireOwner,
   setPassword,
   startSession,
   verifyPassword,
 } from "./auth";
+import { getData } from "./db";
 import { deleteUserForClient } from "./auth";
 
 // Server actions for logging in and out, and for the coach handing a client
@@ -93,6 +96,46 @@ export async function resetClientPasswordAction(formData: FormData) {
   // password the coach has seen is never the one left in place.
   setPassword(user.id, password, true);
   redirect(`/admin?client=${clientId}&loginOk=reset`);
+}
+
+// ---- Owner: coach accounts -------------------------------------------------
+// Only the owner (OWNER_EMAIL) reaches these; requireOwner sends anyone else
+// back to their admin. A new coach starts with an empty client list, their own
+// copy of the presets, and a temporary password they must change at sign-in.
+
+const COACHES = "/admin?view=coaches";
+
+export async function createCoachAction(formData: FormData) {
+  await requireOwner();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 8) redirect(`${COACHES}&coachError=invalid`);
+  try {
+    createUser(email, password, "coach", null, true);
+  } catch {
+    redirect(`${COACHES}&coachError=taken`);
+  }
+  redirect(`${COACHES}&coachOk=added`);
+}
+
+export async function resetCoachPasswordAction(formData: FormData) {
+  const owner = await requireOwner();
+  const coachId = Number(formData.get("coachId"));
+  const password = String(formData.get("password") ?? "");
+  const coach = getData().users.find((u) => u.id === coachId && u.role === "coach");
+  if (!coach || password.length < 8) redirect(`${COACHES}&coachError=invalid`);
+  if (coach.id === owner.id) redirect(`${COACHES}&coachError=self`);
+  // A password the owner has seen is never the one left in place.
+  setPassword(coach.id, password, true);
+  redirect(`${COACHES}&coachOk=reset`);
+}
+
+export async function removeCoachAction(formData: FormData) {
+  const owner = await requireOwner();
+  const coachId = Number(formData.get("coachId"));
+  if (coachId === owner.id) redirect(`${COACHES}&coachError=self`);
+  if (!deleteCoachAccount(coachId)) redirect(`${COACHES}&coachError=hasclients`);
+  redirect(`${COACHES}&coachOk=removed`);
 }
 
 export async function removeClientLoginAction(formData: FormData) {

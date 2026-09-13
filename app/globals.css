@@ -12601,6 +12601,34 @@ a.cd-entry:hover { border-color: var(--accent); }
 .fd-more { padding: 8px 16px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; font-size: 13px; font-weight: 800; color: #141a24; text-decoration: none; }
 .fd-more:hover { background: #f8f9fb; }
 .fd-more-count { font-size: 12px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; }
+
+/* ---- Owner: Coaches page (cp-*) ---- */
+.cp { max-width: 980px; }
+.cp-note { margin: 0; padding: 10px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; }
+.cp-note.ok { background: #e7f3ea; color: #2f7a3f; }
+.cp-note.error { background: #fbeaea; color: #a32d2d; }
+.cp-table { display: flex; flex-direction: column; }
+.cp-row { display: grid; grid-template-columns: minmax(0, 2fr) 70px minmax(0, 1.2fr) 96px minmax(0, 1.8fr); align-items: center; gap: 12px; padding: 12px 22px; border-top: 1px solid #eceff3; font-size: 13px; color: #2a3140; }
+.cp-head { padding-top: 9px; padding-bottom: 9px; background: #f8f9fb; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #8b93a1; }
+.cp-email { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; font-weight: 700; color: #141a24; overflow-wrap: anywhere; }
+.cp-tag { flex: none; padding: 2px 8px; border-radius: 999px; background: #e6edf6; color: #2f5d8f; font-size: 10.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+.cp-clients { font-family: var(--font-serif); font-size: 17px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; }
+.cp-when { font-size: 12.5px; color: #5b6474; font-variant-numeric: tabular-nums; }
+.cp-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
+.cp-reset summary { cursor: pointer; list-style: none; font-size: 12px; font-weight: 800; color: #2f5d8f; }
+.cp-reset summary::-webkit-details-marker { display: none; }
+.cp-reset[open] summary { margin-bottom: 8px; }
+.cp-reset form { display: flex; gap: 6px; }
+.cp-muted { font-size: 12px; font-weight: 700; color: #a0a7b3; cursor: not-allowed; }
+.cp-add { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; padding: 4px 22px 14px; }
+.cp-field { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #5b6474; }
+.cp-field input, .cp-reset input { min-width: 220px; padding: 8px 10px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; font: inherit; font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #141a24; }
+.cp-field input:focus, .cp-reset input:focus { outline: 2px solid #2f5d8f; outline-offset: 1px; }
+.cp-hint { margin: 0; padding: 0 22px 18px; font-size: 12.5px; line-height: 1.5; color: #8b93a1; }
+@media (max-width: 760px) {
+  .cp-row { grid-template-columns: 1fr 1fr; }
+  .cp-head { display: none; }
+}
 @media (max-width: 640px) {
   .fd-row { grid-template-columns: minmax(0, 1fr) auto; }
   .fd-cat { grid-column: 1 / -1; }

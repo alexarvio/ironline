@@ -14,8 +14,9 @@ import ProgramBuilder from "../components/ProgramBuilder";
 import PhaseTimeline from "./PhaseTimeline";
 import { getClient, getOverviewPanel, listClients } from "../lib/queries";
 import { coachOwnsClient } from "../lib/tenancy";
+import CoachesPanel from "./CoachesPanel";
 
-import { requireCoach } from "../lib/auth";
+import { isOwner, requireCoach } from "../lib/auth";
 
 // Reads live from the JSON store on every request — without this, Next
 // statically prerenders this page at build time (before any real data
@@ -38,6 +39,9 @@ export default async function AdminPage({
         these set the working area shows that view instead of a client, and
         the client panel is hidden since there is no single client in play. */
     view?: string;
+    /** Coaches (owner only): the outcome of the last account change. */
+    coachOk?: string;
+    coachError?: string;
     /** Feed: the category filter, and how many rows are shown. */
     cat?: string;
     show?: string;
@@ -49,7 +53,10 @@ export default async function AdminPage({
   const coach = await requireCoach();
   const params = await searchParams;
   const clients = listClients(coach.id);
-  const view = params.view === "feed" || params.view === "calendar" ? params.view : null;
+  const owner = isOwner(coach);
+  // Coaches is the owner's view only; for anyone else the parameter is ignored.
+  const view =
+    params.view === "feed" || params.view === "calendar" || (params.view === "coaches" && owner) ? params.view : null;
   // ?client= only opens one of this coach's own clients; anything else lands
   // on their first client, as if no client had been asked for.
   const asked = params.client ? Number(params.client) : null;
@@ -58,7 +65,7 @@ export default async function AdminPage({
 
   return (
     <AdminShell
-      sidebar={<AdminSidebar coachId={coach.id} selectedId={selectedId} />}
+      sidebar={<AdminSidebar coachId={coach.id} selectedId={selectedId} isOwner={owner} />}
       panel={
         view === "calendar" ? (
           <CalendarDayPanel coachId={coach.id} day={params.day} month={params.month} />
@@ -76,6 +83,10 @@ export default async function AdminPage({
       {view === "feed" ? (
         <div className="ad-pad">
           <FeedPanel coachId={coach.id} category={params.cat} show={params.show} />
+        </div>
+      ) : view === "coaches" ? (
+        <div className="ad-pad">
+          <CoachesPanel ownerId={coach.id} ok={params.coachOk} error={params.coachError} />
         </div>
       ) : view === "calendar" ? (
         <div className="ad-pad">

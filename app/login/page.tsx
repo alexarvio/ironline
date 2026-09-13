@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { loginAction } from "../lib/auth-actions";
-import { ensureCoachFromEnv, getSessionUser, resetCoachFromEnv, resetWorkspaceFromEnv } from "../lib/auth";
+import { ensureCoachFromEnv, ensureOwnerFromEnv, getSessionUser, resetCoachFromEnv, resetWorkspaceFromEnv } from "../lib/auth";
 
 export default async function LoginPage({
   searchParams,
@@ -12,6 +12,8 @@ export default async function LoginPage({
   // request to the login page is where the bootstrap coach gets created
   // from the environment. No-op once any coach exists.
   ensureCoachFromEnv();
+  // The owner's login, from OWNER_EMAIL / OWNER_PASSWORD, once; see auth.ts.
+  ensureOwnerFromEnv();
   // Lockout recovery: fires once per new COACH_RESET_TOKEN value, see auth.ts.
   resetCoachFromEnv();
   // Blank-canvas wipe: fires once per new WORKSPACE_RESET_TOKEN value, see auth.ts.

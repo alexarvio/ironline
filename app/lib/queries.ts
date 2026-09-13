@@ -2076,6 +2076,28 @@ export function feedTimeLabel(at: number, timeKnown = true): string {
   return timeKnown ? `${date} · ${feedClock(at)}` : date;
 }
 
+/**
+ * Every coach account, for the owner's Coaches page: the email, how many
+ * clients the coach has and when one of them last logged something. Nothing
+ * about the clients themselves.
+ */
+export function listCoachAccounts() {
+  const data = getData();
+  return data.users
+    .filter((u) => u.role === "coach")
+    .sort((a, b) => a.id - b.id)
+    .map((u) => {
+      const latest = getActivityFeed(u.id)[0];
+      return {
+        id: u.id,
+        email: u.email,
+        clients: data.clients.filter((c) => c.coach_id === u.id).length,
+        lastActivity: latest ? feedTimeLabel(latest.at, latest.timeKnown) : null,
+        mustChangePassword: u.must_change_password,
+      };
+    });
+}
+
 // ---- Nutrition plan: coach's macro/vitamin/supplement targets for a client ----
 // Mirrors the "Voeding en supplementen" tab from the original sheet. This is
 // the coach's target plan, not a food diary — actual meal-by-meal logging by
