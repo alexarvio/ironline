@@ -1023,6 +1023,11 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 .pp-instructions-box { display: block; width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; font: inherit; font-size: 13px; font-weight: 500; line-height: 1.45; color: #141a24; resize: vertical; }
 .pp-instructions-box:focus { outline: none; border-color: #2f5d8f; }
 .pp-instructions-box::placeholder { color: #a0a7b3; }
+/* Save for the schedule: nothing reaches the client until it is pressed. */
+.pp-save-row { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.pp-save-status { margin-right: auto; font-size: 12px; font-weight: 600; color: #8b93a1; }
+.pp-save-row.dirty .pp-save-status { color: #b3471d; }
+.pp-btn.ghost { background: #fff; border: 1px solid #dfe3e8; color: #313851; }
 
 /* Angle chips */
 .pp-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -1054,6 +1059,23 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 .pp-compare-btn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; color: #5b6474; padding: 8px 12px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 .pp-compare-btn:hover { color: #141a24; }
 .pp-compare-btn.active { background: #e6ecf3; border-color: #cfdce9; color: #1e3a6e; }
+
+/* Sheets as rows that fold open, one per sheet, like the days in Training. */
+.pp-sheet-list { display: flex; flex-direction: column; gap: 10px; padding: 14px 22px 22px; border-top: 1px solid #eceff3; background: #f8f9fb; }
+.pp-sheet-row { overflow: hidden; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; }
+.pp-sheet-row.open { border-color: #cfdce9; }
+.pp-sheet-row-head { display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 18px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.pp-sheet-row-head:hover { background: #fafbfc; }
+.pp-sheet-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pp-sheet-row-titlerow { display: flex; align-items: baseline; gap: 10px; }
+.pp-sheet-row-title { font-size: 14px; font-weight: 800; color: #141a24; }
+.pp-sheet-row-meta { font-size: 12px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.pp-sheet-row-phases { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; min-width: 0; }
+.pp-sheet-row-body { padding: 18px; border-top: 1px solid #eceff3; }
+.pp-chevron { flex: none; display: flex; color: #8b93a1; transition: transform 0.15s ease; }
+.pp-chevron.open { transform: rotate(180deg); }
+.pp-compare-view { border-top: 1px solid #eceff3; }
+.pp-detail-side .pp-btn.tint.sm { margin-bottom: 12px; }
 
 /* Week rail */
 .pp-gallery-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
@@ -12898,6 +12920,19 @@ a.cd-entry:hover { border-color: var(--accent); }
 .pp-app-coach { margin: 0 16px; padding: 12px 0 16px; border-top: 1px solid #eceff3; }
 .pp-app-coach-label { display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #5b6474; }
 .pp-app-coach-text { margin: 4px 0 0; font-size: 13px; font-weight: 500; line-height: 1.45; color: #313851; white-space: pre-wrap; }
+
+/* A picked photo waits on the phone, outlined, until Save sends it. */
+.pp-app-frame.ready::after { content: ""; position: absolute; inset: 0; border: 2px solid var(--cat-training-prompt-pending); border-radius: 12px; pointer-events: none; }
+.pp-app-save { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 16px; padding: 12px 0 14px; border-top: 1px solid #eceff3; }
+.pp-app-save-text { min-width: 0; font-size: 12.5px; font-weight: 600; line-height: 1.35; color: #5b6474; font-variant-numeric: tabular-nums; }
+.pp-app-save-actions { flex: none; display: flex; align-items: center; gap: 4px; }
+.pp-app-save-btn { min-height: 44px; padding: 0 18px; border: 0; border-radius: 10px; background: var(--cat-training-fg); color: #fff; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.pp-app-save-btn:disabled { background: var(--cat-training-prompt-empty); cursor: default; }
+.pp-app-save-btn.secondary { border: 1px solid var(--cat-training-prompt-border); background: #fff; color: var(--cat-training-fg); }
+.pp-app-save-cancel { min-height: 44px; padding: 0 10px; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 700; color: #5b6474; cursor: pointer; }
+
+/* Sent: the open sheet folds into a row like the earlier ones; Edit inside. */
+.pp-app-edit-photos { display: block; width: 100%; min-height: 44px; margin-top: 14px; border: 1px solid var(--cat-training-prompt-border); border-radius: 10px; background: #fff; font: inherit; font-size: 13px; font-weight: 800; color: var(--cat-training-fg); cursor: pointer; }
 
 /* Camera or library, for one slot */
 .pp-app-sheet-scrim { position: absolute; inset: 0; z-index: 10; display: flex; align-items: flex-end; background: rgba(20, 26, 36, 0.45); }

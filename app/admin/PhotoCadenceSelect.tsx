@@ -1,11 +1,8 @@
 "use client";
 
-import { useOptimistic, useTransition } from "react";
-import { setPhotoCadenceAction } from "../lib/actions";
-
 // Kept local (not imported from ../lib/queries) so this client component's
 // bundle doesn't pull in queries.ts's server-only fs/path dependencies.
-type PhotoCadence = "weekly" | "biweekly" | "monthly" | "sixweekly";
+export type PhotoCadence = "weekly" | "biweekly" | "monthly" | "sixweekly";
 
 const OPTIONS: { value: PhotoCadence; label: string }[] = [
   { value: "weekly", label: "Week" },
@@ -14,23 +11,9 @@ const OPTIONS: { value: PhotoCadence; label: string }[] = [
   { value: "sixweekly", label: "Six weeks" },
 ];
 
-// A segmented control that saves on tap. The chosen segment moves at once;
-// the server catches up behind it.
-export default function PhotoCadenceSelect({ clientId, cadence }: { clientId: number; cadence: PhotoCadence }) {
-  const [shown, setShown] = useOptimistic(cadence);
-  const [, startSaving] = useTransition();
-
-  const pick = (next: PhotoCadence) => {
-    if (next === shown) return;
-    startSaving(async () => {
-      setShown(next);
-      const fd = new FormData();
-      fd.set("clientId", String(clientId));
-      fd.set("cadence", next);
-      await setPhotoCadenceAction(fd);
-    });
-  };
-
+// How often a new sheet opens, as a segmented control. Controlled: the
+// schedule form holds the choice until the coach presses Save.
+export default function PhotoCadenceSelect({ value, onChange }: { value: PhotoCadence; onChange: (cadence: PhotoCadence) => void }) {
   return (
     <div className="pp-seg" role="radiogroup" aria-label="How often a new sheet opens">
       {OPTIONS.map((o) => (
@@ -38,9 +21,9 @@ export default function PhotoCadenceSelect({ clientId, cadence }: { clientId: nu
           key={o.value}
           type="button"
           role="radio"
-          aria-checked={shown === o.value}
-          className={`pp-seg-btn${shown === o.value ? " active" : ""}`}
-          onClick={() => pick(o.value)}
+          aria-checked={value === o.value}
+          className={`pp-seg-btn${value === o.value ? " active" : ""}`}
+          onClick={() => onChange(o.value)}
         >
           {o.label}
         </button>

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { ChevronDownIcon } from "../components/icons";
 
 type Photo = { slotId: number; label: string; src: string | null };
@@ -22,12 +23,18 @@ export default function PhotoPeriodHistoryRow({
   note,
   open,
   onToggle,
+  metaExtra,
+  footer,
 }: {
   title: string;
   photos: Photo[];
   note: HistoryNote;
   open: boolean;
   onToggle: () => void;
+  /** A word after the counts, e.g. "sent" for the sheet open now. */
+  metaExtra?: string;
+  /** Shown at the foot of the open row, e.g. the open sheet's Edit button. */
+  footer?: ReactNode;
 }) {
   const notes = NOTE_LABELS.filter(({ key }) => note[key].trim());
   const inCount = photos.filter((p) => p.src).length;
@@ -49,6 +56,7 @@ export default function PhotoPeriodHistoryRow({
           <span className="pp-app-past-title">{title}</span>
           <span className="pp-app-past-meta">
             {inCount} of {photos.length}
+            {metaExtra && ` · ${metaExtra}`}
             {notes.length > 0 && " · coach replied"}
           </span>
         </span>
@@ -86,6 +94,7 @@ export default function PhotoPeriodHistoryRow({
               ))}
             </div>
           )}
+          {footer}
         </div>
       )}
     </article>

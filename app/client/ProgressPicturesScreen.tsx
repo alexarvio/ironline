@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { uploadProgressPhotoAction } from "../lib/actions";
 import { ArrowRightIcon, CameraIcon, CheckIcon, ChevronLeftIcon } from "../components/icons";
 import { useOpenPhotos } from "./CheckInContext";
@@ -26,17 +26,25 @@ export type ProgressPicturesProps = {
   hasAngles: boolean;
 };
 
-// The client's progress pictures: the sheet open now, where each photo
-// saves the moment it is added, and every earlier sheet with the coach's
-// notes. A pushed layer in AppShell, reached from Home and the Account tab.
+const NO_NOTE: HistoryNote = { shape: "", strengths: "", improvements: "", next_steps: "" };
+
+// The client's progress pictures: the sheet open now, filled in and sent
+// with Save like a check-in, and a feed of every earlier sheet below, all
+// folded until opened. A pushed layer in AppShell, from Home and Account.
 export default function ProgressPicturesScreen({ data, onBack }: { data: ProgressPicturesProps; onBack: () => void }) {
   // One earlier sheet open at a time: opening another closes this one.
   const [openPast, setOpenPast] = useState<string | null>(null);
+  // Photos picked but not sent yet; leaving would lose them, so Back asks.
+  const [unsent, setUnsent] = useState(false);
+  const back = () => {
+    if (unsent && !window.confirm("Your new pictures aren’t sent yet. Leave without sending them?")) return;
+    onBack();
+  };
 
   return (
     <>
       <header className="cn-header pp-app-header">
-        <button type="button" className="cn-icon-btn pp-app-back" onClick={onBack} aria-label="Back">
+        <button type="button" className="cn-icon-btn pp-app-back" onClick={back} aria-label="Back">
           <ChevronLeftIcon />
         </button>
         <div className="cn-header-titles">
@@ -48,7 +56,7 @@ export default function ProgressPicturesScreen({ data, onBack }: { data: Progres
 
       <main className="pp-app-body">
         {data.openSheet ? (
-          <OpenSheet clientId={data.clientId} sheet={data.openSheet} />
+          <OpenSheet clientId={data.clientId} sheet={data.openSheet} onUnsentChange={setUnsent} />
         ) : (
           !data.hasAngles && <p className="pp-app-empty">Your coach hasn&rsquo;t asked for progress pictures yet.</p>
         )}
@@ -88,44 +96,141 @@ export default function ProgressPicturesScreen({ data, onBack }: { data: Progres
   );
 }
 
-// The open sheet. A slot opens a small sheet offering the camera or the
-// library; the chosen photo uploads straight away, shown over its own
-// preview until the server has it. There is no submit button.
-function OpenSheet({ clientId, sheet }: { clientId: number; sheet: NonNullable<ProgressPicturesProps["openSheet"]> }) {
-  // slot id → local preview of the photo on its way up
-  const [uploading, setUploading] = useState<Record<number, string>>({});
-  const [picking, setPicking] = useState<Slot | null>(null);
-  const [failed, setFailed] = useState(false);
-  const [, startUpload] = useTransition();
+type Staged = { file: File; preview: string };
 
-  const upload = (slot: Slot, file: File) => {
+// The open sheet, like a check-in: pick a photo for each angle (it waits on
+// the phone, outlined), press Save to send them, and the sheet folds into a
+// row like the earlier ones, with Edit inside to reopen it. Save sends one
+// photo at a time so a weak connection fails on one photo, not all of them.
+function OpenSheet({
+  clientId,
+  sheet,
+  onUnsentChange,
+}: {
+  clientId: number;
+  sheet: NonNullable<ProgressPicturesProps["openSheet"]>;
+  onUnsentChange: (unsent: boolean) => void;
+}) {
+  const [staged, setStaged] = useState<Record<number, Staged>>({});
+  // Picked photos that have already gone up during the current Save.
+  const [sent, setSent] = useState<number[]>([]);
+  const [uploadingId, setUploadingId] = useState<number | null>(null);
+  const [picking, setPicking] = useState<Slot | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
+  const [failed, setFailed] = useState(false);
+  // Whether the folded "sent" row is opened up.
+  const [sentOpen, setSentOpen] = useState(false);
+  const [saving, startSaving] = useTransition();
+
+  // Every preview made on this visit, released when the screen closes.
+  const previews = useRef<string[]>([]);
+  useEffect(() => {
+    const made = previews.current;
+    return () => made.forEach((url) => URL.revokeObjectURL(url));
+  }, []);
+
+  const stagedCount = Object.keys(staged).length;
+  useEffect(() => {
+    onUnsentChange(stagedCount > 0);
+  }, [stagedCount, onUnsentChange]);
+
+  const total = sheet.slots.length;
+  const inCount = sheet.slots.filter((s) => s.src).length;
+  // Folded once something has been sent and nothing new is waiting.
+  const collapsed = inCount > 0 && stagedCount === 0 && !editing && !saving;
+
+  const pick = (slot: Slot, file: File) => {
     const preview = URL.createObjectURL(file);
+    previews.current.push(preview);
     setPicking(null);
     setFailed(false);
-    setUploading((u) => ({ ...u, [slot.id]: preview }));
-    const fd = new FormData();
-    fd.set("clientId", String(clientId));
-    fd.set("slotId", String(slot.id));
-    fd.set("file", file);
-    startUpload(async () => {
-      try {
-        await uploadProgressPhotoAction(fd);
-      } catch {
-        // On a weak connection the upload can drop; say so rather than
-        // leaving the slot looking as if nothing was tried.
-        setFailed(true);
-      } finally {
-        setUploading((u) => {
-          const next = { ...u };
-          delete next[slot.id];
+    setJustSaved(false);
+    setStaged((s) => ({ ...s, [slot.id]: { file, preview } }));
+  };
+
+  const save = () => {
+    const queue = sheet.slots.filter((s) => staged[s.id]).map((s) => ({ slot: s, item: staged[s.id] }));
+    if (queue.length === 0) return;
+    setFailed(false);
+    startSaving(async () => {
+      const done: number[] = [];
+      for (const { slot, item } of queue) {
+        setUploadingId(slot.id);
+        const fd = new FormData();
+        fd.set("clientId", String(clientId));
+        fd.set("slotId", String(slot.id));
+        fd.set("file", item.file);
+        try {
+          await uploadProgressPhotoAction(fd);
+          done.push(slot.id);
+          setSent([...done]);
+        } catch {
+          // Stop at the first failure; what did not go up stays ready.
+          setFailed(true);
+          break;
+        }
+      }
+      // Land together with the refreshed sheet, so a sent slot never
+      // flashes empty between its preview and the saved photo.
+      startSaving(() => {
+        setUploadingId(null);
+        setSent([]);
+        setStaged((s) => {
+          const next = { ...s };
+          done.forEach((id) => delete next[id]);
           return next;
         });
-        URL.revokeObjectURL(preview);
-      }
+        if (done.length === queue.length) {
+          setEditing(false);
+          setJustSaved(true);
+          setSentOpen(false);
+        }
+      });
     });
   };
 
-  const inCount = sheet.slots.filter((s) => s.src).length;
+  const cancel = () => {
+    setStaged({});
+    setFailed(false);
+    setEditing(false);
+  };
+
+  // Sent: the open sheet folds into a row like the earlier sheets below it,
+  // closed by default, with Edit inside to change a photo.
+  if (collapsed) {
+    return (
+      <section>
+        <div className="pp-app-section-head">
+          <span className="pp-app-section-title">This sheet</span>
+          <span className="pp-app-section-meta" role="status" aria-live="polite">
+            {justSaved ? "Just sent to your coach" : "Sent to your coach"}
+          </span>
+        </div>
+        <PhotoPeriodHistoryRow
+          title={sheet.title}
+          photos={sheet.slots.map((s) => ({ slotId: s.id, label: s.label, src: s.src }))}
+          note={NO_NOTE}
+          open={sentOpen}
+          onToggle={() => setSentOpen((o) => !o)}
+          metaExtra="sent"
+          footer={
+            <button
+              type="button"
+              className="pp-app-edit-photos"
+              onClick={() => {
+                setEditing(true);
+                setJustSaved(false);
+                setSentOpen(false);
+              }}
+            >
+              Edit photos
+            </button>
+          }
+        />
+      </section>
+    );
+  }
 
   return (
     <section className="pp-app-open">
@@ -136,49 +241,53 @@ function OpenSheet({ clientId, sheet }: { clientId: number; sheet: NonNullable<P
             <div className="pp-app-open-title">{sheet.title}</div>
           </div>
           <span className="pp-app-open-count">
-            {inCount} of {sheet.slots.length}
+            {inCount} of {total}
           </span>
         </div>
         <div className="pp-app-bar" aria-hidden="true">
-          {sheet.slots.map((s) => (
-            <span key={s.id} className={`pp-app-bar-seg${uploading[s.id] ? " pending" : s.src ? " in" : ""}`} />
-          ))}
+          {sheet.slots.map((s) => {
+            const waiting = !!staged[s.id] && !sent.includes(s.id);
+            return <span key={s.id} className={`pp-app-bar-seg${waiting ? " pending" : s.src || sent.includes(s.id) ? " in" : ""}`} />;
+          })}
         </div>
         <p className="pp-app-open-meta" role={failed ? "alert" : undefined}>
           {failed
-            ? "That photo didn’t upload. Check your connection and try again."
-            : `Opened ${sheet.openedLabel} · each photo saves as you add it`}
+            ? "A photo didn’t send. Check your connection and press Save again."
+            : `Opened ${sheet.openedLabel} · add a photo for each angle, then Save`}
         </p>
       </div>
 
       <div className="pp-app-slots">
         {sheet.slots.map((s) => {
-          const preview = uploading[s.id];
+          const item = staged[s.id];
+          const uploading = uploadingId === s.id;
+          const src = item?.preview ?? s.src;
+          const ticked = item ? sent.includes(s.id) : !!s.src;
+          const ready = !!item && !ticked && !uploading;
           return (
             <button
               key={s.id}
               type="button"
               className="pp-app-slot"
-              disabled={!!preview}
+              disabled={saving}
               onClick={() => setPicking(s)}
-              aria-label={`${s.label}: ${preview ? "uploading" : s.src ? "added, tap to replace" : "add photo"}`}
+              aria-label={`${s.label}: ${uploading ? "sending" : ready ? "ready to send, tap to change" : ticked ? "sent, tap to replace" : "add photo"}`}
             >
-              {preview ? (
-                <span className="pp-app-frame">
+              {src ? (
+                <span className={`pp-app-frame${ready ? " ready" : ""}`}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={preview} alt="" />
-                  <span className="pp-app-uploading">
-                    <span className="pp-app-uploading-label">Uploading</span>
-                    <span className="pp-app-uploading-bar" />
-                  </span>
-                </span>
-              ) : s.src ? (
-                <span className="pp-app-frame">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={s.src} alt="" />
-                  <span className="pp-app-tick" aria-hidden="true">
-                    <CheckIcon />
-                  </span>
+                  <img src={src} alt="" />
+                  {uploading && (
+                    <span className="pp-app-uploading">
+                      <span className="pp-app-uploading-label">Uploading</span>
+                      <span className="pp-app-uploading-bar" />
+                    </span>
+                  )}
+                  {ticked && !uploading && (
+                    <span className="pp-app-tick" aria-hidden="true">
+                      <CheckIcon />
+                    </span>
+                  )}
                 </span>
               ) : (
                 <span className="pp-app-frame empty">
@@ -192,6 +301,32 @@ function OpenSheet({ clientId, sheet }: { clientId: number; sheet: NonNullable<P
             </button>
           );
         })}
+      </div>
+
+      <div className="pp-app-save">
+        <span className="pp-app-save-text">
+          {saving
+            ? "Sending…"
+            : stagedCount > 0
+            ? `${stagedCount} ${stagedCount === 1 ? "photo" : "photos"} ready to send`
+            : `${inCount} of ${total} with your coach`}
+        </span>
+        <span className="pp-app-save-actions">
+          {stagedCount > 0 && inCount > 0 && !saving && (
+            <button type="button" className="pp-app-save-cancel" onClick={cancel}>
+              Cancel
+            </button>
+          )}
+          {stagedCount === 0 && editing && !saving ? (
+            <button type="button" className="pp-app-save-btn secondary" onClick={() => setEditing(false)}>
+              Done
+            </button>
+          ) : (
+            <button type="button" className="pp-app-save-btn" onClick={save} disabled={stagedCount === 0 || saving}>
+              {saving ? "Sending…" : "Save"}
+            </button>
+          )}
+        </span>
       </div>
 
       {sheet.instructions && (
@@ -220,7 +355,7 @@ function OpenSheet({ clientId, sheet }: { clientId: number; sheet: NonNullable<P
                   capture={o.capture ? "environment" : undefined}
                   onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (file) upload(picking, file);
+                    if (file) pick(picking, file);
                   }}
                 />
               </label>

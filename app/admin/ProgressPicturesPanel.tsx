@@ -15,10 +15,8 @@ import {
   weekStart,
 } from "../lib/queries";
 import PhotoAngleChips from "./PhotoAngleChips";
-import PhotoCadenceSelect from "./PhotoCadenceSelect";
 import PhotoGallery, { type GallerySheet } from "./PhotoGallery";
-import PhotoInstructionsInput from "./PhotoInstructionsInput";
-import PhotoStartDateInput from "./PhotoStartDateInput";
+import PhotoScheduleForm from "./PhotoScheduleForm";
 
 const PERIOD_UNIT = { weekly: "Week", biweekly: "Check-in", monthly: "Month", sixweekly: "Block" } as const;
 const PERIOD_SHORT = { weekly: "Wk", biweekly: "Check-in", monthly: "Month", sixweekly: "Block" } as const;
@@ -163,14 +161,13 @@ export default function ProgressPicturesPanel({ clientId }: { clientId: number }
     <div className="pp">
       {/* No title here: the tab strip above already says Progress pictures. */}
       <section className="pp-card pp-config">
-        <span className="pp-label pp-label-block">When sheets arrive</span>
-        <div className="pp-schedule">
-          <span className="pp-schedule-word">First one on</span>
-          <PhotoStartDateInput clientId={clientId} value={startDate ?? ""} />
-          <span className="pp-schedule-word">then every</span>
-          <PhotoCadenceSelect clientId={clientId} cadence={cadence} />
-        </div>
-        <PhotoInstructionsInput clientId={clientId} firstName={firstName} value={instructions} />
+        <PhotoScheduleForm
+          clientId={clientId}
+          firstName={firstName}
+          startDate={startDate ?? ""}
+          cadence={cadence}
+          instructions={instructions}
+        />
 
         <hr className="pp-hairline" />
 

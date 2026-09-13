@@ -824,23 +824,21 @@ export async function reorderPhotoSlotsAction(clientId: number, orderedIds: numb
   revalidatePath("/client");
 }
 
-// The day the first photo sheet opens. An empty value clears it, which goes
-// back to the calendar buckets.
-export async function setPhotoStartDateAction(clientId: number, date: string) {
+// The photo sheet schedule in one save, when the coach presses Save: the day
+// the first sheet opens (empty goes back to calendar buckets), how often a
+// new one opens, and the note on how to take the pictures.
+export async function savePhotoScheduleAction(
+  clientId: number,
+  schedule: { startDate: string; cadence: string; instructions: string }
+) {
   await requireCoach();
-  if (!Number.isInteger(clientId)) return;
-  const value = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null;
-  if (date && !value) return;
-  setPhotoStartDate(clientId, value);
-  revalidatePath("/admin");
-  revalidatePath("/client");
-}
-
-// The coach's note on how to take the pictures. Empty clears it.
-export async function setPhotoInstructionsAction(clientId: number, text: string) {
-  await requireCoach();
-  if (!Number.isInteger(clientId) || typeof text !== "string") return;
-  setPhotoInstructions(clientId, text.slice(0, 600));
+  if (!Number.isInteger(clientId) || !schedule) return;
+  const cadence = (["weekly", "biweekly", "monthly", "sixweekly"] as const).find((c) => c === schedule.cadence);
+  const startDate = /^\d{4}-\d{2}-\d{2}$/.test(schedule.startDate) ? schedule.startDate : null;
+  if (!cadence || (schedule.startDate && !startDate)) return;
+  setPhotoCadence(clientId, cadence);
+  setPhotoStartDate(clientId, startDate);
+  setPhotoInstructions(clientId, String(schedule.instructions ?? "").slice(0, 600));
   revalidatePath("/admin");
   revalidatePath("/client");
 }
