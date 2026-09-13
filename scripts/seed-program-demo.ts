@@ -13,6 +13,7 @@
    the JSON store and would overwrite this script's writes on its next save.
 */
 import { getData, persist, allocId } from "../app/lib/db";
+import { ensureMeasurementField } from "../app/lib/queries";
 import {
   addExerciseToDay,
   addClientGoal,
@@ -93,8 +94,8 @@ addClientGoal(CLIENT_ID, "Add 15kg to leg press over the block");
 addInvoice(CLIENT_ID, "Coaching, Month 1", 180, "paid");
 addMeeting(CLIENT_ID, daysAgo(-4), "18:00", "Week 4 check-in call", 30);
 
-const weightField = listMeasurementFields(CLIENT_ID).find((f) => f.name === "Weight")!;
-const waistField = listMeasurementFields(CLIENT_ID).find((f) => f.name === "Waist")!;
+const weightField = ensureMeasurementField(CLIENT_ID, "Weight", "kg");
+const waistField = ensureMeasurementField(CLIENT_ID, "Waist", "cm");
 [4, 3, 2, 1].forEach((weeksBack, i) => {
   const date = weekStart(daysAgo(weeksBack * 7));
   setMeasurementValue(weightField.id, date, 78 - i * 0.4);

@@ -9,6 +9,7 @@
 import fs from "fs";
 import path from "path";
 import { getData, persist, allocId, DATA_DIR } from "../app/lib/db";
+import { ensureMeasurementField } from "../app/lib/queries";
 import {
   createClient,
   ensureWeekSkeleton,
@@ -227,9 +228,8 @@ function seedAlex() {
   saveNutritionPlan(plan);
 
   // ---- Measurements: 6 weeks of Monday check-ins, trending in the right direction ----
-  const fields = listMeasurementFields(clientId);
-  const weightField = fields.find((f) => f.name === "Weight")!;
-  const waistField = fields.find((f) => f.name === "Waist")!;
+  const weightField = ensureMeasurementField(clientId, "Weight", "kg");
+  const waistField = ensureMeasurementField(clientId, "Waist", "cm");
   const weekly = [
     { back: 42, w: 89.6, waist: 86.5 },
     { back: 35, w: 89.9, waist: 86.2 },
@@ -429,8 +429,7 @@ function seedLightClient(name: string, opts: { weight: number; goalPhase: string
     for (let s = 1; s <= a.sets; s++) logSetAt(a.id, s, a.target_weight_kg, 10, 7, 4);
   });
 
-  const fields = listMeasurementFields(clientId);
-  const weightField = fields.find((f) => f.name === "Weight")!;
+  const weightField = ensureMeasurementField(clientId, "Weight", "kg");
   setMeasurementValue(weightField.id, weekStart(daysAgo(7)), opts.weight);
   setMeasurementValue(weightField.id, weekStart(daysAgo(0)), opts.weight - 0.4);
 

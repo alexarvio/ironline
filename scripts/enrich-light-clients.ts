@@ -14,6 +14,7 @@
 import fs from "fs";
 import path from "path";
 import { getData, persist, allocId, DATA_DIR } from "../app/lib/db";
+import { ensureMeasurementField } from "../app/lib/queries";
 import {
   listClients,
   listExercises,
@@ -266,9 +267,8 @@ function enrichClient(cfg: LightClientConfig) {
   saveNutritionPlan(plan);
 
   // ---- More measurement history ----
-  const fields = listMeasurementFields(clientId);
-  const weightField = fields.find((f) => f.name === "Weight")!;
-  const waistField = fields.find((f) => f.name === "Waist")!;
+  const weightField = ensureMeasurementField(clientId, "Weight", "kg");
+  const waistField = ensureMeasurementField(clientId, "Waist", "cm");
   cfg.weeklyTrend.forEach(({ back, w, waist }) => {
     const date = weekStart(daysAgo(back));
     setMeasurementValue(weightField.id, date, w);

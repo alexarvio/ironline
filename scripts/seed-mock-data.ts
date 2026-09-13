@@ -17,6 +17,7 @@ import fs from "fs";
 import path from "path";
 import { execFileSync } from "child_process";
 import { getData, persist, allocId, DATA_DIR } from "../app/lib/db";
+import { ensureMeasurementField } from "../app/lib/queries";
 import {
   createClient,
   ensureWeekSkeleton,
@@ -164,9 +165,8 @@ function enrichAlex() {
   // ---- Measurements: 6 Mondays of history, none colliding with the real
   // dates already in the table (2026-08-26, 2026-08-25, 2026-08-18) since
   // these are all computed as weekStart() of weeks further back. ----
-  const fields = listMeasurementFields(clientId);
-  const weightField = fields.find((f) => f.name === "Weight")!;
-  const waistField = fields.find((f) => f.name === "Waist")!;
+  const weightField = ensureMeasurementField(clientId, "Weight", "kg");
+  const waistField = ensureMeasurementField(clientId, "Waist", "cm");
   const weekly = [
     { back: 42, w: 89.6, waist: 86.5 },
     { back: 35, w: 89.9, waist: 86.2 },
@@ -343,8 +343,7 @@ function seedLightClient(name: string, opts: { weight: number; goalPhase: string
     for (let s = 1; s <= a.sets; s++) logSetAt(a.id, s, a.target_weight_kg, 10, 7, 4);
   });
 
-  const fields = listMeasurementFields(clientId);
-  const weightField = fields.find((f) => f.name === "Weight")!;
+  const weightField = ensureMeasurementField(clientId, "Weight", "kg");
   setMeasurementValue(weightField.id, weekStart(daysAgo(7)), opts.weight);
   setMeasurementValue(weightField.id, weekStart(daysAgo(0)), opts.weight - 0.4);
 

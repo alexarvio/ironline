@@ -2282,6 +2282,17 @@ export function setMeasurementValue(fieldId: number, date: string, value: number
   persist();
 }
 
+/**
+ * The client's measurement field with this name, created when missing. For
+ * the seed scripts: the load-time tidy in db.ts drops seeded Weight/Waist
+ * fields that have no values yet, so a script can't assume they exist.
+ */
+export function ensureMeasurementField(clientId: number, name: string, unit: string) {
+  const find = () => listMeasurementFields(clientId).find((f) => f.name.toLowerCase() === name.toLowerCase());
+  if (!find()) addMeasurementField(clientId, name, unit);
+  return find()!;
+}
+
 // All distinct check-in dates across a client's fields, oldest first — one
 // table row per date, matching the running-log layout in the admin panel.
 export function listMeasurementDates(clientId: number): string[] {
