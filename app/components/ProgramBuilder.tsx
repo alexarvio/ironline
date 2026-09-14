@@ -227,13 +227,16 @@ export default function ProgramBuilder({
             assignments.length > 0 ? (
               <CopyDayMenu
                 fromDayId={day.id}
+                sourceName={`${sessionName}${day.label ? ` · ${day.label}` : ""}`}
+                newSessionNumber={days.length + 1}
                 remainingWeeks={remainingWeeks}
+                remainingLabel={remainingLabel}
                 targets={days
                   .filter((d) => d.id !== day.id)
                   .map((d) => ({
                     id: d.id,
                     name: `Session ${d.day_of_week}${d.label ? ` · ${d.label}` : ""}`,
-                    hasExercises: getAssignmentsForDay(d.id).length > 0,
+                    exerciseCount: getAssignmentsForDay(d.id).length,
                   }))}
               />
             ) : undefined

@@ -13635,6 +13635,17 @@ a.cd-entry:hover { border-color: var(--accent); }
 /* The client's gyms sit at the far right of the programme row: they belong
    to the client, not to any one programme. */
 .pb-programs-gyms { margin-left: auto; }
+/* Copy a session: where the copy goes, each choice saying what it does. */
+.pb-copy-options { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; max-height: 50vh; overflow-y: auto; }
+.pb-copy-option { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; cursor: pointer; }
+.pb-copy-option.on { border-color: #2f5d8f; background: #e6ecf3; }
+.pb-copy-option input { margin: 0; accent-color: #2f5d8f; }
+.pb-copy-option span { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.pb-copy-option b { font-size: 13px; font-weight: 800; color: #141a24; }
+.pb-copy-option small { font-size: 12px; color: #5b6474; }
+.pb-copy-later { display: flex; align-items: center; gap: 8px; margin: 4px 0 2px; font-size: 13px; font-weight: 600; color: #313851; cursor: pointer; }
+.pb-copy-later input { margin: 0; accent-color: #2f5d8f; }
+
 /* Under a week's sessions: the one way to add another. */
 .pb-add-session-form { margin-top: 10px; }
 .pb-add-session { width: 100%; border: 1px dashed var(--border); border-radius: 12px; background: none; color: #2f5d8f; padding: 14px; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }

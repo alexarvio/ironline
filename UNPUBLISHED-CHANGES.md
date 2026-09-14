@@ -214,6 +214,12 @@ Commit `a10ba40`, ported from `next` and pushed on its own.
 - [x] ~~Nutrition: a training day is a day the client logged a set, on the client's toggle default and in the coach's calorie log, instead of the programme's weekday.~~
 - [x] ~~Coach feed titles read "Session 2 · Push (Week 3)".~~
 
+## 32 · Copy a session: a dialog with "New session" — ✅ LIVE 14 Sep
+
+- [x] ~~Copy on a session opens a dialog, "Copy Session 3 · Push", listing where the copy can go: first "New session — Adds Session 6 to this week", then every other session with what it replaces ("Replaces its 5 exercises"). The button says the outcome: "Add as Session 6", "Replace Session 1".~~
+- [x] ~~A tick does the same in the rest of the programme ("Also add it to the remaining week (W3)"); a new session is added at the end of each later week, so no empty sessions appear.~~
+- [x] ~~A copied session brings its cardio along, not only its exercises.~~
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.

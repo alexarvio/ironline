@@ -5923,7 +5923,39 @@ export function copyProgramDay(fromDayId: number, toDayId: number) {
       data.assignment_custom_values.push({ ...v, id: allocId("assignment_custom_values"), workout_assignment_id: id });
     }
   }
+
+  // Cardio is part of the session too; the target's own goes, ticks and all.
+  data.cardio_entries = data.cardio_entries ?? [];
+  const replacedCardio = new Set(data.cardio_entries.filter((c) => c.program_day_id === dest.id).map((c) => c.id));
+  data.cardio_logs = (data.cardio_logs ?? []).filter((l) => !replacedCardio.has(l.cardio_entry_id));
+  data.cardio_entries = data.cardio_entries.filter((c) => c.program_day_id !== dest.id);
+  for (const c of data.cardio_entries.filter((c) => c.program_day_id === src.id)) {
+    data.cardio_entries.push({ ...c, id: allocId("cardio_entries"), program_day_id: dest.id });
+  }
   persist();
+}
+
+/**
+ * Copies a session into a new session at the end of its week and, with
+ * `laterWeeks`, at the end of every later week of its programme too. Always
+ * appended rather than placed at a number, so a later week with fewer
+ * sessions never grows empty ones to reach it. Returns the new session.
+ */
+export function copyProgramDayToNewSession(fromDayId: number, laterWeeks: boolean): ProgramDay | null {
+  const src = getData().program_days.find((d) => d.id === fromDayId);
+  if (!src) return null;
+  const created = addSession(src.client_id, src.week_number, false);
+  copyProgramDay(fromDayId, created.id);
+  if (laterWeeks) {
+    const program = getProgramForWeek(src.client_id, src.week_number);
+    if (program) {
+      for (let week = src.week_number + 1; week < program.start_week + program.total_weeks; week++) {
+        copyProgramDay(fromDayId, addSession(src.client_id, week, false).id);
+      }
+    }
+  }
+  persist();
+  return created;
 }
 
 

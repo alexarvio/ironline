@@ -181,6 +181,7 @@ import {
   reorderAssignments,
   copyProgramDay,
   copyProgramDayToLaterWeeks,
+  copyProgramDayToNewSession,
   clearProgramDay,
   findProgramById,
   applyDayOrderToLaterWeeks,
@@ -1836,14 +1837,22 @@ export async function reorderAssignmentsAction(programDayId: number, orderedIds:
   revalidatePath("/admin");
 }
 
+// Copy a session onto another session of its week, or into a new one
+// (toDayId "new"). Opt-in per copy: the same in every later week too.
 export async function copyProgramDayAction(formData: FormData) {
   const fromDayId = Number(formData.get("fromDayId"));
-  const toDayId = Number(formData.get("toDayId"));
+  const to = String(formData.get("toDayId") ?? "");
   const owner = clientIdForProgramDay(fromDayId);
-  if (!fromDayId || !toDayId || owner !== clientIdForProgramDay(toDayId) || !(await coachForClient(owner))) return;
-  copyProgramDay(fromDayId, toDayId);
-  // Opt-in per copy: the same weekday in every later week of the programme.
-  if (formData.get("applyToRemainingWeeks") === "1") copyProgramDayToLaterWeeks(fromDayId, toDayId);
+  if (!fromDayId || owner == null || !(await coachForClient(owner))) return;
+  const laterWeeks = formData.get("applyToRemainingWeeks") === "1";
+  if (to === "new") {
+    copyProgramDayToNewSession(fromDayId, laterWeeks);
+  } else {
+    const toDayId = Number(to);
+    if (!toDayId || clientIdForProgramDay(toDayId) !== owner) return;
+    copyProgramDay(fromDayId, toDayId);
+    if (laterWeeks) copyProgramDayToLaterWeeks(fromDayId, toDayId);
+  }
   revalidatePath("/client");
   revalidatePath("/admin");
 }
