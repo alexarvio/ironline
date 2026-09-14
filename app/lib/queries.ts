@@ -319,27 +319,96 @@ export function addExercise(coachId: number, name: string, muscleGroup: string, 
   return exercise;
 }
 
-// Ensures rows 1..7 exist (as drafts) for a given client/week, without clobbering existing ones.
-export function ensureWeekSkeleton(clientId: number, week: number) {
+// ---- Sessions -----------------------------------------------------------
+// A programme week is a list of sessions, not seven weekdays: the coach adds
+// as many as the week needs and the client does them in any order on any
+// day. A session's place in its week is day_of_week (1, 2, 3 …), always
+// numbered without gaps.
+
+/** Adds a session at the end of a week; it goes out at once if the programme is live. */
+export function addSession(clientId: number, week: number, save = true): ProgramDay {
   const data = getData();
-  let changed = false;
-  for (let d = 1; d <= 7; d++) {
-    const exists = data.program_days.some(
-      (pd) => pd.client_id === clientId && pd.week_number === week && pd.day_of_week === d
-    );
-    if (!exists) {
-      data.program_days.push({
-        id: allocId("program_days"),
-        client_id: clientId,
-        week_number: week,
-        day_of_week: d,
-        label: null,
-        status: "draft",
-      });
-      changed = true;
-    }
+  const program = getProgramForWeek(clientId, week);
+  const day: ProgramDay = {
+    id: allocId("program_days"),
+    client_id: clientId,
+    week_number: week,
+    day_of_week: getWeek(clientId, week).reduce((max, d) => Math.max(max, d.day_of_week), 0) + 1,
+    label: null,
+    status: program?.status === "deployed" ? "published" : "draft",
+  };
+  data.program_days.push(day);
+  if (save) persist();
+  return day;
+}
+
+/**
+ * Session N of a week. With `create`, a week with fewer sessions grows to
+ * N first, so copying or mirroring session 3 onto a later week always has
+ * somewhere to land.
+ */
+export function sessionAt(clientId: number, week: number, position: number, create = false): ProgramDay | null {
+  for (;;) {
+    const days = getWeek(clientId, week);
+    const hit = days.find((d) => d.day_of_week === position);
+    if (hit) return hit;
+    if (!create || days.some((d) => d.day_of_week > position)) return null;
+    addSession(clientId, week, false);
   }
-  if (changed) persist();
+}
+
+/**
+ * Deletes a session with everything on it: exercises, cardio, and what the
+ * client logged against them. The sessions after it move up one.
+ */
+export function removeSession(programDayId: number) {
+  const data = getData();
+  const day = data.program_days.find((pd) => pd.id === programDayId);
+  if (!day) return;
+  const assignmentIds = new Set(data.workout_assignments.filter((wa) => wa.program_day_id === day.id).map((wa) => wa.id));
+  const cardioIds = new Set((data.cardio_entries ?? []).filter((c) => c.program_day_id === day.id).map((c) => c.id));
+  data.set_logs = data.set_logs.filter((sl) => !assignmentIds.has(sl.workout_assignment_id));
+  data.assignment_custom_values = data.assignment_custom_values.filter((v) => !assignmentIds.has(v.workout_assignment_id));
+  data.workout_assignments = data.workout_assignments.filter((wa) => !assignmentIds.has(wa.id));
+  data.cardio_logs = (data.cardio_logs ?? []).filter((l) => !cardioIds.has(l.cardio_entry_id));
+  data.cardio_entries = (data.cardio_entries ?? []).filter((c) => !cardioIds.has(c.id));
+  data.program_days = data.program_days.filter((pd) => pd.id !== day.id);
+  getWeek(day.client_id, day.week_number).forEach((d, i) => (d.day_of_week = i + 1));
+  persist();
+}
+
+/**
+ * One-time move from seven weekday slots to sessions (Sept 2026). Days with
+ * nothing on them (unbuilt days, rest days) go; the rest keep their order
+ * and become Session 1, 2, 3 … of their week. Their exercises, cardio and
+ * logged sets stay attached, since the rows themselves stay.
+ */
+export function migrateDaysToSessions() {
+  const data = getData();
+  if (data.sessions_migrated) return;
+  const withContent = new Set([
+    ...data.workout_assignments.map((wa) => wa.program_day_id),
+    ...(data.cardio_entries ?? []).map((c) => c.program_day_id),
+  ]);
+  data.program_days = data.program_days.filter((pd) => withContent.has(pd.id));
+  const weeks = new Map<string, ProgramDay[]>();
+  for (const pd of data.program_days) {
+    const key = `${pd.client_id}:${pd.week_number}`;
+    weeks.set(key, [...(weeks.get(key) ?? []), pd]);
+  }
+  for (const days of weeks.values()) {
+    days.sort((a, b) => a.day_of_week - b.day_of_week).forEach((d, i) => (d.day_of_week = i + 1));
+  }
+  data.sessions_migrated = new Date().toISOString();
+  persist();
+}
+
+/** Dates (YYYY-MM-DD) the client logged at least one set on: their training days. */
+export function trainingDates(clientId: number): Set<string> {
+  const data = getData();
+  const dayIds = new Set(data.program_days.filter((pd) => pd.client_id === clientId).map((pd) => pd.id));
+  const assignmentIds = new Set(data.workout_assignments.filter((wa) => dayIds.has(wa.program_day_id)).map((wa) => wa.id));
+  return new Set(data.set_logs.filter((sl) => assignmentIds.has(sl.workout_assignment_id)).map((sl) => sl.logged_at.slice(0, 10)));
 }
 
 export function getWeek(clientId: number, week: number): ProgramDay[] {
@@ -348,15 +417,24 @@ export function getWeek(clientId: number, week: number): ProgramDay[] {
     .sort((a, b) => a.day_of_week - b.day_of_week);
 }
 
-// Every week_number that has at least one ProgramDay for this client,
-// ascending — drives the week switcher in the Training tab.
+// Every week_number this client has, ascending: each week a programme
+// spans (a week may have no sessions yet) and any week with sessions.
 export function listWeekNumbers(clientId: number): number[] {
-  const weeks = new Set(
-    getData()
-      .program_days.filter((pd) => pd.client_id === clientId)
-      .map((pd) => pd.week_number)
-  );
+  const data = getData();
+  const weeks = new Set(data.program_days.filter((pd) => pd.client_id === clientId).map((pd) => pd.week_number));
+  for (const p of data.training_programs) {
+    if (p.client_id !== clientId) continue;
+    for (let i = 0; i < p.total_weeks; i++) weeks.add(p.start_week + i);
+  }
   return [...weeks].sort((a, b) => a - b);
+}
+
+// A week is published when its sessions are, or, with no sessions yet, when
+// its programme is live.
+function isWeekPublished(clientId: number, week: number): boolean {
+  const days = getWeek(clientId, week);
+  if (days.length > 0) return days.every((d) => d.status === "published");
+  return getProgramForWeek(clientId, week)?.status === "deployed";
 }
 
 // Which week a client is currently looking at by default: the highest
@@ -370,7 +448,7 @@ export function getCurrentWeekNumber(clientId: number): number {
   if (deployed) return deployed.start_week + getProgramCurrentWeekIndex(deployed) - 1;
   const weeks = listWeekNumbers(clientId);
   if (weeks.length === 0) return 1;
-  const publishedWeeks = weeks.filter((w) => getWeek(clientId, w).every((d) => d.status === "published"));
+  const publishedWeeks = weeks.filter((w) => isWeekPublished(clientId, w));
   return publishedWeeks.length > 0 ? Math.max(...publishedWeeks) : weeks[0];
 }
 
@@ -380,7 +458,7 @@ export function getCurrentWeekNumber(clientId: number): number {
 // tabs in the client's own week switcher the moment a coach picks e.g. an
 // 8-week program length, well before deploying anything.
 export function listPublishedWeekNumbers(clientId: number): number[] {
-  return listWeekNumbers(clientId).filter((w) => getWeek(clientId, w).every((d) => d.status === "published"));
+  return listWeekNumbers(clientId).filter((w) => isWeekPublished(clientId, w));
 }
 
 // ---- Training programs: a coach-named, fixed-length (total_weeks) block of
@@ -455,7 +533,6 @@ export function createProgram(clientId: number, name: string, totalWeeks: number
   };
   data.training_programs.push(program);
   persist();
-  for (let i = 0; i < totalWeeks; i++) ensureWeekSkeleton(clientId, startWeek + i);
   return program;
 }
 
@@ -509,9 +586,8 @@ export function scheduleProgramDeploy(programId: number, scheduledAt: string | n
 // silently overwritten.
 function copyWeekOneInto(clientId: number, startWeek: number, toWeek: number) {
   const fromDays = getWeek(clientId, startWeek);
-  const toDays = getWeek(clientId, toWeek);
   fromDays.forEach((fromDay) => {
-    const toDay = toDays.find((d) => d.day_of_week === fromDay.day_of_week);
+    const toDay = sessionAt(clientId, toWeek, fromDay.day_of_week, true);
     if (!toDay) return;
     if (fromDay.label) setDayLabel(toDay.id, fromDay.label);
     getAssignmentsForDay(fromDay.id).forEach((a) => {
@@ -527,7 +603,7 @@ function copyWeekOneInto(clientId: number, startWeek: number, toWeek: number) {
 // adjusting from, not 11 empty ones. Requesting a number no bigger than
 // the current length is just a no-op.
 // New weeks start as copies of week 1 unless `seedFromWeekOne` is false, in
-// which case they are bare: seven days, nothing on them.
+// which case they are bare: no sessions yet.
 export function updateProgramTotalWeeks(programId: number, requestedTotal: number, seedFromWeekOne = true) {
   const data = getData();
   const program = data.training_programs.find((p) => p.id === programId);
@@ -536,7 +612,6 @@ export function updateProgramTotalWeeks(programId: number, requestedTotal: numbe
   if (newTotal === program.total_weeks) return;
   for (let i = program.total_weeks; i < newTotal; i++) {
     const weekNumber = program.start_week + i;
-    ensureWeekSkeleton(program.client_id, weekNumber);
     if (seedFromWeekOne && weekNumber !== program.start_week) copyWeekOneInto(program.client_id, program.start_week, weekNumber);
   }
   program.total_weeks = newTotal;
@@ -595,6 +670,7 @@ export function removeProgram(programId: number) {
 // passed, standing in for a push notification (via the coach_activity log
 // deployProgram writes) without needing any background infrastructure.
 export function applyDueProgramDeployments() {
+  migrateDaysToSessions();
   const data = getData();
   const now = new Date().toISOString();
   const due = data.training_programs.filter((p) => p.status === "draft" && p.scheduled_at && p.scheduled_at <= now);
@@ -668,8 +744,14 @@ export function applyDueClientReminders() {
     ...data.photo_slots.map((s) => s.client_id),
   ]);
 
+  // A reminder ticks itself off once it is no longer due: the check-in was
+  // done, or its day, week or photo period has passed. So clients with an
+  // unread reminder are looked at too, whatever they have set up now.
+  for (const a of data.coach_activity) if (a.kind === "reminder" && !a.read) clientIds.add(a.client_id);
+
+  let cleared = false;
   clientIds.forEach((clientId) => {
-    if (!getClientPreferences(clientId).checkin_reminders) return;
+    const dueKeys = new Set<string>();
     getDueItems(clientId).forEach((item) => {
       const periodKey =
         item.id === "weekly"
@@ -677,11 +759,19 @@ export function applyDueClientReminders() {
           : item.id === "photos"
           ? photoSheetFor(clientId, today) ?? today
           : today;
-      logCoachActivity(clientId, `${item.label}: ${item.detail}`, {
-        kind: "reminder",
-        dedupeKey: `reminder:${item.id}:${clientId}:${periodKey}`,
-      });    });
+      const dedupeKey = `reminder:${item.id}:${clientId}:${periodKey}`;
+      dueKeys.add(dedupeKey);
+      if (!getClientPreferences(clientId).checkin_reminders) return;
+      logCoachActivity(clientId, `${item.label}: ${item.detail}`, { kind: "reminder", dedupeKey });
+    });
+    for (const a of data.coach_activity) {
+      if (a.client_id !== clientId || a.kind !== "reminder" || a.read || !a.dedupe_key) continue;
+      if (dueKeys.has(a.dedupe_key)) continue;
+      a.read = true;
+      cleared = true;
+    }
   });
+  if (cleared) persist();
 }
 
 // Deletes an entire week (days + assignments + their logs). Weeks are
@@ -733,35 +823,21 @@ export function setDayLabel(programDayId: number, label: string) {
   }
 }
 
-// The coach marking an empty day as a deliberate rest day rather than one
-// they haven't built yet. Refuses while the day still has exercises, so this
-// can never be the thing that loses a session's programming — the caller is
-// expected to only offer it on empty days, and this enforces it.
-export function setDayRest(programDayId: number, isRest: boolean) {
-  const data = getData();
-  const day = data.program_days.find((pd) => pd.id === programDayId);
-  if (!day) return;
-  if (isRest && data.workout_assignments.some((wa) => wa.program_day_id === programDayId)) return;
-  day.is_rest = isRest;
-  persist();
-}
-
 // Duplicates one week's programming onto another week of the same client —
-// day labels, every exercise and its targets. Copies plan only: logged sets
-// belong to the week they were performed in, and rest-day marks follow the
-// day they describe. Skips silently if either week has no days.
+// session names, every exercise and its targets. Copies plan only: logged
+// sets belong to the week they were performed in. Session N lands on
+// session N; the target week grows sessions to match. Skips silently if the
+// source week has none.
 export function copyProgramWeek(clientId: number, fromWeek: number, toWeek: number) {
   if (fromWeek === toWeek) return;
   const data = getData();
   const source = getWeek(clientId, fromWeek);
-  const target = getWeek(clientId, toWeek);
-  if (source.length === 0 || target.length === 0) return;
+  if (source.length === 0) return;
 
   for (const src of source) {
-    const dest = target.find((d) => d.day_of_week === src.day_of_week);
+    const dest = sessionAt(clientId, toWeek, src.day_of_week, true);
     if (!dest) continue;
     dest.label = src.label;
-    dest.is_rest = src.is_rest ?? false;
     // Replace rather than append, so copying twice doesn't double the day.
     const replacedIds = data.workout_assignments.filter((wa) => wa.program_day_id === dest.id).map((wa) => wa.id);
     data.workout_assignments = data.workout_assignments.filter((wa) => wa.program_day_id !== dest.id);
@@ -798,11 +874,11 @@ export function getProgramForWeek(clientId: number, week: number): TrainingProgr
   );
 }
 
-// Adds the same prescription to the same weekday in every later week of the
-// day's programme. Weeks that don't have their seven days yet get them;
-// a week that already has this exercise on that day is left alone, so the
-// coach can't double up by ticking the box twice. Returns how many weeks
-// were touched.
+// Adds the same prescription to the same session in every later week of the
+// programme. A week with fewer sessions grows to that one; a week that
+// already has this exercise in that session is left alone, so the coach
+// can't double up by ticking the box twice. Returns how many weeks were
+// touched.
 export function addExerciseToRemainingWeeks(
   programDayId: number,
   exerciseId: number,
@@ -821,10 +897,7 @@ export function addExerciseToRemainingWeeks(
   const lastWeek = program.start_week + program.total_weeks - 1;
   let touched = 0;
   for (let week = day.week_number + 1; week <= lastWeek; week++) {
-    ensureWeekSkeleton(day.client_id, week);
-    const target = getData().program_days.find(
-      (pd) => pd.client_id === day.client_id && pd.week_number === week && pd.day_of_week === day.day_of_week
-    );
+    const target = sessionAt(day.client_id, week, day.day_of_week, true);
     if (!target) continue;
     const already = getData().workout_assignments.some(
       (wa) => wa.program_day_id === target.id && wa.exercise_id === exerciseId
@@ -933,81 +1006,6 @@ export function markExerciseNoteRead(assignmentId: number) {
   if (!assignment || !assignment.notes || assignment.note_read) return;
   assignment.note_read = true;
   persist();
-}
-
-/**
- * One capsule on the week rail. The ticks report what the client ACTUALLY
- * did, not what was planned — that was the point of the rail. A day the
- * coach built but the client skipped reads differently from a rest day, so
- * the coach can see adherence at a glance instead of inferring it.
- */
-export type WeekRailDay = { dayOfWeek: number; state: "trained" | "missed" | "rest"; title: string };
-export type WeekRailWeek = {
-  weekNumber: number;
-  label: string;
-  days: WeekRailDay[];
-  meta: string;
-  isLive: boolean;
-  hasSplit: boolean;
-};
-
-// Which weekdays (1 = Monday) the client actually trained a programme
-// week's sessions on, read from when each set was logged rather than the
-// day it was planned for. A Tuesday session done on Wednesday lights
-// Wednesday; a week trained late still lights the days it was done.
-export function getTrainedWeekdays(clientId: number, weekNumber: number): Set<number> {
-  const data = getData();
-  const dayIds = new Set(getWeek(clientId, weekNumber).map((d) => d.id));
-  const assignmentIds = new Set(data.workout_assignments.filter((a) => dayIds.has(a.program_day_id)).map((a) => a.id));
-  const out = new Set<number>();
-  for (const log of data.set_logs) {
-    if (!assignmentIds.has(log.workout_assignment_id)) continue;
-    const js = new Date(`${log.logged_at.slice(0, 10)}T00:00:00`).getDay();
-    out.add(((js + 6) % 7) + 1);
-  }
-  return out;
-}
-
-export function getWeekRail(clientId: number, weekNumbers: number[], liveWeek: number): WeekRailWeek[] {
-  const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-
-  return weekNumbers.map((weekNumber) => {
-    const days = getWeek(clientId, weekNumber);
-    const railDays: WeekRailDay[] = [];
-    // The day a set was actually logged is what lights a tick; the planned
-    // day only says whether an unlit one was a miss or a rest.
-    const actual = getTrainedWeekdays(clientId, weekNumber);
-
-    for (let dow = 1; dow <= 7; dow++) {
-      const day = days.find((d) => d.day_of_week === dow);
-      const assignments = day ? getAssignmentsForDay(day.id) : [];
-      const name = dayNames[dow - 1];
-      const planned = assignments.length > 0;
-      const trained = actual.has(dow);
-
-      if (trained) railDays.push({ dayOfWeek: dow, state: "trained", title: planned ? `${name}: trained` : `${name}: trained (moved from another day)` });
-      else if (planned) railDays.push({ dayOfWeek: dow, state: "missed", title: `${name}: planned, nothing logged` });
-      else railDays.push({ dayOfWeek: dow, state: "rest", title: `${name}: rest day` });
-    }
-
-    // Sessions done, not days lit: a session logged across two days is one.
-    const planned = days.filter((d) => getAssignmentsForDay(d.id).length > 0).length;
-    const trained = days.filter((d) => {
-      const as = getAssignmentsForDay(d.id);
-      return as.length > 0 && as.some((a) => getLogsForAssignment(a.id).length > 0);
-    }).length;
-
-    return {
-      weekNumber,
-      label: `Week ${weekNumber}`,
-      days: railDays,
-      // A future week has nothing to report yet, so it states the plan
-      // instead of claiming zero days trained.
-      meta: weekNumber > liveWeek ? `${planned} planned` : `${trained} of ${planned} session${planned === 1 ? "" : "s"}`,
-      isLive: weekNumber === liveWeek,
-      hasSplit: planned > 0,
-    };
-  });
 }
 
 /**
@@ -1921,13 +1919,13 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
     events.push({ note: null, thumbs: [], timeKnown: true, ...e, clientId, clientName: client.name });
   };
 
-  // "Monday · Push A (Week 3)", with the week counted inside its programme.
+  // "Session 2 · Push A (Week 3)", with the week counted inside its programme.
   const dayTitle = (day: { client_id: number; week_number: number; day_of_week: number; label: string | null }) => {
     const program = data.training_programs.find(
       (p) => p.client_id === day.client_id && day.week_number >= p.start_week && day.week_number < p.start_week + p.total_weeks
     );
     const week = program ? programWeekLabel(program, day.week_number) : `Week ${day.week_number}`;
-    return `${DAY_NAMES_FULL[day.day_of_week - 1] ?? `Day ${day.day_of_week}`}${day.label ? ` · ${day.label}` : ""} (${week})`;
+    return `Session ${day.day_of_week}${day.label ? ` · ${day.label}` : ""} (${week})`;
   };
 
   // ---- Training ----
@@ -5911,7 +5909,6 @@ export function copyProgramDay(fromDayId: number, toDayId: number) {
   if (!src || !dest || src.client_id !== dest.client_id) return;
 
   dest.label = src.label;
-  dest.is_rest = src.is_rest ?? false;
   const replacedIds = data.workout_assignments.filter((wa) => wa.program_day_id === dest.id).map((wa) => wa.id);
   data.workout_assignments = data.workout_assignments.filter((wa) => wa.program_day_id !== dest.id);
   data.assignment_custom_values = data.assignment_custom_values.filter((v) => !replacedIds.includes(v.workout_assignment_id));
@@ -5967,7 +5964,7 @@ export function copyProgramDayToLaterWeeks(fromDayId: number, toDayId: number): 
   if (!program) return 0;
   let touched = 0;
   for (let week = dest.week_number + 1; week < program.start_week + program.total_weeks; week++) {
-    const target = getWeek(dest.client_id, week).find((d) => d.day_of_week === dest.day_of_week);
+    const target = sessionAt(dest.client_id, week, dest.day_of_week, true);
     if (!target) continue;
     copyProgramDay(fromDayId, target.id);
     touched += 1;
@@ -6006,7 +6003,7 @@ export function applyDayOrderToLaterWeeks(programDayId: number): number {
     .map((wa) => wa.exercise_id);
   let touched = 0;
   for (let week = src.week_number + 1; week < program.start_week + program.total_weeks; week++) {
-    const day = getWeek(src.client_id, week).find((d) => d.day_of_week === src.day_of_week);
+    const day = sessionAt(src.client_id, week, src.day_of_week);
     if (!day) continue;
     const rows = data.workout_assignments.filter((wa) => wa.program_day_id === day.id).sort((a, b) => a.order_index - b.order_index);
     if (rows.length === 0) continue;
@@ -6300,7 +6297,7 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
     );
     if (program) {
       for (let week = src.week_number + 1; week < program.start_week + program.total_weeks; week++) {
-        const day = getWeek(src.client_id, week).find((d) => d.day_of_week === src.day_of_week);
+        const day = sessionAt(src.client_id, week, src.day_of_week, true);
         if (!day) continue;
         const ids = data.workout_assignments.filter((wa) => wa.program_day_id === day.id).map((wa) => wa.id);
         if (data.set_logs.some((sl) => ids.includes(sl.workout_assignment_id))) {

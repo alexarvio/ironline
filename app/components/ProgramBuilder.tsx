@@ -1,10 +1,9 @@
 import { ReactNode } from "react";
-import { clearProgramDayAction, createProgramAction, removeProgramAction } from "../lib/actions";
+import { addSessionAction, createProgramAction, removeProgramAction, removeSessionAction } from "../lib/actions";
 import {
   getAssignmentsForDay,
   getCustomValues,
   getDeployedProgram,
-  getTrainedWeekdays,
   listCardioForDay,
   formatRestSeconds,
   getClientProgramNoteMeta,
@@ -31,7 +30,6 @@ import {
   ProgramDay,
   TrainingProgram,
 } from "../lib/queries";
-import { DAY_NAMES_FULL } from "../lib/db";
 import { coachIdOfClient } from "../lib/tenancy";
 import AssignmentFieldInput, { GymWeightInput } from "./AssignmentFieldInput";
 import GymChipRow from "../admin/GymChipRow";
@@ -52,7 +50,6 @@ import ProgramNameForm from "../admin/ProgramNameForm";
 import ProgramDeployControls from "../admin/ProgramDeployControls";
 import ColumnChipRow from "../admin/ColumnChipRow";
 import CopyWeekButton from "../admin/CopyWeekButton";
-import DayRestToggle from "../admin/DayRestToggle";
 
 function formatTarget(sets: number, reps: string, targetWeight: number | null, rpe: number | null) {
   const weightPart = targetWeight ? ` @${targetWeight}kg` : "";
@@ -146,11 +143,10 @@ export default function ProgramBuilder({
   function renderDays(days: ProgramDay[]) {
     return days.map((day) => {
       const assignments = getAssignmentsForDay(day.id);
-      // Marked rest is the coach saying so; an empty day reads the same way
-      // visually but still invites the first exercise.
+      // A session is its place in the week: no weekday, just Session 1, 2, 3.
+      const sessionName = `Session ${day.day_of_week}`;
       const cardioCount = listCardioForDay(day.id).length;
-      const markedRest = day.is_rest === true && assignments.length === 0 && cardioCount === 0;
-      const isRest = assignments.length === 0 && cardioCount === 0;
+      const isEmpty = assignments.length === 0 && cardioCount === 0;
       // How many weeks of this day's programme come after it, for the
       // "also add to the remaining weeks" option on the add row.
       const dayProgram = allPrograms.find(
@@ -165,9 +161,7 @@ export default function ProgramBuilder({
       // logged on it. Only worth saying when they have more than one gym.
       const dayLog = allGyms.length > 1 ? assignments.flatMap((a) => getLogsForAssignment(a.id))[0] : undefined;
       const dayGymName = dayLog ? gymNameOf(dayLog.gym_id ?? home) : null;
-      const summary = markedRest
-        ? "Rest day"
-        : assignments.length === 0 && cardioCount === 0
+      const summary = isEmpty
         ? "Nothing yet. Add the first exercise"
         : [
             assignments.length ? `${assignments.length} exercise${assignments.length === 1 ? "" : "s"}` : null,
@@ -213,7 +207,7 @@ export default function ProgramBuilder({
         <DayPendingProvider
           key={day.id}
           dayId={day.id}
-          dayName={DAY_NAMES_FULL[day.day_of_week - 1]}
+          dayName={sessionName}
           weekLabel={`W${weekIdx}`}
           remainingCount={remainingWeeks}
           remainingLabel={remainingLabel}
@@ -221,20 +215,13 @@ export default function ProgramBuilder({
           assignments={pendingAssignments}
           cardio={listCardioForDay(day.id).map((c) => ({ id: c.id, fields: { name: c.name, time: c.time, pace: c.pace, incline: c.incline, distance: c.distance ?? "", notes: c.notes } }))}
           label={day.label ?? ""}
-          isRest={markedRest}
+          isRest={false}
           gymNames={gymNames}
         >
         <AdminDayCard
-          dayName={DAY_NAMES_FULL[day.day_of_week - 1]}
+          dayName={sessionName}
           labelSlot={
-            <DayLabelForm
-              programDayId={day.id}
-              defaultLabel={day.label ?? ""}
-              placeholder={markedRest ? "Rest" : "Day label (e.g. Push A)"}
-            />
-          }
-          restSlot={
-            <DayRestToggle programDayId={day.id} isRest={markedRest} hasExercises={assignments.length > 0} />
+            <DayLabelForm programDayId={day.id} defaultLabel={day.label ?? ""} placeholder="Session name (e.g. Push A)" />
           }
           copySlot={
             assignments.length > 0 ? (
@@ -245,22 +232,19 @@ export default function ProgramBuilder({
                   .filter((d) => d.id !== day.id)
                   .map((d) => ({
                     id: d.id,
-                    name: DAY_NAMES_FULL[d.day_of_week - 1],
+                    name: `Session ${d.day_of_week}${d.label ? ` · ${d.label}` : ""}`,
                     hasExercises: getAssignmentsForDay(d.id).length > 0,
                   }))}
               />
             ) : undefined
           }
           dangerSlot={
-            assignments.length > 0 ? (
-              // Whole day at once, rather than exercise by exercise.
-              <ConfirmDeleteButton
-                action={clearProgramDayAction}
-                hiddenFields={{ programDayId: day.id }}
-                label={`Clear ${DAY_NAMES_FULL[day.day_of_week - 1]}`}
-                description="Every exercise on this day goes, with anything the client logged against them. The day itself stays."
-              />
-            ) : undefined
+            <ConfirmDeleteButton
+              action={removeSessionAction}
+              hiddenFields={{ programDayId: day.id }}
+              label={`Delete ${sessionName}`}
+              description="The session goes, with its exercises, cardio and anything the client logged on them. The sessions after it move up."
+            />
           }
           statusPill={
             setsLoggedThisWeek > 0 ? (
@@ -277,7 +261,7 @@ export default function ProgramBuilder({
             ) : undefined
           }
           summary={summary}
-          isRest={isRest}
+          isRest={isEmpty}
           // Every day starts folded; the coach opens the one they are working
           // on, or Expand all. Keyed by day, so an open day survives an Apply.
           defaultOpen={false}
@@ -611,28 +595,30 @@ export default function ProgramBuilder({
       weekContents[index] = (
         <div key={`w${index}`} className="program-sheet">
           {renderDays(days)}
+          {/* A week is only its sessions: an empty week is just this button. */}
+          <form action={addSessionAction} className="pb-add-session-form">
+            <input type="hidden" name="clientId" value={clientId} />
+            <input type="hidden" name="week" value={weekNumber} />
+            <button type="submit" className="pb-add-session">
+              + Add session
+            </button>
+          </form>
         </div>
       );
       weekSummaries[index] = trainingDays
-        ? `${trainingDays} training day${trainingDays === 1 ? "" : "s"}${setsLogged ? ` · ${setsLogged} sets logged` : ""}`
-        : `${programWeekLabel(program, weekNumber)} is empty. Pick a day and add the first exercise`;
+        ? `${trainingDays} session${trainingDays === 1 ? "" : "s"}${setsLogged ? ` · ${setsLogged} sets logged` : ""}`
+        : `${programWeekLabel(program, weekNumber)} has no sessions yet. Add the first one`;
 
-      // Seven ticks in weekday order reporting what the client actually did:
-      // trained, planned-but-missed, or rest. Planned-vs-actual is the whole
-      // point of the rail — a skipped session must not look like a rest day.
-      // The day a set was actually logged is what lights a tick; the planned
-      // day only says whether an unlit one was a miss or a rest.
-      const actual = getTrainedWeekdays(clientId, weekNumber);
-      const railDays = Array.from({ length: 7 }, (_, di) => {
-        const dow = di + 1;
-        const day = days.find((d) => d.day_of_week === dow);
-        const assignments = day ? getAssignmentsForDay(day.id) : [];
-        const name = DAY_NAMES_FULL[di];
-        const planned = assignments.length > 0;
-        const trained = actual.has(dow);
-        if (trained) return { dayOfWeek: dow, state: "trained" as const, title: planned ? `${name}: trained` : `${name}: trained (moved from another day)` };
-        if (planned) return { dayOfWeek: dow, state: "missed" as const, title: `${name}: planned, nothing logged` };
-        return { dayOfWeek: dow, state: "rest" as const, title: `${name}: rest day` };
+      // One tick per session, in order, reporting what the client actually
+      // did: trained, not trained in a week that has passed, or not yet.
+      const railDays = days.map((d, di) => {
+        const assignments = perDay[di];
+        const name = `Session ${d.day_of_week}${d.label ? ` · ${d.label}` : ""}`;
+        const trained = assignments.some((x) => getLogsForAssignment(x.id).length > 0);
+        const past = liveWeekNumber != null && weekNumber < liveWeekNumber;
+        if (trained) return { dayOfWeek: d.day_of_week, state: "trained" as const, title: `${name}: trained` };
+        if (past && assignments.length > 0) return { dayOfWeek: d.day_of_week, state: "missed" as const, title: `${name}: not trained` };
+        return { dayOfWeek: d.day_of_week, state: "rest" as const, title: `${name}: not trained yet` };
       });
       // Sessions done, not days lit: a session logged across two days is
       // still one session, and the client's app counts the same way.

@@ -12,7 +12,7 @@ import { getData, persist, allocId, DATA_DIR } from "../app/lib/db";
 import { ensureMeasurementField } from "../app/lib/queries";
 import {
   createClient,
-  ensureWeekSkeleton,
+  sessionAt,
   addExerciseToDay,
   publishWeek,
   listExercises,
@@ -115,7 +115,7 @@ function seedAlex() {
   addClientGoal(clientId, "Bench press 100kg x 5 clean reps");
 
   // ---- Training: publish week 1 with a 4-day upper/lower split ----
-  ensureWeekSkeleton(clientId, 1);
+  sessionAt(clientId, 1, 7, true); // sessions 1–7; empty ones go on the next load
   const week = getData().program_days.filter((d) => d.client_id === clientId && d.week_number === 1);
   const byDow = (d: number) => week.find((p) => p.day_of_week === d)!;
 
@@ -414,7 +414,7 @@ function seedLightClient(name: string, opts: { weight: number; goalPhase: string
   addClientGoal(clientId, "Log all check-ins this week");
   addClientGoal(clientId, opts.goalPhase);
 
-  ensureWeekSkeleton(clientId, 1);
+  sessionAt(clientId, 1, 7, true); // sessions 1–7; empty ones go on the next load
   const week = getData().program_days.filter((d) => d.client_id === clientId && d.week_number === 1);
   const mon = week.find((d) => d.day_of_week === 1)!;
   mon.label = "Full body";

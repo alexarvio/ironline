@@ -26,6 +26,10 @@ type Client = {
 // Each coach has their own library (seeded from presets.ts), so coach_id is
 // the owner. Optional only for rows from before multi-coach.
 type Exercise = { id: number; name: string; muscle_tags: string | null; video_url: string | null; coach_id?: number };
+// One training session in a programme week. Sessions are not tied to a
+// weekday: the coach sets N sessions a week and the client does them when
+// they can. `day_of_week` is the session's place in its week (1 = Session 1),
+// kept under its old name from when a week was seven weekday slots.
 type ProgramDay = {
   id: number;
   client_id: number;
@@ -694,6 +698,10 @@ export type Data = {
   // Same idea for WORKSPACE_RESET_TOKEN (see resetWorkspaceFromEnv): the last
   // token value that wiped the client data, so it only ever fires once.
   workspace_reset_applied?: string;
+  // When weekday slots became sessions (migrateDaysToSessions), so the
+  // one-time move never runs again and never deletes an empty session a
+  // coach has just added.
+  sessions_migrated?: string;
   _seq: Record<string, number>;
 };
 

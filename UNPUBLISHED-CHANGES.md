@@ -201,6 +201,19 @@ Commit `a10ba40`, ported from `next` and pushed on its own.
 - [x] ~~Client session: the coach's note shows open inside the exercise card, as a "From your coach" box between the target and "My notes". No note, no box. The chat icon in the card header is gone; the note counts as read once the card is open. Cardio cards show their note the same way, under the figures.~~
 - [x] ~~Builder: with two or more gyms the cardio table's columns line up with the exercise table again (both use the wider Weight goal column).~~
 
+## 30 · Check-in reminders tick themselves off — ✅ LIVE 14 Sep
+
+- [x] ~~A reminder in the client's notifications (daily or weekly check-in, measurements, progress pictures) is marked read as soon as it is no longer due: the client did it, or its day, week or photo period has passed. Only reminders; notes, reports and new plans still wait for a tap.~~
+
+## 31 · Sessions instead of weekdays — ✅ LIVE 14 Sep
+
+- [x] ~~A programme week is a list of sessions, not Monday to Sunday. An empty week shows only "+ Add session"; each click adds Session 1, 2, 3 … as an expandable row with its name field, Copy and Delete (Delete takes its exercises, cardio and logged sets; the sessions after it move up). The Workout / Rest toggle is gone.~~
+- [x] ~~Existing programmes convert once, on the first load after deploy: days with nothing on them (unbuilt and rest days) are dropped, the rest keep their order as Session 1, 2, 3 … with their exercises and logged sets.~~
+- [x] ~~Copy week, Copy session, "Also apply to remaining weeks" and "add to the remaining weeks" match sessions by number; a later week with fewer sessions grows to fit.~~
+- [x] ~~Week rail: one tick per session (trained, not trained in a past week, not yet).~~
+- [x] ~~Nutrition: a training day is a day the client logged a set, on the client's toggle default and in the coach's calorie log, instead of the programme's weekday.~~
+- [x] ~~Coach feed titles read "Session 2 · Push (Week 3)".~~
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.

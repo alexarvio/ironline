@@ -1,12 +1,10 @@
 import {
-  getAssignmentsForDay,
   getClient,
-  getCurrentWeekNumber,
+  trainingDates,
   getLatestWeight,
   getNutritionGoalsSummary,
   getNutritionPlan,
   getStoredNutritionPlan,
-  getWeek,
   listCalorieLogs,
   listClientPhases,
   listNutritionPhases,
@@ -69,13 +67,10 @@ export default function NutritionPanel({ clientId }: { clientId: number }) {
   const running = nutritionPhases.find((p) => p.status === "now") ?? null;
 
   // The calorie log: only the days the client actually logged, newest first,
-  // each judged against that weekday's training or rest target and naming the
+  // each judged against the training target on a day the client trained (a
+  // set logged that date) and the rest target otherwise, and naming the
   // nutrition phase it fell in. Days with nothing logged are not listed.
-  const trainingDows = new Set(
-    getWeek(clientId, getCurrentWeekNumber(clientId))
-      .filter((d) => getAssignmentsForDay(d.id).length > 0)
-      .map((d) => d.day_of_week)
-  );
+  const trainedOn = trainingDates(clientId);
   const allLogs = listCalorieLogs(clientId, 10000);
   const nutritionAll = listClientPhases(clientId).filter((ph) => ph.track === "nutrition");
   // A phase's end_week is the Monday of its last week, so the week runs six more days.
@@ -90,7 +85,7 @@ export default function NutritionPanel({ clientId }: { clientId: number }) {
   const logs: NwLogDay[] = [...allLogs]
     .sort((a, b) => (a.date < b.date ? 1 : -1))
     .map((c) => {
-      const isTraining = trainingDows.has(new Date(`${c.date}T00:00:00`).getDay() || 7);
+      const isTraining = trainedOn.has(c.date);
       const target = (isTraining ? derived.trainingKcal : derived.restKcal) || null;
       return { date: c.date, kcal: c.kcal, isTraining, target, note: c.note ?? null, phase: phaseOn(c.date) };
     });

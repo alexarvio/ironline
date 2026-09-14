@@ -16,6 +16,7 @@ import {
   getDeployedProgram,
   getClientExerciseNotes,
   listClientGyms,
+  trainingDates,
   homeGymId,
   dayGymId,
   targetAtGym,
@@ -459,12 +460,9 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   const profile = getClientProfile(CLIENT_ID);
 
   const today = localDateStr();
-  const dow = (() => {
-    const jsDay = new Date(`${today}T00:00:00`).getDay();
-    return jsDay === 0 ? 7 : jsDay;
-  })();
-  const todayDay = getWeekDays(CLIENT_ID).find((d) => d.day.day_of_week === dow);
-  const isTrainingDay = !!todayDay && todayDay.assignments.length > 0;
+  // Sessions have no weekday, so today is a training day once the client has
+  // logged a set today; the Training day / Rest day toggle switches either way.
+  const isTrainingDay = trainingDates(CLIENT_ID).has(today);
   const dateLabel = new Date(`${today}T00:00:00`).toLocaleDateString("en-US", { weekday: "long" });
 
   // Both day types' targets are computed up front (not just today's) so the

@@ -13635,6 +13635,10 @@ a.cd-entry:hover { border-color: var(--accent); }
 /* The client's gyms sit at the far right of the programme row: they belong
    to the client, not to any one programme. */
 .pb-programs-gyms { margin-left: auto; }
+/* Under a week's sessions: the one way to add another. */
+.pb-add-session-form { margin-top: 10px; }
+.pb-add-session { width: 100%; border: 1px dashed var(--border); border-radius: 12px; background: none; color: #2f5d8f; padding: 14px; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+.pb-add-session:hover { border-color: #2f5d8f; background: #fff; }
 /* In a day's header: the gym the client trained that session at. */
 .pb-day-gym { flex-shrink: 0; font-size: 11.5px; font-weight: 800; color: #fff; background: #2f5d8f; border-radius: 999px; padding: 4px 11px; white-space: nowrap; box-shadow: 0 1px 2px rgba(20, 26, 36, 0.15); }
 .pb-gyms { position: relative; }

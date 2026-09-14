@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { copyProgramDayAction } from "../lib/actions";
 
-// Copies this day's exercises (and label) onto another day of the same
-// week. Pick the target, then Copy; if the target already has exercises
+// Copies this session's exercises (and name) onto another session of the
+// same week. Pick the target, then Copy; if the target already has exercises
 // the button says Replace, since that is what happens. When the programme
-// has later weeks, a tick also puts the copy on that weekday in each of
+// has later weeks, a tick also puts the copy on that session in each of
 // them.
 export default function CopyDayMenu({
   fromDayId,
@@ -39,7 +39,7 @@ export default function CopyDayMenu({
         name="toDayId"
         value={targetId ?? ""}
         onChange={(e) => setTargetId(Number(e.target.value))}
-        aria-label="Copy this day to"
+        aria-label="Copy this session to"
         className="pb-copy-day-select"
       >
         {targets.map((t) => (

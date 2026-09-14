@@ -120,7 +120,6 @@ import {
   setMetricVisibleToClient,
   setClientUnits,
   setDayLabel,
-  setDayRest,
   copyProgramWeek,
   setInvoiceStatus,
   setMeasurementValue,
@@ -153,7 +152,8 @@ import {
   setBuiltinColumnVisible,
   listPrograms,
   getProgramCurrentWeekIndex,
-  ensureWeekSkeleton,
+  addSession,
+  removeSession,
   setNutritionDayTargets,
   setNutritionNote,
   setNutritionWater,
@@ -320,18 +320,9 @@ export async function setAssignmentCustomValueAction(formData: FormData) {
   revalidatePath("/client");
 }
 
-export async function setDayRestAction(formData: FormData) {
-  const programDayId = Number(formData.get("programDayId"));
-  if (!(await coachForClient(clientIdForProgramDay(programDayId)))) return;
-  const isRest = formData.get("isRest") === "true";
-  setDayRest(programDayId, isRest);
-  revalidatePath("/client");
-  revalidatePath("/admin");
-}
-
 // "Copy week N here" in the builder toolbar — duplicates the previous
 // week's plan onto the one being edited so a coach progressing a block
-// isn't retyping seven days of exercises.
+// isn't retyping every session.
 export async function copyProgramWeekAction(formData: FormData) {
   const clientId = Number(formData.get("clientId"));
   if (!(await coachForClient(clientId))) return;
@@ -390,7 +381,6 @@ export async function addProgramWeekAction(formData: FormData) {
   updateProgramTotalWeeks(programId, newTotal, false);
 
   const newWeekNumber = program.start_week + newTotal - 1;
-  ensureWeekSkeleton(clientId, newWeekNumber);
   if (copyFrom) copyProgramWeek(clientId, copyFrom, newWeekNumber);
   // A week added to a programme the client already has must go out with
   // it: new days are created as drafts, and the client's Training tab shows
@@ -1884,6 +1874,25 @@ export async function clearProgramDayAction(formData: FormData) {
   const programDayId = Number(formData.get("programDayId"));
   if (!programDayId || !(await coachForClient(clientIdForProgramDay(programDayId)))) return;
   clearProgramDay(programDayId);
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+// "+ Add session" under a week in the builder.
+export async function addSessionAction(formData: FormData) {
+  const clientId = Number(formData.get("clientId"));
+  const week = Number(formData.get("week"));
+  if (!clientId || !week || !(await coachForClient(clientId))) return;
+  addSession(clientId, week);
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+// Deleting a session from its header; the ones after it move up.
+export async function removeSessionAction(formData: FormData) {
+  const programDayId = Number(formData.get("programDayId"));
+  if (!programDayId || !(await coachForClient(clientIdForProgramDay(programDayId)))) return;
+  removeSession(programDayId);
   revalidatePath("/client");
   revalidatePath("/admin");
 }
