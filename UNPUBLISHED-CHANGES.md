@@ -220,6 +220,15 @@ Commit `a10ba40`, ported from `next` and pushed on its own.
 - [x] ~~A tick does the same in the rest of the programme ("Also add it to the remaining week (W3)"); a new session is added at the end of each later week, so no empty sessions appear.~~
 - [x] ~~A copied session brings its cardio along, not only its exercises.~~
 
+## 33 · Admin client panel redesign — ✅ LIVE 14 Sep
+
+- [x] ~~Header: 40px avatar (photo or navy initial), name over "Client since …", a 28px chevron that folds the panel away, and the phase pill on its own line that wraps instead of truncating.~~
+- [x] ~~Snapshot unchanged in content, restyled: label outside the card, value and unit as separate spans so the numbers line up.~~
+- [x] ~~Member info (closed), Coaching info (open) and App access (closed) are collapsible cards whose headers say what is inside ("1 of 6 filled", "7 of 8 set", "Signed up"). Empty fields read "Add" and open that section's editor on the field; each section edits on its own ("Edit details", "Edit plan"). Coaching info gains a Change row (−3.8 kg); the goal / phase row is the header pill instead.~~
+- [x] ~~Each section remembers open or closed in this browser, so folding the panel away and back leaves them as they were.~~
+- [x] ~~App access keeps reset and remove behind the closed section: the temporary-password field, then Reset password and Remove access side by side.~~
+- [x] ~~Recent activity shows three entries with a blue dot for this week, and "See all" to the feed. Delete client is last, outlined and quiet.~~
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.

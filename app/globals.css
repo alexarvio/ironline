@@ -9820,70 +9820,193 @@ a.cd-entry:hover { border-color: var(--accent); }
 .ad-danger-btn svg { width: 13px; height: 13px; }
 .ad-danger-btn:hover { background: var(--accent-plate); color: #fff; }
 
-/* App access inside the overview panel: the box loses its own frame (the
-   panel is already the raised surface) and the forms stack full-width,
-   since the column is 296px and the inline row grammar came from a wider
-   card. */
-.ad-panel .client-login-box { border: 0; border-radius: 0; background: transparent; padding: 0; margin-top: 0; }
-.ad-panel .client-login-box h4 { display: none; }
-.ad-panel .client-login-status { font-size: 11px; line-height: 1.45; }
-.ad-panel .client-login-form { flex-direction: column; align-items: stretch; gap: 6px; }
-.ad-panel .client-login-form input {
-  min-width: 0;
-  height: 26px;
-  padding: 0 7px;
-  border-radius: 6px;
-  font: inherit;
-  font-size: 11.5px;
-  background: var(--surface);
-}
-.ad-panel .client-login-flash { font-size: 11px; padding: 6px 9px; }
+/* ---- Client panel: header, snapshot, collapsible sections ----
+   Scanned many times a day, so no gradients and no motion beyond a section
+   opening and its chevron turning. No ellipsis anywhere: long values wrap. */
+.ad-client-panel { padding: 0; }
 
-.ad-panel-profile {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--border);
-}
-
+.ad-panel-head { background: #fff; border-bottom: 1px solid #eceff3; padding: 14px 16px 16px; }
+.ad-panel-head-top { display: flex; align-items: center; gap: 10px; }
 .ad-panel-avatar {
   width: 40px;
   height: 40px;
-  flex-shrink: 0;
+  flex: none;
   border-radius: 999px;
-  background: var(--accent);
-  color: var(--accent-fg);
+  background: #1e3a6e;
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-serif);
-  font-size: 17px;
-  font-weight: 700;
-}
-
-.ad-panel-ident { min-width: 0; }
-
-.ad-panel-name {
-  font-family: var(--font-serif);
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--ink);
-  line-height: 1.2;
-}
-
-.ad-panel-since { font-size: 11px; color: var(--steel); margin-top: 1px; }
-
-.ad-phase-pill {
-  display: inline-block;
-  margin-top: 5px;
-  border-radius: 999px;
-  background: var(--accent-tint);
-  color: var(--accent);
-  padding: 2px 8px;
-  font-size: 10px;
+  overflow: hidden;
+  font-size: 16px;
   font-weight: 800;
 }
+.ad-panel-ident { flex: 1; min-width: 0; }
+.ad-panel-name { font-size: 17px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.25; color: #141a24; text-wrap: pretty; }
+.ad-panel-since { margin-top: 1px; font-size: 12px; font-weight: 600; color: #8b93a1; }
+.ad-panel-collapse {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #dfe3e8;
+  border-radius: 8px;
+  background: #fff;
+  color: #5b6474;
+  cursor: pointer;
+}
+.ad-panel-collapse svg { transform: rotate(-90deg); }
+.ad-panel-collapse:hover { color: #141a24; }
+/* On its own line, and wraps rather than truncates. */
+.ad-phase-pill {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-top: 10px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #dff3ea;
+  color: #0f5c46;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.35;
+  text-wrap: pretty;
+}
+
+.ad-panel-content { display: flex; flex-direction: column; gap: 16px; padding: 14px 16px 24px; }
+.ad-panel-label { margin: 0 0 6px; font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #8b93a1; }
+.ad-panel-label-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.ad-panel-seeall { font-size: 11.5px; font-weight: 800; color: #2f5d8f; text-decoration: none; }
+.ad-panel-seeall:hover { text-decoration: underline; }
+
+/* Snapshot: value and unit are separate, so the numbers align down the column. */
+.ad-snapshot { background: #fff; border: 1px solid #dfe3e8; border-radius: 12px; }
+.ad-snap-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 10px 13px; border-bottom: 1px solid #eceff3; }
+.ad-snap-row:last-child { border-bottom: 0; }
+.ad-snap-label { flex: none; font-size: 12.5px; font-weight: 600; color: #5b6474; white-space: nowrap; }
+.ad-snap-figure { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-end; gap: 0 5px; min-width: 0; text-align: right; }
+.ad-snap-value { font-size: 13.5px; font-weight: 800; color: #141a24; font-variant-numeric: tabular-nums; }
+.ad-snap-unit { font-size: 11px; font-weight: 600; color: #8b93a1; }
+
+/* Collapsible sections: the header says what is inside even when closed. */
+.ad-sects { display: flex; flex-direction: column; gap: 8px; }
+.ad-sect { background: #fff; border: 1px solid #dfe3e8; border-radius: 12px; }
+.ad-sect-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 13px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ad-sect-title { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
+.ad-sect-hint { font-size: 11px; font-weight: 600; color: #8b93a1; }
+.ad-sect-chev { display: flex; align-self: center; margin-left: auto; color: #8b93a1; transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1); }
+.ad-sect.open .ad-sect-chev { transform: rotate(180deg); }
+.ad-sect-body {
+  overflow: hidden;
+  transition: max-height 0.42s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ad-sect-inner { border-top: 1px solid #eceff3; padding: 4px 13px 12px; }
+.ad-sect .ad-card-form { padding-top: 6px; }
+@media (prefers-reduced-motion: reduce) {
+  .ad-sect-body,
+  .ad-sect-chev { transition: none; }
+}
+
+/* Rows inside a section. An empty editable field is an "Add" link into its editor. */
+.ad-rows { display: flex; flex-direction: column; }
+.ad-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 7px 0; }
+.ad-row-label { flex: none; font-size: 12.5px; font-weight: 600; color: #5b6474; white-space: nowrap; }
+.ad-row-value {
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1.4;
+  color: #141a24;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+.ad-row-value.good { color: #2f7a3f; }
+.ad-row-add { border: 0; background: none; padding: 0; font: inherit; font-size: 12.5px; font-weight: 700; color: #2f5d8f; cursor: pointer; }
+.ad-row-add:hover { text-decoration: underline; }
+.ad-row-none { font-size: 12.5px; font-weight: 600; color: #8b93a1; text-align: right; }
+.ad-sect-edit {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #e6ecf3;
+  color: #1e3a6e;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.ad-sect-edit:hover { color: #141a24; }
+
+/* App access: the reset and remove controls stay inside the closed section. */
+.ad-access .client-login-flash { margin: 8px 0 2px; padding: 6px 9px; border-radius: 8px; font-size: 11.5px; font-weight: 600; }
+.ad-access .client-login-flash.ok { background: #dff3ea; color: #0f5c46; }
+.ad-access .client-login-flash.err { background: #fbe9e0; color: #b3471d; }
+.ad-access-form { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.ad-access-input {
+  width: 100%;
+  height: 34px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  border: 1px solid #dfe3e8;
+  border-radius: 8px;
+  background: #fff;
+  color: #141a24;
+  font: inherit;
+  font-size: 12.5px;
+}
+.ad-access-input:focus { outline: none; border-color: #2f5d8f; }
+.ad-access-actions { display: flex; gap: 6px; margin-top: 6px; }
+.ad-access-actions form { display: flex; }
+.ad-access-primary { flex: 1; height: 32px; border: 0; border-radius: 8px; background: #1e3a6e; color: #fff; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.ad-access-secondary {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid #dfe3e8;
+  border-radius: 8px;
+  background: #fff;
+  color: #313851;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ad-access-explain { margin: 8px 0 0; font-size: 11.5px; font-weight: 500; line-height: 1.45; color: #8b93a1; text-wrap: pretty; }
+
+/* Delete client: last, outlined and quiet. */
+.ad-panel-delete .ad-danger-btn {
+  width: 100%;
+  height: auto;
+  justify-content: center;
+  padding: 9px 12px;
+  border: 1px solid #f0dada;
+  border-radius: 8px;
+  background: #fff;
+  color: #a32d2d;
+  font-size: 12px;
+  font-weight: 800;
+}
+.ad-panel-delete .ad-danger-btn:hover { background: #fbeaea; color: #a32d2d; }
 
 /* A hairline above each block, as the design has it — the panel is six
    unrelated things stacked, and without dividers the goals ran into the
@@ -9909,60 +10032,6 @@ a.cd-entry:hover { border-color: var(--accent); }
 
 .ad-panel-empty { margin: 0; font-size: 11.5px; color: var(--faint); }
 
-/* One card, one hairline row per figure — label left, value right. These are
-   six one-line facts, not six widgets; boxing each one turned a summary into
-   a dashboard. */
-.ad-snapshot {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
-  overflow: hidden;
-}
-
-.ad-snap-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  border-top: 1px solid var(--border);
-  padding: 8px 12px;
-}
-
-.ad-snap-row:first-child { border-top: none; }
-
-.ad-snap-label {
-  flex-shrink: 0;
-  font-size: 10.5px;
-  color: var(--steel);
-  white-space: nowrap;
-}
-
-/* Figure first, qualifier after it in a lighter weight — "4 of 4" is the
-   answer, "done this week" is only how to read it. */
-.ad-snap-figure {
-  display: flex;
-  align-items: baseline;
-  justify-content: flex-end;
-  gap: 4px;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.ad-snap-figure b {
-  font-size: 12.5px;
-  font-weight: 800;
-  color: var(--ink);
-  white-space: nowrap;
-}
-
-.ad-snap-figure em {
-  flex-shrink: 0;
-  font-style: normal;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--steel);
-  white-space: nowrap;
-}
 
 .ad-goal-list { display: flex; flex-direction: column; }
 
@@ -10178,33 +10247,17 @@ a.cd-entry:hover { border-color: var(--accent); }
   margin-top: 12px;
 }
 
-.ad-activity { display: flex; flex-direction: column; }
-
-/* Text first, then the date and time on one line beneath it. The old side
-   column was 42px wide, so "Aug 28 · 5:51 AM" wrapped onto three lines. */
-.ad-activity-row {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 7px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.ad-activity-when {
-  order: 2;
-  font-size: 10px;
-  color: var(--steel);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.ad-activity-text {
-  order: 1;
-  font-size: 11px;
-  line-height: 1.4;
-  color: var(--ink);
-  min-width: 0;
-}
+/* Recent activity in the client panel: a dot (blue this week, grey before),
+   the entry, and when beneath it. Three entries; "See all" opens the feed. */
+.ad-activity { background: #fff; border: 1px solid #dfe3e8; border-radius: 12px; padding: 2px 13px; }
+.ad-activity-row { display: flex; gap: 9px; padding: 9px 0; border-bottom: 1px solid #eceff3; }
+.ad-activity-row:last-child { border-bottom: 0; }
+.ad-activity-dot { flex: none; width: 6px; height: 6px; margin-top: 5px; border-radius: 999px; background: #dfe3e8; }
+.ad-activity-dot.recent { background: #2f5d8f; }
+.ad-activity-main { min-width: 0; }
+.ad-activity-text { font-size: 12.5px; font-weight: 700; line-height: 1.4; color: #313851; text-wrap: pretty; }
+.ad-activity-when { margin-top: 1px; font-size: 11px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.ad-activity-empty { margin: 0; padding: 10px 0; font-size: 12.5px; color: #8b93a1; }
 
 /* The client header strip is gone entirely — no name, age, "client since"
    or Message button above the tabs. Those facts live in the right-hand panel,

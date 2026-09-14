@@ -1673,6 +1673,8 @@ export function getLastActive(clientId: number): string | null {
  * because the panel is on screen for every client, on every tab — the cost of
  * walking the store repeatedly is paid on every single admin render.
  */
+export type OverviewInfoRow = { label: string; value: string; field?: string; tone?: "good" };
+
 export type OverviewPanel = {
   name: string;
   initial: string;
@@ -1683,9 +1685,12 @@ export type OverviewPanel = {
    *  in a lighter weight so the number reads first. */
   snapshot: { label: string; value: string; suffix?: string }[];
   goals: ClientGoal[];
-  memberInfo: { label: string; value: string }[];
-  coachingInfo: { label: string; value: string }[];
-  activity: { id: string; when: string; text: string }[];
+  /** value is "" when empty; field names the card field that edits it, absent
+   *  on rows derived from elsewhere (plan, current week, weight). */
+  memberInfo: OverviewInfoRow[];
+  coachingInfo: OverviewInfoRow[];
+  /** recent: logged this week. */
+  activity: { id: string; when: string; text: string; recent: boolean }[];
   /** The raw, editable values behind the two info blocks.
    *
    * The blocks above are formatted for reading ("178 cm", "—"); an edit form
@@ -1719,8 +1724,14 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
   const invoices = listInvoices(clientId);
   const today = localDateStr();
 
-  const dash = (v: string | number | null | undefined) =>
-    v === null || v === undefined || v === "" ? "-" : String(v);
+  const text =(v: string | number | null | undefined) => (v === null || v === undefined ? "" : String(v));
+  // Weight now against the starting weight, with a true minus sign.
+  const weightChange = (() => {
+    if (weight == null || profile.starting_weight_kg == null) return "";
+    const delta = Math.round((weight - profile.starting_weight_kg) * 10) / 10;
+    const abs = Number.isInteger(delta) ? String(Math.abs(delta)) : Math.abs(delta).toFixed(1);
+    return `${delta < 0 ? "−" : delta > 0 ? "+" : ""}${abs} kg`;
+  })();
 
   const nextMeeting = listMeetings(clientId)
     .filter((m) => m.status === "scheduled" && m.date >= today)
@@ -1785,24 +1796,26 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
       },
     ],
     goals: listClientGoals(clientId),
+    // Empty is "", not a dash: the panel shows an Add link there instead.
     memberInfo: [
-      { label: "Birthdate", value: dash(profile.birthdate) },
-      { label: "Gender", value: dash(profile.gender) },
-      { label: "Height", value: profile.height_cm ? `${profile.height_cm} cm` : "-" },
-      { label: "Email", value: dash(profile.email) },
-      { label: "Phone", value: dash(profile.phone) },
-      { label: "Address", value: dash(profile.address) },
+      { label: "Birthdate", value: text(profile.birthdate), field: "birthdate" },
+      { label: "Gender", value: text(profile.gender), field: "gender" },
+      { label: "Height", value: profile.height_cm ? `${profile.height_cm} cm` : "", field: "height_cm" },
+      { label: "Email", value: text(profile.email), field: "email" },
+      { label: "Phone", value: text(profile.phone), field: "phone" },
+      { label: "Address", value: text(profile.address), field: "address" },
     ],
+    // The goal / phase is the pill under the name, so it isn't repeated here.
     coachingInfo: [
-      { label: "Plan", value: liveProgram?.name || "-" },
+      { label: "Plan", value: liveProgram?.name || "" },
       // The two dates sit together: the block a client is in reads as a span.
-      { label: "Start date", value: dash(profile.coaching_start_date) },
-      { label: "Goal date", value: dash(profile.goal_date) },
-      { label: "Current week", value: liveWeek != null ? `Week ${liveWeek}` : "-" },
-      { label: "Goal / phase", value: dash(effectiveGoalPhase(clientId, profile.goal_phase)) },
-      { label: "Check-in day", value: dash(profile.check_in_day) },
-      { label: "Starting weight", value: profile.starting_weight_kg ? `${profile.starting_weight_kg} kg` : "-" },
-      { label: "Current weight", value: weight != null ? `${weight} kg` : "-" },
+      { label: "Start date", value: text(profile.coaching_start_date), field: "coaching_start_date" },
+      { label: "Goal date", value: text(profile.goal_date), field: "goal_date" },
+      { label: "Current week", value: liveWeek != null ? `Week ${liveWeek}` : "" },
+      { label: "Check-in day", value: text(profile.check_in_day), field: "check_in_day" },
+      { label: "Starting weight", value: profile.starting_weight_kg ? `${profile.starting_weight_kg} kg` : "", field: "starting_weight_kg" },
+      { label: "Current weight", value: weight != null ? `${weight} kg` : "" },
+      { label: "Change", value: weightChange, tone: "good" },
     ],
     activity: getActivityFeed(coachIdOfClient(clientId) ?? 0)
       .filter((e) => e.clientId === clientId)
@@ -1811,6 +1824,7 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
         id: e.id,
         when: feedTimeLabel(e.at, e.timeKnown),
         text: e.text.charAt(0).toUpperCase() + e.text.slice(1),
+        recent: e.at >= new Date(`${weekStart(today)}T00:00:00`).getTime(),
       })),
     card: {
       name: client?.name ?? "",

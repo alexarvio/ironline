@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useSyncExternalStore } from "react";
+import { ChevronDownIcon } from "../components/icons";
 
 // Three columns: the client list, the working area, and everything else true
 // about the client.
@@ -44,6 +45,22 @@ function writePanelOpen(open: boolean) {
   window.dispatchEvent(new Event(CHANGE_EVENT));
 }
 
+/** The chevron in the client panel's header that folds the panel away. */
+export function PanelCollapseButton() {
+  return (
+    <button
+      type="button"
+      className="ad-panel-collapse"
+      onClick={() => writePanelOpen(false)}
+      aria-expanded={true}
+      aria-label="Hide the client panel"
+      title="Hide the client panel"
+    >
+      <ChevronDownIcon />
+    </button>
+  );
+}
+
 export default function AdminShell({
   sidebar,
   panel,
@@ -62,16 +79,20 @@ export default function AdminShell({
       <main className="ad-main">{children}</main>
       {panel && (
         <aside className="ad-panel-col" aria-label="Client overview">
-          <button
-            type="button"
-            className="ad-panel-toggle"
-            onClick={() => writePanelOpen(!panelOpen)}
-            aria-expanded={panelOpen}
-            title={panelOpen ? "Hide the client panel" : "Show the client panel"}
-          >
-            <span aria-hidden="true">{panelOpen ? "›" : "‹"}</span>
-            <span className="sr-only">{panelOpen ? "Hide client panel" : "Show client panel"}</span>
-          </button>
+          {/* Open, the panel's own header carries the collapse chevron
+              (PanelCollapseButton); collapsed, this strip brings it back. */}
+          {!panelOpen && (
+            <button
+              type="button"
+              className="ad-panel-toggle"
+              onClick={() => writePanelOpen(true)}
+              aria-expanded={false}
+              title="Show the client panel"
+            >
+              <span aria-hidden="true">‹</span>
+              <span className="sr-only">Show client panel</span>
+            </button>
+          )}
           {panelOpen && <div className="ad-panel-body">{panel}</div>}
         </aside>
       )}
