@@ -196,6 +196,11 @@ Commit `a10ba40`, ported from `next` and pushed on its own.
 - [x] ~~Two gyms are two parallel tracks for every weight figure: the ▲/▼ % trend beside an exercise in the builder counts one gym (this week's, or the gym in use now), and an exercise goal counts one gym's sets. The goal editor asks which gym when there are two or more; existing goals count the home gym. The goal reads "Lat Pulldown · PureGym · best set" on Home and "… at PureGym" in the coach's lists.~~
 - [x] ~~Postgres: new `client_gyms` table, migration `drizzle/0001_client_gyms.sql`.~~
 
+## 29 · Coach's note open in the exercise card; builder columns lined up — ✅ LIVE 14 Sep
+
+- [x] ~~Client session: the coach's note shows open inside the exercise card, as a "From your coach" box between the target and "My notes". No note, no box. The chat icon in the card header is gone; the note counts as read once the card is open. Cardio cards show their note the same way, under the figures.~~
+- [x] ~~Builder: with two or more gyms the cardio table's columns line up with the exercise table again (both use the wider Weight goal column).~~
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.

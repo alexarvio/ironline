@@ -128,6 +128,11 @@ export default function ProgramBuilder({
   const multiGym = homeGym != null && otherGyms.length > 0;
   const gymNameOf = (id: number | null) => allGyms.find((g) => g.id === id)?.name ?? null;
   const gymNames = Object.fromEntries(allGyms.map((g) => [g.id, g.name]));
+  // One set of widths for the exercise table and the cardio table under it,
+  // so their columns stay lined up when the Weight column grows a box per gym.
+  const columnWidths: Record<string, string> = multiGym
+    ? { ...COLUMN_WIDTH, weight_goal: `${64 * (otherGyms.length + 1)}px` }
+    : COLUMN_WIDTH;
   const cell = (l: { set_number: number; weight_kg: number | null; reps: number | null; rpe_actual: number | null }) => ({
     setNumber: l.set_number,
     weightKg: l.weight_kg,
@@ -286,10 +291,7 @@ export default function ProgramBuilder({
                   <th aria-hidden="true" style={{ width: "22px" }}></th>
                   <th>Exercise</th>
                   {columns.map((col) => (
-                    <th
-                      key={col.id}
-                      style={{ width: col.key === "weight_goal" && multiGym ? `${64 * (otherGyms.length + 1)}px` : COLUMN_WIDTH[col.key] ?? "90px" }}
-                    >
+                    <th key={col.id} style={{ width: columnWidths[col.key] ?? "90px" }}>
                       {col.label}
                     </th>
                   ))}
@@ -578,7 +580,7 @@ export default function ProgramBuilder({
             key="cardio"
             groups={MUSCLE_GROUPS.filter((g) => g.slug === "cardio")}
             exercisesByGroup={{ cardio: exercisesByGroup.cardio ?? [] }}
-            widths={COLUMN_WIDTH}
+            widths={columnWidths}
           />
 
         </AdminDayCard>

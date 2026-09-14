@@ -219,9 +219,6 @@ function CardioCard({ cardio, index }: { cardio: SessionCardio; index: number })
       <div className="ts-card-head">
         <span className={`ts-circle ${done ? "done" : "active"}`}>{done ? "✓" : index}</span>
         <span className="ts-card-name">{cardio.name}</span>
-        <span className="ts-card-tools">
-          <ExerciseCoachNote assignmentId={null} dateLabel="" text={cardio.notes || null} unread={false} />
-        </span>
       </div>
       {cells.length > 0 && (
         <div className="ts-cardio-grid" style={{ gridTemplateColumns: `repeat(${cells.length}, minmax(0, 1fr))` }}>
@@ -233,6 +230,7 @@ function CardioCard({ cardio, index }: { cardio: SessionCardio; index: number })
           ))}
         </div>
       )}
+      <ExerciseCoachNote assignmentId={null} dateLabel="" text={cardio.notes || null} unread={false} />
       <button
         type="button"
         className={`ts-cardio-done${done ? " is-done" : ""}`}
@@ -394,7 +392,6 @@ function ExpandedExercise({
         <span className={`ts-circle ${done ? "done" : "active"}`}>{done ? "✓" : index}</span>
         <span className="ts-card-name">{exercise.name}</span>
         <span className="ts-card-tools">
-          {exercise.note}
           <button type="button" className="ts-chev up" onClick={onCollapse} aria-label="Collapse">
             <ChevronDownIcon />
           </button>
@@ -425,6 +422,9 @@ function ExpandedExercise({
           )}
         </div>
       )}
+
+      {/* The coach's note, open, then the client's own below it. */}
+      {exercise.note}
 
       <MyNote key={gymId ?? 0} assignmentId={exercise.id} gymId={gymId} text={exercise.myNote} />
 

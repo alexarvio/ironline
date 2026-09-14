@@ -12787,6 +12787,13 @@ a.cd-entry:hover { border-color: var(--accent); }
 .pb-log-gym { flex: none; align-self: center; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #5b6474; margin-right: 2px; }
 .pb-log-gym.dim { color: #8b93a1; }
 
+/* The coach's note, open in the card above the client's own. */
+.ts-coachnote { display: flex; flex-direction: column; gap: 3px; margin-top: 10px; padding: 9px 12px; border-radius: 10px; border: 1px solid #dfe3e8; background: #f8f9fb; }
+.ts-coachnote-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.ts-coachnote-label { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #2f5d8f; }
+.ts-coachnote-date { font-size: 11px; color: #8b93a1; white-space: nowrap; }
+.ts-coachnote-text { margin: 0; font-size: 13.5px; line-height: 1.4; color: #313851; white-space: pre-wrap; }
+
 .ts-mynote { display: flex; flex-direction: column; gap: 3px; width: 100%; box-sizing: border-box; margin-top: 10px; padding: 9px 12px; border-radius: 10px; border: 1px dashed #c3c9d2; background: #fafbfc; text-align: left; font: inherit; cursor: text; }
 .ts-mynote.empty { padding: 8px 12px; }
 .ts-mynote.editing { border-style: solid; border-color: #2f5d8f; background: #fff; cursor: auto; }
