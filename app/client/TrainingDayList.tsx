@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import TrainingDaySession, { SessionCardio, SessionExercise } from "./TrainingDaySession";
+import type { GymOption } from "./GymPicker";
 import { useFocusRef } from "./CheckInContext";
 
 export type TrainingDayProps = {
@@ -11,6 +12,9 @@ export type TrainingDayProps = {
   cardio: SessionCardio[];
   /** The day the week should land on: the first one not fully logged. */
   defaultOpen: boolean;
+  /** The client's gyms, and the one this session is at. */
+  gyms: GymOption[];
+  gymId: number | null;
 };
 
 // One day open at a time. Opening Friday while Wednesday is open folds
@@ -47,6 +51,9 @@ export default function TrainingDayList({ days }: { days: TrainingDayProps[] }) 
         >
         <TrainingDaySession
           title={d.title}
+          dayId={d.key}
+          gyms={d.gyms}
+          gymId={d.gymId}
           exercises={d.exercises}
           cardio={d.cardio}
           open={openKey === d.key}

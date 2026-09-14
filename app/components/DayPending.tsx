@@ -19,6 +19,8 @@ export type PendingAssignment = {
   exerciseName: string;
   fields: Record<FieldKey, string>;
   custom: Record<number, string>;
+  /** Saved weight per gym after the home one, "" where that gym has none. */
+  gyms?: Record<number, string>;
 };
 export type NewExercise = { tempId: number; exerciseId: number; exerciseName: string; fields: Record<FieldKey, string> };
 export type DayColumn = { id: number; kind: "builtin" | "custom"; key: string; label: string };
@@ -30,6 +32,7 @@ export const EMPTY_CARDIO: Record<CardioKey, string> = { name: "", time: "", pac
 type Draft = {
   fields: Record<number, Partial<Record<FieldKey, string>>>;
   custom: Record<number, Record<number, string>>;
+  gyms: Record<number, Record<number, string>>;
   removed: number[];
   added: NewExercise[];
   order: number[] | null;
@@ -40,7 +43,7 @@ type Draft = {
   cardio: { fields: Record<number, Partial<Record<CardioKey, string>>>; removed: number[]; added: NewCardio[] };
 };
 
-const EMPTY: Draft = { fields: {}, custom: {}, removed: [], added: [], order: null, moved: [], label: null, rest: null, cardio: { fields: {}, removed: [], added: [] } };
+const EMPTY: Draft = { fields: {}, custom: {}, gyms: {}, removed: [], added: [], order: null, moved: [], label: null, rest: null, cardio: { fields: {}, removed: [], added: [] } };
 
 export const FIELD_LABEL: Record<FieldKey, string> = {
   sets: "sets",
@@ -74,6 +77,8 @@ type Ctx = {
   setAlsoRemaining: (v: boolean) => void;
   fieldValue: (id: number, key: FieldKey) => string;
   customValue: (id: number, columnId: number) => string;
+  gymValue: (id: number, gymId: number) => string;
+  setGym: (id: number, gymId: number, value: string) => void;
   labelValue: string;
   restValue: boolean;
   hasExercises: boolean;
@@ -125,6 +130,7 @@ export function DayPendingProvider({
   cardio = [],
   label,
   isRest,
+  gymNames = {},
   children,
 }: {
   dayId: number;
@@ -137,6 +143,8 @@ export function DayPendingProvider({
   cardio?: PendingCardio[];
   label: string;
   isRest: boolean;
+  /** gym id -> name, for the bar's "weight at Pure" lines. */
+  gymNames?: Record<number, string>;
   children: ReactNode;
 }) {
   const [draft, setDraft] = useState<Draft>(EMPTY);
@@ -199,6 +207,18 @@ export function DayPendingProvider({
       else custom[id] = next;
       return { ...d, custom };
     });
+  const gymValue = (id: number, gymId: number) => draft.gyms[id]?.[gymId] ?? byId.get(id)?.gyms?.[gymId] ?? "";
+  const setGym = (id: number, gymId: number, value: string) =>
+    setDraft((d) => {
+      const saved = byId.get(id)?.gyms?.[gymId] ?? "";
+      const next = { ...(d.gyms[id] ?? {}) };
+      if (value === saved) delete next[gymId];
+      else next[gymId] = value;
+      const gyms = { ...d.gyms };
+      if (Object.keys(next).length === 0) delete gyms[id];
+      else gyms[id] = next;
+      return { ...d, gyms };
+    });
   const remove = (id: number) => setDraft((d) => (d.removed.includes(id) ? d : { ...d, removed: [...d.removed, id] }));
   const restore = (id: number) => setDraft((d) => ({ ...d, removed: d.removed.filter((x) => x !== id) }));
   const add = (ex: Omit<NewExercise, "tempId">) =>
@@ -259,6 +279,10 @@ export function DayPendingProvider({
         const col = columns.find((x) => x.id === Number(colId));
         parts.push(`${col?.label ?? "value"} ${show(a.custom[Number(colId)] ?? "")} → ${show(c[Number(colId)])}`);
       });
+      const g = draft.gyms[a.id] ?? {};
+      Object.keys(g).forEach((gymId) => {
+        parts.push(`weight at ${gymNames[Number(gymId)] ?? "gym"} ${show(a.gyms?.[Number(gymId)] ?? "")} → ${show(g[Number(gymId)])}`);
+      });
       if (parts.length) out.push(`${a.exerciseName}: ${parts.join(", ")}`);
     }
     draft.added.forEach((n) => out.push(`${n.exerciseName} added`));
@@ -285,7 +309,7 @@ export function DayPendingProvider({
     if (draft.label != null) out.push(draft.label ? `Session renamed to "${draft.label}"` : "Session label cleared");
     if (draft.rest != null) out.push(`${dayName} → ${draft.rest ? "Rest day" : "Workout"}`);
     return out;
-  }, [draft, assignments, cardio, columns, dayName, baseOrder, byId]);
+  }, [draft, assignments, cardio, columns, dayName, baseOrder, byId, gymNames]);
   const count = entries.length;
 
   const discard = useCallback(() => {
@@ -305,6 +329,7 @@ export function DayPendingProvider({
       rest: draft.rest,
       fields: Object.fromEntries(Object.entries(draft.fields).map(([id, f]) => [id, f])),
       custom: Object.fromEntries(Object.entries(draft.custom).map(([id, c]) => [id, Object.fromEntries(Object.entries(c))])),
+      gyms: Object.fromEntries(Object.entries(draft.gyms).map(([id, g]) => [id, Object.fromEntries(Object.entries(g))])),
       removed: draft.removed,
       added: draft.added.map((n) => ({ exerciseId: n.exerciseId, fields: n.fields })),
       order: draft.order ? order : null,
@@ -366,6 +391,8 @@ export function DayPendingProvider({
     setAlsoRemaining,
     fieldValue,
     customValue,
+    gymValue,
+    setGym,
     labelValue,
     restValue,
     hasExercises,

@@ -12768,6 +12768,25 @@ a.cd-entry:hover { border-color: var(--accent); }
 }
 
 /* ---- The client's own exercise notes ---- */
+/* Gym picker at the top of an open session: the weights and notes below follow it. */
+.ts-gym { display: flex; flex-direction: column; gap: 7px; padding: 10px 12px; border-radius: 14px; background: #fff; border: 1px solid #dfe3e8; }
+.ts-gym-label { font-size: 13px; font-weight: 700; color: #313851; }
+/* The gyms share the row evenly: two gyms read as this one or that one. */
+.ts-gym-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ts-gym-chip { flex: 1 1 0; min-width: 96px; border: 1px solid #dfe3e8; background: #fff; color: #313851; border-radius: 999px; padding: 9px 13px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The same blue as the selected week pill. */
+.ts-gym-chip.on { background: var(--fp-accent); border-color: var(--fp-accent); color: var(--fp-accent-fg); }
+
+/* Builder: one weight box per gym in the Weight cell, gym name above each. */
+/* Each gym is its own even column: name centred over its weight. */
+.pb-gym-weights { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; align-items: center; }
+.pb-gym-weights label { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.pb-gym-weights label > span { max-width: 100%; font-size: 9.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #8b93a1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-gym-weights input { width: 100%; min-width: 0; box-sizing: border-box; text-align: center; }
+/* Where a lane's sets were done, ahead of the chips. */
+.pb-log-gym { flex: none; align-self: center; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #5b6474; margin-right: 2px; }
+.pb-log-gym.dim { color: #8b93a1; }
+
 .ts-mynote { display: flex; flex-direction: column; gap: 3px; width: 100%; box-sizing: border-box; margin-top: 10px; padding: 9px 12px; border-radius: 10px; border: 1px dashed #c3c9d2; background: #fafbfc; text-align: left; font: inherit; cursor: text; }
 .ts-mynote.empty { padding: 8px 12px; }
 .ts-mynote.editing { border-style: solid; border-color: #2f5d8f; background: #fff; cursor: auto; }
@@ -13605,6 +13624,33 @@ a.cd-entry:hover { border-color: var(--accent); }
 /* Column chips: the "add your own" chip, and the small form it opens. */
 .pb-col-chip-add { border-style: dashed; }
 .pb-col-add-cancel { border: 0; background: none; color: #8b93a1; font: inherit; font-size: 14px; cursor: pointer; padding: 0 4px; }
+
+/* The client's gyms sit at the far right of the programme row: they belong
+   to the client, not to any one programme. */
+.pb-programs-gyms { margin-left: auto; }
+/* In a day's header: the gym the client trained that session at. */
+.pb-day-gym { flex-shrink: 0; font-size: 11.5px; font-weight: 800; color: #fff; background: #2f5d8f; border-radius: 999px; padding: 4px 11px; white-space: nowrap; box-shadow: 0 1px 2px rgba(20, 26, 36, 0.15); }
+.pb-gyms { position: relative; }
+.pb-gyms-pill { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #dfe3e8; border-radius: 999px; background: #fff; color: #313851; padding: 6px 12px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.pb-gyms-pill:hover, .pb-gyms-pill.open { border-color: #2f5d8f; }
+.pb-gyms-count { min-width: 18px; padding: 1px 6px; border-radius: 999px; background: #e6ecf3; color: #2f5d8f; font-size: 11px; font-weight: 800; text-align: center; font-variant-numeric: tabular-nums; }
+.pb-gyms-caret { font-size: 10px; color: #8b93a1; }
+.pb-gyms-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; width: 320px; max-width: calc(100vw - 32px); box-sizing: border-box; padding: 12px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; box-shadow: 0 10px 30px rgba(20, 26, 36, 0.12); }
+.pb-gyms-title { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #5b6474; margin-bottom: 8px; }
+.pb-gyms-empty { margin: 0 0 10px; font-size: 12.5px; color: #8b93a1; }
+.pb-gyms-list { list-style: none; margin: 0 0 10px; padding: 0; }
+.pb-gyms-row { display: flex; align-items: center; gap: 6px; min-height: 36px; border-bottom: 1px solid #eceff3; }
+.pb-gyms-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 700; color: #141a24; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pb-gyms-home { flex: none; padding: 2px 7px; border-radius: 999px; background: #eef0f3; color: #5b6474; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
+.pb-gyms-btn { flex: none; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; color: #313851; padding: 4px 9px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.pb-gyms-btn.primary { border-color: #1e3a6e; background: #1e3a6e; color: #fff; }
+.pb-gyms-btn.danger { color: #a32d2d; }
+.pb-gyms-btn.danger:hover { background: #fbeaea; border-color: #fbeaea; }
+.pb-gyms-btn:disabled { opacity: 0.5; cursor: default; }
+.pb-gyms-form { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.pb-gyms-form input { flex: 1; min-width: 0; border: 1px solid #dfe3e8; border-radius: 8px; padding: 6px 9px; font: inherit; font-size: 13px; color: #141a24; }
+.pb-gyms-form input:focus { outline: none; border-color: #2f5d8f; }
+.pb-gyms-foot { margin: 8px 0 0; font-size: 11.5px; color: #8b93a1; }
 
 /* The week row: the rail takes the width, the client's note card sits at
    the far right and grows downward when opened. */

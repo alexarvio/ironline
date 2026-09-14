@@ -20,6 +20,7 @@ export default function AdminDayCard({
   dangerSlot,
   footSlot,
   statusPill,
+  gymSlot,
   summary,
   isRest,
   defaultOpen,
@@ -35,6 +36,8 @@ export default function AdminDayCard({
   /** Rendered under the body, open or closed: the pending-changes bar. */
   footSlot?: ReactNode;
   statusPill?: ReactNode;
+  /** Where the client trained this session, when they have more than one gym. */
+  gymSlot?: ReactNode;
   summary: string;
   isRest: boolean;
   defaultOpen: boolean;
@@ -92,6 +95,7 @@ export default function AdminDayCard({
           {statusPill}
         </div>
         <div className="admin-day-card-head-right">
+          {gymSlot}
           {copySlot && (
             <div className="inline-row" onClick={(e) => e.stopPropagation()}>
               {copySlot}

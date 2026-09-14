@@ -93,6 +93,29 @@ export type ClientExerciseNote = {
   exercise_id: number;
   text: string;
   updated_at: string;
+  // Seat heights differ between gyms, so a note belongs to one. Missing or
+  // null is the home gym, which is where every note written before gyms
+  // existed was about.
+  gym_id?: number | null;
+};
+
+// A gym the client trains at. Machines differ from gym to gym, so logged
+// sets, weight targets and "My notes" each belong to one, and each gym's
+// weights move forward on their own. One gym is the home gym: the one the
+// coach marked, else the first the client had (lowest id). Sets, notes and
+// goals with no gym on them count as there, and it is the gym the coach's
+// Weight column speaks for. Removing a gym only hides it, so its history
+// stays readable.
+export type ClientGym = {
+  id: number;
+  client_id: number;
+  name: string;
+  created_at: string;
+  // Picking a gym stamps it; a new session starts on the latest one.
+  last_used_at: string | null;
+  archived: boolean;
+  /** Set by the coach's "Make home"; missing on a client who never switched. */
+  is_home?: boolean;
 };
 
 // The client's note about a whole programme, for the coach. One per
@@ -196,6 +219,10 @@ type WorkoutAssignment = {
   // only writes itself forward from sets logged after this, so a target the
   // coach lowers stays lowered. Missing on rows never edited by hand.
   target_set_at?: string | null;
+  // Weight targets for the client's other gyms, by gym id. The home gym's
+  // target is target_weight_kg; a gym with no entry here starts from it.
+  // `set_at` marks one the coach typed, as target_set_at does.
+  gym_targets?: Record<string, { kg: number | null; set_at?: string | null }>;
 };
 type SetLog = {
   id: number;
@@ -205,6 +232,8 @@ type SetLog = {
   reps: number | null;
   rpe_actual: number | null;
   logged_at: string;
+  // Where the set was done. Missing or null is the home gym.
+  gym_id?: number | null;
 };
 type Invoice = {
   id: number;
@@ -655,6 +684,7 @@ export type Data = {
   check_in_notes: CheckInNote[];
   client_exercise_notes: ClientExerciseNote[];
   client_program_notes: ClientProgramNote[];
+  client_gyms: ClientGym[];
   cardio_entries: CardioEntry[];
   cardio_logs: CardioLog[];
   // The last COACH_RESET_TOKEN value that was acted on (see
@@ -678,6 +708,7 @@ function emptyData(): Data {
     check_in_notes: [],
     client_exercise_notes: [],
     client_program_notes: [],
+    client_gyms: [],
     cardio_entries: [],
     cardio_logs: [],
     exercises: [],

@@ -56,12 +56,15 @@ export default function ProgramBuilderShell({
   columnsSlot,
   newProgramSlot,
   emptySlot,
+  gymsSlot,
 }: {
   programs: BuilderProgram[];
   clientId: number;
   columnsSlot: ReactNode;
   newProgramSlot: ReactNode;
   emptySlot: ReactNode;
+  /** The client's gyms, at the far right of the programme row: they apply to every programme. */
+  gymsSlot?: ReactNode;
 }) {
   // Open on whatever is live: that is what the client is doing right now,
   // and the first thing a coach wants to see. Drafts are one click away.
@@ -81,7 +84,10 @@ export default function ProgramBuilderShell({
     return (
       <div className="pb-main">
         {emptySlot}
-        <div className="pb-programs">{newProgramSlot}</div>
+        <div className="pb-programs">
+          {newProgramSlot}
+          {gymsSlot && <div className="pb-programs-gyms">{gymsSlot}</div>}
+        </div>
       </div>
     );
   }
@@ -106,6 +112,7 @@ export default function ProgramBuilderShell({
           </button>
         ))}
         {newProgramSlot}
+        {gymsSlot && <div className="pb-programs-gyms">{gymsSlot}</div>}
       </div>
 
       <div className="pb-editing">

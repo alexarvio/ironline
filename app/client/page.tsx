@@ -15,6 +15,10 @@ import {
   listCalorieLogs,
   getDeployedProgram,
   getClientExerciseNotes,
+  listClientGyms,
+  homeGymId,
+  dayGymId,
+  targetAtGym,
   getLogsForAssignment,
   getCurrentWeekNumber,
   getCheckInSections,
@@ -380,10 +384,25 @@ function TrainingTab({ CLIENT_ID, week, showMyNotes }: { CLIENT_ID: number; week
           // "My notes" are private to the client: a coach previewing the app
           // gets empty ones.
           const myNotes = showMyNotes ? getClientExerciseNotes(CLIENT_ID) : new Map<number, string>();
+          // Gyms: each exercise carries its target and note at every gym, so
+          // switching gym in the session changes them without a round trip.
+          const gyms = listClientGyms(CLIENT_ID);
+          const allGyms = listClientGyms(CLIENT_ID, true);
+          const home = homeGymId(CLIENT_ID);
+          const notesByGym = new Map(
+            allGyms.map((g) => [g.id, showMyNotes ? getClientExerciseNotes(CLIENT_ID, g.id) : new Map<number, string>()] as const)
+          );
           return (
             <TrainingDayList
-              days={trainingDays.map(({ day, assignments }, i) => ({
+              days={trainingDays.map(({ day, assignments }, i) => {
+                const gymId = dayGymId(day.id);
+                // A removed gym still shows on a session that was trained there.
+                const dayGym = allGyms.find((g) => g.id === gymId);
+                const dayGyms = dayGym?.archived ? [...gyms, dayGym] : gyms;
+                return {
                 key: day.id,
+                gyms: dayGyms.map((g) => ({ id: g.id, name: g.name })),
+                gymId,
                 // The coach's own name for the session. Without one it is
                 // numbered by its place in the week; the weekday is never
                 // shown here, so a session skipped to another day still
@@ -406,6 +425,8 @@ function TrainingTab({ CLIENT_ID, week, showMyNotes }: { CLIENT_ID: number; week
                   // library's own video is the fallback.
                   videoUrl: a.exercise_video_url ?? a.demo_url ?? null,
                   myNote: myNotes.get(a.exercise_id) ?? "",
+                  gymTargets: allGyms.length ? Object.fromEntries(allGyms.map((g) => [g.id, targetAtGym(a, g.id, home)])) : undefined,
+                  gymNotes: allGyms.length ? Object.fromEntries(allGyms.map((g) => [g.id, notesByGym.get(g.id)?.get(a.exercise_id) ?? ""])) : undefined,
                   logs: getLogsForAssignment(a.id).map((l) => ({
                     id: l.id,
                     setNumber: l.set_number,
@@ -422,7 +443,8 @@ function TrainingTab({ CLIENT_ID, week, showMyNotes }: { CLIENT_ID: number; week
                     />
                   ),
                 })),
-              }))}
+                };
+              })}
             />
           );
         })()

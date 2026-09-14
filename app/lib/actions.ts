@@ -172,6 +172,10 @@ import {
   setCalorieLog,
   setCheckInNote,
   setClientExerciseNote,
+  addClientGym,
+  removeClientGym,
+  getClientIdForGym,
+  pickGymForDay,
   setClientProgramNote,
   getClientIdForProgram,
   reorderAssignments,
@@ -475,7 +479,9 @@ export async function saveExerciseNoteAction(formData: FormData) {
   if (owner == null || !(await canAccessClient(owner))) return;
   const exerciseId = getExerciseIdForAssignment(assignmentId);
   if (exerciseId == null) return;
-  setClientExerciseNote(owner, exerciseId, String(formData.get("text") ?? ""));
+  // Notes are per gym; a gym that is not this client's counts as none.
+  const gymId = Number(formData.get("gymId")) || null;
+  setClientExerciseNote(owner, exerciseId, String(formData.get("text") ?? ""), gymId != null && getClientIdForGym(gymId) === owner ? gymId : null);
   revalidatePath("/client");
 }
 
@@ -509,8 +515,10 @@ export async function logSetAction(formData: FormData) {
   const weight = num("weight");
   const reps = num("reps");
   const rpe = num("rpe");
+  // The gym the session is at; one that is not this client's counts as none.
+  const gymId = Number(formData.get("gymId")) || null;
 
-  logSet(assignmentId, setNumber, weight, reps, rpe);
+  logSet(assignmentId, setNumber, weight, reps, rpe, gymId != null && getClientIdForGym(gymId) === owner ? gymId : null);
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -1178,7 +1186,7 @@ function parseGoalTracking(raw: FormDataEntryValue | null): GoalTracking | null 
       const weight = num(t.weight);
       const reps = num(t.reps);
       if (exerciseId == null || weight == null || reps == null) return null;
-      return { kind: "exercise", exerciseId, weight, reps, maxRpe: num(t.maxRpe) };
+      return { kind: "exercise", exerciseId, weight, reps, maxRpe: num(t.maxRpe), gymId: num(t.gymId) };
     }
     if (t?.kind === "habit") {
       const metricId = num(t.metricId);
@@ -1199,7 +1207,12 @@ function parseGoalTracking(raw: FormDataEntryValue | null): GoalTracking | null 
 // another client's numbers into this one's goal.
 function trackingFor(clientId: number, coachId: number, tracking: GoalTracking | null): GoalTracking | null {
   if (!tracking) return null;
-  if (tracking.kind === "exercise") return coachOwnsExercise(coachId, tracking.exerciseId) ? tracking : null;
+  if (tracking.kind === "exercise") {
+    if (!coachOwnsExercise(coachId, tracking.exerciseId)) return null;
+    // A gym that is not this client's counts as the home gym.
+    const gymId = tracking.gymId != null && getClientIdForGym(tracking.gymId) === clientId ? tracking.gymId : null;
+    return { ...tracking, gymId };
+  }
   if (tracking.kind === "habit") return clientIdForMetricDefinition(tracking.metricId) === clientId ? tracking : null;
   const ref = /^(field|metric)-(\d+)$/.exec(tracking.metricKey);
   if (ref) {
@@ -1903,6 +1916,7 @@ export async function applyDayChangesAction(
       rest: typeof payload.rest === "boolean" ? payload.rest : null,
       fields: payload.fields ?? {},
       custom: payload.custom ?? {},
+      gyms: payload.gyms ?? {},
       cardio: {
         fields: payload.cardio?.fields ?? {},
         removed: (payload.cardio?.removed ?? []).filter((id) => Number.isInteger(id)),
@@ -1918,6 +1932,34 @@ export async function applyDayChangesAction(
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Something went wrong" };
   }
+}
+
+// ---- Gyms -----------------------------------------------------------------
+// Only the coach keeps a client's gym list: it shapes the builder's weights
+// and lanes, so it is not something a client should be able to reshape. The
+// client picks one of those gyms per session.
+
+export async function addGymAction(clientId: number, name: string): Promise<{ id: number; name: string } | null> {
+  if (!(await coachForClient(Number(clientId)))) return null;
+  const gym = addClientGym(Number(clientId), String(name ?? ""));
+  revalidatePath("/client");
+  revalidatePath("/admin");
+  return gym ? { id: gym.id, name: gym.name } : null;
+}
+
+export async function removeGymAction(gymId: number) {
+  if (!(await coachForClient(getClientIdForGym(Number(gymId))))) return;
+  removeClientGym(Number(gymId));
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+export async function pickGymAction(programDayId: number, gymId: number) {
+  const owner = clientIdForProgramDay(Number(programDayId));
+  if (owner == null || getClientIdForGym(Number(gymId)) !== owner || !(await canAccessClient(owner))) return;
+  pickGymForDay(Number(programDayId), Number(gymId));
+  revalidatePath("/client");
+  revalidatePath("/admin");
 }
 
 // ---- Client avatar --------------------------------------------------------

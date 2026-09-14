@@ -9,11 +9,14 @@
 
 export type GoalTracking =
   | { kind: "metric"; metricKey: string; op: "<=" | ">="; target: number; byDate: string }
-  | { kind: "exercise"; exerciseId: number; weight: number; reps: number; maxRpe?: number | null }
+  // gymId: the gym whose sets count, since machines differ. Missing or null
+  // is the home gym (or every set, for a client without gyms).
+  | { kind: "exercise"; exerciseId: number; weight: number; reps: number; maxRpe?: number | null; gymId?: number | null }
   | { kind: "habit"; metricId: number; op: "<=" | ">="; value: number; daysPerWeek: number };
 
 export type SeriesPoint = { date: string; value: number };
-export type LoggedSet = { weight: number | null; reps: number | null; rpe: number | null; date: string };
+/** gymId: where the set was done, home for unmarked sets; null without gyms. */
+export type LoggedSet = { weight: number | null; reps: number | null; rpe: number | null; date: string; gymId?: number | null };
 
 /** The raw numbers a goal is judged against, gathered by the server. */
 export type GoalContext = {
@@ -21,7 +24,8 @@ export type GoalContext = {
   today: string;
   createdAt: string;
   metric?: { name: string; unit: string; series: SeriesPoint[] };
-  exercise?: { name: string; sets: LoggedSet[] };
+  /** The sets are already the goal's gym's; gymName shows only with two or more gyms. */
+  exercise?: { name: string; sets: LoggedSet[]; gymName?: string | null };
   habit?: { name: string; weekValues: SeriesPoint[] };
 };
 
@@ -154,7 +158,7 @@ export function computeGoalView(
 
   if (t.kind === "exercise") {
     const e = ctx.exercise;
-    const name = e?.name ?? "Exercise";
+    const name = `${e?.name ?? "Exercise"}${e?.gymName ? ` · ${e.gymName}` : ""}`;
     const sets = (e?.sets ?? []).filter((s) => s.weight != null && s.reps != null) as (LoggedSet & { weight: number; reps: number })[];
     const qualifies = (s: LoggedSet & { weight: number; reps: number }) =>
       s.weight >= t.weight && s.reps >= t.reps && (t.maxRpe == null || s.rpe == null || s.rpe <= t.maxRpe);
@@ -200,9 +204,9 @@ export function computeGoalView(
 }
 
 /** One line describing the tracking, for the coach's list. */
-export function describeTracking(t: GoalTracking | null, names: { metric?: string; unit?: string; exercise?: string; habit?: string }): string {
+export function describeTracking(t: GoalTracking | null, names: { metric?: string; unit?: string; exercise?: string; habit?: string; gym?: string | null }): string {
   if (!t) return "Text only";
   if (t.kind === "metric") return `${names.metric ?? "Metric"} ${t.op} ${fmtNum(t.target)}${names.unit ? ` ${names.unit}` : ""} by ${fmtDate(t.byDate)}`;
-  if (t.kind === "exercise") return `${names.exercise ?? "Exercise"} ${fmtNum(t.weight)} kg × ${t.reps}${t.maxRpe != null ? ` @ ≤${t.maxRpe}` : ""}`;
+  if (t.kind === "exercise") return `${names.exercise ?? "Exercise"} ${fmtNum(t.weight)} kg × ${t.reps}${t.maxRpe != null ? ` @ ≤${t.maxRpe}` : ""}${names.gym ? ` at ${names.gym}` : ""}`;
   return `${names.habit ?? "Check-in"} ${t.op} ${fmtNum(t.value)} · ${t.daysPerWeek} days a week`;
 }

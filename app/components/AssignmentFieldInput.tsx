@@ -55,3 +55,23 @@ export default function AssignmentFieldInput({
     </form>
   );
 }
+
+// The weight at one of the client's other gyms. Empty means that gym starts
+// from the home gym's weight, which the placeholder shows. Only inside a day
+// card: the pending bar is the one way it saves.
+export function GymWeightInput({ assignmentId, gymId, placeholder }: { assignmentId: number; gymId: number; placeholder?: string }) {
+  const pending = usePendingDay();
+  if (!pending) return null;
+  const value = pending.gymValue(assignmentId, gymId);
+  const changed = value !== (pending.assignments.find((a) => a.id === assignmentId)?.gyms?.[gymId] ?? "");
+  return (
+    <input
+      type="number"
+      step={0.5}
+      value={value}
+      placeholder={placeholder}
+      className={changed ? "pb-changed" : undefined}
+      onChange={(e) => pending.setGym(assignmentId, gymId, e.target.value)}
+    />
+  );
+}

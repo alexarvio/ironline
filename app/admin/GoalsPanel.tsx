@@ -105,6 +105,11 @@ export function GoalEditor({
   const [weight, setWeight] = useState(t?.kind === "exercise" ? String(t.weight) : "");
   const [reps, setReps] = useState(t?.kind === "exercise" ? String(t.reps) : "");
   const [maxRpe, setMaxRpe] = useState(t?.kind === "exercise" && t.maxRpe != null ? String(t.maxRpe) : "");
+  // Machines differ between gyms, so an exercise goal counts one gym's sets.
+  // Only asked with two or more; a goal without one is the home gym's.
+  const homeGym = options.gyms[0]?.id ?? null;
+  const multiGym = options.gyms.length > 1;
+  const [gymId, setGymId] = useState<number | null>(t?.kind === "exercise" ? t.gymId ?? homeGym : homeGym);
   // Habit
   const [habitId, setHabitId] = useState(t?.kind === "habit" ? t.metricId : 0);
   const [hop, setHop] = useState<"<=" | ">=">(t?.kind === "habit" ? t.op : ">=");
@@ -122,6 +127,7 @@ export function GoalEditor({
 
   const metric = options.metrics.find((m) => m.key === metricKey) ?? null;
   const exercise = options.exercises.find((e) => e.id === Number(exerciseId)) ?? null;
+  const setsAtGym = (sets: GoalEditorOptions["exercises"][number]["sets"]) => (multiGym ? sets.filter((s) => s.gymId === gymId) : sets);
   const habit = options.habits.find((h) => h.id === Number(habitId)) ?? null;
 
   // The tracking as it stands, or null while a required figure is missing.
@@ -133,7 +139,9 @@ export function GoalEditor({
     if (kind === "exercise") {
       const w = num(weight);
       const r = num(reps);
-      return exercise && w != null && r != null ? { kind: "exercise", exerciseId: exercise.id, weight: w, reps: r, maxRpe: num(maxRpe) } : null;
+      return exercise && w != null && r != null
+        ? { kind: "exercise", exerciseId: exercise.id, weight: w, reps: r, maxRpe: num(maxRpe), gymId: multiGym ? gymId : null }
+        : null;
     }
     if (kind === "habit") {
       const v = num(hvalue);
@@ -175,11 +183,12 @@ export function GoalEditor({
       );
     }
     if (kind === "exercise" && exercise) {
-      const sets = exercise.sets.filter((s) => s.weight != null && s.reps != null);
+      const sets = setsAtGym(exercise.sets).filter((s) => s.weight != null && s.reps != null);
       const best = sets.slice().sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0) || (b.reps ?? 0) - (a.reps ?? 0))[0];
-      if (!best) return `No sets logged for ${exercise.name} yet.`;
+      const at = multiGym ? ` at ${options.gyms.find((g) => g.id === gymId)?.name ?? "this gym"}` : "";
+      if (!best) return `No sets logged for ${exercise.name}${at} yet.`;
       const day = new Date(`${best.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-      return `Best logged so far: ${fmtNum(best.weight!)} × ${best.reps}${best.rpe != null ? ` @${best.rpe}` : ""} (${day}).`;
+      return `Best logged${at} so far: ${fmtNum(best.weight!)} × ${best.reps}${best.rpe != null ? ` @${best.rpe}` : ""} (${day}).`;
     }
     if (kind === "habit") return habit ? `Counts each day ${habit.name} is logged ${hop} the value.` : "Add a daily check-in field first.";
     return "Shown as text only. You mark it done by hand.";
@@ -282,11 +291,29 @@ export function GoalEditor({
             <span>Exercise</span>
             <SearchPick
               value={String(exerciseId)}
-              items={options.exercises.map((e) => ({ id: String(e.id), label: e.name, hint: e.sets.length ? `${e.sets.length} sets logged` : "" }))}
+              items={options.exercises.map((e) => {
+                const n = setsAtGym(e.sets).length;
+                return { id: String(e.id), label: e.name, hint: n ? `${n} sets logged` : "" };
+              })}
               onPick={(id) => setExerciseId(Number(id))}
               placeholder="Search exercises…"
             />
           </label>
+          {multiGym && (
+            <label className="ge-field">
+              <span>Gym</span>
+              <select value={gymId ?? ""} onChange={(e) => setGymId(Number(e.target.value))}>
+                {options.gyms
+                  .filter((g) => !g.removed || g.id === gymId)
+                  .map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                      {g.removed ? " (removed)" : ""}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          )}
           <label className="ge-field">
             <span>Weight (kg)</span>
             <input type="text" inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="100" />

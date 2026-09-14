@@ -1,8 +1,9 @@
 "use client";
 
 import { ReactNode, useEffect, useId, useRef, useState, useTransition } from "react";
-import { logSetAction, saveExerciseNoteAction, setCardioDoneAction, updateSetAction } from "../lib/actions";
+import { logSetAction, pickGymAction, saveExerciseNoteAction, setCardioDoneAction, updateSetAction } from "../lib/actions";
 import ExerciseCoachNote from "./ExerciseCoachNote";
+import GymPicker, { type GymOption } from "./GymPicker";
 import { ChevronDownIcon } from "../components/icons";
 
 // One training day, logged in focus mode: one exercise open at a time,
@@ -32,6 +33,9 @@ export type SessionExercise = {
   note: ReactNode;
   /** The client's own note on this exercise: settings, cues. */
   myNote: string;
+  /** With gyms: the weight target and "My notes" at each gym, by gym id. */
+  gymTargets?: Record<number, number | null>;
+  gymNotes?: Record<number, string>;
 };
 
 // Digits and one dot; a typed comma becomes the dot.
@@ -60,7 +64,10 @@ const firstUnfinished = (list: SessionExercise[]) => list.find((ex) => !isDone(e
 
 export default function TrainingDaySession({
   title,
-  exercises,
+  dayId,
+  gyms = [],
+  gymId: savedGymId = null,
+  exercises: baseExercises,
   cardio = [],
   open,
   onToggle,
@@ -69,6 +76,11 @@ export default function TrainingDaySession({
       the client trains it whenever they can, so "Tuesday" would be a lie by
       Wednesday. The weekday stays on the coach's side. */
   title: string;
+  dayId: number;
+  /** The coach's gyms for this client; the picker shows with two or more. */
+  gyms?: GymOption[];
+  /** The gym this session is at: where its sets were logged, else the last pick. */
+  gymId?: number | null;
   exercises: SessionExercise[];
   /** Cardio the coach put on the day, shown after the exercises. */
   cardio?: SessionCardio[];
@@ -76,6 +88,30 @@ export default function TrainingDaySession({
   open: boolean;
   onToggle: () => void;
 }) {
+  // The gym is picked here and saved straight away; the server's answer
+  // takes over whenever it changes.
+  const [gymId, setGymId] = useState(savedGymId);
+  const [seenGymId, setSeenGymId] = useState(savedGymId);
+  if (savedGymId !== seenGymId) {
+    setSeenGymId(savedGymId);
+    setGymId(savedGymId);
+  }
+  // Targets and notes as they are at the picked gym.
+  const exercises =
+    gymId == null
+      ? baseExercises
+      : baseExercises.map((ex) => ({
+          ...ex,
+          targetWeight: ex.gymTargets?.[gymId] ?? ex.targetWeight,
+          myNote: ex.gymNotes ? ex.gymNotes[gymId] ?? "" : ex.myNote,
+        }));
+  const pickGym = (gym: GymOption) => {
+    const logged = baseExercises.reduce((s, ex) => s + ex.logs.length, 0);
+    if (logged > 0 && gymId != null && !window.confirm(`Move the ${logged} set${logged === 1 ? "" : "s"} logged in this session to ${gym.name}?`)) return;
+    setGymId(gym.id);
+    void pickGymAction(dayId, gym.id);
+  };
+
   const planned = exercises.reduce((s, ex) => s + ex.sets, 0);
   const logged = exercises.reduce((s, ex) => s + loggedCount(ex), 0);
   const dayDone = exercises.length + cardio.length > 0 && exercises.every(isDone) && cardio.every((c) => c.done);
@@ -135,11 +171,13 @@ export default function TrainingDaySession({
 
       {open && (
         <div className="ts-list">
+          {gyms.length > 1 && <GymPicker gyms={gyms} gymId={gymId} onPick={pickGym} />}
           {exercises.map((ex, i) =>
             ex.id === expandedId ? (
               <ExpandedExercise
                 key={ex.id}
                 exercise={ex}
+                gymId={gymId}
                 index={i + 1}
                 onCollapse={() => setExpandedId(null)}
               />
@@ -235,7 +273,17 @@ function CollapsedExercise({
   );
 }
 
-function ExpandedExercise({ exercise, index, onCollapse }: { exercise: SessionExercise; index: number; onCollapse: () => void }) {
+function ExpandedExercise({
+  exercise,
+  gymId,
+  index,
+  onCollapse,
+}: {
+  exercise: SessionExercise;
+  gymId: number | null;
+  index: number;
+  onCollapse: () => void;
+}) {
   const done = isDone(exercise);
   const nextSet = nextMissing(exercise);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -378,7 +426,7 @@ function ExpandedExercise({ exercise, index, onCollapse }: { exercise: SessionEx
         </div>
       )}
 
-      <MyNote assignmentId={exercise.id} text={exercise.myNote} />
+      <MyNote key={gymId ?? 0} assignmentId={exercise.id} gymId={gymId} text={exercise.myNote} />
 
       <div className="ts-grid ts-cols">
         <span>Set</span>
@@ -428,7 +476,8 @@ function ExpandedExercise({ exercise, index, onCollapse }: { exercise: SessionEx
                   reps: "",
                   rpe: exercise.targetRpe != null ? String(exercise.targetRpe) : "",
                 },
-                `new-${n}`
+                // Keyed by gym too, so a new pick refills the weight.
+                `new-${n}-${gymId ?? 0}`
               )}
               <span />
             </div>
@@ -452,6 +501,7 @@ function ExpandedExercise({ exercise, index, onCollapse }: { exercise: SessionEx
           <>
             <input type="hidden" name="assignmentId" value={exercise.id} />
             <input type="hidden" name="setNumber" value={nextSet} />
+            <input type="hidden" name="gymId" value={gymId ?? ""} />
           </>
         )}
       </form>
@@ -478,7 +528,7 @@ function ExpandedExercise({ exercise, index, onCollapse }: { exercise: SessionEx
 
 // The client's own note on an exercise: seat height, grip width, a cue that
 // helps. Reads as one line until tapped; saves on blur or Save.
-function MyNote({ assignmentId, text }: { assignmentId: number; text: string }) {
+function MyNote({ assignmentId, gymId, text }: { assignmentId: number; gymId: number | null; text: string }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(text);
   const [saving, start] = useTransition();
@@ -492,6 +542,7 @@ function MyNote({ assignmentId, text }: { assignmentId: number; text: string }) 
     if (next === text.trim()) return;
     const fd = new FormData();
     fd.set("assignmentId", String(assignmentId));
+    fd.set("gymId", gymId == null ? "" : String(gymId));
     fd.set("text", next);
     start(() => saveExerciseNoteAction(fd));
   };

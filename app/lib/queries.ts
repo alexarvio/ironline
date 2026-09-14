@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, CardioEntry } from "./db";
-import type { CalorieLog, CheckInNote, ClientPhase, PhaseTrack } from "./db";
+import type { CalorieLog, CheckInNote, ClientGym, ClientPhase, PhaseTrack } from "./db";
 import { coachIdOfClient } from "./tenancy";
 
 // "Today" (or any Date) as a local YYYY-MM-DD calendar-date string. This is
@@ -54,6 +54,7 @@ export type WorkoutAssignment = {
   note_at: string | null;
   note_read: boolean;
   target_set_at?: string | null;
+  gym_targets?: Record<string, { kg: number | null; set_at?: string | null }>;
   exercise_name?: string;
   exercise_video_url?: string | null;
 };
@@ -77,6 +78,7 @@ export type SetLog = {
   reps: number | null;
   rpe_actual: number | null;
   logged_at: string;
+  gym_id?: number | null;
 };
 
 export type MealMacros = { protein: number | null; fats: number | null; carbs: number | null };
@@ -211,6 +213,7 @@ export function removeClient(clientId: number) {
   data.client_profiles = data.client_profiles.filter((p) => p.client_id !== clientId);
   data.client_goals = data.client_goals.filter((g) => g.client_id !== clientId);
   data.client_preferences = data.client_preferences.filter((p) => p.client_id !== clientId);
+  data.client_gyms = data.client_gyms.filter((g) => g.client_id !== clientId);
   data.client_reports = data.client_reports.filter((r) => r.client_id !== clientId);
   data.chat_messages = data.chat_messages.filter((m) => m.client_id !== clientId);
   data.coach_activity = data.coach_activity.filter((a) => a.client_id !== clientId);
@@ -1083,7 +1086,8 @@ export function logSet(
   setNumber: number,
   weightKg: number | null,
   reps: number | null,
-  rpeActual: number | null
+  rpeActual: number | null,
+  gymId: number | null = null
 ) {
   const data = getData();
   // Logging a set number that already has a row corrects that row rather
@@ -1107,6 +1111,7 @@ export function logSet(
     // Local server time, the same clock localDateStr() reads: an ISO/UTC stamp
     // put a 6am session on the previous day for anyone east of Greenwich.
     logged_at: localStamp(),
+    gym_id: gymId,
   });
   persist();
   progressTargetFromLogs(workoutAssignmentId);
@@ -1123,18 +1128,28 @@ export function logSet(
 // they set it. This runs on every request (applyDueProgramDeployments), so
 // without that a coach lowering next week's weight below a weight already
 // logged (a typo like 1230, or a deliberate deload) saw it jump straight back.
+//
+// Each gym runs this on its own. The home gym moves target_weight_kg, as
+// it always has; another gym moves its own entry in gym_targets. A gym with
+// no entry yet has no target of its own to meet (the coach's weight was
+// only a starting point on a different machine), so what the client lifted
+// there becomes that gym's weight going forward.
 export function progressTargetFromLogs(workoutAssignmentId: number) {
   const data = getData();
   const wa = data.workout_assignments.find((x) => x.id === workoutAssignmentId);
-  if (!wa || wa.target_weight_kg == null) return;
+  if (!wa) return;
   const day = data.program_days.find((pd) => pd.id === wa.program_day_id);
   if (!day) return;
   const logs = data.set_logs.filter((sl) => sl.workout_assignment_id === wa.id);
-  const weights = logs.map((sl) => sl.weight_kg).filter((w): w is number => w != null);
-  if (weights.length === 0) return;
-  const bestWeight = Math.max(...weights);
-  if (bestWeight < wa.target_weight_kg) return;
-  const lastLoggedMs = Math.max(...logs.map((sl) => stampMs(sl.logged_at)));
+  if (logs.length === 0) return;
+  const home = homeGymId(day.client_id);
+
+  // null is the home gym's lane.
+  const byGym = new Map<number | null, SetLog[]>();
+  for (const sl of logs) {
+    const gym = sl.gym_id == null || sl.gym_id === home ? null : sl.gym_id;
+    byGym.set(gym, [...(byGym.get(gym) ?? []), sl]);
+  }
 
   // Every later occurrence of the same exercise for this client moves up:
   // the same weekday next week, but also a second session later this week
@@ -1145,18 +1160,42 @@ export function progressTargetFromLogs(workoutAssignmentId: number) {
   const days = new Map(data.program_days.filter((pd) => pd.client_id === day.client_id).map((pd) => [pd.id, pd] as const));
   const isLater = (pd: ProgramDay) =>
     pd.week_number > day.week_number || (pd.week_number === day.week_number && pd.day_of_week > day.day_of_week);
-  let changed = false;
-  for (const other of data.workout_assignments) {
-    if (other.id === wa.id || other.exercise_id !== wa.exercise_id) continue;
+  const later = data.workout_assignments.filter((other) => {
+    if (other.id === wa.id || other.exercise_id !== wa.exercise_id) return false;
     const otherDay = days.get(other.program_day_id);
-    if (!otherDay || !isLater(otherDay)) continue;
-    if (data.set_logs.some((sl) => sl.workout_assignment_id === other.id)) continue;
-    // The coach set this one by hand after these sets were logged: theirs.
-    if (other.target_set_at && stampMs(other.target_set_at) >= lastLoggedMs) continue;
-    const target = Math.max(other.target_weight_kg ?? 0, bestWeight);
-    if (target === other.target_weight_kg) continue;
-    other.target_weight_kg = target;
-    changed = true;
+    return !!otherDay && isLater(otherDay) && !data.set_logs.some((sl) => sl.workout_assignment_id === other.id);
+  });
+
+  let changed = false;
+  for (const [gym, gymLogs] of byGym) {
+    const weights = gymLogs.map((sl) => sl.weight_kg).filter((w): w is number => w != null);
+    if (weights.length === 0) continue;
+    const bestWeight = Math.max(...weights);
+    const lastLoggedMs = Math.max(...gymLogs.map((sl) => stampMs(sl.logged_at)));
+
+    if (gym == null) {
+      if (wa.target_weight_kg == null || bestWeight < wa.target_weight_kg) continue;
+      for (const other of later) {
+        // The coach set this one by hand after these sets were logged: theirs.
+        if (other.target_set_at && stampMs(other.target_set_at) >= lastLoggedMs) continue;
+        const target = Math.max(other.target_weight_kg ?? 0, bestWeight);
+        if (target === other.target_weight_kg) continue;
+        other.target_weight_kg = target;
+        changed = true;
+      }
+      continue;
+    }
+
+    const own = wa.gym_targets?.[gym]?.kg ?? null;
+    if (own != null && bestWeight < own) continue;
+    for (const other of later) {
+      const entry = other.gym_targets?.[gym];
+      if (entry?.set_at && stampMs(entry.set_at) >= lastLoggedMs) continue;
+      const target = entry?.kg == null ? bestWeight : Math.max(entry.kg, bestWeight);
+      if (target === entry?.kg) continue;
+      other.gym_targets = { ...(other.gym_targets ?? {}), [gym]: { kg: target, set_at: entry?.set_at ?? null } };
+      changed = true;
+    }
   }
   if (changed) persist();
 }
@@ -1543,8 +1582,18 @@ export function getCompletedDaysForClient(clientId: number, limit = 10): Complet
 // Scoped to logs from weeks <= throughWeekNumber so the badge reflects how
 // far the client has come AS OF the week being viewed, instead of a single
 // whole-history number that reads the same on every week.
-export function getExerciseWeightTrendPct(clientId: number, exerciseId: number, throughWeekNumber: number): number | null {
+//
+// With gyms, pass the gym: another gym's machine is a different weight, so
+// mixing the two would read a gym switch as a drop. undefined is every set.
+export function getExerciseWeightTrendPct(
+  clientId: number,
+  exerciseId: number,
+  throughWeekNumber: number,
+  gymId?: number | null
+): number | null {
   const data = getData();
+  const home = homeGymId(clientId);
+  const atGym = (l: SetLog) => gymId === undefined || home == null || (l.gym_id ?? home) === (gymId ?? home);
   const assignmentIds = new Set(
     data.workout_assignments
       .filter((wa) => {
@@ -1555,7 +1604,7 @@ export function getExerciseWeightTrendPct(clientId: number, exerciseId: number, 
       .map((wa) => wa.id)
   );
   const logs = data.set_logs
-    .filter((l) => assignmentIds.has(l.workout_assignment_id) && l.weight_kg != null)
+    .filter((l) => assignmentIds.has(l.workout_assignment_id) && l.weight_kg != null && atGym(l))
     .sort((a, b) => (a.logged_at < b.logged_at ? -1 : 1));
   if (logs.length < 2) return null;
   const first = logs[0].weight_kg as number;
@@ -5586,27 +5635,216 @@ export function setCheckInNote(clientId: number, kind: CheckInNote["kind"], peri
 
 // ---- The client's own exercise notes ----------------------------------
 
-/** exercise_id -> note text, for one client. */
-export function getClientExerciseNotes(clientId: number): Map<number, string> {
+/** exercise_id -> note text, for one client at one gym (null: no gyms, or home). */
+export function getClientExerciseNotes(clientId: number, gymId: number | null = null): Map<number, string> {
+  const home = homeGymId(clientId);
+  const want = gymId ?? home;
   const out = new Map<number, string>();
-  for (const n of getData().client_exercise_notes ?? []) if (n.client_id === clientId) out.set(n.exercise_id, n.text);
+  for (const n of getData().client_exercise_notes ?? []) {
+    if (n.client_id === clientId && (n.gym_id ?? home) === want) out.set(n.exercise_id, n.text);
+  }
   return out;
 }
 
-export function setClientExerciseNote(clientId: number, exerciseId: number, text: string) {
+export function setClientExerciseNote(clientId: number, exerciseId: number, text: string, gymId: number | null = null) {
   const data = getData();
   if (!data.client_exercise_notes) data.client_exercise_notes = [];
+  const home = homeGymId(clientId);
+  const want = gymId ?? home;
   const clean = text.trim();
-  const existing = data.client_exercise_notes.find((n) => n.client_id === clientId && n.exercise_id === exerciseId);
+  const existing = data.client_exercise_notes.find(
+    (n) => n.client_id === clientId && n.exercise_id === exerciseId && (n.gym_id ?? home) === want
+  );
   if (!clean) {
     if (existing) data.client_exercise_notes = data.client_exercise_notes.filter((n) => n !== existing);
   } else if (existing) {
     existing.text = clean;
     existing.updated_at = new Date().toISOString();
   } else {
-    data.client_exercise_notes.push({ id: allocId("client_exercise_notes"), client_id: clientId, exercise_id: exerciseId, text: clean, updated_at: new Date().toISOString() });
+    data.client_exercise_notes.push({ id: allocId("client_exercise_notes"), client_id: clientId, exercise_id: exerciseId, text: clean, updated_at: new Date().toISOString(), gym_id: want });
   }
   persist();
+}
+
+// ---- Gyms ---------------------------------------------------------------
+// See ClientGym in db.ts for the model.
+
+/** The client's gyms, oldest first; the removed ones only when asked. */
+export function listClientGyms(clientId: number, includeArchived = false): ClientGym[] {
+  return (getData().client_gyms ?? [])
+    .filter((g) => g.client_id === clientId && (includeArchived || !g.archived))
+    .sort((a, b) => a.id - b.id);
+}
+
+/** The gym the coach made home, else the first the client had; null without gyms. */
+export function homeGymId(clientId: number): number | null {
+  const gyms = listClientGyms(clientId, true);
+  return (gyms.find((g) => g.is_home) ?? gyms[0])?.id ?? null;
+}
+
+/**
+ * Makes a gym the home gym. The home gym's weights are target_weight_kg,
+ * and sets, notes and exercise goals with no gym on them are the home
+ * gym's, so the old home's are pinned to it first and the new home's
+ * weights move into target_weight_kg. A new home that had no weight of its
+ * own was already starting from that figure, so it keeps it.
+ */
+export function setHomeGym(gymId: number) {
+  const data = getData();
+  const gym = data.client_gyms.find((g) => g.id === gymId && !g.archived);
+  if (!gym) return;
+  const clientId = gym.client_id;
+  const oldHome = homeGymId(clientId);
+  if (oldHome == null || oldHome === gymId) return;
+
+  const dayIds = new Set(data.program_days.filter((pd) => pd.client_id === clientId).map((pd) => pd.id));
+  const assignments = data.workout_assignments.filter((wa) => dayIds.has(wa.program_day_id));
+  const assignmentIds = new Set(assignments.map((wa) => wa.id));
+  for (const sl of data.set_logs) if (assignmentIds.has(sl.workout_assignment_id) && sl.gym_id == null) sl.gym_id = oldHome;
+  for (const n of data.client_exercise_notes) if (n.client_id === clientId && n.gym_id == null) n.gym_id = oldHome;
+  for (const g of data.client_goals) {
+    if (g.client_id === clientId && g.tracked_by?.kind === "exercise" && g.tracked_by.gymId == null) g.tracked_by = { ...g.tracked_by, gymId: oldHome };
+  }
+  for (const wa of assignments) {
+    const targets = { ...(wa.gym_targets ?? {}) };
+    const incoming = targets[gymId];
+    targets[oldHome] = { kg: wa.target_weight_kg, set_at: wa.target_set_at ?? null };
+    // A week trained at the new home before it had a weight of its own was
+    // its first visit there: what was lifted is that week's weight, or the
+    // week would read as short of the old home's figure.
+    const firstVisitBest = Math.max(
+      ...data.set_logs
+        .filter((sl) => sl.workout_assignment_id === wa.id && sl.gym_id === gymId && sl.weight_kg != null)
+        .map((sl) => sl.weight_kg as number)
+    );
+    if (incoming?.kg != null) {
+      wa.target_weight_kg = incoming.kg;
+      wa.target_set_at = incoming.set_at ?? null;
+    } else if (wa.target_weight_kg != null && Number.isFinite(firstVisitBest)) {
+      wa.target_weight_kg = firstVisitBest;
+      wa.target_set_at = null;
+    }
+    delete targets[gymId];
+    wa.gym_targets = targets;
+  }
+  for (const g of data.client_gyms) if (g.client_id === clientId) g.is_home = g.id === gymId;
+  persist();
+}
+
+export function getClientIdForGym(gymId: number): number | null {
+  return (getData().client_gyms ?? []).find((g) => g.id === gymId)?.client_id ?? null;
+}
+
+/** Adds a gym, or brings back a removed one of the same name. */
+export function addClientGym(clientId: number, name: string): ClientGym | null {
+  const clean = name.trim().replace(/\s+/g, " ").slice(0, 40);
+  if (!clean) return null;
+  const data = getData();
+  const same = listClientGyms(clientId, true).find((g) => g.name.toLowerCase() === clean.toLowerCase());
+  if (same) {
+    same.archived = false;
+    persist();
+    return same;
+  }
+  const gym: ClientGym = { id: allocId("client_gyms"), client_id: clientId, name: clean, created_at: new Date().toISOString(), last_used_at: null, archived: false };
+  data.client_gyms.push(gym);
+  persist();
+  return gym;
+}
+
+/**
+ * Hides a gym from the pickers. Its sets, weights and notes stay. Removing
+ * the home gym hands home to the next gym first, so the Weight figure goes
+ * on being a gym still in use and the removed gym keeps its own weights.
+ */
+export function removeClientGym(gymId: number) {
+  const gym = (getData().client_gyms ?? []).find((g) => g.id === gymId);
+  if (!gym) return;
+  const others = listClientGyms(gym.client_id).filter((g) => g.id !== gymId);
+  if (homeGymId(gym.client_id) === gymId && others.length > 0) setHomeGym(others[0].id);
+  gym.archived = true;
+  persist();
+}
+
+/** The gym a new session starts on: the one picked most recently. */
+export function currentGymId(clientId: number): number | null {
+  const gyms = listClientGyms(clientId);
+  if (gyms.length === 0) return null;
+  const used = gyms.filter((g) => g.last_used_at).sort((a, b) => (a.last_used_at! < b.last_used_at! ? 1 : -1));
+  return (used[0] ?? gyms.find((g) => g.id === homeGymId(clientId)) ?? gyms[0]).id;
+}
+
+/** Where a day was trained: the gym of its sets, else the current gym. */
+export function dayGymId(programDayId: number): number | null {
+  const data = getData();
+  const day = data.program_days.find((pd) => pd.id === programDayId);
+  if (!day) return null;
+  const home = homeGymId(day.client_id);
+  if (home == null) return null;
+  const ids = new Set(data.workout_assignments.filter((wa) => wa.program_day_id === day.id).map((wa) => wa.id));
+  const log = data.set_logs.find((sl) => ids.has(sl.workout_assignment_id));
+  return log ? log.gym_id ?? home : currentGymId(day.client_id);
+}
+
+/** The weight target on this prescription at this gym. */
+export function targetAtGym(wa: WorkoutAssignment, gymId: number | null, home: number | null): number | null {
+  if (gymId == null || gymId === home) return wa.target_weight_kg;
+  return wa.gym_targets?.[gymId]?.kg ?? wa.target_weight_kg;
+}
+
+/**
+ * The client picked a gym for a session. It becomes the gym new sessions
+ * start on, and sets already logged that day move to it (a wrong pick is
+ * usually noticed after the first set), with the weights worked out again.
+ */
+export function pickGymForDay(programDayId: number, gymId: number) {
+  const data = getData();
+  const day = data.program_days.find((pd) => pd.id === programDayId);
+  const gym = (data.client_gyms ?? []).find((g) => g.id === gymId);
+  if (!day || !gym || gym.client_id !== day.client_id) return;
+  gym.last_used_at = new Date().toISOString();
+  const ids = data.workout_assignments.filter((wa) => wa.program_day_id === day.id).map((wa) => wa.id);
+  const moved = new Set<number>();
+  for (const sl of data.set_logs) {
+    if (ids.includes(sl.workout_assignment_id) && sl.gym_id !== gymId) {
+      sl.gym_id = gymId;
+      moved.add(sl.workout_assignment_id);
+    }
+  }
+  persist();
+  moved.forEach((id) => progressTargetFromLogs(id));
+}
+
+/**
+ * The most recent earlier session of this exercise at this gym: its
+ * prescription, sheet week and sets. What a coach compares a gym's sets
+ * against, since last week may have been at the other gym.
+ */
+export function getLastVisitAtGym(
+  clientId: number,
+  exerciseId: number,
+  gymId: number | null,
+  before: { week: number; dayOfWeek: number }
+): { assignment: WorkoutAssignment; weekNumber: number; logs: SetLog[] } | null {
+  const data = getData();
+  const home = homeGymId(clientId);
+  const want = gymId ?? home;
+  const days = data.program_days
+    .filter(
+      (pd) =>
+        pd.client_id === clientId &&
+        (pd.week_number < before.week || (pd.week_number === before.week && pd.day_of_week < before.dayOfWeek))
+    )
+    .sort((a, b) => b.week_number - a.week_number || b.day_of_week - a.day_of_week);
+  for (const pd of days) {
+    for (const wa of data.workout_assignments.filter((x) => x.program_day_id === pd.id && x.exercise_id === exerciseId)) {
+      const logs = data.set_logs
+        .filter((sl) => sl.workout_assignment_id === wa.id && (sl.gym_id ?? home) === want)
+        .sort((a, b) => a.set_number - b.set_number);
+      if (logs.length) return { assignment: wa, weekNumber: pd.week_number, logs };
+    }
+  }
+  return null;
 }
 
 export function getClientProgramNote(clientId: number, programId: number): string {
@@ -5845,6 +6083,8 @@ export type DayChanges = {
   fields: Record<string, DayFieldValues>;
   /** assignment id -> column id -> value. */
   custom: Record<string, Record<string, string>>;
+  /** assignment id -> gym id -> weight, for the client's gyms after the home one. */
+  gyms?: Record<string, Record<string, string>>;
   removed: number[];
   added: { exerciseId: number; fields: DayFieldValues }[];
   /** Full order of the surviving assignment ids, or null if untouched. */
@@ -5941,6 +6181,24 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
             value,
           });
       }
+    }
+
+    // A gym's weight the coach types is theirs too; cleared, the gym starts
+    // from the Weight column again.
+    for (const [idStr, gyms] of Object.entries(changes.gyms ?? {})) {
+      const srcRow = data.workout_assignments.find((wa) => wa.id === Number(idStr));
+      const target = mirror ? (srcRow ? byExercise(srcRow.exercise_id) : undefined) : srcRow;
+      if (!target || target.program_day_id !== day.id) continue;
+      const own = new Set(listClientGyms(day.client_id, true).map((g) => String(g.id)));
+      const next = { ...(target.gym_targets ?? {}) };
+      for (const [gymStr, raw] of Object.entries(gyms)) {
+        if (!own.has(gymStr)) continue;
+        const t = raw.trim().replace(",", ".");
+        const kg = t && Number.isFinite(Number(t)) ? Number(t) : null;
+        if (kg == null) delete next[gymStr];
+        else next[gymStr] = { kg, set_at: new Date().toISOString() };
+      }
+      target.gym_targets = next;
     }
 
     for (const add of changes.added) {
@@ -6139,16 +6397,30 @@ export function listClientExercises(clientId: number): { id: number; name: strin
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/** Every set the client has logged on one exercise, across every week. */
-export function loggedSetsForExercise(clientId: number, exerciseId: number): LoggedSet[] {
+/**
+ * Every set the client has logged on one exercise, across every week. With a
+ * gym given, only that gym's (null: the home gym's); undefined is every gym.
+ */
+export function loggedSetsForExercise(clientId: number, exerciseId: number, gymId?: number | null): LoggedSet[] {
   const data = getData();
+  const home = homeGymId(clientId);
   const dayIds = new Set(data.program_days.filter((pd) => pd.client_id === clientId).map((pd) => pd.id));
   const waIds = new Set(
     data.workout_assignments.filter((wa) => dayIds.has(wa.program_day_id) && wa.exercise_id === exerciseId).map((wa) => wa.id)
   );
   return data.set_logs
     .filter((sl) => waIds.has(sl.workout_assignment_id))
-    .map((sl) => ({ weight: sl.weight_kg, reps: sl.reps, rpe: sl.rpe_actual, date: sl.logged_at.slice(0, 10) }));
+    .filter((sl) => gymId === undefined || home == null || (sl.gym_id ?? home) === (gymId ?? home))
+    .map((sl) => ({ weight: sl.weight_kg, reps: sl.reps, rpe: sl.rpe_actual, date: sl.logged_at.slice(0, 10), gymId: home == null ? null : sl.gym_id ?? home }));
+}
+
+/** The gym an exercise goal counts, by name, when the client has two or more gyms. */
+function goalGymName(clientId: number, t: GoalTracking | null): string | null {
+  if (t?.kind !== "exercise") return null;
+  const gyms = listClientGyms(clientId, true);
+  if (gyms.length < 2) return null;
+  const id = t.gymId ?? homeGymId(clientId);
+  return gyms.find((g) => g.id === id)?.name ?? null;
 }
 
 /** This Monday-to-Sunday week's values of a daily metric. */
@@ -6171,7 +6443,7 @@ export function goalContext(clientId: number, goal: ClientGoal): GoalContext {
     if (s) ctx.metric = s;
   } else if (t?.kind === "exercise") {
     const name = getData().exercises.find((e) => e.id === t.exerciseId)?.name ?? "Exercise";
-    ctx.exercise = { name, sets: loggedSetsForExercise(clientId, t.exerciseId) };
+    ctx.exercise = { name, sets: loggedSetsForExercise(clientId, t.exerciseId, t.gymId ?? null), gymName: goalGymName(clientId, t) };
   } else if (t?.kind === "habit") {
     const name = getData().metric_definitions.find((m) => m.id === t.metricId)?.name ?? "Check-in";
     ctx.habit = { name, weekValues: habitWeekValues(t.metricId, today) };
@@ -6191,12 +6463,15 @@ export function getGoalViews(clientId: number): GoalView[] {
 export function getGoalSummaries(clientId: number): { goal: ClientGoal; view: GoalView; tracking: string }[] {
   return listClientGoals(clientId).map((g) => {
     const t = g.tracked_by ?? null;
-    const names: { metric?: string; unit?: string; exercise?: string; habit?: string } = {};
+    const names: { metric?: string; unit?: string; exercise?: string; habit?: string; gym?: string | null } = {};
     if (t?.kind === "metric") {
       const s = seriesForKey(clientId, t.metricKey);
       names.metric = s?.name;
       names.unit = s?.unit;
-    } else if (t?.kind === "exercise") names.exercise = getData().exercises.find((e) => e.id === t.exerciseId)?.name;
+    } else if (t?.kind === "exercise") {
+      names.exercise = getData().exercises.find((e) => e.id === t.exerciseId)?.name;
+      names.gym = goalGymName(clientId, t);
+    }
     else if (t?.kind === "habit") names.habit = getData().metric_definitions.find((m) => m.id === t.metricId)?.name;
     return {
       goal: g,
@@ -6211,8 +6486,11 @@ export type GoalEditorOptions = {
   today: string;
   phaseEnd: string | null;
   metrics: { key: string; name: string; unit: string; series: SeriesPoint[] }[];
+  /** Every set, each marked with its gym; the editor filters to the goal's gym. */
   exercises: { id: number; name: string; sets: LoggedSet[] }[];
   habits: { id: number; name: string; weekValues: SeriesPoint[] }[];
+  /** The client's gyms, home first; a goal picks one when there are two or more. */
+  gyms: { id: number; name: string; removed: boolean }[];
 };
 
 export function getGoalEditorOptions(clientId: number): GoalEditorOptions {
@@ -6239,6 +6517,12 @@ export function getGoalEditorOptions(clientId: number): GoalEditorOptions {
     ],
     exercises: listClientExercises(clientId).map((e) => ({ ...e, sets: loggedSetsForExercise(clientId, e.id) })),
     habits: listMetricDefinitions(clientId, "daily").map((m) => ({ id: m.id, name: m.name, weekValues: habitWeekValues(m.id, today) })),
+    gyms: (() => {
+      const home = homeGymId(clientId);
+      return listClientGyms(clientId, true)
+        .sort((a, b) => (a.id === home ? -1 : b.id === home ? 1 : a.id - b.id))
+        .map((g) => ({ id: g.id, name: g.name, removed: g.archived }));
+    })(),
   };
 }
 
@@ -6555,10 +6839,11 @@ export function getPlanData(clientId: number) {
     } else if (view.kind === "exercise" && t?.kind === "exercise") {
       live = (view.right ?? "").replace(/^best /, "").split(" · ")[0];
       const name = getData().exercises.find((e) => e.id === t.exerciseId)?.name ?? "Exercise";
-      const sets = loggedSetsForExercise(clientId, t.exerciseId).filter((s) => s.weight != null);
+      const sets = loggedSetsForExercise(clientId, t.exerciseId, t.gymId ?? null).filter((s) => s.weight != null);
       const best = sets.length ? Math.max(...sets.map((s) => s.weight as number)) : 0;
       pct = view.reached ? 100 : Math.max(0, Math.min(99, Math.round((best / t.weight) * 100)));
-      rule = `Exercise · ${name} · ${fmtNumber(t.weight)} × ${t.reps}${t.maxRpe != null ? ` @ ≤${t.maxRpe}` : ""}`;
+      const gym = goalGymName(clientId, t);
+      rule = `Exercise · ${name}${gym ? ` at ${gym}` : ""} · ${fmtNumber(t.weight)} × ${t.reps}${t.maxRpe != null ? ` @ ≤${t.maxRpe}` : ""}`;
       by = "ongoing";
     } else if (view.kind === "habit" && t?.kind === "habit") {
       live = `${view.segments?.done ?? 0} of ${view.segments?.total ?? 0}`;

@@ -388,6 +388,7 @@ export function resetWorkspaceFromEnv() {
   data.client_reports = [];
   data.training_programs = [];
   data.client_preferences = [];
+  data.client_gyms = [];
   data.workspace_reset_applied = token;
   persist();
   console.log(`[workspace-reset ${token}] applied: removed ${before} client(s) and their data; kept coach logins, exercises, templates`);

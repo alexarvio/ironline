@@ -114,6 +114,17 @@ export const client_exercise_notes = pgTable("client_exercise_notes", {
   extra: extra(),
 });
 
+export const client_gyms = pgTable("client_gyms", {
+  id: id(),
+  client_id: fk("client_id"),
+  name: text("name"),
+  created_at: text("created_at"),
+  last_used_at: text("last_used_at"),
+  archived: boolean("archived"),
+  is_home: boolean("is_home"),
+  extra: extra(),
+});
+
 export const client_program_notes = pgTable("client_program_notes", {
   id: id(),
   client_id: fk("client_id"),
@@ -485,6 +496,7 @@ export const COLLECTIONS = [
   { name: "calorie_logs", table: calorie_logs, key: ["id"] },
   { name: "check_in_notes", table: check_in_notes, key: ["id"] },
   { name: "client_exercise_notes", table: client_exercise_notes, key: ["id"] },
+  { name: "client_gyms", table: client_gyms, key: ["id"] },
   { name: "client_program_notes", table: client_program_notes, key: ["id"] },
   { name: "cardio_entries", table: cardio_entries, key: ["id"] },
   { name: "cardio_logs", table: cardio_logs, key: ["id"] },

@@ -11,7 +11,12 @@ import {
   getExerciseWeightTrendPct,
   getLogsForAssignment,
   getLogsForAssignmentByWeek,
+  getLastVisitAtGym,
+  currentGymId,
   getPreviousWeekAssignmentRef,
+  homeGymId,
+  listClientGyms,
+  targetAtGym,
   getProgramCurrentWeekIndex,
   getWeek,
   listExercisesByGroup,
@@ -28,7 +33,8 @@ import {
 } from "../lib/queries";
 import { DAY_NAMES_FULL } from "../lib/db";
 import { coachIdOfClient } from "../lib/tenancy";
-import AssignmentFieldInput from "./AssignmentFieldInput";
+import AssignmentFieldInput, { GymWeightInput } from "./AssignmentFieldInput";
+import GymChipRow from "../admin/GymChipRow";
 import ExerciseNoteCell from "./ExerciseNoteCell";
 import DayLabelForm from "./DayLabelForm";
 import ReorderableRows from "./ReorderableRows";
@@ -112,6 +118,23 @@ export default function ProgramBuilder({
   const customValueFor = (assignmentId: number, columnId: number) =>
     customValues.find((v) => v.workout_assignment_id === assignmentId && v.column_id === columnId)?.value ?? "";
 
+  // The client's gyms. The home gym's weight is the Weight figure; with any
+  // other gym still in use, each gets its own box and the logged lanes say
+  // where the sets were done.
+  const allGyms = listClientGyms(clientId, true);
+  const home = homeGymId(clientId);
+  const homeGym = allGyms.find((g) => g.id === home) ?? null;
+  const otherGyms = listClientGyms(clientId).filter((g) => g.id !== home);
+  const multiGym = homeGym != null && otherGyms.length > 0;
+  const gymNameOf = (id: number | null) => allGyms.find((g) => g.id === id)?.name ?? null;
+  const gymNames = Object.fromEntries(allGyms.map((g) => [g.id, g.name]));
+  const cell = (l: { set_number: number; weight_kg: number | null; reps: number | null; rpe_actual: number | null }) => ({
+    setNumber: l.set_number,
+    weightKg: l.weight_kg,
+    reps: l.reps,
+    rpe: l.rpe_actual,
+  });
+
   const currentWeek = weekStart(localDateStr());
   const liveWeekNumber = deployedProgram ? deployedProgram.start_week + getProgramCurrentWeekIndex(deployedProgram) - 1 : null;
 
@@ -133,6 +156,10 @@ export default function ProgramBuilder({
         const wg = getLogsForAssignmentByWeek(a.id).find((g) => g.weekStart === currentWeek);
         return sum + (wg ? wg.logs.length : 0);
       }, 0);
+      // Which gym the client picked for this session, read off the sets they
+      // logged on it. Only worth saying when they have more than one gym.
+      const dayLog = allGyms.length > 1 ? assignments.flatMap((a) => getLogsForAssignment(a.id))[0] : undefined;
+      const dayGymName = dayLog ? gymNameOf(dayLog.gym_id ?? home) : null;
       const summary = markedRest
         ? "Rest day"
         : assignments.length === 0 && cardioCount === 0
@@ -162,6 +189,12 @@ export default function ProgramBuilder({
           notes: a.notes ?? "",
         },
         custom: Object.fromEntries(columns.filter((c) => c.kind === "custom").map((c) => [c.id, customValueFor(a.id, c.id)])),
+        gyms: Object.fromEntries(
+          otherGyms.map((g) => {
+            const kg = a.gym_targets?.[g.id]?.kg;
+            return [g.id, kg == null ? "" : String(kg)];
+          })
+        ),
       }));
       const weekIdx = dayProgram ? day.week_number - dayProgram.start_week + 1 : day.week_number;
       const remainingLabel =
@@ -184,6 +217,7 @@ export default function ProgramBuilder({
           cardio={listCardioForDay(day.id).map((c) => ({ id: c.id, fields: { name: c.name, time: c.time, pace: c.pace, incline: c.incline, distance: c.distance ?? "", notes: c.notes } }))}
           label={day.label ?? ""}
           isRest={markedRest}
+          gymNames={gymNames}
         >
         <AdminDayCard
           dayName={DAY_NAMES_FULL[day.day_of_week - 1]}
@@ -230,6 +264,13 @@ export default function ProgramBuilder({
               </span>
             ) : undefined
           }
+          gymSlot={
+            dayGymName ? (
+              <span className="pb-day-gym" title="The gym the client picked for this session">
+                {dayGymName}
+              </span>
+            ) : undefined
+          }
           summary={summary}
           isRest={isRest}
           // Every day starts folded; the coach opens the one they are working
@@ -245,7 +286,10 @@ export default function ProgramBuilder({
                   <th aria-hidden="true" style={{ width: "22px" }}></th>
                   <th>Exercise</th>
                   {columns.map((col) => (
-                    <th key={col.id} style={{ width: COLUMN_WIDTH[col.key] ?? "90px" }}>
+                    <th
+                      key={col.id}
+                      style={{ width: col.key === "weight_goal" && multiGym ? `${64 * (otherGyms.length + 1)}px` : COLUMN_WIDTH[col.key] ?? "90px" }}
+                    >
                       {col.label}
                     </th>
                   ))}
@@ -282,8 +326,6 @@ export default function ProgramBuilder({
                   // overall, and what last week actually asked for versus what
                   // they did. Neither depends on whether this day is published.
                   const prevRef = getPreviousWeekAssignmentRef(clientId, day.week_number, day.day_of_week, a.exercise_id);
-                  const weightTrendPct = getExerciseWeightTrendPct(clientId, a.exercise_id, day.week_number);
-                  const trendDir = weightTrendPct == null ? null : weightTrendPct > 0 ? "up" : weightTrendPct < 0 ? "down" : null;
 
                   // This week over last, each judged against the target that
                   // was live for ITS OWN week — see LoggedSetsGrid for why
@@ -300,21 +342,46 @@ export default function ProgramBuilder({
                   // earlier. No lane at all when there is no earlier week; "new
                   // this week" when the week exists but the exercise wasn't on it.
                   const hasPrevWeek = day.week_number > 1 && getWeek(clientId, day.week_number - 1).length > 0;
-                  const previous: PreviousLane | null = !hasPrevWeek
-                    ? null
-                    : prevRef
-                    ? {
-                        kind: "logged",
-                        targetWeightKg: prevRef.target_weight_kg,
-                        repsLow: repsLowOf(prevRef.reps),
-                        sets: prevRef.actualLogs.map((l) => ({
-                          setNumber: l.set_number,
-                          weightKg: l.weight_kg,
-                          reps: l.reps,
-                          rpe: l.rpe_actual,
-                        })),
-                      }
-                    : { kind: "absent" };
+                  // With gyms, sets logged this week compare against the last
+                  // visit to the same gym, since last week may have been the
+                  // other one. A gym never trained at before has nothing to
+                  // compare against, and no target of its own to be under.
+                  const ownLogs = multiGym ? getLogsForAssignment(a.id) : [];
+                  const loggedGym = ownLogs.length ? ownLogs[0].gym_id ?? home : null;
+                  const visit =
+                    loggedGym != null
+                      ? getLastVisitAtGym(clientId, a.exercise_id, loggedGym, { week: day.week_number, dayOfWeek: day.day_of_week })
+                      : null;
+                  const firstVisit = loggedGym != null && loggedGym !== home && !visit && a.gym_targets?.[loggedGym]?.kg == null;
+                  // The trend is one gym's too: where this week was trained,
+                  // or the gym the client is using now.
+                  const trendGym = multiGym ? loggedGym ?? currentGymId(clientId) : null;
+                  const weightTrendPct = getExerciseWeightTrendPct(clientId, a.exercise_id, day.week_number, multiGym ? trendGym : undefined);
+                  const trendDir = weightTrendPct == null ? null : weightTrendPct > 0 ? "up" : weightTrendPct < 0 ? "down" : null;
+                  const previous: PreviousLane | null =
+                    loggedGym != null && (visit || loggedGym !== home)
+                      ? visit
+                        ? {
+                            kind: "logged",
+                            weekNumber: visit.weekNumber,
+                            gymName: gymNameOf(loggedGym),
+                            targetWeightKg: targetAtGym(visit.assignment, loggedGym, home),
+                            repsLow: repsLowOf(visit.assignment.reps),
+                            sets: visit.logs.map(cell),
+                          }
+                        : { kind: "absent", note: `First time at ${gymNameOf(loggedGym)}` }
+                      : !hasPrevWeek
+                      ? null
+                      : prevRef
+                      ? {
+                          kind: "logged",
+                          weekNumber: day.week_number - 1,
+                          gymName: multiGym && prevRef.actualLogs.length ? gymNameOf(prevRef.actualLogs[0].gym_id ?? home) : null,
+                          targetWeightKg: prevRef.target_weight_kg,
+                          repsLow: repsLowOf(prevRef.reps),
+                          sets: prevRef.actualLogs.map(cell),
+                        }
+                      : { kind: "absent" };
 
                   return {
                     id: a.id,
@@ -327,7 +394,10 @@ export default function ProgramBuilder({
                             them. */}
                         <div className="pb-exercise-title">
                           {weightTrendPct != null && trendDir && (
-                            <span className={`pb-trend ${trendDir}`}>
+                            <span
+                              className={`pb-trend ${trendDir}`}
+                              title={trendGym != null ? `Weight trend at ${gymNameOf(trendGym)}` : "Weight trend"}
+                            >
                               {trendDir === "up" ? "▲" : "▼"} {Math.abs(weightTrendPct).toFixed(1)}%
                             </span>
                           )}
@@ -374,6 +444,34 @@ export default function ProgramBuilder({
                               </td>
                             );
                           case "weight_goal":
+                            if (multiGym) {
+                              return (
+                                <td key={col.id}>
+                                  <div className="pb-gym-weights">
+                                    <label title={homeGym!.name}>
+                                      <span>{homeGym!.name}</span>
+                                      <AssignmentFieldInput
+                                        assignmentId={a.id}
+                                        name="targetWeight"
+                                        type="number"
+                                        step={0.5}
+                                        defaultValue={a.target_weight_kg ?? ""}
+                                      />
+                                    </label>
+                                    {otherGyms.map((g) => (
+                                      <label key={g.id} title={`${g.name}: empty starts from ${homeGym!.name}'s weight`}>
+                                        <span>{g.name}</span>
+                                        <GymWeightInput
+                                          assignmentId={a.id}
+                                          gymId={g.id}
+                                          placeholder={a.target_weight_kg == null ? "" : String(a.target_weight_kg)}
+                                        />
+                                      </label>
+                                    ))}
+                                  </div>
+                                </td>
+                              );
+                            }
                             return (
                               <td key={col.id}>
                                 <AssignmentFieldInput
@@ -457,7 +555,9 @@ export default function ProgramBuilder({
                       <td className="logged-col">
                         <LoggedSetsGrid
                           weekNumber={day.week_number}
-                          targetWeightKg={a.target_weight_kg}
+                          gymName={loggedGym != null ? gymNameOf(loggedGym) : null}
+                          firstVisit={firstVisit}
+                          targetWeightKg={loggedGym != null ? targetAtGym(a, loggedGym, home) : a.target_weight_kg}
                           repsLow={repsLowOf(a.reps)}
                           plannedSets={a.sets}
                           sets={thisWeekSets}
@@ -637,6 +737,13 @@ export default function ProgramBuilder({
         programs={programs}
         clientId={clientId}
         columnsSlot={<ColumnChipRow key="cols" clientId={clientId} choices={columnChoices} max={MAX_TRAINING_COLUMNS} />}
+        gymsSlot={
+          <GymChipRow
+            key="gyms"
+            clientId={clientId}
+            gyms={listClientGyms(clientId).map((g) => ({ id: g.id, name: g.name }))}
+          />
+        }
         newProgramSlot={
           (
             <form key="new-program" action={createProgramAction}>

@@ -185,6 +185,17 @@ Commit `a10ba40`, ported from `next` and pushed on its own.
 - [x] Under each day’s exercise table the coach can add cardio rows with their own columns: activity (free text), time, pace, incline, notes. They queue on the day’s pending bar with everything else, mirror to later weeks with “Also apply”, and count toward the day (a day with only cardio is a workout, not rest).
 - [x] The client sees each cardio entry as a card after the day’s exercises, with the targets and the note. Nothing is logged against cardio yet.
 
+## 28 · Gyms: weights kept per gym — ✅ LIVE 14 Sep
+
+- [x] ~~A client can have more than one gym. Only the coach keeps the list, from the "Client gyms" pill at the far right of the programme row on the Training tab: it opens a list with Add and Delete. (Behind the scenes the first gym holds the plain Weight figure; deleting it hands that to the next gym, weights swapped over so nothing changes.) Removing a gym only hides it; what was logged there stays.~~
+- [x] ~~With two or more gyms, an open session has a "Which gym are you training at?" box right under its header, the gyms side by side. The client taps one; it stays highlighted for the whole workout, and the box never goes away. It starts on the gym picked last. The client cannot add, rename or remove gyms. Every set logged records the gym. Switching gym after logging moves that session's sets to the new gym (it asks first).~~
+- [x] ~~Each gym's weights move forward on their own, by the same rule as before. The first gym is the home gym: the Weight figure is its weight, and everything logged before gyms existed counts as there. Another gym starts from the Weight figure; after the first visit, what was lifted there becomes that gym's weight.~~
+- [x] ~~Builder, with two or more gyms: the Weight cell has a box per gym (empty = starts from the home weight), queued on the pending bar like any other edit. "What the client did" names the gym and compares against the last visit to that same gym; a first visit says "First visit" instead of "under".~~
+- [x] ~~"My notes" are kept per gym.~~
+- [x] ~~Builder: once the client has logged a session, its day header shows the gym as a blue pill, e.g. "Muscle Factory", beside Copy. The per-gym weights in the Weight goal cell sit in even, centred columns.~~
+- [x] ~~Two gyms are two parallel tracks for every weight figure: the ▲/▼ % trend beside an exercise in the builder counts one gym (this week's, or the gym in use now), and an exercise goal counts one gym's sets. The goal editor asks which gym when there are two or more; existing goals count the home gym. The goal reads "Lat Pulldown · PureGym · best set" on Home and "… at PureGym" in the coach's lists.~~
+- [x] ~~Postgres: new `client_gyms` table, migration `drizzle/0001_client_gyms.sql`.~~
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.

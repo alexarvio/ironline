@@ -15,10 +15,10 @@ export type LoggedSetCell = {
 };
 
 export type PreviousLane =
-  /** Same exercise, same day, the week before. */
-  | { kind: "logged"; targetWeightKg: number | null; repsLow: number | null; sets: LoggedSetCell[] }
-  /** The exercise was not on last week's day. */
-  | { kind: "absent" };
+  /** Same exercise, same day, the week before; with gyms, the last visit to the same gym. */
+  | { kind: "logged"; weekNumber: number; gymName?: string | null; targetWeightKg: number | null; repsLow: number | null; sets: LoggedSetCell[] }
+  /** The exercise was not on last week's day, or never done at this gym (`note` says which). */
+  | { kind: "absent"; note?: string };
 
 /** The low end of a rep prescription: "8-10" → 8, "12" → 12, "AMRAP" → null. */
 export function repsLowOf(reps: string | null | undefined): number | null {
@@ -65,9 +65,11 @@ export default function LoggedSetsGrid({
   plannedSets,
   sets,
   previous,
+  gymName = null,
+  firstVisit = false,
 }: {
   weekNumber: number;
-  /** This week's prescription. */
+  /** This week's prescription (at the gym the sets were done). */
   targetWeightKg: number | null;
   repsLow: number | null;
   plannedSets: number;
@@ -75,14 +77,19 @@ export default function LoggedSetsGrid({
   sets: LoggedSetCell[];
   /** Last week's lane; null when there is no last week to show (week 1). */
   previous: PreviousLane | null;
+  /** Where this week's sets were done, when the client has more than one gym. */
+  gymName?: string | null;
+  /** The first time at this gym: nothing to be under yet. */
+  firstVisit?: boolean;
 }) {
   const logged = sets.length > 0;
   const bestNow = best(sets);
-  const target = targetWeightKg;
+  const target = firstVisit ? null : targetWeightKg;
 
   // Verdict against this week's target: green only when every set made it.
   let verdict: { text: string; tone: "met" | "under" | "none" };
   if (!logged) verdict = { text: "Not logged", tone: "none" };
+  else if (firstVisit) verdict = { text: "First visit", tone: "none" };
   else if (target == null || bestNow == null) verdict = { text: "No target", tone: "none" };
   else if (sets.every((s) => s.weightKg == null || s.weightKg >= target)) {
     verdict = bestNow > target ? { text: `+${fmt(bestNow - target)} kg over`, tone: "met" } : { text: "On target", tone: "met" };
@@ -100,10 +107,10 @@ export default function LoggedSetsGrid({
     if (bestNow != null && bestPrev != null) {
       delta =
         bestNow > bestPrev
-          ? { text: `▲ ${fmt(bestNow - bestPrev)} kg vs W${weekNumber - 1}`, tone: "met" }
+          ? { text: `▲ ${fmt(bestNow - bestPrev)} kg vs W${previous.weekNumber}`, tone: "met" }
           : bestNow < bestPrev
-          ? { text: `▼ ${fmt(bestPrev - bestNow)} kg vs W${weekNumber - 1}`, tone: "under" }
-          : { text: `= W${weekNumber - 1}`, tone: "none" };
+          ? { text: `▼ ${fmt(bestPrev - bestNow)} kg vs W${previous.weekNumber}`, tone: "under" }
+          : { text: `= W${previous.weekNumber}`, tone: "none" };
     }
   }
 
@@ -111,6 +118,11 @@ export default function LoggedSetsGrid({
     <div className="pb-log">
       <span className="pb-log-wk now">W{weekNumber}</span>
       <div className="pb-log-sets">
+        {logged && gymName && (
+          <span className="pb-log-gym" title={`Logged at ${gymName}`}>
+            {gymName}
+          </span>
+        )}
         {logged
           ? sets.map((s) => <SetChip key={s.setNumber} set={s} target={target} repsLow={repsLow} dim={false} />)
           : Array.from({ length: Math.max(1, plannedSets) }, (_, i) => (
@@ -123,16 +135,23 @@ export default function LoggedSetsGrid({
 
       {previous && (
         <>
-          <span className="pb-log-wk">W{weekNumber - 1}</span>
+          <span className="pb-log-wk">W{previous.kind === "logged" ? previous.weekNumber : weekNumber - 1}</span>
           <div className="pb-log-sets">
             {previous.kind === "absent" ? (
-              <span className="pb-log-note">New this week</span>
+              <span className="pb-log-note">{previous.note ?? "New this week"}</span>
             ) : previous.sets.length === 0 ? (
               <span className="pb-log-note">Not logged</span>
             ) : (
-              previous.sets.map((s) => (
-                <SetChip key={s.setNumber} set={s} target={previous.targetWeightKg} repsLow={previous.repsLow} dim />
-              ))
+              <>
+                {previous.gymName && (
+                  <span className="pb-log-gym dim" title={`Logged at ${previous.gymName}`}>
+                    {previous.gymName}
+                  </span>
+                )}
+                {previous.sets.map((s) => (
+                  <SetChip key={s.setNumber} set={s} target={previous.targetWeightKg} repsLow={previous.repsLow} dim />
+                ))}
+              </>
             )}
           </div>
           <span className={`pb-log-delta ${delta?.tone ?? "none"}`}>{delta?.text ?? ""}</span>
