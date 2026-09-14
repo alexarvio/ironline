@@ -187,6 +187,7 @@ import {
   removeClientAvatar,
 } from "./queries";
 import { writeReportNarrative } from "./reportAi";
+import { deleteUpload, keyOf, putUpload } from "./storage";
 import type { ReportSectionType } from "./reportSectionTypes";
 
 // OWNERSHIP RULE for every coach action below: a coach may only touch their
@@ -898,7 +899,8 @@ export async function uploadProgressPhotoAction(formData: FormData) {
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return;
   const buffer = Buffer.from(await file.arrayBuffer());
-  savePhotoUpload(clientId, slotId, buffer, file.type || "image/jpeg");
+  // Saved to the disk, then copied into the storage bucket when it is on.
+  await putUpload(savePhotoUpload(clientId, slotId, buffer, file.type || "image/jpeg"), buffer, file.type);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1367,6 +1369,7 @@ export async function sendChatMessageAction(formData: FormData) {
   if (file && file.size > 0) {
     const buffer = Buffer.from(await file.arrayBuffer());
     media = saveChatMedia(clientId, buffer, file.type || "image/jpeg");
+    await putUpload(media.path, buffer, file.type);
   }
   if (!text && !media) return;
 
@@ -1639,6 +1642,7 @@ export async function uploadDemoVideoAction(formData: FormData): Promise<string 
   const exerciseId = getExerciseIdForAssignment(assignmentId);
   if (exerciseId == null || !coachOwnsExercise(coach.id, exerciseId)) return "That exercise no longer exists.";
   const publicPath = saveLibraryVideoUpload(exerciseId, buffer, file.type);
+  await putUpload(publicPath, buffer, file.type);
   setExerciseVideoUrl(exerciseId, publicPath);
   setAssignmentDemoUrl(assignmentId, "");
   revalidatePath("/admin");
@@ -1855,7 +1859,9 @@ export async function uploadExerciseVideoAction(formData: FormData): Promise<str
   }
   if (!file.type.startsWith("video/")) return "That doesn't look like a video file.";
   const buffer = Buffer.from(await file.arrayBuffer());
-  setExerciseVideoUrl(exerciseId, saveLibraryVideoUpload(exerciseId, buffer, file.type));
+  const videoPath = saveLibraryVideoUpload(exerciseId, buffer, file.type);
+  await putUpload(videoPath, buffer, file.type);
+  setExerciseVideoUrl(exerciseId, videoPath);
   revalidatePath("/admin");
   revalidatePath("/client");
   return null;
@@ -1923,14 +1929,21 @@ export async function uploadClientAvatarAction(formData: FormData) {
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0 || file.size > 6 * 1024 * 1024) return;
   if (!file.type.startsWith("image/")) return;
-  saveClientAvatar(clientId, Buffer.from(await file.arrayBuffer()), file.type);
+  const previous = getClient(clientId)?.avatar_path ?? null;
+  const body = Buffer.from(await file.arrayBuffer());
+  const saved = saveClientAvatar(clientId, body, file.type);
+  // A new extension is a new file; the old one goes from the bucket too.
+  if (previous && keyOf(previous) !== keyOf(saved)) await deleteUpload(previous);
+  await putUpload(saved, body, file.type);
   revalidatePath("/client");
   revalidatePath("/admin");
 }
 
 export async function removeClientAvatarAction(formData: FormData) {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const previous = getClient(clientId)?.avatar_path ?? null;
   removeClientAvatar(clientId);
+  await deleteUpload(previous);
   revalidatePath("/client");
   revalidatePath("/admin");
 }

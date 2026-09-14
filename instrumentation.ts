@@ -15,6 +15,10 @@ export async function register() {
   // any request; in JSON mode this does nothing.
   const { initStore } = await import("./app/lib/pg/runtime");
   await initStore();
+  // Storage bucket on (UPLOADS_STORE=bucket): copy any files the bucket does
+  // not have yet, in the background so the server starts straight away.
+  const { copyDiskUploadsToBucket } = await import("./app/lib/storage");
+  void copyDiskUploadsToBucket().catch((e) => console.error("[uploads] copy to bucket failed:", e instanceof Error ? e.message : e));
   const { runBackup, msUntilNextRun, backupConfigured } = await import("./app/lib/backup");
   if (!backupConfigured()) return;
 

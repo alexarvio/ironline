@@ -3,6 +3,7 @@ import path from "path";
 import { DATA_DIR } from "../../lib/db";
 import { canAccessClient, getSessionUser } from "../../lib/auth";
 import { coachIdOfClient, coachOwnsExercise } from "../../lib/tenancy";
+import { bucketLink, LINK_CACHE_SECONDS } from "../../lib/storage";
 
 // Serves files written by savePhotoUpload/saveChatMedia in queries.ts. Those
 // live under DATA_DIR/uploads rather than /public/uploads so they survive on
@@ -61,6 +62,17 @@ export async function GET(
     if (!Number.isInteger(clientId) || clientId <= 0 || !(await canAccessClient(clientId))) {
       return new Response("Not found", { status: 404 });
     }
+  }
+
+  // Access is settled above. With the storage bucket on, the file downloads
+  // from the bucket through a link that expires; a file not copied there yet
+  // is served from the disk below.
+  const link = await bucketLink(segments.join("/"));
+  if (link) {
+    return new Response(null, {
+      status: 302,
+      headers: { Location: link, "Cache-Control": `private, max-age=${LINK_CACHE_SECONDS}` },
+    });
   }
 
   const uploadsRoot = path.join(DATA_DIR, "uploads");
