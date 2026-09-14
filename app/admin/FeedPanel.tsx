@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { feedClock, getActivityFeed, localDateStr, type FeedCategory, type FeedEvent } from "../lib/queries";
+import { feedClock, getActivityFeed, listLoginLocks, localDateStr, type FeedCategory, type FeedEvent } from "../lib/queries";
 
 const FILTERS = [
   { id: "all", label: "All" },
@@ -38,8 +38,22 @@ function dayHeading(day: string, today: string, yesterday: string) {
 // Everything clients log, across all clients, newest first and grouped by
 // day. The filters narrow it to one kind; Notes gathers the client's words
 // from anywhere so none sit unread.
-export default function FeedPanel({ coachId, category, show }: { coachId: number; category?: string; show?: string }) {
+export default function FeedPanel({
+  coachId,
+  coachEmail,
+  owner = false,
+  category,
+  show,
+}: {
+  coachId: number;
+  coachEmail: string;
+  /** The owner sees every sign-in lock, not only their own clients'. */
+  owner?: boolean;
+  category?: string;
+  show?: string;
+}) {
   const all = getActivityFeed(coachId);
+  const locks = listLoginLocks({ id: coachId, email: coachEmail }, owner);
   const filter: FilterId = FILTERS.some((f) => f.id === category) ? (category as FilterId) : "all";
   const events = all.filter((e) => matches(e, filter));
   const limit = Math.max(PAGE, Math.floor(Number(show)) || PAGE);
@@ -83,6 +97,32 @@ export default function FeedPanel({ coachId, category, show }: { coachId: number
           ))}
         </nav>
       </div>
+
+      {/* Sign-in locks sit above everything: someone can't get into the app,
+          or someone was guessing a password. */}
+      {locks.length > 0 && (
+        <section className="fd-locks" aria-label="Sign-in lockouts">
+          <div className="fd-locks-head">
+            Sign-in lockouts <span>last 7 days</span>
+          </div>
+          {locks.map((l) => (
+            <div key={l.id} className="fd-lock-row">
+              <span className={`fd-lock-dot${l.active ? " active" : ""}`} aria-hidden="true" />
+              <div>
+                <div className="fd-lock-text">
+                  {l.clientId != null ? <Link href={`/admin?client=${l.clientId}`}>{l.who}</Link> : <strong>{l.who}</strong>} was locked
+                  out for 15 minutes after {l.scope === "device" ? "3 wrong passwords from one device" : "10 wrong passwords from different devices"}.
+                </div>
+                <div className="fd-lock-meta">
+                  {new Date(l.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} · {feedClock(new Date(l.at).getTime())} ·{" "}
+                  {l.email} · IP {l.ip}
+                  {l.active ? " · still locked" : l.cleared ? " · unlocked" : ""}
+                </div>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
 
       {visible.length === 0 ? (
         <p className="fd-empty">

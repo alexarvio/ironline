@@ -3,6 +3,7 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { allocId, claimUnownedRows, getData, persist } from "./db";
+import { clearLockoutsFor } from "./loginLockout";
 import { coachOwnsClient, seedCoachLibrary } from "./tenancy";
 
 // Authentication and authorization for Ironline.
@@ -444,6 +445,26 @@ export function setPassword(userId: number, password: string, mustChange: boolea
   user.password_hash = hashPassword(password);
   user.must_change_password = mustChange;
   persist();
+  // A reset is how a coach or the owner unlocks someone straight away.
+  clearLoginLockouts(user.email);
+}
+
+/**
+ * Ends every sign-in lock on this email: its password was reset, or someone
+ * signed in with it. The recorded locks are marked as ended too, so the Feed
+ * stops showing them as still locked.
+ */
+export function clearLoginLockouts(email: string) {
+  clearLockoutsFor(email);
+  const account = email.trim().toLowerCase();
+  let changed = false;
+  for (const e of getData().login_lock_events ?? []) {
+    if (e.email === account && !e.cleared) {
+      e.cleared = true;
+      changed = true;
+    }
+  }
+  if (changed) persist();
 }
 
 export function deleteUserForClient(clientId: number) {

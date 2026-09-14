@@ -3,6 +3,7 @@ import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, CardioEntry } from "./db";
 import type { CalorieLog, CheckInNote, ClientGym, ClientPhase, PhaseTrack } from "./db";
 import { coachIdOfClient } from "./tenancy";
+import { LOCK_MS, type LockScope } from "./loginLockout";
 
 // "Today" (or any Date) as a local YYYY-MM-DD calendar-date string. This is
 // deliberately NOT `date.toISOString().slice(0, 10)` — toISOString always
@@ -2132,6 +2133,70 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
   }
 
   return events.sort((a, b) => b.at - a.at || (a.id < b.id ? -1 : 1));
+}
+
+// ---- Sign-in lockouts -----------------------------------------------------
+// The locks themselves live in memory (lib/loginLockout.ts); this is the
+// record of each one starting, so a coach and the owner can see it happened.
+
+export type LoginLockEvent = { id: number; at: string; email: string; ip: string; scope: LockScope; cleared?: boolean };
+
+/** Writes down a sign-in lock that just started. */
+export function recordLoginLock(email: string, ip: string, scope: LockScope) {
+  const data = getData();
+  const list = [
+    ...(data.login_lock_events ?? []),
+    { id: allocId("login_lock_events"), at: new Date().toISOString(), email: email.trim().toLowerCase(), ip, scope },
+  ];
+  data.login_lock_events = list.slice(-200);
+  persist();
+}
+
+export type LoginLockView = LoginLockEvent & {
+  /** "Sam Rivera", "Your account", "Coach x@y", or no account at all. */
+  who: string;
+  clientId: number | null;
+  /** Still locked: within its 15 minutes and not ended by a reset or a sign-in. */
+  active: boolean;
+};
+
+/**
+ * The locks a coach should see from the last `days` days, newest first: their
+ * own account and their clients' logins. The owner sees every lock, other
+ * coaches' and emails with no account included.
+ */
+export function listLoginLocks(coach: { id: number; email: string }, owner: boolean, days = 7): LoginLockView[] {
+  const data = getData();
+  const now = Date.now();
+  const since = now - days * 86400000;
+  const coachEmail = coach.email.toLowerCase();
+  const out: LoginLockView[] = [];
+  for (const e of data.login_lock_events ?? []) {
+    const at = new Date(e.at).getTime();
+    if (at < since) continue;
+    const user = data.users.find((u) => u.email === e.email);
+    const client = user?.role === "client" && user.client_id != null ? data.clients.find((c) => c.id === user.client_id) : undefined;
+    const mine = e.email === coachEmail || client?.coach_id === coach.id;
+    if (!mine && !owner) continue;
+    const who = client
+      ? client.name
+      : user?.role === "coach"
+      ? e.email === coachEmail
+        ? "Your account"
+        : `Coach ${e.email}`
+      : "An email with no account";
+    out.push({ ...e, who, clientId: client?.id ?? null, active: !e.cleared && at + LOCK_MS > now });
+  }
+  return out.reverse();
+}
+
+/** Whether a client's login is locked right now. */
+export function clientLockedOut(clientId: number): boolean {
+  const data = getData();
+  const user = data.users.find((u) => u.role === "client" && u.client_id === clientId);
+  if (!user) return false;
+  const now = Date.now();
+  return (data.login_lock_events ?? []).some((e) => e.email === user.email && !e.cleared && new Date(e.at).getTime() + LOCK_MS > now);
 }
 
 /** "14:05" in the coach's clock. */
@@ -4500,6 +4565,9 @@ export function getClientHeaderPlans(clientId: number): HeaderPlan[] {
  * "who needs me", not "how many things".
  */
 export function clientAttention(clientId: number): string | null {
+  // Locked out of signing in: they can't reach the app at all right now.
+  if (clientLockedOut(clientId)) return "Locked out of signing in";
+
   // Check-ins the client owes but hasn't logged.
   const due = getCheckInStatus(clientId);
   if (due.dueTypes.length > 0) {

@@ -239,6 +239,16 @@ Commit `a10ba40`, ported from `next` and pushed on its own.
 
 - [x] ~~A programme week holds up to 7 sessions. At 7, "+ Add session" is replaced by a line saying so, the Copy dialog drops "New session" and offers only replacing one, and copying a new session into later weeks skips any week that is already full. Enforced on the server too.~~
 
+## 36 · Sign-in lockout — ✅ LIVE 14 Sep
+
+- [x] ~~3 wrong tries on one account from the same device lock that device out of the account for 15 minutes; 10 wrong tries on one account from anywhere lock the account everywhere for 15 minutes. While locked the password isn't checked, and the page says "Too many attempts. Try again in 15 minutes." Unknown emails count the same, so nothing reveals which accounts exist. A correct sign-in clears the count. Counts live in server memory, so a redeploy clears them.~~
+- [x] ~~Every lock is written down and shown at the top of the Feed for 7 days ("Sign-in lockouts"): who, why, when, the email and IP, and whether it is still locked. A coach sees their own account and their clients'; the owner sees every lock, including emails with no account. A client locked out right now gets the orange dot and counts under Needs you.~~
+- [x] ~~Resetting a password (coach for a client, owner for a coach) ends any lock on that account at once.~~
+
+## 37 · Plan tab: tinted card headers — ✅ LIVE 14 Sep
+
+- [x] ~~The Phases and Goals card headers are filled with the accent tint (#e6ecf3), like the panel's Edit buttons: navy title, darker helper text, and a white switch track with a tinted active option.~~
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.

@@ -702,6 +702,9 @@ export type Data = {
   // one-time move never runs again and never deletes an empty session a
   // coach has just added.
   sessions_migrated?: string;
+  // Sign-in locks as they started (lib/loginLockout.ts), oldest first, the
+  // last 200 kept. Shown to the coach and the owner in the Feed.
+  login_lock_events?: { id: number; at: string; email: string; ip: string; scope: "device" | "account"; cleared?: boolean }[];
   _seq: Record<string, number>;
 };
 

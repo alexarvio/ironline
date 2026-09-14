@@ -82,7 +82,7 @@ export default async function AdminPage({
     >
       {view === "feed" ? (
         <div className="ad-pad">
-          <FeedPanel coachId={coach.id} category={params.cat} show={params.show} />
+          <FeedPanel coachId={coach.id} coachEmail={coach.email} owner={owner} category={params.cat} show={params.show} />
         </div>
       ) : view === "coaches" ? (
         <div className="ad-pad">

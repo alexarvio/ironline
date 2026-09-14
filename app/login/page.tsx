@@ -37,7 +37,11 @@ export default async function LoginPage({
         </div>
         <h1 className="auth-title">Sign in</h1>
 
-        {error && <p className="auth-error">Wrong email or password.</p>}
+        {error === "locked" ? (
+          <p className="auth-error">Too many attempts. Try again in 15 minutes.</p>
+        ) : (
+          error && <p className="auth-error">Wrong email or password.</p>
+        )}
 
         <form action={loginAction} className="auth-form">
           <label className="auth-field">

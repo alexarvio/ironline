@@ -1,7 +1,11 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { isLoginLocked, recordLoginFailure } from "./loginLockout";
+import { recordLoginLock } from "./queries";
 import {
+  clearLoginLockouts,
   coachForClient,
   createUser,
   deleteCoachAccount,
@@ -24,15 +28,26 @@ import { deleteUserForClient } from "./auth";
 export async function loginAction(formData: FormData) {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
+  // Railway's proxy puts the caller's address first in x-forwarded-for.
+  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+
+  // Too many wrong tries: stop here, without checking the password at all.
+  if (isLoginLocked(email, ip)) redirect("/login?error=locked");
 
   const user = findUserByEmail(email);
 
   // Same message and same work either way — revealing "no such account"
   // would let anyone enumerate which emails are clients here.
   if (!user || !verifyPassword(password, user.password_hash)) {
-    redirect("/login?error=1");
+    // A lock that starts on this try is written down, so the coach and the
+    // owner see it in the Feed.
+    const locked = recordLoginFailure(email, ip);
+    if (locked) recordLoginLock(email, ip, locked);
+    redirect(isLoginLocked(email, ip) ? "/login?error=locked" : "/login?error=1");
   }
 
+  // The right password: whatever was counted against this account goes.
+  clearLoginLockouts(email);
   await startSession(user.id);
 
   if (user.must_change_password) redirect("/login/change-password");

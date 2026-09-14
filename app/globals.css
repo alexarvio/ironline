@@ -12606,7 +12606,13 @@ a.cd-entry:hover { border-color: var(--accent); }
    target, orange a draft that needs deploying, red destructive, grey the rest. */
 .pl { display: flex; flex-direction: column; gap: 18px; font-family: var(--font-sans); }
 .pl-card { background: #fff; border: 1px solid #dfe3e8; border-radius: 12px; overflow: hidden; }
-.pl-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 18px 22px 14px; }
+.pl-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 14px 22px; background: #e6ecf3; }
+/* On the accent-tint band: navy title, a darker helper grey, and a white
+   switch track with a tinted active option, so nothing blends into the blue. */
+.pl-card-head .pl-eyebrow { color: #1e3a6e; }
+.pl-card-head .pl-helper { color: #5b6474; }
+.pl-card-head .pl-seg { background: #fff; }
+.pl-card-head .pl-seg-btn.active { background: #e6ecf3; color: #1e3a6e; box-shadow: none; }
 .pl-card-titles { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .pl-inline-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .pl-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
@@ -12796,6 +12802,17 @@ a.cd-entry:hover { border-color: var(--accent); }
 .fd-filter:focus-visible { outline: 2px solid #2f5d8f; outline-offset: 2px; }
 .fd-filter-count { min-width: 18px; padding: 1px 6px; border-radius: 999px; background: #fff3dc; color: #8a5a12; font-size: 11px; text-align: center; font-variant-numeric: tabular-nums; }
 .fd-empty { margin: 24px 0; font-size: 13px; color: #5b6474; }
+/* Sign-in lockouts, above the day groups. */
+.fd-locks { margin-bottom: 18px; overflow: hidden; background: #fff; border: 1px solid #dfe3e8; border-radius: 12px; }
+.fd-locks-head { display: flex; align-items: baseline; gap: 8px; padding: 9px 16px; background: #fbe9e0; color: #b3471d; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.fd-locks-head span { font-weight: 600; letter-spacing: 0; text-transform: none; }
+.fd-lock-row { display: flex; gap: 10px; padding: 10px 16px; }
+.fd-lock-row + .fd-lock-row { border-top: 1px solid #eceff3; }
+.fd-lock-dot { flex: none; width: 7px; height: 7px; margin-top: 6px; border-radius: 999px; background: #dfe3e8; }
+.fd-lock-dot.active { background: #b3471d; }
+.fd-lock-text { font-size: 13px; line-height: 1.4; color: #141a24; }
+.fd-lock-text a { color: #141a24; font-weight: 800; }
+.fd-lock-meta { margin-top: 2px; font-size: 11.5px; color: #8b93a1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .fd-day + .fd-day { margin-top: 18px; }
 .fd-day-label { margin: 0 0 8px; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #5b6474; }
 .fd-card { overflow: hidden; background: #fff; border: 1px solid #dfe3e8; border-radius: 12px; }
