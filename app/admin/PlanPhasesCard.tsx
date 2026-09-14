@@ -28,9 +28,16 @@ const TRACKS: { id: PhaseTrack; label: string }[] = [
   { id: "lifestyle", label: "Lifestyle" },
 ];
 
-type Window = 13 | 26;
-// The grid keeps each week readable: narrower than this and it scrolls.
-const MIN_WIDTH: Record<Window, number> = { 13: 820, 26: 1560 };
+// How far ahead the grid shows, in months; each is a whole number of weeks.
+const WINDOWS = [
+  { months: 3, weeks: 13 },
+  { months: 6, weeks: 26 },
+  { months: 9, weeks: 39 },
+  { months: 12, weeks: 52 },
+] as const;
+type Window = (typeof WINDOWS)[number]["weeks"];
+// The grid keeps each week readable (about 63px); narrower than this and it scrolls.
+const minWidth = (weeks: number) => Math.round(weeks * 63);
 
 export default function PlanPhasesCard({
   clientId,
@@ -165,8 +172,8 @@ export default function PlanPhasesCard({
           <span className="pl-helper">Drag a bar edge to change its length · click a bar to edit</span>
         </div>
         <div className="pl-card-tools">
-          <div className="pl-seg" role="radiogroup" aria-label="Weeks shown">
-            {([13, 26] as Window[]).map((w) => (
+          <div className="pl-seg" role="radiogroup" aria-label="Time shown">
+            {WINDOWS.map(({ months, weeks: w }) => (
               <button
                 key={w}
                 type="button"
@@ -175,7 +182,7 @@ export default function PlanPhasesCard({
                 className={`pl-seg-btn${win === w ? " active" : ""}`}
                 onClick={() => setWin(w)}
               >
-                {w} weeks
+                {months} months
               </button>
             ))}
           </div>
@@ -193,7 +200,7 @@ export default function PlanPhasesCard({
       </div>
 
       <div className="pl-timeline-scroll">
-        <div className="pl-timeline" style={{ minWidth: MIN_WIDTH[win] }}>
+        <div className="pl-timeline" style={{ minWidth: minWidth(win) }}>
           <div className="pl-tl-row">
             <span />
             <div className="pl-tl-grid" style={cols}>

@@ -283,26 +283,83 @@ function SheetView({
         ))}
       </div>
 
-      <form key={sheet.period} action={savePhotoPeriodNoteAction} className="pp-notes">
-        <input type="hidden" name="clientId" value={clientId} />
-        <input type="hidden" name="period" value={sheet.period} />
+      <SheetNotes key={sheet.period} clientId={clientId} firstName={firstName} sheet={sheet} />
+    </>
+  );
+}
+
+// The coach's notes on one sheet. Saved notes lock into a read-only view with
+// the time they were saved, like a sent check-in; Edit opens them again.
+function SheetNotes({ clientId, firstName, sheet }: { clientId: number; firstName: string; sheet: GallerySheet }) {
+  const hasNote = NOTE_FIELDS.some((f) => sheet.note[f.name].trim());
+  const [editing, setEditing] = useState(!hasNote);
+  // What was just saved, shown straight away while the page refreshes.
+  const [values, setValues] = useState<Note>(sheet.note);
+  const [justSaved, setJustSaved] = useState(false);
+
+  const save = async (fd: FormData) => {
+    await savePhotoPeriodNoteAction(fd);
+    setValues({
+      shape: String(fd.get("shape") ?? ""),
+      strengths: String(fd.get("strengths") ?? ""),
+      improvements: String(fd.get("improvements") ?? ""),
+      next_steps: String(fd.get("next_steps") ?? ""),
+    });
+    setJustSaved(true);
+    setEditing(false);
+  };
+
+  if (!editing) {
+    return (
+      <div className="pp-notes locked">
         <div className="pp-notes-head">
           <span className="pp-label">Your notes · {firstName} sees these on this sheet</span>
-          {sheet.savedLabel && <span className="pp-faint">Saved {sheet.savedLabel}</span>}
+          <span className="pp-notes-saved" role="status">
+            ✓ Saved{justSaved ? " just now" : sheet.savedLabel ? ` ${sheet.savedLabel}` : ""}
+          </span>
         </div>
         <div className="pp-notes-grid">
           {NOTE_FIELDS.map((f) => (
-            <label key={f.name} className="pp-note-field">
+            <div key={f.name} className="pp-note-field">
               <span className="pp-note-label">{f.label}</span>
-              <textarea name={f.name} defaultValue={sheet.note[f.name]} rows={3} placeholder={f.placeholder} />
-            </label>
+              <p className={`pp-note-read${values[f.name].trim() ? "" : " empty"}`}>{values[f.name].trim() || "—"}</p>
+            </div>
           ))}
         </div>
         <div className="pp-notes-foot">
-          <SaveNotesButton />
+          <button type="button" className="pp-btn" onClick={() => setEditing(true)}>
+            Edit notes
+          </button>
         </div>
-      </form>
-    </>
+      </div>
+    );
+  }
+
+  return (
+    <form action={save} className="pp-notes">
+      <input type="hidden" name="clientId" value={clientId} />
+      <input type="hidden" name="period" value={sheet.period} />
+      <div className="pp-notes-head">
+        <span className="pp-label">Your notes · {firstName} sees these on this sheet</span>
+        {hasNote && <span className="pp-faint">Not saved yet</span>}
+      </div>
+      <div className="pp-notes-grid">
+        {NOTE_FIELDS.map((f) => (
+          <label key={f.name} className="pp-note-field">
+            <span className="pp-note-label">{f.label}</span>
+            <textarea name={f.name} defaultValue={values[f.name]} rows={3} placeholder={f.placeholder} />
+          </label>
+        ))}
+      </div>
+      <div className="pp-notes-foot">
+        {hasNote && (
+          <button type="button" className="pp-btn" onClick={() => setEditing(false)}>
+            Cancel
+          </button>
+        )}
+        <SaveNotesButton />
+      </div>
+    </form>
   );
 }
 

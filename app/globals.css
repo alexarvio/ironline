@@ -1129,7 +1129,11 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 .pp-note-label { font-size: 12px; font-weight: 800; color: #313851; }
 .pp-note-field textarea { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; font: inherit; font-size: 13px; font-weight: 500; line-height: 1.45; color: #141a24; resize: vertical; }
 .pp-note-field textarea:focus { outline: none; border-color: #2f5d8f; }
-.pp-notes-foot { display: flex; justify-content: flex-end; margin-top: 14px; }
+.pp-notes-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+/* Saved notes, locked until Edit: read-only boxes and a green saved line. */
+.pp-notes-saved { font-size: 12px; font-weight: 800; color: #2f7a3f; font-variant-numeric: tabular-nums; }
+.pp-note-read { margin: 0; min-height: 66px; box-sizing: border-box; padding: 8px 10px; border: 1px solid #eceff3; border-radius: 8px; background: #f8f9fb; font-size: 13px; font-weight: 500; line-height: 1.45; color: #141a24; white-space: pre-wrap; overflow-wrap: anywhere; }
+.pp-note-read.empty { color: #a0a7b3; }
 
 /* Viewer: one photo */
 .pp-detail { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 22px; }
@@ -13013,6 +13017,7 @@ a.cd-entry:hover { border-color: var(--accent); }
 .pp-app-tick svg { width: 12px; height: 12px; }
 .pp-app-slot-name { font-size: 13px; font-weight: 800; line-height: 1.25; color: #141a24; }
 .pp-app-coach { margin: 0 16px; padding: 12px 0 16px; border-top: 1px solid #eceff3; }
+.pp-app-open-notes { margin: 0 16px 16px; }
 .pp-app-coach-label { display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #5b6474; }
 .pp-app-coach-text { margin: 4px 0 0; font-size: 13px; font-weight: 500; line-height: 1.45; color: #313851; white-space: pre-wrap; }
 

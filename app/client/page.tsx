@@ -889,6 +889,8 @@ function progressPicturesData(CLIENT_ID: number): ProgressPicturesProps {
           openedLabel: fmtShortDate(openPeriod),
           slots: active.map((s) => ({ id: s.id, label: s.label, src: srcFor(s.id, openPeriod) })),
           instructions: getPhotoInstructions(CLIENT_ID),
+          // The coach's notes on the sheet open now, as soon as they write them.
+          note: noteFor(openPeriod),
         }
       : null,
     earlier,

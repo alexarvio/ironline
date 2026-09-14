@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { uploadProgressPhotoAction } from "../lib/actions";
 import { ArrowRightIcon, CameraIcon, CheckIcon, ChevronLeftIcon } from "../components/icons";
 import { useOpenPhotos } from "./CheckInContext";
-import PhotoPeriodHistoryRow, { type HistoryNote } from "./PhotoPeriodHistoryRow";
+import PhotoPeriodHistoryRow, { NOTE_LABELS, type HistoryNote } from "./PhotoPeriodHistoryRow";
 
 // Deliberately does not import from ../lib/queries (a "use client" file
 // importing queries.ts breaks the dev server); page.tsx builds these props.
@@ -15,7 +15,7 @@ export type ProgressPicturesProps = {
   clientId: number;
   /** The sheet open today, with every angle it asks for and the coach's
       note on how to take them. */
-  openSheet: { period: string; title: string; openedLabel: string; slots: Slot[]; instructions: string | null } | null;
+  openSheet: { period: string; title: string; openedLabel: string; slots: Slot[]; instructions: string | null; note: HistoryNote } | null;
   /** Earlier sheets, newest first. */
   earlier: { period: string; title: string; photos: { slotId: number; label: string; src: string | null }[]; note: HistoryNote }[];
   /** "June": the month the oldest earlier sheet opened. */
@@ -26,7 +26,6 @@ export type ProgressPicturesProps = {
   hasAngles: boolean;
 };
 
-const NO_NOTE: HistoryNote = { shape: "", strengths: "", improvements: "", next_steps: "" };
 
 // The client's progress pictures: the sheet open now, filled in and sent
 // with Save like a check-in, and a feed of every earlier sheet below, all
@@ -204,7 +203,7 @@ function OpenSheet({
         <PhotoPeriodHistoryRow
           title={sheet.title}
           photos={sheet.slots.map((s) => ({ slotId: s.id, label: s.label, src: s.src }))}
-          note={NO_NOTE}
+          note={sheet.note}
           open={sentOpen}
           onToggle={() => setSentOpen((o) => !o)}
           metaExtra={justSaved ? "just sent" : "sent"}
@@ -327,6 +326,19 @@ function OpenSheet({
         <div className="pp-app-coach">
           <span className="pp-app-coach-label">From your coach</span>
           <p className="pp-app-coach-text">{sheet.instructions}</p>
+        </div>
+      )}
+
+      {/* The coach's notes on this sheet, once they have written some. */}
+      {NOTE_LABELS.some(({ key }) => sheet.note[key].trim()) && (
+        <div className="pp-app-notes pp-app-open-notes">
+          <span className="pp-app-notes-label">What your coach said</span>
+          {NOTE_LABELS.filter(({ key }) => sheet.note[key].trim()).map(({ key, label }) => (
+            <div key={key}>
+              <div className="pp-app-note-label">{label}</div>
+              <div className="pp-app-note-text">{sheet.note[key]}</div>
+            </div>
+          ))}
         </div>
       )}
 

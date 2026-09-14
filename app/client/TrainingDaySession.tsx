@@ -91,15 +91,22 @@ export default function TrainingDaySession({
   // Remembered per exercise, so opening one that was already finished
   // does not read as "just finished" and snap away.
   const last = useRef<{ id: number | null; done: boolean }>({ id: expandedId, done: expandedDone });
+  // The latest exercises, read when the timer fires. Not a dependency of the
+  // effect below: saving a set refreshes the page data (a new array) a moment
+  // after the set lands, and re-running the effect then cancelled the timer,
+  // so the finished exercise closed and the next one never opened.
+  const latest = useRef(exercises);
+  useEffect(() => {
+    latest.current = exercises;
+  }, [exercises]);
   useEffect(() => {
     const prev = last.current;
     last.current = { id: expandedId, done: expandedDone };
     const justFinished = expandedId != null && prev.id === expandedId && !prev.done && expandedDone;
     if (!justFinished) return;
-    const next = firstUnfinished(exercises);
-    const t = setTimeout(() => setExpandedId(next), 600);
+    const t = setTimeout(() => setExpandedId(firstUnfinished(latest.current)), 600);
     return () => clearTimeout(t);
-  }, [expandedId, expandedDone, exercises]);
+  }, [expandedId, expandedDone]);
 
   const position = expanded ? exercises.findIndex((ex) => ex.id === expanded.id) + 1 : 0;
 
