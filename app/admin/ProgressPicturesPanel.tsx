@@ -161,6 +161,10 @@ export default function ProgressPicturesPanel({ clientId }: { clientId: number }
     <div className="pp">
       {/* No title here: the tab strip above already says Progress pictures. */}
       <section className="pp-card pp-config">
+        <div className="pp-config-head">
+          <span className="pp-eyebrow">Sheet setup</span>
+          <span className="pp-summary">When sheets arrive, how to take them, and which angles</span>
+        </div>
         <PhotoScheduleForm
           clientId={clientId}
           firstName={firstName}

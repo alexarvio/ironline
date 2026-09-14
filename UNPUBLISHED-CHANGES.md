@@ -249,6 +249,14 @@ Commit `a10ba40`, ported from `next` and pushed on its own.
 
 - [x] ~~The Phases and Goals card headers are filled with the accent tint (#e6ecf3), like the panel's Edit buttons: navy title, darker helper text, and a white switch track with a tinted active option.~~
 
+## 38 · Accent-tint headers across the client tabs — ✅ LIVE 14 Sep
+
+- [x] ~~Nutrition: the Daily targets (with its phase chips and live line), Supplements and Calories logged headers use the #e6ecf3 tint, like Plan. The phase chips on it are white; a scheduled phase has a dotted outline, and the chip being edited is outlined in navy.~~
+- [x] ~~Training: each session's header row is tinted.~~
+- [x] ~~Meetings: the upcoming meeting's band is the tint instead of navy (navy text, white date tile, navy Join button), and the past meeting rows are tinted.~~
+- [x] ~~Progress pictures: a "Sheet setup" header band on the settings card, a tinted Sheets header, and tinted week rows.~~
+- [x] ~~App access in the client panel: Reset password and Remove access stacked full width, so the label no longer wraps inside its button.~~
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.

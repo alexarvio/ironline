@@ -177,7 +177,7 @@ function TargetsCard({ p, phase, onPickPhase, onEditPhase }: { p: NutritionWorks
                 type="button"
                 role="tab"
                 aria-selected={ph.id === phase.id}
-                className={`pb-program-chip${ph.id === phase.id ? " active" : ""}`}
+                className={`pb-program-chip nw-phase-chip ${ph.status}${ph.id === phase.id ? " active" : ""}`}
                 onClick={() => onPickPhase(ph.id)}
               >
                 <span className="pb-program-name">{ph.name}</span>

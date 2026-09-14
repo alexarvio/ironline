@@ -431,18 +431,19 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   background: var(--paper-raised);
 }
 
+/* Session headers carry the accent tint, like the card headers elsewhere. */
 .admin-day-card-toggle {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  background: var(--paper-raised);
+  background: #e6ecf3;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
 }
 
 .admin-day-card-toggle:hover {
-  background: var(--border);
+  background: #dce4ee;
 }
 
 .admin-day-card-head-left {
@@ -1054,7 +1055,15 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 /* Gallery card */
 .pp-gallery { overflow: hidden; }
-.pp-gallery-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 22px; }
+.pp-gallery-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 22px; background: #e6ecf3; }
+/* On the accent-tint band: navy title, white toggles, an active one outlined in navy. */
+.pp-gallery-head .pp-eyebrow { color: #1e3a6e; }
+.pp-gallery-head .pp-gallery-help { color: #5b6474; }
+.pp-gallery-head .pp-compare-btn.active { background: #fff; border-color: #1e3a6e; color: #1e3a6e; }
+/* The settings card's header band, flush with the card's edges. */
+.pp-config-head { display: flex; flex-direction: column; gap: 3px; margin: -18px -22px 18px; padding: 14px 22px; border-radius: 12px 12px 0 0; background: #e6ecf3; }
+.pp-config-head .pp-eyebrow { color: #1e3a6e; }
+.pp-config-head .pp-summary { color: #5b6474; }
 .pp-gallery-help { margin: 4px 0 0; font-size: 12.5px; font-weight: 500; color: #8b93a1; }
 .pp-compare-btn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; color: #5b6474; padding: 8px 12px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 .pp-compare-btn:hover { color: #141a24; }
@@ -1065,7 +1074,10 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 .pp-sheet-row { overflow: hidden; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; }
 .pp-sheet-row.open { border-color: #cfdce9; }
 .pp-sheet-row-head { display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 18px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
-.pp-sheet-row-head:hover { background: #fafbfc; }
+.pp-sheet-row-head { background: #e6ecf3; }
+.pp-sheet-row-head:hover { background: #dce4ee; }
+.pp-sheet-row-head .pp-sheet-row-meta,
+.pp-sheet-row-head .pp-tile-badge:not(.open) { color: #5b6474; }
 .pp-sheet-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .pp-sheet-row-titlerow { display: flex; align-items: baseline; gap: 10px; }
 .pp-sheet-row-title { font-size: 14px; font-weight: 800; color: #141a24; }
@@ -10137,12 +10149,16 @@ a.cd-entry:hover { border-color: var(--accent); }
   font-size: 12.5px;
 }
 .ad-access-input:focus { outline: none; border-color: #2f5d8f; }
-.ad-access-actions { display: flex; gap: 6px; margin-top: 6px; }
+/* Stacked, full width: side by side, "Reset password" wrapped inside its button
+   in the panel's narrow column. */
+.ad-access-actions { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
 .ad-access-actions form { display: flex; }
-.ad-access-primary { flex: 1; height: 32px; border: 0; border-radius: 8px; background: #1e3a6e; color: #fff; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.ad-access-actions form > button { flex: 1; }
+.ad-access-primary { width: 100%; min-height: 34px; padding: 8px 12px; border: 0; border-radius: 8px; background: #1e3a6e; color: #fff; font: inherit; font-size: 12px; font-weight: 800; white-space: nowrap; cursor: pointer; }
 .ad-access-secondary {
-  height: 32px;
-  padding: 0 12px;
+  width: 100%;
+  min-height: 34px;
+  padding: 8px 12px;
   border: 1px solid #dfe3e8;
   border-radius: 8px;
   background: #fff;
@@ -12375,23 +12391,24 @@ a.cd-entry:hover { border-color: var(--accent); }
 .mw-dot.muted { background: transparent; border: 1.5px solid #c3c9d2; box-sizing: border-box; }
 
 /* Upcoming card */
-.mw-band { display: flex; align-items: flex-start; gap: 16px; padding: 16px 20px; background: #1e3a6e; color: #fff; }
-.mw-tile { flex: none; width: 56px; height: 56px; border-radius: 10px; background: rgba(255, 255, 255, 0.12); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; }
+/* The accent-tint band, as on the Plan, Nutrition and Training headers. */
+.mw-band { display: flex; align-items: flex-start; gap: 16px; padding: 16px 20px; background: #e6ecf3; color: #141a24; }
+.mw-tile { flex: none; width: 56px; height: 56px; border-radius: 10px; background: #fff; color: #1e3a6e; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; }
 .mw-tile-month { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
 .mw-tile-day { font-size: 24px; font-weight: 800; }
 .mw-band-body { flex: 1; min-width: 0; }
-.mw-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.7; }
-.mw-topic { display: block; width: 100%; min-width: 0; box-sizing: border-box; margin: 2px 0 0 -4px; padding: 2px 4px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: #fff; font: inherit; font-size: 18px; font-weight: 800; }
-.mw-topic:hover { border-color: rgba(255, 255, 255, 0.25); }
-.mw-topic:focus { outline: none; border-color: rgba(255, 255, 255, 0.6); background: rgba(255, 255, 255, 0.08); }
-.mw-topic::placeholder { color: rgba(255, 255, 255, 0.5); }
-.mw-band-when { font-size: 13px; opacity: 0.85; margin-top: 2px; }
+.mw-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #1e3a6e; }
+.mw-topic { display: block; width: 100%; min-width: 0; box-sizing: border-box; margin: 2px 0 0 -4px; padding: 2px 4px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: #141a24; font: inherit; font-size: 18px; font-weight: 800; }
+.mw-topic:hover { border-color: #dfe3e8; }
+.mw-topic:focus { outline: none; border-color: #2f5d8f; background: #fff; }
+.mw-topic::placeholder { color: #8b93a1; }
+.mw-band-when { font-size: 13px; color: #5b6474; margin-top: 2px; }
 .mw-band-right { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-.mw-join { display: inline-flex; align-items: center; gap: 7px; background: #fff; color: #1e3a6e; border: 0; border-radius: 8px; padding: 8px 12px; font: inherit; font-size: 13px; font-weight: 800; text-decoration: none; cursor: pointer; white-space: nowrap; }
-.mw-join.ghost { background: transparent; color: #fff; border: 1px solid rgba(255, 255, 255, 0.4); }
-.mw-link-host { font-size: 11px; opacity: 0.7; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
-.mw-link-edit { border: 0; background: none; color: inherit; font: inherit; font-size: 11px; text-decoration: underline; cursor: pointer; padding: 0; }
-.mw-link-input { width: 240px; box-sizing: border-box; padding: 7px 9px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.1); color: #fff; font: inherit; font-size: 12px; }
+.mw-join { display: inline-flex; align-items: center; gap: 7px; background: #1e3a6e; color: #fff; border: 0; border-radius: 8px; padding: 8px 12px; font: inherit; font-size: 13px; font-weight: 800; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.mw-join.ghost { background: #fff; color: #1e3a6e; border: 1px solid #dfe3e8; }
+.mw-link-host { font-size: 11px; color: #5b6474; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.mw-link-edit { border: 0; background: none; color: #2f5d8f; font: inherit; font-size: 11px; text-decoration: underline; cursor: pointer; padding: 0; }
+.mw-link-input { width: 240px; box-sizing: border-box; padding: 7px 9px; border-radius: 8px; border: 1px solid #dfe3e8; background: #fff; color: #141a24; font: inherit; font-size: 12px; }
 .mw-upcoming-body { display: grid; grid-template-columns: 1fr 1fr; }
 .mw-upcoming-body .mw-col { padding: 14px 20px 16px; min-width: 0; }
 .mw-upcoming-body .mw-col + .mw-col { border-left: 1px solid #eceff3; }
@@ -12413,7 +12430,11 @@ a.cd-entry:hover { border-color: var(--accent); }
 .mw-complete { border: 0; background: #e3f2e6; color: #2f7a3f; border-radius: 8px; padding: 6px 11px; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; }
 
 /* Also scheduled / past rows */
-.mw-row, .mw-past-head { display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 18px; background: #fff; border: 1px solid #dfe3e8; border-radius: 12px; text-align: left; font: inherit; color: inherit; }
+.mw-row, .mw-past-head { display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 18px; background: #e6ecf3; border: 1px solid #dfe3e8; border-radius: 12px; text-align: left; font: inherit; color: inherit; }
+.mw-past-head:hover { background: #dce4ee; }
+/* On the tinted row: white date tile, and a scheduled pill that isn't tint on tint. */
+.mw-row .mw-tile-sm, .mw-past-head .mw-tile-sm { background: #fff; }
+.mw-row .mw-pill.scheduled, .mw-past-head .mw-pill.scheduled { background: #fff; }
 .mw-row + .mw-row { margin-top: 8px; }
 .mw-past-row { margin-top: 8px; }
 .mw-past-head { cursor: pointer; }
@@ -12627,10 +12648,17 @@ a.cd-entry:hover { border-color: var(--accent); }
 .pl-btn.navy { background: #1e3a6e; color: #fff; }
 /* Card header still used by the Nutrition tab's cards (and pl-primary by the
    phase dialog): the same white head as .pl-card-head, not the old navy band. */
-.pl-band { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 16px 22px 12px; }
+.pl-band { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 14px 22px; background: #e6ecf3; }
+/* On the accent-tint band, as on the Plan cards: navy title, white switch track. */
+.pl-band .pl-eyebrow { color: #1e3a6e; }
+.pl-band .pl-switch { background: #fff; }
+.pl-band .pl-switch-opt.active { background: #e6ecf3; color: #1e3a6e; box-shadow: none; }
+/* Nutrition's phase chips and "Live:" line belong to the Daily targets
+   header, so the tint carries on under them. */
+.pl-band + .nw-phases { background: #e6ecf3; }
 .pl-band-left { min-width: 0; }
 .pl-band-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.pl-band-note { font-size: 12px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.pl-band-note { font-size: 12px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
 .pl-switch { display: inline-flex; gap: 4px; padding: 4px; background: #eef0f3; border-radius: 8px; }
 .pl-switch-opt { border: 0; background: transparent; border-radius: 6px; padding: 6px 12px; font: inherit; font-size: 12px; font-weight: 800; color: #5b6474; cursor: pointer; white-space: nowrap; }
 .pl-switch-opt:hover { color: #141a24; }
@@ -12886,6 +12914,12 @@ a.cd-entry:hover { border-color: var(--accent); }
 .nw-phases { display: flex; flex-direction: column; gap: 10px; padding: 0 22px 14px; border-bottom: 1px solid #eceff3; }
 .nw-phase-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .nw-phase-chips .pb-program-chip { font: inherit; cursor: pointer; }
+/* On the tinted header every phase chip is white inside. A scheduled phase
+   has a dotted outline, so it never reads as the live one; the chip being
+   edited is outlined in navy (dotted still, when it is scheduled). */
+.nw-phase-chips .nw-phase-chip { background: #fff; }
+.nw-phase-chips .nw-phase-chip.next { border-style: dotted; border-color: #8b93a1; }
+.nw-phase-chips .nw-phase-chip.active { border-color: #1e3a6e; }
 .status-pill.scheduled { background: #e6edf6; color: #2f5d8f; }
 .nw-phase-line { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; }
 .nw-phase-dot { flex: none; width: 7px; height: 7px; border-radius: 999px; background: currentColor; }
