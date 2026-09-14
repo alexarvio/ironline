@@ -229,6 +229,12 @@ Commit `a10ba40`, ported from `next` and pushed on its own.
 - [x] ~~App access keeps reset and remove behind the closed section: the temporary-password field, then Reset password and Remove access side by side.~~
 - [x] ~~Recent activity shows three entries with a blue dot for this week, and "See all" to the feed. Delete client is last, outlined and quiet.~~
 
+## 34 · Coach rail redesign: search, Needs you — ✅ LIVE 14 Sep
+
+- [x] ~~The left rail is 240px: brand block with the real logo mark, Feed and Calendar (Feed shows how many clients need you), then the client roster, then the coach at the foot.~~
+- [x] ~~Roster: search by name, All / Needs you filter with its count, "4 of 9" when narrowed. The selected client is the only navy avatar; an amber ring means the client hasn't signed in to the app yet (no login, or a temporary password never replaced); the orange dot still means they need you. Only the list scrolls, with no visible scrollbar. New client is pinned at its foot.~~
+- [x] ~~Coach footer: initial, name (from the login email, as accounts have no name), "Coach", and a gear that opens a menu with Sign out. There is no coach Settings page on main yet; when it lands, the gear can link to it.~~
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.

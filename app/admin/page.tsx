@@ -65,7 +65,7 @@ export default async function AdminPage({
 
   return (
     <AdminShell
-      sidebar={<AdminSidebar coachId={coach.id} selectedId={selectedId} isOwner={owner} />}
+      sidebar={<AdminSidebar coachId={coach.id} coachEmail={coach.email} selectedId={selectedId} view={view} isOwner={owner} />}
       panel={
         view === "calendar" ? (
           <CalendarDayPanel coachId={coach.id} day={params.day} month={params.month} />

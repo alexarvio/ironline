@@ -1,119 +1,99 @@
-import Image from "next/image";
 import Link from "next/link";
-import { createClientAction } from "../lib/actions";
 import { logoutAction } from "../lib/auth-actions";
+import { getUserForClient } from "../lib/auth";
 import { clientAttention, listClients } from "../lib/queries";
+import { AccountIcon, CalendarIcon, FeedIcon } from "../components/icons";
+import ClientRoster, { type RosterClient } from "./ClientRoster";
+import CoachFooter from "./CoachFooter";
 
-// The left rail: brand, the coach's two cross-client views, and the client
-// list with a way to add another.
+// The left rail: brand, the coach's cross-client views, the client roster
+// (the only part that scrolls) and the coach at the foot.
 //
-// Only Feed and Calendar live in the nav. Report templates and Branding were
-// cut, and nothing else belongs here — the per-client work happens in the
-// tabs, not in navigation.
-export default function AdminSidebar({ coachId, selectedId, isOwner = false }: { coachId: number; selectedId: number | null; isOwner?: boolean }) {
-  const clients = listClients(coachId);
+// Only Feed and Calendar live in the nav (plus Coaches for the owner). The
+// per-client work happens in the tabs, not in navigation. Feed carries the
+// count of clients needing attention, the same number as the roster's
+// "Needs you" filter, so it is visible before the coach looks at the list.
+export default function AdminSidebar({
+  coachId,
+  coachEmail,
+  selectedId,
+  view,
+  isOwner = false,
+}: {
+  coachId: number;
+  coachEmail: string;
+  selectedId: number | null;
+  /** The cross-client view open in the working area, if any. */
+  view: string | null;
+  isOwner?: boolean;
+}) {
+  const clients: RosterClient[] = listClients(coachId).map((c) => {
+    const user = getUserForClient(c.id);
+    return {
+      id: c.id,
+      name: c.name,
+      avatarPath: c.avatar_path ?? null,
+      attention: clientAttention(c.id),
+      // No login yet, or a temporary password never replaced: they have not
+      // signed in to the app themselves.
+      notSignedIn: !user || user.must_change_password,
+    };
+  });
+  const needsYou = clients.filter((c) => c.attention).length;
 
   return (
     <>
-      <div className="ad-brand">
-        <span className="ad-brand-mark">
-          <Image src="/brand/logo.png" alt="" width={14} height={24} priority />
+      <div className="ad-rail-brand">
+        <span className="ad-rail-mark">
+          {/* eslint-disable-next-line @next/next/no-img-element -- the brand mark at its natural ratio */}
+          <img src="/brand/logo.png" alt="" />
         </span>
-        <div className="ad-brand-text">
-          <div className="ad-brand-name">Full Potential</div>
-          <div className="ad-brand-sub">Coach workstation</div>
+        <div className="ad-rail-brand-text">
+          <div className="ad-rail-brand-name">Full Potential</div>
+          <div className="ad-rail-brand-sub">Coach workstation</div>
         </div>
       </div>
 
-      <nav className="ad-nav">
-        <Link href="/admin?view=feed" className="ad-nav-row">
-          <span className="ad-nav-icon" aria-hidden="true">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-            </svg>
-          </span>
-          <span className="ad-nav-label">Feed</span>
+      <nav className="ad-rail-nav">
+        <Link href="/admin?view=feed" className={`ad-rail-nav-row${view === "feed" ? " active" : ""}`}>
+          <FeedIcon />
+          <span className="ad-rail-nav-label">Feed</span>
+          {needsYou > 0 && (
+            <span className="ad-rail-badge" title={`${needsYou} client${needsYou === 1 ? "" : "s"} need you`}>
+              {needsYou}
+            </span>
+          )}
         </Link>
-        <Link href="/admin?view=calendar" className="ad-nav-row">
-          <span className="ad-nav-icon" aria-hidden="true">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.6" />
-              <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
-          </span>
-          <span className="ad-nav-label">Calendar</span>
+        <Link href="/admin?view=calendar" className={`ad-rail-nav-row${view === "calendar" ? " active" : ""}`}>
+          <CalendarIcon />
+          <span className="ad-rail-nav-label">Calendar</span>
         </Link>
         {/* The owner's account management; no other coach sees this link. */}
         {isOwner && (
-          <Link href="/admin?view=coaches" className="ad-nav-row">
-            <span className="ad-nav-icon" aria-hidden="true">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <circle cx="9" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.6" />
-                <path d="M3.5 19c.6-3 2.9-4.8 5.5-4.8s4.9 1.8 5.5 4.8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                <path d="M16 5.2a3 3 0 0 1 0 5.6M18 14.6c1.4.6 2.4 2.1 2.7 4.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              </svg>
-            </span>
-            <span className="ad-nav-label">Coaches</span>
+          <Link href="/admin?view=coaches" className={`ad-rail-nav-row${view === "coaches" ? " active" : ""}`}>
+            <AccountIcon />
+            <span className="ad-rail-nav-label">Coaches</span>
           </Link>
         )}
       </nav>
 
-      <div className="ad-clients-head">
-        <span className="ad-microlabel">Clients</span>
-        <span className="ad-clients-count">{clients.length}</span>
-      </div>
+      <ClientRoster clients={clients} selectedId={selectedId} />
 
-      {/* The add-client row sits at the bottom of this same scroll area, at
-          the same 36px as the rows above it, rather than pinned outside. */}
-      <div className="ad-clients">
-        {clients.length === 0 ? (
-          <p className="ad-empty">No clients yet. Add your first one below.</p>
-        ) : (
-          clients.map((c) => {
-            const attention = clientAttention(c.id);
-            return (
-              <Link
-                key={c.id}
-                href={`/admin?client=${c.id}`}
-                className={`ad-client-row${c.id === selectedId ? " active" : ""}`}
-              >
-                <span className="ad-client-avatar" aria-hidden="true">
-                  {c.avatar_path ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
-                    <img src={c.avatar_path} alt="" className="ad-avatar-img" />
-                  ) : (
-                    c.name.slice(0, 1).toUpperCase()
-                  )}
-                </span>
-                <span className="ad-client-name">{c.name}</span>
-                {/* One dot, with the reason in its title — at a glance the
-                    useful question is "who needs me", not "how many things". */}
-                {attention && <span className="ad-client-dot" title={attention} aria-label={attention} />}
-              </Link>
-            );
-          })
-        )}
-
-        {/* One full-width button, no name field: the name is typed on the
-            card that opens right after, with the rest of the member info,
-            rather than in a second, smaller place here. */}
-        <form action={createClientAction} className="ad-new-client">
-          <button className="ad-new-client-btn" type="submit">
-            <span>New client</span>
-            <span className="ad-new-client-plus" aria-hidden="true">
-              +
-            </span>
+      <CoachFooter name={nameFromEmail(coachEmail)}>
+        <form action={logoutAction}>
+          <button type="submit" role="menuitem">
+            Sign out
           </button>
         </form>
-      </div>
-
-      {/* Pinned to the foot of the rail: the one thing the coach needs when
-          they hand the laptop to someone else or switch accounts. */}
-      <form action={logoutAction} className="ad-signout">
-        <button type="submit" className="ad-signout-btn">
-          Sign out
-        </button>
-      </form>
+      </CoachFooter>
     </>
   );
+}
+
+// A coach account has an email but no name; "finlay.smith@…" reads as
+// "Finlay Smith".
+function nameFromEmail(email: string): string {
+  const local = email.split("@")[0] ?? "";
+  const words = local.split(/[._-]+/).filter(Boolean);
+  return words.length ? words.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") : "Coach";
 }
