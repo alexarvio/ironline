@@ -20,8 +20,8 @@ export default function CopyDayMenu({
   fromDayId: number;
   /** "Session 3 · Push" */
   sourceName: string;
-  /** The number a new session in this week would get. */
-  newSessionNumber: number;
+  /** The number a new session in this week would get; null when the week is full. */
+  newSessionNumber: number | null;
   targets: { id: number; name: string; exerciseCount: number }[];
   /** How many weeks of the programme come after this one, and which ("W3–W5"). */
   remainingWeeks: number;
@@ -29,7 +29,9 @@ export default function CopyDayMenu({
 }) {
   // Only ever opened by a click, so the portal always has a document to use.
   const [open, setOpen] = useState(false);
-  const [to, setTo] = useState<string>("new");
+  // A full week can only copy over one of its sessions.
+  const firstChoice = newSessionNumber != null ? "new" : String(targets[0]?.id ?? "");
+  const [to, setTo] = useState<string>(firstChoice);
 
   useEffect(() => {
     if (!open) return;
@@ -40,7 +42,9 @@ export default function CopyDayMenu({
 
   const target = targets.find((t) => String(t.id) === to) ?? null;
   const submitLabel = !target
-    ? `Add as Session ${newSessionNumber}`
+    ? newSessionNumber != null
+      ? `Add as Session ${newSessionNumber}`
+      : "Copy"
     : target.exerciseCount > 0
     ? `Replace ${target.name.split(" · ")[0]}`
     : `Copy to ${target.name.split(" · ")[0]}`;
@@ -52,7 +56,7 @@ export default function CopyDayMenu({
         type="button"
         className="pb-toolbar-btn"
         onClick={() => {
-          setTo("new");
+          setTo(firstChoice);
           setOpen(true);
         }}
       >
@@ -75,13 +79,17 @@ export default function CopyDayMenu({
               <p className="pb-confirm-body">Where should the copy go?</p>
 
               <div className="pb-copy-options" role="radiogroup">
-                <label className={`pb-copy-option${to === "new" ? " on" : ""}`}>
-                  <input type="radio" name="toDayId" value="new" checked={to === "new"} onChange={() => setTo("new")} />
-                  <span>
-                    <b>New session</b>
-                    <small>Adds Session {newSessionNumber} to this week</small>
-                  </span>
-                </label>
+                {newSessionNumber != null ? (
+                  <label className={`pb-copy-option${to === "new" ? " on" : ""}`}>
+                    <input type="radio" name="toDayId" value="new" checked={to === "new"} onChange={() => setTo("new")} />
+                    <span>
+                      <b>New session</b>
+                      <small>Adds Session {newSessionNumber} to this week</small>
+                    </span>
+                  </label>
+                ) : (
+                  <p className="pb-copy-full">This week has the most sessions a week can hold, so the copy replaces one.</p>
+                )}
                 {targets.map((t) => (
                   <label key={t.id} className={`pb-copy-option${to === String(t.id) ? " on" : ""}`}>
                     <input type="radio" name="toDayId" value={t.id} checked={to === String(t.id)} onChange={() => setTo(String(t.id))} />

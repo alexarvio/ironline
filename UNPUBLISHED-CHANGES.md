@@ -235,6 +235,10 @@ Commit `a10ba40`, ported from `next` and pushed on its own.
 - [x] ~~Roster: search by name, All / Needs you filter with its count, "4 of 9" when narrowed. The selected client is the only navy avatar; an amber ring means the client hasn't signed in to the app yet (no login, or a temporary password never replaced); the orange dot still means they need you. Only the list scrolls, with no visible scrollbar. New client is pinned at its foot.~~
 - [x] ~~Coach footer: initial, name (from the login email, as accounts have no name), "Coach", and a gear that opens a menu with Sign out. There is no coach Settings page on main yet; when it lands, the gear can link to it.~~
 
+## 35 · Seven sessions a week at most — ✅ LIVE 14 Sep
+
+- [x] ~~A programme week holds up to 7 sessions. At 7, "+ Add session" is replaced by a line saying so, the Copy dialog drops "New session" and offers only replacing one, and copying a new session into later weeks skips any week that is already full. Enforced on the server too.~~
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.

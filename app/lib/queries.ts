@@ -325,15 +325,23 @@ export function addExercise(coachId: number, name: string, muscleGroup: string, 
 // day. A session's place in its week is day_of_week (1, 2, 3 …), always
 // numbered without gaps.
 
-/** Adds a session at the end of a week; it goes out at once if the programme is live. */
-export function addSession(clientId: number, week: number, save = true): ProgramDay {
+/** A week holds seven sessions at most: one a day is the ceiling. */
+export const MAX_SESSIONS_PER_WEEK = 7;
+
+/**
+ * Adds a session at the end of a week; it goes out at once if the programme
+ * is live. Null when the week already has MAX_SESSIONS_PER_WEEK.
+ */
+export function addSession(clientId: number, week: number, save = true): ProgramDay | null {
   const data = getData();
+  const existing = getWeek(clientId, week);
+  if (existing.length >= MAX_SESSIONS_PER_WEEK) return null;
   const program = getProgramForWeek(clientId, week);
   const day: ProgramDay = {
     id: allocId("program_days"),
     client_id: clientId,
     week_number: week,
-    day_of_week: getWeek(clientId, week).reduce((max, d) => Math.max(max, d.day_of_week), 0) + 1,
+    day_of_week: existing.reduce((max, d) => Math.max(max, d.day_of_week), 0) + 1,
     label: null,
     status: program?.status === "deployed" ? "published" : "draft",
   };
@@ -353,7 +361,7 @@ export function sessionAt(clientId: number, week: number, position: number, crea
     const hit = days.find((d) => d.day_of_week === position);
     if (hit) return hit;
     if (!create || days.some((d) => d.day_of_week > position)) return null;
-    addSession(clientId, week, false);
+    if (!addSession(clientId, week, false)) return null;
   }
 }
 
@@ -5953,18 +5961,22 @@ export function copyProgramDay(fromDayId: number, toDayId: number) {
  * Copies a session into a new session at the end of its week and, with
  * `laterWeeks`, at the end of every later week of its programme too. Always
  * appended rather than placed at a number, so a later week with fewer
- * sessions never grows empty ones to reach it. Returns the new session.
+ * sessions never grows empty ones to reach it. A week that already has the
+ * most sessions a week holds is skipped. Returns the new session, or null
+ * when the session's own week is full.
  */
 export function copyProgramDayToNewSession(fromDayId: number, laterWeeks: boolean): ProgramDay | null {
   const src = getData().program_days.find((d) => d.id === fromDayId);
   if (!src) return null;
   const created = addSession(src.client_id, src.week_number, false);
+  if (!created) return null;
   copyProgramDay(fromDayId, created.id);
   if (laterWeeks) {
     const program = getProgramForWeek(src.client_id, src.week_number);
     if (program) {
       for (let week = src.week_number + 1; week < program.start_week + program.total_weeks; week++) {
-        copyProgramDay(fromDayId, addSession(src.client_id, week, false).id);
+        const dest = addSession(src.client_id, week, false);
+        if (dest) copyProgramDay(fromDayId, dest.id);
       }
     }
   }

@@ -23,6 +23,7 @@ import {
   listTrainingColumns,
   listColumnChoices,
   MAX_TRAINING_COLUMNS,
+  MAX_SESSIONS_PER_WEEK,
   localDateStr,
   MUSCLE_GROUPS,
   programWeekLabel,
@@ -228,7 +229,7 @@ export default function ProgramBuilder({
               <CopyDayMenu
                 fromDayId={day.id}
                 sourceName={`${sessionName}${day.label ? ` · ${day.label}` : ""}`}
-                newSessionNumber={days.length + 1}
+                newSessionNumber={days.length < MAX_SESSIONS_PER_WEEK ? days.length + 1 : null}
                 remainingWeeks={remainingWeeks}
                 remainingLabel={remainingLabel}
                 targets={days
@@ -598,14 +599,19 @@ export default function ProgramBuilder({
       weekContents[index] = (
         <div key={`w${index}`} className="program-sheet">
           {renderDays(days)}
-          {/* A week is only its sessions: an empty week is just this button. */}
-          <form action={addSessionAction} className="pb-add-session-form">
-            <input type="hidden" name="clientId" value={clientId} />
-            <input type="hidden" name="week" value={weekNumber} />
-            <button type="submit" className="pb-add-session">
-              + Add session
-            </button>
-          </form>
+          {/* A week is only its sessions: an empty week is just this button.
+              Seven is the most a week holds, and then the button says so. */}
+          {days.length < MAX_SESSIONS_PER_WEEK ? (
+            <form action={addSessionAction} className="pb-add-session-form">
+              <input type="hidden" name="clientId" value={clientId} />
+              <input type="hidden" name="week" value={weekNumber} />
+              <button type="submit" className="pb-add-session">
+                + Add session
+              </button>
+            </form>
+          ) : (
+            <p className="pb-add-session-full">{MAX_SESSIONS_PER_WEEK} sessions is the most a week can hold.</p>
+          )}
         </div>
       );
       weekSummaries[index] = trainingDays
