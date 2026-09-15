@@ -676,7 +676,10 @@ export default function ProgramBuilder({
       id: program.id,
       name: program.name ?? "",
       status,
-      statusLabel: status === "live" ? "Live" : status === "draft" ? "Draft" : "Past",
+      // A draft with a schedule is waiting to go out on its own, so its pill
+      // says Scheduled; it is still a draft underneath (editable, deletable).
+      pill: status === "draft" && program.scheduled_at ? "scheduled" : status,
+      statusLabel: status === "live" ? "Live" : status === "draft" ? (program.scheduled_at ? "Scheduled" : "Draft") : "Past",
       totalWeeks: program.total_weeks,
       meta: `${program.total_weeks} week${program.total_weeks === 1 ? "" : "s"}${
         deployedOn ? ` · deployed ${deployedOn}` : " · not deployed yet"

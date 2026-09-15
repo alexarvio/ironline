@@ -167,6 +167,7 @@ import {
   addClientPhase,
   updateClientPhase,
   removeClientPhase,
+  setNutritionPhaseDraft,
   getClientIdForPhase,
   PHASE_TRACKS,
   setCalorieLog,
@@ -1806,6 +1807,23 @@ export async function removeClientPhaseAction(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id || !(await coachForClient(getClientIdForPhase(id)))) return;
   removeClientPhase(id);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// A draft nutrition phase goes out: scheduled when it starts in a later
+// week, live when its start week has come. Called directly, not via a form.
+export async function deployNutritionPhaseAction(phaseId: number) {
+  if (!Number.isInteger(phaseId) || !(await coachForClient(getClientIdForPhase(phaseId)))) return;
+  setNutritionPhaseDraft(phaseId, false);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// A scheduled nutrition phase back to draft, off the client's plan again.
+export async function draftNutritionPhaseAction(phaseId: number) {
+  if (!Number.isInteger(phaseId) || !(await coachForClient(getClientIdForPhase(phaseId)))) return;
+  setNutritionPhaseDraft(phaseId, true);
   revalidatePath("/admin");
   revalidatePath("/client");
 }

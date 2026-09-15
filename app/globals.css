@@ -431,6 +431,25 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   background: var(--paper-raised);
 }
 
+/* An open session carries a navy stripe down its left edge, as an open past
+   meeting does. Drawn on top rather than as an inset shadow, because the
+   tinted header and the exercise table would paint over a shadow. */
+.admin-day-card.open {
+  position: relative;
+}
+
+.admin-day-card.open::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: #1e3a6e;
+  z-index: 2;
+  pointer-events: none;
+}
+
 /* Session headers carry the accent tint, like the card headers elsewhere. */
 .admin-day-card-toggle {
   display: flex;
@@ -1052,6 +1071,8 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 .pp-chip-act.danger { color: #a32d2d; }
 .pp-chip-act.danger:hover { background: #fbeaea; }
 .pp-add { display: inline-flex; align-items: center; gap: 8px; }
+/* Its own row above the angle pills, so new angles never push it along. */
+.pp-add-row { display: flex; margin-bottom: 12px; }
 
 /* Gallery card */
 .pp-gallery { overflow: hidden; }
@@ -12919,13 +12940,19 @@ a.cd-entry:hover { border-color: var(--accent); }
    edited is outlined in navy (dotted still, when it is scheduled). */
 .nw-phase-chips .nw-phase-chip { background: #fff; }
 .nw-phase-chips .nw-phase-chip.next { border-style: dotted; border-color: #8b93a1; }
+/* A draft is dashed orange, like a draft bar on the Plan tab. */
+.nw-phase-chips .nw-phase-chip.draft { border-style: dashed; border-color: #b3471d; }
 .nw-phase-chips .nw-phase-chip.active { border-color: #1e3a6e; }
+/* "+ New phase" after the chips: Training's dashed "+ New program", darker on the tint. */
+.nw-phase-chips .nw-new-phase { border-color: #a9b3c1; color: #2f5d8f; }
+.nw-phase-chips .nw-new-phase:hover { background: #fff; border-color: #2f5d8f; color: #1e3a6e; }
 .status-pill.scheduled { background: #e6edf6; color: #2f5d8f; }
 .nw-phase-line { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; }
 .nw-phase-dot { flex: none; width: 7px; height: 7px; border-radius: 999px; background: currentColor; }
 .nw-phase-line.now { color: #2f7a3f; }
 .nw-phase-line.next { color: #2f5d8f; }
 .nw-phase-line.past { color: #5b6474; }
+.nw-phase-line.draft { color: #b3471d; }
 .nw-hint { font-size: 11px; color: #8b93a1; font-weight: 500; }
 .nw-label { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
 
@@ -12933,7 +12960,7 @@ a.cd-entry:hover { border-color: var(--accent); }
 .nw-editor { padding: 18px 22px 20px; border-right: 1px solid #eceff3; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .nw-editor-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .nw-daytoggle { display: inline-flex; background: #eef0f3; border-radius: 999px; padding: 3px; }
-.nw-daybtn { border: 0; background: transparent; border-radius: 999px; padding: 5px 13px; font-size: 12px; font-weight: 800; color: #5b6474; cursor: pointer; }
+.nw-daybtn { border: 0; background: transparent; border-radius: 999px; padding: 5px 13px; font: inherit; font-size: 12px; font-weight: 800; color: #5b6474; cursor: pointer; }
 .nw-daybtn.on { background: #fff; color: #1e3a6e; box-shadow: 0 1px 2px rgba(20,30,50,0.12); }
 .nw-linked { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: #3b4453; cursor: pointer; }
 .nw-linked input { accent-color: #1e3a6e; }
@@ -12943,7 +12970,7 @@ a.cd-entry:hover { border-color: var(--accent); }
 /* Figures use the client app's serif numbers (.nd-kcal), so a target reads
    the same on both sides. */
 .nw-kcal-value { font-family: var(--font-serif); font-size: 44px; font-weight: 600; line-height: 1; color: #141a24; font-variant-numeric: tabular-nums; }
-.nw-kcal-value small { font-size: 13px; font-weight: 700; color: #8b93a1; letter-spacing: 0; margin-left: 2px; }
+.nw-kcal-value small { font-family: var(--font-sans); font-size: 13px; font-weight: 700; color: #8b93a1; letter-spacing: 0; margin-left: 2px; }
 .nw-share { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: #eceff3; }
 .nw-share span { display: block; height: 100%; transition: width 0.15s ease; }
 
@@ -13901,6 +13928,32 @@ a.cd-entry:hover { border-color: var(--accent); }
 /* The client's gyms sit at the far right of the programme row: they belong
    to the client, not to any one programme. */
 .pb-programs-gyms { margin-left: auto; }
+/* Training's head card, built like Nutrition's Daily targets: a tinted header
+   with the title, the programme chips and the one being edited, then a white
+   body with its weeks. No overflow clip: the Client gyms menu opens past it. */
+.pb-head-card { background: #fff; border: 1px solid #dfe3e8; border-radius: 12px; }
+.pb-head-band { display: flex; flex-direction: column; gap: 12px; padding: 14px 22px; background: #e6ecf3; border-radius: 11px 11px 0 0; }
+.pb-head-top { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 32px; }
+.pb-head-top .pl-eyebrow { color: #1e3a6e; }
+.pb-head-band .pb-program-chip { background: #fff; }
+.pb-head-band .pb-program-chip.active { border-color: #1e3a6e; }
+.pb-head-band .pb-new-program { border-color: #a9b3c1; color: #2f5d8f; }
+.pb-head-band .pb-new-program:hover { background: #fff; border-color: #2f5d8f; color: #1e3a6e; }
+.pb-head-band .pb-editing { margin-top: 0; padding-bottom: 0; border-bottom: 0; }
+.pb-head-body { padding: 16px 22px 18px; }
+.pb-head-body .pb-rail-row { margin-top: 0; }
+/* Deploy and schedule in the header use the accent navy, like Nutrition's
+   buttons: navy primary, white secondary with navy text. */
+/* font: inherit, as on Create login: without it the browser's own button
+   font shows at weight 800 and reads heavy. */
+.pb-head-band .deploy-btn,
+.pb-head-band .plan-deploy-controls .btn { font: inherit; font-size: 12px; font-weight: 800; }
+.pb-head-band .deploy-btn { background: #1e3a6e; color: #fff; }
+.pb-head-band .deploy-btn:hover:not(:disabled) { background: #274a8a; }
+.pb-head-band .deploy-btn:disabled { background: #8b9dbb; opacity: 1; }
+.pb-head-band .plan-deploy-controls .btn.secondary { background: #fff; border-color: #dfe3e8; color: #1e3a6e; font-weight: 800; }
+.pb-head-band .plan-deploy-controls .btn.secondary:hover:not(:disabled) { background: #f8f9fb; border-color: #2f5d8f; }
+.pb-head-band .plan-deploy-controls .btn.secondary:disabled { color: #8b93a1; cursor: not-allowed; }
 /* Copy a session: where the copy goes, each choice saying what it does. */
 .pb-copy-options { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; max-height: 50vh; overflow-y: auto; }
 .pb-copy-option { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; cursor: pointer; }

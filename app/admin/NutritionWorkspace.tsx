@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import {
   applySupplementChangesAction,
+  deployNutritionPhaseAction,
+  draftNutritionPhaseAction,
   saveCoachNutritionNoteAction,
   saveNutritionTargetsAction,
 } from "../lib/actions";
@@ -20,7 +22,7 @@ type Macros = { protein: number | null; carbs: number | null; fats: number | nul
 export type NwPhase = {
   id: number;
   name: string;
-  status: "past" | "now" | "next";
+  status: "past" | "now" | "next" | "draft";
   startLabel: string;
   range: string;
   training: Macros;
@@ -55,27 +57,73 @@ const kcalOf = (m: Macros) => (m.protein ?? 0) * KCAL.protein + (m.carbs ?? 0) *
 const same = (a: Macros, b: Macros) => a.protein === b.protein && a.carbs === b.carbs && a.fats === b.fats;
 const fmtDate = (iso: string, opts: Intl.DateTimeFormatOptions) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", opts);
 const n = (v: number) => v.toLocaleString("en-US");
-// The same pills as the programmes on Training. A scheduled phase needs no
-// deploy (it starts on its date), so it is not the orange draft pill.
+// The same pills as the programmes on Training: a new phase is an orange
+// draft until deployed, then scheduled until its start week, then live.
 const PHASE_STATUS = {
+  draft: { label: "Draft", pill: "draft" },
   now: { label: "Live", pill: "live" },
   next: { label: "Scheduled", pill: "scheduled" },
   past: { label: "Past", pill: "past" },
 } as const;
+
+// Week maths for the new-phase defaults; phases run Monday to Monday.
+const mondayOf = (date: string) => {
+  const d = new Date(`${date}T00:00:00`);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+const addWeeks = (monday: string, weeks: number) => {
+  const d = new Date(`${monday}T00:00:00`);
+  d.setDate(d.getDate() + weeks * 7);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 
 export default function NutritionWorkspace(p: NutritionWorkspaceProps) {
   const initial = p.phases.find((x) => x.status === "now") ?? p.phases.find((x) => x.status === "next") ?? p.phases[0];
   const [phaseId, setPhaseId] = useState<number>(initial?.id ?? 0);
   const phase = p.phases.find((x) => x.id === phaseId) ?? initial;
   const [editPhase, setEditPhase] = useState(false);
+  const [newPhase, setNewPhase] = useState(false);
+
+  // A phase that arrives from the server (just added here or on Plan) is
+  // selected, so the coach lands straight on its targets.
+  const ids = p.phases.map((x) => x.id).join(",");
+  const [seenIds, setSeenIds] = useState(ids);
+  if (ids !== seenIds) {
+    const before = new Set(seenIds.split(",").map(Number));
+    const fresh = p.phases.find((x) => x.id !== 0 && !before.has(x.id));
+    setSeenIds(ids);
+    if (fresh) setPhaseId(fresh.id);
+  }
+
+  // A new phase starts the week after the last one ends, else this week.
+  const real = p.phases.filter((x) => x.id !== 0);
+  const lastEnd = real.reduce<string | null>((max, x) => (!max || x.phase.end_week > max ? x.phase.end_week : max), null);
+  const thisWeek = mondayOf(p.today);
+  const newStart = lastEnd && addWeeks(lastEnd, 1) > thisWeek ? addWeeks(lastEnd, 1) : thisWeek;
+  const others = real.map((x) => ({ id: x.id, track: x.phase.track, name: x.name, start_week: x.phase.start_week, end_week: x.phase.end_week }));
 
   return (
     <div className="pl nw">
-      {phase && <TargetsCard key={phase.id} p={p} phase={phase} onPickPhase={setPhaseId} onEditPhase={() => setEditPhase(true)} />}
+      {phase && (
+        <TargetsCard key={phase.id} p={p} phase={phase} onPickPhase={setPhaseId} onEditPhase={() => setEditPhase(true)} onNewPhase={() => setNewPhase(true)} />
+      )}
       <SupplementsCard p={p} />
       <CaloriesCard p={p} />
       {editPhase && phase && phase.id !== 0 && (
-        <PhaseDialog clientId={p.clientId} phase={phase.phase} today={p.today} onClose={() => setEditPhase(false)} />
+        <PhaseDialog clientId={p.clientId} phase={phase.phase} today={p.today} others={others} lockTrack onClose={() => setEditPhase(false)} />
+      )}
+      {newPhase && (
+        <PhaseDialog
+          clientId={p.clientId}
+          today={p.today}
+          defaultTrack="nutrition"
+          defaultStart={newStart}
+          defaultEnd={addWeeks(newStart, 3)}
+          others={others}
+          lockTrack
+          onClose={() => setNewPhase(false)}
+        />
       )}
     </div>
   );
@@ -83,7 +131,19 @@ export default function NutritionWorkspace(p: NutritionWorkspaceProps) {
 
 // ---- 1 · Daily targets ---------------------------------------------------
 
-function TargetsCard({ p, phase, onPickPhase, onEditPhase }: { p: NutritionWorkspaceProps; phase: NwPhase; onPickPhase: (id: number) => void; onEditPhase: () => void }) {
+function TargetsCard({
+  p,
+  phase,
+  onPickPhase,
+  onEditPhase,
+  onNewPhase,
+}: {
+  p: NutritionWorkspaceProps;
+  phase: NwPhase;
+  onPickPhase: (id: number) => void;
+  onEditPhase: () => void;
+  onNewPhase: () => void;
+}) {
   const [day, setDay] = useState<"training" | "rest">("training");
   const [values, setValues] = useState({ training: phase.training, rest: phase.rest });
   const [linked, setLinked] = useState(() => same(phase.training, phase.rest));
@@ -142,6 +202,12 @@ function TargetsCard({ p, phase, onPickPhase, onEditPhase }: { p: NutritionWorks
     });
   const hasPhases = phase.id !== 0;
   const firstName = p.clientName.trim().split(/\s+/)[0] || "The client";
+  // Deploying a draft schedules it when it starts in a later week, and puts
+  // it live when its start week has come.
+  const [publishing, startPublish] = useTransition();
+  const startsLater = phase.phase.start_week > mondayOf(p.today);
+  const deploy = () => startPublish(() => deployNutritionPhaseAction(phase.id));
+  const backToDraft = () => startPublish(() => draftNutritionPhaseAction(phase.id));
 
   const summary = [
     `${n(kcalOf(values.training))} kcal training`,
@@ -155,13 +221,35 @@ function TargetsCard({ p, phase, onPickPhase, onEditPhase }: { p: NutritionWorks
         <div className="pl-band-left">
           <div className="pl-eyebrow">Daily targets</div>
         </div>
-        {hasPhases && (
-          <div className="pl-band-right">
-            <button type="button" className="pl-switch-opt nw-edit-phase" onClick={onEditPhase}>
-              Edit dates
+        <div className="pl-band-right">
+          {hasPhases ? (
+            <>
+              {phase.status === "next" && (
+                <button type="button" className="pl-switch-opt nw-edit-phase" onClick={backToDraft} disabled={publishing}>
+                  Back to draft
+                </button>
+              )}
+              <button type="button" className="pl-switch-opt nw-edit-phase" onClick={onEditPhase}>
+                Edit dates
+              </button>
+              {phase.status === "draft" && (
+                <button
+                  type="button"
+                  className="pl-primary"
+                  onClick={deploy}
+                  disabled={publishing || changes.length > 0}
+                  title={changes.length > 0 ? "Apply or discard the changes first" : undefined}
+                >
+                  {publishing ? "Deploying…" : startsLater ? `Schedule for ${phase.startLabel}` : "Deploy now"}
+                </button>
+              )}
+            </>
+          ) : (
+            <button type="button" className="pl-primary" onClick={onNewPhase}>
+              + New phase
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Every nutrition phase from the Plan tab, like the programmes on
@@ -185,10 +273,15 @@ function TargetsCard({ p, phase, onPickPhase, onEditPhase }: { p: NutritionWorks
                 <span className="pb-program-weeks">{ph.range}</span>
               </button>
             ))}
+            <button type="button" className="pb-new-program nw-new-phase" onClick={onNewPhase}>
+              + New phase
+            </button>
           </div>
           <div className={`nw-phase-line ${phase.status}`} role="status">
             <span className="nw-phase-dot" aria-hidden="true" />
-            {phase.status === "now"
+            {phase.status === "draft"
+              ? `Draft: ${firstName} doesn't see this yet. ${startsLater ? `Schedule it to go live on ${phase.startLabel}` : "Deploy it to go live now"}`
+              : phase.status === "now"
               ? `Live: ${firstName} sees these targets now`
               : phase.status === "next"
               ? `Scheduled: ${firstName} gets these targets on ${phase.startLabel}`

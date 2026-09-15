@@ -2268,19 +2268,45 @@ export function getNutritionPlan(clientId: number): NutritionPlan {
 
 // Nutrition phases the coach can still set numbers for: the running one and
 // everything ahead, plus last week's for context. Oldest first.
-export function listNutritionPhases(clientId: number): (ClientPhase & { status: "past" | "now" | "next" })[] {
+export function listNutritionPhases(clientId: number): (ClientPhase & { status: "past" | "now" | "next" | "draft" })[] {
   const week = weekStart(localDateStr());
   const d = new Date(`${week}T00:00:00`);
   d.setDate(d.getDate() - 7);
   const lastWeek = localDateStr(d);
   return listClientPhases(clientId)
     .filter((p) => p.track === "nutrition" && p.end_week >= lastWeek)
-    .map((p) => ({ ...p, status: p.end_week < week ? "past" : p.start_week > week ? "next" : "now" }));
+    .map((p) => ({ ...p, status: p.draft ? "draft" : p.end_week < week ? "past" : p.start_week > week ? "next" : "now" }));
 }
 
 function nutritionPhaseFor(clientId: number, phaseId: number): ClientPhase | null {
   const phase = getData().client_phases.find((p) => p.id === phaseId);
   return phase && phase.client_id === clientId && phase.track === "nutrition" ? phase : null;
+}
+
+// Deploys a draft nutrition phase (its dates then make it scheduled or live),
+// or takes a scheduled one back to draft. A phase the client is already in,
+// or that has ended, can't go back: they have seen it.
+// Returns true when a draft was deployed.
+export function setNutritionPhaseDraft(phaseId: number, draft: boolean): boolean {
+  const phase = getData().client_phases.find((p) => p.id === phaseId);
+  if (!phase || phase.track !== "nutrition" || !!phase.draft === draft) return false;
+  if (draft) {
+    if (phase.start_week <= weekStart(localDateStr())) return false;
+    phase.draft = true;
+  } else {
+    delete phase.draft;
+  }
+  persist();
+  // Going live now tells the client, as a deployed programme does. A
+  // scheduled phase stays quiet: its targets are not theirs to see yet.
+  if (!draft && phase.start_week <= weekStart(localDateStr())) {
+    logCoachActivity(phase.client_id, `Your coach set new nutrition targets${phase.name ? `: ${phase.name}` : ""}. Check them out`, {
+      kind: "programme",
+      actionTab: "nutrition",
+      actionLabel: "See your targets",
+    });
+  }
+  return !draft;
 }
 
 // The note under the targets: on a phase when one is named, else client-level.
@@ -5395,6 +5421,9 @@ export function addClientPhase(clientId: number, track: PhaseTrack, name: string
     name: name.trim(),
     start_week: first,
     end_week: last,
+    // A new nutrition phase is a draft, like a new programme: the coach sets
+    // its targets and deploys it from the Nutrition tab.
+    ...(track === "nutrition" ? { draft: true } : {}),
   };
   // A training phase is a programme: adding one on the Plan tab makes a
   // draft, named and sized to match, ready to build in the Training tab.
@@ -5548,7 +5577,8 @@ export function syncProgramPhase(programId: number, dates = true) {
 // and the card's Goal / phase fact can read off instead of retyping.
 export function getCurrentPhase(clientId: number, track: PhaseTrack): ClientPhase | null {
   const week = weekStart(localDateStr());
-  return listClientPhases(clientId).find((p) => p.track === track && p.start_week <= week && p.end_week >= week) ?? null;
+  // A draft is the coach's alone, so it is never the phase anyone is in.
+  return listClientPhases(clientId).find((p) => !p.draft && p.track === track && p.start_week <= week && p.end_week >= week) ?? null;
 }
 
 // Goal / phase as the app should show it: the nutrition phase running this
@@ -5592,7 +5622,8 @@ export type ClientPlanView = {
 };
 
 export function getClientPlanView(clientId: number): ClientPlanView | null {
-  const phases = listClientPhases(clientId);
+  // Draft phases stay off the client's phone until the coach deploys them.
+  const phases = listClientPhases(clientId).filter((p) => !p.draft);
   if (phases.length === 0) return null;
   const week = weekStart(localDateStr());
   const weeksBetween = (a: string, b: string) =>
@@ -6891,6 +6922,8 @@ export type PlanProgramStatus = "live" | "scheduled" | "draft";
 export type PlanPhaseRow = {
   id: number;
   track: PhaseTrack;
+  /** A nutrition phase not deployed yet. */
+  draft: boolean;
   name: string;
   start_week: string;
   end_week: string;
@@ -6928,6 +6961,7 @@ export function getPlanData(clientId: number) {
       name: p.name,
       start_week: p.start_week,
       end_week: p.end_week,
+      draft: !!p.draft,
       program: program
         ? { id: program.id, status: programStatus(program), totalWeeks: program.total_weeks, loggedWeeks: programLoggedWeekIndexes(program.id) }
         : null,

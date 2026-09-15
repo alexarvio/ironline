@@ -312,7 +312,7 @@ export default function MeetingsWorkspace(p: MeetingsWorkspaceProps) {
                 </button>
               )}
               <button type="submit" className="mw-primary" disabled={pending}>
-                {pending ? "Saving…" : form.rescheduleId != null ? "Save new time" : `Schedule · shows in ${p.firstName}'s app`}
+                {pending ? "Saving…" : form.rescheduleId != null ? "Save new time" : "Schedule"}
               </button>
             </div>
           </form>

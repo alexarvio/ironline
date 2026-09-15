@@ -72,7 +72,7 @@ export default function ProgressPicturesPanel({ clientId }: { clientId: number }
 
   // The Plan tab's phase that covered the week a sheet opened in. Phases are
   // stored as whole weeks, Monday to Monday.
-  const phases = listClientPhases(clientId);
+  const phases = listClientPhases(clientId).filter((p) => !p.draft);
   const phaseOn = (track: "nutrition" | "training", day: string) => {
     const week = weekStart(day);
     return phases.find((p) => p.track === track && p.start_week <= week && p.end_week >= week)?.name ?? null;
@@ -183,21 +183,23 @@ export default function ProgressPicturesPanel({ clientId }: { clientId: number }
             </span>
           )}
         </div>
-        <div className="pp-chips">
-          {slots.length > 0 && (
+        {/* The add box sits on its own row above the angles, so it stays in
+            the same spot however many angles there are. */}
+        <form action={addPhotoSlotAction} className="pp-add pp-add-row">
+          <input type="hidden" name="clientId" value={clientId} />
+          <input name="label" type="text" className="pp-input" placeholder="Name an angle…" aria-label="New angle name" required />
+          <button type="submit" className="pp-btn navy sm">
+            Add
+          </button>
+        </form>
+        {slots.length > 0 && (
+          <div className="pp-chips">
             <PhotoAngleChips
               clientId={clientId}
               slots={slots.map((s) => ({ id: s.id, label: s.label, paused: !!s.paused }))}
             />
-          )}
-          <form action={addPhotoSlotAction} className="pp-add">
-            <input type="hidden" name="clientId" value={clientId} />
-            <input name="label" type="text" className="pp-input" placeholder="Name an angle…" aria-label="New angle name" required />
-            <button type="submit" className="pp-btn navy sm">
-              Add
-            </button>
-          </form>
-        </div>
+          </div>
+        )}
       </section>
 
       {gallery}

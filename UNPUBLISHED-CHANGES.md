@@ -257,10 +257,47 @@ Commit `a10ba40`, ported from `next` and pushed on its own.
 - [x] ~~Progress pictures: a "Sheet setup" header band on the settings card, a tinted Sheets header, and tinted week rows.~~
 - [x] ~~App access in the client panel: Reset password and Remove access stacked full width, so the label no longer wraps inside its button.~~
 
+## 39 · New nutrition phase from the Nutrition tab — ✅ LIVE 15 Sep
+
+- [x] A dashed "+ New phase" chip after the phase chips on Daily targets (a "+ New phase" button in the band when the client has none) opens the same phase dialog as the Plan tab, fixed to the Nutrition track. It defaults to four weeks starting the week after the last nutrition phase ends, or this week. The phase lands on the Plan tab's nutrition lane like any other, and the Nutrition tab switches to it so its targets can be set straight away. Edit dates uses the same dialog, also fixed to Nutrition.
+- [x] **Nutrition phases start as drafts**, like programmes. A new one (from Nutrition or Plan) has an orange Draft pill, a dashed chip and "Draft: Alex doesn't see this yet". Only the coach sees it: not the client's Home, plan, Nutrition targets, the calorie log's phase column or Progress pictures. "Schedule for Oct 5" (or "Deploy now" once its start week has come) sends it out: it is then Scheduled and goes live by itself on its start week. A scheduled phase has "Back to draft". On the Plan tab a draft nutrition bar is dashed with "draft · deploy". Going live straight away notifies the client. Phases made before this count as deployed. No database migration: the flag rides in `extra`.
+
+Look: `/admin` → a client → Nutrition.
+
+## 40 · Training tab: one header card like Nutrition — ✅ LIVE 15 Sep
+
+- [x] The programme chips, "+ New program", Client gyms, the programme being edited (name, deploy controls, live line) sit in a tinted header titled "Programmes", with the week rail and the client's note in the white body under it, the same shape as Nutrition's Daily targets. The column pills and the session cards follow below, unchanged.
+- [x] A programme scheduled to deploy reads **Scheduled** (blue pill) on its chip instead of Draft, matching Nutrition's scheduled phases.
+- [x] Deploy now is navy instead of green, and Schedule for later… / Cancel are white with navy text, like the buttons on Nutrition and Plan.
+- [x] Deploy now, Schedule for later… and Nutrition's Training day / Rest day toggle use the app font like Create login; they were falling back to the browser's own button font and looked heavy.
+- [x] The "kcal" beside the calorie figure on Daily targets is in the app font; the figure itself stays in the serif.
+
+Look: `/admin` → a client → Training.
+
+## 41 · Progress pictures: add an angle above the angles — ✅ LIVE 15 Sep
+
+- [x] "Name an angle…" and Add sit on their own row under "Angles you ask for", above the angle pills, so the box stays in the same spot instead of being pushed right by every new angle.
+
+Look: `/admin` → a client → Progress pictures.
+
+## 42 · Meetings: plain Schedule button — ✅ LIVE 15 Sep
+
+- [x] The schedule form's button reads just "Schedule" instead of "Schedule · shows in Alex's app".
+
+Look: `/admin` → a client → Meetings.
+
+## 43 · Training: open session marked in navy — ✅ LIVE 15 Sep
+
+- [x] An expanded session in the builder carries the same navy stripe down its left edge as an open past meeting, header and body both, so the session being built stands out from the folded ones.
+
+Look: `/admin` → a client → Training → expand a session.
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.
 3. **What else belongs beside "Days trained"** on the client's Training tab, if anything. Left as the single figure for now.
+4. **Payments in the app.** Stripe (iDEAL, SEPA, cards; Billing for subscriptions; Checkout and the Customer Portal), or Mollie if Finlay prefers a Dutch provider. Money goes straight to the coach's own account, never through Ironline: start with Finlay's account, and move to Stripe Connect once there are several coaches. A payment webhook marks the invoice paid. Before building: Finlay's business account (KvK, bank, ID), what he sells (one-off packages, subscriptions), and BTW from his accountant. Checkout needs his terms and the EU 14-day cancellation consent.
+5. **Financial report for coaches.** Income this month vs last, outstanding and overdue, recurring monthly revenue from subscriptions, per-client payments and lifetime value, a 12-month trend, and a CSV export for the accountant with BTW split out. Phase 1 on the existing invoices; phase 2 fed by Stripe (payments, refunds, fees, payouts); with several coaches each sees only their own, and the owner only platform totals.
 
 ## Not in this push
 The `next` branch is separate and unmerged: branding, packages, progress pictures, and the check-in rebuild that drops the Measure tab. See `WHATS-NEW-ON-NEXT.md` on that branch. Merging it now conflicts in ten files, including the check-in screen, because live has moved a long way since it was cut.

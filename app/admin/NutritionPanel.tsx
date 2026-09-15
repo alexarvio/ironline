@@ -72,7 +72,7 @@ export default function NutritionPanel({ clientId }: { clientId: number }) {
   // nutrition phase it fell in. Days with nothing logged are not listed.
   const trainedOn = trainingDates(clientId);
   const allLogs = listCalorieLogs(clientId, 10000);
-  const nutritionAll = listClientPhases(clientId).filter((ph) => ph.track === "nutrition");
+  const nutritionAll = listClientPhases(clientId).filter((ph) => ph.track === "nutrition" && !ph.draft);
   // A phase's end_week is the Monday of its last week, so the week runs six more days.
   const phaseOn = (date: string) => {
     const hit = nutritionAll.find((ph) => {

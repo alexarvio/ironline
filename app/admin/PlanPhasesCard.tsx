@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { deployProgramAction, updateClientPhaseAction } from "../lib/actions";
+import { deployNutritionPhaseAction, deployProgramAction, updateClientPhaseAction } from "../lib/actions";
 import type { PhaseTrack } from "../lib/db";
 import type { PlanPhaseRow, PlanProgramOption } from "../lib/queries";
 import PhaseDialogButton, { isoWeek, PhaseDialog } from "./PhaseDialogButton";
@@ -142,7 +142,14 @@ export default function PlanPhasesCard({
     });
   };
   const deploy = (p: PlanPhaseRow) => {
-    if (!p.program) return;
+    if (!p.program) {
+      // A draft nutrition phase: no programme, just the flag.
+      start(async () => {
+        await deployNutritionPhaseAction(p.id);
+        setDeploying(null);
+      });
+      return;
+    }
     const fd = new FormData();
     fd.set("programId", String(p.program.id));
     start(async () => {
@@ -276,7 +283,7 @@ export default function PlanPhasesCard({
                     const shown = sp.b - sp.a + 1;
                     const isRunning = sp.s <= thisWeek && sp.e >= thisWeek;
                     const isFuture = sp.s > thisWeek;
-                    const draft = p.program?.status === "draft";
+                    const draft = p.program?.status === "draft" || p.draft;
                     // The shade covers the weeks already behind us that are inside the
                     // window, so a phase clipped at the left edge shades the right share.
                     const elapsed = draft ? 0 : Math.max(0, Math.min(shown, nowIdx - sp.a));
@@ -401,7 +408,8 @@ export default function PlanPhasesCard({
         (() => {
           // An unnamed programme can't go out (the action refuses it), so say so
           // and send the coach to Training rather than a Deploy that does nothing.
-          const unnamed = programs.find((x) => x.id === deploying.program?.id)?.name === "Untitled programme";
+          const unnamed = !!deploying.program && programs.find((x) => x.id === deploying.program?.id)?.name === "Untitled programme";
+          const nutritionLater = !deploying.program && deploying.start_week > thisWeek;
           return (
             <div className="pb-modal-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && setDeploying(null)}>
               <div className="pb-modal pb-modal-sm" role="dialog" aria-modal="true" aria-label="Deploy the training programme">
@@ -409,6 +417,10 @@ export default function PlanPhasesCard({
                 <p className="pb-confirm-body">
                   {unnamed
                     ? "A programme needs a name before it goes to the client. Give it one on the Training tab, then deploy."
+                    : !deploying.program
+                    ? nutritionLater
+                      ? `It is scheduled: the client gets these nutrition targets on ${shortDate(deploying.start_week)}.`
+                      : "The client sees these nutrition targets in their app as soon as it is deployed."
                     : "The client sees this training programme in their app as soon as it is deployed."}
                 </p>
                 <div className="pb-modal-foot">
@@ -421,7 +433,7 @@ export default function PlanPhasesCard({
                     </a>
                   ) : (
                     <button type="button" className="ad-btn-primary" onClick={() => deploy(deploying)} disabled={busy}>
-                      {busy ? "Deploying…" : "Deploy now"}
+                      {busy ? "Deploying…" : nutritionLater ? "Schedule" : "Deploy now"}
                     </button>
                   )}
                 </div>

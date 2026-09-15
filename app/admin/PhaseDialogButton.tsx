@@ -80,10 +80,12 @@ export type PhaseDialogProps = {
   others?: PhaseNeighbour[];
   /** Programmes a new training phase could be linked to. */
   programs?: PhaseProgramOption[];
+  /** Opened from a track's own tab: the track can't be switched. */
+  lockTrack?: boolean;
   onClose: () => void;
 };
 
-export function PhaseDialog({ clientId, phase, program, today, defaultTrack, defaultStart, defaultEnd, others = [], programs = [], onClose }: PhaseDialogProps) {
+export function PhaseDialog({ clientId, phase, program, today, defaultTrack, defaultStart, defaultEnd, others = [], programs = [], lockTrack = false, onClose }: PhaseDialogProps) {
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -179,7 +181,7 @@ export function PhaseDialog({ clientId, phase, program, today, defaultTrack, def
                     className={`pl-chip${active ? " active" : ""}`}
                     style={active ? { background: tt.bg, color: tt.fg, borderColor: tt.fg } : undefined}
                     onClick={() => setTrack(t.id)}
-                    disabled={!!program}
+                    disabled={!!program || lockTrack}
                   >
                     {t.label}
                   </button>
@@ -230,6 +232,9 @@ export function PhaseDialog({ clientId, phase, program, today, defaultTrack, def
             </p>
           )}
 
+          {!editing && track === "nutrition" && (
+            <p className="ph-note">It starts as a draft only you see. Set its targets on the Nutrition tab, then deploy it.</p>
+          )}
           {!editing && track === "training" && (
             <label className="plan-schedule-field">
               <span>Programme</span>

@@ -57,7 +57,7 @@ export default function AdminDayCard({
   }, [expand]);
 
   return (
-    <div className={`admin-day-card${isRest ? " rest" : ""}`}>
+    <div className={`admin-day-card${isRest ? " rest" : ""}${open ? " open" : ""}`}>
       <div
         className="admin-day-card-toggle"
         role="button"

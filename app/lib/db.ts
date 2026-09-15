@@ -181,6 +181,10 @@ export type ClientPhase = {
     day_targets: { training: MealMacros; rest: MealMacros };
     coach_notes: string;
   } | null;
+  // A nutrition phase is a draft until the coach deploys it: only the coach
+  // sees it. Once deployed its dates make it scheduled, then live. Phases
+  // from before drafts existed have no flag and count as deployed.
+  draft?: boolean;
   // Set when this phase IS a training programme: created from a deploy or
   // schedule, or from the Plan tab (which makes the draft). Name and length
   // follow the programme; the programme's dates follow the phase until it

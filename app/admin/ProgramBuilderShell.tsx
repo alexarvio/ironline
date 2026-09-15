@@ -22,6 +22,8 @@ export type BuilderProgram = {
   id: number;
   name: string;
   status: "live" | "draft" | "past";
+  /** The chip's pill: a draft with a schedule reads Scheduled. */
+  pill: "live" | "draft" | "scheduled" | "past";
   statusLabel: string;
   totalWeeks: number;
   meta: string;
@@ -83,11 +85,16 @@ export default function ProgramBuilderShell({
   if (!program) {
     return (
       <div className="pb-main">
-        {emptySlot}
-        <div className="pb-programs">
-          {newProgramSlot}
-          {gymsSlot && <div className="pb-programs-gyms">{gymsSlot}</div>}
-        </div>
+        <section className="pb-head-card">
+          <div className="pb-head-band">
+            <div className="pb-head-top">
+              <div className="pl-eyebrow">Programmes</div>
+              {gymsSlot && <div className="pb-programs-gyms">{gymsSlot}</div>}
+            </div>
+            <div className="pb-programs">{newProgramSlot}</div>
+          </div>
+          <div className="pb-head-body">{emptySlot}</div>
+        </section>
       </div>
     );
   }
@@ -98,33 +105,43 @@ export default function ProgramBuilderShell({
 
   return (
     <div className="pb-main">
-      <div className="pb-programs">
-        {programs.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            className={`pb-program-chip${p.id === program.id ? " active" : ""}`}
-            onClick={() => selectProgram(p)}
-          >
-            <span className="pb-program-name">{p.name || "Untitled program"}</span>
-            <span className={`status-pill ${p.status}`}>{p.statusLabel}</span>
-            <span className="pb-program-weeks">{p.totalWeeks}w</span>
-          </button>
-        ))}
-        {newProgramSlot}
-        {gymsSlot && <div className="pb-programs-gyms">{gymsSlot}</div>}
-      </div>
-
-      <div className="pb-editing">
-        <div className="pb-editing-left">
-          <div className="pb-eyebrow">Editing</div>
-          <div className="pb-editing-name-row">
-            {program.nameSlot}
-          </div>
+      {/* One card like Nutrition's Daily targets: the tinted header holds the
+          programmes and the one being edited, the white body its weeks. The
+          columns and the session cards follow below it. */}
+      <section className="pb-head-card">
+      <div className="pb-head-band">
+        <div className="pb-head-top">
+          <div className="pl-eyebrow">Programmes</div>
+          {gymsSlot && <div className="pb-programs-gyms">{gymsSlot}</div>}
         </div>
-        <div className="pb-editing-actions">{program.actionsSlot}</div>
+        <div className="pb-programs">
+          {programs.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className={`pb-program-chip${p.id === program.id ? " active" : ""}`}
+              onClick={() => selectProgram(p)}
+            >
+              <span className="pb-program-name">{p.name || "Untitled program"}</span>
+              <span className={`status-pill ${p.pill}`}>{p.statusLabel}</span>
+              <span className="pb-program-weeks">{p.totalWeeks}w</span>
+            </button>
+          ))}
+          {newProgramSlot}
+        </div>
+
+        <div className="pb-editing">
+          <div className="pb-editing-left">
+            <div className="pb-eyebrow">Editing</div>
+            <div className="pb-editing-name-row">
+              {program.nameSlot}
+            </div>
+          </div>
+          <div className="pb-editing-actions">{program.actionsSlot}</div>
+        </div>
       </div>
 
+      <div className="pb-head-body">
       <div className="pb-rail-row">
       <WeekRail
         weeks={program.weekCards.map((w) => ({
@@ -148,6 +165,8 @@ export default function ProgramBuilderShell({
       />
       <ProgramNotePeek programId={program.id} note={program.clientNote ?? null} />
       </div>
+      </div>
+      </section>
 
       <div className="pb-toolbar">
         <div className="pb-toolbar-left">
