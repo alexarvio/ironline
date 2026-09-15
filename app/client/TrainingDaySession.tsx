@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useId, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { logSetAction, pickGymAction, saveExerciseNoteAction, setCardioDoneAction, updateSetAction } from "../lib/actions";
 import ExerciseCoachNote from "./ExerciseCoachNote";
 import GymPicker, { type GymOption } from "./GymPicker";
@@ -51,6 +52,41 @@ function tidyDecimal(e: React.FormEvent<HTMLInputElement>) {
     }
   }
   if (out !== el.value) el.value = out;
+}
+
+// Weights are stored in kg. A machine marked in lbs is one tap away: the
+// client flips an exercise to lbs, every figure on it is converted, and a
+// weight typed in lbs is saved back as kg, so progression, goals and the
+// coach's view are untouched. Remembered per exercise on this phone, since
+// it is the machine that decides the unit.
+type WeightUnit = "kg" | "lb";
+const KG_PER_LB = 0.45359237;
+const roundTo = (n: number, dp: number) => Math.round(n * 10 ** dp) / 10 ** dp;
+// Lbs are whole numbers, always rounded up. Tidied to two decimals first, so
+// the few ten-thousandths a saved lbs figure carries don't tip it to the
+// next pound. Kg shows at most two decimals.
+const kgToUnit = (kg: number, unit: WeightUnit) => (unit === "kg" ? roundTo(kg, 2) : Math.ceil(roundTo(kg / KG_PER_LB, 2)));
+// Four decimals in kg, so a figure typed in lbs reads back as the same
+// figure: at two decimals, 2 lbs came back as 3 once rounded up.
+const unitToKg = (value: number, unit: WeightUnit) => (unit === "kg" ? value : roundTo(value * KG_PER_LB, 4));
+const unitStorageKey = (exerciseName: string) => `ironline:weight-unit:${exerciseName.trim().toLowerCase()}`;
+
+function useWeightUnit(exerciseName: string): [WeightUnit, (unit: WeightUnit) => void] {
+  const [unit, setUnit] = useState<WeightUnit>("kg");
+  // Read after mount: the server render has no storage, and kg is the default.
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(unitStorageKey(exerciseName)) === "lb") setUnit("lb");
+    } catch {}
+  }, [exerciseName]);
+  const choose = (next: WeightUnit) => {
+    setUnit(next);
+    try {
+      if (next === "lb") localStorage.setItem(unitStorageKey(exerciseName), "lb");
+      else localStorage.removeItem(unitStorageKey(exerciseName));
+    } catch {}
+  };
+  return [unit, choose];
 }
 
 const hasSet = (ex: SessionExercise, n: number) => ex.logs.some((l) => l.setNumber === n);
@@ -116,6 +152,39 @@ export default function TrainingDaySession({
   const logged = exercises.reduce((s, ex) => s + loggedCount(ex), 0);
   const dayDone = exercises.length + cardio.length > 0 && exercises.every(isDone) && cardio.every((c) => c.done);
 
+  // The last set or cardio of the day landing: a short "Workout complete"
+  // moment, then the day folds itself away. Only on the change itself, so
+  // opening a day that was already finished does not replay it. The timer
+  // hangs off `celebrating` alone: saving refreshes the page data a moment
+  // later, and a wider dependency list would cancel it.
+  const [celebrating, setCelebrating] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
+  const wasDone = useRef(dayDone);
+  const openNow = useRef(open);
+  const doneNow = useRef(dayDone);
+  const toggleNow = useRef(onToggle);
+  useEffect(() => {
+    openNow.current = open;
+    doneNow.current = dayDone;
+    toggleNow.current = onToggle;
+  });
+  useEffect(() => {
+    const before = wasDone.current;
+    wasDone.current = dayDone;
+    if (!before && dayDone && openNow.current) setCelebrating(true);
+  }, [dayDone]);
+  useEffect(() => {
+    if (!celebrating) return;
+    const t = setTimeout(() => {
+      setCelebrating(false);
+      // An undo during the moment (a cardio tapped back) keeps the day open.
+      if (!openNow.current || !doneNow.current) return;
+      toggleNow.current();
+      setTimeout(() => sectionRef.current?.scrollIntoView({ block: "start", behavior: "smooth" }), 60);
+    }, 1800);
+    return () => clearTimeout(t);
+  }, [celebrating]);
+
   // Which exercise is expanded; starts on the first with sets still to log.
   const [expandedId, setExpandedId] = useState<number | null>(() => firstUnfinished(exercises) ?? exercises[0]?.id ?? null);
   const activeId = firstUnfinished(exercises);
@@ -147,7 +216,7 @@ export default function TrainingDaySession({
   const position = expanded ? exercises.findIndex((ex) => ex.id === expanded.id) + 1 : 0;
 
   return (
-    <section className={`ts-day${dayDone ? " done" : ""}`}>
+    <section ref={sectionRef} className={`ts-day${dayDone ? " done" : ""}`}>
       <button type="button" className="ts-day-head" onClick={onToggle} aria-expanded={open}>
         <div className="ts-day-head-main">
           <div className="ts-day-title">{title}</div>
@@ -196,6 +265,22 @@ export default function TrainingDaySession({
           ))}
         </div>
       )}
+      {celebrating &&
+        createPortal(
+          <div className="ts-complete" role="status" aria-live="polite">
+            <div className="ts-complete-card">
+              <svg className="ts-complete-check" viewBox="0 0 52 52" aria-hidden="true">
+                <circle cx="26" cy="26" r="24" />
+                <path d="M15 27l7 7 15-15" />
+              </svg>
+              <div className="ts-complete-title">Workout complete</div>
+              <div className="ts-complete-sub">
+                {title} · {logged} set{logged === 1 ? "" : "s"} logged
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </section>
   );
 }
@@ -291,6 +376,20 @@ function ExpandedExercise({
   const formId = useId();
   const editing = editingId != null ? exercise.logs.find((l) => l.id === editingId) ?? null : null;
 
+  const [unit, setUnit] = useWeightUnit(exercise.name);
+  const unitLabel = unit === "kg" ? "kg" : "lbs";
+  // A weight typed before the flip, converted, so flipping keeps it.
+  const [carried, setCarried] = useState<string | null>(null);
+  const show = (kg: number | null) => (kg == null ? "" : String(kgToUnit(kg, unit)));
+  const flipUnit = () => {
+    const next: WeightUnit = unit === "kg" ? "lb" : "kg";
+    const form = document.getElementById(formId) as HTMLFormElement | null;
+    const el = form?.elements.namedItem("weight") as HTMLInputElement | null;
+    const typed = el && el.value.trim() !== "" ? Number(el.value) : NaN;
+    setCarried(Number.isFinite(typed) ? String(next === "kg" ? roundTo(unitToKg(typed, "lb"), 1) : kgToUnit(typed, "lb")) : null);
+    setUnit(next);
+  };
+
   // A finished exercise reopened later is read-only until Edit is tapped.
   const rows = Array.from({ length: exercise.sets }, (_, i) => {
     const n = i + 1;
@@ -299,7 +398,7 @@ function ExpandedExercise({
   });
 
   const targets = [
-    exercise.targetWeight != null ? { value: `${exercise.targetWeight}`, unit: "kg" } : null,
+    exercise.targetWeight != null ? { value: show(exercise.targetWeight), unit: unitLabel } : null,
     exercise.reps ? { value: exercise.reps, unit: "reps" } : null,
     exercise.targetRpe != null ? { value: `${exercise.targetRpe}`, unit: "rpe" } : null,
     exercise.distance ? { value: exercise.distance, unit: "distance" } : null,
@@ -314,6 +413,12 @@ function ExpandedExercise({
   const colCount = 1 + (askWeight ? 1 : 0) + (askRpe ? 1 : 0);
 
   const submit = async (formData: FormData) => {
+    // Typed in lbs, stored in kg.
+    if (unit === "lb") {
+      const raw = String(formData.get("weight") ?? "").replace(",", ".").trim();
+      const value = raw === "" ? NaN : Number(raw);
+      if (Number.isFinite(value)) formData.set("weight", String(unitToKg(value, "lb")));
+    }
     setPending(true);
     try {
       if (editing) await updateSetAction(formData);
@@ -322,6 +427,7 @@ function ExpandedExercise({
       setPending(false);
       setEditingId(null);
       setReps("");
+      setCarried(null);
     }
   };
 
@@ -336,7 +442,8 @@ function ExpandedExercise({
     <>
       {askWeight && (
       <input
-        key={`w-${key}`}
+        // The unit in the key refills the box with the converted figure.
+        key={`w-${key}-${unit}`}
         form={formId}
         name="weight"
         type="text"
@@ -345,8 +452,8 @@ function ExpandedExercise({
         onFocus={selectAll}
         onClick={selectAll}
         onInput={tidyDecimal}
-        defaultValue={defaults.weight}
-        aria-label="Weight in kg"
+        defaultValue={carried ?? defaults.weight}
+        aria-label={`Weight in ${unitLabel}`}
         className="ts-input"
         required
       />
@@ -430,7 +537,19 @@ function ExpandedExercise({
 
       <div className="ts-grid ts-cols">
         <span>Set</span>
-        {askWeight && <span>Kg</span>}
+        {askWeight && (
+          <span>
+            <button
+              type="button"
+              className="ts-unit"
+              onClick={flipUnit}
+              aria-label={unit === "kg" ? "Weights in kg. Switch to lbs" : "Weights in lbs. Switch to kg"}
+            >
+              <span className={unit === "kg" ? "on" : undefined}>Kg</span>
+              <span className={unit === "lb" ? "on" : undefined}>Lbs</span>
+            </button>
+          </span>
+        )}
         <span>Reps</span>
         {askRpe && <span>Rpe</span>}
         <span />
@@ -441,7 +560,7 @@ function ExpandedExercise({
           return (
             <div key={n} className="ts-grid ts-set logged">
               <span className="ts-circle done">✓</span>
-              {askWeight && <span>{log.weight ?? "–"}</span>}
+              {askWeight && <span>{log.weight != null ? show(log.weight) : "–"}</span>}
               <span>{log.reps ?? "–"}</span>
               {askRpe && <span>{log.rpe ?? "–"}</span>}
               <button
@@ -449,6 +568,7 @@ function ExpandedExercise({
                 className="ts-edit"
                 onClick={() => {
                   setEditingId(log.id);
+                  setCarried(null);
                   setReps(log.reps != null ? String(log.reps) : "");
                 }}
               >
@@ -461,7 +581,7 @@ function ExpandedExercise({
           return (
             <div key={n} className="ts-grid ts-set active">
               <span className="ts-circle active">{n}</span>
-              {inputs({ weight: log.weight != null ? String(log.weight) : "", reps: String(log.reps ?? ""), rpe: log.rpe != null ? String(log.rpe) : "" }, `edit-${log.id}`)}
+              {inputs({ weight: show(log.weight), reps: String(log.reps ?? ""), rpe: log.rpe != null ? String(log.rpe) : "" }, `edit-${log.id}`)}
               <span />
             </div>
           );
@@ -472,7 +592,7 @@ function ExpandedExercise({
               <span className="ts-circle active">{n}</span>
               {inputs(
                 {
-                  weight: exercise.targetWeight != null ? String(exercise.targetWeight) : "",
+                  weight: show(exercise.targetWeight),
                   reps: "",
                   rpe: exercise.targetRpe != null ? String(exercise.targetRpe) : "",
                 },
@@ -486,7 +606,7 @@ function ExpandedExercise({
         return (
           <div key={n} className="ts-grid ts-set upcoming">
             <span className="ts-circle">{n}</span>
-            {askWeight && <span>{exercise.targetWeight}</span>}
+            {askWeight && <span>{show(exercise.targetWeight)}</span>}
             <span>{exercise.reps}</span>
             {askRpe && <span>{exercise.targetRpe}</span>}
             <span />
@@ -511,7 +631,15 @@ function ExpandedExercise({
           <button type="submit" form={formId} className="ts-primary" disabled={pending || reps.trim() === ""}>
             {pending ? "Saving…" : `Save set ${editing.setNumber}`}
           </button>
-          <button type="button" className="ts-cancel" onClick={() => setEditingId(null)} disabled={pending}>
+          <button
+            type="button"
+            className="ts-cancel"
+            onClick={() => {
+              setEditingId(null);
+              setCarried(null);
+            }}
+            disabled={pending}
+          >
             Cancel
           </button>
         </div>

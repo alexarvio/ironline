@@ -1,7 +1,9 @@
 "use client";
 
-import { ReactNode, useState } from "react";
-import { ExpandProvider } from "./BuilderContext";
+import { ReactNode, useEffect, useState } from "react";
+import { ExpandProvider, WeightUnitProvider, type BuilderWeightUnit } from "./BuilderContext";
+
+const UNIT_KEY = "ironline:builder-weight-unit";
 import WeekRail from "./WeekRail";
 import ProgramNotePeek from "./ProgramNotePeek";
 
@@ -75,6 +77,21 @@ export default function ProgramBuilderShell({
   const program = programs.find((p) => p.id === programId) ?? initial;
   const [week, setWeek] = useState(initial?.defaultWeek ?? 1);
   const [expand, setExpand] = useState({ signal: 0, open: false });
+  // Kg or lbs for reading weights; remembered in this browser.
+  const [unit, setUnit] = useState<BuilderWeightUnit>("kg");
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(UNIT_KEY) === "lb") setUnit("lb");
+    } catch {}
+  }, []);
+  const flipUnit = () => {
+    const next: BuilderWeightUnit = unit === "kg" ? "lb" : "kg";
+    setUnit(next);
+    try {
+      if (next === "lb") localStorage.setItem(UNIT_KEY, "lb");
+      else localStorage.removeItem(UNIT_KEY);
+    } catch {}
+  };
 
   const selectProgram = (p: BuilderProgram) => {
     setProgramId(p.id);
@@ -175,6 +192,16 @@ export default function ProgramBuilderShell({
         <div className="pb-toolbar-right">
           <button
             type="button"
+            className="pb-unit"
+            onClick={flipUnit}
+            aria-label={unit === "kg" ? "Weights shown in kg. Show them in lbs" : "Weights shown in lbs. Show them in kg"}
+            title="Show weights in kg or lbs. Goals are still typed in kg."
+          >
+            <span className={unit === "kg" ? "on" : undefined}>Kg</span>
+            <span className={unit === "lb" ? "on" : undefined}>Lbs</span>
+          </button>
+          <button
+            type="button"
             className="pb-toolbar-btn"
             onClick={() => setExpand((e) => ({ signal: e.signal + 1, open: !e.open }))}
           >
@@ -184,9 +211,11 @@ export default function ProgramBuilderShell({
         </div>
       </div>
 
-      <ExpandProvider value={expand}>
-        <div className="pb-days">{program.weekContents[activeWeek]}</div>
-      </ExpandProvider>
+      <WeightUnitProvider value={unit}>
+        <ExpandProvider value={expand}>
+          <div className="pb-days">{program.weekContents[activeWeek]}</div>
+        </ExpandProvider>
+      </WeightUnitProvider>
     </div>
   );
 }

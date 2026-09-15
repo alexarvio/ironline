@@ -46,6 +46,7 @@ import AdminDayCard from "./AdminDayCard";
 import CardioBlock from "./CardioBlock";
 import DemoVideoDialog from "../admin/DemoVideoDialog";
 import LoggedSetsGrid, { repsLowOf, type PreviousLane } from "../admin/LoggedSetsGrid";
+import { WeightGoalHint } from "../admin/BuilderContext";
 import ProgramBuilderShell, { BuilderProgram, WeekCard } from "../admin/ProgramBuilderShell";
 import ProgramNameForm from "../admin/ProgramNameForm";
 import ProgramDeployControls from "../admin/ProgramDeployControls";
@@ -447,6 +448,7 @@ export default function ProgramBuilder({
                                         step={0.5}
                                         defaultValue={a.target_weight_kg ?? ""}
                                       />
+                                      <WeightGoalHint kg={a.target_weight_kg} />
                                     </label>
                                     {otherGyms.map((g) => (
                                       <label key={g.id} title={`${g.name}: empty starts from ${homeGym!.name}'s weight`}>
@@ -456,6 +458,7 @@ export default function ProgramBuilder({
                                           gymId={g.id}
                                           placeholder={a.target_weight_kg == null ? "" : String(a.target_weight_kg)}
                                         />
+                                        <WeightGoalHint kg={a.gym_targets?.[g.id]?.kg ?? a.target_weight_kg} />
                                       </label>
                                     ))}
                                   </div>
@@ -472,6 +475,7 @@ export default function ProgramBuilder({
                                  
                                   defaultValue={a.target_weight_kg ?? ""}
                                 />
+                                <WeightGoalHint kg={a.target_weight_kg} />
                               </td>
                             );
                           case "rpe":

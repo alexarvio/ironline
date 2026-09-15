@@ -12135,6 +12135,29 @@ a.cd-entry:hover { border-color: var(--accent); }
 .ts-cancel { border: 0; background: none; font: inherit; font-size: 12px; font-weight: 700; color: #5b6472; padding: 6px; cursor: pointer; }
 .ts-all-logged { margin-top: 12px; text-align: center; font-size: 12px; font-weight: 700; color: #2f7a3f; }
 
+/* Kg / lbs switch in the weight column's label: the lit half is the unit
+   every figure on the exercise is shown in. */
+.ts-unit { display: inline-flex; gap: 1px; border: 0; padding: 2px; border-radius: 999px; background: #eef1f4; font: inherit; font-size: 10px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
+.ts-unit span { padding: 2px 7px; border-radius: 999px; color: #8b93a1; }
+.ts-unit span.on { background: #fff; color: #2f5d8f; box-shadow: 0 1px 2px rgba(20, 30, 50, 0.12); }
+
+/* The day's last set landing: a card pops in, the tick draws itself, the
+   whole thing fades, and the day folds away behind it. */
+.ts-complete { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 24px; pointer-events: none; animation: ts-complete-fade 1.8s ease forwards; }
+.ts-complete-card { background: #fff; border-radius: 18px; padding: 22px 30px 20px; text-align: center; box-shadow: 0 14px 44px rgba(20, 30, 50, 0.2); animation: ts-complete-pop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.25) both; }
+.ts-complete-check { display: block; width: 58px; height: 58px; margin: 0 auto 10px; }
+.ts-complete-check circle { fill: #e3f2e6; stroke: #2f7a3f; stroke-width: 2.5; }
+.ts-complete-check path { fill: none; stroke: #2f7a3f; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 40; stroke-dashoffset: 40; animation: ts-complete-draw 0.4s 0.25s ease forwards; }
+.ts-complete-title { font-size: 18px; font-weight: 800; color: #313851; }
+.ts-complete-sub { margin-top: 3px; font-size: 13px; color: #5b6472; }
+@keyframes ts-complete-pop { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes ts-complete-draw { to { stroke-dashoffset: 0; } }
+@keyframes ts-complete-fade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .ts-complete, .ts-complete-card, .ts-complete-check path { animation: none; }
+  .ts-complete-check path { stroke-dashoffset: 0; }
+}
+
 /* The coach-note panel is a sibling of its button inside the tools slot;
    the header wraps so the open panel drops onto its own full-width line
    under the name instead of squeezing in beside it. */
@@ -13942,6 +13965,12 @@ a.cd-entry:hover { border-color: var(--accent); }
 .pb-head-band .pb-editing { margin-top: 0; padding-bottom: 0; border-bottom: 0; }
 .pb-head-body { padding: 16px 22px 18px; }
 .pb-head-body .pb-rail-row { margin-top: 0; }
+/* Kg / lbs in the builder toolbar: the lit half is how weights are shown.
+   Under a weight goal box in lbs mode, the goal converted. */
+.pb-unit { display: inline-flex; gap: 1px; border: 1px solid #dfe3e8; padding: 2px; border-radius: 999px; background: #eef1f4; font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
+.pb-unit span { padding: 3px 9px; border-radius: 999px; color: #8b93a1; }
+.pb-unit span.on { background: #fff; color: #1e3a6e; box-shadow: 0 1px 2px rgba(20, 30, 50, 0.12); }
+.pb-weight-hint { display: block; margin-top: 2px; font-size: 10px; font-weight: 700; color: #8b93a1; text-align: center; white-space: nowrap; }
 /* Deploy and schedule in the header use the accent navy, like Nutrition's
    buttons: navy primary, white secondary with navy text. */
 /* font: inherit, as on Create login: without it the browser's own button

@@ -292,6 +292,14 @@ Look: `/admin` → a client → Meetings.
 
 Look: `/admin` → a client → Training → expand a session.
 
+## 44 · Kg / lbs switch; a finished workout folds away — ✅ LIVE 15 Sep
+
+- [x] **Client, logging sets**: the weight column's label is a Kg | Lbs switch. On Lbs, the target, the prefilled weight and the logged sets on that exercise show in lbs, and a weight typed in lbs is saved as kg (to four decimals, so 135 lbs reads back as 135). A figure already typed converts with the switch. Remembered per exercise on the phone, since it is the machine that decides. Everything stored stays kg: progression, goals and the coach's view are unchanged. Lbs are always whole numbers, rounded up (60 kg reads 133 lbs), on the client and in the builder.
+- [x] **Coach, builder**: a Kg | Lbs switch in the toolbar beside Expand all. On Lbs, "What the client did" (sets, over / under, week-over-week) is in lbs, and each weight goal box shows its lbs figure underneath. Goals are still typed in kg. Remembered in the coach's browser.
+- [x] **Workout complete**: logging the day's last set (or ticking its last cardio) pops a "Workout complete" card with a drawn tick, the session name and sets logged; after under two seconds the day folds itself and scrolls back to its header. Opening a day that was already finished does not replay it. No animation with reduced motion on.
+
+Look: `/client` → Training → an exercise with a weight target; `/admin` → a client → Training toolbar.
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.

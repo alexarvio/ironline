@@ -7,6 +7,9 @@
 // would paint the client's history amber and it would look like they had
 // been failing all along.
 
+import type { ReactNode } from "react";
+import { BuilderUnit, BuilderWeight } from "./BuilderContext";
+
 export type LoggedSetCell = {
   setNumber: number;
   weightKg: number | null;
@@ -31,7 +34,8 @@ function best(sets: LoggedSetCell[]): number | null {
   return weights.length ? Math.max(...weights) : null;
 }
 
-const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, ""));
+// Figures below are drawn by BuilderWeight / BuilderUnit, so they follow the
+// toolbar's kg / lbs switch. Hover titles stay in kg.
 
 function SetChip({
   set,
@@ -51,7 +55,7 @@ function SetChip({
   }${repsShort ? ` · below ${repsLow} reps` : ""}`;
   return (
     <span className={`pb-log-set${dim ? " dim" : met == null ? "" : met ? " met" : " under"}`} title={title}>
-      {set.weightKg ?? "–"}
+      {set.weightKg != null ? <BuilderWeight kg={set.weightKg} /> : "–"}
       <span className={`pb-log-reps${repsShort ? " short" : ""}`}>×{set.reps ?? "–"}</span>
       {set.rpe != null && <span className="pb-log-rpe">@{set.rpe}</span>}
     </span>
@@ -87,29 +91,60 @@ export default function LoggedSetsGrid({
   const target = firstVisit ? null : targetWeightKg;
 
   // Verdict against this week's target: green only when every set made it.
-  let verdict: { text: string; tone: "met" | "under" | "none" };
+  let verdict: { text: ReactNode; tone: "met" | "under" | "none" };
   if (!logged) verdict = { text: "Not logged", tone: "none" };
   else if (firstVisit) verdict = { text: "First visit", tone: "none" };
   else if (target == null || bestNow == null) verdict = { text: "No target", tone: "none" };
   else if (sets.every((s) => s.weightKg == null || s.weightKg >= target)) {
-    verdict = bestNow > target ? { text: `+${fmt(bestNow - target)} kg over`, tone: "met" } : { text: "On target", tone: "met" };
+    verdict =
+      bestNow > target
+        ? {
+            text: (
+              <>
+                +<BuilderWeight kg={bestNow - target} /> <BuilderUnit /> over
+              </>
+            ),
+            tone: "met",
+          }
+        : { text: "On target", tone: "met" };
   } else {
     // The shortfall is the weakest set's, so a day with one good set and
     // one short one still says how far the short one missed by.
     const lowest = Math.min(...sets.map((s) => s.weightKg).filter((w): w is number => w != null));
-    verdict = { text: `${fmt(target - lowest)} kg under`, tone: "under" };
+    verdict = {
+      text: (
+        <>
+          <BuilderWeight kg={target - lowest} /> <BuilderUnit /> under
+        </>
+      ),
+      tone: "under",
+    };
   }
 
   // Week over week: best weight this week against best weight last week.
-  let delta: { text: string; tone: "met" | "under" | "none" } | null = null;
+  let delta: { text: ReactNode; tone: "met" | "under" | "none" } | null = null;
   if (previous?.kind === "logged") {
     const bestPrev = best(previous.sets);
     if (bestNow != null && bestPrev != null) {
       delta =
         bestNow > bestPrev
-          ? { text: `▲ ${fmt(bestNow - bestPrev)} kg vs W${previous.weekNumber}`, tone: "met" }
+          ? {
+              text: (
+                <>
+                  ▲ <BuilderWeight kg={bestNow - bestPrev} /> <BuilderUnit /> vs W{previous.weekNumber}
+                </>
+              ),
+              tone: "met",
+            }
           : bestNow < bestPrev
-          ? { text: `▼ ${fmt(bestPrev - bestNow)} kg vs W${previous.weekNumber}`, tone: "under" }
+          ? {
+              text: (
+                <>
+                  ▼ <BuilderWeight kg={bestPrev - bestNow} /> <BuilderUnit /> vs W{previous.weekNumber}
+                </>
+              ),
+              tone: "under",
+            }
           : { text: `= W${previous.weekNumber}`, tone: "none" };
     }
   }
