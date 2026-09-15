@@ -66,6 +66,9 @@ const roundTo = (n: number, dp: number) => Math.round(n * 10 ** dp) / 10 ** dp;
 // the few ten-thousandths a saved lbs figure carries don't tip it to the
 // next pound. Kg shows at most two decimals.
 const kgToUnit = (kg: number, unit: WeightUnit) => (unit === "kg" ? roundTo(kg, 2) : Math.ceil(roundTo(kg / KG_PER_LB, 2)));
+// In lbs mode the kg figure rides along: whole and rounded up too. Kg the
+// coach set exactly (62.5) is shown as set in kg mode.
+const kgWhole = (kg: number) => Math.ceil(roundTo(kg, 2));
 // Four decimals in kg, so a figure typed in lbs reads back as the same
 // figure: at two decimals, 2 lbs came back as 3 once rounded up.
 const unitToKg = (value: number, unit: WeightUnit) => (unit === "kg" ? value : roundTo(value * KG_PER_LB, 4));
@@ -380,13 +383,26 @@ function ExpandedExercise({
   const unitLabel = unit === "kg" ? "kg" : "lbs";
   // A weight typed before the flip, converted, so flipping keeps it.
   const [carried, setCarried] = useState<string | null>(null);
+  // What is in the weight box as it is typed, for its live kg line in lbs mode.
+  const [typedLbs, setTypedLbs] = useState<string | null>(null);
   const show = (kg: number | null) => (kg == null ? "" : String(kgToUnit(kg, unit)));
+  // A set's weight cell: the figure, and in lbs mode its kg underneath.
+  const weightCell = (kg: number | null) =>
+    kg == null ? (
+      "–"
+    ) : (
+      <>
+        {show(kg)}
+        {unit === "lb" && <small className="ts-alt">{kgWhole(kg)} kg</small>}
+      </>
+    );
   const flipUnit = () => {
     const next: WeightUnit = unit === "kg" ? "lb" : "kg";
     const form = document.getElementById(formId) as HTMLFormElement | null;
     const el = form?.elements.namedItem("weight") as HTMLInputElement | null;
     const typed = el && el.value.trim() !== "" ? Number(el.value) : NaN;
-    setCarried(Number.isFinite(typed) ? String(next === "kg" ? roundTo(unitToKg(typed, "lb"), 1) : kgToUnit(typed, "lb")) : null);
+    setCarried(Number.isFinite(typed) ? String(next === "kg" ? kgWhole(unitToKg(typed, "lb")) : kgToUnit(typed, "lb")) : null);
+    setTypedLbs(null);
     setUnit(next);
   };
 
@@ -398,7 +414,9 @@ function ExpandedExercise({
   });
 
   const targets = [
-    exercise.targetWeight != null ? { value: show(exercise.targetWeight), unit: unitLabel } : null,
+    exercise.targetWeight != null
+      ? { value: show(exercise.targetWeight), unit: unit === "lb" ? `lbs · ${kgWhole(exercise.targetWeight)} kg` : unitLabel }
+      : null,
     exercise.reps ? { value: exercise.reps, unit: "reps" } : null,
     exercise.targetRpe != null ? { value: `${exercise.targetRpe}`, unit: "rpe" } : null,
     exercise.distance ? { value: exercise.distance, unit: "distance" } : null,
@@ -428,6 +446,7 @@ function ExpandedExercise({
       setEditingId(null);
       setReps("");
       setCarried(null);
+      setTypedLbs(null);
     }
   };
 
@@ -440,24 +459,37 @@ function ExpandedExercise({
   };
   const inputs = (defaults: { weight: string; reps: string; rpe: string }, key: string) => (
     <>
-      {askWeight && (
-      <input
-        // The unit in the key refills the box with the converted figure.
-        key={`w-${key}-${unit}`}
-        form={formId}
-        name="weight"
-        type="text"
-        inputMode="decimal"
-        autoComplete="off"
-        onFocus={selectAll}
-        onClick={selectAll}
-        onInput={tidyDecimal}
-        defaultValue={carried ?? defaults.weight}
-        aria-label={`Weight in ${unitLabel}`}
-        className="ts-input"
-        required
-      />
-      )}
+      {askWeight &&
+        (() => {
+          // In lbs mode the box carries its kg underneath, live as it is typed.
+          const lbText = typedLbs ?? carried ?? defaults.weight;
+          const lbValue = lbText.trim() === "" ? NaN : Number(lbText);
+          return (
+            // The unit in the key refills the box with the converted figure.
+            <span key={`w-${key}-${unit}`} className="ts-weight-cell">
+              <input
+                form={formId}
+                name="weight"
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                onFocus={selectAll}
+                onClick={selectAll}
+                onInput={(e) => {
+                  tidyDecimal(e);
+                  setTypedLbs(e.currentTarget.value);
+                }}
+                defaultValue={carried ?? defaults.weight}
+                aria-label={`Weight in ${unitLabel}`}
+                className="ts-input"
+                required
+              />
+              {unit === "lb" && (
+                <small className="ts-alt">{Number.isFinite(lbValue) ? `${kgWhole(unitToKg(lbValue, "lb"))} kg` : "kg"}</small>
+              )}
+            </span>
+          );
+        })()}
       <input
         key={`r-${key}`}
         form={formId}
@@ -560,7 +592,7 @@ function ExpandedExercise({
           return (
             <div key={n} className="ts-grid ts-set logged">
               <span className="ts-circle done">✓</span>
-              {askWeight && <span>{log.weight != null ? show(log.weight) : "–"}</span>}
+              {askWeight && <span>{weightCell(log.weight)}</span>}
               <span>{log.reps ?? "–"}</span>
               {askRpe && <span>{log.rpe ?? "–"}</span>}
               <button
@@ -569,6 +601,7 @@ function ExpandedExercise({
                 onClick={() => {
                   setEditingId(log.id);
                   setCarried(null);
+                  setTypedLbs(null);
                   setReps(log.reps != null ? String(log.reps) : "");
                 }}
               >
@@ -606,7 +639,7 @@ function ExpandedExercise({
         return (
           <div key={n} className="ts-grid ts-set upcoming">
             <span className="ts-circle">{n}</span>
-            {askWeight && <span>{show(exercise.targetWeight)}</span>}
+            {askWeight && <span>{weightCell(exercise.targetWeight)}</span>}
             <span>{exercise.reps}</span>
             {askRpe && <span>{exercise.targetRpe}</span>}
             <span />
@@ -637,6 +670,7 @@ function ExpandedExercise({
             onClick={() => {
               setEditingId(null);
               setCarried(null);
+              setTypedLbs(null);
             }}
             disabled={pending}
           >

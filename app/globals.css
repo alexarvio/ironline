@@ -12140,6 +12140,9 @@ a.cd-entry:hover { border-color: var(--accent); }
 .ts-unit { display: inline-flex; gap: 1px; border: 0; padding: 2px; border-radius: 999px; background: #eef1f4; font: inherit; font-size: 10px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
 .ts-unit span { padding: 2px 7px; border-radius: 999px; color: #8b93a1; }
 .ts-unit span.on { background: #fff; color: #2f5d8f; box-shadow: 0 1px 2px rgba(20, 30, 50, 0.12); }
+/* In lbs mode, the kg figure under a set's weight and under the weight box. */
+.ts-weight-cell { display: block; }
+.ts-alt { display: block; margin-top: 2px; font-size: 10px; font-weight: 700; color: #8b93a1; letter-spacing: 0; }
 
 /* The day's last set landing: a card pops in, the tick draws itself, the
    whole thing fades, and the day folds away behind it. */

@@ -300,6 +300,12 @@ Look: `/admin` → a client → Training → expand a session.
 
 Look: `/client` → Training → an exercise with a weight target; `/admin` → a client → Training toolbar.
 
+## 45 · Lbs mode shows the kg too, rounded up — ✅ LIVE 15 Sep
+
+- [x] On the client's exercise in lbs mode, every weight carries its kg: the target reads "133 lbs · 61 kg", each logged and upcoming set has its kg in small type underneath, and the weight box shows the kg of what is being typed, live (135 → 62 kg). Those kg figures are whole numbers, rounded up, as the lbs are. Flipping a typed lbs figure back to kg rounds it up too. Kg the coach set exactly (62.5) still shows as set in kg mode.
+
+Look: `/client` → Training → an exercise with a weight target → Lbs.
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.
