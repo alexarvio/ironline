@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AppleIcon, CalendarIcon, CheckIcon, ChevronDownIcon, DumbbellIcon, HeartIcon, TargetIcon } from "../components/icons";
 import GoalRow from "../components/GoalRow";
+import CoachMark from "./CoachMark";
 import { useNavigateTab, useOpenCheckIn, useOpenMessages, useOpenPhotos } from "./CheckInContext";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
@@ -311,7 +312,10 @@ function MessageCard({ m }: { m: LatestMessage }) {
   if (!m) return null;
   return (
     <button type="button" className="hm-card hm-message" onClick={() => openMessages?.()}>
-      <span className="hm-eyebrow">From {m.coachName}</span>
+      <span className="hm-eyebrow coach-eyebrow">
+        <CoachMark />
+        From {m.coachName}
+      </span>
       <p className="hm-message-text">{m.text}</p>
       <span className="hm-message-foot">
         <span>{m.whenLabel}</span>

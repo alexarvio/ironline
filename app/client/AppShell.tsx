@@ -1,16 +1,26 @@
 "use client";
 
-import { ReactNode, useState, useSyncExternalStore, useTransition } from "react";
+import {
+  ReactNode,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+} from "react";
 import { markCoachNotesReadAction } from "../lib/actions";
 import { logoutAction } from "../lib/auth-actions";
 import { BellIcon, ChevronLeftIcon, MenuIcon } from "../components/icons";
 import CheckInScreen, { CheckInProps } from "./CheckInScreen";
-import ProgressPicturesScreen, { type ProgressPicturesProps } from "./ProgressPicturesScreen";
+import ProgressPicturesScreen, {
+  type ProgressPicturesProps,
+} from "./ProgressPicturesScreen";
 import CoachProfileScreen from "./CoachProfileScreen";
-import CoachMessagesScreen, { type CoachMessagesProps } from "./CoachMessagesScreen";
+import CoachMessagesScreen, {
+  type CoachMessagesProps,
+} from "./CoachMessagesScreen";
 import type { CoachProfileView } from "../lib/coachProfileView";
 import {
   CheckInProvider,
+  CoachIdentityProvider,
   CoachProvider,
   FocusRefProvider,
   MessagesProvider,
@@ -32,7 +42,8 @@ export type AppTab = {
   darkBanner?: boolean;
 };
 
-type PushView = "notifications" | "checkin" | "photos" | "coach" | "messages" | null;
+type PushView =
+  "notifications" | "checkin" | "photos" | "coach" | "messages" | null;
 
 // The active bottom tab lives in sessionStorage, not just React state. A full
 // page load — a form that posts before hydration finishes on a slow phone, a
@@ -81,6 +92,7 @@ export default function AppShell({
   coachMessages,
   helpEmail = "",
   coachProfile = null,
+  coachAvatarPath = null,
 }: {
   clientName: string;
   tabs: AppTab[];
@@ -96,9 +108,12 @@ export default function AppShell({
   helpEmail?: string;
   /** The client's coach, opened from the Account tab's Coach row. */
   coachProfile?: CoachProfileView | null;
+  /** The coach's profile picture, in front of anything they wrote. */
+  coachAvatarPath?: string | null;
 }) {
   const storedTab = useSyncExternalStore(subscribeTab, readTab, () => null);
-  const activeId = storedTab && tabs.some((t) => t.id === storedTab) ? storedTab : tabs[0]?.id;
+  const activeId =
+    storedTab && tabs.some((t) => t.id === storedTab) ? storedTab : tabs[0]?.id;
   const setActiveId = (id: string) => writeTab(id);
   const [pushView, setPushView] = useState<PushView>(null);
   // Which check-in section to land on, set by whichever due item opened it.
@@ -159,20 +174,35 @@ export default function AppShell({
     ) : pushView === "coach" && coachProfile ? (
       <div className="app-layer app-layer-push cpf-layer">
         {/* "Book a call" lands on Home, where the next meeting card is. */}
-        <CoachProfileScreen profile={coachProfile} onBack={() => setPushView(null)} onBook={() => goToTab("home")} />
+        <CoachProfileScreen
+          profile={coachProfile}
+          onBack={() => setPushView(null)}
+          onBook={() => goToTab("home")}
+        />
       </div>
     ) : pushView === "photos" ? (
       <div className="app-layer app-layer-push pp-app-screen">
-        <ProgressPicturesScreen data={photos} onBack={() => setPushView(null)} />
+        <ProgressPicturesScreen
+          data={photos}
+          onBack={() => setPushView(null)}
+        />
       </div>
     ) : pushView === "messages" ? (
       <div className="app-layer app-layer-push cn-screen">
-        <CoachMessagesScreen {...coachMessages} onBack={() => setPushView(null)} />
+        <CoachMessagesScreen
+          {...coachMessages}
+          onBack={() => setPushView(null)}
+        />
       </div>
     ) : pushView ? (
       <div className="app-layer app-layer-push cn-screen">
         <header className="cn-header">
-          <button type="button" className="cn-icon-btn" onClick={() => setPushView(null)} aria-label="Back">
+          <button
+            type="button"
+            className="cn-icon-btn"
+            onClick={() => setPushView(null)}
+            aria-label="Back"
+          >
             <ChevronLeftIcon />
           </button>
           <div className="cn-header-titles">
@@ -183,120 +213,171 @@ export default function AppShell({
         <main className="cn-body">
           {/* A "Coach note" row opens the messages feed over Notifications. */}
           <MessagesProvider value={openMessages}>
-            <NavigateProvider value={goToTab}>{notificationsContent}</NavigateProvider>
+            <NavigateProvider value={goToTab}>
+              {notificationsContent}
+            </NavigateProvider>
           </MessagesProvider>
         </main>
       </div>
     ) : null;
 
   return (
-    <div className="phone-frame">
-      <div className="app-screen app-stack">
-        {/* The tab stays mounted under a pushed view, so closing the view
+    <CoachIdentityProvider
+      value={{ name: coachMessages.coachName, photoPath: coachAvatarPath }}
+    >
+      <div className="phone-frame">
+        <div className="app-screen app-stack">
+          {/* The tab stays mounted under a pushed view, so closing the view
             comes back to the same scroll and the same open day. inert keeps
             it out of reach of taps and the keyboard while covered. */}
-        <div className="app-layer app-layer-main" inert={pushView ? true : undefined} aria-hidden={pushView ? true : undefined}>
-        <header
-          className={`app-header dark${active?.bare ? " overlay" : ""}${clearBar ? " clear" : ""}${clearBar && active?.darkBanner ? " on-dark" : ""}`}
-        >
-          <button type="button" className="app-header-icon-btn" onClick={() => setMenuOpen(true)} aria-label="Menu" aria-expanded={menuOpen}>
-            <MenuIcon />
-          </button>
-          <span className="app-header-brand">Ironline</span>
-          <div className="app-header-actions">
-            <button type="button" className="app-header-icon-btn" onClick={() => setPushView("notifications")} aria-label="Notifications">
-              <BellIcon />
-              {hasUnreadNotifications && <span className="app-header-icon-badge" aria-hidden="true" />}
-            </button>
-          </div>
-        </header>
-
-        <main
-          className="app-content dark"
-          key={`${activeId}-${navResetKey}`}
-          onScroll={active?.bare ? (e) => setScrolled(e.currentTarget.scrollTop > 4) : undefined}
-        >
-          <CheckInProvider value={openCheckIn}>
-            <PhotosProvider value={() => setPushView("photos")}>
-              <MessagesProvider value={openMessages}>
-                <CoachProvider value={coachProfile ? () => setPushView("coach") : null}>
-                  <NotificationsProvider value={() => setPushView("notifications")}>
-                    <NavigateProvider value={goToTab}>
-                      <FocusRefProvider value={focusRef}>{active?.content}</FocusRefProvider>
-                    </NavigateProvider>
-                  </NotificationsProvider>
-                </CoachProvider>
-              </MessagesProvider>
-            </PhotosProvider>
-          </CheckInProvider>
-        </main>
-
-        {active?.footer && <div className="app-sticky-footer">{active.footer}</div>}
-
-        <nav className="app-bottom-nav dark">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className={`app-tab-btn${t.id === activeId ? " active" : ""}`}
-              onClick={() => {
-                // A tap on the tab already showing does nothing. It used to
-                // rebuild the tab, which read as the screen jumping to the top.
-                if (t.id === activeId) return;
-                setScrolled(false);
-                setActiveId(t.id);
-                setFocusRef(null);
-                setNavResetKey((k) => k + 1);
-              }}
+          <div
+            className="app-layer app-layer-main"
+            inert={pushView ? true : undefined}
+            aria-hidden={pushView ? true : undefined}
+          >
+            <header
+              className={`app-header dark${active?.bare ? " overlay" : ""}${clearBar ? " clear" : ""}${clearBar && active?.darkBanner ? " on-dark" : ""}`}
             >
-              <span className="app-tab-icon" aria-label={t.label}>
-                {t.icon}
-              </span>
-            </button>
-          ))}
-        </nav>
-        </div>
-        {pushedLayer}
-
-        {/* The burger's drawer: the screens that are not on the bottom nav.
-            Tapping the scrim or a row closes it. */}
-        {menuOpen && (
-          <>
-            <button type="button" className="app-menu-scrim" onClick={() => setMenuOpen(false)} aria-label="Close menu" />
-            <nav className="app-menu" aria-label="Menu">
-              <div className="app-menu-head">
-                <span className="app-header-brand app-menu-brand">Ironline</span>
-                {/* The coach's business, hardcoded like the rail and the Settings
-                    footnote until the coach profile carries it. */}
-                <span className="app-menu-name">Full Potential Coaching</span>
-              </div>
-              <div className="app-menu-list">
-                <button type="button" className="app-menu-item" onClick={() => go(() => openMessages())}>
-                  Messages from {coachMessages.coachName}
+              <button
+                type="button"
+                className="app-header-icon-btn"
+                onClick={() => setMenuOpen(true)}
+                aria-label="Menu"
+                aria-expanded={menuOpen}
+              >
+                <MenuIcon />
+              </button>
+              <span className="app-header-brand">Ironline</span>
+              <div className="app-header-actions">
+                <button
+                  type="button"
+                  className="app-header-icon-btn"
+                  onClick={() => setPushView("notifications")}
+                  aria-label="Notifications"
+                >
+                  <BellIcon />
+                  {hasUnreadNotifications && (
+                    <span
+                      className="app-header-icon-badge"
+                      aria-hidden="true"
+                    />
+                  )}
                 </button>
-                {/* Help writes to the coach: the person who can actually do something. */}
-                {helpEmail && (
-                  <a
-                    className="app-menu-item app-menu-item-link"
-                    href={`mailto:${helpEmail}?subject=${encodeURIComponent("Ironline app")}`}
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    Help
-                  </a>
-                )}
               </div>
-              <div className="app-menu-foot">
-                <form action={logoutAction}>
-                  <button type="submit" className="app-menu-logout">
-                    Log out
-                  </button>
-                </form>
-                <span className="app-menu-footnote">Ironline · Full Potential Coaching</span>
-              </div>
+            </header>
+
+            <main
+              className="app-content dark"
+              key={`${activeId}-${navResetKey}`}
+              onScroll={
+                active?.bare
+                  ? (e) => setScrolled(e.currentTarget.scrollTop > 4)
+                  : undefined
+              }
+            >
+              <CheckInProvider value={openCheckIn}>
+                <PhotosProvider value={() => setPushView("photos")}>
+                  <MessagesProvider value={openMessages}>
+                    <CoachProvider
+                      value={coachProfile ? () => setPushView("coach") : null}
+                    >
+                      <NotificationsProvider
+                        value={() => setPushView("notifications")}
+                      >
+                        <NavigateProvider value={goToTab}>
+                          <FocusRefProvider value={focusRef}>
+                            {active?.content}
+                          </FocusRefProvider>
+                        </NavigateProvider>
+                      </NotificationsProvider>
+                    </CoachProvider>
+                  </MessagesProvider>
+                </PhotosProvider>
+              </CheckInProvider>
+            </main>
+
+            {active?.footer && (
+              <div className="app-sticky-footer">{active.footer}</div>
+            )}
+
+            <nav className="app-bottom-nav dark">
+              {tabs.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  className={`app-tab-btn${t.id === activeId ? " active" : ""}`}
+                  onClick={() => {
+                    // A tap on the tab already showing does nothing. It used to
+                    // rebuild the tab, which read as the screen jumping to the top.
+                    if (t.id === activeId) return;
+                    setScrolled(false);
+                    setActiveId(t.id);
+                    setFocusRef(null);
+                    setNavResetKey((k) => k + 1);
+                  }}
+                >
+                  <span className="app-tab-icon" aria-label={t.label}>
+                    {t.icon}
+                  </span>
+                </button>
+              ))}
             </nav>
-          </>
-        )}
+          </div>
+          {pushedLayer}
+
+          {/* The burger's drawer: the screens that are not on the bottom nav.
+            Tapping the scrim or a row closes it. */}
+          {menuOpen && (
+            <>
+              <button
+                type="button"
+                className="app-menu-scrim"
+                onClick={() => setMenuOpen(false)}
+                aria-label="Close menu"
+              />
+              <nav className="app-menu" aria-label="Menu">
+                <div className="app-menu-head">
+                  <span className="app-header-brand app-menu-brand">
+                    Ironline
+                  </span>
+                  {/* The coach's business, hardcoded like the rail and the Settings
+                    footnote until the coach profile carries it. */}
+                  <span className="app-menu-name">Full Potential Coaching</span>
+                </div>
+                <div className="app-menu-list">
+                  <button
+                    type="button"
+                    className="app-menu-item"
+                    onClick={() => go(() => openMessages())}
+                  >
+                    Messages from {coachMessages.coachName}
+                  </button>
+                  {/* Help writes to the coach: the person who can actually do something. */}
+                  {helpEmail && (
+                    <a
+                      className="app-menu-item app-menu-item-link"
+                      href={`mailto:${helpEmail}?subject=${encodeURIComponent("Ironline app")}`}
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Help
+                    </a>
+                  )}
+                </div>
+                <div className="app-menu-foot">
+                  <form action={logoutAction}>
+                    <button type="submit" className="app-menu-logout">
+                      Log out
+                    </button>
+                  </form>
+                  <span className="app-menu-footnote">
+                    Ironline · Full Potential Coaching
+                  </span>
+                </div>
+              </nav>
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </CoachIdentityProvider>
   );
 }

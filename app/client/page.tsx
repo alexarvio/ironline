@@ -1256,6 +1256,7 @@ export default async function ClientPage({
       coachMessages={{ coachName: getCoachDisplayName(CLIENT_ID), messages: coachMessagesFor(CLIENT_ID) }}
       helpEmail={getCoachEmail(CLIENT_ID)}
       coachProfile={getCoachProfileForClient(CLIENT_ID)}
+      coachAvatarPath={getCoachAvatarPath(CLIENT_ID)}
     />
   );
 }

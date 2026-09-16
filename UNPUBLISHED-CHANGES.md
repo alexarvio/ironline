@@ -463,6 +463,8 @@ Commits `a3c0e90`, `c6a5e46` for groups 46–59.
 - [ ] **Framed before it uploads**: picking a photo opens a dialog with the picture under a round window; drag to move it, a slider to zoom (1–3×), Use photo cuts a 512 px square out as a JPEG and uploads that. Cancel or Esc drops the pick. New `AvatarCropDialog`.
 - [ ] **It shows wherever the coach's initial used to**: the note on the client's Nutrition tab, the "From {coach}" row in Notifications, and the coach's own row at the foot of the admin rail. Without a picture, the initial stays.
 
+- [ ] **And in front of everything else they wrote**: the message card on Home, each bubble in their feed (28 px, beside the bubble), the note on an exercise, and the instructions on a progress sheet, all carry the small picture before the "From …" line. New `CoachMark`, fed by a coach-identity context from the shell.
+
 Look: `/admin/profile` → drop a photo on Profile picture; then `/client` → Nutrition (with a coach note) and the bell.
 
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { uploadProgressPhotoAction } from "../lib/actions";
 import { ArrowRightIcon, CameraIcon, CheckIcon, ChevronLeftIcon } from "../components/icons";
 import { useOpenPhotos } from "./CheckInContext";
+import CoachMark from "./CoachMark";
 import PhotoPeriodHistoryRow, { NOTE_LABELS, type HistoryNote } from "./PhotoPeriodHistoryRow";
 
 // Deliberately does not import from ../lib/queries (a "use client" file
@@ -323,7 +324,10 @@ function OpenSheet({
 
       {sheet.instructions && (
         <div className="pp-app-coach">
-          <span className="pp-app-coach-label">From your coach</span>
+          <span className="pp-app-coach-label coach-eyebrow">
+            <CoachMark />
+            From your coach
+          </span>
           <p className="pp-app-coach-text">{sheet.instructions}</p>
         </div>
       )}

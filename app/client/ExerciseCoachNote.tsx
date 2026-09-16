@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { markExerciseNoteReadAction } from "../lib/actions";
+import CoachMark from "./CoachMark";
 
 // The coach's note on one exercise — a posture fix off a submitted video, a
 // load instruction after an easy week — shown open in the card, between the
@@ -29,7 +30,10 @@ export default function ExerciseCoachNote({
   return (
     <div className="ts-coachnote">
       <div className="ts-coachnote-top">
-        <span className="ts-coachnote-label">From your coach</span>
+        <span className="ts-coachnote-label coach-eyebrow">
+          <CoachMark />
+          From your coach
+        </span>
         {dateLabel && <span className="ts-coachnote-date">{dateLabel}</span>}
       </div>
       <p className="ts-coachnote-text">{text}</p>

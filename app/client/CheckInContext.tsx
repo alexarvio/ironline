@@ -71,6 +71,18 @@ export function useFocusRef() {
   return useContext(FocusRefContext);
 }
 
+// Who the coach is, for the small round picture (CoachMark) in front of
+// anything they wrote. Null when the client has no coach.
+export type CoachIdentity = { name: string; photoPath: string | null };
+
+const CoachIdentityContext = createContext<CoachIdentity | null>(null);
+
+export const CoachIdentityProvider = CoachIdentityContext.Provider;
+
+export function useCoachIdentity() {
+  return useContext(CoachIdentityContext);
+}
+
 // Same bridge for the coach's messages: the read-only feed opened from the
 // card on Home and from a "Coach note" row in Notifications.
 const MessagesContext = createContext<(() => void) | null>(null);

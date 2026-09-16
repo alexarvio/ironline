@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronLeftIcon } from "../components/icons";
+import CoachMark from "./CoachMark";
 
 // The coach's messages to the client, newest first, grouped by day. One-way:
 // the coach writes from the Messages tab, the client reads. Every message
@@ -51,8 +52,11 @@ export default function CoachMessagesScreen({ coachName, messages, onBack }: Coa
                     <span className="cm-day-label">{i === 0 ? d.label : ""}</span>
                     <span className="cm-msg-time">{m.timeLabel}</span>
                   </div>
-                  <div className="cm-msg">
-                    <p className="cm-msg-text">{m.text}</p>
+                  <div className="cm-msg-row">
+                    <CoachMark size="lg" />
+                    <div className="cm-msg">
+                      <p className="cm-msg-text">{m.text}</p>
+                    </div>
                   </div>
                 </article>
               ))}
