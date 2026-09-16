@@ -185,6 +185,13 @@ import {
   updateFoodEntry,
   removeFoodEntry,
   addCustomFood,
+  addFoodMeal,
+  removeFoodMeal,
+  copyFoodMeal,
+  hasFoodMeal,
+  getFoodDiary,
+  localDateStr,
+  type FoodDiaryView,
   type FoodMeal,
   type FoodOption,
   getClientIdForProgram,
@@ -2173,7 +2180,6 @@ export async function searchFoodsAction(clientId: number, query: string): Promis
   return searchFoods(owner, String(query ?? "").slice(0, 80));
 }
 
-const MEALS = new Set(["breakfast", "lunch", "dinner", "snacks"]);
 const gramsOf = (v: FormDataEntryValue | null) => {
   const n = Number(String(v ?? "").replace(",", ".").trim());
   return Number.isFinite(n) && n > 0 && n <= 5000 ? n : null;
@@ -2185,7 +2191,7 @@ export async function addFoodEntryAction(formData: FormData) {
   const meal = String(formData.get("meal") ?? "");
   const foodId = String(formData.get("foodId") ?? "");
   const grams = gramsOf(formData.get("grams"));
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !MEALS.has(meal) || !foodId || grams == null) return;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !hasFoodMeal(clientId, meal) || !foodId || grams == null) return;
   const serving = String(formData.get("serving") ?? "").trim().slice(0, 80) || null;
   addFoodEntry(clientId, date, meal as FoodMeal, foodId, grams, serving);
   revalidatePath("/client");
@@ -2230,4 +2236,49 @@ export async function addCustomFoodAction(formData: FormData): Promise<string | 
   const row = addCustomFood(clientId, { name, kcal, protein, carbs, fat, servingLabel: servingLabel && servingGrams ? servingLabel : null, servingGrams: servingLabel && servingGrams ? servingGrams : null });
   revalidatePath("/client");
   return `custom:${row.id}`;
+}
+
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+// The diary steps back through the last month; nothing after today.
+function diaryDateOk(date: string): boolean {
+  if (!DATE.test(date)) return false;
+  const today = localDateStr();
+  const floor = new Date(`${today}T00:00:00`);
+  floor.setDate(floor.getDate() - 30);
+  return date <= today && date >= localDateStr(floor);
+}
+
+export async function getFoodDiaryAction(clientId: number, date: string): Promise<FoodDiaryView | null> {
+  const owner = await requireClientAccess(Number(clientId));
+  if (!diaryDateOk(String(date))) return null;
+  return getFoodDiary(owner, String(date));
+}
+
+export async function addFoodMealAction(formData: FormData): Promise<string | null> {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const name = String(formData.get("name") ?? "").trim().slice(0, 30);
+  if (!name) return null;
+  const row = addFoodMeal(clientId, name);
+  revalidatePath("/client");
+  return `m:${row.id}`;
+}
+
+export async function removeFoodMealAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const id = Number(String(formData.get("meal") ?? "").replace(/^m:/, ""));
+  if (!Number.isInteger(id)) return;
+  removeFoodMeal(clientId, id);
+  revalidatePath("/client");
+}
+
+export async function copyFoodMealAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const fromDate = String(formData.get("fromDate") ?? "");
+  const fromMeal = String(formData.get("fromMeal") ?? "");
+  const toDate = String(formData.get("toDate") ?? "");
+  const toMeal = String(formData.get("toMeal") ?? "");
+  if (!DATE.test(fromDate) || !diaryDateOk(toDate) || !hasFoodMeal(clientId, toMeal)) return;
+  copyFoodMeal(clientId, fromDate, fromMeal, toDate, toMeal);
+  revalidatePath("/client");
+  revalidatePath("/admin");
 }

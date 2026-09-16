@@ -40,7 +40,7 @@ function ringFills(set: NutritionTargetSet) {
 // A figure that runs from its last value to the new one when the day tab
 // changes, over the same time the arcs take, instead of snapping. It snaps
 // for anyone with reduced motion on.
-function useTween(target: number, ms = 600) {
+export function useTween(target: number, ms = 600) {
   const [value, setValue] = useState(target);
   const current = useRef(target);
   useEffect(() => {

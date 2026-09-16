@@ -99,7 +99,8 @@ export type FoodEntry = {
   id: number;
   client_id: number;
   date: string; // YYYY-MM-DD
-  meal: "breakfast" | "lunch" | "dinner" | "snacks";
+  /** "breakfast" | "lunch" | "dinner" | "snacks", or "m:<id>" for a meal the client added. */
+  meal: string;
   /** "usda:171077" for the catalog, "custom:12" for the client's own food. */
   food_id: string;
   name: string;
@@ -111,6 +112,13 @@ export type FoodEntry = {
   carbs: number;
   fat: number;
   logged_at: string;
+};
+// A meal a client added beside the four standard ones ("Pre-workout").
+export type FoodMealSlot = {
+  id: number;
+  client_id: number;
+  name: string;
+  created_at: string;
 };
 // A food a client made themselves ("Mum's lasagne"), per 100 g, with one
 // optional serving. Only they can find it.
@@ -760,6 +768,7 @@ export type Data = {
   calorie_logs: CalorieLog[];
   food_entries: FoodEntry[];
   custom_foods: CustomFood[];
+  food_meals: FoodMealSlot[];
   check_in_notes: CheckInNote[];
   client_exercise_notes: ClientExerciseNote[];
   client_program_notes: ClientProgramNote[];
@@ -794,6 +803,7 @@ function emptyData(): Data {
     calorie_logs: [],
     food_entries: [],
     custom_foods: [],
+    food_meals: [],
     check_in_notes: [],
     client_exercise_notes: [],
     client_program_notes: [],

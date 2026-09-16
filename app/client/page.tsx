@@ -1222,18 +1222,8 @@ export default async function ClientPage({
     );
   })();
 
-  // Today's food diary: its targets are the ring's for the day type the
-  // client logged today (else by whether a set was logged), so what the
-  // diary counts down from is what the ring shows.
-  const foodDiary = (() => {
-    const today = localDateStr();
-    const s = getNutritionGoalsSummary(CLIENT_ID);
-    const log = getCalorieLog(CLIENT_ID, today);
-    const trained = log?.day_type ? log.day_type === "training" : trainingDates(CLIENT_ID).has(today);
-    const kcal = trained ? s.trainingKcal : s.restKcal;
-    const target = kcal > 0 ? { kcal, protein: trained ? s.trainingProtein : s.restProtein, carbs: trained ? s.trainingCarbs : s.restCarbs, fat: trained ? s.trainingFats : s.restFats } : null;
-    return getFoodDiary(CLIENT_ID, today, "Today", target);
-  })();
+  // Today's food diary, opened from the ring on Nutrition.
+  const foodDiary = getFoodDiary(CLIENT_ID, localDateStr());
 
   const tabs: AppTab[] = [
     // Draws its own light banner (name and main goal); the top bar floats over it.
