@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { BookmarkIcon, ChevronDownIcon, ChevronLeftIcon, PlusIcon, SearchIcon } from "../components/icons";
+import { BookmarkIcon, ChevronDownIcon, ChevronLeftIcon, PlusIcon, SearchIcon, TrashIcon } from "../components/icons";
 import {
   addCustomFoodAction,
   addFoodEntryAction,
@@ -1047,6 +1047,7 @@ function AmountPanel({
   const unit = units.find((u) => u.id === unitId) ?? units[0];
   const startAmount = entry ? entry.grams / unit.grams : unit.portion ? 1 : unit.id === "ml" ? 250 : 100;
   const [amountText, setAmountText] = useState(g(startAmount));
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const [pending, start] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -1124,28 +1125,98 @@ function AmountPanel({
             aria-label="Amount"
           />
         </label>
-        <label className="fdi-unit">
+        <div className="fdi-unit">
           <span className="fdi-field-label">Unit</span>
-          <select id={`fdi-unit-${meal}-${entry?.id ?? "new"}`} value={unitId} onChange={(e) => changeUnit(e.target.value)} aria-label="Unit">
-            {units.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.portion ? `${u.label} (${g(u.grams)} g)` : u.label}
-              </option>
-            ))}
-          </select>
-        </label>
+          <UnitPicker
+            id={`fdi-unit-${meal}-${entry?.id ?? "new"}`}
+            value={unitId}
+            options={units.map((u) => ({ id: u.id, label: u.portion ? `${u.label} (${g(u.grams)} g)` : u.label }))}
+            onChange={changeUnit}
+          />
+        </div>
       </div>
 
       <div className="fdi-panel-actions">
-        {entry && (
-          <button type="button" className="fdi-remove" onClick={remove} disabled={pending}>
-            Remove
-          </button>
-        )}
         <button type="button" className="fdi-primary" onClick={save} disabled={!ok}>
           {pending ? "Saving…" : entry ? "Save" : `Add to ${mealLabel}`}
         </button>
+        {entry && (
+          <button type="button" className="fdi-bin" onClick={() => setConfirmRemove(true)} disabled={pending} aria-label={`Remove ${food.name} from ${mealLabel}`}>
+            <TrashIcon />
+          </button>
+        )}
       </div>
+      {confirmRemove && (
+        <div className="fdi-dialog-scrim" role="presentation" onClick={() => setConfirmRemove(false)}>
+          <div className="fdi-dialog" role="dialog" aria-modal="true" aria-labelledby="fdi-remove-title" onClick={(e) => e.stopPropagation()}>
+            <div>
+              <div className="fdi-eyebrow">Remove</div>
+              <h2 id="fdi-remove-title" className="fdi-dialog-title">
+                Take {food.name} out of {mealLabel}?
+              </h2>
+            </div>
+            <div className="fdi-dialog-actions">
+              <button type="button" className="fdi-secondary" onClick={() => setConfirmRemove(false)} autoFocus>
+                Keep it
+              </button>
+              <button type="button" className="fdi-primary danger" onClick={remove} disabled={pending}>
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---- A dropdown of our own -----------------------------------------------------
+// A button showing the choice; a list under it when opened; closes on a
+// pick, a tap outside, or Escape.
+
+function UnitPicker({ id, value, options, onChange }: { id: string; value: string; options: { id: string; label: string }[]; onChange: (id: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (wrap.current && !wrap.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  const current = options.find((o) => o.id === value) ?? options[0];
+  return (
+    <div className={`fdi-pick${open ? " open" : ""}`} ref={wrap}>
+      <button type="button" id={id} className="fdi-pick-btn" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}>
+        <span className="fdi-pick-label">{current?.label}</span>
+        <ChevronDownIcon />
+      </button>
+      {open && (
+        <ul className="fdi-pick-menu" role="listbox" aria-labelledby={id}>
+          {options.map((o) => (
+            <li key={o.id}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={o.id === value}
+                className={`fdi-pick-item${o.id === value ? " on" : ""}`}
+                onClick={() => {
+                  onChange(o.id);
+                  setOpen(false);
+                }}
+              >
+                {o.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

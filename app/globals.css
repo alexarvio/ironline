@@ -14456,11 +14456,25 @@ label.ci-pill { cursor: text; }
 .fdi-amount { flex: 0 0 110px; }
 .fdi-unit { flex: 1; }
 .fdi-field-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
-.fdi-amount input, .fdi-unit select { width: 100%; box-sizing: border-box; height: 48px; padding: 0 12px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; font-size: 16px; font-weight: 600; color: #141a24; outline: none; }
+.fdi-amount input { width: 100%; box-sizing: border-box; height: 48px; padding: 0 12px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; font-size: 16px; font-weight: 600; color: #141a24; outline: none; }
 .fdi-amount input { text-align: right; font-variant-numeric: tabular-nums; }
-.fdi-unit select { appearance: none; -webkit-appearance: none; padding-right: 34px; background-image: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%235b6474%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M6 9l6 6 6-6%27/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; text-overflow: ellipsis; }
-.fdi-amount input:focus, .fdi-unit select:focus { border-color: #2f5d8f; }
-.fdi-remove { min-height: 48px; padding: 0 16px; border: 1px solid #a32d2d; border-radius: 12px; background: #fff; font: inherit; font-size: 14px; font-weight: 700; color: #a32d2d; cursor: pointer; }
+.fdi-amount input:focus { border-color: #2f5d8f; }
+/* The unit dropdown. */
+.fdi-pick { position: relative; }
+.fdi-pick-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; box-sizing: border-box; height: 48px; padding: 0 12px 0 14px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; font-size: 16px; font-weight: 600; color: #141a24; text-align: left; cursor: pointer; }
+.fdi-pick.open .fdi-pick-btn { border-color: #2f5d8f; }
+.fdi-pick-btn svg { flex: none; width: 16px; height: 16px; color: #5b6474; transition: transform 0.15s; }
+.fdi-pick.open .fdi-pick-btn svg { transform: rotate(180deg); }
+.fdi-pick-label { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fdi-pick-menu { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 20; margin: 0; padding: 6px; list-style: none; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; box-shadow: 0 12px 28px rgba(20, 23, 28, 0.16); max-height: 260px; overflow-y: auto; }
+.fdi-pick-item { display: block; width: 100%; padding: 10px 12px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 15px; font-weight: 500; color: #313851; text-align: left; cursor: pointer; }
+.fdi-pick-item:hover { background: #F4F7FC; }
+.fdi-pick-item.on { background: #e6ecf3; color: #1e3a6e; font-weight: 700; }
+/* Save takes the row; the bin beside it. */
+.fdi-bin { flex: none; display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; color: #a32d2d; cursor: pointer; }
+.fdi-bin svg { width: 18px; height: 18px; }
+.fdi-bin:disabled { opacity: 0.5; cursor: default; }
+.fdi-primary.danger { background: #a32d2d; }
 .fdi-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .fdi-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .fdi-field.wide { grid-column: 1 / -1; }
