@@ -460,6 +460,7 @@ Commits `a3c0e90`, `c6a5e46` for groups 46–59.
 ## 60 · The coach's profile picture
 
 - [ ] **A third photo slot, "Profile picture"**, on the coach's profile page (gear at the foot of the rail → Your profile): a round drop zone beside the hero and candid slots, uploaded and removed the same way. New `avatar_path` column on `coach_profiles` (migration `0003_coach_avatar`).
+- [ ] **Framed before it uploads**: picking a photo opens a dialog with the picture under a round window; drag to move it, a slider to zoom (1–3×), Use photo cuts a 512 px square out as a JPEG and uploads that. Cancel or Esc drops the pick. New `AvatarCropDialog`.
 - [ ] **It shows wherever the coach's initial used to**: the note on the client's Nutrition tab, the "From {coach}" row in Notifications, and the coach's own row at the foot of the admin rail. Without a picture, the initial stays.
 
 Look: `/admin/profile` → drop a photo on Profile picture; then `/client` → Nutrition (with a coach note) and the bell.

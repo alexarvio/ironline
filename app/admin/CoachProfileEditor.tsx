@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import DragList from "../components/DragList";
 import CoachProfileScreen from "../client/CoachProfileScreen";
+import AvatarCropDialog from "./AvatarCropDialog";
 import { publishCoachProfileAction, removeCoachPhotoAction, saveCoachProfileAction, uploadCoachPhotoAction } from "../lib/actions";
 import { COACH_PROFILE_LIMITS as LIMIT, type CoachProfileView, type CoachRole, type CoachStudy } from "../lib/coachProfileView";
 
@@ -186,7 +187,7 @@ export default function CoachProfileEditor({
         <div className="cpe-form">
           <Card title="Photos">
             <div className="cpe-photos">
-              <PhotoSlot coachId={profile.coachId} kind="avatar" label="Profile picture" hint="Square; shown beside your notes and messages" path={profile.avatarPath} />
+              <PhotoSlot coachId={profile.coachId} kind="avatar" label="Profile picture" hint="Shown beside your notes and messages" path={profile.avatarPath} />
               <PhotoSlot coachId={profile.coachId} kind="hero" label="Hero photo" hint="Portrait, at least 1200 px tall" path={profile.heroPath} />
               <PhotoSlot coachId={profile.coachId} kind="candid" label="Candid photo" hint="For Outside the gym" path={profile.candidPath} />
             </div>
@@ -393,8 +394,14 @@ function PhotoSlot({ coachId, kind, label, hint, path }: { coachId: number; kind
   const inputRef = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
   const [busy, start] = useTransition();
+  // The profile picture is framed in a dialog first; the others upload as they are.
+  const [framing, setFraming] = useState<File | null>(null);
   const upload = (file: File | undefined) => {
     if (!file || !file.type.startsWith("image/")) return;
+    if (kind === "avatar" && !framing) {
+      setFraming(file);
+      return;
+    }
     const fd = new FormData();
     fd.set("coachId", String(coachId));
     fd.set("kind", kind);
@@ -450,6 +457,20 @@ function PhotoSlot({ coachId, kind, label, hint, path }: { coachId: number; kind
         </div>
       )}
       <span className="cpe-hint">{hint} · up to 6 MB</span>
+      {framing && (
+        <AvatarCropDialog
+          file={framing}
+          onCancel={() => setFraming(null)}
+          onUse={(cropped) => {
+            setFraming(null);
+            const fd = new FormData();
+            fd.set("coachId", String(coachId));
+            fd.set("kind", kind);
+            fd.set("file", cropped);
+            start(() => uploadCoachPhotoAction(fd));
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -14037,6 +14037,12 @@ label.ci-pill { cursor: text; }
 .cpe-photo.candid { width: 130px; }
 .cpe-photo.avatar { width: 110px; }
 .cpe-photo.avatar .cpe-drop { aspect-ratio: 1; border-radius: 999px; }
+.cpe-crop-frame { position: relative; margin: 14px auto 0; overflow: hidden; border-radius: 12px; background: #141a24; touch-action: none; cursor: grab; user-select: none; }
+.cpe-crop-frame:active { cursor: grabbing; }
+.cpe-crop-frame img { position: absolute; top: 0; left: 0; max-width: none; pointer-events: none; }
+.cpe-crop-window { position: absolute; inset: 0; border-radius: 999px; box-shadow: 0 0 0 999px rgba(20, 23, 28, 0.55); pointer-events: none; }
+.cpe-crop-zoom { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.cpe-crop-zoom input { flex: 1; accent-color: #1e3a6e; }
 .cpe-drop { position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 3 / 4; padding: 10px; overflow: hidden; border: 1.5px dashed #c3c9d2; border-radius: 12px; background: #fafbfc center / cover no-repeat; font-size: 12px; font-weight: 700; text-align: center; color: #5b6474; cursor: pointer; }
 .cpe-drop.over { border-color: #2f5d8f; background-color: #e6ecf3; }
 .cpe-drop.has { border-style: solid; border-color: #dfe3e8; }
