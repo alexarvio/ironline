@@ -571,31 +571,58 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
               })}
             </section>
 
-            <button type="button" className="fdi-add-meal" onClick={() => setNamingMeal(true)}>
-              <PlusIcon />
-              Add a meal
-            </button>
+            {namingMeal ? (
+              <form
+                className="fdi-new-meal"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const name = String(new FormData(e.currentTarget).get("name") ?? "").trim();
+                  if (!name) return;
+                  const fd = new FormData();
+                  fd.set("clientId", String(clientId));
+                  fd.set("name", name);
+                  setNamingMeal(false);
+                  startLoad(async () => {
+                    await addFoodMealAction(fd);
+                    const next = await getFoodDiaryAction(clientId, date);
+                    if (next) setDiary(next);
+                  });
+                }}
+              >
+                <input
+                  id="fdi-new-meal-name"
+                  name="name"
+                  type="text"
+                  placeholder="Name the meal"
+                  maxLength={30}
+                  autoComplete="off"
+                  autoFocus
+                  aria-label="Meal name"
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") setNamingMeal(false);
+                  }}
+                  onBlur={(e) => {
+                    if (!e.currentTarget.value.trim() && !e.relatedTarget) setNamingMeal(false);
+                  }}
+                />
+                <button type="submit" className="fdi-new-meal-add">
+                  Add
+                </button>
+                <button type="button" className="fdi-new-meal-x" onClick={() => setNamingMeal(false)} aria-label="Cancel">
+                  ×
+                </button>
+              </form>
+            ) : (
+              <button type="button" className="fdi-add-meal" onClick={() => setNamingMeal(true)}>
+                <PlusIcon />
+                Add a meal
+              </button>
+            )}
             <p className="fdi-meals-hint">Hold a meal&rsquo;s name to move it.</p>
           </div>
         </div>
       </main>
 
-      {namingMeal && (
-        <NewMealDialog
-          onCancel={() => setNamingMeal(false)}
-          onAdd={(name) => {
-            const fd = new FormData();
-            fd.set("clientId", String(clientId));
-            fd.set("name", name);
-            setNamingMeal(false);
-            startLoad(async () => {
-              await addFoodMealAction(fd);
-              const next = await getFoodDiaryAction(clientId, date);
-              if (next) setDiary(next);
-            });
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -709,65 +736,6 @@ function FactTile({ name, value, format, unit, color }: { name: string; value: n
       </b>
       <small>{name}</small>
     </span>
-  );
-}
-
-// ---- Naming a new meal -------------------------------------------------------
-
-function NewMealDialog({ onCancel, onAdd }: { onCancel: () => void; onAdd: (name: string) => void }) {
-  const [name, setName] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    const t = setTimeout(() => inputRef.current?.focus(), 30);
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onCancel();
-    document.addEventListener("keydown", onKey);
-    return () => {
-      clearTimeout(t);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [onCancel]);
-  const clean = name.trim();
-  return (
-    <div className="fdi-dialog-scrim" role="presentation" onClick={onCancel}>
-      <form
-        className="fdi-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="fdi-new-meal-title"
-        onClick={(e) => e.stopPropagation()}
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (clean) onAdd(clean);
-        }}
-      >
-        <div>
-          <div className="fdi-eyebrow">New meal</div>
-          <h2 id="fdi-new-meal-title" className="fdi-dialog-title">
-            Name this meal
-          </h2>
-        </div>
-        <input
-          ref={inputRef}
-          id="fdi-new-meal-name"
-          className="fdi-dialog-input"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Pre-workout"
-          maxLength={30}
-          autoComplete="off"
-          aria-label="Meal name"
-        />
-        <div className="fdi-dialog-actions">
-          <button type="button" className="fdi-secondary" onClick={onCancel}>
-            Cancel
-          </button>
-          <button type="submit" className="fdi-primary" disabled={!clean}>
-            Add meal
-          </button>
-        </div>
-      </form>
-    </div>
   );
 }
 

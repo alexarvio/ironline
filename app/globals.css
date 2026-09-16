@@ -14387,14 +14387,14 @@ label.ci-pill { cursor: text; }
 .fdi-add-plus svg { width: 12px; height: 12px; }
 .fdi-add-meal { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 48px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; font: inherit; font-size: 14px; font-weight: 700; color: #1e3a6e; cursor: pointer; }
 .fdi-add-meal svg { width: 16px; height: 16px; }
+/* Naming a new meal, in place of the button. */
+.fdi-new-meal { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 4px 0 0; }
+.fdi-new-meal input { flex: 1; min-width: 0; height: 44px; padding: 0 14px; border: 1px solid #2f5d8f; border-radius: 12px; background: #fff; font: inherit; font-size: 16px; color: #313851; outline: none; }
+.fdi-new-meal-add { flex: none; height: 44px; padding: 0 16px; border: 0; border-radius: 12px; background: #1e3a6e; font: inherit; font-size: 14px; font-weight: 700; color: #fff; cursor: pointer; }
+.fdi-new-meal-x { flex: none; width: 36px; height: 44px; border: 0; background: none; font-size: 22px; line-height: 1; color: #8b93a1; cursor: pointer; }
 /* Naming a new meal: a dialog. */
-.fdi-dialog-scrim { position: absolute; inset: 0; z-index: 12; display: flex; align-items: flex-end; justify-content: center; padding: 12px; background: rgba(20, 23, 28, 0.4); }
-.fdi-dialog { display: flex; flex-direction: column; gap: 16px; width: 100%; box-sizing: border-box; padding: 22px; border-radius: 12px; background: #fff; box-shadow: 0 18px 44px rgba(20, 23, 28, 0.22); }
-.fdi-dialog-title { margin: 4px 0 0; font-size: 22px; font-weight: 700; color: #141a24; }
 .fdi-dialog-input { width: 100%; box-sizing: border-box; height: 48px; padding: 0 14px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; font-size: 16px; color: #313851; outline: none; }
 .fdi-dialog-input:focus { border-color: #2f5d8f; }
-.fdi-dialog-actions { display: flex; gap: 10px; }
-.fdi-dialog-actions > * { flex: 1; }
 .fdi-secondary { min-height: 48px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; font: inherit; font-size: 14px; font-weight: 700; color: #1e3a6e; cursor: pointer; }
 .fdi-primary { min-height: 48px; border: 0; border-radius: 12px; background: #1e3a6e; font: inherit; font-size: 14px; font-weight: 700; color: #fff; cursor: pointer; }
 .fdi-primary:disabled { background: #eceff3; color: #8b93a1; cursor: default; }
