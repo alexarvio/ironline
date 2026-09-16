@@ -604,12 +604,14 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                   onBlur={(e) => {
                     if (!e.currentTarget.value.trim() && !e.relatedTarget) setNamingMeal(false);
                   }}
+                  onFocus={(e) => {
+                    // Above the keyboard on a phone.
+                    const el = e.currentTarget;
+                    setTimeout(() => el.scrollIntoView({ block: "center", behavior: "smooth" }), 250);
+                  }}
                 />
                 <button type="submit" className="fdi-new-meal-add">
                   Add
-                </button>
-                <button type="button" className="fdi-new-meal-x" onClick={() => setNamingMeal(false)} aria-label="Cancel">
-                  ×
                 </button>
               </form>
             ) : (
