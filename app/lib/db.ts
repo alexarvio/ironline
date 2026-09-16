@@ -115,6 +115,23 @@ export type FoodEntry = {
   fat: number;
   logged_at: string;
 };
+// A packaged product fetched from Open Food Facts, kept so it is instant
+// next time and there when they are down. Shared by every client.
+export type OffFood = {
+  id: number;
+  /** The barcode. */
+  code: string;
+  name: string;
+  brand: string | null;
+  quantity: string | null;
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  serving_label: string | null;
+  serving_grams: number | null;
+  fetched_at: string;
+};
 // A meal a client saved to add again ("My breakfast"): the foods and
 // amounts as they were, with their kcal and macros. Only they can use it.
 export type SavedMeal = {
@@ -791,6 +808,7 @@ export type Data = {
   food_meals: FoodMealSlot[];
   food_days: FoodDay[];
   saved_meals: SavedMeal[];
+  off_foods: OffFood[];
   check_in_notes: CheckInNote[];
   client_exercise_notes: ClientExerciseNote[];
   client_program_notes: ClientProgramNote[];
@@ -828,6 +846,7 @@ function emptyData(): Data {
     food_meals: [],
     food_days: [],
     saved_meals: [],
+    off_foods: [],
     check_in_notes: [],
     client_exercise_notes: [],
     client_program_notes: [],

@@ -1,9 +1,10 @@
 import fs from "fs";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, CardioEntry } from "./db";
-import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, SavedMeal, ClientGym, ClientPhase, CoachProfile, PhaseTrack } from "./db";
+import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedMeal, ClientGym, ClientPhase, CoachProfile, PhaseTrack } from "./db";
 import type { CoachProfileFields, CoachProfileView } from "./coachProfileView";
 import { getCatalogFood, searchCatalog, type CatalogFood } from "./foods/catalog";
+import type { OffProduct } from "./foods/openfoodfacts";
 import { coachIdOfClient } from "./tenancy";
 import { LOCK_MS, type LockScope } from "./loginLockout";
 
@@ -7360,8 +7361,8 @@ export type FoodOption = {
   name: string;
   /** "Your food" for the client's own; the catalog's full name for a common food; the USDA category otherwise. */
   hint: string;
-  /** Own and common foods show first; "more" folds away under a count. */
-  group: "own" | "common" | "more";
+  /** Own, packaged and common foods show first; "more" folds away under a count. */
+  group: "own" | "packaged" | "common" | "more";
   kcal: number;
   protein: number;
   carbs: number;
@@ -7382,7 +7383,43 @@ const customOption = (f: CustomFood): FoodOption => ({
   servings: f.serving_label && f.serving_grams ? [[f.serving_label, f.serving_grams]] : [],
 });
 
+const offOption = (f: OffFood): FoodOption => ({
+  id: `off:${f.code}`,
+  name: f.name,
+  hint: [f.brand, f.quantity].filter(Boolean).join(" · ") || "Packaged",
+  group: "packaged",
+  kcal: f.kcal,
+  protein: f.protein,
+  carbs: f.carbs,
+  fat: f.fat,
+  servings: f.serving_label && f.serving_grams ? [[f.serving_label, f.serving_grams]] : [],
+});
+
+/** Products from Open Food Facts into the store: new ones added, known ones refreshed. */
+export function rememberOffProducts(products: OffProduct[]): FoodOption[] {
+  const data = getData();
+  const now = new Date().toISOString();
+  const out: FoodOption[] = [];
+  for (const p of products) {
+    let row = data.off_foods.find((f) => f.code === p.code);
+    if (row) Object.assign(row, p, { fetched_at: now });
+    else {
+      row = { id: allocId("off_foods"), ...p, fetched_at: now };
+      data.off_foods.push(row);
+    }
+    out.push(offOption(row));
+  }
+  if (products.length) persist();
+  return out;
+}
+
+export function getOffFoodByCode(code: string): FoodOption | null {
+  const f = getData().off_foods.find((x) => x.code === code);
+  return f ? offOption(f) : null;
+}
+
 export function getFoodOption(clientId: number, foodId: string): FoodOption | null {
+  if (foodId.startsWith("off:")) return getOffFoodByCode(foodId.slice(4));
   if (foodId.startsWith("custom:")) {
     const f = getData().custom_foods.find((c) => c.id === Number(foodId.slice(7)) && c.client_id === clientId);
     return f ? customOption(f) : null;
@@ -7398,8 +7435,17 @@ export function searchFoods(clientId: number, query: string, limit = 30): FoodOp
   const own = getData()
     .custom_foods.filter((c) => c.client_id === clientId && c.name.toLowerCase().includes(q))
     .map(customOption);
+  // Packaged products already fetched once, by name or brand.
+  const words = q.split(/\s+/).filter(Boolean);
+  const packaged = getData()
+    .off_foods.filter((f) => {
+      const hay = `${f.name} ${f.brand ?? ""}`.toLowerCase();
+      return words.every((w) => hay.includes(w));
+    })
+    .slice(0, 8)
+    .map(offOption);
   const hits = searchCatalog(query, limit);
-  return [...own, ...hits.common.map((f) => catalogOption(f, "common")), ...hits.more.map((f) => catalogOption(f, "more"))].slice(0, limit + hits.common.length);
+  return [...own, ...packaged, ...hits.common.map((f) => catalogOption(f, "common")), ...hits.more.map((f) => catalogOption(f, "more"))].slice(0, limit + hits.common.length + packaged.length);
 }
 
 /** What the client logged most often lately, for the top of an empty search. */

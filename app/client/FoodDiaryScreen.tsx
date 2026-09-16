@@ -11,6 +11,8 @@ import {
   deleteSavedMealAction,
   saveMealAction,
   getFoodDiaryAction,
+  lookupBarcodeAction,
+  searchPackagedAction,
   removeFoodEntryAction,
   pushFoodDayAction,
   removeFoodMealAction,
@@ -20,6 +22,7 @@ import {
   updateFoodEntryAction,
 } from "../lib/actions";
 import { useTween } from "./NutritionTargetsCard";
+import BarcodeScanner from "./BarcodeScanner";
 
 // The client's food diary, opened from the ring on Nutrition. On the client
 // page model: the top bar (a back arrow in place of the burger) floating
@@ -51,7 +54,7 @@ export type FoodOptionView = {
   id: string;
   name: string;
   hint: string;
-  group?: "own" | "common" | "more";
+  group?: "own" | "packaged" | "common" | "more";
   kcal: number;
   protein: number;
   carbs: number;
@@ -144,7 +147,7 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
   const [drag, setDrag] = useState<{ from: number; to: number; dy: number; height: number } | null>(null);
   const mealRefs = useRef<Map<FoodMeal, HTMLDivElement>>(new Map());
   const hold = useRef<{ timer: ReturnType<typeof setTimeout>; x: number; y: number; index: number; el: HTMLElement; pointerId: number } | null>(null);
-  const dragging = useRef<{ from: number; startY: number; mids: number[] } | null>(null);
+  const dragging = useRef<{ from: number; to: number; startY: number; mids: number[] } | null>(null);
   const holdStart = (e: React.PointerEvent<HTMLElement>, index: number) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
     const el = e.currentTarget;
@@ -153,7 +156,7 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
       hold.current = null;
       el.setPointerCapture(pointerId);
       const rects = diary.meals.map((m) => mealRefs.current.get(m.id)?.getBoundingClientRect());
-      dragging.current = { from: index, startY: e.clientY, mids: rects.map((r) => (r ? r.top + r.height / 2 : 0)) };
+      dragging.current = { from: index, to: index, startY: e.clientY, mids: rects.map((r) => (r ? r.top + r.height / 2 : 0)) };
       if (navigator.vibrate) navigator.vibrate(10);
       setDrag({ from: index, to: index, dy: 0, height: rects[index]?.height ?? 60 });
     }, 320);
@@ -161,7 +164,7 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
   };
   const holdMove = (e: React.PointerEvent<HTMLElement>) => {
     const h = hold.current;
-    if (h && Math.hypot(e.clientX - h.x, e.clientY - h.y) > 8) {
+    if (h && Math.hypot(e.clientX - h.x, e.clientY - h.y) > 14) {
       clearTimeout(h.timer);
       hold.current = null;
     }
@@ -182,6 +185,7 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
         }
       }
     }
+    d.to = to;
     setDrag((prev) => (prev ? { ...prev, dy, to } : prev));
   };
   const holdEnd = (e: React.PointerEvent<HTMLElement>) => {
@@ -198,21 +202,19 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
     } catch {
       /* already released */
     }
-    setDrag((current) => {
-      if (current && current.to !== current.from) {
-        const ids = diary.meals.map((m) => m.id);
-        const [moved] = ids.splice(current.from, 1);
-        ids.splice(current.to, 0, moved);
-        setDiary({ ...diary, meals: ids.map((x) => diary.meals.find((m) => m.id === x)!) });
-        const fd = new FormData();
-        fd.set("clientId", String(clientId));
-        fd.set("order", ids.join(","));
-        startLoad(async () => {
-          await reorderFoodMealsAction(fd);
-        });
-      }
-      return null;
-    });
+    setDrag(null);
+    if (d.to !== d.from) {
+      const ids = diary.meals.map((m) => m.id);
+      const [moved] = ids.splice(d.from, 1);
+      ids.splice(d.to, 0, moved);
+      setDiary({ ...diary, meals: ids.map((x) => diary.meals.find((m) => m.id === x)!) });
+      const fd = new FormData();
+      fd.set("clientId", String(clientId));
+      fd.set("order", ids.join(","));
+      startLoad(async () => {
+        await reorderFoodMealsAction(fd);
+      });
+    }
   };
   // Where each meal sits while one is being dragged.
   const shiftFor = (index: number): string | undefined => {
@@ -770,12 +772,32 @@ function SearchPanel({
   // Which query the long tail was opened for.
   const [moreFor, setMoreFor] = useState<string | null>(null);
   const [copying, startCopy] = useTransition();
+  // Packaged products from Open Food Facts, asked for on request: the answer
+  // and the query it answers.
+  const [packaged, setPackaged] = useState<{ q: string; rows: FoodOptionView[]; error?: string } | null>(null);
+  const [fetching, startFetch] = useTransition();
+  const [scanning, setScanning] = useState(false);
+  const [scanNote, setScanNote] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     const t = setTimeout(() => inputRef.current?.focus(), 50);
     return () => clearTimeout(t);
   }, []);
   const q = query.trim();
+  const searchPackaged = () =>
+    startFetch(async () => {
+      const res = await searchPackagedAction(clientId, q);
+      setPackaged({ q, ...res });
+    });
+  const onCode = (code: string) => {
+    setScanning(false);
+    setScanNote(null);
+    startFetch(async () => {
+      const res = await lookupBarcodeAction(clientId, code);
+      if (res.food) onPick(res.food);
+      else setScanNote(res.error ?? `Barcode ${code} is not in Open Food Facts yet. Search by name, or add it as your own food.`);
+    });
+  };
   const active = q.length >= 2;
   // Search a beat after the last keystroke; the latest query wins.
   useEffect(() => {
@@ -842,6 +864,7 @@ function SearchPanel({
           Cancel
         </button>
       </div>
+      {scanning && <BarcodeScanner onCode={onCode} onClose={() => setScanning(false)} />}
       {(previous.length > 0 || saved.length > 0) && (
         <div className="fdi-modes" role="tablist">
           <button type="button" role="tab" aria-selected={mode === "search"} className={`fdi-mode${mode === "search" ? " on" : ""}`} onClick={() => setMode("search")}>
@@ -854,10 +877,19 @@ function SearchPanel({
       )}
       {mode === "search" ? (
         <>
-          <label className="fdi-search">
-            <SearchIcon />
-            <input ref={inputRef} id={`fdi-search-${meal}`} type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="What did you eat?" autoComplete="off" aria-label="Search foods" />
-          </label>
+          <div className="fdi-search-row">
+            <label className="fdi-search">
+              <SearchIcon />
+              <input ref={inputRef} id={`fdi-search-${meal}`} type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="What did you eat?" autoComplete="off" aria-label="Search foods" />
+            </label>
+            <button type="button" className="fdi-scan-btn" onClick={() => setScanning(true)} aria-label="Scan a barcode" disabled={fetching}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                <path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2" />
+                <path d="M8 8v8M11 8v8M14 8v8M16.5 8v8" />
+              </svg>
+            </button>
+          </div>
+          {scanNote && <p className="fdi-empty">{scanNote}</p>}
           <div className="fdi-results">
             {showingRecent && <span className="fdi-results-label">Recent</span>}
             {list.map((f) => (
@@ -877,6 +909,29 @@ function SearchPanel({
               </button>
             )}
             {results != null && results.length === 0 && !searching && <p className="fdi-empty">Nothing called “{q}”.</p>}
+            {active && packaged?.q === q && (
+              <>
+                <span className="fdi-results-label">Packaged products</span>
+                {packaged.rows.map((f) => (
+                  <button key={f.id} type="button" className="fdi-result" onClick={() => onPick(f)}>
+                    <span className="fdi-result-main">
+                      <span className="fdi-result-name">{f.name}</span>
+                      <span className="fdi-result-hint">{f.hint}</span>
+                    </span>
+                    <span className="fdi-result-kcal">
+                      {n(f.kcal)} <small>kcal / 100 g</small>
+                    </span>
+                  </button>
+                ))}
+                {packaged.error && <p className="fdi-empty">{packaged.error}</p>}
+                {!packaged.error && packaged.rows.length === 0 && <p className="fdi-empty">No packaged product called “{q}” on Open Food Facts.</p>}
+              </>
+            )}
+            {active && !searching && packaged?.q !== q && (
+              <button type="button" className="fdi-more" onClick={searchPackaged} disabled={fetching}>
+                {fetching ? "Asking Open Food Facts…" : "Search packaged products"}
+              </button>
+            )}
             {results == null && recent.length === 0 && !active && <p className="fdi-empty">Try “chicken breast”, “oats”, “banana”.</p>}
           </div>
           <button type="button" className="fdi-link" onClick={onCustom}>

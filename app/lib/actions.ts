@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { lookupOpenFoodFacts, searchOpenFoodFacts } from "./foods/openfoodfacts";
 import { revalidatePath } from "next/cache";
 import {
   canAccessClient,
@@ -196,6 +197,8 @@ import {
   saveMeal,
   deleteSavedMeal,
   addSavedMeal,
+  rememberOffProducts,
+  getOffFoodByCode,
   localDateStr,
   type FoodDiaryView,
   type FoodMeal,
@@ -2345,4 +2348,33 @@ export async function addSavedMealAction(formData: FormData) {
   if (!Number.isInteger(id) || !diaryDateOk(date)) return;
   addSavedMeal(clientId, id, date, meal);
   revalidatePath("/client");
+}
+
+// ---- Open Food Facts ---------------------------------------------------------
+
+/** Packaged products by name. { error } when the service does not answer. */
+export async function searchPackagedAction(clientId: number, query: string): Promise<{ rows: FoodOption[]; error?: string }> {
+  await requireClientAccess(Number(clientId));
+  try {
+    const products = await searchOpenFoodFacts(String(query ?? "").slice(0, 80));
+    return { rows: rememberOffProducts(products) };
+  } catch {
+    return { rows: [], error: "Open Food Facts did not answer. Try again in a moment." };
+  }
+}
+
+/** One product by barcode, from the store when known, else fetched. null: not in Open Food Facts. */
+export async function lookupBarcodeAction(clientId: number, barcode: string): Promise<{ food: FoodOption | null; error?: string }> {
+  await requireClientAccess(Number(clientId));
+  const code = String(barcode ?? "").replace(/\D/g, "").slice(0, 20);
+  if (!code) return { food: null };
+  const known = getOffFoodByCode(code);
+  if (known) return { food: known };
+  try {
+    const product = await lookupOpenFoodFacts(code);
+    if (!product) return { food: null };
+    return { food: rememberOffProducts([product])[0] ?? null };
+  } catch {
+    return { food: null, error: "Open Food Facts did not answer. Try again in a moment." };
+  }
 }

@@ -14400,6 +14400,21 @@ label.ci-pill { cursor: text; }
 .fdi-meal.lifted { z-index: 3; border-radius: 12px; box-shadow: 0 12px 28px rgba(20, 23, 28, 0.16); transform-origin: center; transition: box-shadow 0.2s; animation: fdi-lift 0.2s cubic-bezier(0.22, 1, 0.36, 1); }
 .fdi-meal.lifted .fdi-meal-handle { cursor: grabbing; }
 @keyframes fdi-lift { from { box-shadow: none; } }
+.fdi-search-row { display: flex; align-items: stretch; gap: 8px; }
+.fdi-search-row .fdi-search { flex: 1; min-width: 0; }
+.fdi-scan-btn { flex: none; display: flex; align-items: center; justify-content: center; width: 48px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; color: #1e3a6e; cursor: pointer; }
+.fdi-scan-btn:disabled { opacity: 0.5; cursor: default; }
+/* The scanner: the camera in a sheet over the screen. */
+.fdi-scan-scrim { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; background: rgba(20, 23, 28, 0.55); }
+.fdi-scan { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 420px; box-sizing: border-box; padding: 14px 16px calc(16px + env(safe-area-inset-bottom)); border-radius: 18px 18px 0 0; background: #fff; }
+.fdi-scan-view { position: relative; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 12px; background: #141a24; }
+.fdi-scan-view video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.fdi-scan-frame { position: absolute; inset: 22% 14%; border: 2px solid rgba(255, 255, 255, 0.85); border-radius: 10px; box-shadow: 0 0 0 999px rgba(20, 23, 28, 0.35); pointer-events: none; }
+.fdi-scan-error { margin: 0; font-size: 13px; color: #a32d2d; }
+.fdi-scan-typed { display: flex; gap: 8px; }
+.fdi-scan-typed input { flex: 1; min-width: 0; height: 48px; padding: 0 12px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; font-size: 16px; color: #313851; outline: none; }
+.fdi-scan-typed input:focus { border-color: #2f5d8f; }
+.fdi-scan-typed .fdi-secondary { flex: none; padding: 0 14px; }
 .fdi-search { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; color: #8b93a1; }
 .fdi-search:focus-within { border-color: #2f5d8f; }
 .fdi-search svg { flex: none; width: 18px; height: 18px; }
