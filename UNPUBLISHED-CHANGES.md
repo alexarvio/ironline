@@ -306,7 +306,7 @@ Look: `/client` → Training → an exercise with a weight target; `/admin` → 
 
 Look: `/client` → Training → an exercise with a weight target → Lbs.
 
-## 46 · Client Nutrition tab redesign — LOCAL ONLY, not pushed
+## 46 · Client Nutrition tab redesign — ✅ LIVE 16 Sep
 
 - [ ] **Banner** in place of the app header on this tab, scrolling with the page: brand and bell, Training day / Rest day as centred underline tabs, the phase name, one thin line for the phase that fills day by day, and under it "Started …" on the left with "Week 2 of 4" on the right (switching to "Day 24 of 28" with under a week to go).
 - [ ] **Calories card** overlapping the banner: three thin rings one inside the other (protein outside, carbs, fat inside), each filled from the top by that macro's share of the kcal, with the kcal target in the centre; beside them protein / carbs / fat stacked with grams and % of kcal. Switching day tabs slides the arcs round and counts the kcal, grams and percentages over to the new figures. The card also swipes: left for Rest day, right for Training day (a clearly sideways swipe only, so scrolling past it never flips it), with two dots under the ring showing which day is up. At its foot, a light-blue Supplements row with how many there are folds down under a chevron. The bottom nav's current tab icon is black instead of blue.
@@ -318,7 +318,7 @@ Look: `/client` → Training → an exercise with a weight target → Lbs.
 
 Look: `/client` → Nutrition.
 
-## 47 · Client Training tab retouch — LOCAL ONLY, not pushed
+## 47 · Client Training tab retouch — ✅ LIVE 16 Sep
 
 - [ ] **Banner** in #5987a8 with faded diagonal stripes, in place of the app header, its text navy like Nutrition's (no white text): wordmark and bell, "PROGRAMME" and its name, one line filled by the days gone since it was deployed, "Started … / Week N of M", and the week chips at its foot (white when selected; a dot on this week, ✓ on finished weeks, a lock on weeks ahead; they scroll past three weeks). The "Your coach's deployed week…" paragraph is gone.
 - [ ] **Days trained** card overlapping the banner: the figure "of N", "N sessions left" / "Week complete", and a ring with the percentage that fills as the tab opens. Its footer is the programme note: one line and a send button; the saved note shows as a bubble, and tapping it puts the text back in the line to change.
@@ -327,7 +327,7 @@ Look: `/client` → Nutrition.
 
 Look: `/client` → Training.
 
-## 48 · Coach profile — LOCAL ONLY, not pushed
+## 48 · Coach profile — ✅ LIVE 16 Sep (parked: nothing opens it)
 
 - [ ] **Your profile** (`/admin/profile`, from the gear menu at the foot of the rail): photos (a tall hero and a candid, drop or pick, Replace / Remove), About you (display name, title, headline, location, languages, years coaching, reply note), Story (intro, bio, quote, outside the gym, with live character counts), Specialties as chips (Enter adds, up to 8), Studies and Experience as rows you add, remove and drag into order. A live phone preview beside the form is the client's own screen fed from what you type. Save at the foot, with when it was last saved, and a Published switch ("Clients see this from their Account tab"); publishing needs a display name. The owner can switch to any coach's profile.
 - [ ] **Client, Account tab**: a Coach row at the top (photo or initial, name, title) opens the profile over the tab: the photo drifts and grows slightly as it scrolls, with the name and years over it; sticky Overview / Background / Outside the gym tabs that follow the scroll; headline, "Your coach · place · languages", pills for years, clients and a degree; the intro with a drop cap, the bio, the quote, "Works most with" chips; where they studied and a timeline of their experience; the candid photo with a line about life outside the gym. A dock at the foot: "Book a call with {first name}" (takes the client to Home's meeting card), the reply note, Share and Save. Sections with nothing in them, and their tabs, stay hidden. Unpublished, the row opens a minimal card: initial, name and email.
@@ -336,7 +336,7 @@ Look: `/client` → Training.
 
 Look: `/admin/profile`, then `/client` → Account → Coach.
 
-## 49 · Check-in retouch — LOCAL ONLY, not pushed
+## 49 · Check-in retouch — ✅ LIVE 16 Sep
 
 - [ ] Two tabs, **Daily** and **Weekly**, as a pill switch; the coach's measurements now sit in Weekly, and the Measure tab is gone. A header with the date, "Check-in" and a pill counting what is filled in ("3 / 5").
 - [ ] Each tab is one white card of rows: the metric's name, its last reading ("87.7 kg on Sep 14"), and a value pill on the right to type into, with its unit. Rating metrics (1–5 and the like) show the pick in the pill and a row of number buttons under it; tap again to clear. A row already logged for this period turns steel blue: tinted row, blue pill with the value in white, a tick after the name.
@@ -346,7 +346,7 @@ Look: `/admin/profile`, then `/client` → Account → Coach.
 Look: `/client` → Home → the check-in row.
 
 
-## 50 · Wordmark in Kirana — LOCAL ONLY, not pushed
+## 50 · Wordmark in Kirana — ✅ LIVE 16 Sep
 
 - [ ] "IRONLINE" at the top of the client app (the white header and the Nutrition / Training banners) is set in Kirana, in capitals, self-hosted from `app/fonts/Kirana-Regular.ttf`. It is smaller than before (17–18px), just the name with no logo mark, and centred under the island. A burger menu icon sits on the left and the bell on the right, both bare icons with no circle around them. The rest of the app keeps its fonts.
 - [ ] **One top bar on every tab**, and it stays put. On Home and Settings it is off-white with navy name and icons. On Training and Nutrition it floats over the banner, see-through at the top of the page (white on Training's navy banner, navy on Nutrition's light one); the moment the page scrolls it turns off-white with navy, and the page scrolls under it. The burger does nothing yet.
@@ -355,7 +355,7 @@ Look: `/client` → Home → the check-in row.
 
 Look: `/client` → any tab.
 
-## 51 · Client Training tab on the design system — LOCAL ONLY, not pushed
+## 51 · Client Training tab on the design system — ✅ LIVE 16 Sep
 
 The first screen brought onto `docs/UI-GUIDELINES.md` (decided 16 Sep). Layout and behaviour unchanged; only colours, corners and type sizes.
 
@@ -369,7 +369,7 @@ The first screen brought onto `docs/UI-GUIDELINES.md` (decided 16 Sep). Layout a
 
 Look: `/client` → Training, open a session.
 
-## 52 · Client Nutrition tab on the design system — LOCAL ONLY, not pushed
+## 52 · Client Nutrition tab on the design system — ✅ LIVE 16 Sep
 
 Same treatment as Training (group 51). Layout and behaviour unchanged.
 
@@ -381,7 +381,7 @@ Same treatment as Training (group 51). Layout and behaviour unchanged.
 
 Look: `/client` → Nutrition.
 
-## 53 · Client Home on the design system — LOCAL ONLY, not pushed
+## 53 · Client Home on the design system — ✅ LIVE 16 Sep
 
 Home moves onto the same page model as Training and Nutrition (decision 8 in `docs/UI-GUIDELINES.md`).
 
@@ -396,7 +396,7 @@ Home moves onto the same page model as Training and Nutrition (decision 8 in `do
 
 Look: `/client` → Home.
 
-## 54 · Client check-in on the design system — LOCAL ONLY, not pushed
+## 54 · Client check-in on the design system — ✅ LIVE 16 Sep
 
 Same treatment as the tabs (groups 51–53). Layout and behaviour unchanged; still Daily / Weekly with measurements inside Weekly.
 
@@ -407,14 +407,14 @@ Same treatment as the tabs (groups 51–53). Layout and behaviour unchanged; sti
 
 Look: `/client` → Home → the check-in row.
 
-## 55 · Client notifications on the design system — LOCAL ONLY, not pushed
+## 55 · Client notifications on the design system — ✅ LIVE 16 Sep
 
 - [ ] Archivo instead of Manrope and Newsreader; page `#F4F7FC`; Ink for unread text and the title, Muted for read text and labels, Faint for times; the unread icon circle is the tint with Navy; the unread dot and "Open" links are Accent. The old dark-theme back button (near-black ring, black on hover) is gone: the back arrow is bare, the title is centred and the "Activity" line above it is dropped.
 - [ ] "Mark all as read" is a white secondary button with navy text, radius 12, instead of a filled accent pill.
 
 Look: `/client` → the bell.
 
-## 56 · Messages from the coach: a feed on the client side — LOCAL ONLY, not pushed
+## 56 · Messages from the coach: a feed on the client side — ✅ LIVE 16 Sep
 
 The coach's Messages tab already sent one-way notes that landed in the client's notifications as "Coach note". Now the client can read them together.
 
@@ -425,7 +425,7 @@ The coach's Messages tab already sent one-way notes that landed in the client's 
 
 Look: `/admin` → a client → Messages → send one; then `/client` → Home.
 
-## 57 · Client Settings on the design system — LOCAL ONLY, not pushed
+## 57 · Client Settings on the design system — ✅ LIVE 16 Sep
 
 The last client tab, and the one that was still flat rows on Manrope.
 
@@ -441,13 +441,13 @@ The last client tab, and the one that was still flat rows on Manrope.
 
 Look: `/client` → Settings (the person icon).
 
-## 58 · Progress pictures screen retouched — LOCAL ONLY, not pushed
+## 58 · Progress pictures screen retouched — ✅ LIVE 16 Sep
 
 - [ ] Archivo; page `#F4F7FC`; the header like the other pushed screens (bare back arrow, "Progress pictures" centred, the "Your progress" line above it dropped). Cards radius 18, buttons 48px radius 12, the picker sheet radius 18. Labels use the one label recipe; titles are 600 instead of 800. The purple stays — it is this screen's identity, as decided.
 
 Look: `/client` → Settings → Progress pictures.
 
-## 59 · The burger menu, and the Reserved box gone — LOCAL ONLY, not pushed
+## 59 · The burger menu, and the Reserved box gone — ✅ LIVE 16 Sep
 
 - [ ] **The burger opens a drawer** from the left: the wordmark with the coach's business under it ("Full Potential Coaching", hardcoded like the rail until the coach profile carries it), then three rows only: Messages from {coach}, Help (opens an email to the coach, subject "Ironline app"), and Log out at the foot with "Ironline · Full Potential Coaching" under it. Notifications has the bell and Settings has its tab, so neither is repeated here. Tapping the shaded page or a row closes it.
 - [ ] The dashed "Reserved" slot at the bottom of Home is gone.
@@ -455,9 +455,11 @@ Look: `/client` → Settings → Progress pictures.
 
 Look: `/client` → the burger.
 
-## ⚠ Open before pushing: Start on Home no longer scrolls to the session
+Commits `a3c0e90`, `c6a5e46` for groups 46–59.
 
-Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Do not push the client changes until this is back.
+## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
+
+Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).
 
 ## Still to build
 
