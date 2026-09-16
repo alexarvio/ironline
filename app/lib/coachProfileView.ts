@@ -30,6 +30,7 @@ export type CoachProfileView = CoachProfileFields & {
   email: string;
   heroPath: string | null;
   candidPath: string | null;
+  avatarPath: string | null;
   /** Derived from clients.coach_id, for the "40 clients" pill. */
   clientCount: number;
   updatedAt: string | null;

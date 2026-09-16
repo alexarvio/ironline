@@ -35,6 +35,7 @@ import {
   getCoachFirstName,
   getCoachDisplayName,
   getCoachEmail,
+  getCoachAvatarPath,
   getCoachProfileForClient,
   getStoredNutritionPlan,
   listClientPhases,
@@ -726,6 +727,7 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
       <div className="nd-body">
         <CoachCard
           coachName={coachName}
+          photoPath={getCoachAvatarPath(CLIENT_ID)}
           note={plan.coach_notes?.trim() || null}
           noteDate={nutritionPhase ? `Since ${short(nutritionPhase.start_week)}` : null}
         />
@@ -967,6 +969,7 @@ function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
       <CoachNotesRow
         coachName={coachName}
         initial={coachName.charAt(0).toUpperCase() || "C"}
+        photoPath={getCoachAvatarPath(CLIENT_ID)}
         unread={coachNotes.filter((n) => !n.read).length}
         total={coachNotes.length}
       />

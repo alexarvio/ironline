@@ -457,6 +457,13 @@ Look: `/client` → the burger.
 
 Commits `a3c0e90`, `c6a5e46` for groups 46–59.
 
+## 60 · The coach's profile picture
+
+- [ ] **A third photo slot, "Profile picture"**, on the coach's profile page (gear at the foot of the rail → Your profile): a round drop zone beside the hero and candid slots, uploaded and removed the same way. New `avatar_path` column on `coach_profiles` (migration `0003_coach_avatar`).
+- [ ] **It shows wherever the coach's initial used to**: the note on the client's Nutrition tab, the "From {coach}" row in Notifications, and the coach's own row at the foot of the admin rail. Without a picture, the initial stays.
+
+Look: `/admin/profile` → drop a photo on Profile picture; then `/client` → Nutrition (with a coach note) and the bell.
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).

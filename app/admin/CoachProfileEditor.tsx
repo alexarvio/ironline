@@ -186,6 +186,7 @@ export default function CoachProfileEditor({
         <div className="cpe-form">
           <Card title="Photos">
             <div className="cpe-photos">
+              <PhotoSlot coachId={profile.coachId} kind="avatar" label="Profile picture" hint="Square; shown beside your notes and messages" path={profile.avatarPath} />
               <PhotoSlot coachId={profile.coachId} kind="hero" label="Hero photo" hint="Portrait, at least 1200 px tall" path={profile.heroPath} />
               <PhotoSlot coachId={profile.coachId} kind="candid" label="Candid photo" hint="For Outside the gym" path={profile.candidPath} />
             </div>
@@ -388,7 +389,7 @@ function TextField({
 }
 
 // One photo: drop a file on it or click to pick; uploads straight away.
-function PhotoSlot({ coachId, kind, label, hint, path }: { coachId: number; kind: "hero" | "candid"; label: string; hint: string; path: string | null }) {
+function PhotoSlot({ coachId, kind, label, hint, path }: { coachId: number; kind: "hero" | "candid" | "avatar"; label: string; hint: string; path: string | null }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
   const [busy, start] = useTransition();

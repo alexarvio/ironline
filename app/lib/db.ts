@@ -126,6 +126,8 @@ export type CoachProfile = {
   years_coaching: number | null;
   hero_path: string | null;
   candid_path: string | null;
+  /** The small round picture shown wherever the coach's initial used to be. */
+  avatar_path: string | null;
   intro: string | null;
   bio: string | null;
   quote: string | null;

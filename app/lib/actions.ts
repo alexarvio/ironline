@@ -197,6 +197,7 @@ import {
   getCoachProfileView,
   removeCoachPhoto,
   saveCoachPhoto,
+  type CoachPhotoKind,
   saveCoachProfile,
   setCoachProfilePublished,
 } from "./queries";
@@ -2105,15 +2106,19 @@ export async function publishCoachProfileAction(formData: FormData): Promise<{ o
   return ok ? { ok: true } : { ok: false, error: "Add your display name and save before publishing." };
 }
 
+function coachPhotoKind(v: FormDataEntryValue | null): CoachPhotoKind {
+  return v === "candid" || v === "avatar" ? v : "hero";
+}
+
 export async function uploadCoachPhotoAction(formData: FormData) {
   const coachId = await profileCoachId(formData);
-  const kind = formData.get("kind") === "candid" ? "candid" : "hero";
+  const kind = coachPhotoKind(formData.get("kind"));
   const file = formData.get("file") as File | null;
   // Same checks as the client avatar.
   if (!file || file.size === 0 || file.size > 6 * 1024 * 1024) return;
   if (!file.type.startsWith("image/")) return;
   const current = getCoachProfile(coachId);
-  const previous = (kind === "hero" ? current?.hero_path : current?.candid_path) ?? null;
+  const previous = (kind === "hero" ? current?.hero_path : kind === "candid" ? current?.candid_path : current?.avatar_path) ?? null;
   const body = Buffer.from(await file.arrayBuffer());
   const saved = saveCoachPhoto(coachId, kind, body, file.type);
   if (previous && keyOf(previous) !== keyOf(saved)) await deleteUpload(previous);
@@ -2123,7 +2128,7 @@ export async function uploadCoachPhotoAction(formData: FormData) {
 
 export async function removeCoachPhotoAction(formData: FormData) {
   const coachId = await profileCoachId(formData);
-  const kind = formData.get("kind") === "candid" ? "candid" : "hero";
+  const kind = coachPhotoKind(formData.get("kind"));
   const previous = removeCoachPhoto(coachId, kind);
   await deleteUpload(previous);
   revalidateCoachProfile();

@@ -4541,7 +4541,8 @@ label.ci-pill { cursor: text; }
 /* 4 · Coach card */
 .nd-coach { padding: 18px 20px 16px; }
 .nd-coach-head { display: flex; align-items: center; gap: 10px; }
-.nd-avatar { flex: none; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 999px; background: #1e3a6e; color: #fff; font-size: 16px; font-weight: 600; }
+.nd-avatar { flex: none; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; overflow: hidden; border-radius: 999px; background: #1e3a6e; color: #fff; font-size: 16px; font-weight: 600; }
+.nd-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .nd-coach-name { font-size: 14px; font-weight: 600; color: #141a24; }
 .nd-coach-date { font-size: 11.5px; color: #8b93a1; }
 .nd-coach-note { margin: 12px 0 0; font-size: 14px; font-weight: 400; line-height: 1.5; color: #313851; white-space: pre-wrap; }
@@ -8210,7 +8211,8 @@ label.ci-pill { cursor: text; }
 .ad-rail-new-plus { color: #2f5d8f; font-size: 15px; font-weight: 800; line-height: 1; }
 
 .ad-rail-coach { flex: none; position: relative; display: flex; align-items: center; gap: 9px; padding: 9px 10px; background: #fff; border-top: 1px solid #eceff3; }
-.ad-rail-coach-avatar { flex: none; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #e6ecf3; color: #1e3a6e; font-size: 11.5px; font-weight: 800; }
+.ad-rail-coach-avatar { flex: none; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 999px; background: #e6ecf3; color: #1e3a6e; font-size: 11.5px; font-weight: 800; }
+.ad-rail-coach-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .ad-rail-coach-text { flex: 1; min-width: 0; }
 .ad-rail-coach-name { font-size: 12px; font-weight: 800; color: #141a24; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ad-rail-coach-role { font-size: 10px; font-weight: 600; color: #8b93a1; }
@@ -14033,6 +14035,8 @@ label.ci-pill { cursor: text; }
 .cpe-photo { display: flex; flex-direction: column; gap: 8px; }
 .cpe-photo.hero { width: 180px; }
 .cpe-photo.candid { width: 130px; }
+.cpe-photo.avatar { width: 110px; }
+.cpe-photo.avatar .cpe-drop { aspect-ratio: 1; border-radius: 999px; }
 .cpe-drop { position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 3 / 4; padding: 10px; overflow: hidden; border: 1.5px dashed #c3c9d2; border-radius: 12px; background: #fafbfc center / cover no-repeat; font-size: 12px; font-weight: 700; text-align: center; color: #5b6474; cursor: pointer; }
 .cpe-drop.over { border-color: #2f5d8f; background-color: #e6ecf3; }
 .cpe-drop.has { border-style: solid; border-color: #dfe3e8; }
@@ -14112,7 +14116,8 @@ label.ci-pill { cursor: text; }
 /* Notifications: the coach's messages as one row at the top, apart from the rest. */
 .cn-coach-row { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 4px; padding: 14px 16px; border: 1px solid #dfe3e8; border-radius: 18px; background: #fff; font: inherit; color: inherit; text-align: left; cursor: pointer; }
 .cn-coach-row.unread { border-color: #1e3a6e; }
-.cn-coach-avatar { flex: none; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 999px; background: #1e3a6e; color: #fff; font-size: 15px; font-weight: 700; }
+.cn-coach-avatar { flex: none; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; overflow: hidden; border-radius: 999px; background: #1e3a6e; color: #fff; font-size: 15px; font-weight: 700; }
+.cn-coach-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .cn-coach-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .cn-coach-title { font-size: 15px; font-weight: 700; color: #141a24; }
 .cn-coach-sub { font-size: 12.5px; color: #5b6474; }

@@ -135,6 +135,7 @@ export const coach_profiles = pgTable("coach_profiles", {
   years_coaching: num("years_coaching"),
   hero_path: text("hero_path"),
   candid_path: text("candid_path"),
+  avatar_path: text("avatar_path"),
   intro: text("intro"),
   bio: text("bio"),
   quote: text("quote"),

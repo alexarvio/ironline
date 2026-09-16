@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { logoutAction } from "../lib/auth-actions";
 import { getUserForClient } from "../lib/auth";
-import { clientAttention, listClients } from "../lib/queries";
+import { clientAttention, getCoachProfile, listClients } from "../lib/queries";
 import { AccountIcon, CalendarIcon, FeedIcon } from "../components/icons";
 import ClientRoster, { type RosterClient } from "./ClientRoster";
 import CoachFooter from "./CoachFooter";
@@ -79,7 +79,7 @@ export default function AdminSidebar({
 
       <ClientRoster clients={clients} selectedId={selectedId} />
 
-      <CoachFooter name={nameFromEmail(coachEmail)}>
+      <CoachFooter name={nameFromEmail(coachEmail)} photoPath={getCoachProfile(coachId)?.avatar_path ?? null}>
         <Link href="/admin/profile" role="menuitem" className="ad-rail-menu-link">
           Your profile
         </Link>

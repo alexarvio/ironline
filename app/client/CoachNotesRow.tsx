@@ -5,13 +5,18 @@ import { useOpenMessages } from "./CheckInContext";
 
 // The coach's messages sit apart from the other notifications: one row at
 // the top of the list that opens their own feed, with how many are new.
-export default function CoachNotesRow({ coachName, initial, unread, total }: { coachName: string; initial: string; unread: number; total: number }) {
+export default function CoachNotesRow({ coachName, initial, photoPath, unread, total }: { coachName: string; initial: string; photoPath: string | null; unread: number; total: number }) {
   const openMessages = useOpenMessages();
   if (total === 0) return null;
   return (
     <button type="button" className={`cn-coach-row${unread > 0 ? " unread" : ""}`} onClick={() => openMessages?.()}>
       <span className="cn-coach-avatar" aria-hidden="true">
-        {initial}
+        {photoPath ? (
+          // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
+          <img src={photoPath} alt="" />
+        ) : (
+          initial
+        )}
       </span>
       <span className="cn-coach-body">
         <span className="cn-coach-title">From {coachName}</span>

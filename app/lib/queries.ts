@@ -174,6 +174,12 @@ export function getCoachFirstName(clientId: number): string {
   return getCoachDisplayName(clientId).split(/\s+/)[0] || "Coach";
 }
 
+/** The coach's profile picture, if they have set one; shown beside their notes and messages. */
+export function getCoachAvatarPath(clientId: number): string | null {
+  const coachId = coachIdOfClient(clientId);
+  return getData().coach_profiles.find((p) => p.coach_id === coachId)?.avatar_path ?? null;
+}
+
 /** The coach's login email: where the client's Help row writes to. */
 export function getCoachEmail(clientId: number): string {
   const coachId = coachIdOfClient(clientId);
@@ -7211,6 +7217,7 @@ export function getCoachProfileView(coachId: number): CoachProfileView | null {
     replyNote: p?.reply_note ?? "",
     heroPath: p?.hero_path ?? null,
     candidPath: p?.candid_path ?? null,
+    avatarPath: p?.avatar_path ?? null,
     published: !!p?.published && !!p.display_name?.trim(),
     clientCount: data.clients.filter((c) => c.coach_id === coachId).length,
     updatedAt: p?.updated_at ?? null,
@@ -7237,6 +7244,7 @@ function ensureCoachProfile(coachId: number): CoachProfile {
       years_coaching: null,
       hero_path: null,
       candid_path: null,
+      avatar_path: null,
       intro: null,
       bio: null,
       quote: null,
@@ -7286,14 +7294,17 @@ export function setCoachProfilePublished(coachId: number, published: boolean): b
   return true;
 }
 
-export function saveCoachPhoto(coachId: number, kind: "hero" | "candid", buffer: Buffer, mimeType: string): string {
+export type CoachPhotoKind = "hero" | "candid" | "avatar";
+const COACH_PHOTO_FIELD = { hero: "hero_path", candid: "candid_path", avatar: "avatar_path" } as const;
+
+export function saveCoachPhoto(coachId: number, kind: CoachPhotoKind, buffer: Buffer, mimeType: string): string {
   const profile = ensureCoachProfile(coachId);
   const ext = (mimeType.split("/")[1] || "jpg").replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "jpg";
   const dir = path.join(DATA_DIR, "uploads", "coaches", String(coachId));
   fs.mkdirSync(dir, { recursive: true });
   const filename = `${kind}.${ext}`;
   fs.writeFileSync(path.join(dir, filename), buffer);
-  const field = kind === "hero" ? "hero_path" : "candid_path";
+  const field = COACH_PHOTO_FIELD[kind];
   const previous = profile[field]?.split("?")[0].split("/").pop();
   if (previous && previous !== filename) {
     try {
@@ -7310,10 +7321,10 @@ export function saveCoachPhoto(coachId: number, kind: "hero" | "candid", buffer:
 }
 
 /** Returns the path that was removed, for the storage bucket. */
-export function removeCoachPhoto(coachId: number, kind: "hero" | "candid"): string | null {
+export function removeCoachPhoto(coachId: number, kind: CoachPhotoKind): string | null {
   const profile = getCoachProfile(coachId);
   if (!profile) return null;
-  const field = kind === "hero" ? "hero_path" : "candid_path";
+  const field = COACH_PHOTO_FIELD[kind];
   const previous = profile[field];
   const file = previous?.split("?")[0].split("/").pop();
   if (file) {

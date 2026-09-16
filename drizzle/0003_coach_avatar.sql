@@ -1,0 +1,1 @@
+ALTER TABLE "coach_profiles" ADD COLUMN "avatar_path" text;

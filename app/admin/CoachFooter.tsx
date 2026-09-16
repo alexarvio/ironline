@@ -6,7 +6,7 @@ import { GearIcon } from "../components/icons";
 // The coach, at the foot of the rail, with the gear that opens their account
 // menu. `children` is the menu's content (Sign out), rendered on the server
 // because it posts to a server action.
-export default function CoachFooter({ name, children }: { name: string; children: ReactNode }) {
+export default function CoachFooter({ name, photoPath, children }: { name: string; photoPath: string | null; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
 
@@ -27,7 +27,12 @@ export default function CoachFooter({ name, children }: { name: string; children
   return (
     <div className="ad-rail-coach" ref={wrap}>
       <span className="ad-rail-coach-avatar" aria-hidden="true">
-        {name.charAt(0).toUpperCase()}
+        {photoPath ? (
+          // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
+          <img src={photoPath} alt="" />
+        ) : (
+          name.charAt(0).toUpperCase()
+        )}
       </span>
       <div className="ad-rail-coach-text">
         <div className="ad-rail-coach-name">{name}</div>
