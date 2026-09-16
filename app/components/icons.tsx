@@ -69,6 +69,15 @@ export function PlusIcon() {
   );
 }
 
+// A bookmark: outline to save something for later, filled once it is saved.
+export function BookmarkIcon({ filled = false }: { filled?: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill={filled ? "currentColor" : "none"} xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 2.5h8a.5.5 0 0 1 .5.5v10.4l-4.5-3-4.5 3V3a.5.5 0 0 1 .5-.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function ChartIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">

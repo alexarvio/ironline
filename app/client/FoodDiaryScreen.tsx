@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { ChevronDownIcon, ChevronLeftIcon, PlusIcon, SearchIcon } from "../components/icons";
+import { BookmarkIcon, ChevronDownIcon, ChevronLeftIcon, PlusIcon, SearchIcon } from "../components/icons";
 import {
   addCustomFoodAction,
   addFoodEntryAction,
@@ -393,11 +393,6 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                       <button type="button" className={`fdi-meal-chev${folded.has(meal.id) ? "" : " up"}`} onClick={() => toggleFold(meal.id)} aria-expanded={!folded.has(meal.id)} aria-label={folded.has(meal.id) ? `Open ${meal.label}` : `Fold ${meal.label}`}>
                         <ChevronDownIcon />
                       </button>
-                      {meal.entries.length === 0 && !open && (
-                        <button type="button" className="fdi-meal-plus" onClick={() => setPanel({ kind: "search", meal: meal.id })} aria-label={`Add food to ${meal.label}`}>
-                          <PlusIcon />
-                        </button>
-                      )}
                       {meal.entries.length === 0 && meal.own ? (
                         <button
                           type="button"
@@ -524,23 +519,23 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                       />
                     ) : open?.kind === "custom" ? (
                       <CustomFoodPanel clientId={clientId} onCancel={() => setPanel({ kind: "search", meal: meal.id })} onCreated={(food) => setPanel({ kind: "amount", meal: meal.id, food })} />
-                    ) : meal.entries.length > 0 ? (
+                    ) : (
                       <div className="fdi-meal-foot">
-                        <button type="button" className="fdi-add" onClick={() => setPanel({ kind: "search", meal: meal.id })}>
-                          <span className="fdi-add-plus" aria-hidden="true">
-                            <PlusIcon />
-                          </span>
-                          Add food
+                        <button type="button" className="fdi-icon-btn" onClick={() => setPanel({ kind: "search", meal: meal.id })} aria-label={`Add food to ${meal.label}`}>
+                          <PlusIcon />
                         </button>
-                        {meal.savedAs ? (
-                          <span className="fdi-meal-savedas">Saved as {meal.savedAs}</span>
-                        ) : (
-                          <button type="button" className="fdi-meal-save" onClick={() => setSavingMeal(savingMeal === meal.id ? null : meal.id)}>
-                            Save meal
-                          </button>
-                        )}
+                        {meal.entries.length > 0 &&
+                          (meal.savedAs ? (
+                            <span className="fdi-icon-btn saved" title={`Saved as ${meal.savedAs}`} aria-label={`Saved as ${meal.savedAs}`} role="img">
+                              <BookmarkIcon filled />
+                            </span>
+                          ) : (
+                            <button type="button" className="fdi-icon-btn" onClick={() => setSavingMeal(savingMeal === meal.id ? null : meal.id)} aria-label={`Save ${meal.label} to add again`}>
+                              <BookmarkIcon />
+                            </button>
+                          ))}
                       </div>
-                    ) : null}
+                    )}
                     </div>
                     </div>
                   </div>
