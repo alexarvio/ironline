@@ -774,9 +774,25 @@ function AmountPanel({
       </div>
       <div className="fdi-food">
         <span className="fdi-food-name">{food.name}</span>
-        <span className="fdi-food-per">
-          {n(food.kcal)} kcal · P {g(food.protein)} · C {g(food.carbs)} · F {g(food.fat)} per 100 g
-        </span>
+        <span className="fdi-field-label">Per 100 g</span>
+        <div className="fdi-per">
+          <span className="fdi-per-cell">
+            <b>{n(food.kcal)}</b>
+            <small>kcal</small>
+          </span>
+          <span className="fdi-per-cell" style={{ color: HUE.protein }}>
+            <b>{g(food.protein)}<i>g</i></b>
+            <small>protein</small>
+          </span>
+          <span className="fdi-per-cell" style={{ color: HUE.carbs }}>
+            <b>{g(food.carbs)}<i>g</i></b>
+            <small>carbs</small>
+          </span>
+          <span className="fdi-per-cell" style={{ color: HUE.fat }}>
+            <b>{g(food.fat)}<i>g</i></b>
+            <small>fat</small>
+          </span>
+        </div>
       </div>
 
       <div className="fdi-amount-row">

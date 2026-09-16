@@ -88,6 +88,29 @@ export function searchCatalog(query: string, limit = 40): { common: CatalogFood[
   };
   const common = rank(COMMON, false);
   const taken = new Set(common.map((f) => f.id));
-  const more = rank(INDEX, true).filter((f) => !taken.has(f.id));
+  let more = rank(INDEX, true).filter((f) => !taken.has(f.id));
+  // "Roasted potatoes" matches two frozen rows in full; the client still
+  // wants the potatoes. When the full match is thin, rows matching most of
+  // the words follow it, best first.
+  if (q.length > 1 && common.length + more.length < 8) {
+    const seen = new Set([...taken, ...more.map((f) => f.id)]);
+    const partial: { food: CatalogFood; hits: number; score: number }[] = [];
+    for (const row of INDEX) {
+      if (seen.has(row.food.id)) continue;
+      let hits = 0;
+      let sc = 0;
+      for (const w of q) {
+        const at = row.tokens.findIndex((t) => t.startsWith(w));
+        if (at >= 0) {
+          hits++;
+          sc += at * 4;
+        }
+      }
+      if (hits === 0) continue;
+      partial.push({ food: row.food, hits, score: sc + row.tokens.length * 0.5 + (LATE.has(row.food.category) ? 40 : 0) });
+    }
+    partial.sort((a, b) => b.hits - a.hits || a.score - b.score || a.food.name.localeCompare(b.food.name));
+    more = [...more, ...partial.map((p) => p.food)];
+  }
   return { common: common.slice(0, limit), more: more.slice(0, limit) };
 }
