@@ -14351,6 +14351,11 @@ label.ci-pill { cursor: text; }
 .fdi-fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.42s cubic-bezier(0.4, 0, 0.2, 1); }
 .fdi-fold-inner { min-height: 0; overflow: hidden; }
 .fdi-fold.folding { grid-template-rows: 0fr; }
+.fdi-meal-plus { flex: none; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; margin: -6px 0; border: 0; border-radius: 999px; background: #e6ecf3; color: #1e3a6e; cursor: pointer; }
+.fdi-meal-plus svg { width: 16px; height: 16px; }
+.fdi-meal-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-right: 18px; }
+.fdi-meal-foot .fdi-add { flex: 1; min-width: 0; }
+.fdi-meal-savedas { flex: none; font-size: 12px; font-weight: 600; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%; }
 .fdi-meal-save { flex: none; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 700; color: #2f5d8f; cursor: pointer; }
 .fdi-per.meal { margin: 10px 18px 14px; }
 .fdi-per.meal .fdi-per-cell { background: #F4F7FC; }

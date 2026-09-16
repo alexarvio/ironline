@@ -66,7 +66,7 @@ export type FoodDiaryProps = {
   eaten: Macros;
   dayType: "training" | "rest";
   loggedKcal: number | null;
-  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntryView[] }[];
+  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntryView[]; savedAs: string | null }[];
   recent: FoodOptionView[];
   saved: { id: number; name: string; kcal: number; count: number; names: string[] }[];
   previous: { date: string; dateLabel: string; meal: FoodMeal; mealLabel: string; kcal: number; names: string[] }[];
@@ -393,11 +393,12 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                       <button type="button" className={`fdi-meal-chev${folded.has(meal.id) ? "" : " up"}`} onClick={() => toggleFold(meal.id)} aria-expanded={!folded.has(meal.id)} aria-label={folded.has(meal.id) ? `Open ${meal.label}` : `Fold ${meal.label}`}>
                         <ChevronDownIcon />
                       </button>
-                      {meal.entries.length > 0 ? (
-                        <button type="button" className="fdi-meal-save" onClick={() => setSavingMeal(savingMeal === meal.id ? null : meal.id)}>
-                          Save meal
+                      {meal.entries.length === 0 && !open && (
+                        <button type="button" className="fdi-meal-plus" onClick={() => setPanel({ kind: "search", meal: meal.id })} aria-label={`Add food to ${meal.label}`}>
+                          <PlusIcon />
                         </button>
-                      ) : meal.own ? (
+                      )}
+                      {meal.entries.length === 0 && meal.own ? (
                         <button
                           type="button"
                           className="fdi-meal-remove"
@@ -523,14 +524,23 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                       />
                     ) : open?.kind === "custom" ? (
                       <CustomFoodPanel clientId={clientId} onCancel={() => setPanel({ kind: "search", meal: meal.id })} onCreated={(food) => setPanel({ kind: "amount", meal: meal.id, food })} />
-                    ) : (
-                      <button type="button" className="fdi-add" onClick={() => setPanel({ kind: "search", meal: meal.id })}>
-                        <span className="fdi-add-plus" aria-hidden="true">
-                          <PlusIcon />
-                        </span>
-                        Add food
-                      </button>
-                    )}
+                    ) : meal.entries.length > 0 ? (
+                      <div className="fdi-meal-foot">
+                        <button type="button" className="fdi-add" onClick={() => setPanel({ kind: "search", meal: meal.id })}>
+                          <span className="fdi-add-plus" aria-hidden="true">
+                            <PlusIcon />
+                          </span>
+                          Add food
+                        </button>
+                        {meal.savedAs ? (
+                          <span className="fdi-meal-savedas">Saved as {meal.savedAs}</span>
+                        ) : (
+                          <button type="button" className="fdi-meal-save" onClick={() => setSavingMeal(savingMeal === meal.id ? null : meal.id)}>
+                            Save meal
+                          </button>
+                        )}
+                      </div>
+                    ) : null}
                     </div>
                     </div>
                   </div>

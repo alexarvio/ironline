@@ -7611,7 +7611,7 @@ export type FoodDiaryView = {
   /** The day's targets, training or rest as the client called it (else by sets); null without targets. */
   target: { kcal: number; protein: number; carbs: number; fat: number } | null;
   eaten: { kcal: number; protein: number; carbs: number; fat: number };
-  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntry[] }[];
+  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntry[]; /** The saved meal this is a copy of, by name, when it still matches one. */ savedAs: string | null }[];
   recent: FoodOption[];
   /** The client's saved meals, newest first. */
   saved: SavedMealView[];
@@ -7674,6 +7674,10 @@ export function getFoodDiary(clientId: number, date: string): FoodDiaryView {
   const sum = (k: "kcal" | "protein" | "carbs" | "fat") => r1(entries.reduce((s, e) => s + e[k], 0));
   const meals = listFoodMeals(clientId);
   const labelOf = new Map(meals.map((m) => [m.id, m.label]));
+  // The same foods in the same amounts as a saved meal: it is that meal.
+  const savedKeys = getData()
+    .saved_meals.filter((s) => s.client_id === clientId)
+    .map((s) => ({ name: s.name, key: s.items.map((i) => `${i.food_id}@${i.grams}`).sort().join("|") }));
   // The other days' meals, newest first, so a day can be built from one before it.
   const since = new Date(`${today}T00:00:00`);
   since.setDate(since.getDate() - 14);
@@ -7703,7 +7707,9 @@ export function getFoodDiary(clientId: number, date: string): FoodDiaryView {
     meals: meals.map((m) => {
       const rows = entries.filter((e) => e.meal === m.id);
       const tot = (k: "kcal" | "protein" | "carbs" | "fat") => r1(rows.reduce((s, e) => s + e[k], 0));
-      return { ...m, kcal: Math.round(tot("kcal")), protein: tot("protein"), carbs: tot("carbs"), fat: tot("fat"), entries: rows };
+      const key = rows.map((e) => `${e.food_id}@${e.grams}`).sort().join("|");
+      const savedAs = rows.length ? savedKeys.find((s) => s.key === key)?.name ?? null : null;
+      return { ...m, kcal: Math.round(tot("kcal")), protein: tot("protein"), carbs: tot("carbs"), fat: tot("fat"), entries: rows, savedAs };
     }),
     recent: recentFoods(clientId),
     saved: listSavedMeals(clientId),
