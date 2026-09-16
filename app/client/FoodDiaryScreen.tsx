@@ -128,21 +128,103 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
   const [namingMeal, setNamingMeal] = useState(false);
   // Which meal is being saved under a name.
   const [savingMeal, setSavingMeal] = useState<FoodMeal | null>(null);
-  // Arranging: each meal shows up / down arrows; the order is saved as it changes.
-  const [arranging, setArranging] = useState(false);
-  const move = (id: FoodMeal, by: -1 | 1) => {
-    const ids = diary.meals.map((m) => m.id);
-    const i = ids.indexOf(id);
-    const j = i + by;
-    if (i < 0 || j < 0 || j >= ids.length) return;
-    [ids[i], ids[j]] = [ids[j], ids[i]];
-    setDiary({ ...diary, meals: ids.map((x) => diary.meals.find((m) => m.id === x)!) });
-    const fd = new FormData();
-    fd.set("clientId", String(clientId));
-    fd.set("order", ids.join(","));
-    startLoad(async () => {
-      await reorderFoodMealsAction(fd);
+  // Meals folded shut to their name and figures, so a long day stays short.
+  const [folded, setFolded] = useState<Set<FoodMeal>>(() => new Set());
+  const toggleFold = (id: FoodMeal) =>
+    setFolded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
     });
+  // Rearranging: press and hold a meal's name and it lifts; drag it up or
+  // down and the others slide out of its way; let go and the order is saved.
+  // A short tap on the name folds the meal instead.
+  const [drag, setDrag] = useState<{ from: number; to: number; dy: number; height: number } | null>(null);
+  const mealRefs = useRef<Map<FoodMeal, HTMLDivElement>>(new Map());
+  const hold = useRef<{ timer: ReturnType<typeof setTimeout>; x: number; y: number; index: number; el: HTMLElement; pointerId: number } | null>(null);
+  const dragging = useRef<{ from: number; startY: number; mids: number[] } | null>(null);
+  const suppressTap = useRef(false);
+  const holdStart = (e: React.PointerEvent<HTMLElement>, index: number) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    const el = e.currentTarget;
+    const pointerId = e.pointerId;
+    const timer = setTimeout(() => {
+      hold.current = null;
+      el.setPointerCapture(pointerId);
+      const rects = diary.meals.map((m) => mealRefs.current.get(m.id)?.getBoundingClientRect());
+      dragging.current = { from: index, startY: e.clientY, mids: rects.map((r) => (r ? r.top + r.height / 2 : 0)) };
+      suppressTap.current = true;
+      if (navigator.vibrate) navigator.vibrate(10);
+      setDrag({ from: index, to: index, dy: 0, height: rects[index]?.height ?? 60 });
+    }, 320);
+    hold.current = { timer, x: e.clientX, y: e.clientY, index, el, pointerId };
+  };
+  const holdMove = (e: React.PointerEvent<HTMLElement>) => {
+    const h = hold.current;
+    if (h && Math.hypot(e.clientX - h.x, e.clientY - h.y) > 8) {
+      clearTimeout(h.timer);
+      hold.current = null;
+    }
+    const d = dragging.current;
+    if (!d) return;
+    e.preventDefault();
+    const dy = e.clientY - d.startY;
+    const centre = d.mids[d.from] + dy;
+    let to = d.from;
+    if (dy < 0) {
+      const i = d.mids.findIndex((m, idx) => idx < d.from && centre < m);
+      if (i >= 0) to = i;
+    } else if (dy > 0) {
+      for (let i = d.mids.length - 1; i > d.from; i--) {
+        if (centre > d.mids[i]) {
+          to = i;
+          break;
+        }
+      }
+    }
+    setDrag((prev) => (prev ? { ...prev, dy, to } : prev));
+  };
+  const holdEnd = (e: React.PointerEvent<HTMLElement>) => {
+    const h = hold.current;
+    if (h) {
+      clearTimeout(h.timer);
+      hold.current = null;
+    }
+    const d = dragging.current;
+    if (!d) return;
+    dragging.current = null;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      /* already released */
+    }
+    setDrag((current) => {
+      if (current && current.to !== current.from) {
+        const ids = diary.meals.map((m) => m.id);
+        const [moved] = ids.splice(current.from, 1);
+        ids.splice(current.to, 0, moved);
+        setDiary({ ...diary, meals: ids.map((x) => diary.meals.find((m) => m.id === x)!) });
+        const fd = new FormData();
+        fd.set("clientId", String(clientId));
+        fd.set("order", ids.join(","));
+        startLoad(async () => {
+          await reorderFoodMealsAction(fd);
+        });
+      }
+      return null;
+    });
+    setTimeout(() => {
+      suppressTap.current = false;
+    }, 0);
+  };
+  // Where each meal sits while one is being dragged.
+  const shiftFor = (index: number): string | undefined => {
+    if (!drag) return undefined;
+    if (index === drag.from) return `translateY(${drag.dy}px)`;
+    if (drag.from < drag.to && index > drag.from && index <= drag.to) return `translateY(-${drag.height}px)`;
+    if (drag.to < drag.from && index >= drag.to && index < drag.from) return `translateY(${drag.height}px)`;
+    return undefined;
   };
   // The top bar is see-through over the banner until the page scrolls.
   const [scrolled, setScrolled] = useState(false);
@@ -290,25 +372,38 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
 
           <div className="nd-body fdi-list">
             <section className="fdi-meals">
-              {diary.meals.map((meal) => {
+              {diary.meals.map((meal, index) => {
                 const open = panel?.meal === meal.id ? panel : null;
                 return (
-                  <div key={meal.id} className={`fdi-meal${open ? " open" : ""}`}>
+                  <div
+                    key={meal.id}
+                    ref={(el) => {
+                      if (el) mealRefs.current.set(meal.id, el);
+                      else mealRefs.current.delete(meal.id);
+                    }}
+                    className={`fdi-meal${open ? " open" : ""}${drag?.from === index ? " lifted" : ""}${drag ? " shifting" : ""}`}
+                    style={{ transform: shiftFor(index) }}
+                  >
                     <div className="fdi-meal-head">
-                      <div className="fdi-meal-titles">
+                      <button
+                        type="button"
+                        className="fdi-meal-toggle"
+                        onClick={() => {
+                          if (!suppressTap.current) toggleFold(meal.id);
+                        }}
+                        onPointerDown={(e) => holdStart(e, index)}
+                        onPointerMove={holdMove}
+                        onPointerUp={holdEnd}
+                        onPointerCancel={holdEnd}
+                        onContextMenu={(e) => e.preventDefault()}
+                        aria-expanded={!folded.has(meal.id)}
+                      >
                         <span className="fdi-meal-title">{meal.label}</span>
-                        <span className="fdi-meal-sub">{meal.entries.length === 0 ? "Nothing logged yet" : `${meal.entries.length} item${meal.entries.length === 1 ? "" : "s"}`}</span>
-                      </div>
-                      {arranging ? (
-                        <span className="fdi-arrange">
-                          <button type="button" className="fdi-arrange-btn up" onClick={() => move(meal.id, -1)} disabled={diary.meals[0]?.id === meal.id} aria-label={`Move ${meal.label} up`}>
-                            <ChevronDownIcon />
-                          </button>
-                          <button type="button" className="fdi-arrange-btn" onClick={() => move(meal.id, 1)} disabled={diary.meals[diary.meals.length - 1]?.id === meal.id} aria-label={`Move ${meal.label} down`}>
-                            <ChevronDownIcon />
-                          </button>
+                        <span className={`fdi-meal-chev${folded.has(meal.id) ? "" : " up"}`} aria-hidden="true">
+                          <ChevronDownIcon />
                         </span>
-                      ) : meal.entries.length > 0 ? (
+                      </button>
+                      {meal.entries.length > 0 ? (
                         <button type="button" className="fdi-meal-save" onClick={() => setSavingMeal(savingMeal === meal.id ? null : meal.id)}>
                           Save meal
                         </button>
@@ -332,24 +427,7 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                       ) : null}
                     </div>
                     {meal.entries.length > 0 && (
-                      <div className="fdi-per meal" aria-label={`${meal.label}: ${n(meal.kcal)} kcal`}>
-                        <span className="fdi-per-cell">
-                          <b>{n(meal.kcal)}</b>
-                          <small>calories</small>
-                        </span>
-                        <span className="fdi-per-cell" style={{ color: HUE.protein }}>
-                          <b>{g(meal.protein)}<i>g</i></b>
-                          <small>protein</small>
-                        </span>
-                        <span className="fdi-per-cell" style={{ color: HUE.carbs }}>
-                          <b>{g(meal.carbs)}<i>g</i></b>
-                          <small>carbs</small>
-                        </span>
-                        <span className="fdi-per-cell" style={{ color: HUE.fat }}>
-                          <b>{g(meal.fat)}<i>g</i></b>
-                          <small>fat</small>
-                        </span>
-                      </div>
+                      <Facts className="fdi-per meal" label={`${meal.label}: ${n(meal.kcal)} kcal`} kcal={meal.kcal} protein={meal.protein} carbs={meal.carbs} fat={meal.fat} />
                     )}
                     {savingMeal === meal.id && (
                       <form
@@ -383,6 +461,8 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                         </button>
                       </form>
                     )}
+                    <div className={`fdi-fold${folded.has(meal.id) ? " folding" : ""}`}>
+                    <div className="fdi-fold-inner">
                     {meal.entries.map((e) =>
                       open?.kind === "amount" && open.entry?.id === e.id ? (
                         <AmountPanel
@@ -461,20 +541,18 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                         Add food
                       </button>
                     )}
+                    </div>
+                    </div>
                   </div>
                 );
               })}
             </section>
 
-            <div className="fdi-meal-tools">
-              <button type="button" className="fdi-add-meal" onClick={() => setNamingMeal(true)}>
-                <PlusIcon />
-                Add a meal
-              </button>
-              <button type="button" className={`fdi-arrange-toggle${arranging ? " on" : ""}`} onClick={() => setArranging((a) => !a)}>
-                {arranging ? "Done" : "Rearrange"}
-              </button>
-            </div>
+            <button type="button" className="fdi-add-meal" onClick={() => setNamingMeal(true)}>
+              <PlusIcon />
+              Add a meal
+            </button>
+            <p className="fdi-meals-hint">Hold a meal&rsquo;s name to move it.</p>
           </div>
         </div>
       </main>
@@ -573,6 +651,33 @@ function MacroRow({ id, eaten, goal }: { id: (typeof MACROS)[number]; eaten: num
         </div>
       </div>
     </div>
+  );
+}
+
+// ---- Four figures: calories, protein, carbs, fat -----------------------------
+// For a food per 100 g and for a meal; the figures run to their new values.
+
+function Facts({ className, label, kcal, protein, carbs, fat }: { className: string; label: string; kcal: number; protein: number; carbs: number; fat: number }) {
+  return (
+    <div className={className} role="group" aria-label={label}>
+      <FactTile name="calories" value={kcal} format={n} />
+      <FactTile name="protein" value={protein} format={g} unit="g" color={HUE.protein} />
+      <FactTile name="carbs" value={carbs} format={g} unit="g" color={HUE.carbs} />
+      <FactTile name="fat" value={fat} format={g} unit="g" color={HUE.fat} />
+    </div>
+  );
+}
+
+function FactTile({ name, value, format, unit, color }: { name: string; value: number; format: (v: number) => string; unit?: string; color?: string }) {
+  const shown = useTween(value);
+  return (
+    <span className="fdi-per-cell" style={color ? { color } : undefined}>
+      <b>
+        {format(shown)}
+        {unit && <i>{unit}</i>}
+      </b>
+      <small>{name}</small>
+    </span>
   );
 }
 
@@ -931,24 +1036,7 @@ function AmountPanel({
       <div className="fdi-food">
         <span className="fdi-food-name">{food.name}</span>
         <span className="fdi-field-label">Per 100 g</span>
-        <div className="fdi-per">
-          <span className="fdi-per-cell">
-            <b>{n(food.kcal)}</b>
-            <small>kcal</small>
-          </span>
-          <span className="fdi-per-cell" style={{ color: HUE.protein }}>
-            <b>{g(food.protein)}<i>g</i></b>
-            <small>protein</small>
-          </span>
-          <span className="fdi-per-cell" style={{ color: HUE.carbs }}>
-            <b>{g(food.carbs)}<i>g</i></b>
-            <small>carbs</small>
-          </span>
-          <span className="fdi-per-cell" style={{ color: HUE.fat }}>
-            <b>{g(food.fat)}<i>g</i></b>
-            <small>fat</small>
-          </span>
-        </div>
+        <Facts className="fdi-per" label={`Per 100 g: ${n(food.kcal)} kcal`} kcal={food.kcal} protein={food.protein} carbs={food.carbs} fat={food.fat} />
       </div>
 
       <div className="fdi-amount-row">
