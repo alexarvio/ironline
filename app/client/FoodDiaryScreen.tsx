@@ -128,8 +128,9 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
   const [namingMeal, setNamingMeal] = useState(false);
   // Which meal is being saved under a name.
   const [savingMeal, setSavingMeal] = useState<FoodMeal | null>(null);
-  // Meals folded shut to their name and figures, so a long day stays short.
-  const [folded, setFolded] = useState<Set<FoodMeal>>(() => new Set());
+  // Meals fold shut to their name and figures, so a long day stays short.
+  // They start folded; a meal added just now opens, since it is about to be filled.
+  const [folded, setFolded] = useState<Set<FoodMeal>>(() => new Set(initial.meals.map((m) => m.id)));
   const toggleFold = (id: FoodMeal) =>
     setFolded((prev) => {
       const next = new Set(prev);
