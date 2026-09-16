@@ -6,7 +6,10 @@ import {
   addCustomFoodAction,
   addFoodEntryAction,
   addFoodMealAction,
+  addSavedMealAction,
   copyFoodMealAction,
+  deleteSavedMealAction,
+  saveMealAction,
   getFoodDiaryAction,
   removeFoodEntryAction,
   pushFoodDayAction,
@@ -63,8 +66,9 @@ export type FoodDiaryProps = {
   eaten: Macros;
   dayType: "training" | "rest";
   loggedKcal: number | null;
-  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; entries: FoodEntryView[] }[];
+  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntryView[] }[];
   recent: FoodOptionView[];
+  saved: { id: number; name: string; kcal: number; count: number; names: string[] }[];
   previous: { date: string; dateLabel: string; meal: FoodMeal; mealLabel: string; kcal: number; names: string[] }[];
   /** Dates in the last month with anything logged, for the dots on the week strip. */
   loggedDays: string[];
@@ -120,6 +124,8 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
   const reload = () => load(date);
   const [panel, setPanel] = useState<Panel | null>(null);
   const [namingMeal, setNamingMeal] = useState(false);
+  // Which meal is being saved under a name.
+  const [savingMeal, setSavingMeal] = useState<FoodMeal | null>(null);
   // Arranging: each meal shows up / down arrows; the order is saved as it changes.
   const [arranging, setArranging] = useState(false);
   const move = (id: FoodMeal, by: -1 | 1) => {
@@ -301,7 +307,9 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                           </button>
                         </span>
                       ) : meal.entries.length > 0 ? (
-                        <span className="fdi-pill">{n(meal.kcal)} kcal</span>
+                        <button type="button" className="fdi-meal-save" onClick={() => setSavingMeal(savingMeal === meal.id ? null : meal.id)}>
+                          Save meal
+                        </button>
                       ) : meal.own ? (
                         <button
                           type="button"
@@ -319,10 +327,60 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                         >
                           Remove
                         </button>
-                      ) : (
-                        <span className="fdi-pill empty">Empty</span>
-                      )}
+                      ) : null}
                     </div>
+                    {meal.entries.length > 0 && (
+                      <div className="fdi-per meal" aria-label={`${meal.label}: ${n(meal.kcal)} kcal`}>
+                        <span className="fdi-per-cell">
+                          <b>{n(meal.kcal)}</b>
+                          <small>calories</small>
+                        </span>
+                        <span className="fdi-per-cell" style={{ color: HUE.protein }}>
+                          <b>{g(meal.protein)}<i>g</i></b>
+                          <small>protein</small>
+                        </span>
+                        <span className="fdi-per-cell" style={{ color: HUE.carbs }}>
+                          <b>{g(meal.carbs)}<i>g</i></b>
+                          <small>carbs</small>
+                        </span>
+                        <span className="fdi-per-cell" style={{ color: HUE.fat }}>
+                          <b>{g(meal.fat)}<i>g</i></b>
+                          <small>fat</small>
+                        </span>
+                      </div>
+                    )}
+                    {savingMeal === meal.id && (
+                      <form
+                        className="fdi-panel fdi-save"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          const name = String(new FormData(e.currentTarget).get("name") ?? "").trim();
+                          if (!name) return;
+                          const fd = new FormData();
+                          fd.set("clientId", String(clientId));
+                          fd.set("date", date);
+                          fd.set("meal", meal.id);
+                          fd.set("name", name);
+                          setSavingMeal(null);
+                          startLoad(async () => {
+                            await saveMealAction(fd);
+                            const next = await getFoodDiaryAction(clientId, date);
+                            if (next) setDiary(next);
+                          });
+                        }}
+                      >
+                        <div className="fdi-panel-head">
+                          <span className="fdi-eyebrow">Save this meal to add again</span>
+                          <button type="button" className="fdi-panel-cancel" onClick={() => setSavingMeal(null)}>
+                            Cancel
+                          </button>
+                        </div>
+                        <input name="name" className="fdi-dialog-input" type="text" defaultValue={`My ${meal.label.toLowerCase()}`} maxLength={40} autoFocus aria-label="Name for the saved meal" />
+                        <button type="submit" className="fdi-primary">
+                          Save meal
+                        </button>
+                      </form>
+                    )}
                     {meal.entries.map((e) =>
                       open?.kind === "amount" && open.entry?.id === e.id ? (
                         <AmountPanel
@@ -368,6 +426,7 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                         meal={meal.id}
                         mealLabel={meal.label}
                         recent={diary.recent}
+                        saved={diary.saved}
                         previous={diary.previous}
                         onPick={(food) => setPanel({ kind: "amount", meal: meal.id, food })}
                         onCustom={() => setPanel({ kind: "custom", meal: meal.id })}
@@ -582,6 +641,7 @@ function SearchPanel({
   meal,
   mealLabel,
   recent,
+  saved,
   previous,
   onPick,
   onCustom,
@@ -593,6 +653,7 @@ function SearchPanel({
   meal: FoodMeal;
   mealLabel: string;
   recent: FoodOptionView[];
+  saved: FoodDiaryProps["saved"];
   previous: FoodDiaryProps["previous"];
   onPick: (food: FoodOptionView) => void;
   onCustom: () => void;
@@ -637,6 +698,26 @@ function SearchPanel({
   const tail = results?.filter((f) => f.group === "more") ?? [];
   const list = front.length === 0 || showMore ? [...front, ...tail] : front;
 
+  const addSaved = (s: FoodDiaryProps["saved"][number]) => {
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("id", String(s.id));
+    fd.set("date", date);
+    fd.set("meal", meal);
+    startCopy(async () => {
+      await addSavedMealAction(fd);
+      onCopied();
+    });
+  };
+  const forget = (s: FoodDiaryProps["saved"][number]) => {
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("id", String(s.id));
+    startCopy(async () => {
+      await deleteSavedMealAction(fd);
+      onCopied();
+    });
+  };
   const copy = (p: FoodDiaryProps["previous"][number]) => {
     const fd = new FormData();
     fd.set("clientId", String(clientId));
@@ -658,7 +739,7 @@ function SearchPanel({
           Cancel
         </button>
       </div>
-      {previous.length > 0 && (
+      {(previous.length > 0 || saved.length > 0) && (
         <div className="fdi-modes" role="tablist">
           <button type="button" role="tab" aria-selected={mode === "search"} className={`fdi-mode${mode === "search" ? " on" : ""}`} onClick={() => setMode("search")}>
             Search
@@ -701,7 +782,24 @@ function SearchPanel({
         </>
       ) : (
         <div className="fdi-results">
-          <p className="fdi-hint">A whole meal from another day, the same foods and amounts, into {mealLabel}.</p>
+          {saved.length > 0 && <span className="fdi-results-label">Saved meals</span>}
+          {saved.map((s) => (
+            <div key={`s${s.id}`} className="fdi-result-row">
+              <button type="button" className="fdi-result" onClick={() => addSaved(s)} disabled={copying}>
+                <span className="fdi-result-main">
+                  <span className="fdi-result-name">{s.name}</span>
+                  <span className="fdi-result-hint">{s.names.join(", ")}</span>
+                </span>
+                <span className="fdi-result-kcal">
+                  {n(s.kcal)} <small>kcal</small>
+                </span>
+              </button>
+              <button type="button" className="fdi-result-x" onClick={() => forget(s)} disabled={copying} aria-label={`Delete saved meal ${s.name}`}>
+                ×
+              </button>
+            </div>
+          ))}
+          {previous.length > 0 && <span className="fdi-results-label">Other days</span>}
           {previous.map((p) => (
             <button key={`${p.date}|${p.meal}`} type="button" className="fdi-result" onClick={() => copy(p)} disabled={copying}>
               <span className="fdi-result-main">

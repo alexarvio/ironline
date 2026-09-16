@@ -193,6 +193,9 @@ import {
   getFoodDiary,
   setFoodDayType,
   pushFoodDayToCalorieLog,
+  saveMeal,
+  deleteSavedMeal,
+  addSavedMeal,
   localDateStr,
   type FoodDiaryView,
   type FoodMeal,
@@ -2314,4 +2317,32 @@ export async function pushFoodDayAction(formData: FormData) {
   pushFoodDayToCalorieLog(clientId, date);
   revalidatePath("/client");
   revalidatePath("/admin");
+}
+
+export async function saveMealAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const date = String(formData.get("date") ?? "");
+  const meal = String(formData.get("meal") ?? "");
+  const name = String(formData.get("name") ?? "").trim().slice(0, 40);
+  if (!DATE.test(date) || !name) return;
+  saveMeal(clientId, date, meal, name);
+  revalidatePath("/client");
+}
+
+export async function deleteSavedMealAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const id = Number(formData.get("id"));
+  if (!Number.isInteger(id)) return;
+  deleteSavedMeal(clientId, id);
+  revalidatePath("/client");
+}
+
+export async function addSavedMealAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const id = Number(formData.get("id"));
+  const date = String(formData.get("date") ?? "");
+  const meal = String(formData.get("meal") ?? "");
+  if (!Number.isInteger(id) || !diaryDateOk(date)) return;
+  addSavedMeal(clientId, id, date, meal);
+  revalidatePath("/client");
 }

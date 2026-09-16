@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, CardioEntry } from "./db";
-import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, ClientGym, ClientPhase, CoachProfile, PhaseTrack } from "./db";
+import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, SavedMeal, ClientGym, ClientPhase, CoachProfile, PhaseTrack } from "./db";
 import type { CoachProfileFields, CoachProfileView } from "./coachProfileView";
 import { getCatalogFood, searchCatalog, type CatalogFood } from "./foods/catalog";
 import { coachIdOfClient } from "./tenancy";
@@ -7487,6 +7487,52 @@ export function copyFoodMeal(clientId: number, fromDate: string, fromMeal: strin
   return rows.length;
 }
 
+export type SavedMealView = { id: number; name: string; kcal: number; count: number; names: string[] };
+
+export function listSavedMeals(clientId: number): SavedMealView[] {
+  return getData()
+    .saved_meals.filter((m) => m.client_id === clientId)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .map((m) => ({ id: m.id, name: m.name, kcal: Math.round(m.items.reduce((s, i) => s + i.kcal, 0)), count: m.items.length, names: [...new Set(m.items.map((i) => i.name))] }));
+}
+
+/** One meal on one day, kept under a name to add again. */
+export function saveMeal(clientId: number, date: string, meal: FoodMeal, name: string): SavedMeal | null {
+  const rows = listFoodEntries(clientId, date).filter((e) => e.meal === meal);
+  if (rows.length === 0) return null;
+  const data = getData();
+  const row: SavedMeal = {
+    id: allocId("saved_meals"),
+    client_id: clientId,
+    name,
+    items: rows.map((e) => ({ food_id: e.food_id, name: e.name, grams: e.grams, serving: e.serving, kcal: e.kcal, protein: e.protein, carbs: e.carbs, fat: e.fat })),
+    created_at: new Date().toISOString(),
+  };
+  data.saved_meals.push(row);
+  persist();
+  return row;
+}
+
+export function deleteSavedMeal(clientId: number, id: number): boolean {
+  const data = getData();
+  const before = data.saved_meals.length;
+  data.saved_meals = data.saved_meals.filter((m) => !(m.id === id && m.client_id === clientId));
+  if (data.saved_meals.length === before) return false;
+  persist();
+  return true;
+}
+
+/** A saved meal's foods and amounts into a meal on a day, logged now. */
+export function addSavedMeal(clientId: number, id: number, date: string, meal: FoodMeal): number {
+  const data = getData();
+  const saved = data.saved_meals.find((m) => m.id === id && m.client_id === clientId);
+  if (!saved || !hasFoodMeal(clientId, meal)) return 0;
+  const now = new Date().toISOString();
+  for (const i of saved.items) data.food_entries.push({ id: allocId("food_entries"), client_id: clientId, date, meal, ...i, logged_at: now });
+  persist();
+  return saved.items.length;
+}
+
 export function addFoodEntry(clientId: number, date: string, meal: FoodMeal, foodId: string, grams: number, serving: string | null): FoodEntry | null {
   const food = getFoodOption(clientId, foodId);
   if (!food || !hasFoodMeal(clientId, meal)) return null;
@@ -7565,8 +7611,10 @@ export type FoodDiaryView = {
   /** The day's targets, training or rest as the client called it (else by sets); null without targets. */
   target: { kcal: number; protein: number; carbs: number; fat: number } | null;
   eaten: { kcal: number; protein: number; carbs: number; fat: number };
-  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; entries: FoodEntry[] }[];
+  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntry[] }[];
   recent: FoodOption[];
+  /** The client's saved meals, newest first. */
+  saved: SavedMealView[];
   /** Meals with food in them on the last two weeks' other days, newest first, to copy from. */
   previous: { date: string; dateLabel: string; meal: FoodMeal; mealLabel: string; kcal: number; names: string[] }[];
   /** Dates in the last month with anything logged, for the dots on the week strip. */
@@ -7654,9 +7702,11 @@ export function getFoodDiary(clientId: number, date: string): FoodDiaryView {
     eaten: { kcal: sum("kcal"), protein: sum("protein"), carbs: sum("carbs"), fat: sum("fat") },
     meals: meals.map((m) => {
       const rows = entries.filter((e) => e.meal === m.id);
-      return { ...m, kcal: Math.round(rows.reduce((s, e) => s + e.kcal, 0)), entries: rows };
+      const tot = (k: "kcal" | "protein" | "carbs" | "fat") => r1(rows.reduce((s, e) => s + e[k], 0));
+      return { ...m, kcal: Math.round(tot("kcal")), protein: tot("protein"), carbs: tot("carbs"), fat: tot("fat"), entries: rows };
     }),
     recent: recentFoods(clientId),
+    saved: listSavedMeals(clientId),
     previous,
     loggedDays: [...new Set(getData().food_entries.filter((e) => e.client_id === clientId && e.date >= monthAgo && e.date <= today).map((e) => e.date))],
   };

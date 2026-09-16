@@ -115,6 +115,15 @@ export type FoodEntry = {
   fat: number;
   logged_at: string;
 };
+// A meal a client saved to add again ("My breakfast"): the foods and
+// amounts as they were, with their kcal and macros. Only they can use it.
+export type SavedMeal = {
+  id: number;
+  client_id: number;
+  name: string;
+  items: { food_id: string; name: string; grams: number; serving: string | null; kcal: number; protein: number; carbs: number; fat: number }[];
+  created_at: string;
+};
 // Training day or rest day, as the client set it on the food diary for a
 // date: which targets the day counts down from. Absent: by whether a set
 // was logged that day.
@@ -781,6 +790,7 @@ export type Data = {
   custom_foods: CustomFood[];
   food_meals: FoodMealSlot[];
   food_days: FoodDay[];
+  saved_meals: SavedMeal[];
   check_in_notes: CheckInNote[];
   client_exercise_notes: ClientExerciseNote[];
   client_program_notes: ClientProgramNote[];
@@ -817,6 +827,7 @@ function emptyData(): Data {
     custom_foods: [],
     food_meals: [],
     food_days: [],
+    saved_meals: [],
     check_in_notes: [],
     client_exercise_notes: [],
     client_program_notes: [],
