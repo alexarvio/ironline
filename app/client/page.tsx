@@ -30,6 +30,8 @@ import {
   listPublishedWeekNumbers,
   getNotifications,
   getNutritionGoalsSummary,
+  getFoodDiary,
+  listFoodEntries,
   getNutritionPlan,
   getCurrentPhase,
   getCoachFirstName,
@@ -730,6 +732,7 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
         initialIsTraining={todayLog?.day_type ? todayLog.day_type === "training" : isTrainingDay}
         hasTargets={hasTargets}
         phase={phaseSlot}
+        eatenKcal={listFoodEntries(CLIENT_ID, today).reduce((s, e) => s + e.kcal, 0)}
         footer={supplements.length > 0 ? <SupplementsCard date={today} rows={supplements} /> : undefined}
       />
 
@@ -1219,6 +1222,19 @@ export default async function ClientPage({
     );
   })();
 
+  // Today's food diary: its targets are the ring's for the day type the
+  // client logged today (else by whether a set was logged), so what the
+  // diary counts down from is what the ring shows.
+  const foodDiary = (() => {
+    const today = localDateStr();
+    const s = getNutritionGoalsSummary(CLIENT_ID);
+    const log = getCalorieLog(CLIENT_ID, today);
+    const trained = log?.day_type ? log.day_type === "training" : trainingDates(CLIENT_ID).has(today);
+    const kcal = trained ? s.trainingKcal : s.restKcal;
+    const target = kcal > 0 ? { kcal, protein: trained ? s.trainingProtein : s.restProtein, carbs: trained ? s.trainingCarbs : s.restCarbs, fat: trained ? s.trainingFats : s.restFats } : null;
+    return getFoodDiary(CLIENT_ID, today, "Today", target);
+  })();
+
   const tabs: AppTab[] = [
     // Draws its own light banner (name and main goal); the top bar floats over it.
     { id: "home", label: "Home", icon: <HomeIcon />, bare: true, content: <HomeTab CLIENT_ID={CLIENT_ID} photos={homePhotos} /> },
@@ -1266,6 +1282,7 @@ export default async function ClientPage({
       helpEmail={getCoachEmail(CLIENT_ID)}
       coachProfile={getCoachProfileForClient(CLIENT_ID)}
       coachAvatarPath={getCoachAvatarPath(CLIENT_ID)}
+      foodDiary={foodDiary}
     />
   );
 }

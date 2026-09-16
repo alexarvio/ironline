@@ -88,6 +88,43 @@ export type CalorieLog = {
   /** The kind of day the client said it was when logging. Absent on older
       logs, which fall back to whether a set was logged that date. */
   day_type?: "training" | "rest" | null;
+  /** "diary" when the food diary wrote the figure; a typed figure has none. */
+  source?: "diary" | null;
+};
+// One food logged in a client's food diary: what, how much, and the
+// calories and macros that amount came to (a snapshot, so a later change to
+// the food does not rewrite the past). The day's kcal sum is mirrored into
+// calorie_logs so the coach's side reads it as before.
+export type FoodEntry = {
+  id: number;
+  client_id: number;
+  date: string; // YYYY-MM-DD
+  meal: "breakfast" | "lunch" | "dinner" | "snacks";
+  /** "usda:171077" for the catalog, "custom:12" for the client's own food. */
+  food_id: string;
+  name: string;
+  grams: number;
+  /** The serving the client picked, when they did not type grams: "1 large". */
+  serving: string | null;
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  logged_at: string;
+};
+// A food a client made themselves ("Mum's lasagne"), per 100 g, with one
+// optional serving. Only they can find it.
+export type CustomFood = {
+  id: number;
+  client_id: number;
+  name: string;
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  serving_label: string | null;
+  serving_grams: number | null;
+  created_at: string;
 };
 // A client's note on a check-in: why yesterday's steps were low, what
 // the weekly numbers don't say. One per section per period.
@@ -721,6 +758,8 @@ export type Data = {
   client_preferences: ClientPreferences[];
   client_phases: ClientPhase[];
   calorie_logs: CalorieLog[];
+  food_entries: FoodEntry[];
+  custom_foods: CustomFood[];
   check_in_notes: CheckInNote[];
   client_exercise_notes: ClientExerciseNote[];
   client_program_notes: ClientProgramNote[];
@@ -753,6 +792,8 @@ function emptyData(): Data {
     client_preferences: [],
     client_phases: [],
     calorie_logs: [],
+    food_entries: [],
+    custom_foods: [],
     check_in_notes: [],
     client_exercise_notes: [],
     client_program_notes: [],

@@ -8,12 +8,14 @@ import CheckInScreen, { CheckInProps } from "./CheckInScreen";
 import ProgressPicturesScreen, { type ProgressPicturesProps } from "./ProgressPicturesScreen";
 import CoachProfileScreen from "./CoachProfileScreen";
 import CoachMessagesScreen, { type CoachMessagesProps } from "./CoachMessagesScreen";
+import FoodDiaryScreen, { type FoodDiaryProps } from "./FoodDiaryScreen";
 import type { CoachProfileView } from "../lib/coachProfileView";
 import {
   CheckInProvider,
   CoachIdentityProvider,
   CoachProvider,
   FocusRefProvider,
+  FoodProvider,
   MessagesProvider,
   NavigateProvider,
   NotificationsProvider,
@@ -33,7 +35,7 @@ export type AppTab = {
   darkBanner?: boolean;
 };
 
-type PushView = "notifications" | "checkin" | "photos" | "coach" | "messages" | null;
+type PushView = "notifications" | "checkin" | "photos" | "coach" | "messages" | "food" | null;
 
 // The active bottom tab lives in sessionStorage, not just React state. A full
 // page load — a form that posts before hydration finishes on a slow phone, a
@@ -83,6 +85,7 @@ export default function AppShell({
   helpEmail = "",
   coachProfile = null,
   coachAvatarPath = null,
+  foodDiary = null,
 }: {
   clientName: string;
   tabs: AppTab[];
@@ -100,6 +103,8 @@ export default function AppShell({
   coachProfile?: CoachProfileView | null;
   /** The coach's profile picture, in front of anything they wrote. */
   coachAvatarPath?: string | null;
+  /** Today's food diary, opened from the ring on Nutrition. */
+  foodDiary?: FoodDiaryProps | null;
 }) {
   const storedTab = useSyncExternalStore(subscribeTab, readTab, () => null);
   const activeId = storedTab && tabs.some((t) => t.id === storedTab) ? storedTab : tabs[0]?.id;
@@ -169,6 +174,10 @@ export default function AppShell({
       <div className="app-layer app-layer-push pp-app-screen">
         <ProgressPicturesScreen data={photos} onBack={() => setPushView(null)} />
       </div>
+    ) : pushView === "food" && foodDiary ? (
+      <div className="app-layer app-layer-push cn-screen">
+        <FoodDiaryScreen clientId={clientId} diary={foodDiary} onBack={() => setPushView(null)} />
+      </div>
     ) : pushView === "messages" ? (
       <div className="app-layer app-layer-push cn-screen">
         <CoachMessagesScreen {...coachMessages} onBack={() => setPushView(null)} />
@@ -224,13 +233,15 @@ export default function AppShell({
             <CheckInProvider value={openCheckIn}>
               <PhotosProvider value={() => setPushView("photos")}>
                 <MessagesProvider value={openMessages}>
-                  <CoachProvider value={coachProfile ? () => setPushView("coach") : null}>
+                  <FoodProvider value={foodDiary ? () => setPushView("food") : null}>
+                <CoachProvider value={coachProfile ? () => setPushView("coach") : null}>
                     <NotificationsProvider value={() => setPushView("notifications")}>
                       <NavigateProvider value={goToTab}>
                         <FocusRefProvider value={focusRef}>{active?.content}</FocusRefProvider>
                       </NavigateProvider>
                     </NotificationsProvider>
                   </CoachProvider>
+                </FoodProvider>
                 </MessagesProvider>
               </PhotosProvider>
             </CheckInProvider>

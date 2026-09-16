@@ -1,8 +1,9 @@
 import fs from "fs";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, CardioEntry } from "./db";
-import type { CalorieLog, CheckInNote, ClientGym, ClientPhase, CoachProfile, PhaseTrack } from "./db";
+import type { CalorieLog, CheckInNote, CustomFood, FoodEntry, ClientGym, ClientPhase, CoachProfile, PhaseTrack } from "./db";
 import type { CoachProfileFields, CoachProfileView } from "./coachProfileView";
+import { getCatalogFood, searchCatalog, type CatalogFood } from "./foods/catalog";
 import { coachIdOfClient } from "./tenancy";
 import { LOCK_MS, type LockScope } from "./loginLockout";
 
@@ -5771,7 +5772,8 @@ export function setCalorieLog(
   date: string,
   kcal: number | null,
   note: string | null | undefined = undefined,
-  dayType: "training" | "rest" | undefined = undefined
+  dayType: "training" | "rest" | undefined = undefined,
+  source: "diary" | null | undefined = undefined
 ) {
   const data = getData();
   const existing = data.calorie_logs.find((c) => c.client_id === clientId && c.date === date);
@@ -5782,6 +5784,7 @@ export function setCalorieLog(
     existing.logged_at = new Date().toISOString();
     if (note !== undefined) existing.note = note;
     if (dayType !== undefined) existing.day_type = dayType;
+    if (source !== undefined) existing.source = source;
   } else {
     data.calorie_logs.push({
       id: allocId("calorie_logs"),
@@ -5791,6 +5794,7 @@ export function setCalorieLog(
       logged_at: new Date().toISOString(),
       note: note ?? null,
       ...(dayType ? { day_type: dayType } : {}),
+      ...(source ? { source } : {}),
     });
   }
   persist();
@@ -7338,4 +7342,192 @@ export function removeCoachPhoto(coachId: number, kind: CoachPhotoKind): string 
   profile.updated_at = new Date().toISOString();
   persist();
   return previous;
+}
+
+// ---- Food diary ------------------------------------------------------------
+
+export type FoodMeal = FoodEntry["meal"];
+export const FOOD_MEALS: { id: FoodMeal; label: string }[] = [
+  { id: "breakfast", label: "Breakfast" },
+  { id: "lunch", label: "Lunch" },
+  { id: "dinner", label: "Dinner" },
+  { id: "snacks", label: "Snacks" },
+];
+
+/** A food as the diary's search shows it: per 100 g, with its portions. */
+export type FoodOption = {
+  id: string;
+  name: string;
+  /** "Your food" for the client's own; the USDA category otherwise. */
+  hint: string;
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  servings: [string, number][];
+};
+
+const catalogOption = (f: CatalogFood): FoodOption => ({ id: f.id, name: f.name, hint: f.category, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat, servings: f.servings });
+const customOption = (f: CustomFood): FoodOption => ({
+  id: `custom:${f.id}`,
+  name: f.name,
+  hint: "Your food",
+  kcal: f.kcal,
+  protein: f.protein,
+  carbs: f.carbs,
+  fat: f.fat,
+  servings: f.serving_label && f.serving_grams ? [[f.serving_label, f.serving_grams]] : [],
+});
+
+export function getFoodOption(clientId: number, foodId: string): FoodOption | null {
+  if (foodId.startsWith("custom:")) {
+    const f = getData().custom_foods.find((c) => c.id === Number(foodId.slice(7)) && c.client_id === clientId);
+    return f ? customOption(f) : null;
+  }
+  const f = getCatalogFood(foodId);
+  return f ? catalogOption(f) : null;
+}
+
+/** The client's own foods first when they match, then the catalog. */
+export function searchFoods(clientId: number, query: string, limit = 30): FoodOption[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const own = getData()
+    .custom_foods.filter((c) => c.client_id === clientId && c.name.toLowerCase().includes(q))
+    .map(customOption);
+  return [...own, ...searchCatalog(query, limit).map(catalogOption)].slice(0, limit);
+}
+
+/** What the client logged most often lately, for the top of an empty search. */
+export function recentFoods(clientId: number, limit = 8): FoodOption[] {
+  const seen = new Map<string, number>();
+  const entries = getData().food_entries.filter((e) => e.client_id === clientId);
+  for (const e of entries.slice(-200)) seen.set(e.food_id, (seen.get(e.food_id) ?? 0) + 1);
+  return [...seen.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([id]) => getFoodOption(clientId, id))
+    .filter((f): f is FoodOption => !!f)
+    .slice(0, limit);
+}
+
+export function listFoodEntries(clientId: number, date: string): FoodEntry[] {
+  return getData()
+    .food_entries.filter((e) => e.client_id === clientId && e.date === date)
+    .sort((a, b) => a.logged_at.localeCompare(b.logged_at));
+}
+
+const r1 = (n: number) => Math.round(n * 10) / 10;
+
+// The day's calories, mirrored into the calorie log the coach reads. Nothing
+// logged in the diary any more: the log is cleared too (a typed figure the
+// client entered by hand is kept, since it is not the diary's to remove).
+function mirrorDayIntoCalorieLog(clientId: number, date: string) {
+  const entries = listFoodEntries(clientId, date);
+  const existing = getCalorieLog(clientId, date);
+  if (entries.length === 0) {
+    if (existing?.source === "diary") setCalorieLog(clientId, date, null);
+    return;
+  }
+  const kcal = Math.round(entries.reduce((s, e) => s + e.kcal, 0));
+  setCalorieLog(clientId, date, kcal, undefined, undefined, "diary");
+}
+
+export function addFoodEntry(clientId: number, date: string, meal: FoodMeal, foodId: string, grams: number, serving: string | null): FoodEntry | null {
+  const food = getFoodOption(clientId, foodId);
+  if (!food) return null;
+  const data = getData();
+  const k = grams / 100;
+  const entry: FoodEntry = {
+    id: allocId("food_entries"),
+    client_id: clientId,
+    date,
+    meal,
+    food_id: foodId,
+    name: food.name,
+    grams: r1(grams),
+    serving,
+    kcal: r1(food.kcal * k),
+    protein: r1(food.protein * k),
+    carbs: r1(food.carbs * k),
+    fat: r1(food.fat * k),
+    logged_at: new Date().toISOString(),
+  };
+  data.food_entries.push(entry);
+  mirrorDayIntoCalorieLog(clientId, date);
+  persist();
+  return entry;
+}
+
+export function updateFoodEntry(clientId: number, id: number, grams: number, serving: string | null): boolean {
+  const e = getData().food_entries.find((x) => x.id === id && x.client_id === clientId);
+  if (!e) return false;
+  const food = getFoodOption(clientId, e.food_id);
+  // The food is gone (a custom one deleted): scale the snapshot instead.
+  const per100 = food ?? { kcal: (e.kcal / e.grams) * 100, protein: (e.protein / e.grams) * 100, carbs: (e.carbs / e.grams) * 100, fat: (e.fat / e.grams) * 100 };
+  const k = grams / 100;
+  e.grams = r1(grams);
+  e.serving = serving;
+  e.kcal = r1(per100.kcal * k);
+  e.protein = r1(per100.protein * k);
+  e.carbs = r1(per100.carbs * k);
+  e.fat = r1(per100.fat * k);
+  mirrorDayIntoCalorieLog(clientId, e.date);
+  persist();
+  return true;
+}
+
+export function removeFoodEntry(clientId: number, id: number): boolean {
+  const data = getData();
+  const e = data.food_entries.find((x) => x.id === id && x.client_id === clientId);
+  if (!e) return false;
+  data.food_entries = data.food_entries.filter((x) => x !== e);
+  mirrorDayIntoCalorieLog(clientId, e.date);
+  persist();
+  return true;
+}
+
+export function addCustomFood(clientId: number, food: { name: string; kcal: number; protein: number; carbs: number; fat: number; servingLabel: string | null; servingGrams: number | null }): CustomFood {
+  const data = getData();
+  const row: CustomFood = {
+    id: allocId("custom_foods"),
+    client_id: clientId,
+    name: food.name,
+    kcal: r1(food.kcal),
+    protein: r1(food.protein),
+    carbs: r1(food.carbs),
+    fat: r1(food.fat),
+    serving_label: food.servingLabel,
+    serving_grams: food.servingGrams,
+    created_at: new Date().toISOString(),
+  };
+  data.custom_foods.push(row);
+  persist();
+  return row;
+}
+
+/** Everything the diary screen needs for one day. */
+export type FoodDiaryView = {
+  date: string;
+  dateLabel: string;
+  /** The day's targets, training or rest as the client called it (else by sets); null without targets. */
+  target: { kcal: number; protein: number; carbs: number; fat: number } | null;
+  eaten: { kcal: number; protein: number; carbs: number; fat: number };
+  meals: { id: FoodMeal; label: string; kcal: number; entries: FoodEntry[] }[];
+  recent: FoodOption[];
+};
+
+export function getFoodDiary(clientId: number, date: string, dateLabel: string, target: FoodDiaryView["target"]): FoodDiaryView {
+  const entries = listFoodEntries(clientId, date);
+  const sum = (k: "kcal" | "protein" | "carbs" | "fat") => r1(entries.reduce((s, e) => s + e[k], 0));
+  return {
+    date,
+    dateLabel,
+    target,
+    eaten: { kcal: sum("kcal"), protein: sum("protein"), carbs: sum("carbs"), fat: sum("fat") },
+    meals: FOOD_MEALS.map((m) => {
+      const rows = entries.filter((e) => e.meal === m.id);
+      return { id: m.id, label: m.label, kcal: Math.round(rows.reduce((s, e) => s + e.kcal, 0)), entries: rows };
+    }),
+    recent: recentFoods(clientId),
+  };
 }

@@ -71,6 +71,15 @@ export function useFocusRef() {
   return useContext(FocusRefContext);
 }
 
+// Same bridge for the food diary, opened from the ring on Nutrition.
+const FoodContext = createContext<(() => void) | null>(null);
+
+export const FoodProvider = FoodContext.Provider;
+
+export function useOpenFood() {
+  return useContext(FoodContext);
+}
+
 // Who the coach is, for the small round picture (CoachMark) in front of
 // anything they wrote. Null when the client has no coach.
 export type CoachIdentity = { name: string; photoPath: string | null };

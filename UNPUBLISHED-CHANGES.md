@@ -489,6 +489,16 @@ Look: `/client` → Training → log a whole exercise, then a whole session.
 
 - [ ] The calories figure is right-aligned against "kcal". The note under it says "Note for Finlay", no longer a sentence that cut off.
 
+## 65 · Food diary — local only, first cut
+
+- [ ] **Tap the ring on Nutrition** and the Food diary for today opens: what is left of the day's calories in big, eaten / target beside it, a bar, and the three macros with eaten / target and a bar each. Under it Breakfast, Lunch, Dinner, Snacks as cards, each row a food with its amount and kcal.
+- [ ] **Add food** opens a sheet: search (the client's own foods first, then the catalog), pick one, choose a serving (chips with their grams, a − / + count) or type grams, see the kcal and macros for that amount, add. Recent foods show before typing. "Add your own food" takes a name, per-100 g figures and an optional serving. Tapping a row reopens the sheet to change the amount or remove it.
+- [ ] **The catalog** is USDA FoodData Central (Foundation Foods + SR Legacy, public domain), 8,059 generic foods with household portions, built into `app/lib/foods/catalog.json` by `scripts/build-food-catalog.mjs`. Search is server-side (`searchFoodsAction`): every word must start a word of the name; names that start with the query first, baby / restaurant / fast foods last. English only for now; Open Food Facts for packaged foods and barcodes comes next.
+- [ ] **The ring counts down**: with food logged today its centre shows kcal left instead of the target. The day's kcal is mirrored into the calorie log (`source: "diary"`), so the Calories card, Last 7 days and the coach's side read it as before; a figure typed by hand is left alone, and the diary only clears what it wrote.
+- [ ] New tables `food_entries` and `custom_foods` (migration `0004_food_diary`). Entries keep a snapshot of the kcal and macros for the amount.
+
+Look: `/client` → Nutrition → tap the ring.
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).

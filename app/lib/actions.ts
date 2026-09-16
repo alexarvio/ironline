@@ -180,6 +180,13 @@ import {
   getClientIdForGym,
   pickGymForDay,
   setClientProgramNote,
+  searchFoods,
+  addFoodEntry,
+  updateFoodEntry,
+  removeFoodEntry,
+  addCustomFood,
+  type FoodMeal,
+  type FoodOption,
   getClientIdForProgram,
   reorderAssignments,
   copyProgramDay,
@@ -1859,7 +1866,7 @@ export async function logCaloriesAction(formData: FormData) {
   // Training or rest, as the client called the day; absent keeps what it was.
   const rawDayType = formData.get("dayType");
   const dayType = rawDayType === "training" || rawDayType === "rest" ? rawDayType : undefined;
-  setCalorieLog(clientId, date, kcal, note, dayType);
+  setCalorieLog(clientId, date, kcal, note, dayType, null);
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -2157,4 +2164,70 @@ export async function saveMyDetailsAction(formData: FormData) {
   patchClientProfile(clientId, { email: field("email"), phone: field("phone"), address: field("address") });
   revalidatePath("/client");
   revalidatePath("/admin");
+}
+
+// ---- Food diary ------------------------------------------------------------
+
+export async function searchFoodsAction(clientId: number, query: string): Promise<FoodOption[]> {
+  const owner = await requireClientAccess(Number(clientId));
+  return searchFoods(owner, String(query ?? "").slice(0, 80));
+}
+
+const MEALS = new Set(["breakfast", "lunch", "dinner", "snacks"]);
+const gramsOf = (v: FormDataEntryValue | null) => {
+  const n = Number(String(v ?? "").replace(",", ".").trim());
+  return Number.isFinite(n) && n > 0 && n <= 5000 ? n : null;
+};
+
+export async function addFoodEntryAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const date = String(formData.get("date") ?? "");
+  const meal = String(formData.get("meal") ?? "");
+  const foodId = String(formData.get("foodId") ?? "");
+  const grams = gramsOf(formData.get("grams"));
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !MEALS.has(meal) || !foodId || grams == null) return;
+  const serving = String(formData.get("serving") ?? "").trim().slice(0, 80) || null;
+  addFoodEntry(clientId, date, meal as FoodMeal, foodId, grams, serving);
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+export async function updateFoodEntryAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const id = Number(formData.get("id"));
+  const grams = gramsOf(formData.get("grams"));
+  if (!Number.isInteger(id) || grams == null) return;
+  const serving = String(formData.get("serving") ?? "").trim().slice(0, 80) || null;
+  updateFoodEntry(clientId, id, grams, serving);
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+export async function removeFoodEntryAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const id = Number(formData.get("id"));
+  if (!Number.isInteger(id)) return;
+  removeFoodEntry(clientId, id);
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+/** Returns the new food's id ("custom:12") so the diary can add it straight away. */
+export async function addCustomFoodAction(formData: FormData): Promise<string | null> {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const name = String(formData.get("name") ?? "").trim().slice(0, 80);
+  const num = (k: string, max: number) => {
+    const n = Number(String(formData.get(k) ?? "").replace(",", ".").trim() || "0");
+    return Number.isFinite(n) && n >= 0 && n <= max ? n : null;
+  };
+  const kcal = num("kcal", 2000);
+  const protein = num("protein", 100);
+  const carbs = num("carbs", 100);
+  const fat = num("fat", 100);
+  if (!name || kcal == null || protein == null || carbs == null || fat == null) return null;
+  const servingLabel = String(formData.get("servingLabel") ?? "").trim().slice(0, 40) || null;
+  const servingGrams = gramsOf(formData.get("servingGrams"));
+  const row = addCustomFood(clientId, { name, kcal, protein, carbs, fat, servingLabel: servingLabel && servingGrams ? servingLabel : null, servingGrams: servingLabel && servingGrams ? servingGrams : null });
+  revalidatePath("/client");
+  return `custom:${row.id}`;
 }

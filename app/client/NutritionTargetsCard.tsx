@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useRef, useState } from "react";
+import { useOpenFood } from "./CheckInContext";
 
 // The top of the client's Nutrition tab: the banner (Training day / Rest day
 // tabs, the phase; the app's top bar floats over its top) and the calories card overlapping it (the
@@ -76,6 +77,7 @@ export default function NutritionTargetsCard({
   hasTargets,
   phase,
   footer,
+  eatenKcal = 0,
 }: {
   training: NutritionTargetSet;
   rest: NutritionTargetSet;
@@ -85,7 +87,10 @@ export default function NutritionTargetsCard({
   phase: ReactNode;
   /** The foot of the calories card: the supplements fold. */
   footer?: ReactNode;
+  /** Calories logged in the food diary today; the ring's centre counts down from the target. */
+  eatenKcal?: number;
 }) {
+  const openFood = useOpenFood();
   const [isTraining, setIsTraining] = useState(initialIsTraining);
   const chooseDay = (training: boolean) => setIsTraining(training);
   // A sideways swipe on the ring and macros switches the day: left for Rest
@@ -140,7 +145,13 @@ export default function NutritionTargetsCard({
             >
               {/* The rings on the left, the three macros beside them. */}
               <div className="nd-cal-row">
-              <div className="nd-ring">
+              <button
+                type="button"
+                className="nd-ring"
+                onClick={() => openFood?.()}
+                disabled={!openFood}
+                aria-label={eatenKcal > 0 ? `${n(Math.max(0, active.kcal - eatenKcal))} kcal left today. Open the food diary` : "Open the food diary"}
+              >
                 <svg viewBox={`0 0 ${SIZE} ${SIZE}`} aria-hidden="true">
                   <g transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}>
                     {rings.map((ring) => (
@@ -163,11 +174,11 @@ export default function NutritionTargetsCard({
                 </svg>
                 <div className="nd-ring-center">
                   <span className="nd-ring-kcal">
-                    <Tween value={active.kcal} format={n} />
+                    <Tween value={eatenKcal > 0 ? Math.max(0, active.kcal - eatenKcal) : active.kcal} format={n} />
                   </span>
-                  <span className="nd-ring-label">kcal</span>
+                  <span className="nd-ring-label">{eatenKcal > 0 ? "kcal left" : "kcal"}</span>
                 </div>
-              </div>
+              </button>
 
               <div className="nd-macros">
                 {active.macros.map((m) => (

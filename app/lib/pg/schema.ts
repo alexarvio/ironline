@@ -510,6 +510,37 @@ export const kv = pgTable("kv", {
  * Every collection, with the field(s) that identify a row. store.ts walks
  * this list to load and save; a collection missing here would not be saved.
  */
+export const food_entries = pgTable("food_entries", {
+  id: id(),
+  client_id: fk("client_id"),
+  date: text("date"),
+  meal: text("meal"),
+  food_id: text("food_id"),
+  name: text("name"),
+  grams: num("grams"),
+  serving: text("serving"),
+  kcal: num("kcal"),
+  protein: num("protein"),
+  carbs: num("carbs"),
+  fat: num("fat"),
+  logged_at: text("logged_at"),
+  extra: extra(),
+});
+
+export const custom_foods = pgTable("custom_foods", {
+  id: id(),
+  client_id: fk("client_id"),
+  name: text("name"),
+  kcal: num("kcal"),
+  protein: num("protein"),
+  carbs: num("carbs"),
+  fat: num("fat"),
+  serving_label: text("serving_label"),
+  serving_grams: num("serving_grams"),
+  created_at: text("created_at"),
+  extra: extra(),
+});
+
 export const COLLECTIONS = [
   { name: "users", table: users, key: ["id"] },
   { name: "clients", table: clients, key: ["id"] },
@@ -518,6 +549,8 @@ export const COLLECTIONS = [
   { name: "training_programs", table: training_programs, key: ["id"] },
   { name: "client_phases", table: client_phases, key: ["id"] },
   { name: "calorie_logs", table: calorie_logs, key: ["id"] },
+  { name: "food_entries", table: food_entries, key: ["id"] },
+  { name: "custom_foods", table: custom_foods, key: ["id"] },
   { name: "check_in_notes", table: check_in_notes, key: ["id"] },
   { name: "client_exercise_notes", table: client_exercise_notes, key: ["id"] },
   { name: "client_gyms", table: client_gyms, key: ["id"] },
