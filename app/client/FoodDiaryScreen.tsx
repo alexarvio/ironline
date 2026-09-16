@@ -665,7 +665,7 @@ function SearchPanel({
                 <span className="fdi-result-hint">{p.names.join(", ")}</span>
               </span>
               <span className="fdi-result-kcal">
-                {n(p.kcal)} <small>kcal</small>
+                {n(p.kcal)} <small>calories</small>
               </span>
             </button>
           ))}
