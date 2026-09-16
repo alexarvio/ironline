@@ -14403,7 +14403,7 @@ label.ci-pill { cursor: text; }
 .fdi-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .fdi-panel-cancel { padding: 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #2f5d8f; cursor: pointer; }
 .fdi-panel-actions { display: flex; gap: 10px; }
-.fdi-panel-actions .fdi-primary { flex: 1; }
+.fdi-panel-actions .fdi-primary { flex: 1; min-height: 44px; }
 .fdi-modes { display: flex; padding: 3px; border-radius: 12px; background: #e6ecf3; }
 .fdi-mode { flex: 1; min-height: 38px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 13px; font-weight: 700; color: #1e3a6e; cursor: pointer; }
 .fdi-mode.on { background: #fff; box-shadow: 0 1px 2px rgba(20, 30, 50, 0.12); }
@@ -14462,22 +14462,22 @@ label.ci-pill { cursor: text; }
 .fdi-amount { flex: 0 0 110px; }
 .fdi-unit { flex: 1; }
 .fdi-field-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
-.fdi-amount input { width: 100%; box-sizing: border-box; height: 48px; padding: 0 12px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; font-size: 16px; font-weight: 600; color: #141a24; outline: none; }
+.fdi-amount input { width: 100%; box-sizing: border-box; height: 44px; padding: 0 12px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; font-size: 16px; font-weight: 600; color: #141a24; outline: none; }
 .fdi-amount input { text-align: right; font-variant-numeric: tabular-nums; }
 .fdi-amount input:focus { border-color: #2f5d8f; }
 /* The unit dropdown. */
 .fdi-pick { position: relative; }
-.fdi-pick-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; box-sizing: border-box; height: 48px; padding: 0 12px 0 14px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; font-size: 16px; font-weight: 600; color: #141a24; text-align: left; cursor: pointer; }
+.fdi-pick-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; box-sizing: border-box; height: 44px; padding: 0 10px 0 12px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; font-size: 15px; font-weight: 600; color: #141a24; text-align: left; cursor: pointer; }
 .fdi-pick.open .fdi-pick-btn { border-color: #2f5d8f; }
 .fdi-pick-btn svg { flex: none; width: 16px; height: 16px; color: #5b6474; transition: transform 0.15s; }
 .fdi-pick.open .fdi-pick-btn svg { transform: rotate(180deg); }
 .fdi-pick-label { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fdi-pick-menu { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 20; margin: 0; padding: 6px; list-style: none; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; box-shadow: 0 12px 28px rgba(20, 23, 28, 0.16); max-height: 260px; overflow-y: auto; }
-.fdi-pick-item { display: block; width: 100%; padding: 10px 12px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 15px; font-weight: 500; color: #313851; text-align: left; cursor: pointer; }
+.fdi-pick-menu { position: fixed; z-index: 90; margin: 0; padding: 6px; list-style: none; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; box-shadow: 0 12px 28px rgba(20, 23, 28, 0.16); max-height: 252px; overflow-y: auto; font-family: var(--font-archivo), "Archivo", -apple-system, BlinkMacSystemFont, sans-serif; }
+.fdi-pick-item { display: block; width: 100%; height: 40px; padding: 0 12px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 14px; font-weight: 500; color: #313851; text-align: left; cursor: pointer; }
 .fdi-pick-item:hover { background: #F4F7FC; }
 .fdi-pick-item.on { background: #e6ecf3; color: #1e3a6e; font-weight: 700; }
 /* Save takes the row; the bin beside it. */
-.fdi-bin { flex: none; display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; color: #a32d2d; cursor: pointer; }
+.fdi-bin { flex: none; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; color: #a32d2d; cursor: pointer; }
 .fdi-bin svg { width: 18px; height: 18px; }
 .fdi-bin:disabled { opacity: 0.5; cursor: default; }
 /* The question, in place of the Save row. */

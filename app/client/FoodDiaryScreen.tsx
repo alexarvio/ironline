@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { BookmarkIcon, ChevronDownIcon, ChevronLeftIcon, PlusIcon, SearchIcon, TrashIcon } from "../components/icons";
 import {
   addCustomFoodAction,
@@ -1183,28 +1184,49 @@ function AmountPanel({
 function UnitPicker({ id, value, options, onChange }: { id: string; value: string; options: { id: string; label: string }[]; onChange: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLUListElement>(null);
+  // The list floats over the page (the meal clips what hangs out of it),
+  // under the button, or above it when the screen ends too soon.
+  const [place, setPlace] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
   useEffect(() => {
     if (!open) return;
     const onDown = (e: PointerEvent) => {
-      if (wrap.current && !wrap.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (wrap.current && !wrap.current.contains(t) && menuRef.current && !menuRef.current.contains(t)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const onMove = () => setOpen(false);
     document.addEventListener("pointerdown", onDown);
     document.addEventListener("keydown", onKey);
+    window.addEventListener("resize", onMove);
+    document.addEventListener("scroll", onMove, true);
     return () => {
       document.removeEventListener("pointerdown", onDown);
       document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", onMove);
+      document.removeEventListener("scroll", onMove, true);
     };
   }, [open]);
+  const toggle = () => {
+    if (open) return setOpen(false);
+    const r = wrap.current?.getBoundingClientRect();
+    if (!r) return;
+    const need = Math.min(options.length, 6) * 40 + 12;
+    const below = window.innerHeight - r.bottom;
+    setPlace(below >= need + 8 ? { top: r.bottom + 6, left: r.left, width: r.width } : { bottom: window.innerHeight - r.top + 6, left: r.left, width: r.width });
+    setOpen(true);
+  };
   const current = options.find((o) => o.id === value) ?? options[0];
   return (
     <div className={`fdi-pick${open ? " open" : ""}`} ref={wrap}>
-      <button type="button" id={id} className="fdi-pick-btn" onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}>
+      <button type="button" id={id} className="fdi-pick-btn" onClick={toggle} aria-haspopup="listbox" aria-expanded={open}>
         <span className="fdi-pick-label">{current?.label}</span>
         <ChevronDownIcon />
       </button>
-      {open && (
-        <ul className="fdi-pick-menu" role="listbox" aria-labelledby={id}>
+      {open &&
+        place &&
+        createPortal(
+        <ul ref={menuRef} className="fdi-pick-menu" role="listbox" aria-labelledby={id} style={{ top: place.top, bottom: place.bottom, left: place.left, width: place.width }}>
           {options.map((o) => (
             <li key={o.id}>
               <button
@@ -1221,8 +1243,9 @@ function UnitPicker({ id, value, options, onChange }: { id: string; value: strin
               </button>
             </li>
           ))}
-        </ul>
-      )}
+        </ul>,
+        document.body,
+        )}
     </div>
   );
 }
