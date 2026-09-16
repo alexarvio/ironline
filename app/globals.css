@@ -4469,7 +4469,7 @@ label.ci-pill { cursor: text; }
 .nd-daytype-btn { flex: 1; min-height: 40px; border: 0; border-radius: 999px; background: transparent; font: inherit; font-size: 13px; font-weight: 600; color: #5b6474; cursor: pointer; }
 .nd-daytype-btn.on { background: #fff; color: #1e3a6e; box-shadow: 0 1px 2px rgba(20, 30, 50, 0.12); }
 .nd-log-row { display: flex; align-items: center; gap: 10px; }
-.nd-log-row .nd-eaten-input { flex: 1; width: auto; min-width: 0; text-align: left; }
+.nd-log-row .nd-eaten-input { flex: 1; width: auto; min-width: 0; text-align: right; }
 .nd-log-target { margin-top: -6px; font-size: 12px; color: #5b6474; font-variant-numeric: tabular-nums; }
 /* ‹ Today › in the card's header: which day is being logged. */
 .nd-log-head { align-items: center; }
@@ -13867,19 +13867,22 @@ label.ci-pill { cursor: text; }
 .tr-days-status.done { font-weight: 600; }
 .tr-ring-pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; }
 .tr-note { background: #f8f9fb; border-top: 1px solid #eceff3; }
-.tr-note-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px 12px 22px; }
+.tr-note-prompt { display: flex; align-items: center; gap: 10px; width: 100%; padding: 14px 16px 14px 22px; border: 0; background: transparent; font: inherit; text-align: left; cursor: pointer; }
 .tr-note-icon { flex: none; display: flex; color: #8b93a1; }
 .tr-note-icon svg { width: 16px; height: 16px; }
-/* 16px, not 14.5: iOS zooms the page into any smaller field on focus. */
-.tr-note-input { flex: 1; min-width: 0; min-height: 40px; padding: 0; border: 0; background: transparent; font: inherit; font-size: 16px; color: #313851; outline: none; }
-.tr-note-input::placeholder { color: #8b93a1; }
-.tr-send { position: relative; flex: none; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 0; border-radius: 999px; background: #a0a7b3; color: #fff; cursor: pointer; }
-.tr-send::after { content: ""; position: absolute; inset: -5px; }
-.tr-send svg { width: 16px; height: 16px; }
-.tr-send.ready { background: #1e3a6e; }
-.tr-send:disabled { cursor: default; }
-.tr-note-bubble-wrap { display: flex; justify-content: flex-end; padding: 0 12px 12px 22px; }
-.tr-note-bubble { max-width: 85%; padding: 9px 13px; border: 0; border-radius: 12px 12px 4px 12px; background: #e6ecf3; font: inherit; font-size: 14px; line-height: 1.4; color: #1e3a6e; text-align: left; white-space: pre-wrap; cursor: pointer; }
+.tr-note-prompt-text { flex: 1; min-width: 0; font-size: 15px; color: #5b6474; }
+.tr-note-prompt-go, .tr-note-edit { flex: none; padding: 0; border: 0; background: transparent; font: inherit; font-size: 14px; font-weight: 600; color: #1e3a6e; cursor: pointer; }
+.tr-note-saved, .tr-note-writing { display: flex; flex-direction: column; gap: 8px; padding: 14px 22px 16px; }
+.tr-note-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tr-note-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
+.tr-note-text { margin: 0; font-size: 15px; line-height: 1.5; color: #313851; white-space: pre-wrap; overflow-wrap: anywhere; }
+.tr-note-box { width: 100%; box-sizing: border-box; min-height: 72px; padding: 10px 12px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; font: inherit; font-size: 16px; line-height: 1.45; color: #313851; resize: none; outline: none; overflow: hidden; }
+.tr-note-box:focus { border-color: #1e3a6e; }
+.tr-note-box::placeholder { color: #a0a7b3; }
+.tr-note-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.tr-note-btn { height: 36px; padding: 0 16px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; font-size: 14px; font-weight: 600; color: #313851; cursor: pointer; }
+.tr-note-btn.primary { border-color: #1e3a6e; background: #1e3a6e; color: #fff; }
+.tr-note-btn:disabled { opacity: 0.45; cursor: default; }
 
 /* 3 · Sessions */
 .tr-sessions-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 4px 6px 0; }
@@ -13900,7 +13903,18 @@ label.ci-pill { cursor: text; }
 .tr-pill.done { background: #DFF3EA; color: #2f7a3f; }
 .tr-chev { flex: none; width: 9px; height: 9px; box-sizing: border-box; border-right: 2px solid #8b93a1; border-bottom: 2px solid #8b93a1; transform: translateY(-2px) rotate(45deg); transition: transform 0.2s ease; }
 .tr-chev.up { transform: translateY(2px) rotate(225deg); }
-.tr-session-body { display: flex; flex-direction: column; gap: 12px; padding: 12px 12px 14px; border-top: 1px solid #eceff3; }
+/* The body unfolds on open and folds shut before it leaves (see FOLD_MS). */
+.tr-session-fold { display: grid; grid-template-rows: 1fr; border-top: 1px solid #eceff3; transition: grid-template-rows 0.42s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.42s; animation: tr-unfold 0.35s cubic-bezier(0.2, 0, 0.2, 1); }
+.tr-session-fold > * { min-height: 0; overflow: hidden; }
+.tr-session-fold.folding { grid-template-rows: 0fr; border-color: transparent; }
+@keyframes tr-unfold { from { grid-template-rows: 0fr; } }
+/* An exercise card's body, the same way: unfolds when the card opens, folds shut before the next takes over. */
+.ts-fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.42s cubic-bezier(0.4, 0, 0.2, 1); animation: tr-unfold 0.35s cubic-bezier(0.2, 0, 0.2, 1); }
+.ts-fold-inner { min-height: 0; overflow: hidden; }
+.ts-fold.folding { grid-template-rows: 0fr; }
+@media (prefers-reduced-motion: reduce) { .ts-fold { animation: none; transition: none; } }
+@media (prefers-reduced-motion: reduce) { .tr-session-fold { animation: none; transition: none; } }
+.tr-session-body { display: flex; flex-direction: column; gap: 12px; padding: 12px 12px 14px; }
 
 /* Inside a session the exercise cards, sets and cardio keep the live
    structure and their own ts-* styles. */

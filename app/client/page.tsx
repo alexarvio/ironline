@@ -6,7 +6,7 @@ import {
   getClient,
   getClientProfile,
   getClientPlanView,
-  getClientProgramNote,
+  getClientProgramNoteMeta,
   listCardioForDay,
   listChatMessages,
   isCardioDone,
@@ -424,7 +424,16 @@ function TrainingTab({ CLIENT_ID, week, showMyNotes }: { CLIENT_ID: number; week
               </div>
             </div>
           )}
-          {program && <ProgramNote programId={program.id} text={getClientProgramNote(CLIENT_ID, program.id)} coachName={getCoachFirstName(CLIENT_ID)} />}
+          {program && (
+            <ProgramNote
+              programId={program.id}
+              note={(() => {
+                const m = getClientProgramNoteMeta(CLIENT_ID, program.id);
+                return m ? { text: m.text, dateLabel: new Date(m.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) } : null;
+              })()}
+              coachName={getCoachFirstName(CLIENT_ID)}
+            />
+          )}
         </section>
       )}
 

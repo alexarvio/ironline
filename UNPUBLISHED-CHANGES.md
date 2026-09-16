@@ -473,6 +473,22 @@ Look: `/admin/profile` → drop a photo on Profile picture; then `/client` → N
 
 Look: `/client` → Training → an exercise with a weight → type 60, flip Kg/Lbs back and forth.
 
+## 62 · The programme note, rebuilt — local only
+
+- [ ] The one-line box under Days trained is gone. Nothing yet: one row, "Tell Finlay how the programme feels", with Write. Tap it and a box opens that grows with the text, Cancel and Send under it. Sent: the note in full under "Your note to Finlay · 12 Sep", with Edit; saving it empty removes it. No more bubble sitting there. Placeholder in the box: "How the programme feels, what is not working, what you want more of".
+
+Look: `/client` → Training → under Days trained.
+
+## 63 · Sessions and exercises fold shut, not vanish — local only
+
+- [ ] A session body unfolds when opened and folds shut over 0.4 s when tapped closed or when the last set lands (after the "Workout complete" moment). An exercise card does the same: its body folds shut after the last set, then the next one unfolds in its place. Off with prefers-reduced-motion.
+
+Look: `/client` → Training → log a whole exercise, then a whole session.
+
+## 64 · Calories box: the figure sits right, the note placeholder is short — local only
+
+- [ ] The calories figure is right-aligned against "kcal". The note under it says "Note for Finlay", no longer a sentence that cut off.
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).

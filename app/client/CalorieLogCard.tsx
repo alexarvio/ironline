@@ -214,7 +214,7 @@ function DayLog({ clientId, day, coachName, stepper }: { clientId: number; day: 
           maxLength={500}
           value={noteValue}
           onChange={(e) => setNoteDraft(e.target.value)}
-          placeholder={`Note for ${coachName} (optional), e.g. why the day went over`}
+          placeholder={`Note for ${coachName}`}
           aria-label={`Note for ${coachName}`}
           className="nd-log-note"
         />

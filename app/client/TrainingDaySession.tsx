@@ -59,6 +59,8 @@ function tidyDecimal(e: React.FormEvent<HTMLInputElement>) {
 // weight typed in lbs is saved back as kg, so progression, goals and the
 // coach's view are untouched. Remembered per exercise on this phone, since
 // it is the machine that decides the unit.
+// How long the session body takes to fold shut (matches .tr-session-fold).
+const FOLD_MS = 420;
 type WeightUnit = "kg" | "lb";
 const KG_PER_LB = 0.45359237;
 const roundTo = (n: number, dp: number) => Math.round(n * 10 ** dp) / 10 ** dp;
@@ -177,14 +179,34 @@ export default function TrainingDaySession({
     wasDone.current = dayDone;
     if (!before && dayDone && openNow.current) setCelebrating(true);
   }, [dayDone]);
+  // Closing folds the body shut over a beat before it leaves, rather than
+  // vanishing; a tap on the head and the finished day's own fold both go
+  // through here. Opening unfolds the same way (CSS). A finished day also
+  // scrolls its head into view once folded.
+  const [folding, setFolding] = useState(false);
+  const scrollAfterFold = useRef(false);
+  const fold = (thenScroll = false) => {
+    if (!openNow.current) return;
+    scrollAfterFold.current = thenScroll;
+    setFolding(true);
+  };
+  useEffect(() => {
+    if (!folding) return;
+    const t = setTimeout(() => {
+      setFolding(false);
+      if (openNow.current) toggleNow.current();
+      if (scrollAfterFold.current) setTimeout(() => sectionRef.current?.scrollIntoView({ block: "start", behavior: "smooth" }), 60);
+      scrollAfterFold.current = false;
+    }, FOLD_MS);
+    return () => clearTimeout(t);
+  }, [folding]);
   useEffect(() => {
     if (!celebrating) return;
     const t = setTimeout(() => {
       setCelebrating(false);
       // An undo during the moment (a cardio tapped back) keeps the day open.
       if (!openNow.current || !doneNow.current) return;
-      toggleNow.current();
-      setTimeout(() => sectionRef.current?.scrollIntoView({ block: "start", behavior: "smooth" }), 60);
+      fold(true);
     }, 1800);
     return () => clearTimeout(t);
   }, [celebrating]);
@@ -208,12 +230,22 @@ export default function TrainingDaySession({
   useEffect(() => {
     latest.current = exercises;
   }, [exercises]);
+  // The exercise whose body is folding shut right now; its card stays until
+  // the fold has run, then the next one unfolds (CSS) in its place.
+  const [closingId, setClosingId] = useState<number | null>(null);
+  const closeExercise = (id: number, then: () => number | null) => {
+    setClosingId(id);
+    setTimeout(() => {
+      setClosingId(null);
+      setExpandedId(then());
+    }, FOLD_MS);
+  };
   useEffect(() => {
     const prev = last.current;
     last.current = { id: expandedId, done: expandedDone };
     const justFinished = expandedId != null && prev.id === expandedId && !prev.done && expandedDone;
     if (!justFinished) return;
-    const t = setTimeout(() => setExpandedId(firstUnfinished(latest.current)), 600);
+    const t = setTimeout(() => closeExercise(expandedId, () => firstUnfinished(latest.current)), 600);
     return () => clearTimeout(t);
   }, [expandedId, expandedDone]);
 
@@ -233,7 +265,7 @@ export default function TrainingDaySession({
 
   return (
     <section ref={sectionRef} className={`tr-session${open ? " open" : ""}${dayDone ? " done" : ""}`}>
-      <button type="button" className="tr-session-head" onClick={onToggle} aria-expanded={open}>
+      <button type="button" className="tr-session-head" onClick={() => (open ? fold() : onToggle())} aria-expanded={open}>
         <span className="tr-session-main">
           <span className="tr-session-title">{title}</span>
           <span className="tr-session-sub">{sub}</span>
@@ -246,6 +278,7 @@ export default function TrainingDaySession({
       </button>
 
       {open && (
+        <div className={`tr-session-fold${folding ? " folding" : ""}`}>
         <div className="tr-session-body ts-list">
           {gyms.length > 1 && <GymPicker gyms={gyms} gymId={gymId} onPick={pickGym} />}
           {exercises.map((ex, i) =>
@@ -255,7 +288,8 @@ export default function TrainingDaySession({
                 exercise={ex}
                 gymId={gymId}
                 index={i + 1}
-                onCollapse={() => setExpandedId(null)}
+                closing={closingId === ex.id}
+                onCollapse={() => closeExercise(ex.id, () => null)}
               />
             ) : (
               <CollapsedExercise
@@ -270,6 +304,7 @@ export default function TrainingDaySession({
           {cardio.map((c, i) => (
             <CardioCard key={`c${c.id}`} cardio={c} index={exercises.length + i + 1} />
           ))}
+        </div>
         </div>
       )}
       {celebrating &&
@@ -367,11 +402,14 @@ function ExpandedExercise({
   exercise,
   gymId,
   index,
+  closing = false,
   onCollapse,
 }: {
   exercise: SessionExercise;
   gymId: number | null;
   index: number;
+  /** Folding shut: the body slides away before the card gives way to the next. */
+  closing?: boolean;
   onCollapse: () => void;
 }) {
   const done = isDone(exercise);
@@ -522,6 +560,8 @@ function ExpandedExercise({
           </button>
         </span>
       </div>
+      <div className={`ts-fold${closing ? " folding" : ""}`}>
+      <div className="ts-fold-inner">
       {exercise.videoUrl && (
         <a href={exercise.videoUrl} target="_blank" rel="noreferrer" className="ts-video">
           ▶ Demo
@@ -668,6 +708,8 @@ function ExpandedExercise({
           {pending ? "Logging…" : `Log set ${nextSet} of ${exercise.sets}`}
         </button>
       )}
+      </div>
+      </div>
     </div>
   );
 }
