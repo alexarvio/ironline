@@ -15,15 +15,18 @@ import {
 } from "../lib/actions";
 import { useTween } from "./NutritionTargetsCard";
 
-// The client's food diary, opened from the ring on Nutrition: a day at a
-// time (today first, back a month with the arrows or a sideways swipe),
-// what is left of its calories and macros at the top, then the meals. Add
+// The client's food diary, opened from the ring on Nutrition. On the client
+// page model: the top bar (a back arrow in place of the burger) floating
+// over a banner with the day and a week strip, the targets card pulled up
+// over the banner (the ring of what is left, the three macros, the day's
+// standing), then the meals in one card. A day at a time: the strip, its
+// arrows or a sideways swipe move a day, never past today; other days are
+// read through the action, and the day is re-read after every change. Add
 // food opens a sheet: search the catalog (the client's own foods first),
-// pick one, say how much (a serving or grams), and it lands in the meal; or
-// copy a whole meal from another day. A row opens the same sheet to change
-// the amount or take it out. Meals can be added beside the four standard
-// ones. Every change is saved as it happens and the day is re-read; the
-// day's kcal is mirrored into the calorie log the coach reads.
+// pick one, say how much, or copy a whole meal from another day. A row
+// opens the same sheet to change the amount or take it out. Meals can be
+// added beside the four standard ones, in a dialog. The day's kcal is
+// mirrored into the calorie log the coach reads.
 export type FoodMeal = string;
 export type FoodEntryView = {
   id: number;
@@ -57,19 +60,31 @@ export type FoodDiaryProps = {
   meals: { id: FoodMeal; label: string; own: boolean; kcal: number; entries: FoodEntryView[] }[];
   recent: FoodOptionView[];
   previous: { date: string; dateLabel: string; meal: FoodMeal; mealLabel: string; kcal: number; names: string[] }[];
+  /** Dates in the last month with anything logged, for the dots on the week strip. */
+  loggedDays: string[];
 };
 
 const HUE = { protein: "#334EAC", carbs: "#D99A2B", fat: "#2E8B7A" } as const;
 const n = (v: number) => Math.round(v).toLocaleString("en-US");
 const g = (v: number) => (Math.abs(v - Math.round(v)) < 0.05 ? String(Math.round(v)) : v.toFixed(1));
 const amountLabel = (e: { grams: number; serving: string | null }) => (e.serving ? `${e.serving} · ${g(e.grams)} g` : `${g(e.grams)} g`);
-const addDays = (iso: string, days: number) => {
-  const d = new Date(`${iso}T00:00:00`);
+const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const addDays = (date: string, days: number) => {
+  const d = new Date(`${date}T00:00:00`);
   d.setDate(d.getDate() + days);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return iso(d);
 };
-// How far back the arrows go.
+// Monday to Sunday around a date.
+const weekOf = (date: string) => {
+  const d = new Date(`${date}T00:00:00`);
+  const back = (d.getDay() + 6) % 7;
+  const monday = addDays(date, -back);
+  return Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+};
+const WEEKDAY = ["M", "T", "W", "T", "F", "S", "S"];
+// How far back the diary goes.
 const DAYS_BACK = 30;
+const MEAL_IDEAS = ["Pre-workout", "Post-workout", "Second breakfast", "Late snack", "Shake"];
 
 type Sheet =
   | { kind: "search"; meal: FoodMeal }
@@ -80,6 +95,7 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
   // The day showing. Today arrives with the page; other days, and today
   // again after a change, are read through the action.
   const today = initial.date;
+  const floor = addDays(today, -DAYS_BACK);
   const [diary, setDiary] = useState<FoodDiaryProps>(initial);
   const [date, setDate] = useState(initial.date);
   const [loading, startLoad] = useTransition();
@@ -89,15 +105,17 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
       if (next) setDiary(next);
     });
   const goTo = (d: string) => {
-    if (d > today || d < addDays(today, -DAYS_BACK)) return;
+    if (d > today || d < floor || d === date) return;
     setDate(d);
     load(d);
   };
   const reload = () => load(date);
   const [sheet, setSheet] = useState<Sheet | null>(null);
-  const [addingMeal, setAddingMeal] = useState(false);
+  const [namingMeal, setNamingMeal] = useState(false);
+  // The top bar is see-through over the banner until the page scrolls.
+  const [scrolled, setScrolled] = useState(false);
 
-  // A sideways swipe on the summary steps a day: left for the next, right for the one before.
+  // A sideways swipe on the page steps a day: left for the next, right for the one before.
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const onSwipeEnd = (x: number, y: number) => {
     const start = swipeStart.current;
@@ -105,134 +123,162 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
     if (!start) return;
     const dx = x - start.x;
     const dy = y - start.y;
-    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
     goTo(addDays(date, dx > 0 ? -1 : 1));
   };
 
   const mealLabel = (id: FoodMeal) => diary.meals.find((m) => m.id === id)?.label ?? "";
+  const logged = new Set(diary.loggedDays);
+  const week = weekOf(date);
 
   return (
-    <div className="fd-screen">
-      <header className="cn-header">
-        <button type="button" className="cn-icon-btn" onClick={onBack} aria-label="Back">
+    <div className="fd-screen app-layer-main">
+      <header className={`app-header dark overlay${scrolled ? "" : " clear"}`}>
+        <button type="button" className="app-header-icon-btn" onClick={onBack} aria-label="Back">
           <ChevronLeftIcon />
         </button>
-        <div className="cn-header-titles">
-          <h1 className="cn-title">Food diary</h1>
-          <div className="nd-date-step fd-step">
-            <button type="button" className="nd-date-btn" onClick={() => goTo(addDays(date, -1))} disabled={date <= addDays(today, -DAYS_BACK)} aria-label="Previous day">
-              <ChevronLeftIcon />
-            </button>
-            <span className={`nd-date-label${loading ? " loading" : ""}`} aria-live="polite">
-              {diary.dateLabel}
-            </span>
-            <button type="button" className="nd-date-btn next" onClick={() => goTo(addDays(date, 1))} disabled={date >= today} aria-label="Next day">
-              <ChevronLeftIcon />
+        <span className="app-header-brand">Ironline</span>
+        <div className="app-header-actions">
+          <span className="app-header-icon-btn fd-bar-spacer" aria-hidden="true" />
+        </div>
+      </header>
+
+      <main
+        className={`app-content dark${loading ? " fd-loading" : ""}`}
+        onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 4)}
+        onPointerDown={(e) => {
+          swipeStart.current = { x: e.clientX, y: e.clientY };
+        }}
+        onPointerUp={(e) => onSwipeEnd(e.clientX, e.clientY)}
+        onPointerCancel={() => {
+          swipeStart.current = null;
+        }}
+      >
+        <div className="fd-page">
+          <header className="nd-banner fd-banner">
+            <div className="fd-banner-titles">
+              <div className="fd-eyebrow">Food diary</div>
+              <h1 className="fd-date">{diary.dateLabel}</h1>
+            </div>
+            <div className="fd-week">
+              <button type="button" className="fd-week-arrow" onClick={() => goTo(addDays(date, -1))} disabled={date <= floor} aria-label="Previous day">
+                <ChevronLeftIcon />
+              </button>
+              {week.map((d, i) => {
+                const future = d > today;
+                const tooFar = d < floor;
+                const on = d === date;
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    className={`fd-day${on ? " on" : ""}${future || tooFar ? " off" : ""}`}
+                    onClick={() => goTo(d)}
+                    disabled={future || tooFar}
+                    aria-pressed={on}
+                    aria-label={d === today ? "Today" : d}
+                  >
+                    <span className="fd-day-letter">{WEEKDAY[i]}</span>
+                    <span className="fd-day-num">{Number(d.slice(8))}</span>
+                    <span className={`fd-day-dot${on ? " on" : logged.has(d) ? " logged" : ""}`} aria-hidden="true" />
+                  </button>
+                );
+              })}
+              <button type="button" className="fd-week-arrow next" onClick={() => goTo(addDays(date, 1))} disabled={date >= today} aria-label="Next day">
+                <ChevronLeftIcon />
+              </button>
+            </div>
+          </header>
+
+          <Targets target={diary.target} eaten={diary.eaten} />
+
+          <div className="nd-body fd-list">
+            <section className="fd-meals">
+              {diary.meals.map((meal) => (
+                <div key={meal.id} className="fd-meal">
+                  <div className="fd-meal-head">
+                    <div className="fd-meal-titles">
+                      <span className="fd-meal-title">{meal.label}</span>
+                      <span className="fd-meal-sub">{meal.entries.length === 0 ? "Nothing logged yet" : `${meal.entries.length} item${meal.entries.length === 1 ? "" : "s"}`}</span>
+                    </div>
+                    {meal.entries.length > 0 ? (
+                      <span className="fd-pill">{n(meal.kcal)} kcal</span>
+                    ) : meal.own ? (
+                      <button
+                        type="button"
+                        className="fd-meal-remove"
+                        onClick={() => {
+                          const fd = new FormData();
+                          fd.set("clientId", String(clientId));
+                          fd.set("meal", meal.id);
+                          startLoad(async () => {
+                            await removeFoodMealAction(fd);
+                            const next = await getFoodDiaryAction(clientId, date);
+                            if (next) setDiary(next);
+                          });
+                        }}
+                      >
+                        Remove
+                      </button>
+                    ) : (
+                      <span className="fd-pill empty">Empty</span>
+                    )}
+                  </div>
+                  {meal.entries.map((e) => (
+                    <button
+                      key={e.id}
+                      type="button"
+                      className="fd-row"
+                      onClick={() =>
+                        setSheet({
+                          kind: "amount",
+                          meal: meal.id,
+                          entry: e,
+                          food: { id: e.food_id, name: e.name, hint: "", group: "more", kcal: (e.kcal / e.grams) * 100, protein: (e.protein / e.grams) * 100, carbs: (e.carbs / e.grams) * 100, fat: (e.fat / e.grams) * 100, servings: [] },
+                        })
+                      }
+                    >
+                      <span className="fd-row-main">
+                        <span className="fd-row-name">{e.name}</span>
+                        <span className="fd-row-amount">{amountLabel(e)}</span>
+                      </span>
+                      <span className="fd-row-kcal">{n(e.kcal)} kcal</span>
+                    </button>
+                  ))}
+                  <button type="button" className="fd-add" onClick={() => setSheet({ kind: "search", meal: meal.id })}>
+                    <span className="fd-add-plus" aria-hidden="true">
+                      <PlusIcon />
+                    </span>
+                    Add food
+                  </button>
+                </div>
+              ))}
+            </section>
+
+            <button type="button" className="fd-add-meal" onClick={() => setNamingMeal(true)}>
+              <PlusIcon />
+              Add a meal
             </button>
           </div>
         </div>
-        <span className="cn-icon-spacer" aria-hidden="true" />
-      </header>
-
-      <main className={`fd-body${loading ? " loading" : ""}`}>
-        <div
-          onPointerDown={(e) => {
-            swipeStart.current = { x: e.clientX, y: e.clientY };
-          }}
-          onPointerUp={(e) => onSwipeEnd(e.clientX, e.clientY)}
-          onPointerCancel={() => {
-            swipeStart.current = null;
-          }}
-        >
-          <Summary target={diary.target} eaten={diary.eaten} />
-        </div>
-
-        {diary.meals.map((meal) => (
-          <section key={meal.id} className="nd-card fd-meal">
-            <div className="fd-meal-head">
-              <h2 className="fd-meal-title">{meal.label}</h2>
-              {meal.entries.length > 0 ? (
-                <span className="fd-meal-kcal">{n(meal.kcal)} kcal</span>
-              ) : meal.own ? (
-                <button
-                  type="button"
-                  className="fd-meal-remove"
-                  onClick={() => {
-                    const fd = new FormData();
-                    fd.set("clientId", String(clientId));
-                    fd.set("meal", meal.id);
-                    startLoad(async () => {
-                      await removeFoodMealAction(fd);
-                      const next = await getFoodDiaryAction(clientId, date);
-                      if (next) setDiary(next);
-                    });
-                  }}
-                >
-                  Remove
-                </button>
-              ) : null}
-            </div>
-            {meal.entries.map((e) => (
-              <button
-                key={e.id}
-                type="button"
-                className="fd-row"
-                onClick={() =>
-                  setSheet({
-                    kind: "amount",
-                    meal: meal.id,
-                    entry: e,
-                    food: { id: e.food_id, name: e.name, hint: "", group: "more", kcal: (e.kcal / e.grams) * 100, protein: (e.protein / e.grams) * 100, carbs: (e.carbs / e.grams) * 100, fat: (e.fat / e.grams) * 100, servings: [] },
-                  })
-                }
-              >
-                <span className="fd-row-main">
-                  <span className="fd-row-name">{e.name}</span>
-                  <span className="fd-row-amount">{amountLabel(e)}</span>
-                </span>
-                <span className="fd-row-kcal">{n(e.kcal)}</span>
-              </button>
-            ))}
-            <button type="button" className="fd-add" onClick={() => setSheet({ kind: "search", meal: meal.id })}>
-              <PlusIcon />
-              Add food
-            </button>
-          </section>
-        ))}
-
-        {addingMeal ? (
-          <form
-            className="nd-card fd-new-meal"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const name = String(new FormData(e.currentTarget).get("name") ?? "").trim();
-              if (!name) return;
-              const fd = new FormData();
-              fd.set("clientId", String(clientId));
-              fd.set("name", name);
-              setAddingMeal(false);
-              startLoad(async () => {
-                await addFoodMealAction(fd);
-                const next = await getFoodDiaryAction(clientId, date);
-                if (next) setDiary(next);
-              });
-            }}
-          >
-            <input name="name" type="text" placeholder="Pre-workout, Second lunch…" maxLength={30} autoFocus aria-label="Meal name" />
-            <button type="button" className="fd-note-btn" onClick={() => setAddingMeal(false)}>
-              Cancel
-            </button>
-            <button type="submit" className="fd-note-btn primary">
-              Add
-            </button>
-          </form>
-        ) : (
-          <button type="button" className="fd-add-meal" onClick={() => setAddingMeal(true)}>
-            <PlusIcon />
-            Add a meal
-          </button>
-        )}
       </main>
+
+      {namingMeal && (
+        <NewMealDialog
+          onCancel={() => setNamingMeal(false)}
+          onAdd={(name) => {
+            const fd = new FormData();
+            fd.set("clientId", String(clientId));
+            fd.set("name", name);
+            setNamingMeal(false);
+            startLoad(async () => {
+              await addFoodMealAction(fd);
+              const next = await getFoodDiaryAction(clientId, date);
+              if (next) setDiary(next);
+            });
+          }}
+        />
+      )}
 
       {sheet && (
         <div className="fd-scrim" role="presentation" onClick={() => setSheet(null)}>
@@ -281,64 +327,59 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
   );
 }
 
-// ---- What is left of the day -----------------------------------------------
-// A ring that fills as the day is eaten, the kcal left counting inside it;
-// the three macros beside it, each with its own bar. Figures run to their
-// new values rather than snapping.
+// ---- The targets card -------------------------------------------------------
+// Pulled up over the banner: a ring that fills as the day is eaten with the
+// kcal left counting inside it, the three macros beside it, and under a
+// hairline how the day stands. Figures run to their new values.
 
-const RING = 118;
-const RING_R = 52;
-const RING_STROKE = 9;
+const RING = 104;
+const RING_R = 46;
+const RING_STROKE = 8;
 
-function Summary({ target, eaten }: { target: Macros | null; eaten: Macros }) {
+function Targets({ target, eaten }: { target: Macros | null; eaten: Macros }) {
   const left = target ? target.kcal - eaten.kcal : null;
-  const over = left != null && left < 0;
   const share = target && target.kcal > 0 ? Math.min(1, eaten.kcal / target.kcal) : 0;
   const circumference = 2 * Math.PI * RING_R;
   const fill = useTween(share * circumference);
-  const figure = useTween(left == null ? eaten.kcal : Math.abs(left));
+  const figure = useTween(left == null ? eaten.kcal : Math.max(0, left));
+  const ratio = target && target.kcal > 0 ? eaten.kcal / target.kcal : 0;
+  const standing =
+    left == null
+      ? null
+      : left < 0
+      ? { tone: "warn", text: `${n(-left)} over` }
+      : ratio >= 0.9
+      ? { tone: "good", text: "On target" }
+      : { tone: "", text: `${n(left)} to go` };
   return (
-    <section className={`nd-card fd-summary${over ? " over" : ""}`}>
-      <div className="fd-summary-row">
-        <div className="fd-ring" role="img" aria-label={left == null ? `${n(eaten.kcal)} kcal eaten` : over ? `${n(-left)} kcal over` : `${n(left)} kcal left`}>
+    <section className="fd-targets">
+      <div className="fd-targets-row">
+        <div className="fd-ring" role="img" aria-label={left == null ? `${n(eaten.kcal)} kcal eaten` : left < 0 ? `${n(-left)} kcal over` : `${n(left)} kcal left`}>
           <svg viewBox={`0 0 ${RING} ${RING}`} aria-hidden="true">
             <g transform={`rotate(-90 ${RING / 2} ${RING / 2})`}>
               <circle cx={RING / 2} cy={RING / 2} r={RING_R} fill="none" stroke="#e6ecf3" strokeWidth={RING_STROKE} />
-              <circle
-                cx={RING / 2}
-                cy={RING / 2}
-                r={RING_R}
-                fill="none"
-                stroke={over ? "#b3471d" : "#1e3a6e"}
-                strokeWidth={RING_STROKE}
-                strokeLinecap="round"
-                strokeDasharray={`${fill} ${circumference}`}
-              />
+              <circle cx={RING / 2} cy={RING / 2} r={RING_R} fill="none" stroke="#1e3a6e" strokeWidth={RING_STROKE} strokeLinecap="round" strokeDasharray={`${fill} ${circumference}`} />
             </g>
           </svg>
           <div className="fd-ring-center">
             <span className="fd-ring-figure">{n(figure)}</span>
-            <span className="fd-ring-label">{left == null ? "eaten" : over ? "over" : "left"}</span>
+            <span className="fd-ring-label">{left == null ? "eaten" : "left"}</span>
           </div>
         </div>
-        <div className="fd-summary-side">
-          {target && (
-            <div className="fd-summary-totals">
-              <span>
-                <b>{n(eaten.kcal)}</b> eaten
-              </span>
-              <span>
-                <b>{n(target.kcal)}</b> target
-              </span>
-            </div>
-          )}
-          <div className="fd-macros">
-            {(["protein", "carbs", "fat"] as const).map((m) => (
-              <MacroLine key={m} id={m} eaten={eaten[m]} goal={target?.[m] ?? null} />
-            ))}
-          </div>
+        <div className="fd-macros">
+          {(["protein", "carbs", "fat"] as const).map((m) => (
+            <MacroLine key={m} id={m} eaten={eaten[m]} goal={target?.[m] ?? null} />
+          ))}
         </div>
       </div>
+      {target && standing && (
+        <div className="fd-targets-foot">
+          <span className="fd-targets-eaten">
+            {n(eaten.kcal)} / {n(target.kcal)} kcal eaten
+          </span>
+          <span className={`fd-pill${standing.tone ? ` ${standing.tone}` : ""}`}>{standing.text}</span>
+        </div>
+      )}
     </section>
   );
 }
@@ -349,15 +390,81 @@ function MacroLine({ id, eaten, goal }: { id: "protein" | "carbs" | "fat"; eaten
   return (
     <div className="fd-macro">
       <div className="fd-macro-line">
-        <span className="fd-macro-name">{id === "protein" ? "Protein" : id === "carbs" ? "Carbs" : "Fat"}</span>
+        <span className="fd-eyebrow">{id === "protein" ? "Protein" : id === "carbs" ? "Carbs" : "Fat"}</span>
         <span className="fd-macro-figure">
-          <b>{g(figure)}</b>
+          {g(figure)}
           <small>{goal != null ? ` / ${n(goal)} g` : " g"}</small>
         </span>
       </div>
       <span className="fd-macro-bar" aria-hidden="true">
         <span style={{ width: `${share * 100}%`, background: HUE[id] }} />
       </span>
+    </div>
+  );
+}
+
+// ---- Naming a new meal -------------------------------------------------------
+
+function NewMealDialog({ onCancel, onAdd }: { onCancel: () => void; onAdd: (name: string) => void }) {
+  const [name, setName] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const t = setTimeout(() => inputRef.current?.focus(), 30);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onCancel();
+    document.addEventListener("keydown", onKey);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [onCancel]);
+  const clean = name.trim();
+  return (
+    <div className="fd-dialog-scrim" role="presentation" onClick={onCancel}>
+      <form
+        className="fd-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="fd-new-meal-title"
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (clean) onAdd(clean);
+        }}
+      >
+        <div>
+          <div className="fd-eyebrow">New meal</div>
+          <h2 id="fd-new-meal-title" className="fd-dialog-title">
+            Name this meal
+          </h2>
+        </div>
+        <input
+          ref={inputRef}
+          id="fd-new-meal-name"
+          className="fd-dialog-input"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Pre-workout"
+          maxLength={30}
+          autoComplete="off"
+          aria-label="Meal name"
+        />
+        <div className="fd-chips">
+          {MEAL_IDEAS.map((idea) => (
+            <button key={idea} type="button" className={`fd-chip${clean === idea ? " on" : ""}`} onClick={() => setName(idea)}>
+              {idea}
+            </button>
+          ))}
+        </div>
+        <div className="fd-dialog-actions">
+          <button type="button" className="fd-secondary" onClick={onCancel}>
+            Cancel
+          </button>
+          <button type="submit" className="fd-primary" disabled={!clean}>
+            Add meal
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
@@ -463,6 +570,7 @@ function SearchSheet({
             <SearchIcon />
             <input
               ref={inputRef}
+              id="fd-search-input"
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -609,7 +717,7 @@ function AmountSheet({
       </div>
 
       {food.servings.length > 0 && (
-        <div className="fd-servings" role="radiogroup" aria-label="Serving">
+        <div className="fd-chips" role="radiogroup" aria-label="Serving">
           {food.servings.map(([label, grams]) => (
             <button
               key={label}
@@ -645,6 +753,7 @@ function AmountSheet({
         <label className={`fd-grams${serving ? " secondary" : ""}`}>
           <input
             ref={inputRef}
+            id="fd-grams-input"
             type="text"
             inputMode="decimal"
             value={gramsText}
@@ -724,31 +833,31 @@ function CustomFoodSheet({ clientId, onBack, onCreated }: { clientId: number; on
       <div className="fd-form">
         <label className="fd-field wide">
           <span>Name</span>
-          <input type="text" value={form.name} onChange={set("name")} placeholder="Mum’s lasagne" maxLength={80} autoFocus />
+          <input id="fd-custom-name" type="text" value={form.name} onChange={set("name")} placeholder="Mum’s lasagne" maxLength={80} autoFocus />
         </label>
         <label className="fd-field">
           <span>kcal</span>
-          <input type="text" inputMode="decimal" value={form.kcal} onChange={set("kcal")} placeholder="0" />
+          <input id="fd-custom-kcal" type="text" inputMode="decimal" value={form.kcal} onChange={set("kcal")} placeholder="0" />
         </label>
         <label className="fd-field">
           <span>Protein g</span>
-          <input type="text" inputMode="decimal" value={form.protein} onChange={set("protein")} placeholder="0" />
+          <input id="fd-custom-protein" type="text" inputMode="decimal" value={form.protein} onChange={set("protein")} placeholder="0" />
         </label>
         <label className="fd-field">
           <span>Carbs g</span>
-          <input type="text" inputMode="decimal" value={form.carbs} onChange={set("carbs")} placeholder="0" />
+          <input id="fd-custom-carbs" type="text" inputMode="decimal" value={form.carbs} onChange={set("carbs")} placeholder="0" />
         </label>
         <label className="fd-field">
           <span>Fat g</span>
-          <input type="text" inputMode="decimal" value={form.fat} onChange={set("fat")} placeholder="0" />
+          <input id="fd-custom-fat" type="text" inputMode="decimal" value={form.fat} onChange={set("fat")} placeholder="0" />
         </label>
         <label className="fd-field">
           <span>Serving (optional)</span>
-          <input type="text" value={form.servingLabel} onChange={set("servingLabel")} placeholder="1 portion" maxLength={40} />
+          <input id="fd-custom-serving" type="text" value={form.servingLabel} onChange={set("servingLabel")} placeholder="1 portion" maxLength={40} />
         </label>
         <label className="fd-field">
           <span>Serving grams</span>
-          <input type="text" inputMode="decimal" value={form.servingGrams} onChange={set("servingGrams")} placeholder="250" />
+          <input id="fd-custom-serving-grams" type="text" inputMode="decimal" value={form.servingGrams} onChange={set("servingGrams")} placeholder="250" />
         </label>
       </div>
       <button type="button" className="fd-primary" onClick={submit} disabled={!ok}>

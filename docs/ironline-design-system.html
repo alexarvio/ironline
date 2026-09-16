@@ -1,0 +1,334 @@
+<title>Ironline Design System</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Newsreader:wght@500;600&display=swap">
+<style>
+  /* The system documents itself: every token below is the app's own. It is a
+     deliberately light-only page, since the swatches are the point. */
+  :root {
+    --navy: #1e3a6e; --accent: #2f5d8f; --tint: #e6ecf3;
+    --ink: #141a24; --text: #313851; --muted: #5b6474; --faint: #8b93a1;
+    --border: #dfe3e8; --hairline: #eceff3; --page: #F4F7FC; --raised: #edf0f4; --surface: #fff;
+    --good: #2f7a3f; --good-tint: #dff3ea; --warn: #b3471d; --warn-tint: #fbe9e0; --bad: #a32d2d; --bad-tint: #fbeaea;
+    --font: "Archivo", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --figure: "Newsreader", Georgia, "Times New Roman", serif;
+    color-scheme: light;
+  }
+  body { margin: 0; background: var(--page); color: var(--text); font-family: var(--font); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding-block: 40px 80px; padding-inline: 20px; }
+  header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; padding-bottom: 22px; border-bottom: 1px solid var(--border); }
+  .brand { font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; font-size: 17px; color: var(--navy); }
+  h1 { margin: 6px 0 0; font-size: 32px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.1; color: var(--ink); text-wrap: balance; }
+  .lede { margin: 10px 0 0; max-width: 62ch; color: var(--muted); }
+  .status { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: var(--good-tint); color: #0f5c46; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+  nav.toc { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 18px; font-size: 12px; font-weight: 600; }
+  nav.toc a { color: var(--accent); text-decoration: none; }
+  nav.toc a:hover, nav.toc a:focus-visible { text-decoration: underline; outline: none; }
+  section { margin-top: 44px; }
+  .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  h2 { margin: 4px 0 0; font-size: 22px; font-weight: 700; color: var(--ink); }
+  .note { margin: 8px 0 0; max-width: 66ch; color: var(--muted); }
+  .rule { margin: 8px 0 0; max-width: 66ch; padding: 10px 14px; border-left: 3px solid var(--navy); background: var(--surface); border-radius: 0 10px 10px 0; }
+  .grid { display: grid; gap: 12px; margin-top: 18px; }
+  .g4 { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .g3 { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  .g2 { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+  /* Swatches */
+  .sw { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow: hidden; }
+  .sw .chip { height: 64px; }
+  .sw .meta { padding: 10px 12px 12px; }
+  .sw .name { font-weight: 700; color: var(--ink); }
+  .sw .hex { font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .sw .use { margin-top: 4px; font-size: 12px; color: var(--muted); }
+  .retire { margin-top: 12px; font-size: 12px; color: var(--faint); }
+  .retire code { font-family: inherit; }
+  /* Type specimens */
+  .spec { display: grid; grid-template-columns: 150px 1fr; gap: 14px; align-items: baseline; padding: 12px 0; border-top: 1px solid var(--hairline); }
+  .spec:first-of-type { border-top: 0; }
+  .spec .k { font-size: 12px; color: var(--muted); }
+  .spec .k b { display: block; color: var(--ink); font-weight: 700; }
+  .spec .v { color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
+  .card { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); padding: 18px 22px; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  /* Shapes */
+  .shape { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+  .shape .box { width: 100%; height: 56px; background: var(--surface); border: 1px solid var(--border); }
+  .shape .k { font-size: 12px; color: var(--muted); }
+  .shape .k b { color: var(--ink); }
+  .stops { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-top: 14px; }
+  .stop { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .stop span { display: block; width: 22px; background: var(--navy); border-radius: 3px; }
+  /* Controls */
+  .ctl { display: flex; flex-direction: column; gap: 10px; }
+  .ctl .k { font-size: 12px; color: var(--muted); }
+  .btn-c { height: 48px; width: 100%; border: 0; border-radius: 12px; background: var(--navy); color: #fff; font: inherit; font-size: 14px; font-weight: 700; }
+  .btn-c.sec { background: var(--surface); color: var(--navy); border: 1px solid var(--border); }
+  .btn-a { height: 34px; padding: 0 14px; border: 0; border-radius: 8px; background: var(--navy); color: #fff; font: inherit; font-size: 12px; font-weight: 800; }
+  .btn-a.sec { background: var(--surface); color: var(--navy); border: 1px solid var(--border); }
+  .btn-t { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; font-weight: 600; }
+  .btn-d { height: 34px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--bad); background: var(--surface); color: var(--bad); font: inherit; font-size: 12px; font-weight: 800; }
+  .seg { display: flex; padding: 3px; border-radius: 12px; background: var(--tint); }
+  .seg span { flex: 1; text-align: center; padding: 8px 0; border-radius: 10px; font-size: 13px; font-weight: 700; color: var(--navy); }
+  .seg span.on { background: var(--surface); box-shadow: 0 1px 2px rgba(20,30,50,.12); }
+  .pill { display: inline-block; padding: 4px 10px; border-radius: 999px; background: var(--tint); color: var(--navy); font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+  .pill.good { background: var(--good-tint); color: #0f5c46; }
+  .pill.warn { background: var(--warn-tint); color: var(--warn); }
+  .tag { display: inline-block; padding: 3px 8px; border-radius: 6px; background: #e6e4fa; color: #3a3390; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+  .input { width: 100%; box-sizing: border-box; height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); font: inherit; font-size: 16px; color: var(--text); }
+  .input.focus { border-color: var(--accent); }
+  .switch { position: relative; width: 44px; height: 26px; border-radius: 999px; background: var(--navy); }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 21px; width: 20px; height: 20px; border-radius: 999px; background: #fff; }
+  .switch.off { background: #c3c9d2; } .switch.off::after { left: 3px; }
+  /* Page model mock */
+  .phone { width: 100%; max-width: 300px; border: 1px solid var(--border); border-radius: 18px; overflow: hidden; background: var(--page); }
+  .phone .bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; color: var(--navy); background: linear-gradient(180deg, #D5DEEF, #D5DEEF); }
+  .phone .banner { padding: 4px 22px 58px; background: linear-gradient(180deg, #D5DEEF, #E3E9F5 55%, #F4F7FC); }
+  .phone .banner .eyebrow { color: var(--muted); }
+  .phone .banner .big { font-size: 28px; font-weight: 700; letter-spacing: -0.015em; color: var(--ink); line-height: 1.1; }
+  .phone .track { height: 5px; margin-top: 12px; border-radius: 999px; background: rgba(30,58,110,.14); }
+  .phone .track i { display: block; width: 60%; height: 100%; border-radius: 999px; background: var(--navy); }
+  .phone .first { margin: -36px 16px 0; padding: 16px 18px; border-radius: 18px; background: var(--surface); box-shadow: 0 12px 30px -20px rgba(8,31,92,.4); }
+  .phone .first .fig { font-family: var(--figure); font-size: 28px; font-weight: 500; color: var(--ink); line-height: 1; }
+  .phone .first .fig small { font-family: var(--font); font-size: 14px; font-weight: 600; color: var(--muted); }
+  .phone .body { display: flex; flex-direction: column; gap: 16px; padding: 16px 16px 20px; }
+  .phone .c { padding: 14px 18px; border-radius: 18px; background: var(--surface); border: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+  .steps { counter-reset: s; display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+  .steps li { position: relative; padding-left: 30px; max-width: 60ch; }
+  .steps li::before { counter-increment: s; content: counter(s); position: absolute; left: 0; top: 1px; width: 20px; height: 20px; border-radius: 999px; background: var(--tint); color: var(--navy); font-size: 11px; font-weight: 800; text-align: center; line-height: 20px; }
+  .coach { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow: hidden; }
+  .coach .band { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 22px; background: var(--tint); }
+  .coach table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .coach th { padding: 8px 22px; background: #fafbfc; text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .coach td { padding: 10px 22px; border-top: 1px solid var(--hairline); color: var(--text); }
+  .coach td:first-child { font-weight: 700; color: var(--ink); }
+  .coach .foot { padding: 8px 22px; font-size: 12px; color: var(--faint); }
+  /* Tables */
+  .tbl-wrap { overflow-x: auto; margin-top: 16px; }
+  table.t { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; font-size: 13px; }
+  table.t th { text-align: left; padding: 10px 14px; background: #fafbfc; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  table.t td { padding: 10px 14px; border-top: 1px solid var(--hairline); vertical-align: top; }
+  table.t td:first-child { font-weight: 700; color: var(--ink); white-space: nowrap; }
+  .ok { color: var(--good); font-weight: 700; }
+  .motion { display: grid; gap: 10px; margin-top: 16px; }
+  .motion .row { display: grid; grid-template-columns: 110px 1fr; gap: 12px; align-items: center; }
+  .motion .row b { font-variant-numeric: tabular-nums; color: var(--ink); }
+  .motion .track { height: 8px; border-radius: 999px; background: var(--tint); overflow: hidden; }
+  .motion .track i { display: block; height: 100%; width: 0; border-radius: 999px; background: var(--navy); animation: fill 2.4s cubic-bezier(.22,1,.36,1) infinite alternate; }
+  .motion .track.a i { animation-duration: 1.2s; } .motion .track.b i { animation-duration: 1.8s; }
+  @keyframes fill { from { width: 8%; } to { width: 100%; } }
+  @media (prefers-reduced-motion: reduce) { .motion .track i { animation: none; width: 70%; } }
+  footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--border); font-size: 12px; color: var(--faint); max-width: 70ch; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (max-width: 560px) { .spec { grid-template-columns: 1fr; gap: 4px; } .motion .row { grid-template-columns: 1fr; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="brand">Ironline</div>
+      <h1>Design system</h1>
+      <p class="lede">How the coaching app looks, for anyone designing a new screen. The client side is a phone app; the coach side is a desktop workstation. Both share one palette and one typeface.</p>
+    </div>
+    <span class="status">Decided 16 Sep 2026</span>
+  </header>
+  <nav class="toc" aria-label="Sections">
+    <a href="#type">Typefaces</a><a href="#scale">Type scale</a><a href="#colour">Colour</a><a href="#shape">Shape & space</a><a href="#motion">Motion</a><a href="#controls">Controls</a><a href="#client">Client page</a><a href="#coach">Coach page</a><a href="#words">Words</a><a href="#screens">Screens</a>
+  </nav>
+
+  <section id="type">
+    <div class="eyebrow">1</div>
+    <h2>Typefaces</h2>
+    <div class="grid g3">
+      <div class="card">
+        <div class="eyebrow">Everything</div>
+        <div style="font-size:30px;font-weight:700;color:var(--ink);margin-top:6px">Archivo</div>
+        <div style="margin-top:4px;color:var(--muted);font-size:12px">400–800 · body, tables, buttons, pills, inputs, labels, figures</div>
+      </div>
+      <div class="card">
+        <div class="eyebrow">Wordmark only</div>
+        <div style="font-size:22px;font-weight:800;letter-spacing:.14em;color:var(--ink);margin-top:10px">IRONLINE</div>
+        <div style="margin-top:8px;color:var(--muted);font-size:12px">Kirana, uppercase, 17–18px, in the client top bar. Nowhere else.</div>
+      </div>
+      <div class="card">
+        <div class="eyebrow">Display figures</div>
+        <div style="font-family:var(--figure);font-size:34px;font-weight:500;color:var(--ink);margin-top:2px;line-height:1">2,660</div>
+        <div style="margin-top:8px;color:var(--muted);font-size:12px">Newsreader 500–600: one big figure or a dialog title. Never in a table, button, pill or input.</div>
+      </div>
+    </div>
+    <p class="note">Manrope and Libre Baskerville are retired. Numbers that sit in columns use tabular figures.</p>
+  </section>
+
+  <section id="scale">
+    <div class="eyebrow">2</div>
+    <h2>Type scale</h2>
+    <p class="note">Ten sizes, whole pixels. Pick the nearest; do not invent an eleventh.</p>
+    <div class="card" style="margin-top:18px">
+      <div class="spec"><div class="k"><b>Display</b>32 / 700, −0.015em</div><div class="v" style="font-size:32px;font-weight:700;letter-spacing:-.015em;line-height:1.1">Upper body strength</div></div>
+      <div class="spec"><div class="k"><b>Title</b>22 / 700</div><div class="v" style="font-size:22px;font-weight:700">Days trained</div></div>
+      <div class="spec"><div class="k"><b>Section</b>18 / 600</div><div class="v" style="font-size:18px;font-weight:600">Sessions</div></div>
+      <div class="spec"><div class="k"><b>Figure</b>28 / 500, tabular</div><div class="v tabular" style="font-family:var(--figure);font-size:28px;font-weight:500;line-height:1">2,648</div></div>
+      <div class="spec"><div class="k"><b>Body strong</b>14 / 700</div><div class="v" style="font-weight:700">Barbell back squat</div></div>
+      <div class="spec"><div class="k"><b>Body</b>14 / 400–500</div><div class="v">No need to go all the way up on the last set.</div></div>
+      <div class="spec"><div class="k"><b>Small</b>12 / 500–600</div><div class="v" style="font-size:12px;font-weight:500;color:var(--muted)">Wednesday · 30 min</div></div>
+      <div class="spec"><div class="k"><b>Label</b>11 / 700, +0.12em, uppercase</div><div class="v eyebrow">From your coach</div></div>
+      <div class="spec"><div class="k"><b>Micro</b>10 / 800, +0.1em, uppercase</div><div class="v" style="font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Wed</div></div>
+      <div class="spec"><div class="k"><b>Coach dense</b>12.5–13</div><div class="v" style="font-size:12.5px">Coach tables and rows, where 14 wastes the screen.</div></div>
+    </div>
+    <p class="rule">The Label is one recipe: <b>11 / 700 / +0.12em / uppercase / Muted</b>. It is the single biggest source of drift, so every eyebrow, table header and meta line uses exactly this.</p>
+  </section>
+
+  <section id="colour">
+    <div class="eyebrow">3</div>
+    <h2>Colour</h2>
+    <p class="note">Brand</p>
+    <div class="grid g4">
+      <div class="sw"><div class="chip" style="background:#1e3a6e"></div><div class="meta"><div class="name">Navy</div><div class="hex">#1e3a6e</div><div class="use">Primary buttons, the pending bar, the navy Home card</div></div></div>
+      <div class="sw"><div class="chip" style="background:#2f5d8f"></div><div class="meta"><div class="name">Accent</div><div class="hex">#2f5d8f</div><div class="use">Links, focus rings, selected states, text buttons</div></div></div>
+      <div class="sw"><div class="chip" style="background:linear-gradient(180deg,#D5DEEF,#E3E9F5,#F4F7FC)"></div><div class="meta"><div class="name">Banner</div><div class="hex">#D5DEEF → #E3E9F5 → #F4F7FC</div><div class="use">Every client tab's banner; ink text, navy for the selected chip</div></div></div>
+      <div class="sw"><div class="chip" style="background:#e6ecf3"></div><div class="meta"><div class="name">Tint</div><div class="hex">#e6ecf3</div><div class="use">Card header bands, selected rows, icon circles</div></div></div>
+    </div>
+    <p class="note" style="margin-top:22px">Greys, with a slight cool bias</p>
+    <div class="grid g4">
+      <div class="sw"><div class="chip" style="background:#141a24"></div><div class="meta"><div class="name">Ink</div><div class="hex">#141a24</div><div class="use">Headings, first cell in a row</div></div></div>
+      <div class="sw"><div class="chip" style="background:#313851"></div><div class="meta"><div class="name">Text</div><div class="hex">#313851</div><div class="use">Body copy</div></div></div>
+      <div class="sw"><div class="chip" style="background:#5b6474"></div><div class="meta"><div class="name">Muted</div><div class="hex">#5b6474</div><div class="use">Labels, second cells, table headers (4.9:1 on white)</div></div></div>
+      <div class="sw"><div class="chip" style="background:#8b93a1"></div><div class="meta"><div class="name">Faint</div><div class="hex">#8b93a1</div><div class="use">Placeholders, hints, footers</div></div></div>
+      <div class="sw"><div class="chip" style="background:#dfe3e8"></div><div class="meta"><div class="name">Border</div><div class="hex">#dfe3e8</div><div class="use">Card and input outlines</div></div></div>
+      <div class="sw"><div class="chip" style="background:#eceff3"></div><div class="meta"><div class="name">Hairline</div><div class="hex">#eceff3</div><div class="use">Dividers inside a card</div></div></div>
+      <div class="sw"><div class="chip" style="background:#F4F7FC;border-bottom:1px solid var(--hairline)"></div><div class="meta"><div class="name">Page</div><div class="hex">#F4F7FC</div><div class="use">Every screen background, client and coach</div></div></div>
+      <div class="sw"><div class="chip" style="background:#edf0f4"></div><div class="meta"><div class="name">Raised</div><div class="hex">#edf0f4</div><div class="use">Coach rail and client panel</div></div></div>
+      <div class="sw"><div class="chip" style="background:#fff;border-bottom:1px solid var(--hairline)"></div><div class="meta"><div class="name">Surface</div><div class="hex">#ffffff</div><div class="use">Cards, inputs</div></div></div>
+    </div>
+    <p class="note" style="margin-top:22px">Status. A colour always carries a meaning: green never decorates, orange never means "training day". No status, no colour.</p>
+    <div class="grid g3">
+      <div class="sw"><div class="chip" style="background:#dff3ea;display:flex;align-items:center;justify-content:center"><span style="color:#2f7a3f;font-weight:800">Good · on target · done</span></div><div class="meta"><div class="hex">#2f7a3f on #dff3ea · text #0f5c46</div></div></div>
+      <div class="sw"><div class="chip" style="background:#fbe9e0;display:flex;align-items:center;justify-content:center"><span style="color:#b3471d;font-weight:800">Warning · off target · unsaved</span></div><div class="meta"><div class="hex">#b3471d on #fbe9e0</div></div></div>
+      <div class="sw"><div class="chip" style="background:#fbeaea;display:flex;align-items:center;justify-content:center"><span style="color:#a32d2d;font-weight:800">Destructive</span></div><div class="meta"><div class="hex">#a32d2d on #fbeaea</div></div></div>
+    </div>
+    <p class="note" style="margin-top:22px">Category tints classify, never judge. Macro hues are fixed.</p>
+    <div class="grid g4">
+      <div class="sw"><div class="chip" style="background:#e6e4fa;display:flex;align-items:center;justify-content:center;color:#3a3390;font-weight:800">Training</div><div class="meta"><div class="hex">#e6e4fa / #3a3390</div></div></div>
+      <div class="sw"><div class="chip" style="background:#dff3ea;display:flex;align-items:center;justify-content:center;color:#0f5c46;font-weight:800">Nutrition</div><div class="meta"><div class="hex">#dff3ea / #0f5c46</div></div></div>
+      <div class="sw"><div class="chip" style="background:#efede6;display:flex;align-items:center;justify-content:center;color:#4a4a45;font-weight:800">Lifestyle</div><div class="meta"><div class="hex">#efede6 / #4a4a45</div></div></div>
+      <div class="sw"><div class="chip" style="background:#fff3dc;display:flex;align-items:center;justify-content:center;color:#8a5a12;font-weight:800">Feed note</div><div class="meta"><div class="hex">#fff3dc / #8a5a12</div></div></div>
+      <div class="sw"><div class="chip" style="background:#e3edf7;display:flex;align-items:center;justify-content:center;color:#24507c;font-weight:800">Measurements</div><div class="meta"><div class="hex">#e3edf7 / #24507c</div></div></div>
+      <div class="sw"><div class="chip" style="background:#334EAC"></div><div class="meta"><div class="name">Protein</div><div class="hex">#334EAC</div></div></div>
+      <div class="sw"><div class="chip" style="background:#D99A2B"></div><div class="meta"><div class="name">Carbs</div><div class="hex">#D99A2B</div></div></div>
+      <div class="sw"><div class="chip" style="background:#2E8B7A"></div><div class="meta"><div class="name">Fat</div><div class="hex">#2E8B7A</div></div></div>
+    </div>
+    <p class="retire">Retired and not to be reused: <code>#081F5C #1b3f6e #3B5A8C #5987a8 #7C9DE0</code> as blues; <code>#5b6472 #8b93a0 #14171c #c2cbd3 #c3c9d2 #3d4a68 #6C7A9C #97A3BD</code> as greys; <code>#f8f9fb #F7F9FC</code> as page colours; <code>#3f6e46 #1f7a4d #9a5a33 #b8471f #a13a3a #9b2c2c</code> as status colours.</p>
+  </section>
+
+  <section id="shape">
+    <div class="eyebrow">4</div>
+    <h2>Shape and space</h2>
+    <div class="grid g4">
+      <div class="shape"><div class="box" style="border-radius:999px;height:36px"></div><div class="k"><b>999</b> · pills, switches, progress tracks</div></div>
+      <div class="shape"><div class="box" style="border-radius:18px"></div><div class="k"><b>18</b> · client cards (phone)</div></div>
+      <div class="shape"><div class="box" style="border-radius:12px"></div><div class="k"><b>12</b> · coach cards, dialogs, client primary buttons, inner tiles</div></div>
+      <div class="shape"><div class="box" style="border-radius:10px"></div><div class="k"><b>10</b> · inputs, notes, inner cells</div></div>
+      <div class="shape"><div class="box" style="border-radius:8px"></div><div class="k"><b>8</b> · coach buttons, chips in tables</div></div>
+      <div class="shape"><div class="box" style="border-radius:6px"></div><div class="k"><b>6</b> · inline-editable cells, category tags</div></div>
+    </div>
+    <p class="note" style="margin-top:22px">Spacing stops. Cards sit 18px apart; controls in a row 10px; label to value 4–6px. A coach card body has 22px sides and 16–18px on top.</p>
+    <div class="stops">
+      <div class="stop"><span style="height:4px"></span>4</div><div class="stop"><span style="height:6px"></span>6</div><div class="stop"><span style="height:8px"></span>8</div><div class="stop"><span style="height:10px"></span>10</div><div class="stop"><span style="height:12px"></span>12</div><div class="stop"><span style="height:14px"></span>14</div><div class="stop"><span style="height:16px"></span>16</div><div class="stop"><span style="height:18px"></span>18</div><div class="stop"><span style="height:22px"></span>22</div>
+    </div>
+    <div class="grid g4" style="margin-top:22px">
+      <div class="card" style="box-shadow:0 12px 30px -20px rgba(8,31,92,.4);border:0;border-radius:18px"><div class="eyebrow">Client card</div><div style="font-size:12px;color:var(--muted);margin-top:4px">0 12px 30px −20px rgba(8,31,92,.4)</div></div>
+      <div class="card" style="box-shadow:0 12px 28px rgba(20,23,28,.16);border:0"><div class="eyebrow">Popover</div><div style="font-size:12px;color:var(--muted);margin-top:4px">0 12px 28px rgba(20,23,28,.16)</div></div>
+      <div class="card" style="box-shadow:0 18px 44px rgba(20,23,28,.22);border:0"><div class="eyebrow">Dialog</div><div style="font-size:12px;color:var(--muted);margin-top:4px">0 18px 44px rgba(20,23,28,.22)</div></div>
+      <div class="card"><div class="eyebrow">Coach card</div><div style="font-size:12px;color:var(--muted);margin-top:4px">No shadow. The 1px border does that work.</div></div>
+    </div>
+  </section>
+
+  <section id="motion">
+    <div class="eyebrow">5</div>
+    <h2>Motion</h2>
+    <div class="motion card">
+      <div class="row"><b>150ms ease</b><div><div class="track a"><i></i></div><div style="font-size:12px;color:var(--muted);margin-top:4px">Hover, a bar turning solid, a chevron.</div></div></div>
+      <div class="row"><b>300ms ease</b><div><div class="track b"><i></i></div><div style="font-size:12px;color:var(--muted);margin-top:4px">Something moving or reordering.</div></div></div>
+      <div class="row"><b>600ms</b><div><div class="track"><i></i></div><div style="font-size:12px;color:var(--muted);margin-top:4px">cubic-bezier(.22, 1, .36, 1) · a figure earning itself: a ring filling, a count-up, a tick.</div></div></div>
+    </div>
+    <p class="note">All of it behind prefers-reduced-motion, including timers and smooth scrolls. Sections that open and close fold over about 400ms rather than appearing.</p>
+  </section>
+
+  <section id="controls">
+    <div class="eyebrow">6</div>
+    <h2>Controls</h2>
+    <div class="grid g3">
+      <div class="card ctl"><div class="k">Client primary · 48px, radius 12, 14/700, one per card. The label says what happens.</div><button class="btn-c" type="button">Log set 3 of 4</button><button class="btn-c sec" type="button">Cancel</button></div>
+      <div class="card ctl"><div class="k">Coach primary and secondary · 34px, radius 8, 12/800.</div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn-a" type="button">Deploy now</button><button class="btn-a sec" type="button">Save draft</button><button class="btn-d" type="button">Delete</button></div><div class="k">Destructive is outlined; filled only as the confirm inside a dialog.</div><button class="btn-t" type="button" style="align-self:flex-start">Text button →</button></div>
+      <div class="card ctl"><div class="k">Segmented control · tint track, white active segment, navy text. One treatment.</div><div class="seg"><span class="on">Training day</span><span>Rest day</span></div><div class="k">Switch · the standard pill.</div><div style="display:flex;gap:10px"><div class="switch"></div><div class="switch off"></div></div></div>
+      <div class="card ctl"><div class="k">Pills · radius 999, 11/800, +0.06em. Category tags · radius 6, same type.</div><div style="display:flex;gap:8px;flex-wrap:wrap"><span class="pill">Week 3</span><span class="pill good">10 / 10 sets</span><span class="pill warn">Draft</span><span class="tag">Training</span></div></div>
+      <div class="card ctl"><div class="k">Inputs · white, 1px Border, radius 10. Focus turns the border Accent, no outline, no shift. Phone inputs are 16px and at least 44px tall, or iOS zooms.</div><input class="input" type="text" value="Note for Finlay" aria-label="Example input" readonly><input class="input focus" type="text" value="60" aria-label="Example focused input" readonly></div>
+      <div class="card ctl"><div class="k">Rules of the road</div><ul style="margin:0;padding-left:18px;font-size:13px;color:var(--text);display:flex;flex-direction:column;gap:6px"><li>Tap targets are 44px; a smaller control grows an invisible hit area.</li><li>Inline-editable cells are transparent at rest, bordered on hover, white on focus, and save on blur.</li><li>Coach edits queue on the pending bar. No per-row save buttons beside it.</li><li>A confirm dialog before anything that moves dates, deletes, or changes what a client sees while a phase is live.</li></ul></div>
+    </div>
+  </section>
+
+  <section id="client">
+    <div class="eyebrow">7</div>
+    <h2>Client page model</h2>
+    <div class="grid g2" style="align-items:start">
+      <div class="phone" aria-hidden="true">
+        <div class="bar"><span>☰</span><span>IRONLINE</span><span>🔔</span></div>
+        <div class="banner"><div class="eyebrow">Programme</div><div class="big">Upper body strength</div><div class="track"><i></i></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px"><span>Started Aug 31</span><span>Week 3 of 4</span></div></div>
+        <div class="first"><div class="eyebrow">Days trained</div><div class="fig" style="margin-top:6px">3 <small>of 5</small></div></div>
+        <div class="body"><div class="c">Sessions · 2 of 5 done</div><div class="c">Lower · 10 / 10 sets</div></div>
+      </div>
+      <ol class="steps">
+        <li><b>The fixed top bar</b> (burger · IRONLINE · bell), off-white with Navy, see-through over the banner until the page scrolls.</li>
+        <li><b>A full-bleed banner</b> holding the tab's one big fact: a Label eyebrow, a Display line, a progress line where there is one. Side padding 22, bottom 58.</li>
+        <li><b>The first card pulled up −36px</b> over the banner: radius 18, no border, the soft client shadow.</li>
+        <li><b>The body below</b>: a flex column, 16px gap, 0 16px padding. Cards radius 18 with a 1px Border, 18px apart.</li>
+      </ol>
+    </div>
+    <p class="note">Every client tab opens this way. Pushed screens (Notifications, Messages, Food diary) use a centred title with a bare back arrow and no bottom nav. Sheets rise from the bottom with radius 18 on the top corners.</p>
+  </section>
+
+  <section id="coach">
+    <div class="eyebrow">8</div>
+    <h2>Coach page model</h2>
+    <div class="coach" style="margin-top:18px">
+      <div class="band"><div><div class="eyebrow">Nutrition</div><div style="font-weight:700;color:var(--ink)">Day targets</div></div><div style="display:flex;align-items:center;gap:10px"><div class="switch"></div><button class="btn-a" type="button">Deploy now</button></div></div>
+      <table><thead><tr><th>Day</th><th>Kcal</th><th>Protein</th><th>Carbs</th><th>Fat</th></tr></thead>
+      <tbody><tr><td>Training</td><td class="tabular">2,660</td><td class="tabular">185 g</td><td class="tabular">300 g</td><td class="tabular">80 g</td></tr><tr><td>Rest</td><td class="tabular">2,300</td><td class="tabular">185 g</td><td class="tabular">210 g</td><td class="tabular">80 g</td></tr></tbody></table>
+      <div class="foot">Last changed 12 Sep · shown to the client from the Nutrition tab</div>
+    </div>
+    <p class="note">Card: white, 1px Border, radius 12, 18px apart. Header band in the tint, 14px 22px: a Label eyebrow and at most one heading on the left; a pill switch and at most one button on the right. Table header strip #fafbfc in Label type; rows 10px 22px with a Hairline under each; footer strip in Small Faint. Left rail 240px, client panel 296px, both Raised.</p>
+  </section>
+
+  <section id="words">
+    <div class="eyebrow">9</div>
+    <h2>Words</h2>
+    <ul style="margin:14px 0 0;padding-left:18px;max-width:66ch;display:flex;flex-direction:column;gap:6px">
+      <li>The client never reads a coach word: no "deploy", no "phase id", no "client 5".</li>
+      <li>A control says what happens; the message after it says what happened.</li>
+      <li>Errors say what went wrong and what to do about it.</li>
+      <li>Coach names in the client app are the display name Finlay set ("Finlay Chedd"), first name in running copy.</li>
+    </ul>
+  </section>
+
+  <section id="screens">
+    <div class="eyebrow">10</div>
+    <h2>Where each screen stands</h2>
+    <p class="note">Nothing was swept through the stylesheet. New and touched code follows this page; older screens catch up one at a time.</p>
+    <div class="tbl-wrap"><table class="t">
+      <thead><tr><th>Screen</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Client · Home</td><td><span class="ok">On the system</span> · banner with name and goal</td></tr>
+        <tr><td>Client · Training</td><td><span class="ok">On the system</span> · sessions and exercises fold open and shut</td></tr>
+        <tr><td>Client · Nutrition</td><td><span class="ok">On the system</span> · ring opens the Food diary</td></tr>
+        <tr><td>Client · Food diary</td><td><span class="ok">On the system</span> · new, 16 Sep</td></tr>
+        <tr><td>Client · Check-in</td><td><span class="ok">On the system</span></td></tr>
+        <tr><td>Client · Settings</td><td><span class="ok">On the system</span></td></tr>
+        <tr><td>Client · Notifications, Messages</td><td><span class="ok">On the system</span></td></tr>
+        <tr><td>Client · Progress pictures</td><td><span class="ok">On the system</span> · its purple kept as identity</td></tr>
+        <tr><td>Client · Coach profile</td><td>Parked. Archivo and navy still to apply; serif for display lines only</td></tr>
+        <tr><td>Coach · all tabs</td><td>Label recipe; green confirms to Navy; page to #F4F7FC</td></tr>
+        <tr><td>Coach · calendar</td><td>Still on the old cream palette</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">Browser floor: iOS Safari 15.6 and up. Check caniuse before anything newer.</p>
+  </section>
+
+  <footer>Ironline · Full Potential Coaching. The short version of this lives with the code in docs/UI-GUIDELINES.md; this page is the one to hand to design.</footer>
+</div>

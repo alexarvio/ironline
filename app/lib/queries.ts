@@ -7565,6 +7565,8 @@ export type FoodDiaryView = {
   recent: FoodOption[];
   /** Meals with food in them on the last two weeks' other days, newest first, to copy from. */
   previous: { date: string; dateLabel: string; meal: FoodMeal; mealLabel: string; kcal: number; names: string[] }[];
+  /** Dates in the last month with anything logged, for the dots on the week strip. */
+  loggedDays: string[];
 };
 
 const dayLabelFor = (date: string, today: string): string => {
@@ -7573,7 +7575,7 @@ const dayLabelFor = (date: string, today: string): string => {
   y.setDate(y.getDate() - 1);
   if (date === today) return "Today";
   if (date === localDateStr(y)) return "Yesterday";
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "long" });
+  return d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" });
 };
 
 /** The kcal and macro targets the diary counts down from on a date: the ring's, for the day type the client logged (else by whether a set was logged). */
@@ -7601,6 +7603,9 @@ export function getFoodDiary(clientId: number, date: string): FoodDiaryView {
   const since = new Date(`${today}T00:00:00`);
   since.setDate(since.getDate() - 14);
   const sinceStr = localDateStr(since);
+  const month = new Date(`${today}T00:00:00`);
+  month.setDate(month.getDate() - 31);
+  const monthAgo = localDateStr(month);
   const previousMap = new Map<string, FoodDiaryView["previous"][number]>();
   for (const e of getData().food_entries.filter((x) => x.client_id === clientId && x.date !== date && x.date >= sinceStr && x.date <= today)) {
     const key = `${e.date}|${e.meal}`;
@@ -7624,5 +7629,6 @@ export function getFoodDiary(clientId: number, date: string): FoodDiaryView {
     }),
     recent: recentFoods(clientId),
     previous,
+    loggedDays: [...new Set(getData().food_entries.filter((e) => e.client_id === clientId && e.date >= monthAgo && e.date <= today).map((e) => e.date))],
   };
 }
