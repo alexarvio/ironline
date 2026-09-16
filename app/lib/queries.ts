@@ -7358,8 +7358,10 @@ export const FOOD_MEALS: { id: FoodMeal; label: string }[] = [
 export type FoodOption = {
   id: string;
   name: string;
-  /** "Your food" for the client's own; the USDA category otherwise. */
+  /** "Your food" for the client's own; the catalog's full name for a common food; the USDA category otherwise. */
   hint: string;
+  /** Own and common foods show first; "more" folds away under a count. */
+  group: "own" | "common" | "more";
   kcal: number;
   protein: number;
   carbs: number;
@@ -7367,11 +7369,12 @@ export type FoodOption = {
   servings: [string, number][];
 };
 
-const catalogOption = (f: CatalogFood): FoodOption => ({ id: f.id, name: f.name, hint: f.category, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat, servings: f.servings });
+const catalogOption = (f: CatalogFood, group: FoodOption["group"]): FoodOption => ({ id: f.id, name: f.name, hint: f.category, group, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat, servings: f.servings });
 const customOption = (f: CustomFood): FoodOption => ({
   id: `custom:${f.id}`,
   name: f.name,
   hint: "Your food",
+  group: "own",
   kcal: f.kcal,
   protein: f.protein,
   carbs: f.carbs,
@@ -7385,7 +7388,7 @@ export function getFoodOption(clientId: number, foodId: string): FoodOption | nu
     return f ? customOption(f) : null;
   }
   const f = getCatalogFood(foodId);
-  return f ? catalogOption(f) : null;
+  return f ? catalogOption(f, "more") : null;
 }
 
 /** The client's own foods first when they match, then the catalog. */
@@ -7395,7 +7398,8 @@ export function searchFoods(clientId: number, query: string, limit = 30): FoodOp
   const own = getData()
     .custom_foods.filter((c) => c.client_id === clientId && c.name.toLowerCase().includes(q))
     .map(customOption);
-  return [...own, ...searchCatalog(query, limit).map(catalogOption)].slice(0, limit);
+  const hits = searchCatalog(query, limit);
+  return [...own, ...hits.common.map((f) => catalogOption(f, "common")), ...hits.more.map((f) => catalogOption(f, "more"))].slice(0, limit + hits.common.length);
 }
 
 /** What the client logged most often lately, for the top of an empty search. */

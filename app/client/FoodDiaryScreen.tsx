@@ -28,6 +28,7 @@ export type FoodOptionView = {
   id: string;
   name: string;
   hint: string;
+  group?: "own" | "common" | "more";
   kcal: number;
   protein: number;
   carbs: number;
@@ -136,7 +137,7 @@ export default function FoodDiaryScreen({ clientId, diary, onBack }: { clientId:
                     kind: "amount",
                     meal: meal.id,
                     entry: e,
-                    food: { id: e.food_id, name: e.name, hint: "", kcal: (e.kcal / e.grams) * 100, protein: (e.protein / e.grams) * 100, carbs: (e.carbs / e.grams) * 100, fat: (e.fat / e.grams) * 100, servings: [] },
+                    food: { id: e.food_id, name: e.name, hint: "", group: "more", kcal: (e.kcal / e.grams) * 100, protein: (e.protein / e.grams) * 100, carbs: (e.carbs / e.grams) * 100, fat: (e.fat / e.grams) * 100, servings: [] },
                   })
                 }
               >
@@ -212,37 +213,40 @@ function SearchSheet({
   onClose: () => void;
 }) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<FoodOptionView[] | null>(null);
-  const [searching, setSearching] = useState(false);
+  // The last answer, with the query it answers; anything else is stale.
+  const [answer, setAnswer] = useState<{ q: string; rows: FoodOptionView[] } | null>(null);
+  // Which query the long tail was opened for.
+  const [moreFor, setMoreFor] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     const t = setTimeout(() => inputRef.current?.focus(), 50);
     return () => clearTimeout(t);
   }, []);
+  const q = query.trim();
+  const active = q.length >= 2;
   // Search a beat after the last keystroke; the latest query wins.
   useEffect(() => {
-    const q = query.trim();
-    if (q.length < 2) {
-      setResults(null);
-      setSearching(false);
-      return;
-    }
+    if (!active) return;
     let live = true;
-    setSearching(true);
     const t = setTimeout(async () => {
       const rows = await searchFoodsAction(clientId, q);
-      if (!live) return;
-      setResults(rows);
-      setSearching(false);
+      if (live) setAnswer({ q, rows });
     }, 220);
     return () => {
       live = false;
       clearTimeout(t);
     };
-  }, [query, clientId]);
+  }, [q, active, clientId]);
 
-  const list = results ?? recent;
+  const results = active && answer?.q === q ? answer.rows : null;
+  const searching = active && results == null;
+  const showMore = moreFor === q;
   const showingRecent = results == null && recent.length > 0;
+  // The client's own and the everyday foods are the list; the catalog's long
+  // tail sits behind a count, unless it is all there is.
+  const front = (results ?? recent).filter((f) => results == null || f.group !== "more");
+  const tail = results?.filter((f) => f.group === "more") ?? [];
+  const list = front.length === 0 || showMore ? [...front, ...tail] : front;
   return (
     <>
       <div className="fd-sheet-head">
@@ -276,6 +280,11 @@ function SearchSheet({
             </span>
           </button>
         ))}
+        {front.length > 0 && tail.length > 0 && !showMore && (
+          <button type="button" className="fd-more" onClick={() => setMoreFor(q)}>
+            Show {tail.length} more from the catalogue
+          </button>
+        )}
         {results != null && results.length === 0 && !searching && <p className="fd-empty">Nothing called “{query.trim()}”.</p>}
         {results == null && recent.length === 0 && query.trim().length < 2 && <p className="fd-empty">Type what you ate: “chicken breast”, “oats”, “banana”.</p>}
       </div>

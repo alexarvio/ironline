@@ -14353,6 +14353,7 @@ label.ci-pill { cursor: text; }
 .fd-result-kcal { flex: none; font-size: 14px; font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; text-align: right; }
 .fd-result-kcal small { display: block; font-size: 10px; font-weight: 500; color: #8b93a1; }
 .fd-empty { margin: 14px 4px; font-size: 14px; line-height: 1.5; color: #5b6474; }
+.fd-more { margin: 6px 0 10px; padding: 10px 4px; border: 0; border-top: 1px solid #eceff3; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #2f5d8f; text-align: left; cursor: pointer; }
 .fd-link { align-self: center; padding: 8px; border: 0; background: none; font: inherit; font-size: 14px; font-weight: 600; color: #2f5d8f; cursor: pointer; }
 .fd-hint { margin: -4px 0 0; font-size: 13px; line-height: 1.45; color: #5b6474; }
 .fd-food { display: flex; flex-direction: column; gap: 3px; }
