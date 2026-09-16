@@ -144,7 +144,6 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
   const mealRefs = useRef<Map<FoodMeal, HTMLDivElement>>(new Map());
   const hold = useRef<{ timer: ReturnType<typeof setTimeout>; x: number; y: number; index: number; el: HTMLElement; pointerId: number } | null>(null);
   const dragging = useRef<{ from: number; startY: number; mids: number[] } | null>(null);
-  const suppressTap = useRef(false);
   const holdStart = (e: React.PointerEvent<HTMLElement>, index: number) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
     const el = e.currentTarget;
@@ -154,7 +153,6 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
       el.setPointerCapture(pointerId);
       const rects = diary.meals.map((m) => mealRefs.current.get(m.id)?.getBoundingClientRect());
       dragging.current = { from: index, startY: e.clientY, mids: rects.map((r) => (r ? r.top + r.height / 2 : 0)) };
-      suppressTap.current = true;
       if (navigator.vibrate) navigator.vibrate(10);
       setDrag({ from: index, to: index, dy: 0, height: rects[index]?.height ?? 60 });
     }, 320);
@@ -214,9 +212,6 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
       }
       return null;
     });
-    setTimeout(() => {
-      suppressTap.current = false;
-    }, 0);
   };
   // Where each meal sits while one is being dragged.
   const shiftFor = (index: number): string | undefined => {
@@ -385,23 +380,18 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                     style={{ transform: shiftFor(index) }}
                   >
                     <div className="fdi-meal-head">
-                      <button
-                        type="button"
-                        className="fdi-meal-toggle"
-                        onClick={() => {
-                          if (!suppressTap.current) toggleFold(meal.id);
-                        }}
+                      <span
+                        className="fdi-meal-handle"
                         onPointerDown={(e) => holdStart(e, index)}
                         onPointerMove={holdMove}
                         onPointerUp={holdEnd}
                         onPointerCancel={holdEnd}
                         onContextMenu={(e) => e.preventDefault()}
-                        aria-expanded={!folded.has(meal.id)}
                       >
                         <span className="fdi-meal-title">{meal.label}</span>
-                        <span className={`fdi-meal-chev${folded.has(meal.id) ? "" : " up"}`} aria-hidden="true">
-                          <ChevronDownIcon />
-                        </span>
+                      </span>
+                      <button type="button" className={`fdi-meal-chev${folded.has(meal.id) ? "" : " up"}`} onClick={() => toggleFold(meal.id)} aria-expanded={!folded.has(meal.id)} aria-label={folded.has(meal.id) ? `Open ${meal.label}` : `Fold ${meal.label}`}>
+                        <ChevronDownIcon />
                       </button>
                       {meal.entries.length > 0 ? (
                         <button type="button" className="fdi-meal-save" onClick={() => setSavingMeal(savingMeal === meal.id ? null : meal.id)}>
