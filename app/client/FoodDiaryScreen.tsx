@@ -1153,7 +1153,7 @@ function AmountPanel({
       {/* Removing is asked in place: the Save row becomes the question. */}
       {confirmRemove ? (
         <div className="fdi-confirm" role="group" aria-label={`Remove from ${mealLabel}?`}>
-          <span className="fdi-confirm-text">Remove from {mealLabel}?</span>
+          <span className="fdi-confirm-text">Remove?</span>
           <button type="button" className="fdi-confirm-keep" onClick={() => setConfirmRemove(false)} autoFocus>
             Keep
           </button>
