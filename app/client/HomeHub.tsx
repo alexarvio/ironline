@@ -142,9 +142,7 @@ function ProfileCard({
       <div className="hm-profile-row">
         <div className="hm-profile-main">
           {/* A plain hello, always: a time-of-day greeting ran long. */}
-          <h1 className="hm-greeting">
-            Hello, <em>{firstName}</em>.
-          </h1>
+          <h1 className="hm-greeting">Hello, {firstName}.</h1>
           <div className="hm-eyebrow hm-date">{dateLabel}</div>
         </div>
         {canExpand && (
