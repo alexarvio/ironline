@@ -14431,7 +14431,8 @@ label.ci-pill { cursor: text; }
 .fdi-results { max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; scrollbar-width: none; }
 .fdi-results::-webkit-scrollbar { display: none; }
 .fdi-results-label { padding: 6px 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
-.fdi-result { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 8px 4px; border: 0; border-top: 1px solid #eceff3; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.fdi-results > * { flex: none; }
+.fdi-result { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; height: auto; padding: 10px 4px; border: 0; border-top: 1px solid #eceff3; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
 .fdi-result:first-child, .fdi-results-label + .fdi-result, .fdi-hint + .fdi-result { border-top: 0; }
 .fdi-result-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .fdi-result-name { font-size: 14px; font-weight: 500; color: #313851; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
