@@ -1101,14 +1101,17 @@ function AmountPanel({
 
   return (
     <div className="fdi-panel">
-      <div className="fdi-panel-head">
-        <span className="fdi-eyebrow">{entry ? "Change amount" : `Add to ${mealLabel}`}</span>
-        <button type="button" className="fdi-panel-cancel" onClick={onCancel}>
-          {entry ? "Cancel" : "Back"}
-        </button>
-      </div>
+      {/* Under a row the row already says what this is; only a new food needs the head and name. */}
+      {!entry && (
+        <div className="fdi-panel-head">
+          <span className="fdi-eyebrow">Add to {mealLabel}</span>
+          <button type="button" className="fdi-panel-cancel" onClick={onCancel}>
+            Back
+          </button>
+        </div>
+      )}
       <div className="fdi-food">
-        <span className="fdi-food-name">{food.name}</span>
+        {!entry && <span className="fdi-food-name">{food.name}</span>}
         <span className="fdi-field-label">Per 100 g</span>
         <Facts className="fdi-per" label={`Per 100 g: ${n(food.kcal)} kcal`} kcal={food.kcal} protein={food.protein} carbs={food.carbs} fat={food.fat} />
       </div>
