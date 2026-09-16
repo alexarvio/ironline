@@ -33,6 +33,7 @@ import {
   getNutritionPlan,
   getCurrentPhase,
   getCoachFirstName,
+  getCoachDisplayName,
   getCoachEmail,
   getCoachProfileForClient,
   getStoredNutritionPlan,
@@ -333,7 +334,7 @@ function HomeTab({ CLIENT_ID, photos }: { CLIENT_ID: number; photos: HomePhotos 
         const sent = coachMessagesFor(CLIENT_ID);
         const latest = sent[0];
         return latest
-          ? { coachName: getCoachFirstName(CLIENT_ID), text: latest.text, whenLabel: fmtShortDate(latest.dateIso), count: sent.length }
+          ? { coachName: getCoachDisplayName(CLIENT_ID), text: latest.text, whenLabel: fmtShortDate(latest.dateIso), count: sent.length }
           : null;
       })()}
     />
@@ -953,7 +954,7 @@ function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
   // own feed; the list under it is everything else.
   const coachNotes = all.filter((n) => n.kind === "coach_note");
   const notifications = all.filter((n) => n.kind !== "coach_note");
-  const coachName = getCoachFirstName(CLIENT_ID);
+  const coachName = getCoachDisplayName(CLIENT_ID);
   const unreadCount = notifications.filter((n) => !n.read).length;
   const todayStr = localDateStr();
   const groups = [
@@ -1249,7 +1250,7 @@ export default async function ClientPage({
       clientId={CLIENT_ID}
       checkIn={checkIn}
       photos={progressPictures}
-      coachMessages={{ coachName: getCoachFirstName(CLIENT_ID), messages: coachMessagesFor(CLIENT_ID) }}
+      coachMessages={{ coachName: getCoachDisplayName(CLIENT_ID), messages: coachMessagesFor(CLIENT_ID) }}
       helpEmail={getCoachEmail(CLIENT_ID)}
       coachProfile={getCoachProfileForClient(CLIENT_ID)}
     />

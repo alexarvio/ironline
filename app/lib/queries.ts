@@ -157,11 +157,21 @@ export function getClient(id: number) {
 
 // A coach account has an email but no name. The client's app calls them by
 // the first word of it ("finlay.smith@…" → "Finlay"), as the coach rail does.
-export function getCoachFirstName(clientId: number): string {
+// What the client sees the coach called. The display name from the coach's
+// profile ("Finlay Chedd") when they have set one; otherwise a name read off
+// the login email, which is all a coach account carries.
+export function getCoachDisplayName(clientId: number): string {
   const coachId = coachIdOfClient(clientId);
+  const set = getData().coach_profiles.find((p) => p.coach_id === coachId)?.display_name?.trim();
+  if (set) return set;
   const email = getData().users.find((u) => u.id === coachId && u.role === "coach")?.email ?? "";
-  const first = (email.split("@")[0] ?? "").split(/[._-]+/).filter(Boolean)[0] ?? "";
-  return first ? first.charAt(0).toUpperCase() + first.slice(1) : "Coach";
+  const words = (email.split("@")[0] ?? "").split(/[._-]+/).filter(Boolean);
+  return words.length ? words.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") : "Coach";
+}
+
+/** The first word of that: "Finlay", for lines like "A notification when Finlay sends you one". */
+export function getCoachFirstName(clientId: number): string {
+  return getCoachDisplayName(clientId).split(/\s+/)[0] || "Coach";
 }
 
 /** The coach's login email: where the client's Help row writes to. */
