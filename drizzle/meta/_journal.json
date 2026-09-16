@@ -43,6 +43,13 @@
       "when": 1789567384318,
       "tag": "0005_food_meals",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789570098855,
+      "tag": "0006_food_days",
+      "breakpoints": true
     }
   ]
 }

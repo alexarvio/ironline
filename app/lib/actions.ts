@@ -187,9 +187,11 @@ import {
   addCustomFood,
   addFoodMeal,
   removeFoodMeal,
+  reorderFoodMeals,
   copyFoodMeal,
   hasFoodMeal,
   getFoodDiary,
+  setFoodDayType,
   localDateStr,
   type FoodDiaryView,
   type FoodMeal,
@@ -2281,4 +2283,25 @@ export async function copyFoodMealAction(formData: FormData) {
   copyFoodMeal(clientId, fromDate, fromMeal, toDate, toMeal);
   revalidatePath("/client");
   revalidatePath("/admin");
+}
+
+export async function setFoodDayTypeAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const date = String(formData.get("date") ?? "");
+  const dayType = formData.get("dayType");
+  if (!diaryDateOk(date) || (dayType !== "training" && dayType !== "rest")) return;
+  setFoodDayType(clientId, date, dayType);
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+export async function reorderFoodMealsAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const ids = String(formData.get("order") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 30);
+  reorderFoodMeals(clientId, ids);
+  revalidatePath("/client");
 }

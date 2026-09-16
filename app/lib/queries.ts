@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, CardioEntry } from "./db";
-import type { CalorieLog, CheckInNote, CustomFood, FoodEntry, FoodMealSlot, ClientGym, ClientPhase, CoachProfile, PhaseTrack } from "./db";
+import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, ClientGym, ClientPhase, CoachProfile, PhaseTrack } from "./db";
 import type { CoachProfileFields, CoachProfileView } from "./coachProfileView";
 import { getCatalogFood, searchCatalog, type CatalogFood } from "./foods/catalog";
 import { coachIdOfClient } from "./tenancy";
@@ -7433,7 +7433,7 @@ function mirrorDayIntoCalorieLog(clientId: number, date: string) {
     return;
   }
   const kcal = Math.round(entries.reduce((s, e) => s + e.kcal, 0));
-  setCalorieLog(clientId, date, kcal, undefined, undefined, "diary");
+  setCalorieLog(clientId, date, kcal, undefined, foodDayType(clientId, date), "diary");
 }
 
 export function listFoodMeals(clientId: number): { id: FoodMeal; label: string; own: boolean }[] {
@@ -7441,7 +7441,20 @@ export function listFoodMeals(clientId: number): { id: FoodMeal; label: string; 
     .food_meals.filter((m) => m.client_id === clientId)
     .sort((a, b) => a.created_at.localeCompare(b.created_at))
     .map((m) => ({ id: `m:${m.id}`, label: m.name, own: true }));
-  return [...FOOD_MEALS.map((m) => ({ ...m, own: false })), ...extra];
+  const all = [...FOOD_MEALS.map((m) => ({ ...m, own: false })), ...extra];
+  const order = getClient(clientId)?.meal_order;
+  if (!order?.length) return all;
+  const rank = new Map(order.map((id, i) => [id, i]));
+  return all.map((m, i) => ({ m, i })).sort((a, b) => (rank.get(a.m.id) ?? 1000 + a.i) - (rank.get(b.m.id) ?? 1000 + b.i)).map((x) => x.m);
+}
+
+/** The meals in the order the client put them; ids not theirs are ignored, missing ones keep their place at the end. */
+export function reorderFoodMeals(clientId: number, ids: string[]) {
+  const client = getClient(clientId);
+  if (!client) return;
+  const have = new Set(listFoodMeals(clientId).map((m) => m.id));
+  client.meal_order = ids.filter((id) => have.has(id));
+  persist();
 }
 
 export function hasFoodMeal(clientId: number, meal: string): boolean {
@@ -7567,6 +7580,8 @@ export type FoodDiaryView = {
   previous: { date: string; dateLabel: string; meal: FoodMeal; mealLabel: string; kcal: number; names: string[] }[];
   /** Dates in the last month with anything logged, for the dots on the week strip. */
   loggedDays: string[];
+  /** Which targets the day counts down from. */
+  dayType: "training" | "rest";
 };
 
 const dayLabelFor = (date: string, today: string): string => {
@@ -7578,11 +7593,30 @@ const dayLabelFor = (date: string, today: string): string => {
   return d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" });
 };
 
-/** The kcal and macro targets the diary counts down from on a date: the ring's, for the day type the client logged (else by whether a set was logged). */
+/** Training or rest on a date: as set on the diary, else as logged with the calories, else by whether a set was logged. */
+export function foodDayType(clientId: number, date: string): "training" | "rest" {
+  const set = getData().food_days.find((d) => d.client_id === clientId && d.date === date)?.day_type;
+  if (set) return set;
+  const log = getCalorieLog(clientId, date);
+  if (log?.day_type) return log.day_type;
+  return trainingDates(clientId).has(date) ? "training" : "rest";
+}
+
+export function setFoodDayType(clientId: number, date: string, dayType: "training" | "rest") {
+  const data = getData();
+  const row = data.food_days.find((d) => d.client_id === clientId && d.date === date);
+  if (row) row.day_type = dayType;
+  else data.food_days.push({ id: allocId("food_days"), client_id: clientId, date, day_type: dayType } as FoodDay);
+  // The calorie log the coach reads says the same.
+  const log = getCalorieLog(clientId, date);
+  if (log) setCalorieLog(clientId, date, log.kcal, undefined, dayType);
+  persist();
+}
+
+/** The kcal and macro targets the diary counts down from on a date: the ring's, for the kind of day it is. */
 export function foodDiaryTargetOn(clientId: number, date: string): FoodDiaryView["target"] {
   const s = getNutritionGoalsSummary(clientId);
-  const log = getCalorieLog(clientId, date);
-  const trained = log?.day_type ? log.day_type === "training" : trainingDates(clientId).has(date);
+  const trained = foodDayType(clientId, date) === "training";
   const kcal = trained ? s.trainingKcal : s.restKcal;
   if (!(kcal > 0)) return null;
   return {
@@ -7622,6 +7656,7 @@ export function getFoodDiary(clientId: number, date: string): FoodDiaryView {
     date,
     dateLabel: dayLabelFor(date, today),
     target: foodDiaryTargetOn(clientId, date),
+    dayType: foodDayType(clientId, date),
     eaten: { kcal: sum("kcal"), protein: sum("protein"), carbs: sum("carbs"), fat: sum("fat") },
     meals: meals.map((m) => {
       const rows = entries.filter((e) => e.meal === m.id);
