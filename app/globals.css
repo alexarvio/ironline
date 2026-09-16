@@ -14340,7 +14340,7 @@ label.ci-pill { cursor: text; }
 .fdi-meals { border: 1px solid #dfe3e8; border-radius: 18px; background: #fff; overflow: hidden; }
 .fdi-meal { display: flex; flex-direction: column; border-top: 1px solid #eceff3; }
 .fdi-meal:first-child { border-top: 0; }
-.fdi-meal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 52px; padding: 8px 12px 0 18px; }
+.fdi-meal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 56px; padding: 6px 12px 6px 18px; }
 .fdi-meal-titles { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .fdi-meal-title { font-size: 14px; font-weight: 700; color: #141a24; }
 .fdi-meal-sub { font-size: 12px; font-weight: 500; color: #8b93a1; }
@@ -14356,7 +14356,7 @@ label.ci-pill { cursor: text; }
 .fdi-icon-btn svg { width: 18px; height: 18px; }
 .fdi-icon-btn.saved { color: #2f7a3f; cursor: default; }
 .fdi-meal-save { flex: none; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 700; color: #2f5d8f; cursor: pointer; }
-.fdi-per.meal { margin: 10px 18px 14px; }
+.fdi-per.meal { margin: 4px 18px 14px; }
 .fdi-per.meal .fdi-per-cell { background: #F4F7FC; }
 .fdi-save { margin-top: 12px; }
 .fdi-result-row { display: flex; align-items: center; gap: 4px; }
