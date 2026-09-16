@@ -385,8 +385,17 @@ function ExpandedExercise({
 
   const [unit, setUnit] = useWeightUnit(exercise.name);
   const unitLabel = unit === "kg" ? "kg" : "lbs";
-  // A weight typed before the flip, converted, so flipping keeps it.
-  const [carried, setCarried] = useState<string | null>(null);
+  // A weight typed before the flip, converted, so flipping keeps it. The
+  // exact kg behind the shown figure is kept too: converting the rounded
+  // figure again on every flip climbed a step each time (60 → 132.5 → 60.25
+  // → 133 …), so while the box still shows what the flip put there, the next
+  // flip and the save both start from that kg, not from the box.
+  const [carried, setCarried] = useState<{ kg: number; shown: string } | null>(null);
+  const exactKg = (boxValue: string, from: WeightUnit) => {
+    if (carried && boxValue === carried.shown) return carried.kg;
+    const value = Number(boxValue.replace(",", ".").trim());
+    return Number.isFinite(value) ? unitToKg(value, from) : NaN;
+  };
   const show = (kg: number | null) => (kg == null ? "" : String(kgToUnit(kg, unit)));
   // A set's weight cell: the figure in the unit on the toggle, nothing else.
   const weightCell = (kg: number | null) => (kg == null ? "–" : show(kg));
@@ -394,8 +403,8 @@ function ExpandedExercise({
     const next: WeightUnit = unit === "kg" ? "lb" : "kg";
     const form = document.getElementById(formId) as HTMLFormElement | null;
     const el = form?.elements.namedItem("weight") as HTMLInputElement | null;
-    const typed = el && el.value.trim() !== "" ? Number(el.value) : NaN;
-    setCarried(Number.isFinite(typed) ? String(next === "kg" ? kgToUnit(unitToKg(typed, "lb"), "kg") : kgToUnit(typed, "lb")) : null);
+    const kg = el && el.value.trim() !== "" ? exactKg(el.value, unit) : NaN;
+    setCarried(Number.isFinite(kg) ? { kg, shown: String(kgToUnit(kg, next)) } : null);
     setUnit(next);
   };
 
@@ -422,11 +431,11 @@ function ExpandedExercise({
   const colCount = 1 + (askWeight ? 1 : 0) + (askRpe ? 1 : 0);
 
   const submit = async (formData: FormData) => {
-    // Typed in lbs, stored in kg.
-    if (unit === "lb") {
-      const raw = String(formData.get("weight") ?? "").replace(",", ".").trim();
-      const value = raw === "" ? NaN : Number(raw);
-      if (Number.isFinite(value)) formData.set("weight", String(unitToKg(value, "lb")));
+    // Stored in kg: the exact figure behind a flipped box, else what was typed.
+    const raw = String(formData.get("weight") ?? "").trim();
+    if (raw !== "" && (unit === "lb" || carried)) {
+      const kg = exactKg(raw, unit);
+      if (Number.isFinite(kg)) formData.set("weight", String(kg));
     }
     setPending(true);
     try {
@@ -461,7 +470,7 @@ function ExpandedExercise({
           onFocus={selectAll}
           onClick={selectAll}
           onInput={tidyDecimal}
-          defaultValue={carried ?? defaults.weight}
+          defaultValue={carried?.shown ?? defaults.weight}
           aria-label={`Weight in ${unitLabel}`}
           className="ts-input"
           required

@@ -467,6 +467,12 @@ Commits `a3c0e90`, `c6a5e46` for groups 46–59.
 
 Look: `/admin/profile` → drop a photo on Profile picture; then `/client` → Nutrition (with a coach note) and the bell.
 
+## 61 · Kg ⇄ lbs no longer drifts on every flip
+
+- [ ] A weight typed in the box and flipped to the other unit used to be converted from the rounded figure each time, so it climbed a step per flip (60 → 132.5 → 60.25 → 133 …). The flip now remembers the exact kg behind the figure it put in the box; while the box is untouched, the next flip and the save both start from that kg. Edit the figure and what you typed wins again.
+
+Look: `/client` → Training → an exercise with a weight → type 60, flip Kg/Lbs back and forth.
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).
