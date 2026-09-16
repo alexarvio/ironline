@@ -192,6 +192,7 @@ import {
   hasFoodMeal,
   getFoodDiary,
   setFoodDayType,
+  pushFoodDayToCalorieLog,
   localDateStr,
   type FoodDiaryView,
   type FoodMeal,
@@ -2304,4 +2305,13 @@ export async function reorderFoodMealsAction(formData: FormData) {
     .slice(0, 30);
   reorderFoodMeals(clientId, ids);
   revalidatePath("/client");
+}
+
+export async function pushFoodDayAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const date = String(formData.get("date") ?? "");
+  if (!diaryDateOk(date)) return;
+  pushFoodDayToCalorieLog(clientId, date);
+  revalidatePath("/client");
+  revalidatePath("/admin");
 }

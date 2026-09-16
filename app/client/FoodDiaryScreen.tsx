@@ -9,6 +9,7 @@ import {
   copyFoodMealAction,
   getFoodDiaryAction,
   removeFoodEntryAction,
+  pushFoodDayAction,
   removeFoodMealAction,
   reorderFoodMealsAction,
   searchFoodsAction,
@@ -61,6 +62,7 @@ export type FoodDiaryProps = {
   target: Macros | null;
   eaten: Macros;
   dayType: "training" | "rest";
+  loggedKcal: number | null;
   meals: { id: FoodMeal; label: string; own: boolean; kcal: number; entries: FoodEntryView[] }[];
   recent: FoodOptionView[];
   previous: { date: string; dateLabel: string; meal: FoodMeal; mealLabel: string; kcal: number; names: string[] }[];
@@ -233,6 +235,50 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
           </header>
 
           <Targets target={diary.target} eaten={diary.eaten} />
+          {/* Pushing the day's calories into the log the coach reads: the
+              client decides when the day is done, today or later. */}
+          {(() => {
+            const total = Math.round(diary.eaten.kcal);
+            const logged = diary.loggedKcal;
+            const same = logged != null && logged === total;
+            const push = () => {
+              const fd = new FormData();
+              fd.set("clientId", String(clientId));
+              fd.set("date", date);
+              startLoad(async () => {
+                await pushFoodDayAction(fd);
+                const next = await getFoodDiaryAction(clientId, date);
+                if (next) setDiary(next);
+              });
+            };
+            return (
+              <div className={`fdi-push${same ? " done" : ""}`}>
+                <span className="fdi-push-text">
+                  {total === 0 ? (
+                    "Nothing logged yet"
+                  ) : same ? (
+                    <>
+                      <b>{n(total)} kcal</b> logged for {diary.dateLabel.toLowerCase()}
+                    </>
+                  ) : logged != null ? (
+                    <>
+                      <b>{n(total)} kcal</b> eaten · {n(logged)} logged
+                    </>
+                  ) : (
+                    <>
+                      <b>{n(total)} kcal</b> eaten {diary.dateLabel === "Today" ? "today" : diary.dateLabel}
+                    </>
+                  )}
+                </span>
+                {total > 0 && !same && (
+                  <button type="button" className="fdi-push-btn" onClick={push} disabled={loading}>
+                    {logged != null ? "Update log" : "Log calories"}
+                  </button>
+                )}
+                {same && <span className="fdi-push-tick" aria-hidden="true">✓</span>}
+              </div>
+            );
+          })()}
 
           <div className="nd-body fdi-list">
             <section className="fdi-meals">

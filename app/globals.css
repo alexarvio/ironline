@@ -14325,6 +14325,16 @@ label.ci-pill { cursor: text; }
 .fdi-targets .nd-ring-label { white-space: nowrap; }
 .fdi-targets .nd-macro-of { font-variant-numeric: tabular-nums; }
 .fdi-tabs { margin-top: 0; }
+/* Attached under the rings: push the day's kcal into the calorie log. */
+.fdi-push { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 16px; padding: 12px 18px; border-radius: 0 0 18px 18px; background: #e6ecf3; }
+.fdi-targets { border-radius: 18px 18px 0 0; }
+.fdi-push.done { background: #dff3ea; }
+.fdi-push-text { flex: 1; min-width: 0; font-size: 13px; color: #5b6474; font-variant-numeric: tabular-nums; }
+.fdi-push-text b { font-weight: 700; color: #141a24; }
+.fdi-push.done .fdi-push-text, .fdi-push.done .fdi-push-text b { color: #0f5c46; }
+.fdi-push-btn { flex: none; height: 36px; padding: 0 14px; border: 0; border-radius: 10px; background: #1e3a6e; font: inherit; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer; }
+.fdi-push-btn:disabled { opacity: 0.6; cursor: default; }
+.fdi-push-tick { flex: none; font-size: 16px; font-weight: 800; color: #2f7a3f; }
 /* The meals, one card. */
 .fdi-list { margin-top: 16px; }
 .fdi-meals { border: 1px solid #dfe3e8; border-radius: 18px; background: #fff; overflow: hidden; }

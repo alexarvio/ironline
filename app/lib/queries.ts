@@ -7422,18 +7422,13 @@ export function listFoodEntries(clientId: number, date: string): FoodEntry[] {
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
 
-// The day's calories, mirrored into the calorie log the coach reads. Nothing
-// logged in the diary any more: the log is cleared too (a typed figure the
-// client entered by hand is kept, since it is not the diary's to remove).
-function mirrorDayIntoCalorieLog(clientId: number, date: string) {
+/** The day's kcal from the diary into the calorie log the coach reads, when the client pushes it. Nothing logged in the diary: nothing happens. */
+export function pushFoodDayToCalorieLog(clientId: number, date: string): boolean {
   const entries = listFoodEntries(clientId, date);
-  const existing = getCalorieLog(clientId, date);
-  if (entries.length === 0) {
-    if (existing?.source === "diary") setCalorieLog(clientId, date, null);
-    return;
-  }
+  if (entries.length === 0) return false;
   const kcal = Math.round(entries.reduce((s, e) => s + e.kcal, 0));
   setCalorieLog(clientId, date, kcal, undefined, foodDayType(clientId, date), "diary");
+  return true;
 }
 
 export function listFoodMeals(clientId: number): { id: FoodMeal; label: string; own: boolean }[] {
@@ -7487,7 +7482,6 @@ export function copyFoodMeal(clientId: number, fromDate: string, fromMeal: strin
   const now = new Date().toISOString();
   for (const e of rows) data.food_entries.push({ ...e, id: allocId("food_entries"), date: toDate, meal: toMeal, logged_at: now });
   if (rows.length) {
-    mirrorDayIntoCalorieLog(clientId, toDate);
     persist();
   }
   return rows.length;
@@ -7514,7 +7508,6 @@ export function addFoodEntry(clientId: number, date: string, meal: FoodMeal, foo
     logged_at: new Date().toISOString(),
   };
   data.food_entries.push(entry);
-  mirrorDayIntoCalorieLog(clientId, date);
   persist();
   return entry;
 }
@@ -7532,7 +7525,6 @@ export function updateFoodEntry(clientId: number, id: number, grams: number, ser
   e.protein = r1(per100.protein * k);
   e.carbs = r1(per100.carbs * k);
   e.fat = r1(per100.fat * k);
-  mirrorDayIntoCalorieLog(clientId, e.date);
   persist();
   return true;
 }
@@ -7542,7 +7534,6 @@ export function removeFoodEntry(clientId: number, id: number): boolean {
   const e = data.food_entries.find((x) => x.id === id && x.client_id === clientId);
   if (!e) return false;
   data.food_entries = data.food_entries.filter((x) => x !== e);
-  mirrorDayIntoCalorieLog(clientId, e.date);
   persist();
   return true;
 }
@@ -7582,6 +7573,8 @@ export type FoodDiaryView = {
   loggedDays: string[];
   /** Which targets the day counts down from. */
   dayType: "training" | "rest";
+  /** What the calorie log holds for the day, pushed from here or typed; null when nothing is logged. */
+  loggedKcal: number | null;
 };
 
 const dayLabelFor = (date: string, today: string): string => {
@@ -7657,6 +7650,7 @@ export function getFoodDiary(clientId: number, date: string): FoodDiaryView {
     dateLabel: dayLabelFor(date, today),
     target: foodDiaryTargetOn(clientId, date),
     dayType: foodDayType(clientId, date),
+    loggedKcal: getCalorieLog(clientId, date)?.kcal ?? null,
     eaten: { kcal: sum("kcal"), protein: sum("protein"), carbs: sum("carbs"), fat: sum("fat") },
     meals: meals.map((m) => {
       const rows = entries.filter((e) => e.meal === m.id);
