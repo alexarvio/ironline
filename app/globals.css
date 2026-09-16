@@ -14370,7 +14370,12 @@ label.ci-pill { cursor: text; }
 .fdi-result-row .fdi-result { flex: 1; min-width: 0; }
 .fdi-result-x { flex: none; width: 32px; height: 32px; border: 0; border-radius: 999px; background: none; font-size: 20px; line-height: 1; color: #8b93a1; cursor: pointer; }
 .fdi-meal-remove { flex: none; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #8b93a1; cursor: pointer; }
-.fdi-fold-inner > .fdi-row:last-child { padding-bottom: 14px; }
+.fdi-fold-inner > .fdi-row-wrap:last-child > .fdi-row { padding-bottom: 14px; }
+/* The row being changed and its panel read as one block. */
+.fdi-row-wrap.selected { margin: 8px 12px 14px; border-radius: 12px; background: #F4F7FC; }
+.fdi-row-wrap.selected > .fdi-row { padding: 12px 14px 0; }
+.fdi-row-wrap.selected > .fdi-row .fdi-row-name { font-weight: 700; color: #1e3a6e; }
+.fdi-row-wrap.selected > .fdi-panel { margin: 0; padding-top: 10px; border-radius: 0 0 12px 12px; }
 .fdi-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 18px 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
 .fdi-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .fdi-row-name { font-size: 14px; font-weight: 500; color: #313851; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

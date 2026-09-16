@@ -482,29 +482,15 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                     )}
                     <div className={`fdi-fold${folded.has(meal.id) ? " folding" : ""}`}>
                     <div className="fdi-fold-inner">
-                    {meal.entries.map((e) =>
-                      open?.kind === "amount" && open.entry?.id === e.id ? (
-                        <AmountPanel
-                          key={e.id}
-                          clientId={clientId}
-                          date={date}
-                          meal={meal.id}
-                          mealLabel={meal.label}
-                          food={open.food}
-                          entry={e}
-                          onDone={() => {
-                            setPanel(null);
-                            reload();
-                          }}
-                          onCancel={() => setPanel(null)}
-                        />
-                      ) : (
+                    {meal.entries.map((e) => {
+                      const selected = open?.kind === "amount" && open.entry?.id === e.id;
+                      return (
+                        <div key={e.id} className={`fdi-row-wrap${selected ? " selected" : ""}`}>
                         <button
-                          key={e.id}
                           type="button"
-                          className="fdi-row"
+                          className={`fdi-row${selected ? " selected" : ""}`}
                           onClick={() =>
-                            setPanel({
+                            selected ? setPanel(null) : setPanel({
                               kind: "amount",
                               meal: meal.id,
                               entry: e,
@@ -518,8 +504,24 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                           </span>
                           <span className="fdi-row-kcal">{n(e.kcal)} kcal</span>
                         </button>
-                      ),
-                    )}
+                        {selected && open?.kind === "amount" && (
+                          <AmountPanel
+                            clientId={clientId}
+                            date={date}
+                            meal={meal.id}
+                            mealLabel={meal.label}
+                            food={open.food}
+                            entry={e}
+                            onDone={() => {
+                              setPanel(null);
+                              reload();
+                            }}
+                            onCancel={() => setPanel(null)}
+                          />
+                        )}
+                        </div>
+                      );
+                    })}
                     {open?.kind === "search" ? (
                       <SearchPanel
                         clientId={clientId}
@@ -1150,9 +1152,9 @@ function AmountPanel({
         <div className="fdi-dialog-scrim" role="presentation" onClick={() => setConfirmRemove(false)}>
           <div className="fdi-dialog" role="dialog" aria-modal="true" aria-labelledby="fdi-remove-title" onClick={(e) => e.stopPropagation()}>
             <div>
-              <div className="fdi-eyebrow">Remove</div>
+              <div className="fdi-eyebrow">{mealLabel}</div>
               <h2 id="fdi-remove-title" className="fdi-dialog-title">
-                Take {food.name} out of {mealLabel}?
+                Remove this item?
               </h2>
             </div>
             <div className="fdi-dialog-actions">
