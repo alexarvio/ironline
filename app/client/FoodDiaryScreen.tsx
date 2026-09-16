@@ -696,29 +696,42 @@ function AmountPanel({
   onDone: () => void;
   onCancel: () => void;
 }) {
-  // A serving picked, or a weight typed in grams or ounces; the last touched wins.
-  const [serving, setServing] = useState<string | null>(entry?.serving ?? (food.servings[0]?.[0] ?? null));
-  const [count, setCount] = useState(1);
-  const [unit, setUnit] = useState<"g" | "oz">("g");
-  const [weightText, setWeightText] = useState(entry ? g(entry.grams) : food.servings[0] ? "" : "100");
+  // A number and a unit. The unit list is grams, ounces, and the food's own
+  // portions ("cup", "large"), each worth so many grams; what is saved is
+  // number × unit, in grams, with the unit's name when it is a portion.
+  const units: { id: string; label: string; grams: number; portion: boolean }[] = [
+    { id: "g", label: "g", grams: 1, portion: false },
+    { id: "oz", label: "oz", grams: G_PER_OZ, portion: false },
+    ...food.servings.map(([label, grams]) => ({ id: `p:${label}`, label, grams, portion: true })),
+  ];
+  const startUnit = entry
+    ? units.find((u) => u.portion && entry.serving?.endsWith(u.label))?.id ?? "g"
+    : food.servings.length
+    ? `p:${food.servings[0][0]}`
+    : "g";
+  const [unitId, setUnitId] = useState(startUnit);
+  const unit = units.find((u) => u.id === unitId) ?? units[0];
+  const startAmount = entry ? (unit.portion ? entry.grams / unit.grams : entry.grams) : unit.portion ? 1 : 100;
+  const [amountText, setAmountText] = useState(g(startAmount));
   const [pending, start] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
-    if (!food.servings.length) setTimeout(() => inputRef.current?.select(), 50);
-  }, [food.servings.length]);
+    const t = setTimeout(() => inputRef.current?.select(), 50);
+    return () => clearTimeout(t);
+  }, []);
 
-  const servingGrams = serving ? food.servings.find((s) => s[0] === serving)?.[1] ?? null : null;
-  const typed = Number(weightText.replace(",", ".")) || 0;
-  const grams = serving && servingGrams ? servingGrams * count : unit === "oz" ? typed * G_PER_OZ : typed;
+  const amount = Number(amountText.replace(",", ".")) || 0;
+  const grams = amount * unit.grams;
   const k = grams / 100;
   const preview = { kcal: food.kcal * k, protein: food.protein * k, carbs: food.carbs * k, fat: food.fat * k };
-  const servingLabel = serving && servingGrams ? `${count === 1 ? "" : `${g(count)} × `}${serving}` : unit === "oz" && typed > 0 ? `${g(typed)} oz` : null;
+  const servingLabel = unit.portion ? `${amount === 1 ? "" : `${g(amount)} × `}${unit.label}` : unit.id === "oz" ? `${g(amount)} oz` : null;
   const ok = grams > 0 && grams <= 5000 && !pending;
-  // Switching the unit converts what is in the box, so the amount stays the same.
-  const switchUnit = (next: "g" | "oz") => {
-    if (next === unit) return;
-    setUnit(next);
-    if (!serving && typed > 0) setWeightText(g(next === "oz" ? typed / G_PER_OZ : typed * G_PER_OZ));
+  // Changing the unit keeps the weight: 100 g becomes 3.5 oz, a cup becomes its grams.
+  const changeUnit = (id: string) => {
+    const next = units.find((u) => u.id === id);
+    if (!next) return;
+    setUnitId(id);
+    if (grams > 0) setAmountText(g(grams / next.grams));
   };
 
   const save = () => {
@@ -766,62 +779,29 @@ function AmountPanel({
         </span>
       </div>
 
-      {food.servings.length > 0 && (
-        <div className="fdi-chips" role="radiogroup" aria-label="Serving">
-          {food.servings.map(([label, grams]) => (
-            <button
-              key={label}
-              type="button"
-              role="radio"
-              aria-checked={serving === label}
-              className={`fdi-chip${serving === label ? " on" : ""}`}
-              onClick={() => {
-                setServing(label);
-                setWeightText("");
-              }}
-            >
-              {label} <small>{g(grams)} g</small>
-            </button>
-          ))}
-        </div>
-      )}
-
       <div className="fdi-amount-row">
-        {serving && servingGrams ? (
-          <div className="fdi-count">
-            <button type="button" onClick={() => setCount((c) => Math.max(0.5, c - 0.5))} aria-label="Less">
-              −
-            </button>
-            <span>
-              {g(count)} × {serving}
-            </span>
-            <button type="button" onClick={() => setCount((c) => Math.min(20, c + 0.5))} aria-label="More">
-              +
-            </button>
-          </div>
-        ) : null}
-        <label className={`fdi-grams${serving ? " secondary" : ""}`}>
+        <label className="fdi-amount">
+          <span className="fdi-field-label">Amount</span>
           <input
             ref={inputRef}
-            id={`fdi-weight-${meal}-${entry?.id ?? "new"}`}
+            id={`fdi-amount-${meal}-${entry?.id ?? "new"}`}
             type="text"
             inputMode="decimal"
-            value={weightText}
-            onFocus={() => {
-              setServing(null);
-              if (!weightText) setWeightText(grams ? g(unit === "oz" ? grams / G_PER_OZ : grams) : "100");
-            }}
-            onChange={(e) => setWeightText(e.target.value.replace(/[^\d.,]/g, ""))}
-            placeholder={serving ? g(unit === "oz" ? grams / G_PER_OZ : grams) : "0"}
-            aria-label={unit === "oz" ? "Ounces" : "Grams"}
+            value={amountText}
+            onChange={(e) => setAmountText(e.target.value.replace(/[^\d.,]/g, ""))}
+            placeholder="0"
+            aria-label="Amount"
           />
-          <span className="fdi-units" role="radiogroup" aria-label="Unit">
-            {(["g", "oz"] as const).map((u) => (
-              <button key={u} type="button" role="radio" aria-checked={unit === u} className={unit === u ? "on" : undefined} onClick={() => switchUnit(u)}>
-                {u}
-              </button>
+        </label>
+        <label className="fdi-unit">
+          <span className="fdi-field-label">Unit</span>
+          <select id={`fdi-unit-${meal}-${entry?.id ?? "new"}`} value={unitId} onChange={(e) => changeUnit(e.target.value)} aria-label="Unit">
+            {units.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.portion ? `${u.label} (${g(u.grams)} g)` : u.label}
+              </option>
             ))}
-          </span>
+          </select>
         </label>
       </div>
 
@@ -831,7 +811,7 @@ function AmountPanel({
         </span>
         <span className="fdi-preview-macros">
           P {g(preview.protein)} · C {g(preview.carbs)} · F {g(preview.fat)}
-          {grams > 0 && unit === "oz" ? ` · ${g(grams)} g` : ""}
+          {unit.id !== "g" && grams > 0 ? ` · ${g(grams)} g` : ""}
         </span>
       </div>
 

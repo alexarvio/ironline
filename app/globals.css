@@ -14356,11 +14356,6 @@ label.ci-pill { cursor: text; }
 .fdi-secondary { min-height: 48px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; font: inherit; font-size: 14px; font-weight: 700; color: #1e3a6e; cursor: pointer; }
 .fdi-primary { min-height: 48px; border: 0; border-radius: 12px; background: #1e3a6e; font: inherit; font-size: 14px; font-weight: 700; color: #fff; cursor: pointer; }
 .fdi-primary:disabled { background: #eceff3; color: #8b93a1; cursor: default; }
-.fdi-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.fdi-chip { display: inline-flex; align-items: baseline; gap: 5px; min-height: 36px; padding: 6px 12px; border: 0; border-radius: 999px; background: #e6ecf3; font: inherit; font-size: 13px; font-weight: 600; color: #1e3a6e; cursor: pointer; transition: background-color 0.15s, color 0.15s; }
-.fdi-chip small { font-size: 11px; font-weight: 500; color: #5b6474; }
-.fdi-chip.on { background: #1e3a6e; color: #fff; }
-.fdi-chip.on small { color: rgba(255, 255, 255, 0.75); }
 /* Inside a meal: the search, the amount, a food of the client's own. */
 .fdi-panel { display: flex; flex-direction: column; gap: 12px; margin: 12px 12px 14px; padding: 14px; border-radius: 12px; background: #F4F7FC; }
 .fdi-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -14378,9 +14373,6 @@ label.ci-pill { cursor: text; }
 .fdi-arrange-btn svg { width: 14px; height: 14px; }
 .fdi-arrange-btn.up svg { transform: rotate(180deg); }
 .fdi-arrange-btn:disabled { color: #c3c9d2; cursor: default; }
-.fdi-units { display: inline-flex; flex: none; gap: 2px; padding: 2px; border-radius: 999px; background: #e6ecf3; }
-.fdi-units button { min-width: 34px; height: 28px; padding: 0 8px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 12px; font-weight: 700; color: #5b6474; cursor: pointer; }
-.fdi-units button.on { background: #fff; color: #1e3a6e; box-shadow: 0 1px 2px rgba(20, 30, 50, 0.12); }
 .fdi-search { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; color: #8b93a1; }
 .fdi-search:focus-within { border-color: #2f5d8f; }
 .fdi-search svg { flex: none; width: 18px; height: 18px; }
@@ -14403,14 +14395,15 @@ label.ci-pill { cursor: text; }
 .fdi-food { display: flex; flex-direction: column; gap: 3px; }
 .fdi-food-name { font-size: 16px; font-weight: 600; line-height: 1.3; color: #141a24; }
 .fdi-food-per { font-size: 12px; color: #5b6474; font-variant-numeric: tabular-nums; }
-.fdi-amount-row { display: flex; align-items: center; gap: 10px; }
-.fdi-count { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; padding: 0 4px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font-size: 14px; font-weight: 600; color: #313851; }
-.fdi-count span { flex: 1; min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fdi-count button { flex: none; width: 40px; height: 40px; border: 0; border-radius: 999px; background: #F4F7FC; font: inherit; font-size: 20px; color: #1e3a6e; cursor: pointer; }
-.fdi-grams { display: flex; align-items: center; gap: 6px; flex: 1; min-height: 48px; padding: 0 14px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; color: #5b6474; }
-.fdi-grams.secondary { flex: 0 0 112px; }
-.fdi-grams:focus-within { border-color: #2f5d8f; }
-.fdi-grams input { width: 100%; min-width: 0; border: 0; background: none; font: inherit; font-size: 16px; font-weight: 600; color: #141a24; text-align: right; outline: none; }
+.fdi-amount-row { display: flex; align-items: flex-end; gap: 10px; }
+.fdi-amount, .fdi-unit { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.fdi-amount { flex: 0 0 110px; }
+.fdi-unit { flex: 1; }
+.fdi-field-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
+.fdi-amount input, .fdi-unit select { width: 100%; box-sizing: border-box; height: 48px; padding: 0 12px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; font-size: 16px; font-weight: 600; color: #141a24; outline: none; }
+.fdi-amount input { text-align: right; font-variant-numeric: tabular-nums; }
+.fdi-unit select { appearance: none; -webkit-appearance: none; padding-right: 34px; background-image: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%235b6474%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M6 9l6 6 6-6%27/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; text-overflow: ellipsis; }
+.fdi-amount input:focus, .fdi-unit select:focus { border-color: #2f5d8f; }
 .fdi-preview { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 2px 4px; }
 .fdi-preview-kcal { font-size: 15px; color: #5b6474; font-variant-numeric: tabular-nums; }
 .fdi-preview-kcal b { font-size: 20px; font-weight: 700; color: #141a24; }
