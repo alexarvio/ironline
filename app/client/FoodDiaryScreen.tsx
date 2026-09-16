@@ -1056,8 +1056,6 @@ function AmountPanel({
 
   const amount = Number(amountText.replace(",", ".")) || 0;
   const grams = amount * unit.grams;
-  const k = grams / 100;
-  const preview = { kcal: food.kcal * k, protein: food.protein * k, carbs: food.carbs * k, fat: food.fat * k };
   const servingLabel = unit.portion ? `${amount === 1 ? "" : `${g(amount)} × `}${unit.label}` : unit.id !== "g" ? `${g(amount)} ${unit.label}` : null;
   const ok = grams > 0 && grams <= 5000 && !pending;
   // Changing the unit keeps the weight: 100 g becomes 3.5 oz, a cup becomes its grams.
@@ -1136,16 +1134,6 @@ function AmountPanel({
             ))}
           </select>
         </label>
-      </div>
-
-      <div className="fdi-preview">
-        <span className="fdi-preview-kcal">
-          <b>{n(preview.kcal)}</b> kcal
-        </span>
-        <span className="fdi-preview-macros">
-          P {g(preview.protein)} · C {g(preview.carbs)} · F {g(preview.fat)}
-          {unit.id !== "g" && grams > 0 ? ` · ${g(grams)} g` : ""}
-        </span>
       </div>
 
       <div className="fdi-panel-actions">
