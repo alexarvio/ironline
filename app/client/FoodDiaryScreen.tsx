@@ -254,6 +254,13 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
 
   const logged = new Set(diary.loggedDays);
   const week = weekOf(date);
+  // The banner: the day in big ("Today", "Monday"), the date under it.
+  const dayDate = new Date(`${date}T00:00:00`);
+  const weekday = dayDate.toLocaleDateString("en-GB", { weekday: "long" });
+  const relative = diary.dateLabel === "Today" || diary.dateLabel === "Yesterday" ? diary.dateLabel : null;
+  const dayTitle = relative ?? weekday;
+  const daySub = `${relative ? `${weekday}, ` : ""}${dayDate.toLocaleDateString("en-GB", { day: "numeric", month: "long" })}`;
+  const dayWord = relative ? relative.toLowerCase() : weekday;
 
   return (
     <div className="fdi-screen app-layer-main">
@@ -282,7 +289,8 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
           <header className="nd-banner fdi-banner">
             <div className="fdi-banner-titles">
               <div className="fdi-eyebrow">Food diary</div>
-              <h1 className="fdi-date">{diary.dateLabel}</h1>
+              <h1 className="fdi-date">{dayTitle}</h1>
+              <span className="fdi-date-sub">{daySub}</span>
             </div>
             <div className="fdi-week">
               <button type="button" className="fdi-week-arrow" onClick={() => goTo(addDays(date, -1))} disabled={date <= floor} aria-label="Previous day">
@@ -346,7 +354,7 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                     "Nothing logged yet"
                   ) : same ? (
                     <>
-                      <b>{n(total)} kcal</b> logged for {diary.dateLabel.toLowerCase()}
+                      <b>{n(total)} kcal</b> logged for {dayWord}
                     </>
                   ) : logged != null ? (
                     <>
@@ -354,7 +362,7 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                     </>
                   ) : (
                     <>
-                      <b>{n(total)} kcal</b> eaten {diary.dateLabel === "Today" ? "today" : diary.dateLabel}
+                      <b>{n(total)} kcal</b> eaten {relative ? dayWord : `on ${weekday}`}
                     </>
                   )}
                 </span>

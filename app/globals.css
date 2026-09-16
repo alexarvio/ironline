@@ -14303,6 +14303,7 @@ label.ci-pill { cursor: text; }
 .fdi-banner { display: flex; flex-direction: column; gap: 18px; }
 .fdi-banner-titles { display: flex; flex-direction: column; gap: 4px; }
 .fdi-date { margin: 0; font-size: 32px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.1; color: #141a24; }
+.fdi-date-sub { font-size: 14px; font-weight: 500; color: #5b6474; }
 .fdi-week { display: flex; align-items: center; gap: 4px; margin: 0 -8px; }
 .fdi-week-arrow { flex: none; display: flex; align-items: center; justify-content: center; width: 34px; height: 44px; border: 0; background: none; color: #1e3a6e; cursor: pointer; }
 .fdi-week-arrow svg { width: 16px; height: 16px; }
