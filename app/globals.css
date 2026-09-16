@@ -14324,6 +14324,13 @@ label.ci-pill { cursor: text; }
 .fdi-targets { position: relative; z-index: 2; margin: -36px 16px 0; padding: 22px 20px 18px; border-radius: 18px; background: #fff; box-shadow: 0 12px 30px -20px rgba(8, 31, 92, 0.4); }
 .fdi-targets .nd-ring-label { white-space: nowrap; }
 .fdi-targets .nd-macro-of { font-variant-numeric: tabular-nums; }
+/* A macro target reached: the figure in its colour, a tick drawing itself beside it. */
+.fdi-targets .nd-macro-grams { display: inline-flex; align-items: baseline; transition: color 0.3s; }
+.fdi-targets .nd-macro-grams.met small { color: inherit; opacity: 0.8; }
+.fdi-tick { width: 16px; height: 16px; margin-left: 6px; align-self: center; }
+.fdi-tick path { stroke-dasharray: 20; stroke-dashoffset: 20; animation: fdi-tick-draw 0.5s 0.1s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+@keyframes fdi-tick-draw { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .fdi-tick path { animation: none; stroke-dashoffset: 0; } }
 .fdi-tabs { margin-top: 0; }
 /* Attached under the rings: push the day's kcal into the calorie log. */
 .fdi-push { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 16px; padding: 12px 18px; border-radius: 0 0 18px 18px; background: #e6ecf3; }

@@ -644,13 +644,21 @@ function Ring({ id, share }: { id: (typeof MACROS)[number]; share: number }) {
 
 function MacroRow({ id, eaten, goal }: { id: (typeof MACROS)[number]; eaten: number; goal: number | null }) {
   const figure = useTween(eaten);
+  // The target reached: the figure takes the macro's colour and a tick draws
+  // itself beside it. The figure keeps counting past it.
+  const met = goal != null && goal > 0 && eaten >= goal - 0.05;
   return (
     <div className="nd-macro">
       <span className="nd-macro-bar" style={{ background: HUE[id] }} aria-hidden="true" />
       <div className="nd-macro-body">
-        <div className="nd-macro-grams">
+        <div className={`nd-macro-grams${met ? " met" : ""}`} style={met ? { color: HUE[id] } : undefined}>
           {g(figure)}
           <small>g</small>
+          {met && (
+            <svg className="fdi-tick" viewBox="0 0 16 16" aria-label="Target reached" role="img">
+              <path d="M3 8.5l3.2 3.2L13 5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
         </div>
         <div className="nd-macro-name">
           {NAME[id]}
