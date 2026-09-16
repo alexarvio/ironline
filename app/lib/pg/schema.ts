@@ -125,6 +125,29 @@ export const client_gyms = pgTable("client_gyms", {
   extra: extra(),
 });
 
+export const coach_profiles = pgTable("coach_profiles", {
+  coach_id: integer("coach_id").primaryKey(),
+  display_name: text("display_name"),
+  title: text("title"),
+  headline: text("headline"),
+  location: text("location"),
+  languages: text("languages"),
+  years_coaching: num("years_coaching"),
+  hero_path: text("hero_path"),
+  candid_path: text("candid_path"),
+  intro: text("intro"),
+  bio: text("bio"),
+  quote: text("quote"),
+  specialties: jsonb("specialties"),
+  studies: jsonb("studies"),
+  experience: jsonb("experience"),
+  outside: text("outside"),
+  reply_note: text("reply_note"),
+  published: boolean("published"),
+  updated_at: text("updated_at"),
+  extra: extra(),
+});
+
 export const client_program_notes = pgTable("client_program_notes", {
   id: id(),
   client_id: fk("client_id"),
@@ -497,6 +520,7 @@ export const COLLECTIONS = [
   { name: "check_in_notes", table: check_in_notes, key: ["id"] },
   { name: "client_exercise_notes", table: client_exercise_notes, key: ["id"] },
   { name: "client_gyms", table: client_gyms, key: ["id"] },
+  { name: "coach_profiles", table: coach_profiles, key: ["coach_id"] },
   { name: "client_program_notes", table: client_program_notes, key: ["id"] },
   { name: "cardio_entries", table: cardio_entries, key: ["id"] },
   { name: "cardio_logs", table: cardio_logs, key: ["id"] },

@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { Archivo, Libre_Baskerville } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { applyDueClientReminders, applyDueProgramDeployments } from "./lib/queries";
 
@@ -15,6 +17,31 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
   },
 };
+
+// The client Nutrition tab's serif is Baskerville, built into iPhones. This
+// self-hosted Libre Baskerville stands in wherever it is missing; the tab's
+// CSS names it through this variable.
+const libreBaskerville = Libre_Baskerville({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-libre-baskerville",
+  display: "swap",
+});
+// Archivo: the client Nutrition tab's type. Regular text, Medium figures,
+// SemiBold headings and names.
+const archivo = Archivo({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-archivo",
+  display: "swap",
+});
+// Kirana: the "Ironline" wordmark at the top left of the client app.
+const kirana = localFont({
+  src: "./fonts/Kirana-Regular.ttf",
+  variable: "--font-brand",
+  display: "swap",
+});
 
 export const viewport: Viewport = {
   themeColor: "#2f5d8f",
@@ -37,7 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   // is deliberately out for now: one moving accent was enough to make both
   // apps drift away from the files they were drawn from.
   return (
-    <html lang="en">
+    <html lang="en" className={`${libreBaskerville.variable} ${archivo.variable} ${kirana.variable}`}>
       <body>{children}</body>
     </html>
   );

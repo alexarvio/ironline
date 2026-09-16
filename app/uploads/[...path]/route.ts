@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { DATA_DIR } from "../../lib/db";
-import { canAccessClient, getSessionUser } from "../../lib/auth";
+import { canAccessClient, getSessionUser, isOwner } from "../../lib/auth";
 import { coachIdOfClient, coachOwnsExercise } from "../../lib/tenancy";
 import { bucketLink, LINK_CACHE_SECONDS } from "../../lib/storage";
 
@@ -52,6 +52,15 @@ export async function GET(
     const exerciseId = Number.parseInt(clientIdRaw, 10);
     const coachId = !user ? null : user.role === "coach" ? user.id : coachIdOfClient(user.client_id);
     if (coachId == null || !coachOwnsExercise(coachId, exerciseId)) return new Response("Not found", { status: 404 });
+  } else if (kind === "coaches") {
+    // uploads/coaches/<coachId>/hero|candid.<ext>: a coach's profile photos.
+    // The coach may see them, so may the owner (who can edit any profile),
+    // and so may that coach's own clients.
+    const user = await getSessionUser();
+    const coachId = Number.parseInt(clientIdRaw, 10);
+    const allowed =
+      !!user && (user.role === "coach" ? user.id === coachId || isOwner(user) : coachIdOfClient(user.client_id) === coachId);
+    if (!allowed) return new Response("Not found", { status: 404 });
   } else {
     // uploads/avatars/<clientId>/avatar.<ext>: the client's profile photo,
     // per-client and checked like the rest.

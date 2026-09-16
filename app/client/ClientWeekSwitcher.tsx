@@ -8,12 +8,16 @@ import { ReactNode, useEffect, useRef, useState } from "react";
 // toggle, no navigation, so it can't disturb AppShell/HomeHub's own
 // sub-view state. Defaults to whichever week getCurrentWeekNumber()
 // computed, i.e. "current week deploys by default" every time the app opens.
+//
+// With `banner`, the week chips sit at the foot of the Training banner and
+// the week's content (its Days trained card first) follows under it.
 export default function ClientWeekSwitcher({
   weeks,
   currentWeek,
   contents,
   weekLabels,
   completedWeeks = [],
+  banner,
 }: {
   weeks: number[];
   currentWeek: number;
@@ -24,20 +28,23 @@ export default function ClientWeekSwitcher({
   // Weeks where every planned set on every training day has been logged.
   // Ticked in the switcher so the client sees the programme filling in.
   completedWeeks?: number[];
+  /** The banner's top (brand, programme, progress), rendered by the server page. */
+  banner?: ReactNode;
 }) {
   const [selected, setSelected] = useState(currentWeek);
-  // The strip opens with last week at the left edge, so the current week
-  // sits second and the rest of the row is what is coming. Near the end of
-  // the programme the strip cannot scroll that far, so the current week
-  // drifts right on its own.
+  // With more weeks than fit, the strip scrolls and opens with last week at
+  // the left edge, so the current week sits second and the rest of the row
+  // is what is coming. Near the end of the programme the strip cannot scroll
+  // that far, so the current week drifts right on its own.
+  const scrolls = weeks.length > 3;
   const stripRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const strip = stripRef.current;
-    if (!strip) return;
+    if (!strip || !scrolls) return;
     const anchor = strip.querySelector<HTMLElement>(`[data-week="${currentWeek - 1}"]`) ?? strip.querySelector<HTMLElement>(`[data-week="${currentWeek}"]`);
     if (!anchor) return;
     strip.scrollLeft = anchor.getBoundingClientRect().left - strip.getBoundingClientRect().left;
-  }, [currentWeek]);
+  }, [currentWeek, scrolls]);
 
   // Weeks ahead of the current one are locked: the client can see the
   // programme has a Week 4, but not what is in it until that week arrives.
@@ -45,50 +52,51 @@ export default function ClientWeekSwitcher({
   // visible-but-locked week is a better promise than a hidden one.
   const isLocked = (w: number) => w > currentWeek;
 
+  const strip =
+    weeks.length > 1 ? (
+      <div className={`tr-weeks${scrolls ? " scroll" : ""}`} ref={stripRef}>
+        {weeks.map((w) => {
+          const done = completedWeeks.includes(w);
+          const locked = isLocked(w);
+          return (
+            <button
+              key={w}
+              type="button"
+              data-week={w}
+              className={`tr-wk${w === selected ? " on" : ""}${done ? " done" : ""}${locked ? " locked" : ""}`}
+              onClick={() => setSelected(w)}
+              aria-pressed={w === selected}
+              aria-disabled={locked}
+              title={locked ? "Unlocks when this week starts" : done ? "Week complete, every set logged" : undefined}
+            >
+              {weekLabels?.[w] ?? `Week ${w}`}
+              {locked ? (
+                <span className="tr-wk-lock" aria-label="Locked until this week starts">
+                  <LockIcon />
+                </span>
+              ) : done ? (
+                <span className="tr-wk-tick" aria-label="Week complete">
+                  ✓
+                </span>
+              ) : (
+                w === currentWeek && <span className="tr-wk-dot" aria-label="This week" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    ) : null;
+
   return (
     <div>
-      {weeks.length > 1 && (
-        <div className="week-switcher" style={{ marginBottom: 14 }} ref={stripRef}>
-          {weeks.map((w) => {
-            const done = completedWeeks.includes(w);
-            const locked = isLocked(w);
-            return (
-              <button
-                key={w}
-                type="button"
-                data-week={w}
-                className={`toggle-btn${w === selected ? " active" : ""}${done ? " done" : ""}${locked ? " locked" : ""}`}
-                onClick={() => setSelected(w)}
-                aria-disabled={locked}
-                title={
-                  locked
-                    ? "Unlocks when this week starts"
-                    : done
-                      ? "Week complete, every set logged"
-                      : undefined
-                }
-              >
-                {weekLabels?.[w] ?? `Week ${w}`}
-                {/* Always-present, fixed-size slot: a lock, a tick, the
-                    current-week dot or nothing all take the same room, so
-                    every pill is the same size whatever its state. */}
-                <span className="week-status" aria-hidden={!locked && !done ? true : undefined}>
-                  {locked ? (
-                    <span className="week-lock" aria-label="Locked until this week starts">
-                      <LockIcon />
-                    </span>
-                  ) : done ? (
-                    <span className="week-done-tick" aria-label="Week complete">
-                      ✓
-                    </span>
-                  ) : (
-                    w === currentWeek && <span className="week-current-dot" />
-                  )}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+      {banner != null ? (
+        <header className="tr-banner">
+          <span className="tr-banner-glow" aria-hidden="true" />
+          {banner}
+          {strip}
+        </header>
+      ) : (
+        strip
       )}
       {isLocked(selected) ? (
         <div className="week-locked-card">

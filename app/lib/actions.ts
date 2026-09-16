@@ -6,6 +6,7 @@ import {
   canAccessClient,
   coachForClient,
   getSessionUser,
+  isOwner,
   requireClientAccess,
   requireCoach,
 } from "./auth";
@@ -82,6 +83,7 @@ import {
   listMetricDefinitions,
   logCoachActivity,
   markAllNotificationsRead,
+  markCoachNotesRead,
   markNotificationRead,
   markReportOpened,
   logSet,
@@ -191,8 +193,15 @@ import {
   getExerciseIdForAssignment,
   saveClientAvatar,
   removeClientAvatar,
+  getCoachProfile,
+  getCoachProfileView,
+  removeCoachPhoto,
+  saveCoachPhoto,
+  saveCoachProfile,
+  setCoachProfilePublished,
 } from "./queries";
 import { writeReportNarrative } from "./reportAi";
+import { COACH_PROFILE_LIMITS } from "./coachProfileView";
 import { deleteUpload, keyOf, putUpload } from "./storage";
 import type { ReportSectionType } from "./reportSectionTypes";
 
@@ -1394,6 +1403,13 @@ export async function markNotificationReadAction(id: number) {
   revalidatePath("/client");
 }
 
+export async function markCoachNotesReadAction(clientId: number) {
+  const id = await requireClientAccess(clientId);
+  if (!id) return;
+  markCoachNotesRead(id);
+  revalidatePath("/client");
+}
+
 export async function markAllNotificationsReadAction(formData: FormData) {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
   if (!clientId) return;
@@ -1839,7 +1855,10 @@ export async function logCaloriesAction(formData: FormData) {
   const kcal = raw === "" ? null : Math.round(Number(raw));
   if (kcal != null && (!Number.isFinite(kcal) || kcal < 0 || kcal > 20000)) return;
   const note = formData.has("note") ? String(formData.get("note") ?? "").trim().slice(0, 500) || null : undefined;
-  setCalorieLog(clientId, date, kcal, note);
+  // Training or rest, as the client called the day; absent keeps what it was.
+  const rawDayType = formData.get("dayType");
+  const dayType = rawDayType === "training" || rawDayType === "rest" ? rawDayType : undefined;
+  setCalorieLog(clientId, date, kcal, note, dayType);
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -2017,11 +2036,120 @@ export async function uploadClientAvatarAction(formData: FormData) {
   revalidatePath("/admin");
 }
 
+// ---- Coach profile ----------------------------------------------------------
+// A coach edits their own profile. The owner may edit any coach's, named by
+// coachId; for anyone else that field is ignored.
+
+async function profileCoachId(formData: FormData): Promise<number> {
+  const coach = await requireCoach();
+  const asked = Number(formData.get("coachId"));
+  if (isOwner(coach) && Number.isInteger(asked) && asked > 0 && asked !== coach.id && getCoachProfileView(asked)) return asked;
+  return coach.id;
+}
+
+function revalidateCoachProfile() {
+  revalidatePath("/admin/profile");
+  revalidatePath("/client");
+}
+
+function jsonList(formData: FormData, key: string): unknown[] {
+  try {
+    const value = JSON.parse(String(formData.get(key) ?? "[]"));
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
+const clip = (value: unknown, max: number) => (typeof value === "string" ? value.trim().slice(0, max) : "");
+
+export async function saveCoachProfileAction(formData: FormData) {
+  const coachId = await profileCoachId(formData);
+  const field = (key: keyof typeof COACH_PROFILE_LIMITS) => clip(formData.get(key), COACH_PROFILE_LIMITS[key]);
+  const rawYears = String(formData.get("yearsCoaching") ?? "").trim();
+  const years = Number(rawYears);
+  saveCoachProfile(coachId, {
+    displayName: field("displayName"),
+    title: field("title"),
+    headline: field("headline"),
+    location: field("location"),
+    languages: field("languages"),
+    yearsCoaching: rawYears === "" || !Number.isFinite(years) || years < 0 ? null : Math.min(80, Math.round(years)),
+    intro: field("intro"),
+    bio: field("bio"),
+    quote: field("quote"),
+    outside: field("outside"),
+    replyNote: field("replyNote"),
+    specialties: [...new Set(jsonList(formData, "specialties").map((v) => clip(v, 40)).filter(Boolean))].slice(0, COACH_PROFILE_LIMITS.specialties),
+    studies: jsonList(formData, "studies")
+      .map((v) => {
+        const o = (v ?? {}) as Record<string, unknown>;
+        return { title: clip(o.title, 80), place: clip(o.place, 80), year: clip(o.year, 12) };
+      })
+      .filter((s) => s.title || s.place)
+      .slice(0, 12),
+    experience: jsonList(formData, "experience")
+      .map((v) => {
+        const o = (v ?? {}) as Record<string, unknown>;
+        return { years: clip(o.years, 20), role: clip(o.role, 80), place: clip(o.place, 80) };
+      })
+      .filter((r) => r.role || r.place)
+      .slice(0, 20),
+  });
+  revalidateCoachProfile();
+}
+
+export async function publishCoachProfileAction(formData: FormData): Promise<{ ok: boolean; error?: string }> {
+  const coachId = await profileCoachId(formData);
+  const ok = setCoachProfilePublished(coachId, formData.get("published") === "1");
+  revalidateCoachProfile();
+  return ok ? { ok: true } : { ok: false, error: "Add your display name and save before publishing." };
+}
+
+export async function uploadCoachPhotoAction(formData: FormData) {
+  const coachId = await profileCoachId(formData);
+  const kind = formData.get("kind") === "candid" ? "candid" : "hero";
+  const file = formData.get("file") as File | null;
+  // Same checks as the client avatar.
+  if (!file || file.size === 0 || file.size > 6 * 1024 * 1024) return;
+  if (!file.type.startsWith("image/")) return;
+  const current = getCoachProfile(coachId);
+  const previous = (kind === "hero" ? current?.hero_path : current?.candid_path) ?? null;
+  const body = Buffer.from(await file.arrayBuffer());
+  const saved = saveCoachPhoto(coachId, kind, body, file.type);
+  if (previous && keyOf(previous) !== keyOf(saved)) await deleteUpload(previous);
+  await putUpload(saved, body, file.type);
+  revalidateCoachProfile();
+}
+
+export async function removeCoachPhotoAction(formData: FormData) {
+  const coachId = await profileCoachId(formData);
+  const kind = formData.get("kind") === "candid" ? "candid" : "hero";
+  const previous = removeCoachPhoto(coachId, kind);
+  await deleteUpload(previous);
+  revalidateCoachProfile();
+}
+
 export async function removeClientAvatarAction(formData: FormData) {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const previous = getClient(clientId)?.avatar_path ?? null;
   removeClientAvatar(clientId);
   await deleteUpload(previous);
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+// The client's own contact details, edited from Settings. The session decides
+// whose profile this is; the clientId in the form is only checked against it.
+// The login email is not touched here: this is the contact email the coach
+// sees on the member card.
+export async function saveMyDetailsAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  if (!clientId) return;
+  const field = (name: string) => {
+    const v = String(formData.get(name) ?? "").trim();
+    return v ? v.slice(0, 200) : null;
+  };
+  patchClientProfile(clientId, { email: field("email"), phone: field("phone"), address: field("address") });
   revalidatePath("/client");
   revalidatePath("/admin");
 }

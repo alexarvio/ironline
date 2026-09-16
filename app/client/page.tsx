@@ -8,6 +8,7 @@ import {
   getClientPlanView,
   getClientProgramNote,
   listCardioForDay,
+  listChatMessages,
   isCardioDone,
   getLastMeetingRecap,
   getUpNextSession,
@@ -31,6 +32,12 @@ import {
   getNutritionGoalsSummary,
   getNutritionPlan,
   getCurrentPhase,
+  getCoachFirstName,
+  getCoachEmail,
+  getCoachProfileForClient,
+  getStoredNutritionPlan,
+  listClientPhases,
+  weekStart,
   getPhotoCadence,
   getPhotoInstructions,
   getPhotoPeriodNote,
@@ -54,10 +61,15 @@ import TrainingDayList from "./TrainingDayList";
 import ExerciseCoachNote from "./ExerciseCoachNote";
 import { ProgressPicturesRow, type ProgressPicturesProps } from "./ProgressPicturesScreen";
 import HomeHub, { HomePhotos, HomeTrack, UpcomingMeeting } from "./HomeHub";
-import NutritionDayToggle, { NutritionTargetSet } from "./NutritionDayToggle";
-import CalorieLog from "./CalorieLog";
+import NutritionTargetsCard, { type NutritionTargetSet } from "./NutritionTargetsCard";
+import CoachCard from "./CoachCard";
+import CalorieLogCard, { type CalorieDay } from "./CalorieLogCard";
+import SupplementsCard, { type SupplementRow } from "./SupplementsCard";
 import ReportArchiveList, { ArchiveReport } from "./ReportArchiveList";
 import NotificationRow from "./NotificationRow";
+import CoachNotesRow from "./CoachNotesRow";
+import DeleteAccountRow from "./DeleteAccountRow";
+import MyDetailsCard from "./MyDetailsCard";
 import ClientWeekSwitcher from "./ClientWeekSwitcher";
 import ProgramNote from "./ProgramNote";
 import AppShell, { AppTab } from "./AppShell";
@@ -65,7 +77,6 @@ import AvatarUpload from "./AvatarUpload";
 import {
   AccountIcon,
   AppleIcon,
-  ArrowRightIcon,
   CalendarIcon,
   ChatIcon,
   ClockIcon,
@@ -76,7 +87,6 @@ import {
 import {
   markAllNotificationsReadAction,
   setClientPreferenceAction,
-  setClientUnitsAction,
 } from "../lib/actions";
 
 // Reads live from the JSON store on every request — without this, Next
@@ -319,8 +329,34 @@ function HomeTab({ CLIENT_ID, photos }: { CLIENT_ID: number; photos: HomePhotos 
       recap={getLastMeetingRecap(CLIENT_ID)}
       checkInStatus={checkInStatus}
       photos={photos}
+      latestMessage={(() => {
+        const sent = coachMessagesFor(CLIENT_ID);
+        const latest = sent[0];
+        return latest
+          ? { coachName: getCoachFirstName(CLIENT_ID), text: latest.text, whenLabel: fmtShortDate(latest.dateIso), count: sent.length }
+          : null;
+      })()}
     />
   );
+}
+
+// The coach's one-way messages to this client, newest first, with the
+// labels the feed and Home's card show. Only the coach's side: the client
+// has no reply box, so their side of chat_messages is empty anyway.
+function coachMessagesFor(clientId: number) {
+  return listChatMessages(clientId)
+    .filter((m) => m.sender === "coach" && m.text.trim())
+    .reverse()
+    .map((m) => {
+      const d = new Date(m.created_at);
+      return {
+        id: m.id,
+        text: m.text,
+        dateIso: m.created_at.slice(0, 10),
+        dayLabel: d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),
+        timeLabel: d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+      };
+    });
 }
 
 function TrainingTab({ CLIENT_ID, week, showMyNotes }: { CLIENT_ID: number; week: number; showMyNotes: boolean }) {
@@ -331,44 +367,64 @@ function TrainingTab({ CLIENT_ID, week, showMyNotes }: { CLIENT_ID: number; week
   const trainingDays = days.filter((d) => d.assignments.length > 0 || listCardioForDay(d.day.id).length > 0);
   const stats = weekStats(CLIENT_ID, week);
   const dayTarget = stats.totalDays || 7;
+  // Sessions finished this week: every set logged and any cardio ticked.
+  const sessionsDone = trainingDays.filter(
+    ({ day, assignments }) =>
+      assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets) && listCardioForDay(day.id).every((c) => isCardioDone(c.id))
+  ).length;
+  const pct = Math.round((Math.min(stats.daysTrained, dayTarget) / dayTarget) * 100);
+  const sessionsLeft = dayTarget - stats.daysTrained;
+  const ringR = 43;
+  const ringC = 2 * Math.PI * ringR;
 
   return (
-    <div>
-      <p className="app-lead">
-        Your coach&rsquo;s deployed week. Log your sets below. Your trainer sees this the moment
-        you save it, no extra step.
-      </p>
-
-      {trainingDays.length > 0 && (
-        <div className="training-stats ts-days">
-          {(() => {
-            const pct = Math.round((Math.min(stats.daysTrained, dayTarget) / dayTarget) * 100);
-            const complete = stats.daysTrained >= dayTarget;
-            return (
-              <div
-                className={`ts-days-ring${complete ? " complete" : ""}`}
-                style={{ background: `conic-gradient(${complete ? "#2f7a3f" : "#2f5d8f"} ${pct}%, #eceff3 0)` }}
-                role="img"
-                aria-label={`${pct}% of this week's sessions done`}
-              >
-                <span className="ts-days-ring-inner">{pct}%</span>
+    <div className="tr-body">
+      {/* Days trained, overlapping the banner, with the programme note as its footer row. */}
+      {(trainingDays.length > 0 || program) && (
+        <section className="tr-days">
+          {trainingDays.length > 0 && (
+            <div className="tr-days-top">
+              <div>
+                <div className="tr-label">Days trained</div>
+                <div className="tr-days-figure">
+                  <span className="tr-days-num">{stats.daysTrained}</span>
+                  <span className="tr-days-of">of {dayTarget}</span>
+                </div>
+                <div className={`tr-days-status${sessionsLeft <= 0 ? " done" : ""}`}>
+                  {sessionsLeft <= 0 ? "Week complete" : `${sessionsLeft} session${sessionsLeft === 1 ? "" : "s"} left`}
+                </div>
               </div>
-            );
-          })()}
-          <div className="ts-days-body">
-            <div className="home-dark-stat-label">Days trained</div>
-            <div className="home-dark-stat-value-row">
-              <span className="home-dark-stat-value">{stats.daysTrained}</span>
-              <span className="home-dark-stat-of">of {dayTarget}</span>
+              {/* Green once the week is complete, like a finished session's pill. */}
+              <div className={`tr-ring${sessionsLeft <= 0 ? " done" : ""}`} role="img" aria-label={`${pct}% of this week's sessions done`}>
+                <svg viewBox="0 0 96 96" aria-hidden="true">
+                  <circle cx="48" cy="48" r={ringR} fill="none" stroke={sessionsLeft <= 0 ? "#DFF3EA" : "#e6ecf3"} strokeWidth="5" />
+                  <circle
+                    className="tr-ring-fill"
+                    cx="48"
+                    cy="48"
+                    r={ringR}
+                    fill="none"
+                    stroke={sessionsLeft <= 0 ? "#2f7a3f" : "#2f5d8f"}
+                    strokeWidth="5"
+                    strokeLinecap="round"
+                    transform="rotate(-90 48 48)"
+                    style={
+                      {
+                        strokeDasharray: ringC,
+                        strokeDashoffset: ringC * (1 - pct / 100),
+                        strokeOpacity: pct > 0 ? 1 : 0,
+                        "--tr-ring-c": ringC,
+                      } as React.CSSProperties
+                    }
+                  />
+                </svg>
+                <span className="tr-ring-pct">{pct}%</span>
+              </div>
             </div>
-            <div className="home-dark-stat-caption">
-              {stats.daysTrained >= dayTarget ? "Week complete" : `${dayTarget - stats.daysTrained} left this week`}
-            </div>
-          </div>
-        </div>
+          )}
+          {program && <ProgramNote programId={program.id} text={getClientProgramNote(CLIENT_ID, program.id)} coachName={getCoachFirstName(CLIENT_ID)} />}
+        </section>
       )}
-
-      {program && <ProgramNote programId={program.id} text={getClientProgramNote(CLIENT_ID, program.id)} />}
 
       {days.length === 0 ? (
         <p className="empty-note">Nothing deployed yet. Your coach is still building this week.</p>
@@ -394,6 +450,14 @@ function TrainingTab({ CLIENT_ID, week, showMyNotes }: { CLIENT_ID: number; week
             allGyms.map((g) => [g.id, showMyNotes ? getClientExerciseNotes(CLIENT_ID, g.id) : new Map<number, string>()] as const)
           );
           return (
+            <>
+            <div className="tr-sessions-head">
+              <h2 className="tr-sessions-title">Sessions</h2>
+              <span className="tr-sessions-count">
+                {sessionsDone} of {trainingDays.length} done
+              </span>
+            </div>
+            <div className="tr-sessions">
             <TrainingDayList
               days={trainingDays.map(({ day, assignments }, i) => {
                 const gymId = dayGymId(day.id);
@@ -447,6 +511,8 @@ function TrainingTab({ CLIENT_ID, week, showMyNotes }: { CLIENT_ID: number; week
                 };
               })}
             />
+            </div>
+            </>
           );
         })()
       )}
@@ -457,43 +523,100 @@ function TrainingTab({ CLIENT_ID, week, showMyNotes }: { CLIENT_ID: number; week
 function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   const summary = getNutritionGoalsSummary(CLIENT_ID);
   const plan = getNutritionPlan(CLIENT_ID);
-  const profile = getClientProfile(CLIENT_ID);
+  const storedPlan = getStoredNutritionPlan(CLIENT_ID);
 
   const today = localDateStr();
   // Sessions have no weekday, so today is a training day once the client has
-  // logged a set today; the Training day / Rest day toggle switches either way.
-  const isTrainingDay = trainingDates(CLIENT_ID).has(today);
-  const dateLabel = new Date(`${today}T00:00:00`).toLocaleDateString("en-US", { weekday: "long" });
+  // logged a set today; the Training day / Rest day tabs switch either way.
+  const trainedOn = trainingDates(CLIENT_ID);
+  const isTrainingDay = trainedOn.has(today);
+  const coachName = getCoachFirstName(CLIENT_ID);
+  const short = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const addDays = (iso: string, days: number) => {
+    const d = new Date(`${iso}T00:00:00`);
+    d.setDate(d.getDate() + days);
+    return localDateStr(d);
+  };
+  const weeksBetween = (a: string, b: string) =>
+    Math.round((new Date(`${b}T00:00:00`).getTime() - new Date(`${a}T00:00:00`).getTime()) / (7 * 86400000));
 
-  // Both day types' targets are computed up front (not just today's) so the
-  // Training day/Rest day toggle can switch between them client-side with no
-  // server round trip — see NutritionDayToggle.
-  const macroSet = (kcalTarget: number, protein: number, carbs: number, fats: number, caption: string): NutritionTargetSet => {
+  // Both day types' targets up front, so the tabs switch with no server
+  // round trip. A macro's share is of the kcal the three macros make up.
+  const targetSet = (kcal: number, protein: number, carbs: number, fats: number): NutritionTargetSet => {
     const macroKcal = protein * 4 + carbs * 4 + fats * 9;
-    const maxGrams = Math.max(protein, carbs, fats, 1);
-    const macro = (id: string, name: string, grams: number, kcalPerGram: number) => ({
-      id,
-      name,
-      grams,
-      barPct: Math.round((grams / maxGrams) * 100),
-      share: macroKcal > 0 ? `${Math.round(((grams * kcalPerGram) / macroKcal) * 100)}% of kcal` : "-",
-    });
+    const share = (grams: number, kcalPerGram: number) => (macroKcal > 0 ? (grams * kcalPerGram) / macroKcal : 0);
     return {
-      kcalLabel: kcalTarget.toLocaleString("en-US"),
-      caption,
-      macros: [macro("protein", "Protein", protein, 4), macro("carbs", "Carbs", carbs, 4), macro("fat", "Fat", fats, 9)],
+      kcal,
+      macros: [
+        { id: "protein", name: "Protein", grams: protein, share: share(protein, 4) },
+        { id: "carbs", name: "Carbs", grams: carbs, share: share(carbs, 4) },
+        { id: "fat", name: "Fat", grams: fats, share: share(fats, 9) },
+      ],
     };
   };
-
   const hasTargets = summary.trainingKcal > 0 || summary.restKcal > 0;
-  const training = macroSet(
-    summary.trainingKcal,
-    summary.trainingProtein,
-    summary.trainingCarbs,
-    summary.trainingFats,
-    "Training day targets"
+  const training = targetSet(summary.trainingKcal, summary.trainingProtein, summary.trainingCarbs, summary.trainingFats);
+  const rest = targetSet(summary.restKcal, summary.restProtein, summary.restCarbs, summary.restFats);
+
+  // The nutrition phase the client is in, named as the coach named it on the
+  // Plan tab: which week of it this is, one segment per week, and when it ends.
+  const nutritionPhase = getCurrentPhase(CLIENT_ID, "nutrition");
+  const phaseSlot = nutritionPhase ? (
+    (() => {
+      const total = weeksBetween(nutritionPhase.start_week, nutritionPhase.end_week) + 1;
+      const current = Math.min(total, Math.max(1, weeksBetween(nutritionPhase.start_week, weekStart(today)) + 1));
+      // The bar is one line for the phase's days, filled up to today. With
+      // under a week to go, the count switches from weeks to days.
+      const totalDays = total * 7;
+      const dayIndex = Math.min(
+        totalDays,
+        Math.max(1, Math.round((new Date(`${today}T00:00:00`).getTime() - new Date(`${nutritionPhase.start_week}T00:00:00`).getTime()) / 86400000) + 1)
+      );
+      const inDays = totalDays - dayIndex < 7;
+      return (
+        <>
+          <div className="nd-phase">
+            <div className="nd-phase-titles">
+              <div className="nd-kicker">Nutrition</div>
+              <div className="nd-phase-name">{nutritionPhase.name}</div>
+            </div>
+          </div>
+          <div
+            className="nd-progress"
+            role="progressbar"
+            aria-label={`${nutritionPhase.name}: day ${dayIndex} of ${totalDays}`}
+            aria-valuemin={0}
+            aria-valuemax={totalDays}
+            aria-valuenow={dayIndex}
+          >
+            <span style={{ width: `${(dayIndex / totalDays) * 100}%` }} />
+          </div>
+          {/* Under the bar: when it began on the left, how far in on the right. */}
+          <div className="nd-timeline-foot">
+            <span>Started {short(nutritionPhase.start_week)}</span>
+            <span className="nd-phase-week">
+              {inDays ? (
+                <>
+                  Day <b>{dayIndex}</b> of {totalDays}
+                </>
+              ) : (
+                <>
+                  Week <b>{current}</b> of {total}
+                </>
+              )}
+            </span>
+          </div>
+        </>
+      );
+    })()
+  ) : (
+    <div className="nd-phase">
+      <div className="nd-phase-titles">
+        <div className="nd-kicker">Nutrition</div>
+        <div className="nd-phase-name">Your targets</div>
+      </div>
+    </div>
   );
-  const rest = macroSet(summary.restKcal, summary.restProtein, summary.restCarbs, summary.restFats, "Rest day targets");
 
   const supplementRows = SUPPLEMENT_ITEMS.map((item) => ({ item, entry: plan.supplements[slugify(item)] })).filter(
     (r) => r.entry?.quantity
@@ -518,86 +641,124 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
     })),
   ];
 
-  // The nutrition phase the client is in, named the way the coach named it
-  // on the Plan tab, above the targets it sets.
-  const nutritionPhase = getCurrentPhase(CLIENT_ID, "nutrition");
+  const supplements: SupplementRow[] = referenceRows.map((r) => ({ name: r.item, quantity: r.quantity, timing: r.timing, notes: r.notes }));
+
+  const todayLog = getCalorieLog(CLIENT_ID, today);
+
+  // The last seven days before today that the client logged, each judged
+  // against that day's own target: the deployed nutrition phase the day fell
+  // in (else the plan's), training or rest by whether a set was logged that
+  // day. Days with nothing logged are not listed.
+  const nutritionPhases = listClientPhases(CLIENT_ID).filter((p) => p.track === "nutrition" && !p.draft);
+  const kcalOf = (m: { protein: number | null; carbs: number | null; fats: number | null }) => (m.protein ?? 0) * 4 + (m.carbs ?? 0) * 4 + (m.fats ?? 0) * 9;
+  const targetOn = (date: string, trained: boolean) => {
+    const week = weekStart(date);
+    const phase = nutritionPhases.find((p) => p.start_week <= week && p.end_week >= week);
+    const targets = phase?.nutrition?.day_targets ?? storedPlan.day_targets;
+    const kcal = targets ? kcalOf(trained ? targets.training : targets.rest) : trained ? summary.trainingKcal : summary.restKcal;
+    return kcal > 0 ? kcal : null;
+  };
+  const weekAgo = addDays(today, -7);
+  const lastWeek = listCalorieLogs(CLIENT_ID, 14)
+    .filter((c) => c.date < today && c.date >= weekAgo && c.kcal != null)
+    .map((c) => {
+      const kcal = c.kcal as number;
+      // The day type the client picked when logging; older logs go by sets.
+      const trained = c.day_type ? c.day_type === "training" : trainedOn.has(c.date);
+      const target = targetOn(c.date, trained);
+      const diff = target != null ? kcal - target : null;
+      const d = new Date(`${c.date}T00:00:00`);
+      const delta =
+        diff == null
+          ? { text: "–", tone: "" }
+          : Math.abs(diff) <= 100
+          ? { text: "On target", tone: "ok" }
+          : diff > 0
+          ? { text: `+${Math.round(diff).toLocaleString("en-US")}`, tone: "over" }
+          : { text: `−${Math.round(-diff).toLocaleString("en-US")}`, tone: "under" };
+      return {
+        date: c.date,
+        label: `${d.toLocaleDateString("en-US", { weekday: "short" })} ${d.getDate()}`,
+        type: trained ? "Training" : "Rest",
+        note: c.note ?? "",
+        kcal,
+        delta,
+      };
+    });
+  const onTarget = lastWeek.filter((d) => d.delta.tone === "ok").length;
+
+  // The calories card steps back through the last month, one day at a time:
+  // today first. Each day carries what was logged and its own targets.
+  const logsByDate = new Map(listCalorieLogs(CLIENT_ID, 60).map((c) => [c.date, c] as const));
+  const yesterday = addDays(today, -1);
+  const calorieDays: CalorieDay[] = Array.from({ length: 31 }, (_, i) => addDays(today, -i)).map((date) => {
+    const log = logsByDate.get(date);
+    return {
+      date,
+      label:
+        date === today
+          ? "Today"
+          : date === yesterday
+          ? "Yesterday"
+          : new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "long" }),
+      kcal: log?.kcal ?? null,
+      dayType: log?.day_type ?? null,
+      note: log?.note ?? null,
+      defaultDayType: trainedOn.has(date) ? "training" : "rest",
+      targets: { training: targetOn(date, true), rest: targetOn(date, false) },
+    };
+  });
+
   return (
-    <div className="nutrition-dark">
-      {nutritionPhase && (
-        <div className="ts-program-head">
-          <span className="ts-program-eyebrow">Nutrition phase</span>
-          <span className="ts-program-name">{nutritionPhase.name}</span>
-        </div>
-      )}
-      {!hasTargets ? (
-        <p className="empty-note">Your coach hasn&rsquo;t set up nutrition targets yet.</p>
-      ) : (
-        <NutritionDayToggle dateLabel={dateLabel} training={training} rest={rest} initialIsTraining={isTrainingDay} />
-      )}
+    <div className="nd">
+      <NutritionTargetsCard
+        training={training}
+        rest={rest}
+        // Opens on the day type the client logged today, else on whether a
+        // set was logged today.
+        initialIsTraining={todayLog?.day_type ? todayLog.day_type === "training" : isTrainingDay}
+        hasTargets={hasTargets}
+        phase={phaseSlot}
+        footer={supplements.length > 0 ? <SupplementsCard date={today} rows={supplements} /> : undefined}
+      />
 
-      {/* The coach's note on the targets (Nutrition tab → "Note on the
-          targets"). Distinct from the "Coach notes" feed further down, which
-          is per-exercise/check-in commentary; this is the standing guidance
-          that goes with the numbers, so it sits right under them, before the client's own log. */}
-      {plan.coach_notes?.trim() && (
-        <section className="home-dark-section">
-          <span className="home-dark-section-title">From your coach</span>
-          <p className="nd-coach-note">{plan.coach_notes}</p>
+      <div className="nd-body">
+        <CoachCard
+          coachName={coachName}
+          note={plan.coach_notes?.trim() || null}
+          noteDate={nutritionPhase ? `Since ${short(nutritionPhase.start_week)}` : null}
+        />
+
+        <CalorieLogCard clientId={CLIENT_ID} days={calorieDays} coachName={coachName} />
+
+        <section className="nd-days">
+          <div className="nd-section-head">
+            <h2 className="nd-card-title">Last 7 days</h2>
+            {lastWeek.length > 0 && (
+              <span className="nd-card-count">
+                <b>{onTarget}</b> of 7 on target
+              </span>
+            )}
+          </div>
+          <div className="nd-card">
+            {lastWeek.length === 0 ? (
+              <p className="nd-empty">Nothing logged in the last week yet.</p>
+            ) : (
+              lastWeek.map((d) => (
+                <div key={d.date} className="nd-day">
+                  <span>
+                    <span className="nd-day-date">{d.label}</span>
+                    <span className="nd-day-type">{d.type}</span>
+                  </span>
+                  <span className="nd-day-note">{d.note}</span>
+                  <span className="nd-day-kcal">{d.kcal.toLocaleString("en-US")}</span>
+                  <span className={`nd-day-delta ${d.delta.tone}`}>{d.delta.text}</span>
+                </div>
+              ))
+            )}
+          </div>
         </section>
-      )}
-
-      {/* The client's own calories, day by day, right under the targets. */}
-      {(() => {
-        const dayLabel = (d: string) =>
-          new Date(`${d}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-        // Only days that were actually logged, the last seven of them before
-        // today: the list fills up as the client logs and then rolls, and
-        // there is nothing to show until the first entry exists.
-        const recent = listCalorieLogs(CLIENT_ID, 8)
-          .filter((c) => c.date < today)
-          .slice(0, 7)
-          .map((c) => ({ date: c.date, label: dayLabel(c.date), kcal: c.kcal as number | null, note: c.note ?? null }));
-        const targetKcal = hasTargets ? (isTrainingDay ? summary.trainingKcal : summary.restKcal) || null : null;
-        return (
-          <CalorieLog
-            clientId={CLIENT_ID}
-            today={{ date: today, label: dayLabel(today), kcal: getCalorieLog(CLIENT_ID, today)?.kcal ?? null, note: getCalorieLog(CLIENT_ID, today)?.note ?? null }}
-            days={recent}
-            targetKcal={targetKcal}
-            between={
-              <>
-              {referenceRows.length > 0 && (
-                <section className="home-dark-section">
-                  <span className="home-dark-section-title">Supplements</span>
-                  <div className="home-dark-rows">
-                    {referenceRows.map(({ item, quantity, timing, notes }) => (
-                      <div key={item} className={`nd-supp-row${notes ? " has-note" : ""}`}>
-                        <div className="nd-supp-name">{item}</div>
-                        <div className="nd-supp-detail">
-                          {quantity}
-                          {timing ? ` · ${timing}` : ""}
-                        </div>
-                        {/* The coach's note on this item, e.g. how or when to take it. */}
-                        {notes && <div className="nd-supp-note">{notes}</div>}
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
-              </>
-            }
-          />
-        );
-      })()}
-
-      {profile.water_goal && (
-        <div className="nd-water-row">
-          <span className="nd-water-label">Water goal</span>
-          <span className="nd-water-value">{profile.water_goal}</span>
-        </div>
-      )}
-
-      <div className="nd-footnote">Meal logging isn&rsquo;t on yet. Your coach sets the targets, you hit them.</div>
+      </div>
     </div>
   );
 }
@@ -606,15 +767,6 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   const client = getClient(CLIENT_ID);
   const profile = getClientProfile(CLIENT_ID);
   const prefs = getClientPreferences(CLIENT_ID);
-
-  const weeksInLabel = (() => {
-    if (!profile.coaching_start_date) return null;
-    const weeks = Math.floor(
-      (new Date(`${localDateStr()}T00:00:00`).getTime() - new Date(`${profile.coaching_start_date}T00:00:00`).getTime()) /
-        (7 * 86400000)
-    );
-    return weeks >= 0 ? `${weeks} week${weeks === 1 ? "" : "s"} in` : null;
-  })();
 
   const sentReports = listClientReports(CLIENT_ID).filter((r) => r.status === "sent");
   const reports: ArchiveReport[] = sentReports.map((r) => {
@@ -643,28 +795,33 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   const newReportCount = reports.filter((r) => r.isNew).length;
   const reportCountLabel = `${newReportCount > 0 ? `${newReportCount} new · ` : ""}${reports.length} saved`;
 
-  const toggleDefs: { key: "coach_notes" | "checkin_reminders" | "weekly_digest"; label: string; detail: string }[] = [
-    { key: "coach_notes", label: "Coach notes", detail: "Log a note when your coach comments on your work" },
-    { key: "checkin_reminders", label: "Check-in reminders", detail: "Nudge when a tracker, measurement or photo is due" },
-    { key: "weekly_digest", label: "Weekly summary", detail: "Sunday recap of your week (coming soon)" },
+  // Weekly summary and the units toggle are out for now: the summary is
+  // not built, and the units live on the Kg | Lbs switch in a session.
+  const toggleDefs: { key: "coach_notes" | "checkin_reminders"; label: string; detail: string }[] = [
+    { key: "coach_notes", label: "Messages from your coach", detail: `A notification when ${getCoachFirstName(CLIENT_ID)} sends you one` },
+    { key: "checkin_reminders", label: "Check-in reminders", detail: "A reminder when a check-in, measurement or photo is due" },
   ];
 
   return (
     <div className="settings-dark">
-      <div className="home-dark-datebar">Your account</div>
-      <div className="home-dark-name">{client?.name}</div>
-      <div className="home-dark-subrow">
-        {profile.coaching_start_date && (
-          <span className="home-dark-sub">Client since {fmtShortDate(profile.coaching_start_date)}</span>
-        )}
-        {weeksInLabel && <span className="home-dark-goal">{weeksInLabel}</span>}
-      </div>
+      {/* The banner, like the other tabs: who this is, since when, and the photo. */}
+      <header className="hm-banner st-banner">
+        <div className="st-head">
+          <div className="st-who">
+            <div className="hm-eyebrow hm-date">Your account</div>
+            <h1 className="st-name">{client?.name}</h1>
+          </div>
+          {/* The photo tile on the right, the + on it saying what it does. */}
+          <div className="st-avatar">
+            <AvatarUpload clientId={CLIENT_ID} name={client?.name ?? ""} avatarPath={client?.avatar_path ?? null} />
+          </div>
+        </div>
+      </header>
 
-      <div className="home-dark-hr" />
-
-      <section className="home-dark-section" style={{ paddingTop: 18 }}>
-        <AvatarUpload clientId={CLIENT_ID} name={client?.name ?? ""} avatarPath={client?.avatar_path ?? null} />
-      </section>
+      <div className="st-body">
+      {/* The coach's profile row is out of Settings for now (nice to have,
+          not yet); the profile screen and its data stay in place. */}
+      <MyDetailsCard clientId={CLIENT_ID} email={profile.email ?? null} phone={profile.phone ?? null} address={profile.address ?? null} />
 
       <section className="home-dark-section">
         <div className="home-dark-rows">
@@ -706,20 +863,6 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
               </form>
             );
           })}
-          <div className="settings-units-row">
-            <div className="home-dark-row-title">Units</div>
-            <div className="settings-units-options">
-              {(["metric", "imperial"] as const).map((u) => (
-                <form key={u} action={setClientUnitsAction}>
-                  <input type="hidden" name="clientId" value={CLIENT_ID} />
-                  <input type="hidden" name="units" value={u} />
-                  <button type="submit" className={`settings-unit-btn${prefs.units === u ? " active" : ""}`}>
-                    {u === "metric" ? "kg · cm" : "lb · in"}
-                  </button>
-                </form>
-              ))}
-            </div>
-          </div>
         </div>
       </section>
 
@@ -731,36 +874,32 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
               <div className="home-dark-row-title">Apple Health</div>
               <div className="home-dark-row-detail">Auto-log steps, weight & workouts</div>
             </div>
-            <span className="settings-app-action">Connect</span>
+            <span className="st-soon">Soon</span>
           </div>
           <div className="settings-app-row">
             <div className="home-dark-row-body">
               <div className="home-dark-row-title">Health Connect</div>
               <div className="home-dark-row-detail">Auto-log steps, weight & workouts</div>
             </div>
-            <span className="settings-app-action">Connect</span>
+            <span className="st-soon">Soon</span>
           </div>
         </div>
-        <div className="home-dark-empty" style={{ marginTop: 12 }}>
-          Health syncing needs the Ironline mobile app (not available on web).
-        </div>
+        <div className="home-dark-empty st-note">Health syncing needs the Ironline mobile app (not available on web).</div>
       </section>
 
       <section className="home-dark-section">
         <span className="home-dark-section-title">Data</span>
+        <p className="st-note st-privacy">Your coach sees your check-ins, photos, logs and notes. Nobody else does.</p>
         <div className="home-dark-rows">
           <div className="settings-data-row">
             <div className="home-dark-row-title">Export my data</div>
-            <ArrowRightIcon />
+            <span className="st-soon">Soon</span>
           </div>
           <div className="settings-data-row">
             <div className="home-dark-row-title">Privacy policy</div>
-            <ArrowRightIcon />
+            <span className="st-soon">Soon</span>
           </div>
-          <div className="settings-data-row warn">
-            <div className="home-dark-row-title">Delete account</div>
-            <ArrowRightIcon />
-          </div>
+          <DeleteAccountRow coachName={getCoachFirstName(CLIENT_ID)} />
         </div>
       </section>
 
@@ -770,6 +909,7 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
         </button>
       </form>
       <div className="settings-footnote">Ironline · Full Potential Coaching</div>
+      </div>
     </div>
   );
 }
@@ -808,7 +948,12 @@ function notificationTimeLabel(iso: string) {
 // form (mark-read on tap, same auto-submit pattern used elsewhere in this
 // app, e.g. PhotoUploadBox) rather than client-side state.
 function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
-  const notifications = getNotifications(CLIENT_ID);
+  const all = getNotifications(CLIENT_ID);
+  // The coach's messages sit apart, as one row at the top that opens their
+  // own feed; the list under it is everything else.
+  const coachNotes = all.filter((n) => n.kind === "coach_note");
+  const notifications = all.filter((n) => n.kind !== "coach_note");
+  const coachName = getCoachFirstName(CLIENT_ID);
   const unreadCount = notifications.filter((n) => !n.read).length;
   const todayStr = localDateStr();
   const groups = [
@@ -818,22 +963,30 @@ function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
 
   return (
     <div className="cn-notifications">
-      <div className="cn-notif-header">
-        <span className="cn-unread-label">{unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}</span>
-        <form action={markAllNotificationsReadAction}>
-          <input type="hidden" name="clientId" value={CLIENT_ID} />
-          <button type="submit" className="cn-markall" disabled={unreadCount === 0}>
-            Mark all as read
-          </button>
-        </form>
-      </div>
+      <CoachNotesRow
+        coachName={coachName}
+        initial={coachName.charAt(0).toUpperCase() || "C"}
+        unread={coachNotes.filter((n) => !n.read).length}
+        total={coachNotes.length}
+      />
 
       {groups.length === 0 ? (
-        <p className="cn-empty">No notifications yet.</p>
+        <p className="cn-empty">{coachNotes.length > 0 ? "No other notifications." : "No notifications yet."}</p>
       ) : (
-        groups.map((g) => (
+        groups.map((g, i) => (
           <section key={g.label} className="cn-notif-group">
-            <span className="cn-notif-group-label">{g.label}</span>
+            {/* Mark all as read shares the first group's label line. */}
+            <div className="cn-notif-group-head">
+              <span className="cn-notif-group-label">{g.label}</span>
+              {i === 0 && (
+                <form action={markAllNotificationsReadAction}>
+                  <input type="hidden" name="clientId" value={CLIENT_ID} />
+                  <button type="submit" className="cn-markall" disabled={unreadCount === 0 && coachNotes.every((n) => n.read)}>
+                    Mark all as read
+                  </button>
+                </form>
+              )}
+            </div>
             <div className="cn-notif-list">
               {g.items.map((n) => (
                 <NotificationRow key={n.id} id={n.id} actionTab={n.action_tab} actionRef={n.action_ref}>
@@ -952,9 +1105,21 @@ export default async function ClientPage({
   // a prompt while it is missing photos, "sent" once every angle is in, and
   // nothing when no sheet is open (no photo is ever filed outside one).
   const photoCount = checkInData.photoSlots.length;
+  // "Sent" shows on Home for a day after the last photo of the sheet went
+  // in, as a tick where the reminder was; after that Home says nothing
+  // about pictures until the next sheet opens.
+  const photosSentRecently = (() => {
+    const period = photoSheetFor(CLIENT_ID, localDateStr());
+    const latest = listPhotoUploads(listPhotoSlots(CLIENT_ID).map((s) => s.id))
+      .filter((u) => u.period === period)
+      .map((u) => u.uploaded_at)
+      .sort()
+      .at(-1);
+    return !!latest && Date.now() - new Date(latest).getTime() < 24 * 60 * 60 * 1000;
+  })();
   const homePhotos: HomePhotos = checkInData.photosDue
     ? { state: "due" }
-    : photoCount > 0 && checkInData.photoSlots.every((p) => p.src)
+    : photoCount > 0 && checkInData.photoSlots.every((p) => p.src) && photosSentRecently
     ? {
         state: "done",
         summary: `${photoCount}/${photoCount} · next sheet ${fmtShortDate(
@@ -1000,35 +1165,79 @@ export default async function ClientPage({
     );
   });
 
+  // The Training banner: the programme's name, one line for how far through
+  // the programme the client is (by days, from the week it was deployed),
+  // when it started and which week this is. The week chips join it at the
+  // foot, inside ClientWeekSwitcher. The app's top bar floats over its top.
+  const trainingBanner = (() => {
+    const today = localDateStr();
+    const start = deployedProgram?.deployed_at ? weekStart(deployedProgram.deployed_at.slice(0, 10)) : null;
+    const totalDays = deployedProgram ? deployedProgram.total_weeks * 7 : 0;
+    const elapsedDays = start
+      ? Math.round((new Date(`${today}T00:00:00`).getTime() - new Date(`${start}T00:00:00`).getTime()) / 86400000) + 1
+      : 0;
+    const elapsedPct = totalDays ? Math.min(100, Math.max(0, (elapsedDays / totalDays) * 100)) : 0;
+    const weekIndex = deployedProgram ? Math.min(deployedProgram.total_weeks, Math.max(1, currentWeekNum - deployedProgram.start_week + 1)) : null;
+    return (
+      <>
+        <div className="tr-kicker">Programme</div>
+        <div className="tr-name">{deployedProgram?.name || "Your programme"}</div>
+        {deployedProgram && start && (
+          <>
+            <div
+              className="tr-progress"
+              role="progressbar"
+              aria-label="How far through the programme"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(elapsedPct)}
+            >
+              <span style={{ width: `${elapsedPct}%` }} />
+            </div>
+            <div className="tr-progress-foot">
+              <span>Started {new Date(`${start}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+              <span>
+                Week <b>{weekIndex}</b> of {deployedProgram.total_weeks}
+              </span>
+            </div>
+          </>
+        )}
+      </>
+    );
+  })();
+
   const tabs: AppTab[] = [
-    { id: "home", label: "Home", icon: <HomeIcon />, content: <HomeTab CLIENT_ID={CLIENT_ID} photos={homePhotos} /> },
+    // Draws its own light banner (name and main goal); the top bar floats over it.
+    { id: "home", label: "Home", icon: <HomeIcon />, bare: true, content: <HomeTab CLIENT_ID={CLIENT_ID} photos={homePhotos} /> },
     {
       id: "training",
       label: "Training",
       icon: <DumbbellIcon />,
+      // Draws its own light banner; the top bar floats over it.
+      bare: true,
       content: (
-        <div className="training-dark">
-          {/* The programme's name: the coach had to give it one to deploy it,
-              and the client should see what the block is called. */}
-          {deployedProgram?.name && (
-            <div className="ts-program-head">
-              <span className="ts-program-eyebrow">Programme</span>
-              <span className="ts-program-name">{deployedProgram.name}</span>
-              <span className="ts-program-meta">{deployedProgram.total_weeks} week{deployedProgram.total_weeks === 1 ? "" : "s"}</span>
-            </div>
-          )}
+        <div className="tr">
           <ClientWeekSwitcher
             weeks={trainingWeeks}
             currentWeek={currentWeekNum}
             contents={trainingWeekContents}
             weekLabels={trainingWeekLabels}
             completedWeeks={completedWeeks}
+            banner={trainingBanner}
           />
         </div>
       ),
     },
-    { id: "nutrition", label: "Nutrition", icon: <AppleIcon />, content: <NutritionTab CLIENT_ID={CLIENT_ID} /> },
-    { id: "settings", label: "Settings", icon: <AccountIcon />, content: <SettingsTab CLIENT_ID={CLIENT_ID} /> },
+    {
+      id: "nutrition",
+      label: "Nutrition",
+      icon: <AppleIcon />,
+      // Draws its own light banner; the top bar floats over it in navy.
+      bare: true,
+      content: <NutritionTab CLIENT_ID={CLIENT_ID} />,
+    },
+    // Draws its own light banner (name, since when, the photo); the top bar floats over it.
+    { id: "settings", label: "Settings", icon: <AccountIcon />, bare: true, content: <SettingsTab CLIENT_ID={CLIENT_ID} /> },
   ];
 
   return (
@@ -1040,6 +1249,9 @@ export default async function ClientPage({
       clientId={CLIENT_ID}
       checkIn={checkIn}
       photos={progressPictures}
+      coachMessages={{ coachName: getCoachFirstName(CLIENT_ID), messages: coachMessagesFor(CLIENT_ID) }}
+      helpEmail={getCoachEmail(CLIENT_ID)}
+      coachProfile={getCoachProfileForClient(CLIENT_ID)}
     />
   );
 }

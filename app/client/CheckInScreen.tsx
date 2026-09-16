@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeftIcon } from "../components/icons";
+import { CheckIcon, ChevronDownIcon, ChevronLeftIcon } from "../components/icons";
 import { logMetricPeriodAction, saveMeasurementCheckInAction } from "../lib/actions";
 
 // Deliberately does NOT import from ../lib/queries (see HomeHub.tsx for why
@@ -30,16 +30,54 @@ export type CheckInProps = {
   dateLabel: string;
   today: string;
   sections: CheckInSection[];
-  // Which segments still have no entry for their current period — drives
-  // the dot on each tab so the client can see where action is needed.
+  // Which segments still have no entry for their current period.
   dueSections: string[];
 };
 
-// The whole check-in in one screen: three sections the client taps between,
-// each a list of "what your coach asked for" rows. Inputs are controlled so
-// the header's filled/total counter and the per-row underline react as you
-// type; the actual save is a real form post to the same server actions the
-// old separate forms used, so what reaches the coach is unchanged.
+// The check-in as two tabs, Daily and Weekly, with the coach's measurements
+// riding in Weekly. Each tab is one card of rows: the metric, its last
+// reading, and a value pill (typed, or picked from a 1–N scale under it). A
+// row already logged for this period turns steel blue. Save posts to the
+// same server actions as before with the same fields: the weekly metrics to
+// logMetricPeriodAction, the measurements to saveMeasurementCheckInAction.
+
+type RowSource = "tracker" | "measurements";
+type Row = { key: string; source: RowSource; metric: CheckInMetric };
+type Tab = {
+  id: "daily" | "weekly";
+  label: string;
+  intro: string;
+  /** The tracker frequency posted with the metrics; null when the tab only holds measurements. */
+  frequency: "daily" | "weekly" | null;
+  note: string | null;
+  rows: Row[];
+};
+
+function buildTabs(sections: CheckInSection[]): Tab[] {
+  const daily = sections.find((s) => s.id === "daily");
+  const weekly = sections.find((s) => s.id === "weekly");
+  const measure = sections.find((s) => s.id === "measurements");
+  const trackerRows = (s: CheckInSection): Row[] => s.metrics.map((m) => ({ key: `t${m.id}`, source: "tracker", metric: m }));
+  const tabs: Tab[] = [];
+  if (daily) {
+    tabs.push({ id: "daily", label: "Daily", intro: "Every day, about twenty seconds.", frequency: "daily", note: daily.note, rows: trackerRows(daily) });
+  }
+  if (weekly || measure) {
+    tabs.push({
+      id: "weekly",
+      label: "Weekly",
+      intro: "Once a week, then it closes.",
+      frequency: weekly ? "weekly" : null,
+      note: weekly ? weekly.note : measure?.note ?? null,
+      rows: [
+        ...(weekly ? trackerRows(weekly) : []),
+        ...(measure?.metrics ?? []).map((m): Row => ({ key: `m${m.id}`, source: "measurements", metric: m })),
+      ],
+    });
+  }
+  return tabs;
+}
+
 // "82.5", "82,5" and "82.50" are the same reading: the server stores the
 // number, so comparing typed text against the persisted value numerically
 // is what tells us whether anything has actually changed.
@@ -73,7 +111,6 @@ export default function CheckInScreen({
   today,
   sections,
   initialSection,
-  dueSections,
   onBack,
 }: {
   clientId: number;
@@ -84,60 +121,54 @@ export default function CheckInScreen({
   dueSections: string[];
   onBack: () => void;
 }) {
-  const startIndex = Math.max(
-    0,
-    sections.findIndex((s) => s.id === initialSection)
-  );
-  const [sectionId, setSectionId] = useState(sections[startIndex]?.id ?? sections[0]?.id);
+  const tabs = buildTabs(sections);
+  // Home opens straight on whatever is due; measurements now live in Weekly.
+  const wanted = initialSection === "measurements" ? "weekly" : initialSection;
+  const [tabId, setTabId] = useState<Tab["id"] | undefined>(() => (tabs.find((t) => t.id === wanted) ?? tabs[0])?.id);
   // Seeded from what's already logged for the current period, so reopening
   // the screen shows what was sent rather than blanking it out.
   const [values, setValues] = useState<Record<string, Record<string, string>>>(() =>
-    Object.fromEntries(
-      sections.map((s) => [s.id, Object.fromEntries(s.metrics.map((m) => [m.id, m.value]))])
-    )
+    Object.fromEntries(tabs.map((t) => [t.id, Object.fromEntries(t.rows.map((r) => [r.key, r.metric.value]))]))
   );
+  // The note for the coach, per tab, edited alongside the numbers.
+  const [notes, setNotes] = useState<Record<string, string>>(() => Object.fromEntries(tabs.map((t) => [t.id, t.note ?? ""])));
+  const [pending, setPending] = useState(false);
 
-  const active = sections.find((s) => s.id === sectionId);
+  const active = tabs.find((t) => t.id === tabId) ?? tabs[0];
 
-  // Derived from the active section; all computed before the early return
-  // below so the hooks that follow run in the same order on every render.
+  // Derived from the active tab; all computed before the early return below
+  // so the hooks that follow run in the same order on every render.
   const activeValues = active ? values[active.id] ?? {} : {};
-  // The note for the coach, per section, edited alongside the numbers.
-  const [notes, setNotes] = useState<Record<string, string>>(() => Object.fromEntries(sections.map((s) => [s.id, s.note ?? ""])));
   const activeNote = active ? notes[active.id] ?? "" : "";
   const noteDirty = !!active && activeNote.trim() !== (active.note ?? "").trim();
-  const metrics = active?.metrics ?? [];
-  const filled = metrics.filter((m) => (activeValues[m.id] ?? "").length > 0);
-  const complete = filled.length === metrics.length && metrics.length > 0;
-  const isMeasurements = active?.id === "measurements";
-  const remaining = metrics.length - filled.length;
+  const rows = active?.rows ?? [];
+  const filled = rows.filter((r) => (activeValues[r.key] ?? "").length > 0);
+  const complete = filled.length === rows.length && rows.length > 0;
+  const remaining = rows.length - filled.length;
 
-  // m.value is what's actually persisted for this period, so comparing the
-  // two tells us whether there's anything left to send — no separate "saved"
-  // flag to keep in sync, and editing a saved section re-arms Save by
-  // itself. After a submit the server re-renders with the new values, so
-  // this settles into the saved state on its own.
-  const dirty = metrics.some((m) => !sameNumber(activeValues[m.id] ?? "", m.value)) || noteDirty;
-  const savedSomething = metrics.some((m) => m.value.length > 0);
+  // metric.value is what's actually persisted for this period, so comparing
+  // the two tells us whether there's anything left to send. After a save the
+  // server re-renders with the new values, so this settles on its own.
+  const changedRow = (r: Row) => !sameNumber(activeValues[r.key] ?? "", r.metric.value);
+  const dirty = rows.some(changedRow) || noteDirty;
+  const savedSomething = rows.some((r) => r.metric.value.length > 0);
   const isSaved = !dirty && savedSomething;
   // A note on its own is fine once the numbers are in; it just can't be the
   // only thing sent for a period with nothing logged.
   const canSave = dirty && (filled.length > 0 || (noteDirty && savedSomething));
 
-  // The confirmation banner shows after a save THIS visit lands — not on
-  // merely opening a section that was saved earlier. `submitted` is armed
-  // by the form's submit and disarmed when the server re-render brings the
-  // values back matching (isSaved), which is the moment the save is real.
+  // The confirmation shows after a save THIS visit lands, not on merely
+  // opening a tab that was saved earlier.
   const submitted = useRef(false);
   const [justSaved, setJustSaved] = useState(false);
-  // A saved section shows as a collapsed "done" card rather than the open
-  // form; Edit reopens it (a client may have typed something wrong), and a
-  // fresh save, or Done, folds it back up.
+  // A saved tab folds into a "done" card; Edit reopens it, and a fresh save,
+  // or Done, folds it back up.
   const [editing, setEditing] = useState(false);
+  // The folded done card, opened to show the readings.
+  const [expanded, setExpanded] = useState(false);
   useEffect(() => {
     if (isSaved && submitted.current) {
       submitted.current = false;
-      // Deferred a tick so the state change isn't synchronous inside the effect.
       const t = setTimeout(() => {
         setJustSaved(true);
         setEditing(false);
@@ -146,218 +177,251 @@ export default function CheckInScreen({
     }
   }, [isSaved]);
   const collapsed = isSaved && !editing;
-  const armSubmit = () => {
-    submitted.current = true;
-    setJustSaved(false);
-  };
 
   if (!active) {
     return (
       <div className="ci-screen">
+        <header className="ci-head">
+          <button type="button" className="ci-back" onClick={onBack} aria-label="Back to home">
+            <ChevronLeftIcon />
+          </button>
+        </header>
         <p className="ci-empty">Your coach hasn&rsquo;t set up any check-in metrics yet.</p>
       </div>
     );
   }
 
-  const setValue = (metricId: string, v: string) => {
+  const setValue = (key: string, v: string) => {
     setJustSaved(false);
-    setValues((prev) => ({ ...prev, [active.id]: { ...prev[active.id], [metricId]: v } }));
+    setValues((prev) => ({ ...prev, [active.id]: { ...prev[active.id], [key]: v } }));
   };
-  const switchSection = (id: CheckInSection["id"]) => {
-    setSectionId(id);
+  const switchTab = (id: Tab["id"]) => {
+    setTabId(id);
     setEditing(false);
+    setExpanded(false);
     setJustSaved(false);
   };
   // Leaving edit mode without saving puts back what the coach actually has.
   const stopEditing = () => {
-    setValues((prev) => ({
-      ...prev,
-      [active.id]: Object.fromEntries(active.metrics.map((m) => [m.id, m.value])),
-    }));
+    setValues((prev) => ({ ...prev, [active.id]: Object.fromEntries(active.rows.map((r) => [r.key, r.metric.value])) }));
     setEditing(false);
   };
-  const showValue = (m: CheckInMetric) =>
-    m.scaleMax ? `${m.value}/${m.scaleMax}` : `${m.value}${m.unit ? ` ${m.unit}` : ""}`;
+  const showValue = (m: CheckInMetric) => (m.scaleMax ? `${m.value}/${m.scaleMax}` : `${m.value}${m.unit ? ` ${m.unit}` : ""}`);
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSave || pending) return;
+    submitted.current = true;
+    setJustSaved(false);
+    setPending(true);
+    try {
+      const trackerRows = active.rows.filter((r) => r.source === "tracker");
+      const measureRows = active.rows.filter((r) => r.source === "measurements");
+      // The note belongs to the tracker period when there is one.
+      const noteWithTracker = active.frequency != null;
+      if (trackerRows.length > 0 && active.frequency) {
+        const fd = new FormData();
+        fd.set("clientId", String(clientId));
+        fd.set("date", today);
+        fd.set("frequency", active.frequency);
+        trackerRows.forEach((r) => fd.set(`metric_${r.metric.id}`, activeValues[r.key] ?? ""));
+        fd.set("note", activeNote);
+        await logMetricPeriodAction(fd);
+      }
+      if (measureRows.length > 0 && (measureRows.some(changedRow) || (!noteWithTracker && noteDirty))) {
+        const fd = new FormData();
+        fd.set("clientId", String(clientId));
+        fd.set("date", today);
+        measureRows.forEach((r) => fd.set(`field_${r.metric.id}`, activeValues[r.key] ?? ""));
+        if (!noteWithTracker) fd.set("note", activeNote);
+        await saveMeasurementCheckInAction(fd);
+      }
+    } finally {
+      setPending(false);
+    }
+  };
 
   return (
     <div className="ci-screen">
-      <header className="ci-header">
+      <header className="ci-head">
         <button type="button" className="ci-back" onClick={onBack} aria-label="Back to home">
           <ChevronLeftIcon />
         </button>
-        <div className="ci-header-titles">
-          <div className="ci-kicker">{dateLabel}</div>
-          <div className="ci-title">Check-in</div>
+        <div className="ci-head-titles">
+          <h1 className="ci-title">Check-in</h1>
         </div>
-        <div className="ci-progress">
-          <div className={`ci-progress-count${complete ? " complete" : ""}`}>
-            {filled.length}
-            <span className="ci-progress-total">/{active.metrics.length}</span>
-          </div>
-          <div className="ci-progress-label">logged</div>
+        <div className="ci-count" aria-label={`${filled.length} of ${rows.length} filled in`}>
+          <span className="ci-count-dot" aria-hidden="true" />
+          {filled.length}
+          <span className="ci-count-total">/ {rows.length}</span>
         </div>
       </header>
 
-      {sections.length > 1 && (
-        <div className="ci-tabs">
-          {sections.map((s) => (
+      {tabs.length > 1 && (
+        <div className="ci-seg" role="tablist" aria-label="Check-in">
+          {tabs.map((t) => (
             <button
-              key={s.id}
+              key={t.id}
               type="button"
-              className={`ci-tab${s.id === active.id ? " active" : ""}`}
-              onClick={() => switchSection(s.id)}
+              role="tab"
+              aria-selected={t.id === active.id}
+              className={`ci-seg-btn${t.id === active.id ? " on" : ""}`}
+              onClick={() => switchTab(t.id)}
             >
-              {s.label}
-              {dueSections.includes(s.id) && <span className="ci-tab-dot" aria-label="Not logged yet" />}
+              {t.label}
             </button>
           ))}
         </div>
       )}
 
       <div className="ci-scroll">
-      {collapsed ? (
-        <div className="ci-body">
-          <div className="ci-done" role="status" aria-live="polite">
-            <div className="ci-saved-banner">
-              <span className="ci-saved-icon" aria-hidden="true">
-                ✓
-              </span>
-              <div className="ci-saved-text">
-                <div className="ci-saved-title">{justSaved ? "Check-in saved" : "Already logged"}</div>
-                <div className="ci-saved-sub">
-                  {justSaved ? "Your coach can see it now." : "Your coach has it."}
-                </div>
-              </div>
-              <button type="button" className="ci-saved-home" onClick={() => setEditing(true)}>
-                Edit
-              </button>
-            </div>
-            <div className="ci-done-list">
-              {(active.note ?? "").trim() !== "" && (
-                <div className="ci-done-note">
-                  <span className="ci-done-note-label">Your note</span>
-                  <span className="ci-done-note-text">{active.note}</span>
-                </div>
-              )}
-              {active.metrics.map((m) => (
-                <div key={m.id} className="ci-done-row">
-                  <span className="ci-done-name">{m.name}</span>
-                  <span className={`ci-done-value${m.value ? "" : " empty"}`}>
-                    {m.value ? showValue(m) : "–"}
+        {collapsed ? (
+          <div className="ci-list">
+            {/* Folded to its banner once logged; the banner opens the readings, Edit reopens the form. */}
+            <div className={`ci-done${expanded ? "" : " closed"}`} role="status" aria-live="polite">
+              <div className="ci-saved-banner">
+                <button
+                  type="button"
+                  className="ci-saved-toggle"
+                  onClick={() => setExpanded((x) => !x)}
+                  aria-expanded={expanded}
+                  aria-label={expanded ? "Hide what was logged" : "Show what was logged"}
+                >
+                  <span className="ci-saved-icon" aria-hidden="true">
+                    <CheckIcon />
                   </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : (
-      /* One form per section, keyed so switching sections resets the
-          uncontrolled bits rather than carrying them over. */
-      <form
-        key={active.id}
-        id="ci-form"
-        className="ci-body"
-        action={isMeasurements ? saveMeasurementCheckInAction : logMetricPeriodAction}
-        onSubmit={armSubmit}
-      >
-        <input type="hidden" name="clientId" value={clientId} />
-        <input type="hidden" name="date" value={today} />
-        {!isMeasurements && <input type="hidden" name="frequency" value={active.id} />}
-
-        <p className="ci-intro">{active.intro}</p>
-
-        {active.metrics.map((m) => {
-          const value = activeValues[m.id] ?? "";
-          const has = value.length > 0;
-          return (
-            <div key={m.id} className="ci-metric">
-              <div className="ci-metric-top">
-                <div className="ci-metric-labels">
-                  <div className="ci-metric-name">{m.name}</div>
-                  {m.hint && <div className="ci-metric-hint">{m.hint}</div>}
-                </div>
-                <div className="ci-metric-input-wrap">
-                  <input
-                    type="text"
-                    inputMode={m.scaleMax ? "numeric" : "decimal"}
-                    autoComplete="off"
-                    name={isMeasurements ? `field_${m.id}` : `metric_${m.id}`}
-                    placeholder="–"
-                    value={value}
-                    onChange={(e) => setValue(m.id, cleanNumeric(e.target.value, !!m.scaleMax))}
-                    aria-label={m.name}
-                    className={`ci-input${has ? " filled" : ""}`}
-                  />
-                  {/* Always rendered, fixed width: a metric with no unit
-                      (Steps) keeps the same right edge as one with (kg), so
-                      the numerals line up down the list. */}
-                  <span className="ci-metric-unit">{m.scaleMax ? `/${m.scaleMax}` : m.unit || ""}</span>
-                </div>
+                  <span className="ci-saved-text">
+                    <span className="ci-saved-title">{dateLabel}</span>
+                    <span className="ci-saved-sub">{justSaved ? "Your coach can see it now." : "Your coach has it."}</span>
+                  </span>
+                  <span className={`ci-saved-chev${expanded ? " open" : ""}`} aria-hidden="true">
+                    <ChevronDownIcon />
+                  </span>
+                </button>
+                <button type="button" className="ci-saved-home" onClick={() => setEditing(true)}>
+                  Edit
+                </button>
               </div>
-              {m.scaleMax && (
-                <div className="ci-scale">
-                  {Array.from({ length: m.scaleMax }, (_, i) => {
-                    const n = String(i + 1);
-                    const on = value === n;
-                    return (
-                      <button
-                        key={n}
-                        type="button"
-                        className={`ci-scale-btn${on ? " active" : ""}`}
-                        onClick={() => setValue(m.id, on ? "" : n)}
-                        aria-pressed={on}
-                      >
-                        {n}
-                      </button>
-                    );
-                  })}
-                </div>
+              {expanded && (
+              <div className="ci-done-list">
+                {(active.note ?? "").trim() !== "" && (
+                  <div className="ci-done-note">
+                    <span className="ci-done-note-label">Your note</span>
+                    <span className="ci-done-note-text">{active.note}</span>
+                  </div>
+                )}
+                {active.rows.map((r) => (
+                  <div key={r.key} className="ci-done-row">
+                    <span className="ci-done-name">{r.metric.name}</span>
+                    <span className={`ci-done-value${r.metric.value ? "" : " empty"}`}>{r.metric.value ? showValue(r.metric) : "–"}</span>
+                  </div>
+                ))}
+              </div>
               )}
             </div>
-          );
-        })}
-
-        <label className="ci-notefield">
-          <span className="ci-notefield-label">Note for your coach</span>
-          <textarea
-            name="note"
-            value={activeNote}
-            onChange={(e) => setNotes((n) => ({ ...n, [active.id]: e.target.value }))}
-            placeholder="Anything the numbers don't say: a tennis session, a bad night, a day off…"
-            maxLength={500}
-            rows={2}
-          />
-        </label>
-      </form>
-      )}
-      </div>
-
-      {/* No footer once the section is folded up: the done card is the whole
-          story, and its own Edit is the way back in. */}
-      {!collapsed && (
-      <div className="ci-footer">
-        <div className="ci-footer-labels">
-          <div className="ci-footer-kicker">{isSaved ? "Sent" : "Goes to your coach"}</div>
-          <div className={`ci-footer-label${isSaved ? " sent" : complete ? " complete" : ""}`}>
-            {isSaved
-              ? complete
-                ? "All updated"
-                : "Your coach has it"
-              : complete
-              ? "Everything filled in"
-              : `${remaining} still empty`}
           </div>
-        </div>
-        {isSaved ? (
-          <button type="button" className="ci-save secondary" onClick={stopEditing}>
-            Done
-          </button>
         ) : (
-          <button type="submit" form="ci-form" className="ci-save" disabled={!canSave}>
-            Save
-          </button>
+          // Keyed by tab, so switching resets anything uncontrolled.
+          <form key={active.id} id="ci-form" className="ci-list" onSubmit={save}>
+            <p className="ci-intro">{active.intro}</p>
+
+            <div className="ci-card">
+              {active.rows.map((r) => {
+                const m = r.metric;
+                const value = activeValues[r.key] ?? "";
+                // Logged: saved for this period and not changed since.
+                const logged = m.value.length > 0 && sameNumber(value, m.value);
+                const unit = m.scaleMax ? `/${m.scaleMax}` : m.unit || "";
+                return (
+                  <div key={r.key} className={`ci-row${logged ? " logged" : ""}`}>
+                    <div className="ci-row-head">
+                      <div className="ci-row-labels">
+                        <div className="ci-row-name">
+                          <span>{m.name}</span>
+                          {logged && <CheckIcon />}
+                        </div>
+                        {m.hint && <div className="ci-row-last">{m.hint}</div>}
+                      </div>
+                      {m.scaleMax ? (
+                        <div className="ci-pill">
+                          <span className="ci-pill-value">{value || "—"}</span>
+                          <span className="ci-pill-unit">{unit}</span>
+                        </div>
+                      ) : (
+                        <label className="ci-pill">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            autoComplete="off"
+                            placeholder="—"
+                            value={value}
+                            onChange={(e) => setValue(r.key, cleanNumeric(e.target.value, false))}
+                            aria-label={m.name}
+                            className="ci-pill-input"
+                          />
+                          <span className="ci-pill-unit">{unit}</span>
+                        </label>
+                      )}
+                    </div>
+                    {m.scaleMax && (
+                      <div className="ci-scale" style={{ gridTemplateColumns: `repeat(${m.scaleMax}, minmax(0, 1fr))` }}>
+                        {Array.from({ length: m.scaleMax }, (_, i) => {
+                          const n = String(i + 1);
+                          const on = value === n;
+                          return (
+                            <button
+                              key={n}
+                              type="button"
+                              className={`ci-scale-btn${on ? " on" : ""}`}
+                              onClick={() => setValue(r.key, on ? "" : n)}
+                              aria-pressed={on}
+                              aria-label={`${m.name} ${n} of ${m.scaleMax}`}
+                            >
+                              {n}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <label className="ci-notefield">
+              <span className="ci-notefield-label">Note for your coach</span>
+              <textarea
+                value={activeNote}
+                onChange={(e) => setNotes((n) => ({ ...n, [active.id]: e.target.value }))}
+                placeholder="Anything the numbers don't say: a tennis session, a bad night, a day off…"
+                maxLength={500}
+                rows={2}
+              />
+            </label>
+          </form>
         )}
       </div>
+
+      {/* No dock once the tab is folded up: the done card is the whole story,
+          and its own Edit is the way back in. */}
+      {!collapsed && (
+        <div className="ci-dock">
+          <div>
+            <div className="ci-dock-kicker">{isSaved ? "Sent" : "Goes to your coach"}</div>
+            <div className="ci-dock-label">
+              {isSaved ? (complete ? "All updated" : "Your coach has it") : complete ? "All logged" : `${remaining} still empty`}
+            </div>
+          </div>
+          {isSaved ? (
+            <button type="button" className="ci-save secondary" onClick={stopEditing}>
+              Done
+            </button>
+          ) : (
+            <button type="submit" form="ci-form" className="ci-save" disabled={!canSave || pending}>
+              {pending ? "Saving…" : "Save"}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

@@ -306,6 +306,159 @@ Look: `/client` → Training → an exercise with a weight target; `/admin` → 
 
 Look: `/client` → Training → an exercise with a weight target → Lbs.
 
+## 46 · Client Nutrition tab redesign — LOCAL ONLY, not pushed
+
+- [ ] **Banner** in place of the app header on this tab, scrolling with the page: brand and bell, Training day / Rest day as centred underline tabs, the phase name, one thin line for the phase that fills day by day, and under it "Started …" on the left with "Week 2 of 4" on the right (switching to "Day 24 of 28" with under a week to go).
+- [ ] **Calories card** overlapping the banner: three thin rings one inside the other (protein outside, carbs, fat inside), each filled from the top by that macro's share of the kcal, with the kcal target in the centre; beside them protein / carbs / fat stacked with grams and % of kcal. Switching day tabs slides the arcs round and counts the kcal, grams and percentages over to the new figures. The card also swipes: left for Rest day, right for Training day (a clearly sideways swipe only, so scrolling past it never flips it), with two dots under the ring showing which day is up. At its foot, a light-blue Supplements row with how many there are folds down under a chevron. The bottom nav's current tab icon is black instead of blue.
+- [ ] **Supplements** (in that fold) with a tick per item, as a reminder. The ticks stay on the phone for today only; nothing is sent to the coach.
+- [ ] **Coach card**: the coach's note on the targets; hidden when there is none.
+- [ ] **Calories**, after the coach card, with "‹ Today ›" in its header to step back through the last month (Yesterday, 7 September…), never past today, so a day can be filled in once it is over. For the day showing, the client picks Training day or Rest day, types the figure, can add a note for the coach (why a day went 400 over, say), and saves. The note is the one the coach reads beside the day in Calories logged, and it shows under the figure once locked. Saving locks the card: the green washes in, a tick pops and draws itself, and the card shows just the figure with Edit to open it again (a day already logged opens locked, without the animation). The day type is saved with the log (no migration, it rides in `extra`), and the last 7 days and the coach's Calories logged table use it, falling back to whether a set was logged that date on older logs.
+- [ ] **Last 7 days**: each logged day with its type, note, kcal and "On target" (within 100) / +N / −N against that day's own phase target, and "k of 7 on target".
+- [ ] Water goal and the "Meal logging isn't on yet" line are gone. The tab is set in Archivo (self-hosted): regular text, Medium for every figure, SemiBold for headings and names like the phase, "Supplements" and "Creatine". Only the Ironline wordmark is different (Kirana, group 50). The rest of the app keeps its fonts.
+
+Look: `/client` → Nutrition.
+
+## 47 · Client Training tab retouch — LOCAL ONLY, not pushed
+
+- [ ] **Banner** in #5987a8 with faded diagonal stripes, in place of the app header, its text navy like Nutrition's (no white text): wordmark and bell, "PROGRAMME" and its name, one line filled by the days gone since it was deployed, "Started … / Week N of M", and the week chips at its foot (white when selected; a dot on this week, ✓ on finished weeks, a lock on weeks ahead; they scroll past three weeks). The "Your coach's deployed week…" paragraph is gone.
+- [ ] **Days trained** card overlapping the banner: the figure "of N", "N sessions left" / "Week complete", and a ring with the percentage that fills as the tab opens. Its footer is the programme note: one line and a send button; the saved note shows as a bubble, and tapping it puts the text back in the line to change.
+- [ ] **Sessions** header with "N of M done". Each session is a white card: the name, "N exercises · M sets" / "In progress · N exercises left" / "Session complete", and on the right the sets pill (green once every set is logged, as on live) and a chevron. Inside, everything keeps the live structure: the gym picker, exercise cards with the target line, the coach's and your own notes, the set table and the full-width "Log set N of M" button, and the cardio cards. Logging, gyms, kg / lbs and notes work as before.
+- [ ] Archivo like Nutrition, rather than the SF Pro / Baskerville the prompt named, to match the tab you preferred.- [ ] **Weights round up to a step** and show in one unit only: kg to the next .25, lbs to the next .5, in the client's app and the coach's builder. The kg shown beside lbs (group 45) and any second unit under a logged set are gone; only the unit on the toggle shows.
+
+Look: `/client` → Training.
+
+## 48 · Coach profile — LOCAL ONLY, not pushed
+
+- [ ] **Your profile** (`/admin/profile`, from the gear menu at the foot of the rail): photos (a tall hero and a candid, drop or pick, Replace / Remove), About you (display name, title, headline, location, languages, years coaching, reply note), Story (intro, bio, quote, outside the gym, with live character counts), Specialties as chips (Enter adds, up to 8), Studies and Experience as rows you add, remove and drag into order. A live phone preview beside the form is the client's own screen fed from what you type. Save at the foot, with when it was last saved, and a Published switch ("Clients see this from their Account tab"); publishing needs a display name. The owner can switch to any coach's profile.
+- [ ] **Client, Account tab**: a Coach row at the top (photo or initial, name, title) opens the profile over the tab: the photo drifts and grows slightly as it scrolls, with the name and years over it; sticky Overview / Background / Outside the gym tabs that follow the scroll; headline, "Your coach · place · languages", pills for years, clients and a degree; the intro with a drop cap, the bio, the quote, "Works most with" chips; where they studied and a timeline of their experience; the candid photo with a line about life outside the gym. A dock at the foot: "Book a call with {first name}" (takes the client to Home's meeting card), the reply note, Share and Save. Sections with nothing in them, and their tabs, stay hidden. Unpublished, the row opens a minimal card: initial, name and email.
+- [ ] Data: a new `coach_profiles` table (migration `drizzle/0002_coach_profiles.sql`, applied at startup on Railway). Photos under `/uploads/coaches/{coachId}/`, visible to the coach, the owner and that coach's clients.
+- [ ] Labels use the coach's first name ("How Finlay coaches", "Where Finlay studied") rather than "he".
+
+Look: `/admin/profile`, then `/client` → Account → Coach.
+
+## 49 · Check-in retouch — LOCAL ONLY, not pushed
+
+- [ ] Two tabs, **Daily** and **Weekly**, as a pill switch; the coach's measurements now sit in Weekly, and the Measure tab is gone. A header with the date, "Check-in" and a pill counting what is filled in ("3 / 5").
+- [ ] Each tab is one white card of rows: the metric's name, its last reading ("87.7 kg on Sep 14"), and a value pill on the right to type into, with its unit. Rating metrics (1–5 and the like) show the pick in the pill and a row of number buttons under it; tap again to clear. A row already logged for this period turns steel blue: tinted row, blue pill with the value in white, a tick after the name.
+- [ ] The note for your coach under the card, and a Save dock pinned over the list: "Goes to your coach · 2 still empty" / "All logged". Saving posts the weekly metrics and the measurements to the same two actions as before, with the same fields; the saved summary card works as it did.
+- [ ] Archivo like the other client tabs, rather than SF Pro / Baskerville.
+
+Look: `/client` → Home → the check-in row.
+
+
+## 50 · Wordmark in Kirana — LOCAL ONLY, not pushed
+
+- [ ] "IRONLINE" at the top of the client app (the white header and the Nutrition / Training banners) is set in Kirana, in capitals, self-hosted from `app/fonts/Kirana-Regular.ttf`. It is smaller than before (17–18px), just the name with no logo mark, and centred under the island. A burger menu icon sits on the left and the bell on the right, both bare icons with no circle around them. The rest of the app keeps its fonts.
+- [ ] **One top bar on every tab**, and it stays put. On Home and Settings it is off-white with navy name and icons. On Training and Nutrition it floats over the banner, see-through at the top of the page (white on Training's navy banner, navy on Nutrition's light one); the moment the page scrolls it turns off-white with navy, and the page scrolls under it. The burger does nothing yet.
+- [ ] **Training banner** is a light navy with a fine grain and faint stripes, its text and week chips white (the selected chip white with navy text), replacing the #5987a8 blue with navy text.
+- [ ] Nutrition's banner had its own top row (old logo, Baskerville, bell in a circle) that the earlier wordmark changes missed; it now uses the shared bar too.
+
+Look: `/client` → any tab.
+
+## 51 · Client Training tab on the design system — LOCAL ONLY, not pushed
+
+The first screen brought onto `docs/UI-GUIDELINES.md` (decided 16 Sep). Layout and behaviour unchanged; only colours, corners and type sizes.
+
+- [ ] One navy: `#1e3a6e` for the selected week chip, the send button, the note bubble and the "started" pill; `#2f5d8f` for the Days trained ring. The deeper `#081F5C` / `#334EAC` are gone from the tab. Headings and the big figure are Ink `#141a24`; body `#313851`; labels `#5b6474`; hints and chevrons `#8b93a1`. Tints are `#e6ecf3`, borders `#dfe3e8`, dividers `#eceff3`, done-green tint `#dff3ea` throughout.
+- [ ] Corners: Days trained, session cards, the locked-week and empty cards 22 → 18; exercise rows and the gym picker 14 → 12; set inputs 8 → 10; Log set and cardio Done are 48px tall with radius 12.
+- [ ] Labels ("Programme", "Days trained") are the one label recipe: 11 / 700 / +0.12em. "Sessions" is 18 / 600.
+- [ ] Set inputs and My notes are 16px, so an iPhone no longer zooms the page when they are tapped.
+- [ ] The top bar's name and icons are Ink on every tab (was `#3B5A8C`).
+- [ ] **Training's banner is the same light blue as Home and Nutrition** (ink text, navy selected week chip), with a fine diagonal hatch instead of their rings so it keeps a texture of its own. The navy banner and its stripes are gone.
+- [ ] The "Workout complete" card is in Archivo like the rest of the tab (it is portalled to `body`, so it was falling back to Manrope). Baskerville is no longer declared on the tab; the locked-week title uses Newsreader like the rest of the app.
+
+Look: `/client` → Training, open a session.
+
+## 52 · Client Nutrition tab on the design system — LOCAL ONLY, not pushed
+
+Same treatment as Training (group 51). Layout and behaviour unchanged.
+
+- [ ] One navy: `#1e3a6e` for the selected day tab, the phase bar, Save, the date arrows, the avatar and the swipe dot; `#2f5d8f` for links, the dirty kcal underline and the note's focus border. `#081F5C` / `#334EAC` are gone from the tab. Headings and figures are Ink `#141a24`, body `#313851`, labels `#5b6474`, hints `#8b93a1`; borders `#dfe3e8`, dividers `#eceff3`, tints `#e6ecf3`. The macro ring hues (protein, carbs, fat) are unchanged.
+- [ ] The phase name is 32 / 700 like the programme name on Training; "Phase" and the ring and macro labels use the label recipes.
+- [ ] The phase bar is a solid navy fill with a marker at its end and the same grow-in animation as Training's.
+- [ ] Training day / Rest day on the calorie log is a pill switch (tint track, white active segment, navy text) like the Kg | Lbs switch; Save is radius 12.
+- [ ] Baskerville is no longer declared on the tab.
+
+Look: `/client` → Nutrition.
+
+## 53 · Client Home on the design system — LOCAL ONLY, not pushed
+
+Home moves onto the same page model as Training and Nutrition (decision 8 in `docs/UI-GUIDELINES.md`).
+
+- [ ] **Banner instead of the profile card**: the date, the client's name (32 / 700) and the main goal (18 / 600) sit in a navy banner like Training's, in white, with the top bar floating over it. The plan rows still fold out under the chevron, inside the banner.
+- [ ] **Up next overlaps the banner**, like Days trained on Training, and is a two-tone blue (navy to accent, corner to corner); the rest of the cards follow at 16px.
+- [ ] Archivo instead of Manrope and Newsreader; page `#F4F7FC`; cards and the navy card radius 18; Start, Join call and Upload radius 12; the chevron button is a circle. Colours were already on the system.
+- [ ] The "Reserved" dashed slot is still there, untouched.
+- [ ] **Progress pictures are a reminder row, not a card.** While a sheet is open and missing photos, Up next carries a "Progress pictures due" row with the same pulsing dot under the check-ins row, opening the pictures screen. Once the last one goes in the row reads "Progress pictures sent" with a tick for 24 hours, then leaves Home until the next sheet opens (the Account tab still reaches them). The purple prompt card and the "Pictures sent" card are gone.
+- [ ] The check-in dot pulses while check-ins are due; the chevron beside the name has no circle; the top bar's name and icons are Ink rather than Navy on every tab; Up next is a two-tone blue.
+- [ ] **Banner rewritten**: "Hello, *Alex*." in Baskerville (the name in italic), the date under it in small caps, then the main goal with a small target icon before it, and nothing at all while the coach hasn't set one. The avatar is off Home (it stays in Settings). In the plan fold-out each track is an icon and its name in the track's colour (green apple, purple dumbbell, heart for lifestyle) with the phase name on its own line under it; the chips are gone.
+- [ ] Nutrition tidies: the date arrows have no circles and the one that cannot go further is hidden; the supplements count is a plain number; the logged tick has no disc; the saved note sits on the card under a "Your note" label. Training: filled and selected things inside a session (gym, exercise number, Log set, cardio Done) are Navy like the week chip.
+
+Look: `/client` → Home.
+
+## 54 · Client check-in on the design system — LOCAL ONLY, not pushed
+
+Same treatment as the tabs (groups 51–53). Layout and behaviour unchanged; still Daily / Weekly with measurements inside Weekly.
+
+- [ ] One navy: `#1e3a6e` for the logged pill, a picked scale number, the Save button and the saved banner; `#2f5d8f` for the count dot. The screen's own `#1b3f6e` / `#5987a8` / `#081F5C` are gone. Headings and values are Ink, body Text, labels Muted, hints Faint; borders `#dfe3e8`, dividers `#eceff3`; page `#F4F7FC`.
+- [ ] Daily | Weekly is the standard pill switch (grey track, white active segment, navy text) instead of a filled navy segment. The back arrow has no circle.
+- [ ] The card is radius 18; Save is radius 12; scale buttons and the note box radius 10. Labels use the one label recipe.
+- [ ] The row and pill colour changes are off with reduced motion on.
+
+Look: `/client` → Home → the check-in row.
+
+## 55 · Client notifications on the design system — LOCAL ONLY, not pushed
+
+- [ ] Archivo instead of Manrope and Newsreader; page `#F4F7FC`; Ink for unread text and the title, Muted for read text and labels, Faint for times; the unread icon circle is the tint with Navy; the unread dot and "Open" links are Accent. The old dark-theme back button (near-black ring, black on hover) is gone: the back arrow is bare, the title is centred and the "Activity" line above it is dropped.
+- [ ] "Mark all as read" is a white secondary button with navy text, radius 12, instead of a filled accent pill.
+
+Look: `/client` → the bell.
+
+## 56 · Messages from the coach: a feed on the client side — LOCAL ONLY, not pushed
+
+The coach's Messages tab already sent one-way notes that landed in the client's notifications as "Coach note". Now the client can read them together.
+
+- [ ] **From {coach}**: a read-only screen listing every message the coach has sent, newest first, grouped by day, with the time on each. A line at the foot says you can't reply here. Same header as Notifications.
+- [ ] **Home card**: the latest message under Up next ("From Finlay", the text, the date, "All 4 messages →"); the whole card opens the feed. Nothing on Home until the coach has sent one.
+- [ ] **Notifications keep them apart**: the coach's messages are no longer mixed into the list. One row at the top, "From Finlay · 2 new messages", opens the feed; the list under it is everything else. Opening the feed marks the messages read, so the bell clears. "Mark all as read" still covers both.
+- [ ] No data changes: messages are the existing `chat_messages` rows with `sender: "coach"`; the notification is still created when the message is sent.
+
+Look: `/admin` → a client → Messages → send one; then `/client` → Home.
+
+## 57 · Client Settings on the design system — LOCAL ONLY, not pushed
+
+The last client tab, and the one that was still flat rows on Manrope.
+
+- [ ] **Banner** like the other tabs: "Your account", the name (32 / 700), "Client since 7 Sep · 2 weeks in", and the profile photo row (tile, Tap to change, Remove) at the banner's foot. The top bar floats over it.
+- [ ] **Every section is a card** (radius 18, hairline rows inside): Your details, Progress pictures, Progress reports, Preferences, Connected apps, Data. The first card overlaps the banner. The Coach row is out of Settings for now (nice to have, not yet); the coach profile screen itself stays.
+- [ ] Archivo; page `#F4F7FC`; row titles Ink 15 / 600, details Muted, section labels the one label recipe. Toggles are navy when on with a white knob; kg · cm | lb · in is the standard pill switch; the "New" report pill is the tint with navy; Delete account is the destructive red; Log out is a white secondary button, 48px, radius 12.
+- [ ] Nothing moved or renamed; the same rows and actions as before.
+- [ ] **Honest rows.** Export my data, Privacy policy and the two Connect rows are not built, so they carry a "Soon" pill instead of an arrow that goes nowhere.
+- [ ] **Delete account confirms first.** Tapping it opens a red panel: what deletion removes, that it can't be undone, and that the coach does it (ask on a call or by email) — nothing is deleted from the app itself. "Keep my account" closes it. Self-serve deletion is a future item.
+- [ ] A line under Data says what the coach can see: check-ins, photos, logs and notes, and nobody else.
+- [ ] The Weekly summary toggle (not built) and the kg · cm | lb · in row are gone from Preferences; units are chosen on the Kg | Lbs switch inside a session.
+- [ ] **Your details**: a card under Coach with Email, Phone and Address as rows ("Add" where empty). Edit turns them into fields; Save posts all three. They are the same fields the coach sees on the member card, so a change reaches the coach's panel too. The contact email, not the login email. The photo is the banner's. Invoicing details are a later card. New `saveMyDetailsAction`.
+
+Look: `/client` → Settings (the person icon).
+
+## 58 · Progress pictures screen retouched — LOCAL ONLY, not pushed
+
+- [ ] Archivo; page `#F4F7FC`; the header like the other pushed screens (bare back arrow, "Progress pictures" centred, the "Your progress" line above it dropped). Cards radius 18, buttons 48px radius 12, the picker sheet radius 18. Labels use the one label recipe; titles are 600 instead of 800. The purple stays — it is this screen's identity, as decided.
+
+Look: `/client` → Settings → Progress pictures.
+
+## 59 · The burger menu, and the Reserved box gone — LOCAL ONLY, not pushed
+
+- [ ] **The burger opens a drawer** from the left: the wordmark with the coach's business under it ("Full Potential Coaching", hardcoded like the rail until the coach profile carries it), then three rows only: Messages from {coach}, Help (opens an email to the coach, subject "Ironline app"), and Log out at the foot with "Ironline · Full Potential Coaching" under it. Notifications has the bell and Settings has its tab, so neither is repeated here. Tapping the shaded page or a row closes it.
+- [ ] The dashed "Reserved" slot at the bottom of Home is gone.
+- [ ] The coach profile screen is parked: nothing opens it for now; its code and data stay.
+
+Look: `/client` → the burger.
+
+## ⚠ Open before pushing: Start on Home no longer scrolls to the session
+
+Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Do not push the client changes until this is back.
+
 ## Still to build
 
 2. **Short-term goals set from the Plan tab.** The Goals list on the client's Home is the coach's list; the intent is that these are the micro goals, set alongside the main goal.

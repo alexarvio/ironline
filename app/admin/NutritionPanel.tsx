@@ -67,8 +67,9 @@ export default function NutritionPanel({ clientId }: { clientId: number }) {
   const running = nutritionPhases.find((p) => p.status === "now") ?? null;
 
   // The calorie log: only the days the client actually logged, newest first,
-  // each judged against the training target on a day the client trained (a
-  // set logged that date) and the rest target otherwise, and naming the
+  // each judged against the training target on a training day (the day type
+  // the client picked when logging, or on older logs a set logged that date)
+  // and the rest target otherwise, and naming the
   // nutrition phase it fell in. Days with nothing logged are not listed.
   const trainedOn = trainingDates(clientId);
   const allLogs = listCalorieLogs(clientId, 10000);
@@ -85,7 +86,7 @@ export default function NutritionPanel({ clientId }: { clientId: number }) {
   const logs: NwLogDay[] = [...allLogs]
     .sort((a, b) => (a.date < b.date ? 1 : -1))
     .map((c) => {
-      const isTraining = trainedOn.has(c.date);
+      const isTraining = c.day_type ? c.day_type === "training" : trainedOn.has(c.date);
       const target = (isTraining ? derived.trainingKcal : derived.restKcal) || null;
       return { date: c.date, kcal: c.kcal, isTraining, target, note: c.note ?? null, phase: phaseOn(c.date) };
     });

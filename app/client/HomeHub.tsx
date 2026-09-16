@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarIcon, CheckIcon, ChevronDownIcon } from "../components/icons";
+import { AppleIcon, CalendarIcon, CheckIcon, ChevronDownIcon, DumbbellIcon, HeartIcon, TargetIcon } from "../components/icons";
 import GoalRow from "../components/GoalRow";
-import { useNavigateTab, useOpenCheckIn, useOpenPhotos } from "./CheckInContext";
+import { useNavigateTab, useOpenCheckIn, useOpenMessages, useOpenPhotos } from "./CheckInContext";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
 // CheckInHub.tsx this replaces — a "use client" file importing queries.ts
@@ -62,6 +62,9 @@ export type HomePhotos = { state: "due" } | { state: "done"; summary: string } |
 
 export type GoalRowView = Parameters<typeof GoalRow>[0]["goal"];
 
+/** The newest of the coach's one-way messages, for the card on Home. */
+export type LatestMessage = { coachName: string; text: string; whenLabel: string; count: number } | null;
+
 // Home is the client's landing screen: who they are and where they are in
 // the plan, then the one thing to do now, then what is coming.
 export default function HomeHub({
@@ -77,10 +80,11 @@ export default function HomeHub({
   recap,
   checkInStatus,
   photos,
+  latestMessage,
 }: {
   dateLabel: string;
   firstName: string;
-  /** Null until client profile photos land; the initial stands in. */
+  /** The photo lives in Settings for now; Home shows no avatar. */
   photoUrl: string | null;
   initial: string;
   mainGoal: string | null;
@@ -91,45 +95,42 @@ export default function HomeHub({
   recap: MeetingRecap;
   checkInStatus: CheckInStatus;
   photos: HomePhotos;
+  /** The coach's most recent message, or null when they have never sent one. */
+  latestMessage: LatestMessage;
 }) {
   return (
     <div className="hm">
-      <ProfileCard
-        dateLabel={dateLabel}
-        firstName={firstName}
-        photoUrl={photoUrl}
-        initial={initial}
-        mainGoal={mainGoal}
-        tracks={tracks}
-      />
-      <TodayCard session={session} checkInStatus={checkInStatus} hasPlan={tracks.length > 0} />
-      <PhotosCard photos={photos} />
-      <MeetingCard m={upcoming} recap={recap} />
-      {goals.length > 0 && <GoalsCard goals={goals} />}
-      <div className="hm-reserved">
-        <span className="hm-eyebrow hm-reserved-label">Reserved</span>
+      <ProfileCard dateLabel={dateLabel} firstName={firstName} mainGoal={mainGoal} tracks={tracks} />
+      <div className="hm-body">
+        <TodayCard
+          session={session}
+          checkInStatus={checkInStatus}
+          hasPlan={tracks.length > 0}
+          photosState={photos?.state ?? null}
+        />
+        <MessageCard m={latestMessage} />
+        <MeetingCard m={upcoming} recap={recap} />
+        {goals.length > 0 && <GoalsCard goals={goals} />}
       </div>
     </div>
   );
 }
 
-// ---- 1 · Profile card ----------------------------------------------------
-// Collapsed it still says all three tracks are being managed, because that
-// is the point of showing them at all; expanded it gives each one its own
-// row. Anything longer than a phrase lives behind the chevron.
+// ---- 1 · Profile banner --------------------------------------------------
+// The tab's banner, like Training's and Nutrition's: the name and the main
+// goal, with the app's top bar floating over it. Collapsed it still says all
+// three tracks are being managed, because that is the point of showing them
+// at all; expanded it gives each one its own row. Anything longer than a
+// phrase lives behind the chevron.
 
 function ProfileCard({
   dateLabel,
   firstName,
-  photoUrl,
-  initial,
   mainGoal,
   tracks,
 }: {
   dateLabel: string;
   firstName: string;
-  photoUrl: string | null;
-  initial: string;
   mainGoal: string | null;
   tracks: HomeTrack[];
 }) {
@@ -137,20 +138,14 @@ function ProfileCard({
   const canExpand = tracks.length > 0;
 
   return (
-    <section className="hm-card hm-profile">
+    <header className="hm-banner hm-profile">
       <div className="hm-profile-row">
-        {photoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- served by the
-          // uploads route behind the session; the image optimizer has no cookie.
-          <img src={photoUrl} alt="" width={44} height={44} className="hm-avatar-img" />
-        ) : (
-          <span className="hm-avatar" aria-hidden="true">
-            {initial}
-          </span>
-        )}
         <div className="hm-profile-main">
-          <div className="hm-eyebrow">{dateLabel}</div>
-          <div className="hm-name">{firstName}</div>
+          {/* A plain hello, always: a time-of-day greeting ran long. */}
+          <h1 className="hm-greeting">
+            Hello, <em>{firstName}</em>.
+          </h1>
+          <div className="hm-eyebrow hm-date">{dateLabel}</div>
         </div>
         {canExpand && (
           <button
@@ -165,19 +160,30 @@ function ProfileCard({
         )}
       </div>
 
-      <p className={`hm-maingoal${mainGoal ? "" : " unset"}`}>
-        {mainGoal ?? "Your coach hasn’t set your main goal yet"}
-      </p>
+      {/* Nothing at all until the coach sets one. */}
+      {mainGoal && (
+        <p className="hm-maingoal">
+          <span className="hm-maingoal-icon" aria-hidden="true">
+            <TargetIcon />
+          </span>
+          {mainGoal}
+        </p>
+      )}
 
       {canExpand && open && (
         <div className="hm-tracks">
           {tracks.map((t) => (
             <div key={t.track} className="hm-track">
               <div className="hm-track-head">
-                <span className={`hm-chip ${t.track}`}>{t.label}</span>
-                <span className="hm-track-name">{t.phaseName}</span>
+                <span className={`hm-track-tag ${t.track}`}>
+                  <span className="hm-track-icon" aria-hidden="true">
+                    {t.track === "nutrition" ? <AppleIcon /> : t.track === "training" ? <DumbbellIcon /> : <HeartIcon />}
+                  </span>
+                  {t.label}
+                </span>
                 <span className={`hm-track-left ${t.track}`}>{t.timeLeft}</span>
               </div>
+              <div className="hm-track-name">{t.phaseName}</div>
               <div className={`hm-track-bar ${t.track}`}>
                 <div className="hm-track-bar-fill" style={{ width: `${Math.round(t.progress * 100)}%` }} />
               </div>
@@ -195,7 +201,7 @@ function ProfileCard({
           ))}
         </div>
       )}
-    </section>
+    </header>
   );
 }
 
@@ -208,16 +214,21 @@ function TodayCard({
   session,
   checkInStatus,
   hasPlan,
+  photosState,
 }: {
   session: HomeSession;
   checkInStatus: CheckInStatus;
   hasPlan: boolean;
+  /** "due": a sheet is open and missing photos, a reminder row. "done": the
+      last photo went in within a day, a ticked row. Null: no row. */
+  photosState: "due" | "done" | null;
 }) {
   const openCheckIn = useOpenCheckIn();
+  const openPhotos = useOpenPhotos();
   const goToTab = useNavigateTab();
   const dueCount = checkInStatus.dueTypes.length;
   const hasCheckIns = checkInStatus.configuredCount > 0;
-  if (!session && !hasCheckIns && !hasPlan) return null;
+  if (!session && !hasCheckIns && !hasPlan && !photosState) return null;
 
   return (
     <section className="hm-today">
@@ -264,43 +275,49 @@ function TodayCard({
           </span>
         </button>
       )}
+
+      {/* Progress pictures come round about once a month, so they are a
+          reminder row here rather than a card of their own: a pulsing dot
+          while a sheet is open and missing photos, a tick for a day after
+          the last one went in, then nothing (the Account tab still reaches
+          them). */}
+      {photosState && (
+        <button type="button" className="hm-checkin" onClick={() => openPhotos?.()}>
+          {photosState === "due" ? (
+            <span className="hm-checkin-dot" aria-hidden="true" />
+          ) : (
+            <span className="hm-checkin-tick" aria-hidden="true">
+              <CheckIcon />
+            </span>
+          )}
+          <span className="hm-checkin-body">
+            <span className="hm-checkin-title">
+              {photosState === "due" ? "Progress pictures due" : "Progress pictures sent"}
+            </span>
+          </span>
+          <span className="hm-checkin-chev" aria-hidden="true">
+            <ChevronDownIcon />
+          </span>
+        </button>
+      )}
     </section>
   );
 }
 
-// ---- 3 · Progress pictures -----------------------------------------------
-// One thing to say, so one tap: the whole card is the button, and it opens
-// the Progress pictures screen. Nothing at all when no sheet is open.
+// ---- 3 · From the coach --------------------------------------------------
+// The coach's latest message, in full when short. The whole card opens the
+// feed of everything they have sent. Nothing at all until they write one.
 
-function PhotosCard({ photos }: { photos: HomePhotos }) {
-  const openPhotos = useOpenPhotos();
-  if (!photos) return null;
-
-  if (photos.state === "due") {
-    return (
-      <button type="button" className="hm-photos" onClick={() => openPhotos?.()}>
-        <span className="hm-photos-text">
-          <span className="hm-photos-eyebrow">Progress pictures</span>
-          <span className="hm-photos-line">Upload your progress pictures</span>
-        </span>
-        <span className="hm-photos-upload" aria-hidden="true">
-          Upload
-        </span>
-      </button>
-    );
-  }
-
+function MessageCard({ m }: { m: LatestMessage }) {
+  const openMessages = useOpenMessages();
+  if (!m) return null;
   return (
-    <button type="button" className="hm-photos-done" onClick={() => openPhotos?.()}>
-      <span className="hm-photos-done-tick" aria-hidden="true">
-        <CheckIcon />
-      </span>
-      <span className="hm-photos-text">
-        <span className="hm-photos-done-title">Pictures sent</span>
-        <span className="hm-photos-done-meta">{photos.summary}</span>
-      </span>
-      <span className="hm-photos-view" aria-hidden="true">
-        View
+    <button type="button" className="hm-card hm-message" onClick={() => openMessages?.()}>
+      <span className="hm-eyebrow">From {m.coachName}</span>
+      <p className="hm-message-text">{m.text}</p>
+      <span className="hm-message-foot">
+        <span>{m.whenLabel}</span>
+        <b>{m.count > 1 ? `All ${m.count} messages →` : "Open →"}</b>
       </span>
     </button>
   );

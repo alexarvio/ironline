@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, CardioEntry } from "./db";
-import type { CalorieLog, CheckInNote, ClientGym, ClientPhase, PhaseTrack } from "./db";
+import type { CalorieLog, CheckInNote, ClientGym, ClientPhase, CoachProfile, PhaseTrack } from "./db";
+import type { CoachProfileFields, CoachProfileView } from "./coachProfileView";
 import { coachIdOfClient } from "./tenancy";
 import { LOCK_MS, type LockScope } from "./loginLockout";
 
@@ -152,6 +153,21 @@ function emptyKeyedMap<T extends string>(items: string[], fields: T[]): Record<s
 
 export function getClient(id: number) {
   return getData().clients.find((c) => c.id === id);
+}
+
+// A coach account has an email but no name. The client's app calls them by
+// the first word of it ("finlay.smith@…" → "Finlay"), as the coach rail does.
+export function getCoachFirstName(clientId: number): string {
+  const coachId = coachIdOfClient(clientId);
+  const email = getData().users.find((u) => u.id === coachId && u.role === "coach")?.email ?? "";
+  const first = (email.split("@")[0] ?? "").split(/[._-]+/).filter(Boolean)[0] ?? "";
+  return first ? first.charAt(0).toUpperCase() + first.slice(1) : "Coach";
+}
+
+/** The coach's login email: where the client's Help row writes to. */
+export function getCoachEmail(clientId: number): string {
+  const coachId = coachIdOfClient(clientId);
+  return getData().users.find((u) => u.id === coachId && u.role === "coach")?.email ?? "";
 }
 
 /** One coach's clients, by name. Coaches never see each other's. */
@@ -4973,6 +4989,19 @@ export function markNotificationRead(id: number) {
   persist();
 }
 
+// Opening the coach's message feed reads every message at once.
+export function markCoachNotesRead(clientId: number) {
+  const data = getData();
+  let changed = false;
+  data.coach_activity.forEach((a) => {
+    if (a.client_id === clientId && a.kind === "coach_note" && !a.read) {
+      a.read = true;
+      changed = true;
+    }
+  });
+  if (changed) persist();
+}
+
 export function markAllNotificationsRead(clientId: number) {
   const data = getData();
   data.coach_activity.forEach((a) => {
@@ -5720,7 +5749,14 @@ export function listCalorieLogs(clientId: number, limit = 30): CalorieLog[] {
 }
 
 // null clears the day.
-export function setCalorieLog(clientId: number, date: string, kcal: number | null, note: string | null | undefined = undefined) {
+// `note` and `dayType` left undefined keep what the day already has.
+export function setCalorieLog(
+  clientId: number,
+  date: string,
+  kcal: number | null,
+  note: string | null | undefined = undefined,
+  dayType: "training" | "rest" | undefined = undefined
+) {
   const data = getData();
   const existing = data.calorie_logs.find((c) => c.client_id === clientId && c.date === date);
   if (kcal == null) {
@@ -5729,8 +5765,17 @@ export function setCalorieLog(clientId: number, date: string, kcal: number | nul
     existing.kcal = kcal;
     existing.logged_at = new Date().toISOString();
     if (note !== undefined) existing.note = note;
+    if (dayType !== undefined) existing.day_type = dayType;
   } else {
-    data.calorie_logs.push({ id: allocId("calorie_logs"), client_id: clientId, date, kcal, logged_at: new Date().toISOString(), note: note ?? null });
+    data.calorie_logs.push({
+      id: allocId("calorie_logs"),
+      client_id: clientId,
+      date,
+      kcal,
+      logged_at: new Date().toISOString(),
+      note: note ?? null,
+      ...(dayType ? { day_type: dayType } : {}),
+    });
   }
   persist();
 }
@@ -7116,4 +7161,160 @@ export function removeClientAvatar(clientId: number) {
   }
   client.avatar_path = null;
   persist();
+}
+
+// ---- Coach profile: written by the coach, read by their clients -----------
+
+export function getCoachProfile(coachId: number): CoachProfile | null {
+  return getData().coach_profiles.find((p) => p.coach_id === coachId) ?? null;
+}
+
+// A coach account has an email but no name; "finlay.smith@…" reads as
+// "Finlay Smith" until they give their display name.
+function nameFromCoachEmail(email: string): string {
+  const words = (email.split("@")[0] ?? "").split(/[._-]+/).filter(Boolean);
+  return words.length ? words.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") : "Coach";
+}
+
+/** The profile as the screens render it, with fallbacks; null for a user who is not a coach. */
+export function getCoachProfileView(coachId: number): CoachProfileView | null {
+  const data = getData();
+  const user = data.users.find((u) => u.id === coachId && u.role === "coach");
+  if (!user) return null;
+  const p = getCoachProfile(coachId);
+  return {
+    coachId,
+    email: user.email,
+    displayName: p?.display_name?.trim() || nameFromCoachEmail(user.email),
+    title: p?.title ?? "",
+    headline: p?.headline ?? "",
+    location: p?.location ?? "",
+    languages: p?.languages ?? "",
+    yearsCoaching: p?.years_coaching ?? null,
+    intro: p?.intro ?? "",
+    bio: p?.bio ?? "",
+    quote: p?.quote ?? "",
+    specialties: p?.specialties ?? [],
+    studies: p?.studies ?? [],
+    experience: p?.experience ?? [],
+    outside: p?.outside ?? "",
+    replyNote: p?.reply_note ?? "",
+    heroPath: p?.hero_path ?? null,
+    candidPath: p?.candid_path ?? null,
+    published: !!p?.published && !!p.display_name?.trim(),
+    clientCount: data.clients.filter((c) => c.coach_id === coachId).length,
+    updatedAt: p?.updated_at ?? null,
+  };
+}
+
+/** The profile of the client's own coach. */
+export function getCoachProfileForClient(clientId: number): CoachProfileView | null {
+  const coachId = coachIdOfClient(clientId);
+  return coachId == null ? null : getCoachProfileView(coachId);
+}
+
+function ensureCoachProfile(coachId: number): CoachProfile {
+  const data = getData();
+  let profile = data.coach_profiles.find((p) => p.coach_id === coachId);
+  if (!profile) {
+    profile = {
+      coach_id: coachId,
+      display_name: null,
+      title: null,
+      headline: null,
+      location: null,
+      languages: null,
+      years_coaching: null,
+      hero_path: null,
+      candid_path: null,
+      intro: null,
+      bio: null,
+      quote: null,
+      specialties: [],
+      studies: [],
+      experience: [],
+      outside: null,
+      reply_note: null,
+      published: false,
+      updated_at: null,
+    };
+    data.coach_profiles.push(profile);
+  }
+  return profile;
+}
+
+export function saveCoachProfile(coachId: number, fields: CoachProfileFields) {
+  const p = ensureCoachProfile(coachId);
+  const orNull = (s: string) => s.trim() || null;
+  p.display_name = orNull(fields.displayName);
+  p.title = orNull(fields.title);
+  p.headline = orNull(fields.headline);
+  p.location = orNull(fields.location);
+  p.languages = orNull(fields.languages);
+  p.years_coaching = fields.yearsCoaching;
+  p.intro = orNull(fields.intro);
+  p.bio = orNull(fields.bio);
+  p.quote = orNull(fields.quote);
+  p.specialties = fields.specialties;
+  p.studies = fields.studies;
+  p.experience = fields.experience;
+  p.outside = orNull(fields.outside);
+  p.reply_note = orNull(fields.replyNote);
+  // Publishing needs a name: clearing it takes the profile back to the minimal card.
+  if (!p.display_name) p.published = false;
+  p.updated_at = new Date().toISOString();
+  persist();
+}
+
+/** False when publishing is refused because there is no display name. */
+export function setCoachProfilePublished(coachId: number, published: boolean): boolean {
+  const p = ensureCoachProfile(coachId);
+  if (published && !p.display_name?.trim()) return false;
+  p.published = published;
+  p.updated_at = new Date().toISOString();
+  persist();
+  return true;
+}
+
+export function saveCoachPhoto(coachId: number, kind: "hero" | "candid", buffer: Buffer, mimeType: string): string {
+  const profile = ensureCoachProfile(coachId);
+  const ext = (mimeType.split("/")[1] || "jpg").replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "jpg";
+  const dir = path.join(DATA_DIR, "uploads", "coaches", String(coachId));
+  fs.mkdirSync(dir, { recursive: true });
+  const filename = `${kind}.${ext}`;
+  fs.writeFileSync(path.join(dir, filename), buffer);
+  const field = kind === "hero" ? "hero_path" : "candid_path";
+  const previous = profile[field]?.split("?")[0].split("/").pop();
+  if (previous && previous !== filename) {
+    try {
+      fs.unlinkSync(path.join(dir, previous));
+    } catch {
+      /* already gone */
+    }
+  }
+  const saved = `/uploads/coaches/${coachId}/${filename}?v=${Date.now()}`;
+  profile[field] = saved;
+  profile.updated_at = new Date().toISOString();
+  persist();
+  return saved;
+}
+
+/** Returns the path that was removed, for the storage bucket. */
+export function removeCoachPhoto(coachId: number, kind: "hero" | "candid"): string | null {
+  const profile = getCoachProfile(coachId);
+  if (!profile) return null;
+  const field = kind === "hero" ? "hero_path" : "candid_path";
+  const previous = profile[field];
+  const file = previous?.split("?")[0].split("/").pop();
+  if (file) {
+    try {
+      fs.unlinkSync(path.join(DATA_DIR, "uploads", "coaches", String(coachId), file));
+    } catch {
+      /* already gone */
+    }
+  }
+  profile[field] = null;
+  profile.updated_at = new Date().toISOString();
+  persist();
+  return previous;
 }

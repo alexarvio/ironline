@@ -47,8 +47,7 @@ export default function ProgressPicturesScreen({ data, onBack }: { data: Progres
           <ChevronLeftIcon />
         </button>
         <div className="cn-header-titles">
-          <div className="pp-app-kicker">Your progress</div>
-          <div className="pp-app-title">Progress pictures</div>
+          <h1 className="pp-app-title">Progress pictures</h1>
         </div>
         <span className="cn-icon-spacer" aria-hidden="true" />
       </header>

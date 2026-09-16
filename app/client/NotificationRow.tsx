@@ -2,12 +2,12 @@
 
 import { ReactNode, useTransition } from "react";
 import { markNotificationReadAction } from "../lib/actions";
-import { useNavigateTab } from "./CheckInContext";
+import { useNavigateTab, useOpenMessages } from "./CheckInContext";
 
 // Deliberately does NOT import from ../lib/queries — see HomeHub.tsx.
 // Tapping a notification does two things: marks it read, and follows its
-// action link if it has one. "chat" isn't a bottom-nav tab (it's the view
-// this row already sits in), so those rows just mark read.
+// action link if it has one. "chat" is the coach's message feed, not a
+// bottom-nav tab, so those rows open the feed instead.
 export default function NotificationRow({
   id,
   actionTab,
@@ -20,6 +20,7 @@ export default function NotificationRow({
   children: ReactNode;
 }) {
   const navigate = useNavigateTab();
+  const openMessages = useOpenMessages();
   const [, startTransition] = useTransition();
 
   return (
@@ -30,7 +31,8 @@ export default function NotificationRow({
         startTransition(() => {
           markNotificationReadAction(id);
         });
-        if (actionTab && actionTab !== "chat") navigate?.(actionTab, actionRef ?? undefined);
+        if (actionTab === "chat") openMessages?.();
+        else if (actionTab) navigate?.(actionTab, actionRef ?? undefined);
       }}
     >
       {children}

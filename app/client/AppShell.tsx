@@ -1,15 +1,38 @@
 "use client";
 
-import Image from "next/image";
-import { ReactNode, useState, useSyncExternalStore } from "react";
-import { BellIcon, ChevronLeftIcon } from "../components/icons";
+import { ReactNode, useState, useSyncExternalStore, useTransition } from "react";
+import { markCoachNotesReadAction } from "../lib/actions";
+import { logoutAction } from "../lib/auth-actions";
+import { BellIcon, ChevronLeftIcon, MenuIcon } from "../components/icons";
 import CheckInScreen, { CheckInProps } from "./CheckInScreen";
 import ProgressPicturesScreen, { type ProgressPicturesProps } from "./ProgressPicturesScreen";
-import { CheckInProvider, FocusRefProvider, NavigateProvider, NotificationsProvider, PhotosProvider } from "./CheckInContext";
+import CoachProfileScreen from "./CoachProfileScreen";
+import CoachMessagesScreen, { type CoachMessagesProps } from "./CoachMessagesScreen";
+import type { CoachProfileView } from "../lib/coachProfileView";
+import {
+  CheckInProvider,
+  CoachProvider,
+  FocusRefProvider,
+  MessagesProvider,
+  NavigateProvider,
+  NotificationsProvider,
+  PhotosProvider,
+} from "./CheckInContext";
 
-export type AppTab = { id: string; label: string; icon: ReactNode; content: ReactNode; footer?: ReactNode };
+export type AppTab = {
+  id: string;
+  label: string;
+  icon: ReactNode;
+  content: ReactNode;
+  footer?: ReactNode;
+  /** The tab draws its own banner (Training, Nutrition): the top bar floats
+      over it, see-through until the page scrolls, then off-white. */
+  bare?: boolean;
+  /** The banner is dark, so the see-through top bar is white. */
+  darkBanner?: boolean;
+};
 
-type PushView = "notifications" | "checkin" | "photos" | null;
+type PushView = "notifications" | "checkin" | "photos" | "coach" | "messages" | null;
 
 // The active bottom tab lives in sessionStorage, not just React state. A full
 // page load — a form that posts before hydration finishes on a slow phone, a
@@ -55,6 +78,9 @@ export default function AppShell({
   clientId,
   checkIn,
   photos,
+  coachMessages,
+  helpEmail = "",
+  coachProfile = null,
 }: {
   clientName: string;
   tabs: AppTab[];
@@ -64,6 +90,12 @@ export default function AppShell({
   clientId: number;
   checkIn: CheckInProps;
   photos: ProgressPicturesProps;
+  /** The coach's one-way messages, read from Home's card or a notification. */
+  coachMessages: CoachMessagesProps;
+  /** Where the menu's Help row writes to: the coach's email. */
+  helpEmail?: string;
+  /** The client's coach, opened from the Account tab's Coach row. */
+  coachProfile?: CoachProfileView | null;
 }) {
   const storedTab = useSyncExternalStore(subscribeTab, readTab, () => null);
   const activeId = storedTab && tabs.some((t) => t.id === storedTab) ? storedTab : tabs[0]?.id;
@@ -75,6 +107,20 @@ export default function AppShell({
     setCheckInSection(section);
     setPushView("checkin");
   };
+  // The burger's drawer. A row closes it and then does its thing.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const go = (then: () => void) => {
+    setMenuOpen(false);
+    then();
+  };
+  // Opening the coach's feed reads every message, so the bell clears.
+  const [, startTransition] = useTransition();
+  const openMessages = () => {
+    setPushView("messages");
+    startTransition(() => {
+      markCoachNotesReadAction(clientId);
+    });
+  };
   // Bumped when the tab changes and used as a key on the content below, so
   // a tab comes up fresh when switched to. A tap on the tab already showing
   // is ignored: rebuilding it read as the screen jumping to the top.
@@ -83,9 +129,14 @@ export default function AppShell({
   // a notification's deep link and cleared by any ordinary nav tap.
   const [focusRef, setFocusRef] = useState<number | null>(null);
   const active = tabs.find((t) => t.id === activeId) ?? tabs[0];
+  // Whether the tab has scrolled off its top, which turns a banner tab's
+  // see-through top bar solid. A new tab starts at the top.
+  const [scrolled, setScrolled] = useState(false);
+  const clearBar = !!active?.bare && !scrolled;
 
   const goToTab = (tab: string, ref?: number) => {
     if (!tabs.some((t) => t.id === tab)) return;
+    setScrolled(false);
     setPushView(null);
     setActiveId(tab);
     setFocusRef(ref ?? null);
@@ -105,9 +156,18 @@ export default function AppShell({
           onBack={() => setPushView(null)}
         />
       </div>
+    ) : pushView === "coach" && coachProfile ? (
+      <div className="app-layer app-layer-push cpf-layer">
+        {/* "Book a call" lands on Home, where the next meeting card is. */}
+        <CoachProfileScreen profile={coachProfile} onBack={() => setPushView(null)} onBook={() => goToTab("home")} />
+      </div>
     ) : pushView === "photos" ? (
       <div className="app-layer app-layer-push pp-app-screen">
         <ProgressPicturesScreen data={photos} onBack={() => setPushView(null)} />
+      </div>
+    ) : pushView === "messages" ? (
+      <div className="app-layer app-layer-push cn-screen">
+        <CoachMessagesScreen {...coachMessages} onBack={() => setPushView(null)} />
       </div>
     ) : pushView ? (
       <div className="app-layer app-layer-push cn-screen">
@@ -116,13 +176,15 @@ export default function AppShell({
             <ChevronLeftIcon />
           </button>
           <div className="cn-header-titles">
-            <div className="cn-kicker">Activity</div>
-            <div className="cn-title">Notifications</div>
+            <h1 className="cn-title">Notifications</h1>
           </div>
           <span className="cn-icon-spacer" aria-hidden="true" />
         </header>
         <main className="cn-body">
-          <NavigateProvider value={goToTab}>{notificationsContent}</NavigateProvider>
+          {/* A "Coach note" row opens the messages feed over Notifications. */}
+          <MessagesProvider value={openMessages}>
+            <NavigateProvider value={goToTab}>{notificationsContent}</NavigateProvider>
+          </MessagesProvider>
         </main>
       </div>
     ) : null;
@@ -134,11 +196,13 @@ export default function AppShell({
             comes back to the same scroll and the same open day. inert keeps
             it out of reach of taps and the keyboard while covered. */}
         <div className="app-layer app-layer-main" inert={pushView ? true : undefined} aria-hidden={pushView ? true : undefined}>
-        <header className="app-header dark">
-          <span className="app-header-brand">
-            <Image src="/brand/logo.png" alt="" width={15} height={26} className="app-header-logo" priority />
-            Ironline
-          </span>
+        <header
+          className={`app-header dark${active?.bare ? " overlay" : ""}${clearBar ? " clear" : ""}${clearBar && active?.darkBanner ? " on-dark" : ""}`}
+        >
+          <button type="button" className="app-header-icon-btn" onClick={() => setMenuOpen(true)} aria-label="Menu" aria-expanded={menuOpen}>
+            <MenuIcon />
+          </button>
+          <span className="app-header-brand">Ironline</span>
           <div className="app-header-actions">
             <button type="button" className="app-header-icon-btn" onClick={() => setPushView("notifications")} aria-label="Notifications">
               <BellIcon />
@@ -147,14 +211,22 @@ export default function AppShell({
           </div>
         </header>
 
-        <main className="app-content dark" key={`${activeId}-${navResetKey}`}>
+        <main
+          className="app-content dark"
+          key={`${activeId}-${navResetKey}`}
+          onScroll={active?.bare ? (e) => setScrolled(e.currentTarget.scrollTop > 4) : undefined}
+        >
           <CheckInProvider value={openCheckIn}>
             <PhotosProvider value={() => setPushView("photos")}>
-              <NotificationsProvider value={() => setPushView("notifications")}>
-                <NavigateProvider value={goToTab}>
-                  <FocusRefProvider value={focusRef}>{active?.content}</FocusRefProvider>
-                </NavigateProvider>
-              </NotificationsProvider>
+              <MessagesProvider value={openMessages}>
+                <CoachProvider value={coachProfile ? () => setPushView("coach") : null}>
+                  <NotificationsProvider value={() => setPushView("notifications")}>
+                    <NavigateProvider value={goToTab}>
+                      <FocusRefProvider value={focusRef}>{active?.content}</FocusRefProvider>
+                    </NavigateProvider>
+                  </NotificationsProvider>
+                </CoachProvider>
+              </MessagesProvider>
             </PhotosProvider>
           </CheckInProvider>
         </main>
@@ -171,6 +243,7 @@ export default function AppShell({
                 // A tap on the tab already showing does nothing. It used to
                 // rebuild the tab, which read as the screen jumping to the top.
                 if (t.id === activeId) return;
+                setScrolled(false);
                 setActiveId(t.id);
                 setFocusRef(null);
                 setNavResetKey((k) => k + 1);
@@ -184,6 +257,45 @@ export default function AppShell({
         </nav>
         </div>
         {pushedLayer}
+
+        {/* The burger's drawer: the screens that are not on the bottom nav.
+            Tapping the scrim or a row closes it. */}
+        {menuOpen && (
+          <>
+            <button type="button" className="app-menu-scrim" onClick={() => setMenuOpen(false)} aria-label="Close menu" />
+            <nav className="app-menu" aria-label="Menu">
+              <div className="app-menu-head">
+                <span className="app-header-brand app-menu-brand">Ironline</span>
+                {/* The coach's business, hardcoded like the rail and the Settings
+                    footnote until the coach profile carries it. */}
+                <span className="app-menu-name">Full Potential Coaching</span>
+              </div>
+              <div className="app-menu-list">
+                <button type="button" className="app-menu-item" onClick={() => go(() => openMessages())}>
+                  Messages from {coachMessages.coachName}
+                </button>
+                {/* Help writes to the coach: the person who can actually do something. */}
+                {helpEmail && (
+                  <a
+                    className="app-menu-item app-menu-item-link"
+                    href={`mailto:${helpEmail}?subject=${encodeURIComponent("Ironline app")}`}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Help
+                  </a>
+                )}
+              </div>
+              <div className="app-menu-foot">
+                <form action={logoutAction}>
+                  <button type="submit" className="app-menu-logout">
+                    Log out
+                  </button>
+                </form>
+                <span className="app-menu-footnote">Ironline · Full Potential Coaching</span>
+              </div>
+            </nav>
+          </>
+        )}
       </div>
     </div>
   );

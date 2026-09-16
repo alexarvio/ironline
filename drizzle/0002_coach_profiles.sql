@@ -1,0 +1,22 @@
+CREATE TABLE "coach_profiles" (
+	"coach_id" integer PRIMARY KEY NOT NULL,
+	"display_name" text,
+	"title" text,
+	"headline" text,
+	"location" text,
+	"languages" text,
+	"years_coaching" double precision,
+	"hero_path" text,
+	"candid_path" text,
+	"intro" text,
+	"bio" text,
+	"quote" text,
+	"specialties" jsonb,
+	"studies" jsonb,
+	"experience" jsonb,
+	"outside" text,
+	"reply_note" text,
+	"published" boolean,
+	"updated_at" text,
+	"extra" jsonb
+);

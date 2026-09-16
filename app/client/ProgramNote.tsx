@@ -1,58 +1,85 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { saveProgramNoteAction } from "../lib/actions";
+import { ArrowRightIcon, ChatIcon } from "../components/icons";
 
 // The client's note to the coach about the programme as a whole: how it is
 // feeling, what is not working, what they want more of. One per programme.
-// Tapping anywhere on the box opens it fully, with Save and Cancel showing
-// from the first tap; Cancel or Escape closes it and puts the saved text
-// back.
-export default function ProgramNote({ programId, text }: { programId: number; text: string }) {
-  const [draft, setDraft] = useState(text);
-  const [open, setOpen] = useState(false);
+// It is the footer row of the Days trained card: one line to type into and a
+// send button. What was sent shows as a bubble under the row; tapping it puts
+// the text back in the line to change it. Escape puts the line back.
+export default function ProgramNote({ programId, text, coachName }: { programId: number; text: string; coachName: string }) {
+  const [draft, setDraft] = useState("");
+  // True while the saved note is back in the line being changed.
+  const [changingSaved, setChangingSaved] = useState(false);
   const [saving, start] = useTransition();
-  const dirty = draft.trim() !== text.trim();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const next = draft.trim();
+  const canSend = next !== "" && next !== text.trim() && !saving;
+
   const cancel = () => {
-    setDraft(text);
-    setOpen(false);
+    setDraft("");
+    setChangingSaved(false);
+    inputRef.current?.blur();
   };
-  const save = () => {
-    const next = draft.trim();
-    setOpen(false);
-    if (!dirty) return;
+  const send = () => {
+    if (!canSend) return;
     const fd = new FormData();
     fd.set("programId", String(programId));
     fd.set("text", next);
-    start(() => saveProgramNoteAction(fd));
+    start(async () => {
+      await saveProgramNoteAction(fd);
+      setDraft("");
+      setChangingSaved(false);
+    });
   };
+
   return (
-    <section className={`ts-prognote${open ? " open" : ""}`} onClick={() => { if (!open) setOpen(true); }}>
-      <span className="ts-prognote-label">Note for your coach{saving ? " · saving…" : ""}</span>
-      <textarea
-        className="ts-prognote-input"
-        value={draft}
-        rows={open ? 4 : 2}
-        onFocus={() => setOpen(true)}
-        placeholder="How the programme is feeling, what is too much, what you would like more of…"
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") cancel();
+    <div className="tr-note">
+      <form
+        className="tr-note-row"
+        onSubmit={(e) => {
+          e.preventDefault();
+          send();
         }}
-        aria-label="Note for your coach about this programme"
-      />
-      {open && (
-        <div className="ts-prognote-foot">
-          <span className="ts-mynote-btns">
-            <button type="button" className="ts-mynote-cancel" onClick={cancel}>
-              Cancel
-            </button>
-            <button type="button" className="ts-mynote-save" onClick={save} disabled={saving}>
-              Save
-            </button>
-          </span>
+      >
+        <span className="tr-note-icon" aria-hidden="true">
+          <ChatIcon />
+        </span>
+        <input
+          ref={inputRef}
+          className="tr-note-input"
+          type="text"
+          value={draft}
+          maxLength={1000}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") cancel();
+          }}
+          placeholder={`Tell ${coachName} how the programme feels`}
+          aria-label={`Note for ${coachName} about this programme`}
+        />
+        <button type="submit" className={`tr-send${canSend ? " ready" : ""}`} disabled={!canSend} aria-label="Send">
+          <ArrowRightIcon />
+        </button>
+      </form>
+      {text.trim() && !changingSaved && (
+        <div className="tr-note-bubble-wrap">
+          <button
+            type="button"
+            className="tr-note-bubble"
+            onClick={() => {
+              setDraft(text);
+              setChangingSaved(true);
+              inputRef.current?.focus();
+            }}
+            aria-label="Change your note"
+          >
+            {saving ? "Saving…" : text}
+          </button>
         </div>
       )}
-    </section>
+    </div>
   );
 }

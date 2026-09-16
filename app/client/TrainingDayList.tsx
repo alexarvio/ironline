@@ -35,12 +35,25 @@ export default function TrainingDayList({ days }: { days: TrainingDayProps[] }) 
     if (focus == null || applied.current === focus || !days.some((d) => d.key === focus)) return;
     applied.current = focus;
     setOpenKey(focus);
-    const t = setTimeout(() => rowRefs.current.get(focus)?.scrollIntoView({ block: "start", behavior: "smooth" }), 60);
-    return () => clearTimeout(t);
+    // The tab's own scroller is moved directly, to the row's offset minus the
+    // floating top bar. scrollIntoView was being dropped: a smooth scroll
+    // started on the same tick as the week strip positioning itself, and the
+    // browser kept only one. Instant, and repeated as the tab settles (rings
+    // and bars animate in), so the session ends the top whatever shifts.
+    const scroll = () => {
+      const row = rowRefs.current.get(focus);
+      const scroller = row?.closest<HTMLElement>(".app-content");
+      if (!row || !scroller) return;
+      const bar = parseFloat(getComputedStyle(scroller.parentElement ?? scroller).getPropertyValue("--topbar-h")) || 0;
+      const top = row.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - bar - 8;
+      scroller.scrollTo({ top: Math.max(0, top), behavior: "auto" });
+    };
+    const timers = [60, 300, 700].map((ms) => setTimeout(scroll, ms));
+    return () => timers.forEach(clearTimeout);
   }, [focus, days]);
   return (
     <>
-      {days.map((d) => (
+      {days.map((d, i) => (
         <div
           key={d.key}
           ref={(el) => {
@@ -52,6 +65,7 @@ export default function TrainingDayList({ days }: { days: TrainingDayProps[] }) 
         <TrainingDaySession
           title={d.title}
           dayId={d.key}
+          index={i + 1}
           gyms={d.gyms}
           gymId={d.gymId}
           exercises={d.exercises}

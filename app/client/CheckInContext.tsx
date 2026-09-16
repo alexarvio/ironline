@@ -26,6 +26,16 @@ export function useOpenPhotos() {
   return useContext(PhotosContext);
 }
 
+// Same bridge for the coach's profile, opened from the Coach row on the
+// Account tab. Null when the client has no coach to show.
+const CoachContext = createContext<(() => void) | null>(null);
+
+export const CoachProvider = CoachContext.Provider;
+
+export function useOpenCoach() {
+  return useContext(CoachContext);
+}
+
 // Same bridge for the Notifications push view. Home's coach-note rows used
 // to open the chat thread the note came from; with chat cut from the first
 // beta they open Notifications instead, which is where coach activity now
@@ -59,4 +69,14 @@ export const FocusRefProvider = FocusRefContext.Provider;
 
 export function useFocusRef() {
   return useContext(FocusRefContext);
+}
+
+// Same bridge for the coach's messages: the read-only feed opened from the
+// card on Home and from a "Coach note" row in Notifications.
+const MessagesContext = createContext<(() => void) | null>(null);
+
+export const MessagesProvider = MessagesContext.Provider;
+
+export function useOpenMessages() {
+  return useContext(MessagesContext);
 }

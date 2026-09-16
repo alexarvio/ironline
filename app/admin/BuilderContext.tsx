@@ -29,15 +29,18 @@ const UnitContext = createContext<BuilderWeightUnit>("kg");
 export const WeightUnitProvider = UnitContext.Provider;
 
 const KG_PER_LB = 0.45359237;
-const trim = (n: number, dp: number) => String(Math.round(n * 10 ** dp) / 10 ** dp);
-// Lbs are whole numbers, always rounded up, tidied to two decimals first so
-// float noise (136.0036) does not tip a round figure over to the next pound.
-const lbs = (kg: number) => String(Math.ceil(Math.round((kg / KG_PER_LB) * 100) / 100));
+// Always rounded up: kg to the next quarter, lbs to the next half, as in the
+// client's app. Tidied to two decimals first, so float noise (136.0036) does
+// not tip a round figure over to the next step.
+const r2 = (n: number) => Math.round(n * 100) / 100;
+const ceilTo = (n: number, step: number) => r2(Math.ceil(r2(n) / step - 1e-9) * step);
+const kgShown = (kg: number) => String(ceilTo(kg, 0.25));
+const lbs = (kg: number) => String(ceilTo(kg / KG_PER_LB, 0.5));
 
 /** A weight held in kg, shown in the builder's unit. */
 export function BuilderWeight({ kg }: { kg: number }) {
   const unit = useContext(UnitContext);
-  return <>{unit === "kg" ? trim(kg, 2) : lbs(kg)}</>;
+  return <>{unit === "kg" ? kgShown(kg) : lbs(kg)}</>;
 }
 
 /** "kg" or "lbs", to sit after a BuilderWeight. */

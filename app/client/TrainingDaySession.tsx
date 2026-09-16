@@ -62,13 +62,12 @@ function tidyDecimal(e: React.FormEvent<HTMLInputElement>) {
 type WeightUnit = "kg" | "lb";
 const KG_PER_LB = 0.45359237;
 const roundTo = (n: number, dp: number) => Math.round(n * 10 ** dp) / 10 ** dp;
-// Lbs are whole numbers, always rounded up. Tidied to two decimals first, so
-// the few ten-thousandths a saved lbs figure carries don't tip it to the
-// next pound. Kg shows at most two decimals.
-const kgToUnit = (kg: number, unit: WeightUnit) => (unit === "kg" ? roundTo(kg, 2) : Math.ceil(roundTo(kg / KG_PER_LB, 2)));
-// In lbs mode the kg figure rides along: whole and rounded up too. Kg the
-// coach set exactly (62.5) is shown as set in kg mode.
-const kgWhole = (kg: number) => Math.ceil(roundTo(kg, 2));
+// Shown weights always round up: kg to the next quarter (.25, .5, .75), lbs
+// to the next half. Tidied to two decimals first, so the few ten-thousandths
+// a figure saved from lbs carries don't tip it over to the next step. Only
+// the unit on the toggle is ever shown.
+const ceilTo = (n: number, step: number) => roundTo(Math.ceil(roundTo(n, 2) / step - 1e-9) * step, 2);
+const kgToUnit = (kg: number, unit: WeightUnit) => (unit === "kg" ? ceilTo(kg, 0.25) : ceilTo(kg / KG_PER_LB, 0.5));
 // Four decimals in kg, so a figure typed in lbs reads back as the same
 // figure: at two decimals, 2 lbs came back as 3 once rounded up.
 const unitToKg = (value: number, unit: WeightUnit) => (unit === "kg" ? value : roundTo(value * KG_PER_LB, 4));
@@ -126,6 +125,8 @@ export default function TrainingDaySession({
   /** Owned by TrainingDayList so only one day is open at a time. */
   open: boolean;
   onToggle: () => void;
+  /** Its place in the week. */
+  index?: number;
 }) {
   // The gym is picked here and saved straight away; the server's answer
   // takes over whenever it changes.
@@ -216,33 +217,36 @@ export default function TrainingDaySession({
     return () => clearTimeout(t);
   }, [expandedId, expandedDone]);
 
-  const position = expanded ? exercises.findIndex((ex) => ex.id === expanded.id) + 1 : 0;
+  // The line under the session's title.
+  const left = exercises.filter((ex) => !isDone(ex)).length + cardio.filter((c) => !c.done).length;
+  const sub = dayDone
+    ? "Session complete"
+    : logged > 0
+    ? `In progress · ${left} exercise${left === 1 ? "" : "s"} left`
+    : [
+        exercises.length ? `${exercises.length} exercise${exercises.length === 1 ? "" : "s"}` : null,
+        planned ? `${planned} sets` : null,
+        cardio.length ? `${cardio.length} cardio` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
 
   return (
-    <section ref={sectionRef} className={`ts-day${dayDone ? " done" : ""}`}>
-      <button type="button" className="ts-day-head" onClick={onToggle} aria-expanded={open}>
-        <div className="ts-day-head-main">
-          <div className="ts-day-title">{title}</div>
-          <div className="ts-day-sub">
-            {dayDone
-              ? "Session complete"
-              : position > 0
-              ? `Exercise ${position} of ${exercises.length}`
-              : [exercises.length ? `${exercises.length} exercises` : null, cardio.length ? `${cardio.length} cardio` : null].filter(Boolean).join(" · ")}
-          </div>
-        </div>
-        <span className="ts-day-head-right">
-          <span className={`ts-day-pill${dayDone ? " done" : ""}`}>
-            {logged} / {planned} sets
-          </span>
-          <span className={`ts-chev${open ? " up" : ""}`} aria-hidden="true">
-            <ChevronDownIcon />
-          </span>
+    <section ref={sectionRef} className={`tr-session${open ? " open" : ""}${dayDone ? " done" : ""}`}>
+      <button type="button" className="tr-session-head" onClick={onToggle} aria-expanded={open}>
+        <span className="tr-session-main">
+          <span className="tr-session-title">{title}</span>
+          <span className="tr-session-sub">{sub}</span>
         </span>
+        {/* Green once every set is logged; plain until then. */}
+        <span className={`tr-pill${dayDone ? " done" : ""}`}>
+          {logged} / {planned} sets
+        </span>
+        <span className={`tr-chev${open ? " up" : ""}`} aria-hidden="true" />
       </button>
 
       {open && (
-        <div className="ts-list">
+        <div className="tr-session-body ts-list">
           {gyms.length > 1 && <GymPicker gyms={gyms} gymId={gymId} onPick={pickGym} />}
           {exercises.map((ex, i) =>
             ex.id === expandedId ? (
@@ -383,26 +387,15 @@ function ExpandedExercise({
   const unitLabel = unit === "kg" ? "kg" : "lbs";
   // A weight typed before the flip, converted, so flipping keeps it.
   const [carried, setCarried] = useState<string | null>(null);
-  // What is in the weight box as it is typed, for its live kg line in lbs mode.
-  const [typedLbs, setTypedLbs] = useState<string | null>(null);
   const show = (kg: number | null) => (kg == null ? "" : String(kgToUnit(kg, unit)));
-  // A set's weight cell: the figure, and in lbs mode its kg underneath.
-  const weightCell = (kg: number | null) =>
-    kg == null ? (
-      "–"
-    ) : (
-      <>
-        {show(kg)}
-        {unit === "lb" && <small className="ts-alt">{kgWhole(kg)} kg</small>}
-      </>
-    );
+  // A set's weight cell: the figure in the unit on the toggle, nothing else.
+  const weightCell = (kg: number | null) => (kg == null ? "–" : show(kg));
   const flipUnit = () => {
     const next: WeightUnit = unit === "kg" ? "lb" : "kg";
     const form = document.getElementById(formId) as HTMLFormElement | null;
     const el = form?.elements.namedItem("weight") as HTMLInputElement | null;
     const typed = el && el.value.trim() !== "" ? Number(el.value) : NaN;
-    setCarried(Number.isFinite(typed) ? String(next === "kg" ? kgWhole(unitToKg(typed, "lb")) : kgToUnit(typed, "lb")) : null);
-    setTypedLbs(null);
+    setCarried(Number.isFinite(typed) ? String(next === "kg" ? kgToUnit(unitToKg(typed, "lb"), "kg") : kgToUnit(typed, "lb")) : null);
     setUnit(next);
   };
 
@@ -414,9 +407,7 @@ function ExpandedExercise({
   });
 
   const targets = [
-    exercise.targetWeight != null
-      ? { value: show(exercise.targetWeight), unit: unit === "lb" ? `lbs · ${kgWhole(exercise.targetWeight)} kg` : unitLabel }
-      : null,
+    exercise.targetWeight != null ? { value: show(exercise.targetWeight), unit: unitLabel } : null,
     exercise.reps ? { value: exercise.reps, unit: "reps" } : null,
     exercise.targetRpe != null ? { value: `${exercise.targetRpe}`, unit: "rpe" } : null,
     exercise.distance ? { value: exercise.distance, unit: "distance" } : null,
@@ -446,7 +437,6 @@ function ExpandedExercise({
       setEditingId(null);
       setReps("");
       setCarried(null);
-      setTypedLbs(null);
     }
   };
 
@@ -459,37 +449,24 @@ function ExpandedExercise({
   };
   const inputs = (defaults: { weight: string; reps: string; rpe: string }, key: string) => (
     <>
-      {askWeight &&
-        (() => {
-          // In lbs mode the box carries its kg underneath, live as it is typed.
-          const lbText = typedLbs ?? carried ?? defaults.weight;
-          const lbValue = lbText.trim() === "" ? NaN : Number(lbText);
-          return (
-            // The unit in the key refills the box with the converted figure.
-            <span key={`w-${key}-${unit}`} className="ts-weight-cell">
-              <input
-                form={formId}
-                name="weight"
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                onFocus={selectAll}
-                onClick={selectAll}
-                onInput={(e) => {
-                  tidyDecimal(e);
-                  setTypedLbs(e.currentTarget.value);
-                }}
-                defaultValue={carried ?? defaults.weight}
-                aria-label={`Weight in ${unitLabel}`}
-                className="ts-input"
-                required
-              />
-              {unit === "lb" && (
-                <small className="ts-alt">{Number.isFinite(lbValue) ? `${kgWhole(unitToKg(lbValue, "lb"))} kg` : "kg"}</small>
-              )}
-            </span>
-          );
-        })()}
+      {askWeight && (
+        <input
+          // The unit in the key refills the box with the converted figure.
+          key={`w-${key}-${unit}`}
+          form={formId}
+          name="weight"
+          type="text"
+          inputMode="decimal"
+          autoComplete="off"
+          onFocus={selectAll}
+          onClick={selectAll}
+          onInput={tidyDecimal}
+          defaultValue={carried ?? defaults.weight}
+          aria-label={`Weight in ${unitLabel}`}
+          className="ts-input"
+          required
+        />
+      )}
       <input
         key={`r-${key}`}
         form={formId}
@@ -601,7 +578,6 @@ function ExpandedExercise({
                 onClick={() => {
                   setEditingId(log.id);
                   setCarried(null);
-                  setTypedLbs(null);
                   setReps(log.reps != null ? String(log.reps) : "");
                 }}
               >
@@ -670,7 +646,6 @@ function ExpandedExercise({
             onClick={() => {
               setEditingId(null);
               setCarried(null);
-              setTypedLbs(null);
             }}
             disabled={pending}
           >

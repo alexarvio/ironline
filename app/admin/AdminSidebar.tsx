@@ -80,6 +80,9 @@ export default function AdminSidebar({
       <ClientRoster clients={clients} selectedId={selectedId} />
 
       <CoachFooter name={nameFromEmail(coachEmail)}>
+        <Link href="/admin/profile" role="menuitem" className="ad-rail-menu-link">
+          Your profile
+        </Link>
         <form action={logoutAction}>
           <button type="submit" role="menuitem">
             Sign out

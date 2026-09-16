@@ -85,6 +85,9 @@ export type CalorieLog = {
   logged_at?: string;
   /** A line for the coach: "ate out, estimate". */
   note?: string | null;
+  /** The kind of day the client said it was when logging. Absent on older
+      logs, which fall back to whether a set was logged that date. */
+  day_type?: "training" | "rest" | null;
 };
 // A client's note on a check-in: why yesterday's steps were low, what
 // the weekly numbers don't say. One per section per period.
@@ -110,6 +113,33 @@ export type ClientExerciseNote = {
 // goals with no gym on them count as there, and it is the gym the coach's
 // Weight column speaks for. Removing a gym only hides it, so its history
 // stays readable.
+// A coach's profile, written by the coach at /admin/profile and read by their
+// clients from the Account tab. One row per coach user. Photos live under
+// /uploads/coaches/{coach_id}/.
+export type CoachProfile = {
+  coach_id: number;
+  display_name: string | null;
+  title: string | null;
+  headline: string | null;
+  location: string | null;
+  languages: string | null;
+  years_coaching: number | null;
+  hero_path: string | null;
+  candid_path: string | null;
+  intro: string | null;
+  bio: string | null;
+  quote: string | null;
+  specialties: string[] | null;
+  studies: { title: string; place: string; year: string }[] | null;
+  /** Newest first. */
+  experience: { years: string; role: string; place: string }[] | null;
+  outside: string | null;
+  reply_note: string | null;
+  /** Unpublished, the client sees only a minimal card. */
+  published: boolean | null;
+  updated_at: string | null;
+};
+
 export type ClientGym = {
   id: number;
   client_id: number;
@@ -693,6 +723,7 @@ export type Data = {
   client_exercise_notes: ClientExerciseNote[];
   client_program_notes: ClientProgramNote[];
   client_gyms: ClientGym[];
+  coach_profiles: CoachProfile[];
   cardio_entries: CardioEntry[];
   cardio_logs: CardioLog[];
   // The last COACH_RESET_TOKEN value that was acted on (see
@@ -724,6 +755,7 @@ function emptyData(): Data {
     client_exercise_notes: [],
     client_program_notes: [],
     client_gyms: [],
+    coach_profiles: [],
     cardio_entries: [],
     cardio_logs: [],
     exercises: [],

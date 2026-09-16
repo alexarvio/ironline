@@ -1,164 +1,206 @@
 # Ironline UI guidelines
 
-Rules for how the app looks, so new screens match the old ones without discussion. Written from what the code already does in `app/globals.css`; where the code disagrees with itself, this doc picks one and marks the other **to retire**.
+How the app looks, so a new screen matches the ones already there without discussion.
 
-Status: **draft for agreement**. Sections marked ⚖ need a decision.
+Status: **decided 16 Sep 2026**. The eight open questions in the previous draft were settled on the
+design system page (https://claude.ai/artifact/HqBeb5YUR9jeftwRbAKtP5), which also holds swatches,
+component specimens and a screen-by-screen table of what each screen uses today. This file is the
+short version that lives with the code.
+
+Nothing was swept through the stylesheet on that date: **new and touched code follows this file, the
+rest catches up screen by screen.** §10 lists what each screen still needs.
 
 ---
 
 ## 1 · Typefaces
 
-Two faces, loaded from Google Fonts at the top of `globals.css`.
+| Role | Face | Where |
+|---|---|---|
+| Everything | **Archivo** 400–800 | body, tables, buttons, pills, inputs, labels, figures |
+| Wordmark | **Kirana** (`--font-brand`, local) | "IRONLINE" in the client top bar, uppercase, 17–18px |
+| Display figures | **Newsreader** 500–600 | a big figure or a dialog title, never in a table, button, pill or input |
 
-| Role | Face | Weights loaded | Where |
-|---|---|---|---|
-| Everything | **Manrope** | 400 500 600 700 800 | body, tables, buttons, pills, inputs, eyebrows |
-| Display only | **Newsreader** (serif) | 500 600 700 | the client's name on Home, a few big headings |
-
-Rules
-
-- Manrope is the default. If you have not got a reason, it is Manrope.
-- Newsreader is for one line per screen at most, at 22 px or larger, and never in a table, button, pill or input.
-- Fallbacks stay as declared: `ui-sans-serif, system-ui, -apple-system, "Segoe UI"` for Manrope, `Georgia, serif` for Newsreader.
-- Numbers that sit in columns (kcal, kg, sets, dates) get `font-variant-numeric: tabular-nums` so they line up.
+- Manrope is retired. `--font-sans` should resolve to Archivo everywhere; the `body:has(.ad-shell)`
+  override and the per-tab overrides in `.nd`, `.tr` and `.ci-screen` collapse into one root rule
+  once the Manrope screens are converted.
+- Libre Baskerville is retired: nothing reads the `--font-serif` override in `.nd`, and `.tr` uses it
+  in one place by accident (the locked-week title).
+- Numbers that sit in columns get `font-variant-numeric: tabular-nums`.
 
 ## 2 · Type scale
 
-Nine sizes. Do not invent a tenth; pick the nearest.
+Ten sizes, px only, no half pixels. Pick the nearest; do not invent an eleventh.
 
-| Token | Size | Weight | Use |
-|---|---|---|---|
-| Display | 40 px | 800, letter-spacing −0.02 em | one hero figure per card (the kcal number, a weight) |
-| Title | 22 px | 800 | dialog titles, the client's name |
-| Heading | 16–17 px | 800 | summary line in a navy band, section titles |
-| Body strong | 13.5 px | 800 | the primary cell in a row (goal text, exercise name, supplement name) |
-| Body | 13 px | 500–600 | ordinary text, notes, inputs |
-| Small | 12–12.5 px | 500–700 | secondary cell text, footers, hints beside a control |
-| Label | 11 px | 800, +0.06 em, uppercase | table headers, pills, meta lines |
-| Eyebrow | 10–11 px | 800, +0.12–0.14 em, uppercase | the word above a heading (PHASES, DAILY TARGETS) |
-| Micro | 9.5–10 px | 800, uppercase | weekday letters under a bar, badges inside a bar |
+| Role | Size / weight | Use |
+|---|---|---|
+| Display | 32 / 700, −0.015em | the one big line on a screen (programme name) |
+| Title | 22 / 700 | card titles, dialog titles, the client's name |
+| Section | 18 / 600 | a heading above a group |
+| Figure | 28 / 500, tabular | kcal, days trained, a weight |
+| Body strong | 14 / 700 | the primary cell in a row (exercise, goal, supplement) |
+| Body | 14 / 400–500 | ordinary text and notes (16 in any input, see §6) |
+| Small | 12 / 500–600 | secondary cells, footers, hints |
+| Label | 11 / 700, +0.12em, uppercase | eyebrows, table headers, meta lines |
+| Micro | 10 / 800, +0.1em, uppercase | badges, weekday letters |
+| Coach dense | 12.5–13 | coach tables and rows, where 14 wastes the screen |
 
-Weights: **800** for anything that names or measures, **700** for pills and buttons, **500–600** for reading text. 400 is only for long paragraphs the client reads.
-
-⚖ *The code currently uses 10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5 px all at once. Proposal: collapse the halves (10.5 → 10 or 11, 11.5 → 11 or 12) when a file is next touched. No big sweep.*
+The Label recipe is one recipe: **11 / 700 / +0.12em / Muted**. It is the single biggest source of
+drift — the same role currently appears at six letter-spacings and three weights.
 
 ## 3 · Colour
-
-### Core
-
-| Name | Hex | Use |
-|---|---|---|
-| Ink | `#141a24` | headings and primary cell text |
-| Text | `#313851` | body text |
-| Muted | `#5b6474` | labels, secondary cells, table headers (4.9:1 on white, do not lighten) |
-| Faint | `#8b93a1` | placeholders, hints, footers, dashes, the × on a row |
-| Disabled | `#a0a7b3` | missed-day rows, "not logged", inactive icons |
-| Hairline | `#eceff3` | row dividers, cell borders inside a card |
-| Border | `#dfe3e8` | card outline, input outline on hover/focus |
-| Surface | `#ffffff` | cards, inputs |
-| Head fill | `#fafbfc` | table header and footer strips |
-| Page | `#f8f9fb` | app background |
-| Raised | `#edf0f4` | left rail, right panel |
 
 ### Brand
 
 | Name | Hex | Use |
 |---|---|---|
-| Navy | `#1e3a6e` | card header bands, primary buttons on white, the Now marker |
-| Accent | `#2f5d8f` | links, focus rings, protein bar, selected states on light fills |
-| Accent tint | `#e6ecf3` | selected row, icon circles, cadence pills |
+| Navy | `#1e3a6e` | primary buttons, the pending bar, the navy Home card |
+| Accent | `#2f5d8f` | links, focus rings, selected states, text buttons |
+| Banner | `#D5DEEF → #E3E9F5 → #F4F7FC` | every client tab's banner (light); ink text, navy for the selected chip |
+| Tint | `#e6ecf3` | card header bands, selected rows, icon circles |
 
-White on Navy is 10.7:1. White on Accent is 6.2:1. Both pass.
+Retire: `#081F5C`, `#1b3f6e`, `#334EAC`, `#3B5A8C`, `#5987a8`, `#7C9DE0`, `#3a3390`, and `#313851`
+wherever it is standing in for a blue.
 
-### Status
+### Greys
 
-Three meanings, three colours, always the same three.
-
-| Meaning | Text / fill | Tint (behind text) | Examples |
-|---|---|---|---|
-| Good / on target / done | `#2f7a3f` | `#dff3ea` (text `#0f5c46`) | within ±150 kcal, goal reached, week trained, Metric pill |
-| Warning / off target / slipped | `#b3471d` | `#fbe9e0` | over/under target, goal slipped, unsaved changes |
-| Destructive | `#a32d2d` | `#fbeaea` | delete hover, cancelled meeting |
-
-Rule: a colour carries a meaning. Green never decorates; orange never means "training day". If a thing has no status it is grey.
-
-### Category pills
-
-Pills that classify rather than judge use tints, not status colours.
-
-| Category | Tint | Text |
+| Name | Hex | Use |
 |---|---|---|
-| Training day / Exercise / Post-workout | `#e6e4fa` | `#3a3390` |
-| Progress pictures identity, off the training tint (Home upload card, open sheet on the Progress pictures screen; nowhere else in the client app) | `#f1f0fc`, border `#d9d6f5`, rule `#e6e3f7` | `#211d5e`; eyebrow `#6b64ab`; button / filled bar `#3a3390`; uploading `#8b84d6`; missing `#ddd9f4` |
-| Rest day / neutral / Before bed | `#eef0f3` | `#5b6474` |
-| With breakfast / draft programme | `#fff3dc` | `#8a5a12` |
-| Metric / nutrition track | `#dff3ea` | `#0f5c46` |
-| Habit / lifestyle track | `#efede6` | `#4a4a45` |
-| Feed: Measurements (check-ins, measurements, progress pictures) | `#e3edf7` | `#24507c` |
-| Feed: client Note (and the count on the Notes filter); the note text itself sits in `#fff8ea`, border `#f3e2bd`, text `#4a3a1a` | `#fff3dc` | `#8a5a12` |
+| Ink | `#141a24` | headings, first cell in a row |
+| Text | `#313851` | body copy |
+| Muted | `#5b6474` | labels, second cells, table headers (4.9:1 on white) |
+| Faint | `#8b93a1` | placeholders, hints, footers |
+| Border | `#dfe3e8` | card and input outlines |
+| Hairline | `#eceff3` | dividers inside a card |
+| Page | `#F4F7FC` | every screen background, client and coach |
+| Raised | `#edf0f4` | coach rail and client panel |
+| Surface | `#ffffff` | cards, inputs |
 
-Macro bars: protein `#2f5d8f`, carbs `#3f6e46`, fat `#9a5a33`. These are chart colours only.
+Retire: `#5b6472`, `#8b93a0`, `#14171c`, `#c2cbd3`, `#c3c9d2`, and the blue-tinted set
+`#3d4a68` / `#6C7A9C` / `#97A3BD`. Also `#f8f9fb` and `#F7F9FC` as page colours — the page is
+`#F4F7FC`. `--border` and `--fp-line` should be changed to `#dfe3e8` at the token, not rule by rule.
 
-### To retire ⚖
+### Status — a colour always carries a meaning
 
-The stylesheet has near-duplicates from two design passes. New code uses the left column; the right column goes when a file is next touched.
+| Meaning | Text / fill | Tint |
+|---|---|---|
+| Good / on target / done | `#2f7a3f` | `#dff3ea` (text `#0f5c46`) |
+| Warning / off target / draft / unsaved | `#b3471d` | `#fbe9e0` |
+| Destructive | `#a32d2d` | `#fbeaea` |
 
-| Keep | Retire |
-|---|---|
-| Muted `#5b6474` | `#5b6472` |
-| Faint `#8b93a1` | `#8b93a0` |
-| Border `#dfe3e8` | `#c2cbd3`, `#c3c9d2` |
-| Good `#2f7a3f` | `#3f6e46` (except as the carbs bar), `#1f7a4d` |
-| Warning `#b3471d` | `#9a5a33` (except as the fat bar), `#b8471f` |
-| Destructive `#a32d2d` | `#9b2c2c`, `#a13a3a` |
+Green never decorates; orange never means "training day". No status, no colour — it is grey.
+Retire `#3f6e46`, `#1f7a4d`, `#9a5a33`, `#b8471f`, `#a13a3a`, `#9b2c2c`.
 
-## 4 · Cards and bands
+### Category tints
 
-The pattern every admin tab now follows (Plan, Meetings, Nutrition):
+Classify, never judge: training `#e6e4fa` / `#3a3390`, nutrition `#dff3ea` / `#0f5c46`, lifestyle
+`#efede6` / `#4a4a45`, feed note `#fff3dc` / `#8a5a12`, measurements `#e3edf7` / `#24507c`,
+neutral `#eef0f3` / `#5b6474`. Macro chart hues stay: protein `#334EAC`, carbs `#D99A2B`,
+fat `#2E8B7A`.
 
-- Card: white, 1 px Border, radius **12 px**, cards stacked with 18 px between.
-- Header band: Navy, padding 14 px 22 px, white text. Left: Eyebrow, then optionally one Heading line where the tail after the first clause is 600 weight at 75 % opacity. Right: a pill switch and at most one white primary button.
-- Table inside a card: header strip on Head fill with Label text; rows 9–10 px 22 px with a Hairline under each; footer strip on Head fill with Small Faint text.
-- Content padding inside a card body: **22 px** sides, 16–18 px top.
-
-## 5 · Radii
+## 4 · Shape and space
 
 | Radius | Use |
 |---|---|
-| 999 px | pills, switches, share bars, progress tracks |
-| 12 px | cards, dialogs |
-| 10 px | inner cells (macro cell, textarea) |
-| 8 px | inputs, small buttons |
-| 6 px | inline-editable cell outline, chips inside tables |
-| 4 px 4 px 0 0 | chart bars |
+| 999px | pills, switches, progress tracks |
+| 18px | client cards (phone) |
+| 12px | coach cards, dialogs, client primary buttons, inner tiles |
+| 10px | inputs, notes, inner cells |
+| 8px | coach buttons, chips in tables |
+| 6px | inline-editable cells, category tags |
 
-Nothing else. 5 px, 7 px and 99 px exist in the code and should become 6, 8 and 999.
+Retire 5, 7, 9, 14, 16, 22, 24 and 99px.
+
+Spacing stops: **4, 6, 8, 10, 12, 14, 16, 18, 22**. Cards 18px apart; controls in a row 10px; label
+to value 4–6px. Coach card body: 22px sides, 16–18px top.
+
+Shadows, one per job: client card `0 12px 30px -20px rgba(8,31,92,.4)`, popover
+`0 12px 28px rgba(20,23,28,.16)`, dialog `0 18px 44px rgba(20,23,28,.22)`, segmented-control thumb
+`0 1px 2px rgba(20,30,50,.12)`. Coach cards have no shadow — the border does that work.
+
+## 5 · Motion
+
+- **150ms ease** — hover, a bar turning solid, a chevron.
+- **300ms ease** — something moving or reordering.
+- **600ms `cubic-bezier(.22,1,.36,1)`** — a figure earning itself: a ring filling, a count-up, a tick.
+- All of it behind `prefers-reduced-motion`, including JS timers and `behavior: "smooth"` scrolls.
 
 ## 6 · Controls
 
-- **Primary button**: white on Navy inside a band; Navy on white elsewhere. One per card.
-- **Secondary button**: white, 1 px Border, Text colour.
-- **Pill switch**: Raised track, white active segment, 12 px 800.
-- **Inline-editable cell**: transparent border at rest, Border on hover and focus, white fill on focus. No save button; saves on blur.
-- **Pending bar** (blue strip with Discard / Apply): the only way batched edits land. Do not add per-row save buttons next to it.
-- **Confirm dialog**: needed before anything that moves dates, deletes, or changes what the client sees while a phase is live.
+- **Primary button**: Navy fill, white text, one per card. Client: 48px tall, radius 12, 14 / 700,
+  full width in a dock. Coach: 34px, radius 8, 12 / 800. The label says what happens ("Deploy now").
+- **Secondary**: white, 1px Border, Navy text, same geometry as the primary beside it.
+- **Text button**: Accent, no fill, no border.
+- **Destructive**: outlined `#a32d2d`; filled only as the confirm inside a dialog.
+- **Segmented control**: tint track, white active segment with the thumb shadow, Navy text.
+  One treatment — not the filled-accent or filled-black variants.
+- **Pill**: radius 999, 11 / 800, +0.06em, uppercase. Category tag: radius 6, same type.
+- **Inputs**: white, 1px Border, radius 10; focus turns the border Accent, no outline, no shift.
+  **On the phone every input is 16px** or iOS zooms the page. Client inputs are at least 44px tall.
+- **Inline-editable cell**: transparent at rest, Border on hover, white on focus, saves on blur.
+- **Tap targets are 44px**; where the control is smaller, expand it with an invisible `::after`.
+- **Coach edits queue on the pending bar** — it is the only way batched edits land. No per-row save
+  buttons beside it. A confirm dialog is needed before anything that moves dates, deletes, or changes
+  what the client sees while a phase is live.
 
-## 7 · Spacing
+## 7 · Client page model
 
-An 2 px grid with these stops: 4, 6, 8, 10, 12, 14, 16, 18, 22. Gaps between controls in a row: 10 px. Between label and value: 4–6 px.
+Every client tab opens the same way:
 
-## 8 · Client app
+1. The fixed top bar (burger · IRONLINE · bell), off-white with Navy, see-through over a banner
+   until the page scrolls.
+2. A full-bleed banner holding the tab's one big fact: a Label eyebrow, a Display line, and a
+   progress line where there is one. Side padding 22, bottom 58, top `calc(var(--topbar-h) + 2px)`.
+3. The first card pulled up **−36px** over the banner: radius 18, no border, soft shadow.
+4. `.tr-body` / `.nd-body` below: a flex column, 16px gap, 0 16px padding.
 
-Same faces, same status colours, same pills. Differences: the Home screen uses the "home-dark" tokens (`--fp-*`) with Text `#313851` and Dim `#5b6472` (these are the same greys, just older names), and Newsreader for the client's name. Anything new on the client side should read this doc, not copy an older client screen.
+Home and Settings still use their own shapes (a card stack and flat rows); they move onto this model
+when they are next reworked.
 
-## 9 · Browser floor
+## 8 · Coach page model
 
-iOS Safari 15.6 and up (a live tester is on iOS 16.1). No CSS that needs newer than that: container queries are fine, `:has()` is fine, but check caniuse before anything exotic.
+- Card: white, 1px Border, radius 12, 18px apart.
+- Header band: the accent tint, padding 14px 22px, centred. Left: a Label eyebrow, optionally one
+  heading line. Right: a pill switch and at most one button.
+- Table in a card: header strip `#fafbfc` with Label text, rows 10px 22px with a Hairline under each,
+  footer strip with Small Faint text.
+- Left rail 240px, client panel 296px, both `#edf0f4`.
+
+## 9 · Words
+
+- The client never reads a coach word: no "deploy", no "phase id", no "client 5".
+- A control says what happens; the message after it says what happened.
+- Errors say what went wrong and what to do about it.
+
+## 10 · What each screen still needs
+
+| Screen | Outstanding |
+|---|---|
+| Client · Home | ✅ done 16 Sep (banner with name and goal, Archivo, colours, corners) |
+| Client · Training | ✅ done 16 Sep (colours, corners, labels, 16px inputs) |
+| Client · Training session | ✅ done 16 Sep, with the Training tab |
+| Client · Nutrition | ✅ done 16 Sep (colours, labels, pill switch, phase bar) |
+| Client · Check-in | ✅ done 16 Sep (colours, corners, pill switch, Save radius 12) |
+| Client · Settings | ✅ done 16 Sep (banner with name and photo, cards, Archivo, switches) |
+| Client · Notifications | ✅ done 16 Sep (Archivo, colours, centred title, bare back arrow) |
+| Client · Progress pictures | ✅ done 16 Sep (Archivo, centred title, corners, labels; purple kept) |
+| Client · Coach profile | Archivo; navy; serif kept for the display lines only |
+| Coach · all tabs | Label recipe; green `#3f6e46` confirms → Navy; page `#F4F7FC` |
+| Coach · calendar | still on the old cream palette |
+
+Also outstanding, app-wide: the duplicate `--fp-*` token set, the dead CSS blocks
+(`.training-dark`, `.ts-day-head`, `.tr-tile`, `.nt-*`, the second `.ad-nav`), the "Workout complete"
+card rendering in the wrong face because it is portalled to `body`, and the units preference in
+Settings that the Kg | Lbs switch ignores.
+
+## 11 · Browser floor
+
+iOS Safari 15.6 and up (a live tester is on 16.1). `:has()` and container queries are fine; check
+caniuse before anything newer.
 
 ---
 
-### Decisions needed ⚖
+### Decision log
 
-1. Collapse the half-pixel font sizes as files are touched — yes / no.
-2. Retire the duplicate greys, greens and oranges per the table in §3 — yes / no.
-3. Keep Newsreader for the client's name only, or drop the serif entirely.
+Settled 16 Sep 2026: Archivo everywhere · Navy `#1e3a6e` + Accent `#2f5d8f` · neutral greys ·
+page `#F4F7FC` · 18 phone / 12 desk radii · client primary radius 12 at 48px · Label 11 / 700 /
++0.12em · banner model on every client tab.
