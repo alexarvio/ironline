@@ -14459,7 +14459,7 @@ label.ci-pill { cursor: text; }
 .fdi-per-cell small { font-size: 10px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #5b6474; white-space: nowrap; }
 .fdi-amount-row { display: flex; align-items: flex-end; gap: 10px; }
 .fdi-amount, .fdi-unit { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.fdi-amount { flex: 0 0 110px; }
+.fdi-amount { flex: 1; }
 .fdi-unit { flex: 1; }
 .fdi-field-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
 .fdi-amount input { width: 100%; box-sizing: border-box; height: 44px; padding: 0 12px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; font-size: 16px; font-weight: 600; color: #141a24; outline: none; }
