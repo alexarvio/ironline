@@ -393,9 +393,39 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                       >
                         <span className="fdi-meal-title">{meal.label}</span>
                       </span>
-                      <button type="button" className={`fdi-meal-chev${folded.has(meal.id) ? "" : " up"}`} onClick={() => toggleFold(meal.id)} aria-expanded={!folded.has(meal.id)} aria-label={folded.has(meal.id) ? `Open ${meal.label}` : `Fold ${meal.label}`}>
-                        <ChevronDownIcon />
-                      </button>
+                      {meal.entries.length > 0 && (
+                        <button type="button" className={`fdi-meal-chev${folded.has(meal.id) ? "" : " up"}`} onClick={() => toggleFold(meal.id)} aria-expanded={!folded.has(meal.id)} aria-label={folded.has(meal.id) ? `Open ${meal.label}` : `Fold ${meal.label}`}>
+                          <ChevronDownIcon />
+                        </button>
+                      )}
+                      <span className="fdi-meal-spacer" />
+                      {meal.entries.length > 0 &&
+                        (meal.savedAs ? (
+                          <span className="fdi-icon-btn saved" title={`Saved as ${meal.savedAs}`} aria-label={`Saved as ${meal.savedAs}`} role="img">
+                            <BookmarkIcon filled />
+                          </span>
+                        ) : (
+                          <button type="button" className="fdi-icon-btn" onClick={() => setSavingMeal(savingMeal === meal.id ? null : meal.id)} aria-label={`Save ${meal.label} to add again`}>
+                            <BookmarkIcon />
+                          </button>
+                        ))}
+                      {!open && (
+                        <button
+                          type="button"
+                          className="fdi-icon-btn"
+                          onClick={() => {
+                            setFolded((prev) => {
+                              const next = new Set(prev);
+                              next.delete(meal.id);
+                              return next;
+                            });
+                            setPanel({ kind: "search", meal: meal.id });
+                          }}
+                          aria-label={`Add food to ${meal.label}`}
+                        >
+                          <PlusIcon />
+                        </button>
+                      )}
                       {meal.entries.length === 0 && meal.own ? (
                         <button
                           type="button"
@@ -522,23 +552,7 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                       />
                     ) : open?.kind === "custom" ? (
                       <CustomFoodPanel clientId={clientId} onCancel={() => setPanel({ kind: "search", meal: meal.id })} onCreated={(food) => setPanel({ kind: "amount", meal: meal.id, food })} />
-                    ) : (
-                      <div className="fdi-meal-foot">
-                        <button type="button" className="fdi-icon-btn" onClick={() => setPanel({ kind: "search", meal: meal.id })} aria-label={`Add food to ${meal.label}`}>
-                          <PlusIcon />
-                        </button>
-                        {meal.entries.length > 0 &&
-                          (meal.savedAs ? (
-                            <span className="fdi-icon-btn saved" title={`Saved as ${meal.savedAs}`} aria-label={`Saved as ${meal.savedAs}`} role="img">
-                              <BookmarkIcon filled />
-                            </span>
-                          ) : (
-                            <button type="button" className="fdi-icon-btn" onClick={() => setSavingMeal(savingMeal === meal.id ? null : meal.id)} aria-label={`Save ${meal.label} to add again`}>
-                              <BookmarkIcon />
-                            </button>
-                          ))}
-                      </div>
-                    )}
+                    ) : null}
                     </div>
                     </div>
                   </div>
