@@ -78,6 +78,8 @@ const HUE = { protein: "#334EAC", carbs: "#D99A2B", fat: "#2E8B7A" } as const;
 const n = (v: number) => Math.round(v).toLocaleString("en-US");
 const g = (v: number) => (Math.abs(v - Math.round(v)) < 0.05 ? String(Math.round(v)) : v.toFixed(1));
 const G_PER_OZ = 28.349523125;
+const ML_PER_FL_OZ = 29.5735295625;
+const ML_PER_CUP = 236.5882365;
 const amountLabel = (e: { grams: number; serving: string | null }) => (e.serving ? `${e.serving} · ${g(e.grams)} g` : `${g(e.grams)} g`);
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const addDays = (date: string, days: number) => {
@@ -840,22 +842,32 @@ function AmountPanel({
   onDone: () => void;
   onCancel: () => void;
 }) {
-  // A number and a unit. The unit list is grams, ounces, and the food's own
-  // portions ("cup", "large"), each worth so many grams; what is saved is
-  // number × unit, in grams, with the unit's name when it is a portion.
+  // A number and a unit. The unit list is grams, ounces, ml and l for a
+  // liquid, and the food's own portions ("cup", "large"), each worth so many
+  // grams; what is saved is number × unit, in grams, with the unit's name
+  // when it is not grams. A liquid is a food the catalog weighs by the fluid
+  // ounce (or a plain cup), which gives its density; the client's own foods
+  // are taken as water.
+  const liquid = food.servings.find(([label]) => /^fl oz\b/i.test(label)) ?? food.servings.find(([label]) => /^cup$/i.test(label));
+  const density = liquid ? liquid[1] / (/^fl oz/i.test(liquid[0]) ? ML_PER_FL_OZ : ML_PER_CUP) : food.group === "own" ? 1 : null;
   const units: { id: string; label: string; grams: number; portion: boolean }[] = [
     { id: "g", label: "g", grams: 1, portion: false },
     { id: "oz", label: "oz", grams: G_PER_OZ, portion: false },
+    ...(density ? [{ id: "ml", label: "ml", grams: density, portion: false }, { id: "l", label: "l", grams: density * 1000, portion: false }] : []),
     ...food.servings.map(([label, grams]) => ({ id: `p:${label}`, label, grams, portion: true })),
   ];
+  // A row opened again comes back in the unit it was entered in; a liquid
+  // starts in ml, anything with a portion in its first portion.
   const startUnit = entry
-    ? units.find((u) => u.portion && entry.serving?.endsWith(u.label))?.id ?? "g"
+    ? units.find((u) => u.portion && entry.serving?.endsWith(u.label))?.id ?? units.find((u) => !u.portion && u.id !== "g" && entry.serving?.endsWith(` ${u.label}`))?.id ?? "g"
+    : liquid && /^fl oz/i.test(liquid[0])
+    ? "ml"
     : food.servings.length
     ? `p:${food.servings[0][0]}`
     : "g";
   const [unitId, setUnitId] = useState(startUnit);
   const unit = units.find((u) => u.id === unitId) ?? units[0];
-  const startAmount = entry ? (unit.portion ? entry.grams / unit.grams : entry.grams) : unit.portion ? 1 : 100;
+  const startAmount = entry ? entry.grams / unit.grams : unit.portion ? 1 : unit.id === "ml" ? 250 : 100;
   const [amountText, setAmountText] = useState(g(startAmount));
   const [pending, start] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -868,7 +880,7 @@ function AmountPanel({
   const grams = amount * unit.grams;
   const k = grams / 100;
   const preview = { kcal: food.kcal * k, protein: food.protein * k, carbs: food.carbs * k, fat: food.fat * k };
-  const servingLabel = unit.portion ? `${amount === 1 ? "" : `${g(amount)} × `}${unit.label}` : unit.id === "oz" ? `${g(amount)} oz` : null;
+  const servingLabel = unit.portion ? `${amount === 1 ? "" : `${g(amount)} × `}${unit.label}` : unit.id !== "g" ? `${g(amount)} ${unit.label}` : null;
   const ok = grams > 0 && grams <= 5000 && !pending;
   // Changing the unit keeps the weight: 100 g becomes 3.5 oz, a cup becomes its grams.
   const changeUnit = (id: string) => {
