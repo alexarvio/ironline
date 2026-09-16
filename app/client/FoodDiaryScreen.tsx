@@ -1149,34 +1149,27 @@ function AmountPanel({
         </div>
       </div>
 
-      <div className="fdi-panel-actions">
-        <button type="button" className="fdi-primary" onClick={save} disabled={!ok}>
-          {pending ? "Saving…" : entry ? "Save" : `Add to ${mealLabel}`}
-        </button>
-        {entry && (
-          <button type="button" className="fdi-bin" onClick={() => setConfirmRemove(true)} disabled={pending} aria-label={`Remove ${food.name} from ${mealLabel}`}>
-            <TrashIcon />
+      {/* Removing is asked in place: the Save row becomes the question. */}
+      {confirmRemove ? (
+        <div className="fdi-confirm" role="group" aria-label={`Remove from ${mealLabel}?`}>
+          <span className="fdi-confirm-text">Remove from {mealLabel}?</span>
+          <button type="button" className="fdi-confirm-keep" onClick={() => setConfirmRemove(false)} autoFocus>
+            Keep
           </button>
-        )}
-      </div>
-      {confirmRemove && (
-        <div className="fdi-dialog-scrim" role="presentation" onClick={() => setConfirmRemove(false)}>
-          <div className="fdi-dialog" role="dialog" aria-modal="true" aria-labelledby="fdi-remove-title" onClick={(e) => e.stopPropagation()}>
-            <div>
-              <div className="fdi-eyebrow">{mealLabel}</div>
-              <h2 id="fdi-remove-title" className="fdi-dialog-title">
-                Remove this item?
-              </h2>
-            </div>
-            <div className="fdi-dialog-actions">
-              <button type="button" className="fdi-secondary" onClick={() => setConfirmRemove(false)} autoFocus>
-                Keep it
-              </button>
-              <button type="button" className="fdi-primary danger" onClick={remove} disabled={pending}>
-                Remove
-              </button>
-            </div>
-          </div>
+          <button type="button" className="fdi-confirm-remove" onClick={remove} disabled={pending}>
+            {pending ? "Removing…" : "Remove"}
+          </button>
+        </div>
+      ) : (
+        <div className="fdi-panel-actions">
+          <button type="button" className="fdi-primary" onClick={save} disabled={!ok}>
+            {pending ? "Saving…" : entry ? "Save" : `Add to ${mealLabel}`}
+          </button>
+          {entry && (
+            <button type="button" className="fdi-bin" onClick={() => setConfirmRemove(true)} disabled={pending} aria-label={`Remove ${food.name} from ${mealLabel}`}>
+              <TrashIcon />
+            </button>
+          )}
         </div>
       )}
     </div>

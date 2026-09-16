@@ -14480,7 +14480,14 @@ label.ci-pill { cursor: text; }
 .fdi-bin { flex: none; display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; color: #a32d2d; cursor: pointer; }
 .fdi-bin svg { width: 18px; height: 18px; }
 .fdi-bin:disabled { opacity: 0.5; cursor: default; }
-.fdi-primary.danger { background: #a32d2d; }
+/* The question, in place of the Save row. */
+.fdi-confirm { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 6px 0 14px; border-radius: 12px; background: #fbeaea; animation: fdi-confirm-in 0.15s ease; }
+.fdi-confirm-text { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: #a32d2d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fdi-confirm-keep { flex: none; height: 36px; padding: 0 12px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 14px; font-weight: 700; color: #313851; cursor: pointer; }
+.fdi-confirm-remove { flex: none; height: 36px; padding: 0 14px; border: 0; border-radius: 10px; background: #a32d2d; font: inherit; font-size: 14px; font-weight: 700; color: #fff; cursor: pointer; }
+.fdi-confirm-remove:disabled { opacity: 0.6; cursor: default; }
+@keyframes fdi-confirm-in { from { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) { .fdi-confirm { animation: none; } }
 .fdi-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .fdi-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .fdi-field.wide { grid-column: 1 / -1; }
