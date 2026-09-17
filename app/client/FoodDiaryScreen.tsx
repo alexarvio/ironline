@@ -8,7 +8,6 @@ import {
   addFoodEntryAction,
   addFoodMealAction,
   addSavedMealAction,
-  copyFoodMealAction,
   deleteSavedMealAction,
   saveMealAction,
   getFoodDiaryAction,
@@ -542,7 +541,6 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                         mealLabel={meal.label}
                         recent={diary.recent}
                         saved={diary.saved}
-                        previous={diary.previous}
                         onPick={(food) => setPanel({ kind: "amount", meal: meal.id, food })}
                         onCustom={() => setPanel({ kind: "custom", meal: meal.id })}
                         onCopied={() => {
@@ -753,7 +751,6 @@ function SearchPanel({
   mealLabel,
   recent,
   saved,
-  previous,
   onPick,
   onCustom,
   onCopied,
@@ -765,7 +762,6 @@ function SearchPanel({
   mealLabel: string;
   recent: FoodOptionView[];
   saved: FoodDiaryProps["saved"];
-  previous: FoodDiaryProps["previous"];
   onPick: (food: FoodOptionView) => void;
   onCustom: () => void;
   onCopied: () => void;
@@ -849,18 +845,6 @@ function SearchPanel({
       onCopied();
     });
   };
-  const copy = (p: FoodDiaryProps["previous"][number]) => {
-    const fd = new FormData();
-    fd.set("clientId", String(clientId));
-    fd.set("fromDate", p.date);
-    fd.set("fromMeal", p.meal);
-    fd.set("toDate", date);
-    fd.set("toMeal", meal);
-    startCopy(async () => {
-      await copyFoodMealAction(fd);
-      onCopied();
-    });
-  };
 
   return (
     <div className="fdi-panel">
@@ -871,7 +855,7 @@ function SearchPanel({
         </button>
       </div>
       {scanning && <BarcodeScanner onCode={onCode} onClose={() => setScanning(false)} />}
-      {(previous.length > 0 || saved.length > 0) && (
+      {saved.length > 0 && (
         <div className="fdi-modes" role="tablist">
           <button type="button" role="tab" aria-selected={mode === "search"} className={`fdi-mode${mode === "search" ? " on" : ""}`} onClick={() => setMode("search")}>
             Search
@@ -946,7 +930,7 @@ function SearchPanel({
         </>
       ) : (
         <div className="fdi-results">
-          {saved.length > 0 && <span className="fdi-results-label">Saved meals</span>}
+          <p className="fdi-hint">A meal you saved, the same foods and amounts, into {mealLabel}.</p>
           {saved.map((s) => (
             <div key={`s${s.id}`} className="fdi-result-row">
               <button type="button" className="fdi-result" onClick={() => addSaved(s)} disabled={copying}>
@@ -962,20 +946,6 @@ function SearchPanel({
                 ×
               </button>
             </div>
-          ))}
-          {previous.length > 0 && <span className="fdi-results-label">Other days</span>}
-          {previous.map((p) => (
-            <button key={`${p.date}|${p.meal}`} type="button" className="fdi-result" onClick={() => copy(p)} disabled={copying}>
-              <span className="fdi-result-main">
-                <span className="fdi-result-name">
-                  {p.dateLabel} · {p.mealLabel}
-                </span>
-                <span className="fdi-result-hint">{p.names.join(", ")}</span>
-              </span>
-              <span className="fdi-result-kcal">
-                {n(p.kcal)} <small>calories</small>
-              </span>
-            </button>
           ))}
         </div>
       )}
