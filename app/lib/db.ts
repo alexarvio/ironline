@@ -121,6 +121,8 @@ export type SavedDay = {
   id: number;
   client_id: number;
   name: string;
+  /** Training or rest, as the day was when saved. */
+  day_type?: "training" | "rest" | null;
   items: { meal: string; food_id: string; name: string; grams: number; serving: string | null; kcal: number; protein: number; carbs: number; fat: number }[];
   created_at: string;
 };

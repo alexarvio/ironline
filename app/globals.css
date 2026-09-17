@@ -14363,17 +14363,27 @@ label.ci-pill { cursor: text; }
 .fdi-push-tick { flex: none; font-size: 16px; font-weight: 800; color: #2f7a3f; }
 /* The meals, one card. */
 .fdi-list { margin-top: 16px; }
-/* An empty day: one folded card of days that can be copied onto it. */
-.fdi-copy { border: 1px solid #dfe3e8; border-radius: 18px; background: #fff; overflow: hidden; }
-.fdi-copy-head { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 56px; padding: 6px 12px 6px 18px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
-.fdi-copy-count { flex: 1; font-size: 12px; font-weight: 600; color: #8b93a1; }
-.fdi-copy-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px 10px 18px; border-top: 1px solid #eceff3; }
+/* An empty day: one folded card of days that can be copied onto it, with a navy band for a head. */
+.fdi-copy { border-radius: 18px; background: #fff; overflow: hidden; box-shadow: 0 12px 30px -20px rgba(8, 31, 92, 0.4); }
+.fdi-copy-head { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 56px; padding: 6px 12px 6px 18px; border: 0; background: linear-gradient(135deg, #1e3a6e, #2f5d8f); font: inherit; color: #fff; text-align: left; cursor: pointer; }
+.fdi-copy-title { font-size: 14px; font-weight: 700; }
+.fdi-copy-count { flex: 1; font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.75); }
+.fdi-copy-chev { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: rgba(255, 255, 255, 0.85); transition: transform 0.15s; }
+.fdi-copy-chev svg { width: 16px; height: 16px; }
+.fdi-copy-chev.up { transform: rotate(180deg); }
+.fdi-copy-row { display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 18px; border-top: 1px solid #eceff3; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.fdi-copy-row:first-child { border-top: 0; }
+.fdi-copy-row.asking { background: #fbeaea; }
+.fdi-copy-dot { flex: none; width: 8px; height: 8px; border-radius: 999px; background: #1e3a6e; }
+.fdi-copy-dot.rest { background: #0f5c46; }
+.fdi-copy-dot.training { background: #3a3390; }
+.fdi-copy-dot.saved { background: #5b6474; }
 .fdi-copy-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .fdi-copy-name { font-size: 14px; font-weight: 700; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fdi-copy-sub { font-size: 12px; color: #5b6474; font-variant-numeric: tabular-nums; }
-.fdi-copy-use { flex: none; height: 36px; padding: 0 14px; border: 0; border-radius: 10px; background: #e6ecf3; font: inherit; font-size: 13px; font-weight: 700; color: #1e3a6e; cursor: pointer; }
+.fdi-copy-use { flex: none; height: 34px; padding: 0 14px; border: 1px solid #dfe3e8; border-radius: 999px; background: #fff; font: inherit; font-size: 13px; font-weight: 700; color: #1e3a6e; cursor: pointer; }
 .fdi-copy-use:disabled { opacity: 0.6; cursor: default; }
-.fdi-copy-row .fdi-row-bin { margin-top: 0; }
+.fdi-copy-foot { margin: 0; padding: 10px 18px 12px; border-top: 1px solid #eceff3; font-size: 12px; color: #8b93a1; text-align: center; }
 .fdi-meals { border: 1px solid #dfe3e8; border-radius: 18px; background: #fff; overflow: hidden; }
 .fdi-meal { display: flex; flex-direction: column; border-top: 1px solid #eceff3; }
 .fdi-meal:first-child { border-top: 0; }

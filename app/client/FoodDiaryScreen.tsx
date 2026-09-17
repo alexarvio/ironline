@@ -76,7 +76,7 @@ export type FoodDiaryProps = {
   meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntryView[]; savedAs: string | null }[];
   recent: FoodOptionView[];
   saved: { id: number; name: string; kcal: number; count: number; names: string[] }[];
-  savedDays: { id: number; name: string; kcal: number; count: number }[];
+  savedDays: { id: number; name: string; kcal: number; count: number; dayType: "training" | "rest" | null }[];
   previous: { date: string; dateLabel: string; meal: FoodMeal; mealLabel: string; kcal: number; names: string[] }[];
   /** Dates in the last month with anything logged, for the dots on the week strip. */
   loggedDays: string[];
@@ -142,6 +142,7 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
   const [askForgetDay, setAskForgetDay] = useState<number | null>(null);
   // The Copy a day card, folded until opened.
   const [copyOpen, setCopyOpen] = useState(false);
+  const forgetHold = useRef<ReturnType<typeof setTimeout> | null>(null);
   const removeRow = (id: number) => {
     const fd = new FormData();
     fd.set("clientId", String(clientId));
@@ -451,12 +452,35 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                 });
               };
               const count = diary.savedDays.length + (last ? 1 : 0);
+              // Holding a saved day's row asks to forget it.
+              const holdRow = (id: number) => ({
+                onPointerDown: () => {
+                  forgetHold.current = setTimeout(() => {
+                    forgetHold.current = null;
+                    if (navigator.vibrate) navigator.vibrate(10);
+                    setAskForgetDay(id);
+                  }, 450);
+                },
+                onPointerUp: () => {
+                  if (forgetHold.current) clearTimeout(forgetHold.current);
+                  forgetHold.current = null;
+                },
+                onPointerCancel: () => {
+                  if (forgetHold.current) clearTimeout(forgetHold.current);
+                  forgetHold.current = null;
+                },
+                onPointerMove: () => {
+                  if (forgetHold.current) clearTimeout(forgetHold.current);
+                  forgetHold.current = null;
+                },
+                onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
+              });
               return (
                 <section className="fdi-copy">
                   <button type="button" className="fdi-copy-head" onClick={() => setCopyOpen((o) => !o)} aria-expanded={copyOpen}>
-                    <span className="fdi-meal-title">Copy a day</span>
-                    <span className="fdi-copy-count">{count}</span>
-                    <span className={`fdi-meal-chev${copyOpen ? " up" : ""}`} aria-hidden="true">
+                    <span className="fdi-copy-title">Copy a day</span>
+                    <span className="fdi-copy-count">{count === 1 ? "1 to choose from" : `${count} to choose from`}</span>
+                    <span className={`fdi-copy-chev${copyOpen ? " up" : ""}`} aria-hidden="true">
                       <ChevronDownIcon />
                     </span>
                   </button>
@@ -464,17 +488,19 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                     <div className="fdi-fold-inner">
                       {last && (
                         <div className="fdi-copy-row">
+                          <span className="fdi-copy-dot yday" aria-hidden="true" />
                           <span className="fdi-copy-main">
                             <span className="fdi-copy-name">{label === "Yesterday" ? "Yesterday" : label}</span>
-                            <span className="fdi-copy-sub">Every meal from that day · {n(kcal)} kcal</span>
+                            <span className="fdi-copy-sub">Every meal · {n(kcal)} kcal</span>
                           </span>
                           <button type="button" className="fdi-copy-use" onClick={copyLast} disabled={loading}>
-                            Copy
+                            Use
                           </button>
                         </div>
                       )}
                       {diary.savedDays.map((d) => (
-                        <div key={d.id} className="fdi-copy-row">
+                        <div key={d.id} className={`fdi-copy-row${askForgetDay === d.id ? " asking" : ""}`} {...holdRow(d.id)}>
+                          <span className={`fdi-copy-dot ${d.dayType ?? "saved"}`} aria-hidden="true" />
                           <span className="fdi-copy-main">
                             <span className="fdi-copy-name">{d.name}</span>
                             <span className="fdi-copy-sub">A day you saved · {n(d.kcal)} kcal</span>
@@ -489,17 +515,13 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                               </button>
                             </span>
                           ) : (
-                            <>
-                              <button type="button" className="fdi-copy-use" onClick={() => use(d.id)} disabled={loading}>
-                                Use
-                              </button>
-                              <button type="button" className="fdi-row-bin" onClick={() => setAskForgetDay(d.id)} disabled={loading} aria-label={`Forget saved day ${d.name}`}>
-                                <TrashIcon />
-                              </button>
-                            </>
+                            <button type="button" className="fdi-copy-use" onClick={() => use(d.id)} disabled={loading}>
+                              Use
+                            </button>
                           )}
                         </div>
                       ))}
+                      {diary.savedDays.length > 0 && <p className="fdi-copy-foot">Hold a saved day to forget it</p>}
                     </div>
                   </div>
                 </section>

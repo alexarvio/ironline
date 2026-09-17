@@ -7595,13 +7595,13 @@ export function addSavedMeal(clientId: number, id: number, date: string, meal: F
   return saved.items.length;
 }
 
-export type SavedDayView = { id: number; name: string; kcal: number; count: number };
+export type SavedDayView = { id: number; name: string; kcal: number; count: number; dayType: "training" | "rest" | null };
 
 export function listSavedDays(clientId: number): SavedDayView[] {
   return getData()
     .saved_days.filter((d) => d.client_id === clientId)
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
-    .map((d) => ({ id: d.id, name: d.name, kcal: Math.round(d.items.reduce((s, i) => s + i.kcal, 0)), count: d.items.length }));
+    .map((d) => ({ id: d.id, name: d.name, kcal: Math.round(d.items.reduce((s, i) => s + i.kcal, 0)), count: d.items.length, dayType: d.day_type ?? null }));
 }
 
 /** One whole day, kept under a name to log again. */
@@ -7613,6 +7613,7 @@ export function saveDay(clientId: number, date: string, name: string): SavedDay 
     id: allocId("saved_days"),
     client_id: clientId,
     name,
+    day_type: foodDayType(clientId, date),
     items: rows.map((e) => ({ meal: e.meal, food_id: e.food_id, name: e.name, grams: e.grams, serving: e.serving, kcal: e.kcal, protein: e.protein, carbs: e.carbs, fat: e.fat })),
     created_at: new Date().toISOString(),
   };
