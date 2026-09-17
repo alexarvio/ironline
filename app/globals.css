@@ -14403,15 +14403,20 @@ label.ci-pill { cursor: text; }
 .fdi-meal-remove { padding: 8px 12px; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 500; color: #8b93a1; cursor: pointer; }
 .fdi-fold-inner > .fdi-row-wrap:last-child > .fdi-row { padding-bottom: 14px; }
 /* The row being changed and its panel read as one block. */
-.fdi-row-wrap.selected { margin: 8px 12px 14px; border-radius: 12px; background: #F4F7FC; }
+.fdi-row-wrap.selected { flex-wrap: wrap; margin: 8px 12px 14px; padding-right: 8px; border-radius: 12px; background: #F4F7FC; }
+.fdi-row-wrap.selected > .fdi-panel { flex-basis: 100%; }
 .fdi-row-wrap.selected > .fdi-row { padding: 12px 14px 0; }
 .fdi-row-wrap.selected > .fdi-row .fdi-row-name { font-weight: 700; color: #1e3a6e; }
 .fdi-row-wrap.selected > .fdi-panel { margin: 0; padding-top: 10px; border-radius: 0 0 12px 12px; }
 .fdi-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 18px 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.fdi-row-wrap { display: flex; align-items: center; gap: 4px; padding-right: 8px; }
+.fdi-row-wrap > .fdi-row { flex: 1; min-width: 0; }
+.fdi-row-bin { flex: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; margin-top: 12px; border: 0; background: none; color: #8b93a1; cursor: pointer; }
+.fdi-row-bin svg { width: 16px; height: 16px; }
+.fdi-row-ask { flex: none; display: inline-flex; align-items: center; gap: 4px; margin-top: 12px; }
 .fdi-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .fdi-row-name { font-size: 14px; font-weight: 500; color: #313851; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fdi-row-amount { font-size: 12px; font-weight: 500; color: #8b93a1; }
-.fdi-row-kcal { flex: none; font-size: 12px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
 .fdi-add { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 12px 18px 14px; border: 0; background: none; font: inherit; font-size: 14px; font-weight: 700; color: #2f5d8f; text-align: left; cursor: pointer; }
 .fdi-add-plus { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; background: #e6ecf3; color: #1e3a6e; }
 .fdi-add-plus svg { width: 12px; height: 12px; }

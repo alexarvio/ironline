@@ -136,6 +136,20 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
   const [namingMeal, setNamingMeal] = useState(false);
   // Naming the day to save it.
   const [namingDay, setNamingDay] = useState(false);
+  // The row whose bin was tapped: it becomes the question until answered.
+  const [askRemove, setAskRemove] = useState<number | null>(null);
+  const removeRow = (id: number) => {
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("id", String(id));
+    setAskRemove(null);
+    if (panel?.kind === "amount" && panel.entry?.id === id) setPanel(null);
+    startLoad(async () => {
+      await removeFoodEntryAction(fd);
+      const next = await getFoodDiaryAction(clientId, date);
+      if (next) setDiary(next);
+    });
+  };
   // Which meal is being saved under a name.
   const [savingMeal, setSavingMeal] = useState<FoodMeal | null>(null);
   // Meals fold shut to their name and figures, so a long day stays short.
@@ -595,10 +609,25 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                         >
                           <span className="fdi-row-main">
                             <span className="fdi-row-name">{e.name}</span>
-                            <span className="fdi-row-amount">{amountLabel(e)}</span>
+                            <span className="fdi-row-amount">
+                              {amountLabel(e)} · {n(e.kcal)} kcal
+                            </span>
                           </span>
-                          <span className="fdi-row-kcal">{n(e.kcal)} kcal</span>
                         </button>
+                        {askRemove === e.id ? (
+                          <span className="fdi-row-ask">
+                            <button type="button" className="fdi-confirm-keep" onClick={() => setAskRemove(null)} autoFocus>
+                              Keep
+                            </button>
+                            <button type="button" className="fdi-confirm-remove" onClick={() => removeRow(e.id)} disabled={loading}>
+                              Remove
+                            </button>
+                          </span>
+                        ) : (
+                          <button type="button" className="fdi-row-bin" onClick={() => setAskRemove(e.id)} aria-label={`Remove ${e.name}`}>
+                            <TrashIcon />
+                          </button>
+                        )}
                         {selected && open?.kind === "amount" && (
                           <AmountPanel
                             clientId={clientId}
@@ -1243,11 +1272,7 @@ function AmountPanel({
           <button type="button" className="fdi-primary" onClick={save} disabled={!ok}>
             {pending ? "Saving…" : entry ? "Save" : `Add to ${mealLabel}`}
           </button>
-          {entry && (
-            <button type="button" className="fdi-bin" onClick={() => setConfirmRemove(true)} disabled={pending} aria-label={`Remove ${food.name} from ${mealLabel}`}>
-              <TrashIcon />
-            </button>
-          )}
+
         </div>
       )}
     </div>
