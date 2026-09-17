@@ -411,7 +411,48 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
               });
             };
             return (
-              <div className={`fdi-push${same ? " done" : ""}`}>
+              <div className={`fdi-push${same ? " done" : ""}${namingDay ? " naming" : ""}`}>
+                {namingDay ? (
+                  <form
+                    className="fdi-push-name"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const name = String(new FormData(e.currentTarget).get("name") ?? "").trim();
+                      if (!name) return;
+                      const fd = new FormData();
+                      fd.set("clientId", String(clientId));
+                      fd.set("date", date);
+                      fd.set("name", name);
+                      setNamingDay(false);
+                      startLoad(async () => {
+                        await saveDayAction(fd);
+                        const next = await getFoodDiaryAction(clientId, date);
+                        if (next) setDiary(next);
+                      });
+                    }}
+                  >
+                    <input
+                      id="fdi-save-day-name"
+                      name="name"
+                      type="text"
+                      placeholder="Name this day"
+                      maxLength={40}
+                      autoComplete="off"
+                      autoFocus
+                      aria-label="Name for the saved day"
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") setNamingDay(false);
+                      }}
+                      onBlur={(e) => {
+                        if (!e.currentTarget.value.trim() && !e.relatedTarget) setNamingDay(false);
+                      }}
+                    />
+                    <button type="submit" className="fdi-push-btn">
+                      Save
+                    </button>
+                  </form>
+                ) : (
+                <>
                 <span className="fdi-push-text">
                   {total === 0 ? (
                     "Nothing logged yet"
@@ -435,6 +476,19 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                   </button>
                 )}
                 {same && <span className="fdi-push-tick" aria-hidden="true">✓</span>}
+                {/* Keeping the whole day to log again: outline to save, filled once it is. */}
+                {total > 0 &&
+                  (diary.savedDayAs ? (
+                    <span className="fdi-push-mark saved" role="img" title={`Saved as ${diary.savedDayAs}`} aria-label={`Saved as ${diary.savedDayAs}`}>
+                      <BookmarkIcon filled />
+                    </span>
+                  ) : (
+                    <button type="button" className="fdi-push-mark" onClick={() => setNamingDay(true)} disabled={loading} aria-label="Save this day to log again">
+                      <BookmarkIcon />
+                    </button>
+                  ))}
+                </>
+                )}
               </div>
             );
           })()}
@@ -796,60 +850,6 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
               })}
             </section>
 
-            {diary.meals.some((m) => m.entries.length > 0) &&
-              (namingDay ? (
-                <form
-                  className="fdi-new-meal"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const name = String(new FormData(e.currentTarget).get("name") ?? "").trim();
-                    if (!name) return;
-                    const fd = new FormData();
-                    fd.set("clientId", String(clientId));
-                    fd.set("date", date);
-                    fd.set("name", name);
-                    setNamingDay(false);
-                    startLoad(async () => {
-                      await saveDayAction(fd);
-                      const next = await getFoodDiaryAction(clientId, date);
-                      if (next) setDiary(next);
-                    });
-                  }}
-                >
-                  <input
-                    id="fdi-save-day-name"
-                    name="name"
-                    type="text"
-                    placeholder="Training day"
-                    maxLength={40}
-                    autoComplete="off"
-                    autoFocus
-                    aria-label="Name for the saved day"
-                    onKeyDown={(e) => {
-                      if (e.key === "Escape") setNamingDay(false);
-                    }}
-                    onBlur={(e) => {
-                      if (!e.currentTarget.value.trim() && !e.relatedTarget) setNamingDay(false);
-                    }}
-                    onFocus={(e) => {
-                      const el = e.currentTarget;
-                      setTimeout(() => el.scrollIntoView({ block: "center", behavior: "smooth" }), 250);
-                    }}
-                  />
-                  <button type="submit" className="fdi-new-meal-add">
-                    Save
-                  </button>
-                </form>
-              ) : diary.savedDayAs ? (
-                <p className="fdi-saved-day-note">
-                  <BookmarkIcon filled /> Saved as {diary.savedDayAs}
-                </p>
-              ) : (
-                <button type="button" className="fdi-add-meal" onClick={() => setNamingDay(true)}>
-                  <BookmarkIcon />
-                  Save this day
-                </button>
-              ))}
             <button type="button" className="fdi-add-meal" onClick={addMealNow} disabled={loading || namingId != null}>
               <PlusIcon />
               Add a meal

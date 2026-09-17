@@ -14361,6 +14361,12 @@ label.ci-pill { cursor: text; }
 .fdi-push-btn { flex: none; height: 36px; padding: 0 14px; border: 0; border-radius: 10px; background: #1e3a6e; font: inherit; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer; }
 .fdi-push-btn:disabled { opacity: 0.6; cursor: default; }
 .fdi-push-tick { flex: none; font-size: 16px; font-weight: 800; color: #2f7a3f; }
+.fdi-push-mark { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; margin-right: -8px; border: 0; border-radius: 999px; background: none; color: #1e3a6e; cursor: pointer; }
+.fdi-push-mark svg { width: 18px; height: 18px; }
+.fdi-push-mark.saved { color: #2f7a3f; cursor: default; }
+.fdi-push.naming { padding: 8px 8px 8px 18px; }
+.fdi-push-name { display: flex; align-items: center; gap: 8px; width: 100%; }
+.fdi-push-name input { flex: 1; min-width: 0; height: 40px; padding: 0 12px; border: 1px solid #2f5d8f; border-radius: 10px; background: #fff; font: inherit; font-size: 16px; color: #313851; outline: none; }
 /* The meals, one card. */
 .fdi-list { margin-top: 16px; }
 /* An empty day: one folded card of days that can be copied onto it, with a navy band for a head. */
@@ -14454,8 +14460,6 @@ label.ci-pill { cursor: text; }
 .fdi-modes { display: flex; padding: 3px; border-radius: 12px; background: #e6ecf3; }
 .fdi-mode { flex: 1; min-height: 38px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 13px; font-weight: 700; color: #1e3a6e; cursor: pointer; }
 .fdi-mode.on { background: #fff; box-shadow: 0 1px 2px rgba(20, 30, 50, 0.12); }
-.fdi-saved-day-note { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0; min-height: 48px; font-size: 14px; font-weight: 600; color: #2f7a3f; }
-.fdi-saved-day-note svg { width: 16px; height: 16px; }
 .fdi-meals-hint { margin: -6px 0 0; font-size: 12px; text-align: center; color: #8b93a1; }
 /* A meal being moved: lifted and following the finger; the others slide out of its way. */
 .fdi-meal { position: relative; background: #fff; transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s; }
