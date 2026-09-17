@@ -79,6 +79,7 @@ export type FoodDiaryProps = {
   saved: { id: number; name: string; kcal: number; count: number; names: string[] }[];
   savedDays: { id: number; name: string; kcal: number; count: number; dayType: "training" | "rest" | null }[];
   savedDayAs: string | null;
+  savedDayId: number | null;
   previous: { date: string; dateLabel: string; meal: FoodMeal; mealLabel: string; kcal: number; names: string[] }[];
   /** Dates in the last month with anything logged, for the dots on the week strip. */
   loggedDays: string[];
@@ -478,10 +479,26 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                 {same && <span className="fdi-push-tick" aria-hidden="true">✓</span>}
                 {/* Keeping the whole day to log again: outline to save, filled once it is. */}
                 {total > 0 &&
-                  (diary.savedDayAs ? (
-                    <span className="fdi-push-mark saved" role="img" title={`Saved as ${diary.savedDayAs}`} aria-label={`Saved as ${diary.savedDayAs}`}>
+                  (diary.savedDayAs && diary.savedDayId != null ? (
+                    <button
+                      type="button"
+                      className="fdi-push-mark saved"
+                      title={`Saved as ${diary.savedDayAs} · tap to unsave`}
+                      aria-label={`Saved as ${diary.savedDayAs}. Unsave`}
+                      disabled={loading}
+                      onClick={() => {
+                        const fd = new FormData();
+                        fd.set("clientId", String(clientId));
+                        fd.set("id", String(diary.savedDayId));
+                        startLoad(async () => {
+                          await deleteSavedDayAction(fd);
+                          const next = await getFoodDiaryAction(clientId, date);
+                          if (next) setDiary(next);
+                        });
+                      }}
+                    >
                       <BookmarkIcon filled />
-                    </span>
+                    </button>
                   ) : (
                     <button type="button" className="fdi-push-mark" onClick={() => setNamingDay(true)} disabled={loading} aria-label="Save this day to log again">
                       <BookmarkIcon />
