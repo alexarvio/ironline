@@ -67,7 +67,6 @@ import { ProgressPicturesRow, type ProgressPicturesProps } from "./ProgressPictu
 import HomeHub, { HomePhotos, HomeTrack, UpcomingMeeting } from "./HomeHub";
 import NutritionTargetsCard, { type NutritionTargetSet } from "./NutritionTargetsCard";
 import CoachCard from "./CoachCard";
-import CalorieLogCard, { type CalorieDay } from "./CalorieLogCard";
 import SupplementsCard, { type SupplementRow } from "./SupplementsCard";
 import ReportArchiveList, { ArchiveReport } from "./ReportArchiveList";
 import NotificationRow from "./NotificationRow";
@@ -702,27 +701,6 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
     });
   const onTarget = lastWeek.filter((d) => d.delta.tone === "ok").length;
 
-  // The calories card steps back through the last month, one day at a time:
-  // today first. Each day carries what was logged and its own targets.
-  const logsByDate = new Map(listCalorieLogs(CLIENT_ID, 60).map((c) => [c.date, c] as const));
-  const yesterday = addDays(today, -1);
-  const calorieDays: CalorieDay[] = Array.from({ length: 31 }, (_, i) => addDays(today, -i)).map((date) => {
-    const log = logsByDate.get(date);
-    return {
-      date,
-      label:
-        date === today
-          ? "Today"
-          : date === yesterday
-          ? "Yesterday"
-          : new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "long" }),
-      kcal: log?.kcal ?? null,
-      dayType: log?.day_type ?? null,
-      note: log?.note ?? null,
-      defaultDayType: trainedOn.has(date) ? "training" : "rest",
-      targets: { training: targetOn(date, true), rest: targetOn(date, false) },
-    };
-  });
 
   return (
     <div className="nd">
@@ -745,8 +723,6 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
           note={plan.coach_notes?.trim() || null}
           noteDate={nutritionPhase ? `Since ${short(nutritionPhase.start_week)}` : null}
         />
-
-        <CalorieLogCard clientId={CLIENT_ID} days={calorieDays} coachName={coachName} />
 
         <section className="nd-days">
           <div className="nd-section-head">

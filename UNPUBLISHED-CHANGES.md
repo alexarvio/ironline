@@ -517,6 +517,10 @@ Look: `/client` → Nutrition → tap the ring.
 
 Look: `/client` → Home, under the goal line.
 
+## 67 · Nutrition tab: the typed calorie log card is gone — ✅ LIVE 17 Sep
+
+- [x] Calories are logged from the food diary now (the strip under the rings), so the card with the day stepper, the kcal box and the note is off the Nutrition tab. Last 7 days stays and reads the same log. The ring shows the coach's targets again; the countdown lives in the diary.
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).
