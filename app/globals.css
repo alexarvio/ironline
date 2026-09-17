@@ -12990,14 +12990,24 @@ label.ci-pill { cursor: text; }
 .hm-track-tag.training  { color: #3a3390; }
 .hm-track-tag.lifestyle { color: #4a4a45; }
 
-.hm-tracks {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid rgba(30, 58, 110, 0.14);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
+/* The phases as cards in a row, swiped sideways, one per track: frosted
+   glass tinted the track's colour, so the banner shows through. */
+.hm-phases { display: flex; gap: 10px; margin: 16px -22px 0; padding: 0 22px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.hm-phases::-webkit-scrollbar { display: none; }
+.hm-phase { flex: 0 0 calc(100% - 28px); scroll-snap-align: start; box-sizing: border-box; padding: 14px 16px 14px; border: 1px solid rgba(255, 255, 255, 0.55); border-radius: 18px; background: rgba(255, 255, 255, 0.34); -webkit-backdrop-filter: blur(14px) saturate(1.3); backdrop-filter: blur(14px) saturate(1.3); box-shadow: 0 8px 24px -18px rgba(8, 31, 92, 0.5); }
+.hm-phase.nutrition { background: rgba(47, 122, 63, 0.14); border-color: rgba(47, 122, 63, 0.28); }
+.hm-phase.training { background: rgba(58, 51, 144, 0.12); border-color: rgba(58, 51, 144, 0.26); }
+.hm-phase.lifestyle { background: rgba(74, 74, 69, 0.1); border-color: rgba(74, 74, 69, 0.22); }
+.hm-phase .hm-track-bar-fill { width: var(--w); animation: hm-bar-fill 0.9s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes hm-bar-fill { from { width: 0; } }
+.hm-phase-note { margin: 10px 0 0; padding-top: 10px; border-top: 1px solid rgba(20, 26, 36, 0.1); font-size: 13px; line-height: 1.45; color: #313851; }
+.hm-phase-dots { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
+.hm-phase-dots span { width: 6px; height: 6px; border-radius: 999px; background: rgba(20, 26, 36, 0.18); transition: width 0.3s ease, background-color 0.3s ease; }
+.hm-phase-dots span.on { width: 16px; }
+.hm-phase-dots span.nutrition.on { background: #0f5c46; }
+.hm-phase-dots span.training.on { background: #3a3390; }
+.hm-phase-dots span.lifestyle.on { background: #4a4a45; }
+@media (prefers-reduced-motion: reduce) { .hm-phase .hm-track-bar-fill { animation: none; } }
 
 .hm-track-head {
   display: flex;

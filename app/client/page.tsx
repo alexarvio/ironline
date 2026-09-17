@@ -158,8 +158,9 @@ const countWord = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"
 /** "8 weeks" from a week or more, rounded up; "6 days" under one. */
 const spanWords = (days: number) => (days >= 7 ? countWord(Math.ceil(days / 7), "week") : countWord(days, "day"));
 
-function homeTracks(plan: ReturnType<typeof getClientPlanView>): HomeTrack[] {
+function homeTracks(plan: ReturnType<typeof getClientPlanView>, clientId: number): HomeTrack[] {
   if (!plan) return [];
+  const raw = listClientPhases(clientId).filter((ph) => !ph.draft);
   const today = plan.today;
   return HOME_TRACK_ORDER.map((id) => {
     const t = plan.tracks.find((x) => x.track === id);
@@ -188,6 +189,7 @@ function homeTracks(plan: ReturnType<typeof getClientPlanView>): HomeTrack[] {
       weekTotal,
       progress: totalDays > 0 ? doneDays / totalDays : 0,
       upNext: sorted.find((ph) => ph.startWeek > shown.endWeek)?.name ?? null,
+      coachNote: raw.find((ph) => ph.track === id && ph.start_week === shown.startWeek && ph.name === shown.name)?.nutrition?.coach_notes?.trim() || null,
     };
   }).filter((r): r is HomeTrack => !!r);
 }
@@ -326,7 +328,7 @@ function HomeTab({ CLIENT_ID, photos }: { CLIENT_ID: number; photos: HomePhotos 
       photoUrl={client?.avatar_path ?? null}
       initial={(client?.name ?? "?").trim().charAt(0).toUpperCase() || "?"}
       mainGoal={profile.main_goal ?? null}
-      tracks={homeTracks(plan)}
+      tracks={homeTracks(plan, CLIENT_ID)}
       session={getUpNextSession(CLIENT_ID)}
       goals={getGoalViews(CLIENT_ID)}
       upcoming={upcoming}

@@ -509,6 +509,12 @@ Look: `/client` → Training → log a whole exercise, then a whole session.
 
 Look: `/client` → Nutrition → tap the ring.
 
+## 66 · Home: the phases as swipeable frosted cards — local only
+
+- [ ] The chevron beside the greeting is gone. Under the main goal sits a row of cards, one per track (Nutrition, Training, Lifestyle), swiped sideways with snapping and dots underneath. Each card is frosted glass tinted the track's colour (the banner shows through), with the track tag and time to go, the phase name, a bar that fills in as the card appears, Week x of y, Up next, and the coach's note on the phase when there is one (a nutrition phase's note today).
+
+Look: `/client` → Home, under the goal line.
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).

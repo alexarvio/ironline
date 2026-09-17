@@ -31,6 +31,8 @@ export type HomeTrack = {
   /** 0..1 for the bar. */
   progress: number;
   upNext: string | null;
+  /** The coach's note on the phase, when they wrote one. */
+  coachNote: string | null;
 };
 
 export type HomeSession = {
@@ -135,8 +137,8 @@ function ProfileCard({
   mainGoal: string | null;
   tracks: HomeTrack[];
 }) {
-  const [open, setOpen] = useState(false);
-  const canExpand = tracks.length > 0;
+  // Which phase card is in view, for the dots under the row.
+  const [shown, setShown] = useState(0);
 
   return (
     <header className="hm-banner hm-profile">
@@ -146,17 +148,6 @@ function ProfileCard({
           <h1 className="hm-greeting">Hello, {firstName}.</h1>
           <div className="hm-eyebrow hm-date">{dateLabel}</div>
         </div>
-        {canExpand && (
-          <button
-            type="button"
-            className={`hm-chev-btn${open ? " open" : ""}`}
-            onClick={() => setOpen((o) => !o)}
-            aria-expanded={open}
-            aria-label={open ? "Hide the plan" : "Show the plan"}
-          >
-            <ChevronDownIcon />
-          </button>
-        )}
       </div>
 
       {/* Nothing at all until the coach sets one. */}
@@ -169,36 +160,54 @@ function ProfileCard({
         </p>
       )}
 
-      {canExpand && open && (
-        <div className="hm-tracks">
-          {tracks.map((t) => (
-            <div key={t.track} className="hm-track">
-              <div className="hm-track-head">
-                <span className={`hm-track-tag ${t.track}`}>
-                  <span className="hm-track-icon" aria-hidden="true">
-                    {t.track === "nutrition" ? <AppleIcon /> : t.track === "training" ? <DumbbellIcon /> : <HeartIcon />}
+      {/* One frosted card per track, swiped sideways; the bar fills in as the card arrives. */}
+      {tracks.length > 0 && (
+        <>
+          <div
+            className="hm-phases"
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              const w = el.firstElementChild?.getBoundingClientRect().width ?? 1;
+              setShown(Math.round(el.scrollLeft / (w + 10)));
+            }}
+          >
+            {tracks.map((t) => (
+              <article key={t.track} className={`hm-phase ${t.track}`} aria-label={`${t.label}: ${t.phaseName}`}>
+                <div className="hm-track-head">
+                  <span className={`hm-track-tag ${t.track}`}>
+                    <span className="hm-track-icon" aria-hidden="true">
+                      {t.track === "nutrition" ? <AppleIcon /> : t.track === "training" ? <DumbbellIcon /> : <HeartIcon />}
+                    </span>
+                    {t.label}
                   </span>
-                  {t.label}
-                </span>
-                <span className={`hm-track-left ${t.track}`}>{t.timeLeft}</span>
-              </div>
-              <div className="hm-track-name">{t.phaseName}</div>
-              <div className={`hm-track-bar ${t.track}`}>
-                <div className="hm-track-bar-fill" style={{ width: `${Math.round(t.progress * 100)}%` }} />
-              </div>
-              <div className="hm-track-foot">
-                <span>
-                  Week <b>{t.weekNow}</b> of <b>{t.weekTotal}</b>
-                </span>
-                {t.upNext && (
+                  <span className={`hm-track-left ${t.track}`}>{t.timeLeft}</span>
+                </div>
+                <div className="hm-track-name">{t.phaseName}</div>
+                <div className={`hm-track-bar ${t.track}`}>
+                  <div className="hm-track-bar-fill" style={{ "--w": `${Math.round(t.progress * 100)}%` } as React.CSSProperties} />
+                </div>
+                <div className="hm-track-foot">
                   <span>
-                    Up next · <b>{t.upNext}</b>
+                    Week <b>{t.weekNow}</b> of <b>{t.weekTotal}</b>
                   </span>
-                )}
-              </div>
+                  {t.upNext && (
+                    <span>
+                      Up next · <b>{t.upNext}</b>
+                    </span>
+                  )}
+                </div>
+                {t.coachNote && <p className="hm-phase-note">{t.coachNote}</p>}
+              </article>
+            ))}
+          </div>
+          {tracks.length > 1 && (
+            <div className="hm-phase-dots" aria-hidden="true">
+              {tracks.map((t, i) => (
+                <span key={t.track} className={`${t.track}${i === shown ? " on" : ""}`} />
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </header>
   );
