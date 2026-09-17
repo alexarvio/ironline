@@ -12990,6 +12990,11 @@ label.ci-pill { cursor: text; }
 .hm-track-tag.training  { color: #3a3390; }
 .hm-track-tag.lifestyle { color: #4a4a45; }
 
+/* The cards fold out under the chevron beside the greeting. */
+.hm-phases-fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.42s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s; }
+.hm-phases-fold.folded { grid-template-rows: 0fr; opacity: 0; pointer-events: none; }
+.hm-phases-fold-inner { min-height: 0; overflow: hidden; }
+@media (prefers-reduced-motion: reduce) { .hm-phases-fold { transition: none; } }
 /* The phases as cards in a row, swiped sideways, one per track: frosted
    glass tinted the track's colour, so the banner shows through. */
 .hm-phases { display: flex; gap: 10px; margin: 16px -22px 0; padding: 0 22px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 22px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }

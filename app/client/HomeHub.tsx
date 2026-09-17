@@ -137,6 +137,8 @@ function ProfileCard({
   mainGoal: string | null;
   tracks: HomeTrack[];
 }) {
+  // The cards fold out from the chevron beside the greeting.
+  const [open, setOpen] = useState(false);
   // Which phase card is in view, for the dots under the row.
   const [shown, setShown] = useState(0);
 
@@ -148,6 +150,17 @@ function ProfileCard({
           <h1 className="hm-greeting">Hello, {firstName}.</h1>
           <div className="hm-eyebrow hm-date">{dateLabel}</div>
         </div>
+        {tracks.length > 0 && (
+          <button
+            type="button"
+            className={`hm-chev-btn${open ? " open" : ""}`}
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            aria-label={open ? "Hide the plan" : "Show the plan"}
+          >
+            <ChevronDownIcon />
+          </button>
+        )}
       </div>
 
       {/* Nothing at all until the coach sets one. */}
@@ -162,7 +175,8 @@ function ProfileCard({
 
       {/* One frosted card per track, swiped sideways; the bar fills in as the card arrives. */}
       {tracks.length > 0 && (
-        <>
+        <div className={`hm-phases-fold${open ? "" : " folded"}`} aria-hidden={!open}>
+        <div className="hm-phases-fold-inner">
           <div
             className="hm-phases"
             onScroll={(e) => {
@@ -207,7 +221,8 @@ function ProfileCard({
               ))}
             </div>
           )}
-        </>
+        </div>
+        </div>
       )}
     </header>
   );
