@@ -14453,6 +14453,8 @@ label.ci-pill { cursor: text; }
 .fdi-modes { display: flex; padding: 3px; border-radius: 12px; background: #e6ecf3; }
 .fdi-mode { flex: 1; min-height: 38px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 13px; font-weight: 700; color: #1e3a6e; cursor: pointer; }
 .fdi-mode.on { background: #fff; box-shadow: 0 1px 2px rgba(20, 30, 50, 0.12); }
+.fdi-saved-day-note { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0; min-height: 48px; font-size: 14px; font-weight: 600; color: #2f7a3f; }
+.fdi-saved-day-note svg { width: 16px; height: 16px; }
 .fdi-meals-hint { margin: -6px 0 0; font-size: 12px; text-align: center; color: #8b93a1; }
 /* A meal being moved: lifted and following the finger; the others slide out of its way. */
 .fdi-meal { position: relative; background: #fff; transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s; }

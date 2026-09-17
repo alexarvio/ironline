@@ -77,6 +77,7 @@ export type FoodDiaryProps = {
   recent: FoodOptionView[];
   saved: { id: number; name: string; kcal: number; count: number; names: string[] }[];
   savedDays: { id: number; name: string; kcal: number; count: number; dayType: "training" | "rest" | null }[];
+  savedDayAs: string | null;
   previous: { date: string; dateLabel: string; meal: FoodMeal; mealLabel: string; kcal: number; names: string[] }[];
   /** Dates in the last month with anything logged, for the dots on the week strip. */
   loggedDays: string[];
@@ -781,6 +782,10 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                     Save
                   </button>
                 </form>
+              ) : diary.savedDayAs ? (
+                <p className="fdi-saved-day-note">
+                  <BookmarkIcon filled /> Saved as {diary.savedDayAs}
+                </p>
               ) : (
                 <button type="button" className="fdi-add-meal" onClick={() => setNamingDay(true)}>
                   <BookmarkIcon />

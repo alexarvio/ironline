@@ -7744,6 +7744,8 @@ export type FoodDiaryView = {
   saved: SavedMealView[];
   /** The client's saved days, newest first. */
   savedDays: SavedDayView[];
+  /** The saved day this day is a copy of, by name, while it still matches one. */
+  savedDayAs: string | null;
   /** Meals with food in them on the last two weeks' other days, newest first, to copy from. */
   previous: { date: string; dateLabel: string; meal: FoodMeal; mealLabel: string; kcal: number; names: string[] }[];
   /** Dates in the last month with anything logged, for the dots on the week strip. */
@@ -7843,6 +7845,16 @@ export function getFoodDiary(clientId: number, date: string): FoodDiaryView {
     recent: recentFoods(clientId),
     saved: listSavedMeals(clientId),
     savedDays: listSavedDays(clientId),
+    savedDayAs: (() => {
+      if (entries.length === 0) return null;
+      // Meals by name, since a copied custom meal gets a new id on its day.
+      const nameOf = (meal: string) => labelOf.get(meal)?.toLowerCase() ?? meal;
+      const key = entries.map((e) => `${nameOf(e.meal)}@${e.food_id}@${e.grams}`).sort().join("|");
+      const hit = getData()
+        .saved_days.filter((d) => d.client_id === clientId)
+        .find((d) => d.items.map((i) => `${nameOf(i.meal)}@${i.food_id}@${i.grams}`).sort().join("|") === key);
+      return hit?.name ?? null;
+    })(),
     previous,
     loggedDays: [...new Set(getData().food_entries.filter((e) => e.client_id === clientId && e.date >= monthAgo && e.date <= today).map((e) => e.date))],
   };
