@@ -299,7 +299,7 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
     if (!start) return;
     const dx = x - start.x;
     const dy = y - start.y;
-    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    if (Math.abs(dx) < 80 || Math.abs(dx) < Math.abs(dy) * 2.5) return;
     goTo(addDays(date, dx > 0 ? -1 : 1));
   };
 
@@ -381,18 +381,19 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
         </div>
       </header>
 
-      <main
-        className={`app-content dark${loading ? " fdi-loading" : ""}`}
-        onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 4)}
-        onPointerDown={(e) => {
-          swipeStart.current = { x: e.clientX, y: e.clientY };
-        }}
-        onPointerUp={(e) => onSwipeEnd(e.clientX, e.clientY)}
-        onPointerCancel={() => {
-          swipeStart.current = null;
-        }}
-      >
+      <main className={`app-content dark${loading ? " fdi-loading" : ""}`} onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 4)}>
         <div className="fdi-page">
+          {/* A clear sideways swipe on the banner or the rings steps a day; the meals below scroll only. */}
+          <div
+            className="fdi-swipe-zone"
+            onPointerDown={(e) => {
+              swipeStart.current = { x: e.clientX, y: e.clientY };
+            }}
+            onPointerUp={(e) => onSwipeEnd(e.clientX, e.clientY)}
+            onPointerCancel={() => {
+              swipeStart.current = null;
+            }}
+          >
           <header className="nd-banner fdi-banner">
             <div className="fdi-banner-titles">
               <div className="fdi-eyebrow">Food diary</div>
@@ -460,6 +461,7 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
           </header>
 
           <Targets target={diary.target} eaten={diary.eaten} />
+          </div>
           {/* Pushing the day's calories into the log the coach reads: the
               client decides when the day is done, today or later. */}
           {(() => {
