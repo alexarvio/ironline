@@ -150,7 +150,7 @@ export default function NutritionTargetsCard({
                 className="nd-ring"
                 onClick={() => openFood?.()}
                 disabled={!openFood}
-                aria-label={eatenKcal > 0 ? `${n(Math.max(0, active.kcal - eatenKcal))} kcal left today. Open the food diary` : "Open the food diary"}
+                aria-label={eatenKcal > 0 ? `${n(eatenKcal)} kcal logged today. Open the food diary` : "Open the food diary"}
               >
                 <svg viewBox={`0 0 ${SIZE} ${SIZE}`} aria-hidden="true">
                   <g transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}>
@@ -174,9 +174,9 @@ export default function NutritionTargetsCard({
                 </svg>
                 <div className="nd-ring-center">
                   <span className="nd-ring-kcal">
-                    <Tween value={eatenKcal > 0 ? Math.max(0, active.kcal - eatenKcal) : active.kcal} format={n} />
+                    <Tween value={active.kcal} format={n} />
                   </span>
-                  <span className="nd-ring-label">{eatenKcal > 0 ? "kcal left" : "kcal"}</span>
+                  <span className="nd-ring-label">kcal</span>
                 </div>
               </button>
 
