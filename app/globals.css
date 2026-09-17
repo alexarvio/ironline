@@ -13619,8 +13619,9 @@ label.ci-pill { cursor: text; }
 .nw-draglist .dl-row.lifted .nw-tr { background: #ffffff; box-shadow: 0 8px 24px -12px rgba(20, 26, 36, 0.35); }
 
 /* Meeting card with nothing booked: a calendar where the date leaf goes. */
-.hm-leaf-empty { display: flex; align-items: center; justify-content: center; height: 58px; color: #8b93a1; background: #f8f9fb; }
-.hm-leaf-empty svg { width: 22px; height: 22px; }
+/* No call booked: a bare calendar where the date leaf would be, no box. */
+.hm-leaf-empty { display: flex; align-items: center; justify-content: center; width: 52px; height: 58px; border: 0; box-shadow: none; background: none; color: #8b93a1; }
+.hm-leaf-empty svg { width: 34px; height: 34px; }
 .hm-meeting-topic.muted { color: #5b6474; }
 
 /* The calorie note uses the programme-note box; it sits full width under

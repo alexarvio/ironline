@@ -392,7 +392,8 @@ function MeetingCard({ m, recap }: { m: UpcomingMeeting; recap: MeetingRecap }) 
       )}
 
       {recap && (
-        <div className={`hm-recap${m ? " attached" : ""}`}>
+        {/* Always under a row (a booked call or the empty slot), so always set apart from it. */}
+        <div className="hm-recap attached">
           <div className="hm-recap-head">
             <span className="hm-eyebrow">From the last meeting</span>
             <span className="hm-recap-date">{recap.dateLabel}</span>
