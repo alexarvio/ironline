@@ -14314,7 +14314,7 @@ label.ci-pill { cursor: text; }
 /* ---- Food diary (client): the client page model, a day at a time ---- */
 .fdi-screen { position: relative; display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .fdi-bar-spacer { visibility: hidden; pointer-events: none; }
-.fdi-page { --font-sans: var(--font-archivo), "Archivo", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, sans-serif; font-family: var(--font-sans); margin: -16px -16px -24px; padding-bottom: 140px; min-height: 100%; background: #F4F7FC; color: #313851; }
+.fdi-page { --font-sans: var(--font-archivo), "Archivo", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, sans-serif; font-family: var(--font-sans); margin: -16px -16px -24px; padding-bottom: 45vh; min-height: 100%; background: #F4F7FC; color: #313851; }
 .fdi-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
 /* The banner: the day, and the week around it. */
 .fdi-banner { display: flex; flex-direction: column; gap: 18px; }

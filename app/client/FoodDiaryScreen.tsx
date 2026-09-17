@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { BookmarkIcon, ChevronDownIcon, ChevronLeftIcon, PlusIcon, SearchIcon, TrashIcon } from "../components/icons";
 import {
@@ -135,7 +135,39 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
     load(d);
   };
   const reload = () => load(date);
+  const mealRefs = useRef<Map<FoodMeal, HTMLDivElement>>(new Map());
   const [panel, setPanel] = useState<Panel | null>(null);
+  // Closing a panel takes a few hundred pixels out of the page above the
+  // thumb, and the browser would leave the scroll where it was, so the meal
+  // jumps. The meal's top is noted before, and the scroll moved by the
+  // difference after, so it stays put.
+  const anchor = useRef<{ id: FoodMeal; top: number } | null>(null);
+  const holdMeal = (id: FoodMeal) => {
+    const el = mealRefs.current.get(id);
+    if (el) anchor.current = { id, top: el.getBoundingClientRect().top };
+  };
+  const closePanel = () => {
+    if (panel) holdMeal(panel.meal);
+    setPanel(null);
+  };
+  useLayoutEffect(() => {
+    const a = anchor.current;
+    if (!a) return;
+    const el = mealRefs.current.get(a.id);
+    const scroller = el?.closest<HTMLElement>(".app-content");
+    if (el && scroller) {
+      const bar = parseFloat(getComputedStyle(scroller.parentElement ?? scroller).getPropertyValue("--topbar-h")) || 0;
+      const top = scroller.getBoundingClientRect().top + bar;
+      if (a.top < top) {
+        // The head of the meal had gone above the top bar: bring it to just under it.
+        scroller.scrollTop += el.getBoundingClientRect().top - top - 8;
+      } else {
+        const delta = el.getBoundingClientRect().top - a.top;
+        if (Math.abs(delta) > 1) scroller.scrollTop += delta;
+      }
+    }
+    anchor.current = null;
+  });
   // A meal added just now: it appears at once with its name as a box to type into.
   const [namingId, setNamingId] = useState<FoodMeal | null>(null);
   const addMealNow = () => {
@@ -185,6 +217,8 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
     fd.set("clientId", String(clientId));
     fd.set("id", String(id));
     setAskRemove(null);
+    const meal = diary.meals.find((m) => m.entries.some((e) => e.id === id))?.id;
+    if (meal) holdMeal(meal);
     if (panel?.kind === "amount" && panel.entry?.id === id) setPanel(null);
     startLoad(async () => {
       await removeFoodEntryAction(fd);
@@ -208,7 +242,6 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
   // down and the others slide out of its way; let go and the order is saved.
   // A short tap on the name folds the meal instead.
   const [drag, setDrag] = useState<{ from: number; to: number; dy: number; height: number } | null>(null);
-  const mealRefs = useRef<Map<FoodMeal, HTMLDivElement>>(new Map());
   const hold = useRef<{ timer: ReturnType<typeof setTimeout>; x: number; y: number; index: number; el: HTMLElement; pointerId: number } | null>(null);
   const dragging = useRef<{ from: number; to: number; startY: number; mids: number[] } | null>(null);
   const holdStart = (e: React.PointerEvent<HTMLElement>, index: number) => {
@@ -892,10 +925,10 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                             food={open.food}
                             entry={e}
                             onDone={() => {
-                              setPanel(null);
+                              closePanel();
                               reload();
                             }}
-                            onCancel={() => setPanel(null)}
+                            onCancel={closePanel}
                           />
                         )}
                         </div>
@@ -909,13 +942,19 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                         mealLabel={meal.label}
                         recent={diary.recent}
                         saved={diary.saved}
-                        onPick={(food) => setPanel({ kind: "amount", meal: meal.id, food })}
-                        onCustom={() => setPanel({ kind: "custom", meal: meal.id })}
+                        onPick={(food) => {
+                          holdMeal(meal.id);
+                          setPanel({ kind: "amount", meal: meal.id, food });
+                        }}
+                        onCustom={() => {
+                          holdMeal(meal.id);
+                          setPanel({ kind: "custom", meal: meal.id });
+                        }}
                         onCopied={() => {
-                          setPanel(null);
+                          closePanel();
                           reload();
                         }}
-                        onCancel={() => setPanel(null)}
+                        onCancel={closePanel}
                       />
                     ) : open?.kind === "amount" && !open.entry ? (
                       <AmountPanel
@@ -925,10 +964,13 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                         mealLabel={meal.label}
                         food={open.food}
                         onDone={() => {
-                          setPanel(null);
+                          closePanel();
                           reload();
                         }}
-                        onCancel={() => setPanel({ kind: "search", meal: meal.id })}
+                        onCancel={() => {
+                          holdMeal(meal.id);
+                          setPanel({ kind: "search", meal: meal.id });
+                        }}
                       />
                     ) : open?.kind === "custom" ? (
                       <CustomFoodPanel clientId={clientId} onCancel={() => setPanel({ kind: "search", meal: meal.id })} onCreated={(food) => setPanel({ kind: "amount", meal: meal.id, food })} />
@@ -1331,7 +1373,7 @@ function AmountPanel({
     : liquid && /^fl oz/i.test(liquid[0])
     ? "ml"
     : food.servings.length
-    ? `p:${food.servings[0][0]}`
+    ? `p:${(food.servings.find(([l]) => /^(small|medium|large|extra|1 )/i.test(l)) ?? food.servings.find(([l]) => !/,/.test(l) && !/^(cup|tbsp|tsp|oz|fl oz|tablespoon|teaspoon)\b/i.test(l)) ?? food.servings[0])[0]}`
     : "g";
   const [unitId, setUnitId] = useState(startUnit);
   const unit = units.find((u) => u.id === unitId) ?? units[0];
@@ -1341,7 +1383,12 @@ function AmountPanel({
   const [pending, start] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
-    const t = setTimeout(() => inputRef.current?.select(), 50);
+    const t = setTimeout(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus({ preventScroll: true });
+      el.select();
+    }, 50);
     return () => clearTimeout(t);
   }, []);
 
