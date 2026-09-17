@@ -452,7 +452,6 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                   if (next) setDiary(next);
                 });
               };
-              const count = diary.savedDays.length + (last ? 1 : 0);
               // Holding a saved day's row asks to forget it.
               const holdRow = (id: number) => ({
                 onPointerDown: () => {
@@ -479,8 +478,7 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
               return (
                 <section className="fdi-copy">
                   <button type="button" className="fdi-copy-head" onClick={() => setCopyOpen((o) => !o)} aria-expanded={copyOpen}>
-                    <span className="fdi-copy-title">Copy a day</span>
-                    <span className="fdi-copy-count">{count === 1 ? "1 to choose from" : `${count} to choose from`}</span>
+                    <span className="fdi-copy-title">Saved days</span>
                     <span className={`fdi-copy-chev${copyOpen ? " up" : ""}`} aria-hidden="true">
                       <ChevronDownIcon />
                     </span>

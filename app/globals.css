@@ -14366,7 +14366,7 @@ label.ci-pill { cursor: text; }
 /* An empty day: one folded card of days that can be copied onto it, with a navy band for a head. */
 .fdi-copy { border-radius: 18px; background: #fff; overflow: hidden; box-shadow: 0 12px 30px -20px rgba(8, 31, 92, 0.4); }
 .fdi-copy-head { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 56px; padding: 6px 12px 6px 18px; border: 0; background: linear-gradient(135deg, #1e3a6e, #2f5d8f); font: inherit; color: #fff; text-align: left; cursor: pointer; }
-.fdi-copy-title { font-size: 14px; font-weight: 700; }
+.fdi-copy-title { flex: 1; font-size: 14px; font-weight: 700; }
 .fdi-copy-count { flex: 1; font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.75); }
 .fdi-copy-chev { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: rgba(255, 255, 255, 0.85); transition: transform 0.15s; }
 .fdi-copy-chev svg { width: 16px; height: 16px; }
