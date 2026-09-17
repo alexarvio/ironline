@@ -493,8 +493,8 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
             </div>
           </header>
 
-          <Targets target={diary.target} eaten={diary.eaten} />
           </div>
+          <Targets target={diary.target} eaten={diary.eaten} dayType={diary.dayType} onDayType={chooseDay} />
           {/* Pushing the day's calories into the log the coach reads: the
               client decides when the day is done, today or later. */}
           {(() => {
@@ -1006,12 +1006,34 @@ const RING_R = { protein: 70, carbs: 61, fat: 52 } as const;
 const MACROS = ["protein", "carbs", "fat"] as const;
 const NAME = { protein: "Protein", carbs: "Carbs", fat: "Fat" } as const;
 
-function Targets({ target, eaten }: { target: Macros | null; eaten: Macros }) {
+function Targets({ target, eaten, dayType, onDayType }: { target: Macros | null; eaten: Macros; dayType: "training" | "rest"; onDayType: (t: "training" | "rest") => void }) {
+  // A sideways swipe on the rings switches the kind of day, as on Nutrition:
+  // left for a rest day, right for a training day. The rings and figures run
+  // to the new targets.
+  const swipe = useRef<{ x: number; y: number } | null>(null);
+  const swipeEnd = (x: number, y: number) => {
+    const start = swipe.current;
+    swipe.current = null;
+    if (!start) return;
+    const dx = x - start.x;
+    const dy = y - start.y;
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    onDayType(dx > 0 ? "training" : "rest");
+  };
   const left = target ? Math.max(0, target.kcal - eaten.kcal) : null;
   const over = target ? Math.max(0, eaten.kcal - target.kcal) : 0;
   const figure = useTween(left == null ? eaten.kcal : over > 0 ? over : left);
   return (
-    <section className="nd-card fdi-targets">
+    <section
+      className="nd-card fdi-targets"
+      onPointerDown={(e) => {
+        swipe.current = { x: e.clientX, y: e.clientY };
+      }}
+      onPointerUp={(e) => swipeEnd(e.clientX, e.clientY)}
+      onPointerCancel={() => {
+        swipe.current = null;
+      }}
+    >
       <div className="nd-cal-row">
         <div className="nd-ring" role="img" aria-label={left == null ? `${n(eaten.kcal)} kcal eaten` : over > 0 ? `${n(over)} kcal over` : `${n(left)} kcal left`}>
           <svg viewBox={`0 0 ${SIZE} ${SIZE}`} aria-hidden="true">
@@ -1031,6 +1053,10 @@ function Targets({ target, eaten }: { target: Macros | null; eaten: Macros }) {
             <MacroRow key={m} id={m} eaten={eaten[m]} goal={target?.[m] ?? null} />
           ))}
         </div>
+      </div>
+      <div className="nd-dots fdi-dots" aria-hidden="true">
+        <span className={dayType === "training" ? "on" : undefined} />
+        <span className={dayType === "rest" ? "on" : undefined} />
       </div>
     </section>
   );

@@ -14353,6 +14353,8 @@ label.ci-pill { cursor: text; }
 @keyframes fdi-tick-draw { to { stroke-dashoffset: 0; } }
 @media (prefers-reduced-motion: reduce) { .fdi-tick path { animation: none; stroke-dashoffset: 0; } }
 .fdi-tabs { margin-top: 0; }
+.fdi-targets { touch-action: pan-y; }
+.fdi-dots { margin: 10px 0 0; }
 /* Attached under the rings: push the day's kcal into the calorie log. */
 .fdi-push { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 16px; padding: 12px 18px; border-radius: 0 0 18px 18px; background: #e6ecf3; transition: border-radius 0.2s; }
 .fdi-push:has(+ .fdi-push-fold:not(.folding)) { border-radius: 0; }
