@@ -522,10 +522,9 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                     <div className="fdi-fold-inner">
                       {last && (
                         <div className="fdi-copy-row">
-                          <span className="fdi-copy-dot yday" aria-hidden="true" />
                           <span className="fdi-copy-main">
                             <span className="fdi-copy-name">{label === "Yesterday" ? "Yesterday" : label}</span>
-                            <span className="fdi-copy-sub">Every meal · {n(kcal)} kcal</span>
+                            <span className="fdi-copy-sub">{n(kcal)} kcal</span>
                           </span>
                           <button type="button" className="fdi-copy-use" onClick={copyLast} disabled={loading}>
                             Use
@@ -534,10 +533,9 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                       )}
                       {diary.savedDays.map((d) => (
                         <div key={d.id} className={`fdi-copy-row${askForgetDay === d.id ? " asking" : ""}`} {...holdRow(d.id)}>
-                          <span className={`fdi-copy-dot ${d.dayType ?? "saved"}`} aria-hidden="true" />
                           <span className="fdi-copy-main">
                             <span className="fdi-copy-name">{d.name}</span>
-                            <span className="fdi-copy-sub">A day you saved · {n(d.kcal)} kcal</span>
+                            <span className="fdi-copy-sub">{n(d.kcal)} kcal</span>
                           </span>
                           {askForgetDay === d.id ? (
                             <span className="fdi-row-ask">
