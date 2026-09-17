@@ -14323,6 +14323,9 @@ label.ci-pill { cursor: text; }
 .fdi-date { margin: 0; font-size: 32px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.1; color: #141a24; }
 .fdi-date-sub { font-size: 14px; font-weight: 500; color: #5b6474; }
 .fdi-week { display: flex; align-items: center; gap: 4px; margin: 0 -8px; }
+.fdi-week-view { flex: 1; min-width: 0; overflow: hidden; touch-action: pan-y; }
+.fdi-week-track { display: flex; width: 300%; will-change: transform; }
+.fdi-week-days { flex: 0 0 calc(100% / 3); display: flex; gap: 4px; min-width: 0; }
 .fdi-week-arrow { flex: none; display: flex; align-items: center; justify-content: center; width: 34px; height: 44px; border: 0; background: none; color: #1e3a6e; cursor: pointer; }
 .fdi-week-arrow svg { width: 16px; height: 16px; }
 .fdi-week-arrow.next svg { transform: rotate(180deg); }

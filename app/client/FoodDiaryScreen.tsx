@@ -318,6 +318,49 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
 
   const logged = new Set(diary.loggedDays);
   const week = weekOf(date);
+  // The strip slides under the finger, a week at a time: three weeks sit
+  // side by side and the middle one shows; let go past a third of the way and
+  // it glides to the neighbour, then the day moves to the same weekday there.
+  const weeks = [weekOf(addDays(date, -7)), week, weekOf(addDays(date, 7))];
+  const canPrev = week[0] > floor;
+  const canNext = week[6] < today;
+  const [slide, setSlide] = useState<{ x: number; animate: boolean }>({ x: 0, animate: false });
+  const stripRef = useRef<HTMLDivElement>(null);
+  const stripDrag = useRef<{ x: number; y: number; width: number; on: boolean } | null>(null);
+  const stripDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    stripDrag.current = { x: e.clientX, y: e.clientY, width: e.currentTarget.getBoundingClientRect().width, on: false };
+  };
+  const stripMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = stripDrag.current;
+    if (!d) return;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    if (!d.on) {
+      if (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+      d.on = true;
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+    // Past the ends it only gives a little, so it reads as the end.
+    const give = (dx > 0 && !canPrev) || (dx < 0 && !canNext) ? 0.25 : 1;
+    setSlide({ x: dx * give, animate: false });
+  };
+  const stripUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = stripDrag.current;
+    stripDrag.current = null;
+    if (!d || !d.on) return;
+    e.stopPropagation();
+    const dx = e.clientX - d.x;
+    const dir = dx > d.width / 3 && canPrev ? -1 : dx < -d.width / 3 && canNext ? 1 : 0;
+    if (dir === 0) return setSlide({ x: 0, animate: true });
+    setSlide({ x: -dir * d.width, animate: true });
+    const target = dir < 0 ? addDays(date, -7) : addDays(date, 7);
+    const landing = target > today ? today : target < floor ? floor : target;
+    window.setTimeout(() => {
+      setSlide({ x: 0, animate: false });
+      goTo(landing);
+    }, 260);
+  };
   // The banner: the day in big ("Today", "Monday"), the date under it.
   const dayDate = new Date(`${date}T00:00:00`);
   const weekday = dayDate.toLocaleDateString("en-GB", { weekday: "long" });
@@ -360,26 +403,48 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
               <button type="button" className="fdi-week-arrow" onClick={() => goTo(addDays(date, -1))} disabled={date <= floor} aria-label="Previous day">
                 <ChevronLeftIcon />
               </button>
-              {week.map((d, i) => {
-                const future = d > today;
-                const tooFar = d < floor;
-                const on = d === date;
-                return (
-                  <button
-                    key={d}
-                    type="button"
-                    className={`fdi-day${on ? " on" : ""}${future || tooFar ? " off" : ""}`}
-                    onClick={() => goTo(d)}
-                    disabled={future || tooFar}
-                    aria-pressed={on}
-                    aria-label={d === today ? "Today" : d}
-                  >
-                    <span className="fdi-day-letter">{WEEKDAY[i]}</span>
-                    <span className="fdi-day-num">{Number(d.slice(8))}</span>
-                    <span className={`fdi-day-dot${on ? " on" : logged.has(d) ? " logged" : ""}`} aria-hidden="true" />
-                  </button>
-                );
-              })}
+              <div
+                ref={stripRef}
+                className="fdi-week-view"
+                onPointerDown={stripDown}
+                onPointerMove={stripMove}
+                onPointerUp={stripUp}
+                onPointerCancel={() => {
+                  stripDrag.current = null;
+                  setSlide({ x: 0, animate: true });
+                }}
+              >
+                <div className="fdi-week-track" style={{ transform: `translateX(calc(-100% / 3 + ${slide.x}px))`, transition: slide.animate ? "transform 0.26s cubic-bezier(0.22, 1, 0.36, 1)" : "none" }}>
+                  {weeks.map((w, wi) => (
+                    <div key={w[0]} className="fdi-week-days" aria-hidden={wi !== 1}>
+                      {w.map((d, i) => {
+                        const future = d > today;
+                        const tooFar = d < floor;
+                        const on = d === date;
+                        return (
+                          <button
+                            key={d}
+                            type="button"
+                            className={`fdi-day${on ? " on" : ""}${future || tooFar ? " off" : ""}`}
+                            onClick={() => {
+                              if (stripDrag.current?.on) return;
+                              goTo(d);
+                            }}
+                            disabled={future || tooFar}
+                            tabIndex={wi === 1 ? 0 : -1}
+                            aria-pressed={on}
+                            aria-label={d === today ? "Today" : d}
+                          >
+                            <span className="fdi-day-letter">{WEEKDAY[i]}</span>
+                            <span className="fdi-day-num">{Number(d.slice(8))}</span>
+                            <span className={`fdi-day-dot${on ? " on" : logged.has(d) ? " logged" : ""}`} aria-hidden="true" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
               <button type="button" className="fdi-week-arrow next" onClick={() => goTo(addDays(date, 1))} disabled={date >= today} aria-label="Next day">
                 <ChevronLeftIcon />
               </button>
