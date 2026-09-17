@@ -14388,7 +14388,9 @@ label.ci-pill { cursor: text; }
 .fdi-result-row { display: flex; align-items: center; gap: 4px; }
 .fdi-result-row .fdi-result { flex: 1; min-width: 0; }
 .fdi-result-x { flex: none; width: 32px; height: 32px; border: 0; border-radius: 999px; background: none; font-size: 20px; line-height: 1; color: #8b93a1; cursor: pointer; }
-.fdi-meal-remove { flex: none; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #8b93a1; cursor: pointer; }
+.fdi-meal-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0 18px 12px; }
+.fdi-meal-empty-note { width: 100%; box-sizing: border-box; margin: 0; padding: 12px 14px; border-radius: 12px; background: #F4F7FC; font-size: 14px; color: #8b93a1; }
+.fdi-meal-remove { padding: 8px 12px; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 500; color: #8b93a1; cursor: pointer; }
 .fdi-fold-inner > .fdi-row-wrap:last-child > .fdi-row { padding-bottom: 14px; }
 /* The row being changed and its panel read as one block. */
 .fdi-row-wrap.selected { margin: 8px 12px 14px; border-radius: 12px; background: #F4F7FC; }

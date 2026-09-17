@@ -402,7 +402,7 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                       >
                         <span className="fdi-meal-title">{meal.label}</span>
                       </span>
-                      {meal.entries.length > 0 && (
+                      {(meal.entries.length > 0 || meal.own) && (
                         <button type="button" className={`fdi-meal-chev${folded.has(meal.id) ? "" : " up"}`} onClick={() => toggleFold(meal.id)} aria-expanded={!folded.has(meal.id)} aria-label={folded.has(meal.id) ? `Open ${meal.label}` : `Fold ${meal.label}`}>
                           <ChevronDownIcon />
                         </button>
@@ -435,24 +435,6 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                           <PlusIcon />
                         </button>
                       )}
-                      {meal.entries.length === 0 && meal.own ? (
-                        <button
-                          type="button"
-                          className="fdi-meal-remove"
-                          onClick={() => {
-                            const fd = new FormData();
-                            fd.set("clientId", String(clientId));
-                            fd.set("meal", meal.id);
-                            startLoad(async () => {
-                              await removeFoodMealAction(fd);
-                              const next = await getFoodDiaryAction(clientId, date);
-                              if (next) setDiary(next);
-                            });
-                          }}
-                        >
-                          Remove
-                        </button>
-                      ) : null}
                     </div>
                     {meal.entries.length > 0 && (
                       <Facts className="fdi-per meal" label={`${meal.label}: ${n(meal.kcal)} kcal`} kcal={meal.kcal} protein={meal.protein} carbs={meal.carbs} fat={meal.fat} />
@@ -491,6 +473,27 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                     )}
                     <div className={`fdi-fold${folded.has(meal.id) ? " folding" : ""}`}>
                     <div className="fdi-fold-inner">
+                    {meal.own && meal.entries.length === 0 && !open && (
+                      <div className="fdi-meal-empty">
+                        <p className="fdi-meal-empty-note">Nothing here yet. Tap + to add a food.</p>
+                        <button
+                          type="button"
+                          className="fdi-meal-remove"
+                          onClick={() => {
+                            const fd = new FormData();
+                            fd.set("clientId", String(clientId));
+                            fd.set("meal", meal.id);
+                            startLoad(async () => {
+                              await removeFoodMealAction(fd);
+                              const next = await getFoodDiaryAction(clientId, date);
+                              if (next) setDiary(next);
+                            });
+                          }}
+                        >
+                          Remove this meal
+                        </button>
+                      </div>
+                    )}
                     {meal.entries.map((e) => {
                       const selected = open?.kind === "amount" && open.entry?.id === e.id;
                       return (
