@@ -7516,6 +7516,14 @@ export function addFoodMeal(clientId: number, name: string, date: string): FoodM
 }
 
 /** Only an empty meal goes; one with food in it stays. */
+export function renameFoodMeal(clientId: number, id: number, name: string): boolean {
+  const row = getData().food_meals.find((m) => m.id === id && m.client_id === clientId);
+  if (!row) return false;
+  row.name = name;
+  persist();
+  return true;
+}
+
 export function removeFoodMeal(clientId: number, id: number): boolean {
   const data = getData();
   const row = data.food_meals.find((m) => m.id === id && m.client_id === clientId);

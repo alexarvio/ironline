@@ -20,6 +20,7 @@ import {
   removeFoodEntryAction,
   pushFoodDayAction,
   removeFoodMealAction,
+  renameFoodMealAction,
   reorderFoodMealsAction,
   searchFoodsAction,
   setFoodDayTypeAction,
@@ -134,7 +135,41 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
   };
   const reload = () => load(date);
   const [panel, setPanel] = useState<Panel | null>(null);
-  const [namingMeal, setNamingMeal] = useState(false);
+  // A meal added just now: it appears at once with its name as a box to type into.
+  const [namingId, setNamingId] = useState<FoodMeal | null>(null);
+  const addMealNow = () => {
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("name", "New meal");
+    fd.set("date", date);
+    startLoad(async () => {
+      const id = await addFoodMealAction(fd);
+      const next = await getFoodDiaryAction(clientId, date);
+      if (next) setDiary(next);
+      if (id) setNamingId(id);
+    });
+  };
+  // Leaving the name box: an empty or untouched name means the meal was not wanted.
+  const finishNaming = (id: FoodMeal, name: string) => {
+    setNamingId(null);
+    const clean = name.trim();
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("meal", id);
+    if (!clean || clean === "New meal") {
+      startLoad(async () => {
+        await removeFoodMealAction(fd);
+        const next = await getFoodDiaryAction(clientId, date);
+        if (next) setDiary(next);
+      });
+      return;
+    }
+    fd.set("name", clean);
+    setDiary({ ...diary, meals: diary.meals.map((m) => (m.id === id ? { ...m, label: clean } : m)) });
+    startLoad(async () => {
+      await renameFoodMealAction(fd);
+    });
+  };
   // Naming the day to save it.
   const [namingDay, setNamingDay] = useState(false);
   // The row whose bin was tapped: it becomes the question until answered.
@@ -548,7 +583,34 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                         onPointerCancel={holdEnd}
                         onContextMenu={(e) => e.preventDefault()}
                       >
-                        <span className="fdi-meal-title">{meal.label}</span>
+                        {namingId === meal.id ? (
+                          <input
+                            id={`fdi-meal-name-${meal.id}`}
+                            className="fdi-meal-name-box"
+                            type="text"
+                            defaultValue=""
+                            placeholder="Name the meal"
+                            maxLength={30}
+                            autoComplete="off"
+                            autoFocus
+                            aria-label="Meal name"
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") e.currentTarget.blur();
+                              if (e.key === "Escape") {
+                                e.currentTarget.value = "";
+                                e.currentTarget.blur();
+                              }
+                            }}
+                            onBlur={(e) => finishNaming(meal.id, e.currentTarget.value)}
+                            onFocus={(e) => {
+                              const el = e.currentTarget;
+                              setTimeout(() => el.scrollIntoView({ block: "center", behavior: "smooth" }), 250);
+                            }}
+                          />
+                        ) : (
+                          <span className="fdi-meal-title">{meal.label}</span>
+                        )}
                       </span>
                       {(meal.entries.length > 0 || meal.own) && (
                         <button type="button" className={`fdi-meal-chev${folded.has(meal.id) ? "" : " up"}`} onClick={() => toggleFold(meal.id)} aria-expanded={!folded.has(meal.id)} aria-label={folded.has(meal.id) ? `Open ${meal.label}` : `Fold ${meal.label}`}>
@@ -790,56 +852,10 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                   Save this day
                 </button>
               ))}
-            {namingMeal ? (
-              <form
-                className="fdi-new-meal"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const name = String(new FormData(e.currentTarget).get("name") ?? "").trim();
-                  if (!name) return;
-                  const fd = new FormData();
-                  fd.set("clientId", String(clientId));
-                  fd.set("name", name);
-                  fd.set("date", date);
-                  setNamingMeal(false);
-                  startLoad(async () => {
-                    await addFoodMealAction(fd);
-                    const next = await getFoodDiaryAction(clientId, date);
-                    if (next) setDiary(next);
-                  });
-                }}
-              >
-                <input
-                  id="fdi-new-meal-name"
-                  name="name"
-                  type="text"
-                  placeholder="Name the meal"
-                  maxLength={30}
-                  autoComplete="off"
-                  autoFocus
-                  aria-label="Meal name"
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") setNamingMeal(false);
-                  }}
-                  onBlur={(e) => {
-                    if (!e.currentTarget.value.trim() && !e.relatedTarget) setNamingMeal(false);
-                  }}
-                  onFocus={(e) => {
-                    // Above the keyboard on a phone.
-                    const el = e.currentTarget;
-                    setTimeout(() => el.scrollIntoView({ block: "center", behavior: "smooth" }), 250);
-                  }}
-                />
-                <button type="submit" className="fdi-new-meal-add">
-                  Add
-                </button>
-              </form>
-            ) : (
-              <button type="button" className="fdi-add-meal" onClick={() => setNamingMeal(true)}>
-                <PlusIcon />
-                Add a meal
-              </button>
-            )}
+            <button type="button" className="fdi-add-meal" onClick={addMealNow} disabled={loading || namingId != null}>
+              <PlusIcon />
+              Add a meal
+            </button>
             <p className="fdi-meals-hint">Hold a meal&rsquo;s name to move it.</p>
           </div>
         </div>

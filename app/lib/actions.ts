@@ -188,6 +188,7 @@ import {
   addCustomFood,
   addFoodMeal,
   removeFoodMeal,
+  renameFoodMeal,
   reorderFoodMeals,
   copyFoodMeal,
   copyFoodDay,
@@ -2275,6 +2276,15 @@ export async function addFoodMealAction(formData: FormData): Promise<string | nu
   const row = addFoodMeal(clientId, name, date);
   revalidatePath("/client");
   return `m:${row.id}`;
+}
+
+export async function renameFoodMealAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const id = Number(String(formData.get("meal") ?? "").replace(/^m:/, ""));
+  const name = String(formData.get("name") ?? "").trim().slice(0, 30);
+  if (!Number.isInteger(id) || !name) return;
+  renameFoodMeal(clientId, id, name);
+  revalidatePath("/client");
 }
 
 export async function removeFoodMealAction(formData: FormData) {
