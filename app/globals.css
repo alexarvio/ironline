@@ -14352,7 +14352,8 @@ label.ci-pill { cursor: text; }
 @media (prefers-reduced-motion: reduce) { .fdi-tick path { animation: none; stroke-dashoffset: 0; } }
 .fdi-tabs { margin-top: 0; }
 /* Attached under the rings: push the day's kcal into the calorie log. */
-.fdi-push { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 16px; padding: 12px 18px; border-radius: 0 0 18px 18px; background: #e6ecf3; }
+.fdi-push { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 16px; padding: 12px 18px; border-radius: 0 0 18px 18px; background: #e6ecf3; transition: border-radius 0.2s; }
+.fdi-push:has(+ .fdi-push-fold:not(.folding)) { border-radius: 0; }
 .fdi-targets { border-radius: 18px 18px 0 0; }
 .fdi-push.done { background: #dff3ea; }
 .fdi-push-text { flex: 1; min-width: 0; font-size: 13px; color: #5b6474; font-variant-numeric: tabular-nums; }
@@ -14364,9 +14365,12 @@ label.ci-pill { cursor: text; }
 .fdi-push-mark { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; margin-right: -8px; border: 0; border-radius: 999px; background: none; color: #1e3a6e; cursor: pointer; }
 .fdi-push-mark svg { width: 18px; height: 18px; }
 .fdi-push-mark.saved { color: #2f7a3f; }
-.fdi-push.naming { padding: 8px 8px 8px 18px; }
+.fdi-push-fold { margin: 0 16px; }
+.fdi-push-name-row { padding: 10px 12px 12px; border-radius: 0 0 18px 18px; background: #fff; border: 1px solid #dfe3e8; border-top: 0; }
 .fdi-push-name { display: flex; align-items: center; gap: 8px; width: 100%; }
-.fdi-push-name input { flex: 1; min-width: 0; height: 40px; padding: 0 12px; border: 1px solid #2f5d8f; border-radius: 10px; background: #fff; font: inherit; font-size: 16px; color: #313851; outline: none; }
+.fdi-push-name input { flex: 1; min-width: 0; box-sizing: border-box; height: 48px; padding: 0 14px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; font: inherit; font-size: 16px; color: #313851; outline: none; }
+.fdi-push-name input:focus { border-color: #2f5d8f; }
+.fdi-push-name .fdi-push-btn { height: 48px; padding: 0 18px; border-radius: 12px; font-size: 14px; }
 /* The meals, one card. */
 .fdi-list { margin-top: 16px; }
 /* An empty day: one folded card of days that can be copied onto it, with a navy band for a head. */

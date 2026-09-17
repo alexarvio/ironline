@@ -412,48 +412,8 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
               });
             };
             return (
-              <div className={`fdi-push${same ? " done" : ""}${namingDay ? " naming" : ""}`}>
-                {namingDay ? (
-                  <form
-                    className="fdi-push-name"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const name = String(new FormData(e.currentTarget).get("name") ?? "").trim();
-                      if (!name) return;
-                      const fd = new FormData();
-                      fd.set("clientId", String(clientId));
-                      fd.set("date", date);
-                      fd.set("name", name);
-                      setNamingDay(false);
-                      startLoad(async () => {
-                        await saveDayAction(fd);
-                        const next = await getFoodDiaryAction(clientId, date);
-                        if (next) setDiary(next);
-                      });
-                    }}
-                  >
-                    <input
-                      id="fdi-save-day-name"
-                      name="name"
-                      type="text"
-                      placeholder="Name this day"
-                      maxLength={40}
-                      autoComplete="off"
-                      autoFocus
-                      aria-label="Name for the saved day"
-                      onKeyDown={(e) => {
-                        if (e.key === "Escape") setNamingDay(false);
-                      }}
-                      onBlur={(e) => {
-                        if (!e.currentTarget.value.trim() && !e.relatedTarget) setNamingDay(false);
-                      }}
-                    />
-                    <button type="submit" className="fdi-push-btn">
-                      Save
-                    </button>
-                  </form>
-                ) : (
-                <>
+              <>
+              <div className={`fdi-push${same ? " done" : ""}`}>
                 <span className="fdi-push-text">
                   {total === 0 ? (
                     "Nothing logged yet"
@@ -504,9 +464,55 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                       <BookmarkIcon />
                     </button>
                   ))}
-                </>
-                )}
               </div>
+              {/* Naming the day to save it: a row that folds out under the strip. */}
+              <div className={`fdi-fold fdi-push-fold${namingDay ? "" : " folding"}`} aria-hidden={!namingDay}>
+                <div className="fdi-fold-inner">
+                  <div className="fdi-push-name-row">
+                    {namingDay && (
+                      <form
+                        className="fdi-push-name"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          const name = String(new FormData(e.currentTarget).get("name") ?? "").trim();
+                          if (!name) return;
+                          const fd = new FormData();
+                          fd.set("clientId", String(clientId));
+                          fd.set("date", date);
+                          fd.set("name", name);
+                          setNamingDay(false);
+                          startLoad(async () => {
+                            await saveDayAction(fd);
+                            const next = await getFoodDiaryAction(clientId, date);
+                            if (next) setDiary(next);
+                          });
+                        }}
+                      >
+                        <input
+                          id="fdi-save-day-name"
+                          name="name"
+                          type="text"
+                          placeholder="Name this day"
+                          maxLength={40}
+                          autoComplete="off"
+                          autoFocus
+                          aria-label="Name for the saved day"
+                          onKeyDown={(e) => {
+                            if (e.key === "Escape") setNamingDay(false);
+                          }}
+                          onBlur={(e) => {
+                            if (!e.currentTarget.value.trim() && !e.relatedTarget) setNamingDay(false);
+                          }}
+                        />
+                        <button type="submit" className="fdi-push-btn">
+                          Save
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                </div>
+              </div>
+              </>
             );
           })()}
 
