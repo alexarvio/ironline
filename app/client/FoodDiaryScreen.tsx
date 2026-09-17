@@ -8,6 +8,7 @@ import {
   addFoodEntryAction,
   addFoodMealAction,
   addSavedMealAction,
+  copyFoodDayAction,
   deleteSavedMealAction,
   saveMealAction,
   getFoodDiaryAction,
@@ -377,6 +378,41 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
           })()}
 
           <div className="nd-body fdi-list">
+            {/* An empty day, with a recent day to copy: most people eat the same most days. */}
+            {(() => {
+              if (diary.eaten.kcal > 0 || diary.meals.some((m) => m.entries.length > 0)) return null;
+              const last = diary.previous.reduce<string | null>((best, p) => (p.date < date && (!best || p.date > best) ? p.date : best), null);
+              if (!last) return null;
+              const label = diary.previous.find((p) => p.date === last)?.dateLabel ?? last;
+              const kcal = diary.previous.filter((p) => p.date === last).reduce((sum, p) => sum + p.kcal, 0);
+              return (
+                <button
+                  type="button"
+                  className="fdi-copy-day"
+                  onClick={() => {
+                    const fd = new FormData();
+                    fd.set("clientId", String(clientId));
+                    fd.set("fromDate", last);
+                    fd.set("toDate", date);
+                    startLoad(async () => {
+                      await copyFoodDayAction(fd);
+                      const next = await getFoodDiaryAction(clientId, date);
+                      if (next) {
+                        setDiary(next);
+                        setFolded(new Set());
+                      }
+                    });
+                  }}
+                  disabled={loading}
+                >
+                  <span className="fdi-copy-day-main">
+                    <span className="fdi-copy-day-title">Same as {label === "Yesterday" ? "yesterday" : label}?</span>
+                    <span className="fdi-copy-day-sub">Copy every meal from that day · {n(kcal)} kcal</span>
+                  </span>
+                  <span className="fdi-copy-day-go">Copy</span>
+                </button>
+              );
+            })()}
             <section className="fdi-meals">
               {diary.meals.map((meal, index) => {
                 const open = panel?.meal === meal.id ? panel : null;

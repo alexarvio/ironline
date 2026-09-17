@@ -7579,6 +7579,17 @@ export function addSavedMeal(clientId: number, id: number, date: string, meal: F
   return saved.items.length;
 }
 
+/** Every meal of one day into another, the same foods and amounts, logged now; meals that no longer exist go to Snacks. */
+export function copyFoodDay(clientId: number, fromDate: string, toDate: string): number {
+  const data = getData();
+  const rows = listFoodEntries(clientId, fromDate);
+  const meals = new Set(listFoodMeals(clientId).map((m) => m.id));
+  const now = new Date().toISOString();
+  for (const e of rows) data.food_entries.push({ ...e, id: allocId("food_entries"), date: toDate, meal: meals.has(e.meal) ? e.meal : "snacks", logged_at: now });
+  if (rows.length) persist();
+  return rows.length;
+}
+
 export function addFoodEntry(clientId: number, date: string, meal: FoodMeal, foodId: string, grams: number, serving: string | null): FoodEntry | null {
   const food = getFoodOption(clientId, foodId);
   if (!food || !hasFoodMeal(clientId, meal)) return null;

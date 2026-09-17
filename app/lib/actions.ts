@@ -190,6 +190,7 @@ import {
   removeFoodMeal,
   reorderFoodMeals,
   copyFoodMeal,
+  copyFoodDay,
   hasFoodMeal,
   getFoodDiary,
   setFoodDayType,
@@ -2377,4 +2378,14 @@ export async function lookupBarcodeAction(clientId: number, barcode: string): Pr
   } catch {
     return { food: null, error: "Open Food Facts did not answer. Try again in a moment." };
   }
+}
+
+export async function copyFoodDayAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const fromDate = String(formData.get("fromDate") ?? "");
+  const toDate = String(formData.get("toDate") ?? "");
+  if (!DATE.test(fromDate) || !diaryDateOk(toDate) || fromDate === toDate) return;
+  copyFoodDay(clientId, fromDate, toDate);
+  revalidatePath("/client");
+  revalidatePath("/admin");
 }
