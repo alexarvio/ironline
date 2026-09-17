@@ -12997,7 +12997,6 @@ label.ci-pill { cursor: text; }
 .hm-phase { --c: 47, 122, 63; --ink-c: #0f5c46; flex: 0 0 100%; scroll-snap-align: center; box-sizing: border-box; padding: 14px 16px; position: relative; overflow: hidden; border: 2.5px solid rgb(var(--c)); border-radius: 18px; background: rgba(255, 255, 255, 0.3); -webkit-backdrop-filter: blur(22px) saturate(1.6); backdrop-filter: blur(22px) saturate(1.6); box-shadow: 0 0 0 4px rgba(var(--c), 0.12), 0 12px 30px -18px rgba(8, 31, 92, 0.5); }
 .hm-phase::before { content: ""; position: absolute; inset: 0; background: radial-gradient(120% 80% at 100% 0%, rgba(var(--c), 0.16), transparent 60%); pointer-events: none; }
 .hm-phase > * { position: relative; }
-.hm-phase .hm-track-tag { padding: 3px 8px; border-radius: 999px; background: rgb(var(--c)); color: #fff; }
 .hm-phase.training { --c: 58, 51, 144; --ink-c: #3a3390; }
 .hm-phase.lifestyle { --c: 74, 74, 69; --ink-c: #4a4a45; }
 /* The bar fills in as the card arrives, glowing along its length, and its tip keeps a soft pulse. */
