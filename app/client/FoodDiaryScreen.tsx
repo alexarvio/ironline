@@ -7,7 +7,10 @@ import {
   addCustomFoodAction,
   addFoodEntryAction,
   addFoodMealAction,
+  addSavedDayAction,
   addSavedMealAction,
+  deleteSavedDayAction,
+  saveDayAction,
   copyFoodDayAction,
   deleteSavedMealAction,
   saveMealAction,
@@ -73,6 +76,7 @@ export type FoodDiaryProps = {
   meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntryView[]; savedAs: string | null }[];
   recent: FoodOptionView[];
   saved: { id: number; name: string; kcal: number; count: number; names: string[] }[];
+  savedDays: { id: number; name: string; kcal: number; count: number }[];
   previous: { date: string; dateLabel: string; meal: FoodMeal; mealLabel: string; kcal: number; names: string[] }[];
   /** Dates in the last month with anything logged, for the dots on the week strip. */
   loggedDays: string[];
@@ -130,6 +134,8 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
   const reload = () => load(date);
   const [panel, setPanel] = useState<Panel | null>(null);
   const [namingMeal, setNamingMeal] = useState(false);
+  // Naming the day to save it.
+  const [namingDay, setNamingDay] = useState(false);
   // Which meal is being saved under a name.
   const [savingMeal, setSavingMeal] = useState<FoodMeal | null>(null);
   // Meals fold shut to their name and figures, so a long day stays short.
@@ -382,10 +388,50 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
             {(() => {
               if (diary.eaten.kcal > 0 || diary.meals.some((m) => m.entries.length > 0)) return null;
               const last = diary.previous.reduce<string | null>((best, p) => (p.date < date && (!best || p.date > best) ? p.date : best), null);
-              if (!last) return null;
-              const label = diary.previous.find((p) => p.date === last)?.dateLabel ?? last;
-              const kcal = diary.previous.filter((p) => p.date === last).reduce((sum, p) => sum + p.kcal, 0);
+              const label = last ? (diary.previous.find((p) => p.date === last)?.dateLabel ?? last) : null;
+              const kcal = last ? diary.previous.filter((p) => p.date === last).reduce((sum, p) => sum + p.kcal, 0) : 0;
+              const use = (id: number) => {
+                const fd = new FormData();
+                fd.set("clientId", String(clientId));
+                fd.set("id", String(id));
+                fd.set("date", date);
+                startLoad(async () => {
+                  await addSavedDayAction(fd);
+                  const next = await getFoodDiaryAction(clientId, date);
+                  if (next) {
+                    setDiary(next);
+                    setFolded(new Set());
+                  }
+                });
+              };
+              const forget = (id: number) => {
+                const fd = new FormData();
+                fd.set("clientId", String(clientId));
+                fd.set("id", String(id));
+                startLoad(async () => {
+                  await deleteSavedDayAction(fd);
+                  const next = await getFoodDiaryAction(clientId, date);
+                  if (next) setDiary(next);
+                });
+              };
+              if (!last && diary.savedDays.length === 0) return null;
               return (
+                <div className="fdi-copy-days">
+                  {diary.savedDays.map((d) => (
+                    <div key={d.id} className="fdi-copy-day-row">
+                      <button type="button" className="fdi-copy-day" onClick={() => use(d.id)} disabled={loading}>
+                        <span className="fdi-copy-day-main">
+                          <span className="fdi-copy-day-title">{d.name}</span>
+                          <span className="fdi-copy-day-sub">A day you saved · {n(d.kcal)} kcal</span>
+                        </span>
+                        <span className="fdi-copy-day-go">Use</span>
+                      </button>
+                      <button type="button" className="fdi-result-x" onClick={() => forget(d.id)} disabled={loading} aria-label={`Delete saved day ${d.name}`}>
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  {last && (
                 <button
                   type="button"
                   className="fdi-copy-day"
@@ -411,6 +457,8 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                   </span>
                   <span className="fdi-copy-day-go">Copy</span>
                 </button>
+                  )}
+                </div>
               );
             })()}
             <section className="fdi-meals">
@@ -608,6 +656,56 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
               })}
             </section>
 
+            {diary.meals.some((m) => m.entries.length > 0) &&
+              (namingDay ? (
+                <form
+                  className="fdi-new-meal"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const name = String(new FormData(e.currentTarget).get("name") ?? "").trim();
+                    if (!name) return;
+                    const fd = new FormData();
+                    fd.set("clientId", String(clientId));
+                    fd.set("date", date);
+                    fd.set("name", name);
+                    setNamingDay(false);
+                    startLoad(async () => {
+                      await saveDayAction(fd);
+                      const next = await getFoodDiaryAction(clientId, date);
+                      if (next) setDiary(next);
+                    });
+                  }}
+                >
+                  <input
+                    id="fdi-save-day-name"
+                    name="name"
+                    type="text"
+                    placeholder="Training day"
+                    maxLength={40}
+                    autoComplete="off"
+                    autoFocus
+                    aria-label="Name for the saved day"
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") setNamingDay(false);
+                    }}
+                    onBlur={(e) => {
+                      if (!e.currentTarget.value.trim() && !e.relatedTarget) setNamingDay(false);
+                    }}
+                    onFocus={(e) => {
+                      const el = e.currentTarget;
+                      setTimeout(() => el.scrollIntoView({ block: "center", behavior: "smooth" }), 250);
+                    }}
+                  />
+                  <button type="submit" className="fdi-new-meal-add">
+                    Save
+                  </button>
+                </form>
+              ) : (
+                <button type="button" className="fdi-add-meal" onClick={() => setNamingDay(true)}>
+                  <BookmarkIcon />
+                  Save this day
+                </button>
+              ))}
             {namingMeal ? (
               <form
                 className="fdi-new-meal"

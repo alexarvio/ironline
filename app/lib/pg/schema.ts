@@ -582,6 +582,15 @@ export const off_foods = pgTable("off_foods", {
   extra: extra(),
 });
 
+export const saved_days = pgTable("saved_days", {
+  id: id(),
+  client_id: fk("client_id"),
+  name: text("name"),
+  items: jsonb("items"),
+  created_at: text("created_at"),
+  extra: extra(),
+});
+
 export const COLLECTIONS = [
   { name: "users", table: users, key: ["id"] },
   { name: "clients", table: clients, key: ["id"] },
@@ -596,6 +605,7 @@ export const COLLECTIONS = [
   { name: "food_days", table: food_days, key: ["id"] },
   { name: "saved_meals", table: saved_meals, key: ["id"] },
   { name: "off_foods", table: off_foods, key: ["id"] },
+  { name: "saved_days", table: saved_days, key: ["id"] },
   { name: "check_in_notes", table: check_in_notes, key: ["id"] },
   { name: "client_exercise_notes", table: client_exercise_notes, key: ["id"] },
   { name: "client_gyms", table: client_gyms, key: ["id"] },

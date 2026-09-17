@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, CardioEntry } from "./db";
-import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedMeal, ClientGym, ClientPhase, CoachProfile, PhaseTrack } from "./db";
+import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientGym, ClientPhase, CoachProfile, PhaseTrack } from "./db";
 import type { CoachProfileFields, CoachProfileView } from "./coachProfileView";
 import { getCatalogFood, searchCatalog, type CatalogFood } from "./foods/catalog";
 import type { OffProduct } from "./foods/openfoodfacts";
@@ -7579,6 +7579,53 @@ export function addSavedMeal(clientId: number, id: number, date: string, meal: F
   return saved.items.length;
 }
 
+export type SavedDayView = { id: number; name: string; kcal: number; count: number };
+
+export function listSavedDays(clientId: number): SavedDayView[] {
+  return getData()
+    .saved_days.filter((d) => d.client_id === clientId)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .map((d) => ({ id: d.id, name: d.name, kcal: Math.round(d.items.reduce((s, i) => s + i.kcal, 0)), count: d.items.length }));
+}
+
+/** One whole day, kept under a name to log again. */
+export function saveDay(clientId: number, date: string, name: string): SavedDay | null {
+  const rows = listFoodEntries(clientId, date);
+  if (rows.length === 0) return null;
+  const data = getData();
+  const row: SavedDay = {
+    id: allocId("saved_days"),
+    client_id: clientId,
+    name,
+    items: rows.map((e) => ({ meal: e.meal, food_id: e.food_id, name: e.name, grams: e.grams, serving: e.serving, kcal: e.kcal, protein: e.protein, carbs: e.carbs, fat: e.fat })),
+    created_at: new Date().toISOString(),
+  };
+  data.saved_days.push(row);
+  persist();
+  return row;
+}
+
+export function deleteSavedDay(clientId: number, id: number): boolean {
+  const data = getData();
+  const before = data.saved_days.length;
+  data.saved_days = data.saved_days.filter((d) => !(d.id === id && d.client_id === clientId));
+  if (data.saved_days.length === before) return false;
+  persist();
+  return true;
+}
+
+/** A saved day's meals onto a date, logged now; meals that no longer exist go to Snacks. */
+export function addSavedDay(clientId: number, id: number, date: string): number {
+  const data = getData();
+  const saved = data.saved_days.find((d) => d.id === id && d.client_id === clientId);
+  if (!saved) return 0;
+  const meals = new Set(listFoodMeals(clientId).map((m) => m.id));
+  const now = new Date().toISOString();
+  for (const i of saved.items) data.food_entries.push({ id: allocId("food_entries"), client_id: clientId, date, ...i, meal: meals.has(i.meal) ? i.meal : "snacks", logged_at: now });
+  if (saved.items.length) persist();
+  return saved.items.length;
+}
+
 /** Every meal of one day into another, the same foods and amounts, logged now; meals that no longer exist go to Snacks. */
 export function copyFoodDay(clientId: number, fromDate: string, toDate: string): number {
   const data = getData();
@@ -7672,6 +7719,8 @@ export type FoodDiaryView = {
   recent: FoodOption[];
   /** The client's saved meals, newest first. */
   saved: SavedMealView[];
+  /** The client's saved days, newest first. */
+  savedDays: SavedDayView[];
   /** Meals with food in them on the last two weeks' other days, newest first, to copy from. */
   previous: { date: string; dateLabel: string; meal: FoodMeal; mealLabel: string; kcal: number; names: string[] }[];
   /** Dates in the last month with anything logged, for the dots on the week strip. */
@@ -7770,6 +7819,7 @@ export function getFoodDiary(clientId: number, date: string): FoodDiaryView {
     }),
     recent: recentFoods(clientId),
     saved: listSavedMeals(clientId),
+    savedDays: listSavedDays(clientId),
     previous,
     loggedDays: [...new Set(getData().food_entries.filter((e) => e.client_id === clientId && e.date >= monthAgo && e.date <= today).map((e) => e.date))],
   };

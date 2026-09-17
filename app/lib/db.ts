@@ -115,6 +115,15 @@ export type FoodEntry = {
   fat: number;
   logged_at: string;
 };
+// A whole day a client saved to log again ("Training day"): every meal's
+// foods and amounts as they were. Only they can use it.
+export type SavedDay = {
+  id: number;
+  client_id: number;
+  name: string;
+  items: { meal: string; food_id: string; name: string; grams: number; serving: string | null; kcal: number; protein: number; carbs: number; fat: number }[];
+  created_at: string;
+};
 // A packaged product fetched from Open Food Facts, kept so it is instant
 // next time and there when they are down. Shared by every client.
 export type OffFood = {
@@ -809,6 +818,7 @@ export type Data = {
   food_days: FoodDay[];
   saved_meals: SavedMeal[];
   off_foods: OffFood[];
+  saved_days: SavedDay[];
   check_in_notes: CheckInNote[];
   client_exercise_notes: ClientExerciseNote[];
   client_program_notes: ClientProgramNote[];
@@ -847,6 +857,7 @@ function emptyData(): Data {
     food_days: [],
     saved_meals: [],
     off_foods: [],
+    saved_days: [],
     check_in_notes: [],
     client_exercise_notes: [],
     client_program_notes: [],

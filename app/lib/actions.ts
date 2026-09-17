@@ -191,6 +191,9 @@ import {
   reorderFoodMeals,
   copyFoodMeal,
   copyFoodDay,
+  saveDay,
+  deleteSavedDay,
+  addSavedDay,
   hasFoodMeal,
   getFoodDiary,
   setFoodDayType,
@@ -2386,6 +2389,33 @@ export async function copyFoodDayAction(formData: FormData) {
   const toDate = String(formData.get("toDate") ?? "");
   if (!DATE.test(fromDate) || !diaryDateOk(toDate) || fromDate === toDate) return;
   copyFoodDay(clientId, fromDate, toDate);
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+export async function saveDayAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const date = String(formData.get("date") ?? "");
+  const name = String(formData.get("name") ?? "").trim().slice(0, 40);
+  if (!DATE.test(date) || !name) return;
+  saveDay(clientId, date, name);
+  revalidatePath("/client");
+}
+
+export async function deleteSavedDayAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const id = Number(formData.get("id"));
+  if (!Number.isInteger(id)) return;
+  deleteSavedDay(clientId, id);
+  revalidatePath("/client");
+}
+
+export async function addSavedDayAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const id = Number(formData.get("id"));
+  const date = String(formData.get("date") ?? "");
+  if (!Number.isInteger(id) || !diaryDateOk(date)) return;
+  addSavedDay(clientId, id, date);
   revalidatePath("/client");
   revalidatePath("/admin");
 }
