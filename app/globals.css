@@ -14413,7 +14413,8 @@ label.ci-pill { cursor: text; }
 .fdi-row-wrap > .fdi-row { flex: 1; min-width: 0; }
 .fdi-row-bin { flex: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; margin-top: 12px; border: 0; background: none; color: #8b93a1; cursor: pointer; }
 .fdi-row-bin svg { width: 16px; height: 16px; }
-.fdi-row-ask { flex: none; display: inline-flex; align-items: center; gap: 4px; margin-top: 12px; }
+.fdi-row-ask { flex: none; display: inline-flex; align-items: center; gap: 4px; }
+.fdi-row-wrap > .fdi-row-ask { margin-top: 12px; }
 .fdi-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .fdi-row-name { font-size: 14px; font-weight: 500; color: #313851; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fdi-row-amount { font-size: 12px; font-weight: 500; color: #8b93a1; }

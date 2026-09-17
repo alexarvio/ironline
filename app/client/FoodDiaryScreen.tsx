@@ -138,6 +138,8 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
   const [namingDay, setNamingDay] = useState(false);
   // The row whose bin was tapped: it becomes the question until answered.
   const [askRemove, setAskRemove] = useState<number | null>(null);
+  // The saved day whose × was tapped, likewise.
+  const [askForgetDay, setAskForgetDay] = useState<number | null>(null);
   const removeRow = (id: number) => {
     const fd = new FormData();
     fd.set("clientId", String(clientId));
@@ -231,6 +233,7 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
       setDiary({ ...diary, meals: ids.map((x) => diary.meals.find((m) => m.id === x)!) });
       const fd = new FormData();
       fd.set("clientId", String(clientId));
+      fd.set("date", date);
       fd.set("order", ids.join(","));
       startLoad(async () => {
         await reorderFoodMealsAction(fd);
@@ -440,9 +443,20 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                         </span>
                         <span className="fdi-copy-day-go">Use</span>
                       </button>
-                      <button type="button" className="fdi-result-x" onClick={() => forget(d.id)} disabled={loading} aria-label={`Delete saved day ${d.name}`}>
-                        ×
-                      </button>
+                      {askForgetDay === d.id ? (
+                        <span className="fdi-row-ask">
+                          <button type="button" className="fdi-confirm-keep" onClick={() => setAskForgetDay(null)} autoFocus>
+                            Keep
+                          </button>
+                          <button type="button" className="fdi-confirm-remove" onClick={() => { setAskForgetDay(null); forget(d.id); }} disabled={loading}>
+                            Forget
+                          </button>
+                        </span>
+                      ) : (
+                        <button type="button" className="fdi-result-x" onClick={() => setAskForgetDay(d.id)} disabled={loading} aria-label={`Forget saved day ${d.name}`}>
+                          ×
+                        </button>
+                      )}
                     </div>
                   ))}
                   {last && (
@@ -745,6 +759,7 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                   const fd = new FormData();
                   fd.set("clientId", String(clientId));
                   fd.set("name", name);
+                  fd.set("date", date);
                   setNamingMeal(false);
                   startLoad(async () => {
                     await addFoodMealAction(fd);
@@ -937,6 +952,8 @@ function SearchPanel({
   // Which query the long tail was opened for.
   const [moreFor, setMoreFor] = useState<string | null>(null);
   const [copying, startCopy] = useTransition();
+  // The saved meal whose × was tapped: it asks before it forgets.
+  const [askForget, setAskForget] = useState<number | null>(null);
   // Packaged products from Open Food Facts, asked for on request: the answer
   // and the query it answers.
   const [packaged, setPackaged] = useState<{ q: string; rows: FoodOptionView[]; error?: string } | null>(null);
@@ -1105,9 +1122,20 @@ function SearchPanel({
                   {n(s.kcal)} <small>kcal</small>
                 </span>
               </button>
-              <button type="button" className="fdi-result-x" onClick={() => forget(s)} disabled={copying} aria-label={`Delete saved meal ${s.name}`}>
-                ×
-              </button>
+              {askForget === s.id ? (
+                <span className="fdi-row-ask">
+                  <button type="button" className="fdi-confirm-keep" onClick={() => setAskForget(null)} autoFocus>
+                    Keep
+                  </button>
+                  <button type="button" className="fdi-confirm-remove" onClick={() => { setAskForget(null); forget(s); }} disabled={copying}>
+                    Forget
+                  </button>
+                </span>
+              ) : (
+                <button type="button" className="fdi-result-x" onClick={() => setAskForget(s.id)} disabled={copying} aria-label={`Forget saved meal ${s.name}`}>
+                  ×
+                </button>
+              )}
             </div>
           ))}
         </div>

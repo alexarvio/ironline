@@ -164,6 +164,8 @@ export type FoodMealSlot = {
   id: number;
   client_id: number;
   name: string;
+  /** The day it was added for; it shows on that day only. Absent on the first ones made, which show nowhere unless they hold food. */
+  date?: string | null;
   created_at: string;
 };
 // A food a client made themselves ("Mum's lasagne"), per 100 g, with one

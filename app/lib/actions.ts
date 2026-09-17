@@ -2204,7 +2204,7 @@ export async function addFoodEntryAction(formData: FormData) {
   const meal = String(formData.get("meal") ?? "");
   const foodId = String(formData.get("foodId") ?? "");
   const grams = gramsOf(formData.get("grams"));
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !hasFoodMeal(clientId, meal) || !foodId || grams == null) return;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !hasFoodMeal(clientId, meal, date) || !foodId || grams == null) return;
   const serving = String(formData.get("serving") ?? "").trim().slice(0, 80) || null;
   addFoodEntry(clientId, date, meal as FoodMeal, foodId, grams, serving);
   revalidatePath("/client");
@@ -2270,8 +2270,9 @@ export async function getFoodDiaryAction(clientId: number, date: string): Promis
 export async function addFoodMealAction(formData: FormData): Promise<string | null> {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const name = String(formData.get("name") ?? "").trim().slice(0, 30);
-  if (!name) return null;
-  const row = addFoodMeal(clientId, name);
+  const date = String(formData.get("date") ?? "");
+  if (!name || !diaryDateOk(date)) return null;
+  const row = addFoodMeal(clientId, name, date);
   revalidatePath("/client");
   return `m:${row.id}`;
 }
@@ -2290,7 +2291,7 @@ export async function copyFoodMealAction(formData: FormData) {
   const fromMeal = String(formData.get("fromMeal") ?? "");
   const toDate = String(formData.get("toDate") ?? "");
   const toMeal = String(formData.get("toMeal") ?? "");
-  if (!DATE.test(fromDate) || !diaryDateOk(toDate) || !hasFoodMeal(clientId, toMeal)) return;
+  if (!DATE.test(fromDate) || !diaryDateOk(toDate)) return;
   copyFoodMeal(clientId, fromDate, fromMeal, toDate, toMeal);
   revalidatePath("/client");
   revalidatePath("/admin");
@@ -2308,12 +2309,14 @@ export async function setFoodDayTypeAction(formData: FormData) {
 
 export async function reorderFoodMealsAction(formData: FormData) {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const date = String(formData.get("date") ?? "");
+  if (!DATE.test(date)) return;
   const ids = String(formData.get("order") ?? "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean)
     .slice(0, 30);
-  reorderFoodMeals(clientId, ids);
+  reorderFoodMeals(clientId, date, ids);
   revalidatePath("/client");
 }
 
