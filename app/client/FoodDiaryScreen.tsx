@@ -140,6 +140,8 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
   const [askRemove, setAskRemove] = useState<number | null>(null);
   // The saved day whose × was tapped, likewise.
   const [askForgetDay, setAskForgetDay] = useState<number | null>(null);
+  // The Copy a day card, folded until opened.
+  const [copyOpen, setCopyOpen] = useState(false);
   const removeRow = (id: number) => {
     const fd = new FormData();
     fd.set("clientId", String(clientId));
@@ -401,12 +403,32 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
           })()}
 
           <div className="nd-body fdi-list">
-            {/* An empty day, with a recent day to copy: most people eat the same most days. */}
+            {/* An empty day: one card, folded, holding the days that can be copied
+                onto it: the last day with food, and the days the client saved. */}
             {(() => {
               if (diary.eaten.kcal > 0 || diary.meals.some((m) => m.entries.length > 0)) return null;
               const last = diary.previous.reduce<string | null>((best, p) => (p.date < date && (!best || p.date > best) ? p.date : best), null);
               const label = last ? (diary.previous.find((p) => p.date === last)?.dateLabel ?? last) : null;
               const kcal = last ? diary.previous.filter((p) => p.date === last).reduce((sum, p) => sum + p.kcal, 0) : 0;
+              if (!last && diary.savedDays.length === 0) return null;
+              const after = async () => {
+                const next = await getFoodDiaryAction(clientId, date);
+                if (next) {
+                  setDiary(next);
+                  setFolded(new Set());
+                }
+              };
+              const copyLast = () => {
+                if (!last) return;
+                const fd = new FormData();
+                fd.set("clientId", String(clientId));
+                fd.set("fromDate", last);
+                fd.set("toDate", date);
+                startLoad(async () => {
+                  await copyFoodDayAction(fd);
+                  await after();
+                });
+              };
               const use = (id: number) => {
                 const fd = new FormData();
                 fd.set("clientId", String(clientId));
@@ -414,79 +436,73 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                 fd.set("date", date);
                 startLoad(async () => {
                   await addSavedDayAction(fd);
-                  const next = await getFoodDiaryAction(clientId, date);
-                  if (next) {
-                    setDiary(next);
-                    setFolded(new Set());
-                  }
+                  await after();
                 });
               };
               const forget = (id: number) => {
                 const fd = new FormData();
                 fd.set("clientId", String(clientId));
                 fd.set("id", String(id));
+                setAskForgetDay(null);
                 startLoad(async () => {
                   await deleteSavedDayAction(fd);
                   const next = await getFoodDiaryAction(clientId, date);
                   if (next) setDiary(next);
                 });
               };
-              if (!last && diary.savedDays.length === 0) return null;
+              const count = diary.savedDays.length + (last ? 1 : 0);
               return (
-                <div className="fdi-copy-days">
-                  {diary.savedDays.map((d) => (
-                    <div key={d.id} className="fdi-copy-day-row">
-                      <button type="button" className="fdi-copy-day" onClick={() => use(d.id)} disabled={loading}>
-                        <span className="fdi-copy-day-main">
-                          <span className="fdi-copy-day-title">{d.name}</span>
-                          <span className="fdi-copy-day-sub">A day you saved · {n(d.kcal)} kcal</span>
-                        </span>
-                        <span className="fdi-copy-day-go">Use</span>
-                      </button>
-                      {askForgetDay === d.id ? (
-                        <span className="fdi-row-ask">
-                          <button type="button" className="fdi-confirm-keep" onClick={() => setAskForgetDay(null)} autoFocus>
-                            Keep
+                <section className="fdi-copy">
+                  <button type="button" className="fdi-copy-head" onClick={() => setCopyOpen((o) => !o)} aria-expanded={copyOpen}>
+                    <span className="fdi-meal-title">Copy a day</span>
+                    <span className="fdi-copy-count">{count}</span>
+                    <span className={`fdi-meal-chev${copyOpen ? " up" : ""}`} aria-hidden="true">
+                      <ChevronDownIcon />
+                    </span>
+                  </button>
+                  <div className={`fdi-fold${copyOpen ? "" : " folding"}`}>
+                    <div className="fdi-fold-inner">
+                      {last && (
+                        <div className="fdi-copy-row">
+                          <span className="fdi-copy-main">
+                            <span className="fdi-copy-name">{label === "Yesterday" ? "Yesterday" : label}</span>
+                            <span className="fdi-copy-sub">Every meal from that day · {n(kcal)} kcal</span>
+                          </span>
+                          <button type="button" className="fdi-copy-use" onClick={copyLast} disabled={loading}>
+                            Copy
                           </button>
-                          <button type="button" className="fdi-confirm-remove" onClick={() => { setAskForgetDay(null); forget(d.id); }} disabled={loading}>
-                            Forget
-                          </button>
-                        </span>
-                      ) : (
-                        <button type="button" className="fdi-result-x" onClick={() => setAskForgetDay(d.id)} disabled={loading} aria-label={`Forget saved day ${d.name}`}>
-                          ×
-                        </button>
+                        </div>
                       )}
+                      {diary.savedDays.map((d) => (
+                        <div key={d.id} className="fdi-copy-row">
+                          <span className="fdi-copy-main">
+                            <span className="fdi-copy-name">{d.name}</span>
+                            <span className="fdi-copy-sub">A day you saved · {n(d.kcal)} kcal</span>
+                          </span>
+                          {askForgetDay === d.id ? (
+                            <span className="fdi-row-ask">
+                              <button type="button" className="fdi-confirm-keep" onClick={() => setAskForgetDay(null)} autoFocus>
+                                Keep
+                              </button>
+                              <button type="button" className="fdi-confirm-remove" onClick={() => forget(d.id)} disabled={loading}>
+                                Forget
+                              </button>
+                            </span>
+                          ) : (
+                            <>
+                              <button type="button" className="fdi-copy-use" onClick={() => use(d.id)} disabled={loading}>
+                                Use
+                              </button>
+                              <button type="button" className="fdi-row-bin" onClick={() => setAskForgetDay(d.id)} disabled={loading} aria-label={`Forget saved day ${d.name}`}>
+                                <TrashIcon />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                  {last && (
-                <button
-                  type="button"
-                  className="fdi-copy-day"
-                  onClick={() => {
-                    const fd = new FormData();
-                    fd.set("clientId", String(clientId));
-                    fd.set("fromDate", last);
-                    fd.set("toDate", date);
-                    startLoad(async () => {
-                      await copyFoodDayAction(fd);
-                      const next = await getFoodDiaryAction(clientId, date);
-                      if (next) {
-                        setDiary(next);
-                        setFolded(new Set());
-                      }
-                    });
-                  }}
-                  disabled={loading}
-                >
-                  <span className="fdi-copy-day-main">
-                    <span className="fdi-copy-day-title">Same as {label === "Yesterday" ? "yesterday" : label}?</span>
-                    <span className="fdi-copy-day-sub">Copy every meal from that day · {n(kcal)} kcal</span>
-                  </span>
-                  <span className="fdi-copy-day-go">Copy</span>
-                </button>
-                  )}
-                </div>
+                  </div>
+                </section>
               );
             })()}
             <section className="fdi-meals">
