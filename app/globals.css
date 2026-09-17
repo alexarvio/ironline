@@ -14479,6 +14479,10 @@ label.ci-pill { cursor: text; }
 .fdi-scan-btn:disabled { opacity: 0.5; cursor: default; }
 /* The scanner: the camera in a sheet over the screen. */
 .fdi-scan-scrim { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; background: rgba(20, 23, 28, 0.55); }
+.fdi-sheet-head { display: grid; grid-template-columns: 32px 1fr 32px; align-items: center; gap: 8px; }
+.fdi-sheet-title { font-size: 15px; font-weight: 600; color: #141a24; text-align: center; }
+.fdi-sheet-x, .fdi-sheet-back { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 0; border-radius: 999px; background: none; font-size: 22px; line-height: 1; color: #5b6474; cursor: pointer; }
+.fdi-sheet-x { justify-self: end; }
 .fdi-scan { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 420px; box-sizing: border-box; padding: 14px 16px calc(16px + env(safe-area-inset-bottom)); border-radius: 18px 18px 0 0; background: #fff; }
 .fdi-scan-view { position: relative; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 12px; background: #141a24; }
 .fdi-scan-view video { display: block; width: 100%; height: 100%; object-fit: cover; }
