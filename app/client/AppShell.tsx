@@ -44,6 +44,19 @@ type PushView = "notifications" | "checkin" | "photos" | "coach" | "messages" | 
 // the server render and the first client render agree (first tab), then the
 // remembered tab applies.
 const TAB_KEY = "ironline.client.tab";
+const PUSH_KEY = "ironline.client.push";
+// Which pushed view was open when the page last reloaded (only the food diary is kept).
+function readPush(): string | null {
+  try {
+    return window.sessionStorage.getItem(PUSH_KEY);
+  } catch {
+    return null;
+  }
+}
+// Nothing to subscribe to: once the client picks a view, that choice wins.
+function subscribePush() {
+  return () => {};
+}
 const TAB_EVENT = "ironline:tab";
 
 function readTab(): string | null {
@@ -109,7 +122,22 @@ export default function AppShell({
   const storedTab = useSyncExternalStore(subscribeTab, readTab, () => null);
   const activeId = storedTab && tabs.some((t) => t.id === storedTab) ? storedTab : tabs[0]?.id;
   const setActiveId = (id: string) => writeTab(id);
-  const [pushView, setPushView] = useState<PushView>(null);
+  // The food diary stays open across a reload (a deploy landing mid-session
+  // reloads the page), the way the tab does: read from storage until the
+  // client chooses otherwise. The other pushed views start closed, since
+  // they hang off something on the tab underneath.
+  const storedPush = useSyncExternalStore(subscribePush, readPush, () => null);
+  const [chosenPush, setChosenPush] = useState<PushView | undefined>(undefined);
+  const pushView: PushView = chosenPush !== undefined ? chosenPush : storedPush === "food" && foodDiary ? "food" : null;
+  const setPushView = (v: PushView) => {
+    setChosenPush(v);
+    try {
+      if (v === "food") window.sessionStorage.setItem(PUSH_KEY, "food");
+      else window.sessionStorage.removeItem(PUSH_KEY);
+    } catch {
+      /* blocked storage: the view still opens for this page */
+    }
+  };
   // Which check-in section to land on, set by whichever due item opened it.
   const [checkInSection, setCheckInSection] = useState("daily");
   const openCheckIn = (section: string) => {
