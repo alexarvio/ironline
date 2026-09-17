@@ -12994,17 +12994,20 @@ label.ci-pill { cursor: text; }
    glass tinted the track's colour, so the banner shows through. */
 .hm-phases { display: flex; gap: 10px; margin: 16px -22px 0; padding: 0 22px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 22px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .hm-phases::-webkit-scrollbar { display: none; }
-.hm-phase { flex: 0 0 100%; scroll-snap-align: center; box-sizing: border-box; padding: 14px 16px 14px; border: 1px solid rgba(255, 255, 255, 0.55); border-radius: 18px; background: rgba(255, 255, 255, 0.34); -webkit-backdrop-filter: blur(14px) saturate(1.3); backdrop-filter: blur(14px) saturate(1.3); box-shadow: 0 8px 24px -18px rgba(8, 31, 92, 0.5); }
-.hm-phase.nutrition { background: rgba(47, 122, 63, 0.14); border-color: rgba(47, 122, 63, 0.28); }
-.hm-phase.training { background: rgba(58, 51, 144, 0.12); border-color: rgba(58, 51, 144, 0.26); }
-.hm-phase.lifestyle { background: rgba(74, 74, 69, 0.1); border-color: rgba(74, 74, 69, 0.22); }
-.hm-phase .hm-track-bar-fill { width: var(--w); animation: hm-bar-fill 0.9s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.hm-phase { --c: 47, 122, 63; --ink-c: #0f5c46; flex: 0 0 100%; scroll-snap-align: center; box-sizing: border-box; padding: 14px 16px; border: 2px solid rgba(var(--c), 0.55); border-radius: 18px; background: linear-gradient(180deg, rgba(var(--c), 0.22) 0%, rgba(var(--c), 0.08) 60%, rgba(255, 255, 255, 0.35) 100%); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 10px 30px -18px rgba(var(--c), 0.55); }
+.hm-phase.training { --c: 58, 51, 144; --ink-c: #3a3390; }
+.hm-phase.lifestyle { --c: 74, 74, 69; --ink-c: #4a4a45; }
+/* The bar fills in as the card arrives, glowing along its length, and its tip keeps a soft pulse. */
+.hm-phase .hm-track-bar { overflow: visible; background: rgba(var(--c), 0.16); }
+.hm-phase .hm-track-bar-fill { position: relative; width: var(--w); background: linear-gradient(90deg, var(--ink-c), rgb(var(--c))); box-shadow: 0 0 10px rgba(var(--c), 0.55), 0 0 2px rgba(var(--c), 0.9); animation: hm-bar-fill 1.1s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.hm-phase .hm-track-bar-fill::after { content: ""; position: absolute; right: -2px; top: 50%; width: 10px; height: 10px; border-radius: 999px; transform: translateY(-50%); background: #fff; box-shadow: 0 0 0 2px rgb(var(--c)), 0 0 12px 4px rgba(var(--c), 0.55); animation: hm-bar-tip 1.6s ease-in-out 1.1s infinite alternate; }
 @keyframes hm-bar-fill { from { width: 0; } }
+@keyframes hm-bar-tip { from { box-shadow: 0 0 0 2px rgb(var(--c)), 0 0 8px 2px rgba(var(--c), 0.35); } to { box-shadow: 0 0 0 2px rgb(var(--c)), 0 0 14px 6px rgba(var(--c), 0.65); } }
 .hm-phase-note { margin: 10px 0 0; padding-top: 10px; border-top: 1px solid rgba(20, 26, 36, 0.1); font-size: 13px; line-height: 1.45; color: #313851; }
 .hm-phase-dots { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
 .hm-phase-dots span { width: 6px; height: 6px; border-radius: 999px; background: rgba(20, 26, 36, 0.25); transition: width 0.3s ease, background-color 0.3s ease; }
 .hm-phase-dots span.on { width: 16px; background: #141a24; }
-@media (prefers-reduced-motion: reduce) { .hm-phase .hm-track-bar-fill { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .hm-phase .hm-track-bar-fill, .hm-phase .hm-track-bar-fill::after { animation: none; } }
 
 .hm-track-head {
   display: flex;
