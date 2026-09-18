@@ -519,6 +519,7 @@ export type TrainingProgram = {
   status: "draft" | "deployed";
   deployed_at: string | null;
   scheduled_at: string | null;
+  phase_removed?: boolean;
 };
 
 export function listPrograms(clientId: number): TrainingProgram[] {
@@ -5573,6 +5574,12 @@ export function removeClientPhase(phaseId: number) {
   // the Training tab, unlinked.
   if (phase.program_id) {
     const program = data.training_programs.find((p) => p.id === phase.program_id);
+    // A live, scheduled or past programme would otherwise get its phase
+    // straight back on the next page load (syncProgramPhase).
+    if (program && (program.status === "deployed" || program.scheduled_at)) {
+      program.phase_removed = true;
+      persist();
+    }
     if (program && program.status === "draft" && !program.scheduled_at) {
       const built = getWeek(program.client_id, program.start_week).some((d) => getAssignmentsForDay(d.id).length > 0) ||
         Array.from({ length: program.total_weeks }, (_, i) => program.start_week + i).some((w) =>
@@ -5609,6 +5616,8 @@ export function syncProgramPhase(programId: number, dates = true) {
   endDate.setDate(endDate.getDate() + (program.total_weeks - 1) * 7);
   const end = localDateStr(endDate);
   if (!phase) {
+    // The coach deleted it from the Plan tab; it stays deleted.
+    if (program.phase_removed) return;
     phase = { id: allocId("client_phases"), client_id: program.client_id, track: "training", name, start_week: start, end_week: end, program_id: programId };
     data.client_phases.push(phase);
   } else {

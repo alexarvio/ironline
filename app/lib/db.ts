@@ -70,6 +70,8 @@ type TrainingProgram = {
   status: "draft" | "deployed";
   deployed_at: string | null;
   scheduled_at: string | null;
+  // The coach deleted this programme's Plan-tab phase: don't draw it again.
+  phase_removed?: boolean;
 };
 // One block on the coach's phase timeline: "Bulk" on the nutrition track
 // from one week to another. Weeks are Monday dates (YYYY-MM-DD); end_week
