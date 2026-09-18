@@ -5,6 +5,7 @@ import {
   getCustomValues,
   getDeployedProgram,
   listCardioForDay,
+  isCardioDone,
   formatRestSeconds,
   getClientProgramNoteMeta,
   getExerciseWeightTrendPct,
@@ -163,6 +164,15 @@ export default function ProgramBuilder({
       // logged on it. Only worth saying when they have more than one gym.
       const dayLog = allGyms.length > 1 ? assignments.flatMap((a) => getLogsForAssignment(a.id))[0] : undefined;
       const dayGymName = dayLog ? gymNameOf(dayLog.gym_id ?? home) : null;
+      // Complete as the client's app counts it: every planned set logged and
+      // every cardio ticked.
+      const sessionDone =
+        !isEmpty &&
+        assignments.every((a) => {
+          const logged = new Set(getLogsForAssignment(a.id).map((l) => l.set_number));
+          return Array.from({ length: a.sets }, (_, i) => i + 1).every((n) => logged.has(n));
+        }) &&
+        listCardioForDay(day.id).every((c) => isCardioDone(c.id));
       const summary = isEmpty
         ? "Nothing yet. Add the first exercise"
         : [
@@ -252,21 +262,26 @@ export default function ProgramBuilder({
             />
           }
           statusPill={
-            setsLoggedThisWeek > 0 ? (
-              <span className="pb-logged-pill">
-                {setsLoggedThisWeek} set{setsLoggedThisWeek === 1 ? "" : "s"} logged
-              </span>
-            ) : undefined
-          }
-          gymSlot={
-            dayGymName || day.skip_reason ? (
+            setsLoggedThisWeek > 0 || dayGymName ? (
               <>
+                {setsLoggedThisWeek > 0 && (
+                  <span className="pb-logged-pill">
+                    {setsLoggedThisWeek} set{setsLoggedThisWeek === 1 ? "" : "s"} logged
+                  </span>
+                )}
                 {dayGymName && (
                   <span className="pb-day-gym" title="The gym the client picked for this session">
                     {dayGymName}
                   </span>
                 )}
-                {day.skip_reason && (
+              </>
+            ) : undefined
+          }
+          gymSlot={
+            day.skip_reason || sessionDone ? (
+              <>
+                {sessionDone && <span className="pb-day-done">Session completed</span>}
+                {day.skip_reason && !sessionDone && (
                   <span className="pb-day-skip" title="The client's reason for not doing this session">
                     Couldn&rsquo;t train · {day.skip_reason}
                   </span>
@@ -633,13 +648,18 @@ export default function ProgramBuilder({
 
       // One tick per session, in order, reporting what the client actually
       // did: trained, not trained in a week that has passed, or not yet.
-      const railDays = days.map((d, di) => {
+      // Only sessions with exercises get a tick, so five training days are
+      // five ticks and a skipped second one is the second tick in red.
+      const railDays = days.flatMap((d, di) => {
         const assignments = perDay[di];
+        if (assignments.length === 0) return [];
         const name = `Session ${d.day_of_week}${d.label ? ` · ${d.label}` : ""}`;
         const trained = assignments.some((x) => getLogsForAssignment(x.id).length > 0);
-        const past = liveWeekNumber != null && weekNumber < liveWeekNumber;
+        // Red once it can no longer be trained: the week has passed, the whole
+        // programme has, or the client said they couldn't.
+        const past = status === "past" || (liveWeekNumber != null && weekNumber < liveWeekNumber);
         if (trained) return { dayOfWeek: d.day_of_week, state: "trained" as const, title: `${name}: trained` };
-        if (past && assignments.length > 0) return { dayOfWeek: d.day_of_week, state: "missed" as const, title: `${name}: not trained${d.skip_reason ? ` (${d.skip_reason})` : ""}` };
+        if (past || d.skip_reason) return { dayOfWeek: d.day_of_week, state: "missed" as const, title: `${name}: not trained${d.skip_reason ? ` (${d.skip_reason})` : ""}` };
         return { dayOfWeek: d.day_of_week, state: "rest" as const, title: `${name}: not trained yet` };
       });
       // Sessions done, not days lit: a session logged across two days is

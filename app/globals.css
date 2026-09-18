@@ -9265,7 +9265,7 @@ label.ci-pill { cursor: text; }
 
 /* Trained / planned-but-missed / rest — what happened, not what was planned. */
 .pb-week-tick.trained { background: var(--good); }
-.pb-week-tick.missed { background: var(--border); }
+.pb-week-tick.missed { background: #d9534f; }
 .pb-week-tick.rest { background: var(--table-head); }
 
 .pb-week-meta { font-size: 10px; color: var(--steel); margin-top: 6px; }
@@ -13763,6 +13763,7 @@ label.ci-pill { cursor: text; }
 .pb-copy-full { margin: 0; padding: 9px 12px; border-radius: 10px; background: #f8f9fb; font-size: 12px; font-weight: 600; color: #5b6474; }
 /* In a day's header: the gym the client trained that session at. */
 .pb-day-gym { flex-shrink: 0; font-size: 11.5px; font-weight: 800; color: #fff; background: #2f5d8f; border-radius: 999px; padding: 4px 11px; white-space: nowrap; box-shadow: 0 1px 2px rgba(20, 26, 36, 0.15); }
+.pb-day-done { flex-shrink: 0; font-size: 11.5px; font-weight: 800; color: #2f7a3f; background: #dff3ea; border-radius: 999px; padding: 4px 11px; white-space: nowrap; }
 .pb-day-skip { min-width: 0; max-width: 260px; overflow: hidden; text-overflow: ellipsis; font-size: 11.5px; font-weight: 800; color: #a32d2d; background: #fbeaea; border-radius: 999px; padding: 4px 11px; white-space: nowrap; }
 .pb-gyms { position: relative; }
 .pb-gyms-pill { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #dfe3e8; border-radius: 999px; background: #fff; color: #313851; padding: 6px 12px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
