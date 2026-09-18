@@ -61,6 +61,7 @@ export type WorkoutAssignment = {
   note_read: boolean;
   target_set_at?: string | null;
   gym_targets?: Record<string, { kg: number | null; set_at?: string | null }>;
+  warmup_sets?: { weight_kg: number | null; reps: number | null }[];
   exercise_name?: string;
   exercise_video_url?: string | null;
 };
@@ -896,7 +897,7 @@ export function copyProgramWeek(clientId: number, fromWeek: number, toWeek: numb
       .sort((a, b) => a.order_index - b.order_index);
     for (const wa of srcAssignments) {
       const id = allocId("workout_assignments");
-      data.workout_assignments.push({ ...wa, id, program_day_id: dest.id });
+      data.workout_assignments.push({ ...wa, warmup_sets: undefined, id, program_day_id: dest.id });
       // Custom columns are part of the plan too, so they come along.
       for (const v of data.assignment_custom_values.filter((v) => v.workout_assignment_id === wa.id)) {
         data.assignment_custom_values.push({
@@ -6011,6 +6012,42 @@ export function pickGymForDay(programDayId: number, gymId: number) {
   moved.forEach((id) => progressTargetFromLogs(id));
 }
 
+/**
+ * The warm-up the client did the last time they had this exercise: the
+ * latest earlier session of theirs with warm-up sets on it. What this
+ * week's warm-up starts from.
+ */
+export function getLastWarmupSets(assignmentId: number): { weight_kg: number | null; reps: number | null }[] {
+  const data = getData();
+  const wa = data.workout_assignments.find((x) => x.id === assignmentId);
+  const day = wa && data.program_days.find((pd) => pd.id === wa.program_day_id);
+  if (!wa || !day) return [];
+  const days = new Map(data.program_days.filter((pd) => pd.client_id === day.client_id).map((pd) => [pd.id, pd]));
+  const at = (pd: { week_number: number; day_of_week: number }) => pd.week_number * 100 + pd.day_of_week;
+  let best: { when: number; sets: { weight_kg: number | null; reps: number | null }[] } | null = null;
+  for (const other of data.workout_assignments) {
+    if (other.exercise_id !== wa.exercise_id || !other.warmup_sets?.length) continue;
+    const pd = days.get(other.program_day_id);
+    if (!pd || at(pd) >= at(day)) continue;
+    if (!best || at(pd) > best.when) best = { when: at(pd), sets: other.warmup_sets };
+  }
+  return best?.sets ?? [];
+}
+
+/** The client's warm-up sets on an exercise; an empty list clears them. */
+export function setWarmupSets(assignmentId: number, sets: { weight_kg: number | null; reps: number | null }[]) {
+  const wa = getData().workout_assignments.find((x) => x.id === assignmentId);
+  if (!wa) return;
+  const num = (v: unknown, max: number) => (typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= max ? v : null);
+  const clean = sets
+    .slice(0, 8)
+    .map((s) => ({ weight_kg: num(s?.weight_kg, 2000), reps: num(s?.reps, 1000) }))
+    .filter((s) => s.weight_kg != null || s.reps != null);
+  if (clean.length) wa.warmup_sets = clean;
+  else delete wa.warmup_sets;
+  persist();
+}
+
 /** The client's reason for not doing a session; empty text clears it. */
 export function setSessionSkipReason(programDayId: number, text: string) {
   const data = getData();
@@ -6132,7 +6169,7 @@ export function copyProgramDay(fromDayId: number, toDayId: number) {
     .sort((a, b) => a.order_index - b.order_index);
   for (const wa of srcAssignments) {
     const id = allocId("workout_assignments");
-    data.workout_assignments.push({ ...wa, id, program_day_id: dest.id });
+    data.workout_assignments.push({ ...wa, warmup_sets: undefined, id, program_day_id: dest.id });
     for (const v of data.assignment_custom_values.filter((v) => v.workout_assignment_id === wa.id)) {
       data.assignment_custom_values.push({ ...v, id: allocId("assignment_custom_values"), workout_assignment_id: id });
     }

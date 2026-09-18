@@ -581,6 +581,11 @@ export default function ProgramBuilder({
                           sets={thisWeekSets}
                           previous={previous}
                         />
+                        {a.warmup_sets?.length ? (
+                          <div className="pb-warmups" title="Warm-up sets the client added. Not counted in the sets logged.">
+                            Warm-up: {a.warmup_sets.map((w) => `${w.weight_kg != null ? `${Math.round(w.weight_kg * 100) / 100}kg` : ""}${w.weight_kg != null && w.reps != null ? "×" : ""}${w.reps ?? ""}`).join(", ")}
+                          </div>
+                        ) : null}
                       </td>
                       <td>
                         <PendingRemoveButton assignmentId={a.id} exerciseName={a.exercise_name ?? "this exercise"} />

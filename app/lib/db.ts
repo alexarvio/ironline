@@ -364,6 +364,10 @@ type WorkoutAssignment = {
   // target is target_weight_kg; a gym with no entry here starts from it.
   // `set_at` marks one the coach typed, as target_set_at does.
   gym_targets?: Record<string, { kg: number | null; set_at?: string | null }>;
+  // Warm-up sets the client did before the working sets. Optional, theirs to
+  // fill in, and kept off set_logs so progression, goals and the set counts
+  // never see them. Not carried along when a day or week is copied.
+  warmup_sets?: { weight_kg: number | null; reps: number | null }[];
 };
 type SetLog = {
   id: number;

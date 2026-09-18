@@ -2,7 +2,7 @@
 
 import { ReactNode, useEffect, useId, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { logSetAction, pickGymAction, saveExerciseNoteAction, saveSkipReasonAction, setCardioDoneAction, updateSetAction } from "../lib/actions";
+import { logSetAction, pickGymAction, saveExerciseNoteAction, saveSkipReasonAction, saveWarmupSetsAction, setCardioDoneAction, updateSetAction } from "../lib/actions";
 import ExerciseCoachNote from "./ExerciseCoachNote";
 import GymPicker, { type GymOption } from "./GymPicker";
 import { ChevronDownIcon } from "../components/icons";
@@ -34,6 +34,10 @@ export type SessionExercise = {
   note: ReactNode;
   /** The client's own note on this exercise: settings, cues. */
   myNote: string;
+  /** Warm-up sets the client added, in kg. Optional, never counted. */
+  warmups?: { weight: number | null; reps: number | null }[];
+  /** The warm-up from the last time the client had this exercise. */
+  lastWarmups?: { weight: number | null; reps: number | null }[];
   /** With gyms: the weight target and "My notes" at each gym, by gym id. */
   gymTargets?: Record<number, number | null>;
   gymNotes?: Record<number, string>;
@@ -301,7 +305,9 @@ export default function TrainingDaySession({
                 key={ex.id}
                 exercise={ex}
                 index={i + 1}
-                active={ex.id === activeId}
+                // The next one to do is only picked out while nothing is open;
+                // with another exercise open, that card has the highlight.
+                active={ex.id === activeId && expandedId == null}
                 onOpen={() => setExpandedId(ex.id)}
               />
             )
@@ -421,6 +427,7 @@ function ExpandedExercise({
   const done = isDone(exercise);
   const nextSet = nextMissing(exercise);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [panel, setPanel] = useState<"note" | "warm" | null>(null);
   const [pending, setPending] = useState(false);
   // The bottom button only wakes up once reps has a value.
   const [reps, setReps] = useState("");
@@ -561,6 +568,14 @@ function ExpandedExercise({
         <span className={`ts-circle ${done ? "done" : "active"}`}>{done ? "✓" : index}</span>
         <span className="ts-card-name">{exercise.name}</span>
         <span className="ts-card-tools">
+          {/* The demo: a play button beside the chevron, not a row of its own. */}
+          {exercise.videoUrl && (
+            <a href={exercise.videoUrl} target="_blank" rel="noreferrer" className="ts-video" aria-label={`Watch the ${exercise.name} demo`} title="Watch the demo">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M8 5.5v13l11-6.5z" />
+              </svg>
+            </a>
+          )}
           <button type="button" className="ts-chev up" onClick={onCollapse} aria-label="Collapse">
             <ChevronDownIcon />
           </button>
@@ -568,12 +583,6 @@ function ExpandedExercise({
       </div>
       <div className={`ts-fold${closing ? " folding" : ""}`}>
       <div className="ts-fold-inner">
-      {exercise.videoUrl && (
-        <a href={exercise.videoUrl} target="_blank" rel="noreferrer" className="ts-video">
-          ▶ Demo
-        </a>
-      )}
-
       {(targets.length > 0 || exercise.tempo) && (
         <div className="ts-target">
           <div className="ts-target-label">Target</div>
@@ -597,7 +606,21 @@ function ExpandedExercise({
       {/* The coach's note, open, then the client's own below it. */}
       {exercise.note}
 
-      <MyNote key={gymId ?? 0} assignmentId={exercise.id} gymId={gymId} text={exercise.myNote} />
+      {/* Two optional extras, side by side: the client's own note and their
+          warm-up sets. A pill opens its panel underneath, one at a time, and
+          carries a count once there is something in it. */}
+      <div className="ts-extras">
+        <button type="button" className={`ts-extra${panel === "note" ? " on" : ""}`} onClick={() => setPanel(panel === "note" ? null : "note")} aria-expanded={panel === "note"}>
+          Notes
+          {exercise.myNote.trim() !== "" && <span className="ts-extra-count">1</span>}
+        </button>
+        <button type="button" className={`ts-extra${panel === "warm" ? " on" : ""}`} onClick={() => setPanel(panel === "warm" ? null : "warm")} aria-expanded={panel === "warm"}>
+          Warm-up
+          {(exercise.warmups?.length ?? 0) > 0 && <span className="ts-extra-count">{exercise.warmups?.length}</span>}
+        </button>
+      </div>
+      {panel === "note" && <MyNote key={gymId ?? 0} assignmentId={exercise.id} gymId={gymId} text={exercise.myNote} onClose={() => setPanel(null)} />}
+      {panel === "warm" && <Warmups assignmentId={exercise.id} sets={exercise.warmups ?? []} last={exercise.lastWarmups ?? []} unit={unit} onFlipUnit={flipUnit} />}
 
       <div className="ts-grid ts-cols">
         <span>Set</span>
@@ -720,6 +743,218 @@ function ExpandedExercise({
   );
 }
 
+// Warm-up sets: optional, so one quiet line until tapped. Open, it is the
+// working sets' own grid without RPE, and it works the same way: one row to
+// type into, logged with one button, then the next. The warm-up from the
+// last time the client had this exercise is one swipe to the side (two dots
+// say so, as on the food diary's rings), and its weights start the boxes.
+// They are the client's record only: not counted in the
+// sets logged, the weight goal or the session being complete.
+type WarmupSet = { weight: number | null; reps: number | null };
+const MAX_WARMUPS = 8;
+function Warmups({
+  assignmentId,
+  sets,
+  last,
+  unit,
+  onFlipUnit,
+}: {
+  assignmentId: number;
+  sets: WarmupSet[];
+  last: WarmupSet[];
+  unit: WeightUnit;
+  /** The exercise's own kg / lbs switch: one unit for the whole card. */
+  onFlipUnit: () => void;
+}) {
+  const [editIdx, setEditIdx] = useState<number | null>(null);
+  const [page, setPage] = useState(0);
+  const [saving, start] = useTransition();
+  const shown = (kg: number | null) => (kg == null ? "" : String(kgToUnit(kg, unit)));
+  const cell = (kg: number | null) => (kg == null ? "–" : shown(kg));
+  const commit = (next: WarmupSet[]) => {
+    setEditIdx(null);
+    start(() => saveWarmupSetsAction(assignmentId, next.map((w) => ({ weight_kg: w.weight, reps: w.reps }))));
+  };
+
+  const nextIdx = sets.length;
+  const activeIdx = editIdx ?? (nextIdx < MAX_WARMUPS ? nextIdx : null);
+  const rowCount = Math.min(MAX_WARMUPS, sets.length + (editIdx == null ? 1 : 0));
+  const cols = (
+    <div className="ts-grid ts-cols">
+      <span>Set</span>
+      <span>
+        <button type="button" className="ts-unit" onClick={onFlipUnit} aria-label={unit === "kg" ? "Weights in kg. Switch to lbs" : "Weights in lbs. Switch to kg"}>
+          <span className={unit === "kg" ? "on" : undefined}>Kg</span>
+          <span className={unit === "lb" ? "on" : undefined}>Lbs</span>
+        </button>
+      </span>
+      <span>Reps</span>
+      <span />
+    </div>
+  );
+  return (
+    <div className="ts-warm editing" style={{ "--ts-n": 2 } as React.CSSProperties}>
+      <span className="ts-mynote-label">
+        {page === 1 ? "Warm-up · last time" : "Warm-up"}
+        {saving ? " · saving…" : ""}
+      </span>
+      <div
+        className="ts-warm-pages"
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          setPage(el.scrollLeft > el.clientWidth / 2 ? 1 : 0);
+        }}
+      >
+      <div className="ts-warm-page">
+      {cols}
+      {Array.from({ length: rowCount }, (_, i) => {
+        if (i === activeIdx) {
+          return (
+            <WarmupEntry
+              key={`entry-${i}-${unit}-${editIdx ?? "new"}`}
+              index={i}
+              unit={unit}
+              // Editing starts from the set itself; a new one starts blank,
+              // with last time's figures as the grey hint in each box.
+              seed={editIdx != null ? sets[i] : { weight: null, reps: null }}
+              weightHint={editIdx == null && last[i]?.weight != null ? shown(last[i].weight) : ""}
+              repsHint={last[i]?.reps ?? null}
+              editing={editIdx != null}
+              busy={saving}
+              onSave={(w) => commit(editIdx != null ? sets.map((x, j) => (j === i ? w : x)) : [...sets, w])}
+              onRemove={() => commit(sets.filter((_, j) => j !== i))}
+              onCancel={() => setEditIdx(null)}
+            />
+          );
+        }
+        const mine = sets[i];
+        if (mine) {
+          return (
+            <div key={i} className="ts-grid ts-set logged">
+              <span className="ts-circle done">✓</span>
+              <span>{cell(mine.weight)}</span>
+              <span>{mine.reps ?? "–"}</span>
+              <button type="button" className="ts-edit" onClick={() => setEditIdx(i)} disabled={saving}>
+                Edit
+              </button>
+            </div>
+          );
+        }
+        return null;
+      })}
+      </div>
+      {last.length > 0 && (
+        <div className="ts-warm-page">
+          {cols}
+          {last.map((w, i) => (
+            <div key={i} className="ts-grid ts-set upcoming">
+              <span className="ts-circle">{i + 1}</span>
+              <span>{cell(w.weight)}</span>
+              <span>{w.reps ?? "–"}</span>
+              <span />
+            </div>
+          ))}
+        </div>
+      )}
+      </div>
+      {last.length > 0 && (
+        <div className="nd-dots ts-warm-dots" aria-hidden="true">
+          <span className={page === 0 ? "on" : undefined} />
+          <span className={page === 1 ? "on" : undefined} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// The one warm-up row being typed into, with its button.
+function WarmupEntry({
+  index,
+  unit,
+  seed,
+  weightHint,
+  repsHint,
+  editing,
+  busy,
+  onSave,
+  onRemove,
+  onCancel,
+}: {
+  index: number;
+  unit: WeightUnit;
+  seed: WarmupSet;
+  weightHint: string;
+  repsHint: number | null;
+  editing: boolean;
+  busy: boolean;
+  onSave: (w: WarmupSet) => void;
+  onRemove: () => void;
+  onCancel: () => void;
+}) {
+  const seedShown = seed.weight == null ? "" : String(kgToUnit(seed.weight, unit));
+  const [weight, setWeight] = useState(seedShown);
+  const [reps, setReps] = useState(seed.reps == null ? "" : String(seed.reps));
+  const selectAll = (e: React.SyntheticEvent<HTMLInputElement>) => {
+    const el = e.currentTarget;
+    setTimeout(() => el.select(), 0);
+  };
+  const save = () => {
+    const typed = Number(weight.replace(",", ".").trim());
+    // An untouched figure keeps its exact kg, so lbs do not drift.
+    const kg = weight.trim() === "" || !Number.isFinite(typed) ? null : weight === seedShown && seed.weight != null ? seed.weight : unitToKg(typed, unit);
+    const n = Number(reps);
+    onSave({ weight: kg, reps: reps.trim() !== "" && Number.isFinite(n) ? n : null });
+  };
+  return (
+    <>
+      <div className="ts-grid ts-set active">
+        <span className="ts-circle active">{index + 1}</span>
+        <input
+          type="text"
+          inputMode="decimal"
+          autoComplete="off"
+          className="ts-input"
+          aria-label={`Warm-up ${index + 1} weight`}
+          placeholder={weightHint}
+          value={weight}
+          onFocus={selectAll}
+          onClick={selectAll}
+          onInput={tidyDecimal}
+          onChange={(e) => setWeight(e.target.value)}
+        />
+        <input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          className="ts-input reps"
+          placeholder={repsHint != null ? String(repsHint) : ""}
+          aria-label={`Warm-up ${index + 1} reps`}
+          value={reps}
+          onFocus={selectAll}
+          onClick={selectAll}
+          onChange={(e) => setReps(e.target.value)}
+        />
+        <span />
+      </div>
+      <div className="ts-actions">
+        <button type="button" className="ts-primary" onClick={save} disabled={busy || reps.trim() === ""}>
+          {editing ? `Save warm-up ${index + 1}` : `Log warm-up ${index + 1}`}
+        </button>
+        {editing && (
+          <span className="ts-warm-actions">
+            <button type="button" className="ts-skip-clear" onClick={onRemove} disabled={busy}>
+              Remove
+            </button>
+            <button type="button" className="ts-cancel" onClick={onCancel} disabled={busy}>
+              Cancel
+            </button>
+          </span>
+        )}
+      </div>
+    </>
+  );
+}
+
 // The last item of a session: the client telling the coach why they could
 // not do it. A red button until tapped, then a field to say why. Saved on
 // the session, so the coach reads it next to the missed tick; saving a
@@ -788,17 +1023,13 @@ function SkipReason({ dayId, text, onSaved }: { dayId: number; text: string; onS
 
 // The client's own note on an exercise: seat height, grip width, a cue that
 // helps. Reads as one line until tapped; saves on blur or Save.
-function MyNote({ assignmentId, gymId, text }: { assignmentId: number; gymId: number | null; text: string }) {
-  const [editing, setEditing] = useState(false);
+function MyNote({ assignmentId, gymId, text, onClose }: { assignmentId: number; gymId: number | null; text: string; onClose: () => void }) {
   const [draft, setDraft] = useState(text);
-  const [saving, start] = useTransition();
-  const cancel = () => {
-    setDraft(text);
-    setEditing(false);
-  };
+  const [, start] = useTransition();
+  const cancel = onClose;
   const save = () => {
     const next = draft.trim();
-    setEditing(false);
+    onClose();
     if (next === text.trim()) return;
     const fd = new FormData();
     fd.set("assignmentId", String(assignmentId));
@@ -806,8 +1037,7 @@ function MyNote({ assignmentId, gymId, text }: { assignmentId: number; gymId: nu
     fd.set("text", next);
     start(() => saveExerciseNoteAction(fd));
   };
-  if (editing) {
-    return (
+  return (
       <div className="ts-mynote editing">
         <span className="ts-mynote-label">My notes</span>
         <textarea
@@ -832,18 +1062,5 @@ function MyNote({ assignmentId, gymId, text }: { assignmentId: number; gymId: nu
           </span>
         </div>
       </div>
-    );
-  }
-  return (
-    <button type="button" className={`ts-mynote${text ? "" : " empty"}`} onClick={() => setEditing(true)}>
-      {text ? (
-        <>
-          <span className="ts-mynote-label">My notes{saving ? " · saving…" : ""}</span>
-          <span className="ts-mynote-text">{text}</span>
-        </>
-      ) : (
-        <span className="ts-mynote-add">+ Add a note for yourself (settings, cues)</span>
-      )}
-    </button>
   );
 }

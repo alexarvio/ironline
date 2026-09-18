@@ -34,7 +34,6 @@ export default function ExerciseCoachNote({
           <CoachMark />
           From your coach
         </span>
-        {dateLabel && <span className="ts-coachnote-date">{dateLabel}</span>}
       </div>
       <p className="ts-coachnote-text">{text}</p>
     </div>

@@ -22,6 +22,7 @@ import {
   dayGymId,
   targetAtGym,
   getLogsForAssignment,
+  getLastWarmupSets,
   getCurrentWeekNumber,
   getCheckInSections,
   getCheckInStatus,
@@ -505,6 +506,8 @@ function TrainingTab({ CLIENT_ID, week, showMyNotes }: { CLIENT_ID: number; week
                   // library's own video is the fallback.
                   videoUrl: a.exercise_video_url ?? a.demo_url ?? null,
                   myNote: myNotes.get(a.exercise_id) ?? "",
+                  warmups: (a.warmup_sets ?? []).map((w) => ({ weight: w.weight_kg, reps: w.reps })),
+                  lastWarmups: getLastWarmupSets(a.id).map((w) => ({ weight: w.weight_kg, reps: w.reps })),
                   gymTargets: allGyms.length ? Object.fromEntries(allGyms.map((g) => [g.id, targetAtGym(a, g.id, home)])) : undefined,
                   gymNotes: allGyms.length ? Object.fromEntries(allGyms.map((g) => [g.id, notesByGym.get(g.id)?.get(a.exercise_id) ?? ""])) : undefined,
                   logs: getLogsForAssignment(a.id).map((l) => ({

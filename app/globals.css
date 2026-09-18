@@ -11799,7 +11799,8 @@ label.ci-pill { cursor: text; }
    collapsed rows, so "Exercise 2 of 5" up top and the card agree. */
 .ts-card-head > .ts-circle { flex: 0 0 auto; margin-right: 10px; }
 .ts-card-tools { display: inline-flex; align-items: center; gap: 8px; }
-.ts-video { display: inline-block; margin-top: 4px; font-size: 12px; font-weight: 700; color: #2f5d8f; text-decoration: none; }
+.ts-video { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; color: #2f5d8f; text-decoration: none; }
+.ts-video svg { width: 24px; height: 24px; fill: currentColor; }
 
 .ts-grid {
   display: grid;
@@ -11913,10 +11914,13 @@ label.ci-pill { cursor: text; }
    the header wraps so the open panel drops onto its own full-width line
    under the name instead of squeezing in beside it. */
 .ts-card-head { flex-wrap: wrap; }
-.ts-card-name { flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The open card has the room, so a long name runs onto a second line
+   rather than being cut; past two lines it is trimmed. */
+.ts-card-name { flex: 1 1 0; min-width: 0; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
 /* The tools slot dissolves so its children lay out on the header row:
    name, note bubble, chevron; the open note panel wraps under all three. */
 .ts-card-tools { display: contents; }
+.ts-card-tools .ts-video { order: 1; }
 .ts-card-tools .ex-note-btn { order: 1; }
 .ts-card-tools .ts-chev { order: 2; }
 .ts-card-tools .ex-note-panel { order: 3; flex: 1 0 100%; margin-top: 10px; }
@@ -12874,6 +12878,26 @@ label.ci-pill { cursor: text; }
 .ts-mynote-cancel { border: 1px solid #dfe3e8; background: #fff; color: #5b6474; border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 .ts-mynote-save { border: 0; background: #1e3a6e; color: #fff; border-radius: 999px; padding: 7px 16px; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
 
+/* Notes and Warm-up: two equal pills, the open one lit, a count when filled. */
+.ts-extras { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.ts-extra { display: flex; align-items: center; justify-content: center; gap: 7px; padding: 11px 8px; border: 1.5px solid #dfe3e8; border-radius: 12px; background: #fafbfc; color: #2f5d8f; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+/* Open: outlined in the navy, as the reps box is, not filled. */
+.ts-extra.on { border-color: #1e3a6e; background: #fff; color: #1e3a6e; }
+.ts-extra-count { min-width: 18px; height: 18px; box-sizing: border-box; padding: 0 5px; border-radius: 999px; background: #1e3a6e; color: #fff; font-size: 11px; font-weight: 800; line-height: 18px; text-align: center; font-variant-numeric: tabular-nums; }
+/* Warm-up sets: optional, one quiet line until opened. */
+.ts-warm { display: flex; flex-direction: column; gap: 3px; width: 100%; box-sizing: border-box; margin-top: 8px; padding: 9px 12px; border-radius: 10px; border: 1px dashed #dfe3e8; background: #fafbfc; text-align: left; font: inherit; cursor: pointer; }
+.ts-warm.editing { border-style: solid; border-color: #1e3a6e; background: #fff; cursor: auto; gap: 0; }
+.ts-warm.editing .ts-cols { margin-top: 4px; }
+.ts-warm.editing .ts-mynote-foot { margin-top: 10px; }
+/* Both warm-up boxes are equals: no navy outline on reps here. */
+.ts-warm .ts-input.reps { border: 1px solid #dfe3e8; }
+/* This week, and one swipe over, last time. */
+.ts-warm-pages { display: flex; align-items: flex-start; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+.ts-warm-pages::-webkit-scrollbar { display: none; }
+.ts-warm-page { flex: 0 0 100%; width: 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; }
+.ts-warm-dots { margin: 10px 0 2px; }
+.ts-warm-actions { display: flex; align-items: center; justify-content: space-between; }
+
 /* The session's last item: why the client could not do it. */
 .ts-skip-open { display: block; width: 100%; box-sizing: border-box; margin-top: 14px; padding: 12px; border: 1px solid #f0c9c9; border-radius: 12px; background: #fbeaea; color: #a32d2d; font: inherit; font-size: 13.5px; font-weight: 800; cursor: pointer; }
 .ts-skip { display: flex; flex-direction: column; gap: 4px; width: 100%; box-sizing: border-box; margin-top: 14px; padding: 10px 12px; border: 1px solid #f0c9c9; border-radius: 12px; background: #fbeaea; text-align: left; font: inherit; }
@@ -13763,6 +13787,7 @@ label.ci-pill { cursor: text; }
 .pb-copy-full { margin: 0; padding: 9px 12px; border-radius: 10px; background: #f8f9fb; font-size: 12px; font-weight: 600; color: #5b6474; }
 /* In a day's header: the gym the client trained that session at. */
 .pb-day-gym { flex-shrink: 0; font-size: 11.5px; font-weight: 800; color: #fff; background: #2f5d8f; border-radius: 999px; padding: 4px 11px; white-space: nowrap; box-shadow: 0 1px 2px rgba(20, 26, 36, 0.15); }
+.pb-warmups { margin-top: 4px; font-size: 11.5px; color: var(--text-dim, #5b6474); font-variant-numeric: tabular-nums; }
 .pb-day-done { flex-shrink: 0; font-size: 11.5px; font-weight: 800; color: #2f7a3f; background: #dff3ea; border-radius: 999px; padding: 4px 11px; white-space: nowrap; }
 .pb-day-skip { min-width: 0; max-width: 260px; overflow: hidden; text-overflow: ellipsis; font-size: 11.5px; font-weight: 800; color: #a32d2d; background: #fbeaea; border-radius: 999px; padding: 4px 11px; white-space: nowrap; }
 .pb-gyms { position: relative; }

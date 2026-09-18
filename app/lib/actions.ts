@@ -181,6 +181,7 @@ import {
   getClientIdForGym,
   pickGymForDay,
   setSessionSkipReason,
+  setWarmupSets,
   setClientProgramNote,
   searchFoods,
   addFoodEntry,
@@ -2043,6 +2044,14 @@ export async function pickGymAction(programDayId: number, gymId: number) {
   const owner = clientIdForProgramDay(Number(programDayId));
   if (owner == null || getClientIdForGym(Number(gymId)) !== owner || !(await canAccessClient(owner))) return;
   pickGymForDay(Number(programDayId), Number(gymId));
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+export async function saveWarmupSetsAction(assignmentId: number, sets: { weight_kg: number | null; reps: number | null }[]) {
+  const owner = getClientIdForAssignment(Number(assignmentId));
+  if (owner == null || !(await canAccessClient(owner)) || !Array.isArray(sets)) return;
+  setWarmupSets(Number(assignmentId), sets);
   revalidatePath("/client");
   revalidatePath("/admin");
 }
