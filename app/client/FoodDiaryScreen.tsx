@@ -170,7 +170,26 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
   });
   // A meal added just now: it appears at once with its name as a box to type into.
   const [namingId, setNamingId] = useState<FoodMeal | null>(null);
+  // iOS only opens the keyboard for a focus made during the tap itself, and
+  // the name box appears after the server has made the meal. So the tap
+  // focuses an unseen input, which holds the keyboard open until the name
+  // box mounts and takes the focus over (autoFocus).
+  const keyboardHold = useRef<HTMLInputElement | null>(null);
+  const releaseKeyboardHold = () => {
+    keyboardHold.current?.remove();
+    keyboardHold.current = null;
+  };
   const addMealNow = () => {
+    releaseKeyboardHold();
+    const hold = document.createElement("input");
+    hold.type = "text";
+    hold.setAttribute("aria-hidden", "true");
+    hold.tabIndex = -1;
+    // 16px so iOS does not zoom; in view so it does not scroll.
+    hold.style.cssText = "position:fixed;top:40%;left:0;width:1px;height:1px;opacity:0;border:0;padding:0;font-size:16px;pointer-events:none;";
+    document.body.appendChild(hold);
+    hold.focus({ preventScroll: true });
+    keyboardHold.current = hold;
     const fd = new FormData();
     fd.set("clientId", String(clientId));
     fd.set("name", "New meal");
@@ -180,6 +199,7 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
       const next = await getFoodDiaryAction(clientId, date);
       if (next) setDiary(next);
       if (id) setNamingId(id);
+      else releaseKeyboardHold();
     });
   };
   // Leaving the name box: an empty or untouched name means the meal was not wanted.
@@ -780,6 +800,7 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                             onBlur={(e) => finishNaming(meal.id, e.currentTarget.value)}
                             onFocus={(e) => {
                               const el = e.currentTarget;
+                              releaseKeyboardHold();
                               setTimeout(() => el.scrollIntoView({ block: "center", behavior: "smooth" }), 250);
                             }}
                           />
