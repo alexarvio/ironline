@@ -38,6 +38,8 @@ export type ProgramDay = {
   label: string | null;
   status: "draft" | "published";
   is_rest?: boolean;
+  skip_reason?: string;
+  skip_reason_at?: string;
 };
 export type WorkoutAssignment = {
   id: number;
@@ -6007,6 +6009,22 @@ export function pickGymForDay(programDayId: number, gymId: number) {
   }
   persist();
   moved.forEach((id) => progressTargetFromLogs(id));
+}
+
+/** The client's reason for not doing a session; empty text clears it. */
+export function setSessionSkipReason(programDayId: number, text: string) {
+  const data = getData();
+  const day = data.program_days.find((pd) => pd.id === programDayId);
+  if (!day) return;
+  const next = text.trim().slice(0, 300);
+  if (next) {
+    day.skip_reason = next;
+    day.skip_reason_at = new Date().toISOString();
+  } else {
+    delete day.skip_reason;
+    delete day.skip_reason_at;
+  }
+  persist();
 }
 
 /**

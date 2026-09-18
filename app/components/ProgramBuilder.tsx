@@ -259,10 +259,19 @@ export default function ProgramBuilder({
             ) : undefined
           }
           gymSlot={
-            dayGymName ? (
-              <span className="pb-day-gym" title="The gym the client picked for this session">
-                {dayGymName}
-              </span>
+            dayGymName || day.skip_reason ? (
+              <>
+                {dayGymName && (
+                  <span className="pb-day-gym" title="The gym the client picked for this session">
+                    {dayGymName}
+                  </span>
+                )}
+                {day.skip_reason && (
+                  <span className="pb-day-skip" title="The client's reason for not doing this session">
+                    Couldn&rsquo;t train · {day.skip_reason}
+                  </span>
+                )}
+              </>
             ) : undefined
           }
           summary={summary}
@@ -630,7 +639,7 @@ export default function ProgramBuilder({
         const trained = assignments.some((x) => getLogsForAssignment(x.id).length > 0);
         const past = liveWeekNumber != null && weekNumber < liveWeekNumber;
         if (trained) return { dayOfWeek: d.day_of_week, state: "trained" as const, title: `${name}: trained` };
-        if (past && assignments.length > 0) return { dayOfWeek: d.day_of_week, state: "missed" as const, title: `${name}: not trained` };
+        if (past && assignments.length > 0) return { dayOfWeek: d.day_of_week, state: "missed" as const, title: `${name}: not trained${d.skip_reason ? ` (${d.skip_reason})` : ""}` };
         return { dayOfWeek: d.day_of_week, state: "rest" as const, title: `${name}: not trained yet` };
       });
       // Sessions done, not days lit: a session logged across two days is

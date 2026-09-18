@@ -10,6 +10,7 @@ export type TrainingDayProps = {
   title: string;
   exercises: SessionExercise[];
   cardio: SessionCardio[];
+  skipReason: string;
   /** The day the week should land on: the first one not fully logged. */
   defaultOpen: boolean;
   /** The client's gyms, and the one this session is at. */
@@ -70,6 +71,7 @@ export default function TrainingDayList({ days }: { days: TrainingDayProps[] }) 
           gymId={d.gymId}
           exercises={d.exercises}
           cardio={d.cardio}
+          skipReason={d.skipReason}
           open={openKey === d.key}
           onToggle={() => setOpenKey((k) => (k === d.key ? null : d.key))}
         />

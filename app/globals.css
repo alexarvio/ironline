@@ -12874,6 +12874,18 @@ label.ci-pill { cursor: text; }
 .ts-mynote-cancel { border: 1px solid #dfe3e8; background: #fff; color: #5b6474; border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 .ts-mynote-save { border: 0; background: #1e3a6e; color: #fff; border-radius: 999px; padding: 7px 16px; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
 
+/* The session's last item: why the client could not do it. */
+.ts-skip-open { display: block; width: 100%; box-sizing: border-box; margin-top: 14px; padding: 12px; border: 1px solid #f0c9c9; border-radius: 12px; background: #fbeaea; color: #a32d2d; font: inherit; font-size: 13.5px; font-weight: 800; cursor: pointer; }
+.ts-skip { display: flex; flex-direction: column; gap: 4px; width: 100%; box-sizing: border-box; margin-top: 14px; padding: 10px 12px; border: 1px solid #f0c9c9; border-radius: 12px; background: #fbeaea; text-align: left; font: inherit; }
+.ts-skip.said { cursor: pointer; }
+.ts-skip.editing { border-color: #a32d2d; background: #fff; }
+.ts-skip-label { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #a32d2d; }
+.ts-skip-text { font-size: 13.5px; line-height: 1.4; color: #313851; white-space: pre-wrap; }
+.ts-skip-input { width: 100%; box-sizing: border-box; border: 0; padding: 0; font: inherit; font-size: 16px; line-height: 1.4; color: #313851; background: transparent; resize: none; outline: none; }
+.ts-skip-clear { border: 0; background: none; padding: 7px 0; color: #a32d2d; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.ts-skip-save { border: 0; background: #a32d2d; color: #fff; border-radius: 999px; padding: 7px 16px; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+.ts-skip-save:disabled { opacity: 0.45; }
+
 
 /* ==== Client Home, design "2a" ==========================================
    Five blocks: who they are and where they are in the plan, the one thing
@@ -13751,6 +13763,7 @@ label.ci-pill { cursor: text; }
 .pb-copy-full { margin: 0; padding: 9px 12px; border-radius: 10px; background: #f8f9fb; font-size: 12px; font-weight: 600; color: #5b6474; }
 /* In a day's header: the gym the client trained that session at. */
 .pb-day-gym { flex-shrink: 0; font-size: 11.5px; font-weight: 800; color: #fff; background: #2f5d8f; border-radius: 999px; padding: 4px 11px; white-space: nowrap; box-shadow: 0 1px 2px rgba(20, 26, 36, 0.15); }
+.pb-day-skip { min-width: 0; max-width: 260px; overflow: hidden; text-overflow: ellipsis; font-size: 11.5px; font-weight: 800; color: #a32d2d; background: #fbeaea; border-radius: 999px; padding: 4px 11px; white-space: nowrap; }
 .pb-gyms { position: relative; }
 .pb-gyms-pill { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #dfe3e8; border-radius: 999px; background: #fff; color: #313851; padding: 6px 12px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
 .pb-gyms-pill:hover, .pb-gyms-pill.open { border-color: #2f5d8f; }
@@ -13919,6 +13932,8 @@ label.ci-pill { cursor: text; }
 .tr-pill { flex: none; padding: 7px 12px; border-radius: 999px; background: #eef0f3; color: #5b6474; font-size: 13px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .tr-pill.started { background: #e6ecf3; color: #1e3a6e; }
 .tr-pill.done { background: #DFF3EA; color: #2f7a3f; }
+.tr-pill.skipped { background: #fbeaea; color: #a32d2d; }
+.tr-session.skipped { border-color: #f0c9c9; }
 .tr-chev { flex: none; width: 9px; height: 9px; box-sizing: border-box; border-right: 2px solid #8b93a1; border-bottom: 2px solid #8b93a1; transform: translateY(-2px) rotate(45deg); transition: transform 0.2s ease; }
 .tr-chev.up { transform: translateY(2px) rotate(225deg); }
 /* The body unfolds on open and folds shut before it leaves (see FOLD_MS). */

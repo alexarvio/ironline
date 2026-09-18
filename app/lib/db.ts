@@ -45,6 +45,10 @@ type ProgramDay = {
   // can never discard programming. Missing on rows written before this field
   // existed, so callers treat absent as false.
   is_rest?: boolean;
+  // The client saying why they could not do this session (holiday, sick,
+  // work trip…), in their own words. Absent or empty means nothing was said.
+  skip_reason?: string;
+  skip_reason_at?: string;
 };
 // A multi-week training program — the coach picks a name and a length
 // (total_weeks) up front; program_days for weeks [start_week, start_week +

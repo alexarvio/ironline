@@ -180,6 +180,7 @@ import {
   removeClientGym,
   getClientIdForGym,
   pickGymForDay,
+  setSessionSkipReason,
   setClientProgramNote,
   searchFoods,
   addFoodEntry,
@@ -2042,6 +2043,14 @@ export async function pickGymAction(programDayId: number, gymId: number) {
   const owner = clientIdForProgramDay(Number(programDayId));
   if (owner == null || getClientIdForGym(Number(gymId)) !== owner || !(await canAccessClient(owner))) return;
   pickGymForDay(Number(programDayId), Number(gymId));
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+export async function saveSkipReasonAction(programDayId: number, text: string) {
+  const owner = clientIdForProgramDay(Number(programDayId));
+  if (owner == null || !(await canAccessClient(owner))) return;
+  setSessionSkipReason(Number(programDayId), String(text ?? ""));
   revalidatePath("/client");
   revalidatePath("/admin");
 }

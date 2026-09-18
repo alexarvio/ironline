@@ -2,7 +2,7 @@
 
 import { ReactNode, useEffect, useId, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { logSetAction, pickGymAction, saveExerciseNoteAction, setCardioDoneAction, updateSetAction } from "../lib/actions";
+import { logSetAction, pickGymAction, saveExerciseNoteAction, saveSkipReasonAction, setCardioDoneAction, updateSetAction } from "../lib/actions";
 import ExerciseCoachNote from "./ExerciseCoachNote";
 import GymPicker, { type GymOption } from "./GymPicker";
 import { ChevronDownIcon } from "../components/icons";
@@ -109,6 +109,7 @@ export default function TrainingDaySession({
   gymId: savedGymId = null,
   exercises: baseExercises,
   cardio = [],
+  skipReason = "",
   open,
   onToggle,
 }: {
@@ -124,6 +125,8 @@ export default function TrainingDaySession({
   exercises: SessionExercise[];
   /** Cardio the coach put on the day, shown after the exercises. */
   cardio?: SessionCardio[];
+  /** Why the client could not do this session, if they said. */
+  skipReason?: string;
   /** Owned by TrainingDayList so only one day is open at a time. */
   open: boolean;
   onToggle: () => void;
@@ -253,6 +256,8 @@ export default function TrainingDaySession({
   const left = exercises.filter((ex) => !isDone(ex)).length + cardio.filter((c) => !c.done).length;
   const sub = dayDone
     ? "Session complete"
+    : skipReason
+    ? `Couldn't train · ${skipReason}`
     : logged > 0
     ? `In progress · ${left} exercise${left === 1 ? "" : "s"} left`
     : [
@@ -264,15 +269,15 @@ export default function TrainingDaySession({
         .join(" · ");
 
   return (
-    <section ref={sectionRef} className={`tr-session${open ? " open" : ""}${dayDone ? " done" : ""}`}>
+    <section ref={sectionRef} className={`tr-session${open ? " open" : ""}${dayDone ? " done" : skipReason ? " skipped" : ""}`}>
       <button type="button" className="tr-session-head" onClick={() => (open ? fold() : onToggle())} aria-expanded={open}>
         <span className="tr-session-main">
           <span className="tr-session-title">{title}</span>
           <span className="tr-session-sub">{sub}</span>
         </span>
         {/* Green once every set is logged; plain until then. */}
-        <span className={`tr-pill${dayDone ? " done" : ""}`}>
-          {logged} / {planned} sets
+        <span className={`tr-pill${dayDone ? " done" : skipReason ? " skipped" : ""}`}>
+          {!dayDone && skipReason ? "Skipped" : `${logged} / ${planned} sets`}
         </span>
         <span className={`tr-chev${open ? " up" : ""}`} aria-hidden="true" />
       </button>
@@ -304,6 +309,7 @@ export default function TrainingDaySession({
           {cardio.map((c, i) => (
             <CardioCard key={`c${c.id}`} cardio={c} index={exercises.length + i + 1} />
           ))}
+          {(!dayDone || skipReason) && <SkipReason dayId={dayId} text={skipReason} onSaved={() => fold(true)} />}
         </div>
         </div>
       )}
@@ -711,6 +717,72 @@ function ExpandedExercise({
       </div>
       </div>
     </div>
+  );
+}
+
+// The last item of a session: the client telling the coach why they could
+// not do it. A red button until tapped, then a field to say why. Saved on
+// the session, so the coach reads it next to the missed tick; saving a
+// reason folds the day away, as finishing it does.
+function SkipReason({ dayId, text, onSaved }: { dayId: number; text: string; onSaved: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(text);
+  const [saving, start] = useTransition();
+  const cancel = () => {
+    setDraft(text);
+    setEditing(false);
+  };
+  const save = (value: string) => {
+    const next = value.trim();
+    setEditing(false);
+    setDraft(next);
+    if (next === text.trim()) return;
+    start(() => saveSkipReasonAction(dayId, next));
+    if (next) onSaved();
+  };
+  if (editing) {
+    return (
+      <div className="ts-skip editing">
+        <span className="ts-skip-label">Reason</span>
+        <textarea
+          className="ts-skip-input"
+          value={draft}
+          autoFocus
+          rows={2}
+          maxLength={300}
+          placeholder="Holiday, work trip, sick, injured, no time…"
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") cancel();
+          }}
+        />
+        <div className="ts-mynote-foot">
+          {text && (
+            <button type="button" className="ts-skip-clear" onClick={() => save("")}>
+              Remove
+            </button>
+          )}
+          <span className="ts-mynote-btns">
+            <button type="button" className="ts-mynote-cancel" onClick={cancel}>
+              Cancel
+            </button>
+            <button type="button" className="ts-skip-save" onClick={() => save(draft)} disabled={!draft.trim()}>
+              Save
+            </button>
+          </span>
+        </div>
+      </div>
+    );
+  }
+  return text ? (
+    <button type="button" className="ts-skip said" onClick={() => setEditing(true)}>
+      <span className="ts-skip-label">Couldn&rsquo;t train{saving ? " · saving…" : ""}</span>
+      <span className="ts-skip-text">{text}</span>
+    </button>
+  ) : (
+    <button type="button" className="ts-skip-open" onClick={() => setEditing(true)}>
+      Couldn&rsquo;t do this session?
+    </button>
   );
 }
 
