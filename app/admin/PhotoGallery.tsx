@@ -113,7 +113,8 @@ export default function PhotoGallery({
   const [showPhases, setShowPhases] = useState(true);
   const [pairSize, setPairSize] = useState<PairSize>("m");
 
-  // `sheets` arrives newest first; the rows read Week 1 downwards.
+  // `sheets` arrives newest first, and the rows keep that order. The compare
+  // pickers read oldest to newest, so they use this.
   const chronological = [...sheets].reverse();
   const openSheet = sheets.find((s) => s.period === openPeriod) ?? null;
   const cellCount = openSheet?.cells.length ?? 0;
@@ -191,7 +192,8 @@ export default function PhotoGallery({
         />
       ) : (
         <div className="pp-sheet-list">
-          {chronological.map((s) => {
+          {/* Newest first: the sheet just sent is at the top, Month 1 at the foot. */}
+          {sheets.map((s) => {
             const open = s.period === openPeriod;
             const phaseNames = PHASE_TRACKS.filter((t) => s.phases[t.id]);
             return (
