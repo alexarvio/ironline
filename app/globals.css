@@ -12658,6 +12658,17 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 /* Phase dialog */
 .pl-dialog-head { display: flex; align-items: center; gap: 10px; }
 .pl-chips { display: flex; gap: 6px; }
+/* The demo video dialog (DemoVideoDialog), in the phase dialog's chrome. */
+.dv-current { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid #dfe3e8; border-radius: 8px; background: #f8f9fb; text-decoration: none; }
+.dv-current span { font-size: 13px; font-weight: 800; color: #1e3a6e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dv-current:hover span { text-decoration: underline; }
+.dv-current small, .dv-hint { font-size: 11.5px; font-weight: 500; line-height: 1.45; color: #8b93a1; }
+.dv-none { margin: 0; font-size: 12.5px; line-height: 1.5; color: #5b6474; }
+.dv-file { position: relative; display: flex; align-items: center; min-height: 40px; padding: 0 12px; border: 1px dashed #c3c9d2; border-radius: 8px; background: #fff; font-size: 13px; font-weight: 700; color: #5b6474; cursor: pointer; }
+.dv-file:hover { border-color: #2f5d8f; color: #1e3a6e; }
+.dv-file.chosen { border-style: solid; color: #141a24; }
+.dv-file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.dv-file span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pl-chip { border: 1px solid #dfe3e8; background: #fff; color: #313851; border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 11.5px; font-weight: 800; cursor: pointer; }
 .pl-chip:disabled { opacity: 0.5; cursor: default; }
 .pl-summary { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 12px; color: #5b6474; }

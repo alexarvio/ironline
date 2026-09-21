@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { clearDemoAction, setDemoUrlAction, uploadDemoVideoAction } from "../lib/actions";
+import { TRACK_PALETTE } from "./phaseChrome";
 
 // The demo video for one prescribed exercise.
 //
@@ -97,11 +98,11 @@ function DemoDialog({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
-    cardRef.current?.querySelector("input")?.focus();
+    cardRef.current?.querySelector<HTMLInputElement>(".pl-dlg-body input")?.focus();
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const run = (fn: () => Promise<string | null>) =>
+  const run = (fn: () => Promise<string | null | void>) =>
     start(async () => {
       setError(null);
       const message = await fn();
@@ -109,117 +110,118 @@ function DemoDialog({
       else onClose();
     });
 
+  const palette = TRACK_PALETTE.training;
+  const uploaded = !!effective && effective.startsWith("/uploads/");
   return (
-    <div className="pb-modal-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="pb-modal" role="dialog" aria-modal="true" aria-label={`Demo video for ${exerciseName}`} ref={cardRef}>
-        <div className="pb-modal-head">
-          <div>
-            <span className="ad-microlabel">Demo video</span>
-            <h2 className="pb-modal-title">{exerciseName}</h2>
+    // The phase dialog's chrome: the name and its tags on top, the choice in
+    // the body, Remove on the left of the foot and Save on the right.
+    <div className="pl-dlg-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="pl-dlg" role="dialog" aria-modal="true" aria-label={`Demo video for ${exerciseName}`} ref={cardRef}>
+        <header className="pl-dlg-head">
+          <h2>{exerciseName}</h2>
+          <span className="pl-track-tag" style={{ background: palette.tint, color: palette.ink }}>
+            Demo video
+          </span>
+          <span className="pl-dlg-state" style={effective ? { background: palette.ink, color: "#fff" } : { background: "#eef0f3", color: "#5b6474" }}>
+            {effective ? "Attached" : "None yet"}
+          </span>
+        </header>
+
+        <form
+          className="pl-dlg-form"
+          action={(fd) => run(() => (tab === "link" ? setDemoUrlAction(fd) : uploadDemoVideoAction(fd)))}
+        >
+          <input type="hidden" name="assignmentId" value={assignmentId} />
+          <input type="hidden" name="clientId" value={clientId} />
+          <div className="pl-dlg-body">
+            {/* What the client sees right now, stated plainly — including when
+                it comes from the library rather than from this prescription. */}
+            <div className="pl-dlg-field">
+              <span className="pl-dlg-label">The client sees</span>
+              {effective ? (
+                <a href={effective} target="_blank" rel="noreferrer" className="dv-current">
+                  <span>{uploaded ? "An uploaded video" : effective}</span>
+                  <small>On every client&rsquo;s sheet that has {exerciseName}</small>
+                </a>
+              ) : (
+                <p className="dv-none">Nothing yet. A demo shows on every client&rsquo;s sheet that has {exerciseName}.</p>
+              )}
+            </div>
+
+            <div className="pl-dlg-field">
+              <span className="pl-dlg-label">{effective ? "Replace it with" : "Attach"}</span>
+              <div className="pl-chips" role="group" aria-label="How to attach">
+                {(["link", "file"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    className={`pl-chip${tab === t ? " active" : ""}`}
+                    style={tab === t ? { background: palette.tint, color: palette.ink, borderColor: palette.ink } : undefined}
+                    onClick={() => {
+                      setTab(t);
+                      setError(null);
+                    }}
+                    aria-pressed={tab === t}
+                  >
+                    {t === "link" ? "Paste a link" : "Upload a file"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {tab === "link" ? (
+              <label className="pl-dlg-field">
+                <span className="pl-dlg-label">Link</span>
+                <input
+                  key="link"
+                  name="demoUrl"
+                  type="url"
+                  className="pl-dlg-input"
+                  defaultValue={effective && !uploaded ? effective : ""}
+                  placeholder="https://youtube.com/watch?v=…"
+                  aria-label={`Demo video link for ${exerciseName}`}
+                  required
+                />
+                <small className="dv-hint">YouTube, Vimeo, or any link that opens a video. The client taps &ldquo;how to&rdquo; to open it.</small>
+              </label>
+            ) : (
+              <div className="pl-dlg-field">
+                <span className="pl-dlg-label">Video file</span>
+                <label className={`dv-file${fileName ? " chosen" : ""}`}>
+                  <input key="file" name="file" type="file" accept="video/*" required onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)} />
+                  <span>{fileName ?? "Choose a video from your computer"}</span>
+                </label>
+                <small className="dv-hint">Up to 64 MB. A phone clip of the movement is plenty; trim it rather than sending a whole session.</small>
+              </div>
+            )}
+
+            {/* A failed save must say so. Closing on failure would look like
+                it worked until the coach reopened the chip. */}
+            {error && <p className="pl-move-note warn">{error}</p>}
           </div>
-          <button type="button" className="pb-modal-x" onClick={onClose} aria-label="Close">
-            ×
-          </button>
-        </div>
 
-        {/* What the client sees right now, stated plainly — including when it
-            comes from the library rather than from this prescription. */}
-        <div className="pb-demo-current">
-          {effective ? (
-            <>
-              <span className="pb-demo-current-label">Client sees</span>
-              <a href={effective} target="_blank" rel="noreferrer" className="pb-demo-current-link">
-                {effective.startsWith("/uploads/") ? "Uploaded file" : effective}
-              </a>
-              <span className="pb-demo-fallback">on every client&rsquo;s sheet that has {exerciseName}</span>
-              <form action={clearDemoAction}>
-                <input type="hidden" name="assignmentId" value={assignmentId} />
-                <button type="submit" className="pb-demo-remove">
-                  Remove
-                </button>
-              </form>
-            </>
-          ) : (
-            <span className="pb-demo-current-label">Nothing attached yet.</span>
-          )}
-        </div>
-
-        <div className="pb-demo-tabs" role="group" aria-label="How to attach">
-          {(["link", "file"] as const).map((t) => (
-            <button
-              key={t}
-              type="button"
-              className={`pb-demo-tab${tab === t ? " on" : ""}`}
-              onClick={() => setTab(t)}
-              aria-pressed={tab === t}
-            >
-              {t === "link" ? "Paste a link" : "Upload a file"}
-            </button>
-          ))}
-        </div>
-
-        {tab === "link" ? (
-          <form
-            action={(fd) => run(() => setDemoUrlAction(fd))}
-            className="pb-demo-pane"
-          >
-            <input type="hidden" name="assignmentId" value={assignmentId} />
-            <input
-              name="demoUrl"
-              type="url"
-              defaultValue={effective && !effective.startsWith("/uploads/") ? effective : ""}
-              placeholder="https://youtube.com/watch?v=…"
-              aria-label={`Demo video link for ${exerciseName}`}
-              className="pb-demo-input"
-              required
-            />
-            <p className="pb-demo-hint">
-              YouTube, Vimeo, or any link that opens a video. The client taps “how to” to open it.
-            </p>
-            <div className="pb-modal-foot">
-              <button type="button" className="ad-btn-secondary" onClick={onClose}>
+          <footer className="pl-dlg-foot">
+            {effective && (
+              <button
+                type="submit"
+                className="pl-text-btn danger"
+                formAction={(fd) => run(() => clearDemoAction(fd))}
+                formNoValidate
+                disabled={pending}
+              >
+                Remove
+              </button>
+            )}
+            <div className="pl-dlg-actions">
+              <button type="button" className="pl-dlg-cancel" onClick={onClose} disabled={pending}>
                 Cancel
               </button>
-              <button type="submit" className="ad-btn-primary" disabled={pending}>
-                {pending ? "Saving…" : "Save link"}
+              <button type="submit" className="pl-dlg-save" disabled={pending}>
+                {pending ? (tab === "link" ? "Saving…" : "Uploading…") : tab === "link" ? "Save link" : "Upload"}
               </button>
             </div>
-          </form>
-        ) : (
-          <form
-            action={(fd) => run(() => uploadDemoVideoAction(fd))}
-            className="pb-demo-pane"
-          >
-            <input type="hidden" name="assignmentId" value={assignmentId} />
-            <input type="hidden" name="clientId" value={clientId} />
-            <label className="pb-demo-file">
-              <input
-                name="file"
-                type="file"
-                accept="video/*"
-                required
-                onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
-              />
-              <span>{fileName ?? "Choose a video from your computer"}</span>
-            </label>
-            <p className="pb-demo-hint">
-              Up to 64&nbsp;MB. A phone clip of the movement is usually plenty. Trim it before uploading
-              rather than sending a whole session.
-            </p>
-            <div className="pb-modal-foot">
-              <button type="button" className="ad-btn-secondary" onClick={onClose}>
-                Cancel
-              </button>
-              <button type="submit" className="ad-btn-primary" disabled={pending}>
-                {pending ? "Uploading…" : "Upload"}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* A failed upload must say so. Closing on failure would look like it
-            worked until the coach reopened the chip. */}
-        {error && <p className="pb-demo-error">{error}</p>}
+          </footer>
+        </form>
       </div>
     </div>
   );
