@@ -4,9 +4,14 @@ import { useState } from "react";
 import ExercisePicker, { type ExerciseOption, type Group } from "./ExercisePicker";
 import { DayColumn, FieldKey, usePendingDay } from "./DayPending";
 
-// The add-exercise row at the foot of a day's table. Picking an exercise and
-// pressing Add queues it on the pending-changes bar; the row then clears for
-// the next one. Nothing is written until the coach applies.
+const EMPTY_FIELDS: Record<FieldKey, string> = { sets: "", reps: "", targetWeight: "", rpe: "", tempo: "", rest: "", distance: "", time: "", notes: "" };
+
+// The add-exercise row at the foot of a day's table: only the picker.
+// Picking an exercise queues it on the pending-changes bar straight away, as
+// a row above this one with its first box focused, so the coach types its
+// targets there and picks the next. There was an Add button to press after
+// every pick; choosing the exercise already says it is wanted. Nothing is
+// written until the coach applies.
 export default function AddExerciseRow({
   columns,
   groups,
@@ -17,67 +22,24 @@ export default function AddExerciseRow({
   exercisesByGroup: Record<string, ExerciseOption[]>;
 }) {
   const pending = usePendingDay();
-  const [picked, setPicked] = useState<ExerciseOption | null>(null);
-  const [fields, setFields] = useState<Record<FieldKey, string>>({ sets: "", reps: "", targetWeight: "", rpe: "", tempo: "", rest: "", distance: "", time: "", notes: "" });
+  // A fresh picker after each pick, back on "Add exercise…".
   const [pickerKey, setPickerKey] = useState(0);
-  const set = (key: FieldKey, value: string) => setFields((f) => ({ ...f, [key]: value }));
-
-  const submit = () => {
-    if (!pending || !picked) return;
-    pending.add({ exerciseId: picked.id, exerciseName: picked.name, fields });
-    setPicked(null);
-    setFields({ sets: "", reps: "", targetWeight: "", rpe: "", tempo: "", rest: "", distance: "", time: "", notes: "" });
+  const pick = (ex: ExerciseOption) => {
+    if (!pending) return;
+    pending.add({ exerciseId: ex.id, exerciseName: ex.name, fields: { ...EMPTY_FIELDS } });
     setPickerKey((k) => k + 1);
   };
-
-  // Nothing pre-filled: the coach types every target for the new row.
-  const input = (key: FieldKey, props: { type?: "text" | "number"; step?: string; min?: number; placeholder?: string }) => (
-    <input
-      {...props}
-      value={fields[key]}
-      onChange={(e) => set(key, e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          submit();
-        }
-      }}
-    />
-  );
 
   return (
     <tr className="add-exercise-row">
       <td aria-hidden="true"></td>
       <td>
-        <ExercisePicker key={pickerKey} groups={groups} exercisesByGroup={exercisesByGroup} onPick={setPicked} />
+        <ExercisePicker key={pickerKey} groups={groups} exercisesByGroup={exercisesByGroup} onPick={pick} />
       </td>
-      {columns.map((col) => {
-        if (col.kind === "custom") return <td key={col.id} aria-hidden="true"></td>;
-        switch (col.key) {
-          case "sets":
-            return <td key={col.id}>{input("sets", { type: "number", min: 1 })}</td>;
-          case "reps":
-            return <td key={col.id}>{input("reps", { type: "text" })}</td>;
-          case "weight_goal":
-            return <td key={col.id}>{input("targetWeight", { type: "number", step: "0.5" })}</td>;
-          case "rpe":
-            return <td key={col.id}>{input("rpe", { type: "number", step: "0.5" })}</td>;
-          case "tempo":
-            return <td key={col.id}>{input("tempo", { type: "text" })}</td>;
-          case "rest":
-            return <td key={col.id}>{input("rest", { type: "text" })}</td>;
-          case "notes":
-            return <td key={col.id}>{input("notes", { type: "text", placeholder: "optional" })}</td>;
-          default:
-            return <td key={col.id} aria-hidden="true"></td>;
-        }
-      })}
-      {/* Under "What the client did", the add button at its right end. */}
-      <td className="pb-add-cell">
-        <button className="pb-add-btn" type="button" onClick={submit} disabled={!picked} title={picked ? undefined : "Pick an exercise first"}>
-          + Add
-        </button>
-      </td>
+      {columns.map((col) => (
+        <td key={col.id} aria-hidden="true"></td>
+      ))}
+      <td aria-hidden="true"></td>
     </tr>
   );
 }

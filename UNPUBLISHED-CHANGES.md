@@ -794,6 +794,11 @@ Commit `86a3313` (the client camera, storage, `/uploads/meals`, and the `meal_ph
 - [ ] Still refused where it was: a nutrition draft with no macros or with unapplied changes, and an unnamed programme (the confirm says why).
 - [ ] Checked in a dry run, then undone: nutrition "toutre" now → 21–28 Sep, the running Cut ends 14 Sep, and it stops before "fgh" (5 Oct); lifestyle "hyper" now → live, "cock" (started this week) back to draft; training "addasasdasd" now → deployed, and it is the current training phase. The confirm renders on Measurements; the nutrition buttons are disabled with "Set the macros first" on a draft without macros.
 
+## 108 · Builder: no Add button — picking an exercise adds it — ✅ LIVE 21 Sep
+
+- [ ] **Picking an exercise puts it in the session straight away**, as a new row with the cursor in its first box (Sets), so its targets are typed right there; the add row goes back to "Add exercise…" for the next one. The add row's own boxes and its "+ Add" button are gone. Everything waits on the session's bar ("2 changes · Barbell Bench Press added · Back Squat added") and goes in with Apply, or out with Discard; × on a new row takes just that one back. The same for cardio: picking an activity adds its row with the cursor in the first box.
+- [ ] Checked in the real builder: two picks in a row (the first keeps its typed sets while the second takes the cursor), the bar lists both, Discard clears them; a cardio pick lands with the cursor in Time.
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).

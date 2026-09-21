@@ -28,7 +28,8 @@ export default function CardioBlock({
   columns: CardioColumn[];
 }) {
   const pending = usePendingDay();
-  const [draft, setDraft] = useState<Record<CardioKey, string>>({ ...EMPTY_CARDIO });
+  // A fresh picker after each pick. Picking queues the activity at once, as
+  // a row with its first box focused; there is no Add to press.
   const [pickerKey, setPickerKey] = useState(0);
   // Rows drag into a new order by the grip, like the exercise rows; the new
   // order waits on the session's Apply bar with every other change.
@@ -41,10 +42,9 @@ export default function CardioBlock({
   const byId = new Map(pending.cardio.map((c) => [c.id, c] as const));
   const rows = pending.cardioOrder.map((id) => byId.get(id)).filter((c): c is NonNullable<typeof c> => !!c);
   const added = pending.draft.cardio.added;
-  const submit = () => {
-    if (!draft.name.trim()) return;
-    pending.addCardio({ ...draft, name: draft.name.trim() });
-    setDraft({ ...EMPTY_CARDIO });
+  const pick = (name: string) => {
+    if (!name.trim()) return;
+    pending.addCardio({ ...EMPTY_CARDIO, name: name.trim() });
     setPickerKey((k) => k + 1);
   };
 
@@ -53,15 +53,18 @@ export default function CardioBlock({
     set: (k: CardioKey, v: string) => void,
     changed: (k: CardioKey) => boolean,
     onEnter: (() => void) | undefined,
-    // The row's bin or Add, at the end of Notes: the table has no column of
-    // its own for it.
-    end: ReactNode
+    // The row's bin, at the end of Notes: the table has no column of its
+    // own for it.
+    end: ReactNode,
+    /** The row just picked: the cursor goes to its first box. */
+    focusFirst = false
   ) => (
     <>
       {slots.map((slot, i) => {
         const field: CardioKey = slot === "notes" ? "notes" : slot.field;
         const input = (
           <input
+            autoFocus={focusFirst && i === 0}
             type="text"
             value={value(field)}
             onChange={(e) => set(field, e.target.value)}
@@ -139,7 +142,7 @@ export default function CardioBlock({
                 )}
               </tr>
             ))}
-            {added.map((n) => (
+            {added.map((n, i) => (
               <tr key={`new-${n.tempId}`} className="pb-row pb-row-new">
                 <td className="pb-grip-cell" aria-hidden="true"></td>
                 <td className="exercise-name-cell">
@@ -154,24 +157,19 @@ export default function CardioBlock({
                   undefined,
                   <button type="button" className="row-icon-btn row-icon-danger" aria-label={`Undo adding ${n.fields.name}`} title="Undo" onClick={() => pending.unaddCardio(n.tempId)}>
                     <TrashIcon />
-                  </button>
+                  </button>,
+                  i === added.length - 1
                 )}
               </tr>
             ))}
             <tr className="add-exercise-row">
               <td aria-hidden="true"></td>
               <td>
-                <ExercisePicker key={pickerKey} groups={groups} exercisesByGroup={exercisesByGroup} onPick={(ex) => setDraft((d) => ({ ...d, name: ex.name }))} />
+                <ExercisePicker key={pickerKey} groups={groups} exercisesByGroup={exercisesByGroup} onPick={(ex) => pick(ex.name)} />
               </td>
-              {cells(
-                (k) => draft[k],
-                (k, v) => setDraft((d) => ({ ...d, [k]: v })),
-                () => false,
-                submit,
-                <button className="pb-add-btn" type="button" onClick={submit} disabled={!draft.name.trim()} title={draft.name.trim() ? undefined : "Pick a cardio activity first"}>
-                  + Add
-                </button>
-              )}
+              {slots.map((_, i) => (
+                <td key={i} aria-hidden="true"></td>
+              ))}
             </tr>
           </tbody>
         </table>

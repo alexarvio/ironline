@@ -5,6 +5,11 @@ import { applyDayOrderToLaterWeeksAction, reorderAssignmentsAction } from "../li
 import { FieldKey, usePendingDay } from "./DayPending";
 import { useRowDrag } from "./useRowDrag";
 
+// The builder columns a new row has a box in, and the field each one sets:
+// the first of them on screen takes the cursor when the row is picked.
+const FIRST_FIELD_KEYS = ["sets", "reps", "weight_goal", "rpe", "tempo", "rest", "distance", "time", "notes"];
+const COLUMN_FIELD: Record<string, FieldKey> = { weight_goal: "targetWeight" };
+
 // The exercise rows of one programme day, reorderable by dragging the grip
 // at the left of a row. The cells themselves are rendered on the server and
 // handed in per row; this owns only the order.
@@ -80,9 +85,18 @@ export default function ReorderableRows({
       {/* Exercises added on the bar: a full row like any other, with its
           targets editable in place, until Apply makes it real. The bar is
           what says it is not saved yet; the row itself does not nag. */}
-      {pending?.draft.added.map((n) => {
+      {pending?.draft.added.map((n, i, all) => {
+        // The row just picked takes the cursor in its first box, so its
+        // targets are typed straight in.
+        const newest = i === all.length - 1;
+        const firstCol = pending.columns.find((c) => c.kind === "builtin" && FIRST_FIELD_KEYS.includes(c.key))?.key;
         const field = (key: FieldKey, props: { type?: "text" | "number"; step?: string; min?: number; placeholder?: string }) => (
-          <input {...props} value={n.fields[key]} onChange={(e) => pending.setAddedField(n.tempId, key, e.target.value)} />
+          <input
+            {...props}
+            autoFocus={newest && firstCol != null && (COLUMN_FIELD[firstCol] ?? firstCol) === key}
+            value={n.fields[key]}
+            onChange={(e) => pending.setAddedField(n.tempId, key, e.target.value)}
+          />
         );
         return (
           <tr key={`new-${n.tempId}`} className="pb-row pb-row-new">
