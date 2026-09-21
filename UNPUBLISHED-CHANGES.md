@@ -894,6 +894,11 @@ Look: `/client` → Training.
 
 - [ ] The video a client sends for an exercise can be two minutes and 128 MB (was one minute, 64 MB). The phone still checks length and size before uploading and says how to make it fit. Coach demo uploads stay at 64 MB.
 
+## 122 · Builder: no cardio among the weights; a tidier pending bar — ✅ LIVE 21 Sep
+
+- [ ] The exercise picker on the weights side no longer offers the Cardio group (tiles or search); cardio is added from the heart toggle, as before.
+- [ ] The session's pending bar: "Unsaved · W6" is gone, the tick reads "Apply to the rest of the programme" (hover names the weeks), and Discard and Apply sit together at the right, after the tick.
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).

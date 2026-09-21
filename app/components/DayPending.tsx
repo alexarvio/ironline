@@ -500,19 +500,18 @@ export function PendingChangesBar() {
         {failed ? (
           <span className="pb-pending-status">Couldn&rsquo;t save{p.error ? ` · ${p.error}` : ""}</span>
         ) : (
-          <span className="pb-pending-status">
-            {p.status === "applying" ? "Saving…" : "Unsaved"} · {p.weekLabel}
-          </span>
+          // The bar being there says "unsaved", and the week is the one on screen.
+          p.status === "applying" && <span className="pb-pending-status">Saving…</span>
+        )}
+        {p.remainingCount > 0 && (
+          <label className="pb-pending-also" title={`Also changes ${p.remainingLabel}`}>
+            <input type="checkbox" checked={p.alsoRemaining} onChange={(e) => p.setAlsoRemaining(e.target.checked)} />
+            <span>Apply to the rest of the programme</span>
+          </label>
         )}
         <button type="button" className="pb-pending-ghost" onClick={p.discard} disabled={p.status === "applying"}>
           Discard
         </button>
-        {p.remainingCount > 0 && (
-          <label className="pb-pending-also">
-            <input type="checkbox" checked={p.alsoRemaining} onChange={(e) => p.setAlsoRemaining(e.target.checked)} />
-            <span>Also apply to {p.remainingLabel}</span>
-          </label>
-        )}
         <button type="button" className="pb-pending-apply" onClick={p.apply} disabled={p.status === "applying"}>
           {failed ? "Retry" : p.status === "applying" ? "Applying…" : "Apply"}
         </button>

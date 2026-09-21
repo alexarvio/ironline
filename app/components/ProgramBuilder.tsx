@@ -400,7 +400,8 @@ export default function ProgramBuilder({
                   <AddExerciseRow
                     columns={columns.map((c) => ({ id: c.id, kind: c.kind, key: c.key, label: c.label }))}
                     // "Other" only earns a tile when something is filed there.
-                    groups={MUSCLE_GROUPS.filter((g) => g.slug !== "other" || (exercisesByGroup.other?.length ?? 0) > 0)}
+                    // Cardio has its own block (the heart toggle on the session), so it is not offered among the weights.
+                    groups={MUSCLE_GROUPS.filter((g) => g.slug !== "cardio" && (g.slug !== "other" || (exercisesByGroup.other?.length ?? 0) > 0))}
                     exercisesByGroup={exercisesByGroup}
                   />
                 }
