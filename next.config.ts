@@ -13,6 +13,13 @@ const nextConfig: NextConfig = {
       // an over-large file gets a sentence rather than a failed request.
       bodySizeLimit: "64mb",
     },
+    // proxy.ts runs in front of nearly every request, and with a proxy Next
+    // copies each request body into memory, cut off at 10MB by default. An
+    // upload over 10MB then reached its server action truncated ("Unexpected
+    // end of form"), so a 30MB demo video failed although the limit above
+    // says 64MB. The same 64MB here. (Bigger files, like a coach's screen
+    // recording, go to a route the proxy skips.)
+    proxyClientMaxBodySize: "64mb",
   },
 };
 

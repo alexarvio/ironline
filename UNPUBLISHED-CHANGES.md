@@ -829,6 +829,10 @@ Commit `86a3313` (the client camera, storage, `/uploads/meals`, and the `meal_ph
 
 - [ ] **A row just picked shows "Add demo" (or "▶ Demo" when the exercise already has one)** right away, not only after Apply. The demo is the exercise's own (the library's), so it is saved on the exercise at once, link or upload, in the same dialog, and follows it onto every client's sheet, as before. Checked in the real builder: two picked rows carry the chip and the dialog posts by the exercise. Not checked: saving (needs a signed-in coach).
 
+## 116 · Uploads over 10 MB work again — ✅ LIVE 21 Sep
+
+- [ ] **Any upload over 10 MB failed** ("Unexpected end of form"): with proxy.ts in front of the pages, Next copies each request body into memory and cut it off at 10 MB by default, so a demo video between 10 and 64 MB (and a big progress picture) never arrived whole, although the limit said 64 MB. `experimental.proxyClientMaxBodySize` is now 64 MB, the same as the server actions. Proven locally with a test action: 20 MB failed before, arrives whole (20,971,520 bytes) after.
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).
