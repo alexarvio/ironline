@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { deployNutritionPhaseAction, deployPhaseNowAction, deployProgramAction, scheduleProgramDeployAction, updateClientPhaseAction } from "../lib/actions";
+import { updateClientPhaseAction } from "../lib/actions";
 import type { PhaseTrack } from "../lib/db";
 import type { PlanPhaseRow, PlanProgramOption } from "../lib/queries";
 import PhaseDialogButton, { isoWeek, PhaseDialog } from "./PhaseDialogButton";
@@ -64,11 +64,9 @@ export default function PlanPhasesCard({
   // A finished drag waits here for the coach's confirmation; the bar keeps
   // previewing the new span until they save or cancel.
   const [pending, setPending] = useState<{ id: number; start: string; end: string } | null>(null);
-  // A draft phase whose programme the coach asked to deploy, awaiting confirmation.
-  const [deploying, setDeploying] = useState<PlanPhaseRow | null>(null);
   // The click that ends a drag must not open the edit dialog.
   const justDragged = useRef(false);
-  const [busy, start] = useTransition();
+  const [, start] = useTransition();
   const areaRef = useRef<HTMLDivElement>(null);
 
   // The window: last week for context, then the current week in the second
@@ -155,34 +153,6 @@ export default function PlanPhasesCard({
       setPending(null);
     });
   };
-  // A draft goes out on its own dates, whichever track it is on: a start in
-  // a later week schedules it (it goes live on that week by itself), a start
-  // that has come puts it live now. A training draft used to go live now
-  // whatever its dates, so a block planned for November started today.
-  const deploy = (p: PlanPhaseRow) => {
-    if (!p.program) {
-      // A nutrition or lifestyle draft: no programme, just the flag. Its
-      // dates then make it scheduled or live.
-      start(async () => {
-        await deployNutritionPhaseAction(p.id);
-        setDeploying(null);
-      });
-      return;
-    }
-    const fd = new FormData();
-    fd.set("programId", String(p.program.id));
-    const later = p.start_week > thisWeek;
-    if (later) {
-      // From the start of its first Monday.
-      fd.set("date", p.start_week);
-      fd.set("time", "00:00");
-    }
-    start(async () => {
-      await (later ? scheduleProgramDeployAction(fd) : deployProgramAction(fd));
-      setDeploying(null);
-    });
-  };
-
   const span = (p: PlanPhaseRow) => {
     const live = drag?.id === p.id ? drag : pending?.id === p.id ? pending : null;
     const s = live ? live.start : p.start_week;
@@ -357,18 +327,10 @@ export default function PlanPhasesCard({
                             {total} wk · {shortDate(sp.s)} → {shortDate(addWeeks(sp.e, 1))}
                           </span>
                         </span>
+                        {/* Only a label: the bar opens the phase dialog wherever it is
+                            clicked, and a draft is deployed or scheduled from there. */}
                         {draft ? (
-                          <button
-                            type="button"
-                            className="pl-bar-pill draft"
-                            onPointerDown={(e) => e.stopPropagation()}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeploying(p);
-                            }}
-                          >
-                            {p.start_week > thisWeek ? "draft · schedule" : "draft · deploy"}
-                          </button>
+                          <span className="pl-bar-pill draft">Draft</span>
                         ) : isRunning ? (
                           <span className="pl-bar-pill running">
                             wk {weeksBetween(sp.s, thisWeek) + 1} / {total}
@@ -494,91 +456,6 @@ export default function PlanPhasesCard({
           );
         })()}
 
-      {deploying &&
-        (() => {
-          // An unnamed programme can't go out (the action refuses it), so say so
-          // and send the coach to Training rather than a button that does nothing.
-          const unnamed = !!deploying.program && programs.find((x) => x.id === deploying.program?.id)?.name === "Untitled programme";
-          const later = deploying.start_week > thisWeek;
-          const track = deploying.track;
-          const chrome = phaseChrome(track, unnamed ? "draft" : later ? "scheduled" : "live");
-          const palette = TRACK_PALETTE[track];
-          const when = new Date(`${deploying.start_week}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
-          const what = track === "training" ? "this training programme" : track === "nutrition" ? "these nutrition targets" : "this lifestyle phase";
-          return (
-            <div className="pl-dlg-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && setDeploying(null)}>
-              <div className="pl-dlg pl-move" role="dialog" aria-modal="true" aria-label={unnamed ? "Name the programme first" : later ? `Schedule ${deploying.name}` : `Put ${deploying.name} live`}>
-                <header className="pl-dlg-head">
-                  <h2>{unnamed ? "Name the programme first" : later ? `Schedule ${deploying.name}` : `Put ${deploying.name} live`}</h2>
-                  <span className="pl-track-tag" style={{ background: palette.tint, color: palette.ink }}>
-                    {TRACK_LABEL[track]}
-                  </span>
-                  {!unnamed && (
-                    <span className="pl-dlg-state" style={{ background: chrome.chipBg, color: chrome.chipInk }}>
-                      {later ? "Scheduled" : "Live"}
-                    </span>
-                  )}
-                </header>
-                <div className="pl-dlg-body">
-                  {unnamed ? (
-                    <p className="pl-move-note">A programme needs a name before it goes to the client. Give it one on the Training tab, then schedule it here.</p>
-                  ) : (
-                    <>
-                      <div className="pl-move-rows">
-                        <div className="pl-move-row">
-                          <span className="pl-dlg-label">Goes live</span>
-                          <b className="pl-move-now" style={{ gridColumn: "2 / -1", color: chrome.edge }}>
-                            {later ? when : "Now"}
-                          </b>
-                        </div>
-                      </div>
-                      <p className="pl-move-note">
-                        {later
-                          ? `The client gets ${what} in their app on ${when}, by itself. Until then it can still be moved or changed. Or put it live now: it starts this week and keeps its length.`
-                          : `The client sees ${what} in their app as soon as you put it live.`}
-                      </p>
-                    </>
-                  )}
-                </div>
-                <footer className="pl-dlg-foot">
-                  <div className="pl-dlg-actions">
-                    <button type="button" className="pl-dlg-cancel" onClick={() => setDeploying(null)} disabled={busy}>
-                      Cancel
-                    </button>
-                    {unnamed ? (
-                      <a className="pl-dlg-save" href={`/admin?client=${clientId}&tab=training`}>
-                        Open Training
-                      </a>
-                    ) : (
-                      <>
-                        {/* Not waiting for its start: live this week (deployPhaseNow). */}
-                        {later && (
-                          <button
-                            type="button"
-                            className="pl-dlg-cancel"
-                            onClick={() =>
-                              start(async () => {
-                                await deployPhaseNowAction(deploying.id);
-                                setDeploying(null);
-                              })
-                            }
-                            disabled={busy}
-                          >
-                            Put it live now
-                          </button>
-                        )}
-                      <button type="button" className="pl-dlg-save" onClick={() => deploy(deploying)} disabled={busy}>
-                        {busy ? (later ? "Scheduling…" : "Putting it live…") : later ? `Schedule for ${when}` : "Put it live"}
-                      </button>
-                      </>
-                    )}
-                  </div>
-                </footer>
-              </div>
-            </div>
-          );
-        })()}
-
       {dialog && (
         <PhaseDialog
           clientId={clientId}
@@ -593,6 +470,8 @@ export default function PlanPhasesCard({
                   start_week: dialog.phase.start_week,
                   end_week: dialog.phase.end_week,
                   program_id: dialog.phase.program?.id ?? null,
+                  // So the dialog knows it is a draft, and offers to send it out.
+                  ...(dialog.phase.draft ? { draft: true } : {}),
                 }
               : undefined
           }

@@ -12636,7 +12636,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .pl-bar-pill { position: relative; z-index: 2; flex: none; padding: 2px 8px; border: 0; border-radius: 999px; font: inherit; font-size: 10px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .pl-bar-pill.running { background: rgba(255, 255, 255, 0.75); color: inherit; }
 .pl-bar-pill.future { background: #eef0f3; color: #5b6474; }
-.pl-bar-pill.draft { background: #fbe9e0; color: #b3471d; cursor: pointer; }
+.pl-bar-pill.draft { background: #fbe9e0; color: #b3471d; }
 /* Wide grab zones on the bar edges, shown on hover. */
 .pl-bar-edge { position: absolute; top: 0; bottom: 0; z-index: 2; width: 14px; cursor: col-resize; }
 .pl-bar-edge.left { left: 0; }

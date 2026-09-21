@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { addClientPhaseAction, removeClientPhaseAction, schedulePhaseAction, updateClientPhaseAction } from "../lib/actions";
+import { addClientPhaseAction, removeClientPhaseAction, saveAndDeployPhaseNowAction, saveAndSchedulePhaseAction, schedulePhaseAction, updateClientPhaseAction } from "../lib/actions";
 import type { ClientPhase, PhaseTrack } from "../lib/db";
 import PhaseCalendar, { isoWeek, mondayOf, monthOf, type CalMonth, type PlannedRange } from "./PhaseCalendar";
 import { phaseChrome, phaseStateOf, STATE_LABEL, TRACK_LABEL, TRACK_PALETTE, type PhaseState } from "./phaseChrome";
@@ -536,9 +536,39 @@ export function PhaseDialog({
                   <button type="button" className="pl-dlg-cancel" onClick={onClose}>
                     Cancel
                   </button>
-                  <button type="submit" className="pl-dlg-save" disabled={!ready}>
-                    {scheduling ? (startWeek && startWeek <= today ? "Make it live" : "Schedule it") : "Save"}
-                  </button>
+                  {editing && isDraft ? (
+                    // A draft goes out from here, the same dialog wherever the
+                    // phase was clicked. Each button saves what was changed
+                    // above first, then sends it: on its dates (scheduled, or
+                    // live if its week has come), or now, from this week.
+                    <>
+                      <button type="submit" className="pl-dlg-cancel" disabled={!ready}>
+                        Save draft
+                      </button>
+                      {startWeek > mondayOf(today) && (
+                        <button
+                          type="submit"
+                          className="pl-dlg-cancel"
+                          disabled={!ready}
+                          formAction={saveAndDeployPhaseNowAction}
+                        >
+                          Deploy now
+                        </button>
+                      )}
+                      <button
+                        type="submit"
+                        className="pl-dlg-save"
+                        disabled={!ready}
+                        formAction={saveAndSchedulePhaseAction}
+                      >
+                        {startWeek && startWeek <= today ? "Make it live" : "Schedule it"}
+                      </button>
+                    </>
+                  ) : (
+                    <button type="submit" className="pl-dlg-save" disabled={!ready}>
+                      {scheduling ? (startWeek && startWeek <= today ? "Make it live" : "Schedule it") : "Save"}
+                    </button>
+                  )}
                 </div>
               </>
             )}

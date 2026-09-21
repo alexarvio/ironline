@@ -803,6 +803,12 @@ Commit `86a3313` (the client camera, storage, `/uploads/meals`, and the `meal_ph
 
 - [ ] **"Add demo" / "▶ Demo" opens a dialog like the phase dialog**: the exercise's name with a "Demo video" tag and an "Attached" / "None yet" chip on top; in the body what the client sees now (the link, or "An uploaded video", opening it), "Paste a link" / "Upload a file" as two chips, the field and its hint; Remove on the left of the foot (only when one is attached), Cancel and Save link / Upload on the right. A failed save says why in the red note. Same actions as before.
 
+## 110 · Plan tab: one dialog for a draft, wherever it is clicked — ✅ LIVE 21 Sep
+
+- [ ] **A draft's pill on the Plan timeline is only a label now ("Draft")**; clicking anywhere on the bar, pill included, opens the phase dialog. The pill used to be its own button with its own "schedule / deploy" pop-up, so the same bar opened two different things depending on where it was clicked.
+- [ ] **The phase dialog sends a draft out itself**: for a draft its foot reads Delete · Cancel · Save draft · Deploy now · Schedule it ("Make it live" once its start week has come). Each saves what was changed in the dialog first, then sends it, in one step on the server: Schedule it on its dates (a programme scheduled from its first Monday), Deploy now from this week, making room as in group 107. Deploy now only shows when the start is in a later week. The same dialog opens from "Edit dates" on the other tabs, so a draft can go out from there too.
+- [ ] Checked on the real Plan timeline: all four local drafts (nutrition, training, two lifestyle), clicked by name and by pill, open the same dialog with those buttons. Not checked: pressing them (needs a signed-in coach); they run the save and the schedule / deploy-now logic already checked in 102 and 107.
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).

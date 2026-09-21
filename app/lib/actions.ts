@@ -1996,6 +1996,29 @@ export async function deployPhaseNowAction(id: number) {
   revalidatePath("/client");
 }
 
+// The phase dialog's buttons for a draft: what was changed in the dialog is
+// saved and the draft goes out, in one step — on its dates (scheduled, or
+// live if its week has come), or now from this week.
+export async function saveAndSchedulePhaseAction(formData: FormData) {
+  const id = Number(formData.get("id"));
+  const fields = readPhaseForm(formData);
+  if (!id || !fields || !(await coachForClient(getClientIdForPhase(id)))) return;
+  updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1");
+  schedulePhase(id, fields.name, fields.start, fields.end);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function saveAndDeployPhaseNowAction(formData: FormData) {
+  const id = Number(formData.get("id"));
+  const fields = readPhaseForm(formData);
+  if (!id || !fields || !(await coachForClient(getClientIdForPhase(id)))) return;
+  updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1");
+  deployPhaseNow(id);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
 export async function unschedulePhaseAction(id: number) {
   if (!(await coachForClient(getClientIdForPhase(Number(id))))) return;
   unschedulePhase(Number(id));
