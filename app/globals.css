@@ -8151,7 +8151,7 @@ label.ci-pill { cursor: text; }
 .pl-dlg-state { margin-left: auto; padding: 4px 10px; border-radius: 999px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
 /* The body scrolls; the footer never does. */
 .pl-dlg-form { display: flex; flex-direction: column; flex: 1; min-height: 0; margin: 0; }
-.pl-dlg-body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 16px 20px 18px; }
+.pl-dlg-body { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 14px; padding: 16px 20px 18px; }
 .pl-dlg-field { display: flex; flex-direction: column; gap: 6px; }
 .pl-dlg-label { font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; }
 .pl-dlg-input { box-sizing: border-box; width: 100%; padding: 10px 12px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; font: inherit; font-size: 13.5px; font-weight: 600; color: #141a24; outline: none; }
@@ -8234,6 +8234,13 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 /* Moving a phase on the Plan timeline: the same shell, narrower, with what
    changes as a before → after, the new value in the state's colour. */
 .pl-dlg.pl-move { width: 440px; }
+/* Plain body copy in a dialog: what a delete takes with it, a question. */
+.pl-dlg-text { margin: 0; font-size: 13px; line-height: 1.5; color: #313851; }
+/* Two fields side by side (a date and a time). */
+.pl-dlg-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* A form as a flex item among the footer's buttons. */
+.pl-dlg-actions form { display: flex; margin: 0; }
+.pb-copy-options { margin: 0; }
 .pl-move-rows { display: flex; flex-direction: column; }
 .pl-move-row { display: grid; grid-template-columns: 70px auto 18px auto; justify-content: start; align-items: baseline; gap: 8px; padding: 10px 0; border-bottom: 1px solid #eceff3; }
 .pl-move-row:last-child { border-bottom: 0; }

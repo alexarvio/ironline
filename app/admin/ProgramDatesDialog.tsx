@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { deployProgramAction, renameProgramAction, scheduleProgramDeployAction } from "../lib/actions";
+import { phaseChrome, TRACK_PALETTE } from "./phaseChrome";
 
 // A draft programme's name and when it goes out, in one dialog.
 //
@@ -59,18 +60,28 @@ export default function ProgramDatesDialog({
       onClose();
     });
 
+  // The phase dialog's chrome: a draft programme, so the draft chip.
+  const chrome = phaseChrome("training", "draft");
+  const palette = TRACK_PALETTE.training;
   return createPortal(
-    <div className="pb-modal-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="pb-modal pb-modal-sm pl-dialog" role="dialog" aria-modal="true" aria-label="This programme">
-        <div className="pl-dialog-head">
-          <h2 className="pb-confirm-title">This programme</h2>
-        </div>
+    <div className="pl-dlg-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="pl-dlg" role="dialog" aria-modal="true" aria-label="This programme">
+        <header className="pl-dlg-head">
+          <h2>This programme</h2>
+          <span className="pl-track-tag" style={{ background: palette.tint, color: palette.ink }}>
+            Training
+          </span>
+          <span className="pl-dlg-state" style={{ background: chrome.chipBg, color: chrome.chipInk }}>
+            Draft
+          </span>
+        </header>
 
-        <div className="cd-form">
-          <label className="plan-schedule-field">
-            <span>Name</span>
+        <div className="pl-dlg-body">
+          <label className="pl-dlg-field">
+            <span className="pl-dlg-label">Name</span>
             <input
               ref={nameRef}
+              className="pl-dlg-input"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -79,31 +90,31 @@ export default function ProgramDatesDialog({
             />
           </label>
 
-          <p className="pl-hint">
-            Its length is however many weeks are on the rail. What you pick here is when it reaches the client.
-          </p>
-
-          <div className="cd-form-row">
-            <label className="plan-schedule-field">
-              <span>Goes live on</span>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <div className="pl-dlg-pair">
+            <label className="pl-dlg-field">
+              <span className="pl-dlg-label">Goes live on</span>
+              <input className="pl-dlg-input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </label>
-            <label className="plan-schedule-field">
-              <span>At</span>
-              <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+            <label className="pl-dlg-field">
+              <span className="pl-dlg-label">At</span>
+              <input className="pl-dlg-input" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
             </label>
           </div>
 
-          <div className="pb-modal-foot">
-            <button type="button" className="ad-btn-secondary" onClick={onClose} disabled={busy}>
+          <p className="pl-move-note">Its length is however many weeks are on the rail. What you pick here is when it reaches the client.</p>
+        </div>
+
+        <footer className="pl-dlg-foot">
+          <button type="button" className="pl-text-btn" onClick={() => go("save")} disabled={busy}>
+            Save the name
+          </button>
+          <div className="pl-dlg-actions">
+            <button type="button" className="pl-dlg-cancel" onClick={onClose} disabled={busy}>
               Cancel
-            </button>
-            <button type="button" className="ad-btn-secondary" onClick={() => go("save")} disabled={busy}>
-              Save the name
             </button>
             <button
               type="button"
-              className="ad-btn-secondary"
+              className="pl-dlg-cancel"
               onClick={() => go("deploy")}
               disabled={busy || !named}
               title={named ? undefined : "Name it first"}
@@ -112,7 +123,7 @@ export default function ProgramDatesDialog({
             </button>
             <button
               type="button"
-              className="ad-btn-primary"
+              className="pl-dlg-save"
               onClick={() => go("schedule")}
               disabled={busy || !named || !date || !time}
               title={named ? undefined : "Name it first"}
@@ -120,7 +131,7 @@ export default function ProgramDatesDialog({
               Schedule it
             </button>
           </div>
-        </div>
+        </footer>
       </div>
     </div>,
     document.body

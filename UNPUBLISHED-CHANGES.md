@@ -743,6 +743,12 @@ Commit `86a3313` (the client camera, storage, `/uploads/meals`, and the `meal_ph
 - [ ] **Exercise names are never cut.** The Exercise column is a fixed 280px (Activity on the cardio view too, so the toggle still lines up): room for the trend, a name on one or two lines and "Add demo". The two-line clamp with "…" is gone; a rare very long name takes a third line.
 - [ ] **"On target", "+5 kg over" and "▲ 5 kg vs W2" sit in one column down the table.** The verdict used to follow the last set, so it moved with every row's set count. Now each row is week tags | sets | verdicts, with the tags and verdicts in fixed places and only the sets scrolling sideways (both weeks together) when a week has more than fit — the table itself no longer grows for it. Checked on the real builder: every verdict ends on the same line; thirteen sets in one row scroll inside their area and nothing else moves.
 
+## 98 · Every delete confirmation, and Training's schedule dialog, in the new look — ✅ LIVE 21 Sep
+
+- [ ] **The shared "Delete …?" dialog** (a week, a session, and every other delete in the coach app) uses the phase dialog's chrome: the question in the header, what goes with it in the body, "This can't be undone" in a red note, Cancel and a red Delete in the footer. Focus still starts on Cancel.
+- [ ] **Training's "This programme" dialog** (name a draft programme, deploy it now or schedule it) and **Duplicate session** (the other item in the ⋯ menu) match it.
+- [ ] Note on "the delete button does not work": the live logs show the delete at 05:08:28 hit the ~15 seconds in which the server was restarting for a push (502, timed out), so nothing was deleted; requests after it went through. Every push restarts the live server for about that long.
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).

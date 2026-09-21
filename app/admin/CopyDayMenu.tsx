@@ -53,18 +53,21 @@ export function CopyDayDialog({
   const weeksText = remainingWeeks === 1 ? `the remaining week (${remainingLabel})` : `the ${remainingWeeks} remaining weeks (${remainingLabel})`;
 
   return createPortal(
-    <div className="pb-modal-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="pl-dlg-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <form
         action={copyProgramDayAction}
         onSubmit={() => setTimeout(onClose, 0)}
-        className="pb-modal pb-modal-sm"
+        className="pl-dlg pl-move"
         role="dialog"
         aria-modal="true"
         aria-label={`Duplicate ${sourceName}`}
       >
         <input type="hidden" name="fromDayId" value={fromDayId} />
-        <h2 className="pb-confirm-title">Duplicate {sourceName}</h2>
-        <p className="pb-confirm-body">Where should the copy go?</p>
+        <header className="pl-dlg-head">
+          <h2>Duplicate {sourceName}</h2>
+        </header>
+        <div className="pl-dlg-body">
+        <p className="pl-dlg-text">Where should the copy go?</p>
 
         <div className="pb-copy-options" role="radiogroup">
           {newSessionNumber != null ? (
@@ -95,15 +98,18 @@ export function CopyDayDialog({
             <span>{to === "new" ? `Also add it to ${weeksText}` : `Also do this in ${weeksText}`}</span>
           </label>
         )}
-
-        <div className="pb-modal-foot">
-          <button type="button" className="ad-btn-secondary" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" className="ad-btn-primary">
-            {submitLabel}
-          </button>
         </div>
+
+        <footer className="pl-dlg-foot">
+          <div className="pl-dlg-actions">
+            <button type="button" className="pl-dlg-cancel" onClick={onClose}>
+              Cancel
+            </button>
+            <button type="submit" className="pl-dlg-save">
+              {submitLabel}
+            </button>
+          </div>
+        </footer>
       </form>
     </div>,
     document.body

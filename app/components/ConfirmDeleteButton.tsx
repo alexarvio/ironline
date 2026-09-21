@@ -103,29 +103,33 @@ export function ConfirmDialog({
   }, [onClose]);
 
   return (
-    <div
-      className="pb-modal-scrim"
-      role="presentation"
-      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div className="pb-modal pb-modal-sm" role="dialog" aria-modal="true" aria-label={label}>
-        <h2 className="pb-confirm-title">{label}?</h2>
-        {description && <p className="pb-confirm-body">{description}</p>}
-        <p className="pb-confirm-body">This can&rsquo;t be undone.</p>
-
-        <div className="pb-modal-foot">
-          <button type="button" className="ad-btn-secondary" onClick={onClose} ref={cancelRef}>
-            Cancel
-          </button>
-          <form action={action}>
-            {Object.entries(hiddenFields).map(([key, value]) => (
-              <input key={key} type="hidden" name={key} value={value} />
-            ))}
-            <button type="submit" className="pb-confirm-delete">
-              Delete
-            </button>
-          </form>
+    // The phase dialog's chrome, like every dialog in the coach app now: the
+    // question in the header, what goes with it in the body, and the red
+    // Delete beside Cancel in the footer.
+    <div className="pl-dlg-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="pl-dlg pl-move" role="alertdialog" aria-modal="true" aria-label={label}>
+        <header className="pl-dlg-head">
+          <h2>{label}?</h2>
+        </header>
+        <div className="pl-dlg-body">
+          {description && <p className="pl-dlg-text">{description}</p>}
+          <p className="pl-move-note warn">This can&rsquo;t be undone.</p>
         </div>
+        <footer className="pl-dlg-foot">
+          <div className="pl-dlg-actions">
+            <button type="button" className="pl-dlg-cancel" onClick={onClose} ref={cancelRef}>
+              Cancel
+            </button>
+            <form action={action}>
+              {Object.entries(hiddenFields).map(([key, value]) => (
+                <input key={key} type="hidden" name={key} value={value} />
+              ))}
+              <button type="submit" className="pl-dlg-danger">
+                Delete
+              </button>
+            </form>
+          </div>
+        </footer>
       </div>
     </div>
   );
