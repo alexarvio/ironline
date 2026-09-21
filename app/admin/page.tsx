@@ -227,10 +227,11 @@ function ClientDashboard({
           right-hand panel now; printing them twice on one screen made the
           panel read as an echo of the header rather than the place those
           facts are kept. The tabs are the top of this column. */}
-      {/* Keyed by client and requested tab: switching client lands on Home,
-          and a deep link such as the feed's "See the week" opens its tab
-          even when this client is already on screen. */}
-      <SectionTabs key={`${clientId}:${initialTab ?? ""}`} clientId={clientId} sections={sections} initialId={initialTab} />
+      {/* Keyed by client: switching client lands on Home (or the tab asked
+          for). Within a client the tabs follow ?tab= themselves, so a deep
+          link such as the feed's "See the week" opens its tab, and a save
+          never remounts the one on screen. */}
+      <SectionTabs key={clientId} clientId={clientId} sections={sections} initialId={initialTab} />
     </>
   );
 }

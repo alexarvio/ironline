@@ -105,6 +105,17 @@ export default function ProgramBuilderShell({
     week: p.liveWeek,
   }));
   const { current, select } = usePhases(options, { initialId: initialProgramId });
+  // A programme that was not here a moment ago is the one just made with
+  // "+ New programme": open it. The tab used to stay on the live one, so
+  // making a programme looked like it did nothing.
+  const ids = options.map((o) => o.id).join(",");
+  const [seenIds, setSeenIds] = useState(ids);
+  if (ids !== seenIds) {
+    const before = new Set(seenIds.split(",").map(Number));
+    const fresh = options.find((o) => !before.has(o.id));
+    setSeenIds(ids);
+    if (fresh) select(fresh.id);
+  }
   const program = programs.find((p) => p.id === current?.id) ?? programs[0];
 
   const [week, setWeek] = useState(program?.defaultWeek ?? 1);

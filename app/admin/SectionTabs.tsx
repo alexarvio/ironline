@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { markSeenAction } from "../lib/actions";
 
 export type TabSection = {
@@ -29,6 +30,18 @@ export default function SectionTabs({
   const [activeId, setActiveId] = useState(
     initialId && sections.some((s) => s.id === initialId) ? initialId : sections[0]?.id
   );
+  // A link to another of this client's tabs (the feed's "See the week", a
+  // notification) changes ?tab= in the address, and the tab follows it. A
+  // save does not change the address, so nothing moves: this used to be
+  // remounted whenever the server's idea of the tab changed, which the first
+  // save after clicking a tab did — the builder jumped back to the live week
+  // with every session folded, the open nutrition day closed.
+  const tabParam = useSearchParams().get("tab");
+  const [seenParam, setSeenParam] = useState(tabParam);
+  if (tabParam !== seenParam) {
+    setSeenParam(tabParam);
+    if (tabParam && tabParam !== activeId && sections.some((s) => s.id === tabParam)) setActiveId(tabParam);
+  }
   const active = sections.find((s) => s.id === activeId) ?? sections[0];
 
   // Being on a tab is having seen it: its dot clears. News about one training
@@ -59,7 +72,10 @@ export default function SectionTabs({
               // The phase in the address was the old tab's; the new one opens on
               // its live phase and writes its own.
               if (s.id !== activeId) url.searchParams.delete("phase");
-              window.history.replaceState(window.history.state, "", url);
+              // null, not window.history.state, so Next's router keeps the
+              // new address: handed its own state back it ignored the write,
+              // and the next save put the old tab back in the address.
+              window.history.replaceState(null, "", url);
             }}
           >
             {s.label}

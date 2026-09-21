@@ -702,8 +702,12 @@ export default function ProgramBuilder({
         // A week the client has trained in is history and stays. Anything
         // with nothing logged, the live week included, can go: a coach who
         // wants to shorten a block before the client starts it should not
-        // have to wait for it to pass. Past programmes are archives.
-        locked: status === "past" || (status !== "draft" && liveWeekNumber == null) || trainedDays > 0,
+        // have to wait for it to pass. Past programmes are archives, and so
+        // are the live programme's past weeks: removing one moves every later
+        // week up, so the week the client is on would turn into next week.
+        // (A scheduled programme was locked whenever nothing was live, so a
+        // new client's first block could not lose a week before it began.)
+        locked: status === "past" || (status === "live" && liveWeekNumber != null && weekNumber < liveWeekNumber) || trainedDays > 0,
         // A future week has nothing to report, so it states the plan rather
         // than claiming zero days trained.
         meta: isFuture

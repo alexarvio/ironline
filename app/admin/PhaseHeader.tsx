@@ -109,7 +109,10 @@ export function usePhases(
     if (url.searchParams.get("phase") === String(id)) return;
     url.searchParams.set("phase", String(id));
     if (navigate) router.replace(`${url.pathname}${url.search}`, { scroll: false });
-    else window.history.replaceState(window.history.state, "", url);
+    // null, not window.history.state: handed its own state back, Next takes
+    // the write for one of its own and ignores it, and the next refresh (any
+    // save) puts the old address back.
+    else window.history.replaceState(null, "", url);
   }, [id, picked, initialId, navigate, router]);
 
   const select = useCallback((next: number) => setPicked(next), []);

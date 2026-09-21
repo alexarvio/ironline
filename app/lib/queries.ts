@@ -801,6 +801,15 @@ export function applyDueProgramDeployments() {
   if (rescheduled) persist();
   const due = data.training_programs.filter((p) => p.status === "draft" && p.scheduled_at && p.scheduled_at <= now);
   due.forEach((program) => deployProgram(program.id));
+  // Mends training phases whose draft flag and programme disagree (see
+  // alignPhaseDraft); a no-op once they agree.
+  let realigned = false;
+  for (const phase of data.client_phases) {
+    if (phase.track !== "training" || !phase.program_id) continue;
+    const program = data.training_programs.find((p) => p.id === phase.program_id);
+    if (program && alignPhaseDraft(phase, program)) realigned = true;
+  }
+  if (realigned) persist();
 
   // Goals progress from what was logged before the rule existed too: every
   // assignment with logs gets one pass. Cheap, idempotent, and a no-op for
@@ -6277,6 +6286,7 @@ export function syncProgramPhase(programId: number, dates = true) {
   const anchor = program.status === "deployed" ? program.deployed_at : program.scheduled_at;
   let phase = data.client_phases.find((p) => p.program_id === programId);
   const name = program.name?.trim() || "Untitled programme";
+  if (phase && alignPhaseDraft(phase, program)) persist();
   if (!anchor || (!dates && phase)) {
     if (phase && phase.name !== name) {
       phase.name = name;
@@ -6300,6 +6310,19 @@ export function syncProgramPhase(programId: number, dates = true) {
     phase.end_week = end;
   }
   persist();
+}
+
+// A training phase is a draft exactly when its programme is one: not
+// deployed and not scheduled. The client's plan and "the phase they are in"
+// read the phase's flag, so it has to follow the programme both ways: off
+// when the programme goes out, back on when a schedule is cancelled.
+// Returns true when the flag changed.
+function alignPhaseDraft(phase: ClientPhase, program: TrainingProgram): boolean {
+  const draft = program.status !== "deployed" && !program.scheduled_at;
+  if (!!phase.draft === draft) return false;
+  if (draft) phase.draft = true;
+  else delete phase.draft;
+  return true;
 }
 
 // The phase a track is in this week, if any: what the client's Home line
