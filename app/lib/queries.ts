@@ -5022,6 +5022,8 @@ export type EngagementPart = {
 export type ClientEngagement = {
   /** The average across the parts that apply, or null when none do. */
   overall: number | null;
+  /** The client's first day, when it falls inside the window: counting starts there. */
+  since: string | null;
   /** The same average over the window before this one, for the trend. */
   previous: number | null;
   parts: EngagementPart[];
@@ -5034,6 +5036,35 @@ const plusDays = (iso: string, n: number) => {
   return localDateStr(d);
 };
 
+/**
+ * The first day a client can be held to anything: the first day they logged
+ * something (a daily check-in, food, a set), or, when they have logged
+ * nothing yet, the day their login was made. Null when neither is known.
+ *
+ * The thirty-day window used to count from thirty days ago whatever: a
+ * client eighteen days in, with every check-in done, read "18 of 33", 55%,
+ * which says a client doing half of what they are asked. Days before they
+ * started are not days they missed.
+ */
+export function clientStartDate(clientId: number): string | null {
+  const data = getData();
+  let first: string | null = null;
+  const see = (day: string | null | undefined) => {
+    if (day && (first == null || day < first)) first = day;
+  };
+  // Daily check-ins only: a weekly one is filed under its Monday, which can
+  // be days before the client actually began.
+  const daily = new Set(data.metric_definitions.filter((m) => m.client_id === clientId && m.frequency === "daily").map((m) => m.id));
+  for (const e of data.metric_entries) if (daily.has(e.metric_definition_id)) see(e.period);
+  for (const e of data.food_entries ?? []) if (e.client_id === clientId) see(e.date);
+  for (const c of data.calorie_logs) if (c.client_id === clientId) see(c.date);
+  const dayIds = new Set(data.program_days.filter((pd) => pd.client_id === clientId).map((pd) => pd.id));
+  const assignmentIds = new Set(data.workout_assignments.filter((wa) => dayIds.has(wa.program_day_id)).map((wa) => wa.id));
+  for (const s of data.set_logs) if (assignmentIds.has(s.workout_assignment_id)) see(s.logged_at?.slice(0, 10));
+  if (first) return first;
+  return data.users.find((u) => u.role === "client" && u.client_id === clientId)?.created_at?.slice(0, 10) ?? null;
+}
+
 // One window of it. `back` is how many windows ago — 0 is now, 1 is the one
 // before it, which is all the trend needs.
 //
@@ -5044,11 +5075,17 @@ const plusDays = (iso: string, n: number) => {
 // altogether and lose eight points. Normalise first and the difference in
 // rhythm stops mattering — which is the whole reason a daily thing and a
 // weekly thing can sit in one score at all.
-function engagementWindow(clientId: number, days: number, back: number): { parts: EngagementPart[]; overall: number | null } {
+function engagementWindow(clientId: number, days: number, back: number, since: string | null): { parts: EngagementPart[]; overall: number | null } {
   const data = getData();
   const today = localDateStr();
   const to = plusDays(today, -days * back);
-  const from = plusDays(to, -(days - 1));
+  const windowFrom = plusDays(to, -(days - 1));
+  // Nothing before the client's first day counts against them. A window
+  // wholly before it (the one the trend compares with, for a new client)
+  // has nothing in it and says nothing.
+  const from = since && since > windowFrom ? since : windowFrom;
+  if (from > to) return { parts: [], overall: null };
+  const firstWeek = weekStart(from);
   const current = back === 0;
   const weeks = Math.max(1, Math.round(days / 7));
 
@@ -5099,7 +5136,7 @@ function engagementWindow(clientId: number, days: number, back: number): { parts
     const firstMonday = weekStart(program.deployed_at.slice(0, 10));
     for (let i = 0; i < program.total_weeks; i++) {
       const monday = plusDays(firstMonday, i * 7);
-      if (monday < from || monday > to) continue;
+      if (monday < firstWeek || monday < windowFrom || monday > to) continue;
       for (const day of getWeek(clientId, program.start_week + i)) {
         const assignments = getAssignmentsForDay(day.id);
         if (assignments.length === 0) continue;
@@ -5132,9 +5169,12 @@ function engagementWindow(clientId: number, days: number, back: number): { parts
   if (weeklyDefs.length > 0) {
     const logged = new Set(listMetricPeriods(weeklyDefs.map((d) => d.id)));
     // The weeks that have closed, plus this one once its check-in day has come.
+    // Only the weeks since the client began.
     const mondays: string[] = [];
     for (let i = current && !weeklyCheckInOpen(clientId) ? 1 : 0; i < weeks; i++) {
-      mondays.push(plusDays(weekStart(to), -i * 7));
+      const monday = plusDays(weekStart(to), -i * 7);
+      if (monday < firstWeek) break;
+      mondays.push(monday);
     }
     checkInsAsked += mondays.length;
     checkInsDone += mondays.filter((w) => logged.has(w)).length;
@@ -5160,12 +5200,14 @@ function engagementWindow(clientId: number, days: number, back: number): { parts
 }
 
 export function getClientEngagement(clientId: number, days: number = ENGAGEMENT_DAYS): ClientEngagement {
-  const now = engagementWindow(clientId, days, 0);
+  const start = clientStartDate(clientId);
+  const now = engagementWindow(clientId, days, 0, start);
   // The same thirty days before those thirty. Null until there is anything
   // in them, so a new client is not told they are down on a month that never
   // happened.
-  const before = engagementWindow(clientId, days, 1);
-  return { overall: now.overall, previous: before.overall, parts: now.parts, days };
+  const before = engagementWindow(clientId, days, 1, start);
+  const windowFrom = plusDays(localDateStr(), -(days - 1));
+  return { overall: now.overall, previous: before.overall, parts: now.parts, days, since: start && start > windowFrom ? start : null };
 }
 
 /** The coach's own note about a client. Theirs alone; the client never sees it. */

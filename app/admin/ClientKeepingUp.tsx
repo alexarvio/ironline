@@ -36,7 +36,11 @@ export default function ClientKeepingUp({ firstName, engagement }: { firstName: 
         <div className="ch-head-titles">
           <span className="ch-label">Keeping up</span>
           <span className="ch-head-sub">
-            What {firstName} filled in · last {engagement.days} days
+            {/* A client newer than the window is counted from their first day, and the line says so. */}
+            What {firstName} filled in ·{" "}
+            {engagement.since
+              ? `since ${new Date(`${engagement.since}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
+              : `last ${engagement.days} days`}
           </span>
         </div>
       </div>
