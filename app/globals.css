@@ -11693,29 +11693,53 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
    its right end: there is no column of its own for it. The content before it
    takes the rest and scrolls on its own, so the bin never moves. */
 .pb-cell-end { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.pb-cell-main { flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: thin; scrollbar-color: #cfd5de transparent; }
+.pb-cell-main { flex: 1; min-width: 0; }
 .pb-cell-end > :last-child:not(.pb-cell-main) { flex: none; }
 .pb .exercise-table td.pb-add-cell { text-align: right; }
 /* The cell scrolls as one: the week tags, the sets and the verdicts move
      together. The grid sizes to its content so there is something to scroll;
      the cell around it is what holds the column's width. */
 .pb .exercise-table td.logged-col {
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: thin;
-  scrollbar-color: #cfd5de transparent;
+  overflow: hidden;
 }
 .pb .exercise-table td.logged-col::-webkit-scrollbar { height: 4px; }
 .pb .exercise-table td.logged-col::-webkit-scrollbar-thumb { background: #cfd5de; border-radius: 99px; }
 .pb .exercise-table td.logged-col::-webkit-scrollbar-track { background: transparent; }
 
+/* Week tags | sets | verdicts. The tags and the verdicts have fixed places,
+   so every row's "On target" sits on the same line down the table; only the
+   sets in the middle scroll, both weeks together, when they do not fit. The
+   two lanes have fixed heights so the three columns stay level. */
 .pb-log {
   display: grid;
-  grid-template-columns: 30px max-content minmax(96px, max-content);
+  grid-template-columns: 30px minmax(0, 1fr) 118px;
+  grid-template-rows: 30px;
   column-gap: 10px;
-  row-gap: 3px;
+  row-gap: 4px;
   align-items: center;
+  width: 100%;
 }
+.pb-log.two { grid-template-rows: 30px 24px; }
+.pb-log .pb-log-wk.now { grid-column: 1; grid-row: 1; }
+.pb-log .pb-log-wk.prev { grid-column: 1; grid-row: 2; }
+.pb-log-scroll {
+  grid-column: 2;
+  grid-row: 1 / -1;
+  display: grid;
+  grid-template-rows: 30px;
+  row-gap: 4px;
+  align-items: center;
+  min-width: 0;
+  overflow-x: auto;
+  /* Sideways only: a sideways scroller scrolls down too unless told not to. */
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #cfd5de transparent;
+}
+.pb-log.two .pb-log-scroll { grid-template-rows: 30px 24px; }
+.pb-log .pb-log-set { line-height: 1.2; }
+.pb-log .pb-log-verdict { grid-column: 3; grid-row: 1; }
+.pb-log .pb-log-delta { grid-column: 3; grid-row: 2; }
 .pb-log-wk {
   display: inline-flex;
   align-items: center;
@@ -11731,7 +11755,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 /* A chip is never narrower than its figures. A week with more sets than the
    lane can hold scrolls sideways rather than wrapping: a wrapped lane grows
    the row, and the two tables in a session stop lining up. */
-.pb-log-sets { display: flex; flex-wrap: nowrap; gap: 4px; min-width: 0; }
+.pb-log-sets { display: flex; flex-wrap: nowrap; align-items: center; gap: 4px; min-width: 0; width: max-content; }
 .pb-log-set {
   flex: 0 0 auto;
   display: inline-flex;
@@ -11774,14 +11798,13 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
   box-sizing: border-box;
   vertical-align: middle;
 }
+/* A name is never cut: it wraps, and a rare very long one takes a third
+   line and a taller row rather than an ellipsis. The column is wide enough
+   that most fit on one or two. */
 .pb .exercise-table .pb-exercise-name {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
   line-height: 1.25;
+  overflow-wrap: break-word;
 }
-.pb .exercise-table .exercise-name-cell { max-width: 220px; }
 .pb .exercise-table td.logged-col .pb-log { align-content: center; }
 
 /* RPE rides on the set chip, small and after the reps: "90×8 @7". */

@@ -147,39 +147,39 @@ export default function LoggedSetsGrid({
     }
   }
 
+  // Three fixed places: the week tags on the left, the verdicts in a column
+  // of their own on the right, and the sets between them in one area that
+  // scrolls sideways when a week has more than fit. The verdict used to sit
+  // straight after the last set, so "On target" moved with every row's set
+  // count and no two rows lined up.
   return (
-    <div className="pb-log">
+    <div className={`pb-log${previous ? " two" : ""}`}>
       <span className="pb-log-wk now">W{weekNumber}</span>
-      <div className="pb-log-sets">
-        {logged
-          ? sets.map((s) => <SetChip key={s.setNumber} set={s} target={target} repsLow={repsLow} dim={false} />)
-          : Array.from({ length: Math.max(1, plannedSets) }, (_, i) => (
-              <span key={i} className="pb-log-set planned" title="Not logged yet">
-                — × —
-              </span>
-            ))}
-      </div>
-      <span className={`pb-log-verdict ${verdict.tone}`}>{verdict.text}</span>
-
-      {previous && (
-        <>
-          <span className="pb-log-wk">W{previous.kind === "logged" ? previous.weekNumber : weekNumber - 1}</span>
-          <div className="pb-log-sets">
+      {previous && <span className="pb-log-wk prev">W{previous.kind === "logged" ? previous.weekNumber : weekNumber - 1}</span>}
+      <div className="pb-log-scroll">
+        <div className="pb-log-sets">
+          {logged
+            ? sets.map((s) => <SetChip key={s.setNumber} set={s} target={target} repsLow={repsLow} dim={false} />)
+            : Array.from({ length: Math.max(1, plannedSets) }, (_, i) => (
+                <span key={i} className="pb-log-set planned" title="Not logged yet">
+                  — × —
+                </span>
+              ))}
+        </div>
+        {previous && (
+          <div className="pb-log-sets prev">
             {previous.kind === "absent" ? (
               <span className="pb-log-note">{previous.note ?? "New this week"}</span>
             ) : previous.sets.length === 0 ? (
               <span className="pb-log-note">Not logged</span>
             ) : (
-              <>
-                {previous.sets.map((s) => (
-                  <SetChip key={s.setNumber} set={s} target={previous.targetWeightKg} repsLow={previous.repsLow} dim />
-                ))}
-              </>
+              previous.sets.map((s) => <SetChip key={s.setNumber} set={s} target={previous.targetWeightKg} repsLow={previous.repsLow} dim />)
             )}
           </div>
-          <span className={`pb-log-delta ${delta?.tone ?? "none"}`}>{delta?.text ?? ""}</span>
-        </>
-      )}
+        )}
+      </div>
+      <span className={`pb-log-verdict ${verdict.tone}`}>{verdict.text}</span>
+      {previous && <span className={`pb-log-delta ${delta?.tone ?? "none"}`}>{delta?.text ?? ""}</span>}
     </div>
   );
 }

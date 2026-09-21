@@ -90,11 +90,11 @@ export default function CardioBlock({
   return (
     <div className="pb-cardio">
       <div className="exercise-table-wrap">
-        {/* Grip and Activity are 22 + 210, as in the exercise table; Notes takes the spare width, with the row's bin at its end. */}
-        <table className="exercise-table pb-cardio-table" style={{ minWidth: 22 + 210 + columns.length * 120 + 220 + 58 }}>
+        {/* Grip and Activity are 22 + 280, as in the exercise table; Notes takes the spare width, with the row's bin at its end. */}
+        <table className="exercise-table pb-cardio-table" style={{ minWidth: 22 + 280 + columns.length * 120 + 220 + 58 }}>
           <colgroup>
             <col style={{ width: "22px" }} />
-            <col style={{ width: "210px" }} />
+            <col style={{ width: "280px" }} />
             {columns.map((c) => (
               <col key={c.key} style={{ width: "120px" }} />
             ))}

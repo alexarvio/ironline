@@ -71,7 +71,7 @@ function formatActualLogs(logs: { weight_kg: number | null; reps: number | null 
 // Column widths from the design. The exercise column takes whatever is left
 // (table-layout is fixed), so it isn't listed here; anything the coach adds
 // as a custom column falls back to a sane default.
-// The exercise column (210px) and the client's logged column (300px) are
+// The exercise column (280px) and the client's logged column (the rest) are
 // fixed by the design; these are what's left to divide at a 1440 canvas once
 // the 216px rail and 296px panel are taken out. Sized to the content — a
 // weight is at most "142.5", an RPE is one or two characters.
@@ -321,16 +321,19 @@ export default function ProgramBuilder({
           }
           exercises={
           <div className="exercise-table-wrap">
-            {/* Grip and Exercise are 22 + 210 exactly, as in the cardio table,
-                so the toggle between the two never moves them. The spare
-                width goes to "What the client did", which keeps 290 at least. */}
+            {/* Grip and Exercise are 22 + 280 exactly, as in the cardio table,
+                so the toggle between the two never moves them; 280 holds the
+                trend, a name on up to two lines and "Add demo". The spare
+                width goes to "What the client did", which scrolls inside its
+                own cell when a week has more sets than fit, rather than
+                taking room from the names. */}
             <table
               className="exercise-table"
-              style={{ minWidth: 22 + 210 + columns.reduce((sum, col) => sum + parseInt(columnWidths[col.key] ?? "90px", 10), 0) + 330 }}
+              style={{ minWidth: 22 + 280 + columns.reduce((sum, col) => sum + parseInt(columnWidths[col.key] ?? "90px", 10), 0) + 280 }}
             >
               <colgroup>
                 <col style={{ width: "22px" }} />
-                <col style={{ width: "210px" }} />
+                <col style={{ width: "280px" }} />
                 {columns.map((col) => (
                   <col key={col.id} style={{ width: columnWidths[col.key] ?? "90px" }} />
                 ))}
