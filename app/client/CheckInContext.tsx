@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
+import type { LinkView } from "../lib/messageLinks";
 
 // Check-in is a full-screen pushed view (its own header, its own save bar,
 // no bottom nav), so AppShell owns it the same way it owns Chat and
@@ -100,4 +101,27 @@ export const MessagesProvider = MessagesContext.Provider;
 
 export function useOpenMessages() {
   return useContext(MessagesContext);
+}
+
+// Opening what a coach message points at (messageLinks.ts). AppShell knows
+// every screen; the message card only knows the link.
+const LinkContext = createContext<((view: LinkView) => void) | null>(null);
+
+export const LinkProvider = LinkContext.Provider;
+
+export function useOpenLink() {
+  return useContext(LinkContext);
+}
+
+// Where a link into Training lands: the week to show (its strip can be on
+// any week the client has had) and the exercise to open in the session the
+// focus ref names. Null on an ordinary visit.
+export type TrainingFocus = { week: number | null; exercise: number | null };
+
+const TrainingFocusContext = createContext<TrainingFocus | null>(null);
+
+export const TrainingFocusProvider = TrainingFocusContext.Provider;
+
+export function useTrainingFocus() {
+  return useContext(TrainingFocusContext);
 }

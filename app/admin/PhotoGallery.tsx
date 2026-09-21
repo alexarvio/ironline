@@ -4,6 +4,7 @@ import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { useFormStatus } from "react-dom";
 import { savePhotoPeriodNoteAction } from "../lib/actions";
 import { ChevronDownIcon } from "../components/icons";
+import MessageAboutButton from "./MessageAbout";
 
 type Note = { shape: string; strengths: string; improvements: string; next_steps: string };
 
@@ -283,6 +284,10 @@ function SheetView({
             </span>
           </button>
         ))}
+      </div>
+
+      <div className="ma-row">
+        <MessageAboutButton target={{ link: { kind: "photos", period: sheet.period }, area: "Measurements", label: `Progress pictures · ${sheet.title}, ${sheet.dateLabel}` }} />
       </div>
 
       <SheetNotes key={sheet.period} clientId={clientId} firstName={firstName} sheet={sheet} />

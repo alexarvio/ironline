@@ -126,7 +126,7 @@ export default function ClientHomeFeed({
                     <span className="ch-title">{a.title}</span>
                     <span className={`ch-detail${a.tone === "note" ? " quote" : ""}`}>{a.detail}</span>
                   </span>
-                  {a.tab && <span className="ch-go">{TAB_LABEL[a.tab] ?? a.tab} →</span>}
+                  {a.tab && <span className="ch-go">{TAB_LABEL[a.tab] ?? a.tab}</span>}
                 </button>
               </li>
             ))}

@@ -31,9 +31,26 @@ export type ProgressPicturesProps = {
 // The client's progress pictures: the sheet open now, filled in and sent
 // with Save like a check-in, and a feed of every earlier sheet below, all
 // folded until opened. A pushed layer in AppShell, from Home and Account.
-export default function ProgressPicturesScreen({ data, onBack }: { data: ProgressPicturesProps; onBack: () => void }) {
+export default function ProgressPicturesScreen({
+  data,
+  initialPeriod = null,
+  onBack,
+}: {
+  data: ProgressPicturesProps;
+  /** A coach message linked this sheet: open it, and bring it into view. */
+  initialPeriod?: string | null;
+  onBack: () => void;
+}) {
   // One earlier sheet open at a time: opening another closes this one.
-  const [openPast, setOpenPast] = useState<string | null>(null);
+  const linkedIndex = initialPeriod ? data.earlier.findIndex((s) => s.period === initialPeriod) : -1;
+  const [openPast, setOpenPast] = useState<string | null>(linkedIndex >= 0 ? initialPeriod : null);
+  const history = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (linkedIndex < 0) return;
+    const t = setTimeout(() => (history.current?.children[linkedIndex] as HTMLElement | undefined)?.scrollIntoView({ block: "start" }), 120);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival from a link.
+  }, []);
   // Photos picked but not sent yet; leaving would lose them, so Back asks.
   const [unsent, setUnsent] = useState(false);
   const back = () => {
@@ -70,7 +87,7 @@ export default function ProgressPicturesScreen({ data, onBack }: { data: Progres
                 </span>
               )}
             </div>
-            <div className="pp-app-history">
+            <div className="pp-app-history" ref={history}>
               {data.earlier.map((s) => (
                 <PhotoPeriodHistoryRow
                   key={s.period}

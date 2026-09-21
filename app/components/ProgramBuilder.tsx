@@ -36,7 +36,10 @@ import {
   ProgramDay,
   TrainingProgram,
   programEmptyReason,
+  describeMessageLink,
+  videoRequestsFor,
 } from "../lib/queries";
+import ExerciseRowMenu from "../admin/ExerciseRowMenu";
 import { coachIdOfClient } from "../lib/tenancy";
 import AssignmentFieldInput, { GymWeightInput } from "./AssignmentFieldInput";
 import GymChipRow from "../admin/GymChipRow";
@@ -44,7 +47,7 @@ import ExerciseNoteCell from "./ExerciseNoteCell";
 import DayLabelForm from "./DayLabelForm";
 import ReorderableRows from "./ReorderableRows";
 import AddExerciseRow from "./AddExerciseRow";
-import { DayPendingProvider, PendingChangesBar, PendingRemoveButton, type PendingAssignment } from "./DayPending";
+import { DayPendingProvider, PendingChangesBar, type PendingAssignment } from "./DayPending";
 import SessionMenu from "../admin/SessionMenu";
 import CustomValueInput from "../admin/CustomValueInput";
 import AdminDayCard from "./AdminDayCard";
@@ -175,6 +178,11 @@ export default function ProgramBuilder({
       const assignments = getAssignmentsForDay(day.id);
       // A session is its place in the week: no weekday, just Session 1, 2, 3.
       const sessionName = `Session ${day.day_of_week}`;
+      // A message can link a session or exercise the client can open: the
+      // live programme's weeks up to this one. Elsewhere there is no link to
+      // make, so no way in.
+      const sessionLink = describeMessageLink(clientId, { kind: "session", dayId: day.id });
+      const messageable = !sessionLink.gone;
       const cardioCount = listCardioForDay(day.id).length;
       const isEmpty = assignments.length === 0 && cardioCount === 0;
       // How many weeks of this day's programme come after it, for the
@@ -183,6 +191,14 @@ export default function ProgramBuilder({
         (p) => day.week_number >= p.start_week && day.week_number < p.start_week + p.total_weeks
       );
       const remainingWeeks = dayProgram ? dayProgram.start_week + dayProgram.total_weeks - 1 - day.week_number : 0;
+      // A video can be asked for on a programme the client has (live, or
+      // one they have finished); a draft is not theirs to film yet.
+      const canAskVideo = dayProgram?.status === "deployed";
+      const videoRequests = canAskVideo ? videoRequestsFor(assignments.map((a) => a.id)) : new Map();
+      // Videos in this session the coach has not opened yet, said on its
+      // header so a folded session shows where the video is.
+      const newVideos = [...videoRequests.values()].filter((r) => r.file_path && !r.seen_at).length;
+      const videoWhere = `${sessionName}${day.label ? ` · ${day.label}` : ""}, ${dayProgram ? programWeekLabel(dayProgram, day.week_number) : `Week ${day.week_number}`}`;
       const setsLoggedThisWeek = assignments.reduce((sum, a) => {
         const wg = getLogsForAssignmentByWeek(a.id).find((g) => g.weekStart === currentWeek);
         return sum + (wg ? wg.logs.length : 0);
@@ -266,6 +282,7 @@ export default function ProgramBuilder({
             <SessionMenu
               programDayId={day.id}
               sessionName={sessionName}
+              message={messageable ? { link: sessionLink.link, area: "Training", label: sessionLink.label } : null}
               // Duplicate copies exercises and cardio alike; an empty session has nothing to copy.
               copy={
                 assignments.length > 0 || cardioCount > 0
@@ -288,8 +305,13 @@ export default function ProgramBuilder({
             />
           }
           statusPill={
-            setsLoggedThisWeek > 0 || dayGymName ? (
+            setsLoggedThisWeek > 0 || dayGymName || newVideos > 0 ? (
               <>
+                {newVideos > 0 && (
+                  <span className="pb-video-pill" title="Open the session: the dot on an exercise's ⋯ marks the video">
+                    {newVideos === 1 ? "New video" : `${newVideos} new videos`}
+                  </span>
+                )}
                 {setsLoggedThisWeek > 0 && (
                   <span className="pb-logged-pill">
                     {setsLoggedThisWeek} set{setsLoggedThisWeek === 1 ? "" : "s"} logged
@@ -623,7 +645,43 @@ export default function ProgramBuilder({
                               previous={previous}
                             />
                           </div>
-                          <PendingRemoveButton assignmentId={a.id} exerciseName={a.exercise_name ?? "this exercise"} />
+                          {/* One ⋯ for what the row can do: video, message, remove. */}
+                          <ExerciseRowMenu
+                            assignmentId={a.id}
+                            exerciseName={a.exercise_name ?? "this exercise"}
+                            video={
+                              canAskVideo
+                                ? {
+                                    where: videoWhere,
+                                    request: (() => {
+                                      const r = videoRequests.get(a.id);
+                                      return r
+                                        ? {
+                                            id: r.id,
+                                            note: r.note,
+                                            src: r.file_path,
+                                            sentAt: r.submitted_at,
+                                            seen: !!r.seen_at,
+                                            replyNote: r.reply_note ?? null,
+                                            replySrc: r.reply_file_path ?? null,
+                                            repliedAt: r.replied_at ?? null,
+                                            replySeen: !!r.reply_seen_at,
+                                          }
+                                        : null;
+                                    })(),
+                                  }
+                                : null
+                            }
+                            message={
+                              messageable
+                                ? {
+                                    link: { kind: "exercise", dayId: day.id, assignmentId: a.id },
+                                    area: "Training",
+                                    label: `${a.exercise_name ?? "Exercise"} · ${sessionLink.label}`,
+                                  }
+                                : null
+                            }
+                          />
                         </div>
                       </td>
                     </>
@@ -706,7 +764,8 @@ export default function ProgramBuilder({
         label: programWeekLabel(program, weekNumber),
         days: railDays,
         isLive: liveWeekNumber === weekNumber,
-        hasNew: days.some((d) => newDayIds.has(d.id)),
+        // … or a video in it the coach has not watched: the dot stays until they do.
+        hasNew: days.some((d) => newDayIds.has(d.id)) || [...videoRequestsFor(perDay.flat().map((a) => a.id)).values()].some((r) => r.file_path && !r.seen_at),
         // A week the client has trained in is history and stays. Anything
         // with nothing logged, the live week included, can go: a coach who
         // wants to shorten a block before the client starts it should not

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { AppleIcon, CalendarIcon, CheckIcon, ChevronDownIcon, DumbbellIcon, HeartIcon, TargetIcon } from "../components/icons";
 import GoalRow from "../components/GoalRow";
 import CoachMark from "./CoachMark";
+import MessageLinkChip from "./MessageLinkChip";
+import type { LinkView } from "../lib/messageLinks";
 import { useNavigateTab, useOpenCheckIn, useOpenMessages, useOpenPhotos } from "./CheckInContext";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
@@ -66,7 +68,7 @@ export type HomePhotos = { state: "due" } | { state: "done"; summary: string } |
 export type GoalRowView = Parameters<typeof GoalRow>[0]["goal"];
 
 /** The newest of the coach's one-way messages, for the card on Home. */
-export type LatestMessage = { coachName: string; text: string; whenLabel: string; count: number } | null;
+export type LatestMessage = { coachName: string; text: string; whenLabel: string; count: number; link?: LinkView | null } | null;
 
 // Home is the client's landing screen: who they are and where they are in
 // the plan, then the one thing to do now, then what is coming.
@@ -328,24 +330,29 @@ function TodayCard({
 }
 
 // ---- 3 · From the coach --------------------------------------------------
-// The coach's latest message, in full when short. The whole card opens the
-// feed of everything they have sent. Nothing at all until they write one.
+// The coach's latest message, in full when short. The card opens the feed
+// of everything they have sent; a message that points at something carries
+// a link under it that goes straight there. Nothing at all until they write
+// one.
 
 function MessageCard({ m }: { m: LatestMessage }) {
   const openMessages = useOpenMessages();
   if (!m) return null;
   return (
-    <button type="button" className="hm-card hm-message" onClick={() => openMessages?.()}>
-      <span className="hm-eyebrow coach-eyebrow">
-        <CoachMark />
-        From {m.coachName}
-      </span>
-      <p className="hm-message-text">{m.text}</p>
-      <span className="hm-message-foot">
-        <span>{m.whenLabel}</span>
-        <b>{m.count > 1 ? `All ${m.count} messages →` : "Open →"}</b>
-      </span>
-    </button>
+    <div className="hm-card hm-message-card">
+      <button type="button" className="hm-message" onClick={() => openMessages?.()}>
+        <span className="hm-eyebrow coach-eyebrow">
+          <CoachMark />
+          From {m.coachName}
+        </span>
+        <p className="hm-message-text">{m.text}</p>
+        <span className="hm-message-foot">
+          <span>{m.whenLabel}</span>
+          <b>{m.count > 1 ? `All ${m.count} messages` : "Open"}</b>
+        </span>
+      </button>
+      {m.link && <MessageLinkChip view={m.link} />}
+    </div>
   );
 }
 

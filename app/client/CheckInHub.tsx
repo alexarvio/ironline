@@ -51,7 +51,7 @@ export default function CheckInHub({ dueItems, tabs }: { dueItems: DueItem[]; ta
                     <div className="today-card-title">{item.label}</div>
                     <div className="today-card-detail">{item.detail}</div>
                   </div>
-                  <span className="today-card-cta">Log now →</span>
+                  <span className="today-card-cta">Log now</span>
                 </button>
               ))}
             </div>

@@ -16,11 +16,15 @@ import {
   CoachProvider,
   FocusRefProvider,
   FoodProvider,
+  LinkProvider,
   MessagesProvider,
   NavigateProvider,
   NotificationsProvider,
   PhotosProvider,
+  TrainingFocusProvider,
+  type TrainingFocus,
 } from "./CheckInContext";
+import type { LinkView } from "../lib/messageLinks";
 
 export type AppTab = {
   id: string;
@@ -165,19 +169,57 @@ export default function AppShell({
   // Which row the tab we're switching to should open on arrival, set only by
   // a notification's deep link and cleared by any ordinary nav tap.
   const [focusRef, setFocusRef] = useState<number | null>(null);
+  // With a link into Training: the week to land on and the exercise to open.
+  const [trainingFocus, setTrainingFocus] = useState<TrainingFocus | null>(null);
+  // With a link into the food diary: the day to open it on (today otherwise).
+  const [foodDate, setFoodDate] = useState<string | null>(null);
+  // … and, when the coach commented on one meal, the meal to open on it.
+  const [foodMeal, setFoodMeal] = useState<string | null>(null);
+  // With a link to a sheet of pictures: the sheet to open.
+  const [photosPeriod, setPhotosPeriod] = useState<string | null>(null);
   const active = tabs.find((t) => t.id === activeId) ?? tabs[0];
   // Whether the tab has scrolled off its top, which turns a banner tab's
   // see-through top bar solid. A new tab starts at the top.
   const [scrolled, setScrolled] = useState(false);
   const clearBar = !!active?.bare && !scrolled;
 
-  const goToTab = (tab: string, ref?: number) => {
+  const goToTab = (tab: string, ref?: number, focus?: TrainingFocus) => {
     if (!tabs.some((t) => t.id === tab)) return;
     setScrolled(false);
     setPushView(null);
     setActiveId(tab);
     setFocusRef(ref ?? null);
+    setTrainingFocus(focus ?? null);
     setNavResetKey((k) => k + 1);
+  };
+
+  // A coach message's link: straight to the thing it is about, from Home's
+  // card or the messages feed. One that can no longer open does nothing.
+  const openLink = (view: LinkView) => {
+    if (view.gone) return;
+    const l = view.link;
+    switch (l.kind) {
+      case "session":
+      case "exercise":
+        goToTab("training", l.dayId, { week: view.week, exercise: l.kind === "exercise" ? l.assignmentId : null });
+        return;
+      case "nutrition":
+        goToTab("nutrition");
+        return;
+      case "food":
+        if (!foodDiary) return;
+        setFoodDate(l.date);
+        setFoodMeal(l.meal ?? null);
+        setPushView("food");
+        return;
+      case "checkin":
+        openCheckIn(l.section);
+        return;
+      case "photos":
+        setPhotosPeriod(l.period ?? null);
+        setPushView("photos");
+        return;
+    }
   };
 
   const pushedLayer =
@@ -200,11 +242,11 @@ export default function AppShell({
       </div>
     ) : pushView === "photos" ? (
       <div className="app-layer app-layer-push pp-app-screen">
-        <ProgressPicturesScreen data={photos} onBack={() => setPushView(null)} />
+        <ProgressPicturesScreen data={photos} initialPeriod={photosPeriod} onBack={() => setPushView(null)} />
       </div>
     ) : pushView === "food" && foodDiary ? (
       <div className="app-layer app-layer-push cn-screen">
-        <FoodDiaryScreen clientId={clientId} diary={foodDiary} onBack={() => setPushView(null)} />
+        <FoodDiaryScreen clientId={clientId} diary={foodDiary} initialDate={foodDate} initialMeal={foodMeal} onBack={() => setPushView(null)} />
       </div>
     ) : pushView === "messages" ? (
       <div className="app-layer app-layer-push cn-screen">
@@ -232,6 +274,7 @@ export default function AppShell({
 
   return (
     <CoachIdentityProvider value={{ name: coachMessages.coachName, photoPath: coachAvatarPath }}>
+      <LinkProvider value={openLink}>
       <div className="phone-frame">
         <div className="app-screen app-stack">
           {/* The tab stays mounted under a pushed view, so closing the view
@@ -259,13 +302,30 @@ export default function AppShell({
             onScroll={active?.bare ? (e) => setScrolled(e.currentTarget.scrollTop > 4) : undefined}
           >
             <CheckInProvider value={openCheckIn}>
-              <PhotosProvider value={() => setPushView("photos")}>
+              <PhotosProvider
+                value={() => {
+                  setPhotosPeriod(null);
+                  setPushView("photos");
+                }}
+              >
                 <MessagesProvider value={openMessages}>
-                  <FoodProvider value={foodDiary ? () => setPushView("food") : null}>
+                  <FoodProvider
+                    value={
+                      foodDiary
+                        ? () => {
+                            setFoodDate(null);
+                            setFoodMeal(null);
+                            setPushView("food");
+                          }
+                        : null
+                    }
+                  >
                 <CoachProvider value={coachProfile ? () => setPushView("coach") : null}>
                     <NotificationsProvider value={() => setPushView("notifications")}>
                       <NavigateProvider value={goToTab}>
-                        <FocusRefProvider value={focusRef}>{active?.content}</FocusRefProvider>
+                        <FocusRefProvider value={focusRef}>
+                          <TrainingFocusProvider value={trainingFocus}>{active?.content}</TrainingFocusProvider>
+                        </FocusRefProvider>
                       </NavigateProvider>
                     </NotificationsProvider>
                   </CoachProvider>
@@ -342,6 +402,7 @@ export default function AppShell({
           )}
         </div>
       </div>
+      </LinkProvider>
     </CoachIdentityProvider>
   );
 }

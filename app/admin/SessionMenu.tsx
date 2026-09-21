@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { removeSessionAction } from "../lib/actions";
 import { ConfirmDialog } from "../components/ConfirmDeleteButton";
-import { CopyIcon, MoreIcon, TrashIcon } from "../components/icons";
+import { ChatIcon, CopyIcon, MoreIcon, TrashIcon } from "../components/icons";
+import { MessageAboutDialog, type AboutTarget } from "./MessageAbout";
 import { placePopover, type Placement } from "../components/popover";
 import { CopyDayDialog, type CopyDayProps } from "./CopyDayMenu";
 
@@ -21,14 +22,17 @@ export default function SessionMenu({
   programDayId,
   sessionName,
   copy,
+  message = null,
 }: {
   programDayId: number;
   sessionName: string;
   /** What Duplicate needs; null when the session has nothing in it to copy. */
   copy: CopyDayProps | null;
+  /** Messaging the client about this session; null when they can't open it. */
+  message?: AboutTarget | null;
 }) {
   const [open, setOpen] = useState(false);
-  const [dialog, setDialog] = useState<"copy" | "delete" | null>(null);
+  const [dialog, setDialog] = useState<"copy" | "delete" | "message" | null>(null);
   const [pos, setPos] = useState<Placement | null>(null);
   const btn = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
@@ -55,7 +59,7 @@ export default function SessionMenu({
     };
   }, [open]);
 
-  const pick = (which: "copy" | "delete") => {
+  const pick = (which: "copy" | "delete" | "message") => {
     setOpen(false);
     setDialog(which);
   };
@@ -70,7 +74,7 @@ export default function SessionMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => {
-          if (!open) setPos(placePopover(btn.current, { width: WIDTH, align: "right", maxHeight: 160, minHeight: 80 }));
+          if (!open) setPos(placePopover(btn.current, { width: WIDTH, align: "right", maxHeight: 200, minHeight: 80 }));
           setOpen((o) => !o);
         }}
       >
@@ -80,6 +84,12 @@ export default function SessionMenu({
       {open &&
         createPortal(
           <div ref={panel} className="pb-session-menu" role="menu" aria-label={sessionName} style={{ ...(pos ?? {}), width: WIDTH }}>
+            {message && (
+              <button type="button" role="menuitem" onClick={() => pick("message")}>
+                <ChatIcon />
+                Message about this session
+              </button>
+            )}
             {copy && (
               <button type="button" role="menuitem" onClick={() => pick("copy")}>
                 <CopyIcon />
@@ -95,6 +105,7 @@ export default function SessionMenu({
         )}
 
       {dialog === "copy" && copy && <CopyDayDialog {...copy} onClose={() => setDialog(null)} />}
+      {dialog === "message" && message && <MessageAboutDialog target={message} onClose={() => setDialog(null)} />}
       {dialog === "delete" &&
         createPortal(
           <ConfirmDialog

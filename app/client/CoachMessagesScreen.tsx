@@ -2,6 +2,8 @@
 
 import { ChevronLeftIcon } from "../components/icons";
 import CoachMark from "./CoachMark";
+import MessageLinkChip from "./MessageLinkChip";
+import type { LinkView } from "../lib/messageLinks";
 
 // The coach's messages to the client, newest first, grouped by day. One-way:
 // the coach writes from the Messages tab, the client reads. Every message
@@ -13,6 +15,8 @@ export type CoachMessageView = {
   dayLabel: string;
   /** "14:02" */
   timeLabel: string;
+  /** What in the app the message is about, when the coach linked it. */
+  link?: LinkView | null;
 };
 
 export type CoachMessagesProps = {
@@ -56,6 +60,7 @@ export default function CoachMessagesScreen({ coachName, messages, onBack }: Coa
                     <CoachMark size="lg" />
                     <div className="cm-msg">
                       <p className="cm-msg-text">{m.text}</p>
+                      {m.link && <MessageLinkChip view={m.link} />}
                     </div>
                   </div>
                 </article>

@@ -8,6 +8,7 @@ import {
   getClientPlanView,
   getClientProgramNoteMeta,
   listCardioForDay,
+  describeMessageLink,
   listChatMessages,
   isCardioDone,
   getLastMeetingRecap,
@@ -23,6 +24,9 @@ import {
   targetAtGym,
   getLogsForAssignment,
   getLastWarmupSets,
+  videoRequestsFor,
+  listVideoReplies,
+  listLiveProgramVideoReplies,
   getCurrentWeekNumber,
   getCheckInSections,
   getCheckInStatus,
@@ -76,6 +80,7 @@ import DeleteAccountRow from "./DeleteAccountRow";
 import MyDetailsCard from "./MyDetailsCard";
 import ClientWeekSwitcher from "./ClientWeekSwitcher";
 import ProgramNote from "./ProgramNote";
+import CoachVideos from "./CoachVideos";
 import AppShell, { AppTab } from "./AppShell";
 import AvatarUpload from "./AvatarUpload";
 import {
@@ -339,7 +344,7 @@ function HomeTab({ CLIENT_ID, photos }: { CLIENT_ID: number; photos: HomePhotos 
         const sent = coachMessagesFor(CLIENT_ID);
         const latest = sent[0];
         return latest
-          ? { coachName: getCoachDisplayName(CLIENT_ID), text: latest.text, whenLabel: fmtShortDate(latest.dateIso), count: sent.length }
+          ? { coachName: getCoachDisplayName(CLIENT_ID), text: latest.text, whenLabel: fmtShortDate(latest.dateIso), count: sent.length, link: latest.link }
           : null;
       })()}
     />
@@ -361,6 +366,7 @@ function coachMessagesFor(clientId: number) {
         dateIso: m.created_at.slice(0, 10),
         dayLabel: d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),
         timeLabel: d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+        link: m.link ? describeMessageLink(clientId, m.link) : null,
       };
     });
 }
@@ -444,6 +450,8 @@ function TrainingTab({ CLIENT_ID, week, showMyNotes }: { CLIENT_ID: number; week
         </section>
       )}
 
+      <CoachVideos coachName={getCoachFirstName(CLIENT_ID)} videos={listLiveProgramVideoReplies(CLIENT_ID)} />
+
       {days.length === 0 ? (
         <p className="empty-note">Nothing deployed yet. Your coach is still building this week.</p>
       ) : trainingDays.length === 0 ? (
@@ -479,6 +487,9 @@ function TrainingTab({ CLIENT_ID, week, showMyNotes }: { CLIENT_ID: number; week
             <TrainingDayList
               days={trainingDays.map(({ day, assignments }, i) => {
                 const gymId = dayGymId(day.id);
+                // Videos the coach asked for in this session.
+                const videoAsks = videoRequestsFor(assignments.map((a) => a.id));
+                const videoReplies = listVideoReplies(CLIENT_ID);
                 // A removed gym still shows on a session that was trained there.
                 const dayGym = allGyms.find((g) => g.id === gymId);
                 const dayGyms = dayGym?.archived ? [...gyms, dayGym] : gyms;
@@ -511,6 +522,10 @@ function TrainingTab({ CLIENT_ID, week, showMyNotes }: { CLIENT_ID: number; week
                   myNote: myNotes.get(a.exercise_id) ?? "",
                   warmups: (a.warmup_sets ?? []).map((w) => ({ weight: w.weight_kg, reps: w.reps })),
                   lastWarmups: getLastWarmupSets(a.id).map((w) => ({ weight: w.weight_kg, reps: w.reps })),
+                  videoRequest: (() => {
+                    const r = videoAsks.get(a.id);
+                    return r ? { id: r.id, note: r.note, src: r.file_path, sentAt: r.submitted_at, reply: videoReplies.find((x) => x.id === r.id) ?? null } : null;
+                  })(),
                   gymTargets: allGyms.length ? Object.fromEntries(allGyms.map((g) => [g.id, targetAtGym(a, g.id, home)])) : undefined,
                   gymNotes: allGyms.length ? Object.fromEntries(allGyms.map((g) => [g.id, notesByGym.get(g.id)?.get(a.exercise_id) ?? ""])) : undefined,
                   logs: getLogsForAssignment(a.id).map((l) => ({
@@ -953,6 +968,8 @@ function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
   // own feed; the list under it is everything else.
   const coachNotes = all.filter((n) => n.kind === "coach_note");
   const notifications = all.filter((n) => n.kind !== "coach_note");
+  // Replies to the client's videos, opened straight from their notification.
+  const videoReplies = listVideoReplies(CLIENT_ID);
   const coachName = getCoachDisplayName(CLIENT_ID);
   const unreadCount = notifications.filter((n) => !n.read).length;
   const todayStr = localDateStr();
@@ -990,7 +1007,13 @@ function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
             </div>
             <div className="cn-notif-list">
               {g.items.map((n) => (
-                <NotificationRow key={n.id} id={n.id} actionTab={n.action_tab} actionRef={n.action_ref}>
+                <NotificationRow
+                  key={n.id}
+                  id={n.id}
+                  actionTab={n.action_tab}
+                  actionRef={n.action_ref}
+                  videoReply={n.action_tab === "video" ? videoReplies.find((r) => r.id === n.action_ref) ?? null : null}
+                >
                   <span className={`cn-notif-icon${n.read ? "" : " unread"}`} aria-hidden="true">
                     {notificationIcon(n.kind)}
                   </span>
@@ -1000,7 +1023,7 @@ function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
                       <span className="cn-notif-time">{notificationTimeLabel(n.created_at)}</span>
                     </span>
                     <span className={`cn-notif-text${n.read ? "" : " unread"}`}>{n.message}</span>
-                    {n.action_label && <span className="cn-notif-action">{n.action_label} →</span>}
+                    {n.action_label && <span className="cn-notif-action">{n.action_label}</span>}
                   </span>
                   {!n.read && <span className="cn-notif-dot" aria-hidden="true" />}
                 </NotificationRow>

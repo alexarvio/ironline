@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useRef, useState } from "react";
+import { useTrainingFocus } from "./CheckInContext";
 
 // Read-only week switcher for the client's own Training tab — every
 // existing week's content is pre-rendered server-side (see TrainingTab in
@@ -31,7 +32,11 @@ export default function ClientWeekSwitcher({
   /** The banner's top (brand, programme, progress), rendered by the server page. */
   banner?: ReactNode;
 }) {
-  const [selected, setSelected] = useState(currentWeek);
+  // A coach message's link can land on an earlier week; otherwise this one.
+  const focus = useTrainingFocus();
+  const [selected, setSelected] = useState(() =>
+    focus?.week != null && weeks.includes(focus.week) && focus.week <= currentWeek ? focus.week : currentWeek
+  );
   // With more weeks than fit, the strip scrolls and always opens with the
   // current week in the same place: just in from the left edge, with a sliver
   // of last week showing behind it so the row reads as scrollable. Week 1 has

@@ -1,9 +1,10 @@
-import { getClient, listChatMessages } from "../lib/queries";
+import { describeMessageLink, getClient, listChatMessages, listMessageLinkTargets } from "../lib/queries";
 import MessagesWorkspace, { type CoachMessage } from "./MessagesWorkspace";
 
 // The Messages tab: the coach's quick notes to the client, newest first.
 // Only the coach's side is shown; the client has no reply box in this beta,
-// so their side of chat_messages is empty anyway.
+// so their side of chat_messages is empty anyway. A message can carry a link
+// to one thing in the client's app (messageLinks.ts).
 const when = (iso: string) => {
   const d = new Date(iso);
   return d.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -14,6 +15,6 @@ export default function MessagesPanel({ clientId }: { clientId: number }) {
   const messages: CoachMessage[] = listChatMessages(clientId)
     .filter((m) => m.sender === "coach" && m.text.trim())
     .reverse()
-    .map((m) => ({ id: m.id, text: m.text, when: when(m.created_at) }));
-  return <MessagesWorkspace clientId={clientId} firstName={firstName} messages={messages} />;
+    .map((m) => ({ id: m.id, text: m.text, when: when(m.created_at), link: m.link ? describeMessageLink(clientId, m.link) : null }));
+  return <MessagesWorkspace clientId={clientId} firstName={firstName} messages={messages} targets={listMessageLinkTargets(clientId)} />;
 }

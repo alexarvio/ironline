@@ -753,6 +753,14 @@ Commit `86a3313` (the client camera, storage, `/uploads/meals`, and the `meal_ph
 
 - [ ] **Weight gets 100px per gym** (was 64) so a gym name like "Muscle Factory" reads in full, and **Notes 180px** (was 90) so a note's first words do. "What the client did" gives up that room; its sets scroll inside the cell when they don't fit, and its verdict column went 118 → 104px (the longest verdict fits). Checked on the real builder: both gym names fit, nothing else moved.
 
+## 100 · Messages that link to the thing they are about — ✅ LIVE 21 Sep
+
+- [ ] **"Link to…" beside the message box** on the coach's Messages tab. Optional; one link per message. Three tabs, the things a coach comments on: **Training** (a session, or one exercise in it, from the live programme's weeks up to this one, newest week first with arrows back), **Nutrition** (their targets, or a day of their food diary from the last two weeks), **Measurements** (the daily or weekly check-in, their progress pictures). The pick shows as a chip under the box, with × to drop it; sent messages show theirs, greyed with "no longer opens" when it can't be opened any more.
+- [ ] **The client taps straight through** from the message on Home and in their messages list: "TRAINING · Leg Press · Lower, Week 4 →" opens Training on that week, opens that session with that exercise open, and scrolls it to the top. Nutrition opens the tab; a food diary day opens the diary on that day; check-in opens its Daily or Weekly tab; pictures open the pictures.
+- [ ] **Links are worked out when shown, not when sent**: a renamed session reads its new name, and a deleted session or exercise, or one from a programme that has ended, reads "no longer available" and does nothing. The server only accepts a link from the coach, and only one the client can open.
+- [ ] **Fixes the known issue below on the way**: Home → Start (and now links) open the session but the screen never scrolled to it. The scroll was scheduled, then cancelled by any re-run of that code (React runs it twice in development; a refreshed session list re-runs it on live), and a guard stopped it being scheduled again. Now it re-runs only for a new arrival and nothing cancels it. Checked in a test harness with the real app shell, week strip and sessions: an exercise link to week 2 lands on week 2, the exercise open, 75px from the top (under the 67px top bar); a session link the same; a removed one does nothing.
+- [ ] Checked on local data: the picker lists client 1's weeks, sessions and exercises, five food diary days, both check-ins and pictures; picking an exercise gives "Jump Rope · Push Day, Week 6". Not checked: sending a message for real (needs a signed-in coach).
+
 ## 101 · A new lifestyle phase starts blank; the coach's name in the rail; Next meeting lined up — ✅ LIVE 21 Sep
 
 - [ ] **A draft or scheduled lifestyle phase is a blank canvas** on Measurements: no metrics, and the Logged data block reads "Nothing logged yet. This phase is a draft." (or "…starts Nov 2."), with no client notes under it. It used to show every metric and check-in of the running phase, because the table and feed read all the client's metrics and all their history whatever phase was on screen. The running phase shows only its own metrics now; an ended one reads back from its last day. "Start from <running phase>" still copies them on purpose.
@@ -768,6 +776,13 @@ Commit `86a3313` (the client camera, storage, `/uploads/meals`, and the `meal_ph
 - [ ] **Scheduling a training phase schedules its programme**: from the start of its first Monday when that is a later week, live now when it has come. The name typed in the dialog becomes the programme's name. Before, only the phase was marked scheduled, which left programmes like client 5's "Bulk block" with a scheduled phase and a draft programme; pressing Schedule it on those again fixes them.
 - [ ] **Programmes going live just after midnight count from the right week.** Deploy and schedule times are stored in UTC, and the date was read off the UTC time, which is the Sunday before for anything in the first hour or two of a Monday in Amsterdam. A programme scheduled from the Plan tab (which goes live at 00:00 Monday) and picked up before about 01:00–02:00 would have started the client on week 2. The date is now read in local time everywhere a programme's start is worked out. Moving a scheduled programme also keeps its local time on the new Monday (it could slide to the Tuesday).
 - [ ] Checked: a dry run on client 1's draft "addasasdasd" (Nov 9–29) scheduled it for 00:00 on Nov 9 with the phase on the same weeks and the new name, then was undone. The dialog renders blue with "Schedule it". Not clicked through on the real Training tab (needs a signed-in coach).
+
+## 103 · Message the client from where you are looking — ✅ LIVE 21 Sep
+
+- [ ] **A "Message <name>" button in each tab**, linked to what it sits on, so there is no trip to the Messages tab and its picker. **Nutrition**: at the foot of an opened logged day (links that day of their food diary), and a bubble on Daily targets for the live phase (links their Nutrition tab). **Training**: "Message about this session" in a session's ⋯ menu, and a bubble at the end of every exercise row beside the bin (links that exercise); only on weeks the client can open, i.e. the live programme up to this week. **Measurements**: at the foot of an opened check-in in the feed (that day's or week's check-in), and Reply beside each client note. **Progress pictures**: under an opened sheet's photos (the client's pictures screen opens on that sheet).
+- [ ] **One small dialog for all of them**, in the phase dialog's look: who it goes to, the area, what it is about, the message, Send (Ctrl+Enter). It goes out exactly like one from the Messages tab: their Home, their messages list, and the Messages tab's Sent list.
+- [ ] Check-in and pictures links now carry the day or sheet: "Daily check-in · Thu 17 Sep", "Progress pictures · 21 Sep".
+- [ ] Checked on local data with the real panels: every button renders and opens the dialog with the right link (food diary day, targets, a check-in day, a client note, a sheet, a session, an exercise). Not checked: pressing Send (needs a signed-in coach).
 
 ## 104 · Bug sweep before Finlay starts: drafts, the address bar, new programmes — ✅ LIVE 21 Sep
 
@@ -813,6 +828,14 @@ Commit `86a3313` (the client camera, storage, `/uploads/meals`, and the `meal_ph
 
 - [ ] **Edit phase on a scheduled training programme: the start is no longer locked.** Moving it (typed or clicked) moves when the programme goes live, and the whole block moves with it, keeping its weeks; moving the end still adds or removes weeks. The note under the calendar says so. A live programme's start stays locked (it is where the client began). Saving reschedules it, keeping its time of day. Checked in the real dialog: "yeyeyeyyeyey" 5 Oct–8 Nov, typed 12/10/2026 → 12 Oct–15 Nov, 5 weeks, still Scheduled.
 
+## 112 · Ask the client for a video of an exercise — ✅ LIVE 21 Sep
+
+- [ ] **The coach asks from the builder**: a camera at the end of every exercise row (before the message bubble and the bin), on a programme the client has (live or past, not a draft). Grey until asked; the dialog (phase dialog look) says which exercise and session, takes an optional note ("From the side, your top set") and "Ask for it". Amber while waiting (edit the note, or Take back); green once the video is in, with a dot until watched: the dialog plays it, shows what was asked, and can Remove the video. A request is for that session only.
+- [ ] **The client films or picks it**: a camera with a dot on the exercise card (and a small camera on the folded row) opens a sheet from the bottom: what the coach asked, "Record a video" (the phone's camera) or "Choose from your phone", a preview, then Send. Up to a minute and 64 MB: longer or bigger clips are refused before uploading, with how to fit (film in 1080p). A sent video plays back in the sheet and can be replaced.
+- [ ] **The coach hears of it** in the client's Home activity ("sent the video you asked for: Goblet Squat, Push Day"), and that session in Training carries the new-dot like a finished workout.
+- [ ] Stored like the other uploads: /uploads/videos/<client>/…, the same per-client access check, copied to the bucket; a new video_requests table (migration 0011) for Postgres.
+- [ ] Checked locally: requests and a stored video on client 1, the three camera states and all three dialogs in the real builder, the feed line; the client sheet at phone size with a clip recorded in the browser (preview, Send enabled) and a 65 MB file refused. Not checked: sending for real (needs a signed-in client) and filming on an actual phone.
+
 ## 113 · Phase dialog: Save draft is the main button; the length is one line — ✅ LIVE 21 Sep
 
 - [ ] **A draft's buttons, left to right: Cancel · Deploy now · Schedule it · Save draft**, with Save draft the navy one: a draft is opened mostly to change it, and sending it out is the deliberate step (Deploy now, the most drastic, furthest from it).
@@ -829,9 +852,47 @@ Commit `86a3313` (the client camera, storage, `/uploads/meals`, and the `meal_ph
 
 - [ ] **A row just picked shows "Add demo" (or "▶ Demo" when the exercise already has one)** right away, not only after Apply. The demo is the exercise's own (the library's), so it is saved on the exercise at once, link or upload, in the same dialog, and follows it onto every client's sheet, as before. Checked in the real builder: two picked rows carry the chip and the dialog posts by the exercise. Not checked: saving (needs a signed-in coach).
 
+## 118 · Coach comments on a meal — ✅ LIVE 21 Sep
+
+- [ ] **Coach**: the meal picture dialog (Nutrition → Logged days → the camera on a meal) has a comment line under the picture. Sending it goes out as a message linked to that meal, so the client is notified like any coach message. One comment a meal: a full-width box with Send in the footer under it; once sent, the comment replaces the box (and shows under the meal's foods in the day), and the server drops a second one.
+- [ ] **Client**: the message's chip reads "Breakfast · Mon 21 Sep"; tapping it opens the food diary on that day with the meal unfolded and scrolled into view. The comment sits under the meal's name in a "From your coach" box, and stays there whenever they open that day.
+- [ ] **Edit** beside Remove: the comment opens in the same box with Cancel / Save. It changes the message and its notification in the client's app, with no new notification.
+- [ ] **Remove comment** under a sent comment (asks Keep / Remove): takes the message and its notification out of the client's app too, and the box comes back.
+- [ ] **Finding a client's video**: a session with an unwatched video carries an orange "New video" pill on its header (folded or open), and its week has the orange dot on the week rail; both stay until the video is opened. The ⋯ on the exercise keeps its dot.
+- [ ] No new data: a comment is a chat message whose food link also names the meal (`meal` on the `food` link). Rides on the message-links work, so it ships with or after it.
+- [ ] Not checked in a browser yet (type-check only): needs a signed-in look.
+
+Look: `/admin` → a client → Nutrition → Logged days → a meal's camera; then `/client` → the message.
+
 ## 116 · Uploads over 10 MB work again — ✅ LIVE 21 Sep
 
 - [ ] **Any upload over 10 MB failed** ("Unexpected end of form"): with proxy.ts in front of the pages, Next copies each request body into memory and cut it off at 10 MB by default, so a demo video between 10 and 64 MB (and a big progress picture) never arrived whole, although the limit said 64 MB. `experimental.proxyClientMaxBodySize` is now 64 MB, the same as the server actions. Proven locally with a test action: 20 MB failed before, arrives whole (20,971,520 bytes) after.
+
+## 117 · Reply to a client's video; one ⋯ per exercise row — ✅ LIVE 21 Sep
+
+- [ ] **One ⋯ at the end of each exercise row** in the builder instead of three icons: Ask for a video / Watch their video · reply, Message <name> about it, Remove from session (queued on the bar, as the bin was). A dot on the ⋯ when a new video is in; amber while one is asked for.
+- [ ] **Reply to their video**: the dialog where the coach watches it has a Your reply section: a comment, a video (a screen recording drawn over theirs works), or both, then Send reply. After that it shows the reply ("Sent … · not opened yet" / "watched") with Edit reply and Take back reply.
+- [ ] **Big reply videos**: up to 500 MB, sent as the raw file to /api/video-reply/<id>, written to the disk as it arrives (never held in memory), then streamed to the bucket; with an upload progress bar. The route sits outside proxy.ts (its matcher), which would otherwise buffer and cut off the body, and checks the coach itself.
+- [ ] **The client is notified** ("Your coach replied to your video of Goblet Squat · Watch"), and the notification opens the reply right there: the coach's video, their comment, and the client's own clip under it. The exercise's camera shows the reply too, with a dot until it is opened.
+- [ ] Data: reply_note, reply_file_path, replied_at, reply_seen_at on video_requests (migration 0011 regenerated with them; not live yet).
+- [ ] Checked locally: a 120 MB reply uploaded whole (125,829,120 bytes, ~10 s), a non-video refused, the real route refusing a caller who is not the coach; sending made the notification and the reply list; both dialogs and the client sheet render the reply; then the test request, files and notification removed. Not checked: sending while signed in, and on live with the bucket.
+
+## 119 · Small wording: no arrows on links; the messages row — ✅ LIVE 21 Sep
+
+- [ ] **Text links lose their arrow** ("Watch", "See the week", "View schedule", "Log now", "Open", "All 4 messages", the coach message's link chip; on the coach side the Home feed's tab links, "Open calendar", "Open in Training"). Next / previous buttons, "was → now" and date ranges keep theirs.
+- [ ] **"From Finlay" on Notifications** reads "Nothing new" or "1 new message"; the total count is gone.
+
+## 120 · Client: Videos from the coach, on Training — ✅ LIVE 21 Sep
+
+- [ ] A blue fold between Days trained and Sessions, "Videos from Finlay", in the look of Saved days in the food diary: a bare play icon, the title, "1 new" or the count, a chevron. Hidden until the coach has replied to a video. It folds open in place to one line a reply (exercise, session, date, a dot on the unwatched), so five videos stay five lines; a tap opens that one in the usual reply sheet, which marks it watched. Read-only: there is nothing for the client to answer.
+- [ ] **Only the live programme's videos**: a new programme starts with an empty list (the row hides again). Older replies stay reachable from their notifications.
+- [ ] Not checked in a browser yet (type-check only).
+
+Look: `/client` → Training.
+
+## 121 · A client's exercise video: two minutes, 128 MB — ✅ LIVE 21 Sep
+
+- [ ] The video a client sends for an exercise can be two minutes and 128 MB (was one minute, 64 MB). The phone still checks length and size before uploading and says how to make it fit. Coach demo uploads stay at 64 MB.
 
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 

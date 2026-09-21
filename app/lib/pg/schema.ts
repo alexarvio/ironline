@@ -601,6 +601,22 @@ export const meal_photos = pgTable("meal_photos", {
   extra: extra(),
 });
 
+export const video_requests = pgTable("video_requests", {
+  id: id(),
+  client_id: fk("client_id"),
+  assignment_id: num("assignment_id"),
+  note: text("note"),
+  requested_at: text("requested_at"),
+  file_path: text("file_path"),
+  submitted_at: text("submitted_at"),
+  seen_at: text("seen_at"),
+  reply_note: text("reply_note"),
+  reply_file_path: text("reply_file_path"),
+  replied_at: text("replied_at"),
+  reply_seen_at: text("reply_seen_at"),
+  extra: extra(),
+});
+
 export const COLLECTIONS = [
   { name: "users", table: users, key: ["id"] },
   { name: "clients", table: clients, key: ["id"] },
@@ -617,6 +633,7 @@ export const COLLECTIONS = [
   { name: "off_foods", table: off_foods, key: ["id"] },
   { name: "saved_days", table: saved_days, key: ["id"] },
   { name: "meal_photos", table: meal_photos, key: ["id"] },
+  { name: "video_requests", table: video_requests, key: ["id"] },
   { name: "check_in_notes", table: check_in_notes, key: ["id"] },
   { name: "client_exercise_notes", table: client_exercise_notes, key: ["id"] },
   { name: "client_gyms", table: client_gyms, key: ["id"] },

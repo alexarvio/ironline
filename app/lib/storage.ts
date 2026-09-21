@@ -91,6 +91,23 @@ export async function putUpload(publicPath: string | null | undefined, body: Buf
 }
 
 /** Removes an upload from the bucket (the disk copy is handled by the caller). */
+/** The same as putUpload for a file already on the disk, streamed rather
+    than read into memory: a coach's screen recording can be hundreds of MB. */
+export async function putUploadFromDisk(publicPath: string, filePath: string, contentType?: string) {
+  const b = bucket();
+  const key = keyOf(publicPath);
+  if (!b || !key) return;
+  try {
+    const size = fs.statSync(filePath).size;
+    await b.s3.send(
+      new PutObjectCommand({ Bucket: b.bucket, Key: key, Body: fs.createReadStream(filePath), ContentLength: size, ContentType: contentType || mimeFor(key) })
+    );
+  } catch (error) {
+    console.error("[uploads] could not copy to the bucket:", key, error);
+    import("@sentry/nextjs").then((Sentry) => Sentry.captureException(error)).catch(() => {});
+  }
+}
+
 export async function deleteUpload(publicPath: string | null | undefined) {
   const b = bucket();
   const key = publicPath ? keyOf(publicPath) : null;

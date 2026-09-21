@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { logSetAction, pickGymAction, saveExerciseNoteAction, saveSkipReasonAction, saveWarmupSetsAction, setCardioDoneAction, updateSetAction } from "../lib/actions";
 import ExerciseCoachNote from "./ExerciseCoachNote";
 import GymPicker, { type GymOption } from "./GymPicker";
+import VideoAskButton, { VideoGlyph, type VideoAsk } from "./VideoAskSheet";
 import { ChevronDownIcon } from "../components/icons";
 
 // One training day, logged in focus mode: one exercise open at a time,
@@ -38,6 +39,8 @@ export type SessionExercise = {
   warmups?: { weight: number | null; reps: number | null }[];
   /** The warm-up from the last time the client had this exercise. */
   lastWarmups?: { weight: number | null; reps: number | null }[];
+  /** The coach asked for a video of this exercise in this session. */
+  videoRequest?: VideoAsk | null;
   /** With gyms: the weight target and "My notes" at each gym, by gym id. */
   gymTargets?: Record<number, number | null>;
   gymNotes?: Record<number, string>;
@@ -116,6 +119,7 @@ export default function TrainingDaySession({
   skipReason = "",
   open,
   onToggle,
+  focusExercise = null,
 }: {
   /** The coach's name for the session, e.g. "Push day". Never a weekday:
       the client trains it whenever they can, so "Tuesday" would be a lie by
@@ -136,6 +140,8 @@ export default function TrainingDaySession({
   onToggle: () => void;
   /** Its place in the week. */
   index?: number;
+  /** A coach message linked this exercise: open it rather than the next to do. */
+  focusExercise?: number | null;
 }) {
   // The gym is picked here and saved straight away; the server's answer
   // takes over whenever it changes.
@@ -219,7 +225,9 @@ export default function TrainingDaySession({
   }, [celebrating]);
 
   // Which exercise is expanded; starts on the first with sets still to log.
-  const [expandedId, setExpandedId] = useState<number | null>(() => firstUnfinished(exercises) ?? exercises[0]?.id ?? null);
+  const [expandedId, setExpandedId] = useState<number | null>(() =>
+    focusExercise != null && exercises.some((e) => e.id === focusExercise) ? focusExercise : firstUnfinished(exercises) ?? exercises[0]?.id ?? null
+  );
   const activeId = firstUnfinished(exercises);
 
   // When the expanded exercise's last set lands, hold the green card for a
@@ -397,9 +405,15 @@ function CollapsedExercise({
   const started = exercise.logs.length > 0;
   const tone = done ? "done" : active ? "active" : started ? "started" : "idle";
   return (
-    <button type="button" className={`ts-row ${tone}`} onClick={onOpen}>
+    <button type="button" className={`ts-row ${tone}`} onClick={onOpen} data-ex={exercise.id}>
       <span className="ts-circle">{done ? "✓" : index}</span>
       <span className="ts-row-name">{exercise.name}</span>
+      {/* A video the coach is waiting for, visible without opening the card. */}
+      {exercise.videoRequest && !exercise.videoRequest.src && (
+        <span className="ts-row-video" aria-label="Your coach asked for a video" title="Your coach asked for a video">
+          <VideoGlyph />
+        </span>
+      )}
       <span className="ts-row-count">
         {loggedCount(exercise)}/{exercise.sets}
       </span>
@@ -563,11 +577,14 @@ function ExpandedExercise({
   );
 
   return (
-    <div className={`ts-card${done ? " done" : ""}`} style={{ "--ts-n": colCount } as React.CSSProperties}>
+    <div className={`ts-card${done ? " done" : ""}`} style={{ "--ts-n": colCount } as React.CSSProperties} data-ex={exercise.id}>
       <div className="ts-card-head">
         <span className={`ts-circle ${done ? "done" : "active"}`}>{done ? "✓" : index}</span>
         <span className="ts-card-name">{exercise.name}</span>
         <span className="ts-card-tools">
+          {/* A video the coach asked for: a camera that opens the sheet to
+              film or pick one, with a dot until it is sent. */}
+          {exercise.videoRequest && <VideoAskButton ask={exercise.videoRequest} exerciseName={exercise.name} />}
           {/* The demo: a play button beside the chevron, not a row of its own. */}
           {exercise.videoUrl && (
             <a href={exercise.videoUrl} target="_blank" rel="noreferrer" className="ts-video" aria-label={`Watch the ${exercise.name} demo`} title="Watch the demo">

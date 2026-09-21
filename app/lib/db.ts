@@ -1,3 +1,4 @@
+import type { MessageLink } from "./messageLinks";
 import fs from "fs";
 import type { GoalTracking } from "./goalView";
 import path from "path";
@@ -141,6 +142,31 @@ export type MealPhoto = {
   meal: string;
   file_path: string; // public URL path, e.g. /uploads/meals/5/2026-09-21/breakfast.jpg
   uploaded_at: string;
+};
+// The coach asking for a video of one exercise in one session, and the
+// client's answer. One per prescription: a request is for that session only,
+// and asking next week is asking on next week's row. The video lives under
+// /uploads/videos/<clientId>/ behind the same per-client check as the rest.
+export type VideoRequest = {
+  id: number;
+  client_id: number;
+  /** The prescription (workout_assignments row) the video is of. */
+  assignment_id: number;
+  /** What the coach wants to see ("film from the side, top set"). */
+  note: string | null;
+  requested_at: string;
+  file_path: string | null;
+  submitted_at: string | null;
+  /** When the coach first opened the video; null while it is new to them. */
+  seen_at: string | null;
+  /** The coach's reply: a comment, a video (often a screen recording drawn
+      over theirs), or both. The video can be long: it is uploaded through
+      /api/video-reply, not a server action. */
+  reply_note?: string | null;
+  reply_file_path?: string | null;
+  replied_at?: string | null;
+  /** When the client first opened the reply. */
+  reply_seen_at?: string | null;
 };
 // A whole day a client saved to log again ("Training day"): every meal's
 // foods and amounts as they were. Only they can use it.
@@ -715,6 +741,8 @@ type ChatMessage = {
   media_path: string | null;
   media_type: "image" | "video" | null;
   created_at: string;
+  /** What in the client's app the message is about, when the coach linked it (see messageLinks.ts). */
+  link?: MessageLink | null;
 };
 
 // A log of coach-side changes worth surfacing to the client — "your coach
@@ -728,7 +756,8 @@ type ChatMessage = {
 // dedupe_key so the same due condition doesn't spawn a new row on every
 // request.
 type CoachActivityKind = "coach_note" | "report" | "programme" | "reminder" | "general";
-type CoachActivityActionTab = "home" | "training" | "nutrition" | "settings" | "chat";
+// "video": a reply to a video the client sent; action_ref is the video_requests id.
+type CoachActivityActionTab = "home" | "training" | "nutrition" | "settings" | "chat" | "video";
 type CoachActivity = {
   id: number;
   client_id: number;
@@ -846,6 +875,7 @@ export type Data = {
   photo_settings: PhotoSettings[];
   photo_period_notes: PhotoPeriodNote[];
   meal_photos: MealPhoto[];
+  video_requests: VideoRequest[];
   client_profiles: ClientProfile[];
   client_goals: ClientGoal[];
   meetings: Meeting[];
@@ -932,6 +962,7 @@ function emptyData(): Data {
     photo_settings: [],
     photo_period_notes: [],
     meal_photos: [],
+    video_requests: [],
     client_profiles: [],
     client_goals: [],
     meetings: [],

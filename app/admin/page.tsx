@@ -1,6 +1,7 @@
 import AdminShell from "./AdminShell";
 import AdminSidebar from "./AdminSidebar";
 import SectionTabs, { TabSection } from "./SectionTabs";
+import { MessageAboutProvider } from "./MessageAbout";
 import NutritionPanel from "./NutritionPanel";
 import MeetingsPanel from "./MeetingsPanel";
 import MessagesPanel from "./MessagesPanel";
@@ -231,7 +232,10 @@ function ClientDashboard({
           for). Within a client the tabs follow ?tab= themselves, so a deep
           link such as the feed's "See the week" opens its tab, and a save
           never remounts the one on screen. */}
-      <SectionTabs key={clientId} clientId={clientId} sections={sections} initialId={initialTab} />
+      {/* Any tab can message the client about what it shows (MessageAbout). */}
+      <MessageAboutProvider value={{ clientId, firstName: name.split(" ")[0] || name }}>
+        <SectionTabs key={clientId} clientId={clientId} sections={sections} initialId={initialTab} />
+      </MessageAboutProvider>
     </>
   );
 }

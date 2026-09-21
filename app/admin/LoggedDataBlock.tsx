@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { LoggedMetric, LoggedValues } from "../lib/queries";
 import { ChevronDownIcon } from "../components/icons";
+import MessageAboutButton from "./MessageAbout";
 
 // What the client actually submitted, two ways of reading it.
 //
@@ -181,6 +182,15 @@ function Feed({ view, cadence, valueFor }: { view: LoggedValues; cadence: "daily
                     <p>{note}</p>
                   </div>
                 )}
+                <div className="ma-row">
+                  <MessageAboutButton
+                    target={{
+                      link: { kind: "checkin", section: cadence, period: p.key },
+                      area: "Measurements",
+                      label: `${cadence === "daily" ? "Daily" : "Weekly"} check-in · ${p.label}`,
+                    }}
+                  />
+                </div>
               </div>
             )}
           </div>

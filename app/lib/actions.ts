@@ -14,6 +14,7 @@ import {
   requireCoach,
 } from "./auth";
 import { sendInviteEmail } from "./mail";
+import { parseMessageLink, type MessageLink } from "./messageLinks";
 import { headers } from "next/headers";
 import {
   clientIdForInvoice,
@@ -126,6 +127,14 @@ import {
   saveMealPhoto,
   getMealPhoto,
   removeMealPhoto,
+  requestExerciseVideo,
+  removeVideoRequest,
+  getClientIdForVideoRequest,
+  saveRequestedVideo,
+  markVideoSeen,
+  sendVideoReply,
+  removeVideoReply,
+  markVideoReplySeen,
   saveDemoVideoUpload,
   setAssignmentCustomValue,
   setClientGoalDone,
@@ -142,6 +151,10 @@ import {
   setMetricCadence,
   saveChatMedia,
   sendChatMessage,
+  describeMessageLink,
+  hasMealComment,
+  removeMealComment,
+  editMealComment,
   setPhotoCadence,
   setTrainingColumnVisible,
   slugify,
@@ -1065,6 +1078,82 @@ export async function uploadMealPhotoAction(formData: FormData) {
   revalidatePath("/client");
 }
 
+// ---- Video requests ----------------------------------------------------------
+
+// The coach asks for a video of one exercise in one session (or changes what
+// they asked for). Called directly from the builder's dialog.
+export async function requestExerciseVideoAction(assignmentId: number, note: string) {
+  const id = Number(assignmentId);
+  if (!Number.isInteger(id) || !(await coachForClient(getClientIdForAssignment(id)))) return;
+  requestExerciseVideo(id, String(note ?? ""));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// Takes a request back, and the video with it if one came.
+export async function removeVideoRequestAction(id: number) {
+  if (!Number.isInteger(id) || !(await coachForClient(getClientIdForVideoRequest(id)))) return;
+  for (const file of removeVideoRequest(id)) await deleteUpload(file);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// The coach's reply goes out (its video, if any, was uploaded first through
+// /api/video-reply): the comment is saved and the client is notified.
+export async function sendVideoReplyAction(id: number, note: string): Promise<boolean> {
+  if (!Number.isInteger(id) || !(await coachForClient(getClientIdForVideoRequest(id)))) return false;
+  const ok = sendVideoReply(id, String(note ?? ""));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  return ok;
+}
+
+export async function removeVideoReplyAction(id: number) {
+  if (!Number.isInteger(id) || !(await coachForClient(getClientIdForVideoRequest(id)))) return;
+  const file = removeVideoReply(id);
+  if (file) await deleteUpload(file);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// The client opened their coach's reply.
+export async function markVideoReplySeenAction(id: number) {
+  const owner = getClientIdForVideoRequest(Number(id));
+  if (owner == null) return;
+  await requireClientAccess(owner);
+  markVideoReplySeen(Number(id));
+  revalidatePath("/client");
+}
+
+export async function markVideoSeenAction(id: number) {
+  if (!Number.isInteger(id) || !(await coachForClient(getClientIdForVideoRequest(id)))) return;
+  markVideoSeen(id);
+  revalidatePath("/admin");
+}
+
+// The client's video for a request: 128 MB, two minutes (next.config.ts's
+// body limits are sized for it); the phone checks length and size
+// first and says so, this is the backstop. Returns an error to show, or null.
+const MAX_REQUESTED_VIDEO_BYTES = 128 * 1024 * 1024;
+export async function uploadRequestedVideoAction(formData: FormData): Promise<string | null> {
+  const id = Number(formData.get("requestId"));
+  const owner = getClientIdForVideoRequest(id);
+  if (owner == null) return "That request is gone.";
+  await requireClientAccess(owner);
+  const file = formData.get("file") as File | null;
+  if (!file || file.size === 0) return "Choose a video first.";
+  if (!file.type.startsWith("video/")) return "That doesn't look like a video.";
+  if (file.size > MAX_REQUESTED_VIDEO_BYTES) return `That video is ${Math.round(file.size / 1024 / 1024)} MB. The limit is 128 MB: film in 1080p and keep it under two minutes.`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const saved = saveRequestedVideo(id, buffer, file.type);
+  if (!saved) return "That request is gone.";
+  if (saved.previous) await deleteUpload(saved.previous);
+  await putUpload(saved.path, buffer, file.type);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  return null;
+}
+
 export async function removeMealPhotoAction(formData: FormData) {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const date = String(formData.get("date") ?? "");
@@ -1550,7 +1639,41 @@ export async function sendChatMessageAction(formData: FormData) {
   }
   if (!text && !media) return;
 
-  sendChatMessage(clientId, sender, text, media);
+  // A link only from the coach, only one that parses, and only one the
+  // client can actually open.
+  let link: MessageLink | null = null;
+  if (sender === "coach") {
+    try {
+      link = parseMessageLink(JSON.parse(String(formData.get("link") || "null")));
+    } catch {
+      link = null;
+    }
+    if (link && describeMessageLink(clientId, link).gone) link = null;
+    // A meal takes one comment: a second send (two tabs, a double click) is dropped.
+    if (link?.kind === "food" && link.meal && hasMealComment(clientId, link.date, link.meal)) return;
+  }
+
+  sendChatMessage(clientId, sender, text, media, link);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// The coach taking back a comment on a meal (a wrong meal, a typo): it goes
+// from the client's diary, their messages and their notifications.
+export async function removeMealCommentAction(clientId: number, messageId: number) {
+  const id = await requireClientAccess(clientId);
+  const user = await getSessionUser();
+  if (!id || user?.role !== "coach") return;
+  removeMealComment(id, messageId);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function editMealCommentAction(clientId: number, messageId: number, text: string) {
+  const id = await requireClientAccess(clientId);
+  const user = await getSessionUser();
+  if (!id || user?.role !== "coach") return;
+  editMealComment(id, messageId, String(text).slice(0, 1000));
   revalidatePath("/admin");
   revalidatePath("/client");
 }

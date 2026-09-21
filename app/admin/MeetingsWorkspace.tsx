@@ -721,7 +721,7 @@ function MiniCalendar({ today, selected, dots, onPick }: { today: string; select
           <i className="mw-cal-dot" /> others
         </span>
         <a href={`/admin?view=calendar&month=${cursor}&day=${selected}`} className="mw-textbtn">
-          Open calendar →
+          Open calendar
         </a>
       </div>
     </div>

@@ -1,10 +1,11 @@
 import fs from "fs";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, CardioEntry } from "./db";
-import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientGym, ClientPhase, CoachProfile, PhaseTrack } from "./db";
+import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientGym, ClientPhase, CoachProfile, PhaseTrack, VideoRequest } from "./db";
 import type { CoachProfileFields, CoachProfileView } from "./coachProfileView";
 import { getCatalogFood, searchCatalog, type CatalogFood } from "./foods/catalog";
 import type { OffProduct } from "./foods/openfoodfacts";
+import type { LinkView, MessageLink } from "./messageLinks";
 import { coachIdOfClient } from "./tenancy";
 import { LOCK_MS, type LockScope } from "./loginLockout";
 
@@ -577,6 +578,115 @@ export function getProgramCurrentWeekIndex(program: TrainingProgram): number {
 // The label shown for one of this program's weeks — always "Week N" where N
 // is the position WITHIN the program (1..total_weeks), never the underlying
 // global week_number, so a client's second program starts back at "Week 1".
+// ---- Links in coach messages ----------------------------------------------
+// A message can point at one thing in the client's app (messageLinks.ts).
+// Only what the client can actually open is offered: the live programme's
+// weeks up to this one (later weeks are locked in their app), food diary
+// days they logged recently, the check-ins they are asked for, their
+// progress pictures.
+
+const sessionTitle = (day: ProgramDay) => day.label?.trim() || `Session ${day.day_of_week}`;
+const shortDay = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+
+/** The weeks of the live programme the client can open: its first up to this one. */
+function linkableWeeks(clientId: number): { program: TrainingProgram; weeks: number[] } | null {
+  const program = getDeployedProgram(clientId);
+  if (!program) return null;
+  const upTo = program.start_week + getProgramCurrentWeekIndex(program) - 1;
+  const weeks: number[] = [];
+  for (let w = program.start_week; w <= upTo; w++) weeks.push(w);
+  return { program, weeks };
+}
+
+export type LinkTargets = {
+  /** Newest week first. */
+  training: { week: number; label: string; sessions: { dayId: number; title: string; exercises: { assignmentId: number; name: string }[] }[] }[];
+  /** The days with food logged in the last two weeks, newest first. */
+  foodDays: { date: string; label: string }[];
+  nutrition: boolean;
+  checkins: ("daily" | "weekly")[];
+  photos: boolean;
+};
+
+export function listMessageLinkTargets(clientId: number): LinkTargets {
+  const data = getData();
+  const span = linkableWeeks(clientId);
+  const training = span
+    ? span.weeks
+        .map((week) => ({
+          week,
+          label: programWeekLabel(span.program, week),
+          sessions: getWeek(clientId, week).map((day) => ({
+            dayId: day.id,
+            title: sessionTitle(day),
+            exercises: getAssignmentsForDay(day.id).map((a) => ({ assignmentId: a.id, name: a.exercise_name ?? "Exercise" })),
+          })),
+        }))
+        .filter((w) => w.sessions.length > 0)
+        .reverse()
+    : [];
+  const today = localDateStr();
+  const from = (() => {
+    const d = new Date(`${today}T00:00:00`);
+    d.setDate(d.getDate() - 14);
+    return localDateStr(d);
+  })();
+  const foodDays = [...new Set((data.food_entries ?? []).filter((e) => e.client_id === clientId && e.date >= from && e.date <= today).map((e) => e.date))]
+    .sort()
+    .reverse()
+    .map((date) => ({ date, label: shortDay(date) }));
+  const checkins: ("daily" | "weekly")[] = [];
+  if (listMetricDefinitions(clientId, "daily").filter(deployedToClient).length) checkins.push("daily");
+  if (listMetricDefinitions(clientId, "weekly").filter(deployedToClient).length) checkins.push("weekly");
+  return {
+    training,
+    foodDays,
+    nutrition: !!getNutritionGoalsSummary(clientId).trainingKcal,
+    checkins,
+    photos: listPhotoSlots(clientId).length > 0,
+  };
+}
+
+/**
+ * A link in words, and whether the client can still open it. Worked out when
+ * shown, not when sent: a renamed session reads its new name, and a deleted
+ * exercise says it is gone rather than leading nowhere.
+ */
+export function describeMessageLink(clientId: number, link: MessageLink): LinkView {
+  const data = getData();
+  const view = (area: LinkView["area"], label: string, week: number | null = null, gone = false): LinkView => ({ link, area, label, week, gone });
+  switch (link.kind) {
+    case "session":
+    case "exercise": {
+      const day = data.program_days.find((d) => d.id === link.dayId && d.client_id === clientId);
+      if (!day) return view("Training", link.kind === "exercise" ? "An exercise that has since been removed" : "A session that has since been removed", null, true);
+      const span = linkableWeeks(clientId);
+      const open = !!span && span.weeks.includes(day.week_number);
+      const weekLabel = span && span.program.start_week <= day.week_number ? programWeekLabel(span.program, day.week_number) : `Week ${day.week_number}`;
+      const where = `${sessionTitle(day)}, ${weekLabel}`;
+      if (link.kind === "session") return view("Training", where, day.week_number, !open);
+      const a = data.workout_assignments.find((w) => w.id === link.assignmentId && w.program_day_id === day.id);
+      if (!a) return view("Training", `An exercise in ${where}, since removed`, day.week_number, true);
+      const name = data.exercises.find((e) => e.id === a.exercise_id)?.name ?? "Exercise";
+      return view("Training", `${name} · ${where}`, day.week_number, !open);
+    }
+    case "nutrition":
+      return view("Nutrition", "Nutrition targets");
+    case "food": {
+      if (!link.meal) return view("Nutrition", `Food diary · ${shortDay(link.date)}`);
+      const meal = listFoodMeals(clientId, link.date).find((m) => m.id === link.meal);
+      return view("Nutrition", `${meal?.label ?? "A meal"} · ${shortDay(link.date)}`);
+    }
+    case "checkin": {
+      const what = link.section === "daily" ? "Daily check-in" : "Weekly check-in";
+      if (!link.period) return view("Measurements", what);
+      return view("Measurements", link.section === "daily" ? `${what} · ${shortDay(link.period)}` : `${what} · week of ${shortDay(link.period)}`);
+    }
+    case "photos":
+      return view("Measurements", link.period ? `Progress pictures · ${shortDay(link.period)}` : "Progress pictures");
+  }
+}
+
 export function programWeekLabel(program: TrainingProgram, weekNumber: number): string {
   return `Week ${weekNumber - program.start_week + 1}`;
 }
@@ -2360,6 +2470,23 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       thumbs: s.photos.sort((a, b) => a.order - b.order).map((p) => p.src),
     });
   });
+
+  // ---- Videos the coach asked for ----
+  for (const v of data.video_requests ?? []) {
+    if (!v.file_path || !v.submitted_at) continue;
+    const a = data.workout_assignments.find((w) => w.id === v.assignment_id);
+    const day = a ? data.program_days.find((d) => d.id === a.program_day_id) : undefined;
+    if (!a || !day) continue;
+    const name = data.exercises.find((e) => e.id === a.exercise_id)?.name ?? "an exercise";
+    add(v.client_id, {
+      id: `video-${v.id}-${v.submitted_at}`,
+      category: "training",
+      at: stampMs(v.submitted_at),
+      tab: "training",
+      dayId: day.id,
+      text: `sent the video you asked for: ${name}, ${day.label || `Session ${day.day_of_week}`}`,
+    });
+  }
 
   // ---- Notes the client writes outside a check-in ----
   for (const n of data.client_program_notes ?? []) {
@@ -4720,6 +4847,8 @@ export type ChatMessage = {
   media_path: string | null;
   media_type: "image" | "video" | null;
   created_at: string;
+  /** What in the client's app the message is about, when the coach linked it. */
+  link?: MessageLink | null;
 };
 
 export function listChatMessages(clientId: number): ChatMessage[] {
@@ -4732,7 +4861,8 @@ export function sendChatMessage(
   clientId: number,
   sender: "client" | "coach",
   text: string,
-  media?: { path: string; type: "image" | "video" }
+  media?: { path: string; type: "image" | "video" },
+  link?: MessageLink | null
 ) {
   const data = getData();
   data.chat_messages.push({
@@ -4743,6 +4873,7 @@ export function sendChatMessage(
     media_path: media?.path ?? null,
     media_type: media?.type ?? null,
     created_at: new Date().toISOString(),
+    ...(link ? { link } : {}),
   });
   persist();
   if (sender === "coach" && getClientPreferences(clientId).coach_notes) {
@@ -5576,7 +5707,7 @@ export function getCheckInSections(clientId: number): CheckInData {
 export type CoachActivityKind = "coach_note" | "report" | "programme" | "reminder" | "general";
 // Where a notification's action link should take the client — the four
 // bottom-nav tabs, or "chat" to open the chat/notifications panel itself.
-export type CoachActivityActionTab = "home" | "training" | "nutrition" | "settings" | "chat";
+export type CoachActivityActionTab = "home" | "training" | "nutrition" | "settings" | "chat" | "video";
 
 export type ClientNotification = {
   id: number;
@@ -8714,6 +8845,194 @@ export function mealPhotosOn(clientId: number, date: string): Map<string, string
   return new Map(getData().meal_photos.filter((p) => p.client_id === clientId && p.date === date).map((p) => [p.meal, p.file_path] as const));
 }
 
+// ---- Video requests: the coach asks for a video of an exercise ----------
+
+/** The request on a prescription, if the coach has made one. */
+export function videoRequestFor(assignmentId: number): VideoRequest | null {
+  return getData().video_requests.find((r) => r.assignment_id === assignmentId) ?? null;
+}
+
+/** Every request on the given prescriptions, by prescription. */
+export function videoRequestsFor(assignmentIds: number[]): Map<number, VideoRequest> {
+  const ids = new Set(assignmentIds);
+  return new Map(getData().video_requests.filter((r) => ids.has(r.assignment_id)).map((r) => [r.assignment_id, r] as const));
+}
+
+/** Asks for a video of one exercise in one session; asking again only updates the note. */
+export function requestExerciseVideo(assignmentId: number, note: string): VideoRequest | null {
+  const clientId = getClientIdForAssignment(assignmentId);
+  if (clientId == null) return null;
+  const data = getData();
+  const clean = note.trim().slice(0, 300) || null;
+  const existing = data.video_requests.find((r) => r.assignment_id === assignmentId);
+  if (existing) {
+    existing.note = clean;
+    persist();
+    return existing;
+  }
+  const row: VideoRequest = {
+    id: allocId("video_requests"),
+    client_id: clientId,
+    assignment_id: assignmentId,
+    note: clean,
+    requested_at: new Date().toISOString(),
+    file_path: null,
+    submitted_at: null,
+    seen_at: null,
+  };
+  data.video_requests.push(row);
+  persist();
+  return row;
+}
+
+/** Takes a request back, with its video and any reply. Returns the files to delete. */
+export function removeVideoRequest(id: number): string[] {
+  const data = getData();
+  const row = data.video_requests.find((r) => r.id === id);
+  if (!row) return [];
+  data.video_requests = data.video_requests.filter((r) => r.id !== id);
+  persist();
+  return [row.file_path, row.reply_file_path].filter((f): f is string => !!f);
+}
+
+// ---- The coach's reply to a video --------------------------------------------
+
+/** Where a reply video for a request is written. */
+export function videoReplyTarget(id: number, ext: string): { dir: string; publicPath: string; filePath: string } | null {
+  const row = getData().video_requests.find((r) => r.id === id);
+  if (!row) return null;
+  const dir = path.join(DATA_DIR, "uploads", "videos", String(row.client_id));
+  const filename = `${row.id}-reply-${Date.now()}.${ext}`;
+  return { dir, publicPath: `/uploads/videos/${row.client_id}/${filename}`, filePath: path.join(dir, filename) };
+}
+
+/** Files the reply video; returns the one it replaces, to delete. */
+export function setVideoReplyFile(id: number, publicPath: string): string | null {
+  const row = getData().video_requests.find((r) => r.id === id);
+  if (!row) return null;
+  const previous = row.reply_file_path ?? null;
+  row.reply_file_path = publicPath;
+  persist();
+  return previous;
+}
+
+/**
+ * The reply goes out: its comment (the video is already filed), and the
+ * client hears of it in their notifications, which open it straight away.
+ */
+export function sendVideoReply(id: number, note: string): boolean {
+  const data = getData();
+  const row = data.video_requests.find((r) => r.id === id);
+  if (!row) return false;
+  const clean = note.trim().slice(0, 2000) || null;
+  if (!clean && !row.reply_file_path) return false;
+  row.reply_note = clean;
+  row.replied_at = new Date().toISOString();
+  row.reply_seen_at = null;
+  persist();
+  const a = data.workout_assignments.find((w) => w.id === row.assignment_id);
+  const name = a ? data.exercises.find((e) => e.id === a.exercise_id)?.name : null;
+  logCoachActivity(row.client_id, `Your coach replied to your video${name ? ` of ${name}` : ""}`, {
+    kind: "general",
+    actionTab: "video",
+    actionLabel: "Watch",
+    actionRef: row.id,
+  });
+  return true;
+}
+
+/** Takes the reply back. Returns its video, to delete. */
+export function removeVideoReply(id: number): string | null {
+  const row = getData().video_requests.find((r) => r.id === id);
+  if (!row) return null;
+  const file = row.reply_file_path ?? null;
+  row.reply_note = null;
+  row.reply_file_path = null;
+  row.replied_at = null;
+  row.reply_seen_at = null;
+  persist();
+  return file;
+}
+
+export function markVideoReplySeen(id: number) {
+  const row = getData().video_requests.find((r) => r.id === id);
+  if (!row || !row.replied_at || row.reply_seen_at) return;
+  row.reply_seen_at = new Date().toISOString();
+  persist();
+}
+
+/** The client's videos their coach has replied to, newest reply first, for the reply viewer. */
+export function listVideoReplies(clientId: number) {
+  const data = getData();
+  return data.video_requests
+    .filter((r) => r.client_id === clientId && r.replied_at)
+    .sort((a, b) => (b.replied_at ?? "").localeCompare(a.replied_at ?? ""))
+    .map((r) => {
+      const a = data.workout_assignments.find((w) => w.id === r.assignment_id);
+      const day = a ? data.program_days.find((d) => d.id === a.program_day_id) : undefined;
+      return {
+        id: r.id,
+        exerciseName: (a ? data.exercises.find((e) => e.id === a.exercise_id)?.name : null) ?? "Exercise",
+        where: day ? day.label || `Session ${day.day_of_week}` : "",
+        /** The programme week it was filmed in, to tell which programme it belongs to. */
+        week: day?.week_number ?? null,
+        asked: r.note,
+        theirs: r.file_path,
+        replyNote: r.reply_note ?? null,
+        replySrc: r.reply_file_path ?? null,
+        repliedAt: r.replied_at!,
+        seen: !!r.reply_seen_at,
+      };
+    });
+}
+
+/**
+ * The replies that belong to the programme the client is on now, for the
+ * list on their Training tab. A new programme has other exercises, so the
+ * list starts empty with it; the older replies stay on their notifications.
+ */
+export function listLiveProgramVideoReplies(clientId: number) {
+  const program = getDeployedProgram(clientId);
+  if (!program) return [];
+  const last = program.start_week + program.total_weeks - 1;
+  return listVideoReplies(clientId).filter((r) => r.week != null && r.week >= program.start_week && r.week <= last);
+}
+
+export function getClientIdForVideoRequest(id: number): number | null {
+  return getData().video_requests.find((r) => r.id === id)?.client_id ?? null;
+}
+
+/** The client's video for a request: written to the disk and filed. Returns the new path and the one it replaces. */
+export function saveRequestedVideo(id: number, buffer: Buffer, mimeType: string): { path: string; previous: string | null } | null {
+  const row = getData().video_requests.find((r) => r.id === id);
+  if (!row) return null;
+  const sub = (mimeType.split("/")[1] || "mp4").toLowerCase();
+  const ext = sub === "quicktime" ? "mov" : sub === "x-m4v" ? "m4v" : sub.replace(/[^a-z0-9]/g, "") || "mp4";
+  const dir = path.join(DATA_DIR, "uploads", "videos", String(row.client_id));
+  fs.mkdirSync(dir, { recursive: true });
+  // A new file name each time, so a replaced video is never served from a
+  // cache under the old one's name.
+  const filename = `${row.id}-${Date.now()}.${ext}`;
+  fs.writeFileSync(path.join(dir, filename), buffer);
+  const previous = row.file_path;
+  if (previous) {
+    const old = path.join(DATA_DIR, previous.replace(/^\//, ""));
+    if (old.startsWith(path.join(DATA_DIR, "uploads"))) fs.rmSync(old, { force: true });
+  }
+  row.file_path = `/uploads/videos/${row.client_id}/${filename}`;
+  row.submitted_at = new Date().toISOString();
+  row.seen_at = null;
+  persist();
+  return { path: row.file_path, previous };
+}
+
+export function markVideoSeen(id: number) {
+  const row = getData().video_requests.find((r) => r.id === id);
+  if (!row || !row.file_path || row.seen_at) return;
+  row.seen_at = new Date().toISOString();
+  persist();
+}
+
 /** Writes the picture to the disk and files it. Returns its public path. */
 export function saveMealPhoto(clientId: number, date: string, meal: string, buffer: Buffer, mimeType: string): string {
   const ext = (mimeType.split("/")[1] || "jpg").replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "jpg";
@@ -8763,7 +9082,7 @@ export type FoodDiaryView = {
   /** The day's targets, training or rest as the client called it (else by sets); null without targets. */
   target: { kcal: number; protein: number; carbs: number; fat: number } | null;
   eaten: { kcal: number; protein: number; carbs: number; fat: number };
-  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntry[]; /** The saved meal this is a copy of, by name, when it still matches one. */ savedAs: string | null; /** The client's picture of this meal, when they took one. */ photo: string | null }[];
+  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntry[]; /** The saved meal this is a copy of, by name, when it still matches one. */ savedAs: string | null; /** The client's picture of this meal, when they took one. */ photo: string | null; /** What the coach said about this meal. */ comments: MealComment[] }[];
   recent: FoodOption[];
   /** The client's saved meals, newest first. */
   saved: SavedMealView[];
@@ -8831,7 +9150,58 @@ export function foodDiaryTargetOn(clientId: number, date: string): FoodDiaryView
 // are drawn from, so a total can never disagree with the breakdown under it.
 
 export type LoggedFood = { name: string; quantity: string; kcal: number; protein: number; carbs: number; fat: number };
-export type LoggedMeal = { id: string; label: string; kcal: number; protein: number; carbs: number; fat: number; foods: LoggedFood[]; /** The client's picture of this meal, when they took one. */ photo: string | null };
+export type LoggedMeal = { id: string; label: string; kcal: number; protein: number; carbs: number; fat: number; foods: LoggedFood[]; /** The client's picture of this meal, when they took one. */ photo: string | null; /** What the coach has said about this meal, oldest first. */ comments: MealComment[] };
+
+// A coach's comment on a meal is a message linked to it (messageLinks.ts), so
+// it reaches the client like any other message; this reads them back by meal
+// for the coach's log and the client's diary.
+export type MealComment = { id: number; text: string; when: string };
+/**
+ * Takes back a comment on a meal: the message, and the notification that
+ * carried it, so nothing of it is left in the client's app. Only a meal
+ * comment of this client's; anything else is left alone.
+ */
+export function removeMealComment(clientId: number, messageId: number) {
+  const data = getData();
+  const msg = data.chat_messages.find((m) => m.id === messageId && m.client_id === clientId && m.sender === "coach");
+  if (!msg || msg.link?.kind !== "food" || !msg.link.meal) return;
+  data.chat_messages = data.chat_messages.filter((m) => m !== msg);
+  // Its notification was logged in the same breath, with the same words.
+  const sent = new Date(msg.created_at).getTime();
+  const note = data.coach_activity.find((a) => a.client_id === clientId && a.kind === "coach_note" && a.message === msg.text && Math.abs(new Date(a.created_at).getTime() - sent) < 5000);
+  if (note) data.coach_activity = data.coach_activity.filter((a) => a !== note);
+  persist();
+}
+
+/**
+ * Rewords a comment on a meal, in the message and in the notification that
+ * carried it. Quietly: a fixed typo is not news, so nothing new is sent and
+ * what the client has read stays read.
+ */
+export function editMealComment(clientId: number, messageId: number, text: string) {
+  const clean = text.trim();
+  const data = getData();
+  const msg = data.chat_messages.find((m) => m.id === messageId && m.client_id === clientId && m.sender === "coach");
+  if (!clean || !msg || msg.link?.kind !== "food" || !msg.link.meal || msg.text === clean) return;
+  const sent = new Date(msg.created_at).getTime();
+  const note = data.coach_activity.find((a) => a.client_id === clientId && a.kind === "coach_note" && a.message === msg.text && Math.abs(new Date(a.created_at).getTime() - sent) < 5000);
+  if (note) note.message = clean;
+  msg.text = clean;
+  persist();
+}
+
+export const hasMealComment = (clientId: number, date: string, meal: string) => (mealCommentsOn(clientId, date).get(meal)?.length ?? 0) > 0;
+function mealCommentsOn(clientId: number, date: string): Map<string, MealComment[]> {
+  const out = new Map<string, MealComment[]>();
+  for (const m of listChatMessages(clientId)) {
+    const l = m.link;
+    if (m.sender !== "coach" || !m.text || l?.kind !== "food" || l.date !== date || !l.meal) continue;
+    const list = out.get(l.meal) ?? [];
+    list.push({ id: m.id, text: m.text, when: new Date(m.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) });
+    out.set(l.meal, list);
+  }
+  return out;
+}
 export type LoggedDay = {
   date: string;
   kcal: number;
@@ -8876,10 +9246,11 @@ export function getLoggedDays(clientId: number, from: string, to: string): Logge
     .map(([date, rows]) => {
       const labels = new Map(listFoodMeals(clientId, date).map((m) => [m.id, m.label] as const));
       const photos = mealPhotosOn(clientId, date);
+      const comments = mealCommentsOn(clientId, date);
       const order = [...labels.keys()];
       const meals = new Map<string, LoggedMeal>();
       for (const e of rows) {
-        const meal = meals.get(e.meal) ?? { id: e.meal, label: labels.get(e.meal) ?? "Meal", kcal: 0, protein: 0, carbs: 0, fat: 0, foods: [], photo: photos.get(e.meal) ?? null };
+        const meal = meals.get(e.meal) ?? { id: e.meal, label: labels.get(e.meal) ?? "Meal", kcal: 0, protein: 0, carbs: 0, fat: 0, foods: [], photo: photos.get(e.meal) ?? null, comments: comments.get(e.meal) ?? [] };
         meal.kcal += e.kcal;
         meal.protein += e.protein;
         meal.carbs += e.carbs;
@@ -9070,6 +9441,7 @@ export function getFoodDiary(clientId: number, date: string): FoodDiaryView {
     previousMap.set(key, row);
   }
   const photos = mealPhotosOn(clientId, date);
+  const comments = mealCommentsOn(clientId, date);
   const order = new Map(meals.map((m, i) => [m.id, i]));
   const previous = [...previousMap.values()]
     .map((p) => ({ ...p, kcal: Math.round(p.kcal) }))
@@ -9086,7 +9458,7 @@ export function getFoodDiary(clientId: number, date: string): FoodDiaryView {
       const tot = (k: "kcal" | "protein" | "carbs" | "fat") => r1(rows.reduce((s, e) => s + e[k], 0));
       const key = rows.map((e) => `${e.food_id}@${e.grams}`).sort().join("|");
       const savedAs = rows.length ? savedKeys.find((s) => s.key === key)?.name ?? null : null;
-      return { ...m, kcal: Math.round(tot("kcal")), protein: tot("protein"), carbs: tot("carbs"), fat: tot("fat"), entries: rows, savedAs, photo: photos.get(m.id) ?? null };
+      return { ...m, kcal: Math.round(tot("kcal")), protein: tot("protein"), carbs: tot("carbs"), fat: tot("fat"), entries: rows, savedAs, photo: photos.get(m.id) ?? null, comments: comments.get(m.id) ?? [] };
     }),
     recent: recentFoods(clientId),
     saved: listSavedMeals(clientId),

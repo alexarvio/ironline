@@ -19,6 +19,7 @@ import DeployNowDialog from "./DeployNowDialog";
 import { phaseRange, phaseWeekIndex, phaseWeeks } from "../lib/phases";
 import PhaseHeader, { usePhases, type PhaseOption } from "./PhaseHeader";
 import { ChevronDownIcon, TrashIcon } from "../components/icons";
+import MessageAboutButton from "./MessageAbout";
 
 // The Nutrition tab: three navy-banded cards. Daily targets per nutrition
 // phase with the note beside them, the supplements sheet, and the calories
@@ -308,7 +309,17 @@ function TargetsCard({
         }
       />
 
-      <Block id="targets" title="Daily targets" hint={summary.join(" · ")}>
+      <Block
+        id="targets"
+        title="Daily targets"
+        hint={summary.join(" · ")}
+        // Only the targets the client is on: the link opens their Nutrition tab.
+        actions={
+          phase.status === "now" || phase.id === 0 ? (
+            <MessageAboutButton icon target={{ link: { kind: "nutrition" }, area: "Nutrition", label: "Nutrition targets" }} />
+          ) : undefined
+        }
+      >
       <div className="nw-targets">
         <div className="nw-editor">
           <div className="nw-editor-top">

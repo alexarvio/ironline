@@ -76,7 +76,7 @@ export type FoodDiaryProps = {
   eaten: Macros;
   dayType: "training" | "rest";
   loggedKcal: number | null;
-  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntryView[]; savedAs: string | null; photo: string | null }[];
+  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntryView[]; savedAs: string | null; photo: string | null; comments: { id: number; text: string; when: string }[] }[];
   recent: FoodOptionView[];
   saved: { id: number; name: string; kcal: number; count: number; names: string[] }[];
   savedDays: { id: number; name: string; kcal: number; count: number; dayType: "training" | "rest" | null }[];
@@ -133,7 +133,21 @@ function useDropOnTapOutside(asking: boolean, clear: (none: null) => void) {
   }, [asking, clear]);
 }
 
-export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { clientId: number; diary: FoodDiaryProps; onBack: () => void }) {
+export default function FoodDiaryScreen({
+  clientId,
+  diary: initial,
+  initialDate = null,
+  initialMeal = null,
+  onBack,
+}: {
+  clientId: number;
+  diary: FoodDiaryProps;
+  /** A coach message linked this day: open on it rather than today. */
+  initialDate?: string | null;
+  /** … and the coach commented on this meal of it: open and show it. */
+  initialMeal?: string | null;
+  onBack: () => void;
+}) {
   // The day showing. Today arrives with the page; other days, and today
   // again after a change, are read through the action.
   const today = initial.date;
@@ -153,6 +167,20 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
     load(d);
   };
   const reload = () => load(date);
+  // Opened from a coach message's link to a day: read that day once, and
+  // switch to it when it has come, so the screen never shows today's meals
+  // under that day's name.
+  useEffect(() => {
+    if (!initialDate || initialDate === initial.date || initialDate > today || initialDate < floor) return;
+    startLoad(async () => {
+      const next = await getFoodDiaryAction(clientId, initialDate);
+      if (!next) return;
+      setDiary(next);
+      setDate(initialDate);
+    });
+    // Once, on open: later days are the client's to move between.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const mealRefs = useRef<Map<FoodMeal, HTMLDivElement>>(new Map());
   const [panel, setPanel] = useState<Panel | null>(null);
   // Closing a panel takes a few hundred pixels out of the page above the
@@ -300,7 +328,17 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
   };
   // Meals fold shut to their name and figures, so a long day stays short.
   // They start folded; a meal added just now opens, since it is about to be filled.
-  const [folded, setFolded] = useState<Set<FoodMeal>>(() => new Set(initial.meals.map((m) => m.id)));
+  const [folded, setFolded] = useState<Set<FoodMeal>>(() => new Set(initial.meals.map((m) => m.id).filter((id) => id !== initialMeal)));
+  // The meal a coach's comment led here for, brought into view once its day
+  // is the one showing.
+  const shownLinked = useRef(false);
+  useEffect(() => {
+    if (!initialMeal || shownLinked.current || diary.date !== (initialDate ?? initial.date)) return;
+    const el = mealRefs.current.get(initialMeal);
+    if (!el) return;
+    shownLinked.current = true;
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [diary, initialMeal, initialDate, initial.date]);
   const toggleFold = (id: FoodMeal) =>
     setFolded((prev) => {
       const next = new Set(prev);
@@ -926,6 +964,17 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                     </div>
                     {meal.entries.length > 0 && (
                       <Facts className="fdi-per meal" label={`${meal.label}: ${n(meal.kcal)} kcal`} kcal={meal.kcal} protein={meal.protein} carbs={meal.carbs} fat={meal.fat} />
+                    )}
+                    {meal.comments.length > 0 && (
+                      <div className="fdi-coach-said">
+                        <span className="fdi-eyebrow">From your coach</span>
+                        {meal.comments.map((c) => (
+                          <p key={c.id}>
+                            {c.text}
+                            <small>{c.when}</small>
+                          </p>
+                        ))}
+                      </div>
                     )}
                     {savingMeal === meal.id && (
                       <form

@@ -21,7 +21,7 @@ export default function CoachNotesRow({ coachName, initial, photoPath, unread, t
       <span className="cn-coach-body">
         <span className="cn-coach-title">From {coachName}</span>
         <span className="cn-coach-sub">
-          {unread > 0 ? `${unread} new message${unread === 1 ? "" : "s"}` : `${total} message${total === 1 ? "" : "s"} · nothing new`}
+          {unread > 0 ? `${unread} new message${unread === 1 ? "" : "s"}` : "Nothing new"}
         </span>
       </span>
       {unread > 0 && <span className="cn-notif-dot" aria-hidden="true" />}

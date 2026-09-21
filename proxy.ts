@@ -32,11 +32,12 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Everything except Next's own assets, the uploads route (which does its
-  // own per-request authorization), and common static files. The app icons
+  // Everything except Next's own assets, the uploads route and the coach's
+  // video-reply upload (which do their own per-request authorization; the
+  // proxy would also buffer and cut off a big upload body), and common static files. The app icons
   // (app/icon.png, app/apple-icon.png) and the logo under public/brand must
   // stay public too: the phone fetches them from the manifest with no cookie
   // when the client adds the app to their home screen, and the login page
   // shows the logo before anyone has a session.
-  matcher: ["/((?!_next/static|_next/image|uploads|favicon.ico|manifest.webmanifest|icon.png|apple-icon.png|icons/|brand/).*)"],
+  matcher: ["/((?!_next/static|_next/image|uploads|api/video-reply|favicon.ico|manifest.webmanifest|icon.png|apple-icon.png|icons/|brand/).*)"],
 };

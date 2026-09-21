@@ -355,7 +355,7 @@ export function PhaseDialog({
                 <span>{editing && isDraft && emptyReason ? emptyReason : "Its content is built on its own tab."}</span>
                 {open && (
                   <Link href={open.href} onClick={onClose}>
-                    {open.label} →
+                    {open.label}
                   </Link>
                 )}
               </div>
