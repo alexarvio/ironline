@@ -71,6 +71,13 @@
       "when": 1789634127325,
       "tag": "0009_saved_days",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789957341847,
+      "tag": "0010_meal_photos",
+      "breakpoints": true
     }
   ]
 }

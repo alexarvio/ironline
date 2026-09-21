@@ -7802,6 +7802,62 @@ export function addCustomFood(clientId: number, food: { name: string; kcal: numb
   return row;
 }
 
+// ---- Meal photos ----
+// One picture per meal per day, taken by the client from their food diary.
+// Filed by date and meal key rather than by row id so a second picture
+// simply replaces the first, on the disk as well as in the table.
+
+/** The client's picture of one meal, or null. */
+export function getMealPhoto(clientId: number, date: string, meal: string): string | null {
+  return getData().meal_photos.find((p) => p.client_id === clientId && p.date === date && p.meal === meal)?.file_path ?? null;
+}
+
+/** Every meal on a date that has a picture, by meal key. */
+export function mealPhotosOn(clientId: number, date: string): Map<string, string> {
+  return new Map(getData().meal_photos.filter((p) => p.client_id === clientId && p.date === date).map((p) => [p.meal, p.file_path] as const));
+}
+
+/** Writes the picture to the disk and files it. Returns its public path. */
+export function saveMealPhoto(clientId: number, date: string, meal: string, buffer: Buffer, mimeType: string): string {
+  const ext = (mimeType.split("/")[1] || "jpg").replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "jpg";
+  // "m:12" is a meal the client added; a colon is not a filename anywhere.
+  const slug = meal.replace(/[^a-z0-9]/gi, "-");
+  const dir = path.join(DATA_DIR, "uploads", "meals", String(clientId), date);
+  fs.mkdirSync(dir, { recursive: true });
+  // The extension can change between pictures (.heic then .jpg); drop any
+  // earlier one for this meal so the old file is not left orphaned.
+  for (const existing of fs.readdirSync(dir)) {
+    if (existing.startsWith(`${slug}.`)) fs.rmSync(path.join(dir, existing), { force: true });
+  }
+  const filename = `${slug}.${ext}`;
+  fs.writeFileSync(path.join(dir, filename), buffer);
+  const publicPath = `/uploads/meals/${clientId}/${date}/${filename}`;
+
+  const data = getData();
+  const row = data.meal_photos.find((p) => p.client_id === clientId && p.date === date && p.meal === meal);
+  if (row) {
+    row.file_path = publicPath;
+    row.uploaded_at = new Date().toISOString();
+  } else {
+    data.meal_photos.push({ id: allocId("meal_photos"), client_id: clientId, date, meal, file_path: publicPath, uploaded_at: new Date().toISOString() });
+  }
+  persist();
+  return publicPath;
+}
+
+/** Forgets a meal's picture. Returns the path it had, for the bucket copy. */
+export function removeMealPhoto(clientId: number, date: string, meal: string): string | null {
+  const data = getData();
+  const row = data.meal_photos.find((p) => p.client_id === clientId && p.date === date && p.meal === meal);
+  if (!row) return null;
+  const was = row.file_path;
+  data.meal_photos = data.meal_photos.filter((p) => p !== row);
+  const onDisk = path.join(DATA_DIR, was.startsWith("/") ? was.slice(1) : was);
+  fs.rmSync(onDisk, { force: true });
+  persist();
+  return was;
+}
+
 /** Everything the diary screen needs for one day. */
 export type FoodDiaryView = {
   date: string;
@@ -7810,7 +7866,7 @@ export type FoodDiaryView = {
   /** The day's targets, training or rest as the client called it (else by sets); null without targets. */
   target: { kcal: number; protein: number; carbs: number; fat: number } | null;
   eaten: { kcal: number; protein: number; carbs: number; fat: number };
-  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntry[]; /** The saved meal this is a copy of, by name, when it still matches one. */ savedAs: string | null }[];
+  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntry[]; /** The saved meal this is a copy of, by name, when it still matches one. */ savedAs: string | null; /** The client's picture of this meal, when they took one. */ photo: string | null }[];
   recent: FoodOption[];
   /** The client's saved meals, newest first. */
   saved: SavedMealView[];
@@ -7897,6 +7953,7 @@ export function getFoodDiary(clientId: number, date: string): FoodDiaryView {
     if (!row.names.includes(e.name)) row.names.push(e.name);
     previousMap.set(key, row);
   }
+  const photos = mealPhotosOn(clientId, date);
   const order = new Map(meals.map((m, i) => [m.id, i]));
   const previous = [...previousMap.values()]
     .map((p) => ({ ...p, kcal: Math.round(p.kcal) }))
@@ -7913,7 +7970,7 @@ export function getFoodDiary(clientId: number, date: string): FoodDiaryView {
       const tot = (k: "kcal" | "protein" | "carbs" | "fat") => r1(rows.reduce((s, e) => s + e[k], 0));
       const key = rows.map((e) => `${e.food_id}@${e.grams}`).sort().join("|");
       const savedAs = rows.length ? savedKeys.find((s) => s.key === key)?.name ?? null : null;
-      return { ...m, kcal: Math.round(tot("kcal")), protein: tot("protein"), carbs: tot("carbs"), fat: tot("fat"), entries: rows, savedAs };
+      return { ...m, kcal: Math.round(tot("kcal")), protein: tot("protein"), carbs: tot("carbs"), fat: tot("fat"), entries: rows, savedAs, photo: photos.get(m.id) ?? null };
     }),
     recent: recentFoods(clientId),
     saved: listSavedMeals(clientId),

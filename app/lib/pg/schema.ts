@@ -591,6 +591,16 @@ export const saved_days = pgTable("saved_days", {
   extra: extra(),
 });
 
+export const meal_photos = pgTable("meal_photos", {
+  id: id(),
+  client_id: fk("client_id"),
+  date: text("date"),
+  meal: text("meal"),
+  file_path: text("file_path"),
+  uploaded_at: text("uploaded_at"),
+  extra: extra(),
+});
+
 export const COLLECTIONS = [
   { name: "users", table: users, key: ["id"] },
   { name: "clients", table: clients, key: ["id"] },
@@ -606,6 +616,7 @@ export const COLLECTIONS = [
   { name: "saved_meals", table: saved_meals, key: ["id"] },
   { name: "off_foods", table: off_foods, key: ["id"] },
   { name: "saved_days", table: saved_days, key: ["id"] },
+  { name: "meal_photos", table: meal_photos, key: ["id"] },
   { name: "check_in_notes", table: check_in_notes, key: ["id"] },
   { name: "client_exercise_notes", table: client_exercise_notes, key: ["id"] },
   { name: "client_gyms", table: client_gyms, key: ["id"] },

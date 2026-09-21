@@ -115,6 +115,9 @@ import {
   saveNutritionPlan,
   savePhotoPeriodNote,
   savePhotoUpload,
+  saveMealPhoto,
+  getMealPhoto,
+  removeMealPhoto,
   saveDemoVideoUpload,
   setAssignmentCustomValue,
   setClientGoalDone,
@@ -941,6 +944,35 @@ export async function uploadProgressPhotoAction(formData: FormData) {
   const buffer = Buffer.from(await file.arrayBuffer());
   // Saved to the disk, then copied into the storage bucket when it is on.
   await putUpload(savePhotoUpload(clientId, slotId, buffer, file.type || "image/jpeg"), buffer, file.type);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function uploadMealPhotoAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const date = String(formData.get("date") ?? "");
+  const meal = String(formData.get("meal") ?? "");
+  if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date) || !meal) return;
+
+  const file = formData.get("file") as File | null;
+  if (!file || file.size === 0) return;
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const previous = getMealPhoto(clientId, date, meal);
+  // Saved to the disk, then copied into the storage bucket when it is on.
+  const saved = saveMealPhoto(clientId, date, meal, buffer, file.type || "image/jpeg");
+  if (previous && keyOf(previous) !== keyOf(saved)) await deleteUpload(previous);
+  await putUpload(saved, buffer, file.type);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function removeMealPhotoAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const date = String(formData.get("date") ?? "");
+  const meal = String(formData.get("meal") ?? "");
+  if (!date || !meal) return;
+  const was = removeMealPhoto(clientId, date, meal);
+  if (was) await deleteUpload(was);
   revalidatePath("/admin");
   revalidatePath("/client");
 }

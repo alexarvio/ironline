@@ -121,6 +121,19 @@ export type FoodEntry = {
   fat: number;
   logged_at: string;
 };
+// One picture of one meal, taken by the client from their food diary. The
+// coach sees a camera on that meal's row in the nutrition log and opens it
+// from there; nobody else can. One picture per meal — taking another
+// replaces it, which is what "photograph your dinner" means in practice.
+export type MealPhoto = {
+  id: number;
+  client_id: number;
+  date: string; // YYYY-MM-DD, the diary day it belongs to
+  /** The same key as FoodEntry.meal: "breakfast" … or "m:<id>". */
+  meal: string;
+  file_path: string; // public URL path, e.g. /uploads/meals/5/2026-09-21/breakfast.jpg
+  uploaded_at: string;
+};
 // A whole day a client saved to log again ("Training day"): every meal's
 // foods and amounts as they were. Only they can use it.
 export type SavedDay = {
@@ -811,6 +824,7 @@ export type Data = {
   photo_uploads: PhotoUpload[];
   photo_settings: PhotoSettings[];
   photo_period_notes: PhotoPeriodNote[];
+  meal_photos: MealPhoto[];
   client_profiles: ClientProfile[];
   client_goals: ClientGoal[];
   meetings: Meeting[];
@@ -896,6 +910,7 @@ function emptyData(): Data {
     photo_uploads: [],
     photo_settings: [],
     photo_period_notes: [],
+    meal_photos: [],
     client_profiles: [],
     client_goals: [],
     meetings: [],

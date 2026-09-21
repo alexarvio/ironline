@@ -378,6 +378,7 @@ export function resetWorkspaceFromEnv() {
   data.photo_uploads = [];
   data.photo_settings = [];
   data.photo_period_notes = [];
+  data.meal_photos = [];
   data.client_profiles = [];
   data.client_goals = [];
   data.meetings = [];

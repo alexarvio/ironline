@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { BookmarkIcon, ChevronDownIcon, ChevronLeftIcon, PlusIcon, SearchIcon, TrashIcon } from "../components/icons";
+import { BookmarkIcon, CameraIcon, ChevronDownIcon, ChevronLeftIcon, PlusIcon, SearchIcon, TrashIcon } from "../components/icons";
 import {
   addCustomFoodAction,
   addFoodEntryAction,
@@ -20,6 +20,8 @@ import {
   removeFoodEntryAction,
   pushFoodDayAction,
   removeFoodMealAction,
+  removeMealPhotoAction,
+  uploadMealPhotoAction,
   renameFoodMealAction,
   reorderFoodMealsAction,
   searchFoodsAction,
@@ -74,7 +76,7 @@ export type FoodDiaryProps = {
   eaten: Macros;
   dayType: "training" | "rest";
   loggedKcal: number | null;
-  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntryView[]; savedAs: string | null }[];
+  meals: { id: FoodMeal; label: string; own: boolean; kcal: number; protein: number; carbs: number; fat: number; entries: FoodEntryView[]; savedAs: string | null; photo: string | null }[];
   recent: FoodOptionView[];
   saved: { id: number; name: string; kcal: number; count: number; names: string[] }[];
   savedDays: { id: number; name: string; kcal: number; count: number; dayType: "training" | "rest" | null }[];
@@ -248,6 +250,36 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
   };
   // Which meal is being saved under a name.
   const [savingMeal, setSavingMeal] = useState<FoodMeal | null>(null);
+  // The meal whose picture is on screen, full width, with Replace and Remove.
+  const [photoOf, setPhotoOf] = useState<FoodMeal | null>(null);
+  const shownPhoto = photoOf ? diary.meals.find((m) => m.id === photoOf) ?? null : null;
+
+  // One picture per meal: sending another simply replaces it.
+  const sendPhoto = (meal: FoodMeal, file: File) => {
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("date", date);
+    fd.set("meal", meal);
+    fd.set("file", file);
+    startLoad(async () => {
+      await uploadMealPhotoAction(fd);
+      const next = await getFoodDiaryAction(clientId, date);
+      if (next) setDiary(next);
+    });
+  };
+
+  const dropPhoto = (meal: FoodMeal) => {
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("date", date);
+    fd.set("meal", meal);
+    setPhotoOf(null);
+    startLoad(async () => {
+      await removeMealPhotoAction(fd);
+      const next = await getFoodDiaryAction(clientId, date);
+      if (next) setDiary(next);
+    });
+  };
   // Meals fold shut to their name and figures, so a long day stays short.
   // They start folded; a meal added just now opens, since it is about to be filled.
   const [folded, setFolded] = useState<Set<FoodMeal>>(() => new Set(initial.meals.map((m) => m.id)));
@@ -841,6 +873,29 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
                           <PlusIcon />
                         </button>
                       )}
+                      {/* The camera is the last thing on the row and stays
+                          there whether or not the + is showing — the + goes
+                          when the meal is open, and an icon that then slid
+                          to the edge would read as a different button. */}
+                      {meal.photo ? (
+                        <button type="button" className="fdi-icon-btn has-photo" onClick={() => setPhotoOf(meal.id)} aria-label={`See your picture of ${meal.label}`}>
+                          <CameraIcon />
+                        </button>
+                      ) : (
+                        <label className="fdi-icon-btn fdi-photo-pick" aria-label={`Add a picture of ${meal.label}`}>
+                          <CameraIcon />
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              // Cleared so picking the same file twice still fires.
+                              e.target.value = "";
+                              if (file) sendPhoto(meal.id, file);
+                            }}
+                          />
+                        </label>
+                      )}
                     </div>
                     {meal.entries.length > 0 && (
                       <Facts className="fdi-per meal" label={`${meal.label}: ${n(meal.kcal)} kcal`} kcal={meal.kcal} protein={meal.protein} carbs={meal.carbs} fat={meal.fat} />
@@ -1012,6 +1067,39 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
         </div>
       </main>
 
+      {shownPhoto?.photo && (
+        <div className="fdi-photo-scrim" role="presentation" onClick={() => setPhotoOf(null)}>
+          <div className="fdi-photo-sheet" role="dialog" aria-modal="true" aria-label={`Your picture of ${shownPhoto.label}`} onClick={(e) => e.stopPropagation()}>
+            <div className="fdi-sheet-head">
+              <span />
+              <span className="fdi-sheet-title">{shownPhoto.label}</span>
+              <button type="button" className="fdi-sheet-x" onClick={() => setPhotoOf(null)} aria-label="Close">
+                ×
+              </button>
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element -- the client’s own upload */}
+            <img className="fdi-photo-shot" src={shownPhoto.photo} alt={`Your picture of ${shownPhoto.label}`} />
+            <p className="fdi-hint">Only your coach sees this.</p>
+            <div className="fdi-photo-actions">
+              <label className="fdi-photo-replace">
+                Replace
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    if (file) sendPhoto(shownPhoto.id, file);
+                  }}
+                />
+              </label>
+              <button type="button" className="fdi-photo-remove" onClick={() => dropPhoto(shownPhoto.id)}>
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

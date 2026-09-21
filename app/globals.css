@@ -14521,6 +14521,20 @@ label.ci-pill { cursor: text; }
 .fdi-scan-btn { flex: none; display: flex; align-items: center; justify-content: center; width: 48px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; color: #1e3a6e; cursor: pointer; }
 .fdi-scan-btn:disabled { opacity: 0.5; cursor: default; }
 /* The scanner: the camera in a sheet over the screen. */
+/* The meal's picture: a camera at the end of the meal row, the shot itself
+   in a sheet like the barcode scanner's. */
+.fdi-photo-pick { position: relative; cursor: pointer; }
+.fdi-photo-pick input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.fdi-icon-btn.has-photo { color: #2f7a3f; }
+.fdi-photo-scrim { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(20, 23, 28, 0.65); }
+.fdi-photo-sheet { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: 18px; background: #fff; }
+.fdi-photo-shot { display: block; width: 100%; max-height: 60vh; object-fit: contain; border-radius: 12px; background: #f4f7fc; }
+.fdi-photo-actions { display: flex; gap: 10px; }
+.fdi-photo-replace, .fdi-photo-remove { flex: 1; display: inline-flex; align-items: center; justify-content: center; height: 46px; border: 0; border-radius: 12px; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+.fdi-photo-replace { position: relative; background: #1e3a6e; color: #fff; }
+.fdi-photo-replace input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.fdi-photo-remove { background: #fbeaea; color: #a32d2d; }
+
 .fdi-scan-scrim { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; background: rgba(20, 23, 28, 0.55); }
 .fdi-sheet-head { display: grid; grid-template-columns: 32px 1fr 32px; align-items: center; gap: 8px; }
 .fdi-sheet-title { font-size: 15px; font-weight: 600; color: #141a24; text-align: center; }
