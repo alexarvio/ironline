@@ -899,6 +899,10 @@ Look: `/client` → Training.
 - [ ] The exercise picker on the weights side no longer offers the Cardio group (tiles or search); cardio is added from the heart toggle, as before.
 - [ ] The session's pending bar: "Unsaved · W6" is gone, the tick reads "Apply to the rest of the programme" (hover names the weeks), and Discard and Apply sit together at the right, after the tick.
 
+## 123 · Phase dialog: an empty draft's Schedule / Make it live looks and acts blocked — ✅ LIVE 21 Sep
+
+- [ ] On an empty draft the button is faded with a not-allowed cursor. Clicking it does nothing but shake the orange line above ("Nothing in it yet: add …") and outline it, so the click is answered with what is missing; "Open in …" beside it goes there.
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).

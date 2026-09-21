@@ -139,6 +139,9 @@ export function PhaseDialog({
     return { from: "", to: "" };
   });
   const [from, setFrom] = useState(initial.from);
+  // Bumped when the greyed-out Schedule / Make it live is clicked on an empty
+  // draft, so the line saying what is missing shakes: the click is answered.
+  const [nudge, setNudge] = useState(0);
   const [to, setTo] = useState(initial.to);
   const [name, setName] = useState(phase?.name ?? "");
   const [track, setTrack] = useState<PhaseTrack>(phase?.track ?? defaultTrack ?? "nutrition");
@@ -351,7 +354,7 @@ export function PhaseDialog({
             {/* Where the phase's content is built, and, for a draft with
                 nothing in it yet, why it can't go out. */}
             {(open || (editing && isDraft && emptyReason)) && (
-              <div className={`pl-dlg-content${editing && isDraft && emptyReason ? " warn" : ""}`}>
+              <div key={nudge} className={`pl-dlg-content${editing && isDraft && emptyReason ? " warn" : ""}${nudge ? " nudge" : ""}`} role={emptyReason ? "alert" : undefined}>
                 <span>{editing && isDraft && emptyReason ? emptyReason : "Its content is built on its own tab."}</span>
                 {open && (
                   <Link href={open.href} onClick={onClose}>
@@ -561,9 +564,17 @@ export function PhaseDialog({
                     <>
                       <button
                         type="submit"
-                        className="pl-dlg-cancel"
-                        disabled={!ready || !!emptyReason}
+                        className={`pl-dlg-cancel${emptyReason ? " blocked" : ""}`}
+                        // Not `disabled` on an empty draft: a disabled button
+                        // swallows the click, and the click is what asks "why not?".
+                        disabled={!ready && !emptyReason}
+                        aria-disabled={emptyReason ? true : undefined}
                         title={emptyReason ?? undefined}
+                        onClick={(e) => {
+                          if (!emptyReason) return;
+                          e.preventDefault();
+                          setNudge((n) => n + 1);
+                        }}
                         formAction={startWeek && startWeek <= mondayOf(today) ? saveAndDeployPhaseNowAction : saveAndSchedulePhaseAction}
                       >
                         {startWeek && startWeek <= mondayOf(today) ? "Make it live" : "Schedule it"}
