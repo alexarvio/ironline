@@ -11719,7 +11719,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
    two lanes have fixed heights so the three columns stay level. */
 .pb-log {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) 118px;
+  grid-template-columns: 30px minmax(0, 1fr) 104px;
   grid-template-rows: 30px;
   column-gap: 10px;
   row-gap: 4px;

@@ -75,13 +75,17 @@ function formatActualLogs(logs: { weight_kg: number | null; reps: number | null 
 // fixed by the design; these are what's left to divide at a 1440 canvas once
 // the 216px rail and 296px panel are taken out. Sized to the content — a
 // weight is at most "142.5", an RPE is one or two characters.
+// Notes and each gym's weight get enough to read (a gym name like "Muscle
+// Factory", a note's first words); "What the client did" takes what is left
+// and scrolls its sets inside the cell when they do not fit.
 const COLUMN_WIDTH: Record<string, string> = {
   sets: "48px",
   reps: "58px",
-  weight_goal: "64px",
+  weight_goal: "72px",
   rpe: "48px",
   tempo: "56px",
   rest: "52px",
+  notes: "180px",
   distance: "62px",
   time: "58px",
 };
@@ -138,7 +142,7 @@ export default function ProgramBuilder({
   const gymNames = Object.fromEntries(allGyms.map((g) => [g.id, g.name]));
   // The exercise table's column widths; Weight grows a box per gym.
   const columnWidths: Record<string, string> = multiGym
-    ? { ...COLUMN_WIDTH, weight_goal: `${64 * (otherGyms.length + 1)}px` }
+    ? { ...COLUMN_WIDTH, weight_goal: `${100 * (otherGyms.length + 1)}px` }
     : COLUMN_WIDTH;
   const cell = (l: { set_number: number; weight_kg: number | null; reps: number | null; rpe_actual: number | null }) => ({
     setNumber: l.set_number,

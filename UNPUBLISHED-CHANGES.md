@@ -749,6 +749,10 @@ Commit `86a3313` (the client camera, storage, `/uploads/meals`, and the `meal_ph
 - [ ] **Training's "This programme" dialog** (name a draft programme, deploy it now or schedule it) and **Duplicate session** (the other item in the ⋯ menu) match it.
 - [ ] Note on "the delete button does not work": the live logs show the delete at 05:08:28 hit the ~15 seconds in which the server was restarting for a push (502, timed out), so nothing was deleted; requests after it went through. Every push restarts the live server for about that long.
 
+## 99 · Room for the other columns — ✅ LIVE 21 Sep
+
+- [ ] **Weight gets 100px per gym** (was 64) so a gym name like "Muscle Factory" reads in full, and **Notes 180px** (was 90) so a note's first words do. "What the client did" gives up that room; its sets scroll inside the cell when they don't fit, and its verdict column went 118 → 104px (the longest verdict fits). Checked on the real builder: both gym names fit, nothing else moved.
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).
