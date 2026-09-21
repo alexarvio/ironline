@@ -13,6 +13,7 @@ import {
 } from "../lib/queries";
 import CheckInDaySelect from "./CheckInDaySelect";
 import SavedStamp from "./SavedStamp";
+import { MetricsPendingProvider, WhenNothingQueued } from "./MetricsPending";
 import MetricLibrary, { LibraryPackView } from "./MetricLibrary";
 import MetricGroups, { type MetricRow } from "./MetricGroups";
 import MeasurementsBlock from "./MeasurementsBlock";
@@ -138,8 +139,11 @@ export default function MeasurementsPanel({ clientId, phaseParam }: { clientId: 
         title="Tracked metrics"
         hint={metrics.length === 0 ? "Nothing asked for yet" : `${metrics.length}${isLive || phases.length === 0 ? " live" : ""} · ${dailyCount} daily, ${metrics.length - dailyCount} weekly`}
       >
+        {/* Keyed by phase: what is queued for one phase is not carried to another. */}
+        <MetricsPendingProvider key={selected?.id ?? 0} clientId={clientId} phaseId={selected?.id ?? null}>
         <MetricLibrary clientId={clientId} phaseId={selected?.id ?? null} packs={packs} groups={METRIC_GROUPS.map((g) => ({ key: g.key, label: g.label }))} />
-        {metrics.length === 0 ? (
+        {metrics.length === 0 && (
+          <WhenNothingQueued>
           <div className="mx-blank">
             <p className="ad-panel-empty">
               {selected && (selected.status === "draft" || selected.status === "next")
@@ -150,9 +154,9 @@ export default function MeasurementsPanel({ clientId, phaseParam }: { clientId: 
               <CopyPhaseMetrics clientId={clientId} fromId={live.id} toId={selected.id} fromName={live.name} />
             )}
           </div>
-        ) : (
-          <MetricGroups metrics={rows} />
+          </WhenNothingQueued>
         )}
+        <MetricGroups metrics={rows} groupInfo={METRIC_GROUPS.map((g) => ({ key: g.key, label: g.label, tint: g.tint }))} />
         <div className="mx-foot">
           <span>Weekly check-in opens on</span>
           <CheckInDaySelect clientId={clientId} value={getClientProfile(clientId).check_in_day} />
@@ -164,6 +168,7 @@ export default function MeasurementsPanel({ clientId, phaseParam }: { clientId: 
             note={selected && (selected.status === "draft" || selected.status === "next") ? "in this phase, not in their app until it is live" : "their check-in asks for this now"}
           />
         </div>
+        </MetricsPendingProvider>
       </MeasurementsBlock>
 
       <MeasurementsBlock id="logged" title="Logged data" hint={loggedHint}>

@@ -153,6 +153,7 @@ import {
   sendChatMessage,
   describeMessageLink,
   hasMealComment,
+  isSessionComplete,
   removeMealComment,
   editMealComment,
   setPhotoCadence,
@@ -818,6 +819,37 @@ export async function addMetricsFromLibraryAction(formData: FormData) {
   addMetricsFromLibraryPhased(clientId, picks, /^\d+$/.test(rawPhase) ? Number(rawPhase) : null);
   revalidatePath("/admin");
   revalidatePath("/client");
+}
+
+/**
+ * The tracked-metrics draft, applied in one go (MetricsPending): removals,
+ * daily / weekly switches, then what was added. True when it landed.
+ */
+export async function applyMetricChangesAction(input: {
+  clientId: number;
+  phaseId: number | null;
+  adds: { name: string; unit: string; group: string; cadence: "daily" | "weekly"; source: "library" | "custom" }[];
+  removes: number[];
+  cadence: { id: number; value: "daily" | "weekly" }[];
+}): Promise<boolean> {
+  const clientId = Number(input?.clientId);
+  if (!clientId || !(await coachForClient(clientId))) return false;
+  const phaseId = input.phaseId == null ? null : Number(input.phaseId);
+  // Only this client's metrics: the ids come from the page.
+  const mine = (id: number) => Number.isInteger(id) && clientIdForMetricDefinition(id) === clientId;
+  for (const id of Array.isArray(input.removes) ? input.removes : []) if (mine(id)) removeMetricDefinition(id);
+  for (const c of Array.isArray(input.cadence) ? input.cadence : []) {
+    if (mine(c.id) && (c.value === "daily" || c.value === "weekly")) setMetricCadence(c.id, c.value);
+  }
+  const adds = (Array.isArray(input.adds) ? input.adds : [])
+    .map((a) => ({ name: String(a.name ?? "").trim().slice(0, 60), unit: String(a.unit ?? "").trim().slice(0, 20), group: String(a.group ?? "other"), cadence: a.cadence === "weekly" ? ("weekly" as const) : ("daily" as const), source: a.source }))
+    .filter((a) => a.name);
+  const library = adds.filter((a) => a.source === "library");
+  if (library.length) addMetricsFromLibraryPhased(clientId, library.map(({ name, unit, group, cadence }) => ({ name, unit, group, cadence })), phaseId);
+  for (const a of adds.filter((x) => x.source !== "library")) addMetricDefinition(clientId, a.group, a.name, a.unit, a.cadence, phaseId);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  return true;
 }
 
 export async function addMetricDefinitionAction(formData: FormData) {
@@ -2353,6 +2385,8 @@ export async function applyDayChangesAction(
   if (!coach) return { ok: false, error: "Unknown day" };
   // Exercises added to the day must come from this coach's own library.
   if ((payload.added ?? []).some((a) => !coachOwnsExercise(coach.id, a.exerciseId))) return { ok: false, error: "Unknown exercise" };
+  // A finished session takes no new exercises (the builder hides the row; this is the backstop).
+  if ((payload.added ?? []).length > 0 && isSessionComplete(payload.programDayId)) return { ok: false, error: "This session is completed" };
   try {
     const { skipped } = applyDayChanges({
       programDayId: payload.programDayId,

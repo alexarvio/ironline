@@ -8848,6 +8848,22 @@ export function mealPhotosOn(clientId: number, date: string): Map<string, string
 // ---- Video requests: the coach asks for a video of an exercise ----------
 
 /** The request on a prescription, if the coach has made one. */
+/**
+ * A session the client has finished, as their app counts it: every planned
+ * set logged and every cardio ticked. An empty session is not finished.
+ */
+export function isSessionComplete(programDayId: number): boolean {
+  const assignments = getAssignmentsForDay(programDayId);
+  const cardio = listCardioForDay(programDayId);
+  if (assignments.length === 0 && cardio.length === 0) return false;
+  return (
+    assignments.every((a) => {
+      const logged = new Set(getLogsForAssignment(a.id).map((l) => l.set_number));
+      return Array.from({ length: a.sets }, (_, i) => i + 1).every((n) => logged.has(n));
+    }) && cardio.every((c) => isCardioDone(c.id))
+  );
+}
+
 export function videoRequestFor(assignmentId: number): VideoRequest | null {
   return getData().video_requests.find((r) => r.assignment_id === assignmentId) ?? null;
 }

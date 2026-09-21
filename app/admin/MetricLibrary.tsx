@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { addMetricDefinitionAction, addMetricsFromLibraryAction } from "../lib/actions";
 import { ChevronDownIcon } from "../components/icons";
+import { useMetricsPending } from "./MetricsPending";
 
 export type LibraryPackView = {
   id: string;
@@ -31,6 +32,8 @@ export default function MetricLibrary({
   /** Category choices for a typed-in column, in display order ("Other" last). */
   groups: { key: string; label: string }[];
 }) {
+  // Inside the draft (MetricsPending) both ways of adding queue on its bar.
+  const pending = useMetricsPending();
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<Record<string, boolean>>({});
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -69,7 +72,19 @@ export default function MetricLibrary({
 
   return (
     <div className="ms-addrow" ref={wrapRef}>
-      <form action={addMetricDefinitionAction} className="ms-addrow-form">
+      <form
+        action={addMetricDefinitionAction}
+        className="ms-addrow-form"
+        onSubmit={(e) => {
+          if (!pending) return;
+          e.preventDefault();
+          const fd = new FormData(e.currentTarget);
+          const name = String(fd.get("name") ?? "").trim();
+          if (!name) return;
+          pending.add([{ name, unit: String(fd.get("unit") ?? "").trim(), group: String(fd.get("category") ?? "other"), cadence: "daily", source: "custom" }]);
+          e.currentTarget.reset();
+        }}
+      >
         <input type="hidden" name="clientId" value={clientId} />
         {phaseId != null && <input type="hidden" name="phaseId" value={phaseId} />}
         {/* Every column starts daily; the Daily / Weekly / Monthly toggle on
@@ -113,7 +128,11 @@ export default function MetricLibrary({
             <span className="ad-microlabel">Metric library</span>
             <form
               action={addMetricsFromLibraryAction}
-              onSubmit={() => {
+              onSubmit={(e) => {
+                if (pending) {
+                  e.preventDefault();
+                  pending.add(selected.map((s) => ({ ...s, source: "library" as const })));
+                }
                 setPicked({});
                 setOpen(false);
               }}
@@ -122,7 +141,7 @@ export default function MetricLibrary({
               {phaseId != null && <input type="hidden" name="phaseId" value={phaseId} />}
               <input type="hidden" name="picks" value={JSON.stringify(selected)} />
               <button type="submit" className="ad-btn-primary" disabled={selected.length === 0}>
-                {selected.length === 0 ? "Pick some metrics" : `Add ${selected.length} to check-in`}
+                {selected.length === 0 ? "Pick some metrics" : `Add ${selected.length}`}
               </button>
             </form>
           </div>
@@ -149,6 +168,14 @@ export default function MetricLibrary({
                   </button>
                   <div className="ml-items">
                     {pack.items.map((item) => {
+                      if (pending?.adds.some((a) => a.name.toLowerCase() === item.name.toLowerCase())) {
+                        return (
+                          <span key={item.name} className="ml-item added" title="Added, waiting for Apply">
+                            {item.name}
+                            <em>to apply</em>
+                          </span>
+                        );
+                      }
                       if (item.already) {
                         return (
                           <span key={item.name} className="ml-item added" title="Already on this client's check-in">

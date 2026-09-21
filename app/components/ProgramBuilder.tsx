@@ -397,6 +397,16 @@ export default function ProgramBuilder({
                 remainingWeeks={remainingWeeks}
                 columnCount={columns.length + 2}
                 footer={
+                  // A finished session is history: what the client did is
+                  // what it was, so nothing new is added to it.
+                  sessionDone ? (
+                    <tr className="add-exercise-row">
+                      <td aria-hidden="true"></td>
+                      <td colSpan={columns.length + 2} className="pb-done-note">
+                        Session completed. Exercises can&rsquo;t be added to it any more.
+                      </td>
+                    </tr>
+                  ) : (
                   <AddExerciseRow
                     columns={columns.map((c) => ({ id: c.id, kind: c.kind, key: c.key, label: c.label }))}
                     // "Other" only earns a tile when something is filed there.
@@ -404,6 +414,7 @@ export default function ProgramBuilder({
                     groups={MUSCLE_GROUPS.filter((g) => g.slug !== "cardio" && (g.slug !== "other" || (exercisesByGroup.other?.length ?? 0) > 0))}
                     exercisesByGroup={exercisesByGroup}
                   />
+                  )
                 }
                 rows={assignments.map((a) => {
                   const weekGroups = getLogsForAssignmentByWeek(a.id);

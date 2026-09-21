@@ -907,9 +907,27 @@ Look: `/client` → Training.
 
 - [ ] Tracked metrics save as they are made (no Apply bar). After any change that landed (a metric added or removed, daily ⇄ weekly, its group, the check-in day) a green "✓ Saved · …" shows at the foot of the card for four seconds: "in this phase, not in their app until it is live" on a draft or scheduled phase, "their check-in asks for this now" on the live one.
 
+## 125 · Measurements: tracked metrics on the Apply bar — ✅ LIVE 21 Sep
+
+- [ ] Tracked metrics are edited as a draft, like a session or the nutrition targets. Adding (typed or from the library), removing (× , ↺ to keep) and Daily ⇄ Weekly queue on the navy bar at the card's foot, which counts rather than lists: "6 changes · 5 metrics added · 1 removed". Discard puts it back; Apply saves it all at once, then the green "Saved" shows.
+- [ ] Queued rows show in their group straight away, tinted with "New · not saved yet"; a removed one is struck through. A group that gets a new metric opens and stays open. The draft is per phase: switching phase drops it.
+- [ ] The check-in day and "start from the running phase" still save at once.
+
+## 126 · shadcn/ui trial page — LOCAL ONLY, a trial, not for live
+
+- [ ] `/admin/shadcn-trial` (not linked anywhere): a ⋯ dropdown menu, a dialog and toasts from shadcn/ui, themed to the design system. Tailwind (theme + utilities, no preflight) is loaded by that page only, through `postcss.config.mjs` and `app/admin/shadcn-trial/trial.css`; `globals.css` and every real screen are untouched. New packages: tailwindcss, @tailwindcss/postcss, radix-ui, sonner, clsx, tailwind-merge, class-variance-authority.
+
 ## 118 · Progress pictures: "What we can improve" on the client's side too — ✅ LIVE 21 Sep
 
 - [ ] The coach's feedback on a sheet read "What to improve" in the client's app (the coach's own field already said "What we can improve"). Now the same words on both sides: a shared next step rather than a list of what is wrong with how someone looks.
+
+## 127 · Builder: a completed session takes no new exercises — ✅ LIVE 21 Sep
+
+- [ ] Once the client has finished a session (every set logged, every cardio ticked), "Add exercise…" is replaced by a quiet line saying so, and the server refuses an add. Editing, notes and the rest stay as they were.
+
+## 128 · Measurements: a Graph view of the logged data — ✅ LIVE 21 Sep
+
+- [ ] Logged data shows as **Table · Graph · Feed**. Graph is one big chart of one metric, picked from a list beside it: the metrics under their categories (each category folds), every one with its latest figure. Over the chart: the latest figure large, the change since the first reading on screen (green or orange by the metric’s good direction), the average and how many periods were logged. Hovering reads any day: the figure and date swap to that reading. A skipped day is a gap in the line; a rating out of N sits on its full 0–N scale. Daily / Weekly and the phase switch apply as they do to the table.
 
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
