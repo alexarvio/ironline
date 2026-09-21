@@ -6115,6 +6115,10 @@ export function listClientPhases(clientId: number): ClientPhase[] {
     .sort((a, b) => (a.start_week < b.start_week ? -1 : a.start_week > b.start_week ? 1 : 0));
 }
 
+export function getPhaseById(phaseId: number): ClientPhase | null {
+  return getData().client_phases.find((p) => p.id === phaseId) ?? null;
+}
+
 export function getClientIdForPhase(phaseId: number): number | null {
   return getData().client_phases.find((p) => p.id === phaseId)?.client_id ?? null;
 }
@@ -6676,6 +6680,43 @@ export function deployPhaseNow(phaseId: number): boolean {
     }
   );
   return true;
+}
+
+/**
+ * Why a draft can't go out yet: there is nothing in it for the client.
+ * A programme with no exercises or cardio, nutrition with no targets, a
+ * lifestyle phase asking for no metrics. Null when it has content (or is not
+ * a draft at all).
+ */
+export function phaseEmptyReason(phaseId: number): string | null {
+  const data = getData();
+  const phase = data.client_phases.find((p) => p.id === phaseId);
+  if (!phase) return null;
+  const program = phase.program_id ? data.training_programs.find((p) => p.id === phase.program_id) : null;
+  const isDraft = program ? program.status !== "deployed" && !program.scheduled_at : !!phase.draft;
+  if (!isDraft) return null;
+  if (phase.track === "training") return program ? programEmptyReason(program.id) : "Nothing in it yet: add its sessions on the Training tab first.";
+  if (phase.track === "nutrition") {
+    const t = phase.nutrition?.day_targets.training;
+    const kcal = t ? (t.protein ?? 0) * 4 + (t.carbs ?? 0) * 4 + (t.fats ?? 0) * 9 : 0;
+    return kcal > 0 ? null : "Nothing in it yet: set its targets on the Nutrition tab first.";
+  }
+  const asks = data.metric_definitions.some((m) => m.client_id === phase.client_id && m.phase_id === phase.id);
+  return asks ? null : "Nothing in it yet: add the metrics it asks for on the Measurements tab first.";
+}
+
+/** A programme with no exercise or cardio in any of its weeks: why it can't go out. */
+export function programEmptyReason(programId: number): string | null {
+  const data = getData();
+  const program = data.training_programs.find((p) => p.id === programId);
+  if (!program) return null;
+  const dayIds = new Set(
+    data.program_days
+      .filter((d) => d.client_id === program.client_id && d.week_number >= program.start_week && d.week_number < program.start_week + program.total_weeks)
+      .map((d) => d.id)
+  );
+  const built = data.workout_assignments.some((a) => dayIds.has(a.program_day_id)) || (data.cardio_entries ?? []).some((c) => dayIds.has(c.program_day_id));
+  return built ? null : "Nothing in it yet: add its sessions on the Training tab first.";
 }
 
 /** Back to a draft. Only before the client has been in it. */
@@ -7911,6 +7952,8 @@ export type PlanPhaseRow = {
   start_week: string;
   end_week: string;
   program: { id: number; status: PlanProgramStatus; totalWeeks: number; loggedWeeks: number[] } | null;
+  /** A draft with nothing in it yet, and so nothing to send out: why. */
+  emptyReason: string | null;
 };
 export type PlanProgramOption = { id: number; name: string; status: PlanProgramStatus; weeks: number; linked: boolean };
 export type PlanGoalRow = {
@@ -7948,6 +7991,7 @@ export function getPlanData(clientId: number) {
       program: program
         ? { id: program.id, status: programStatus(program), totalWeeks: program.total_weeks, loggedWeeks: programLoggedWeekIndexes(program.id) }
         : null,
+      emptyReason: phaseEmptyReason(p.id),
     };
   });
   const linked = new Set(phases.map((p) => p.program?.id).filter((x): x is number => x != null));

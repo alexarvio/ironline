@@ -3,9 +3,8 @@
 import { useState } from "react";
 import type { ClientPhase } from "../lib/db";
 import { PhaseDialog } from "./PhaseDialogButton";
-import SchedulePhaseDialog from "./SchedulePhaseDialog";
 import DeployNowDialog from "./DeployNowDialog";
-import { deployPhaseNowAction } from "../lib/actions";
+import { deployPhaseNowAction, schedulePhaseOnItsDatesAction } from "../lib/actions";
 import { phaseRange, phaseWeekIndex, phaseWeeks } from "../lib/phases";
 import PhaseHeader, { usePhases, type PhaseOption } from "./PhaseHeader";
 
@@ -34,12 +33,15 @@ export default function LifestylePhaseHeader({
   today,
   phases,
   selectedId,
+  emptyReason = null,
 }: {
   clientId: number;
   today: string;
   phases: RailPhase[];
   /** Decided on the server, so the metrics below are the ones it asks for. */
   selectedId: number | null;
+  /** The selected draft asks for nothing yet, so it can't go out: why. */
+  emptyReason?: string | null;
 }) {
   const thisWeek = mondayOf(today);
   const options: PhaseOption[] = phases.map((p) => ({
@@ -58,8 +60,8 @@ export default function LifestylePhaseHeader({
 
   const [editing, setEditing] = useState<RailPhase | null>(null);
   const [adding, setAdding] = useState(false);
-  const [scheduling, setScheduling] = useState<{ phase: RailPhase; from: string | null } | null>(null);
-  // Deploy now / Make it live: straight out this week, no dates to pick.
+  // Schedule it / Make it live: out on its dates, or live this week, from
+  // one confirm.
   const [deploying, setDeploying] = useState<RailPhase | null>(null);
   const runningNow = phases.find((p) => p.status === "now") ?? null;
   const nextSet = (id: number) => phases.filter((p) => p.id !== id && p.status === "next").sort((a, b) => a.start_week.localeCompare(b.start_week))[0] ?? null;
@@ -77,22 +79,20 @@ export default function LifestylePhaseHeader({
         currentId={current?.id ?? null}
         onSelect={select}
         onNew={() => setAdding(true)}
-        secondary={
-          phase && phase.status === "draft" ? (
-            // For later: its dates, in the phase dialog.
-            <button type="button" className="ph-minor" onClick={() => setScheduling({ phase, from: null })}>
-              Schedule
-            </button>
-          ) : undefined
-        }
         primary={
           phase && phase.status === "draft" ? (
-            <button type="button" className="ph-primary" onClick={() => setDeploying(phase)}>
-              Deploy now
+            <button
+              type="button"
+              className="ph-primary"
+              onClick={() => setDeploying(phase)}
+              disabled={!!emptyReason && phase.id === selectedId}
+              title={phase.id === selectedId ? emptyReason ?? undefined : undefined}
+            >
+              {phase.start_week > thisWeek ? "Schedule it" : "Make it live"}
             </button>
           ) : phase && phase.status === "next" ? (
             <button type="button" className="ph-primary" onClick={() => setDeploying(phase)}>
-              Make it live
+              Make it live now
             </button>
           ) : undefined
         }
@@ -118,17 +118,11 @@ export default function LifestylePhaseHeader({
           today={today}
           running={runningNow && runningNow.id !== deploying.id ? { name: runningNow.name, start_week: runningNow.start_week } : null}
           next={nextSet(deploying.id)}
-          onConfirm={() => deployPhaseNowAction(deploying.id)}
+          startsOn={deploying.status === "draft" && deploying.start_week > thisWeek ? deploying.start_week : null}
+          onConfirm={() =>
+            deploying.status === "draft" && deploying.start_week > thisWeek ? schedulePhaseOnItsDatesAction(deploying.id) : deployPhaseNowAction(deploying.id)
+          }
           onClose={() => setDeploying(null)}
-        />
-      )}
-      {scheduling && (
-        <SchedulePhaseDialog
-          phase={scheduling.phase}
-          today={today}
-          others={others}
-          defaultStart={scheduling.from}
-          onClose={() => setScheduling(null)}
         />
       )}
       {editing && <PhaseDialog clientId={clientId} phase={editing} today={today} others={others} onClose={() => setEditing(null)} />}

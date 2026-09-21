@@ -58,6 +58,8 @@ import {
   addMetricDefinition,
   copyPhaseMetrics,
   deployPhaseNow,
+  phaseEmptyReason,
+  getPhaseById,
   addMetricTemplateCategory,
   addMetricTemplateItem,
   addPhotoSlot,
@@ -1983,7 +1985,21 @@ export async function addClientPhaseAction(formData: FormData) {
 export async function schedulePhaseAction(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id || !(await coachForClient(getClientIdForPhase(id)))) return;
+  if (phaseEmptyReason(id)) return;
   schedulePhase(id, String(formData.get("name") ?? ""), String(formData.get("start") ?? ""), String(formData.get("end") ?? ""));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// A draft out on the dates it already has: scheduled for its start week.
+// (One whose week has come goes out with deployPhaseNowAction instead.)
+export async function schedulePhaseOnItsDatesAction(id: number) {
+  const phaseId = Number(id);
+  if (!Number.isInteger(phaseId) || !(await coachForClient(getClientIdForPhase(phaseId)))) return;
+  if (phaseEmptyReason(phaseId)) return;
+  const phase = getPhaseById(phaseId);
+  if (!phase) return;
+  schedulePhase(phaseId, phase.name, phase.start_week, phase.end_week);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1991,6 +2007,8 @@ export async function schedulePhaseAction(formData: FormData) {
 // Straight out, no dates to pick: the phase goes live this week.
 export async function deployPhaseNowAction(id: number) {
   if (!Number.isInteger(id) || !(await coachForClient(getClientIdForPhase(id)))) return;
+  // Nothing in it yet: nothing to send.
+  if (phaseEmptyReason(id)) return;
   deployPhaseNow(id);
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -2004,7 +2022,8 @@ export async function saveAndSchedulePhaseAction(formData: FormData) {
   const fields = readPhaseForm(formData);
   if (!id || !fields || !(await coachForClient(getClientIdForPhase(id)))) return;
   updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1");
-  schedulePhase(id, fields.name, fields.start, fields.end);
+  // The edits are kept; an empty draft just doesn't go out.
+  if (!phaseEmptyReason(id)) schedulePhase(id, fields.name, fields.start, fields.end);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -2014,7 +2033,7 @@ export async function saveAndDeployPhaseNowAction(formData: FormData) {
   const fields = readPhaseForm(formData);
   if (!id || !fields || !(await coachForClient(getClientIdForPhase(id)))) return;
   updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1");
-  deployPhaseNow(id);
+  if (!phaseEmptyReason(id)) deployPhaseNow(id);
   revalidatePath("/admin");
   revalidatePath("/client");
 }

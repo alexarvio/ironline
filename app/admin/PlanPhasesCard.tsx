@@ -476,6 +476,18 @@ export default function PlanPhasesCard({
               : undefined
           }
           program={dialog.phase?.program ? { status: dialog.phase.program.status, totalWeeks: dialog.phase.program.totalWeeks, loggedWeeks: dialog.phase.program.loggedWeeks } : undefined}
+          emptyReason={dialog.phase?.emptyReason ?? null}
+          open={
+            dialog.phase
+              ? dialog.phase.track === "training"
+                ? dialog.phase.program
+                  ? { href: `/admin?client=${clientId}&tab=training&phase=${dialog.phase.program.id}`, label: "Open in Training" }
+                  : null
+                : dialog.phase.track === "nutrition"
+                  ? { href: `/admin?client=${clientId}&tab=nutrition&phase=${dialog.phase.id}`, label: "Open in Nutrition" }
+                  : { href: `/admin?client=${clientId}&tab=measurements&phase=${dialog.phase.id}`, label: "Open in Measurements" }
+              : null
+          }
           defaultTrack={dialog.track}
           defaultStart={thisWeek}
           defaultEnd={addWeeks(thisWeek, 3)}

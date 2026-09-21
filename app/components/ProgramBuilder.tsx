@@ -35,6 +35,7 @@ import {
   weekStart,
   ProgramDay,
   TrainingProgram,
+  programEmptyReason,
 } from "../lib/queries";
 import { coachIdOfClient } from "../lib/tenancy";
 import AssignmentFieldInput, { GymWeightInput } from "./AssignmentFieldInput";
@@ -771,6 +772,7 @@ export default function ProgramBuilder({
             },
           }
         : null,
+      emptyReason: status === "draft" && !program.scheduled_at ? programEmptyReason(program.id) : null,
       defaultWeek: status === "live" ? getProgramCurrentWeekIndex(program) : 1,
       weekCards,
       copyFromWeek,

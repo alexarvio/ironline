@@ -8218,6 +8218,11 @@ label.pl-dlg-end.bad .pl-dlg-date, label.pl-dlg-end.bad small { color: #b3471d; 
 
 /* Length: what is picked, and four lengths that set the end from the start. */
 .pl-dlg-length .pl-dlg-days { font-weight: 600; color: #5b6474; }
+/* The phase's own tab, and why an empty draft can't go out yet. */
+.pl-dlg-content { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 12px; border: 1px solid #e3e8ef; border-radius: 10px; background: #f4f6fa; font-size: 12.5px; line-height: 1.45; color: #313851; }
+.pl-dlg-content.warn { border-color: #f3d9cc; background: #fdf3ee; color: #b3471d; }
+.pl-dlg-content a { flex: none; font-weight: 800; color: #1e3a6e; text-decoration: none; white-space: nowrap; }
+.pl-dlg-content a:hover { text-decoration: underline; }
 .pl-dlg-length { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .pl-dlg-length > div:first-child { display: flex; flex-direction: column; gap: 2px; }
 .pl-dlg-length b { font-size: 13px; font-weight: 800; color: #141a24; }

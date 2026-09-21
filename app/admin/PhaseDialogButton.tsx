@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import { addClientPhaseAction, removeClientPhaseAction, saveAndDeployPhaseNowAction, saveAndSchedulePhaseAction, schedulePhaseAction, updateClientPhaseAction } from "../lib/actions";
 import type { ClientPhase, PhaseTrack } from "../lib/db";
 import PhaseCalendar, { isoWeek, mondayOf, monthOf, type CalMonth, type PlannedRange } from "./PhaseCalendar";
@@ -86,6 +87,10 @@ export type PhaseDialogProps = {
   chooseTrack?: boolean;
   /** "schedule": the last step for a draft — named, dated and sent out. */
   mode?: "edit" | "schedule";
+  /** A draft with nothing in it yet can't go out: why (Plan tab). */
+  emptyReason?: string | null;
+  /** Where the phase's content is built, with the phase open (Plan tab). */
+  open?: { href: string; label: string } | null;
   /** Scheduling a training phase: its length is its programme's, so only the start is picked. */
   lockedWeeks?: number | null;
   /** Start on a Monday, end on a Sunday, so a phase is whole weeks — what the
@@ -110,6 +115,8 @@ export function PhaseDialog({
   programs = [],
   chooseTrack = false,
   mode = "edit",
+  emptyReason = null,
+  open = null,
   lockedWeeks = null,
   snapToWeeks = true,
   onClose,
@@ -341,6 +348,19 @@ export function PhaseDialog({
               <input ref={nameRef} name="name" type="text" className="pl-dlg-input" placeholder="Name this phase" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} />
             </label>
 
+            {/* Where the phase's content is built, and, for a draft with
+                nothing in it yet, why it can't go out. */}
+            {(open || (editing && isDraft && emptyReason)) && (
+              <div className={`pl-dlg-content${editing && isDraft && emptyReason ? " warn" : ""}`}>
+                <span>{editing && isDraft && emptyReason ? emptyReason : "Its content is built on its own tab."}</span>
+                {open && (
+                  <Link href={open.href} onClick={onClose}>
+                    {open.label} →
+                  </Link>
+                )}
+              </div>
+            )}
+
             {/* Two fields, one armed: the ring says which end the next click
                 in the calendar sets. Either can be typed as well: a whole
                 date selects it in the calendar. */}
@@ -533,23 +553,33 @@ export function PhaseDialog({
                   </button>
                   {editing && isDraft ? (
                     // A draft goes out from here, the same dialog wherever the
-                    // phase was clicked. Each button saves what was changed
-                    // above first, then sends it: on its dates (scheduled, or
-                    // live if its week has come), or now, from this week.
-                    // Save draft is the main button, since a draft is opened
-                    // mostly to change it; the most drastic (now, whatever
-                    // its dates) sits furthest from it.
+                    // phase was clicked, saving what was changed above first:
+                    // on its dates (Schedule it), or now if its start week
+                    // has come (Make it live). Not while there is nothing in
+                    // it. Save draft is the main button: a draft is opened
+                    // mostly to change it.
                     <>
-                      {startWeek > mondayOf(today) && (
-                        <button type="submit" className="pl-dlg-cancel" disabled={!ready} formAction={saveAndDeployPhaseNowAction}>
-                          Deploy now
-                        </button>
-                      )}
-                      <button type="submit" className="pl-dlg-cancel" disabled={!ready} formAction={saveAndSchedulePhaseAction}>
-                        {startWeek && startWeek <= today ? "Make it live" : "Schedule it"}
+                      <button
+                        type="submit"
+                        className="pl-dlg-cancel"
+                        disabled={!ready || !!emptyReason}
+                        title={emptyReason ?? undefined}
+                        formAction={startWeek && startWeek <= mondayOf(today) ? saveAndDeployPhaseNowAction : saveAndSchedulePhaseAction}
+                      >
+                        {startWeek && startWeek <= mondayOf(today) ? "Make it live" : "Schedule it"}
                       </button>
                       <button type="submit" className="pl-dlg-save" disabled={!ready}>
                         Save draft
+                      </button>
+                    </>
+                  ) : editing && savedState === "scheduled" ? (
+                    // Scheduled: it can start early, from this week.
+                    <>
+                      <button type="submit" className="pl-dlg-cancel" disabled={!ready} formAction={saveAndDeployPhaseNowAction}>
+                        Make it live now
+                      </button>
+                      <button type="submit" className="pl-dlg-save" disabled={!ready}>
+                        Save
                       </button>
                     </>
                   ) : (

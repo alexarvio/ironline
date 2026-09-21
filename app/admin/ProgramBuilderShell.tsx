@@ -9,12 +9,20 @@ import ProgramNotePeek from "./ProgramNotePeek";
 import PhaseHeader, { usePhases, type PhaseOption, type PhaseStatus } from "./PhaseHeader";
 import ProgramDatesDialog from "./ProgramDatesDialog";
 import DeployNowDialog from "./DeployNowDialog";
+
+// The Monday of a YYYY-MM-DD day, as YYYY-MM-DD.
+const mondayOf = (date: string) => {
+  const d = new Date(`${date}T00:00:00`);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 import { PhaseDialog, type PhaseNeighbour, type PhaseProgramInfo } from "./PhaseDialogButton";
 import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
 import {
   cancelProgramScheduleAction,
   createProgramAction,
   deployPhaseNowAction,
+  schedulePhaseOnItsDatesAction,
   deployProgramAction,
   removeProgramAction,
   removeProgramWeekAction,
@@ -51,6 +59,8 @@ export type BuilderProgram = {
   liveWeek: number | null;
   /** Its phase on the Plan tab, once it has one: what "Edit dates" edits. */
   phase: { phase: ClientPhase; program: PhaseProgramInfo } | null;
+  /** A draft with nothing in it yet can't go out: why. */
+  emptyReason?: string | null;
   defaultWeek: number;
   weekCards: WeekCard[];
   // Per week (1-based within the program): the seven day cards, rendered
@@ -124,7 +134,8 @@ export default function ProgramBuilderShell({
   const [expand, setExpand] = useState({ signal: 0, open: false });
   // "Edit dates" edits the phase; "Schedule it" sends the draft out.
   const [dates, setDates] = useState<false | "edit" | "schedule">(false);
-  // Deploy now: a draft straight out this week, no dates to pick.
+  // Schedule it / Make it live (a dated draft) and Make it live now (a
+  // scheduled one), from one confirm.
   const [deploying, setDeploying] = useState(false);
   const [busy, run] = useTransition();
   // Kg or lbs for reading weights; remembered in this browser.
@@ -215,32 +226,29 @@ export default function ProgramBuilderShell({
               Cancel
             </button>
           ) : program.state === "draft" ? (
-            <>
-              {/* For later: its dates, in the phase dialog. */}
-              <button type="button" className="ph-minor" onClick={() => setDates("schedule")} disabled={busy}>
-                Schedule
-              </button>
-              <ConfirmDeleteButton
-                action={removeProgramAction}
-                hiddenFields={{ programId: program.id, weekLinkBase }}
-                label={`Delete draft ${program.name || "programme"}`}
-              />
-            </>
+            <ConfirmDeleteButton
+              action={removeProgramAction}
+              hiddenFields={{ programId: program.id, weekLinkBase }}
+              label={`Delete draft ${program.name || "programme"}`}
+            />
           ) : undefined
         }
         primary={
           program.state === "draft" ? (
-            <button type="button" className="ph-primary" onClick={() => setDeploying(true)} disabled={busy}>
-              Deploy now
-            </button>
-          ) : program.state === "scheduled" ? (
+            // With dates (a Plan-tab phase): out on them, from one confirm.
+            // Without: the dialog that names it and picks when it goes out.
             <button
               type="button"
               className="ph-primary"
-              onClick={() => post(deployProgramAction, { programId: program.id })}
-              disabled={busy}
+              onClick={() => (program.phase ? setDeploying(true) : setDates("schedule"))}
+              disabled={busy || !!program.emptyReason}
+              title={program.emptyReason ?? undefined}
             >
-              Make it live
+              {program.phase && program.phase.phase.start_week <= mondayOf(today) ? "Make it live" : "Schedule it"}
+            </button>
+          ) : program.state === "scheduled" ? (
+            <button type="button" className="ph-primary" onClick={() => setDeploying(true)} disabled={busy}>
+              Make it live now
             </button>
           ) : undefined
         }
@@ -266,7 +274,12 @@ export default function ProgramBuilderShell({
             return later ? { name: later.name, start_week: later.start as string } : null;
           })()}
           blocked={program.name?.trim() ? undefined : "A programme needs a name before it goes to the client. Give it one under Edit dates."}
+          startsOn={program.state === "draft" && program.phase && program.phase.phase.start_week > mondayOf(today) ? program.phase.phase.start_week : null}
           onConfirm={() => {
+            // A dated draft whose start is later: scheduled on its dates.
+            if (program.state === "draft" && program.phase && program.phase.phase.start_week > mondayOf(today)) {
+              return schedulePhaseOnItsDatesAction(program.phase.phase.id);
+            }
             if (program.phase) return deployPhaseNowAction(program.phase.phase.id);
             const fd = new FormData();
             fd.set("programId", String(program.id));
@@ -278,28 +291,14 @@ export default function ProgramBuilderShell({
 
       {dates &&
         (program.phase ? (
-          dates === "schedule" && program.state === "draft" ? (
-            // Named, dated and sent out: blue while it is scheduled, and its
-            // length is the programme's, so a click moves the whole span.
-            <PhaseDialog
-              mode="schedule"
-              clientId={clientId}
-              phase={program.phase.phase}
-              today={today}
-              others={others}
-              lockedWeeks={program.totalWeeks}
-              onClose={() => setDates(false)}
-            />
-          ) : (
-            <PhaseDialog
-              clientId={clientId}
-              phase={program.phase.phase}
-              program={program.phase.program}
-              today={today}
-              others={others}
-              onClose={() => setDates(false)}
-            />
-          )
+          <PhaseDialog
+            clientId={clientId}
+            phase={program.phase.phase}
+            program={program.phase.program}
+            today={today}
+            others={others}
+            onClose={() => setDates(false)}
+          />
         ) : (
           <ProgramDatesDialog programId={program.id} name={program.name} onClose={() => setDates(false)} />
         ))}

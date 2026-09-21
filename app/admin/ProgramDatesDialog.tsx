@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { deployProgramAction, renameProgramAction, scheduleProgramDeployAction } from "../lib/actions";
+import { renameProgramAction, scheduleProgramDeployAction } from "../lib/actions";
 import { phaseChrome, TRACK_PALETTE } from "./phaseChrome";
 
 // A draft programme's name and when it goes out, in one dialog.
@@ -37,7 +37,7 @@ export default function ProgramDatesDialog({
   }, [onClose]);
 
   const named = name.trim().length > 0;
-  const go = (mode: "save" | "schedule" | "deploy") =>
+  const go = (mode: "save" | "schedule") =>
     run(async () => {
       if (name.trim() !== savedName.trim()) {
         const fd = new FormData();
@@ -51,11 +51,6 @@ export default function ProgramDatesDialog({
         fd.set("date", date);
         fd.set("time", time);
         await scheduleProgramDeployAction(fd);
-      }
-      if (mode === "deploy") {
-        const fd = new FormData();
-        fd.set("programId", String(programId));
-        await deployProgramAction(fd);
       }
       onClose();
     });
@@ -111,15 +106,6 @@ export default function ProgramDatesDialog({
           <div className="pl-dlg-actions">
             <button type="button" className="pl-dlg-cancel" onClick={onClose} disabled={busy}>
               Cancel
-            </button>
-            <button
-              type="button"
-              className="pl-dlg-cancel"
-              onClick={() => go("deploy")}
-              disabled={busy || !named}
-              title={named ? undefined : "Name it first"}
-            >
-              Deploy now
             </button>
             <button
               type="button"

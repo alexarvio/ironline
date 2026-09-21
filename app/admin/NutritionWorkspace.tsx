@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import {
   applySupplementChangesAction,
   deployPhaseNowAction,
+  schedulePhaseOnItsDatesAction,
   draftNutritionPhaseAction,
   saveCoachNutritionNoteAction,
   saveNutritionTargetsAction,
@@ -14,7 +15,6 @@ import type { LoggedDaysView } from "../lib/queries";
 import NutritionLoggedDays from "./NutritionLoggedDays";
 import { PhaseDialog } from "./PhaseDialogButton";
 import DragList from "../components/DragList";
-import SchedulePhaseDialog from "./SchedulePhaseDialog";
 import DeployNowDialog from "./DeployNowDialog";
 import { phaseRange, phaseWeekIndex, phaseWeeks } from "../lib/phases";
 import PhaseHeader, { usePhases, type PhaseOption } from "./PhaseHeader";
@@ -233,9 +233,11 @@ function TargetsCard({
   // Deploying a draft schedules it when it starts in a later week, and puts
   // it live when its start week has come.
   const [publishing, startPublish] = useTransition();
-  const [scheduling, setScheduling] = useState<string | null | false>(false);
-  // Deploy now / Make it live: straight out this week, no dates to pick.
+  // Schedule it / Make it live: out on its dates, or live this week, from
+  // one confirm.
   const [deploying, setDeploying] = useState(false);
+  const startsLater = phase.phase.start_week > mondayOf(p.today);
+  const scheduleIt = phase.status === "draft" && startsLater;
   const runningNow = p.phases.find((x) => x.id !== phase.id && x.id !== 0 && x.status === "now") ?? null;
   const nextSet = p.phases.filter((x) => x.id !== phase.id && x.status === "next").sort((a, b) => a.phase.start_week.localeCompare(b.phase.start_week))[0] ?? null;
   const backToDraft = () => startPublish(() => draftNutritionPhaseAction(phase.id));
@@ -250,16 +252,6 @@ function TargetsCard({
 
   return (
     <>
-      {scheduling !== false && (
-        <SchedulePhaseDialog
-          phase={phase.phase}
-          today={p.today}
-          others={p.phases.filter((x) => x.id !== 0).map((x) => ({ id: x.id, track: x.phase.track, name: x.name, start_week: x.phase.start_week, end_week: x.phase.end_week }))}
-          defaultStart={scheduling}
-          onClose={() => setScheduling(false)}
-        />
-      )}
-
       {deploying && (
         <DeployNowDialog
           track="nutrition"
@@ -268,8 +260,9 @@ function TargetsCard({
           today={p.today}
           running={runningNow ? { name: runningNow.name, start_week: runningNow.phase.start_week } : null}
           next={nextSet ? { name: nextSet.name, start_week: nextSet.phase.start_week } : null}
+          startsOn={scheduleIt ? phase.phase.start_week : null}
           blocked={blocked}
-          onConfirm={() => deployPhaseNowAction(phase.id)}
+          onConfirm={() => (scheduleIt ? schedulePhaseOnItsDatesAction(phase.id) : deployPhaseNowAction(phase.id))}
           onClose={() => setDeploying(false)}
         />
       )}
@@ -288,21 +281,16 @@ function TargetsCard({
             <button type="button" className="ph-minor" onClick={backToDraft} disabled={publishing}>
               Back to draft
             </button>
-          ) : phase.status === "draft" ? (
-            // For later: its dates, in the phase dialog.
-            <button type="button" className="ph-minor" onClick={() => setScheduling(null)} disabled={publishing || !!blocked} title={blocked}>
-              Schedule
-            </button>
           ) : undefined
         }
         primary={
           phase.status === "draft" ? (
             <button type="button" className="ph-primary" onClick={() => setDeploying(true)} disabled={publishing || !!blocked} title={blocked}>
-              Deploy now
+              {startsLater ? "Schedule it" : "Make it live"}
             </button>
           ) : phase.status === "next" ? (
             <button type="button" className="ph-primary" onClick={() => setDeploying(true)} disabled={publishing}>
-              Make it live
+              Make it live now
             </button>
           ) : undefined
         }

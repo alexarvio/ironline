@@ -5,10 +5,11 @@ import { createPortal } from "react-dom";
 import type { PhaseTrack } from "../lib/db";
 import { phaseChrome, TRACK_LABEL, TRACK_PALETTE } from "./phaseChrome";
 
-// A draft (or scheduled) phase straight out, no dates to pick: it goes live
-// this week and keeps its length. What happens to the phase running now on
-// the same track is said before anything goes out (deployPhaseNow).
-// Scheduling for later stays behind the phase's Schedule button.
+// Sending a phase out, from a tab's header, with one confirm and no dates to
+// pick. A draft whose start is in a later week is scheduled on its own dates
+// (startsOn); one whose week has come, or a scheduled one made live early,
+// goes live this week and keeps its length, and what happens to the phase
+// running on the same track is said before anything goes out (deployPhaseNow).
 
 const DAY = 86400000;
 const parse = (s: string) => new Date(`${s}T00:00:00`);
@@ -26,12 +27,15 @@ export default function DeployNowDialog({
   today,
   running,
   next = null,
+  startsOn = null,
   blocked,
   onConfirm,
   onClose,
 }: {
   track: PhaseTrack;
   name: string;
+  /** Scheduling on its own dates: the Monday it starts (a later week). */
+  startsOn?: string | null;
   /** How long it runs from this week. */
   weeks: number;
   today: string;
@@ -51,20 +55,22 @@ export default function DeployNowDialog({
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const start = mondayOf(today);
+  // Scheduled for a later week, on its own dates; otherwise live now.
+  const later = !!startsOn && startsOn > isoOf(mondayOf(today));
+  const start = later ? parse(startsOn!) : mondayOf(today);
   const full = new Date(start.getTime() + (weeks * 7 - 1) * DAY);
   // A nutrition or lifestyle phase stops short of the next one; a programme
   // keeps its weeks, and the next one takes over when it starts.
   const nextDay = next ? parse(next.start_week) : null;
-  const cut = !!nextDay && track !== "training" && full >= nextDay;
+  const cut = !later && !!nextDay && track !== "training" && full >= nextDay;
   const end = cut && nextDay ? new Date(nextDay.getTime() - DAY) : full;
   const shown = Math.max(1, Math.round((end.getTime() - start.getTime() + DAY) / (7 * DAY)));
   const lastSunday = new Date(start.getTime() - DAY);
-  const chrome = phaseChrome(track, "live");
+  const chrome = phaseChrome(track, later ? "scheduled" : "live");
   const palette = TRACK_PALETTE[track];
   const what = track === "training" ? "this programme" : track === "nutrition" ? "these nutrition targets" : "this lifestyle phase";
-  const handsOver = !next || !nextDay || nextDay > full ? null : `${next.name} takes over on ${fmt(nextDay)}, as planned.`;
-  const makesRoom = !running
+  const handsOver = later || !next || !nextDay || nextDay > full ? null : `${next.name} takes over on ${fmt(nextDay)}, as planned.`;
+  const makesRoom = later || !running
     ? null
     : track === "training"
       ? `It replaces ${running.name} as the programme the client trains.`
@@ -74,14 +80,14 @@ export default function DeployNowDialog({
 
   return createPortal(
     <div className="pl-dlg-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="pl-dlg pl-move" role="dialog" aria-modal="true" aria-label={`Deploy ${name} now`}>
+      <div className="pl-dlg pl-move" role="dialog" aria-modal="true" aria-label={later ? `Schedule ${name}` : `Put ${name} live`}>
         <header className="pl-dlg-head">
-          <h2>Deploy {name} now</h2>
+          <h2>{later ? `Schedule ${name}` : `Put ${name} live`}</h2>
           <span className="pl-track-tag" style={{ background: palette.tint, color: palette.ink }}>
             {TRACK_LABEL[track]}
           </span>
           <span className="pl-dlg-state" style={{ background: chrome.chipBg, color: chrome.chipInk }}>
-            Live
+            {later ? "Scheduled" : "Live"}
           </span>
         </header>
         <div className="pl-dlg-body">
@@ -89,7 +95,7 @@ export default function DeployNowDialog({
             <div className="pl-move-row">
               <span className="pl-dlg-label">Goes live</span>
               <b className="pl-move-now" style={{ gridColumn: "2 / -1", color: chrome.edge }}>
-                Now · from {fmt(start)}
+                {later ? fmt(start) : `Now · from ${fmt(start)}`}
               </b>
             </div>
             <div className="pl-move-row">
@@ -100,7 +106,10 @@ export default function DeployNowDialog({
             </div>
           </div>
           <p className={`pl-move-note${blocked ? " warn" : ""}`}>
-            {blocked ?? `The client gets ${what} in their app straight away.${makesRoom ? ` ${makesRoom}` : ""}${handsOver ? ` ${handsOver}` : ""}`}
+            {blocked ??
+              (later
+                ? `The client gets ${what} in their app on ${fmt(start)}, by itself. Until then you can still change it or take it back to a draft.`
+                : `The client gets ${what} in their app straight away.${makesRoom ? ` ${makesRoom}` : ""}${handsOver ? ` ${handsOver}` : ""}`)}
           </p>
         </div>
         <footer className="pl-dlg-foot">
@@ -119,7 +128,7 @@ export default function DeployNowDialog({
                 })
               }
             >
-              {busy ? "Deploying…" : "Deploy now"}
+              {busy ? (later ? "Scheduling…" : "Putting it live…") : later ? "Schedule it" : "Put it live"}
             </button>
           </div>
         </footer>

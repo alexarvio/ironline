@@ -9,6 +9,7 @@ import {
   METRIC_GROUPS,
   METRIC_LIBRARY,
   metricGroup,
+  phaseEmptyReason,
 } from "../lib/queries";
 import CheckInDaySelect from "./CheckInDaySelect";
 import MetricLibrary, { LibraryPackView } from "./MetricLibrary";
@@ -122,7 +123,13 @@ export default function MeasurementsPanel({ clientId, phaseParam }: { clientId: 
     // old "Live in their app / changes save as you go" strip is gone — it
     // said the same thing twice, in a paragraph.
     <section className="ph-card">
-      <LifestylePhaseHeader clientId={clientId} today={today} phases={phases} selectedId={selected?.id ?? null} />
+      <LifestylePhaseHeader
+        clientId={clientId}
+        today={today}
+        phases={phases}
+        selectedId={selected?.id ?? null}
+        emptyReason={selected ? phaseEmptyReason(selected.id) : null}
+      />
 
       <MeasurementsBlock
         id="metrics"

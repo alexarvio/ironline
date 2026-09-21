@@ -818,6 +818,13 @@ Commit `86a3313` (the client camera, storage, `/uploads/meals`, and the `meal_ph
 - [ ] **A draft's buttons, left to right: Cancel · Deploy now · Schedule it · Save draft**, with Save draft the navy one: a draft is opened mostly to change it, and sending it out is the deliberate step (Deploy now, the most drastic, furthest from it).
 - [ ] **The length reads "4 weeks (28 days)"**: the 4 / 6 / 8 / 12 week pills and the "W45 → W48" line are gone for now; the calendar and the two date fields set the length. The overlap warning still shows under it when there is one.
 
+## 114 · A draft goes out on its dates, and not while it is empty; the Plan dialog links to the phase's tab — ✅ LIVE 21 Sep
+
+- [ ] **No "Deploy now" on a draft any more** (Plan dialog and the Nutrition / Measurements / Training headers). A draft goes out with **Schedule it** (on its own dates) or **Make it live** (when its start week has come: live from this week, making room as in 107). A scheduled phase gets **Make it live now**, to start early. In the headers these open one confirm ("Schedule Cut: goes live Mon 12 Oct, 4 weeks, to Sun 8 Nov"); the separate "Schedule" button next to them is gone (Edit dates is there for the dates), and so is Deploy now in the dateless programme's dialog.
+- [ ] **An empty draft can't go out**: a programme with no exercises or cardio, nutrition with no targets, a lifestyle phase asking for no metrics. The button is greyed out with the reason ("Nothing in it yet: add its sessions on the Training tab first."), and the server refuses it too.
+- [ ] **The Plan dialog links to where the phase is built**: "Open in Training / Nutrition / Measurements →", straight onto that phase; for an empty draft the same line says what is missing.
+- [ ] Checked on local data: the four local drafts (all empty) show their reason with Schedule it greyed out and the right link; a scheduled programme shows Make it live now; the three headers grey out their draft with the reason.
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).
