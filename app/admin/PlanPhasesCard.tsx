@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { deployNutritionPhaseAction, deployProgramAction, updateClientPhaseAction } from "../lib/actions";
+import { deployNutritionPhaseAction, deployProgramAction, scheduleProgramDeployAction, updateClientPhaseAction } from "../lib/actions";
 import type { PhaseTrack } from "../lib/db";
 import type { PlanPhaseRow, PlanProgramOption } from "../lib/queries";
 import PhaseDialogButton, { isoWeek, PhaseDialog } from "./PhaseDialogButton";
@@ -155,9 +155,14 @@ export default function PlanPhasesCard({
       setPending(null);
     });
   };
+  // A draft goes out on its own dates, whichever track it is on: a start in
+  // a later week schedules it (it goes live on that week by itself), a start
+  // that has come puts it live now. A training draft used to go live now
+  // whatever its dates, so a block planned for November started today.
   const deploy = (p: PlanPhaseRow) => {
     if (!p.program) {
-      // A draft nutrition phase: no programme, just the flag.
+      // A nutrition or lifestyle draft: no programme, just the flag. Its
+      // dates then make it scheduled or live.
       start(async () => {
         await deployNutritionPhaseAction(p.id);
         setDeploying(null);
@@ -166,8 +171,14 @@ export default function PlanPhasesCard({
     }
     const fd = new FormData();
     fd.set("programId", String(p.program.id));
+    const later = p.start_week > thisWeek;
+    if (later) {
+      // From the start of its first Monday.
+      fd.set("date", p.start_week);
+      fd.set("time", "00:00");
+    }
     start(async () => {
-      await deployProgramAction(fd);
+      await (later ? scheduleProgramDeployAction(fd) : deployProgramAction(fd));
       setDeploying(null);
     });
   };
@@ -356,7 +367,7 @@ export default function PlanPhasesCard({
                               setDeploying(p);
                             }}
                           >
-                            draft · deploy
+                            {p.start_week > thisWeek ? "draft · schedule" : "draft · deploy"}
                           </button>
                         ) : isRunning ? (
                           <span className="pl-bar-pill running">
@@ -486,36 +497,65 @@ export default function PlanPhasesCard({
       {deploying &&
         (() => {
           // An unnamed programme can't go out (the action refuses it), so say so
-          // and send the coach to Training rather than a Deploy that does nothing.
+          // and send the coach to Training rather than a button that does nothing.
           const unnamed = !!deploying.program && programs.find((x) => x.id === deploying.program?.id)?.name === "Untitled programme";
-          const nutritionLater = !deploying.program && deploying.start_week > thisWeek;
+          const later = deploying.start_week > thisWeek;
+          const track = deploying.track;
+          const chrome = phaseChrome(track, unnamed ? "draft" : later ? "scheduled" : "live");
+          const palette = TRACK_PALETTE[track];
+          const when = new Date(`${deploying.start_week}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+          const what = track === "training" ? "this training programme" : track === "nutrition" ? "these nutrition targets" : "this lifestyle phase";
           return (
-            <div className="pb-modal-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && setDeploying(null)}>
-              <div className="pb-modal pb-modal-sm" role="dialog" aria-modal="true" aria-label="Deploy the training programme">
-                <h2 className="pb-confirm-title">{unnamed ? "Name the programme first" : `Deploy ${deploying.name}?`}</h2>
-                <p className="pb-confirm-body">
-                  {unnamed
-                    ? "A programme needs a name before it goes to the client. Give it one on the Training tab, then deploy."
-                    : !deploying.program
-                    ? nutritionLater
-                      ? `It is scheduled: the client gets these nutrition targets on ${shortDate(deploying.start_week)}.`
-                      : "The client sees these nutrition targets in their app as soon as it is deployed."
-                    : "The client sees this training programme in their app as soon as it is deployed."}
-                </p>
-                <div className="pb-modal-foot">
-                  <button type="button" className="ad-btn-secondary" onClick={() => setDeploying(null)} disabled={busy}>
-                    Cancel
-                  </button>
+            <div className="pl-dlg-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && setDeploying(null)}>
+              <div className="pl-dlg pl-move" role="dialog" aria-modal="true" aria-label={unnamed ? "Name the programme first" : later ? `Schedule ${deploying.name}` : `Put ${deploying.name} live`}>
+                <header className="pl-dlg-head">
+                  <h2>{unnamed ? "Name the programme first" : later ? `Schedule ${deploying.name}` : `Put ${deploying.name} live`}</h2>
+                  <span className="pl-track-tag" style={{ background: palette.tint, color: palette.ink }}>
+                    {TRACK_LABEL[track]}
+                  </span>
+                  {!unnamed && (
+                    <span className="pl-dlg-state" style={{ background: chrome.chipBg, color: chrome.chipInk }}>
+                      {later ? "Scheduled" : "Live"}
+                    </span>
+                  )}
+                </header>
+                <div className="pl-dlg-body">
                   {unnamed ? (
-                    <a className="ad-btn-primary" href={`/admin?client=${clientId}&tab=training`}>
-                      Open Training
-                    </a>
+                    <p className="pl-move-note">A programme needs a name before it goes to the client. Give it one on the Training tab, then schedule it here.</p>
                   ) : (
-                    <button type="button" className="ad-btn-primary" onClick={() => deploy(deploying)} disabled={busy}>
-                      {busy ? "Deploying…" : nutritionLater ? "Schedule" : "Deploy now"}
-                    </button>
+                    <>
+                      <div className="pl-move-rows">
+                        <div className="pl-move-row">
+                          <span className="pl-dlg-label">Goes live</span>
+                          <b className="pl-move-now" style={{ gridColumn: "2 / -1", color: chrome.edge }}>
+                            {later ? when : "Now"}
+                          </b>
+                        </div>
+                      </div>
+                      <p className="pl-move-note">
+                        {later
+                          ? `The client gets ${what} in their app on ${when}, by itself. Until then it can still be moved or changed.`
+                          : `The client sees ${what} in their app as soon as you put it live.`}
+                      </p>
+                    </>
                   )}
                 </div>
+                <footer className="pl-dlg-foot">
+                  <div className="pl-dlg-actions">
+                    <button type="button" className="pl-dlg-cancel" onClick={() => setDeploying(null)} disabled={busy}>
+                      Cancel
+                    </button>
+                    {unnamed ? (
+                      <a className="pl-dlg-save" href={`/admin?client=${clientId}&tab=training`}>
+                        Open Training
+                      </a>
+                    ) : (
+                      <button type="button" className="pl-dlg-save" onClick={() => deploy(deploying)} disabled={busy}>
+                        {busy ? (later ? "Scheduling…" : "Putting it live…") : later ? `Schedule for ${when}` : "Put it live"}
+                      </button>
+                    )}
+                  </div>
+                </footer>
               </div>
             </div>
           );

@@ -660,26 +660,10 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   accent-color: var(--accent);
 }
 
-/* The last column (row delete / Add) stays pinned to the right edge while
-   the rest of the table scrolls sideways, so Add is always reachable without
-   scrolling. Opaque background so scrolled-under cells do not show through.
-//
-   No rule down its left, and as narrow as a 22px icon needs. It used to be a
-   full column with a hairline, which drew a hard edge beside "What the client
-   did" — the widest, most-read column in the table — for the sake of a small
-   bin. The barrier is still there, it just cannot be seen. */
-.exercise-table th:last-child,
-.exercise-table td:last-child {
-  position: sticky;
-  right: 0;
-  z-index: 1;
-  width: 34px;
-  padding: 4px 6px;
-  background: var(--surface);
-  border-left: 0;
-}
-
-.exercise-table .add-exercise-row td:last-child { background: var(--paper); }
+/* There is no bin / Add column any more: a row's bin and "+ Add" sit at the
+   end of its last cell (.pb-cell-end). The rules that pinned and narrowed
+   the table's LAST cell went with it — left behind, they squeezed "What the
+   client did" to 30px and pinned it, so the table could not scroll to it. */
 
 .exercise-table input,
 .exercise-table select,
@@ -7715,9 +7699,11 @@ label.ci-pill { cursor: text; }
 /* The column the coach actually reads gets the room the design gives it;
    the prescription inputs shrink around it, not the other way round. The
    width the bin column gave back went here. */
+/* No width of its own: its <col> takes whatever the other columns leave,
+   and the table's min-width keeps 330px of it. A width here made every
+   column fixed, so spare room was spread over all of them and Exercise grew
+   past the 210px it shares with the cardio table. */
 .pb .exercise-table .logged-col {
-  width: 330px;
-  min-width: 330px;
   white-space: normal;
 }
 
@@ -7757,8 +7743,6 @@ label.ci-pill { cursor: text; }
 
 /* The row's delete sits in a fixed 30px gutter rather than sharing the
    logged column's width. */
-.pb .exercise-table th:last-child,
-.pb .exercise-table td:last-child { width: 30px; min-width: 30px; padding-left: 0; padding-right: 6px; }
 
 /* ---- The prescription cells read as a sheet, not as a form ----
    Every numeric field used to carry its own border and radius, so each cell
@@ -8241,6 +8225,7 @@ label.ci-pill { cursor: text; }
 .pl-dlg-cancel:hover { border-color: #c3c9d2; }
 .pl-dlg-save { border: 0; background: #1e3a6e; color: #fff; }
 .pl-dlg-save:hover:not(:disabled) { background: #274a8a; }
+a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none; }
 .pl-dlg-save:disabled { opacity: 0.45; cursor: default; }
 .pl-dlg-danger { border: 0; background: #a32d2d; color: #fff; }
 .pl-dlg-ask { display: flex; align-items: center; gap: 12px; width: 100%; font-size: 12.5px; color: #313851; }
@@ -8925,11 +8910,6 @@ label.ci-pill { cursor: text; }
   white-space: nowrap;
 }
 
-.pb .exercise-table td:last-child,
-.pb .exercise-table th:last-child {
-  padding-right: 10px;
-  text-align: right;
-}
 
 /* ---- Login / password-change screens ----
    Deliberately plain and centered — these are the only pages a logged-out
