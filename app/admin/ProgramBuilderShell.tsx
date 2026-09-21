@@ -8,11 +8,13 @@ import WeekRail from "./WeekRail";
 import ProgramNotePeek from "./ProgramNotePeek";
 import PhaseHeader, { usePhases, type PhaseOption, type PhaseStatus } from "./PhaseHeader";
 import ProgramDatesDialog from "./ProgramDatesDialog";
+import DeployNowDialog from "./DeployNowDialog";
 import { PhaseDialog, type PhaseNeighbour, type PhaseProgramInfo } from "./PhaseDialogButton";
 import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
 import {
   cancelProgramScheduleAction,
   createProgramAction,
+  deployPhaseNowAction,
   deployProgramAction,
   removeProgramAction,
   removeProgramWeekAction,
@@ -122,6 +124,8 @@ export default function ProgramBuilderShell({
   const [expand, setExpand] = useState({ signal: 0, open: false });
   // "Edit dates" edits the phase; "Schedule it" sends the draft out.
   const [dates, setDates] = useState<false | "edit" | "schedule">(false);
+  // Deploy now: a draft straight out this week, no dates to pick.
+  const [deploying, setDeploying] = useState(false);
   const [busy, run] = useTransition();
   // Kg or lbs for reading weights; remembered in this browser.
   const [unit, setUnit] = useState<BuilderWeightUnit>("kg");
@@ -211,17 +215,23 @@ export default function ProgramBuilderShell({
               Cancel
             </button>
           ) : program.state === "draft" ? (
-            <ConfirmDeleteButton
-              action={removeProgramAction}
-              hiddenFields={{ programId: program.id, weekLinkBase }}
-              label={`Delete draft ${program.name || "programme"}`}
-            />
+            <>
+              {/* For later: its dates, in the phase dialog. */}
+              <button type="button" className="ph-minor" onClick={() => setDates("schedule")} disabled={busy}>
+                Schedule
+              </button>
+              <ConfirmDeleteButton
+                action={removeProgramAction}
+                hiddenFields={{ programId: program.id, weekLinkBase }}
+                label={`Delete draft ${program.name || "programme"}`}
+              />
+            </>
           ) : undefined
         }
         primary={
           program.state === "draft" ? (
-            <button type="button" className="ph-primary" onClick={() => setDates("schedule")} disabled={busy}>
-              Schedule it
+            <button type="button" className="ph-primary" onClick={() => setDeploying(true)} disabled={busy}>
+              Deploy now
             </button>
           ) : program.state === "scheduled" ? (
             <button
@@ -240,6 +250,31 @@ export default function ProgramBuilderShell({
           </button>
         }
       />
+
+      {deploying && (
+        <DeployNowDialog
+          track="training"
+          name={program.name || "Untitled programme"}
+          weeks={program.totalWeeks}
+          today={today}
+          running={(() => {
+            const live = options.find((o) => o.status === "live" && o.id !== program.id);
+            return live ? { name: live.name, start_week: live.start ?? today } : null;
+          })()}
+          next={(() => {
+            const later = options.filter((o) => o.status === "scheduled" && o.id !== program.id && o.start).sort((a, b) => (a.start ?? "").localeCompare(b.start ?? ""))[0];
+            return later ? { name: later.name, start_week: later.start as string } : null;
+          })()}
+          blocked={program.name?.trim() ? undefined : "A programme needs a name before it goes to the client. Give it one under Edit dates."}
+          onConfirm={() => {
+            if (program.phase) return deployPhaseNowAction(program.phase.phase.id);
+            const fd = new FormData();
+            fd.set("programId", String(program.id));
+            return deployProgramAction(fd);
+          }}
+          onClose={() => setDeploying(false)}
+        />
+      )}
 
       {dates &&
         (program.phase ? (

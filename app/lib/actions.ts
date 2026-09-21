@@ -57,6 +57,7 @@ import {
   addMeetingNote,
   addMetricDefinition,
   copyPhaseMetrics,
+  deployPhaseNow,
   addMetricTemplateCategory,
   addMetricTemplateItem,
   addPhotoSlot,
@@ -1983,6 +1984,14 @@ export async function schedulePhaseAction(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id || !(await coachForClient(getClientIdForPhase(id)))) return;
   schedulePhase(id, String(formData.get("name") ?? ""), String(formData.get("start") ?? ""), String(formData.get("end") ?? ""));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// Straight out, no dates to pick: the phase goes live this week.
+export async function deployPhaseNowAction(id: number) {
+  if (!Number.isInteger(id) || !(await coachForClient(getClientIdForPhase(id)))) return;
+  deployPhaseNow(id);
   revalidatePath("/admin");
   revalidatePath("/client");
 }

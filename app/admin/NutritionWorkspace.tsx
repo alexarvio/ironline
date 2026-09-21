@@ -4,6 +4,7 @@ import { ReactNode, useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import {
   applySupplementChangesAction,
+  deployPhaseNowAction,
   draftNutritionPhaseAction,
   saveCoachNutritionNoteAction,
   saveNutritionTargetsAction,
@@ -14,6 +15,7 @@ import NutritionLoggedDays from "./NutritionLoggedDays";
 import { PhaseDialog } from "./PhaseDialogButton";
 import DragList from "../components/DragList";
 import SchedulePhaseDialog from "./SchedulePhaseDialog";
+import DeployNowDialog from "./DeployNowDialog";
 import { phaseRange, phaseWeekIndex, phaseWeeks } from "../lib/phases";
 import PhaseHeader, { usePhases, type PhaseOption } from "./PhaseHeader";
 import { ChevronDownIcon, TrashIcon } from "../components/icons";
@@ -232,10 +234,13 @@ function TargetsCard({
   // it live when its start week has come.
   const [publishing, startPublish] = useTransition();
   const [scheduling, setScheduling] = useState<string | null | false>(false);
+  // Deploy now / Make it live: straight out this week, no dates to pick.
+  const [deploying, setDeploying] = useState(false);
+  const runningNow = p.phases.find((x) => x.id !== phase.id && x.id !== 0 && x.status === "now") ?? null;
+  const nextSet = p.phases.filter((x) => x.id !== phase.id && x.status === "next").sort((a, b) => a.phase.start_week.localeCompare(b.phase.start_week))[0] ?? null;
   const backToDraft = () => startPublish(() => draftNutritionPhaseAction(phase.id));
-  const mondayThisWeek = mondayOf(p.today);
   const blocked =
-    changes.length > 0 ? "Apply or discard the changes first" : kcalOf(values.training) === 0 ? "Set the macros before scheduling it" : undefined;
+    changes.length > 0 ? "Apply or discard the changes first" : kcalOf(values.training) === 0 ? "Set the macros first" : undefined;
 
   const summary = [
     `${n(kcalOf(values.training))} kcal training`,
@@ -255,6 +260,20 @@ function TargetsCard({
         />
       )}
 
+      {deploying && (
+        <DeployNowDialog
+          track="nutrition"
+          name={phase.name}
+          weeks={phaseWeeks(phase.phase.start_week, phase.phase.end_week)}
+          today={p.today}
+          running={runningNow ? { name: runningNow.name, start_week: runningNow.phase.start_week } : null}
+          next={nextSet ? { name: nextSet.name, start_week: nextSet.phase.start_week } : null}
+          blocked={blocked}
+          onConfirm={() => deployPhaseNowAction(phase.id)}
+          onClose={() => setDeploying(false)}
+        />
+      )}
+
       {/* The phase, whole: which one it is, its targets, its supplements and
           what the client actually ate, in one card under one name. */}
       <section className="pl-card ph-card nw-phase-card">
@@ -269,15 +288,20 @@ function TargetsCard({
             <button type="button" className="ph-minor" onClick={backToDraft} disabled={publishing}>
               Back to draft
             </button>
+          ) : phase.status === "draft" ? (
+            // For later: its dates, in the phase dialog.
+            <button type="button" className="ph-minor" onClick={() => setScheduling(null)} disabled={publishing || !!blocked} title={blocked}>
+              Schedule
+            </button>
           ) : undefined
         }
         primary={
           phase.status === "draft" ? (
-            <button type="button" className="ph-primary" onClick={() => setScheduling(null)} disabled={publishing || !!blocked} title={blocked}>
-              Schedule it
+            <button type="button" className="ph-primary" onClick={() => setDeploying(true)} disabled={publishing || !!blocked} title={blocked}>
+              Deploy now
             </button>
           ) : phase.status === "next" ? (
-            <button type="button" className="ph-primary" onClick={() => setScheduling(mondayThisWeek)} disabled={publishing}>
+            <button type="button" className="ph-primary" onClick={() => setDeploying(true)} disabled={publishing}>
               Make it live
             </button>
           ) : undefined

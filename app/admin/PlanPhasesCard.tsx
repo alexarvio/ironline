@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { deployNutritionPhaseAction, deployProgramAction, scheduleProgramDeployAction, updateClientPhaseAction } from "../lib/actions";
+import { deployNutritionPhaseAction, deployPhaseNowAction, deployProgramAction, scheduleProgramDeployAction, updateClientPhaseAction } from "../lib/actions";
 import type { PhaseTrack } from "../lib/db";
 import type { PlanPhaseRow, PlanProgramOption } from "../lib/queries";
 import PhaseDialogButton, { isoWeek, PhaseDialog } from "./PhaseDialogButton";
@@ -534,7 +534,7 @@ export default function PlanPhasesCard({
                       </div>
                       <p className="pl-move-note">
                         {later
-                          ? `The client gets ${what} in their app on ${when}, by itself. Until then it can still be moved or changed.`
+                          ? `The client gets ${what} in their app on ${when}, by itself. Until then it can still be moved or changed. Or put it live now: it starts this week and keeps its length.`
                           : `The client sees ${what} in their app as soon as you put it live.`}
                       </p>
                     </>
@@ -550,9 +550,27 @@ export default function PlanPhasesCard({
                         Open Training
                       </a>
                     ) : (
+                      <>
+                        {/* Not waiting for its start: live this week (deployPhaseNow). */}
+                        {later && (
+                          <button
+                            type="button"
+                            className="pl-dlg-cancel"
+                            onClick={() =>
+                              start(async () => {
+                                await deployPhaseNowAction(deploying.id);
+                                setDeploying(null);
+                              })
+                            }
+                            disabled={busy}
+                          >
+                            Put it live now
+                          </button>
+                        )}
                       <button type="button" className="pl-dlg-save" onClick={() => deploy(deploying)} disabled={busy}>
                         {busy ? (later ? "Scheduling…" : "Putting it live…") : later ? `Schedule for ${when}` : "Put it live"}
                       </button>
+                      </>
                     )}
                   </div>
                 </footer>

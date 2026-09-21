@@ -6619,6 +6619,65 @@ export function schedulePhase(phaseId: number, name: string, startDate: string, 
   return live;
 }
 
+/**
+ * A draft (or scheduled) phase goes live now, whatever dates it had: it
+ * starts this week and keeps its length, up to the week before the next
+ * phase already set on the track, so the two never overlap. The phase
+ * running on the track makes room: it ends last week, or goes back to a
+ * draft if it only started this week. A training phase is its programme,
+ * which is deployed now (the programme running before becomes a past one:
+ * its phase ends last week). Returns false for an unnamed programme.
+ */
+export function deployPhaseNow(phaseId: number): boolean {
+  const data = getData();
+  const phase = data.client_phases.find((p) => p.id === phaseId);
+  if (!phase) return false;
+  const program = phase.program_id ? data.training_programs.find((p) => p.id === phase.program_id) : null;
+  if (program && !program.name?.trim()) return false;
+  const thisWeek = weekStart(localDateStr());
+  const shift = (monday: string, weeks: number) => {
+    const d = new Date(`${monday}T00:00:00`);
+    d.setDate(d.getDate() + weeks * 7);
+    return localDateStr(d);
+  };
+  const sameTrack = data.client_phases.filter(
+    (o) => o.id !== phase.id && o.client_id === phase.client_id && o.track === phase.track && !o.draft
+  );
+  for (const other of sameTrack) {
+    if (other.start_week > thisWeek || other.end_week < thisWeek) continue;
+    if (other.start_week < thisWeek) other.end_week = shift(thisWeek, -1);
+    // A programme that went out this week stays out; the new one is simply
+    // the latest to have started.
+    else if (!other.program_id) other.draft = true;
+  }
+  if (program) {
+    persist();
+    deployProgram(program.id);
+    return true;
+  }
+  const weeks = Math.max(1, Math.round((new Date(`${phase.end_week}T00:00:00`).getTime() - new Date(`${phase.start_week}T00:00:00`).getTime()) / (7 * 86400000)) + 1);
+  const next = sameTrack.filter((o) => !o.draft && o.start_week > thisWeek).map((o) => o.start_week).sort()[0];
+  let end = shift(thisWeek, weeks - 1);
+  if (next && end >= next) end = shift(next, -1);
+  phase.start_week = thisWeek;
+  phase.end_week = end;
+  delete phase.draft;
+  persist();
+  const where = { nutrition: "nutrition", training: "training", lifestyle: "home" } as const;
+  logCoachActivity(
+    phase.client_id,
+    phase.track === "nutrition"
+      ? `Your coach set new nutrition targets${phase.name ? `: ${phase.name}` : ""}. Check them out`
+      : `Your coach set a new ${phase.track} phase${phase.name ? `: ${phase.name}` : ""}`,
+    {
+      kind: "programme",
+      actionTab: where[phase.track] ?? "home",
+      actionLabel: phase.track === "nutrition" ? "See your targets" : "Take a look",
+    }
+  );
+  return true;
+}
+
 /** Back to a draft. Only before the client has been in it. */
 export function unschedulePhase(phaseId: number): boolean {
   const phase = getData().client_phases.find((p) => p.id === phaseId);

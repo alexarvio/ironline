@@ -4,6 +4,8 @@ import { useState } from "react";
 import type { ClientPhase } from "../lib/db";
 import { PhaseDialog } from "./PhaseDialogButton";
 import SchedulePhaseDialog from "./SchedulePhaseDialog";
+import DeployNowDialog from "./DeployNowDialog";
+import { deployPhaseNowAction } from "../lib/actions";
 import { phaseRange, phaseWeekIndex, phaseWeeks } from "../lib/phases";
 import PhaseHeader, { usePhases, type PhaseOption } from "./PhaseHeader";
 
@@ -57,6 +59,10 @@ export default function LifestylePhaseHeader({
   const [editing, setEditing] = useState<RailPhase | null>(null);
   const [adding, setAdding] = useState(false);
   const [scheduling, setScheduling] = useState<{ phase: RailPhase; from: string | null } | null>(null);
+  // Deploy now / Make it live: straight out this week, no dates to pick.
+  const [deploying, setDeploying] = useState<RailPhase | null>(null);
+  const runningNow = phases.find((p) => p.status === "now") ?? null;
+  const nextSet = (id: number) => phases.filter((p) => p.id !== id && p.status === "next").sort((a, b) => a.start_week.localeCompare(b.start_week))[0] ?? null;
 
   // A new phase starts the week after the last one ends, else this week.
   const lastEnd = phases.reduce<string | null>((max, p) => (!max || p.end_week > max ? p.end_week : max), null);
@@ -71,13 +77,21 @@ export default function LifestylePhaseHeader({
         currentId={current?.id ?? null}
         onSelect={select}
         onNew={() => setAdding(true)}
+        secondary={
+          phase && phase.status === "draft" ? (
+            // For later: its dates, in the phase dialog.
+            <button type="button" className="ph-minor" onClick={() => setScheduling({ phase, from: null })}>
+              Schedule
+            </button>
+          ) : undefined
+        }
         primary={
           phase && phase.status === "draft" ? (
-            <button type="button" className="ph-primary" onClick={() => setScheduling({ phase, from: null })}>
-              Schedule it
+            <button type="button" className="ph-primary" onClick={() => setDeploying(phase)}>
+              Deploy now
             </button>
           ) : phase && phase.status === "next" ? (
-            <button type="button" className="ph-primary" onClick={() => setScheduling({ phase, from: thisWeek })}>
+            <button type="button" className="ph-primary" onClick={() => setDeploying(phase)}>
               Make it live
             </button>
           ) : undefined
@@ -96,6 +110,18 @@ export default function LifestylePhaseHeader({
         }
       />
 
+      {deploying && (
+        <DeployNowDialog
+          track="lifestyle"
+          name={deploying.name}
+          weeks={phaseWeeks(deploying.start_week, deploying.end_week)}
+          today={today}
+          running={runningNow && runningNow.id !== deploying.id ? { name: runningNow.name, start_week: runningNow.start_week } : null}
+          next={nextSet(deploying.id)}
+          onConfirm={() => deployPhaseNowAction(deploying.id)}
+          onClose={() => setDeploying(null)}
+        />
+      )}
       {scheduling && (
         <SchedulePhaseDialog
           phase={scheduling.phase}
