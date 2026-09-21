@@ -813,6 +813,11 @@ Commit `86a3313` (the client camera, storage, `/uploads/meals`, and the `meal_ph
 
 - [ ] **Edit phase on a scheduled training programme: the start is no longer locked.** Moving it (typed or clicked) moves when the programme goes live, and the whole block moves with it, keeping its weeks; moving the end still adds or removes weeks. The note under the calendar says so. A live programme's start stays locked (it is where the client began). Saving reschedules it, keeping its time of day. Checked in the real dialog: "yeyeyeyyeyey" 5 Oct–8 Nov, typed 12/10/2026 → 12 Oct–15 Nov, 5 weeks, still Scheduled.
 
+## 113 · Phase dialog: Save draft is the main button; the length is one line — ✅ LIVE 21 Sep
+
+- [ ] **A draft's buttons, left to right: Cancel · Deploy now · Schedule it · Save draft**, with Save draft the navy one: a draft is opened mostly to change it, and sending it out is the deliberate step (Deploy now, the most drastic, furthest from it).
+- [ ] **The length reads "4 weeks (28 days)"**: the 4 / 6 / 8 / 12 week pills and the "W45 → W48" line are gone for now; the calendar and the two date fields set the length. The overlap warning still shows under it when there is one.
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).

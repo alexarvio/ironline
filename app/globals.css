@@ -8217,6 +8217,7 @@ label.pl-dlg-end.bad .pl-dlg-date, label.pl-dlg-end.bad small { color: #b3471d; 
 .pl-cal-sw.planned.clash { background: #b3471d; }
 
 /* Length: what is picked, and four lengths that set the end from the start. */
+.pl-dlg-length .pl-dlg-days { font-weight: 600; color: #5b6474; }
 .pl-dlg-length { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .pl-dlg-length > div:first-child { display: flex; flex-direction: column; gap: 2px; }
 .pl-dlg-length b { font-size: 13px; font-weight: 800; color: #141a24; }

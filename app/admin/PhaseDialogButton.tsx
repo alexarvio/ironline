@@ -11,7 +11,6 @@ import { phaseChrome, phaseStateOf, STATE_LABEL, TRACK_LABEL, TRACK_PALETTE, typ
 export { isoWeek };
 
 const TRACKS: PhaseTrack[] = ["nutrition", "training", "lifestyle"];
-const LENGTHS = [4, 6, 8, 12];
 
 /** What the dialog knows about the programme behind a training phase. */
 export type PhaseProgramInfo = {
@@ -240,10 +239,6 @@ export function PhaseDialog({
     const day = end === "start" ? from : to;
     if (day) setMonth(monthOf(day));
   };
-  const setLength = (weeks: number) => {
-    if (!from) return;
-    setTo(addDays(mondayOf(from), weeks * 7 - 1));
-  };
 
   // ---- What is on screen ----
   const weeks = from && to ? weeksBetween(mondayOf(from), mondayOf(to)) + 1 : 0;
@@ -417,28 +412,22 @@ export function PhaseDialog({
               )}
             </div>
 
+            {/* The length in words and days; the calendar and the two fields
+                set it. (The 4 / 6 / 8 / 12 week pills and the W45 → W48 line
+                are gone for now.) */}
             <div className="pl-dlg-length">
               <div>
-                <b>{weeks ? `${weeks} week${weeks === 1 ? "" : "s"}` : "No dates yet"}</b>
-                {overlap ? (
-                  <small className="pl-overlap">Overlaps a phase already on this track</small>
-                ) : (
-                  from && to && (
-                    <small>
-                      W{isoWeek(from)} → W{isoWeek(to)} · {days} day{days === 1 ? "" : "s"}
-                    </small>
-                  )
-                )}
+                <b>
+                  {weeks ? `${weeks} week${weeks === 1 ? "" : "s"}` : "No dates yet"}
+                  {weeks > 0 && (
+                    <span className="pl-dlg-days">
+                      {" "}
+                      ({days} day{days === 1 ? "" : "s"})
+                    </span>
+                  )}
+                </b>
+                {overlap && <small className="pl-overlap">Overlaps a phase already on this track</small>}
               </div>
-              {!endLocked && (
-                <div className="pl-dlg-pills">
-                  {LENGTHS.map((n) => (
-                    <button key={n} type="button" className={weeks === n ? "on" : undefined} onClick={() => setLength(n)} disabled={!from}>
-                      {n} wk
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
             {endLocked && <p className="ph-note">Its length follows the programme: add or remove weeks in Training.</p>}
@@ -547,27 +536,20 @@ export function PhaseDialog({
                     // phase was clicked. Each button saves what was changed
                     // above first, then sends it: on its dates (scheduled, or
                     // live if its week has come), or now, from this week.
+                    // Save draft is the main button, since a draft is opened
+                    // mostly to change it; the most drastic (now, whatever
+                    // its dates) sits furthest from it.
                     <>
-                      <button type="submit" className="pl-dlg-cancel" disabled={!ready}>
-                        Save draft
-                      </button>
                       {startWeek > mondayOf(today) && (
-                        <button
-                          type="submit"
-                          className="pl-dlg-cancel"
-                          disabled={!ready}
-                          formAction={saveAndDeployPhaseNowAction}
-                        >
+                        <button type="submit" className="pl-dlg-cancel" disabled={!ready} formAction={saveAndDeployPhaseNowAction}>
                           Deploy now
                         </button>
                       )}
-                      <button
-                        type="submit"
-                        className="pl-dlg-save"
-                        disabled={!ready}
-                        formAction={saveAndSchedulePhaseAction}
-                      >
+                      <button type="submit" className="pl-dlg-cancel" disabled={!ready} formAction={saveAndSchedulePhaseAction}>
                         {startWeek && startWeek <= today ? "Make it live" : "Schedule it"}
+                      </button>
+                      <button type="submit" className="pl-dlg-save" disabled={!ready}>
+                        Save draft
                       </button>
                     </>
                   ) : (
