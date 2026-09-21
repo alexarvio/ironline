@@ -109,7 +109,8 @@ export default function ProgramBuilderShell({
 
   const [week, setWeek] = useState(program?.defaultWeek ?? 1);
   const [expand, setExpand] = useState({ signal: 0, open: false });
-  const [dates, setDates] = useState(false);
+  // "Edit dates" edits the phase; "Schedule it" sends the draft out.
+  const [dates, setDates] = useState<false | "edit" | "schedule">(false);
   const [busy, run] = useTransition();
   // Kg or lbs for reading weights; remembered in this browser.
   const [unit, setUnit] = useState<BuilderWeightUnit>("kg");
@@ -208,7 +209,7 @@ export default function ProgramBuilderShell({
         }
         primary={
           program.state === "draft" ? (
-            <button type="button" className="ph-primary" onClick={() => setDates(true)} disabled={busy}>
+            <button type="button" className="ph-primary" onClick={() => setDates("schedule")} disabled={busy}>
               Schedule it
             </button>
           ) : program.state === "scheduled" ? (
@@ -223,7 +224,7 @@ export default function ProgramBuilderShell({
           ) : undefined
         }
         editDates={
-          <button type="button" className="nw-edit-phase" onClick={() => setDates(true)}>
+          <button type="button" className="nw-edit-phase" onClick={() => setDates("edit")}>
             Edit dates
           </button>
         }
@@ -231,14 +232,28 @@ export default function ProgramBuilderShell({
 
       {dates &&
         (program.phase ? (
-          <PhaseDialog
-            clientId={clientId}
-            phase={program.phase.phase}
-            program={program.phase.program}
-            today={today}
-            others={others}
-            onClose={() => setDates(false)}
-          />
+          dates === "schedule" && program.state === "draft" ? (
+            // Named, dated and sent out: blue while it is scheduled, and its
+            // length is the programme's, so a click moves the whole span.
+            <PhaseDialog
+              mode="schedule"
+              clientId={clientId}
+              phase={program.phase.phase}
+              today={today}
+              others={others}
+              lockedWeeks={program.totalWeeks}
+              onClose={() => setDates(false)}
+            />
+          ) : (
+            <PhaseDialog
+              clientId={clientId}
+              phase={program.phase.phase}
+              program={program.phase.program}
+              today={today}
+              others={others}
+              onClose={() => setDates(false)}
+            />
+          )
         ) : (
           <ProgramDatesDialog programId={program.id} name={program.name} onClose={() => setDates(false)} />
         ))}

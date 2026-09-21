@@ -736,7 +736,8 @@ export default function ProgramBuilder({
     const anchor = program.status === "deployed" ? program.deployed_at : program.scheduled_at;
     const span = anchor
       ? (() => {
-          const from = weekStart(anchor.slice(0, 10));
+          // The local day: a UTC stamp can be the day before.
+          const from = weekStart(localDateStr(new Date(anchor)));
           const last = new Date(`${from}T00:00:00`);
           last.setDate(last.getDate() + (program.total_weeks - 1) * 7);
           return { start: from, end: localDateStr(last) };

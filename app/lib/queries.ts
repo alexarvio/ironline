@@ -29,6 +29,15 @@ export function localDateStr(d: Date = new Date()): string {
   return `${y}-${m}-${day}`;
 }
 
+// The local day a stored deploy or schedule stamp falls on. The stamps are
+// UTC, so their first ten characters are the day before for anything in the
+// first hour or two of a day here: a programme going live at 00:30 on a
+// Monday would count from the week before.
+export function localDayOf(stamp: string): string {
+  const d = new Date(stamp);
+  return Number.isNaN(d.getTime()) ? stamp.slice(0, 10) : localDateStr(d);
+}
+
 export type Exercise = { id: number; name: string; muscle_tags: string | null; video_url: string | null; coach_id?: number };
 export type ProgramDay = {
   id: number;
@@ -542,7 +551,7 @@ export function findProgramById(programId: number): TrainingProgram | null {
 // past and the future one as live.
 export function getDeployedProgram(clientId: number): TrainingProgram | null {
   const thisWeek = weekStart(localDateStr());
-  const deployed = listPrograms(clientId).filter((p) => p.status === "deployed" && (!p.deployed_at || weekStart(p.deployed_at.slice(0, 10)) <= thisWeek));
+  const deployed = listPrograms(clientId).filter((p) => p.status === "deployed" && (!p.deployed_at || weekStart(localDayOf(p.deployed_at)) <= thisWeek));
   if (deployed.length === 0) return null;
   return deployed.reduce((latest, p) => (p.start_week > latest.start_week ? p : latest));
 }
@@ -558,7 +567,7 @@ export function getDraftProgram(clientId: number): TrainingProgram | null {
 // final week) or before the first.
 export function getProgramCurrentWeekIndex(program: TrainingProgram): number {
   if (!program.deployed_at) return 1;
-  const start = weekStart(program.deployed_at.slice(0, 10));
+  const start = weekStart(localDayOf(program.deployed_at));
   const now = weekStart(localDateStr());
   const diffDays = Math.round((new Date(`${now}T00:00:00`).getTime() - new Date(`${start}T00:00:00`).getTime()) / 86400000);
   const index = Math.floor(diffDays / 7) + 1;
@@ -782,7 +791,7 @@ export function applyDueProgramDeployments() {
   const thisWeek = weekStart(localDateStr());
   let rescheduled = false;
   for (const p of data.training_programs) {
-    if (p.status !== "deployed" || !p.deployed_at || weekStart(p.deployed_at.slice(0, 10)) <= thisWeek) continue;
+    if (p.status !== "deployed" || !p.deployed_at || weekStart(localDayOf(p.deployed_at)) <= thisWeek) continue;
     if (programLoggedWeekIndexes(p.id).length > 0) continue;
     p.status = "draft";
     p.scheduled_at = p.deployed_at;
@@ -5167,7 +5176,7 @@ function engagementWindow(clientId: number, days: number, back: number, since: s
   let sessionsAsked = 0;
   let sessionsDone = 0;
   if (program?.deployed_at) {
-    const firstMonday = weekStart(program.deployed_at.slice(0, 10));
+    const firstMonday = weekStart(localDayOf(program.deployed_at));
     for (let i = 0; i < program.total_weeks; i++) {
       const monday = plusDays(firstMonday, i * 7);
       if (monday < firstWeek || monday < windowFrom || monday > to) continue;
@@ -6162,18 +6171,24 @@ export function updateClientPhase(
   // programme: then the start stays put and only the end can move.
   const anchor = program ? (program.status === "deployed" ? program.deployed_at : program.scheduled_at) : null;
   if (anchor && program) {
-    const anchored = weekStart(anchor.slice(0, 10));
+    const anchored = weekStart(localDayOf(anchor));
+    // The new Monday at the same local time of day. The stamp is UTC, so
+    // splicing the new date into it could land on the Tuesday.
+    const was = new Date(anchor);
+    const hm = (n: number) => String(n).padStart(2, "0");
+    const onStart = (time = `${hm(was.getHours())}:${hm(was.getMinutes())}`) => new Date(`${start}T${time}:00`).toISOString();
     if (start !== anchored) {
       if (programLoggedWeekIndexes(program.id).length > 0) start = anchored;
       else if (program.status === "deployed" && start > weekStart(localDateStr())) {
         // Moved into a later week: it is not running any more, it is
-        // coming. Scheduled, so it goes live on that week by itself and the
-        // programme running now stays the live one.
+        // coming. Scheduled, so it goes live on that week by itself (from
+        // the start of its Monday) and the programme running now stays the
+        // live one.
         program.status = "draft";
-        program.scheduled_at = `${start}${anchor.slice(10)}`;
+        program.scheduled_at = onStart("00:00");
         program.deployed_at = null;
-      } else if (program.status === "deployed") program.deployed_at = `${start}${anchor.slice(10)}`;
-      else program.scheduled_at = `${start}${anchor.slice(10)}`;
+      } else if (program.status === "deployed") program.deployed_at = onStart();
+      else program.scheduled_at = onStart();
     }
     if (end < start) end = start;
   }
@@ -6269,7 +6284,7 @@ export function syncProgramPhase(programId: number, dates = true) {
     }
     return;
   }
-  const start = weekStart(anchor.slice(0, 10));
+  const start = weekStart(localDayOf(anchor));
   const endDate = new Date(`${start}T00:00:00`);
   endDate.setDate(endDate.getDate() + (program.total_weeks - 1) * 7);
   const end = localDateStr(endDate);
@@ -6554,9 +6569,22 @@ export function schedulePhase(phaseId: number, name: string, startDate: string, 
   phase.end_week = start <= end ? end : start;
   delete phase.draft;
   persist();
-  // A programme keeps its length; what moves is when it begins.
-  if (phase.program_id) syncProgramPhase(phase.program_id, false);
   const live = phase.start_week <= weekStart(localDateStr());
+  const program = phase.program_id ? data.training_programs.find((p) => p.id === phase.program_id) : null;
+  if (program) {
+    // The phase's name is the programme's; the sync below reads it back.
+    if (name.trim()) program.name = name.trim();
+    if (program.status !== "deployed") {
+      // A draft programme goes out with its phase: from its first Monday
+      // when that is a later week, now when that week has come. Scheduling
+      // only the phase left the programme a draft on the Training tab.
+      if (live) deployProgram(program.id);
+      else scheduleProgramDeploy(program.id, new Date(`${phase.start_week}T00:00:00`).toISOString());
+      return live;
+    }
+    // A programme keeps its length; what moves is when it begins.
+    syncProgramPhase(program.id, false);
+  }
   if (live) {
     const where = { nutrition: "nutrition", training: "training", lifestyle: "home" } as const;
     logCoachActivity(phase.client_id, `Your coach set a new ${phase.track} phase${phase.name ? `: ${phase.name}` : ""}`, {
