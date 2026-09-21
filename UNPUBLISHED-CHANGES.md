@@ -907,6 +907,10 @@ Look: `/client` → Training.
 
 - [ ] Tracked metrics save as they are made (no Apply bar). After any change that landed (a metric added or removed, daily ⇄ weekly, its group, the check-in day) a green "✓ Saved · …" shows at the foot of the card for four seconds: "in this phase, not in their app until it is live" on a draft or scheduled phase, "their check-in asks for this now" on the live one.
 
+## 118 · Progress pictures: "What we can improve" on the client's side too — ✅ LIVE 21 Sep
+
+- [ ] The coach's feedback on a sheet read "What to improve" in the client's app (the coach's own field already said "What we can improve"). Now the same words on both sides: a shared next step rather than a list of what is wrong with how someone looks.
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).

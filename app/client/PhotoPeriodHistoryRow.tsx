@@ -9,7 +9,9 @@ export type HistoryNote = { shape: string; strengths: string; improvements: stri
 export const NOTE_LABELS: { key: keyof HistoryNote; label: string }[] = [
   { key: "shape", label: "Shape" },
   { key: "strengths", label: "What's strong" },
-  { key: "improvements", label: "What to improve" },
+  // "We", as the coach's own field reads: a shared next step, not a list of
+  // what is wrong with how someone looks.
+  { key: "improvements", label: "What we can improve" },
   { key: "next_steps", label: "Next steps" },
 ];
 
