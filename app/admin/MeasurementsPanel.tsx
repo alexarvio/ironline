@@ -12,6 +12,7 @@ import {
   phaseEmptyReason,
 } from "../lib/queries";
 import CheckInDaySelect from "./CheckInDaySelect";
+import SavedStamp from "./SavedStamp";
 import MetricLibrary, { LibraryPackView } from "./MetricLibrary";
 import MetricGroups, { type MetricRow } from "./MetricGroups";
 import MeasurementsBlock from "./MeasurementsBlock";
@@ -155,6 +156,13 @@ export default function MeasurementsPanel({ clientId, phaseParam }: { clientId: 
         <div className="mx-foot">
           <span>Weekly check-in opens on</span>
           <CheckInDaySelect clientId={clientId} value={getClientProfile(clientId).check_in_day} />
+          {/* These save as they are made; this says so when one has. */}
+          <SavedStamp
+            // Per phase: switching phase is not a save.
+            key={selected?.id ?? 0}
+            signature={`${selected?.id ?? 0}|${getClientProfile(clientId).check_in_day}|${rows.map((r) => `${r.id}:${r.frequency}:${r.groupKey}:${r.name}:${r.unit ?? ""}`).join(",")}`}
+            note={selected && (selected.status === "draft" || selected.status === "next") ? "in this phase, not in their app until it is live" : "their check-in asks for this now"}
+          />
         </div>
       </MeasurementsBlock>
 
