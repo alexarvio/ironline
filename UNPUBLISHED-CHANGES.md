@@ -929,6 +929,15 @@ Look: `/client` → Training.
 
 - [ ] Logged data shows as **Table · Graph · Feed**. Graph is one big chart of one metric, picked from a list beside it: the metrics under their categories (each category folds), every one with its latest figure. Over the chart: the latest figure large, the change since the first reading on screen (green or orange by the metric’s good direction), the average and how many periods were logged. Hovering reads any day: the figure and date swap to that reading. A skipped day is a gap in the line; a rating out of N sits on its full 0–N scale. Daily / Weekly and the phase switch apply as they do to the table.
 
+## 129 · Measurements graph: a range switch, and every day on the axis — ✅ LIVE 21 Sep
+
+- [ ] The graph has **Last 7 days · Last 30 days** (weekly: Last 5 weeks · Last 12 weeks) at the right of its header. The figure, change, average and "n of m logged" follow the range.
+- [ ] Up to ten periods each get their date under the chart, so a week reads with no day left out (Wednesday and Saturday were being skipped); a longer range shows first, last and a few between.
+
+## 130 · shadcn trial: the Measurements tab rebuilt from shadcn parts — LOCAL ONLY, a trial, not for live
+
+- [ ] `/admin/shadcn-trial/measurements` (add `?client=ID`): the phase header, tracked metrics (Accordion, Toggle Group, a ⋯ Dropdown Menu), logged data (Tabs, Table, the feed as an Accordion), the client’s notes, toasts. The client’s real data, read-only: every control answers with a toast and saves nothing. Parts live in `app/components/ui/`.
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).

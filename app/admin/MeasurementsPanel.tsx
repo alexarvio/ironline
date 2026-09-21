@@ -75,6 +75,9 @@ export default function MeasurementsPanel({ clientId, phaseParam }: { clientId: 
   const scope = phases.length ? { metrics, until } : undefined;
   const daily = getLoggedValues(clientId, "daily", started ? 8 : 0, scope);
   const weekly = getLoggedValues(clientId, "weekly", started ? 5 : 0, scope);
+  // The graph can look further back than the table does.
+  const dailyLong = getLoggedValues(clientId, "daily", started ? 30 : 0, scope);
+  const weeklyLong = getLoggedValues(clientId, "weekly", started ? 12 : 0, scope);
   const dailyCount = metrics.filter((m) => m.frequency === "daily").length;
 
   // The last thing logged against each metric, so a row says whether it is
@@ -175,6 +178,8 @@ export default function MeasurementsPanel({ clientId, phaseParam }: { clientId: 
         <LoggedDataBlock
           daily={daily}
           weekly={weekly}
+          dailyLong={dailyLong}
+          weeklyLong={weeklyLong}
           notStarted={!started ? (selected?.status === "draft" ? "Nothing logged yet. This phase is a draft." : `Nothing logged yet. This phase starts ${startsOn}.`) : null}
         />
       </MeasurementsBlock>

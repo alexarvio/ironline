@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type React from "react";
 import type { LoggedMetric, LoggedValues } from "../lib/queries";
 import { ChevronDownIcon } from "../components/icons";
 import MessageAboutButton from "./MessageAbout";
@@ -26,10 +27,15 @@ const withUnit = (v: number, unit: string) => {
 export default function LoggedDataBlock({
   daily,
   weekly,
+  dailyLong,
+  weeklyLong,
   notStarted = null,
 }: {
   daily: LoggedValues;
   weekly: LoggedValues;
+  /** A longer run of the same lookups, for the graph's wider range (30 days, 12 weeks). */
+  dailyLong?: LoggedValues;
+  weeklyLong?: LoggedValues;
   /** The phase on screen has not started: nothing to show, and why. */
   notStarted?: string | null;
 }) {
@@ -66,7 +72,7 @@ export default function LoggedDataBlock({
       ) : show === "table" ? (
         <Table view={view} valueFor={valueFor} />
       ) : show === "graph" ? (
-        <Graphs view={view} valueFor={valueFor} />
+        <Graphs key={cadence} view={(cadence === "daily" ? dailyLong : weeklyLong) ?? view} cadence={cadence} shortCount={cadence === "daily" ? 7 : 5} />
       ) : (
         <Feed view={view} cadence={cadence} valueFor={valueFor} />
       )}
@@ -209,10 +215,15 @@ function Feed({ view, cadence, valueFor }: { view: LoggedValues; cadence: "daily
 // without one of them going flat. The same periods as the table, oldest on
 // the left; a period the client skipped is a gap in the line, not a line
 // drawn across it.
-function Graphs({ view, valueFor }: { view: LoggedValues; valueFor: (m: number, p: string) => number | null }) {
+function Graphs({ view, cadence, shortCount }: { view: LoggedValues; cadence: "daily" | "weekly"; shortCount: number }) {
   const [picked, setPicked] = useState<number | null>(null);
+  // The range on the chart: the last week (or five weeks), or all that was read.
+  const [range, setRange] = useState<"short" | "long">("short");
+  const valueFor = (metricId: number, period: string): number | null => view.values[`${metricId}:${period}`] ?? null;
   const metric = view.metrics.find((m) => m.id === picked) ?? view.metrics[0];
-  const periods = [...view.periods].reverse();
+  const hasLong = view.periods.length > shortCount;
+  const periods = [...(range === "short" ? view.periods.slice(0, shortCount) : view.periods)].reverse();
+  const unitWord = cadence === "daily" ? "days" : "weeks";
   const latest = (m: LoggedMetric) => {
     for (const p of view.periods) {
       const v = valueFor(m.id, p.key);
@@ -270,7 +281,22 @@ function Graphs({ view, valueFor }: { view: LoggedValues; valueFor: (m: number, 
           );
         })}
       </nav>
-      <MetricGraph key={metric.id} metric={metric} points={periods.map((p) => ({ label: p.label, value: valueFor(metric.id, p.key) }))} />
+      <MetricGraph
+        key={metric.id}
+        metric={metric}
+        points={periods.map((p) => ({ label: p.label, value: valueFor(metric.id, p.key) }))}
+        rangeSwitch={
+          hasLong ? (
+            <div className="ms-viewby" role="group" aria-label="Range">
+              {(["short", "long"] as const).map((r) => (
+                <button key={r} type="button" className={`ms-viewby-btn${range === r ? " on" : ""}`} onClick={() => setRange(r)} aria-pressed={range === r}>
+                  Last {r === "short" ? shortCount : view.periods.length} {unitWord}
+                </button>
+              ))}
+            </div>
+          ) : null
+        }
+      />
     </div>
   );
 }
@@ -291,7 +317,7 @@ function niceTicks(lo: number, hi: number, count = 4): number[] {
   return out;
 }
 
-function MetricGraph({ metric: m, points }: { metric: LoggedMetric; points: { label: string; value: number | null }[] }) {
+function MetricGraph({ metric: m, points, rangeSwitch = null }: { metric: LoggedMetric; points: { label: string; value: number | null }[]; rangeSwitch?: React.ReactNode }) {
   const [hover, setHover] = useState<number | null>(null);
   const seen = points.map((p, i) => ({ ...p, i })).filter((p): p is { label: string; value: number; i: number } => p.value != null);
   const unit = m.unit.trim();
@@ -300,8 +326,8 @@ function MetricGraph({ metric: m, points }: { metric: LoggedMetric; points: { la
   if (seen.length === 0) {
     return (
       <section className="mx-graph">
-        <GraphHead metric={m} />
-        <p className="mx-graph-empty">Nothing logged for {m.name} in this phase yet.</p>
+        <GraphHead metric={m} rangeSwitch={rangeSwitch} />
+        <p className="mx-graph-empty">Nothing logged for {m.name} in this range.</p>
       </section>
     );
   }
@@ -323,7 +349,9 @@ function MetricGraph({ metric: m, points }: { metric: LoggedMetric; points: { la
   const y = (v: number) => PAD.t + (1 - (v - lo) / (hi - lo || 1)) * (H - PAD.t - PAD.b);
   const ticks = niceTicks(lo, hi);
   // A handful of dates along the foot: first, last and a few between.
-  const dateCount = Math.min(6, points.length);
+  // Up to ten periods each get their date (a week reads Mon to Sun with no
+  // day left out); a longer range gets first, last and a few between.
+  const dateCount = points.length <= 10 ? points.length : 6;
   const dateAt = [...new Set(Array.from({ length: dateCount }, (_, k) => (dateCount === 1 ? 0 : Math.round((k * (points.length - 1)) / (dateCount - 1)))))];
 
   // Runs of consecutive logged periods: each is one stroke, so a gap stays a gap.
@@ -339,7 +367,7 @@ function MetricGraph({ metric: m, points }: { metric: LoggedMetric; points: { la
 
   return (
     <section className="mx-graph">
-      <GraphHead metric={m} />
+      <GraphHead metric={m} rangeSwitch={rangeSwitch} />
       <div className="mx-graph-figure">
         <span className="mx-graph-now">
           {n((shown ?? last).value)}
@@ -408,12 +436,13 @@ function MetricGraph({ metric: m, points }: { metric: LoggedMetric; points: { la
   );
 }
 
-function GraphHead({ metric: m }: { metric: LoggedMetric }) {
+function GraphHead({ metric: m, rangeSwitch = null }: { metric: LoggedMetric; rangeSwitch?: React.ReactNode }) {
   return (
     <header className="mx-graph-head">
       <span className="mx-graph-key" style={{ background: m.colour }} aria-hidden="true" />
       <span className="mx-graph-name">{m.name}</span>
       <span className="mx-graph-catname">{m.categoryLabel}</span>
+      {rangeSwitch}
     </header>
   );
 }
