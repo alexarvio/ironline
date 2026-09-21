@@ -725,6 +725,14 @@ Commit `86a3313` (the client camera, storage, `/uploads/meals`, and the `meal_ph
 
 - [ ] **A new client was scored against days before they started.** The window is the last 30 days, and every one of them counted: a client 18 days in with every check-in done read "18 of 33 check-ins", 55%, and food "13 of 29 days". Now counting starts on the client's first day (the first day they logged anything, or the day their login was made if nothing yet), the sub-line says "since 3 Sep" instead of "last 30 days", and the trend against the 30 days before stays quiet when there were none. Checked: 18 of 18 reads 100%; a client who stopped after 5 days reads 5 of 18.
 
+## 95 · Activity is a history, the rows line up, and the Move dialog matches — ✅ LIVE 21 Sep
+
+- [ ] **Activity is not a notifications list any more**: no "12 new since you last looked", no orange dots or tinted rows, no counts on the filters, no Mark all seen. The dots on the tabs are what say something new came in. A row still opens its tab.
+- [ ] **Nothing overlaps in Activity or the Feed**: the tag column fits the longest tag ("MEASUREMENTS" needs 114px; it had 92, so it ran into the text on every row). The Feed's column went 112 → 124 for the same reason.
+- [ ] **The pager's ends are two chevrons**, on Home's Activity, the Feed and the style page; "Full history →" is gone from Activity.
+- [ ] **Phases → Ending soon lines up**: the track pill sits in a column of its own, one width for all three tracks, text centred and centred in the row, so every name starts on the same line. The "Plan →" buttons are gone; the row still opens the client's Plan.
+- [ ] **The Move dialog (dragging a bar on the Plan timeline) uses the phase dialog's look**: title, track tag, the state the new dates put it in, Start / End / Length as before → after with the new value in the state's colour, the programme and live notes in boxes, Cancel / Save new dates.
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).

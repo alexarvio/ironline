@@ -113,7 +113,6 @@ export default function PhasesOverviewPanel({ coachId, win }: { coachId: number;
                       {phase.weeksLeft === 1 ? "Ends this week" : `${phase.weeksLeft} weeks left`} · last day {shortDate(addWeeks(phase.end_week, 1))}
                     </span>
                   </span>
-                  <span className="ch-go">Plan →</span>
                 </Link>
               </li>
             ))}

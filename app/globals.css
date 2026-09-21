@@ -8128,7 +8128,11 @@ label.ci-pill { cursor: text; }
 .pl-bar.pho-bar .pl-bar-name { font-size: 11px; }
 .pl-bar.pho-bar.soon { border: 1.5px solid #b3471d; }
 .pho-left { flex: none; padding: 0 6px; border-radius: 999px; background: #fbe9e0; color: #b3471d; font-size: 9.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
-.pho-soon-row { text-decoration: none; align-items: center; }
+/* Ending soon: the track pill in a column of its own, one width for all
+   three tracks and centred in it, so every name starts on the same line.
+   The whole row opens the client's Plan. */
+.ch-row.pho-soon-row { display: grid; grid-template-columns: 100px minmax(0, 1fr); align-items: center; gap: 14px; text-decoration: none; }
+.ch-row.pho-soon-row .pl-track-tag { justify-self: stretch; box-sizing: border-box; text-align: center; white-space: nowrap; }
 .pho-swatch { display: inline-block; width: 14px; height: 10px; border-radius: 3px; border: 1px solid transparent; }
 .pho-swatch.nutrition { background: #dff3ea; border-color: #9fd3bb; }
 .pho-swatch.training { background: #e6e4fa; border-color: #b9b4ec; }
@@ -8242,6 +8246,19 @@ label.ci-pill { cursor: text; }
 .pl-dlg-ask { display: flex; align-items: center; gap: 12px; width: 100%; font-size: 12.5px; color: #313851; }
 .pl-dlg-ask strong { font-weight: 800; color: #141a24; }
 
+/* Moving a phase on the Plan timeline: the same shell, narrower, with what
+   changes as a before → after, the new value in the state's colour. */
+.pl-dlg.pl-move { width: 440px; }
+.pl-move-rows { display: flex; flex-direction: column; }
+.pl-move-row { display: grid; grid-template-columns: 70px auto 18px auto; justify-content: start; align-items: baseline; gap: 8px; padding: 10px 0; border-bottom: 1px solid #eceff3; }
+.pl-move-row:last-child { border-bottom: 0; }
+.pl-move-was { font-size: 13px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.pl-move-arrow { font-size: 13px; color: #a0a7b3; text-align: center; }
+.pl-move-now { font-size: 13.5px; font-weight: 800; color: var(--sel-edge); font-variant-numeric: tabular-nums; }
+.pl-move-same { grid-column: 2 / -1; font-size: 13px; font-weight: 700; color: #313851; font-variant-numeric: tabular-nums; }
+.pl-move-note { margin: 0; padding: 10px 12px; border: 1px solid #e3e8ef; border-left: 3px solid #1e3a6e; border-radius: 10px; background: #f4f6fa; font-size: 12.5px; line-height: 1.5; color: #313851; }
+.pl-move-note.warn { border-color: #f3d9cc; border-left-color: #b3471d; background: #fdf3ee; }
+
 /* ---- A client's Home (admin) -------------------------------------------
    Who this is and how they are doing in one card, then what needs the coach
    and what the client did down the middle, with the reference details on a
@@ -8352,11 +8369,13 @@ label.ci-pill { cursor: text; }
 .ch-empty { margin: 0; padding: 14px 22px; border-top: 1px solid #eceff3; font-size: 12.5px; color: #8b93a1; }
 
 /* An activity row is a fixed grid, so the dot never shifts the text. */
-.ch-event { display: grid; grid-template-columns: 8px 92px minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 11px 22px; }
+/* The tag column fits the longest tag: "MEASUREMENTS" is 114px in Archivo,
+   and at 92px it ran into the text beside it on every row. */
+.ch-event { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 11px 22px; }
 .ch-event.new { background: #fdf8f3; }
 .ch-newdot { width: 6px; height: 6px; margin-top: 6px; border-radius: 999px; background: transparent; }
 .ch-event.new .ch-newdot { background: #c2622f; }
-.ch-cat { padding: 3px 7px; border-radius: 6px; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; text-align: center; background: #eef0f3; color: #5b6474; }
+.ch-cat { box-sizing: border-box; min-width: 0; padding: 3px 7px; border-radius: 6px; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #eef0f3; color: #5b6474; }
 .ch-cat.training { background: #e9e7fa; color: #4c42a8; }
 .ch-cat.nutrition { background: #e0efe7; color: #1f6a52; }
 .ch-cat.measurements { background: #e6ecf3; color: #1e3a6e; }
@@ -12727,7 +12746,7 @@ label.ci-pill { cursor: text; }
 .fd-day + .fd-day { margin-top: 18px; }
 .fd-day-label { margin: 0 0 8px; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #5b6474; }
 .fd-card { overflow: hidden; background: #fff; border: 1px solid #dfe3e8; border-radius: 12px; }
-.fd-row { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 11px 16px; color: #141a24; text-decoration: none; }
+.fd-row { display: grid; grid-template-columns: 124px minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 11px 16px; color: #141a24; text-decoration: none; }
 .fd-row + .fd-row { border-top: 1px solid #eceff3; }
 .fd-row:hover { background: #f8f9fb; }
 .fd-row:focus-visible { outline: 2px solid #2f5d8f; outline-offset: -2px; }
@@ -12766,6 +12785,10 @@ label.ci-pill { cursor: text; }
   cursor: pointer;
 }
 .pg-step:hover:not(:disabled):not(.off) { background: #f8f9fb; border-color: #2f5d8f; }
+/* Newer and Older are two chevrons: which way is which needs no word. */
+.pg-step.chev { width: 30px; padding: 0; justify-content: center; }
+.pg-step.chev svg { width: 16px; height: 16px; }
+.pg-step.chev.next svg { transform: rotate(180deg); }
 .pg-step:disabled, .pg-step.off { color: #8b93a1; background: #f4f6f9; border-color: #eceff3; cursor: default; }
 .pg-nums { display: inline-flex; align-items: center; gap: 3px; }
 .pg-num {

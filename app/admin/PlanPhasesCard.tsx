@@ -5,7 +5,7 @@ import { deployNutritionPhaseAction, deployProgramAction, updateClientPhaseActio
 import type { PhaseTrack } from "../lib/db";
 import type { PlanPhaseRow, PlanProgramOption } from "../lib/queries";
 import PhaseDialogButton, { isoWeek, PhaseDialog } from "./PhaseDialogButton";
-import { phaseChrome } from "./phaseChrome";
+import { phaseChrome, phaseStateOf, STATE_LABEL, TRACK_LABEL, TRACK_PALETTE } from "./phaseChrome";
 
 // The phases card: a week grid with one row per track and the phases as bars
 // laid into the same grid. Bar edges drag to change a phase's length, the
@@ -403,35 +403,81 @@ export default function PlanPhasesCard({
           const isLive = p.start_week <= thisWeek && p.end_week >= thisWeek;
           const startChanged = pending.start !== p.start_week;
           const endChanged = pending.end !== p.end_week;
+          // The same dialog chrome as editing a phase (phaseChrome): the
+          // track's tag, and the state the NEW dates put it in, so moving a
+          // live phase into the future already reads Scheduled here.
+          const draft = p.program?.status === "draft" || !!p.draft;
+          const state = phaseStateOf({ draft, startWeek: pending.start, endWeek: pending.end, today });
+          const chrome = phaseChrome(p.track, state);
+          const palette = TRACK_PALETTE[p.track];
+          // Days as the phase dialog shows them: the first day, and the last.
+          const day = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+          const lastDay = (monday: string) => {
+            const d = new Date(`${monday}T00:00:00`);
+            d.setDate(d.getDate() + 6);
+            return day(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+          };
+          const weeksWas = weeksOf(p.start_week, p.end_week);
+          const weeksNow = weeksOf(pending.start, pending.end);
+          const rows: { label: string; was: string; now: string; changed: boolean }[] = [
+            { label: "Start", was: day(p.start_week), now: day(pending.start), changed: startChanged },
+            { label: "End", was: lastDay(p.end_week), now: lastDay(pending.end), changed: endChanged },
+            { label: "Length", was: `${weeksWas} week${weeksWas === 1 ? "" : "s"}`, now: `${weeksNow} week${weeksNow === 1 ? "" : "s"}`, changed: weeksWas !== weeksNow },
+          ];
           return (
-            <div className="pb-modal-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && setPending(null)}>
-              <div className="pb-modal pb-modal-sm" role="dialog" aria-modal="true" aria-label="Confirm the new dates">
-                <h2 className="pb-confirm-title">Move {p.name}?</h2>
-                <p className="pb-confirm-body">
-                  {startChanged && (
-                    <>
-                      Start: {shortDate(p.start_week)} → <b>{shortDate(pending.start)}</b>
-                      <br />
-                    </>
+            <div className="pl-dlg-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && setPending(null)}>
+              <div
+                className="pl-dlg pl-move"
+                role="dialog"
+                aria-modal="true"
+                aria-label={`Move ${p.name}`}
+                style={{ "--sel-edge": chrome.edge } as React.CSSProperties}
+              >
+                <header className="pl-dlg-head">
+                  <h2>Move {p.name}</h2>
+                  <span className="pl-track-tag" style={{ background: palette.tint, color: palette.ink }}>
+                    {TRACK_LABEL[p.track]}
+                  </span>
+                  <span className="pl-dlg-state" style={{ background: chrome.chipBg, color: chrome.chipInk }}>
+                    {STATE_LABEL[state]}
+                  </span>
+                </header>
+                <div className="pl-dlg-body">
+                  <div className="pl-move-rows">
+                    {rows.map((r) => (
+                      <div key={r.label} className="pl-move-row">
+                        <span className="pl-dlg-label">{r.label}</span>
+                        {r.changed ? (
+                          <>
+                            <span className="pl-move-was">{r.was}</span>
+                            <span className="pl-move-arrow" aria-label="to">
+                              →
+                            </span>
+                            <b className="pl-move-now">{r.now}</b>
+                          </>
+                        ) : (
+                          <span className="pl-move-same">{r.now}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {p.program && (
+                    <p className="pl-move-note">
+                      {startChanged ? "The training programme moves with it, deploy week included." : "The training programme changes with it."}
+                    </p>
                   )}
-                  {endChanged && (
-                    <>
-                      End: {shortDate(addWeeks(p.end_week, 1))} → <b>{shortDate(addWeeks(pending.end, 1))}</b>
-                      <br />
-                    </>
-                  )}
-                  {weeksOf(p.start_week, p.end_week)} weeks → <b>{weeksOf(pending.start, pending.end)} weeks</b>.
-                  {p.program && (startChanged ? " The training programme moves with it, deploy week included." : " The training programme changes with it.")}
-                  {isLive && " This phase is live: the client's app changes as soon as you save."}
-                </p>
-                <div className="pb-modal-foot">
-                  <button type="button" className="ad-btn-secondary" onClick={() => setPending(null)}>
-                    Cancel
-                  </button>
-                  <button type="button" className="ad-btn-primary" onClick={savePending}>
-                    Save new dates
-                  </button>
+                  {isLive && <p className="pl-move-note warn">This phase is live: the client&rsquo;s app changes as soon as you save.</p>}
                 </div>
+                <footer className="pl-dlg-foot">
+                  <div className="pl-dlg-actions">
+                    <button type="button" className="pl-dlg-cancel" onClick={() => setPending(null)}>
+                      Cancel
+                    </button>
+                    <button type="button" className="pl-dlg-save" onClick={savePending}>
+                      Save new dates
+                    </button>
+                  </div>
+                </footer>
               </div>
             </div>
           );

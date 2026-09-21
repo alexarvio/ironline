@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { ChevronLeftIcon } from "../components/icons";
 import { useRouter } from "next/navigation";
 import { markSeenAction } from "../lib/actions";
 import { pageWindow } from "../lib/pager";
@@ -52,46 +53,40 @@ const PAGE = 15;
 const SHOW_NEEDS_YOU: boolean = false;
 
 // The two cards down the middle of a client's Home: what needs the coach,
-// then what the client has been doing. A row opens the tab it is about; a new
-// one stops being new once it has been opened, or all at once with "Mark all
-// seen". The filters are client-side, on what is already loaded.
+// then what the client has been doing. Activity is a history, not a
+// notifications list: no "new" dots, counts or Mark all seen — the dots on
+// the tabs are what say something new came in. A row opens the tab it is
+// about. The filters are client-side, on what is already loaded.
 export default function ClientHomeFeed({
   clientId,
   firstName,
   actions,
   events,
   eventTotal,
-  unseenCount,
 }: {
   clientId: number;
   firstName: string;
   actions: HomeAction[];
   events: HomeEvent[];
   eventTotal: number;
-  unseenCount: number;
+  /** No longer shown here: Activity is not a notifications list. */
+  unseenCount?: number;
 }) {
   const router = useRouter();
   const [busy, start] = useTransition();
   const [filter, setFilter] = useState<FilterId>(FILTERS[0].id);
   const [page, setPage] = useState(1);
-  // Cleared here as well as on the server, so the tint and the count go the
-  // moment the coach says they have seen it rather than after the round trip.
-  const [allSeen, setAllSeen] = useState(false);
   const holds = FILTERS.find((f) => f.id === filter)!.holds as readonly string[];
   const matching = events.filter((e) => holds.includes(e.category));
   const pages = Math.max(1, Math.ceil(matching.length / PAGE));
   const at = Math.min(page, pages);
   const from = (at - 1) * PAGE;
   const shown = matching.slice(from, from + PAGE);
-  const newCount = allSeen ? 0 : unseenCount;
   // A new kind starts at its own beginning, not on page 3 of the last one.
   const pick = (id: FilterId) => {
     setFilter(id);
     setPage(1);
   };
-  // What is new, per kind, so the chips say where to look.
-  const fresh = (f: (typeof FILTERS)[number]) =>
-    allSeen ? 0 : events.filter((e) => e.unseen && (f.holds as readonly string[]).includes(e.category)).length;
 
   const open = (tab: string | null, seenIds: string[]) =>
     start(async () => {
@@ -146,46 +141,22 @@ export default function ClientHomeFeed({
         <div className="ch-head tint">
           <div className="ch-head-titles">
             <span className="ch-label">Activity</span>
-            <span className="ch-head-sub">{newCount ? `${newCount} new since you last looked` : `What ${firstName} has been doing`}</span>
+            <span className="ch-head-sub">What {firstName} has been doing</span>
           </div>
           <div className="ch-chips">
-            {FILTERS.map((f) => {
-              const n = fresh(f);
-              return (
-                <button key={f.id} type="button" className={`ch-chip${filter === f.id ? " on" : ""}`} onClick={() => pick(f.id)}>
-                  {f.label}
-                  {n > 0 && <span className="ch-chip-count">{n}</span>}
-                </button>
-              );
-            })}
-            {newCount > 0 && (
-              <button
-                type="button"
-                className="ch-chip plain"
-                disabled={busy}
-                onClick={() => {
-                  setAllSeen(true);
-                  start(() => markSeenAction(clientId, { all: true }));
-                }}
-              >
-                Mark all seen
+            {FILTERS.map((f) => (
+              <button key={f.id} type="button" className={`ch-chip${filter === f.id ? " on" : ""}`} onClick={() => pick(f.id)}>
+                {f.label}
               </button>
-            )}
+            ))}
           </div>
         </div>
         {shown.length > 0 ? (
           <ul className="ch-list">
             {shown.map((e) => {
-              const unseen = e.unseen && !allSeen;
               return (
                 <li key={e.id}>
-                  <button
-                    type="button"
-                    className={`ch-row ch-event${unseen ? " new" : ""}`}
-                    disabled={busy}
-                    onClick={() => open(e.tab, unseen ? [e.id] : [])}
-                  >
-                    <span className="ch-newdot" aria-label={unseen ? "New" : undefined} />
+                  <button type="button" className="ch-row ch-event" disabled={busy} onClick={() => open(e.tab, [])}>
                     <span className={`ch-cat ${e.category}`}>{CATEGORY_LABEL[e.category] ?? e.category}</span>
                     <span className="ch-main">
                       <span className="ch-title">{e.text.charAt(0).toUpperCase() + e.text.slice(1)}</span>
@@ -207,8 +178,8 @@ export default function ClientHomeFeed({
 
           {pages > 1 && (
             <nav className="pg" aria-label="Activity pages">
-              <button type="button" className="pg-step" onClick={() => setPage(at - 1)} disabled={at === 1}>
-                ‹ Newer
+              <button type="button" className="pg-step chev" onClick={() => setPage(at - 1)} disabled={at === 1} aria-label="Newer">
+                <ChevronLeftIcon />
               </button>
               <span className="pg-nums">
                 {pageWindow(at, pages).map((n, i) =>
@@ -229,15 +200,12 @@ export default function ClientHomeFeed({
                   )
                 )}
               </span>
-              <button type="button" className="pg-step" onClick={() => setPage(at + 1)} disabled={at === pages}>
-                Older ›
+              <button type="button" className="pg-step chev next" onClick={() => setPage(at + 1)} disabled={at === pages} aria-label="Older">
+                <ChevronLeftIcon />
               </button>
             </nav>
           )}
 
-          <Link href={`/admin?view=feed&cat=${filter}`} className="ch-go">
-            Full history →
-          </Link>
         </div>
       </section>
     </>

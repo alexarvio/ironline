@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronLeftIcon } from "../components/icons";
 import { feedClock, getActivityFeed, listLoginLocks, localDateStr, type FeedCategory, type FeedEvent } from "../lib/queries";
 import { pageWindow } from "../lib/pager";
 
@@ -174,11 +175,13 @@ export default function FeedPanel({
       {pages > 1 && (
         <nav className="fd-pager pg" aria-label="Feed pages">
           {page > 1 ? (
-            <Link href={href(filter, page - 1)} className="pg-step">
-              ‹ Newer
+            <Link href={href(filter, page - 1)} className="pg-step chev" aria-label="Newer">
+              <ChevronLeftIcon />
             </Link>
           ) : (
-            <span className="pg-step off">‹ Newer</span>
+            <span className="pg-step chev off" aria-hidden="true">
+              <ChevronLeftIcon />
+            </span>
           )}
 
           <span className="pg-nums">
@@ -200,11 +203,13 @@ export default function FeedPanel({
           </span>
 
           {page < pages ? (
-            <Link href={href(filter, page + 1)} className="pg-step">
-              Older ›
+            <Link href={href(filter, page + 1)} className="pg-step chev next" aria-label="Older">
+              <ChevronLeftIcon />
             </Link>
           ) : (
-            <span className="pg-step off">Older ›</span>
+            <span className="pg-step chev next off" aria-hidden="true">
+              <ChevronLeftIcon />
+            </span>
           )}
 
           <span className="pg-count">

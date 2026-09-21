@@ -3,7 +3,7 @@
 import { useState } from "react";
 import PhaseHeader, { type PhaseOption } from "./PhaseHeader";
 import { pageWindow } from "../lib/pager";
-import { TrashIcon } from "../components/icons";
+import { ChevronLeftIcon, TrashIcon } from "../components/icons";
 
 // The house style, rendered from the real classes.
 //
@@ -175,8 +175,8 @@ export default function StyleGuidePanel() {
 
       <Section title="Pages" hint="Fifteen rows, then the next fifteen">
         <nav className="pg" aria-label="Example pages">
-          <button type="button" className="pg-step" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>
-            ‹ Newer
+          <button type="button" className="pg-step chev" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} aria-label="Newer">
+            <ChevronLeftIcon />
           </button>
           <span className="pg-nums">
             {pageWindow(page, 12).map((n, i) =>
@@ -193,11 +193,12 @@ export default function StyleGuidePanel() {
           </span>
           <button
             type="button"
-            className="pg-step"
+            className="pg-step chev next"
             onClick={() => setPage(Math.min(12, page + 1))}
             disabled={page === 12}
+            aria-label="Older"
           >
-            Older ›
+            <ChevronLeftIcon />
           </button>
         </nav>
       </Section>
