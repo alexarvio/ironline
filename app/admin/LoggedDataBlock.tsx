@@ -21,7 +21,16 @@ const withUnit = (v: number, unit: string) => {
   return u.startsWith("/") ? `${n(v)}${u}` : `${n(v)} ${u}`;
 };
 
-export default function LoggedDataBlock({ daily, weekly }: { daily: LoggedValues; weekly: LoggedValues }) {
+export default function LoggedDataBlock({
+  daily,
+  weekly,
+  notStarted = null,
+}: {
+  daily: LoggedValues;
+  weekly: LoggedValues;
+  /** The phase on screen has not started: nothing to show, and why. */
+  notStarted?: string | null;
+}) {
   const [show, setShow] = useState<"table" | "feed">("table");
   const [cadence, setCadence] = useState<"daily" | "weekly">("daily");
   const view = cadence === "daily" ? daily : weekly;
@@ -48,7 +57,9 @@ export default function LoggedDataBlock({ daily, weekly }: { daily: LoggedValues
         </div>
       </div>
 
-      {view.metrics.length === 0 ? (
+      {notStarted ? (
+        <p className="mx-log-empty">{notStarted}</p>
+      ) : view.metrics.length === 0 ? (
         <p className="mx-log-empty">No {cadence} metrics in this phase. Add one above.</p>
       ) : show === "table" ? (
         <Table view={view} valueFor={valueFor} />

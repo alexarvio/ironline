@@ -97,7 +97,7 @@ export default function AdminSidebar({
 
       <ClientRoster clients={clients} selectedId={selectedId} inviteReady={mailConfigured()} />
 
-      <CoachFooter name={nameFromEmail(coachEmail)} photoPath={getCoachProfile(coachId)?.avatar_path ?? null}>
+      <CoachFooter name={getCoachProfile(coachId)?.display_name?.trim() || nameFromEmail(coachEmail)} photoPath={getCoachProfile(coachId)?.avatar_path ?? null}>
         <Link href="/admin/profile" role="menuitem" className="ad-rail-menu-link">
           Your profile
         </Link>

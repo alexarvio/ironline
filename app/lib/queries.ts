@@ -3072,13 +3072,46 @@ export function addMetricsFromLibrary(
   return added;
 }
 
+/**
+ * What the client is asked for now: the running lifestyle phase's metrics,
+ * plus any standing ones when no phase is running. A draft or scheduled
+ * phase's metrics wait for their phase, so setting one up never reaches the
+ * client early.
+ */
 export function listMetricDefinitions(
   clientId: number,
   frequency: MetricCadence
 ): MetricDefinition[] {
+  adoptStandingMetrics(clientId);
+  const running = runningLifestylePhaseId(clientId);
   return getData()
-    .metric_definitions.filter((m) => m.client_id === clientId && m.frequency === frequency)
+    .metric_definitions.filter(
+      (m) => m.client_id === clientId && m.frequency === frequency && (m.phase_id == null || m.phase_id === running)
+    )
     .sort((a, b) => a.order_index - b.order_index);
+}
+
+/** The lifestyle phase the client is in this week, if any. */
+function runningLifestylePhaseId(clientId: number): number | null {
+  const week = weekStart(localDateStr());
+  return (
+    listClientPhases(clientId).find((p) => p.track === "lifestyle" && !p.draft && p.start_week <= week && p.end_week >= week)?.id ?? null
+  );
+}
+
+// Metrics from before phases owned them (no phase_id) belong to the phase
+// that is running, so the next phase starts as a blank canvas instead of
+// inheriting them. With no phase running they stay standing.
+function adoptStandingMetrics(clientId: number) {
+  const running = runningLifestylePhaseId(clientId);
+  if (running == null) return;
+  let moved = false;
+  for (const m of getData().metric_definitions) {
+    if (m.client_id !== clientId || m.phase_id != null) continue;
+    m.phase_id = running;
+    moved = true;
+  }
+  if (moved) persist();
 }
 
 export function addMetricDefinition(
@@ -3115,6 +3148,7 @@ export function addMetricDefinition(
  * draft is not quietly pre-filled by it.
  */
 export function listMetricsForPhase(clientId: number, phaseId: number | null, isLive: boolean): MetricDefinition[] {
+  adoptStandingMetrics(clientId);
   return listAllMetrics(clientId).filter((m) => {
     if (m.phase_id != null) return m.phase_id === phaseId;
     // The standing set: shown while the running phase is on screen, and when
@@ -8778,10 +8812,19 @@ const CATEGORY_COLOUR: Record<string, string> = {
   training: "#4c42a8",
 };
 
-/** Everything the Logged data block reads, for one cadence. */
-export function getLoggedValues(clientId: number, cadence: "daily" | "weekly", count: number): LoggedValues {
+/**
+ * Everything the Logged data block reads, for one cadence. With a phase's
+ * metrics, only those; with `until`, periods count back from that day (a
+ * phase that has ended) rather than today.
+ */
+export function getLoggedValues(
+  clientId: number,
+  cadence: "daily" | "weekly",
+  count: number,
+  scope?: { metrics: MetricDefinition[]; until?: string }
+): LoggedValues {
   const data = getData();
-  const defs = listAllMetrics(clientId).filter((m) => m.frequency === cadence);
+  const defs = (scope ? scope.metrics : listAllMetrics(clientId)).filter((m) => m.frequency === cadence);
   const metrics: LoggedMetric[] = defs.map((m) => {
     const g = metricGroup(m.category);
     return {
@@ -8797,7 +8840,8 @@ export function getLoggedValues(clientId: number, cadence: "daily" | "weekly", c
 
   // The periods asked for, newest first, whether or not anything came in:
   // a gap is data, so it has to have a row.
-  const today = localDateStr();
+  const now = localDateStr();
+  const today = scope?.until && scope.until < now ? scope.until : now;
   const periods: LoggedPeriod[] = [];
   for (let i = 0; i < count; i++) {
     if (cadence === "daily") {

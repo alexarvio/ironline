@@ -119,6 +119,7 @@ export default function MetricLibrary({
               }}
             >
               <input type="hidden" name="clientId" value={clientId} />
+              {phaseId != null && <input type="hidden" name="phaseId" value={phaseId} />}
               <input type="hidden" name="picks" value={JSON.stringify(selected)} />
               <button type="submit" className="ad-btn-primary" disabled={selected.length === 0}>
                 {selected.length === 0 ? "Pick some metrics" : `Add ${selected.length} to check-in`}

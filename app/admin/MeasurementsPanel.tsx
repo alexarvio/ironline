@@ -58,9 +58,19 @@ export default function MeasurementsPanel({ clientId, phaseParam }: { clientId: 
   });
 
   // Both presentations read one lookup; the table shows eight days or five
-  // weeks, and the feed the same periods.
-  const daily = getLoggedValues(clientId, "daily", 8);
-  const weekly = getLoggedValues(clientId, "weekly", 5);
+  // weeks, and the feed the same periods. Only this phase's metrics, and a
+  // phase that has not started has nothing logged yet: a blank canvas, not
+  // the running phase's history. One that has ended reads back from its end.
+  const started = !selected || selected.status === "now" || selected.status === "past";
+  let until: string | undefined;
+  if (selected?.status === "past") {
+    const end = new Date(`${selected.end_week}T00:00:00`);
+    end.setDate(end.getDate() + 6);
+    until = localDateStr(end);
+  }
+  const scope = phases.length ? { metrics, until } : undefined;
+  const daily = getLoggedValues(clientId, "daily", started ? 8 : 0, scope);
+  const weekly = getLoggedValues(clientId, "weekly", started ? 5 : 0, scope);
   const dailyCount = metrics.filter((m) => m.frequency === "daily").length;
 
   // The last thing logged against each metric, so a row says whether it is
@@ -96,8 +106,15 @@ export default function MeasurementsPanel({ clientId, phaseParam }: { clientId: 
   const asked = (v: ReturnType<typeof getLoggedValues>) => (v.metrics.length === 0 ? 0 : v.periods.length);
   const totalDone = done(daily) + done(weekly);
   const totalAsked = asked(daily) + asked(weekly);
-  const loggedHint = totalAsked === 0 ? "Nothing asked for yet" : `${totalDone} of ${totalAsked} check-ins done`;
-  const notes = listCheckInNotes(clientId, 12);
+  const startsOn = selected ? new Date(`${selected.start_week}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
+  const loggedHint = !started
+    ? selected?.status === "draft"
+      ? "Nothing yet · a draft"
+      : `Nothing yet · starts ${startsOn}`
+    : totalAsked === 0
+      ? "Nothing asked for yet"
+      : `${totalDone} of ${totalAsked} check-ins done`;
+  const notes = started ? listCheckInNotes(clientId, 12).filter((n) => !until || n.period <= until) : [];
 
   return (
     // One card: the phase band on top, and under it everything that belongs
@@ -110,17 +127,17 @@ export default function MeasurementsPanel({ clientId, phaseParam }: { clientId: 
       <MeasurementsBlock
         id="metrics"
         title="Tracked metrics"
-        hint={metrics.length === 0 ? "Nothing asked for yet" : `${metrics.length} live · ${dailyCount} daily, ${metrics.length - dailyCount} weekly`}
+        hint={metrics.length === 0 ? "Nothing asked for yet" : `${metrics.length}${isLive || phases.length === 0 ? " live" : ""} · ${dailyCount} daily, ${metrics.length - dailyCount} weekly`}
       >
-        <MetricLibrary clientId={clientId} phaseId={selected && !isLive ? selected.id : null} packs={packs} groups={METRIC_GROUPS.map((g) => ({ key: g.key, label: g.label }))} />
+        <MetricLibrary clientId={clientId} phaseId={selected?.id ?? null} packs={packs} groups={METRIC_GROUPS.map((g) => ({ key: g.key, label: g.label }))} />
         {metrics.length === 0 ? (
           <div className="mx-blank">
             <p className="ad-panel-empty">
-              {selected && selected.status === "draft"
+              {selected && (selected.status === "draft" || selected.status === "next")
                 ? "A blank board. Tick what this phase should ask for, or start from the one running now."
                 : "Nothing yet. Open the metric library and tick what this client should log."}
             </p>
-            {selected && selected.status === "draft" && live && (
+            {selected && (selected.status === "draft" || selected.status === "next") && live && (
               <CopyPhaseMetrics clientId={clientId} fromId={live.id} toId={selected.id} fromName={live.name} />
             )}
           </div>
@@ -134,7 +151,11 @@ export default function MeasurementsPanel({ clientId, phaseParam }: { clientId: 
       </MeasurementsBlock>
 
       <MeasurementsBlock id="logged" title="Logged data" hint={loggedHint}>
-        <LoggedDataBlock daily={daily} weekly={weekly} />
+        <LoggedDataBlock
+          daily={daily}
+          weekly={weekly}
+          notStarted={!started ? (selected?.status === "draft" ? "Nothing logged yet. This phase is a draft." : `Nothing logged yet. This phase starts ${startsOn}.`) : null}
+        />
       </MeasurementsBlock>
 
       {/* What the client wrote beside their numbers: why a day was off, what

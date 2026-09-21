@@ -753,6 +753,15 @@ Commit `86a3313` (the client camera, storage, `/uploads/meals`, and the `meal_ph
 
 - [ ] **Weight gets 100px per gym** (was 64) so a gym name like "Muscle Factory" reads in full, and **Notes 180px** (was 90) so a note's first words do. "What the client did" gives up that room; its sets scroll inside the cell when they don't fit, and its verdict column went 118 → 104px (the longest verdict fits). Checked on the real builder: both gym names fit, nothing else moved.
 
+## 101 · A new lifestyle phase starts blank; the coach's name in the rail; Next meeting lined up — ✅ LIVE 21 Sep
+
+- [ ] **A draft or scheduled lifestyle phase is a blank canvas** on Measurements: no metrics, and the Logged data block reads "Nothing logged yet. This phase is a draft." (or "…starts Nov 2."), with no client notes under it. It used to show every metric and check-in of the running phase, because the table and feed read all the client's metrics and all their history whatever phase was on screen. The running phase shows only its own metrics now; an ended one reads back from its last day. "Start from <running phase>" still copies them on purpose.
+- [ ] **The old standing metrics now belong to the running phase**, so when the next phase starts they don't come back with it. Happens by itself the first time a client with a running lifestyle phase is opened. A client with no running phase keeps them as before.
+- [ ] **The client is only asked the running phase's metrics.** Before, ticking metrics on a draft put them in the client's check-in straight away. Also the metric library's "Add to check-in" button now adds to the phase on screen (it always added to the running one, whatever phase was open).
+- [ ] **The rail's foot shows your display name** from your profile ("Finlay Chedd") instead of a name read off the login email. Falls back to the email when no display name is set.
+- [ ] **"None booked" sits on the same line** as the other figures in the client Home strip (it was centred in its box, so it dropped below "0 of 5", "3,180 kcal").
+- [ ] Checked on local data: draft "hyper" shows a blank board and empty feed; live "cock" keeps its 13 metrics and history; client 1's 13 metrics moved onto "cock"; the rail reads "Finlay Chedd"; all six figures share one top edge with "None booked".
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).
