@@ -1,7 +1,8 @@
 "use client";
 
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { ReactNode, useRef, useState } from "react";
 import { useOpenFood } from "./CheckInContext";
+import { useTween } from "../components/useTween";
 
 // The top of the client's Nutrition tab: the banner (Training day / Rest day
 // tabs, the phase; the app's top bar floats over its top) and the calories card overlapping it (the
@@ -37,34 +38,10 @@ function ringFills(set: NutritionTargetSet) {
   });
 }
 
-// A figure that runs from its last value to the new one when the day tab
-// changes, over the same time the arcs take, instead of snapping. It snaps
-// for anyone with reduced motion on.
-export function useTween(target: number, ms = 600) {
-  const [value, setValue] = useState(target);
-  const current = useRef(target);
-  useEffect(() => {
-    const from = current.current;
-    if (from === target) return;
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-      current.current = target;
-      setValue(target);
-      return;
-    }
-    const began = performance.now();
-    let frame = 0;
-    const step = (now: number) => {
-      const t = Math.min(1, (now - began) / ms);
-      const eased = 1 - Math.pow(1 - t, 3);
-      current.current = from + (target - from) * eased;
-      setValue(current.current);
-      if (t < 1) frame = requestAnimationFrame(step);
-    };
-    frame = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(frame);
-  }, [target, ms]);
-  return value;
-}
+// The count-up lives in components/useTween now, so the coach's Keeping up
+// rings run on the same curve over the same 600ms. Re-exported here because
+// the food diary imports it from this file.
+export { useTween };
 
 function Tween({ value, format }: { value: number; format: (v: number) => string }) {
   return <>{format(useTween(value))}</>;

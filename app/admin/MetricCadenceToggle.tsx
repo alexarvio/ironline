@@ -3,7 +3,6 @@ import { setMetricCadenceAction } from "../lib/actions";
 const OPTIONS = [
   { value: "daily", label: "Daily" },
   { value: "weekly", label: "Weekly" },
-  { value: "monthly", label: "Monthly" },
 ] as const;
 
 // Daily / Weekly / Monthly on a check-in column row. Each option is its own

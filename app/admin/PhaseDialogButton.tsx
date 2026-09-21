@@ -1,21 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { addClientPhaseAction, removeClientPhaseAction, updateClientPhaseAction } from "../lib/actions";
+import { addClientPhaseAction, removeClientPhaseAction, schedulePhaseAction, updateClientPhaseAction } from "../lib/actions";
 import type { ClientPhase, PhaseTrack } from "../lib/db";
+import PhaseCalendar, { isoWeek, mondayOf, monthOf, type CalMonth, type PlannedRange } from "./PhaseCalendar";
+import { phaseChrome, phaseStateOf, STATE_LABEL, TRACK_LABEL, TRACK_PALETTE, type PhaseState } from "./phaseChrome";
 
-const TRACKS: { id: PhaseTrack; label: string }[] = [
-  { id: "nutrition", label: "Nutrition" },
-  { id: "training", label: "Training" },
-  { id: "lifestyle", label: "Lifestyle" },
-];
+export { isoWeek };
 
-export const TRACK_TONE: Record<PhaseTrack, { bg: string; fg: string; mid: string }> = {
-  nutrition: { bg: "#dff3ea", fg: "#0f5c46", mid: "#9fd3bb" },
-  training: { bg: "#e6e4fa", fg: "#3a3390", mid: "#b9b4ec" },
-  lifestyle: { bg: "#efede6", fg: "#4a4a45", mid: "#cfcbbd" },
-};
+const TRACKS: PhaseTrack[] = ["nutrition", "training", "lifestyle"];
+const LENGTHS = [4, 6, 8, 12];
 
 /** What the dialog knows about the programme behind a training phase. */
 export type PhaseProgramInfo = {
@@ -30,30 +26,19 @@ export type PhaseNeighbour = { id: number; track: PhaseTrack; name: string; star
 export type PhaseProgramOption = { id: number; name: string; status: "live" | "scheduled" | "draft"; weeks: number; linked: boolean };
 
 const DAY = 86400000;
-const parse = (iso: string) => new Date(`${iso}T00:00:00`);
+const parse = (s: string) => new Date(`${s}T00:00:00`);
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const mondayOf = (date: string) => {
-  const d = parse(date);
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return iso(d);
-};
 const addDays = (date: string, n: number) => {
   const d = parse(date);
   d.setDate(d.getDate() + n);
   return iso(d);
 };
-const weeksBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / (7 * DAY));
-export const isoWeek = (monday: string) => {
-  const d = parse(monday);
-  const thursday = new Date(d);
-  thursday.setDate(d.getDate() + 3);
-  const jan1 = new Date(thursday.getFullYear(), 0, 1);
-  return Math.floor((thursday.getTime() - jan1.getTime()) / DAY / 7) + 1;
-};
+const daysBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / DAY);
+const weeksBetween = (a: string, b: string) => Math.round(daysBetween(a, b) / 7);
+const fieldDate = (d: string) => (d ? parse(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "Pick a day");
 
-// Either the "+ Add phase" button in the card header, or a bar in the grid;
-// both open the same dialog. With `phase` set, the dialog edits (and can
-// delete) that phase; without it, it adds one.
+// "+ Add phase" in the Plan card's header, or any button that opens the same
+// dialog. With `phase` set it edits (and can delete) that phase.
 export default function PhaseDialogButton(props: Omit<PhaseDialogProps, "onClose"> & { label?: string; className?: string }) {
   const [open, setOpen] = useState(false);
   const { label, className, ...dialog } = props;
@@ -74,76 +59,173 @@ export type PhaseDialogProps = {
   /** Server-local date, so "is this live" agrees with the timeline. */
   today?: string;
   defaultTrack?: PhaseTrack;
+  /** A new phase's first week; in "schedule" mode, the week the span slides to. */
   defaultStart?: string;
   defaultEnd?: string;
-  /** The other phases, for the overlap warning. */
+  /** The other phases, for the calendar's planned bars and the overlap warning. */
   others?: PhaseNeighbour[];
   /** Programmes a new training phase could be linked to. */
   programs?: PhaseProgramOption[];
-  /** Opened from a track's own tab: the track can't be switched. */
-  lockTrack?: boolean;
+  /** Show the track chips. Only the Plan screen's “Add phase” does: every
+      other way in already knows which track it is about. */
+  chooseTrack?: boolean;
+  /** "schedule": the last step for a draft — named, dated and sent out. */
+  mode?: "edit" | "schedule";
+  /** Scheduling a training phase: its length is its programme's, so only the start is picked. */
+  lockedWeeks?: number | null;
+  /** Start on a Monday, end on a Sunday, so a phase is whole weeks — what the
+      Plan timeline draws. Off only for a track that one day needs part-weeks. */
+  snapToWeeks?: boolean;
   onClose: () => void;
 };
 
-export function PhaseDialog({ clientId, phase, program, today, defaultTrack, defaultStart, defaultEnd, others = [], programs = [], lockTrack = false, onClose }: PhaseDialogProps) {
-  const ref = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    document.addEventListener("keydown", onKey);
-    ref.current?.focus();
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+// Schedule or edit a phase, the same dialog on Plan, Training, Nutrition and
+// Measurements. Its colours come from the phase's state (phaseChrome), which
+// is worked out from the dates on screen on every render: move a live
+// phase's start into the future and it turns scheduled blue as you click.
+export function PhaseDialog({
+  clientId,
+  phase,
+  program,
+  today: todayProp,
+  defaultTrack,
+  defaultStart,
+  defaultEnd,
+  others = [],
+  programs = [],
+  chooseTrack = false,
+  mode = "edit",
+  lockedWeeks = null,
+  snapToWeeks = true,
+  onClose,
+}: PhaseDialogProps) {
+  const today = todayProp ?? iso(new Date());
+  const scheduling = mode === "schedule" && !!phase;
+  const editing = !!phase && !scheduling;
+  const snapStart = (d: string) => (snapToWeeks ? mondayOf(d) : d);
+  const snapEnd = (d: string) => (snapToWeeks ? addDays(mondayOf(d), 6) : d);
 
-  const editing = !!phase;
-  const [start, setStart] = useState(phase?.start_week ?? defaultStart ?? "");
-  const [end, setEnd] = useState(phase?.end_week ?? defaultEnd ?? "");
+  // The selection is held as its first and last DAY; the form posts weeks.
+  const [initial] = useState(() => {
+    if (scheduling) {
+      const from = snapStart(defaultStart ?? phase.start_week);
+      const weeks = lockedWeeks ?? weeksBetween(phase.start_week, phase.end_week) + 1;
+      return { from, to: addDays(from, weeks * 7 - 1) };
+    }
+    if (phase) return { from: phase.start_week, to: addDays(phase.end_week, 6) };
+    if (defaultStart) return { from: snapStart(defaultStart), to: snapEnd(defaultEnd ?? defaultStart) };
+    return { from: "", to: "" };
+  });
+  const [from, setFrom] = useState(initial.from);
+  const [to, setTo] = useState(initial.to);
+  const [name, setName] = useState(phase?.name ?? "");
   const [track, setTrack] = useState<PhaseTrack>(phase?.track ?? defaultTrack ?? "nutrition");
+  // A live or scheduled programme starts on its deploy week; only the end moves.
+  const startLocked = !scheduling && !!program && program.status !== "draft";
+  const endLocked = !!lockedWeeks;
+  // Exactly one end is armed: the one the next click in the calendar sets.
+  const [active, setActive] = useState<"start" | "end">(startLocked ? "end" : "start");
+  const [month, setMonth] = useState<CalMonth>(() => monthOf(initial.from || today));
   const [programChoice, setProgramChoice] = useState<string>("new");
   const [adjust, setAdjust] = useState(true);
   const [confirming, setConfirming] = useState(false);
   // Delete asks first: one click used to remove the phase outright.
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  const tone = TRACK_TONE[track];
-  // A live or scheduled programme starts on its deploy week; only the end moves.
-  const startLocked = !!program && program.status !== "draft";
-  const live = !!phase && !!today && phase.start_week <= today && addDays(phase.end_week, 6) >= today;
+  const nameRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    nameRef.current?.focus();
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
-  const snappedStart = start ? mondayOf(start) : "";
-  const snappedEnd = end ? mondayOf(end) : "";
-  const ordered = snappedStart && snappedEnd ? (snappedStart <= snappedEnd ? [snappedStart, snappedEnd] : [snappedEnd, snappedStart]) : null;
-  const newWeeks = ordered ? weeksBetween(ordered[0], ordered[1]) + 1 : 0;
-  const datesChanged = !!phase && (snappedStart !== phase.start_week || snappedEnd !== phase.end_week);
-  const trackChanged = !!phase && track !== phase.track;
-  const weekDelta = program ? newWeeks - program.totalWeeks : 0;
+  // ---- The state, and so the colours: derived, never stored ----
+  // A new phase is a draft on every track until it is deployed. Scheduling
+  // shows what the phase is about to become.
+  const isDraft = scheduling ? false : !phase ? true : !!phase.draft || program?.status === "draft";
+  const startWeek = from ? mondayOf(from) : "";
+  const endWeek = to ? mondayOf(to) : "";
+  const state: PhaseState = startWeek ? phaseStateOf({ draft: isDraft, startWeek, endWeek: endWeek || startWeek, today }) : isDraft ? "draft" : "scheduled";
+  const sel = phaseChrome(track, state);
+  const palette = TRACK_PALETTE[track];
+  const savedState = phase ? phaseStateOf({ draft: isDraft, startWeek: phase.start_week, endWeek: phase.end_week, today }) : null;
+  const wasLive = editing && savedState === "live";
+
+  // ---- Picking ----
+  const pick = (day: string) => {
+    if (endLocked) {
+      // A programme's length is fixed: the click moves the whole span.
+      const s = snapStart(day);
+      setFrom(s);
+      setTo(addDays(s, lockedWeeks! * 7 - 1));
+      return;
+    }
+    if (active === "start" && !startLocked) {
+      const s = snapStart(day);
+      setFrom(s);
+      if (!to || to < s) setTo(snapEnd(day));
+      setActive("end");
+      return;
+    }
+    const e = snapEnd(day);
+    if (!from) {
+      setFrom(snapStart(day));
+      setTo(e);
+      return;
+    }
+    // Before the start: that day becomes the start, rather than a range that
+    // runs backwards. The end stays armed.
+    if (e < from) {
+      if (!startLocked) setFrom(snapStart(day));
+      return;
+    }
+    setTo(e);
+    if (!startLocked) setActive("start");
+  };
+  const arm = (end: "start" | "end") => {
+    setActive(end);
+    const day = end === "start" ? from : to;
+    if (day) setMonth(monthOf(day));
+  };
+  const setLength = (weeks: number) => {
+    if (!from) return;
+    setTo(addDays(mondayOf(from), weeks * 7 - 1));
+  };
+
+  // ---- What is on screen ----
+  const weeks = from && to ? weeksBetween(mondayOf(from), mondayOf(to)) + 1 : 0;
+  const days = from && to ? daysBetween(from, to) + 1 : 0;
+  const planned: PlannedRange[] = others
+    .filter((o) => o.track === track && !(phase && o.id === phase.id))
+    .map((o) => ({ name: o.name, from: o.start_week, to: addDays(o.end_week, 6) }));
+  const overlap = !!from && !!to && planned.some((p) => p.from <= to && p.to >= from);
+
+  // A training phase's programme follows the phase's length.
+  const weekDelta = program && !scheduling ? weeks - program.totalWeeks : 0;
   let removable = 0;
   if (program && weekDelta < 0) {
-    for (let i = program.totalWeeks; i > newWeeks; i--) {
+    for (let i = program.totalWeeks; i > weeks; i--) {
       if (program.loggedWeeks.includes(i)) break;
       removable += 1;
     }
   }
   const removeFrom = program ? program.totalWeeks - removable + 1 : 0;
   const removeLabel = removable === 0 ? null : removable === 1 ? `week ${program!.totalWeeks}` : `weeks ${removeFrom}–${program!.totalWeeks}`;
+  const datesChanged = !!phase && (startWeek !== phase.start_week || endWeek !== phase.end_week);
+  const trackChanged = !!phase && track !== phase.track;
 
-  // Another phase on the same track sharing weeks with this one.
-  const overlap = (() => {
-    if (!ordered) return null;
-    for (const o of others) {
-      if (o.track !== track || (phase && o.id === phase.id)) continue;
-      const lo = ordered[0] > o.start_week ? ordered[0] : o.start_week;
-      const hi = ordered[1] < o.end_week ? ordered[1] : o.end_week;
-      if (lo <= hi) return { name: o.name, weeks: weeksBetween(lo, hi) + 1 };
-    }
-    return null;
-  })();
-
+  const ready = name.trim().length > 0 && !!from && !!to;
   const submit = (e: React.FormEvent<HTMLFormElement>) => {
     if (confirmingDelete) {
       setTimeout(onClose, 0);
       return;
     }
-    if (live && (datesChanged || trackChanged) && !confirming) {
+    if (!ready) {
+      e.preventDefault();
+      return;
+    }
+    if (wasLive && (datesChanged || trackChanged) && !confirming) {
       e.preventDefault();
       setConfirming(true);
       return;
@@ -152,181 +234,244 @@ export function PhaseDialog({ clientId, phase, program, today, defaultTrack, def
   };
 
   const available = programs.filter((p) => !p.linked);
+  const vars = { "--sel-edge": sel.edge, "--sel-soft": sel.soft, "--sel-band": sel.band } as CSSProperties;
+  const title = scheduling ? "Schedule phase" : editing ? "Edit phase" : "New phase";
+  const action = scheduling ? schedulePhaseAction : editing ? updateClientPhaseAction : addClientPhaseAction;
 
   return createPortal(
-    <div className="pb-modal-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="pb-modal pb-modal-sm pl-dialog" role="dialog" aria-modal="true" aria-label={editing ? "Edit phase" : "New phase"} style={{ borderTop: `4px solid ${tone.fg}` }}>
-        <div className="pl-dialog-head">
-          <h2 className="pb-confirm-title">{editing ? "Edit phase" : "New phase"}</h2>
-          <span className="pl-track-tag" style={{ background: tone.bg, color: tone.fg }}>
-            {TRACKS.find((t) => t.id === track)?.label}
+    <div className="pl-dlg-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="pl-dlg" role="dialog" aria-modal="true" aria-label={title} style={vars}>
+        <header className="pl-dlg-head">
+          <h2>{title}</h2>
+          {/* The tag names the track and always wears its colours; the chip
+              beside it says what state the phase is in, in that state's. */}
+          <span className="pl-track-tag" style={{ background: palette.tint, color: palette.ink }}>
+            {TRACK_LABEL[track]}
           </span>
-        </div>
-        <form action={editing ? updateClientPhaseAction : addClientPhaseAction} className="cd-form" onSubmit={submit}>
-          {editing ? <input type="hidden" name="id" value={phase.id} /> : <input type="hidden" name="clientId" value={clientId} />}
-          <input type="hidden" name="track" value={program ? "training" : track} />
-          {program && weekDelta !== 0 && adjust && <input type="hidden" name="adjustProgram" value="1" />}
-          {!editing && track === "training" && <input type="hidden" name="programId" value={programChoice} />}
+          <span className="pl-dlg-state" style={{ background: sel.chipBg, color: sel.chipInk }}>
+            {STATE_LABEL[state]}
+          </span>
+        </header>
 
-          <div className="plan-schedule-field">
-            <span>Track</span>
-            <div className="pl-chips">
-              {TRACKS.map((t) => {
-                const tt = TRACK_TONE[t.id];
-                const active = t.id === track;
+        <form action={action} className="pl-dlg-form" onSubmit={submit}>
+          <div className="pl-dlg-body">
+            {phase ? <input type="hidden" name="id" value={phase.id} /> : <input type="hidden" name="clientId" value={clientId} />}
+            {!scheduling && <input type="hidden" name="track" value={program ? "training" : track} />}
+            <input type="hidden" name="start" value={startWeek} />
+            <input type="hidden" name="end" value={endWeek} />
+            {program && weekDelta !== 0 && adjust && <input type="hidden" name="adjustProgram" value="1" />}
+            {!phase && track === "training" && <input type="hidden" name="programId" value={programChoice} />}
+
+            {/* Only where the track is genuinely an open question: the Plan
+                screen's "Add phase". Everywhere else the way in already said
+                which track you meant. */}
+            {chooseTrack && !phase && (
+              <div className="pl-dlg-field">
+                <span className="pl-dlg-label">Track</span>
+                <div className="pl-chips">
+                  {TRACKS.map((t) => {
+                    const on = t === track;
+                    const p = TRACK_PALETTE[t];
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        className={`pl-chip${on ? " active" : ""}`}
+                        style={on ? { background: p.tint, color: p.ink, borderColor: p.ink } : undefined}
+                        onClick={() => setTrack(t)}
+                        disabled={!!program}
+                      >
+                        {TRACK_LABEL[t]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <label className="pl-dlg-field">
+              <span className="pl-dlg-label">Name</span>
+              <input ref={nameRef} name="name" type="text" className="pl-dlg-input" placeholder="Name this phase" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} />
+            </label>
+
+            {/* Two fields, one armed: the ring says which end the next click
+                in the calendar sets. */}
+            <div className="pl-dlg-ends">
+              {(["start", "end"] as const).map((end) => {
+                const locked = end === "start" ? startLocked : endLocked;
                 return (
                   <button
-                    key={t.id}
+                    key={end}
                     type="button"
-                    className={`pl-chip${active ? " active" : ""}`}
-                    style={active ? { background: tt.bg, color: tt.fg, borderColor: tt.fg } : undefined}
-                    onClick={() => setTrack(t.id)}
-                    disabled={!!program || lockTrack}
+                    className={`pl-dlg-end${active === end && !locked ? " on" : ""}`}
+                    onClick={() => arm(end)}
+                    disabled={locked}
+                    aria-pressed={active === end && !locked}
+                    title={
+                      locked
+                        ? end === "start"
+                          ? "A live or scheduled programme starts on its deploy week"
+                          : "Its length follows the programme: add or remove weeks in Training"
+                        : undefined
+                    }
                   >
-                    {t.label}
+                    <span className="pl-dlg-label">{end === "start" ? "Start" : "End"}</span>
+                    <b>{fieldDate(end === "start" ? from : to)}</b>
                   </button>
                 );
               })}
             </div>
-          </div>
-          <label className="plan-schedule-field">
-            <span>Name</span>
-            <input ref={ref} name="name" type="text" placeholder="Bulk, Cut, Hypertrophy, Morning routine…" defaultValue={phase?.name ?? ""} required maxLength={40} />
-          </label>
-          <div className="cd-form-row">
-            <label className="plan-schedule-field">
-              <span>Start week</span>
-              <input
-                name="start"
-                type="date"
-                value={start}
-                onChange={(e) => setStart(e.target.value)}
-                required
-                readOnly={startLocked}
-                title={startLocked ? "A programme that is live or scheduled starts on its deploy week" : undefined}
-              />
-            </label>
-            <label className="plan-schedule-field">
-              <span>End week</span>
-              <input name="end" type="date" value={end} onChange={(e) => setEnd(e.target.value)} required />
-            </label>
-          </div>
-          {ordered && (
-            <div className="pl-summary">
+
+            <PhaseCalendar month={month} onMonth={setMonth} from={from} to={to} onPick={pick} planned={planned} chrome={sel} />
+
+            <div className="pl-cal-legend">
               <span>
-                <b>
-                  {newWeeks} week{newWeeks === 1 ? "" : "s"}
-                </b>{" "}
-                · W{isoWeek(ordered[0])} → W{isoWeek(ordered[1])}
+                <i className={`pl-cal-sw${sel.dashed ? " dashed" : ""}`} style={{ background: sel.band, borderColor: sel.edge }} />
+                {state === "draft" ? "Draft — not deployed" : state === "scheduled" ? "Scheduled" : "This phase"}
               </span>
+              {planned.length > 0 && (
+                <span>
+                  <i className="pl-cal-sw planned" /> already planned
+                </span>
+              )}
               {overlap && (
                 <span className="pl-overlap">
-                  Overlaps {overlap.name} by {overlap.weeks} week{overlap.weeks === 1 ? "" : "s"}
+                  <i className="pl-cal-sw planned clash" /> overlap
                 </span>
               )}
             </div>
-          )}
-          {startLocked && (
-            <p className="ph-note">
-              This is the {program.status === "live" ? "live" : "scheduled"} training programme. It starts on its deploy week; move the end to shorten or extend it.
-            </p>
-          )}
 
-          {!editing && track === "nutrition" && (
-            <p className="ph-note">It starts as a draft only you see. Set its targets on the Nutrition tab, then deploy it.</p>
-          )}
-          {!editing && track === "training" && (
-            <label className="plan-schedule-field">
-              <span>Programme</span>
-              <select value={programChoice} onChange={(e) => setProgramChoice(e.target.value)} className="ph-select">
-                <option value="new">Create new programme (draft) · {newWeeks || "?"} weeks</option>
-                {available.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} · {p.status} · {p.weeks} wk
-                  </option>
-                ))}
-              </select>
-              <small className="pl-hint">Deploy later from Training.</small>
-            </label>
-          )}
-
-          {program && weekDelta > 0 && (
-            <label className="ph-adjust">
-              <input type="checkbox" checked={adjust} onChange={(e) => setAdjust(e.target.checked)} />
-              <span>
-                <strong>
-                  Also add {weekDelta} week{weekDelta === 1 ? "" : "s"} to the training programme
-                </strong>
-                New weeks are copies of week 1, ready to edit on the Training tab.
-              </span>
-            </label>
-          )}
-          {program && weekDelta < 0 && (
-            <label className={removable === 0 ? "ph-adjust off" : "ph-adjust"}>
-              <input type="checkbox" checked={adjust && removable > 0} disabled={removable === 0} onChange={(e) => setAdjust(e.target.checked)} />
-              <span>
-                {removable > 0 ? (
-                  <>
-                    <strong>Also delete {removeLabel} from the training programme</strong>
-                    {removable < -weekDelta ? "The other weeks past the new end have logged sets and stay." : "Everything built for those weeks goes with them."}
-                  </>
+            <div className="pl-dlg-length">
+              <div>
+                <b>{weeks ? `${weeks} week${weeks === 1 ? "" : "s"}` : "No dates yet"}</b>
+                {overlap ? (
+                  <small className="pl-overlap">Overlaps a phase already on this track</small>
                 ) : (
-                  <>
-                    <strong>The programme keeps its weeks</strong>
-                    The weeks past the new end have logged sets, so they can&rsquo;t be deleted.
-                  </>
+                  from && to && (
+                    <small>
+                      W{isoWeek(from)} → W{isoWeek(to)} · {days} day{days === 1 ? "" : "s"}
+                    </small>
+                  )
                 )}
-              </span>
-            </label>
-          )}
-
-          {confirmingDelete && phase ? (
-            <div className="ph-warn" role="alert">
-              <strong>Delete {phase.name}?</strong>
-              {live && " The client is in this phase right now."}
-              {phase.track === "nutrition"
-                ? " Its daily targets and note go with it."
-                : phase.program_id
-                ? " A programme with nothing built yet goes with it; anything built, scheduled or live stays on the Training tab."
-                : ""}{" "}
-              This can&rsquo;t be undone.
-              <div className="pb-modal-foot">
-                <button type="button" className="ad-btn-secondary" onClick={() => setConfirmingDelete(false)}>
-                  Back
-                </button>
-                <button type="submit" formAction={removeClientPhaseAction} className="ad-btn-primary ph-delete-confirm" formNoValidate>
-                  Yes, delete
-                </button>
               </div>
-            </div>
-          ) : confirming ? (
-            <div className="ph-warn" role="alert">
-              <strong>This phase is live.</strong> The client is in it right now, and their app changes as soon as you save.
-              {program && weekDelta !== 0 && adjust && " The training programme changes with it."} Are you sure?
-              <div className="pb-modal-foot">
-                <button type="button" className="ad-btn-secondary" onClick={() => setConfirming(false)}>
-                  Back
-                </button>
-                <button type="submit" className="ad-btn-primary">
-                  Yes, save
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="pb-modal-foot">
-              {editing && (
-                <button type="button" className="ad-btn-secondary ph-delete" onClick={() => setConfirmingDelete(true)}>
-                  Delete
-                </button>
+              {!endLocked && (
+                <div className="pl-dlg-pills">
+                  {LENGTHS.map((n) => (
+                    <button key={n} type="button" className={weeks === n ? "on" : undefined} onClick={() => setLength(n)} disabled={!from}>
+                      {n} wk
+                    </button>
+                  ))}
+                </div>
               )}
-              <button type="button" className="ad-btn-secondary" onClick={onClose}>
-                Cancel
-              </button>
-              <button type="submit" className="ad-btn-primary">
-                {editing ? "Save" : "Add phase"}
-              </button>
             </div>
-          )}
+
+            {endLocked && <p className="ph-note">Its length follows the programme: add or remove weeks in Training.</p>}
+            {startLocked && program && (
+              <p className="ph-note">
+                This is the {program.status === "live" ? "live" : "scheduled"} training programme. It starts on its deploy week; move the end to shorten or extend it.
+              </p>
+            )}
+            {!phase && track === "nutrition" && <p className="ph-note">It starts as a draft only you see. Set its targets on the Nutrition tab, then deploy it.</p>}
+            {!phase && track === "training" && (
+              <label className="pl-dlg-field">
+                <span className="pl-dlg-label">Programme</span>
+                <select value={programChoice} onChange={(e) => setProgramChoice(e.target.value)} className="ph-select">
+                  <option value="new">Create new programme (draft) · {weeks || "?"} weeks</option>
+                  {available.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} · {p.status} · {p.weeks} wk
+                    </option>
+                  ))}
+                </select>
+                <small className="pl-hint">Deploy later from Training.</small>
+              </label>
+            )}
+            {program && weekDelta > 0 && (
+              <label className="ph-adjust">
+                <input type="checkbox" checked={adjust} onChange={(e) => setAdjust(e.target.checked)} />
+                <span>
+                  <strong>
+                    Also add {weekDelta} week{weekDelta === 1 ? "" : "s"} to the training programme
+                  </strong>
+                  New weeks are copies of week 1, ready to edit on the Training tab.
+                </span>
+              </label>
+            )}
+            {program && weekDelta < 0 && (
+              <label className={removable === 0 ? "ph-adjust off" : "ph-adjust"}>
+                <input type="checkbox" checked={adjust && removable > 0} disabled={removable === 0} onChange={(e) => setAdjust(e.target.checked)} />
+                <span>
+                  {removable > 0 ? (
+                    <>
+                      <strong>Also delete {removeLabel} from the training programme</strong>
+                      {removable < -weekDelta ? "The other weeks past the new end have logged sets and stay." : "Everything built for those weeks goes with them."}
+                    </>
+                  ) : (
+                    <>
+                      <strong>The programme keeps its weeks</strong>
+                      The weeks past the new end have logged sets, so they can&rsquo;t be deleted.
+                    </>
+                  )}
+                </span>
+              </label>
+            )}
+          </div>
+
+          <footer className="pl-dlg-foot">
+            {confirmingDelete && phase ? (
+              <div className="pl-dlg-ask" role="alert">
+                <span>
+                  <strong>Delete {phase.name}?</strong>
+                  {wasLive && " The client is in this phase right now."}
+                  {phase.track === "nutrition"
+                    ? " Its daily targets and note go with it."
+                    : phase.program_id
+                    ? " A programme with nothing built yet goes with it; anything built, scheduled or live stays on the Training tab."
+                    : ""}{" "}
+                  Anything already logged stays. This can&rsquo;t be undone.
+                </span>
+                <div className="pl-dlg-actions">
+                  <button type="button" className="pl-dlg-cancel" onClick={() => setConfirmingDelete(false)}>
+                    Back
+                  </button>
+                  <button type="submit" formAction={removeClientPhaseAction} className="pl-dlg-danger" formNoValidate>
+                    Yes, delete
+                  </button>
+                </div>
+              </div>
+            ) : confirming ? (
+              <div className="pl-dlg-ask" role="alert">
+                <span>
+                  <strong>This phase is live.</strong> The client is in it right now, and their app changes as soon as you save.
+                  {program && weekDelta !== 0 && adjust && " The training programme changes with it."}
+                </span>
+                <div className="pl-dlg-actions">
+                  <button type="button" className="pl-dlg-cancel" onClick={() => setConfirming(false)}>
+                    Back
+                  </button>
+                  <button type="submit" className="pl-dlg-save">
+                    Yes, save
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {editing && (
+                  <button type="button" className="pl-text-btn danger" onClick={() => setConfirmingDelete(true)}>
+                    Delete
+                  </button>
+                )}
+                <div className="pl-dlg-actions">
+                  <button type="button" className="pl-dlg-cancel" onClick={onClose}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="pl-dlg-save" disabled={!ready}>
+                    {scheduling ? (startWeek && startWeek <= today ? "Make it live" : "Schedule it") : "Save"}
+                  </button>
+                </div>
+              </>
+            )}
+          </footer>
         </form>
       </div>
     </div>,

@@ -1,17 +1,38 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { addGymAction, removeGymAction } from "../lib/actions";
+import { addGymAction, removeGymAction, setHomeGymAction } from "../lib/actions";
+import { ChevronDownIcon, HomeIcon } from "../components/icons";
+import { placePopover, type Placement } from "../components/popover";
+
+const MENU_WIDTH = 320;
 
 // The client's gyms: one pill at the far right of the programme row that
 // opens a small list to add or delete them. Only the coach keeps this list;
 // the client picks from it at the top of a session once there are two. With
 // two or more, the Weight column gets a box per gym.
-export default function GymChipRow({ clientId, gyms }: { clientId: number; gyms: { id: number; name: string }[] }) {
+export default function GymChipRow({ clientId, gyms }: { clientId: number; gyms: { id: number; name: string; home?: boolean }[] }) {
   const [open, setOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [pending, start] = useTransition();
   const wrap = useRef<HTMLDivElement>(null);
+  const pill = useRef<HTMLButtonElement>(null);
+  // Fixed and measured rather than absolute: .ad-main scrolls, and CSS will
+  // not let one axis scroll while the other stays visible, so that column
+  // clips horizontally too. This menu hangs off the right edge of a pill
+  // near the left of it, and half of it was being cut away.
+  const [pos, setPos] = useState<Placement | null>(null);
+  const place = () => setPos(placePopover(pill.current, { width: MENU_WIDTH, align: "right", gap: 6 }));
+
+  useEffect(() => {
+    if (!open) return;
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [open]);
 
   // A click outside or Escape closes the list.
   useEffect(() => {
@@ -40,23 +61,55 @@ export default function GymChipRow({ clientId, gyms }: { clientId: number; gyms:
 
   return (
     <div className="pb-gyms" ref={wrap}>
-      <button type="button" className={`pb-gyms-pill${open ? " open" : ""}`} aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+      <button
+        ref={pill}
+        type="button"
+        className={`pb-gyms-pill${open ? " open" : ""}`}
+        aria-expanded={open}
+        onClick={() => {
+          if (!open) place();
+          setOpen((o) => !o);
+        }}
+      >
         Client gyms
         <span className="pb-gyms-count">{gyms.length}</span>
-        <span className="pb-gyms-caret" aria-hidden="true">▾</span>
+        <span className="pb-gyms-caret" aria-hidden="true"><ChevronDownIcon /></span>
       </button>
 
       {open && (
-        <div className="pb-gyms-menu" role="dialog" aria-label="Client gyms">
+        <div
+          className="pb-gyms-menu"
+          role="dialog"
+          aria-label="Client gyms"
+          style={pos ?? undefined}
+        >
           <div className="pb-gyms-title">Gyms this client trains at</div>
+          <p className="pb-gyms-hint">The house marks the one they train at most.</p>
 
           {gyms.length === 0 ? (
             <p className="pb-gyms-empty">None yet. Add the gyms the client trains at; each keeps its own weights.</p>
           ) : (
             <ul className="pb-gyms-list">
               {gyms.map((g) => (
-                <li key={g.id} className="pb-gyms-row">
+                <li key={g.id} className={`pb-gyms-row${g.home ? " home" : ""}`}>
                   <span className="pb-gyms-name">{g.name}</span>
+                  {/* The one the client trains at most. Its weights are the
+                      plain targets; the others keep their own.
+
+                      A bare house beside Delete, lit when it is the main gym.
+                      It used to be a circled icon with a tick on it and the
+                      word "Main" beside the name — three things saying one
+                      thing, at the start of a row whose subject is the gym. */}
+                  <button
+                    type="button"
+                    className={`pb-gyms-home${g.home ? " on" : ""}`}
+                    disabled={pending}
+                    aria-pressed={!!g.home}
+                    title={g.home ? `${g.name} is the main gym` : `Make ${g.name} the main gym`}
+                    onClick={() => !g.home && start(() => setHomeGymAction(g.id))}
+                  >
+                    <HomeIcon />
+                  </button>
                   <button
                     type="button"
                     className="pb-gyms-btn danger"

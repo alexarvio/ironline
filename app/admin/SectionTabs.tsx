@@ -1,17 +1,28 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
+import { markSeenAction } from "../lib/actions";
 
-export type TabSection = { id: string; label: string; content: ReactNode };
+export type TabSection = {
+  id: string;
+  label: string;
+  content: ReactNode;
+  /** Something new from the client on this tab that the coach has not seen. */
+  dot?: boolean;
+  /** Home's count of what is new. */
+  count?: number;
+};
 
 // The section tabs under the client header. The bar scrolls horizontally
 // with its scrollbar hidden (there are eleven of these and a visible track
 // under a row of tabs reads as a broken layout), and only the active
 // section's content is mounted.
 export default function SectionTabs({
+  clientId,
   sections,
   initialId,
 }: {
+  clientId: number;
   sections: TabSection[];
   initialId?: string;
 }) {
@@ -19,6 +30,13 @@ export default function SectionTabs({
     initialId && sections.some((s) => s.id === initialId) ? initialId : sections[0]?.id
   );
   const active = sections.find((s) => s.id === activeId) ?? sections[0];
+
+  // Being on a tab is having seen it: its dot clears. News about one training
+  // session stays new until that session is opened (its card has the dot).
+  const activeDot = !!active?.dot;
+  useEffect(() => {
+    if (activeDot && activeId) void markSeenAction(clientId, { tab: activeId });
+  }, [activeDot, activeId, clientId]);
 
   // One white card: the tabs across its top, the active section below.
   return (
@@ -38,10 +56,14 @@ export default function SectionTabs({
               // section rather than the first one.
               const url = new URL(window.location.href);
               url.searchParams.set("tab", s.id);
+              // The phase in the address was the old tab's; the new one opens on
+              // its live phase and writes its own.
+              if (s.id !== activeId) url.searchParams.delete("phase");
               window.history.replaceState(window.history.state, "", url);
             }}
           >
             {s.label}
+            {s.count ? <span className="ad-tab-count">{s.count}</span> : s.dot ? <span className="ad-tab-dot" aria-label="New" /> : null}
           </button>
         ))}
       </div>

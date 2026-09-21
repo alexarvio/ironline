@@ -473,23 +473,23 @@ Look: `/admin/profile` → drop a photo on Profile picture; then `/client` → N
 
 Look: `/client` → Training → an exercise with a weight → type 60, flip Kg/Lbs back and forth.
 
-## 62 · The programme note, rebuilt — local only
+## 62 · The programme note, rebuilt — ✅ LIVE 21 Sep
 
 - [ ] The one-line box under Days trained is gone. Nothing yet: one row, "Tell Finlay how the programme feels", with Write. Tap it and a box opens that grows with the text, Cancel and Send under it. Sent: the note in full under "Your note to Finlay · 12 Sep", with Edit; saving it empty removes it. No more bubble sitting there. Placeholder in the box: "How the programme feels, what is not working, what you want more of".
 
 Look: `/client` → Training → under Days trained.
 
-## 63 · Sessions and exercises fold shut, not vanish — local only
+## 63 · Sessions and exercises fold shut, not vanish — ✅ LIVE 21 Sep
 
 - [ ] A session body unfolds when opened and folds shut over 0.4 s when tapped closed or when the last set lands (after the "Workout complete" moment). An exercise card does the same: its body folds shut after the last set, then the next one unfolds in its place. Off with prefers-reduced-motion.
 
 Look: `/client` → Training → log a whole exercise, then a whole session.
 
-## 64 · Calories box: the figure sits right, the note placeholder is short — local only
+## 64 · Calories box: the figure sits right, the note placeholder is short — ✅ LIVE 21 Sep
 
 - [ ] The calories figure is right-aligned against "kcal". The note under it says "Note for Finlay", no longer a sentence that cut off.
 
-## 65 · Food diary — local only, first cut
+## 65 · Food diary — ✅ LIVE 21 Sep, first cut
 
 - [ ] **Tap the ring on Nutrition** and the Food diary for today opens: what is left of the day's calories in big, eaten / target beside it, a bar, and the three macros with eaten / target and a bar each. Under it Breakfast, Lunch, Dinner, Snacks as cards, each row a food with its amount and kcal.
 - [ ] **Add food** opens a sheet: search (the client's own foods first, then the catalog), pick one, choose a serving (chips with their grams, a − / + count) or type grams, see the kcal and macros for that amount, add. Recent foods show before typing. "Add your own food" takes a name, per-100 g figures and an optional serving. Tapping a row reopens the sheet to change the amount or remove it.
@@ -511,7 +511,7 @@ Look: `/client` → Training → log a whole exercise, then a whole session.
 
 Look: `/client` → Nutrition → tap the ring.
 
-## 66 · Home: the phases as swipeable frosted cards — local only
+## 66 · Home: the phases as swipeable frosted cards — ✅ LIVE 21 Sep
 
 - [ ] The chevron beside the greeting is gone. Under the main goal sits a row of cards, one per track (Nutrition, Training, Lifestyle), swiped sideways with snapping and dots underneath. Each card is frosted glass tinted the track's colour (the banner shows through), with the track tag and time to go, the phase name, a bar that fills in as the card appears, Week x of y, Up next, and the coach's note on the phase when there is one (a nutrition phase's note today).
 
@@ -520,6 +520,206 @@ Look: `/client` → Home, under the goal line.
 ## 67 · Nutrition tab: the typed calorie log card is gone — ✅ LIVE 17 Sep
 
 - [x] Calories are logged from the food diary now (the strip under the rings), so the card with the day stepper, the kcal box and the note is off the Nutrition tab. Last 7 days stays and reads the same log. The ring shows the coach's targets again; the countdown lives in the diary.
+
+## 68 · The phase header: one band, on all three coach tabs — ✅ LIVE 21 Sep
+
+- [ ] **The phase name is the switcher.** Training, Nutrition and Measurements were each two cards — a rail of chips, then an "EDITING …" band repeating the same name under it. They are one card now, and its top is one band: the eyebrow (PROGRAMME / NUTRITION PHASE / LIFESTYLE PHASE), the phase name at 21px as a button with a chevron tile, and under it a line built from what is true — `Aug 18 – Sep 28 · week 5 of 6 · 2 scheduled after this`, or `No dates yet · 4 weeks planned`.
+- [ ] **The menu** opens under the name: Live now · Scheduled · Draft, each row a state dot, the name and its dates, with the past folded behind "3 earlier phases". ↑/↓ walk it, Enter picks, Esc closes back onto the switcher. **"+ New phase" lives only here** — it is off the tabs everywhere else.
+- [ ] **On the right, three things and no sentence**: the state (a pulsing dot + LIVE, a dotted ring + SCHEDULED, a dashed ring + DRAFT), the one action that state has (a draft gets **Schedule it**, a scheduled phase **Make it live**, a live one none), and **Edit dates**. The "Live in Alex's app / changes save as you go" strip on Measurements is gone — the LIVE chip said it already.
+- [ ] **The phase is in the address** (`?phase=`), so a coach can link one. Training and Nutrition swap in place; Measurements navigates, because the server decides which metrics the phase asks for.
+- [ ] **Training**: the programme chips and the inline name field are gone. Naming a draft and picking when it goes out now happen in one dialog behind Schedule it / Edit dates (with **Deploy now** in it); once it has been sent, Edit dates opens its phase on the Plan tab. The client's gyms and the column menus moved down to the week toolbar, where the table they belong to is.
+- [ ] **The state sits under the buttons, not in front of them.** LIVE / SCHEDULED / DRAFT was level with the eyebrow at the head of the action row, which put a word that never changes at the start of a row you read for its actions — and made the three tabs look unlike each other whenever one carried an extra control. Actions on the top line, what the phase IS on the line under, both hard right, the same on all three tabs.
+- [ ] **The phase dialog's track is no longer locked to the tab you opened it from.** "+ New phase" on Nutrition can make a lifestyle phase. Still locked for a phase that IS a training programme: switching its track would leave the programme with nothing pointing at it.
+- [ ] One component, one prop set: `PhaseHeader` + `usePhases`. `ProgramDeployControls` and `ProgramNameForm` are gone, and with them `.pb-editing*`, `.pb-live-*`, `.nw-phase*`, `.mx-rail*` and `.ms-topbar` in the stylesheet.
+
+Look: `/admin` → any client → Training, Nutrition, Measurements.
+
+## 69 · The client card: edited in a dialog, and the header stops repeating it — ✅ LIVE 21 Sep
+
+- [ ] **The chevron beside the client's name is gone.** It unfolded age, client since, address and email — a read-only copy of four of Member info's fields, with Member info sitting on the same screen with an Edit on it. The header is the face, the name and Message.
+- [ ] **Member info, Coaching info and Coach note wear the page's banner** — the accent tint with navy letters, the same one the dialog that edits them has. A grey strip made them read as a footnote beside the tinted cards next to them.
+- [ ] **Member info and Coaching info open in a dialog.** In the narrow card on Home, Edit used to stack seven inputs boxed at 148px inside a 180px column. The dialog keeps the rows exactly as they read — label left, value right, a hairline between — and the input **is** the value: transparent at rest, outlined on hover, white with a navy border on focus. No boxes sitting there doing nothing. Esc and the scrim close it, and "Add" on an empty row still opens the dialog with the cursor in that field.
+- [ ] **Save is navy, everywhere.** `.ad-btn-primary` was green `#3f6e46`; green is a status colour (on target, done) and a Save button is not a status — UI-GUIDELINES §3 and §10 both call for this. It changes every admin dialog's confirm button, which is the point.
+- [ ] Fixed while in there: the card's `Section` wrapper was built during render, so it was a new component type on every keystroke — which remounted `PanelSection` and threw away whether the coach had it open.
+
+Look: `/admin` → any client → Home, the two cards on the right.
+
+## 70 · Keeping up, rebuilt as a scoreboard — ✅ LIVE 21 Sep
+
+- [ ] **Three behaviours, and one score.** *Sets logged* is gone: the client's app will not complete a session without every set in it, so it could never disagree with *Sessions done* — the same fact drawn twice. *Measurements* is gone: those are fields inside the weekly check-in, so counting them separately counted one Sunday evening as two things. *Daily* and *Weekly check-ins* are now one **Check-ins** figure. *Progress pictures* is gone too: a sheet is something the coach asks for now and then, not a habit, and one missed sheet swung the whole figure by a quarter. What is left is the three things a client does or does not do: **train · answer · write down what they ate**.
+- [ ] **How a daily thing and a weekly thing sit in one score.** Each behaviour is scored as `done ÷ asked` **before** anything is averaged, and the overall is the mean of those three rates — so each is an equal third whatever its rhythm. Pooling the events instead would have made training an eighth of the score (58 daily slots against 8 sessions), and a client could have stopped training altogether while the number barely moved.
+- [ ] **One window, and it moves**: the thirty days ending today, so tomorrow it is the thirty ending tomorrow. The 7 / 30 switch is gone — a card with a switch on it asks the coach a question before it answers one. Each row is just the count over those days: `4 of 9 sessions`, `13 of 33 check-ins`, `6 of 29 days` (29, not 30: today is not missed until it is over).
+- [ ] **A trend**, which is what makes it a scoreboard rather than a snapshot: the same calculation over the thirty days before those thirty. "▼ 3 on the 30 days before", and "nothing to compare yet" until there is a month behind it.
+- [ ] **A skipped session counts against the total now.** It used to drop out of the denominator — telling the coach is the behaviour you want — but then the figure did not match the sessions a coach can count on the builder, and "4 of 9" has to be checkable against what is on screen there. The daily rows still carry their streak.
+- [ ] **Linked to what the client is actually asked for.** Check-ins count against `listMetricDefinitions` — the same query `getCheckInSections` builds the client's own check-in screen from — so adherence is never measured against a set they were never shown. Food logged counts over the same days the daily check-in does (today is not missed until it is over).
+- [ ] **A real bug in the count-up, fixed at the source** (`components/useTween`, shared with the client's calorie rings): with no animation frames — a window behind another window, a background tab — the figure sat on its OLD value while the label beside it said the new thing. A wrong number, not a missing animation. A timer now lands it whatever the compositor is doing.
+- [ ] **Figures on the coach side are Archivo**, 700, tabular — not Newsreader. See UI-GUIDELINES §1; the rules are one block at the foot of `globals.css`. Titles keep the serif.
+
+Look: `/admin` → any client → Home, the Keeping up card.
+
+## 72 · The stat strip, built like a date chip — ✅ LIVE 21 Sep
+
+- [ ] **Each fact is a chip**: its name on a tinted band with navy letters, a line under it, then the figure on white — the shape the date already has on a meeting card. Six across, and the eye reads a row rather than pairing six labels with six numbers.
+- [ ] **Training is black.** "0 of 3" was amber whenever nothing had been logged yet, which coloured Monday morning as a problem. "Done this week" under it reads "sessions this week", since the label above already says Training.
+- [ ] **Kcal goal → Nutrition goal**: `2,929 kcal` with `P 235 · C 315 · F 81` under it. A coach reading 2,929 wants to know whether that is 235g of protein or 120.
+- [ ] **Weight carries its unit** — `90 kg` — and the line under it is the move **in the phase the client is in now**, not since they signed up: inside a cut, "−0.8 kg this phase" is what a coach acts on. The baseline is whichever reading sits nearest the day the phase began, either side of it, and falls back to the coaching figure when the nearest is more than a month away.
+- [ ] **Metrics tracked breaks down**: `13` over `7 daily · 6 weekly`.
+
+Look: `/admin` → any client → Home, the top card.
+
+## 73 · Plan: Main goal wears the same head as Phases and Goals — ✅ LIVE 21 Sep
+
+- [ ] The tinted band with the name in navy and the helper under it, and "Saved 16 Sep, 11:37" on the right where the other two keep their controls. It was the one card on the tab in a plain white strip, which made it read as a caption above the page rather than the first of three cards.
+
+Look: `/admin` → any client → Plan.
+
+## 71 · Activity and Feed: four categories, fifteen to a page — ✅ LIVE 21 Sep
+
+- [ ] **"Needs you" is off for now** (`SHOW_NEEDS_YOU` in `ClientHomeFeed.tsx`, one line to bring back). It was three rows of "they have not filled it in yet" sitting between the score that already says so and the activity that shows it. Nothing about how the actions are worked out has changed, and the rail's amber dot and the tab counts still read the same list.
+- [ ] **No "All".** Both the Activity card on a client's Home and the rail's Feed read one kind at a time: **Training · Nutrition · Measurements · Invoices**. Every source category still has a home, so nothing is unreachable — a note the client wrote on their programme is training, an invoice is billing. The chips carry what is new inside each kind.
+- [ ] **Fifteen rows to a page**, with pages rather than a Show more that grows forever. One pager (`.pg-*`) for both: links on the Feed, because its page is in the address (`?cat=&page=`), buttons on Home, because every event is already loaded there. Home's "Full history →" carries the category across.
+
+Look: `/admin` → any client → Home, the Activity card. And the rail's Feed.
+
+## 74 · Popups that go where they fit — ✅ LIVE 21 Sep, fixes a LIVE bug
+
+Finlay could not add an exercise: the picker opened downward at a flat 420px from the last row of a day's table, which put the list, “+ Add new exercise” and the save form under the bottom of the window, where nothing scrolls them back. Two more of the same family turned up with it.
+
+- [ ] **One helper, `app/components/popover.ts`.** Position fixed, so a scrolling ancestor cannot clip it — `.ad-main` sets `overflow-y: auto`, and CSS will not let one axis scroll while the other stays visible, so the whole working column clips sideways too. Then measured against the window: drop below when there is room, flip above when there is more room up there, and cap the height to what is actually there so the list scrolls inside itself.
+- [ ] **The exercise picker** (the live bug) and **Client gyms**, which was losing its left half to that same column clip, both go through it. Both also re-place on scroll and resize, since fixed does not follow the row it hangs off.
+- [ ] **“+ Add week” opens under the button you clicked.** It was `position: absolute; top: 66px; left: 0` — pinned to the left edge of the rail, so on a five-week programme it appeared a whole rail away from the “+ Add week” you pressed.
+
+Checked at 1440×760: a trigger 87px from the bottom now flips above and sits fully on screen where it used to overflow by 337px. At 900×300, where nothing fits either way, all three stay on screen and scroll internally.
+
+Look: `/admin` → a client → Training → a day's “Add exercise…”, the Client gyms pill, and “+ Add week”.
+
+## 75 · The phase band and the gyms list, tidied — ✅ LIVE 21 Sep
+
+- [ ] **LIVE / SCHEDULED / DRAFT sits at the foot of the band**, not hanging just under the buttons with empty space below it, and it is bigger: 13px with a 10px dot.
+- [ ] **The line under a phase name is the span and its length, full stop** — `Aug 17 – Sep 20 · week 5 of 5`. “2 scheduled after this” is gone: it came and went with the data rather than with the phase, so the same line read differently on Training and on Nutrition for no reason a coach could see, and what is queued behind is one click away in the menu.
+- [ ] **A gym row is the name, a bare house, Delete.** The house has lost its pill and its tick and moved next to Delete; the main gym is simply lit navy. The word “Main” beside the name is gone — the circle, the tick and the label were three ways of saying one thing.
+
+
+## 76 · Fixing the class instead of the instance — ✅ LIVE 21 Sep
+
+Three notes kept coming back — a serif number, a header not on the tint, a clipped menu — because each was fixed where it was spotted rather than everywhere it existed.
+
+- [ ] **Serif figures are swept at the token.** `body:has(.ad-shell)` now resolves `--font-serif` to the body face, so nothing in the admin can render a figure in Newsreader — including the screens nobody has opened yet. Dialog titles opt back in by name. This replaces the list of selectors, which guaranteed a fresh report on every unvisited screen. Checked: 17 of 19 admin figure classes are Archivo, the two left are the dialog titles.
+- [ ] **A fourth clipped popover, found by grep rather than by Finlay**: the Exercise / Cardio columns menus were `position: absolute` in the same scrolling column as the gyms pill. Now on `placePopover()` with the other three.
+- [ ] **`npm run audit:ui`** greps for all of it — retired colours, faces set directly, absolute menus, card labels outside a header band. Heuristic, not a linter. It currently reports 166 things, nearly all retired colours in screens that have not been converted yet, which is the honest backlog rather than a clean bill.
+- [ ] **UI-GUIDELINES §12** records the mechanism behind each rule, so the next fix is the class.
+
+## 77 · Nutrition: the macro bar says what the label says — ✅ LIVE 21 Sep
+
+- [ ] The bar under each macro was `grams ÷ the heaviest macro`, so carbs sat at 100% whatever the split — they are almost always heaviest by weight — while the line above it said 43% kcal. Two scales on one row, with the label inviting you to read the bar as that percentage. Fat agreeing with its label was a coincidence of 9 kcal/g against 81g of 315g. It is the calorie share now.
+
+## 78 · The system, settled — ✅ LIVE 21 Sep
+
+Four decisions taken once and applied everywhere, instead of screen by screen.
+
+- [ ] **The executing button.** One question decides it: does this commit something? Add, Save, Apply, Deploy, Schedule, Make it live — navy fill, white letters, radius 8, one per card. Defined once in `globals.css` for every class that plays the role, so a new screen joins the list rather than inventing a fill. It caught “Deploy now” in green, “Save to library” in accent blue, “Copy week split” in a third blue and “+ Add” as bare text. A primary on the navy pending bar inverts.
+- [ ] **Two levels of heading, and only two.** A card’s header is the tinted band with navy letters. A section inside it is **white with navy letters** — same voice, no fill, so the header still sits above its sections. Grey-on-grey read as a caption nobody had finished.
+- [ ] **Adding a row is never filled**: dashed or bare, navy letters. It opens something; it does not write anything.
+- [ ] **A figure is black** unless it needs the coach to act. A colour on a number always means “this one”.
+- [ ] **The retired colours are swept** — 84 replacements at the token and in literals. The macro and category hues stay (§3 keeps them), and `#f8f9fb` stays as a surface since it is retired only as a page colour.
+- [ ] **`npm run audit:ui` reads zero.** Getting it there found a fifth clipped popover the first version of the check had missed, because its rule spanned several lines; it reads whole rule blocks now. Every exception it allows carries the reason it was allowed.
+
+## 79 · A style page you can look at — ✅ LIVE 21 Sep
+
+- [ ] **Style, in the rail** (`?view=style`). The house style rendered from the REAL classes — it imports the same `PhaseHeader` and the same `globals.css` the product does, so it cannot drift from what ships. Buttons in every role, both heading levels, the phase band in each state, the figure strip, thirteen swatches with what each is for, the pager. A written guide cannot be checked against a screen; this can.
+- [ ] **Supplements: “+ Add item” moved inside the block.** On the strip it sat beside a folded section, offering to add a row to something not on screen — and it was filled navy, which says “this writes”, when adding a row only stages one for the bar at the foot. It is at the foot of the list now, dashed with navy letters.
+- [ ] **The exercise table’s last column lost its rule.** The pinned bin column drew a hard edge beside “What the client did” — the widest, most-read column — for the sake of a 22px icon. The barrier is still there and Add is still pinned; it just cannot be seen, and the 40px went to the logged column (290 → 330).
+
+## 80 · One bin, and the line that was never the bin’s — ✅ LIVE 21 Sep
+
+- [ ] **The line beside “What the client did” is gone — properly this time.** The first attempt removed `border-left` from the pinned bin column and changed nothing on screen, because the rule that draws it is the LOGGED column’s own `border-right`, inherited from the generic `td` rule since logged-col is second to last, not last. Measured after: logged-col right border `0px`, bin column 37px, and the logged column went 290 → 330px.
+- [ ] **The bin is the same everywhere.** Bare and grey where it sits, red on a soft tint when you reach for it — the Supplements one. Training had a bordered white box: a small icon in a visible container, taking the width of a real control for something almost never pressed. Every delete in the coach app renders as `.row-icon-danger` or `.nw-remove-btn`, so two selectors covered all of them — exercise rows, sessions, weeks, supplements, metrics. Checked with a real pointer: hover gives `#fbeaea` and `#a32d2d` on both.
+- [ ] It is on the style page now, so “is this the right bin” has somewhere to be answered.
+
+## 81 · One bin, and the dropdown stops jumping — ✅ LIVE 21 Sep
+
+- [ ] **One bin icon.** There were two trash drawings: the shared one in `icons.tsx` and a heavier copy defined inside `NutritionWorkspace`. The Supplements bin was the heavier one — which is the one that reads at 14px — so that is now the shared icon, the copy is gone, and every bin in the app draws the same glyph.
+- [ ] **One bin style, in the real markup.** `.nw-remove button` was styling the Supplements bin as a descendant selector, which out-specified `.nw-remove-btn` — so the shared rule was silently losing in the one place it mattered. My first check missed it because I measured a button that was NOT inside `.nw-remove`. Removed; one selector owns the bin. Both now measure 30×30, transparent, `#8b93a1`, red `#a32d2d` on `#fbeaea` when hovered.
+- [ ] **The client’s food diary bin** joins it — same grey, same red, 40px target instead of 30 because a phone needs the tap area, and on `:active` as well as `:hover` because phones do not hover.
+- [ ] **The picker no longer jumps to the top of the screen.** When it flipped above the trigger it subtracted the MAXIMUM height (420px), but a popup is only as tall as its contents — a search box and one group is about 115px — so a short list landed 300px above where it belonged. Opening upward now pins the popup’s BOTTOM edge just over the trigger, so its height never has to be known in advance. Measured: 4px between the two, exactly the configured gap.
+
+## 82 · Goals: the goal is the button — ✅ LIVE 21 Sep
+
+- [ ] **Edit is gone; clicking the goal opens it.** A row whose whole subject is one goal does not need a word beside it saying so. The name and its rule are the button now — it underlines and goes navy on hover, and takes a focus ring.
+- [ ] **Remove is the standard bin**, not a red word. Same glyph, same grey, same red on hover as every other bin in the app. The actions column went 84px → 44px and the width went to the goal.
+
+## 83 · The track chips only where the track is a question — ✅ LIVE 21 Sep
+
+- [ ] **The phase dialog shows the Track chips in exactly one place**: the Plan screen’s “Add phase”, which is the only way in that is not already about one track. Editing never changes a track — a training phase is a training phase — and adding from Training, Nutrition, Measurements or a row of the Plan grid already said which track you meant by where you clicked.
+- [ ] The value still posts either way (it always came from a hidden input, not the chips), and the header keeps its track tag, so nothing is lost by hiding the choice. The prop is `chooseTrack`, opt-IN — a new call site gets no chips unless it asks, which is the safer default than the old `lockTrack`.
+
+## 84 · Training: the week chips start where the current week is — ✅ LIVE 21 Sep
+
+- [ ] **The row always opens in the same place.** The week strip scrolls the current week to a fixed spot — just in from the left, with a 20px sliver of last week behind it so the row reads as scrollable. It used to put the PREVIOUS week flush left, which pushed the current week to the middle of the row. Week 1 has nothing to peek at and sits flush left; the last weeks cannot scroll that far, so the current week drifts right on its own.
+- [ ] **It stays inside the page.** The strip was bleeding 22px past the right gutter, so the last chip ran off the screen edge. It now starts and ends on the same line as the cards below it (16px), pulling 6px out of the banner's own 22px gutter to get there.
+
+## 85 · The working area stops resizing itself — ✅ LIVE 21 Sep
+
+- [ ] **The scrollbar no longer squeezes the page.** `.ad-main` reserves the scrollbar's width whether or not the tab is long enough to need one, so going from a short tab (Measurements) to a long one (Nutrition) doesn't narrow everything by 15px. Nothing moves when you switch tabs any more.
+
+## 86 · One set of macro colours — ✅ LIVE 21 Sep
+
+- [ ] **Protein blue, carbs amber, fat green — everywhere.** The coach's day targets had their own palette (protein steel blue, carbs GREEN, fat brown) while the logged-days table and the client's food diary used another, so carbs changed colour halfway down the same screen. The targets now use the log's palette.
+- [ ] **They are tokens now**, `--macro-protein` / `--macro-carbs` / `--macro-fat` in `globals.css`, so the next thing that draws a macro cannot pick its own. The food diary's rings still spell the hex out — they are SVG presentation attributes, where `var()` does not resolve — with a comment saying why.
+
+## 87 · Nutrition log: the meal is its name — ✅ LIVE 21 Sep
+
+- [ ] **No more clock times.** An opened day listed "Breakfast 08:36", stamped from whenever the first food went in — which is when it was TYPED, not when it was eaten, so it was a fact about the phone rather than the meal. The row is the meal's name now, and the query has stopped working the time out.
+
+## 88 · Photograph the meal — ✅ LIVE 21 Sep (client side first, coach side with the rest)
+Commit `86a3313` (the client camera, storage, `/uploads/meals`, and the `meal_photos` Postgres table, migration 0010). The coach's camera lives in the logged-days table (group 87 and before), which is not live yet, so Finlay sees the pictures once that ships.
+
+
+- [ ] **A camera on every meal row in the food diary**, at the far right, with the + moved in beside it. The + goes when the meal is open and the camera does not, so it is always the last thing on the row rather than something that slides to the edge. Tapping it opens the phone's camera or library; the picture replaces whatever was there before, one per meal.
+- [ ] **The client can see and undo it**: the camera turns green once there is a picture, and tapping it opens the shot full width with Replace and Remove, and a line saying only the coach sees it.
+- [ ] **The coach sees a camera on that meal's row** in Nutrition → logged days, past the macros, only where there is a picture; clicking it opens the shot. Rows without one keep an empty cell so the macro columns stay in line.
+- [ ] **Stored like the progress pictures**: `/uploads/meals/<client>/<date>/<meal>.jpg` on the volume, copied into the bucket, served through the `/uploads` route behind the same per-client access check — a guessed URL gets a 404. Taking a new picture deletes the old file rather than orphaning it, and the workspace reset clears them with the rest of a client's data.
+
+## 89 · Saved days: the Forget question lets go — ✅ LIVE 21 Sep
+
+- [ ] **A tap anywhere else drops it.** Holding a saved day asks Keep / Forget in red; before, only Keep undid that, and folding Saved days and opening it again brought the red row straight back. Now any tap outside the two buttons drops the question, and folding the list drops it too.
+- [ ] **Same for the other two questions** built the same way — removing a logged food and forgetting a saved meal — so none of the three can be left hanging.
+
+## 90 · Training builder: one table at a time, and the bins tidied away — ✅ LIVE 21 Sep
+
+- [ ] **Dumbbell / heart toggle on every session row.** A session shows its exercises OR its cardio, never one under the other. Icons only, the picked one filled navy; picking one on a folded session opens it on that table. A session with cardio and no exercises opens on cardio. Both tables stay mounted underneath, so a half-typed add row survives a look at the other.
+- [ ] **Cardio has its own columns now.** It used to be squeezed into the exercise table's grid — its fields in the exercise columns' slots, blanks between, notes in the last slot, an empty "logged" column. Now it is Activity, each cardio column the coach has on, then Notes taking the rest. The "Exercises" / "Cardio" bands inside the session are gone; the toggle names what is on screen.
+- [ ] **⋯ replaces the bin on the session row.** It opens Duplicate session (the same dialog Copy opened: a new session, or over another one, optionally in the later weeks) and Delete session in red (the same confirm as before). Duplicate now shows for cardio-only sessions too — the copy always carried cardio; the button just was not offered.
+- [ ] **Toggling keeps the table's shape.** The grip column and the Exercise / Activity column are exactly 22 + 210px in both tables, so the add pill is the same length on both sides. The cause: every exercise column had a fixed width, so on a wide screen the browser shared the spare width across all of them and Exercise grew past 210, while cardio gave its spare width to Notes. Now the exercise table's spare width goes to "What the client did" (290px at least) and cardio's to Notes (220px at least).
+- [ ] **Cardio rows drag into order** by the same grip as exercises (one shared drag, `useRowDrag`). The new order waits on the session's Apply bar ("Walk moved to #1") like every other change, and "also in the remaining weeks" carries it by name.
+- [ ] **Distance and Time are no longer exercise columns.** They belong to cardio, which has its own. The exercise menu offers the six it should (Sets, Reps, Weight, RPE, Tempo, Rest) plus your own; a client who had Distance or Time switched on for exercises just stops seeing it, and what was typed there stays on the exercise.
+- [ ] **No empty column at the end of the tables.** The 58px column that held the bins and "+ Add" is gone: "What the client did" runs to the edge (its legend with it), and each exercise's bin sits at the right end of that cell, pinned while the sets scroll; "+ Add" sits there on the add row. Cardio the same, at the end of Notes.
+- [ ] **The week bin left the week pill.** It sits at the far right of the selected week's heading ("Week 1 · 0 of 0 sessions"). Same rule as before: live and past weeks, and the only week left, have none.
+
+## 91 · The phase dialog, one for every track, and the colour rule — ✅ LIVE 21 Sep
+
+- [ ] **The state picks the colour, the track picks the tag.** One helper, `app/admin/phaseChrome.ts`, decides every phase colour: a LIVE phase wears its track's colours (nutrition green, training purple, lifestyle beige), every SCHEDULED phase on every track is the same blue (`#eef3f9` / `#1e3a6e`), a DRAFT is peach (`#fdf3ee` / `#b3471d`) with a dashed edge. Dashed now means draft and nothing else. The state is worked out from the dates on every render, never stored.
+- [ ] **Everything that draws a phase uses it**: the dialog, the Plan timeline's bars (scheduled bars are blue now, drafts peach; the legend gained "scheduled"), the all-clients Phases view, and the phase header strip on Training / Nutrition / Measurements. The strip's band is the one exception, on request: it is always its TAB's colour (Nutrition green, Training purple, Measurements beige) whatever the state, and the state is the chip beside it, in the state's colours (white when live, so it doesn't vanish into the band). A draft band keeps its dashed edge.
+- [ ] **One dialog to schedule or edit a phase** on Plan, Training, Nutrition and Measurements. The old "Schedule this phase" pop-up is the same component in its schedule mode. 520px, header with the track tag and a state chip, name, then **Start / End as two fields with exactly one armed** (its ring says which end the next click sets; picking a start arms End, picking an end arms Start, a click before the start moves the start). The "Click the start" line is gone.
+- [ ] **The calendar never changes height.** Always 42 days / six 38px rows, whatever the month (it used to be five or six rows, so the dialog jumped as you paged); neighbouring months' days in grey and still clickable. A week-number column leads each row and numbers the selected weeks in the state colour. The selection is a band with a solid pill at each end, one bar per week; for a draft, a dashed edge too. Other phases on the track are a short grey bar under the date, red where they fall inside the selection. Measured: 238px grid and the same body height across eight months.
+- [ ] **Length row**: "8 weeks" over "W37 → W44 · 56 days", or "Overlaps a phase already on this track" in red (a warning, not a block). **4 / 6 / 8 / 12 wk** pills set the end from the start, never moving the start; the matching one fills in the state colour.
+- [ ] **Footer never scrolls**: Delete as red text far left (still asks first), Cancel, Save. Save is off until there is a name and dates.
+- [ ] Kept from before: the training phase's programme choices (link a programme, add or delete programme weeks with the phase), a live programme's locked start, a scheduled training phase's length following its programme, the "this phase is live" confirm.
+- [ ] Not changed: a draft programme with no phase yet still opens its own "name it and when it goes out" dialog on Training (date + time), since there is no phase to edit until it is sent. The reference file `Ironline Phase Dialog.dc.html` was not on this machine, so this was built from the written spec. Two deliberate readings: the calendar's columns have no gap (rows keep 2px) so a selected week reads as one bar, and a PAST phase keeps its track's colours.
+
+## 92 · Every phase tab opens on the live phase — ✅ LIVE 21 Sep (fixes a live bug in the Training half)
+
+- [ ] **Training showed a scheduled programme as live and hid the running one under Past.** Moving a deployed programme's phase to a later week (allowed while nothing is logged in it) moved its deploy date forward but left it "deployed", and the live programme was picked as the deployed one with the LATEST start — so the future one won. Client 1: Calistenia (running, week 5) was listed as past; "yeyeyeyyeyey" (starts Oct 5) as live. The client app reads the same function, so it would have shown the client the wrong programme too.
+- [ ] **Fixed three ways**: the live programme is now the latest deployed one that has STARTED; moving a deployed programme's start into a later week turns it back into a schedule (it goes live on that week by itself, like any other); and the ones already in that state are mended on the next page load (checked on a copy of the local data: Calistenia live, yeyeyeyyeyey scheduled for Oct 5).
+- [ ] **Nutrition opened on a scheduled phase.** The phase in the address (`?phase=`) was shared by all three tabs, but Training writes a programme id there and the others a phase id — Training's "18" opened Nutrition on nutrition phase 18 ("fgh", scheduled). Now the address's phase only applies to the tab it came with, and switching tabs drops it, so each tab opens on its live phase.
+
+## 93 · New client: a two-step dialog that makes the login too — ✅ LIVE 21 Sep
+
+- [ ] **New client opens a dialog instead of making a blank "New client" and a half-open card.** Step 1, Member info: first and last name, birthdate with the age beside it ("31 years old", worked out by month and day, never stored), Male / Female / Other pills, height in cm, starting weight in kg, email (full width, it is also the login), phone as a dial code (NL +31 first, twenty in the order this business meets them) plus the number, address. Step 2, App access: the login email mirrored from step 1 ("Same as above"), a temporary password `Iron-XXXXXX` from letters that survive being read aloud (no O/0, I/1/l) with New and Copy, and "Email the invite now".
+- [ ] **Nothing is written until the last button**; Cancel, Escape or × drop it all. The last button makes the member record and the login together (flagged to change password at first sign-in); if the login cannot be made the record is removed again. The email is checked for an existing account as the coach leaves the field (red hairline, and the footer says so), not at save. Next and Create are genuinely disabled until first name, last name and a valid email are there. On success the dialog closes onto the new client's Home.
+- [ ] **Phone is two fields now**: the dial code and the national number are stored apart and joined only for show ("+31 6 45787628"). Phones typed before this keep exactly what was typed, with no code picked — no country is guessed out of them.
+- [ ] **The Member info / Coaching info editor uses the same rows** (`InfoRow`, shared with the dialog): label over value, a hairline under it, the input is the value; two columns; Birthdate shows the age, Gender is the pills, Phone the dial code + number. Change the row once and both change. The old label-left row styles are gone.
+- [ ] ⚠ **The invite email is not live yet**: the app had no way to send email. It is built (`app/lib/mail.ts`, through Resend) but stays off until `RESEND_API_KEY` and `MAIL_FROM` (a sender on a domain verified in Resend) are set on Railway. Until then the box is greyed with "Email isn't set up on this app yet, so give them the login yourself" and the button reads "Create client". If an invite fails once it is on, the client is still made and the dialog stays open to copy the login from.
 
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 

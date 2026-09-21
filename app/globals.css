@@ -4,24 +4,31 @@
   /* ---- Coach workstation (/admin) ----
      Same off-white / navy family as the client app, so the two halves of
      the product stop reading as different products. */
-  --ink: #14171c;                /* body text */
+  --ink: #141a24;                /* body text */
   --paper: #f8f9fb;              /* app background (centre column) */
   --paper-raised: #edf0f4;       /* left rail and right panel */
   --surface: #ffffff;            /* cards, inputs, day bodies */
   --table-head: #edf0f4;         /* table header fill */
   --logged-head: #eaeef4;        /* "what the client did" header */
   --logged-band: #f3f6fa;        /* and its column band */
-  --steel: #5b6472;              /* dim / labels, 4.9:1 — do not lighten */
-  --faint: #8b93a0;              /* placeholder, "already added" state */
-  --border: #c2cbd3;             /* hairline */
+  --steel: #5b6474;              /* dim / labels, 4.9:1 — do not lighten */
+  --faint: #8b93a1;              /* placeholder, "already added" state */
+  --border: #dfe3e8;             /* hairline */
   --border-strong: #94a2b0;      /* dashed affordances */
   --accent: #2f5d8f;
   --accent-fg: #ffffff;
   --accent-ink: #2f5d8f;
   --accent-tint: #e6ecf3;        /* cadence pills, icon circles, demo chip */
-  --accent-plate: #9a5a33;       /* warning / under target / destructive */
-  --good: #3f6e46;               /* trained, met target, deploy */
+  --accent-plate: #b3471d;       /* warning / under target / destructive */
+  --good: #2f7a3f;               /* trained, met target, deploy */
   --good-tint: #d7e6da;
+  /* The three macros, one set of colours everywhere they are drawn: the
+     coach's day targets, his logged-days table, and the client's food diary.
+     They used to be picked per component and drifted apart — carbs were
+     green on the targets and orange in the log. */
+  --macro-protein: #334eac;
+  --macro-carbs: #d99a2b;
+  --macro-fat: #2e8b7a;
   /* The Draft state's tan. NOT the old cream background — this pair is the
      prototype's own colour for a programme not yet deployed. */
   --draft-bg: #f0e6cf;
@@ -59,16 +66,16 @@
      do not lighten it. */
   --fp-bg: #f8f9fb;              /* page background, cool off-white */
   --fp-raised: #ffffff;          /* raised surface, open accordion header */
-  --fp-line: #c2cbd3;            /* hairline, border, bar track */
+  --fp-line: #dfe3e8;            /* hairline, border, bar track */
   --fp-input: #94a2b0;           /* input / strong border */
   --fp-text: #313851;            /* body text (ink) */
   --fp-text2: #414a60;           /* secondary text */
-  --fp-dim: #5b6472;             /* micro-labels, captions */
+  --fp-dim: #5b6474;             /* micro-labels, captions */
   --fp-accent: #2f5d8f;          /* lines, fills, emphasis */
   --fp-accent-fg: #f8f9fb;       /* text on an accent fill */
   --fp-accent-tint: #e6ecf3;     /* goal row, icon circles, note panel */
   --fp-accent-tint-strong: #d4e0ec;
-  --fp-warn: #9a5a33;            /* warning / destructive, 5.6:1 */
+  --fp-warn: #b3471d;            /* warning / destructive, 5.6:1 */
 
   /* Kept as an alias: older rules named the page colour "surface" back when
      it was the near-black. Same value, so both spellings are safe. */
@@ -93,6 +100,18 @@ body {
    it too. Remove this rule to go back. */
 body:has(.ad-shell) {
   --font-sans: var(--font-archivo), "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Figures in the coach admin are Archivo — swept here at the token rather
+     than rule by rule, because listing selectors meant every screen nobody
+     had looked at yet still came out in Newsreader. A dialog title opts the
+     serif back in explicitly, just below. */
+  --font-serif: var(--font-sans);
+}
+
+/* The only things in the admin that are still set in Newsreader. */
+body:has(.ad-shell) .pb-confirm-title,
+body:has(.ad-shell) .pb-modal-title,
+body:has(.ad-shell) .ad-client-title {
+  font-family: "Newsreader", Georgia, serif;
 }
 
 a { color: var(--accent-ink); }
@@ -171,6 +190,12 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   justify-content: space-between;
   align-items: baseline;
 }
+
+/* The session title is a button until it is clicked. */
+.day-name-btn { max-width: 260px; padding: 2px 6px; margin-left: -6px; border: 0; border-radius: 6px; background: none; font: inherit; font-size: 15px; font-weight: 800; color: #141a24; letter-spacing: -0.01em; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: text; }
+.day-name-btn:hover { background: #eef0f3; }
+.day-name-btn.unnamed { color: #5b6474; }
+.day-name-btn.pb-changed { background: #fff4e5; }
 
 .day-name {
   font-size: 0.72rem;
@@ -494,6 +519,14 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
   max-width: 280px;
 }
 
+/* The session's title is not a field any more: it sizes to the name, so the
+   summary beside it is not pushed across the card. */
+.admin-day-card-head-left .inline-row.day-name {
+  flex: 0 1 auto;
+  max-width: 340px;
+  min-width: 0;
+}
+
 .admin-day-card-head-right {
   display: flex;
   align-items: center;
@@ -629,15 +662,21 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 
 /* The last column (row delete / Add) stays pinned to the right edge while
    the rest of the table scrolls sideways, so Add is always reachable without
-   scrolling. Opaque backgrounds so scrolled-under cells don't show through;
-   the hairline on the left marks where the pinned cell begins. */
+   scrolling. Opaque background so scrolled-under cells do not show through.
+//
+   No rule down its left, and as narrow as a 22px icon needs. It used to be a
+   full column with a hairline, which drew a hard edge beside "What the client
+   did" — the widest, most-read column in the table — for the sake of a small
+   bin. The barrier is still there, it just cannot be seen. */
 .exercise-table th:last-child,
 .exercise-table td:last-child {
   position: sticky;
   right: 0;
   z-index: 1;
+  width: 34px;
+  padding: 4px 6px;
   background: var(--surface);
-  border-left: 1px solid var(--border);
+  border-left: 0;
 }
 
 .exercise-table .add-exercise-row td:last-child { background: var(--paper); }
@@ -1759,11 +1798,11 @@ a.cd-entry:hover { border-color: var(--accent); }
 }
 
 .measurement-summary-row .change-up {
-  color: #b8471f;
+  color: #b3471d;
 }
 
 .measurement-summary-row .change-down {
-  color: #1f7a4d;
+  color: #2f7a3f;
 }
 
 .change-stat {
@@ -1773,11 +1812,11 @@ a.cd-entry:hover { border-color: var(--accent); }
 }
 
 .change-stat .stat-value.change-up {
-  color: #b8471f;
+  color: #b3471d;
 }
 
 .change-stat .stat-value.change-down {
-  color: #1f7a4d;
+  color: #2f7a3f;
 }
 
 .snapshot-grid {
@@ -2095,7 +2134,7 @@ a.cd-entry:hover { border-color: var(--accent); }
 .status-unpaid { background: #f0d9c4; color: var(--accent-plate); }
 .status-sent { background: #dfe6ee; color: var(--accent-ink); }
 .status-paid { background: #d7e6da; color: var(--good); }
-.status-due { background: #f3d2d2; color: #a13a3a; }
+.status-due { background: #f3d2d2; color: #a32d2d; }
 
 .add-invoice-form {
   display: flex;
@@ -4938,11 +4977,11 @@ label.ci-pill { cursor: text; }
 }
 
 .checkin-summary-stat-value.change-up {
-  color: #b8471f;
+  color: #b3471d;
 }
 
 .checkin-summary-stat-value.change-down {
-  color: #1f7a4d;
+  color: #2f7a3f;
 }
 
 /* ---- Coach Measurements: windowed check-ins table ----
@@ -5139,7 +5178,7 @@ label.ci-pill { cursor: text; }
 
 .row-icon-btn.row-icon-danger:hover {
   background: #f3d2d2;
-  color: #a13a3a;
+  color: #a32d2d;
   border-color: #e2a5a5;
 }
 
@@ -5306,14 +5345,14 @@ label.ci-pill { cursor: text; }
   gap: 6px;
   font-size: 0.78rem;
   font-weight: 600;
-  color: #a13a3a;
+  color: #a32d2d;
   white-space: nowrap;
 }
 
 .row-confirm-yes {
   border: none;
   border-radius: 5px;
-  background: #a13a3a;
+  background: #a32d2d;
   color: white;
   padding: 4px 10px;
   font-size: 0.76rem;
@@ -7027,27 +7066,7 @@ label.ci-pill { cursor: text; }
   padding-right: 20px;
 }
 
-.pb-eyebrow {
-  font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--steel);
-  /* Matches .plan-name-input's 8px padding + 1px transparent border, so
-     "EDITING" and the programme name under it start on the same vertical.
-     The input keeps its own padding because that box is its hover and focus
-     affordance; the label moves to meet it. */
-  padding-left: 9px;
-}
-
 /* ---- Program chips ---- */
-
-.pb-programs {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
 
 .pb-program-chip {
   display: flex;
@@ -7078,111 +7097,6 @@ label.ci-pill { cursor: text; }
 .pb-program-weeks {
   font-size: 11px;
   color: var(--steel);
-}
-
-.pb-new-program {
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-  background: none;
-  color: var(--steel);
-  padding: 7px 11px;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.pb-new-program:hover {
-  color: var(--ink);
-  border-color: var(--steel);
-}
-
-/* ---- Editing bar ---- */
-
-.pb-editing {
-  display: flex;
-  /* Centred, with a floor tall enough for the tallest state this bar ever
-     reaches — the date + time inputs revealed by "Schedule for later…".
-     It used to be flex-end with no floor, so opening the scheduler grew the
-     bar and shoved the programme name and the whole week rail downward; the
-     control you just clicked moved out from under the pointer. */
-  align-items: center;
-  min-height: 46px;
-  justify-content: space-between;
-  gap: 20px;
-  margin-top: 16px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border);
-}
-
-.pb-editing-name-row {
-  display: flex;
-  align-items: baseline;
-  gap: 9px;
-  margin-top: 2px;
-}
-
-.pb-editing-meta {
-  font-size: 11px;
-  color: var(--steel);
-}
-
-.pb-editing-actions {
-  flex-shrink: 0;
-}
-
-.pb-deploy-row,
-.pb-live-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  /* No wrapping: a wrapped second line is the other way this bar used to
-     change height under the pointer. */
-  flex-wrap: nowrap;
-  justify-content: flex-end;
-}
-
-/* One height for everything in the deploy row — buttons and the date/time
-   inputs alike — so swapping the "Schedule for later…" button for the
-   scheduler form is a change of content, not of size. */
-.pb-deploy-row .deploy-btn,
-.pb-deploy-row .btn,
-.pb-deploy-row input[type="date"],
-.pb-deploy-row input[type="time"] {
-  height: 30px;
-  box-sizing: border-box;
-  padding-top: 0;
-  padding-bottom: 0;
-  font-size: 11.5px;
-  white-space: nowrap;
-}
-
-.pb-deploy-row .plan-deploy-controls,
-.pb-deploy-row .plan-schedule-form {
-  flex-wrap: nowrap;
-}
-
-.pb-deploy-note {
-  font-size: 11px;
-  color: var(--steel);
-}
-
-.pb-live-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 99px;
-  background: var(--good);
-}
-
-.pb-live-text {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--good);
-}
-
-.pb-live-text.past {
-  color: var(--steel);
-  font-weight: 400;
 }
 
 /* ---- Week strip ---- */
@@ -7473,20 +7387,23 @@ label.ci-pill { cursor: text; }
   opacity: 0.7;
 }
 
+/* Adding a row is the quietest thing on the card, not the loudest: the
+   words alone, in the blue everything else links in. */
 .pb-add-btn {
   height: 26px;
   border: none;
   border-radius: 6px;
-  background: var(--good);
-  /* --fp-text was removed with the dark client theme, so this fell back to
-     the inherited ink and read dark-on-green. White is the intent. */
-  color: #ffffff;
-  padding: 0 10px;
+  background: none;
+  color: #2f5d8f;
+  padding: 0 6px;
   font: inherit;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
+  white-space: nowrap;
   cursor: pointer;
 }
+.pb-add-btn:hover:not(:disabled) { color: #1e3a6e; text-decoration: underline; }
+.pb-add-btn:disabled { color: #a0a7b3; cursor: not-allowed; }
 
 /* ---- Right rail ---- */
 
@@ -7757,6 +7674,15 @@ label.ci-pill { cursor: text; }
   width: 74px;
   flex-shrink: 0;
 }
+/* A session's name is the whole of its row's left side: it was held to the
+   74px above and cut to "Sessio…". It only gives way (with an ellipsis) when
+   the row genuinely runs out of room. */
+.pb .admin-day-card-head-left .inline-row.day-name { width: auto; max-width: 100%; flex: 0 1 auto; min-width: 0; }
+/* +6px: the button pulls itself 6px left (its hover pad), which a plain
+   100% did not count, so every name lost its last letters. */
+.pb .admin-day-card-head-left .day-name-btn { max-width: calc(100% + 6px); }
+/* Starts from the name's own width (not zero) and grows into the rest. */
+.pb .admin-day-card-head-left { flex: 1 1 auto; }
 
 .pb .admin-day-card.rest .day-name {
   color: var(--steel);
@@ -7787,10 +7713,11 @@ label.ci-pill { cursor: text; }
 }
 
 /* The column the coach actually reads gets the room the design gives it;
-   the prescription inputs shrink around it, not the other way round. */
+   the prescription inputs shrink around it, not the other way round. The
+   width the bin column gave back went here. */
 .pb .exercise-table .logged-col {
-  width: 290px;
-  min-width: 290px;
+  width: 330px;
+  min-width: 330px;
   white-space: normal;
 }
 
@@ -7913,27 +7840,6 @@ label.ci-pill { cursor: text; }
   max-width: 200px;
 }
 
-.pb-editing-left {
-  min-width: 0;
-  flex: 1;
-}
-
-.pb-name-slot {
-  display: flex;
-  align-items: baseline;
-  gap: 9px;
-  flex-wrap: wrap;
-}
-
-.pb-editing-meta {
-  white-space: nowrap;
-}
-
-.pb-editing-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
 /* ==================== Admin shell ====================
    Shared by every admin page. Three columns, each scrolling itself so the
    document never does; 13px base with the design's density steps (12px
@@ -7969,6 +7875,10 @@ label.ci-pill { cursor: text; }
   background: var(--paper);
   display: flex;
   flex-direction: column;
+  /* The scrollbar's width is reserved whether or not this tab is long enough
+     to need one, so switching from a short tab (Measurements) to a long one
+     (Nutrition) doesn't squeeze the whole working area by 15px. */
+  scrollbar-gutter: stable;
 }
 
 .ad-pad {
@@ -8188,6 +8098,297 @@ label.ci-pill { cursor: text; }
 .ad-rail-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: #313851; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ad-rail-row.active .ad-rail-name { font-weight: 800; color: #141a24; }
 .ad-rail-dot { flex: none; width: 6px; height: 6px; border-radius: 999px; background: #b3471d; }
+/* The same amber, on a tab, a week and a session: something new from the client. */
+.ad-tab-dot, .ad-new-dot { display: inline-block; flex: none; width: 7px; height: 7px; margin-left: 6px; border-radius: 999px; background: #b3471d; vertical-align: middle; }
+.ad-tab-count { display: inline-block; min-width: 16px; margin-left: 6px; padding: 0 5px; border-radius: 999px; background: #fbe9e0; color: #b3471d; font-size: 10.5px; font-weight: 800; line-height: 16px; text-align: center; vertical-align: middle; }
+
+/* Cross-client pages made of cards: the same 18px the tabs stack with. */
+.ad-stack { display: flex; flex-direction: column; gap: 18px; }
+.ad-stack .fd-head { margin-bottom: 0; }
+
+/* Phases: every client's plan on one week grid. Each client is always the
+   same three rows (nutrition, training, lifestyle), named, filled or not. */
+.pho-row { display: grid; grid-template-columns: var(--pho-labels, 230px) minmax(0, 1fr); }
+.pho-body { position: relative; }
+/* One unbroken line for now, over every client's rows. */
+.pho-now { position: absolute; top: 0; bottom: 0; z-index: 4; width: 2px; margin-left: -1px; border-radius: 2px; background: #1e3a6e; pointer-events: none; }
+.pho-client { display: grid; grid-template-columns: 140px minmax(0, 1fr); padding: 7px 0; border-top: 1px solid #dfe3e8; }
+.pho-name { align-self: center; padding-right: 10px; font-size: 13px; font-weight: 800; color: #141a24; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pho-name:hover { color: #2f5d8f; }
+.pho-tracks { display: flex; flex-direction: column; min-width: 0; }
+.pho-track { display: grid; grid-template-columns: 90px minmax(0, 1fr); align-items: center; padding: 2px 0; }
+.pho-track + .pho-track { border-top: 1px dashed #eceff3; }
+.pho-track-label { font-size: 9.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.pho-track-label.nutrition { color: #0f5c46; }
+.pho-track-label.training { color: #3a3390; }
+.pho-track-label.lifestyle { color: #6b6a62; }
+.pho-lanes { row-gap: 2px; }
+.pl-bar.pho-bar { height: 20px; align-self: center; padding: 0 8px; border-radius: 6px; text-decoration: none; cursor: pointer; }
+.pl-bar.pho-bar:hover { filter: brightness(0.97); }
+.pl-bar.pho-bar .pl-bar-name { font-size: 11px; }
+.pl-bar.pho-bar.soon { border: 1.5px solid #b3471d; }
+.pho-left { flex: none; padding: 0 6px; border-radius: 999px; background: #fbe9e0; color: #b3471d; font-size: 9.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
+.pho-soon-row { text-decoration: none; align-items: center; }
+.pho-swatch { display: inline-block; width: 14px; height: 10px; border-radius: 3px; border: 1px solid transparent; }
+.pho-swatch.nutrition { background: #dff3ea; border-color: #9fd3bb; }
+.pho-swatch.training { background: #e6e4fa; border-color: #b9b4ec; }
+.pho-swatch.lifestyle { background: #efede6; border-color: #cfcbbd; }
+.pho-swatch.soon { background: #fff; border: 1.5px solid #b3471d; }
+
+/* Business: stat tiles and plain bars. */
+.biz-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1px; background: #eceff3; border-top: 1px solid #eceff3; }
+.biz-tile { display: flex; flex-direction: column; gap: 3px; padding: 14px 18px; background: #fff; }
+.biz-label { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; }
+.biz-value { font-size: 24px; font-weight: 800; color: #141a24; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.biz-value small { font-size: 12px; font-weight: 700; color: #5b6474; }
+.biz-basis { font-size: 11.5px; color: #8b93a1; }
+.biz-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+.biz-bars { display: flex; flex-direction: column; gap: 9px; padding: 14px 18px 16px; border-top: 1px solid #eceff3; }
+.biz-bar-row { display: grid; grid-template-columns: 78px minmax(0, 1fr) 70px; align-items: center; gap: 10px; font-size: 12.5px; }
+.biz-bar-label { font-weight: 700; color: #313851; }
+.biz-bar-track { height: 10px; border-radius: 999px; background: #eef0f3; overflow: hidden; }
+.biz-bar-fill { display: block; height: 100%; border-radius: 999px; background: #2f5d8f; }
+.biz-bar-num { text-align: right; font-weight: 800; color: #141a24; font-variant-numeric: tabular-nums; }
+.biz-bar-num small { font-weight: 600; color: #8b93a1; }
+
+/* ---- The phase dialog: schedule or edit a phase, on every track ----------
+   Its colours are the phase's STATE (phaseChrome.ts), handed in as three
+   variables on .pl-dlg: --sel-edge (endpoints, the armed field, selected
+   week numbers, the picked length), --sel-soft (the armed field's ring) and
+   --sel-band (the selection). Nothing here names a state or a track. */
+.pl-dlg-scrim { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(20, 26, 36, 0.28); }
+.pl-dlg { display: flex; flex-direction: column; width: 520px; max-width: 100%; max-height: calc(100vh - 48px); border-radius: 14px; background: #fff; box-shadow: 0 26px 64px rgba(20, 26, 36, 0.32); overflow: hidden; font-family: var(--font-archivo), "Archivo", -apple-system, BlinkMacSystemFont, sans-serif; color: #141a24; }
+.pl-dlg-head { flex: none; display: flex; align-items: center; gap: 10px; padding: 16px 20px 14px; border-bottom: 1px solid #eceff3; }
+.pl-dlg-head h2 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; color: #141a24; }
+.pl-dlg-state { margin-left: auto; padding: 4px 10px; border-radius: 999px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+/* The body scrolls; the footer never does. */
+.pl-dlg-form { display: flex; flex-direction: column; flex: 1; min-height: 0; margin: 0; }
+.pl-dlg-body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 16px 20px 18px; }
+.pl-dlg-field { display: flex; flex-direction: column; gap: 6px; }
+.pl-dlg-label { font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; }
+.pl-dlg-input { box-sizing: border-box; width: 100%; padding: 10px 12px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; font: inherit; font-size: 13.5px; font-weight: 600; color: #141a24; outline: none; }
+.pl-dlg-input:focus { border-color: #2f5d8f; }
+.pl-dlg-input::placeholder { color: #a0a7b3; font-weight: 500; }
+
+/* Start and End: two fields, exactly one armed. */
+.pl-dlg-ends { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pl-dlg-end { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 9px 12px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; font: inherit; text-align: left; cursor: pointer; }
+.pl-dlg-end b { font-size: 13.5px; font-weight: 800; color: #141a24; font-variant-numeric: tabular-nums; }
+.pl-dlg-end:hover:not(:disabled) { border-color: #c3c9d2; }
+.pl-dlg-end.on { border-color: var(--sel-edge); box-shadow: 0 0 0 2px var(--sel-soft); }
+.pl-dlg-end.on .pl-dlg-label { color: var(--sel-edge); }
+.pl-dlg-end:disabled { background: #f8f9fb; cursor: default; }
+.pl-dlg-end:focus-visible { outline: none; border-color: var(--sel-edge); box-shadow: 0 0 0 2px var(--sel-soft); }
+
+/* The calendar: always six rows of 38px, so paging months never moves the
+   dialog. A 34px week column leads each row. Columns sit flush so a
+   selected week reads as one bar; rows keep a 2px gap. */
+.pl-cal-month { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 13px; font-weight: 800; color: #141a24; }
+.pl-cal-nav { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; padding: 0; border: 1px solid #dfe3e8; border-radius: 7px; background: #fff; font: inherit; font-size: 16px; line-height: 1; color: #5b6474; cursor: pointer; }
+.pl-cal-nav:hover { color: #141a24; border-color: #c3c9d2; }
+.pl-cal-weekdays, .pl-cal-grid { display: grid; grid-template-columns: 34px repeat(7, 1fr); }
+.pl-cal-weekdays span { padding: 0 0 6px; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #a0a7b3; text-align: center; }
+.pl-cal-grid { grid-template-rows: repeat(6, 38px); gap: 2px 0; }
+.pl-cal-wk { display: flex; align-items: center; justify-content: center; font-size: 9.5px; font-weight: 700; color: #c3c9d2; font-variant-numeric: tabular-nums; }
+.pl-cal-wk.in { font-weight: 800; color: var(--sel-edge); }
+.pl-cal-day { position: relative; box-sizing: border-box; height: 38px; padding: 0; border: 0; border-radius: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #313851; cursor: pointer; font-variant-numeric: tabular-nums; }
+.pl-cal-day:hover:not(.in) { border-radius: 8px; background: #f4f6f9; }
+.pl-cal-day.out { font-weight: 500; color: #c3c9d2; }
+.pl-cal-day.in { background: var(--sel-band); color: var(--sel-edge); font-weight: 800; }
+.pl-cal-day.in.l { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+.pl-cal-day.in.r { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
+.pl-cal-day.end { background: var(--sel-edge); color: #fff; }
+.pl-cal-day:focus-visible { outline: 2px solid #2f5d8f; outline-offset: -2px; border-radius: 8px; }
+/* Draft only: the selection's edge is dashed too. Endpoints stay solid. */
+.pl-cal.draft .pl-cal-day.in:not(.end) { border-top: 1px dashed var(--sel-edge); border-bottom: 1px dashed var(--sel-edge); }
+.pl-cal.draft .pl-cal-day.in.l:not(.end) { border-left: 1px dashed var(--sel-edge); }
+.pl-cal.draft .pl-cal-day.in.r:not(.end) { border-right: 1px dashed var(--sel-edge); }
+/* Another phase on the track: a short grey bar under the date, red where it
+   falls inside the selection. Never a fill or an outline. */
+.pl-cal-planned { position: absolute; left: 50%; bottom: 6px; width: 14px; height: 2px; margin-left: -7px; border-radius: 2px; background: #c9cfd8; }
+.pl-cal-planned.clash { background: #b3471d; }
+.pl-cal-day.end .pl-cal-planned.clash { background: #fff; }
+
+.pl-cal-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; font-size: 11.5px; font-weight: 600; color: #5b6474; }
+.pl-cal-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.pl-cal-legend .pl-overlap { font-size: 11.5px; }
+.pl-cal-sw { display: inline-block; box-sizing: border-box; width: 16px; height: 10px; border: 1px solid transparent; border-radius: 3px; }
+.pl-cal-sw.dashed { border-style: dashed; }
+.pl-cal-sw.planned { width: 14px; height: 2px; border: 0; border-radius: 2px; background: #c9cfd8; }
+.pl-cal-sw.planned.clash { background: #b3471d; }
+
+/* Length: what is picked, and four lengths that set the end from the start. */
+.pl-dlg-length { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.pl-dlg-length > div:first-child { display: flex; flex-direction: column; gap: 2px; }
+.pl-dlg-length b { font-size: 13px; font-weight: 800; color: #141a24; }
+.pl-dlg-length small { font-size: 11.5px; font-weight: 600; color: #5b6474; }
+.pl-dlg-length small.pl-overlap { color: #b3471d; }
+.pl-dlg-pills { display: flex; gap: 6px; }
+.pl-dlg-pills button { padding: 5px 11px; border: 1px solid #dfe3e8; border-radius: 999px; background: #fff; font: inherit; font-size: 11.5px; font-weight: 800; color: #313851; cursor: pointer; white-space: nowrap; }
+.pl-dlg-pills button:hover:not(:disabled) { border-color: #c3c9d2; }
+.pl-dlg-pills button.on { border-color: var(--sel-edge); background: var(--sel-edge); color: #fff; }
+.pl-dlg-pills button:disabled { opacity: 0.5; cursor: default; }
+
+.pl-dlg-foot { flex: none; display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-top: 1px solid #eceff3; background: #fafbfc; }
+.pl-dlg-foot > .pl-text-btn.danger { padding-left: 0; color: #a32d2d; }
+.pl-dlg-actions { display: flex; gap: 8px; margin-left: auto; }
+.pl-dlg-cancel, .pl-dlg-save, .pl-dlg-danger { padding: 9px 14px; border-radius: 8px; font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.pl-dlg-cancel { border: 1px solid #dfe3e8; background: #fff; color: #313851; }
+.pl-dlg-cancel:hover { border-color: #c3c9d2; }
+.pl-dlg-save { border: 0; background: #1e3a6e; color: #fff; }
+.pl-dlg-save:hover:not(:disabled) { background: #274a8a; }
+.pl-dlg-save:disabled { opacity: 0.45; cursor: default; }
+.pl-dlg-danger { border: 0; background: #a32d2d; color: #fff; }
+.pl-dlg-ask { display: flex; align-items: center; gap: 12px; width: 100%; font-size: 12.5px; color: #313851; }
+.pl-dlg-ask strong { font-weight: 800; color: #141a24; }
+
+/* ---- A client's Home (admin) -------------------------------------------
+   Who this is and how they are doing in one card, then what needs the coach
+   and what the client did down the middle, with the reference details on a
+   rail beside them. The tab strip and .ad-tab-panel around it are the
+   shell's; nothing here re-declares them. */
+.ch-home { display: flex; flex-direction: column; gap: 18px; }
+.ch-card { background: #fff; border: 1px solid #dfe3e8; border-radius: 12px; overflow: hidden; }
+
+/* Identity */
+.ch-ident-card { display: flex; flex-direction: column; }
+.ch-ident-top { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; padding: 18px 22px; }
+/* The name and face are the disclosure: everything about the client that is
+   not their name opens from here. */
+.ch-ident { display: flex; align-items: center; gap: 14px; min-width: 0; }
+
+/* What the client is on, between their name and their figures. */
+.ch-phases { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 22px 16px; }
+.ch-phase { display: inline-flex; align-items: baseline; gap: 8px; padding: 7px 12px; border: 1px solid #eceff3; border-radius: 10px; background: #fafbfc; min-width: 0; }
+.ch-phase-track { font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.ch-phase-track.training { color: #4c42a8; }
+.ch-phase-track.nutrition { color: #1f6a52; }
+.ch-phase-track.lifestyle { color: #6b6a62; }
+.ch-phase-name { font-size: 13px; font-weight: 700; color: #141a24; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ch-phase-weeks { font-size: 11.5px; font-weight: 500; color: #8b93a1; white-space: nowrap; }
+.ch-avatar { flex: none; display: flex; align-items: center; justify-content: center; width: 66px; height: 66px; border-radius: 999px; overflow: hidden; background: #e6ecf3; color: #1e3a6e; font-size: 24px; font-weight: 800; }
+.ch-ident { flex: 1; min-width: 0; }
+.ch-name-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ch-name { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.015em; color: #141a24; }
+.ch-tag { flex: none; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.ch-tag.training { background: #e6ecf3; color: #1e3a6e; }
+.ch-tag.nutrition { background: #e0efe7; color: #1f6a52; }
+.ch-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 4px; font-size: 12.5px; font-weight: 500; color: #5b6474; }
+.ch-meta > * + *::before { content: "·"; margin-right: 10px; color: #c7ccd4; }
+.ch-meta-link { color: #2f5d8f; text-decoration: none; }
+.ch-meta-link:hover { text-decoration: underline; }
+.ch-ident-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ch-ident-actions > * { flex-shrink: 0; white-space: nowrap; }
+.ch-attn { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-radius: 8px; background: #fbeee6; color: #a8501f; font-size: 12px; font-weight: 800; }
+.ch-attn i { width: 6px; height: 6px; border-radius: 999px; background: #c2622f; }
+.ch-attn.clear { background: #e0efe7; color: #1f6a52; }
+.ch-attn.clear i { background: #2f7a3f; }
+
+/* Buttons: secondary by default, one navy primary. */
+.ch-btn { display: inline-flex; align-items: center; justify-content: center; height: 34px; padding: 0 14px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; color: #1e3a6e; font: inherit; font-size: 12px; font-weight: 800; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.ch-btn:hover { border-color: #2f5d8f; background: #f8f9fb; }
+.ch-btn.primary { border-color: #1e3a6e; background: #1e3a6e; color: #fff; }
+.ch-btn.primary:hover { background: #274a8a; }
+.ch-btn.warm { height: 30px; border-color: #e3cbb9; color: #a8501f; background: #fff; }
+
+/* Stat strip — each fact shaped like the date chip on a meeting card: the
+   name on its own tinted band, a line, then the figure on white. */
+.ch-stats { display: flex; flex-wrap: wrap; margin-left: -1px; border-top: 1px solid #dfe3e8; background: #fff; }
+.ch-stat { flex: 1 1 172px; min-width: 0; display: flex; flex-direction: column; border-left: 1px solid #dfe3e8; }
+.ch-stat-label {
+  padding: 8px 20px;
+  background: #e6ecf3;
+  border-bottom: 1px solid #dfe3e8;
+  color: #1e3a6e;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ch-stat-body { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 12px 20px 14px; }
+.ch-stat-value { font-family: var(--font-sans); font-size: 22px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; color: #141a24; font-variant-numeric: tabular-nums; }
+.ch-stat-value.warn { color: #a8501f; }
+.ch-stat-unit { font-size: 12px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
+
+/* Body: the work down the middle, the facts on the rail. */
+.ch-body { display: grid; grid-template-columns: minmax(0, 1fr) 316px; gap: 18px; align-items: start; }
+.ch-main, .ch-rail { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+@media (max-width: 1000px) {
+  .ch-body { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Card headers */
+.ch-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 14px 22px; }
+.ch-head.warm { background: #fbeee6; }
+.ch-head.tint { background: #e6ecf3; }
+.ch-head-titles { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ch-label { font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
+.ch-head.warm .ch-label, .ch-head.warm .ch-head-sub { color: #a8501f; }
+.ch-head.tint .ch-label { color: #1e3a6e; }
+.ch-head-sub { font-size: 12px; font-weight: 500; color: #5b6474; }
+.ch-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ch-chip { flex-shrink: 0; height: 28px; padding: 0 11px; border: 1px solid #cfd9e6; border-radius: 8px; background: #fff; color: #2f5d8f; font: inherit; font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; cursor: pointer; }
+.ch-chip:hover { border-color: #2f5d8f; }
+.ch-chip.on { border-color: #1e3a6e; background: #1e3a6e; color: #fff; }
+.ch-chip.plain { text-transform: none; letter-spacing: 0; }
+
+/* Rows */
+.ch-list { list-style: none; margin: 0; padding: 0; }
+.ch-row { display: flex; align-items: flex-start; gap: 14px; width: 100%; box-sizing: border-box; padding: 12px 22px; border: 0; border-top: 1px solid #eceff3; background: none; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.ch-row:hover:not(:disabled) { background: #f8f9fb; }
+.ch-row:disabled { cursor: default; }
+.ch-main-col, .ch-main { min-width: 0; }
+.ch-row .ch-main { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.ch-title { font-size: 13px; font-weight: 700; color: #141a24; }
+.ch-detail { font-size: 12px; font-weight: 500; color: #5b6474; }
+.ch-detail.quote { padding-left: 8px; border-left: 2px solid #dfe3e8; color: #313851; white-space: pre-wrap; }
+.ch-tone { flex: none; padding: 3px 8px; border-radius: 6px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; background: #fbeee6; color: #a8501f; }
+.ch-tone.urgent { background: #fbeaea; color: #a32d2d; }
+.ch-tone.note { background: #fff3dc; color: #8a5a12; }
+.ch-go { flex: none; font-size: 12px; font-weight: 800; color: #2f5d8f; white-space: nowrap; text-decoration: none; }
+.ch-empty { margin: 0; padding: 14px 22px; border-top: 1px solid #eceff3; font-size: 12.5px; color: #8b93a1; }
+
+/* An activity row is a fixed grid, so the dot never shifts the text. */
+.ch-event { display: grid; grid-template-columns: 8px 92px minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 11px 22px; }
+.ch-event.new { background: #fdf8f3; }
+.ch-newdot { width: 6px; height: 6px; margin-top: 6px; border-radius: 999px; background: transparent; }
+.ch-event.new .ch-newdot { background: #c2622f; }
+.ch-cat { padding: 3px 7px; border-radius: 6px; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; text-align: center; background: #eef0f3; color: #5b6474; }
+.ch-cat.training { background: #e9e7fa; color: #4c42a8; }
+.ch-cat.nutrition { background: #e0efe7; color: #1f6a52; }
+.ch-cat.measurements { background: #e6ecf3; color: #1e3a6e; }
+.ch-cat.notes { background: #fff3dc; color: #8a5a12; }
+.ch-when { font-size: 12px; font-weight: 500; color: #8b93a1; white-space: nowrap; }
+.ch-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 22px; border-top: 1px solid #eceff3; background: #fafbfc; }
+.ch-foot .ch-label { letter-spacing: 0.04em; text-transform: none; font-weight: 500; font-size: 12px; color: #8b93a1; }
+
+/* Rail cards */
+/* Member info, Coaching info and the coach's note wear the same banner as
+   the dialog that edits them and as every other card header on this page:
+   the accent tint, navy letters. A grey strip made them read as a footnote
+   beside the tinted cards next to them. */
+.ch-rail-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 18px; background: #e6ecf3; }
+.ch-rail-head .ch-label { color: #1e3a6e; }
+.ch-edit { border: 0; background: none; padding: 0; font: inherit; font-size: 12px; font-weight: 800; color: #2f5d8f; cursor: pointer; }
+.ch-edit:hover { text-decoration: underline; }
+.ch-rail-card .ad-rows { padding: 0; }
+.ch-rail-card .ad-row { display: flex; justify-content: space-between; gap: 14px; padding: 10px 18px; border-top: 1px solid #eceff3; }
+.ch-rail-card .ad-row:first-child { border-top: 0; }
+.ch-rail-card .ad-row-label { font-size: 12px; font-weight: 500; color: #5b6474; }
+.ch-rail-card .ad-row-value { font-size: 12.5px; font-weight: 600; color: #141a24; text-align: right; overflow-wrap: anywhere; }
+.ch-rail-card .ad-card-actions { padding: 12px 18px; }
+.ch-note-body { padding: 12px 18px; }
+.ch-note-text { margin: 0; font-size: 13px; line-height: 1.55; color: #313851; white-space: pre-wrap; }
+.ch-note-empty { margin: 0; font-size: 12.5px; color: #8b93a1; }
+.ch-note-when { display: block; margin-top: 8px; letter-spacing: 0.04em; text-transform: none; font-weight: 500; font-size: 11.5px; color: #8b93a1; }
+.ch-note-edit { padding: 12px 18px; }
+.ch-note-input { width: 100%; box-sizing: border-box; padding: 9px 10px; border: 1px solid #dfe3e8; border-radius: 8px; font: inherit; font-size: 13px; line-height: 1.5; color: #313851; resize: vertical; }
+.ch-note-input:focus { outline: none; border-color: #1e3a6e; }
+.ch-note-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+
 .ad-rail-empty { margin: 0; padding: 14px 8px; font-size: 12px; font-weight: 600; color: #8b93a1; }
 
 .ad-rail-new { flex: none; padding: 8px 0 10px; }
@@ -8791,7 +8992,7 @@ label.ci-pill { cursor: text; }
   margin: 0 0 14px;
   background: #fdecec;
   border: 1px solid #f0c2c2;
-  color: #9b2c2c;
+  color: #a32d2d;
   border-radius: 8px;
   padding: 9px 12px;
   font-size: 0.83rem;
@@ -8869,7 +9070,7 @@ label.ci-pill { cursor: text; }
 .client-login-flash.err {
   background: #fdecec;
   border: 1px solid #f0c2c2;
-  color: #9b2c2c;
+  color: #a32d2d;
 }
 
 /* ---- Coach's note on an exercise (client Training) ----
@@ -9036,15 +9237,26 @@ label.ci-pill { cursor: text; }
   cursor: not-allowed;
 }
 
+/* The delete on a custom column: its own round target beside the chip,
+   rather than a bare character that reads as part of the label. */
+.pb-col-chip-wrap:has(.pb-col-chip-x-form) .pb-col-chip { border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: 0; }
 .pb-col-chip-x {
-  border: none;
-  background: none;
-  color: var(--steel);
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 22px;
+  border: 1px solid var(--border);
+  border-left: 0;
+  border-radius: 0 99px 99px 0;
+  background: var(--surface);
+  color: #8b93a1;
+  font-size: 13px;
   line-height: 1;
-  padding: 0 4px;
+  padding: 0;
   cursor: pointer;
 }
+.pb-col-chip-x:hover { background: #fbeaea; border-color: #f0c9c9; color: #a32d2d; }
 
 .pb-col-add {
   display: flex;
@@ -9278,10 +9490,10 @@ label.ci-pill { cursor: text; }
 
 .pb-week-add-label { font-size: 11px; font-weight: 800; color: var(--accent); }
 
+/* Placed in JS against the button that opens it (components/popover.ts):
+   fixed so a scrolling ancestor cannot clip it, and clamped to the window. */
 .pb-add-pop {
-  position: absolute;
-  top: 66px;
-  left: 0;
+  position: fixed;
   z-index: 20;
   width: 172px;
   border: 1px solid var(--border);
@@ -9676,6 +9888,10 @@ label.ci-pill { cursor: text; }
 /* Collapsed: the third column becomes a 26px strip holding only the toggle,
    and the working area takes the rest. */
 .ad-shell.panel-collapsed { grid-template-columns: 240px minmax(0, 1fr) 26px; }
+/* No client panel: the working area takes its width too. */
+.ad-shell.no-panel { grid-template-columns: 240px minmax(0, 1fr); }
+.ad-shell.no-panel .pb-main { padding-right: 0; }
+.ad-shell.no-panel .ad-pad { padding-right: 28px; }
 
 .ad-panel-toggle {
   position: absolute;
@@ -9728,28 +9944,6 @@ label.ci-pill { cursor: text; }
 .pb-rail > .pb-week-add { flex: 0 0 136px; }
 .pb-week-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.pb-week-remove {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  opacity: 0;
-  transition: opacity 120ms ease;
-}
-
-/* Shown on hover, and always on the selected week: hover alone hid the
-   control well enough that removing a week looked impossible. */
-.pb-week-wrap:hover .pb-week-remove,
-.pb-week-wrap.selected .pb-week-remove,
-.pb-week-remove:focus-within { opacity: 1; }
-
-.pb-week-remove .row-icon-btn {
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  background: var(--surface);
-}
-
-.pb-week-remove .row-icon-btn svg { width: 11px; height: 11px; }
 
 /* Delete client: a labelled danger button at the foot of the overview panel. */
 .ad-panel-danger { padding-top: 6px; }
@@ -10116,80 +10310,6 @@ label.ci-pill { cursor: text; }
   font-weight: 600;
 }
 
-.ad-fields { display: flex; flex-direction: column; }
-
-/* Same row rhythm as the read-only facts above, so switching to Edit changes
-   the controls rather than the shape of the block. */
-.ad-field {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 3px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.ad-field-label { flex-shrink: 0; font-size: 11px; color: var(--steel); }
-
-/* A card value that comes from elsewhere (the Plan tab) and is shown
-   instead of typed. */
-.ad-field-static {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  justify-content: flex-end;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--ink);
-  text-align: right;
-}
-.ad-field-static em { font-style: normal; font-size: 10px; font-weight: 700; color: var(--steel); white-space: nowrap; }
-
-.ad-field-input {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-  flex: 1;
-  justify-content: flex-end;
-}
-
-.ad-field-input input {
-  width: 100%;
-  max-width: 148px;
-  height: 26px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--ink);
-  padding: 0 7px;
-  font: inherit;
-  font-size: 11.5px;
-  font-weight: 600;
-  text-align: right;
-}
-
-/* Unit suffix (cm, kg) sits INSIDE the input's right edge rather than beside
-   it, so a unit field keeps the same 148px box and right edge as every other
-   row instead of shrinking and drifting left to make room for the label. */
-.ad-field-input { position: relative; }
-
-.ad-field-input.has-suffix input,
-.ad-field-input:has(em) input { padding-right: 30px; }
-
-.ad-field-input em {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-  font-style: normal;
-  font-size: 10.5px;
-  color: var(--steel);
-}
-
 .ad-field-note {
   margin: 8px 0 0;
   font-size: 10.5px;
@@ -10380,11 +10500,13 @@ label.ci-pill { cursor: text; }
 }
 
 /* ================= Workstation: shared controls ================= */
+/* Navy confirms, not green. Green is a status colour — it means "on target",
+   and a Save button is not a status. (UI-GUIDELINES §3, §6.) */
 .ad-btn-primary {
   height: 28px;
   border: none;
   border-radius: 6px;
-  background: var(--good);
+  background: #1e3a6e;
   color: #ffffff;
   padding: 0 12px;
   font: inherit;
@@ -10393,6 +10515,7 @@ label.ci-pill { cursor: text; }
   cursor: pointer;
 }
 
+.ad-btn-primary:hover:not(:disabled) { background: #274a8a; }
 .ad-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .ad-btn-secondary {
@@ -11006,57 +11129,6 @@ label.ci-pill { cursor: text; }
 /* Graph pin on a check-in column row: same footprint as the delete button
    beside it, filled with the accent when the metric is charted on the
    client's Home. */
-.ms-graph {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--faint);
-  cursor: pointer;
-  padding: 0;
-  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
-}
-.ms-graph:hover { color: var(--ink); border-color: var(--steel); }
-.ms-graph.on { background: var(--accent); border-color: var(--accent); color: var(--accent-fg, #fff); }
-.ms-graph:disabled { cursor: not-allowed; opacity: 0.45; }
-.ms-graph:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-/* ---- Measurements tab status bar: "live for the client" + save state ---- */
-.ms-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 0 0 16px;
-  padding: 7px 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-}
-
-.ms-topbar-live {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--ink);
-  white-space: nowrap;
-}
-
-.ms-live-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background: var(--good);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 18%, transparent);
-}
-
-.ms-topbar .pb-autosave { text-align: right; }
 
 /* ---- Weekly check-in day, in the Check-in columns header ---- */
 .cid { display: flex; align-items: center; gap: 7px; }
@@ -11114,9 +11186,11 @@ label.ci-pill { cursor: text; }
   position: absolute;
   top: 34px;
   left: 0;
+  right: 0;
   z-index: 30;
-  width: 660px;
-  max-height: 330px;
+  width: auto;
+  max-width: 660px;
+  max-height: min(60vh, 440px);
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -11153,22 +11227,9 @@ label.ci-pill { cursor: text; }
   text-transform: uppercase;
 }
 
-.ml-rule { flex: 1; height: 1px; background: var(--border); }
 
-.ml-group-actions { display: flex; gap: 4px; }
 
-.ml-group-actions button {
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface);
-  color: var(--steel);
-  font-size: 9.5px;
-  font-weight: 700;
-  padding: 1px 6px;
-  cursor: pointer;
-}
 
-.ml-group-actions button:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .ml-items { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 7px; }
 
@@ -11620,10 +11681,6 @@ label.ci-pill { cursor: text; }
 .ad-btn-primary.ph-delete-confirm { background: #a32d2d; border-color: #a32d2d; color: #fff; }
 .ad-btn-primary.ph-delete-confirm:hover { background: #8a2424; border-color: #8a2424; }
 
-/* Nutrition tab: the phase chips sit between the live line and the editor. */
-.nt-phases { margin-bottom: 14px; }
-.ms-topbar-live.muted { color: var(--steel); }
-.ms-topbar-live.muted .ms-live-dot { background: var(--steel); }
 
 /* "Edit dates" sits at the end of the nutrition phase chips. */
 .nt-phase-edit { margin-left: auto; }
@@ -11633,9 +11690,29 @@ label.ci-pill { cursor: text; }
    contrast, row 2 last week in grey; colours are the palette's green and
    orange, judged per set against the target of the week it belongs to. */
 .pb .exercise-table td.logged-col { padding: 8px 12px; }
+/* The last cell of a row carries the row's bin (or the add row's "+ Add") at
+   its right end: there is no column of its own for it. The content before it
+   takes the rest and scrolls on its own, so the bin never moves. */
+.pb-cell-end { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.pb-cell-main { flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: thin; scrollbar-color: #cfd5de transparent; }
+.pb-cell-end > :last-child:not(.pb-cell-main) { flex: none; }
+.pb .exercise-table td.pb-add-cell { text-align: right; }
+/* The cell scrolls as one: the week tags, the sets and the verdicts move
+     together. The grid sizes to its content so there is something to scroll;
+     the cell around it is what holds the column's width. */
+.pb .exercise-table td.logged-col {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #cfd5de transparent;
+}
+.pb .exercise-table td.logged-col::-webkit-scrollbar { height: 4px; }
+.pb .exercise-table td.logged-col::-webkit-scrollbar-thumb { background: #cfd5de; border-radius: 99px; }
+.pb .exercise-table td.logged-col::-webkit-scrollbar-track { background: transparent; }
+
 .pb-log {
   display: grid;
-  grid-template-columns: 30px 1fr 120px;
+  grid-template-columns: 30px max-content minmax(96px, max-content);
   column-gap: 10px;
   row-gap: 3px;
   align-items: center;
@@ -11652,10 +11729,12 @@ label.ci-pill { cursor: text; }
   background: #eef0f3;
 }
 .pb-log-wk.now { color: #fff; background: #1e3a6e; }
-.pb-log-sets { display: flex; gap: 4px; min-width: 0; }
+/* A chip is never narrower than its figures. A week with more sets than the
+   lane can hold scrolls sideways rather than wrapping: a wrapped lane grows
+   the row, and the two tables in a session stop lining up. */
+.pb-log-sets { display: flex; flex-wrap: nowrap; gap: 4px; min-width: 0; }
 .pb-log-set {
-  flex: 1;
-  min-width: 0;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: baseline;
   justify-content: center;
@@ -11673,12 +11752,12 @@ label.ci-pill { cursor: text; }
 .pb-log-set.met { background: #e3f2e6; color: #2f7a3f; }
 .pb-log-set.under { background: #fbe9e0; color: #b3471d; }
 .pb-log-set .pb-log-reps.short { text-decoration: underline dotted #b3471d; text-underline-offset: 2px; }
-.pb-log-set.planned { background: transparent; border: 1px dashed #c3c9d2; color: #c3c9d2; font-weight: 700; }
+.pb-log-set.planned { background: transparent; border: 1px dashed #dfe3e8; color: #dfe3e8; font-weight: 700; }
 .pb-log-set.dim { background: transparent; color: #8b93a1; font-size: 11.5px; font-weight: 700; padding: 3px 6px; }
 .pb-log-set.dim .pb-log-reps { font-size: 10.5px; }
 .pb-log-note { font-size: 11px; font-weight: 700; color: #8b93a1; padding: 3px 0; }
-.pb-log-verdict { font-size: 11px; font-weight: 800; white-space: nowrap; text-align: right; }
-.pb-log-delta { font-size: 10.5px; font-weight: 700; white-space: nowrap; text-align: right; }
+.pb-log-verdict { font-size: 11px; font-weight: 800; text-align: right; white-space: nowrap; }
+.pb-log-delta { font-size: 10.5px; font-weight: 700; text-align: right; white-space: nowrap; }
 .pb-log-verdict.met, .pb-log-delta.met { color: #2f7a3f; }
 .pb-log-verdict.under, .pb-log-delta.under { color: #b3471d; }
 .pb-log-verdict.none, .pb-log-delta.none { color: #8b93a1; }
@@ -11976,7 +12055,7 @@ label.ci-pill { cursor: text; }
   padding: 6px 14px 4px;
   border-radius: 16px;
   background: #fff;
-  border: 1px solid #c2cbd3;
+  border: 1px solid #dfe3e8;
 }
 .home-goals-head {
   display: flex;
@@ -11985,7 +12064,7 @@ label.ci-pill { cursor: text; }
   gap: 8px;
   padding: 6px 0 4px;
 }
-.home-goals-title { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #5b6472; }
+.home-goals-title { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #5b6474; }
 .home-goals-meta { font-size: 10px; font-weight: 700; color: #8b93a1; white-space: nowrap; }
 
 /* One goal row, shared with the coach's preview. */
@@ -12009,7 +12088,7 @@ label.ci-pill { cursor: text; }
   color: #fff;
 }
 .gr-dot.orange { background: #b3471d; }
-.gr-dot.muted { background: transparent; border: 1.5px solid #c2cbd3; box-sizing: border-box; }
+.gr-dot.muted { background: transparent; border: 1.5px solid #dfe3e8; box-sizing: border-box; }
 .gr-dot.done { background: #2f7a3f; width: 12px; height: 12px; margin-top: 3px; font-size: 8px; line-height: 12px; }
 .gr-body { flex: 1; min-width: 0; }
 .gr-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
@@ -12038,7 +12117,7 @@ label.ci-pill { cursor: text; }
 /* ---- Home: data tiles and the bar chart -------------------------------- */
 .home-data { padding-top: 2px; }
 .home-data-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
-.home-data-title { font-size: 11px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6472; }
+.home-data-title { font-size: 11px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
 .home-data-sub { font-size: 10.5px; font-weight: 700; color: #8b93a1; }
 .home-data-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .home-data-tile {
@@ -12060,12 +12139,12 @@ label.ci-pill { cursor: text; }
 .home-data-tile-label { max-width: 100%; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .home-data-tile-value { font-family: var(--font-serif); font-size: 22px; font-weight: 600; color: #313851; line-height: 1.1; }
 .home-data-tile-value small { font-family: var(--font-sans); font-size: 11px; font-weight: 700; color: #8b93a1; margin-left: 3px; }
-.home-data-tile-trend { font-size: 10.5px; font-weight: 800; color: #5b6472; }
+.home-data-tile-trend { font-size: 10.5px; font-weight: 800; color: #5b6474; }
 .home-data-tile-trend.green { color: #2f7a3f; }
 .home-data-tile-trend.orange { color: #b3471d; }
 
 .home-data-graph { margin-top: 10px; padding: 12px 14px 10px; border-radius: 14px; background: #fff; border: 1px solid #e3e6ea; }
-.home-data-graph-head { display: flex; justify-content: space-between; font-size: 11px; font-weight: 800; color: #5b6472; margin-bottom: 8px; }
+.home-data-graph-head { display: flex; justify-content: space-between; font-size: 11px; font-weight: 800; color: #5b6474; margin-bottom: 8px; }
 .home-data-track {
   display: flex;
   overflow-x: auto;
@@ -12076,13 +12155,13 @@ label.ci-pill { cursor: text; }
 .home-data-track::-webkit-scrollbar { display: none; }
 .home-data-pane { flex: 0 0 100%; width: 100%; scroll-snap-align: start; }
 .home-data-bars { position: relative; display: flex; align-items: flex-end; gap: 6px; height: 56px; }
-.home-data-bar { flex: 1; min-width: 0; border-radius: 3px; background: #c2cbd3; transition: height 300ms ease; }
+.home-data-bar { flex: 1; min-width: 0; border-radius: 3px; background: #dfe3e8; transition: height 300ms ease; }
 .home-data-bar.last { background: #2f5d8f; }
 .home-data-bar.empty { background: #e3e6ea; }
 .home-data-goal { position: absolute; left: 0; right: 0; border-top: 1.5px dashed #2f7a3f; pointer-events: none; }
 .home-data-goal em { position: absolute; right: 0; bottom: 1px; font-style: normal; font-size: 9px; font-weight: 800; color: #2f7a3f; background: rgba(255, 255, 255, 0.85); padding: 0 3px; }
 .home-data-dots { display: flex; justify-content: center; gap: 5px; margin-top: 10px; }
-.home-data-dot { width: 6px; height: 6px; border-radius: 999px; border: 0; padding: 0; background: #c2cbd3; cursor: pointer; transition: width 0.25s ease; }
+.home-data-dot { width: 6px; height: 6px; border-radius: 999px; border: 0; padding: 0; background: #dfe3e8; cursor: pointer; transition: width 0.25s ease; }
 .home-data-dot.on { width: 16px; background: #313851; }
 
 /* ---- Training tab: the week stats block, moved from Home ---------------- */
@@ -12142,7 +12221,7 @@ label.ci-pill { cursor: text; }
 .ge-chip:disabled { opacity: 0.45; cursor: default; }
 .ge-helper { margin: 0; font-size: 11px; line-height: 1.45; color: var(--steel); }
 .ge-preview .ad-microlabel { display: block; margin-bottom: 6px; }
-.ge-preview-card { padding: 2px 12px; border-radius: 12px; background: #fff; border: 1px solid #c2cbd3; font-family: var(--font-sans); }
+.ge-preview-card { padding: 2px 12px; border-radius: 12px; background: #fff; border: 1px solid #dfe3e8; font-family: var(--font-sans); }
 .ge-preview-card .gr { border-top: 0; }
 .ge-foot { display: flex; justify-content: flex-end; gap: 8px; }
 
@@ -12179,7 +12258,7 @@ label.ci-pill { cursor: text; }
 .mw-label { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #5b6474; }
 .mw-label-right { font-size: 11px; font-weight: 700; color: #8b93a1; }
 .mw-muted { font-size: 12px; color: #8b93a1; margin: 6px 0; }
-.mw-empty { padding: 18px 20px; border-radius: 12px; background: #fff; border: 1px dashed #c3c9d2; font-size: 13px; color: #5b6474; }
+.mw-empty { padding: 18px 20px; border-radius: 12px; background: #fff; border: 1px dashed #dfe3e8; font-size: 13px; color: #5b6474; }
 .mw-ghost { border: 1px solid #dfe3e8; background: #fff; color: #313851; border-radius: 8px; padding: 6px 11px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 .mw-ghost:hover { background: #f6f7f9; }
 .mw-textbtn { border: 0; background: none; padding: 0; font: inherit; font-size: 11px; font-weight: 800; color: #1e3a6e; cursor: pointer; text-decoration: none; }
@@ -12187,7 +12266,7 @@ label.ci-pill { cursor: text; }
 .mw-primary:disabled { opacity: 0.6; cursor: default; }
 .mw-dot { flex: none; width: 8px; height: 8px; border-radius: 999px; background: #2f7a3f; margin-top: 5px; }
 .mw-dot.orange { background: #b3471d; }
-.mw-dot.muted { background: transparent; border: 1.5px solid #c3c9d2; box-sizing: border-box; }
+.mw-dot.muted { background: transparent; border: 1.5px solid #dfe3e8; box-sizing: border-box; }
 
 /* Upcoming card */
 /* The accent-tint band, as on the Plan, Nutrition and Training headers. */
@@ -12219,7 +12298,7 @@ label.ci-pill { cursor: text; }
 .mw-goal-status.muted { color: #8b93a1; }
 .mw-goal-def { display: block; font-size: 11px; font-weight: 600; color: #8b93a1; margin-top: 1px; }
 .mw-goals-foot { border-top: 1px solid #eceff3; padding-top: 8px; margin-top: 4px; }
-.mw-add-goal { display: block; width: 100%; margin-top: 8px; padding: 8px; border: 1px dashed #c3c9d2; border-radius: 8px; background: transparent; color: #1e3a6e; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.mw-add-goal { display: block; width: 100%; margin-top: 8px; padding: 8px; border: 1px dashed #dfe3e8; border-radius: 8px; background: transparent; color: #1e3a6e; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
 .mw-add-goal:hover { background: #f6f7f9; }
 .mw-prep { display: block; width: 100%; min-width: 0; box-sizing: border-box; min-height: 118px; resize: vertical; padding: 10px 12px; border: 1px solid #dfe3e8; border-radius: 8px; font: inherit; font-size: 13px; line-height: 1.5; color: #313851; }
 .mw-prep-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
@@ -12277,7 +12356,7 @@ label.ci-pill { cursor: text; }
 .mw-cal-cell.today { background: #e6ecf3; color: #1e3a6e; }
 .mw-cal-cell.selected { background: #1e3a6e; color: #fff; }
 .mw-cal-dots { position: absolute; left: 0; right: 0; bottom: 3px; display: flex; justify-content: center; gap: 2px; }
-.mw-cal-dot { display: inline-block; width: 4px; height: 4px; border-radius: 999px; background: #c3c9d2; }
+.mw-cal-dot { display: inline-block; width: 4px; height: 4px; border-radius: 999px; background: #dfe3e8; }
 .mw-cal-dot.mine { background: #1e3a6e; }
 .mw-cal-dot.done { background: #2f7a3f; }
 .mw-cal-cell.selected .mw-cal-dot { background: rgba(255, 255, 255, 0.7); }
@@ -12339,7 +12418,7 @@ label.ci-pill { cursor: text; }
 /* Drag-to-reorder list (goals). */
 .dl { display: flex; flex-direction: column; }
 .dl-row { display: flex; align-items: flex-start; gap: 6px; }
-.dl-grip { flex: none; margin-top: 9px; color: var(--faint, #c3c9d2); font-size: 13px; letter-spacing: -3px; line-height: 1; cursor: grab; user-select: none; touch-action: none; padding: 0 2px; }
+.dl-grip { flex: none; margin-top: 9px; color: var(--faint, #dfe3e8); font-size: 13px; letter-spacing: -3px; line-height: 1; cursor: grab; user-select: none; touch-action: none; padding: 0 2px; }
 .dl-body { flex: 1; min-width: 0; }
 .dl-dragging .dl-row { transition: transform 160ms ease; }
 .dl-dragging .dl-row.lifted { transition: none; position: relative; z-index: 2; background: #fff; box-shadow: 0 8px 20px rgba(49, 56, 81, 0.16); border-radius: 8px; }
@@ -12386,7 +12465,7 @@ label.ci-pill { cursor: text; }
 .home-data-col-value { font-family: var(--font-serif); font-size: 19px; font-weight: 600; color: #313851; line-height: 1.1; transition: font-size 0.2s ease; white-space: nowrap; }
 .home-data-col.selected .home-data-col-value { font-size: 22px; }
 .home-data-col-value small { font-family: var(--font-sans); font-size: 10px; font-weight: 700; color: #8b93a1; margin-left: 2px; }
-.home-data-col-trend { font-size: 10.5px; font-weight: 800; color: #5b6472; white-space: nowrap; }
+.home-data-col-trend { font-size: 10.5px; font-weight: 800; color: #5b6474; white-space: nowrap; }
 .home-data-col-trend.green { color: #2f7a3f; }
 .home-data-col-trend.orange { color: #b3471d; }
 /* The underline slides in: width grows from the centre on selection. */
@@ -12434,7 +12513,6 @@ label.ci-pill { cursor: text; }
 .pl-card-head .pl-seg { background: #fff; }
 .pl-card-head .pl-seg-btn.active { background: #e6ecf3; color: #1e3a6e; box-shadow: none; }
 .pl-card-titles { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.pl-inline-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .pl-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
 .pl-helper { font-size: 12.5px; font-weight: 500; color: #8b93a1; }
 .pl-card-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -12452,9 +12530,6 @@ label.ci-pill { cursor: text; }
 .pl-band .pl-eyebrow { color: #1e3a6e; }
 .pl-band .pl-switch { background: #fff; }
 .pl-band .pl-switch-opt.active { background: #e6ecf3; color: #1e3a6e; box-shadow: none; }
-/* Nutrition's phase chips and "Live:" line belong to the Daily targets
-   header, so the tint carries on under them. */
-.pl-band + .nw-phases { background: #e6ecf3; }
 .pl-band-left { min-width: 0; }
 .pl-band-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .pl-band-note { font-size: 12px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
@@ -12475,16 +12550,22 @@ label.ci-pill { cursor: text; }
 .pl-track-tag.lifestyle { background: #efede6; color: #4a4a45; }
 
 /* Main goal */
-.pl-maingoal { padding: 18px 22px 14px; }
-.pl-maingoal-input { display: block; width: 100%; box-sizing: border-box; margin-top: 10px; padding: 10px 12px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; font: inherit; font-size: 13.5px; font-weight: 600; color: #141a24; }
+.pl-maingoal-body { padding: 16px 22px 18px; }
+.pl-maingoal-input { display: block; width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; font: inherit; font-size: 13.5px; font-weight: 600; color: #141a24; }
 .pl-maingoal-input:focus { outline: none; border-color: #2f5d8f; }
 .pl-maingoal-input::placeholder { font-weight: 500; color: #a0a7b3; }
-.pl-saved { min-height: 18px; margin: 6px 0 0; font-size: 12px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
+/* On the head, beside the name, where Phases and Goals keep their controls. */
+.pl-saved { margin: 0; font-size: 12px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* Phases timeline */
 .pl-timeline-scroll { overflow-x: auto; padding: 14px 22px 0; border-top: 1px solid #eceff3; }
 .pl-tl-row { display: grid; grid-template-columns: 108px minmax(0, 1fr); }
 .pl-tl-grid { display: grid; min-width: 0; }
+/* The week grid is wider than its window and slides under the fixed "now"
+   line; this hides what hangs over either side. */
+.pl-tl-clip { min-width: 0; overflow: hidden; }
+.pl-tl-body { position: relative; }
+.pl-now-line { position: absolute; top: 0; bottom: 0; z-index: 4; width: 2px; margin-left: -1px; border-radius: 2px; background: #1e3a6e; pointer-events: none; }
 .pl-month { min-width: 0; padding: 0 0 6px 6px; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pl-week { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; border-radius: 6px 6px 0 0; line-height: 1.15; }
 .pl-week b { font-size: 12.5px; font-weight: 800; color: #141a24; font-variant-numeric: tabular-nums; }
@@ -12504,7 +12585,7 @@ label.ci-pill { cursor: text; }
 .pl-bar.nutrition { background: #dff3ea; border-color: #9fd3bb; color: #0f5c46; }
 .pl-bar.training { background: #e6e4fa; border-color: #b9b4ec; color: #3a3390; }
 .pl-bar.lifestyle { background: #efede6; border-color: #cfcbbd; color: #4a4a45; }
-.pl-bar.draft { background: #fff; border: 1px dashed #b3471d; color: #141a24; }
+.pl-bar.draft { background: #fdf3ee; border: 1px dashed #b3471d; color: #b3471d; }
 .pl-bar.clip-start { border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .pl-bar.clip-end { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .pl-bar.dragging { z-index: 3; box-shadow: 0 6px 16px rgba(30, 58, 110, 0.18); }
@@ -12530,7 +12611,8 @@ label.ci-pill { cursor: text; }
 .pl-legend-swatch { display: inline-block; width: 14px; height: 10px; box-sizing: border-box; border-radius: 6px; }
 .pl-legend-swatch.done { background: #c9cfd8; }
 .pl-legend-swatch.planned { background: #eef0f3; border: 1px solid #dfe3e8; }
-.pl-legend-swatch.draft { background: #fff; border: 1px dashed #b3471d; }
+.pl-legend-swatch.scheduled { background: #eef3f9; border: 1px solid #c9d6e6; }
+.pl-legend-swatch.draft { background: #fdf3ee; border: 1px dashed #b3471d; }
 .pl-legend-swatch.now { width: 2px; height: 14px; border-radius: 0; background: #1e3a6e; }
 
 /* Phase dialog */
@@ -12546,7 +12628,7 @@ label.ci-pill { cursor: text; }
 /* Goals table */
 .pl-goals-scroll { overflow-x: auto; border-top: 1px solid #eceff3; }
 .pl-goals { min-width: 880px; }
-.pl-goals-head, .pl-goal-row { display: grid; grid-template-columns: 34px minmax(0, 2.4fr) 108px 112px 128px 92px 84px; align-items: center; gap: 12px; }
+.pl-goals-head, .pl-goal-row { display: grid; grid-template-columns: 34px minmax(0, 2.4fr) 108px 112px 128px 92px 44px; align-items: center; gap: 12px; }
 .pl-goals-head { padding: 10px 22px; background: #f8f9fb; border-bottom: 1px solid #eceff3; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #8b93a1; }
 .pl-goal-row { padding: 14px 22px; border-bottom: 1px solid #eceff3; background: #fff; }
 .pl-goal-row.is-done .pl-goal-name { color: #5b6474; text-decoration: line-through; }
@@ -12563,7 +12645,9 @@ label.ci-pill { cursor: text; }
 .pl-check-box { display: inline-flex; align-items: center; justify-content: center; width: 12px; height: 12px; box-sizing: border-box; border: 1.5px solid #c9cfd8; border-radius: 3px; background: #fff; font-size: 9px; font-weight: 800; color: #fff; }
 .pl-check input:checked + .pl-check-box { background: #2f7a3f; border-color: #2f7a3f; }
 .pl-check input:focus-visible + .pl-check-box { outline: 2px solid #2f5d8f; outline-offset: 2px; }
-.pl-goal-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pl-goal-main { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; padding: 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; }
+.pl-goal-main:hover .pl-goal-name { color: #1e3a6e; text-decoration: underline; }
+.pl-goal-main:focus-visible { outline: 2px solid #2f5d8f; outline-offset: 3px; border-radius: 4px; }
 .pl-goal-name { font-size: 13.5px; font-weight: 800; color: #141a24; }
 .pl-goal-rule { font-size: 11.5px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
 .pl-kind { display: inline-block; padding: 3px 7px; border-radius: 6px; background: #eef0f3; color: #5b6474; font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
@@ -12660,10 +12744,63 @@ label.ci-pill { cursor: text; }
 .fd-thumbs { display: flex; gap: 6px; }
 .fd-thumb { width: 40px; height: 52px; border-radius: 6px; object-fit: cover; background: #eef0f3; }
 .fd-when { font-size: 12px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.fd-more-row { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
-.fd-more { padding: 8px 16px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; font-size: 13px; font-weight: 800; color: #141a24; text-decoration: none; }
-.fd-more:hover { background: #f8f9fb; }
-.fd-more-count { font-size: 12px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; }
+/* Pages, not a growing list: fifteen rows, then the next fifteen. One pager,
+   used by the rail's Feed (links, because the page is in the address) and by
+   the Activity card on a client's Home (buttons, because every event is
+   already loaded there). They look the same either way. */
+.pg { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pg-step {
+  height: 30px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #dfe3e8;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  color: #141a24;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pg-step:hover:not(:disabled):not(.off) { background: #f8f9fb; border-color: #2f5d8f; }
+.pg-step:disabled, .pg-step.off { color: #8b93a1; background: #f4f6f9; border-color: #eceff3; cursor: default; }
+.pg-nums { display: inline-flex; align-items: center; gap: 3px; }
+.pg-num {
+  min-width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: #5b6474;
+  text-decoration: none;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.pg-num:hover { background: #eef0f3; color: #141a24; }
+.pg-num.on { background: #1e3a6e; color: #fff; font-weight: 800; }
+.pg-gap { padding: 0 2px; font-size: 12px; color: #8b93a1; }
+.pg-count { font-size: 12px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; }
+
+/* The rail's Feed puts the pager on its own row under the days. */
+.fd-pager { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+.fd-pager .pg-count { margin-left: auto; }
+
+/* Home's Activity card keeps its footer row: count, pager, full history. */
+.ch-foot .pg { margin: 0 auto; }
+
+/* What is new inside one kind, on the chip that holds it. */
+.ch-chip-count { margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: #fff3dc; color: #8a5a12; font-size: 10.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ch-chip.on .ch-chip-count { background: rgba(255, 255, 255, 0.22); color: #fff; }
 
 /* ---- Owner: Coaches page (cp-*) ---- */
 .cp { max-width: 980px; }
@@ -12707,30 +12844,22 @@ label.ci-pill { cursor: text; }
 .nw .pl-card + .pl-card { margin-top: 18px; }
 .nw-band-check { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,0.9); cursor: pointer; margin-right: 4px; }
 .nw-band-check input { accent-color: #fff; width: 15px; height: 15px; }
-.nw-edit-phase { background: #fff; border: 1px solid #dfe3e8; border-radius: 8px; color: #2f5d8f; }
-.nw-edit-phase:hover { background: #f8f9fb; color: #1e3a6e; }
-/* Phase chips on the Daily targets card, styled as Training's programme chips. */
-.nw-phases { display: flex; flex-direction: column; gap: 10px; padding: 0 22px 14px; border-bottom: 1px solid #eceff3; }
-.nw-phase-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.nw-phase-chips .pb-program-chip { font: inherit; cursor: pointer; }
-/* On the tinted header every phase chip is white inside. A scheduled phase
-   has a dotted outline, so it never reads as the live one; the chip being
-   edited is outlined in navy (dotted still, when it is scheduled). */
-.nw-phase-chips .nw-phase-chip { background: #fff; }
-.nw-phase-chips .nw-phase-chip.next { border-style: dotted; border-color: #8b93a1; }
-/* A draft is dashed orange, like a draft bar on the Plan tab. */
-.nw-phase-chips .nw-phase-chip.draft { border-style: dashed; border-color: #b3471d; }
-.nw-phase-chips .nw-phase-chip.active { border-color: #1e3a6e; }
-/* "+ New phase" after the chips: Training's dashed "+ New program", darker on the tint. */
-.nw-phase-chips .nw-new-phase { border-color: #a9b3c1; color: #2f5d8f; }
-.nw-phase-chips .nw-new-phase:hover { background: #fff; border-color: #2f5d8f; color: #1e3a6e; }
+/* "Edit dates", on every phase band: white, outlined, accent text. */
+.nw-edit-phase {
+  height: 30px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid #dfe3e8;
+  border-radius: 8px;
+  color: #2f5d8f;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.nw-edit-phase:hover { background: #f8f9fb; color: #1e3a6e; border-color: #2f5d8f; }
 .status-pill.scheduled { background: #e6edf6; color: #2f5d8f; }
-.nw-phase-line { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; }
-.nw-phase-dot { flex: none; width: 7px; height: 7px; border-radius: 999px; background: currentColor; }
-.nw-phase-line.now { color: #2f7a3f; }
-.nw-phase-line.next { color: #2f5d8f; }
-.nw-phase-line.past { color: #5b6474; }
-.nw-phase-line.draft { color: #b3471d; }
 .nw-hint { font-size: 11px; color: #8b93a1; font-weight: 500; }
 .nw-label { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
 
@@ -12793,9 +12922,10 @@ label.ci-pill { cursor: text; }
 .nw-timing-btn { border: 1px solid transparent; background: transparent; padding: 3px 0; cursor: text; text-align: left; border-radius: 6px; }
 .nw-timing-pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 800; white-space: nowrap; }
 .nw-timing-empty { font-size: 12px; color: #a0a7b3; font-weight: 500; }
+/* .nw-remove button used to be styled here too. Being a descendant
+   selector it out-specified .nw-remove-btn, so the shared bin rule silently
+   lost in the one place it mattered. One selector owns the bin now. */
 .nw-remove { display: flex; justify-content: flex-end; }
-.nw-remove button { border: 0; background: transparent; color: #a0a7b3; font-size: 18px; line-height: 1; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
-.nw-remove button:hover { color: #a32d2d; background: #fbeaea; }
 .nw-supp-foot form { flex: none; }
 .nw-add-input { width: 320px; max-width: 100%; border: 1px solid #dfe3e8; border-radius: 8px; padding: 7px 10px; font: inherit; font-size: 13px; background: #fff; }
 .nw-add-btn { margin-left: auto; }
@@ -12806,7 +12936,6 @@ label.ci-pill { cursor: text; }
 .nw-strip-bar.green { background: #2f7a3f; }
 .nw-strip-bar.orange { background: #b3471d; }
 .nw-strip-label { font-size: 10px; font-weight: 800; color: #8b93a1; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; }
-.nw-cal-cols { grid-template-columns: 150px 130px 110px 1fr 170px 150px; }
 .nw-cal-phase { font-size: 12px; font-weight: 700; color: #5b6474; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nw-cal-foot { justify-content: space-between; flex-wrap: wrap; }
 .nw-pager { display: inline-flex; align-items: center; gap: 4px; }
@@ -12814,8 +12943,7 @@ label.ci-pill { cursor: text; }
 .nw-page:hover { background: #f6f7f9; }
 .nw-page.active { background: #1e3a6e; border-color: #1e3a6e; color: #fff; font-weight: 800; }
 .nw-page:disabled { opacity: 0.4; cursor: default; }
-.nw-tr.nw-cal-cols { padding: 10px 22px; font-size: 13px; }
-.nw-cal-date { font-weight: 700; color: #141a24; }
+.nw-tr.nw-cal-date { font-weight: 700; color: #141a24; }
 .nw-cal-kcal { font-family: var(--font-serif); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; color: #141a24; }
 .nw-daypill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 800; }
 .nw-daypill.training { background: #e6e4fa; color: #3a3390; }
@@ -12832,9 +12960,7 @@ label.ci-pill { cursor: text; }
   .nw-targets { grid-template-columns: 1fr; }
   .nw-editor { border-right: 0; border-bottom: 1px solid #eceff3; }
   .nw-strip-label { font-size: 8px; }
-  .nw-cal-cols { grid-template-columns: 110px 90px 80px 1fr; }
-  .nw-cal-cols > :nth-child(5) { display: none; }
-  .nw-supp-cols { grid-template-columns: 1fr 90px 1fr 32px; }
+    .nw-supp-cols { grid-template-columns: 1fr 90px 1fr 32px; }
   .nw-supp-cols > :nth-child(4) { display: none; }
 }
 
@@ -13665,7 +13791,7 @@ label.ci-pill { cursor: text; }
 /* Supplement rows drag by a grip in the row's left padding, as on the Plan
    tab's goals table, so the columns still line up with the header. */
 .nw-draglist .dl-row { position: relative; display: block; }
-.nw-draglist .dl-grip { position: absolute; left: 1px; top: 50%; margin: 0; transform: translateY(-50%); z-index: 1; padding: 8px 6px; font-size: 14px; color: #c3c9d2; }
+.nw-draglist .dl-grip { position: absolute; left: 1px; top: 50%; margin: 0; transform: translateY(-50%); z-index: 1; padding: 8px 6px; font-size: 14px; color: #dfe3e8; }
 .nw-draglist .dl-row:hover .dl-grip { color: #8b93a1; }
 .nw-draglist .dl-body { min-width: 0; }
 .nw-draglist .dl-row.lifted { z-index: 2; }
@@ -13733,22 +13859,23 @@ label.ci-pill { cursor: text; }
 .pb-col-chip-add { border-style: dashed; }
 .pb-col-add-cancel { border: 0; background: none; color: #8b93a1; font: inherit; font-size: 14px; cursor: pointer; padding: 0 4px; }
 
-/* The client's gyms sit at the far right of the programme row: they belong
-   to the client, not to any one programme. */
-.pb-programs-gyms { margin-left: auto; }
-/* Training's head card, built like Nutrition's Daily targets: a tinted header
-   with the title, the programme chips and the one being edited, then a white
-   body with its weeks. No overflow clip: the Client gyms menu opens past it. */
+/* The client's gyms sit on the week toolbar, at its left: they belong to the
+   client, not to any one programme or week. */
+.pb-programs-gyms { display: flex; align-items: center; }
+/* Training's head card: the phase band on top (see .ph-band), then a white
+   body with its weeks. No overflow clip: the Client gyms menu and the phase
+   switcher's menu both open past it. */
 .pb-head-card { background: #fff; border: 1px solid #dfe3e8; border-radius: 12px; }
-.pb-head-band { display: flex; flex-direction: column; gap: 12px; padding: 14px 22px; background: #e6ecf3; border-radius: 11px 11px 0 0; }
-.pb-head-top { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 32px; }
-.pb-head-top .pl-eyebrow { color: #1e3a6e; }
-.pb-head-band .pb-program-chip { background: #fff; }
-.pb-head-band .pb-program-chip.active { border-color: #1e3a6e; }
-.pb-head-band .pb-new-program { border-color: #a9b3c1; color: #2f5d8f; }
-.pb-head-band .pb-new-program:hover { background: #fff; border-color: #2f5d8f; color: #1e3a6e; }
-.pb-head-band .pb-editing { margin-top: 0; padding-bottom: 0; border-bottom: 0; }
 .pb-head-body { padding: 16px 22px 18px; }
+/* The programme on screen: name and status, its weeks, then the week itself. */
+.pb-program-card { margin-top: 0; }
+.pb-week-body { padding: 16px 22px 22px; border-top: 1px solid #dfe3e8; background: #f8f9fb; border-radius: 0 0 11px 11px; }
+.pb-week-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+/* The selected week's bin, at the far end of its heading. */
+.pb-week-head-end { margin-left: auto; align-self: center; }
+.pb-week-title { font-size: 16px; font-weight: 800; color: #141a24; letter-spacing: -0.01em; }
+.pb-week-sub { font-size: 12.5px; color: #5b6474; }
+.pb-week-body .pb-toolbar { margin-top: 0; }
 .pb-head-body .pb-rail-row { margin-top: 0; }
 /* Kg / lbs in the builder toolbar: the lit half is how weights are shown.
    Under a weight goal box in lbs mode, the goal converted. */
@@ -13756,18 +13883,6 @@ label.ci-pill { cursor: text; }
 .pb-unit span { padding: 3px 9px; border-radius: 999px; color: #8b93a1; }
 .pb-unit span.on { background: #fff; color: #1e3a6e; box-shadow: 0 1px 2px rgba(20, 30, 50, 0.12); }
 .pb-weight-hint { display: block; margin-top: 2px; font-size: 10px; font-weight: 700; color: #8b93a1; text-align: center; white-space: nowrap; }
-/* Deploy and schedule in the header use the accent navy, like Nutrition's
-   buttons: navy primary, white secondary with navy text. */
-/* font: inherit, as on Create login: without it the browser's own button
-   font shows at weight 800 and reads heavy. */
-.pb-head-band .deploy-btn,
-.pb-head-band .plan-deploy-controls .btn { font: inherit; font-size: 12px; font-weight: 800; }
-.pb-head-band .deploy-btn { background: #1e3a6e; color: #fff; }
-.pb-head-band .deploy-btn:hover:not(:disabled) { background: #274a8a; }
-.pb-head-band .deploy-btn:disabled { background: #8b9dbb; opacity: 1; }
-.pb-head-band .plan-deploy-controls .btn.secondary { background: #fff; border-color: #dfe3e8; color: #1e3a6e; font-weight: 800; }
-.pb-head-band .plan-deploy-controls .btn.secondary:hover:not(:disabled) { background: #f8f9fb; border-color: #2f5d8f; }
-.pb-head-band .plan-deploy-controls .btn.secondary:disabled { color: #8b93a1; cursor: not-allowed; }
 /* Copy a session: where the copy goes, each choice saying what it does. */
 .pb-copy-options { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; max-height: 50vh; overflow-y: auto; }
 .pb-copy-option { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; cursor: pointer; }
@@ -13787,7 +13902,6 @@ label.ci-pill { cursor: text; }
 .pb-copy-full { margin: 0; padding: 9px 12px; border-radius: 10px; background: #f8f9fb; font-size: 12px; font-weight: 600; color: #5b6474; }
 /* In a day's header: the gym the client trained that session at. */
 .pb-day-gym { flex-shrink: 0; font-size: 11.5px; font-weight: 800; color: #fff; background: #2f5d8f; border-radius: 999px; padding: 4px 11px; white-space: nowrap; box-shadow: 0 1px 2px rgba(20, 26, 36, 0.15); }
-.pb-warmups { margin-top: 4px; font-size: 11.5px; color: var(--text-dim, #5b6474); font-variant-numeric: tabular-nums; }
 .pb-day-done { flex-shrink: 0; font-size: 11.5px; font-weight: 800; color: #2f7a3f; background: #dff3ea; border-radius: 999px; padding: 4px 11px; white-space: nowrap; }
 .pb-day-skip { min-width: 0; max-width: 260px; overflow: hidden; text-overflow: ellipsis; font-size: 11.5px; font-weight: 800; color: #a32d2d; background: #fbeaea; border-radius: 999px; padding: 4px 11px; white-space: nowrap; }
 .pb-gyms { position: relative; }
@@ -13795,13 +13909,22 @@ label.ci-pill { cursor: text; }
 .pb-gyms-pill:hover, .pb-gyms-pill.open { border-color: #2f5d8f; }
 .pb-gyms-count { min-width: 18px; padding: 1px 6px; border-radius: 999px; background: #e6ecf3; color: #2f5d8f; font-size: 11px; font-weight: 800; text-align: center; font-variant-numeric: tabular-nums; }
 .pb-gyms-caret { font-size: 10px; color: #8b93a1; }
-.pb-gyms-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; width: 320px; max-width: calc(100vw - 32px); box-sizing: border-box; padding: 12px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; box-shadow: 0 10px 30px rgba(20, 26, 36, 0.12); }
+/* Also placed in JS; see .pb-add-pop above. */
+.pb-gyms-menu { position: fixed; z-index: 30; width: 320px; max-width: calc(100vw - 32px); box-sizing: border-box; overflow-y: auto; padding: 12px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; box-shadow: 0 10px 30px rgba(20, 26, 36, 0.12); }
 .pb-gyms-title { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #5b6474; margin-bottom: 8px; }
 .pb-gyms-empty { margin: 0 0 10px; font-size: 12.5px; color: #8b93a1; }
 .pb-gyms-list { list-style: none; margin: 0 0 10px; padding: 0; }
 .pb-gyms-row { display: flex; align-items: center; gap: 6px; min-height: 36px; border-bottom: 1px solid #eceff3; }
 .pb-gyms-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 700; color: #141a24; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pb-gyms-home { flex: none; padding: 2px 7px; border-radius: 999px; background: #eef0f3; color: #5b6474; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
+/* A bare house next to Delete: grey when it is just a gym, navy when it is
+   the main one. No circle, no tick, no "Main" label beside the name — they
+   were three ways of saying the same thing. */
+.pb-gyms-home { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 8px; background: none; color: #a0a7b3; cursor: pointer; }
+.pb-gyms-home:hover:not(:disabled) { background: #eef0f3; color: #5b6474; }
+.pb-gyms-home.on { color: #1e3a6e; }
+.pb-gyms-home.on:hover:not(:disabled) { background: none; cursor: default; }
+.pb-gyms-home:disabled { cursor: default; }
+.pb-gyms-home svg { width: 16px; height: 16px; display: block; }
 .pb-gyms-btn { flex: none; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; color: #313851; padding: 4px 9px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
 .pb-gyms-btn.primary { border-color: #1e3a6e; background: #1e3a6e; color: #fff; }
 .pb-gyms-btn.danger { color: #a32d2d; }
@@ -13841,14 +13964,27 @@ label.ci-pill { cursor: text; }
 .app-layer-push { z-index: 5; background: var(--paper); }
 
 /* Cardio on a programme day: coach side, under the exercise table. */
+/* A session shows its exercises or its cardio, picked with the dumbbell /
+   heart pair in its header. Two segments in one pill, the picked one filled. */
+.pb-mode { display: inline-flex; align-items: center; gap: 2px; padding: 2px; border: 1px solid #dfe3e8; border-radius: 9px; background: #fff; }
+.pb-mode button { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 26px; padding: 0; border: 0; border-radius: 7px; background: none; color: #8b93a1; cursor: pointer; }
+.pb-mode button svg { width: 17px; height: 17px; }
+.pb-mode button:hover { color: #141a24; }
+.pb-mode button.on { background: #1e3a6e; color: #fff; }
+.pb-mode button:focus-visible { outline: 2px solid #2f5d8f; outline-offset: 1px; }
+
+/* The session's ⋯ and the menu it opens: Duplicate, then Delete in red. */
+.pb-session-more { width: 30px; height: 30px; border-color: transparent; border-radius: 8px; background: transparent; color: #5b6474; }
+.pb-session-more:hover, .pb-session-more.on { border-color: #dfe3e8; background: #fff; color: #141a24; }
+.pb-session-menu { position: fixed; z-index: 45; box-sizing: border-box; display: flex; flex-direction: column; padding: 5px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; box-shadow: 0 12px 28px rgba(20, 30, 50, 0.16); }
+.pb-session-menu button { display: flex; align-items: center; gap: 9px; width: 100%; padding: 8px 10px; border: 0; border-radius: 7px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; text-align: left; cursor: pointer; }
+.pb-session-menu button svg { flex: none; width: 15px; height: 15px; color: #5b6474; }
+.pb-session-menu button:hover { background: #f4f6f9; }
+.pb-session-menu button.danger, .pb-session-menu button.danger svg { color: #a32d2d; }
+.pb-session-menu button.danger:hover { background: #fbeaea; }
+
 .pb-cardio { margin: 0; padding: 0; }
-.pb-cardio-head { display: flex; align-items: baseline; gap: 10px; padding: 12px 22px 2px; }
-.pb-cardio-title { font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
-.pb-cardio-hint { font-size: 11px; font-weight: 500; color: #8b93a1; }
-/* The cardio table borrows the exercise table's skeleton so the cells line
-   up; the wrap keeps the same gutters as the exercise table above. */
 .pb-cardio .exercise-table-wrap { margin: 0; }
-.pb-cardio-table thead th { border-top: 1px solid var(--border); }
 .pb-cardio-overflow { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; min-height: 0; }
 .pb-cardio-overflow:empty { display: none; }
 .pb-cardio-inline { display: inline-flex; align-items: center; gap: 6px; }
@@ -13897,8 +14033,11 @@ label.ci-pill { cursor: text; }
 @keyframes tr-bar-in { from { max-width: 0; } to { max-width: 100%; } }
 .tr-progress-foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 8px; font-size: 13.5px; color: #5b6474; }
 .tr-progress-foot b { font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; }
-.tr-weeks { display: flex; gap: 8px; margin-top: 18px; }
-.tr-weeks.scroll { overflow-x: auto; margin-right: -22px; padding-right: 22px; scrollbar-width: none; }
+/* The chip row pulls 6px out of the banner's 22px gutter so it starts and
+   ends on the same line as the cards below (.tr-body pads 16px), and the
+   scrolling row is clipped there rather than running off the screen. */
+.tr-weeks { display: flex; gap: 8px; margin-top: 18px; margin-left: -6px; margin-right: -6px; }
+.tr-weeks.scroll { overflow-x: auto; scrollbar-width: none; }
 .tr-weeks.scroll::-webkit-scrollbar { display: none; }
 .tr-wk { position: relative; flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 12px; border: 1px solid rgba(30, 58, 110, 0.16); border-radius: 12px; background: rgba(255, 255, 255, 0.6); color: #1e3a6e; font: inherit; font-size: 14px; font-weight: 700; white-space: nowrap; cursor: pointer; }
 .tr-weeks.scroll .tr-wk { flex: none; min-width: 104px; }
@@ -13993,15 +14132,15 @@ label.ci-pill { cursor: text; }
    the hero photo drifts with the page, the section tabs stick and slide
    under the status bar, and the booking dock stays pinned at the foot. */
 .cpf-layer { background: #fff; }
-.cpf { position: relative; flex: 1; height: 100%; min-height: 0; overflow: hidden; background: #fff; color: #3d4a68; font-family: var(--font-sans); }
+.cpf { position: relative; flex: 1; height: 100%; min-height: 0; overflow: hidden; background: #fff; color: #313851; font-family: var(--font-sans); }
 .cpf-scroll { position: relative; height: 100%; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .cpf-scroll::-webkit-scrollbar { display: none; }
 .cpf-statusbar { position: absolute; top: 0; left: 0; right: 0; z-index: 30; height: 50px; background: rgba(255, 255, 255, 0.9); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); pointer-events: none; }
 .cpf-back { position: absolute; top: 50px; left: 8px; z-index: 40; display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; border: 0; border-radius: 999px; background: rgba(8, 31, 92, 0.34); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: #fff; cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease; }
 .cpf-back svg { width: 20px; height: 20px; }
-.cpf-back.solid { background: #fff; color: #081F5C; box-shadow: 0 2px 10px rgba(8, 31, 92, 0.14); }
+.cpf-back.solid { background: #fff; color: #1e3a6e; box-shadow: 0 2px 10px rgba(8, 31, 92, 0.14); }
 
-.cpf-hero { position: relative; height: 478px; overflow: hidden; background: #081F5C; }
+.cpf-hero { position: relative; height: 478px; overflow: hidden; background: #1e3a6e; }
 .cpf-hero-img { position: absolute; top: -92px; left: 0; right: 0; height: 570px; background-position: center top; background-size: cover; will-change: transform; }
 .cpf-hero-initial { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-serif); font-size: 96px; font-weight: 600; color: rgba(255, 255, 255, 0.92); }
 .cpf-hero-fade { position: absolute; left: 0; right: 0; pointer-events: none; }
@@ -14018,32 +14157,32 @@ label.ci-pill { cursor: text; }
 
 .cpf-article { padding-bottom: 150px; }
 .cpf-overview { padding: 22px 20px 20px; }
-.cpf-headline { margin: 0; font-family: var(--font-serif); font-size: 27px; font-weight: 600; line-height: 1.2; color: #081F5C; }
+.cpf-headline { margin: 0; font-family: var(--font-serif); font-size: 27px; font-weight: 600; line-height: 1.2; color: #1e3a6e; }
 .cpf-meta { margin-top: 6px; font-size: 13px; font-weight: 600; color: #5b6474; }
 .cpf-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-.cpf-pill { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px 7px 8px; border-radius: 999px; background: #F2F5FA; font-size: 13px; font-weight: 700; color: #081F5C; }
+.cpf-pill { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px 7px 8px; border-radius: 999px; background: #F2F5FA; font-size: 13px; font-weight: 700; color: #1e3a6e; }
 .cpf-pill-badge { width: 20px; height: 20px; border-radius: 999px; background: #334EAC; }
 .cpf-pill-badge.green { background: #2f7a3f; }
 .cpf-pill-badge.amber { background: #D99A2B; }
-.cpf-rule { display: block; width: 46px; height: 2px; margin: 22px 0 16px; background: #081F5C; animation: cpf-rule 0.6s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.cpf-rule { display: block; width: 46px; height: 2px; margin: 22px 0 16px; background: #1e3a6e; animation: cpf-rule 0.6s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both; }
 @keyframes cpf-rule { from { width: 0; } }
-.cpf-intro { margin: 0; font-family: var(--font-serif); font-size: 19px; line-height: 1.5; color: #081F5C; white-space: pre-wrap; }
+.cpf-intro { margin: 0; font-family: var(--font-serif); font-size: 19px; line-height: 1.5; color: #1e3a6e; white-space: pre-wrap; }
 .cpf-intro::first-letter { float: left; margin: 6px 8px 0 0; font-size: 58px; font-weight: 600; line-height: 0.8; color: #334EAC; }
-.cpf-bio { margin: 14px 0 0; font-family: var(--font-serif); font-size: 16px; line-height: 1.65; color: #3d4a68; white-space: pre-wrap; }
+.cpf-bio { margin: 14px 0 0; font-family: var(--font-serif); font-size: 16px; line-height: 1.65; color: #313851; white-space: pre-wrap; }
 .cpf-quote { position: relative; margin: 26px -20px; padding: 24px 20px; overflow: hidden; background: #E7F1FF; }
 .cpf-quote-mark { position: absolute; top: -34px; right: 10px; font-family: var(--font-serif); font-size: 150px; line-height: 1; color: #D0E3FF; pointer-events: none; }
-.cpf-quote blockquote { position: relative; margin: 0; font-family: var(--font-serif); font-size: 21px; font-style: italic; line-height: 1.4; color: #081F5C; }
+.cpf-quote blockquote { position: relative; margin: 0; font-family: var(--font-serif); font-size: 21px; font-style: italic; line-height: 1.4; color: #1e3a6e; }
 .cpf-quote figcaption { position: relative; margin-top: 12px; font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #334EAC; }
 .cpf-label { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #334EAC; }
 .cpf-works { margin-top: 24px; }
 .cpf-quote + .cpf-works { margin-top: 0; }
 .cpf-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.cpf-chip { padding: 7px 13px; border: 1px solid #DCE6F5; border-radius: 999px; background: #F2F7FF; font-size: 12px; font-weight: 700; color: #081F5C; }
+.cpf-chip { padding: 7px 13px; border: 1px solid #DCE6F5; border-radius: 999px; background: #F2F7FF; font-size: 12px; font-weight: 700; color: #1e3a6e; }
 
 .cpf-section { padding: 8px 20px 20px; }
-.cpf-section-title { margin: 18px 0 8px; font-family: var(--font-serif); font-size: 21px; font-weight: 600; color: #081F5C; }
+.cpf-section-title { margin: 18px 0 8px; font-family: var(--font-serif); font-size: 21px; font-weight: 600; color: #1e3a6e; }
 .cpf-study { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 13px 0; border-top: 1px solid #EDF3FC; }
-.cpf-study-title { font-size: 13.5px; font-weight: 800; color: #081F5C; }
+.cpf-study-title { font-size: 13.5px; font-weight: 800; color: #1e3a6e; }
 .cpf-study-place { margin-top: 2px; font-size: 12px; font-weight: 600; color: #5b6474; }
 .cpf-study-year { flex: none; font-size: 11.5px; font-weight: 800; color: #334EAC; font-variant-numeric: tabular-nums; }
 .cpf-timeline { position: relative; margin: 6px 0 0; padding: 0 0 0 22px; list-style: none; }
@@ -14052,16 +14191,16 @@ label.ci-pill { cursor: text; }
 .cpf-step-dot { position: absolute; top: 3px; left: -22px; width: 11px; height: 11px; box-sizing: border-box; border: 2px solid #334EAC; border-radius: 999px; background: #fff; }
 .cpf-step.first .cpf-step-dot { background: #334EAC; }
 .cpf-step-years { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #334EAC; }
-.cpf-step-role { margin-top: 2px; font-size: 14.5px; font-weight: 800; color: #081F5C; }
+.cpf-step-role { margin-top: 2px; font-size: 14.5px; font-weight: 800; color: #1e3a6e; }
 .cpf-step-place { margin-top: 1px; font-size: 12.5px; font-weight: 600; color: #5b6474; }
 
 .cpf-outside { margin-top: 6px; padding: 20px; background: #F6FAFF; }
 .cpf-outside-row { display: flex; align-items: flex-start; gap: 14px; margin-top: 12px; }
 .cpf-candid { flex: none; width: 96px; height: 120px; border-radius: 14px; object-fit: cover; }
-.cpf-outside-text { margin: 0; font-family: var(--font-serif); font-size: 15.5px; line-height: 1.55; color: #3d4a68; white-space: pre-wrap; }
+.cpf-outside-text { margin: 0; font-family: var(--font-serif); font-size: 15.5px; line-height: 1.55; color: #313851; white-space: pre-wrap; }
 
 .cpf-dock { position: absolute; left: 0; right: 0; bottom: 0; z-index: 35; padding: 28px 20px 26px; background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, #fff 60%); }
-.cpf-book { display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%; padding: 18px; border: 0; border-radius: 999px; background: #081F5C; color: #fff; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 10px 24px -12px rgba(8, 31, 92, 0.6); }
+.cpf-book { display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%; padding: 18px; border: 0; border-radius: 999px; background: #1e3a6e; color: #fff; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 10px 24px -12px rgba(8, 31, 92, 0.6); }
 .cpf-book svg { width: 18px; height: 18px; }
 .cpf-book:disabled { cursor: default; }
 .cpf-reply { margin-top: 8px; text-align: center; font-size: 12px; font-weight: 600; color: #5b6474; }
@@ -14072,8 +14211,8 @@ label.ci-pill { cursor: text; }
 /* Unpublished: the initial, the name and how to reach them. */
 .cpf-minimal { display: flex; }
 .cpf-min-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 100px 24px 40px; text-align: center; }
-.cpf-min-initial { display: flex; align-items: center; justify-content: center; width: 96px; height: 96px; margin-bottom: 10px; border-radius: 999px; background: #081F5C; font-family: var(--font-serif); font-size: 44px; font-weight: 600; color: #fff; }
-.cpf-min-name { margin: 0; font-family: var(--font-serif); font-size: 28px; font-weight: 600; color: #081F5C; }
+.cpf-min-initial { display: flex; align-items: center; justify-content: center; width: 96px; height: 96px; margin-bottom: 10px; border-radius: 999px; background: #1e3a6e; font-family: var(--font-serif); font-size: 44px; font-weight: 600; color: #fff; }
+.cpf-min-name { margin: 0; font-family: var(--font-serif); font-size: 28px; font-weight: 600; color: #1e3a6e; }
 .cpf-min-sub { font-size: 13px; font-weight: 600; color: #5b6474; }
 .cpf-min-email { margin-top: 8px; font-size: 14px; font-weight: 600; color: #334EAC; text-decoration: none; }
 
@@ -14081,7 +14220,7 @@ label.ci-pill { cursor: text; }
 .cpf-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 4px 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
 .cpf-row .home-dark-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .cpf-row > svg { flex: none; width: 16px; height: 16px; color: #8b93a1; }
-.cpf-row-avatar { flex: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; overflow: hidden; border-radius: 999px; background: #081F5C; font-family: var(--font-serif); font-size: 18px; font-weight: 600; color: #fff; }
+.cpf-row-avatar { flex: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; overflow: hidden; border-radius: 999px; background: #1e3a6e; font-family: var(--font-serif); font-size: 18px; font-weight: 600; color: #fff; }
 .cpf-row-avatar img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
 
 /* ==== Coach profile editor (/admin/profile) ====
@@ -14116,14 +14255,14 @@ label.ci-pill { cursor: text; }
 .cpe-crop-window { position: absolute; inset: 0; border-radius: 999px; box-shadow: 0 0 0 999px rgba(20, 23, 28, 0.55); pointer-events: none; }
 .cpe-crop-zoom { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
 .cpe-crop-zoom input { flex: 1; accent-color: #1e3a6e; }
-.cpe-drop { position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 3 / 4; padding: 10px; overflow: hidden; border: 1.5px dashed #c3c9d2; border-radius: 12px; background: #fafbfc center / cover no-repeat; font-size: 12px; font-weight: 700; text-align: center; color: #5b6474; cursor: pointer; }
+.cpe-drop { position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 3 / 4; padding: 10px; overflow: hidden; border: 1.5px dashed #dfe3e8; border-radius: 12px; background: #fafbfc center / cover no-repeat; font-size: 12px; font-weight: 700; text-align: center; color: #5b6474; cursor: pointer; }
 .cpe-drop.over { border-color: #2f5d8f; background-color: #e6ecf3; }
 .cpe-drop.has { border-style: solid; border-color: #dfe3e8; }
 .cpe-drop.has .cpe-drop-text { display: none; }
 .cpe-drop.busy::after { content: "Uploading…"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.8); color: #1e3a6e; }
 .cpe-photo-actions { display: flex; gap: 8px; }
 .cpe-btn { padding: 6px 10px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; font: inherit; font-size: 12px; font-weight: 700; color: #313851; cursor: pointer; }
-.cpe-btn:hover { border-color: #c3c9d2; }
+.cpe-btn:hover { border-color: #dfe3e8; }
 .cpe-btn.danger { color: #a32d2d; }
 .cpe-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; }
 .cpe-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 6px 4px 10px; border-radius: 999px; background: #e6ecf3; font-size: 12px; font-weight: 700; color: #1e3a6e; }
@@ -14134,13 +14273,13 @@ label.ci-pill { cursor: text; }
 .cpe-row.exp { grid-template-columns: 110px minmax(0, 1.3fr) minmax(0, 1.2fr) 30px; }
 .cpe-x { width: 30px; height: 30px; border: 0; border-radius: 6px; background: none; font-size: 16px; color: #8b93a1; cursor: pointer; }
 .cpe-x:hover { background: #fbeaea; color: #a32d2d; }
-.cpe-add { align-self: flex-start; padding: 6px 12px; border: 1px dashed #c3c9d2; border-radius: 8px; background: none; font: inherit; font-size: 12px; font-weight: 700; color: #2f5d8f; cursor: pointer; }
+.cpe-add { align-self: flex-start; padding: 6px 12px; border: 1px dashed #dfe3e8; border-radius: 8px; background: none; font: inherit; font-size: 12px; font-weight: 700; color: #2f5d8f; cursor: pointer; }
 .cpe-bar { position: sticky; bottom: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 14px; padding: 12px 16px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; box-shadow: 0 -6px 20px -14px rgba(20, 26, 36, 0.3); }
 .cpe-saved { font-size: 12px; color: #8b93a1; }
 .cpe-error { font-size: 12px; font-weight: 600; color: #b3471d; }
 .cpe-publish { display: flex; align-items: center; gap: 10px; margin-left: auto; font-size: 12.5px; color: #5b6474; }
 .cpe-publish b { color: #141a24; }
-.cpe-switch { position: relative; flex: none; width: 36px; height: 20px; padding: 0; border: 0; border-radius: 999px; background: #c3c9d2; cursor: pointer; }
+.cpe-switch { position: relative; flex: none; width: 36px; height: 20px; padding: 0; border: 0; border-radius: 999px; background: #dfe3e8; cursor: pointer; }
 .cpe-switch.on { background: #2f7a3f; }
 .cpe-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 999px; background: #fff; transition: transform 0.15s ease; }
 .cpe-switch.on::after { transform: translateX(16px); }
@@ -14618,3 +14757,923 @@ label.ci-pill { cursor: text; }
 /* The ring on Nutrition is a button now. */
 .nd-ring { border: 0; padding: 0; background: none; font: inherit; color: inherit; cursor: pointer; }
 .nd-ring:disabled { cursor: default; }
+
+/* Sessions are dragged into order by the grip at the left of their card. */
+.pb-session-slot { position: relative; }
+.pb-session-slot.dragging { position: relative; z-index: 5; box-shadow: 0 10px 24px rgba(20, 30, 50, 0.16); border-radius: 10px; }
+.pb-session-slot.dragging .admin-day-card { border-color: #1e3a6e; }
+.pb-session-grip { position: absolute; left: -18px; top: 14px; z-index: 2; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 24px; padding: 0; border: 0; background: none; color: #dfe3e8; font-size: 13px; line-height: 1; cursor: grab; touch-action: none; opacity: 0; transition: opacity 0.12s; }
+.pb-session-slot:hover .pb-session-grip, .pb-session-slot.dragging .pb-session-grip { opacity: 1; }
+.pb-session-grip:hover { color: #5b6474; }
+.pb-session-slot.dragging .pb-session-grip { cursor: grabbing; color: #1e3a6e; }
+
+/* The columns row, in two labelled groups: what a lift is prescribed by,
+   and what a cardio piece is. */
+.pb-cols-label { display: inline-flex; align-items: center; gap: 6px; }
+.pb-cols-label svg { width: 15px; height: 15px; }
+.pb-cols-label.cardio { margin-left: 8px; padding-left: 14px; border-left: 1px solid #dfe3e8; }
+.pb-cols-count { padding: 1px 6px; border-radius: 999px; background: #e1e6ed; color: #5b6474; font-size: 10px; font-weight: 800; letter-spacing: 0; }
+
+/* Cardio's logged band is empty for now, but it holds the column open so the
+   two tables in a session line up. */
+
+/* Keeping up: one figure per thing the coach asked for, and their average. */
+.ch-score { display: inline-flex; align-items: baseline; gap: 1px; font-family: var(--font-serif, Newsreader), Georgia, serif; font-size: 26px; font-weight: 600; line-height: 1; color: #1f6a52; }
+.ch-score small { font-size: 13px; font-weight: 600; }
+.ch-score.mid { color: #a8501f; }
+.ch-score.low { color: #a32d2d; }
+/* Keeping up, as a scoreboard: the score on the left, and the three
+   behaviours it is the average of stacked beside it. The arc and the bars
+   are driven from a tweened value in JS rather than a CSS transition, so
+   every figure and every fill arrive together when the window changes. */
+.ch-board { display: flex; align-items: stretch; gap: 26px; flex-wrap: wrap; padding: 20px 22px 22px; }
+
+.ch-board-score {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding-right: 26px;
+  border-right: 1px solid #eceff3;
+  text-align: center;
+}
+.ch-dial { position: relative; }
+.ch-dial svg { display: block; }
+.ch-dial-arc { stroke: #2f7a3f; }
+.ch-dial-arc.mid { stroke: #c2622f; }
+.ch-dial-arc.low { stroke: #a32d2d; }
+.ch-dial-figure {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  font-family: var(--font-sans);
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: #141a24;
+  font-variant-numeric: tabular-nums;
+}
+.ch-dial-figure small { font-size: 15px; font-weight: 700; color: #5b6474; }
+.ch-board-word { margin-top: 10px; font-size: 13px; font-weight: 800; color: #1e3a6e; }
+.ch-trend { font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ch-trend.up { color: #2f7a3f; }
+.ch-trend.down { color: #a32d2d; }
+.ch-trend.flat { color: #8b93a1; font-weight: 500; }
+
+/* One behaviour: what it is, how it went, and the two lines of arithmetic
+   behind it. */
+.ch-board-rows { flex: 1 1 360px; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.ch-score-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  padding: 9px 0;
+}
+.ch-score-row + .ch-score-row { border-top: 1px solid #eceff3; }
+.ch-score-name { font-size: 13px; font-weight: 700; color: #313851; }
+.ch-score-pct { font-family: var(--font-sans); font-size: 15px; font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; text-align: right; }
+.ch-score-track { grid-column: 1 / -1; height: 7px; margin-top: 4px; border-radius: 999px; background: #eef0f3; overflow: hidden; }
+.ch-score-fill { display: block; height: 100%; border-radius: 999px; background: #2f7a3f; }
+.ch-score-fill.mid { background: #c2622f; }
+.ch-score-fill.low { background: #a32d2d; }
+.ch-score-detail { grid-column: 1 / -1; margin-top: 5px; font-size: 12px; font-weight: 500; color: #8b93a1; font-variant-numeric: tabular-nums; }
+/* The one extra fact the behaviour carries: a streak, or how the misses split. */
+.ch-score-detail em { font-style: normal; font-weight: 700; color: #5b6474; }
+.ch-score-detail em::before { content: " · "; font-weight: 500; color: #8b93a1; }
+
+/* Narrow: the score goes above the rows rather than beside them. */
+@media (max-width: 760px) {
+  .ch-board-score { padding: 0 0 16px; border-right: 0; border-bottom: 1px solid #eceff3; width: 100%; }
+}
+@media (max-width: 760px) { .ch-bar-row { grid-template-columns: 1fr auto; } .ch-bar-track, .ch-bar-detail { grid-column: 1 / -1; } }
+
+/* What the coach prescribes by, chosen beside the programme's name because
+   it changes every week of it. Two menus; every option the same width. */
+.pb-colmenus { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pb-colmenu { position: relative; }
+.pb-colmenu-btn { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 11px; border: 1px solid #c7d2e0; border-radius: 8px; background: #fff; color: #1e3a6e; font: inherit; font-size: 12px; font-weight: 800; white-space: nowrap; cursor: pointer; }
+.pb-colmenu-btn:hover { border-color: #2f5d8f; }
+.pb-colmenu-btn.open { border-color: #1e3a6e; box-shadow: 0 0 0 2px rgba(30, 58, 110, 0.12); }
+.pb-colmenu-btn svg { width: 15px; height: 15px; }
+.pb-colmenu-count { padding: 1px 6px; border-radius: 999px; background: #e6ecf3; color: #1e3a6e; font-size: 10.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.pb-colmenu-caret { font-size: 10px; color: #8b93a1; }
+/* Placed in JS; see components/popover.ts. */
+.pb-colmenu-panel { position: fixed; z-index: 40; overflow-y: auto; width: 268px; padding: 12px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; box-shadow: 0 12px 28px rgba(20, 30, 50, 0.16); }
+.pb-colmenu-hint { margin: 0 0 10px; font-size: 11.5px; line-height: 1.45; color: #8b93a1; }
+/* Every option the same width, so the list reads as one block. */
+.pb-colmenu-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.pb-colmenu-item { position: relative; display: flex; min-width: 0; }
+.pb-colmenu-item form { display: flex; flex: 1; min-width: 0; }
+.pb-colmenu-opt { flex: 1; min-width: 0; height: 32px; padding: 0 8px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; color: #5b6474; font: inherit; font-size: 12px; font-weight: 800; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.pb-colmenu-opt:hover:not(:disabled) { border-color: #2f5d8f; color: #1e3a6e; }
+/* On: outlined in the navy, as the open menu button is, not filled. */
+.pb-colmenu-opt.on { border-color: #1e3a6e; border-width: 1.5px; background: #fff; color: #1e3a6e; }
+.pb-colmenu-opt:disabled { opacity: 0.4; cursor: not-allowed; }
+.pb-colmenu-item form:has(.pb-colmenu-del) { position: absolute; z-index: 1; top: -5px; right: -5px; flex: 0 0 auto; }
+.pb-colmenu-del { position: static; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #dfe3e8; border-radius: 999px; background: #fff; color: #8b93a1; font: inherit; font-size: 12px; line-height: 1; padding: 0; cursor: pointer; }
+.pb-colmenu-del:hover { border-color: #f0c9c9; background: #fbeaea; color: #a32d2d; }
+.pb-colmenu-new { width: 100%; margin-top: 8px; height: 32px; border: 1px dashed #c7d2e0; border-radius: 8px; background: none; color: #2f5d8f; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.pb-colmenu-new:hover:not(:disabled) { border-color: #2f5d8f; background: #f8f9fb; }
+.pb-colmenu-new:disabled { opacity: 0.45; cursor: not-allowed; }
+.pb-colmenu-add { display: flex; gap: 6px; margin-top: 8px; }
+.pb-colmenu-add input { flex: 1; min-width: 0; height: 32px; box-sizing: border-box; padding: 0 9px; border: 1px solid #dfe3e8; border-radius: 8px; font: inherit; font-size: 12px; }
+.pb-colmenu-add input:focus { outline: none; border-color: #1e3a6e; }
+.pb-colmenu-add button { height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: #1e3a6e; color: #fff; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+
+/* ---- Nutrition · the phase's blocks, and what the client actually ate ----
+   Each block says what is inside it on its strip, so a folded one is still
+   answering the question the coach opened the tab with. */
+.nl-block { overflow: hidden; }
+/* One strip per block: what it is, what it holds, what it can do, and the
+   fold. The title and the hint are the disclosure; the controls are not. */
+.nl-block-strip { display: flex; align-items: center; gap: 12px; padding: 0 22px 0 0; border-top: 1px solid #dfe3e8; background: #fafbfc; }
+.nl-block:first-child > .nl-block-strip { border-top: 0; }
+.nl-block-head { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; box-sizing: border-box; padding: 12px 22px; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; }
+.nl-block-strip:hover { background: #f4f6f9; }
+.nl-block-actions { flex: none; display: flex; align-items: center; gap: 8px; }
+.nl-block-body { border-top: 1px solid #eceff3; }
+.nl-block-hint { flex: 1; min-width: 0; font-size: 12px; font-weight: 500; color: #8b93a1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nl-block-chev { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 1px solid #dfe3e8; border-radius: 7px; background: #fff; color: #5b6474; font-size: 11px; transform: rotate(-90deg); transition: transform 0.15s ease; }
+.nl-block-chev.open { transform: rotate(0deg); }
+
+/* The four figures that say how the phase is actually going. */
+.nl-stats { display: flex; flex-wrap: wrap; margin-left: -1px; background: #fafbfc; border-bottom: 1px solid #eceff3; }
+.nl-stat { flex: 1 1 168px; min-width: 0; display: flex; flex-direction: column; gap: 3px; padding: 13px 20px; border-left: 1px solid #eceff3; }
+.nl-stat-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
+.nl-stat-value { font-family: var(--font-serif, Newsreader), Georgia, serif; font-size: 22px; font-weight: 600; line-height: 1.15; color: #141a24; }
+.nl-stat-value.warn { color: #a8501f; }
+.nl-stat-unit { font-size: 12px; font-weight: 500; color: #8b93a1; }
+
+/* A day, and its meals under it. */
+.nl-cols { display: grid; grid-template-columns: 28px 130px 110px 84px minmax(0, 1fr) minmax(0, 1.4fr); align-items: center; gap: 12px; }
+.nl-head { padding: 9px 22px; background: #f8f9fb; border-bottom: 1px solid #eceff3; font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; }
+.nl-day + .nl-day { border-top: 1px solid #eceff3; }
+.nl-day.open { background: #fafbfc; }
+.nl-row { width: 100%; box-sizing: border-box; padding: 11px 22px; border: 0; background: none; font: inherit; text-align: left; color: inherit; cursor: pointer; }
+.nl-row:hover { background: #f4f6f9; }
+.nl-chev { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; color: #8b93a1; font-size: 11px; transform: rotate(-90deg); transition: transform 0.15s ease; }
+.nl-chev.open { transform: rotate(0deg); }
+.nl-date { font-size: 13px; font-weight: 700; color: #141a24; }
+.nl-kcal { font-family: var(--font-serif, Newsreader), Georgia, serif; font-size: 17px; color: #141a24; font-variant-numeric: tabular-nums; }
+.nl-daytag { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; background: #eceff3; color: #5b6474; }
+.nl-daytag.training { background: #e9e7fa; color: #4c42a8; }
+.nl-vs { font-size: 12.5px; font-weight: 700; color: #8b93a1; }
+.nl-vs.good { color: #1f6a52; }
+.nl-vs.warn { color: #a8501f; }
+.nl-macros { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.nl-split { flex: 1; min-width: 60px; display: flex; height: 6px; border-radius: 99px; overflow: hidden; background: #eceff3; }
+.nl-split i { display: block; height: 100%; }
+.nl-split i.p { background: var(--macro-protein); }
+.nl-split i.c { background: var(--macro-carbs); }
+.nl-split i.f { background: var(--macro-fat); }
+.nl-gram { flex: none; font-size: 12px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.nl-meals { display: flex; flex-direction: column; gap: 10px; padding: 2px 22px 16px 62px; }
+.nl-meal { border: 1px solid #eceff3; border-radius: 10px; overflow: hidden; background: #fff; }
+.nl-meal-cols { display: grid; grid-template-columns: minmax(0, 1fr) 84px 60px 60px 60px 26px; align-items: center; gap: 10px; padding: 8px 14px; }
+/* The camera sits past the macros, at the end of the meal's own row. */
+.nl-shot-btn { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: none; color: #5b6474; cursor: pointer; }
+.nl-shot-btn svg { width: 15px; height: 15px; }
+.nl-shot-btn:hover { background: #eceff3; color: #141a24; }
+.nl-shot-scrim { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(20, 26, 36, 0.6); }
+.nl-shot { display: flex; flex-direction: column; gap: 10px; max-width: 560px; padding: 14px; border-radius: 14px; background: #fff; box-shadow: 0 20px 50px rgba(8, 31, 92, 0.3); }
+.nl-shot-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-size: 13px; font-weight: 700; color: #141a24; }
+.nl-shot-x { border: 0; background: none; font-size: 20px; line-height: 1; color: #5b6474; cursor: pointer; }
+.nl-shot img { display: block; max-width: 100%; max-height: 70vh; border-radius: 10px; object-fit: contain; }
+.nl-meal-head { background: #fafbfc; }
+.nl-meal-name { font-size: 13px; font-weight: 800; color: #141a24; }
+.nl-food-name small { display: block; font-size: 11px; font-weight: 500; color: #8b93a1; }
+.nl-meal-kcal { font-size: 12.5px; font-weight: 800; color: #313851; font-variant-numeric: tabular-nums; }
+.nl-meal-head .nl-p { color: var(--macro-protein); }
+.nl-meal-head .nl-c { color: var(--macro-carbs); }
+.nl-meal-head .nl-f { color: var(--macro-fat); }
+.nl-meal-head .nl-p, .nl-meal-head .nl-c, .nl-meal-head .nl-f { font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.nl-food { border-top: 1px solid #eceff3; font-size: 12.5px; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.nl-food-name { min-width: 0; font-weight: 500; color: #313851; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nl-food-kcal { color: #5b6474; font-weight: 600; }
+.nl-note { padding: 10px 14px; border-radius: 10px; background: #f4f6fa; }
+.nl-note p { margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; color: #313851; white-space: pre-wrap; }
+.nl-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 22px; border-top: 1px solid #eceff3; background: #fafbfc; font-size: 12px; color: #8b93a1; }
+.nl-more { border: 0; background: none; padding: 0; font: inherit; font-size: 12px; font-weight: 800; color: #2f5d8f; cursor: pointer; }
+.nl-more:hover { text-decoration: underline; }
+.nl-empty { margin: 0; padding: 16px 22px; font-size: 12.5px; color: #8b93a1; }
+
+@media (max-width: 1100px) {
+  .nl-cols { grid-template-columns: 28px 118px 92px 76px minmax(0, 1fr); }
+  .nl-cols > :nth-child(6) { display: none; }
+  .nl-meals { padding-left: 22px; }
+}
+
+/* ---- Measurements: what the client is asked for, and what they sent ----
+   Two blocks, each saying what is inside on its strip, so a folded one still
+   answers the question the tab was opened with. */
+/* No clipping: the metric library opens out of the block and was being cut
+   off at its edge. The strip rounds its own corners instead. */
+.mx-block { background: #fff; border: 1px solid #dfe3e8; border-radius: 12px; }
+.mx-block-head { border-radius: 11px 11px 0 0; }
+.mx-block:not(:has(.mx-block-body)) .mx-block-head { border-radius: 11px; }
+.mx-block + .mx-block { margin-top: 18px; }
+.mx-block-head { display: flex; align-items: center; gap: 12px; width: 100%; box-sizing: border-box; padding: 12px 22px; border: 0; background: #fafbfc; font: inherit; text-align: left; cursor: pointer; }
+.mx-block-head:hover { background: #f4f6f9; }
+.mx-block-hint { flex: 1; min-width: 0; font-size: 12px; font-weight: 500; color: #8b93a1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mx-block-chev { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 1px solid #dfe3e8; border-radius: 7px; background: #fff; color: #5b6474; font-size: 11px; transform: rotate(-90deg); transition: transform 0.15s ease; }
+.mx-block-chev.open { transform: rotate(0deg); }
+/* Room down both sides: rows were running into the card's own border. */
+.mx-block-body { position: relative; border-top: 1px solid #dfe3e8; padding: 16px 0 0; }
+.mx-block-body > .ms-addrow { padding: 0 22px 14px; }
+.mx-block-body > .mx-groups { border-top: 1px solid #eceff3; }
+.mx-block-body > .mx-log-controls:first-child { border-top: 0; }
+.mx-block-body > .ms-head, .mx-block-body > .ad-panel-empty, .mx-block-body > .ms-notes-list { padding-left: 22px; padding-right: 22px; }
+
+/* A category of metrics: closed until the coach opens the one they want. */
+.mx-groups { display: flex; flex-direction: column; }
+.mx-group-head { display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box; min-height: 38px; padding: 4px 22px; border: 0; border-top: 1px solid #eceff3; background: #f8f9fb; font: inherit; text-align: left; cursor: pointer; }
+.mx-group-head:hover { background: #f2f5f8; }
+.mx-group-chev { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; color: #8b93a1; font-size: 11px; transform: rotate(-90deg); transition: transform 0.15s ease; }
+.mx-group-chev.open { transform: rotate(0deg); }
+.mx-group-key { flex: none; width: 10px; height: 10px; border-radius: 3px; box-shadow: inset 0 0 0 1px rgba(20, 30, 50, 0.12); }
+.mx-group-name { flex: 1; min-width: 0; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #5b6474; }
+.mx-group-split, .mx-group-count { flex: none; font-size: 11px; font-weight: 600; color: #8b93a1; white-space: nowrap; }
+.ms-metric-list .ms-metric-row { padding-left: 46px; padding-right: 22px; gap: 16px; }
+.ms-metric-list .ms-metric-name { flex: 0 1 260px; min-width: 0; }
+.mx-metric-last { flex: 1 1 auto; min-width: 0; font-size: 11.5px; font-weight: 600; color: #8b93a1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mx-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 22px; border-top: 1px solid #eceff3; background: #fafbfc; font-size: 12px; font-weight: 600; color: #5b6474; }
+
+/* Table or feed, daily or weekly. */
+.mx-empty { margin: 0; padding: 16px 22px; font-size: 12.5px; color: #8b93a1; }
+
+
+/* One chevron across the admin: the drawn one, sized to whatever holds it. */
+.mx-block-chev svg, .mx-group-chev svg, .nl-block-chev svg, .nl-chev svg,
+.ph-chev svg, .pb-colmenu-caret svg, .pb-gyms-caret svg, .mw-chev svg,
+.ms-lib-chev svg { width: 13px; height: 13px; display: block; }
+.pb-colmenu-caret, .pb-gyms-caret { display: inline-flex; align-items: center; color: #8b93a1; }
+.mw-chev { display: inline-flex; align-items: center; transition: transform 0.15s ease; }
+.mw-chev.up { transform: rotate(180deg); }
+
+/* ---- Logged data: one grid, and the same lookup behind both views ----
+   Header, rows and the Change line are cells of one container, so a column
+   cannot size itself and drift off the heading above it. */
+.mx-log-controls { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 11px 22px; border-bottom: 1px solid #eceff3; }
+.mx-log-empty { margin: 0; padding: 16px 22px; font-size: 13px; color: #8b93a1; }
+.mx-log-scroll { overflow: auto; max-height: 480px; }
+.mx-log-grid { display: grid; min-width: max-content; }
+/* A period's cells are one row of the parent grid, not a grid of their own. */
+.mx-log-grid .contents { display: contents; }
+.mx-log-cell { box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 9px 12px; border-top: 1px solid #eceff3; border-left: 1px solid #eceff3; background: #fff; }
+.mx-log-head { position: sticky; top: 0; z-index: 1; gap: 2px; background: #f8f9fb; border-top: 0; }
+.mx-log-metric { font-size: 11.5px; font-weight: 800; line-height: 1.25; color: #141a24; }
+.mx-log-cat { font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1.25; }
+/* The date pins: a client can be on a dozen metrics, and the row has to stay
+   readable once the grid is scrolled sideways. */
+.mx-log-date { position: sticky; left: 0; z-index: 2; padding: 9px 22px; border-left: 0; font-size: 12.5px; font-weight: 700; color: #141a24; box-shadow: 1px 0 0 #eceff3; }
+.mx-log-head.mx-log-date { z-index: 3; }
+.mx-log-value { font-size: 12.5px; font-weight: 600; color: #313851; font-variant-numeric: tabular-nums; }
+.mx-log-value.none { color: #c7ccd4; }
+.mx-log-cell.now { background: #fafbfc; }
+.mx-log-change { position: sticky; bottom: 0; z-index: 2; background: #f8f9fb; border-top: 1px solid #dfe3e8; padding-top: 10px; padding-bottom: 10px; font-size: 12px; font-weight: 700; color: #5b6474; font-variant-numeric: tabular-nums; }
+.mx-log-date.mx-log-change { z-index: 3; }
+.mx-log-change.none { color: #8b93a1; }
+.mx-log-change.change-down { color: #2f7a3f; }
+.mx-log-change.change-up { color: #b3471d; }
+
+/* The feed: the same periods, read one submission at a time. */
+.mx-log-feed { display: flex; flex-direction: column; }
+.mx-log-day { border-bottom: 1px solid #eceff3; }
+.mx-log-day.open { background: #fafbfc; }
+.mx-log-row { display: grid; grid-template-columns: 28px 150px 110px minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%; box-sizing: border-box; padding: 11px 22px; border: 0; background: none; font: inherit; text-align: left; color: inherit; cursor: pointer; }
+.mx-log-row:hover { background: #f4f6f9; }
+.mx-log-chev { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; color: #8b93a1; transition: transform 0.15s ease; }
+.mx-log-chev.open { transform: rotate(180deg); }
+.mx-log-chev svg { width: 13px; height: 13px; display: block; }
+.mx-log-daydate { font-size: 13px; font-weight: 700; color: #141a24; }
+.mx-log-kind { justify-self: start; padding: 2px 8px; border-radius: 6px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; background: #eceff3; color: #5b6474; }
+.mx-log-kind.weekly { background: #e6edf6; color: #2f5d8f; }
+.mx-log-summary { min-width: 0; font-size: 12.5px; font-weight: 600; color: #5b6474; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mx-log-state { font-size: 12px; font-weight: 600; color: #8b93a1; white-space: nowrap; }
+.mx-log-state.good { color: #2f7a3f; }
+.mx-log-state.warn { color: #b3471d; }
+.mx-log-body { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 22px 16px 62px; }
+.mx-log-tile { display: flex; flex-direction: column; gap: 2px; min-width: 110px; padding: 9px 12px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; }
+.mx-log-tile-label { font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #8b93a1; }
+.mx-log-tile-value { font-family: var(--font-serif, Newsreader), Georgia, serif; font-size: 19px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; }
+.mx-log-tile-value small { font-size: 11px; font-weight: 700; color: #8b93a1; }
+.mx-log-note { flex: 1 1 240px; min-width: 0; padding: 9px 12px; border: 1px solid #e3e8ef; border-radius: 10px; background: #f4f6fa; }
+.mx-log-note p { margin: 3px 0 0; font-size: 12.5px; line-height: 1.5; color: #313851; white-space: pre-wrap; }
+
+/* A blank board, and one way out of it. */
+.mx-blank { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 0 22px 16px; }
+.mx-blank .ad-panel-empty { padding: 0; }
+.mx-copy-metrics { height: 30px; padding: 0 12px; border: 1px solid #c7d2e0; border-radius: 8px; background: #fff; font: inherit; font-size: 12px; font-weight: 800; color: #2f5d8f; cursor: pointer; }
+.mx-copy-metrics:hover:not(:disabled) { border-color: #2f5d8f; background: #f8f9fb; }
+.mx-copy-metrics:disabled { opacity: 0.6; cursor: default; }
+
+/* The metric library: a category is a block in its own colour, and its title
+   is what picks the whole block. */
+.ml-group { --ml: #5b6474; --ml-tint: #eef0f3; margin-top: 14px; }
+.ml-group.g-body { --ml: #b3471d; --ml-tint: #f7e6df; }
+.ml-group.g-sleep { --ml: #4c42a8; --ml-tint: #e7e5f7; }
+.ml-group.g-activity { --ml: #2f7a3f; --ml-tint: #dcf0e5; }
+.ml-group.g-fatigue { --ml: #a8761f; --ml-tint: #f6ecd9; }
+.ml-group.g-lifestyle { --ml: #1d7b86; --ml-tint: #dcf0f2; }
+.ml-group.g-stress { --ml: #a8501f; --ml-tint: #f8e7dd; }
+.ml-group.g-nutrition { --ml: #5f7a18; --ml-tint: #eef3d9; }
+.ml-group.g-training { --ml: #2f5d8f; --ml-tint: #e2ecf7; }
+.ml-group.g-wellbeing { --ml: #6b4aa8; --ml-tint: #ece6f7; }
+.ml-group-head { display: flex; align-items: center; gap: 9px; width: 100%; box-sizing: border-box; padding: 6px 10px; border: 0; border-radius: 8px; background: var(--ml-tint); font: inherit; text-align: left; cursor: pointer; }
+.ml-group-head:disabled { opacity: 0.55; cursor: default; }
+.ml-group-head:hover:not(:disabled) { filter: brightness(0.97); }
+.ml-group-key { flex: none; width: 10px; height: 10px; border-radius: 3px; background: var(--ml); }
+.ml-group-name { flex: 1; min-width: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.04em; color: var(--ml); }
+.ml-group-count { flex: none; font-size: 11px; font-weight: 700; color: var(--ml); opacity: 0.8; }
+.ml-group .ml-items { padding: 8px 10px 2px; }
+.ml-group .ml-item { border-radius: 8px; }
+.ml-group .ml-item:hover:not(.added) { background: var(--ml-tint); }
+
+/* Nutrition is one card, like Training: which phase is the heading, and
+   under it that phase whole — its targets, its supplements and what the
+   client ate. */
+.nw-phase-card { margin-top: 0; }
+
+.nw-bare { display: block; }
+/* The blocks inside the card are the same ones the logged days use. */
+.nw-phase-card .nl-block { border: 0; border-radius: 0; }
+
+/* ==================== The phase header ====================
+   Training, Nutrition and Measurements are each ONE card now, and this band
+   is its top. The phase's name is the button that switches phase — there is
+   no rail of chips above the card any more, and no separate "EDITING …"
+   strip under it. `kind` only changes the eyebrow's wording; everything
+   else about the band is the same on all three tabs. */
+
+.ph-card { background: #fff; border: 1px solid #dfe3e8; border-radius: 12px; overflow: visible; }
+/* The last block rounds the card off; the card itself can't clip, or the
+   switcher's menu would be cut at the band's edge. */
+.ph-card > :last-child { border-radius: 0 0 11px 11px; }
+
+.ph-band {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  box-sizing: border-box;
+  padding: 16px 22px;
+  background: #e6ecf3;
+  border-radius: 11px 11px 0 0;
+}
+
+.ph-left { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ph-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
+
+/* The switcher: the heading and a chevron tile, one button. */
+.ph-switch-wrap { position: relative; }
+.ph-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ph-name { font-size: 21px; font-weight: 800; letter-spacing: -0.01em; color: #141a24; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ph-name-empty { color: #5b6474; }
+.ph-chev {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid #cfd9e6;
+  border-radius: 6px;
+  background: #fff;
+  color: #2f5d8f;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.ph-switch:hover .ph-chev,
+.ph-switch:focus-visible .ph-chev { border-color: #2f5d8f; }
+.ph-switch.open .ph-chev { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .ph-chev { transition: none; } }
+
+/* Built from what is true: the dates, where the client is inside them, and
+   what is queued behind. Never a sentence. */
+.ph-context { font-size: 12.5px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
+
+/* The actions on one line, the state on the line under them, both hard
+   right. Same shape on Training, Nutrition and Measurements whatever
+   controls that track happens to carry. */
+/* Actions at the top, the state at the foot: the band is three lines tall
+   on the left, so pinning the state to the bottom uses that space instead of
+   leaving it hanging just under the buttons. */
+.ph-right { display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; gap: 10px; flex-shrink: 0; }
+.ph-actions { display: flex; align-items: center; gap: 10px; }
+.ph-actions > * { white-space: nowrap; }
+
+/* The state as a chip in the state's colours (phaseChrome, set inline); its
+   dot takes the chip's ink. A draft band gets a dashed edge, drawn on top so
+   nothing inside moves. */
+.ph-state { display: inline-flex; align-items: center; gap: 8px; padding: 5px 11px; border-radius: 999px; font-size: 12px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; white-space: nowrap; }
+.ph-state .ph-dot.live { background: currentColor; animation: ph-live-pulse-ink 2s ease-out infinite; }
+.ph-state .ph-dot.scheduled, .ph-state .ph-dot.draft { border-color: currentColor; }
+.ph-state .ph-dot.past { background: currentColor; }
+@keyframes ph-live-pulse-ink {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 45%, transparent); }
+  70% { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.ph-band.draft { position: relative; }
+.ph-band.draft::after { content: ""; position: absolute; inset: 0; border: 1px dashed #b3471d; border-radius: inherit; pointer-events: none; }
+
+/* A state is a dot and a word, in the band and again on every row of the
+   menu. Live breathes, so it reads as now rather than as a label; the rest
+   are still, and say what they are by their outline — dotted for what is
+   queued, dashed for what has not been sent. */
+.ph-dot { flex: none; width: 10px; height: 10px; border-radius: 999px; box-sizing: border-box; }
+.ph-dot.live { background: #2f7a3f; box-shadow: 0 0 0 0 rgba(47, 122, 63, 0.5); animation: ph-live-pulse 2s ease-out infinite; }
+.ph-dot.scheduled { border: 2px dotted #2f5d8f; }
+.ph-dot.draft { border: 2px dashed #b3471d; }
+.ph-dot.past { background: #8b93a1; }
+
+@keyframes ph-live-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(47, 122, 63, 0.5); }
+  70% { box-shadow: 0 0 0 7px rgba(47, 122, 63, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(47, 122, 63, 0); }
+}
+@media (prefers-reduced-motion: reduce) { .ph-dot.live { animation: none; } }
+
+/* The one thing this state can do: schedule a draft, or make a scheduled
+   phase live. A live phase has none. */
+.ph-primary {
+  height: 30px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 8px;
+  background: #1e3a6e;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.ph-primary:hover:not(:disabled) { background: #274a8a; }
+.ph-primary:disabled { background: #8b9dbb; cursor: not-allowed; }
+
+/* The rare quiet one beside it — back to draft, cancel a schedule. */
+.ph-minor { height: 30px; padding: 0 2px; border: 0; background: none; font: inherit; font-size: 12px; font-weight: 800; color: #2f5d8f; cursor: pointer; }
+.ph-minor:hover:not(:disabled) { color: #1e3a6e; text-decoration: underline; }
+.ph-minor:disabled { color: #8b93a1; cursor: not-allowed; }
+
+/* ---- The phase menu ---- */
+
+.ph-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 40;
+  width: 330px;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid #dfe3e8;
+  border-radius: 10px;
+  box-shadow: 0 18px 44px rgba(20, 23, 28, 0.18);
+}
+.ph-menu-group + .ph-menu-group { margin-top: 2px; }
+.ph-menu-label { padding: 7px 10px 4px; font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #8b93a1; }
+
+.ph-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ph-item:hover { background: #f8f9fb; }
+.ph-item.current { background: #f4f6fa; }
+.ph-item:focus-visible { outline: 2px solid #2f5d8f; outline-offset: -2px; }
+.ph-item-left { display: inline-flex; align-items: center; gap: 9px; min-width: 0; }
+.ph-item .ph-dot { width: 7px; height: 7px; }
+.ph-item-name { font-size: 13px; font-weight: 700; color: #313851; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ph-item.current .ph-item-name { font-weight: 800; color: #141a24; }
+.ph-item-dates { flex: none; font-size: 11px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; }
+
+/* What has ended stays folded away until it is asked for. */
+.ph-more {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: #5b6474;
+  text-align: left;
+  cursor: pointer;
+}
+.ph-more:hover { background: #f8f9fb; }
+.ph-more:focus-visible { outline: 2px solid #2f5d8f; outline-offset: -2px; }
+
+/* The only place a new phase is started. */
+.ph-menu-foot { margin-top: 4px; padding-top: 4px; border-top: 1px solid #eceff3; }
+.ph-new {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #2f5d8f;
+  text-align: left;
+  cursor: pointer;
+}
+.ph-new:hover { background: #f8f9fb; }
+.ph-new:focus-visible { outline: 2px solid #2f5d8f; outline-offset: -2px; }
+
+/* ---- What sits under the band ----
+   Measurements' blocks were cards of their own; inside the one card they are
+   strips, the same shape Nutrition's already had. */
+.ph-card > .mx-block { border: 0; border-radius: 0; background: none; }
+.ph-card > .mx-block + .mx-block { margin-top: 0; }
+.ph-card > .mx-block > .mx-block-head { border-radius: 0; border-top: 1px solid #dfe3e8; }
+.ph-card > .mx-block:last-child { overflow: hidden; }
+
+/* ==================== The client card, as a dialog ====================
+   Member info and Coaching info are edited off the page rather than inside
+   the narrow card on the client's Home: seven inputs boxed at 148px in a
+   180px column was a form to be survived. Here the rows keep the shape they
+   have when they are being read — label left, value right, a hairline
+   between — and the input IS the value: transparent at rest, outlined on
+   hover, white on focus. */
+
+.cc-dialog { max-width: 480px; padding: 0; overflow: hidden; }
+
+.cc-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 22px;
+  background: #e6ecf3;
+}
+.cc-dialog-head .ch-label { color: #1e3a6e; }
+.cc-dialog-x {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: #5b6474;
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.cc-dialog-x:hover { background: #fff; color: #141a24; }
+
+.cc-dialog .ad-card-form { padding: 6px 22px 16px; }
+.cc-dialog .ad-onboard-note { margin: 12px 0 0; }
+
+/* ---- The client card's rows (InfoRow) --------------------------------------
+   Shared by the Member info / Coaching info editor and the New client
+   dialog. Label over value, a hairline under each row, and the input IS the
+   value: borderless, 14 / 700 ink. Two columns; Email spans both. */
+.nc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+.nc-row { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 10px 0 8px; border-bottom: 1px solid #eceff3; }
+.nc-row.full { grid-column: 1 / -1; }
+.nc-row.bad { border-bottom-color: #b3471d; }
+.nc-row:focus-within { border-bottom-color: #2f5d8f; }
+.nc-row.bad:focus-within { border-bottom-color: #b3471d; }
+.nc-label { display: flex; align-items: baseline; gap: 8px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; }
+.nc-aside { font-size: 11.5px; font-weight: 700; letter-spacing: 0; text-transform: none; color: #2f5d8f; }
+.nc-control { display: flex; align-items: center; min-width: 0; min-height: 28px; }
+.nc-input { width: 100%; min-width: 0; box-sizing: border-box; height: 28px; padding: 0; border: 0; border-radius: 0; background: none; font: inherit; font-size: 14px; font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; outline: none; }
+.nc-input::placeholder { color: #a0a7b3; font-weight: 600; }
+.nc-input[type="date"] { font-family: inherit; }
+.nc-suffixed { display: flex; align-items: baseline; gap: 6px; width: 100%; }
+.nc-suffixed em { flex: none; font-style: normal; font-size: 11.5px; font-weight: 700; color: #8b93a1; }
+.nc-static { font-size: 14px; font-weight: 700; color: #141a24; }
+/* Dial code and number read as one field. */
+.nc-phone { display: flex; align-items: center; gap: 8px; width: 100%; }
+.nc-dial { flex: none; height: 28px; padding: 0 2px 0 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 700; color: #313851; font-variant-numeric: tabular-nums; cursor: pointer; outline: none; }
+.nc-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.nc-pills .pl-chip.on { border-color: #1e3a6e; background: #1e3a6e; color: #fff; }
+/* In the narrow client panel the card is one column. */
+.ad-panel-col .nc-grid { grid-template-columns: 1fr; }
+
+/* ---- New client: who they are, then how they get into the app ------------ */
+.nc-scrim { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(20, 26, 36, 0.28); }
+.nc-dialog { display: flex; flex-direction: column; width: 560px; max-width: 100%; max-height: calc(100vh - 48px); border-radius: 14px; background: #fff; box-shadow: 0 26px 64px rgba(20, 26, 36, 0.32); overflow: hidden; font-family: var(--font-archivo), "Archivo", -apple-system, BlinkMacSystemFont, sans-serif; color: #313851; }
+.nc-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 22px; background: #e6ecf3; }
+.nc-title { font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #1e3a6e; }
+.nc-sub { margin-top: 2px; font-size: 12px; font-weight: 600; color: #5b6474; }
+
+.nc-steps { flex: none; display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid #eceff3; }
+.nc-step { display: flex; align-items: center; gap: 10px; padding: 11px 22px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: #fafbfc; font: inherit; text-align: left; cursor: pointer; }
+.nc-step.on { background: #fff; border-bottom-color: #1e3a6e; }
+.nc-step:disabled { cursor: default; }
+.nc-step > span:last-child { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.nc-step b { font-size: 12px; font-weight: 800; color: #141a24; }
+.nc-step small { font-size: 10.5px; font-weight: 600; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nc-step-n { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 999px; background: #e6ecf3; color: #8b93a1; font-size: 11px; font-weight: 800; }
+.nc-step-n.reached { background: #1e3a6e; color: #fff; }
+
+/* The body scrolls; the footer never does. */
+.nc-body { flex: 1; min-height: 0; overflow-y: auto; padding: 6px 22px 18px; }
+
+.nc-access { display: flex; flex-direction: column; gap: 12px; padding-top: 14px; }
+.nc-explain { margin: 0; padding: 11px 14px; border: 1px solid #e3e8ef; border-left: 3px solid #1e3a6e; border-radius: 10px; background: #f4f6fa; font-size: 12.5px; line-height: 1.5; color: #313851; }
+.nc-explain b { color: #141a24; }
+.nc-card { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border: 1px solid #dfe3e8; border-radius: 10px; }
+.nc-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 9px; background: #e6ecf3; color: #1e3a6e; }
+.nc-card-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.nc-card-value { font-size: 14px; font-weight: 700; color: #141a24; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nc-card-empty { font-size: 13px; font-weight: 600; color: #8b93a1; }
+.nc-same { flex: none; padding: 3px 8px; border-radius: 999px; background: #dff3ea; color: #0f5c46; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.nc-password { letter-spacing: 0.04em; }
+.nc-mini { flex: none; height: 30px; padding: 0 12px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; font: inherit; font-size: 12px; font-weight: 800; color: #1e3a6e; cursor: pointer; white-space: nowrap; }
+.nc-mini:hover { border-color: #c3c9d2; }
+.nc-mini.copied { border-color: #9fd3bb; background: #dff3ea; color: #0f5c46; }
+.nc-check { display: flex; align-items: flex-start; gap: 10px; padding: 4px 2px; cursor: pointer; }
+.nc-check input { margin: 2px 0 0; accent-color: #1e3a6e; }
+.nc-check span { display: flex; flex-direction: column; gap: 2px; }
+.nc-check b { font-size: 13px; font-weight: 800; color: #141a24; }
+.nc-check small { font-size: 11.5px; font-weight: 600; color: #5b6474; }
+.nc-check.off { cursor: default; }
+.nc-check.off b { color: #8b93a1; }
+
+.nc-foot { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 22px; border-top: 1px solid #eceff3; background: #fafbfc; }
+/* The status is the only thing allowed to shrink; the buttons never wrap. */
+.nc-status { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 600; color: #5b6474; }
+.nc-status.bad { color: #b3471d; }
+.nc-btn { flex: none; white-space: nowrap; }
+.nc-secondary { padding: 9px 14px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; color: #313851; }
+.nc-secondary:hover { text-decoration: none; border-color: #c3c9d2; }
+.nc-foot .pl-primary:disabled { opacity: 0.45; cursor: default; }
+.nc-foot .pl-primary:disabled:hover { background: #1e3a6e; }
+
+/* The Member info editor's dialog uses the same rows. */
+.cc-dialog .nc-grid { margin-top: 2px; }
+
+.cc-dialog .ad-field-note { margin-top: 12px; font-size: 11.5px; }
+.cc-dialog .ad-card-form-foot { gap: 8px; margin-top: 18px; }
+.cc-dialog .ad-btn-primary,
+.cc-dialog .ad-btn-secondary { height: 32px; border-radius: 8px; font-size: 12px; padding: 0 14px; }
+
+/* ==================== Figures on the coach side are Archivo ==============
+   Newsreader stays for a dialog title and for the client app's display lines
+   (the "Hello, Name." greeting). It is NOT for numbers: a serif figure beside
+   Archivo labels in a dense coach table reads as a different app, and the
+   admin is nothing but numbers beside labels. Everything here is a figure, so
+   everything here is the body face, tabular, and heavier to carry the size.
+
+   Listed rather than swept: .pb-confirm-title, .pb-modal-title and
+   .ad-client-title are titles and keep the serif. */
+.ch-stat-value,
+.ch-ring-figure,
+.ad-stat-value,
+.cp-clients,
+.pb-rail-value,
+.pb-rail-metric-value,
+.report-card-stat-value,
+.nw-kcal-value,
+.nw-cal-kcal,
+.nw-water-input,
+.nw-macro-input input {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.ch-ring-figure small,
+.nw-kcal-value small { font-weight: 700; }
+
+/* ==================== The executing button ====================
+   One look for every button that COMMITS something — Add, Save, Apply,
+   Deploy, Schedule, Make it live: navy fill, white letters, radius 8. One per
+   card, on the right of its header.
+
+   Defined once, here, for every class that plays that role, because the
+   alternative — each component picking its own blue — is how we ended up with
+   "Deploy now" in green, "Save to library" in accent blue, "Copy week split"
+   in a third blue and "+ Add" as bare text. Adding a primary to a new screen
+   means adding its selector to this list, not inventing a fill.
+
+   Geometry stays with each rule: a dialog's foot button and a card header's
+   button are different sizes on purpose. Only the colour and the corner are
+   settled here.
+
+   NOT in this list, on purpose:
+   · .pb-pending-apply — it sits ON the navy pending bar, so it inverts:
+     white fill, navy letters. A primary on a navy surface always does.
+   · .pb-add-blank — the quiet half of a pair; "Copy week split" is the
+     primary of that popover and two navy buttons would say neither is.
+   · The dashed "+ Add session / exercise / week" drop zones — they open a
+     form, they do not commit anything. A placeholder in a list is not an
+     action button. */
+.ad-btn-primary,
+.ph-primary,
+.pl-primary,
+.pl-btn.navy,
+.mw-primary,
+.ad-access-primary,
+.ch-btn.primary,
+.pb-gyms-btn.primary,
+.deploy-btn,
+.pb-add-btn,
+.pb-add-copy,
+.btn:not(.secondary) {
+  border: 0;
+  border-radius: 8px;
+  background: #1e3a6e;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.ad-btn-primary:hover:not(:disabled),
+.ph-primary:hover:not(:disabled),
+.pl-primary:hover:not(:disabled),
+.pl-btn.navy:hover,
+.mw-primary:hover:not(:disabled),
+.ad-access-primary:hover:not(:disabled),
+.ch-btn.primary:hover,
+.pb-gyms-btn.primary:hover:not(:disabled),
+.deploy-btn:hover:not(:disabled),
+.pb-add-btn:hover:not(:disabled),
+.pb-add-copy:hover:not(:disabled),
+.btn:not(.secondary):hover:not(:disabled) {
+  background: #274a8a;
+}
+
+.ad-btn-primary:disabled,
+.ph-primary:disabled,
+.pl-primary:disabled,
+.mw-primary:disabled,
+.ad-access-primary:disabled,
+.pb-gyms-btn.primary:disabled,
+.deploy-btn:disabled,
+.pb-add-btn:disabled,
+.pb-add-copy:disabled,
+.btn:not(.secondary):disabled {
+  background: #8b9dbb;
+  color: #ffffff;
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+/* Destructive keeps its own fill: it is a primary, just not a navy one. */
+.ad-btn-primary.ph-delete-confirm { background: #a32d2d; }
+.ad-btn-primary.ph-delete-confirm:hover:not(:disabled) { background: #8a2424; }
+
+/* ==================== Two levels of heading ====================
+   A card's own header is the tinted band: accent fill, navy letters, its one
+   control on the right (.pl-card-head / .ch-head.tint / .ph-band).
+
+   A SECTION inside that card is white with navy letters. Same voice, no
+   fill, so the card header still sits above its sections — four tinted bands
+   down one card would read as four cards, and the header would stop being a
+   header. Grey-on-grey was the other failure: the sections read as captions
+   nobody had finished styling. */
+.mx-block-head,
+.nl-block-strip,
+.nl-stats { background: #ffffff; }
+.mx-block-head:hover,
+.nl-block-strip:hover { background: #f8f9fb; }
+
+.mx-block-head .ad-microlabel,
+.nl-block-strip .nw-label,
+.nl-stat-label { color: #1e3a6e; }
+
+/* ==================== Adding a row ====================
+   The dashed placeholders at the foot of a list — "+ Add session",
+   "+ Add exercise", "+ Add week", "+ New phase". They OPEN something; they do
+   not commit it, so they are never filled. Navy letters, so they still read
+   as ours rather than as a link. The navy fill is reserved for the button
+   that writes (see "The executing button" above). */
+.pb-add-session,
+.pb-week-add-label,
+.cpe-add,
+.pb-colmenu-new,
+.ph-new,
+.pb-add-blank { color: #1e3a6e; }
+.pb-add-session:hover,
+.cpe-add:hover,
+.pb-colmenu-new:hover:not(:disabled) { border-color: #1e3a6e; }
+
+/* ==================== The style guide (?view=style) ====================
+   Rendered from the real classes, so it cannot disagree with the product.
+   Only the scaffolding around the specimens is styled here. */
+.sg { display: flex; flex-direction: column; gap: 18px; }
+.sg-body { padding: 18px 22px 20px; display: flex; flex-direction: column; gap: 16px; }
+.sg-lead { margin: 0; font-size: 14px; line-height: 1.55; color: #313851; }
+.sg-lead strong { color: #141a24; }
+.sg-note { margin: 0; font-size: 12.5px; line-height: 1.5; color: #8b93a1; }
+.sg-note code { font-size: 12px; color: #5b6474; background: #f8f9fb; border-radius: 4px; padding: 1px 5px; }
+.sg-inline { flex: 1; min-width: 180px; }
+.sg-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sg-on-navy { padding: 12px 14px; border-radius: 10px; background: #1e3a6e; color: #fff; font-size: 12.5px; font-weight: 600; }
+
+.sg-demo-card { border: 1px solid #dfe3e8; border-radius: 12px; overflow: hidden; }
+.sg-demo-body { padding: 14px 22px; font-size: 12.5px; color: #5b6474; }
+.sg-strip { padding: 12px 22px; }
+
+.sg-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 2px 18px; }
+.sg-swatch { display: grid; grid-template-columns: 26px auto 1fr; align-items: center; gap: 4px 10px; padding: 7px 0; border-top: 1px solid #eceff3; }
+.sg-chip { grid-row: span 2; width: 26px; height: 26px; border-radius: 7px; border: 1px solid rgba(20, 26, 36, 0.12); }
+.sg-swatch-name { font-size: 12.5px; font-weight: 700; color: #141a24; }
+.sg-swatch-hex { font-size: 11.5px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.sg-swatch-use { grid-column: 2 / -1; font-size: 11.5px; color: #8b93a1; }
+
+/* Adding a row at the foot of a list it belongs to. Dashed, navy letters,
+   never filled — it stages a row; the pending bar is what writes. */
+.nw-add-row {
+  display: block;
+  width: calc(100% - 44px);
+  margin: 12px 22px 16px;
+  padding: 10px;
+  border: 1px dashed #dfe3e8;
+  border-radius: 10px;
+  background: none;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #1e3a6e;
+  cursor: pointer;
+}
+.nw-add-row:hover { border-color: #1e3a6e; background: #f8f9fb; }
+
+/* The line between "What the client did" and the pinned bin column was never
+   the bin column's — it is the logged column's own right edge, inherited from
+   the generic td rule because logged-col is second to last, not last. Removing
+   border-left from the pinned cell did nothing; this is the one that draws. */
+.exercise-table th.logged-col,
+.exercise-table td.logged-col { border-right: 0; }
+
+/* ==================== The bin ====================
+   One bin everywhere: bare and grey where it sits, red with a soft tint when
+   you reach for it. It was a bordered white box in the training tables — a
+   small icon in a visible container, which took the width of a real control
+   for something that is almost never pressed — and bare in Supplements. The
+   bare one was right.
+
+   Every delete in the coach app renders as .row-icon-danger (via
+   ConfirmDeleteButton) or .nw-remove-btn, so these two selectors are all of
+   them: exercise rows, sessions, weeks, supplements, metrics. */
+.row-icon-btn.row-icon-danger,
+.nw-remove-btn {
+  flex: none;
+  box-sizing: border-box;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #8b93a1;
+}
+
+.row-icon-btn.row-icon-danger:hover:not(:disabled),
+.nw-remove-btn:hover {
+  border-color: #dfe3e8;
+  background: #fbeaea;
+  color: #a32d2d;
+}
+
+/* The client's food diary bin is the same bin at phone size: a 40px target
+   rather than 30px, but the same grey, and the same red when pressed. There
+   is no hover on a phone, so :active is the one that has to carry it. */
+.fdi-row-bin:hover,
+.fdi-row-bin:active {
+  color: #a32d2d;
+  background: #fbeaea;
+  border-radius: 10px;
+}

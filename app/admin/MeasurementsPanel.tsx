@@ -1,45 +1,41 @@
 import {
-  addMetricDefinitionAction,
-  removeMetricDefinitionAction,
-  togglePinMetricAction,
-} from "../lib/actions";
-import {
-  getClient,
   getClientProfile,
-  getMetricHistory,
+  getMetricEntries,
+  getLoggedValues,
+  listMetricsForPhase,
   listCheckInNotes,
-  listAllMetrics,
-  listGraphChoices,
+  listLifestylePhases,
+  localDateStr,
   METRIC_GROUPS,
   METRIC_LIBRARY,
   metricGroup,
-  PINNED_METRIC_LIMIT,
 } from "../lib/queries";
 import CheckInDaySelect from "./CheckInDaySelect";
-import AutosaveNote from "./AutosaveNote";
-import MetricCadenceToggle from "./MetricCadenceToggle";
 import MetricLibrary, { LibraryPackView } from "./MetricLibrary";
-import MetricHistoryTable from "./MetricHistoryTable";
-import TrackerHistory from "./TrackerHistory";
-import MetricGraphPanel from "./MetricGraphPanel";
+import MetricGroups, { type MetricRow } from "./MetricGroups";
+import MeasurementsBlock from "./MeasurementsBlock";
+import LifestylePhaseHeader from "./LifestylePhaseHeader";
+import CopyPhaseMetrics from "./CopyPhaseMetrics";
+import LoggedDataBlock from "./LoggedDataBlock";
 
-const CADENCE_LABEL: Record<string, string> = {
-  daily: "Daily",
-  weekly: "Weekly",
-  monthly: "Monthly",
-};
+const KIND_LABEL = { daily: "Daily check-in", weekly: "Weekly check-in", measurements: "Measurements" } as const;
 
 // Check-in configuration and history.
 //
-// This replaces the old Daily Tracker and Weekly Tracker tabs. Cadence is a
-// property of a metric, not a reason for a screen — so a coach defines
-// everything the client is asked for in one list here, and reads it back in
-// the two tables below.
-export default function MeasurementsPanel({ clientId }: { clientId: number }) {
-  const metrics = listAllMetrics(clientId);
-  // The six-graph cap counts metrics and any legacy pinned measurement
-  // fields together, so the row buttons read the same total the store does.
-  const graphsFull = listGraphChoices(clientId).filter((c) => c.pinned).length >= PINNED_METRIC_LIMIT;
+// Two blocks: what the client is asked to log, and what they logged. Cadence
+// is a property of a metric, not a reason for a screen, so one list defines
+// everything and the tables below read it back. Daily and weekly are the only
+// rhythms — a monthly figure cannot sit honestly in a grid beside yesterday's
+// sleep — and nothing here charts: the client app has no chart to feed.
+export default function MeasurementsPanel({ clientId, phaseParam }: { clientId: number; phaseParam?: string }) {
+  // The phase being set up: the one asked for, else whatever is running.
+  const phases = listLifestylePhases(clientId);
+  const askedPhase = phaseParam && /^\d+$/.test(phaseParam) ? Number(phaseParam) : null;
+  const live = phases.find((p) => p.status === "now") ?? null;
+  const selected = phases.find((p) => p.id === askedPhase) ?? live ?? phases[0] ?? null;
+  const isLive = !!selected && selected.status === "now";
+  // With no phases at all the standing set is simply the client's metrics.
+  const metrics = listMetricsForPhase(clientId, selected?.id ?? null, phases.length === 0 || isLive).filter((m) => m.frequency !== "monthly");
   // A column is identified by its name alone now that cadence is chosen on
   // the row rather than at add time, so "Sleep" counts as added whichever
   // rhythm it is on.
@@ -61,175 +57,102 @@ export default function MeasurementsPanel({ clientId }: { clientId: number }) {
     });
   });
 
-  // Daily and weekly readings share a table; monthly measurements get their
-  // own. Readings on different rhythms can't be averaged into one grid, and
-  // pretending otherwise would put a month-old waist figure beside yesterday's
-  // sleep as if they were comparable.
-  const daily = getMetricHistory(clientId, "daily");
-  const weekly = getMetricHistory(clientId, "weekly");
-  const monthly = getMetricHistory(clientId, "monthly");
+  // Both presentations read one lookup; the table shows eight days or five
+  // weeks, and the feed the same periods.
+  const daily = getLoggedValues(clientId, "daily", 8);
+  const weekly = getLoggedValues(clientId, "weekly", 5);
+  const dailyCount = metrics.filter((m) => m.frequency === "daily").length;
 
-  const graphable = metrics.filter((m) => m.frequency !== "monthly" || true);
+  // The last thing logged against each metric, so a row says whether it is
+  // actually being answered without opening the table below.
+  const today = localDateStr();
+  const fmtWhen = (period: string) => {
+    const days = Math.round((new Date(`${period}T00:00:00`).getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000);
+    if (days === 0) return "today";
+    if (days === -1) return "yesterday";
+    if (days > -7) return `${-days} days ago`;
+    return new Date(`${period}T00:00:00`).toLocaleDateString("en-US", { day: "numeric", month: "short" });
+  };
+  const rows: MetricRow[] = metrics.map((m) => {
+    const g = metricGroup(m.category);
+    const entries = [...getMetricEntries([m.id])].sort((a, b) => a.period.localeCompare(b.period));
+    const last = entries[entries.length - 1];
+    return {
+      id: m.id,
+      name: m.name,
+      unit: m.unit,
+      frequency: m.frequency === "weekly" ? "weekly" : "daily",
+      groupKey: g.key,
+      groupLabel: g.label,
+      tint: g.tint,
+      last: last ? `${last.value}${m.unit ? ` ${m.unit}` : ""} · ${fmtWhen(last.period)}` : null,
+    };
+  });
 
-  const clientName = getClient(clientId)?.name ?? "the client";
-  // Server-stamped on each render; AutosaveNote flips to "Saved" only when
-  // this changes, i.e. after an action has run. Same pattern as ProgramBuilder.
-  // eslint-disable-next-line react-hooks/purity -- a server component render is the intended clock here
-  const renderedAt = Date.now();
+  // Check-ins done out of those asked for, derived the same way the block
+  // derives its rows: a period with nothing in it is one that was missed.
+  const done = (v: ReturnType<typeof getLoggedValues>) =>
+    v.metrics.length === 0 ? 0 : v.periods.filter((p) => v.metrics.some((m) => v.values[`${m.id}:${p.key}`] != null)).length;
+  const asked = (v: ReturnType<typeof getLoggedValues>) => (v.metrics.length === 0 ? 0 : v.periods.length);
+  const totalDone = done(daily) + done(weekly);
+  const totalAsked = asked(daily) + asked(weekly);
+  const loggedHint = totalAsked === 0 ? "Nothing asked for yet" : `${totalDone} of ${totalAsked} check-ins done`;
+  const notes = listCheckInNotes(clientId, 12);
 
   return (
-    <div className="ms">
-      {/* Every control on this tab saves itself and is live in the client's
-          app at once — there is no publish step, unlike the programme. Said
-          out loud here because a coach setting up columns reasonably asks
-          "has this reached them?", and a tab that saves silently can't
-          answer. renderedAt is stamped on the server so the note only says
-          Saved once the action has actually run. */}
-      <div className="ms-topbar">
-        <span className="ms-topbar-live">
-          <span className="ms-live-dot" aria-hidden="true" />
-          Live in {clientName}&rsquo;s app
-        </span>
-        <AutosaveNote
-          renderedAt={renderedAt}
-          idleText="Changes save as you go and reach the client immediately."
-          savedSuffix="· live in the client app"
-        />
-      </div>
+    // One card: the phase band on top, and under it everything that belongs
+    // to that phase. The band says whether the client is seeing this, so the
+    // old "Live in their app / changes save as you go" strip is gone — it
+    // said the same thing twice, in a paragraph.
+    <section className="ph-card">
+      <LifestylePhaseHeader clientId={clientId} today={today} phases={phases} selectedId={selected?.id ?? null} />
 
-      {/* ---- 1. What the client is asked to log ---- */}
-      <section className="ms-section">
-        <div className="ms-head">
-          <h3 className="ad-microlabel">Check-in columns</h3>
+      <MeasurementsBlock
+        id="metrics"
+        title="Tracked metrics"
+        hint={metrics.length === 0 ? "Nothing asked for yet" : `${metrics.length} live · ${dailyCount} daily, ${metrics.length - dailyCount} weekly`}
+      >
+        <MetricLibrary clientId={clientId} phaseId={selected && !isLive ? selected.id : null} packs={packs} groups={METRIC_GROUPS.map((g) => ({ key: g.key, label: g.label }))} />
+        {metrics.length === 0 ? (
+          <div className="mx-blank">
+            <p className="ad-panel-empty">
+              {selected && selected.status === "draft"
+                ? "A blank board. Tick what this phase should ask for, or start from the one running now."
+                : "Nothing yet. Open the metric library and tick what this client should log."}
+            </p>
+            {selected && selected.status === "draft" && live && (
+              <CopyPhaseMetrics clientId={clientId} fromId={live.id} toId={selected.id} fromName={live.name} />
+            )}
+          </div>
+        ) : (
+          <MetricGroups metrics={rows} />
+        )}
+        <div className="mx-foot">
+          <span>Weekly check-in opens on</span>
           <CheckInDaySelect clientId={clientId} value={getClientProfile(clientId).check_in_day} />
         </div>
-        <MetricLibrary
-          clientId={clientId}
-          packs={packs}
-          groups={METRIC_GROUPS.map((g) => ({ key: g.key, label: g.label }))}
-        />
+      </MeasurementsBlock>
 
-        {metrics.length === 0 ? (
-          <p className="ad-panel-empty">
-            Nothing yet. Open the metric library and tick what this client should log.
-          </p>
-        ) : (
-          <div className="ms-metric-list">
-            {metrics.map((m) => {
-              const g = metricGroup(m.category);
-              return (
-                <div key={m.id} className="ms-metric-row">
-                  {/* Name leads the row; the two pills are fixed width so they
-                      form straight columns down the list instead of jittering
-                      with the length of each word. */}
-                  <span className="ms-metric-name">
-                    {m.name}
-                    {m.unit && <em className="ms-metric-unit">({m.unit})</em>}
-                  </span>
-                  <span className="ms-group-pill" style={{ background: g.tint }}>
-                    {g.label}
-                  </span>
-                  <MetricCadenceToggle metricId={m.id} value={m.frequency} name={m.name} />
+      <MeasurementsBlock id="logged" title="Logged data" hint={loggedHint}>
+        <LoggedDataBlock daily={daily} weekly={weekly} />
+      </MeasurementsBlock>
 
-                  {/* Chart on the client's Home: the same pin the Client
-                      graphs section below toggles, here on the row so the
-                      coach decides it where they set the column up. */}
-                  <form action={togglePinMetricAction} className="ms-metric-action">
-                    <input type="hidden" name="id" value={m.id} />
-                    <button
-                      type="submit"
-                      className={`ms-graph${m.pinned ? " on" : ""}`}
-                      role="switch"
-                      aria-checked={!!m.pinned}
-                      aria-label={`${m.pinned ? "Stop charting" : "Chart"} ${m.name} on the client's Home screen`}
-                      disabled={!m.pinned && graphsFull}
-                      title={
-                        !m.pinned && graphsFull
-                          ? `Only ${PINNED_METRIC_LIMIT} can be shown at once. Turn one off first.`
-                          : m.pinned
-                            ? "Shown as a graph on the client's Home screen"
-                            : "Show as a graph on the client's Home screen"
-                      }
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M3 17l6-6 4 4 8-8" />
-                      </svg>
-                    </button>
-                  </form>
-
-                  {/* No per-row visibility toggle. Being on this list IS the
-                      deployment: a column here is a column the client is asked
-                      for. A hide switch made a second, invisible state the
-                      coach had to remember; removing a column is the way to
-                      stop asking for it. */}
-                  <form action={removeMetricDefinitionAction} className="ms-metric-action">
-                    <input type="hidden" name="id" value={m.id} />
-                    <button type="submit" className="ms-del" aria-label={`Delete ${m.name}`} title="Delete this metric and its history">
-                      ×
-                    </button>
-                  </form>
-                </div>
-              );
-            })}
+      {/* What the client wrote beside their numbers: why a day was off, what
+          the figures do not say. Newest first, every section. */}
+      {notes.length > 0 && (
+        <MeasurementsBlock id="notes" title="Notes from the client" hint={`${notes.length}, newest first`}>
+          <div className="ms-notes-list">
+            {notes.map((n) => (
+              <div key={n.id} className="ms-note">
+                <span className="ms-note-meta">
+                  {new Date(`${n.period}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} · {KIND_LABEL[n.kind]}
+                </span>
+                <span className="ms-note-text">{n.text}</span>
+              </div>
+            ))}
           </div>
-        )}
-
-      </section>
-
-      {/* ---- 2. What they logged ---- */}
-      <section className="ms-section">
-        <TrackerHistory daily={daily} weekly={weekly} />
-      </section>
-
-      <section className="ms-section">
-        <h3 className="ad-microlabel">Measurements</h3>
-        <MetricHistoryTable
-          history={monthly}
-          emptyNote="No monthly measurements configured yet. Add them from the library."
-          maxHeight={250}
-        />
-      </section>
-
-      {/* ---- 3. Graph (coach's own view). What the client sees charted is
-              chosen per row in the check-in columns above. ---- */}
-      {/* What the client wrote beside their numbers: why a day was off,
-          what the figures don't say. Newest first, every section. */}
-      {(() => {
-        const notes = listCheckInNotes(clientId, 12);
-        if (notes.length === 0) return null;
-        const kindLabel = { daily: "Daily check-in", weekly: "Weekly check-in", measurements: "Measurements" } as const;
-        return (
-          <section className="ms-notes">
-            <h3 className="ad-microlabel">Notes from the client</h3>
-            <div className="ms-notes-list">
-              {notes.map((n) => (
-                <div key={n.id} className="ms-note">
-                  <span className="ms-note-meta">
-                    {new Date(`${n.period}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} · {kindLabel[n.kind]}
-                  </span>
-                  <span className="ms-note-text">{n.text}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-        );
-      })()}
-      <section className="ms-section">
-        <h3 className="ad-microlabel">Trend</h3>
-        {/* Keyed by client: the panel keeps its chosen metric in state, and
-            without the key that metric id (another client's) survived a
-            switch in the rail and its series drew under the new client's
-            name. */}
-        <MetricGraphPanel
-          key={clientId}
-          metrics={graphable.map((m) => ({
-            id: m.id,
-            name: m.name,
-            unit: m.unit,
-            cadence: CADENCE_LABEL[m.frequency] ?? m.frequency,
-          }))}
-        />
-      </section>
-    </div>
+        </MeasurementsBlock>
+      )}
+    </section>
   );
 }

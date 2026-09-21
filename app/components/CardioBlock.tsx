@@ -1,57 +1,45 @@
 "use client";
 
-import { useState } from "react";
+import { ReactNode, useState } from "react";
 import { CardioKey, EMPTY_CARDIO, usePendingDay } from "./DayPending";
 import ExercisePicker from "./ExercisePicker";
 import { TrashIcon } from "./icons";
+import { useRowDrag } from "./useRowDrag";
 
-// Cardio for the day, under the exercise table and built on the same
-// column skeleton, so its cells line up with the exercise cells above:
-// grip, activity, then the day's prescription columns with Time, Pace,
-// Incline and Distance taking the first four slots and Notes its own, then the logged
-// band and the action column. The activity comes from the library's cardio
-// group through the same picker the exercise rows use.
+// Cardio for the day, in a table of its own: the session card shows it or the
+// exercises, never both (the heart in the session's header). It asks for
+// different things than a lift does — time, pace, incline, distance — so it
+// has its own columns, which the coach picks the same way they pick the
+// exercise ones. Notes are always there, as on an exercise row. The activity
+// comes from the library's cardio group through the same picker the
+// exercise rows use.
 type ExerciseOption = { id: number; name: string };
 type Group = { slug: string; label: string };
-type Column = { id: number; kind: "builtin" | "custom"; key: string; label: string };
-
-const CARDIO_FIELDS: { key: CardioKey; label: string }[] = [
-  { key: "time", label: "Time" },
-  { key: "pace", label: "Pace" },
-  { key: "incline", label: "Incline" },
-  { key: "distance", label: "Distance" },
-];
-
-// Which cardio field, if any, a given exercise column slot carries.
-function slotFor(columns: Column[]): (CardioKey | null)[] {
-  let n = 0;
-  return columns.map((c) => {
-    if (c.key === "notes") return "notes";
-    if (n < CARDIO_FIELDS.length) return CARDIO_FIELDS[n++].key;
-    return null;
-  });
-}
+export type CardioColumn = { key: string; field: "time" | "pace" | "incline" | "distance"; label: string; visible: boolean };
 
 export default function CardioBlock({
   groups,
   exercisesByGroup,
-  widths,
+  columns: allColumns,
 }: {
   groups: readonly Group[];
   exercisesByGroup: Record<string, ExerciseOption[]>;
-  widths: Record<string, string>;
+  /** The client's cardio columns, on and off; only the on ones are shown. */
+  columns: CardioColumn[];
 }) {
   const pending = usePendingDay();
   const [draft, setDraft] = useState<Record<CardioKey, string>>({ ...EMPTY_CARDIO });
   const [pickerKey, setPickerKey] = useState(0);
+  // Rows drag into a new order by the grip, like the exercise rows; the new
+  // order waits on the session's Apply bar with every other change.
+  const { dragging, liftedIndex, shiftFor, rowRef, grip } = useRowDrag(pending?.cardioOrder ?? [], (next, moved) => pending?.setCardioOrder(next, moved));
   if (!pending) return null;
-  const columns = pending.columns;
-  const slots = slotFor(columns);
-  // Fields with no column slot (a day with fewer than four prescription
-  // columns) fall into the logged band, so nothing is ever unreachable.
-  const overflow = CARDIO_FIELDS.filter((f) => !slots.includes(f.key));
-  const hasNotesSlot = slots.includes("notes");
-  const rows = pending.cardio.filter((c) => !pending.isCardioRemoved(c.id));
+  const columns = allColumns.filter((c) => c.visible);
+  // Its own columns, not the exercise table's: each cardio field the coach
+  // has on, then the notes, which take whatever width is left.
+  const slots: ("notes" | CardioColumn)[] = [...columns, "notes"];
+  const byId = new Map(pending.cardio.map((c) => [c.id, c] as const));
+  const rows = pending.cardioOrder.map((id) => byId.get(id)).filter((c): c is NonNullable<typeof c> => !!c);
   const added = pending.draft.cardio.added;
   const submit = () => {
     if (!draft.name.trim()) return;
@@ -59,156 +47,134 @@ export default function CardioBlock({
     setDraft({ ...EMPTY_CARDIO });
     setPickerKey((k) => k + 1);
   };
-  const labelOf = (key: CardioKey) => CARDIO_FIELDS.find((f) => f.key === key)?.label ?? "Notes";
 
-  const cell = (
-    key: CardioKey | null,
+  const cells = (
     value: (k: CardioKey) => string,
     set: (k: CardioKey, v: string) => void,
     changed: (k: CardioKey) => boolean,
-    tdKey: string,
-    onEnter?: () => void
-  ) =>
-    key ? (
-      <td key={tdKey} className={key === "notes" ? "notes-cell" : undefined}>
-        <input
-          type="text"
-          value={value(key)}
-          onChange={(e) => set(key, e.target.value)}
-          onKeyDown={onEnter ? (e) => e.key === "Enter" && onEnter() : undefined}
-          placeholder={key === "notes" ? "Add a note" : undefined}
-          aria-label={labelOf(key)}
-          className={changed(key) ? "pb-changed" : undefined}
-        />
-      </td>
-    ) : (
-      <td key={tdKey} aria-hidden="true"></td>
-    );
-
-  const overflowCell = (value: (k: CardioKey) => string, set: (k: CardioKey, v: string) => void, changed: (k: CardioKey) => boolean, onEnter?: () => void) => (
-    <td className="logged-col">
-      <div className="pb-cardio-overflow">
-      {overflow.map((f) => (
-        <label key={f.key} className="pb-cardio-inline">
-          <span>{f.label}</span>
-          <input type="text" value={value(f.key)} onChange={(e) => set(f.key, e.target.value)} onKeyDown={onEnter ? (e) => e.key === "Enter" && onEnter() : undefined} aria-label={f.label} className={changed(f.key) ? "pb-changed" : undefined} />
-        </label>
-      ))}
-      {!hasNotesSlot && (
-        <label className="pb-cardio-inline">
-          <span>Notes</span>
-          <input type="text" value={value("notes")} onChange={(e) => set("notes", e.target.value)} onKeyDown={onEnter ? (e) => e.key === "Enter" && onEnter() : undefined} aria-label="Notes" className={changed("notes") ? "pb-changed" : undefined} />
-        </label>
-      )}
-      </div>
-    </td>
+    onEnter: (() => void) | undefined,
+    // The row's bin or Add, at the end of Notes: the table has no column of
+    // its own for it.
+    end: ReactNode
+  ) => (
+    <>
+      {slots.map((slot, i) => {
+        const field: CardioKey = slot === "notes" ? "notes" : slot.field;
+        const input = (
+          <input
+            type="text"
+            value={value(field)}
+            onChange={(e) => set(field, e.target.value)}
+            onKeyDown={onEnter ? (e) => e.key === "Enter" && onEnter() : undefined}
+            placeholder={slot === "notes" ? "Add a note" : undefined}
+            aria-label={slot === "notes" ? "Notes" : slot.label}
+            className={changed(field) ? "pb-changed" : undefined}
+          />
+        );
+        return (
+          <td key={i} className={slot === "notes" ? "notes-cell" : undefined}>
+            {slot === "notes" ? (
+              <div className="pb-cell-end">
+                <div className="pb-cell-main">{input}</div>
+                {end}
+              </div>
+            ) : (
+              input
+            )}
+          </td>
+        );
+      })}
+    </>
   );
 
   return (
     <div className="pb-cardio">
       <div className="exercise-table-wrap">
-      <table className="exercise-table pb-cardio-table">
-        <thead>
-          <tr>
-            <th aria-hidden="true" style={{ width: "22px" }}></th>
-            <th>Cardio</th>
-            {columns.map((col, i) => (
-              <th key={col.id} style={{ width: widths[col.key] ?? "90px" }}>
-                {slots[i] ? labelOf(slots[i]!) : ""}
-              </th>
+        {/* Grip and Activity are 22 + 210, as in the exercise table; Notes takes the spare width, with the row's bin at its end. */}
+        <table className="exercise-table pb-cardio-table" style={{ minWidth: 22 + 210 + columns.length * 120 + 220 + 58 }}>
+          <colgroup>
+            <col style={{ width: "22px" }} />
+            <col style={{ width: "210px" }} />
+            {columns.map((c) => (
+              <col key={c.key} style={{ width: "120px" }} />
             ))}
-            <th className="logged-col"></th>
-            <th aria-hidden="true" style={{ width: "58px" }}></th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((c) => (
-            <tr key={c.id} className="pb-row">
-              <td className="pb-grip-cell" aria-hidden="true"></td>
-              <td className="exercise-name-cell">
-                <div className="pb-exercise-title">
-                  <span className="pb-row-new-name">{pending.cardioValue(c.id, "name")}</span>
-                </div>
-              </td>
-              {columns.map((col, i) =>
-                cell(
-                  slots[i],
+            <col />
+          </colgroup>
+          <thead>
+            <tr>
+              <th aria-hidden="true"></th>
+              <th>Activity</th>
+              {slots.map((slot, i) => (
+                <th key={i}>{slot === "notes" ? "Notes" : slot.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className={dragging ? "pb-reordering" : undefined}>
+            {rows.map((c, index) => (
+              <tr key={c.id} ref={rowRef(c.id)} className={`pb-row${liftedIndex === index ? " lifted" : ""}`} style={{ transform: shiftFor(index) }}>
+                <td className="pb-grip-cell">
+                  <span className="pb-grip" title="Drag to reorder" aria-hidden="true" {...grip(index)}>
+                    ⋮⋮
+                  </span>
+                </td>
+                <td className="exercise-name-cell">
+                  <div className="pb-exercise-title">
+                    <span className="pb-row-new-name">{pending.cardioValue(c.id, "name")}</span>
+                  </div>
+                </td>
+                {cells(
                   (k) => pending.cardioValue(c.id, k),
                   (k, v) => pending.setCardioField(c.id, k, v),
                   (k) => pending.draft.cardio.fields[c.id]?.[k] != null,
-                  String(col.id)
-                )
-              )}
-              {overflowCell(
-                (k) => pending.cardioValue(c.id, k),
-                (k, v) => pending.setCardioField(c.id, k, v),
-                (k) => pending.draft.cardio.fields[c.id]?.[k] != null
-              )}
-              <td>
-                <button type="button" className="row-icon-btn row-icon-danger" aria-label={`Remove ${pending.cardioValue(c.id, "name") || "cardio"}`} title="Remove (applies with the other changes)" onClick={() => pending.removeCardio(c.id)}>
-                  <TrashIcon />
-                </button>
-              </td>
-            </tr>
-          ))}
-          {added.map((n) => (
-            <tr key={`new-${n.tempId}`} className="pb-row pb-row-new">
-              <td className="pb-grip-cell" aria-hidden="true"></td>
-              <td className="exercise-name-cell">
-                <div className="pb-exercise-title">
-                  <span className="pb-row-new-name">{n.fields.name}</span>
-                </div>
-              </td>
-              {columns.map((col, i) =>
-                cell(
-                  slots[i],
+                  undefined,
+                  <button
+                    type="button"
+                    className="row-icon-btn row-icon-danger"
+                    aria-label={`Remove ${pending.cardioValue(c.id, "name") || "cardio"}`}
+                    title="Remove (applies with the other changes)"
+                    onClick={() => pending.removeCardio(c.id)}
+                  >
+                    <TrashIcon />
+                  </button>
+                )}
+              </tr>
+            ))}
+            {added.map((n) => (
+              <tr key={`new-${n.tempId}`} className="pb-row pb-row-new">
+                <td className="pb-grip-cell" aria-hidden="true"></td>
+                <td className="exercise-name-cell">
+                  <div className="pb-exercise-title">
+                    <span className="pb-row-new-name">{n.fields.name}</span>
+                  </div>
+                </td>
+                {cells(
                   (k) => n.fields[k],
                   (k, v) => pending.setAddedCardioField(n.tempId, k, v),
                   () => true,
-                  String(col.id)
-                )
-              )}
-              {overflowCell(
-                (k) => n.fields[k],
-                (k, v) => pending.setAddedCardioField(n.tempId, k, v),
-                () => true
-              )}
+                  undefined,
+                  <button type="button" className="row-icon-btn row-icon-danger" aria-label={`Undo adding ${n.fields.name}`} title="Undo" onClick={() => pending.unaddCardio(n.tempId)}>
+                    <TrashIcon />
+                  </button>
+                )}
+              </tr>
+            ))}
+            <tr className="add-exercise-row">
+              <td aria-hidden="true"></td>
               <td>
-                <button type="button" className="row-icon-btn row-icon-danger" aria-label={`Undo adding ${n.fields.name}`} title="Undo" onClick={() => pending.unaddCardio(n.tempId)}>
-                  <TrashIcon />
-                </button>
+                <ExercisePicker key={pickerKey} groups={groups} exercisesByGroup={exercisesByGroup} onPick={(ex) => setDraft((d) => ({ ...d, name: ex.name }))} />
               </td>
-            </tr>
-          ))}
-          <tr className="add-exercise-row">
-            <td aria-hidden="true"></td>
-            <td>
-              <ExercisePicker key={pickerKey} groups={groups} exercisesByGroup={exercisesByGroup} onPick={(ex) => setDraft((d) => ({ ...d, name: ex.name }))} />
-            </td>
-            {columns.map((col, i) =>
-              cell(
-                slots[i],
+              {cells(
                 (k) => draft[k],
                 (k, v) => setDraft((d) => ({ ...d, [k]: v })),
                 () => false,
-                String(col.id),
-                submit
-              )
-            )}
-            {overflowCell(
-              (k) => draft[k],
-              (k, v) => setDraft((d) => ({ ...d, [k]: v })),
-              () => false,
-              submit
-            )}
-            <td>
-              <button className="pb-add-btn" type="button" onClick={submit} disabled={!draft.name.trim()} title={draft.name.trim() ? undefined : "Pick a cardio activity first"}>
-                Add
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+                submit,
+                <button className="pb-add-btn" type="button" onClick={submit} disabled={!draft.name.trim()} title={draft.name.trim() ? undefined : "Pick a cardio activity first"}>
+                  + Add
+                </button>
+              )}
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   );

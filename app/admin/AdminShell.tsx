@@ -74,7 +74,9 @@ export default function AdminShell({
   const collapsed = !!panel && !panelOpen;
 
   return (
-    <div className={`ad-shell${collapsed ? " panel-collapsed" : ""}`}>
+    // With no panel at all the third column goes entirely, rather than
+    // leaving its width empty beside the work.
+    <div className={`ad-shell${panel ? "" : " no-panel"}${collapsed ? " panel-collapsed" : ""}`}>
       <aside className="ad-sidebar">{sidebar}</aside>
       <main className="ad-main">{children}</main>
       {panel && (

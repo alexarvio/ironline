@@ -87,6 +87,8 @@ export type FoodDiaryProps = {
   loggedDays: string[];
 };
 
+// The shared macro palette (--macro-* in globals.css), spelt out because
+// these are SVG presentation attributes, where var() does not resolve.
 const HUE = { protein: "#334EAC", carbs: "#D99A2B", fat: "#2E8B7A" } as const;
 const n = (v: number) => Math.round(v).toLocaleString("en-US");
 const g = (v: number) => (Math.abs(v - Math.round(v)) < 0.05 ? String(Math.round(v)) : v.toFixed(1));
@@ -116,6 +118,20 @@ type Panel =
   | { kind: "search"; meal: FoodMeal }
   | { kind: "amount"; meal: FoodMeal; food: FoodOptionView; entry?: FoodEntryView }
   | { kind: "custom"; meal: FoodMeal };
+
+// A Keep / Forget question is answered by one of its two buttons, or
+// dropped by a tap anywhere else. Without this it outlived the moment it was
+// asked in: fold Saved days, open it again, and the row was still red.
+function useDropOnTapOutside(asking: boolean, clear: (none: null) => void) {
+  useEffect(() => {
+    if (!asking) return;
+    const onDown = (e: PointerEvent) => {
+      if (!(e.target as Element | null)?.closest?.(".fdi-row-ask")) clear(null);
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [asking, clear]);
+}
 
 export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { clientId: number; diary: FoodDiaryProps; onBack: () => void }) {
   // The day showing. Today arrives with the page; other days, and today
@@ -233,6 +249,8 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
   const [askForgetDay, setAskForgetDay] = useState<number | null>(null);
   // The Copy a day card, folded until opened.
   const [copyOpen, setCopyOpen] = useState(false);
+  useDropOnTapOutside(askRemove != null, setAskRemove);
+  useDropOnTapOutside(askForgetDay != null, setAskForgetDay);
   const forgetHold = useRef<ReturnType<typeof setTimeout> | null>(null);
   const removeRow = (id: number) => {
     const fd = new FormData();
@@ -741,7 +759,16 @@ export default function FoodDiaryScreen({ clientId, diary: initial, onBack }: { 
               });
               return (
                 <section className="fdi-copy">
-                  <button type="button" className="fdi-copy-head" onClick={() => setCopyOpen((o) => !o)} aria-expanded={copyOpen}>
+                  <button
+                    type="button"
+                    className="fdi-copy-head"
+                    onClick={() => {
+                      setCopyOpen((o) => !o);
+                      // Folding it away is not answering, so the question goes with it.
+                      setAskForgetDay(null);
+                    }}
+                    aria-expanded={copyOpen}
+                  >
                     <span className="fdi-copy-title">Saved days</span>
                     <span className={`fdi-copy-chev${copyOpen ? " up" : ""}`} aria-hidden="true">
                       <ChevronDownIcon />
@@ -1276,6 +1303,7 @@ function SearchPanel({
   const [copying, startCopy] = useTransition();
   // The saved meal whose × was tapped: it asks before it forgets.
   const [askForget, setAskForget] = useState<number | null>(null);
+  useDropOnTapOutside(askForget != null, setAskForget);
   // Packaged products from Open Food Facts, asked for on request: the answer
   // and the query it answers.
   const [packaged, setPackaged] = useState<{ q: string; rows: FoodOptionView[]; error?: string } | null>(null);

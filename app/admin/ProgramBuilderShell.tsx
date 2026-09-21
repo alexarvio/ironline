@@ -1,11 +1,23 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useState, useTransition } from "react";
 import { ExpandProvider, WeightUnitProvider, type BuilderWeightUnit } from "./BuilderContext";
 
 const UNIT_KEY = "ironline:builder-weight-unit";
 import WeekRail from "./WeekRail";
 import ProgramNotePeek from "./ProgramNotePeek";
+import PhaseHeader, { usePhases, type PhaseOption, type PhaseStatus } from "./PhaseHeader";
+import ProgramDatesDialog from "./ProgramDatesDialog";
+import { PhaseDialog, type PhaseNeighbour, type PhaseProgramInfo } from "./PhaseDialogButton";
+import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
+import {
+  cancelProgramScheduleAction,
+  createProgramAction,
+  deployProgramAction,
+  removeProgramAction,
+  removeProgramWeekAction,
+} from "../lib/actions";
+import type { ClientPhase } from "../lib/db";
 
 // One capsule on the week rail. The seven ticks report what the client
 // ACTUALLY trained — trained / planned-but-missed / rest — rather than what
@@ -15,6 +27,8 @@ export type WeekCard = {
   label: string;
   days: { dayOfWeek: number; state: "trained" | "missed" | "rest"; title: string }[];
   isLive: boolean;
+  /** A session in this week has news the coach has not opened. */
+  hasNew?: boolean;
   /** True when the week is training history (live or past) and must stay. */
   locked: boolean;
   meta: string;
@@ -24,21 +38,23 @@ export type BuilderProgram = {
   id: number;
   name: string;
   status: "live" | "draft" | "past";
-  /** The chip's pill: a draft with a schedule reads Scheduled. */
-  pill: "live" | "draft" | "scheduled" | "past";
-  statusLabel: string;
+  /** What the header band says it is: a draft with a date reads Scheduled. */
+  state: PhaseStatus;
   totalWeeks: number;
-  meta: string;
+  /** "Aug 18 – Sep 28"; empty while a draft has no date to run from. */
+  dates: string;
+  /** The Monday it starts, for ordering; null while it has none. */
+  start: string | null;
+  /** Which of its weeks the client is in — the live programme only. */
+  liveWeek: number | null;
+  /** Its phase on the Plan tab, once it has one: what "Edit dates" edits. */
+  phase: { phase: ClientPhase; program: PhaseProgramInfo } | null;
   defaultWeek: number;
   weekCards: WeekCard[];
   // Per week (1-based within the program): the seven day cards, rendered
   // server-side. Switching weeks is a pure client-side swap.
   weekContents: Record<number, ReactNode>;
   weekSummaries: Record<number, string>;
-  // Deploy/schedule buttons for a draft, or the "live" readout — built
-  // server-side because they're forms posting to server actions.
-  actionsSlot: ReactNode;
-  nameSlot: ReactNode;
   // "Copy week N here", pre-rendered per target week — a form posting to a
   // server action, so it can't be built from a callback on this side of the
   // boundary. Absent for week 1, which has nothing before it to copy.
@@ -57,26 +73,44 @@ export type BuilderProgram = {
 export default function ProgramBuilderShell({
   programs,
   clientId,
+  today,
+  others,
+  weekLinkBase,
+  initialProgramId,
   columnsSlot,
-  newProgramSlot,
   emptySlot,
   gymsSlot,
 }: {
   programs: BuilderProgram[];
   clientId: number;
+  /** Server-local date, so "is this live" agrees with the Plan tab. */
+  today: string;
+  /** The client's other phases, for the dialog's overlap warning. */
+  others: PhaseNeighbour[];
+  weekLinkBase: string;
+  /** `?phase=` as the server read it, so a linked programme opens straight away. */
+  initialProgramId: number | null;
   columnsSlot: ReactNode;
-  newProgramSlot: ReactNode;
   emptySlot: ReactNode;
-  /** The client's gyms, at the far right of the programme row: they apply to every programme. */
+  /** The client's gyms: they apply to every programme, not to one of them. */
   gymsSlot?: ReactNode;
 }) {
-  // Open on whatever is live: that is what the client is doing right now,
-  // and the first thing a coach wants to see. Drafts are one click away.
-  const initial = programs.find((p) => p.status === "live") ?? programs.find((p) => p.status === "draft") ?? programs[0];
-  const [programId, setProgramId] = useState<number | null>(initial?.id ?? null);
-  const program = programs.find((p) => p.id === programId) ?? initial;
-  const [week, setWeek] = useState(initial?.defaultWeek ?? 1);
+  const options: PhaseOption[] = programs.map((p) => ({
+    id: p.id,
+    name: p.name || "Untitled programme",
+    status: p.state,
+    start: p.start,
+    dates: p.dates,
+    weeks: p.totalWeeks,
+    week: p.liveWeek,
+  }));
+  const { current, select } = usePhases(options, { initialId: initialProgramId });
+  const program = programs.find((p) => p.id === current?.id) ?? programs[0];
+
+  const [week, setWeek] = useState(program?.defaultWeek ?? 1);
   const [expand, setExpand] = useState({ signal: 0, open: false });
+  const [dates, setDates] = useState(false);
+  const [busy, run] = useTransition();
   // Kg or lbs for reading weights; remembered in this browser.
   const [unit, setUnit] = useState<BuilderWeightUnit>("kg");
   useEffect(() => {
@@ -93,24 +127,44 @@ export default function ProgramBuilderShell({
     } catch {}
   };
 
-  const selectProgram = (p: BuilderProgram) => {
-    setProgramId(p.id);
-    setWeek(p.defaultWeek);
+  // Switching programme lands on the week that programme opens to, with the
+  // day cards back to folded — a different programme is a different sheet.
+  const [seenId, setSeenId] = useState(program?.id ?? null);
+  if (program && program.id !== seenId) {
+    setSeenId(program.id);
+    setWeek(program.defaultWeek);
     setExpand({ signal: 0, open: false });
-  };
+  }
+
+  const post = (action: (fd: FormData) => Promise<void>, fields: Record<string, string | number>) =>
+    run(async () => {
+      const fd = new FormData();
+      Object.entries(fields).forEach(([k, v]) => fd.set(k, String(v)));
+      await action(fd);
+    });
+  const newProgram = () => post(createProgramAction, { clientId, weekLinkBase });
 
   if (!program) {
     return (
       <div className="pb-main">
-        <section className="pb-head-card">
-          <div className="pb-head-band">
-            <div className="pb-head-top">
-              <div className="pl-eyebrow">Programmes</div>
-              {gymsSlot && <div className="pb-programs-gyms">{gymsSlot}</div>}
-            </div>
-            <div className="pb-programs">{newProgramSlot}</div>
+        <section className="pb-head-card ph-card">
+          <PhaseHeader
+            kind="programme"
+            phases={[]}
+            currentId={null}
+            onSelect={select}
+            onNew={newProgram}
+            newLabel="+ New programme"
+            emptyAction={
+              <button type="button" className="ph-primary" onClick={newProgram} disabled={busy}>
+                Create the first programme
+              </button>
+            }
+          />
+          <div className="pb-head-body">
+            {gymsSlot && <div className="pb-programs-gyms">{gymsSlot}</div>}
+            {emptySlot}
           </div>
-          <div className="pb-head-body">{emptySlot}</div>
         </section>
       </div>
     );
@@ -119,44 +173,75 @@ export default function ProgramBuilderShell({
   // A week the current program doesn't have (left over from switching) falls
   // back to its default rather than rendering nothing.
   const activeWeek = program.weekContents[week] ? week : program.defaultWeek;
+  const activeCard = program.weekCards.find((w) => w.week === activeWeek);
 
   return (
     <div className="pb-main">
-      {/* One card like Nutrition's Daily targets: the tinted header holds the
-          programmes and the one being edited, the white body its weeks. The
-          columns and the session cards follow below it. */}
-      <section className="pb-head-card">
-      <div className="pb-head-band">
-        <div className="pb-head-top">
-          <div className="pl-eyebrow">Programmes</div>
-          {gymsSlot && <div className="pb-programs-gyms">{gymsSlot}</div>}
-        </div>
-        <div className="pb-programs">
-          {programs.map((p) => (
+      {/* One card, because it is one thing: the programme being edited. Which
+          programme that is, is the heading — the switcher's menu holds the
+          rest. Under the band, its weeks, and under the week its sessions. */}
+      <section className="pb-head-card ph-card pb-program-card">
+      <PhaseHeader
+        kind="programme"
+        phases={options}
+        currentId={program.id}
+        onSelect={select}
+        onNew={newProgram}
+        newLabel="+ New programme"
+        secondary={
+          program.state === "scheduled" ? (
             <button
-              key={p.id}
               type="button"
-              className={`pb-program-chip${p.id === program.id ? " active" : ""}`}
-              onClick={() => selectProgram(p)}
+              className="ph-minor"
+              onClick={() => post(cancelProgramScheduleAction, { programId: program.id })}
+              disabled={busy}
             >
-              <span className="pb-program-name">{p.name || "Untitled program"}</span>
-              <span className={`status-pill ${p.pill}`}>{p.statusLabel}</span>
-              <span className="pb-program-weeks">{p.totalWeeks}w</span>
+              Cancel
             </button>
-          ))}
-          {newProgramSlot}
-        </div>
+          ) : program.state === "draft" ? (
+            <ConfirmDeleteButton
+              action={removeProgramAction}
+              hiddenFields={{ programId: program.id, weekLinkBase }}
+              label={`Delete draft ${program.name || "programme"}`}
+            />
+          ) : undefined
+        }
+        primary={
+          program.state === "draft" ? (
+            <button type="button" className="ph-primary" onClick={() => setDates(true)} disabled={busy}>
+              Schedule it
+            </button>
+          ) : program.state === "scheduled" ? (
+            <button
+              type="button"
+              className="ph-primary"
+              onClick={() => post(deployProgramAction, { programId: program.id })}
+              disabled={busy}
+            >
+              Make it live
+            </button>
+          ) : undefined
+        }
+        editDates={
+          <button type="button" className="nw-edit-phase" onClick={() => setDates(true)}>
+            Edit dates
+          </button>
+        }
+      />
 
-        <div className="pb-editing">
-          <div className="pb-editing-left">
-            <div className="pb-eyebrow">Editing</div>
-            <div className="pb-editing-name-row">
-              {program.nameSlot}
-            </div>
-          </div>
-          <div className="pb-editing-actions">{program.actionsSlot}</div>
-        </div>
-      </div>
+      {dates &&
+        (program.phase ? (
+          <PhaseDialog
+            clientId={clientId}
+            phase={program.phase.phase}
+            program={program.phase.program}
+            today={today}
+            others={others}
+            onClose={() => setDates(false)}
+          />
+        ) : (
+          <ProgramDatesDialog programId={program.id} name={program.name} onClose={() => setDates(false)} />
+        ))}
 
       <div className="pb-head-body">
       <div className="pb-rail-row">
@@ -167,8 +252,7 @@ export default function ProgramBuilderShell({
           days: w.days,
           meta: w.meta,
           isLive: w.isLive,
-          // The only week left can't go either; delete the programme instead.
-          removable: !w.locked && program.weekCards.length > 1,
+          hasNew: w.hasNew,
         }))}
         selectedWeek={activeWeek}
         nextWeekNumber={program.totalWeeks + 1}
@@ -183,13 +267,33 @@ export default function ProgramBuilderShell({
       <ProgramNotePeek programId={program.id} note={program.clientNote ?? null} />
       </div>
       </div>
-      </section>
 
+      {/* The week picked on the rail, inside the same card as the rail. */}
+      <div className="pb-week-body">
+      <div className="pb-week-head">
+        <span className="pb-week-title">{activeCard?.label ?? `Week ${activeWeek}`}</span>
+        {activeCard && <span className="pb-week-sub">{activeCard.meta}</span>}
+        {/* Removing the week on screen, at the end of its own heading. A live
+            or past week is training history and stays; so does the only week
+            left — delete the programme instead. */}
+        {activeCard && !activeCard.locked && program.weekCards.length > 1 && (
+          <span className="pb-week-head-end">
+            <ConfirmDeleteButton
+              action={removeProgramWeekAction}
+              hiddenFields={{ clientId, programId: program.id, week: activeCard.week }}
+              label={`Remove ${activeCard.label}`}
+              description="Its exercises and anything logged on them are deleted, and the weeks after it move up one."
+            />
+          </span>
+        )}
+      </div>
       <div className="pb-toolbar">
-        <div className="pb-toolbar-left">
-          {columnsSlot}
-        </div>
+        {/* The gyms and the columns belong to the client and to the table,
+            not to the phase, so they sit with the table rather than in the
+            band above it. */}
+        {gymsSlot && <div className="pb-programs-gyms">{gymsSlot}</div>}
         <div className="pb-toolbar-right">
+          {columnsSlot}
           <button
             type="button"
             className="pb-unit"
@@ -216,6 +320,8 @@ export default function ProgramBuilderShell({
           <div className="pb-days">{program.weekContents[activeWeek]}</div>
         </ExpandProvider>
       </WeightUnitProvider>
+      </div>
+      </section>
     </div>
   );
 }

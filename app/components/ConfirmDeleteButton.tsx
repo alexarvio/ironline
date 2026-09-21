@@ -78,7 +78,7 @@ export default function ConfirmDeleteButton({
   );
 }
 
-function ConfirmDialog({
+export function ConfirmDialog({
   action,
   hiddenFields,
   label,

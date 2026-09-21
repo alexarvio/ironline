@@ -5,6 +5,7 @@ import { deployNutritionPhaseAction, deployProgramAction, updateClientPhaseActio
 import type { PhaseTrack } from "../lib/db";
 import type { PlanPhaseRow, PlanProgramOption } from "../lib/queries";
 import PhaseDialogButton, { isoWeek, PhaseDialog } from "./PhaseDialogButton";
+import { phaseChrome } from "./phaseChrome";
 
 // The phases card: a week grid with one row per track and the phases as bars
 // laid into the same grid. Bar edges drag to change a phase's length, the
@@ -43,12 +44,15 @@ export default function PlanPhasesCard({
   clientId,
   today,
   thisWeek,
+  intoWeek,
   phases,
   programs,
 }: {
   clientId: number;
   today: string;
   thisWeek: string;
+  /** How far through this week it is, 0 (Monday 00:00) to 1. From the server, so both renders agree. */
+  intoWeek: number;
   phases: PlanPhaseRow[];
   programs: PlanProgramOption[];
 }) {
@@ -69,8 +73,13 @@ export default function PlanPhasesCard({
 
   // The window: last week for context, then the current week in the second
   // column, so most of the grid is what is coming rather than what is done.
-  const first = addWeeks(thisWeek, -1);
-  const count = win;
+  // "Now" is one fixed line, a week and a half in from the left, and the
+  // weeks slide under it as the week goes by: Monday morning the current
+  // week's left edge is on the line, Thursday the line is past its middle.
+  // So the grid is two weeks wider than the window and shifted by the part
+  // of the week that has gone; the clip hides what hangs over either side.
+  const first = addWeeks(thisWeek, -2);
+  const count = win + 2;
   const weeks = Array.from({ length: count }, (_, i) => addWeeks(first, i));
   const nowIdx = weeksBetween(first, thisWeek);
   const months: { label: string; start: number; span: number }[] = [];
@@ -80,7 +89,12 @@ export default function PlanPhasesCard({
     if (prev && prev.label === label) prev.span += 1;
     else months.push({ label, start: i, span: 1 });
   });
-  const cols = { gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))` };
+  const cols = {
+    gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))`,
+    width: `${(count / win) * 100}%`,
+    transform: `translateX(${-((0.5 + intoWeek) / count) * 100}%)`,
+  };
+  const nowLeft = `calc(108px + (100% - 108px) * ${1.5 / win})`;
 
   // Edge drag: the pointer's column decides the new start or end week.
   const weekAt = (clientX: number) => {
@@ -202,6 +216,7 @@ export default function PlanPhasesCard({
             defaultEnd={addWeeks(thisWeek, 3)}
             others={others}
             programs={programs}
+            chooseTrack
           />
         </div>
       </div>
@@ -210,6 +225,7 @@ export default function PlanPhasesCard({
         <div className="pl-timeline" style={{ minWidth: minWidth(win) }}>
           <div className="pl-tl-row">
             <span />
+            <div className="pl-tl-clip">
             <div className="pl-tl-grid" style={cols}>
               {months.map((m) => (
                 <span key={m.start} className="pl-month" style={{ gridColumn: `${m.start + 1} / span ${m.span}` }}>
@@ -217,10 +233,15 @@ export default function PlanPhasesCard({
                 </span>
               ))}
             </div>
+            </div>
           </div>
+
+          <div className="pl-tl-body">
+          <span className="pl-now-line" style={{ left: nowLeft }} title="Now" />
 
           <div className="pl-tl-row pl-tl-weeks">
             <span />
+            <div className="pl-tl-clip">
             <div className="pl-tl-grid" style={cols}>
               {weeks.map((w, i) => (
                 <span key={w} className={`pl-week${i === nowIdx ? " now" : ""}`}>
@@ -228,6 +249,7 @@ export default function PlanPhasesCard({
                   <small>{shortDate(w)}</small>
                 </span>
               ))}
+            </div>
             </div>
           </div>
 
@@ -251,6 +273,7 @@ export default function PlanPhasesCard({
                 <div className="pl-tl-label">
                   <span className={`pl-track-tag ${t.id}`}>{t.label}</span>
                 </div>
+                <div className="pl-tl-clip">
                 <div
                   className="pl-tl-grid pl-tl-lanes"
                   style={{ ...cols, gridTemplateRows: `repeat(${laneCount}, 38px)` }}
@@ -262,7 +285,7 @@ export default function PlanPhasesCard({
                   {weeks.map((w, i) => (
                     <span
                       key={w}
-                      className={`pl-cell${i === nowIdx ? " now" : ""}`}
+                      className="pl-cell"
                       style={{ gridColumn: i + 1, gridRow: `1 / span ${laneCount}` }}
                     />
                   ))}
@@ -286,13 +309,18 @@ export default function PlanPhasesCard({
                     const draft = p.program?.status === "draft" || p.draft;
                     // The shade covers the weeks already behind us that are inside the
                     // window, so a phase clipped at the left edge shades the right share.
-                    const elapsed = draft ? 0 : Math.max(0, Math.min(shown, nowIdx - sp.a));
+                    const elapsed = draft ? 0 : Math.max(0, Math.min(shown, nowIdx + intoWeek - sp.a));
                     const trained = !!p.program && p.program.loggedWeeks.length > 0;
+                    // The state picks the colour (phaseChrome): live in its
+                    // track's, every scheduled phase the same blue, a draft
+                    // peach and dashed — as in the phase dialog.
+                    const chrome = phaseChrome(t.id, draft ? "draft" : isRunning ? "live" : isFuture ? "scheduled" : "past");
                     return (
                       <div
                         key={p.id}
                         className={`pl-bar ${t.id}${draft ? " draft" : ""}${sp.clippedStart ? " clip-start" : ""}${sp.clippedEnd ? " clip-end" : ""}${drag?.id === p.id ? " dragging" : ""}`}
-                        style={{ gridColumn: `${sp.a + 1} / span ${shown}`, gridRow: (laneOf.get(p.id) ?? 0) + 1 }}
+                        // A bar that starts under the clipped left edge keeps its name in view.
+                        style={{ gridColumn: `${sp.a + 1} / span ${shown}`, gridRow: (laneOf.get(p.id) ?? 0) + 1, paddingLeft: `calc(14px + ${(Math.max(0, 0.5 + intoWeek - sp.a) / shown) * 100}%)`, background: chrome.band, color: chrome.edge, borderColor: chrome.line, borderStyle: chrome.dashed ? "dashed" : "solid" }}
                         onPointerDown={(e) => {
                           if ((e.target as HTMLElement).closest(".pl-bar-edge, .pl-bar-pill")) return;
                           // A programme the client already trained in keeps its start.
@@ -341,9 +369,11 @@ export default function PlanPhasesCard({
                     );
                   })}
                 </div>
+                </div>
               </div>
             );
           })}
+          </div>
         </div>
       </div>
 
@@ -353,6 +383,9 @@ export default function PlanPhasesCard({
         </span>
         <span>
           <i className="pl-legend-swatch planned" /> planned
+        </span>
+        <span>
+          <i className="pl-legend-swatch scheduled" /> scheduled
         </span>
         <span>
           <i className="pl-legend-swatch draft" /> draft not deployed

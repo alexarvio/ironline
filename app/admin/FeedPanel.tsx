@@ -1,13 +1,20 @@
 import Link from "next/link";
 import { feedClock, getActivityFeed, listLoginLocks, localDateStr, type FeedCategory, type FeedEvent } from "../lib/queries";
+import { pageWindow } from "../lib/pager";
 
+// Four kinds of thing happen to a client, and the feed is read one kind at a
+// time. There is no "All": a single stream of everything was a list nobody
+// finished, and the day headings made it look shorter than it was.
+//
+// Every source category has a home here, so nothing becomes unreachable — a
+// note the client wrote on their programme is training, and an invoice is
+// what a coach calls billing.
 const FILTERS = [
-  { id: "all", label: "All" },
-  { id: "training", label: "Training" },
-  { id: "nutrition", label: "Nutrition" },
-  { id: "measurements", label: "Measurements" },
-  { id: "notes", label: "Notes" },
-] as const;
+  { id: "training", label: "Training", holds: ["training", "notes"] },
+  { id: "nutrition", label: "Nutrition", holds: ["nutrition"] },
+  { id: "measurements", label: "Measurements", holds: ["measurements"] },
+  { id: "invoices", label: "Invoices", holds: ["billing"] },
+] as const satisfies readonly { id: string; label: string; holds: readonly FeedCategory[] }[];
 type FilterId = (typeof FILTERS)[number]["id"];
 
 const CATEGORY_LABEL: Record<FeedCategory, string> = {
@@ -15,19 +22,19 @@ const CATEGORY_LABEL: Record<FeedCategory, string> = {
   nutrition: "Nutrition",
   measurements: "Measurements",
   notes: "Note",
-  billing: "Billing",
+  billing: "Invoice",
 };
 
-const PAGE = 50;
+// One screenful. Fifteen rows across two or three day headings is what fits
+// without scrolling past the point of reading.
+const PAGE = 15;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // The page renders per request, so reading the clock here is the point.
 const now = () => Date.now();
 
-// Notes is every row with words the client wrote for the coach: a check-in,
-// a calorie day, a programme. Their private exercise notes are not in the feed.
 const matches = (e: FeedEvent, filter: FilterId) =>
-  filter === "all" || (filter === "notes" ? e.category === "notes" || !!e.note : e.category === filter);
+  (FILTERS.find((f) => f.id === filter)!.holds as readonly FeedCategory[]).includes(e.category);
 
 function dayHeading(day: string, today: string, yesterday: string) {
   if (day === today) return "Today";
@@ -36,34 +43,39 @@ function dayHeading(day: string, today: string, yesterday: string) {
 }
 
 // Everything clients log, across all clients, newest first and grouped by
-// day. The filters narrow it to one kind; Notes gathers the client's words
-// from anywhere so none sit unread.
+// day — one category at a time, fifteen rows to a page.
 export default function FeedPanel({
   coachId,
   coachEmail,
   owner = false,
   category,
-  show,
+  page: pageParam,
 }: {
   coachId: number;
   coachEmail: string;
   /** The owner sees every sign-in lock, not only their own clients'. */
   owner?: boolean;
   category?: string;
-  show?: string;
+  page?: string;
 }) {
   const all = getActivityFeed(coachId);
   const locks = listLoginLocks({ id: coachId, email: coachEmail }, owner);
-  const filter: FilterId = FILTERS.some((f) => f.id === category) ? (category as FilterId) : "all";
+  const filter: FilterId = FILTERS.some((f) => f.id === category) ? (category as FilterId) : FILTERS[0].id;
   const events = all.filter((e) => matches(e, filter));
-  const limit = Math.max(PAGE, Math.floor(Number(show)) || PAGE);
-  const visible = events.slice(0, limit);
 
+  const pages = Math.max(1, Math.ceil(events.length / PAGE));
+  // A page number from an old link, or one typed by hand, lands on the
+  // nearest real page rather than on nothing.
+  const page = Math.min(Math.max(1, Math.floor(Number(pageParam)) || 1), pages);
+  const from = (page - 1) * PAGE;
+  const visible = events.slice(from, from + PAGE);
+
+  // How much has happened in each kind this week, so the categories say where
+  // to look rather than making the coach try all four.
   const weekAgo = now() - 7 * DAY_MS;
-  const recentNotes = all.filter((e) => matches(e, "notes") && e.at >= weekAgo).length;
+  const recent = (f: FilterId) => all.filter((e) => matches(e, f) && e.at >= weekAgo).length;
 
-  const href = (f: FilterId, n?: number) =>
-    `/admin?view=feed${f === "all" ? "" : `&cat=${f}`}${n ? `&show=${n}` : ""}`;
+  const href = (f: FilterId, n = 1) => `/admin?view=feed&cat=${f}${n > 1 ? `&page=${n}` : ""}`;
 
   const today = localDateStr();
   const yesterday = localDateStr(new Date(now() - DAY_MS));
@@ -80,21 +92,24 @@ export default function FeedPanel({
       <div className="fd-head">
         <h1 className="fd-title">Feed</h1>
         <nav className="fd-filters" aria-label="Filter the feed">
-          {FILTERS.map((f) => (
-            <Link
-              key={f.id}
-              href={href(f.id)}
-              className={`fd-filter${filter === f.id ? " active" : ""}`}
-              aria-current={filter === f.id ? "page" : undefined}
-            >
-              {f.label}
-              {f.id === "notes" && recentNotes > 0 && (
-                <span className="fd-filter-count" title="Notes in the last 7 days">
-                  {recentNotes}
-                </span>
-              )}
-            </Link>
-          ))}
+          {FILTERS.map((f) => {
+            const n = recent(f.id);
+            return (
+              <Link
+                key={f.id}
+                href={href(f.id)}
+                className={`fd-filter${filter === f.id ? " active" : ""}`}
+                aria-current={filter === f.id ? "page" : undefined}
+              >
+                {f.label}
+                {n > 0 && (
+                  <span className="fd-filter-count" title={`${f.label} in the last 7 days`}>
+                    {n}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
         </nav>
       </div>
 
@@ -125,9 +140,7 @@ export default function FeedPanel({
       )}
 
       {visible.length === 0 ? (
-        <p className="fd-empty">
-          {filter === "all" ? "Nothing logged yet." : `No ${FILTERS.find((f) => f.id === filter)!.label.toLowerCase()} yet.`}
-        </p>
+        <p className="fd-empty">Nothing under {FILTERS.find((f) => f.id === filter)!.label.toLowerCase()} yet.</p>
       ) : (
         days.map(({ day, events: rows }) => (
           <section key={day} className="fd-day">
@@ -158,15 +171,46 @@ export default function FeedPanel({
         ))
       )}
 
-      {events.length > visible.length && (
-        <div className="fd-more-row">
-          <Link href={href(filter, limit + PAGE)} className="fd-more" scroll={false}>
-            Show more
-          </Link>
-          <span className="fd-more-count">
-            {visible.length} of {events.length}
+      {pages > 1 && (
+        <nav className="fd-pager pg" aria-label="Feed pages">
+          {page > 1 ? (
+            <Link href={href(filter, page - 1)} className="pg-step">
+              ‹ Newer
+            </Link>
+          ) : (
+            <span className="pg-step off">‹ Newer</span>
+          )}
+
+          <span className="pg-nums">
+            {pageWindow(page, pages).map((n, i) =>
+              n === "gap" ? (
+                <span key={`gap${i}`} className="pg-gap" aria-hidden="true">
+                  …
+                </span>
+              ) : n === page ? (
+                <span key={n} className="pg-num on" aria-current="page">
+                  {n}
+                </span>
+              ) : (
+                <Link key={n} href={href(filter, n)} className="pg-num">
+                  {n}
+                </Link>
+              )
+            )}
           </span>
-        </div>
+
+          {page < pages ? (
+            <Link href={href(filter, page + 1)} className="pg-step">
+              Older ›
+            </Link>
+          ) : (
+            <span className="pg-step off">Older ›</span>
+          )}
+
+          <span className="pg-count">
+            {from + 1}–{from + visible.length} of {events.length}
+          </span>
+        </nav>
       )}
     </div>
   );

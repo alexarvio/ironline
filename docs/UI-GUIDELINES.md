@@ -16,9 +16,18 @@ rest catches up screen by screen.** §10 lists what each screen still needs.
 
 | Role | Face | Where |
 |---|---|---|
-| Everything | **Archivo** 400–800 | body, tables, buttons, pills, inputs, labels, figures |
+| Everything | **Archivo** 400–800 | body, tables, buttons, pills, inputs, labels, **and every figure** |
 | Wordmark | **Kirana** (`--font-brand`, local) | "IRONLINE" in the client top bar, uppercase, 17–18px |
-| Display figures | **Newsreader** 500–600 | a big figure or a dialog title, never in a table, button, pill or input |
+| Display lines | **Newsreader** 500–600 | a dialog title, and the client app's display lines (the "Hello, *Name*." greeting) |
+
+**Numbers are Archivo, 700, tabular** (changed 20 Sep 2026). Newsreader was the face for a big
+figure; beside Archivo labels in a dense coach table it read as a different app, and the admin is
+nothing but figures beside labels.
+
+This is swept **at the token**: `body:has(.ad-shell)` resolves `--font-serif` to the body face, so no
+figure in the admin can come out in Newsreader, including on screens nobody has looked at yet. A
+dialog title opts the serif back in by name. Do not set a face rule by rule — the earlier list of
+selectors is exactly why the same note kept coming back. See §12.
 
 - Manrope is retired. `--font-sans` should resolve to Archivo everywhere; the `body:has(.ad-shell)`
   override and the per-tab overrides in `.nd`, `.tr` and `.ci-screen` collapse into one root rule
@@ -126,8 +135,21 @@ Shadows, one per job: client card `0 12px 30px -20px rgba(8,31,92,.4)`, popover
 
 ## 6 · Controls
 
-- **Primary button**: Navy fill, white text, one per card. Client: 48px tall, radius 12, 14 / 700,
-  full width in a dock. Coach: 34px, radius 8, 12 / 800. The label says what happens ("Deploy now").
+**The one question to ask: does this button COMMIT something?**
+
+| It does | It does not |
+|---|---|
+| Add, Save, Apply, Deploy, Schedule, Make it live | Add a row, open a form, switch a view, cancel |
+| Navy `#1e3a6e` fill, white letters, radius 8 | Never filled |
+
+- **Primary (it commits)**: Navy fill, white text, radius 8, one per card, on the right of its
+  header. Client: 48px tall, radius 12, 14 / 700, full width in a dock. Coach: 30–34px, 12 / 800.
+  The label says what happens ("Deploy now"). Hover `#274a8a`, disabled `#8b9dbb`.
+  Defined once for every class that plays the role — see "The executing button" in `globals.css`.
+  Adding a primary to a new screen means adding its selector there, not inventing a fill.
+- **Primary on a navy surface inverts**: white fill, navy letters (the pending bar’s Apply).
+- **Adding a row** ("+ Add session", "+ Add exercise", "+ New phase"): dashed or bare, never
+  filled, **navy letters**. It opens something; it does not write anything.
 - **Secondary**: white, 1px Border, Navy text, same geometry as the primary beside it.
 - **Text button**: Accent, no fill, no border.
 - **Destructive**: outlined `#a32d2d`; filled only as the confirm inside a dialog.
@@ -159,10 +181,15 @@ when they are next reworked.
 ## 8 · Coach page model
 
 - Card: white, 1px Border, radius 12, 18px apart.
-- Header band: the accent tint, padding 14px 22px, centred. Left: a Label eyebrow, optionally one
-  heading line. Right: a pill switch and at most one button.
-- Table in a card: header strip `#fafbfc` with Label text, rows 10px 22px with a Hairline under each,
-  footer strip with Small Faint text.
+- **Two levels of heading, and only two:**
+  - A **card’s own header** is the tinted band — accent `#e6ecf3`, navy `#1e3a6e` letters, padding
+    14px 22px. Left: a Label eyebrow, optionally one heading line. Right: at most one button.
+  - A **section inside that card** is **white with navy letters**. Same voice, no fill, so the card
+    header still sits above its sections. Four tinted bands down one card read as four cards and
+    the header stops being a header; grey-on-grey read as a caption nobody had finished.
+- Table in a card: rows 10px 22px with a Hairline under each, footer strip with Small Faint text.
+- **A figure is black** unless it needs the coach to act — overdue, off target, missed. A colour on
+  a number always means “this one”. A zero or an in-progress count is not a problem.
 - Left rail 240px, client panel 296px, both `#edf0f4`.
 
 ## 9 · Words
@@ -196,6 +223,27 @@ Settings that the Kg | Lbs switch ignores.
 
 iOS Safari 15.6 and up (a live tester is on 16.1). `:has()` and container queries are fine; check
 caniuse before anything newer.
+
+## 12 · How these are kept
+
+The same three notes kept coming back from whoever was looking at the screen — a serif number, a
+card header that is not on the tint, a menu clipped by a scrolling column. Each was fixed where it
+was spotted rather than everywhere it existed, so the next screen nobody had opened produced the
+same note again. **Fix the class, not the instance**, and prefer a mechanism over a list:
+
+| Drift | The mechanism |
+|---|---|
+| Figures in the wrong face | `body:has(.ad-shell)` resolves `--font-serif` to the body face. No admin figure can come out in Newsreader; dialog titles opt back in by name. |
+| Card headers | One `.pl-card-head` / `.ch-head.tint` / `.ph-band`: accent tint, navy letters, control on the right. |
+| Menus clipped or off screen | `placePopover()` in `app/components/popover.ts`. Fixed, measured, flips, clamps. `.ad-main` scrolls, so an absolute menu is clipped by it. |
+
+**Look at it, do not read it**: `/admin?view=style` (Style, in the rail) renders every one of these
+from the real classes — buttons, both heading levels, the phase band in each state, figures, the
+swatches, the pager. It is not a mockup: it imports the same components the product does, so it
+cannot drift from what ships. If it looks wrong there, it is wrong everywhere.
+
+`npm run audit:ui` greps for all three plus the retired colours in §3. It is a heuristic, not a
+linter — a hit is worth a look. Run it before calling a sweep finished.
 
 ---
 

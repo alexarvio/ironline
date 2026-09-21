@@ -8,9 +8,13 @@ import {
   coachForClient,
   getSessionUser,
   isOwner,
+  findUserByEmail,
+  createUser,
   requireClientAccess,
   requireCoach,
 } from "./auth";
+import { sendInviteEmail } from "./mail";
+import { headers } from "next/headers";
 import {
   clientIdForInvoice,
   clientIdForMeasurementField,
@@ -52,6 +56,7 @@ import {
   DEFAULT_MEETING_DURATION,
   addMeetingNote,
   addMetricDefinition,
+  copyPhaseMetrics,
   addMetricTemplateCategory,
   addMetricTemplateItem,
   addPhotoSlot,
@@ -156,6 +161,7 @@ import {
   setExerciseNoteKind,
   setAssignmentDemoUrl,
   setBuiltinColumnVisible,
+  setCardioColumnVisible,
   listPrograms,
   getProgramCurrentWeekIndex,
   addSession,
@@ -168,12 +174,14 @@ import {
   type SupplementChanges,
   updateSupplementRow,
   removeSupplementRow,
-  addMetricsFromLibrary,
+  addMetricsFromLibraryPhased,
   getNutritionPlan,
   addClientPhase,
   updateClientPhase,
   removeClientPhase,
   setNutritionPhaseDraft,
+  schedulePhase,
+  unschedulePhase,
   getClientIdForPhase,
   PHASE_TRACKS,
   setCalorieLog,
@@ -184,6 +192,10 @@ import {
   getClientIdForGym,
   pickGymForDay,
   setSessionSkipReason,
+  setHomeGym,
+  markClientEventsSeen,
+  setCoachNote,
+  setMetricDirection,
   setWarmupSets,
   setClientProgramNote,
   searchFoods,
@@ -215,6 +227,7 @@ import {
   type FoodOption,
   getClientIdForProgram,
   reorderAssignments,
+  reorderSessions,
   copyProgramDay,
   copyProgramDayToLaterWeeks,
   copyProgramDayToNewSession,
@@ -577,20 +590,92 @@ export async function updateSetAction(formData: FormData) {
   revalidatePath("/admin");
 }
 
-export async function createClientAction(formData: FormData) {
+// ---- New client: the member record and their login, made together --------
+// The New client dialog's two steps post here once, on its last button.
+// Nothing is written before that, so Cancel leaves no trace.
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const GENDERS = new Set(["Male", "Female", "Other"]);
+
+export type NewClientPayload = {
+  firstName: string;
+  lastName: string;
+  birthdate: string;
+  gender: string;
+  heightCm: string;
+  startingWeightKg: string;
+  email: string;
+  phoneCode: string;
+  phone: string;
+  address: string;
+  password: string;
+  invite: boolean;
+};
+
+/** Whether an address already signs someone in: checked as the coach leaves the field, not at save. */
+export async function checkLoginEmailAction(email: string): Promise<{ taken: boolean }> {
+  await requireCoach();
+  const e = String(email ?? "").trim().toLowerCase();
+  if (!EMAIL_RE.test(e)) return { taken: false };
+  return { taken: !!findUserByEmail(e) };
+}
+
+export async function createClientWithLoginAction(
+  p: NewClientPayload
+): Promise<{ ok: true; clientId: number; invited: boolean; inviteFailed: boolean } | { ok: false; error: string }> {
   const coach = await requireCoach();
-  // The sidebar button sends no name: the card that opens next is where the
-  // coach types it, alongside the rest of the member info. Until then the
-  // client is listed under a placeholder so they are findable in the rail.
-  const name = String(formData.get("name") || "").trim() || "New client";
-  const client = createClient(name, coach.id);
+  const s = (v: unknown) => String(v ?? "").trim();
+  const num = (v: unknown) => {
+    const n = Number(s(v).replace(",", "."));
+    return s(v) && Number.isFinite(n) && n > 0 ? n : null;
+  };
+  const first = s(p?.firstName);
+  const last = s(p?.lastName);
+  const email = s(p?.email).toLowerCase();
+  const password = String(p?.password ?? "");
+  if (!first || !last) return { ok: false, error: "A first and a last name are needed." };
+  if (!EMAIL_RE.test(email)) return { ok: false, error: "That email doesn't look right." };
+  if (password.length < 8) return { ok: false, error: "The password needs at least 8 characters." };
+  if (findUserByEmail(email)) return { ok: false, error: "That email already has an account." };
+
+  // The record, then the login. If the login cannot be made, the record goes
+  // too: a client with no way in, that the coach did not ask for, is worse
+  // than trying again.
+  const client = createClient(`${first} ${last}`, coach.id);
+  try {
+    createUser(email, password, "client", client.id, true);
+  } catch (error) {
+    removeClient(client.id);
+    return { ok: false, error: error instanceof Error ? error.message : "The login could not be made." };
+  }
+  const birthdate = s(p.birthdate);
+  const phoneCode = s(p.phoneCode);
+  patchClientProfile(client.id, {
+    birthdate: /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(birthdate) ? birthdate : null,
+    gender: GENDERS.has(s(p.gender)) ? s(p.gender) : null,
+    height_cm: num(p.heightCm),
+    starting_weight_kg: num(p.startingWeightKg),
+    email,
+    // The dial code and the national number are kept apart, and joined only
+    // for show, so a country is never guessed back out of a typed string.
+    phone_code: /^\+[0-9]{1,4}$/.test(phoneCode) ? phoneCode : null,
+    phone: s(p.phone) || null,
+    address: s(p.address) || null,
+  });
   revalidatePath("/admin");
-  // Land on the new client with their card already open for filling in.
-  // Onboarding is not a separate wizard: the fields a coach needs at the
-  // start — birthdate, email, phone, address, start date, goal — are exactly
-  // the fields on the client card, and a second form for the same data would
-  // be a second place for it to go stale.
-  redirect(`/admin?client=${client.id}&onboard=1`);
+
+  if (!p.invite) return { ok: true, clientId: client.id, invited: false, inviteFailed: false };
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
+  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  const invited = await sendInviteEmail({
+    to: email,
+    firstName: first,
+    coachName: getCoachProfile(coach.id)?.display_name || "Your coach",
+    password,
+    signInUrl: `${proto}://${host}/login`,
+  });
+  return { ok: true, clientId: client.id, invited, inviteFailed: !invited };
 }
 
 export async function addInvoiceAction(formData: FormData) {
@@ -713,7 +798,8 @@ export async function addMetricsFromLibraryAction(formData: FormData) {
     return;
   }
   if (!Array.isArray(picks) || picks.length === 0) return;
-  addMetricsFromLibrary(clientId, picks);
+  const rawPhase = String(formData.get("phaseId") ?? "");
+  addMetricsFromLibraryPhased(clientId, picks, /^\d+$/.test(rawPhase) ? Number(rawPhase) : null);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -726,7 +812,17 @@ export async function addMetricDefinitionAction(formData: FormData) {
   const unit = String(formData.get("unit") || "").trim();
   const frequency = String(formData.get("frequency") || "daily") as "daily" | "weekly" | "monthly";
   if (!name) return;
-  addMetricDefinition(clientId, category, name, unit, frequency);
+  // Set up inside a phase: that phase is what asks for it.
+  const rawPhase = String(formData.get("phaseId") ?? "");
+  addMetricDefinition(clientId, category, name, unit, frequency, /^\d+$/.test(rawPhase) ? Number(rawPhase) : null);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+/** Start a phase from what another one asks for, rather than from nothing. */
+export async function copyPhaseMetricsAction(clientId: number, fromPhaseId: number | null, toPhaseId: number, fromIsLive: boolean) {
+  if (!(await coachForClient(Number(clientId)))) return;
+  copyPhaseMetrics(fromPhaseId == null ? null : Number(fromPhaseId), Number(toPhaseId), Number(clientId), !!fromIsLive);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1199,6 +1295,7 @@ export async function saveClientCardAction(formData: FormData) {
     gender: strOrNull("gender"),
     height_cm: numOrNull("height_cm"),
     email: strOrNull("email"),
+    phone_code: /^\+[0-9]{1,4}$/.test(str("phone_code")) ? str("phone_code") : null,
     phone: strOrNull("phone"),
     address: strOrNull("address"),
     coaching_start_date: strOrNull("coaching_start_date"),
@@ -1734,6 +1831,14 @@ export async function uploadDemoVideoAction(formData: FormData): Promise<string 
   return null;
 }
 
+export async function setCardioColumnVisibleAction(formData: FormData) {
+  const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
+  setCardioColumnVisible(clientId, String(formData.get("key") || ""), formData.get("visible") === "true");
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
 export async function setBuiltinColumnVisibleAction(formData: FormData) {
   const clientId = Number(formData.get("clientId"));
   if (!(await coachForClient(clientId))) return;
@@ -1873,6 +1978,22 @@ export async function addClientPhaseAction(formData: FormData) {
   revalidatePath("/client");
 }
 
+/** The draft is named, dated and sent: the last step of the same flow on every track. */
+export async function schedulePhaseAction(formData: FormData) {
+  const id = Number(formData.get("id"));
+  if (!id || !(await coachForClient(getClientIdForPhase(id)))) return;
+  schedulePhase(id, String(formData.get("name") ?? ""), String(formData.get("start") ?? ""), String(formData.get("end") ?? ""));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function unschedulePhaseAction(id: number) {
+  if (!(await coachForClient(getClientIdForPhase(Number(id))))) return;
+  unschedulePhase(Number(id));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
 export async function updateClientPhaseAction(formData: FormData) {
   const id = Number(formData.get("id"));
   const fields = readPhaseForm(formData);
@@ -1929,6 +2050,13 @@ export async function logCaloriesAction(formData: FormData) {
 // ---- Reorder / copy within a day --------------------------------------------
 
 // Called directly from the drag handler with the new order, not via a form.
+export async function reorderSessionsAction(clientId: number, week: number, orderedIds: number[]) {
+  if (!(await coachForClient(Number(clientId)))) return;
+  reorderSessions(Number(clientId), Number(week), (orderedIds ?? []).map(Number).filter((n) => Number.isInteger(n)));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
 export async function reorderAssignmentsAction(programDayId: number, orderedIds: number[]) {
   if (!Number.isInteger(programDayId) || !Array.isArray(orderedIds)) return;
   if (!(await coachForClient(clientIdForProgramDay(programDayId)))) return;
@@ -2039,6 +2167,7 @@ export async function applyDayChangesAction(
         fields: payload.cardio?.fields ?? {},
         removed: (payload.cardio?.removed ?? []).filter((id) => Number.isInteger(id)),
         added: payload.cardio?.added ?? [],
+        order: Array.isArray(payload.cardio?.order) ? payload.cardio.order.filter((id) => Number.isInteger(id)) : null,
       },
       removed: (payload.removed ?? []).filter((id) => Number.isInteger(id)),
       added: (payload.added ?? []).filter((a) => Number.isInteger(a.exerciseId)),
@@ -2065,6 +2194,14 @@ export async function addGymAction(clientId: number, name: string): Promise<{ id
   return gym ? { id: gym.id, name: gym.name } : null;
 }
 
+/** The gym the client trains at most: its weights are the plain targets. */
+export async function setHomeGymAction(gymId: number) {
+  if (!(await coachForClient(getClientIdForGym(Number(gymId))))) return;
+  setHomeGym(Number(gymId));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
 export async function removeGymAction(gymId: number) {
   if (!(await coachForClient(getClientIdForGym(Number(gymId))))) return;
   removeClientGym(Number(gymId));
@@ -2077,6 +2214,26 @@ export async function pickGymAction(programDayId: number, gymId: number) {
   if (owner == null || getClientIdForGym(Number(gymId)) !== owner || !(await canAccessClient(owner))) return;
   pickGymForDay(Number(programDayId), Number(gymId));
   revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+/** Which way a metric is meant to move, for the Change row's colour. */
+export async function setMetricDirectionAction(id: number, direction: "up" | "down" | "none") {
+  if (!(await coachForClient(clientIdForMetricDefinition(Number(id))))) return;
+  setMetricDirection(Number(id), direction);
+  revalidatePath("/admin");
+}
+
+export async function saveCoachNoteAction(clientId: number, text: string) {
+  if (!(await coachForClient(Number(clientId)))) return;
+  setCoachNote(Number(clientId), String(text ?? ""));
+  revalidatePath("/admin");
+}
+
+// The coach has looked at something on a client's Home: it stops being new.
+export async function markSeenAction(clientId: number, which: { all: true } | { dayId: number } | { ids: string[] } | { tab: string }) {
+  if (!(await coachForClient(Number(clientId)))) return;
+  markClientEventsSeen(Number(clientId), which);
   revalidatePath("/admin");
 }
 

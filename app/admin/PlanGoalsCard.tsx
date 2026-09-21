@@ -154,10 +154,13 @@ export default function PlanGoalsCard({
                         />
                       )}
                     </span>
-                    <span className="pl-goal-main">
+                    {/* The goal itself opens the editor. An Edit link beside
+                        a bin, on every row, was a column of words for
+                        something the row already is. */}
+                    <button type="button" className="pl-goal-main" onClick={() => setEditing(g.id)} title="Edit this goal">
                       <span className="pl-goal-name">{g.text}</span>
                       <span className="pl-goal-rule">{textOnly ? "Text only · closed by hand" : g.rule}</span>
-                    </span>
+                    </button>
                     <span>
                       <span className="pl-kind">{KIND_LABEL[g.kind]}</span>
                     </span>
@@ -179,15 +182,10 @@ export default function PlanGoalsCard({
                     </span>
                     <span className="pl-by">{g.by ?? "—"}</span>
                     <span className="pl-goal-actions">
-                      <button type="button" className="pl-text-btn" onClick={() => setEditing(g.id)}>
-                        Edit
-                      </button>
                       <ConfirmDeleteButton
                         action={removeClientGoalAction}
                         hiddenFields={{ id: g.id }}
                         label={`Remove goal: ${g.text}`}
-                        text="Remove"
-                        textClassName="pl-text-btn danger"
                       />
                     </span>
                   </div>

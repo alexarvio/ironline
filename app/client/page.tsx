@@ -379,7 +379,10 @@ function TrainingTab({ CLIENT_ID, week, showMyNotes }: { CLIENT_ID: number; week
       assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets) && listCardioForDay(day.id).every((c) => isCardioDone(c.id))
   ).length;
   const pct = Math.round((Math.min(stats.daysTrained, dayTarget) / dayTarget) * 100);
-  const sessionsLeft = dayTarget - stats.daysTrained;
+  // A session skipped with a reason is settled: it is not still "left" to
+  // do. It does not count as trained either, so the ring stays honest.
+  const skipped = trainingDays.filter(({ day, assignments }) => !!day.skip_reason && !assignments.some((a) => getLogsForAssignment(a.id).length > 0)).length;
+  const sessionsLeft = dayTarget - stats.daysTrained - skipped;
   const ringR = 43;
   const ringC = 2 * Math.PI * ringR;
 
@@ -1159,7 +1162,8 @@ export default async function ClientPage({
     const trainingDays = getWeekDays(CLIENT_ID, w).filter((d) => d.assignments.length > 0);
     return (
       trainingDays.length > 0 &&
-      trainingDays.every((d) => d.assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets))
+      // A day skipped with a reason is settled, the same as a finished one.
+      trainingDays.every((d) => !!d.day.skip_reason || d.assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets))
     );
   });
 

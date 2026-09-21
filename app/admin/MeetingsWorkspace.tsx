@@ -19,6 +19,7 @@ import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
 import DragList from "../components/DragList";
 import type { MeetingStatus } from "./MeetingStatusSelect";
 import { GoalEditor } from "./GoalsPanel";
+import { ChevronDownIcon } from "../components/icons";
 
 // The Meetings tab: the next call with everything to prepare it, the past
 // calls with their notes, a month at a glance, and the form to book the
@@ -558,7 +559,7 @@ function PastMeetings({ past, today }: { past: WsMeeting[]; today: string }) {
                 {agoLabel(today, m.date)} · {m.goals.length} goal{m.goals.length === 1 ? "" : "s"} set
               </span>
               {m.status !== "scheduled" && <span className={`mw-pill ${m.status}`}>{STATUS_LABEL[m.status]}</span>}
-              <span className={`mw-chev${open ? " up" : ""}`}>⌄</span>
+              <span className={`mw-chev${open ? " up" : ""}`}><ChevronDownIcon /></span>
             </button>
             {open && (
               <div className="mw-past-body">

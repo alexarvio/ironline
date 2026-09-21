@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { addMetricDefinitionAction, addMetricsFromLibraryAction } from "../lib/actions";
+import { ChevronDownIcon } from "../components/icons";
 
 export type LibraryPackView = {
   id: string;
@@ -19,10 +20,13 @@ export type LibraryPackView = {
 // The dropdown floats, so nothing below it reflows while they're picking.
 export default function MetricLibrary({
   clientId,
+  phaseId,
   packs,
   groups,
 }: {
   clientId: number;
+  /** The phase being set up, when it is not the running one. */
+  phaseId?: number | null;
   packs: LibraryPackView[];
   /** Category choices for a typed-in column, in display order ("Other" last). */
   groups: { key: string; label: string }[];
@@ -67,6 +71,7 @@ export default function MetricLibrary({
     <div className="ms-addrow" ref={wrapRef}>
       <form action={addMetricDefinitionAction} className="ms-addrow-form">
         <input type="hidden" name="clientId" value={clientId} />
+        {phaseId != null && <input type="hidden" name="phaseId" value={phaseId} />}
         {/* Every column starts daily; the Daily / Weekly / Monthly toggle on
             its row changes that afterwards. Deciding it here as well was a
             second place for the same choice. */}
@@ -81,7 +86,7 @@ export default function MetricLibrary({
             aria-expanded={open}
             aria-label="Open the metric library"
           >
-            ▾
+            <ChevronDownIcon />
           </button>
         </div>
 
@@ -124,20 +129,23 @@ export default function MetricLibrary({
           <div className="ml-groups">
             {packs.map((pack) => {
               const available = pack.items.filter((i) => !i.already);
+              const chosen = available.filter((i) => picked[key(pack.id, i.name)]).length;
+              const allOn = available.length > 0 && chosen === available.length;
               return (
-                <section key={pack.id} className="ml-group">
-                  <div className="ml-group-head">
+                <section key={pack.id} className={`ml-group g-${pack.group}`}>
+                  {/* The title picks the whole block: one target instead of
+                      two words at the other end of the row. */}
+                  <button
+                    type="button"
+                    className="ml-group-head"
+                    onClick={() => setPack(pack, !allOn)}
+                    disabled={available.length === 0}
+                    title={available.length === 0 ? "Every one of these is already asked for" : allOn ? `Clear ${pack.label}` : `Pick all of ${pack.label}`}
+                  >
+                    <span className="ml-group-key" aria-hidden="true" />
                     <span className="ml-group-name">{pack.label}</span>
-                    <span className="ml-rule" />
-                    <span className="ml-group-actions">
-                      <button type="button" onClick={() => setPack(pack, true)} disabled={available.length === 0}>
-                        all
-                      </button>
-                      <button type="button" onClick={() => setPack(pack, false)} disabled={available.length === 0}>
-                        none
-                      </button>
-                    </span>
-                  </div>
+                    <span className="ml-group-count">{chosen ? `${chosen} picked` : `${available.length || pack.items.length}`}</span>
+                  </button>
                   <div className="ml-items">
                     {pack.items.map((item) => {
                       if (item.already) {

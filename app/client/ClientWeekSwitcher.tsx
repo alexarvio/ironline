@@ -32,18 +32,22 @@ export default function ClientWeekSwitcher({
   banner?: ReactNode;
 }) {
   const [selected, setSelected] = useState(currentWeek);
-  // With more weeks than fit, the strip scrolls and opens with last week at
-  // the left edge, so the current week sits second and the rest of the row
-  // is what is coming. Near the end of the programme the strip cannot scroll
-  // that far, so the current week drifts right on its own.
+  // With more weeks than fit, the strip scrolls and always opens with the
+  // current week in the same place: just in from the left edge, with a sliver
+  // of last week showing behind it so the row reads as scrollable. Week 1 has
+  // nothing to peek at and sits flush left; near the end of the programme the
+  // strip cannot scroll that far, so the current week drifts right on its own.
   const scrolls = weeks.length > 3;
   const stripRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const strip = stripRef.current;
     if (!strip || !scrolls) return;
-    const anchor = strip.querySelector<HTMLElement>(`[data-week="${currentWeek - 1}"]`) ?? strip.querySelector<HTMLElement>(`[data-week="${currentWeek}"]`);
+    const anchor = strip.querySelector<HTMLElement>(`[data-week="${currentWeek}"]`);
     if (!anchor) return;
-    strip.scrollLeft = anchor.getBoundingClientRect().left - strip.getBoundingClientRect().left;
+    // 20px of the previous chip plus the 8px gap. The browser clamps the
+    // result to the scrollable range at both ends.
+    const peek = 28;
+    strip.scrollLeft += anchor.getBoundingClientRect().left - strip.getBoundingClientRect().left - peek;
   }, [currentWeek, scrolls]);
 
   // Weeks ahead of the current one are locked: the client can see the

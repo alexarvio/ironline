@@ -535,8 +535,14 @@ export function findProgramById(programId: number): TrainingProgram | null {
   return getData().training_programs.find((p) => p.id === programId) ?? null;
 }
 
+// The programme the client is on now: the latest deployed one that has
+// started. A deployed programme whose start was moved into a later week is
+// not it (applyDueProgramDeployments turns those back into schedules); the
+// latest-start rule alone picked it, so the running programme was listed as
+// past and the future one as live.
 export function getDeployedProgram(clientId: number): TrainingProgram | null {
-  const deployed = listPrograms(clientId).filter((p) => p.status === "deployed");
+  const thisWeek = weekStart(localDateStr());
+  const deployed = listPrograms(clientId).filter((p) => p.status === "deployed" && (!p.deployed_at || weekStart(p.deployed_at.slice(0, 10)) <= thisWeek));
   if (deployed.length === 0) return null;
   return deployed.reduce((latest, p) => (p.start_week > latest.start_week ? p : latest));
 }
@@ -657,6 +663,26 @@ export function updateProgramTotalWeeks(programId: number, requestedTotal: numbe
   if (!program) return;
   const newTotal = Math.max(program.total_weeks, Math.max(1, Math.floor(requestedTotal) || 1));
   if (newTotal === program.total_weeks) return;
+  // Weeks are numbered once per client, so the weeks this programme grows
+  // into may already be another programme's. Everything after this one moves
+  // up first; without that the two programmes shared those weeks' sessions,
+  // and one showed the other's exercises, logged sets and skip reasons.
+  const oldLast = program.start_week + program.total_weeks - 1;
+  const newLast = program.start_week + newTotal - 1;
+  const nextTaken = Math.min(
+    ...data.training_programs.filter((p) => p.client_id === program.client_id && p.id !== program.id && p.start_week > oldLast).map((p) => p.start_week),
+    ...data.program_days.filter((pd) => pd.client_id === program.client_id && pd.week_number > oldLast).map((pd) => pd.week_number),
+    Infinity
+  );
+  if (nextTaken <= newLast) {
+    const shift = newLast - nextTaken + 1;
+    data.training_programs.forEach((p) => {
+      if (p.client_id === program.client_id && p.id !== program.id && p.start_week > oldLast) p.start_week += shift;
+    });
+    data.program_days.forEach((pd) => {
+      if (pd.client_id === program.client_id && pd.week_number > oldLast) pd.week_number += shift;
+    });
+  }
   for (let i = program.total_weeks; i < newTotal; i++) {
     const weekNumber = program.start_week + i;
     if (seedFromWeekOne && weekNumber !== program.start_week) copyWeekOneInto(program.client_id, program.start_week, weekNumber);
@@ -716,10 +742,54 @@ export function removeProgram(programId: number) {
 // which route loads next) — deploys any program whose scheduled time has
 // passed, standing in for a push notification (via the coach_activity log
 // deployProgram writes) without needing any background infrastructure.
+/**
+ * Programmes of one client that overlap on the same week numbers (from before
+ * growing a programme moved the ones after it) are pulled apart: the earlier
+ * one, the live one on a tie, keeps the weeks and their sessions; the later
+ * one moves to free weeks and starts them empty. Nothing is deleted.
+ */
+function separateOverlappingPrograms() {
+  const data = getData();
+  let changed = false;
+  const clientIds = [...new Set(data.training_programs.map((p) => p.client_id))];
+  for (const clientId of clientIds) {
+    const mine = data.training_programs
+      .filter((p) => p.client_id === clientId)
+      .sort((a, b) => a.start_week - b.start_week || (a.status === "deployed" ? -1 : 0) - (b.status === "deployed" ? -1 : 0) || a.id - b.id);
+    let taken = 0;
+    for (const p of mine) {
+      if (p.start_week <= taken) {
+        const dayWeeks = data.program_days.filter((pd) => pd.client_id === clientId).map((pd) => pd.week_number);
+        const free = Math.max(taken, ...mine.map((q) => q.start_week + q.total_weeks - 1), ...dayWeeks) + 1;
+        p.start_week = free;
+        changed = true;
+      }
+      taken = Math.max(taken, p.start_week + p.total_weeks - 1);
+    }
+  }
+  if (changed) persist();
+}
+
 export function applyDueProgramDeployments() {
   migrateDaysToSessions();
+  separateOverlappingPrograms();
   const data = getData();
   const now = new Date().toISOString();
+  // A deployed programme whose start was moved into a later week before
+  // anything was logged in it is a schedule again: it goes live on that
+  // week, like any other. (updateClientPhase does this from now on; this
+  // mends the ones it did not.)
+  const thisWeek = weekStart(localDateStr());
+  let rescheduled = false;
+  for (const p of data.training_programs) {
+    if (p.status !== "deployed" || !p.deployed_at || weekStart(p.deployed_at.slice(0, 10)) <= thisWeek) continue;
+    if (programLoggedWeekIndexes(p.id).length > 0) continue;
+    p.status = "draft";
+    p.scheduled_at = p.deployed_at;
+    p.deployed_at = null;
+    rescheduled = true;
+  }
+  if (rescheduled) persist();
   const due = data.training_programs.filter((p) => p.status === "draft" && p.scheduled_at && p.scheduled_at <= now);
   due.forEach((program) => deployProgram(program.id));
 
@@ -738,7 +808,6 @@ export function applyDueProgramDeployments() {
   // Training phases drawn on the Plan tab before phases and programmes were
   // linked: give each upcoming one its draft, so it can be built. Past ones
   // are history and stay as they are.
-  const thisWeek = weekStart(localDateStr());
   data.client_phases
     .filter((ph) => ph.track === "training" && !ph.program_id && ph.end_week >= thisWeek)
     .forEach((ph) => {
@@ -1354,9 +1423,14 @@ export const AVAILABLE_TRAINING_COLUMNS: { key: string; label: string; placehold
   { key: "rpe", label: "RPE", placeholder: "8" },
   { key: "tempo", label: "Tempo", placeholder: "2-0-2" },
   { key: "rest", label: "Rest", placeholder: "90s" },
-  { key: "distance", label: "Distance", placeholder: "5km" },
-  { key: "time", label: "Time", placeholder: "20min" },
 ];
+
+// Distance and Time were exercise columns too, from before cardio had a
+// table of its own. They belong to cardio (CARDIO_COLUMNS), so they are no
+// longer offered for exercises, and a client who had one switched on simply
+// stops seeing it. What was typed in them stays on the exercise; it is only
+// not shown.
+const RETIRED_EXERCISE_KEYS = new Set(["distance", "time"]);
 
 // Six at once. Past that the grid stops fitting a 1440 canvas beside the
 // logged-sets panel, which is the column that actually matters.
@@ -1371,9 +1445,48 @@ const DEFAULT_TRAINING_COLUMNS: { key: string; label: string }[] = [
   { key: "notes", label: "Notes" },
 ];
 
+// Cardio asks for different things than a lift does, so it has its own
+// columns rather than borrowing the exercise ones. They live in the same
+// table under their own keys, so one mapping still loads and saves them.
+export const CARDIO_COLUMNS: { key: string; field: "time" | "pace" | "incline" | "distance"; label: string }[] = [
+  { key: "cardio_time", field: "time", label: "Time" },
+  { key: "cardio_pace", field: "pace", label: "Pace" },
+  { key: "cardio_incline", field: "incline", label: "Incline" },
+  { key: "cardio_distance", field: "distance", label: "Distance" },
+];
+const isCardioKey = (key: string) => CARDIO_COLUMNS.some((c) => c.key === key);
+
+/** The cardio columns and whether each is on. All four start on. */
+export function listCardioColumns(clientId: number) {
+  const data = getData();
+  const rows = data.training_columns.filter((c) => c.client_id === clientId && isCardioKey(c.key));
+  return CARDIO_COLUMNS.map((def) => {
+    const row = rows.find((r) => r.key === def.key);
+    return { key: def.key, field: def.field, label: row?.label ?? def.label, visible: row ? row.visible : true };
+  });
+}
+
+export function setCardioColumnVisible(clientId: number, key: string, visible: boolean) {
+  if (!isCardioKey(key)) return;
+  const data = getData();
+  const row = data.training_columns.find((c) => c.client_id === clientId && c.key === key);
+  if (row) row.visible = visible;
+  else
+    data.training_columns.push({
+      id: allocId("training_columns"),
+      client_id: clientId,
+      key,
+      label: CARDIO_COLUMNS.find((c) => c.key === key)!.label,
+      kind: "builtin",
+      visible,
+      order_index: 100 + CARDIO_COLUMNS.findIndex((c) => c.key === key),
+    });
+  persist();
+}
+
 export function listTrainingColumns(clientId: number): TrainingColumn[] {
   const data = getData();
-  const existing = data.training_columns.filter((c) => c.client_id === clientId);
+  const existing = data.training_columns.filter((c) => c.client_id === clientId && !isCardioKey(c.key));
   if (existing.length === 0) {
     DEFAULT_TRAINING_COLUMNS.forEach((def, i) => {
       data.training_columns.push({
@@ -1387,9 +1500,9 @@ export function listTrainingColumns(clientId: number): TrainingColumn[] {
       });
     });
     persist();
-    return data.training_columns.filter((c) => c.client_id === clientId).sort(columnOrder);
+    return data.training_columns.filter((c) => c.client_id === clientId && !isCardioKey(c.key)).sort(columnOrder);
   }
-  return existing.sort(columnOrder);
+  return existing.filter((c) => !isCardioKey(c.key) && !RETIRED_EXERCISE_KEYS.has(c.key)).sort(columnOrder);
 }
 
 // Notes is prose and reads last whatever order the other columns were
@@ -1433,7 +1546,7 @@ export function listPrescriptionColumns(clientId: number): TrainingColumn[] {
 /**
  * Every column the coach can pick from: the ones already on this client
  * (whatever their visibility) plus any builtin they haven't added yet, so
- * the chip row shows all eight from the start rather than only what exists.
+ * the chip row shows all six from the start rather than only what exists.
  * Notes is filtered out — it isn't a choice.
  */
 export function listColumnChoices(clientId: number) {
@@ -1730,7 +1843,12 @@ export type OverviewPanel = {
   phase: string | null;
   /** value is the figure; suffix is the unit or qualifier beside it, set
    *  in a lighter weight so the number reads first. */
-  snapshot: { label: string; value: string; suffix?: string }[];
+  snapshot: { label: string; value: string; suffix?: string; attention?: boolean }[];
+  /** The phase running on each track, and how far through it they are. */
+  tags: { label: string; track: "training" | "nutrition" | "lifestyle"; weekNow: number; weeks: number }[];
+  /** Age · client since · city · email, for the line under the name. */
+  meta: { age: string | null; since: string | null; city: string | null; email: string | null };
+  coachNote: { text: string; savedLabel: string | null };
   goals: ClientGoal[];
   /** value is "" when empty; field names the card field that edits it, absent
    *  on rows derived from elsewhere (plan, current week, weight). */
@@ -1751,6 +1869,7 @@ export type OverviewPanel = {
     gender: string;
     height_cm: string;
     email: string;
+    phone_code: string;
     phone: string;
     address: string;
     coaching_start_date: string;
@@ -1785,8 +1904,43 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
     .sort((a, b) => (a.date === b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date)))[0];
 
   const unpaid = invoices.filter((i) => i.status !== "paid").length;
-  const metricCount =
-    listMetricDefinitions(clientId, "daily").length + listMetricDefinitions(clientId, "weekly").length;
+  const dailyMetrics = listMetricDefinitions(clientId, "daily").length;
+  const weeklyMetrics = listMetricDefinitions(clientId, "weekly").length;
+  const metricCount = dailyMetrics + weeklyMetrics;
+
+  // Weight now against where it was when the block began, not against a
+  // figure from six months ago: inside a cut, "−0.8 kg this phase" is the
+  // number a coach acts on, and "+1.6 kg since the start" is history.
+  const weightPhase =
+    getCurrentPhase(clientId, "nutrition") ?? getCurrentPhase(clientId, "training") ?? getCurrentPhase(clientId, "lifestyle");
+  const weightMove = (() => {
+    if (weight == null) return "";
+    const series = getWeightSeriesAll(clientId);
+    let base: number | null = null;
+    let when = "since the start";
+    if (weightPhase && series.length > 0) {
+      // What they weighed going in: whichever reading sits nearest the day
+      // the phase began, either side of it. Taking the last one BEFORE it
+      // reached back months when a client had stopped logging, and taking
+      // the first one INSIDE it missed the start when they logged late.
+      const start = new Date(`${weightPhase.start_week}T00:00:00`).getTime();
+      const nearest = series.reduce((best, s) =>
+        Math.abs(new Date(`${s.date}T00:00:00`).getTime() - start) < Math.abs(new Date(`${best.date}T00:00:00`).getTime() - start) ? s : best
+      );
+      // A reading more than a month either side of the start is not what
+      // they weighed at the start; fall back to the coaching figure.
+      if (Math.abs(new Date(`${nearest.date}T00:00:00`).getTime() - start) <= 31 * 86400000) {
+        base = nearest.value;
+        when = "this phase";
+      }
+    }
+    if (base == null) base = profile.starting_weight_kg ?? null;
+    if (base == null) return "";
+    const delta = Math.round((weight - base) * 10) / 10;
+    if (delta === 0) return `level ${when}`;
+    const abs = Number.isInteger(delta) ? String(Math.abs(delta)) : Math.abs(delta).toFixed(1);
+    return `${delta < 0 ? "−" : "+"}${abs} kg ${when}`;
+  })();
 
   // Workouts done this week against what's owed — the figure a coach glances
   // at first, so it leads the snapshot.
@@ -1812,11 +1966,36 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
     avatarPath: client?.avatar_path ?? null,
     clientSince: profile.coaching_start_date ? `Client since ${fmtDate(profile.coaching_start_date)}` : null,
     phase: effectiveGoalPhase(clientId, profile.goal_phase) || null,
+    tags: (["training", "nutrition", "lifestyle"] as const)
+      .map((track) => {
+        const ph = getCurrentPhase(clientId, track);
+        if (!ph) return null;
+        // Phases are whole weeks, Monday to Monday, so both figures count weeks.
+        const week = (a: string, b: string) => Math.round((new Date(`${b}T00:00:00`).getTime() - new Date(`${a}T00:00:00`).getTime()) / (7 * 86400000));
+        return { track, label: ph.name, weekNow: week(ph.start_week, weekStart(today)) + 1, weeks: week(ph.start_week, ph.end_week) + 1 };
+      })
+      .filter((t): t is { track: "training" | "nutrition" | "lifestyle"; label: string; weekNow: number; weeks: number } => !!t),
+    meta: {
+      age: profile.birthdate ? `${Math.floor((Date.now() - new Date(`${profile.birthdate}T00:00:00`).getTime()) / 31557600000)}` : null,
+      since: profile.coaching_start_date ? fmtDate(profile.coaching_start_date) : null,
+      // The last part of the address is the town, which is all the header needs.
+      city: (profile.address ?? "").split(",").map((p) => p.trim()).filter(Boolean).pop() ?? null,
+      email: profile.email || null,
+    },
+    coachNote: {
+      text: client?.coach_note ?? "",
+      savedLabel: client?.coach_note_at
+        ? new Date(client.coach_note_at).toLocaleDateString("en-US", { day: "numeric", month: "short" })
+        : null,
+    },
     snapshot: [
       {
+        // No "done this week" under it and no amber on the figure: the label
+        // says what it is, and a week that has only just started is not a
+        // problem to be coloured.
         label: "Training",
         value: planned ? `${trained} of ${planned}` : "-",
-        suffix: planned ? "done this week" : undefined,
+        suffix: planned ? "sessions this week" : undefined,
       },
       {
         label: "Next meeting",
@@ -1828,19 +2007,20 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
             })
           : "None booked",
         suffix: nextMeeting ? nextMeeting.time : undefined,
+        attention: !nextMeeting,
       },
       {
-        label: "Kcal goal",
-        value: nutrition.trainingKcal ? String(nutrition.trainingKcal) : "-",
-        suffix: nutrition.trainingKcal ? "kcal" : undefined,
+        // The figure and, under it, what it is made of — a coach reading
+        // "2,929" wants to know whether that is 200g of protein or 120.
+        label: "Nutrition goal",
+        value: nutrition.trainingKcal ? `${nutrition.trainingKcal.toLocaleString("en-US")} kcal` : "-",
+        suffix: nutrition.trainingKcal
+          ? `P ${nutrition.trainingProtein} · C ${nutrition.trainingCarbs} · F ${nutrition.trainingFats}`
+          : undefined,
       },
-      { label: "Weight", value: weight != null ? String(weight) : "-", suffix: weight != null ? "kg" : undefined },
-      { label: "Metrics tracked", value: String(metricCount) },
-      {
-        label: "Invoices",
-        value: unpaid ? String(unpaid) : "0",
-        suffix: unpaid ? "outstanding" : "outstanding",
-      },
+      { label: "Weight", value: weight != null ? `${weight} kg` : "-", suffix: weightMove || undefined },
+      { label: "Metrics tracked", value: String(metricCount), suffix: `${dailyMetrics} daily · ${weeklyMetrics} weekly` },
+      { label: "Invoices", value: unpaid ? String(unpaid) : "0", suffix: "outstanding", attention: unpaid > 0 },
     ],
     goals: listClientGoals(clientId),
     // Empty is "", not a dash: the panel shows an Add link there instead.
@@ -1849,7 +2029,8 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
       { label: "Gender", value: text(profile.gender), field: "gender" },
       { label: "Height", value: profile.height_cm ? `${profile.height_cm} cm` : "", field: "height_cm" },
       { label: "Email", value: text(profile.email), field: "email" },
-      { label: "Phone", value: text(profile.phone), field: "phone" },
+      // Code and number joined for show: "+31 6 45787628".
+      { label: "Phone", value: profile.phone ? [profile.phone_code, profile.phone].filter(Boolean).join(" ") : "", field: "phone" },
       { label: "Address", value: text(profile.address), field: "address" },
     ],
     // The goal / phase is the pill under the name, so it isn't repeated here.
@@ -1879,6 +2060,7 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
       gender: profile.gender ?? "",
       height_cm: profile.height_cm != null ? String(profile.height_cm) : "",
       email: profile.email ?? "",
+      phone_code: profile.phone_code ?? "",
       phone: profile.phone ?? "",
       address: profile.address ?? "",
       coaching_start_date: profile.coaching_start_date ?? "",
@@ -1937,6 +2119,8 @@ export type FeedEvent = {
   timeKnown: boolean;
   /** The admin tab the row opens on. */
   tab: string;
+  /** The training session the event is about, so its card can carry the dot. */
+  dayId?: number;
   /** What happened, written to follow the client's name. */
   text: string;
   /** The client's own words, when the event carries them. */
@@ -1973,7 +2157,7 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
   const events: FeedEvent[] = [];
   const add = (
     clientId: number,
-    e: Pick<FeedEvent, "id" | "category" | "at" | "tab" | "text"> & Partial<Pick<FeedEvent, "note" | "thumbs" | "timeKnown">>
+    e: Pick<FeedEvent, "id" | "category" | "at" | "tab" | "text"> & Partial<Pick<FeedEvent, "note" | "thumbs" | "timeKnown" | "dayId">>
   ) => {
     const client = clientsById.get(clientId);
     if (!client || !Number.isFinite(e.at)) return;
@@ -2022,6 +2206,7 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       category: "training",
       at: stampMs(completedAt),
       tab: "training",
+      dayId,
       text: `completed ${dayTitle(day)} · ${plural(assignments.length, "exercise")}, ${plural(logs.length, "set")}`,
     });
   });
@@ -2035,7 +2220,22 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       category: "training",
       at: stampMs(log.done_at),
       tab: "training",
+      dayId: day?.id,
       text: `ticked off cardio${what ? `: ${what}` : ""}${day ? ` · ${dayTitle(day)}` : ""}`,
+    });
+  }
+
+  // A session the client said they could not do, in their words.
+  for (const day of data.program_days) {
+    if (!day.skip_reason || !day.skip_reason_at) continue;
+    add(day.client_id, {
+      id: `skip-${day.id}`,
+      category: "training",
+      at: stampMs(day.skip_reason_at),
+      tab: "training",
+      dayId: day.id,
+      text: `couldn't do ${dayTitle(day)}`,
+      note: day.skip_reason,
     });
   }
 
@@ -2313,6 +2513,17 @@ export function listNutritionPhases(clientId: number): (ClientPhase & { status: 
   const lastWeek = localDateStr(d);
   return listClientPhases(clientId)
     .filter((p) => p.track === "nutrition" && p.end_week >= lastWeek)
+    .map((p) => ({ ...p, status: p.draft ? "draft" : p.end_week < week ? "past" : p.start_week > week ? "next" : "now" }));
+}
+
+/** The lifestyle phases, with the same states the nutrition rail uses. */
+export function listLifestylePhases(clientId: number): (ClientPhase & { status: "past" | "now" | "next" | "draft" })[] {
+  const week = weekStart(localDateStr());
+  const d = new Date(`${week}T00:00:00`);
+  d.setDate(d.getDate() - 7);
+  const lastWeek = localDateStr(d);
+  return listClientPhases(clientId)
+    .filter((p) => p.track === "lifestyle" && p.end_week >= lastWeek)
     .map((p) => ({ ...p, status: p.draft ? "draft" : p.end_week < week ? "past" : p.start_week > week ? "next" : "now" }));
 }
 
@@ -2663,6 +2874,10 @@ export type MetricDefinition = {
   // metric, which is why Daily Tracker and Weekly Tracker stopped being
   // their own screens.
   frequency: MetricCadence;
+  // Which way this metric is meant to move, for the Change row.
+  good_direction?: "up" | "down" | "none";
+  /** The lifestyle phase that asks for it; absent means the standing set. */
+  phase_id?: number | null;
   order_index: number;
   pinned?: boolean;
   // Deployed to the client's check-in screen; see deployedToClient().
@@ -2681,19 +2896,22 @@ export type MetricCadence = "daily" | "weekly" | "monthly";
 // own spreadsheets. Group is a first-class property: it drives the band rows
 // above the history tables and the order of the columns beneath them, so
 // three nutrition metrics always sit together under one NUTRITION band.
+// The tints carry the category on a pill and a key, so they have to be seen
+// at a glance: pale enough for the label to read on, strong enough to tell
+// two categories apart across a list.
 export const METRIC_GROUPS = [
-  { key: "body", label: "Body", tint: "#e6ecf3" },
-  { key: "sleep", label: "Sleep", tint: "#e8e6f3" },
-  { key: "activity", label: "Activity", tint: "#e2eee6" },
-  { key: "fatigue", label: "Fatigue", tint: "#f5eade" },
-  { key: "lifestyle", label: "Lifestyle", tint: "#e2eff1" },
-  { key: "stress", label: "Stress", tint: "#f6e3e3" },
-  { key: "nutrition", label: "Nutrition", tint: "#eef0da" },
-  { key: "training", label: "Training", tint: "#e6ecf3" },
-  { key: "wellbeing", label: "General wellbeing", tint: "#eae7f0" },
-  { key: "measurements", label: "Measurements", tint: "#e9ecef" },
-  { key: "optional", label: "Optional", tint: "#f0eeea" },
-  { key: "other", label: "Other", tint: "#edf0f4" },
+  { key: "body", label: "Body", tint: "#cfe0f2" },
+  { key: "sleep", label: "Sleep", tint: "#d8d3f0" },
+  { key: "activity", label: "Activity", tint: "#c9e7d5" },
+  { key: "fatigue", label: "Fatigue", tint: "#f4dcc0" },
+  { key: "lifestyle", label: "Lifestyle", tint: "#c9e6ea" },
+  { key: "stress", label: "Stress", tint: "#f3cfcf" },
+  { key: "nutrition", label: "Nutrition", tint: "#e6ebb8" },
+  { key: "training", label: "Training", tint: "#d5d2f3" },
+  { key: "wellbeing", label: "General wellbeing", tint: "#e2d7ee" },
+  { key: "measurements", label: "Measurements", tint: "#dde3e9" },
+  { key: "optional", label: "Optional", tint: "#e8e3d8" },
+  { key: "other", label: "Other", tint: "#dfe6ef" },
 ] as const;
 
 export function metricGroup(key: string): { key: string; label: string; tint: string } {
@@ -2815,6 +3033,14 @@ export function listAllMetrics(clientId: number): MetricDefinition[] {
 }
 
 /** Adds every ticked library item that isn't already on this client. */
+export function addMetricsFromLibraryPhased(
+  clientId: number,
+  picks: { name: string; unit: string; group: string; cadence: MetricCadence }[],
+  phaseId: number | null
+) {
+  for (const p of picks) addMetricDefinition(clientId, p.group, p.name, p.unit, p.cadence, phaseId);
+}
+
 export function addMetricsFromLibrary(
   clientId: number,
   picks: { name: string; unit: string; group: string; cadence: MetricCadence }[]
@@ -2860,7 +3086,9 @@ export function addMetricDefinition(
   category: string,
   name: string,
   unit: string,
-  frequency: MetricCadence
+  frequency: MetricCadence,
+  /** The lifestyle phase being set up, when one is. */
+  phaseId: number | null = null
 ) {
   const data = getData();
   const count = data.metric_definitions.filter(
@@ -2873,8 +3101,43 @@ export function addMetricDefinition(
     name,
     unit,
     frequency,
+    ...(phaseId != null ? { phase_id: phaseId } : {}),
     order_index: count,
   });
+  persist();
+}
+
+/**
+ * The metrics a phase asks for: its own, plus the client's standing set —
+ * everything from before phases owned metrics — which is asked for whatever
+ * is running. A draft phase has none of its own, so it starts blank; the
+ * standing set only shows on the phase the client is actually in, so a new
+ * draft is not quietly pre-filled by it.
+ */
+export function listMetricsForPhase(clientId: number, phaseId: number | null, isLive: boolean): MetricDefinition[] {
+  return listAllMetrics(clientId).filter((m) => {
+    if (m.phase_id != null) return m.phase_id === phaseId;
+    // The standing set: shown while the running phase is on screen, and when
+    // the client has no lifestyle phases at all.
+    return isLive;
+  });
+}
+
+/** Everything one phase asks for, copied onto another. Nothing is moved. */
+export function copyPhaseMetrics(fromPhaseId: number | null, toPhaseId: number, clientId: number, fromIsLive: boolean) {
+  const data = getData();
+  const source = listMetricsForPhase(clientId, fromPhaseId, fromIsLive);
+  const already = new Set(
+    data.metric_definitions.filter((m) => m.client_id === clientId && m.phase_id === toPhaseId).map((m) => m.name.toLowerCase())
+  );
+  for (const m of source) {
+    if (already.has(m.name.toLowerCase())) continue;
+    data.metric_definitions.push({
+      ...m,
+      id: allocId("metric_definitions"),
+      phase_id: toPhaseId,
+    });
+  }
   persist();
 }
 
@@ -3841,6 +4104,8 @@ export type ClientProfile = {
   gender?: string | null;
   email?: string | null;
   phone?: string | null;
+  /** The dial code for `phone` ("+31"); absent on phones typed before the split. */
+  phone_code?: string | null;
   address?: string | null;
   height_cm: number | null;
   starting_weight_kg: number | null;
@@ -4621,6 +4886,326 @@ export function getClientHeaderPlans(clientId: number): HeaderPlan[] {
 
 
 
+// ---- A client's Home (coach side) ------------------------------------------
+// What needs the coach, spelled out, and what the client has been doing, with
+// the coach's own "seen it" kept per event so a dot can lead from the client,
+// to the tab, to the session the news is about.
+
+/** How far back an event still counts as news. Older history is never "new". */
+const HOME_NEW_DAYS = 14;
+
+export type HomeAction = {
+  id: string;
+  /** "urgent": stops the client; "due": something is owed; "note": words to read. */
+  tone: "urgent" | "due" | "note";
+  title: string;
+  detail: string;
+  /** The admin tab that deals with it, if one does. */
+  tab: string | null;
+};
+
+export type HomeEvent = FeedEvent & { when: string; unseen: boolean };
+
+export type ClientHome = {
+  actions: HomeAction[];
+  events: HomeEvent[];
+  /** Everything this client has ever logged, for "showing N of M". */
+  eventTotal: number;
+  unseenCount: number;
+  /** Tabs with something new on them. */
+  unseenTabs: string[];
+  /** Training sessions with something new on them. */
+  unseenDayIds: number[];
+};
+
+const isUnseen = (seen: Record<string, number> | undefined, e: FeedEvent, since: number) =>
+  e.at >= since && (seen?.[e.id] ?? 0) < e.at;
+
+/**
+ * One client's Home. `feed` lets a caller that needs several clients walk the
+ * store once (the rail) rather than once per client.
+ */
+export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome {
+  const data = getData();
+  const client = data.clients.find((c) => c.id === clientId);
+  const all = (feed ?? getActivityFeed(client?.coach_id ?? 0)).filter((e) => e.clientId === clientId);
+  const since = Date.now() - HOME_NEW_DAYS * 86400000;
+  const events = all.slice(0, 60).map((e) => ({ ...e, when: feedTimeLabel(e.at, e.timeKnown), unseen: isUnseen(client?.coach_seen, e, since) }));
+  const unseen = events.filter((e) => e.unseen);
+
+  const actions: HomeAction[] = [];
+  if (clientLockedOut(clientId)) {
+    actions.push({ id: "locked", tone: "urgent", title: "Locked out of signing in", detail: "Too many wrong passwords. Clear the lock from their card, or it lifts by itself.", tab: null });
+  }
+  const program = getDeployedProgram(clientId);
+  if (program) {
+    const index = getProgramCurrentWeekIndex(program);
+    const liveWeek = program.start_week + index - 1;
+    if (!getWeek(clientId, liveWeek).some((d) => getAssignmentsForDay(d.id).length > 0)) {
+      actions.push({ id: "week", tone: "urgent", title: `${programWeekLabel(program, liveWeek)} has no sessions`, detail: "This is the week they are in, so they have nothing to train.", tab: "training" });
+    }
+    // The programme running out with nothing queued behind it.
+    const left = program.total_weeks - index;
+    const queued = data.training_programs.some((p) => p.client_id === clientId && p.status === "draft" && p.scheduled_at);
+    if (left <= 1 && !queued) {
+      actions.push({
+        id: "program-ending",
+        tone: "due",
+        title: left <= 0 ? `${program.name || "Their programme"} ends this week` : `${program.name || "Their programme"} ends next week`,
+        detail: "Nothing is scheduled to follow it.",
+        tab: "training",
+      });
+    }
+  }
+  const due = getCheckInStatus(clientId);
+  const DUE = { daily: "Today's daily check-in", weekly: "This week's weekly check-in", measurements: "Today's measurements" };
+  for (const t of due.dueTypes) {
+    actions.push({ id: `checkin-${t}`, tone: "due", title: `${DUE[t]} not logged`, detail: "They have not filled it in yet.", tab: "measurements" });
+  }
+  // Their own words waiting to be read: notes and reasons, not plain logging.
+  for (const e of unseen) {
+    if (!e.note) continue;
+    actions.push({ id: `read-${e.id}`, tone: "note", title: e.text.charAt(0).toUpperCase() + e.text.slice(1), detail: e.note, tab: e.tab });
+  }
+  // Gone quiet: nothing at all logged for a while.
+  const last = all[0]?.at ?? null;
+  if (last != null) {
+    const days = Math.floor((Date.now() - last) / 86400000);
+    if (days >= 5) actions.push({ id: "quiet", tone: "due", title: `Nothing logged for ${days} days`, detail: `Last seen ${feedTimeLabel(last, false)}.`, tab: null });
+  }
+
+  return {
+    actions,
+    events,
+    eventTotal: all.length,
+    unseenCount: unseen.length,
+    unseenTabs: [...new Set(unseen.map((e) => e.tab))],
+    unseenDayIds: [...new Set(unseen.map((e) => e.dayId).filter((d): d is number => d != null))],
+  };
+}
+
+// ---- How much of what was asked for the client actually does ----------
+// One figure per thing the coach set up, and their average. Only what was
+// actually asked for counts: a client with no photo sheets is not marked
+// down for sending none, and a week the coach never built is not a week the
+// client missed. Over the last four weeks, so one bad week does not read as
+// a collapse and a good day does not hide a month of silence.
+//
+// Four figures, and each one is a distinct behaviour:
+//   Sessions done      — did they train what was built for them
+//   Check-ins          — did they answer what they were asked to log
+//   Food logged        — did they write down what they ate
+//   Progress pictures  — did the sheet come in
+//
+// Deliberately NOT here: sets logged, which cannot disagree with sessions
+// done — the client's app will not complete a session until every set is in,
+// so it was the same fact drawn twice. And measurements, which are fields
+// inside the weekly check-in: counting them separately counted one Sunday
+// evening as two things the client either did or did not do.
+
+// One window, and it moves: the thirty days ending today. Tomorrow it is the
+// thirty ending tomorrow. Nothing to choose between, and the figure always
+// means the same span, so two readings a week apart are comparable.
+export const ENGAGEMENT_DAYS = 30;
+
+export type EngagementPart = {
+  id: string;
+  label: string;
+  /** 0–100, already rounded. */
+  pct: number;
+  /** "4 of 8 sessions", in the client's own units. */
+  detail: string;
+  /** The second fact the behaviour carries, when it has one: a streak. */
+  note?: string;
+};
+
+export type ClientEngagement = {
+  /** The average across the parts that apply, or null when none do. */
+  overall: number | null;
+  /** The same average over the window before this one, for the trend. */
+  previous: number | null;
+  parts: EngagementPart[];
+  days: number;
+};
+
+const plusDays = (iso: string, n: number) => {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setDate(d.getDate() + n);
+  return localDateStr(d);
+};
+
+// One window of it. `back` is how many windows ago — 0 is now, 1 is the one
+// before it, which is all the trend needs.
+//
+// Each behaviour is scored as a rate (done ÷ asked) BEFORE anything is
+// averaged, and the overall is the mean of those rates. Pooling the events
+// instead would let the two daily habits drown the training: fifty-eight
+// daily slots against eight sessions means a client could stop training
+// altogether and lose eight points. Normalise first and the difference in
+// rhythm stops mattering — which is the whole reason a daily thing and a
+// weekly thing can sit in one score at all.
+function engagementWindow(clientId: number, days: number, back: number): { parts: EngagementPart[]; overall: number | null } {
+  const data = getData();
+  const today = localDateStr();
+  const to = plusDays(today, -days * back);
+  const from = plusDays(to, -(days - 1));
+  const current = back === 0;
+  const weeks = Math.max(1, Math.round(days / 7));
+
+  const parts: EngagementPart[] = [];
+  const add = (id: string, label: string, done: number, asked: number, unit: string, note?: string) => {
+    if (asked <= 0) return;
+    parts.push({
+      id,
+      label,
+      pct: Math.max(0, Math.min(100, Math.round((done / asked) * 100))),
+      detail: `${done} of ${asked} ${unit}${asked === 1 ? "" : "s"}`,
+      note,
+    });
+  };
+
+  // The days that could already have been filled in: today is not missed
+  // until it is over. Shared by the daily check-in and the food diary, so
+  // the two are counted out of the same number of days.
+  const pastDays: string[] = [];
+  for (let d = from; d <= to; d = plusDays(d, 1)) {
+    if (current && d === today) continue;
+    pastDays.push(d);
+  }
+
+  // The longest run ending now — the figure a client actually responds to.
+  // Today counts when it is in; an empty today does not break yesterday's run.
+  const streakTo = (has: (day: string) => boolean) => {
+    if (!current) return 0;
+    let n = 0;
+    let d = has(today) ? today : plusDays(today, -1);
+    while (has(d) && n < 400) {
+      n += 1;
+      d = plusDays(d, -1);
+    }
+    return n;
+  };
+
+  // ---- Training: the weeks of the live programme that fall in the window.
+  // Every session that was on the plan inside the window, including one the
+  // client gave a reason for missing. It used to drop out of the denominator
+  // — telling the coach is the behaviour you want — but then the figure did
+  // not match the sessions a coach can count on the builder, and "4 of 8"
+  // has to be checkable against what is on screen there.
+  const program = getDeployedProgram(clientId);
+  let sessionsAsked = 0;
+  let sessionsDone = 0;
+  if (program?.deployed_at) {
+    const firstMonday = weekStart(program.deployed_at.slice(0, 10));
+    for (let i = 0; i < program.total_weeks; i++) {
+      const monday = plusDays(firstMonday, i * 7);
+      if (monday < from || monday > to) continue;
+      for (const day of getWeek(clientId, program.start_week + i)) {
+        const assignments = getAssignmentsForDay(day.id);
+        if (assignments.length === 0) continue;
+        sessionsAsked += 1;
+        if (assignments.some((a) => getLogsForAssignment(a.id).length > 0)) sessionsDone += 1;
+      }
+    }
+  }
+  add("training", "Sessions done", sessionsDone, sessionsAsked, "session");
+
+  // ---- Check-ins, as one figure. Daily and weekly are the same behaviour at
+  // two rhythms — the client answering what they were asked.
+  //
+  // "Asked for" is read from listMetricDefinitions, which is what
+  // getCheckInSections builds the client's own check-in screen from. Keep
+  // these two reading the same query: measuring adherence against a set the
+  // client was never shown is worse than not measuring it.
+  let checkInsAsked = 0;
+  let checkInsDone = 0;
+  let dailyStreak = 0;
+
+  const dailyDefs = listMetricDefinitions(clientId, "daily").filter(deployedToClient);
+  if (dailyDefs.length > 0) {
+    const logged = new Set(listMetricPeriods(dailyDefs.map((d) => d.id)));
+    checkInsAsked += pastDays.length;
+    checkInsDone += pastDays.filter((d) => logged.has(d)).length;
+    dailyStreak = streakTo((d) => logged.has(d));
+  }
+  const weeklyDefs = listMetricDefinitions(clientId, "weekly").filter(deployedToClient);
+  if (weeklyDefs.length > 0) {
+    const logged = new Set(listMetricPeriods(weeklyDefs.map((d) => d.id)));
+    // The weeks that have closed, plus this one once its check-in day has come.
+    const mondays: string[] = [];
+    for (let i = current && !weeklyCheckInOpen(clientId) ? 1 : 0; i < weeks; i++) {
+      mondays.push(plusDays(weekStart(to), -i * 7));
+    }
+    checkInsAsked += mondays.length;
+    checkInsDone += mondays.filter((w) => logged.has(w)).length;
+  }
+  add("checkins", "Check-ins", checkInsDone, checkInsAsked, "check-in", dailyStreak >= 2 ? `${dailyStreak}-day streak` : undefined);
+
+  // ---- Nutrition: the days the client wrote down what they ate, against the
+  // days they were given a target — over the same days the daily check-in is,
+  // so today's blank does not count against either.
+  if (getNutritionGoalsSummary(clientId).trainingKcal) {
+    const logged = new Set(listCalorieLogs(clientId, 400).map((c) => c.date));
+    for (const e of data.food_entries ?? []) if (e.client_id === clientId) logged.add(e.date);
+    const run = streakTo((d) => logged.has(d));
+    add("nutrition", "Food logged", pastDays.filter((d) => logged.has(d)).length, pastDays.length, "day", run >= 2 ? `${run}-day streak` : undefined);
+  }
+
+  // Progress pictures are deliberately NOT scored. A sheet is a thing the
+  // coach asks for now and then, not a habit, and one missed sheet in a
+  // month swung the whole figure by a quarter. The gallery says whether they
+  // came in; this card is about what the client does day to day.
+
+  return { parts, overall: parts.length ? Math.round(parts.reduce((s, p) => s + p.pct, 0) / parts.length) : null };
+}
+
+export function getClientEngagement(clientId: number, days: number = ENGAGEMENT_DAYS): ClientEngagement {
+  const now = engagementWindow(clientId, days, 0);
+  // The same thirty days before those thirty. Null until there is anything
+  // in them, so a new client is not told they are down on a month that never
+  // happened.
+  const before = engagementWindow(clientId, days, 1);
+  return { overall: now.overall, previous: before.overall, parts: now.parts, days };
+}
+
+/** The coach's own note about a client. Theirs alone; the client never sees it. */
+export function setCoachNote(clientId: number, text: string) {
+  const data = getData();
+  const client = data.clients.find((c) => c.id === clientId);
+  if (!client) return;
+  const clean = text.trim().slice(0, 2000);
+  if (clean) {
+    client.coach_note = clean;
+    client.coach_note_at = new Date().toISOString();
+  } else {
+    delete client.coach_note;
+    delete client.coach_note_at;
+  }
+  persist();
+}
+
+/** The coach has looked: these events (all of them, one session's, or by id) stop being new. */
+export function markClientEventsSeen(clientId: number, which: { all: true } | { dayId: number } | { ids: string[] } | { tab: string }) {
+  const data = getData();
+  const client = data.clients.find((c) => c.id === clientId);
+  if (!client) return;
+  const since = Date.now() - HOME_NEW_DAYS * 86400000;
+  const recent = getActivityFeed(client.coach_id ?? 0).filter((e) => e.clientId === clientId && e.at >= since);
+  // A tab clears what is on the tab itself; news about one session waits
+  // for that session to be opened.
+  const hit = recent.filter((e) =>
+    "all" in which ? true : "dayId" in which ? e.dayId === which.dayId : "tab" in which ? e.tab === which.tab && e.dayId == null : which.ids.includes(e.id)
+  );
+  if (hit.length === 0) return;
+  // Only what is still inside the window is kept, so this never grows.
+  const live = new Set(recent.map((e) => e.id));
+  const seen: Record<string, number> = {};
+  for (const [id, at] of Object.entries(client.coach_seen ?? {})) if (live.has(id)) seen[id] = at;
+  for (const e of hit) seen[e.id] = e.at;
+  client.coach_seen = seen;
+  persist();
+}
+
 /**
  * Why a client needs the coach's attention, or null when they don't.
  *
@@ -4628,27 +5213,12 @@ export function getClientHeaderPlans(clientId: number): HeaderPlan[] {
  * one dot, not a badge count, because the useful question at a glance is
  * "who needs me", not "how many things".
  */
-export function clientAttention(clientId: number): string | null {
-  // Locked out of signing in: they can't reach the app at all right now.
-  if (clientLockedOut(clientId)) return "Locked out of signing in";
-
-  // Check-ins the client owes but hasn't logged.
-  const due = getCheckInStatus(clientId);
-  if (due.dueTypes.length > 0) {
-    const n = due.dueTypes.length;
-    return `${n} check-in${n === 1 ? "" : "s"} due`;
-  }
-
-  // The live week having no split is the coach's own omission, and the one
-  // that stops the client training at all.
-  const program = getDeployedProgram(clientId);
-  if (program) {
-    const liveWeek = program.start_week + getProgramCurrentWeekIndex(program) - 1;
-    const built = getWeek(clientId, liveWeek).some((d) => getAssignmentsForDay(d.id).length > 0);
-    if (!built) return `Week ${liveWeek} not built`;
-  }
-
-  return null;
+export function clientAttention(clientId: number, feed?: FeedEvent[]): string | null {
+  // The same list the client's Home spells out; the dot's title is the first
+  // of them, and how many more there are.
+  const actions = getClientHome(clientId, feed).actions;
+  if (actions.length === 0) return null;
+  return actions.length === 1 ? actions[0].title : `${actions[0].title} · and ${actions.length - 1} more`;
 }
 
 export function getCheckInStatus(clientId: number): CheckInStatus {
@@ -5472,9 +6042,11 @@ export function addClientPhase(clientId: number, track: PhaseTrack, name: string
     name: name.trim(),
     start_week: first,
     end_week: last,
-    // A new nutrition phase is a draft, like a new programme: the coach sets
-    // its targets and deploys it from the Nutrition tab.
-    ...(track === "nutrition" ? { draft: true } : {}),
+    // Every phase starts as a draft, whichever track it is on: the coach
+    // makes it, fills it in, and only then schedules it. A phase that
+    // reached the client the moment it was named was the old way, and it
+    // meant a half-built plan was already live.
+    draft: true,
   };
   // A training phase is a programme: adding one on the Plan tab makes a
   // draft, named and sized to match, ready to build in the Training tab.
@@ -5517,7 +6089,14 @@ export function updateClientPhase(
     const anchored = weekStart(anchor.slice(0, 10));
     if (start !== anchored) {
       if (programLoggedWeekIndexes(program.id).length > 0) start = anchored;
-      else if (program.status === "deployed") program.deployed_at = `${start}${anchor.slice(10)}`;
+      else if (program.status === "deployed" && start > weekStart(localDateStr())) {
+        // Moved into a later week: it is not running any more, it is
+        // coming. Scheduled, so it goes live on that week by itself and the
+        // programme running now stays the live one.
+        program.status = "draft";
+        program.scheduled_at = `${start}${anchor.slice(10)}`;
+        program.deployed_at = null;
+      } else if (program.status === "deployed") program.deployed_at = `${start}${anchor.slice(10)}`;
       else program.scheduled_at = `${start}${anchor.slice(10)}`;
     }
     if (end < start) end = start;
@@ -5880,6 +6459,50 @@ export function homeGymId(clientId: number): number | null {
 }
 
 /**
+ * A draft phase, named and dated, goes out: scheduled when it starts in a
+ * later week, live when its start week has already come. The same step on
+ * every track — nutrition, lifestyle and training alike — so "scheduled"
+ * means one thing to a coach wherever they are standing.
+ *
+ * A training phase's length is its programme's, so its weeks come from the
+ * builder rather than from here; the start is still the coach's to pick.
+ */
+export function schedulePhase(phaseId: number, name: string, startDate: string, endDate: string): boolean {
+  const data = getData();
+  const phase = data.client_phases.find((p) => p.id === phaseId);
+  if (!phase) return false;
+  const start = weekStart(startDate);
+  const end = weekStart(endDate);
+  phase.name = name.trim() || phase.name;
+  phase.start_week = start <= end ? start : end;
+  phase.end_week = start <= end ? end : start;
+  delete phase.draft;
+  persist();
+  // A programme keeps its length; what moves is when it begins.
+  if (phase.program_id) syncProgramPhase(phase.program_id, false);
+  const live = phase.start_week <= weekStart(localDateStr());
+  if (live) {
+    const where = { nutrition: "nutrition", training: "training", lifestyle: "home" } as const;
+    logCoachActivity(phase.client_id, `Your coach set a new ${phase.track} phase${phase.name ? `: ${phase.name}` : ""}`, {
+      kind: "programme",
+      actionTab: where[phase.track] ?? "home",
+      actionLabel: "Take a look",
+    });
+  }
+  return live;
+}
+
+/** Back to a draft. Only before the client has been in it. */
+export function unschedulePhase(phaseId: number): boolean {
+  const phase = getData().client_phases.find((p) => p.id === phaseId);
+  if (!phase || phase.draft) return false;
+  if (phase.start_week <= weekStart(localDateStr())) return false;
+  phase.draft = true;
+  persist();
+  return true;
+}
+
+/**
  * Makes a gym the home gym. The home gym's weights are target_weight_kg,
  * and sets, notes and exercise goals with no gym on them are the home
  * gym's, so the old home's are pinned to it first and the new home's
@@ -6141,6 +6764,22 @@ export function listCheckInNotes(clientId: number, limit = 20): CheckInNote[] {
 
 // Sets the order of a day's exercises to the given assignment ids; anything
 // on the day but not in the list keeps its place after them.
+/**
+ * The sessions of one week, in the order the coach dragged them into. A
+ * session's place in its week IS day_of_week, so this renumbers them 1..N
+ * without gaps; everything hanging off a session (its exercises, cardio and
+ * the client's logs) travels with it, since only the number changes.
+ */
+export function reorderSessions(clientId: number, week: number, orderedIds: number[]) {
+  const data = getData();
+  const inWeek = data.program_days.filter((pd) => pd.client_id === clientId && pd.week_number === week);
+  const rest = inWeek.filter((pd) => !orderedIds.includes(pd.id)).sort((a, b) => a.day_of_week - b.day_of_week);
+  const sequence = [...orderedIds.map((id) => inWeek.find((pd) => pd.id === id)).filter((pd): pd is ProgramDay => !!pd), ...rest];
+  if (sequence.length !== inWeek.length) return;
+  sequence.forEach((pd, i) => (pd.day_of_week = i + 1));
+  persist();
+}
+
 export function reorderAssignments(programDayId: number, orderedIds: number[]) {
   const data = getData();
   const onDay = data.workout_assignments.filter((wa) => wa.program_day_id === programDayId);
@@ -6325,6 +6964,8 @@ export type CardioChanges = {
   fields: Record<string, CardioFieldValues>;
   removed: number[];
   added: Record<CardioFieldKey, string>[];
+  /** Full order of the surviving cardio ids, or null if untouched. */
+  order?: number[] | null;
 };
 
 export function getClientIdForCardio(entryId: number): number | null {
@@ -6565,6 +7206,29 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
         notes: (add.notes ?? "").trim(),
         order_index: cardioRows().length,
       });
+    }
+    // The order the rows were dragged into; anything not in it (a row added
+    // just now) follows. A later week follows the source day's sequence by
+    // name, as its exercises follow by exercise.
+    if (changes.cardio.order) {
+      const onDay = cardioRows();
+      const byOrder = (a: CardioEntry, b: CardioEntry) => a.order_index - b.order_index;
+      let sequence: CardioEntry[];
+      if (mirror) {
+        const names = data.cardio_entries.filter((c) => c.program_day_id === src.id).sort(byOrder).map((c) => c.name.trim().toLowerCase());
+        const rank = (c: CardioEntry) => {
+          const i = names.indexOf(c.name.trim().toLowerCase());
+          return i < 0 ? names.length + c.order_index : i;
+        };
+        sequence = [...onDay].sort((a, b) => rank(a) - rank(b));
+      } else {
+        const wanted = changes.cardio.order;
+        sequence = [
+          ...wanted.map((id) => onDay.find((c) => c.id === id)).filter((c): c is CardioEntry => !!c),
+          ...onDay.filter((c) => !wanted.includes(c.id)).sort(byOrder),
+        ];
+      }
+      sequence.forEach((c, i) => (c.order_index = i));
     }
 
     // Rest only sticks on an empty day; a day with exercises or cardio
@@ -6921,8 +7585,11 @@ export function getUpNextSession(clientId: number): UpNextSession | null {
   const days = getPublishedWeek(clientId, week)
     .map((day) => ({ day, assignments: getAssignmentsForDay(day.id) }))
     .filter((d) => d.assignments.length > 0);
-  const index = days.findIndex(({ assignments }) =>
-    !assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets)
+  // A session the client said they could not do is settled, as a finished
+  // one is: Home's "Start" moves on to the next rather than sending them
+  // back to the one they skipped.
+  const index = days.findIndex(({ day, assignments }) =>
+    !day.skip_reason && !assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets)
   );
   if (index < 0) return null;
   const { day, assignments } = days[index];
@@ -7926,6 +8593,215 @@ export function foodDiaryTargetOn(clientId: number, date: string): FoodDiaryView
     carbs: trained ? s.trainingCarbs : s.restCarbs,
     fat: trained ? s.trainingFats : s.restFats,
   };
+}
+
+// ---- What the client actually ate, for the coach ----------------------
+// Every figure here is reduced from the day's own entries: a day's kcal, its
+// macros and everything the summary says come from the same rows the meals
+// are drawn from, so a total can never disagree with the breakdown under it.
+
+export type LoggedFood = { name: string; quantity: string; kcal: number; protein: number; carbs: number; fat: number };
+export type LoggedMeal = { id: string; label: string; kcal: number; protein: number; carbs: number; fat: number; foods: LoggedFood[]; /** The client's picture of this meal, when they took one. */ photo: string | null };
+export type LoggedDay = {
+  date: string;
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  isTraining: boolean;
+  /** That day's target, by the day type the client logged it as. */
+  target: number | null;
+  proteinTarget: number | null;
+  note: string | null;
+  meals: LoggedMeal[];
+};
+export type LoggedDaysView = {
+  days: LoggedDay[];
+  /** Days in the window, whether logged or not, so "21 of 28" is honest. */
+  windowDays: number;
+  avgKcal: number | null;
+  avgProtein: number | null;
+  /** Logged days within ±200 kcal of their target, and how many had one. */
+  onTarget: number;
+  judged: number;
+};
+
+/** The days a client logged food on, newest first, inside a date range. */
+export function getLoggedDays(clientId: number, from: string, to: string): LoggedDaysView {
+  const data = getData();
+  const derived = getNutritionGoalsSummary(clientId);
+  const trainedOn = trainingDates(clientId);
+  const dayType = new Map(data.calorie_logs.filter((c) => c.client_id === clientId).map((c) => [c.date, c] as const));
+  const entries = data.food_entries.filter((e) => e.client_id === clientId && e.date >= from && e.date <= to);
+
+  const byDate = new Map<string, typeof entries>();
+  for (const e of entries) {
+    const list = byDate.get(e.date) ?? [];
+    list.push(e);
+    byDate.set(e.date, list);
+  }
+
+  const days: LoggedDay[] = [...byDate.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([date, rows]) => {
+      const labels = new Map(listFoodMeals(clientId, date).map((m) => [m.id, m.label] as const));
+      const photos = mealPhotosOn(clientId, date);
+      const order = [...labels.keys()];
+      const meals = new Map<string, LoggedMeal>();
+      for (const e of rows) {
+        const meal = meals.get(e.meal) ?? { id: e.meal, label: labels.get(e.meal) ?? "Meal", kcal: 0, protein: 0, carbs: 0, fat: 0, foods: [], photo: photos.get(e.meal) ?? null };
+        meal.kcal += e.kcal;
+        meal.protein += e.protein;
+        meal.carbs += e.carbs;
+        meal.fat += e.fat;
+        meal.foods.push({
+          name: e.name,
+          quantity: e.serving || `${Math.round(e.grams)} g`,
+          kcal: Math.round(e.kcal),
+          protein: r1(e.protein),
+          carbs: r1(e.carbs),
+          fat: r1(e.fat),
+        });
+        meals.set(e.meal, meal);
+      }
+      const log = dayType.get(date);
+      const isTraining = log?.day_type ? log.day_type === "training" : trainedOn.has(date);
+      const sum = (k: "kcal" | "protein" | "carbs" | "fat") => rows.reduce((t, e) => t + e[k], 0);
+      return {
+        date,
+        kcal: Math.round(sum("kcal")),
+        protein: Math.round(sum("protein")),
+        carbs: Math.round(sum("carbs")),
+        fat: Math.round(sum("fat")),
+        isTraining,
+        target: (isTraining ? derived.trainingKcal : derived.restKcal) || null,
+        proteinTarget: (isTraining ? derived.trainingProtein : derived.restProtein) || null,
+        note: log?.note?.trim() || null,
+        meals: [...meals.values()]
+          .map((m) => ({ ...m, kcal: Math.round(m.kcal), protein: Math.round(m.protein), carbs: Math.round(m.carbs), fat: Math.round(m.fat) }))
+          .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id)),
+      };
+    });
+
+  const span = Math.max(1, Math.round((new Date(`${to}T00:00:00`).getTime() - new Date(`${from}T00:00:00`).getTime()) / 86400000) + 1);
+  const judged = days.filter((d) => d.target != null);
+  const avg = (list: number[]) => (list.length ? Math.round(list.reduce((t, v) => t + v, 0) / list.length) : null);
+  return {
+    days,
+    windowDays: span,
+    avgKcal: avg(days.map((d) => d.kcal)),
+    avgProtein: avg(days.map((d) => d.protein)),
+    onTarget: judged.filter((d) => Math.abs(d.kcal - (d.target as number)) <= 200).length,
+    judged: judged.length,
+  };
+}
+
+// ---- Logged data: one lookup behind every figure on the block ----------
+// A table cell, a feed tile, a metric's last value and the Change row all
+// read the same map. Nothing about a period is stored — no day total, no
+// "complete" flag, no delta: they are all derived from these values, so a
+// summary can never disagree with the rows it summarises.
+
+export type LoggedMetric = {
+  id: number;
+  name: string;
+  unit: string;
+  category: string;
+  categoryLabel: string;
+  /** The category's own colour, for the column head. */
+  colour: string;
+  goodDirection: "up" | "down" | "none";
+};
+export type LoggedPeriod = { key: string; label: string };
+export type LoggedValues = {
+  metrics: LoggedMetric[];
+  /** Newest first, as both the table and the feed read them. */
+  periods: LoggedPeriod[];
+  /** "<metricId>:<periodKey>" to the value the client submitted. */
+  values: Record<string, number>;
+  /** The client's note for a period, when they left one. */
+  notes: Record<string, string>;
+};
+
+const CATEGORY_COLOUR: Record<string, string> = {
+  sleep: "#4c42a8",
+  activity: "#1f7a4d",
+  lifestyle: "#a8761f",
+  wellbeing: "#2f5d8f",
+  body: "#b8471f",
+  measurements: "#b8471f",
+  stress: "#b8471f",
+  fatigue: "#a8761f",
+  nutrition: "#1f7a4d",
+  training: "#4c42a8",
+};
+
+/** Everything the Logged data block reads, for one cadence. */
+export function getLoggedValues(clientId: number, cadence: "daily" | "weekly", count: number): LoggedValues {
+  const data = getData();
+  const defs = listAllMetrics(clientId).filter((m) => m.frequency === cadence);
+  const metrics: LoggedMetric[] = defs.map((m) => {
+    const g = metricGroup(m.category);
+    return {
+      id: m.id,
+      name: m.name,
+      unit: m.unit,
+      category: g.key,
+      categoryLabel: g.label,
+      colour: CATEGORY_COLOUR[g.key] ?? "#5b6472",
+      goodDirection: m.good_direction ?? "none",
+    };
+  });
+
+  // The periods asked for, newest first, whether or not anything came in:
+  // a gap is data, so it has to have a row.
+  const today = localDateStr();
+  const periods: LoggedPeriod[] = [];
+  for (let i = 0; i < count; i++) {
+    if (cadence === "daily") {
+      const d = new Date(`${today}T00:00:00`);
+      d.setDate(d.getDate() - i);
+      const key = localDateStr(d);
+      periods.push({ key, label: d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) });
+    } else {
+      const d = new Date(`${weekStart(today)}T00:00:00`);
+      d.setDate(d.getDate() - i * 7);
+      const key = localDateStr(d);
+      periods.push({ key, label: `Week ${isoWeekNumber(key)}` });
+    }
+  }
+
+  const keys = new Set(periods.map((p) => p.key));
+  const values: Record<string, number> = {};
+  const ids = new Set(defs.map((m) => m.id));
+  for (const e of data.metric_entries) {
+    if (!ids.has(e.metric_definition_id) || e.value == null || !keys.has(e.period)) continue;
+    values[`${e.metric_definition_id}:${e.period}`] = e.value;
+  }
+
+  const notes: Record<string, string> = {};
+  for (const n of data.check_in_notes ?? []) {
+    if (n.client_id !== clientId || n.kind !== cadence || !keys.has(n.period)) continue;
+    if (n.text.trim()) notes[n.period] = n.text.trim();
+  }
+
+  return { metrics, periods, values, notes };
+}
+
+/** The ISO week number of the Monday given. */
+function isoWeekNumber(monday: string): number {
+  const d = new Date(`${monday}T00:00:00`);
+  d.setDate(d.getDate() + 3);
+  const firstThursday = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d.getTime() - firstThursday.getTime()) / 86400000 - 3 + ((firstThursday.getDay() + 6) % 7)) / 7);
+}
+
+/** Which way a metric is meant to move. */
+export function setMetricDirection(id: number, direction: "up" | "down" | "none") {
+  const m = getData().metric_definitions.find((x) => x.id === id);
+  if (!m) return;
+  m.good_direction = direction;
+  persist();
 }
 
 export function getFoodDiary(clientId: number, date: string): FoodDiaryView {

@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { addProgramWeekAction, removeProgramWeekAction } from "../lib/actions";
-import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
+import { addProgramWeekAction } from "../lib/actions";
+import { placePopover, type Placement } from "../components/popover";
+
+const ADD_POP_WIDTH = 172;
 
 export type RailDay = { dayOfWeek: number; state: "trained" | "missed" | "rest"; title: string };
 export type RailWeek = {
@@ -11,11 +13,12 @@ export type RailWeek = {
   days: RailDay[];
   meta: string;
   isLive: boolean;
-  /** Shows the remove control. False for live/past weeks and for the only week. */
-  removable: boolean;
+  hasNew?: boolean;
 };
 
-// The week rail: one capsule per week of the programme.
+// The week rail: one capsule per week of the programme. Removing a week is
+// not done here: the bin sat on the capsule's corner and crowded it, so it
+// is on the selected week's heading row under the rail (ProgramBuilderShell).
 //
 // The ticks report what the client ACTUALLY trained, not what was planned.
 // A day the coach built but the client skipped reads differently from a rest
@@ -42,6 +45,23 @@ export default function WeekRail({
   const [addOpen, setAddOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
+  const addRef = useRef<HTMLButtonElement>(null);
+  // It was pinned to the left edge of the rail at a hard-coded 66px down,
+  // which on a five-week programme opened it a whole rail away from the
+  // button that was clicked. It belongs under that button.
+  const [addPos, setAddPos] = useState<Placement | null>(null);
+  const placeAdd = () => setAddPos(placePopover(addRef.current, { width: ADD_POP_WIDTH, maxHeight: 200, minHeight: 120 }));
+
+  useEffect(() => {
+    if (!addOpen) return;
+    // The rail scrolls sideways; keep the popover with its button.
+    window.addEventListener("scroll", placeAdd, true);
+    window.addEventListener("resize", placeAdd);
+    return () => {
+      window.removeEventListener("scroll", placeAdd, true);
+      window.removeEventListener("resize", placeAdd);
+    };
+  }, [addOpen]);
 
   // When a week is added the rail grows past the right edge and the new
   // capsule is off screen, so the coach loses count. On growth, scroll the
@@ -88,8 +108,6 @@ export default function WeekRail({
     <div className="pb-rail-wrap" ref={wrapRef}>
       <div className="pb-rail" ref={railRef}>
         {weeks.map((w) => (
-          // Wrapper so the remove control can sit on the capsule's corner
-          // without nesting a button inside a button.
           <div key={w.weekNumber} className={`pb-week-wrap${w.weekNumber === selectedWeek ? " selected" : ""}`}>
             <button
               type="button"
@@ -100,6 +118,7 @@ export default function WeekRail({
               <span className="pb-week-top">
                 <span className="pb-week-label">{w.label}</span>
                 {w.isLive && <span className="pb-week-dot" title="Current week" aria-hidden="true" />}
+                {w.hasNew && <span className="ad-new-dot" title="Something new from the client in this week" />}
               </span>
               <span className="pb-week-ticks">
                 {w.days.map((d) => (
@@ -108,23 +127,17 @@ export default function WeekRail({
               </span>
               <span className="pb-week-meta">{w.meta}</span>
             </button>
-            {w.removable && programId != null && (
-              <span className="pb-week-remove">
-                <ConfirmDeleteButton
-                  action={removeProgramWeekAction}
-                  hiddenFields={{ clientId, programId, week: w.weekNumber }}
-                  label={`Remove ${w.label}`}
-                  description="Its exercises and anything logged on them are deleted, and the weeks after it move up one."
-                />
-              </span>
-            )}
           </div>
         ))}
 
         <button
+          ref={addRef}
           type="button"
           className={`pb-week-capsule pb-week-add${addOpen ? " open" : ""}`}
-          onClick={() => setAddOpen((o) => !o)}
+          onClick={() => {
+            if (!addOpen) placeAdd();
+            setAddOpen((o) => !o);
+          }}
           aria-expanded={addOpen}
         >
           <span className="pb-week-add-label">+ Add week</span>
@@ -133,7 +146,12 @@ export default function WeekRail({
       </div>
 
       {addOpen && (
-        <div className="pb-add-pop" role="dialog" aria-label={`Add week ${nextWeekNumber}`}>
+        <div
+          className="pb-add-pop"
+          role="dialog"
+          aria-label={`Add week ${nextWeekNumber}`}
+          style={addPos ?? undefined}
+        >
           <div className="pb-add-pop-top">
             <span className="pb-add-pop-title">Add week {nextWeekNumber}</span>
             <button type="button" className="pb-add-pop-x" onClick={() => setAddOpen(false)} aria-label="Cancel">

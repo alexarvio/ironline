@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { logoutAction } from "../lib/auth-actions";
 import { getUserForClient } from "../lib/auth";
-import { clientAttention, getCoachProfile, listClients } from "../lib/queries";
-import { AccountIcon, CalendarIcon, FeedIcon } from "../components/icons";
+import { clientAttention, getActivityFeed, getCoachProfile, listClients } from "../lib/queries";
+import { AccountIcon, BusinessIcon, CalendarIcon, FeedIcon, PhasesIcon } from "../components/icons";
 import ClientRoster, { type RosterClient } from "./ClientRoster";
+import { mailConfigured } from "../lib/mail";
 import CoachFooter from "./CoachFooter";
 
 // The left rail: brand, the coach's cross-client views, the client roster
@@ -27,13 +28,15 @@ export default function AdminSidebar({
   view: string | null;
   isOwner?: boolean;
 }) {
+  // One walk of the store for every client on the rail.
+  const feed = getActivityFeed(coachId);
   const clients: RosterClient[] = listClients(coachId).map((c) => {
     const user = getUserForClient(c.id);
     return {
       id: c.id,
       name: c.name,
       avatarPath: c.avatar_path ?? null,
-      attention: clientAttention(c.id),
+      attention: clientAttention(c.id, feed),
       // No login yet, or a temporary password never replaced: they have not
       // signed in to the app themselves.
       notSignedIn: !user || user.must_change_password,
@@ -68,6 +71,21 @@ export default function AdminSidebar({
           <CalendarIcon />
           <span className="ad-rail-nav-label">Calendar</span>
         </Link>
+        <Link href="/admin?view=phases" className={`ad-rail-nav-row${view === "phases" ? " active" : ""}`}>
+          <PhasesIcon />
+          <span className="ad-rail-nav-label">Phases</span>
+        </Link>
+        <Link href="/admin?view=business" className={`ad-rail-nav-row${view === "business" ? " active" : ""}`}>
+          <BusinessIcon />
+          <span className="ad-rail-nav-label">Business</span>
+        </Link>
+        {/* The house style, rendered from the real classes — somewhere to
+            look when "is this the right blue" comes up, instead of hunting
+            for a screen that already does it. */}
+        <Link href="/admin?view=style" className={`ad-rail-nav-row${view === "style" ? " active" : ""}`}>
+          <BusinessIcon />
+          <span className="ad-rail-nav-label">Style</span>
+        </Link>
         {/* The owner's account management; no other coach sees this link. */}
         {isOwner && (
           <Link href="/admin?view=coaches" className={`ad-rail-nav-row${view === "coaches" ? " active" : ""}`}>
@@ -77,7 +95,7 @@ export default function AdminSidebar({
         )}
       </nav>
 
-      <ClientRoster clients={clients} selectedId={selectedId} />
+      <ClientRoster clients={clients} selectedId={selectedId} inviteReady={mailConfigured()} />
 
       <CoachFooter name={nameFromEmail(coachEmail)} photoPath={getCoachProfile(coachId)?.avatar_path ?? null}>
         <Link href="/admin/profile" role="menuitem" className="ad-rail-menu-link">

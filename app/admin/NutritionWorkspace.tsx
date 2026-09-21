@@ -1,17 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { ReactNode, useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import {
   applySupplementChangesAction,
-  deployNutritionPhaseAction,
   draftNutritionPhaseAction,
   saveCoachNutritionNoteAction,
   saveNutritionTargetsAction,
 } from "../lib/actions";
 import type { ClientPhase } from "../lib/db";
+import type { LoggedDaysView } from "../lib/queries";
+import NutritionLoggedDays from "./NutritionLoggedDays";
 import { PhaseDialog } from "./PhaseDialogButton";
 import DragList from "../components/DragList";
+import SchedulePhaseDialog from "./SchedulePhaseDialog";
+import { phaseRange, phaseWeekIndex, phaseWeeks } from "../lib/phases";
+import PhaseHeader, { usePhases, type PhaseOption } from "./PhaseHeader";
+import { ChevronDownIcon, TrashIcon } from "../components/icons";
 
 // The Nutrition tab: three navy-banded cards. Daily targets per nutrition
 // phase with the note beside them, the supplements sheet, and the calories
@@ -23,48 +28,42 @@ export type NwPhase = {
   id: number;
   name: string;
   status: "past" | "now" | "next" | "draft";
-  startLabel: string;
-  range: string;
   training: Macros;
   rest: Macros;
   note: string;
   phase: ClientPhase;
 };
 export type NwSupplement = { id: number; name: string; quantity: string; timing: string; notes: string };
-export type NwLogDay = { date: string; kcal: number | null; isTraining: boolean; target: number | null; note: string | null; phase: string | null };
+
 
 export type NutritionWorkspaceProps = {
   clientId: number;
-  clientName: string;
   today: string;
   /** No phases: one client-level editor with id 0. */
   phases: NwPhase[];
+  /** `?phase=` as the server read it, so a linked phase opens straight away. */
+  initialPhaseId: number | null;
   waterL: number | null;
   latestWeightKg: number | null;
   supplements: NwSupplement[];
   /** The days the client logged calories, newest first. */
-  logs: NwLogDay[];
+  /** The days the client logged, per phase on the rail. */
+  loggedByPhase: Record<number, LoggedDaysView>;
   liveSince: string | null;
 };
 
 const KCAL = { protein: 4, carbs: 4, fats: 9 } as const;
+// One palette for the macros across the app — the tokens in globals.css,
+// shared with the logged-days table below and the client's food diary.
 const MACRO = [
-  { key: "protein", label: "Protein", colour: "#2f5d8f" },
-  { key: "carbs", label: "Carbs", colour: "#3f6e46" },
-  { key: "fats", label: "Fat", colour: "#9a5a33" },
+  { key: "protein", label: "Protein", colour: "var(--macro-protein)" },
+  { key: "carbs", label: "Carbs", colour: "var(--macro-carbs)" },
+  { key: "fats", label: "Fat", colour: "var(--macro-fat)" },
 ] as const;
 const kcalOf = (m: Macros) => (m.protein ?? 0) * KCAL.protein + (m.carbs ?? 0) * KCAL.carbs + (m.fats ?? 0) * KCAL.fats;
 const same = (a: Macros, b: Macros) => a.protein === b.protein && a.carbs === b.carbs && a.fats === b.fats;
-const fmtDate = (iso: string, opts: Intl.DateTimeFormatOptions) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", opts);
 const n = (v: number) => v.toLocaleString("en-US");
-// The same pills as the programmes on Training: a new phase is an orange
-// draft until deployed, then scheduled until its start week, then live.
-const PHASE_STATUS = {
-  draft: { label: "Draft", pill: "draft" },
-  now: { label: "Live", pill: "live" },
-  next: { label: "Scheduled", pill: "scheduled" },
-  past: { label: "Past", pill: "past" },
-} as const;
+const PHASE_STATE = { draft: "draft", now: "live", next: "scheduled", past: "past" } as const;
 
 // Week maths for the new-phase defaults; phases run Monday to Monday.
 const mondayOf = (date: string) => {
@@ -79,25 +78,35 @@ const addWeeks = (monday: string, weeks: number) => {
 };
 
 export default function NutritionWorkspace(p: NutritionWorkspaceProps) {
-  const initial = p.phases.find((x) => x.status === "now") ?? p.phases.find((x) => x.status === "next") ?? p.phases[0];
-  const [phaseId, setPhaseId] = useState<number>(initial?.id ?? 0);
-  const phase = p.phases.find((x) => x.id === phaseId) ?? initial;
+  // The switcher only ever lists real phases. With none of them the client
+  // still has a plan (the id-0 editor below), and the band says so.
+  const real = p.phases.filter((x) => x.id !== 0);
+  const options: PhaseOption[] = real.map((x) => ({
+    id: x.id,
+    name: x.name,
+    status: PHASE_STATE[x.status],
+    start: x.phase.start_week,
+    dates: phaseRange(x.phase.start_week, x.phase.end_week),
+    weeks: phaseWeeks(x.phase.start_week, x.phase.end_week),
+    week: x.status === "now" ? phaseWeekIndex(x.phase.start_week, x.phase.end_week, p.today) : null,
+  }));
+  const { current, select } = usePhases(options, { initialId: p.initialPhaseId });
+  const phase = p.phases.find((x) => x.id === current?.id) ?? p.phases.find((x) => x.id === 0) ?? p.phases[0];
   const [editPhase, setEditPhase] = useState(false);
   const [newPhase, setNewPhase] = useState(false);
 
   // A phase that arrives from the server (just added here or on Plan) is
   // selected, so the coach lands straight on its targets.
-  const ids = p.phases.map((x) => x.id).join(",");
+  const ids = real.map((x) => x.id).join(",");
   const [seenIds, setSeenIds] = useState(ids);
   if (ids !== seenIds) {
     const before = new Set(seenIds.split(",").map(Number));
-    const fresh = p.phases.find((x) => x.id !== 0 && !before.has(x.id));
+    const fresh = real.find((x) => !before.has(x.id));
     setSeenIds(ids);
-    if (fresh) setPhaseId(fresh.id);
+    if (fresh) select(fresh.id);
   }
 
   // A new phase starts the week after the last one ends, else this week.
-  const real = p.phases.filter((x) => x.id !== 0);
   const lastEnd = real.reduce<string | null>((max, x) => (!max || x.phase.end_week > max ? x.phase.end_week : max), null);
   const thisWeek = mondayOf(p.today);
   const newStart = lastEnd && addWeeks(lastEnd, 1) > thisWeek ? addWeeks(lastEnd, 1) : thisWeek;
@@ -106,12 +115,26 @@ export default function NutritionWorkspace(p: NutritionWorkspaceProps) {
   return (
     <div className="pl nw">
       {phase && (
-        <TargetsCard key={phase.id} p={p} phase={phase} onPickPhase={setPhaseId} onEditPhase={() => setEditPhase(true)} onNewPhase={() => setNewPhase(true)} />
+        <TargetsCard
+          key={phase.id}
+          p={p}
+          phase={phase}
+          options={options}
+          onPickPhase={select}
+          onEditPhase={() => setEditPhase(true)}
+          onNewPhase={() => setNewPhase(true)}
+          rest={
+            <>
+              <SupplementsBlock p={p} />
+              <Block id="logged" title="Logged days" hint={loggedHint(p.loggedByPhase[phase.id])}>
+                <NutritionLoggedDays view={p.loggedByPhase[phase.id] ?? { days: [], windowDays: 0, avgKcal: null, avgProtein: null, onTarget: 0, judged: 0 }} />
+              </Block>
+            </>
+          }
+        />
       )}
-      <SupplementsCard p={p} />
-      <CaloriesCard p={p} />
       {editPhase && phase && phase.id !== 0 && (
-        <PhaseDialog clientId={p.clientId} phase={phase.phase} today={p.today} others={others} lockTrack onClose={() => setEditPhase(false)} />
+        <PhaseDialog clientId={p.clientId} phase={phase.phase} today={p.today} others={others} onClose={() => setEditPhase(false)} />
       )}
       {newPhase && (
         <PhaseDialog
@@ -121,7 +144,6 @@ export default function NutritionWorkspace(p: NutritionWorkspaceProps) {
           defaultStart={newStart}
           defaultEnd={addWeeks(newStart, 3)}
           others={others}
-          lockTrack
           onClose={() => setNewPhase(false)}
         />
       )}
@@ -134,15 +156,21 @@ export default function NutritionWorkspace(p: NutritionWorkspaceProps) {
 function TargetsCard({
   p,
   phase,
+  options,
   onPickPhase,
   onEditPhase,
   onNewPhase,
+  rest,
 }: {
   p: NutritionWorkspaceProps;
   phase: NwPhase;
+  /** The real phases, for the switcher. Empty while the client has none. */
+  options: PhaseOption[];
   onPickPhase: (id: number) => void;
   onEditPhase: () => void;
   onNewPhase: () => void;
+  /** The phase's other blocks, inside its card. */
+  rest?: ReactNode;
 }) {
   const [day, setDay] = useState<"training" | "rest">("training");
   const [values, setValues] = useState({ training: phase.training, rest: phase.rest });
@@ -153,7 +181,6 @@ function TargetsCard({
 
   const current = values[day];
   const kcal = kcalOf(current);
-  const largest = Math.max(current.protein ?? 0, current.carbs ?? 0, current.fats ?? 0, 1);
   const set = (key: keyof Macros, raw: string) => {
     const v = raw.trim() === "" ? null : Number(raw.replace(",", "."));
     setValues((old) => {
@@ -201,13 +228,14 @@ function TargetsCard({
       }
     });
   const hasPhases = phase.id !== 0;
-  const firstName = p.clientName.trim().split(/\s+/)[0] || "The client";
   // Deploying a draft schedules it when it starts in a later week, and puts
   // it live when its start week has come.
   const [publishing, startPublish] = useTransition();
-  const startsLater = phase.phase.start_week > mondayOf(p.today);
-  const deploy = () => startPublish(() => deployNutritionPhaseAction(phase.id));
+  const [scheduling, setScheduling] = useState<string | null | false>(false);
   const backToDraft = () => startPublish(() => draftNutritionPhaseAction(phase.id));
+  const mondayThisWeek = mondayOf(p.today);
+  const blocked =
+    changes.length > 0 ? "Apply or discard the changes first" : kcalOf(values.training) === 0 ? "Set the macros before scheduling it" : undefined;
 
   const summary = [
     `${n(kcalOf(values.training))} kcal training`,
@@ -216,80 +244,59 @@ function TargetsCard({
   ].filter(Boolean);
 
   return (
-    <section className="pl-card">
-      <div className="pl-band">
-        <div className="pl-band-left">
-          <div className="pl-eyebrow">Daily targets</div>
-        </div>
-        <div className="pl-band-right">
-          {hasPhases ? (
-            <>
-              {phase.status === "next" && (
-                <button type="button" className="pl-switch-opt nw-edit-phase" onClick={backToDraft} disabled={publishing}>
-                  Back to draft
-                </button>
-              )}
-              <button type="button" className="pl-switch-opt nw-edit-phase" onClick={onEditPhase}>
-                Edit dates
-              </button>
-              {phase.status === "draft" && (
-                <button
-                  type="button"
-                  className="pl-primary"
-                  onClick={deploy}
-                  disabled={publishing || changes.length > 0}
-                  title={changes.length > 0 ? "Apply or discard the changes first" : undefined}
-                >
-                  {publishing ? "Deploying…" : startsLater ? `Schedule for ${phase.startLabel}` : "Deploy now"}
-                </button>
-              )}
-            </>
-          ) : (
-            <button type="button" className="pl-primary" onClick={onNewPhase}>
-              + New phase
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Every nutrition phase from the Plan tab, like the programmes on
-          Training: the running one and any scheduled after it. The numbers
-          below belong to the chip that is selected, and the line under the
-          chips says when the client gets them. */}
-      {hasPhases && (
-        <div className="nw-phases">
-          <div className="nw-phase-chips" role="tablist" aria-label="Nutrition phases">
-            {p.phases.map((ph) => (
-              <button
-                key={ph.id}
-                type="button"
-                role="tab"
-                aria-selected={ph.id === phase.id}
-                className={`pb-program-chip nw-phase-chip ${ph.status}${ph.id === phase.id ? " active" : ""}`}
-                onClick={() => onPickPhase(ph.id)}
-              >
-                <span className="pb-program-name">{ph.name}</span>
-                <span className={`status-pill ${PHASE_STATUS[ph.status].pill}`}>{PHASE_STATUS[ph.status].label}</span>
-                <span className="pb-program-weeks">{ph.range}</span>
-              </button>
-            ))}
-            <button type="button" className="pb-new-program nw-new-phase" onClick={onNewPhase}>
-              + New phase
-            </button>
-          </div>
-          <div className={`nw-phase-line ${phase.status}`} role="status">
-            <span className="nw-phase-dot" aria-hidden="true" />
-            {phase.status === "draft"
-              ? `Draft: ${firstName} doesn't see this yet. ${startsLater ? `Schedule it to go live on ${phase.startLabel}` : "Deploy it to go live now"}`
-              : phase.status === "now"
-              ? `Live: ${firstName} sees these targets now`
-              : phase.status === "next"
-              ? `Scheduled: ${firstName} gets these targets on ${phase.startLabel}`
-              : `Past phase: ${firstName} no longer sees these`}
-          </div>
-        </div>
+    <>
+      {scheduling !== false && (
+        <SchedulePhaseDialog
+          phase={phase.phase}
+          today={p.today}
+          others={p.phases.filter((x) => x.id !== 0).map((x) => ({ id: x.id, track: x.phase.track, name: x.name, start_week: x.phase.start_week, end_week: x.phase.end_week }))}
+          defaultStart={scheduling}
+          onClose={() => setScheduling(false)}
+        />
       )}
 
+      {/* The phase, whole: which one it is, its targets, its supplements and
+          what the client actually ate, in one card under one name. */}
+      <section className="pl-card ph-card nw-phase-card">
+      <PhaseHeader
+        kind="nutrition"
+        phases={options}
+        currentId={hasPhases ? phase.id : null}
+        onSelect={onPickPhase}
+        onNew={onNewPhase}
+        secondary={
+          phase.status === "next" ? (
+            <button type="button" className="ph-minor" onClick={backToDraft} disabled={publishing}>
+              Back to draft
+            </button>
+          ) : undefined
+        }
+        primary={
+          phase.status === "draft" ? (
+            <button type="button" className="ph-primary" onClick={() => setScheduling(null)} disabled={publishing || !!blocked} title={blocked}>
+              Schedule it
+            </button>
+          ) : phase.status === "next" ? (
+            <button type="button" className="ph-primary" onClick={() => setScheduling(mondayThisWeek)} disabled={publishing}>
+              Make it live
+            </button>
+          ) : undefined
+        }
+        editDates={
+          hasPhases && (
+            <button type="button" className="nw-edit-phase" onClick={onEditPhase}>
+              Edit dates
+            </button>
+          )
+        }
+        emptyAction={
+          <button type="button" className="ph-primary" onClick={onNewPhase}>
+            Create the first phase
+          </button>
+        }
+      />
+
+      <Block id="targets" title="Daily targets" hint={summary.join(" · ")}>
       <div className="nw-targets">
         <div className="nw-editor">
           <div className="nw-editor-top">
@@ -347,8 +354,14 @@ function TargetsCard({
                     <input type="text" inputMode="decimal" value={current[m.key] ?? ""} onChange={(e) => set(m.key, e.target.value)} aria-label={`${m.label} grams`} />
                     <span>g</span>
                   </div>
+                  {/* The share of the day's calories — the same figure as the
+                      label above it. It used to be grams against the heaviest
+                      macro, which meant carbs sat at 100% whatever the split
+                      (they are almost always the heaviest by weight) while the
+                      line above said 43%. Two scales on one row, and the label
+                      invites you to read the bar as that percentage. */}
                   <div className="nw-macro-bar">
-                    <span style={{ width: `${Math.min(100, (value / largest) * 100)}%`, background: m.colour }} />
+                    <span style={{ width: `${pct}%`, background: m.colour }} />
                   </div>
                   {perKg && <span className="nw-macro-perkg">{perKg} g / kg</span>}
                 </div>
@@ -373,6 +386,10 @@ function TargetsCard({
         </div>
       </div>
 
+      </Block>
+
+      {rest}
+
       {changes.length > 0 && (
         <div className="pb-pending pl-pending" role="status" aria-live="polite">
           <span className="pb-pending-count">
@@ -393,13 +410,27 @@ function TargetsCard({
           </div>
         </div>
       )}
-    </section>
+      </section>
+    </>
   );
 }
 
 // ---- 2 · Supplements -----------------------------------------------------
 
-function SupplementsCard({ p }: { p: NutritionWorkspaceProps }) {
+// The supplements, as a block of the phase: its Add sits on the strip.
+function SupplementsBlock({ p }: { p: NutritionWorkspaceProps }) {
+  // "+ Add item" lives with the list, not on the strip. On the strip it sat
+  // beside a folded block, offering to add a row to something not on screen —
+  // and it was filled navy, which says "this writes", when adding a row only
+  // stages one for the bar at the foot.
+  return (
+    <Block id="supplements" title="Supplements" hint={`${p.supplements.length} ${p.supplements.length === 1 ? "item" : "items"}`}>
+      <SupplementsCard p={p} bare />
+    </Block>
+  );
+}
+
+function SupplementsCard({ p, bare = false }: { p: NutritionWorkspaceProps; bare?: boolean }) {
   // The sheet is edited as a draft. Nothing lands until Apply on the bar at
   // the foot, the same way every other table in the admin saves: the coach
   // can add three items and fix a quantity, see "4 changes", and land them
@@ -475,17 +506,19 @@ function SupplementsCard({ p }: { p: NutritionWorkspaceProps }) {
   const confirming = confirmId != null ? rows.find((r) => r.id === confirmId) ?? null : null;
 
   return (
-    <section className="pl-card">
-      <div className="pl-band">
-        <div className="pl-band-left">
-          <div className="pl-eyebrow">Supplements</div>
+    <section className={bare ? "nw-bare" : "pl-card"}>
+      {bare ? null : (
+        <div className="pl-band">
+          <div className="pl-band-left">
+            <div className="pl-eyebrow">Supplements</div>
+          </div>
+          <div className="pl-band-right">
+            <button type="button" className="pl-primary" onClick={addRow}>
+              + Add item
+            </button>
+          </div>
         </div>
-        <div className="pl-band-right">
-          <button type="button" className="pl-primary" onClick={addRow}>
-            + Add item
-          </button>
-        </div>
-      </div>
+      )}
 
       <div className="nw-table">
         <div className="nw-thead nw-supp-cols">
@@ -539,6 +572,11 @@ function SupplementsCard({ p }: { p: NutritionWorkspaceProps }) {
           };
         })}
         />
+        {/* At the foot of the list it is about, not on the folded strip
+            above it. Not filled: it stages a row, the bar at the foot writes. */}
+        <button type="button" className="nw-add-row" onClick={addRow}>
+          + Add item
+        </button>
       </div>
 
       {changeCount > 0 && (
@@ -581,89 +619,46 @@ function SupplementsCard({ p }: { p: NutritionWorkspaceProps }) {
   );
 }
 
-function TrashIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 6h18" />
-      <path d="M8 6V4h8v2" />
-      <path d="M19 6l-1 14H6L5 6" />
-      <path d="M10 11v6M14 11v6" />
-    </svg>
-  );
-}
-
-// ---- 3 · Calories logged -------------------------------------------------
-
-const PAGE = 15;
-
-function CaloriesCard({ p }: { p: NutritionWorkspaceProps }) {
-  // Fifteen days a page, newest first; the pager sits under the table.
-  const [page, setPage] = useState(0);
-  const pageCount = Math.max(1, Math.ceil(p.logs.length / PAGE));
-  const days = p.logs.slice(page * PAGE, page * PAGE + PAGE);
-  const tone = (d: NwLogDay) => (d.kcal == null || d.target == null ? "none" : Math.abs(d.kcal - d.target) <= 150 ? "green" : "orange");
-  const vs = (d: NwLogDay) => {
-    if (d.kcal == null) return "—";
-    if (d.target == null) return "no target";
-    const diff = d.kcal - d.target;
-    if (Math.abs(diff) <= 0) return "on target";
-    return `${n(Math.abs(diff))} kcal ${diff > 0 ? "over" : "under"}`;
+// One block of the phase section: a strip that says what is inside, and a
+// chevron that folds it away. Which blocks a coach keeps folded is theirs,
+// so it is remembered for them rather than for the client they are looking at.
+function Block({ id, title, hint, actions, children }: { id: string; title: string; hint: string; actions?: ReactNode; children: ReactNode }) {
+  const key = `ironline.nutrition.block.${id}`;
+  const [open, setOpen] = useState(true);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(key) === "0") setOpen(false);
+    } catch {}
+  }, [key]);
+  const toggle = () => {
+    setOpen((v) => {
+      try {
+        localStorage.setItem(key, v ? "0" : "1");
+      } catch {}
+      return !v;
+    });
   };
-
   return (
-    <section className="pl-card">
-      <div className="pl-band">
-        <div className="pl-band-left">
-          <div className="pl-eyebrow">Calories logged</div>
-        </div>
-        <div className="pl-band-right">
-          <span className="pl-band-note">
-            {p.logs.length} {p.logs.length === 1 ? "day" : "days"} logged
-          </span>
-        </div>
+    <section className="nl-block">
+      {/* The strip is the disclosure; anything the block can do sits on it,
+          outside that button so it is its own target. */}
+      <div className="nl-block-strip">
+        <button type="button" className="nl-block-head" onClick={toggle} aria-expanded={open}>
+          <span className="nw-label">{title}</span>
+          <span className="nl-block-hint">{hint}</span>
+        </button>
+        {actions && <span className="nl-block-actions">{actions}</span>}
+        <button type="button" className={`nl-block-chev${open ? " open" : ""}`} onClick={toggle} aria-label={open ? `Fold ${title}` : `Open ${title}`}>
+          <ChevronDownIcon />
+        </button>
       </div>
-
-      <div className="nw-table">
-        <div className="nw-thead nw-cal-cols">
-          <span>Date</span>
-          <span>Logged</span>
-          <span>Day</span>
-          <span>vs target</span>
-          <span>Phase</span>
-          <span>Client note</span>
-        </div>
-        {days.length === 0 && <div className="pl-empty-row">No calories logged yet.</div>}
-        {days.map((d) => (
-          <div key={d.date} className="nw-tr nw-cal-cols">
-            <span className="nw-cal-date">{fmtDate(d.date, { weekday: "short", day: "numeric", month: "short" })}</span>
-            <span className="nw-cal-kcal">{d.kcal != null ? `${n(d.kcal)} kcal` : "not logged"}</span>
-            <span>
-              <span className={`nw-daypill ${d.isTraining ? "training" : "rest"}`}>{d.isTraining ? "Training" : "Rest"}</span>
-            </span>
-            <span className={`nw-cal-vs ${tone(d)}`}>{vs(d)}</span>
-            <span className="nw-cal-phase">{d.phase ?? "—"}</span>
-            <span className="nw-cal-note">{d.note ?? "—"}</span>
-          </div>
-        ))}
-        <div className="nw-tfoot nw-cal-foot">
-          <span>Only the days the client logged, against that day&rsquo;s target.</span>
-          {pageCount > 1 && (
-            <nav className="nw-pager" aria-label="Pages">
-              <button type="button" className="nw-page" onClick={() => setPage((x) => Math.max(0, x - 1))} disabled={page === 0} aria-label="Previous page">
-                ‹
-              </button>
-              {Array.from({ length: pageCount }, (_, i) => (
-                <button key={i} type="button" className={`nw-page${i === page ? " active" : ""}`} onClick={() => setPage(i)} aria-current={i === page ? "page" : undefined}>
-                  {i + 1}
-                </button>
-              ))}
-              <button type="button" className="nw-page" onClick={() => setPage((x) => Math.min(pageCount - 1, x + 1))} disabled={page === pageCount - 1} aria-label="Next page">
-                ›
-              </button>
-            </nav>
-          )}
-        </div>
-      </div>
+      {open && <div className="nl-block-body">{children}</div>}
     </section>
   );
 }
+
+const loggedHint = (view: LoggedDaysView | undefined) =>
+  !view || view.days.length === 0 ? "Nothing logged yet" : `${view.days.length} of ${view.windowDays} days logged`;
+
+// ---- 3 · Calories logged -------------------------------------------------
+

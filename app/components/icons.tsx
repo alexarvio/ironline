@@ -17,13 +17,17 @@ export function PencilIcon() {
   );
 }
 
+// The bin, everywhere. There used to be two of these — this one and a
+// heavier copy defined inside NutritionWorkspace — so the Supplements bin
+// and the Training bin were different drawings of the same idea. This is
+// the heavier one, which is the one that reads at 14px.
 export function TrashIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path
-        d="M2.7 4.3h10.6M6.2 4.3V2.7a.8.8 0 0 1 .8-.8h2a.8.8 0 0 1 .8.8v1.6M6.7 7.4v4.2M9.3 7.4v4.2M3.9 4.3l.6 8.2a1 1 0 0 0 1 .9h5l1-.9.6-8.2"
+        d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"
         stroke="currentColor"
-        strokeWidth="1.1"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -109,6 +113,29 @@ export function FeedIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+// Three staggered bars: phases on a timeline.
+export function PhasesIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="3.25" width="8.5" height="3" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="6" y="7.5" width="10" height="3" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="3.5" y="11.75" width="7" height="3" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
+    </svg>
+  );
+}
+
+// Rising columns: the business figures.
+export function BusinessIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M2.5 15.5h13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <rect x="3.5" y="9.5" width="2.8" height="4" rx="0.8" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="7.6" y="6" width="2.8" height="7.5" rx="0.8" stroke="currentColor" strokeWidth="1.3" />
+      <rect x="11.7" y="2.75" width="2.8" height="10.75" rx="0.8" stroke="currentColor" strokeWidth="1.3" />
     </svg>
   );
 }
@@ -373,6 +400,28 @@ export function TargetIcon() {
   );
 }
 
+// A heart with the trace running through it: cardio.
+export function HeartbeatIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M20.5 13H17l-1.6 3.4L12.6 8l-1.9 5H8.2l-1.3-2H3.5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3.7 13.6A4.6 4.6 0 0 1 11.1 6.5l.9.9.9-.9a4.6 4.6 0 0 1 7.4 5.2M20.1 14.2 12 20.3l-4.6-4"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function HeartIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -382,6 +431,26 @@ export function HeartIcon() {
         strokeWidth="1.6"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+// Three dots: "more for this thing", a menu of what can be done to it.
+export function MoreIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="5" cy="12" r="1.9" />
+      <circle cx="12" cy="12" r="1.9" />
+      <circle cx="19" cy="12" r="1.9" />
+    </svg>
+  );
+}
+
+export function CopyIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="8.5" y="8.5" width="12" height="12" rx="2.5" />
+      <path d="M15.5 8.5V6a2.5 2.5 0 0 0-2.5-2.5H6A2.5 2.5 0 0 0 3.5 6v7A2.5 2.5 0 0 0 6 15.5h2.5" />
     </svg>
   );
 }

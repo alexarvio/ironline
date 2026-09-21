@@ -40,10 +40,17 @@ type Draft = {
   moved: number[];
   label: string | null;
   rest: boolean | null;
-  cardio: { fields: Record<number, Partial<Record<CardioKey, string>>>; removed: number[]; added: NewCardio[] };
+  cardio: {
+    fields: Record<number, Partial<Record<CardioKey, string>>>;
+    removed: number[];
+    added: NewCardio[];
+    /** Dragged into a new order, as with the exercises; null while untouched. */
+    order: number[] | null;
+    moved: number[];
+  };
 };
 
-const EMPTY: Draft = { fields: {}, custom: {}, gyms: {}, removed: [], added: [], order: null, moved: [], label: null, rest: null, cardio: { fields: {}, removed: [], added: [] } };
+const EMPTY: Draft = { fields: {}, custom: {}, gyms: {}, removed: [], added: [], order: null, moved: [], label: null, rest: null, cardio: { fields: {}, removed: [], added: [], order: null, moved: [] } };
 
 export const FIELD_LABEL: Record<FieldKey, string> = {
   sets: "sets",
@@ -98,6 +105,9 @@ type Ctx = {
   discard: () => void;
   cardio: PendingCardio[];
   cardioValue: (id: number, key: CardioKey) => string;
+  /** The saved cardio rows in the order they show, removed ones left out. */
+  cardioOrder: number[];
+  setCardioOrder: (ids: number[], movedId: number) => void;
   isCardioRemoved: (id: number) => boolean;
   setCardioField: (id: number, key: CardioKey, value: string) => void;
   removeCardio: (id: number) => void;
@@ -241,6 +251,15 @@ export function DayPendingProvider({
   const cardioById = useMemo(() => new Map(cardio.map((c) => [c.id, c] as const)), [cardio]);
   const cardioValue = (id: number, key: CardioKey) => draft.cardio.fields[id]?.[key] ?? cardioById.get(id)?.fields[key] ?? "";
   const isCardioRemoved = (id: number) => draft.cardio.removed.includes(id);
+  const cardioBase = useMemo(() => cardio.map((c) => c.id), [cardio]);
+  const cardioOrder = (draft.cardio.order ?? cardioBase).filter((id) => !draft.cardio.removed.includes(id) && cardioById.has(id));
+  const setCardioOrder = (ids: number[], movedId: number) =>
+    setDraft((d) => {
+      const same = ids.length === cardioBase.length && ids.every((id, i) => id === cardioBase[i]);
+      if (same) return { ...d, cardio: { ...d.cardio, order: null, moved: [] } };
+      const moved = d.cardio.moved.includes(movedId) ? d.cardio.moved : [...d.cardio.moved, movedId];
+      return { ...d, cardio: { ...d.cardio, order: ids, moved } };
+    });
   const setCardioField = (id: number, key: CardioKey, value: string) =>
     setDraft((d) => {
       const saved = cardioById.get(id)?.fields[key] ?? "";
@@ -305,11 +324,18 @@ export function DayPendingProvider({
       const parts = (Object.keys(f) as CardioKey[]).map((k) => (k === "notes" ? "note changed" : `${k} ${show(c.fields[k])} → ${show(f[k] ?? "")}`));
       if (parts.length) out.push(`${c.fields.name || "Cardio"}: ${parts.join(", ")}`);
     }
+    if (draft.cardio.order) {
+      draft.cardio.moved.forEach((id) => {
+        const c = cardioById.get(id);
+        const at = draft.cardio.order!.indexOf(id);
+        if (c && at >= 0 && !draft.cardio.removed.includes(id)) out.push(`${c.fields.name || "Cardio"} moved to #${at + 1}`);
+      });
+    }
     draft.cardio.added.forEach((n) => out.push(`${n.fields.name.trim() || "Cardio"} added`));
     if (draft.label != null) out.push(draft.label ? `Session renamed to "${draft.label}"` : "Session label cleared");
     if (draft.rest != null) out.push(`${dayName} → ${draft.rest ? "Rest day" : "Workout"}`);
     return out;
-  }, [draft, assignments, cardio, columns, dayName, baseOrder, byId, gymNames]);
+  }, [draft, assignments, cardio, cardioById, columns, dayName, baseOrder, byId, gymNames]);
   const count = entries.length;
 
   const discard = useCallback(() => {
@@ -337,6 +363,7 @@ export function DayPendingProvider({
         fields: Object.fromEntries(Object.entries(draft.cardio.fields).map(([id, f]) => [id, f])),
         removed: draft.cardio.removed,
         added: draft.cardio.added.map((n) => n.fields),
+        order: draft.cardio.order ? cardioOrder : null,
       },
     };
     const result = await applyDayChangesAction(payload);
@@ -348,7 +375,7 @@ export function DayPendingProvider({
     setDraft(EMPTY);
     setStatus("idle");
     setNotice(result.skipped.length ? `Applied · skipped ${result.skipped.map((w) => `${w} (logged)`).join(", ")}` : null);
-  }, [count, status, dayId, alsoRemaining, remainingCount, draft, order]);
+  }, [count, status, dayId, alsoRemaining, remainingCount, draft, order, cardioOrder]);
 
   // Cmd/Ctrl+S applies, Esc discards (asking first past three changes).
   useEffect(() => {
@@ -412,6 +439,8 @@ export function DayPendingProvider({
     discard,
     cardio,
     cardioValue,
+    cardioOrder,
+    setCardioOrder,
     isCardioRemoved,
     setCardioField,
     removeCardio,

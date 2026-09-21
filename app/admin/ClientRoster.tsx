@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { createClientAction } from "../lib/actions";
+import NewClientDialog from "./NewClientDialog";
 import { SearchIcon } from "../components/icons";
 
 export type RosterClient = {
@@ -19,8 +19,18 @@ export type RosterClient = {
 // New client pinned at the foot. The list is the only part of the rail that
 // scrolls, and it shares its left and right edges with the search field,
 // the filter and the button, so nothing in the column is out of line.
-export default function ClientRoster({ clients, selectedId }: { clients: RosterClient[]; selectedId: number | null }) {
+export default function ClientRoster({
+  clients,
+  selectedId,
+  inviteReady = false,
+}: {
+  clients: RosterClient[];
+  selectedId: number | null;
+  /** Whether the app can send the new client's invite email (see lib/mail.ts). */
+  inviteReady?: boolean;
+}) {
   const [query, setQuery] = useState("");
+  const [adding, setAdding] = useState(false);
   const [filter, setFilter] = useState<"all" | "needs">("all");
 
   const needsYou = clients.filter((c) => c.attention).length;
@@ -87,16 +97,17 @@ export default function ClientRoster({ clients, selectedId }: { clients: RosterC
         )}
       </div>
 
-      {/* No name field: the name is typed on the card that opens right after,
-          with the rest of the member info. */}
-      <form action={createClientAction} className="ad-rail-new">
-        <button type="submit" className="ad-rail-new-btn">
+      {/* The two-step New client dialog: who they are, then their login.
+          Nothing exists until its last button. */}
+      <div className="ad-rail-new">
+        <button type="button" className="ad-rail-new-btn" onClick={() => setAdding(true)}>
           <span className="ad-rail-new-plus" aria-hidden="true">
             +
           </span>
           New client
         </button>
-      </form>
+      </div>
+      {adding && <NewClientDialog inviteReady={inviteReady} onClose={() => setAdding(false)} />}
     </div>
   );
 }

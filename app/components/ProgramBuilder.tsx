@@ -1,13 +1,17 @@
 import { ReactNode } from "react";
-import { addSessionAction, createProgramAction, removeProgramAction, removeSessionAction } from "../lib/actions";
+import { addSessionAction } from "../lib/actions";
 import {
   getAssignmentsForDay,
+  listClientPhases,
+  programLoggedWeekIndexes,
   getCustomValues,
   getDeployedProgram,
   listCardioForDay,
+  listCardioColumns,
   isCardioDone,
   formatRestSeconds,
   getClientProgramNoteMeta,
+  getClientHome,
   getExerciseWeightTrendPct,
   getLogsForAssignment,
   getLogsForAssignmentByWeek,
@@ -40,18 +44,17 @@ import DayLabelForm from "./DayLabelForm";
 import ReorderableRows from "./ReorderableRows";
 import AddExerciseRow from "./AddExerciseRow";
 import { DayPendingProvider, PendingChangesBar, PendingRemoveButton, type PendingAssignment } from "./DayPending";
-import CopyDayMenu from "../admin/CopyDayMenu";
+import SessionMenu from "../admin/SessionMenu";
 import CustomValueInput from "../admin/CustomValueInput";
-import ConfirmDeleteButton from "./ConfirmDeleteButton";
 import AdminDayCard from "./AdminDayCard";
+import ReorderableSessions from "./ReorderableSessions";
 import CardioBlock from "./CardioBlock";
 import DemoVideoDialog from "../admin/DemoVideoDialog";
 import LoggedSetsGrid, { repsLowOf, type PreviousLane } from "../admin/LoggedSetsGrid";
 import { WeightGoalHint } from "../admin/BuilderContext";
 import ProgramBuilderShell, { BuilderProgram, WeekCard } from "../admin/ProgramBuilderShell";
-import ProgramNameForm from "../admin/ProgramNameForm";
-import ProgramDeployControls from "../admin/ProgramDeployControls";
-import ColumnChipRow from "../admin/ColumnChipRow";
+import { phaseRange } from "../lib/phases";
+import ColumnMenus from "../admin/ColumnMenus";
 import CopyWeekButton from "../admin/CopyWeekButton";
 
 function formatTarget(sets: number, reps: string, targetWeight: number | null, rpe: number | null) {
@@ -83,8 +86,6 @@ const COLUMN_WIDTH: Record<string, string> = {
   time: "58px",
 };
 
-const fmtDay = (iso: string) =>
-  new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
 // The Program Builder: pick a program, pick one of its weeks, edit the seven
 // days, with the client's real performance alongside. Every week of every
@@ -93,13 +94,19 @@ const fmtDay = (iso: string) =>
 export default function ProgramBuilder({
   clientId,
   clientName,
+  phaseParam,
   weekLinkBase = "/admin",
 }: {
   clientId: number;
   clientName?: string;
+  /** `?phase=` — which programme's band to open on. */
+  phaseParam?: string;
   weekLinkBase?: string;
 }) {
   const allPrograms = listPrograms(clientId);
+  // The Plan tab's training phases, so a programme can say when it runs and
+  // "Edit dates" has something to open.
+  const trainingPhases = listClientPhases(clientId).filter((p) => p.track === "training");
   const deployedProgram = getDeployedProgram(clientId);
   // Every draft, in the order they will run: the Plan tab can hold several
   // future blocks, each a draft here until it is deployed.
@@ -111,6 +118,7 @@ export default function ProgramBuilder({
   // The client's coach's own library; another coach's exercises never show.
   const exercisesByGroup = listExercisesByGroup(coachIdOfClient(clientId) ?? 0);
   const allColumns = listTrainingColumns(clientId);
+  const cardioColumns = listCardioColumns(clientId);
   const columnChoices = listColumnChoices(clientId);
   const columns = allColumns.filter((c) => c.visible);
   const customColumnIds = allColumns.filter((c) => c.kind === "custom").map((c) => c.id);
@@ -128,8 +136,7 @@ export default function ProgramBuilder({
   const multiGym = homeGym != null && otherGyms.length > 0;
   const gymNameOf = (id: number | null) => allGyms.find((g) => g.id === id)?.name ?? null;
   const gymNames = Object.fromEntries(allGyms.map((g) => [g.id, g.name]));
-  // One set of widths for the exercise table and the cardio table under it,
-  // so their columns stay lined up when the Weight column grows a box per gym.
+  // The exercise table's column widths; Weight grows a box per gym.
   const columnWidths: Record<string, string> = multiGym
     ? { ...COLUMN_WIDTH, weight_goal: `${64 * (otherGyms.length + 1)}px` }
     : COLUMN_WIDTH;
@@ -141,10 +148,19 @@ export default function ProgramBuilder({
   });
 
   const currentWeek = weekStart(localDateStr());
+  // Sessions with news the coach has not opened yet (a finished workout, a
+  // reason for missing one): the week and the session carry the dot.
+  const newDayIds = new Set(getClientHome(clientId).unseenDayIds);
   const liveWeekNumber = deployedProgram ? deployedProgram.start_week + getProgramCurrentWeekIndex(deployedProgram) - 1 : null;
 
   function renderDays(days: ProgramDay[]) {
-    return days.map((day) => {
+    return days.map((day) => ({
+      id: day.id,
+      card: renderDay(day, days),
+    }));
+  }
+
+  function renderDay(day: ProgramDay, days: ProgramDay[]) {
       const assignments = getAssignmentsForDay(day.id);
       // A session is its place in the week: no weekday, just Session 1, 2, 3.
       const sessionName = `Session ${day.day_of_week}`;
@@ -174,7 +190,7 @@ export default function ProgramBuilder({
         }) &&
         listCardioForDay(day.id).every((c) => isCardioDone(c.id));
       const summary = isEmpty
-        ? "Nothing yet. Add the first exercise"
+        ? "Nothing yet"
         : [
             assignments.length ? `${assignments.length} exercise${assignments.length === 1 ? "" : "s"}` : null,
             cardioCount ? `${cardioCount} cardio` : null,
@@ -233,32 +249,31 @@ export default function ProgramBuilder({
         <AdminDayCard
           dayName={sessionName}
           labelSlot={
-            <DayLabelForm programDayId={day.id} defaultLabel={day.label ?? ""} placeholder="Session name (e.g. Push A)" />
+            <DayLabelForm programDayId={day.id} defaultLabel={day.label ?? ""} placeholder="Session name (e.g. Push A)" fallback={sessionName} />
           }
-          copySlot={
-            assignments.length > 0 ? (
-              <CopyDayMenu
-                fromDayId={day.id}
-                sourceName={`${sessionName}${day.label ? ` · ${day.label}` : ""}`}
-                newSessionNumber={days.length < MAX_SESSIONS_PER_WEEK ? days.length + 1 : null}
-                remainingWeeks={remainingWeeks}
-                remainingLabel={remainingLabel}
-                targets={days
-                  .filter((d) => d.id !== day.id)
-                  .map((d) => ({
-                    id: d.id,
-                    name: `Session ${d.day_of_week}${d.label ? ` · ${d.label}` : ""}`,
-                    exerciseCount: getAssignmentsForDay(d.id).length,
-                  }))}
-              />
-            ) : undefined
-          }
-          dangerSlot={
-            <ConfirmDeleteButton
-              action={removeSessionAction}
-              hiddenFields={{ programDayId: day.id }}
-              label={`Delete ${sessionName}`}
-              description="The session goes, with its exercises, cardio and anything the client logged on them. The sessions after it move up."
+          menuSlot={
+            <SessionMenu
+              programDayId={day.id}
+              sessionName={sessionName}
+              // Duplicate copies exercises and cardio alike; an empty session has nothing to copy.
+              copy={
+                assignments.length > 0 || cardioCount > 0
+                  ? {
+                      fromDayId: day.id,
+                      sourceName: `${sessionName}${day.label ? ` · ${day.label}` : ""}`,
+                      newSessionNumber: days.length < MAX_SESSIONS_PER_WEEK ? days.length + 1 : null,
+                      remainingWeeks,
+                      remainingLabel,
+                      targets: days
+                        .filter((d) => d.id !== day.id)
+                        .map((d) => ({
+                          id: d.id,
+                          name: `Session ${d.day_of_week}${d.label ? ` · ${d.label}` : ""}`,
+                          exerciseCount: getAssignmentsForDay(d.id).length,
+                        })),
+                    }
+                  : null
+              }
             />
           }
           statusPill={
@@ -294,19 +309,40 @@ export default function ProgramBuilder({
           // Every day starts folded; the coach opens the one they are working
           // on, or Expand all. Keyed by day, so an open day survives an Apply.
           defaultOpen={false}
+          news={newDayIds.has(day.id) ? { clientId, dayId: day.id } : undefined}
           footSlot={<PendingChangesBar />}
-        >
-          <div key="table" className="exercise-table-wrap">
-            <table className="exercise-table">
+          defaultMode={assignments.length === 0 && cardioCount > 0 ? "cardio" : "exercises"}
+          cardio={
+            <CardioBlock
+              groups={MUSCLE_GROUPS.filter((g) => g.slug === "cardio")}
+              exercisesByGroup={{ cardio: exercisesByGroup.cardio ?? [] }}
+              columns={cardioColumns}
+            />
+          }
+          exercises={
+          <div className="exercise-table-wrap">
+            {/* Grip and Exercise are 22 + 210 exactly, as in the cardio table,
+                so the toggle between the two never moves them. The spare
+                width goes to "What the client did", which keeps 290 at least. */}
+            <table
+              className="exercise-table"
+              style={{ minWidth: 22 + 210 + columns.reduce((sum, col) => sum + parseInt(columnWidths[col.key] ?? "90px", 10), 0) + 330 }}
+            >
+              <colgroup>
+                <col style={{ width: "22px" }} />
+                <col style={{ width: "210px" }} />
+                {columns.map((col) => (
+                  <col key={col.id} style={{ width: columnWidths[col.key] ?? "90px" }} />
+                ))}
+                <col />
+              </colgroup>
               <thead>
                 <tr>
                   {/* Grip column for drag-to-reorder. */}
-                  <th aria-hidden="true" style={{ width: "22px" }}></th>
+                  <th aria-hidden="true"></th>
                   <th>Exercise</th>
                   {columns.map((col) => (
-                    <th key={col.id} style={{ width: columnWidths[col.key] ?? "90px" }}>
-                      {col.label}
-                    </th>
+                    <th key={col.id}>{col.label}</th>
                   ))}
                   <th className="logged-col">
                     <span className="pb-log-head">
@@ -317,15 +353,12 @@ export default function ProgramBuilder({
                       </span>
                     </span>
                   </th>
-                  {/* Holds the row delete on an exercise row and the Add button on the
-                      add row, so it needs to fit the wider of the two. */}
-                  <th aria-hidden="true" style={{ width: "58px" }}></th>
                 </tr>
               </thead>
               <ReorderableRows
                 programDayId={day.id}
                 remainingWeeks={remainingWeeks}
-                columnCount={columns.length + 3}
+                columnCount={columns.length + 2}
                 footer={
                   <AddExerciseRow
                     columns={columns.map((c) => ({ id: c.id, kind: c.kind, key: c.key, label: c.label }))}
@@ -539,18 +572,6 @@ export default function ProgramBuilder({
                                 />
                               </td>
                             );
-                          case "distance":
-                            return (
-                              <td key={col.id}>
-                                <AssignmentFieldInput assignmentId={a.id} name="distance" type="text" defaultValue={a.distance ?? ""} />
-                              </td>
-                            );
-                          case "time":
-                            return (
-                              <td key={col.id}>
-                                <AssignmentFieldInput assignmentId={a.id} name="time" type="text" defaultValue={a.time ?? ""} />
-                              </td>
-                            );
                           case "notes":
                             return (
                               <td key={col.id} className="notes-cell">
@@ -570,25 +591,25 @@ export default function ProgramBuilder({
                             return <td key={col.id}>–</td>;
                         }
                       })}
+                      {/* "What the client did" runs to the table's edge; the
+                          row's bin sits at the end of it rather than in a
+                          column of its own, and stays put while the sets
+                          scroll. */}
                       <td className="logged-col">
-                        <LoggedSetsGrid
-                          weekNumber={day.week_number}
-                          gymName={loggedGym != null ? gymNameOf(loggedGym) : null}
-                          firstVisit={firstVisit}
-                          targetWeightKg={loggedGym != null ? targetAtGym(a, loggedGym, home) : a.target_weight_kg}
-                          repsLow={repsLowOf(a.reps)}
-                          plannedSets={a.sets}
-                          sets={thisWeekSets}
-                          previous={previous}
-                        />
-                        {a.warmup_sets?.length ? (
-                          <div className="pb-warmups" title="Warm-up sets the client added. Not counted in the sets logged.">
-                            Warm-up: {a.warmup_sets.map((w) => `${w.weight_kg != null ? `${Math.round(w.weight_kg * 100) / 100}kg` : ""}${w.weight_kg != null && w.reps != null ? "×" : ""}${w.reps ?? ""}`).join(", ")}
+                        <div className="pb-cell-end">
+                          <div className="pb-cell-main">
+                            <LoggedSetsGrid
+                              weekNumber={day.week_number}
+                              firstVisit={firstVisit}
+                              targetWeightKg={loggedGym != null ? targetAtGym(a, loggedGym, home) : a.target_weight_kg}
+                              repsLow={repsLowOf(a.reps)}
+                              plannedSets={a.sets}
+                              sets={thisWeekSets}
+                              previous={previous}
+                            />
                           </div>
-                        ) : null}
-                      </td>
-                      <td>
-                        <PendingRemoveButton assignmentId={a.id} exerciseName={a.exercise_name ?? "this exercise"} />
+                          <PendingRemoveButton assignmentId={a.id} exerciseName={a.exercise_name ?? "this exercise"} />
+                        </div>
                       </td>
                     </>
                     ),
@@ -597,17 +618,10 @@ export default function ProgramBuilder({
               />
             </table>
           </div>
-          <CardioBlock
-            key="cardio"
-            groups={MUSCLE_GROUPS.filter((g) => g.slug === "cardio")}
-            exercisesByGroup={{ cardio: exercisesByGroup.cardio ?? [] }}
-            widths={columnWidths}
-          />
-
-        </AdminDayCard>
+          }
+        />
         </DayPendingProvider>
-      );
-    });
+    );
   }
 
   // Everything the shell needs for one program: its weeks as strip cards,
@@ -631,7 +645,7 @@ export default function ProgramBuilder({
 
       weekContents[index] = (
         <div key={`w${index}`} className="program-sheet">
-          {renderDays(days)}
+          <ReorderableSessions clientId={clientId} week={weekNumber} sessions={renderDays(days)} />
           {/* A week is only its sessions: an empty week is just this button.
               Seven is the most a week holds, and then the button says so. */}
           {days.length < MAX_SESSIONS_PER_WEEK ? (
@@ -677,6 +691,7 @@ export default function ProgramBuilder({
         label: programWeekLabel(program, weekNumber),
         days: railDays,
         isLive: liveWeekNumber === weekNumber,
+        hasNew: days.some((d) => newDayIds.has(d.id)),
         // A week the client has trained in is history and stays. Anything
         // with nothing logged, the live week included, can go: a coach who
         // wants to shorten a block before the client starts it should not
@@ -706,58 +721,54 @@ export default function ProgramBuilder({
       }
     }
 
-    // Programs carry no created_at, so the meta line says when it went live
-    // rather than inventing a creation date; a draft simply doesn't have one
-    // yet.
-    const deployedOn = program.deployed_at ? fmtDay(program.deployed_at.slice(0, 10)) : null;
+    // A programme's span is when it went out (or is due to) plus however many
+    // weeks are on its rail. A draft that has never been sent has no dates of
+    // its own — unless the Plan tab drew it one, in which case that phase's
+    // are the honest answer.
+    const linked = trainingPhases.find((p) => p.program_id === program.id) ?? null;
+    const anchor = program.status === "deployed" ? program.deployed_at : program.scheduled_at;
+    const span = anchor
+      ? (() => {
+          const from = weekStart(anchor.slice(0, 10));
+          const last = new Date(`${from}T00:00:00`);
+          last.setDate(last.getDate() + (program.total_weeks - 1) * 7);
+          return { start: from, end: localDateStr(last) };
+        })()
+      : linked
+      ? { start: linked.start_week, end: linked.end_week }
+      : null;
+
     return {
       id: program.id,
       name: program.name ?? "",
       status,
-      // A draft with a schedule is waiting to go out on its own, so its pill
-      // says Scheduled; it is still a draft underneath (editable, deletable).
-      pill: status === "draft" && program.scheduled_at ? "scheduled" : status,
-      statusLabel: status === "live" ? "Live" : status === "draft" ? (program.scheduled_at ? "Scheduled" : "Draft") : "Past",
+      // A draft with a schedule is waiting to go out on its own, so the band
+      // reads Scheduled; it is still a draft underneath (editable, deletable).
+      state: status === "draft" && program.scheduled_at ? "scheduled" : status,
       totalWeeks: program.total_weeks,
-      meta: `${program.total_weeks} week${program.total_weeks === 1 ? "" : "s"}${
-        deployedOn ? ` · deployed ${deployedOn}` : " · not deployed yet"
-      }`,
+      dates: span ? phaseRange(span.start, span.end) : "",
+      start: span?.start ?? null,
+      liveWeek: status === "live" ? getProgramCurrentWeekIndex(program) : null,
+      phase: linked
+        ? {
+            phase: linked,
+            program: {
+              status: status === "live" ? ("live" as const) : program.scheduled_at ? ("scheduled" as const) : ("draft" as const),
+              totalWeeks: program.total_weeks,
+              loggedWeeks: programLoggedWeekIndexes(program.id),
+            },
+          }
+        : null,
       defaultWeek: status === "live" ? getProgramCurrentWeekIndex(program) : 1,
       weekCards,
       copyFromWeek,
       weekContents,
       weekSummaries,
       copySlots,
-      nameSlot: (
-        <div key={`n${program.id}`} className="pb-name-slot">
-          <ProgramNameForm programId={program.id} defaultName={program.name ?? ""} placeholder="Program name" />
-          {/* No "N weeks" field. A programme's length is however many weeks
-              are on the rail, and having two places to say it meant the number
-              and the rail could disagree — "+ Add week" is the one way to make
-              the programme longer. */}
-        </div>
-      ),
-      actionsSlot:
-        status === "draft" ? (
-          <div key={`a${program.id}`} className="pb-deploy-row">
-            <ProgramDeployControls programId={program.id} scheduledAt={program.scheduled_at} hasName={!!program.name?.trim()} />
-            <ConfirmDeleteButton
-              action={removeProgramAction}
-              hiddenFields={{ programId: program.id, weekLinkBase }}
-              label={`Delete draft ${program.name || "program"}`}
-            />
-          </div>
-        ) : status === "live" ? (
-          <div key={`a${program.id}`} className="pb-live-row">
-            <span className="pb-live-dot" aria-hidden="true" />
-            <span className="pb-live-text">Live: {clientName || "the client"} can see this now</span>
-          </div>
-        ) : (
-          <span key={`a${program.id}`} className="pb-live-text past">Past program, read only for the client</span>
-        ),
     };
   }
 
+  const asked = phaseParam && /^\d+$/.test(phaseParam) ? Number(phaseParam) : null;
   const programs: BuilderProgram[] = [
     ...(deployedProgram ? [buildProgram(deployedProgram, "live")] : []),
     ...draftPrograms.map((p) => buildProgram(p, "draft")),
@@ -774,26 +785,25 @@ export default function ProgramBuilder({
       <ProgramBuilderShell
         programs={programs}
         clientId={clientId}
-        columnsSlot={<ColumnChipRow key="cols" clientId={clientId} choices={columnChoices} max={MAX_TRAINING_COLUMNS} />}
+        today={localDateStr()}
+        others={listClientPhases(clientId).map((p) => ({
+          id: p.id,
+          track: p.track,
+          name: p.name,
+          start_week: p.start_week,
+          end_week: p.end_week,
+        }))}
+        weekLinkBase={weekLinkBase}
+        initialProgramId={asked && programs.some((p) => p.id === asked) ? asked : null}
+        columnsSlot={<ColumnMenus key="cols" clientId={clientId} choices={columnChoices} cardio={cardioColumns} max={MAX_TRAINING_COLUMNS} />}
         gymsSlot={
           <GymChipRow
             key="gyms"
             clientId={clientId}
-            gyms={listClientGyms(clientId).map((g) => ({ id: g.id, name: g.name }))}
+            gyms={listClientGyms(clientId).map((g) => ({ id: g.id, name: g.name, home: g.id === home }))}
           />
         }
-        newProgramSlot={
-          (
-            <form key="new-program" action={createProgramAction}>
-              <input type="hidden" name="clientId" value={clientId} />
-              <input type="hidden" name="weekLinkBase" value={weekLinkBase} />
-              <button className="pb-new-program" type="submit">
-                + New program
-              </button>
-            </form>
-          )
-        }
-        emptySlot={<p key="empty" className="empty-note">No programs yet. Start one and build the first week.</p>}
+        emptySlot={<p key="empty" className="empty-note">No programmes yet. Start one and build the first week.</p>}
       />
 
     </div>

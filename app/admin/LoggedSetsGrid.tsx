@@ -69,7 +69,6 @@ export default function LoggedSetsGrid({
   plannedSets,
   sets,
   previous,
-  gymName = null,
   firstVisit = false,
 }: {
   weekNumber: number;
@@ -81,8 +80,6 @@ export default function LoggedSetsGrid({
   sets: LoggedSetCell[];
   /** Last week's lane; null when there is no last week to show (week 1). */
   previous: PreviousLane | null;
-  /** Where this week's sets were done, when the client has more than one gym. */
-  gymName?: string | null;
   /** The first time at this gym: nothing to be under yet. */
   firstVisit?: boolean;
 }) {
@@ -92,7 +89,8 @@ export default function LoggedSetsGrid({
 
   // Verdict against this week's target: green only when every set made it.
   let verdict: { text: ReactNode; tone: "met" | "under" | "none" };
-  if (!logged) verdict = { text: "Not logged", tone: "none" };
+  // Nothing said when nothing is logged: the dashed boxes say it already.
+  if (!logged) verdict = { text: "", tone: "none" };
   else if (firstVisit) verdict = { text: "First visit", tone: "none" };
   else if (target == null || bestNow == null) verdict = { text: "No target", tone: "none" };
   else if (sets.every((s) => s.weightKg == null || s.weightKg >= target)) {
@@ -153,11 +151,6 @@ export default function LoggedSetsGrid({
     <div className="pb-log">
       <span className="pb-log-wk now">W{weekNumber}</span>
       <div className="pb-log-sets">
-        {logged && gymName && (
-          <span className="pb-log-gym" title={`Logged at ${gymName}`}>
-            {gymName}
-          </span>
-        )}
         {logged
           ? sets.map((s) => <SetChip key={s.setNumber} set={s} target={target} repsLow={repsLow} dim={false} />)
           : Array.from({ length: Math.max(1, plannedSets) }, (_, i) => (
@@ -178,11 +171,6 @@ export default function LoggedSetsGrid({
               <span className="pb-log-note">Not logged</span>
             ) : (
               <>
-                {previous.gymName && (
-                  <span className="pb-log-gym dim" title={`Logged at ${previous.gymName}`}>
-                    {previous.gymName}
-                  </span>
-                )}
                 {previous.sets.map((s) => (
                   <SetChip key={s.setNumber} set={s} target={previous.targetWeightKg} repsLow={previous.repsLow} dim />
                 ))}

@@ -3,12 +3,20 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { addExerciseToLibraryAction, uploadExerciseVideoAction } from "../lib/actions";
+import { placePopover, type Placement } from "./popover";
 
 export type Group = { slug: string; label: string };
 export type ExerciseOption = { id: number; name: string };
 // A video waiting to be attached to the exercise being created: a link, or
 // a file that is uploaded once the exercise exists and has an id.
 type PendingVideo = { kind: "link"; url: string } | { kind: "file"; file: File };
+
+// The add-exercise row is the LAST row of a day's table, so it is usually
+// near the foot of the screen: opening downward at a flat 420px left the
+// list, "+ Add new exercise" and the save form under the window's edge,
+// which is a picker you cannot pick from. See components/popover.ts.
+const POP_WIDTH = 300;
+const place = (trigger: HTMLElement | null) => placePopover(trigger, { width: POP_WIDTH });
 
 // The "Add exercise…" picker on a programme day. The popup opens on a search
 // box: type and matching exercises from the whole library list at once.
@@ -41,12 +49,26 @@ export default function ExercisePicker({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [video, setVideo] = useState<PendingVideo | null>(null);
   const [videoDialog, setVideoDialog] = useState(false);
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const [pos, setPos] = useState<Placement | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) searchRef.current?.focus();
+  }, [open]);
+
+  // Fixed position does not follow the row, so scrolling the day's table
+  // would slide the trigger away and leave the popup behind. Re-place it
+  // instead of letting it drift.
+  useEffect(() => {
+    if (!open) return;
+    const replace = () => setPos(place(triggerRef.current));
+    window.addEventListener("scroll", replace, true);
+    window.addEventListener("resize", replace);
+    return () => {
+      window.removeEventListener("scroll", replace, true);
+      window.removeEventListener("resize", replace);
+    };
   }, [open]);
 
   const pick = (ex: ExerciseOption) => {
@@ -61,10 +83,7 @@ export default function ExercisePicker({
   };
 
   const toggleOpen = () => {
-    if (!open && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      setPos({ top: rect.bottom + 4, left: rect.left });
-    }
+    if (!open) setPos(place(triggerRef.current));
     setOpen((o) => !o);
   };
 
@@ -112,7 +131,10 @@ export default function ExercisePicker({
       {open && (
         <>
           <div className="exercise-picker-backdrop" onClick={() => setOpen(false)} />
-          <div className="exercise-picker-pop" style={pos ? { top: pos.top, left: pos.left } : undefined}>
+          <div
+            className="exercise-picker-pop"
+            style={pos ?? undefined}
+          >
             <input
               ref={searchRef}
               type="search"

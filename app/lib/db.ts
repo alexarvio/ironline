@@ -24,6 +24,14 @@ type Client = {
   avatar_path?: string | null;
   /** The food diary's meals in the client's own order (meal ids); absent: the standard order, added meals after. */
   meal_order?: string[] | null;
+  // What the coach has already looked at on this client's Home: feed event
+  // id to the event's time when it was seen. An event is new to the coach
+  // while it is missing here or has moved on since (a note edited again).
+  coach_seen?: Record<string, number>;
+  // The coach's own standing note about this client, on their Home. Theirs
+  // alone: the client never sees it.
+  coach_note?: string;
+  coach_note_at?: string;
 };
 // Each coach has their own library (seeded from presets.ts), so coach_id is
 // the owner. Optional only for rows from before multi-coach.
@@ -482,6 +490,15 @@ type MetricDefinition = {
   // metric, which is why Daily Tracker and Weekly Tracker stopped being
   // their own screens.
   frequency: MetricCadence;
+  // Which way this metric is meant to move, for the Change row's colour.
+  // Absent on rows written before it existed, and on those the change is
+  // shown without a colour rather than guessed at.
+  good_direction?: "up" | "down" | "none";
+  // The lifestyle phase that asks for this metric. Absent on everything
+  // written before phases owned metrics: those are the client's standing
+  // set, asked for whatever phase is running, so nothing was lost when this
+  // arrived. A metric made inside a phase carries that phase's id.
+  phase_id?: number | null;
   order_index: number;
   // Up to 5 per client, surfaced at the top of their Start Page — see
   // PINNED_METRIC_LIMIT in queries.ts. Optional so existing saved data
@@ -591,6 +608,10 @@ type ClientProfile = {
   gender?: string | null;
   email?: string | null;
   phone?: string | null;
+  // The dial code ("+31") for `phone`, which then holds the national number
+  // alone. Absent on phones typed before the two were split: those are shown
+  // exactly as typed, never parsed for a country.
+  phone_code?: string | null;
   address?: string | null;
   height_cm: number | null;
   starting_weight_kg: number | null;

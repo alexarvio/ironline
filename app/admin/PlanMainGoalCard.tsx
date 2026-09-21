@@ -32,28 +32,39 @@ export default function PlanMainGoalCard({
   };
 
   return (
+    // The same head as Phases and Goals below it: the tinted band, the name
+    // in navy, the helper under it, and what the card has to say on the
+    // right where those two keep their controls. It was the one card on the
+    // tab wearing a plain white strip, which made it read as a caption above
+    // the page rather than the first of three cards.
     <section className="pl-card pl-maingoal">
-      <div className="pl-inline-head">
-        <span className="pl-eyebrow">Main goal</span>
-        <span className="pl-helper">Shows under {firstName}&rsquo;s name on their Home. One sentence.</span>
+      <div className="pl-card-head">
+        <div className="pl-card-titles">
+          <span className="pl-eyebrow">Main goal</span>
+          <span className="pl-helper">Shows under {firstName}&rsquo;s name on their Home. One sentence.</span>
+        </div>
+        <div className="pl-card-tools">
+          <span className="pl-saved" aria-live="polite">
+            {saving ? "Saving…" : savedLabel ? `Saved ${savedLabel}` : ""}
+          </span>
+        </div>
       </div>
-      <input
-        className="pl-maingoal-input"
-        type="text"
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={save}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") e.currentTarget.blur();
-          else if (e.key === "Escape") setDraft(value);
-        }}
-        placeholder="e.g. Drop to 84 kg and keep the bench moving"
-        aria-label="Main goal"
-        maxLength={140}
-      />
-      <p className="pl-saved" aria-live="polite">
-        {saving ? "Saving…" : savedLabel ? `Saved ${savedLabel}` : ""}
-      </p>
+      <div className="pl-maingoal-body">
+        <input
+          className="pl-maingoal-input"
+          type="text"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={save}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.currentTarget.blur();
+            else if (e.key === "Escape") setDraft(value);
+          }}
+          placeholder="e.g. Drop to 84 kg and keep the bench moving"
+          aria-label="Main goal"
+          maxLength={140}
+        />
+      </div>
     </section>
   );
 }

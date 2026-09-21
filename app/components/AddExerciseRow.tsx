@@ -66,20 +66,16 @@ export default function AddExerciseRow({
             return <td key={col.id}>{input("tempo", { type: "text" })}</td>;
           case "rest":
             return <td key={col.id}>{input("rest", { type: "text" })}</td>;
-          case "distance":
-            return <td key={col.id}>{input("distance", { type: "text" })}</td>;
-          case "time":
-            return <td key={col.id}>{input("time", { type: "text" })}</td>;
           case "notes":
             return <td key={col.id}>{input("notes", { type: "text", placeholder: "optional" })}</td>;
           default:
             return <td key={col.id} aria-hidden="true"></td>;
         }
       })}
-      <td aria-hidden="true"></td>
-      <td>
+      {/* Under "What the client did", the add button at its right end. */}
+      <td className="pb-add-cell">
         <button className="pb-add-btn" type="button" onClick={submit} disabled={!picked} title={picked ? undefined : "Pick an exercise first"}>
-          Add
+          + Add
         </button>
       </td>
     </tr>
