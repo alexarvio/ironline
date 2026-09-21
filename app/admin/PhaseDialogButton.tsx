@@ -137,7 +137,10 @@ export function PhaseDialog({
   const [name, setName] = useState(phase?.name ?? "");
   const [track, setTrack] = useState<PhaseTrack>(phase?.track ?? defaultTrack ?? "nutrition");
   // A live or scheduled programme starts on its deploy week; only the end moves.
-  const startLocked = !scheduling && !!program && program.status !== "draft";
+  // A live programme starts on the week it went out, where the client began
+  // it. A scheduled one has not started: moving its start moves when it goes
+  // live (updateClientPhase reschedules it).
+  const startLocked = !scheduling && !!program && program.status === "live";
   const endLocked = !!lockedWeeks;
   // Exactly one end is armed: the one the next click in the calendar sets.
   const [active, setActive] = useState<"start" | "end">(startLocked ? "end" : "start");
@@ -180,7 +183,8 @@ export function PhaseDialog({
     if (active === "start" && !startLocked) {
       const s = snapStart(day);
       setFrom(s);
-      if (!to || to < s) setTo(snapEnd(day));
+      if (program && from && to) setTo(addDays(s, daysBetween(from, to)));
+      else if (!to || to < s) setTo(snapEnd(day));
       setActive("end");
       return;
     }
@@ -213,6 +217,7 @@ export function PhaseDialog({
       const s = snapStart(day);
       setFrom(s);
       if (endLocked) setTo(addDays(s, lockedWeeks! * 7 - 1));
+      else if (program && from && to) setTo(addDays(s, daysBetween(from, to)));
       else if (!to || to < s) setTo(snapEnd(day));
     } else {
       if (endLocked) return;
@@ -356,7 +361,7 @@ export function PhaseDialog({
                     title={
                       locked
                         ? end === "start"
-                          ? "A live or scheduled programme starts on its deploy week"
+                          ? "A live programme starts on the week it went out"
                           : "Its length follows the programme: add or remove weeks in Training"
                         : undefined
                     }
@@ -438,9 +443,10 @@ export function PhaseDialog({
 
             {endLocked && <p className="ph-note">Its length follows the programme: add or remove weeks in Training.</p>}
             {startLocked && program && (
-              <p className="ph-note">
-                This is the {program.status === "live" ? "live" : "scheduled"} training programme. It starts on its deploy week; move the end to shorten or extend it.
-              </p>
+              <p className="ph-note">This is the live training programme. It starts on the week it went out; move the end to shorten or extend it.</p>
+            )}
+            {!startLocked && program?.status === "scheduled" && (
+              <p className="ph-note">This is a scheduled training programme: it goes live by itself on its start week. Move the start to change when; move the end to add or remove weeks.</p>
             )}
             {!phase && track === "nutrition" && <p className="ph-note">It starts as a draft only you see. Set its targets on the Nutrition tab, then deploy it.</p>}
             {!phase && track === "training" && (
