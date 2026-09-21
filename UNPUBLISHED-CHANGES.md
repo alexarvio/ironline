@@ -825,6 +825,10 @@ Commit `86a3313` (the client camera, storage, `/uploads/meals`, and the `meal_ph
 - [ ] **The Plan dialog links to where the phase is built**: "Open in Training / Nutrition / Measurements →", straight onto that phase; for an empty draft the same line says what is missing.
 - [ ] Checked on local data: the four local drafts (all empty) show their reason with Schedule it greyed out and the right link; a scheduled programme shows Make it live now; the three headers grey out their draft with the reason.
 
+## 115 · Builder: a demo on an exercise just added, before Apply — ✅ LIVE 21 Sep
+
+- [ ] **A row just picked shows "Add demo" (or "▶ Demo" when the exercise already has one)** right away, not only after Apply. The demo is the exercise's own (the library's), so it is saved on the exercise at once, link or upload, in the same dialog, and follows it onto every client's sheet, as before. Checked in the real builder: two picked rows carry the chip and the dialog posts by the exercise. Not checked: saving (needs a signed-in coach).
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).

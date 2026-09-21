@@ -1788,6 +1788,31 @@ export async function setDemoUrlAction(formData: FormData): Promise<string | nul
   return null;
 }
 
+// The same for an exercise by itself: the demo is the exercise's (the
+// library's), so an exercise just added to a session, not applied yet, can
+// have one too. Uploads by exercise are uploadExerciseVideoAction.
+export async function setExerciseDemoLinkAction(formData: FormData): Promise<string | null> {
+  const coach = await requireCoach();
+  const exerciseId = Number(formData.get("exerciseId"));
+  if (!exerciseId || !coachOwnsExercise(coach.id, exerciseId)) return "That exercise no longer exists.";
+  const url = String(formData.get("demoUrl") || "").trim();
+  if (!url) return "Paste a link first.";
+  if (!/^https?:\/\//i.test(url)) return "That needs to start with http:// or https://";
+  setExerciseVideoUrl(exerciseId, url);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  return null;
+}
+
+export async function clearExerciseDemoAction(formData: FormData) {
+  const coach = await requireCoach();
+  const exerciseId = Number(formData.get("exerciseId"));
+  if (!exerciseId || !coachOwnsExercise(coach.id, exerciseId)) return;
+  setExerciseVideoUrl(exerciseId, null);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
 export async function clearDemoAction(formData: FormData) {
   const assignmentId = Number(formData.get("assignmentId"));
   const coach = await coachForClient(getClientIdForAssignment(assignmentId));

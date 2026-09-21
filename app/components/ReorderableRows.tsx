@@ -4,6 +4,7 @@ import { ReactNode, useState } from "react";
 import { applyDayOrderToLaterWeeksAction, reorderAssignmentsAction } from "../lib/actions";
 import { FieldKey, usePendingDay } from "./DayPending";
 import { useRowDrag } from "./useRowDrag";
+import DemoVideoDialog from "../admin/DemoVideoDialog";
 
 // The builder columns a new row has a box in, and the field each one sets:
 // the first of them on screen takes the cursor when the row is picked.
@@ -27,11 +28,14 @@ export default function ReorderableRows({
   footer,
   remainingWeeks,
   columnCount,
+  exerciseVideos,
 }: {
   programDayId: number;
   rows: { id: number; cells: ReactNode }[];
   /** The add-exercise row, kept at the bottom and not draggable. */
   footer: ReactNode;
+  /** Each library exercise's demo, so a row just added shows its own. */
+  exerciseVideos?: Record<number, string | null>;
   /** Later weeks of the programme the new order could be pushed onto. */
   remainingWeeks: number;
   /** Cells per row, so the offer row can span the table. */
@@ -104,6 +108,8 @@ export default function ReorderableRows({
             <td className="exercise-name-cell">
               <div className="pb-exercise-title">
                 <span className="pb-row-new-name">{n.exerciseName}</span>
+                {/* Its demo can be set before Apply: it is the exercise's. */}
+                <DemoVideoDialog exerciseId={n.exerciseId} exerciseName={n.exerciseName} demoUrl={null} libraryUrl={exerciseVideos?.[n.exerciseId] ?? null} />
               </div>
             </td>
             {pending.columns.map((col) => {

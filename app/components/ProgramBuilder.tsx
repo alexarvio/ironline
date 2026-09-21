@@ -122,6 +122,12 @@ export default function ProgramBuilder({
 
   // The client's coach's own library; another coach's exercises never show.
   const exercisesByGroup = listExercisesByGroup(coachIdOfClient(clientId) ?? 0);
+  // Each exercise's demo, for a row added in the builder and not applied yet.
+  const exerciseVideos: Record<number, string | null> = Object.fromEntries(
+    Object.values(exercisesByGroup)
+      .flat()
+      .map((e) => [e.id, e.video_url ?? null] as const)
+  );
   const allColumns = listTrainingColumns(clientId);
   const cardioColumns = listCardioColumns(clientId);
   const columnChoices = listColumnChoices(clientId);
@@ -365,6 +371,7 @@ export default function ProgramBuilder({
               </thead>
               <ReorderableRows
                 programDayId={day.id}
+                exerciseVideos={exerciseVideos}
                 remainingWeeks={remainingWeeks}
                 columnCount={columns.length + 2}
                 footer={

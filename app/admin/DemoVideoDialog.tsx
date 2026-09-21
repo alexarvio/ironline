@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { clearDemoAction, setDemoUrlAction, uploadDemoVideoAction } from "../lib/actions";
+import { clearDemoAction, clearExerciseDemoAction, setDemoUrlAction, setExerciseDemoLinkAction, uploadDemoVideoAction, uploadExerciseVideoAction } from "../lib/actions";
 import { TRACK_PALETTE } from "./phaseChrome";
 
 // The demo video for one prescribed exercise.
@@ -23,14 +23,18 @@ import { TRACK_PALETTE } from "./phaseChrome";
 // is never attached twice. A prescription's own older video is kept only as
 // a fallback for rows set up before this.
 export default function DemoVideoDialog({
-  assignmentId,
-  clientId,
+  assignmentId = null,
+  exerciseId = null,
+  clientId = null,
   exerciseName,
   demoUrl,
   libraryUrl,
 }: {
-  assignmentId: number;
-  clientId: number;
+  /** A saved row. */
+  assignmentId?: number | null;
+  /** Or the exercise alone: a row just added, not applied yet. */
+  exerciseId?: number | null;
+  clientId?: number | null;
   exerciseName: string;
   /** Set on THIS prescription by the coach. */
   demoUrl: string | null;
@@ -62,6 +66,7 @@ export default function DemoVideoDialog({
         createPortal(
           <DemoDialog
             assignmentId={assignmentId}
+            exerciseId={exerciseId}
             clientId={clientId}
             exerciseName={exerciseName}
             effective={effective}
@@ -75,13 +80,15 @@ export default function DemoVideoDialog({
 
 function DemoDialog({
   assignmentId,
+  exerciseId,
   clientId,
   exerciseName,
   effective,
   onClose,
 }: {
-  assignmentId: number;
-  clientId: number;
+  assignmentId: number | null;
+  exerciseId: number | null;
+  clientId: number | null;
   exerciseName: string;
   /** What the client sees now: the library video, else an older per-row one. */
   effective: string | null;
@@ -112,6 +119,9 @@ function DemoDialog({
 
   const palette = TRACK_PALETTE.training;
   const uploaded = !!effective && effective.startsWith("/uploads/");
+  // A row just added has no saved prescription yet: the demo goes on the
+  // exercise itself, which is where a saved row's upload goes too.
+  const byExercise = assignmentId == null && exerciseId != null;
   return (
     // The phase dialog's chrome: the name and its tags on top, the choice in
     // the body, Remove on the left of the foot and Save on the right.
@@ -129,10 +139,26 @@ function DemoDialog({
 
         <form
           className="pl-dlg-form"
-          action={(fd) => run(() => (tab === "link" ? setDemoUrlAction(fd) : uploadDemoVideoAction(fd)))}
+          action={(fd) =>
+            run(() =>
+              byExercise
+                ? tab === "link"
+                  ? setExerciseDemoLinkAction(fd)
+                  : uploadExerciseVideoAction(fd)
+                : tab === "link"
+                  ? setDemoUrlAction(fd)
+                  : uploadDemoVideoAction(fd)
+            )
+          }
         >
-          <input type="hidden" name="assignmentId" value={assignmentId} />
-          <input type="hidden" name="clientId" value={clientId} />
+          {byExercise ? (
+            <input type="hidden" name="exerciseId" value={exerciseId!} />
+          ) : (
+            <>
+              <input type="hidden" name="assignmentId" value={assignmentId ?? ""} />
+              <input type="hidden" name="clientId" value={clientId ?? ""} />
+            </>
+          )}
           <div className="pl-dlg-body">
             {/* What the client sees right now, stated plainly — including when
                 it comes from the library rather than from this prescription. */}
@@ -205,7 +231,7 @@ function DemoDialog({
               <button
                 type="submit"
                 className="pl-text-btn danger"
-                formAction={(fd) => run(() => clearDemoAction(fd))}
+                formAction={(fd) => run(() => (byExercise ? clearExerciseDemoAction(fd) : clearDemoAction(fd)))}
                 formNoValidate
                 disabled={pending}
               >
