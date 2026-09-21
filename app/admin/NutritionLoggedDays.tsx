@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import type { LoggedDay, LoggedDaysView } from "../lib/queries";
-import { CameraIcon, ChevronDownIcon } from "../components/icons";
+import { CameraIcon, ChevronDownIcon, ChevronLeftIcon } from "../components/icons";
+import { pageWindow } from "../lib/pager";
 
 // What the client actually ate, day by day, inside the phase on screen.
 // Read-only: the log is the client's, and a coach quietly editing it would
@@ -13,14 +14,23 @@ import { CameraIcon, ChevronDownIcon } from "../components/icons";
 
 const n = (v: number) => Math.round(v).toLocaleString("en-US");
 const ON_TARGET = 200;
+// Days to a page: the newest twenty, then the next twenty.
+const PAGE = 20;
 const fmtDay = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" });
 
-export default function NutritionLoggedDays({ view, shown = 6 }: { view: LoggedDaysView; shown?: number }) {
+export default function NutritionLoggedDays({ view }: { view: LoggedDaysView }) {
   const [open, setOpen] = useState<string | null>(null);
-  const [all, setAll] = useState(false);
+  const [page, setPage] = useState(1);
   // The client's picture of one meal, opened from the camera on its row.
   const [shot, setShot] = useState<{ src: string; label: string; date: string } | null>(null);
-  const days = all ? view.days : view.days.slice(0, shown);
+  const pages = Math.max(1, Math.ceil(view.days.length / PAGE));
+  const at = Math.min(page, pages);
+  const from = (at - 1) * PAGE;
+  const days = view.days.slice(from, from + PAGE);
+  const go = (n: number) => {
+    setPage(n);
+    setOpen(null);
+  };
   const proteinTarget = view.days.find((d) => d.proteinTarget != null)?.proteinTarget ?? null;
   const proteinShort = proteinTarget != null && view.avgProtein != null && view.avgProtein < proteinTarget - 20;
 
@@ -80,13 +90,31 @@ export default function NutritionLoggedDays({ view, shown = 6 }: { view: LoggedD
             </div>
           )}
           <div className="nl-foot">
-            <span>
-              Showing {days.length} of {view.days.length} logged {view.days.length === 1 ? "day" : "days"} in this phase
+            <span className="pg-count">
+              {pages > 1 ? `${from + 1}–${from + days.length} of ${view.days.length}` : view.days.length} logged {view.days.length === 1 ? "day" : "days"} in this phase
             </span>
-            {view.days.length > shown && (
-              <button type="button" className="nl-more" onClick={() => setAll((v) => !v)}>
-                {all ? "Show fewer" : `Show all ${view.days.length} →`}
-              </button>
+            {pages > 1 && (
+              <nav className="pg" aria-label="Logged day pages">
+                <button type="button" className="pg-step chev" onClick={() => go(at - 1)} disabled={at === 1} aria-label="Newer">
+                  <ChevronLeftIcon />
+                </button>
+                <span className="pg-nums">
+                  {pageWindow(at, pages).map((n, i) =>
+                    n === "gap" ? (
+                      <span key={`gap${i}`} className="pg-gap" aria-hidden="true">
+                        …
+                      </span>
+                    ) : (
+                      <button key={n} type="button" className={`pg-num${n === at ? " on" : ""}`} aria-current={n === at ? "page" : undefined} onClick={() => go(n)}>
+                        {n}
+                      </button>
+                    )
+                  )}
+                </span>
+                <button type="button" className="pg-step chev next" onClick={() => go(at + 1)} disabled={at === pages} aria-label="Older">
+                  <ChevronLeftIcon />
+                </button>
+              </nav>
             )}
           </div>
         </>

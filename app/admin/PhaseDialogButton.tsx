@@ -35,7 +35,23 @@ const addDays = (date: string, n: number) => {
 };
 const daysBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / DAY);
 const weeksBetween = (a: string, b: string) => Math.round(daysBetween(a, b) / 7);
-const fieldDate = (d: string) => (d ? parse(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) : "Pick a day");
+// Start and End as they read in their fields, and how they are typed:
+// 21/09/2026 (or with - . or a space between), 21092026, or 2026-09-21.
+const fieldDate = (d: string) => (d ? parse(d).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }) : "");
+const fieldDay = (d: string) => (d ? parse(d).toLocaleDateString("en-GB", { weekday: "short" }) : "");
+/** The day typed, once it is a whole real date; null until then. */
+const typedDate = (raw: string): string | null => {
+  const s = raw.trim();
+  let d: number, m: number, y: number;
+  let r = /^([0-9]{1,2})[/.\- ]([0-9]{1,2})[/.\- ]([0-9]{4})$/.exec(s);
+  if (r) [d, m, y] = [Number(r[1]), Number(r[2]), Number(r[3])];
+  else if ((r = /^([0-9]{2})([0-9]{2})([0-9]{4})$/.exec(s))) [d, m, y] = [Number(r[1]), Number(r[2]), Number(r[3])];
+  else if ((r = /^([0-9]{4})-([0-9]{1,2})-([0-9]{1,2})$/.exec(s))) [y, m, d] = [Number(r[1]), Number(r[2]), Number(r[3])];
+  else return null;
+  const date = new Date(y, m - 1, d);
+  if (y < 2000 || y > 2100 || date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) return null;
+  return iso(date);
+};
 
 // "+ Add phase" in the Plan card's header, or any button that opens the same
 // dialog. With `phase` set it edits (and can delete) that phase.
@@ -183,6 +199,37 @@ export function PhaseDialog({
     setTo(e);
     if (!startLocked) setActive("start");
   };
+  // What is being typed into Start or End; null shows the day it holds.
+  const [typing, setTyping] = useState<{ start: string | null; end: string | null }>({ start: null, end: null });
+  // A whole date typed into a field does what a click on that day does for
+  // that end, and the calendar turns to its month. Phases are whole weeks,
+  // so a Wednesday selects its week. An end before the start is not taken.
+  const typeDate = (end: "start" | "end", raw: string) => {
+    setTyping((t) => ({ ...t, [end]: raw }));
+    const day = typedDate(raw);
+    if (!day) return;
+    if (end === "start") {
+      if (startLocked) return;
+      const s = snapStart(day);
+      setFrom(s);
+      if (endLocked) setTo(addDays(s, lockedWeeks! * 7 - 1));
+      else if (!to || to < s) setTo(snapEnd(day));
+    } else {
+      if (endLocked) return;
+      const e = snapEnd(day);
+      if (from && e < from) return;
+      if (!from) setFrom(snapStart(day));
+      setTo(e);
+    }
+    setMonth(monthOf(day));
+  };
+  // Typed, whole, and not taken: said in the field rather than ignored.
+  const refused = (end: "start" | "end") => {
+    const raw = typing[end];
+    if (raw == null || raw.replace(/[^0-9]/g, "").length < 8) return false;
+    const day = typedDate(raw);
+    return !day || (end === "end" && !!from && snapEnd(day) < from);
+  };
   const arm = (end: "start" | "end") => {
     setActive(end);
     const day = end === "start" ? from : to;
@@ -295,18 +342,17 @@ export function PhaseDialog({
             </label>
 
             {/* Two fields, one armed: the ring says which end the next click
-                in the calendar sets. */}
+                in the calendar sets. Either can be typed as well: a whole
+                date selects it in the calendar. */}
             <div className="pl-dlg-ends">
               {(["start", "end"] as const).map((end) => {
                 const locked = end === "start" ? startLocked : endLocked;
+                const value = end === "start" ? from : to;
+                const label = end === "start" ? "Start" : "End";
                 return (
-                  <button
+                  <label
                     key={end}
-                    type="button"
-                    className={`pl-dlg-end${active === end && !locked ? " on" : ""}`}
-                    onClick={() => arm(end)}
-                    disabled={locked}
-                    aria-pressed={active === end && !locked}
+                    className={`pl-dlg-end${active === end && !locked ? " on" : ""}${locked ? " locked" : ""}${refused(end) ? " bad" : ""}`}
                     title={
                       locked
                         ? end === "start"
@@ -315,9 +361,34 @@ export function PhaseDialog({
                         : undefined
                     }
                   >
-                    <span className="pl-dlg-label">{end === "start" ? "Start" : "End"}</span>
-                    <b>{fieldDate(end === "start" ? from : to)}</b>
-                  </button>
+                    <span className="pl-dlg-label">{label}</span>
+                    <span className="pl-dlg-date-row">
+                      <input
+                        className="pl-dlg-date"
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="dd/mm/yyyy"
+                        maxLength={10}
+                        value={typing[end] ?? fieldDate(value)}
+                        onFocus={(e) => {
+                          arm(end);
+                          e.currentTarget.select();
+                        }}
+                        onChange={(e) => typeDate(end, e.target.value)}
+                        onBlur={() => setTyping((t) => ({ ...t, [end]: null }))}
+                        onKeyDown={(e) => {
+                          // Enter settles the date rather than sending the form.
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            e.currentTarget.blur();
+                          }
+                        }}
+                        disabled={locked}
+                        aria-label={`${label} date, day month year`}
+                      />
+                      <small>{refused(end) ? (typedDate(typing[end] ?? "") ? "before the start" : "not a date") : fieldDay(value)}</small>
+                    </span>
+                  </label>
                 );
               })}
             </div>

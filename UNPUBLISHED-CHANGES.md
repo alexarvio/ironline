@@ -778,6 +778,15 @@ Commit `86a3313` (the client camera, storage, `/uploads/meals`, and the `meal_ph
 - [ ] **The live programme's past weeks can't be deleted.** Removing one (a week the client skipped, so nothing logged) moved every later week up one, so the week the client is on turned into next week's sessions under them. Trained weeks and past programmes were already locked.
 - [ ] Checked in a dry run, then undone: extending a live programme's phase adds the weeks (7 → 9) and the phase ends on the right Monday; shortening stops at logged weeks; moving a live start earlier keeps it where the client trained; moving a scheduled one keeps its time of day; moving a draft keeps it a draft. Railway's logs for the last three days: no errors, no failed requests.
 
+## 105 · Nutrition's logged days in pages of 20 — ✅ LIVE 21 Sep
+
+- [ ] **Every logged day in the phase, twenty to a page**, newest first, instead of the first six and "Show all". The foot reads "1–20 of 45 logged days in this phase" with Activity's chevron pager (numbers between). Changing page closes an open day. Checked with 45 days: 20, 20, then 5.
+
+## 106 · Type a phase's dates — ✅ LIVE 21 Sep
+
+- [ ] **Start and End in the phase dialog are typed as well as picked**, on every track (Plan, Nutrition, Training, Lifestyle, and Schedule it). dd/mm/yyyy; 21-09-2026, 21.09.2026, 21092026 and 2026-09-21 work too. Clicking a field selects its date, so typing replaces it. Once the date is whole, the calendar turns to its month and selects it, the same as clicking that day: phases are whole weeks, so a Wednesday selects its week, and a start after the end moves the end along. An impossible date ("not a date") or an end before the start ("before the start") turns the field red and changes nothing; leaving the field puts back the date it holds. Enter settles the date instead of saving. A locked end (a live programme's start, a programme's length) stays read-only; typing the start of a fixed-length programme moves the whole block.
+- [ ] Checked by typing in the real dialog: a lifestyle draft 16/12/2026 → December, week 51 selected; end 31.01.2027 → January, 7 weeks; 31/02/2027 and an end before the start refused in red; a 3-week training schedule typed 04/01/2027 → 4–24 Jan.
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).

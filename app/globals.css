@@ -8167,6 +8167,17 @@ label.ci-pill { cursor: text; }
 .pl-dlg-end.on .pl-dlg-label { color: var(--sel-edge); }
 .pl-dlg-end:disabled { background: #f8f9fb; cursor: default; }
 .pl-dlg-end:focus-visible { outline: none; border-color: var(--sel-edge); box-shadow: 0 0 0 2px var(--sel-soft); }
+/* Start and End are typed as well as picked: a field inside each box. */
+label.pl-dlg-end { cursor: text; }
+label.pl-dlg-end.locked { background: #f8f9fb; cursor: default; }
+label.pl-dlg-end:focus-within { border-color: var(--sel-edge); box-shadow: 0 0 0 2px var(--sel-soft); }
+.pl-dlg-date-row { display: flex; align-items: baseline; gap: 8px; width: 100%; }
+.pl-dlg-date { flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; font: inherit; font-size: 13.5px; font-weight: 800; color: #141a24; font-variant-numeric: tabular-nums; outline: none; }
+.pl-dlg-date::placeholder { color: #b7bdc7; font-weight: 600; }
+.pl-dlg-date:disabled { color: #5b6474; -webkit-text-fill-color: #5b6474; opacity: 1; }
+.pl-dlg-date-row small { flex: none; font-size: 11.5px; font-weight: 700; color: #8b93a1; }
+label.pl-dlg-end.bad { border-color: #b3471d; box-shadow: 0 0 0 2px #fdf3ee; }
+label.pl-dlg-end.bad .pl-dlg-date, label.pl-dlg-end.bad small { color: #b3471d; }
 
 /* The calendar: always six rows of 38px, so paging months never moves the
    dialog. A 34px week column leads each row. Columns sit flush so a
@@ -14994,8 +15005,8 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .nl-note { padding: 10px 14px; border-radius: 10px; background: #f4f6fa; }
 .nl-note p { margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; color: #313851; white-space: pre-wrap; }
 .nl-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 22px; border-top: 1px solid #eceff3; background: #fafbfc; font-size: 12px; color: #8b93a1; }
-.nl-more { border: 0; background: none; padding: 0; font: inherit; font-size: 12px; font-weight: 800; color: #2f5d8f; cursor: pointer; }
-.nl-more:hover { text-decoration: underline; }
+/* Twenty days to a page: the count on the left, the pager on the right. */
+.nl-foot .pg-count { font-size: 12px; }
 .nl-empty { margin: 0; padding: 16px 22px; font-size: 12.5px; color: #8b93a1; }
 
 @media (max-width: 1100px) {
