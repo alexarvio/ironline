@@ -73,12 +73,12 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
         <div hidden={tab !== "home"}>
           <HomeDraft firstName={firstName} home={home} onOpenTab={(t) => show(t as RedesignTab)} />
         </div>
-        <div hidden={tab !== "training"}>{training.draft ? <TrainingDraft clientId={clientId} firstName={firstName} program={training.draft} library={training.library} /> : <p className="rd-empty">This client has no programme yet.</p>}</div>
+        <div hidden={tab !== "training"}>{training.draft ? <TrainingDraft key={`${training.draft.id}:${training.draft.weekIdx}`} clientId={clientId} firstName={firstName} program={training.draft} library={training.library} /> : <p className="rd-empty">This client has no programme yet.</p>}</div>
         <div hidden={tab !== "nutrition"}>
-          <NutritionDraft clientId={clientId} firstName={firstName} plan={nutrition} />
+          <NutritionDraft key={nutrition.id} clientId={clientId} firstName={firstName} plan={nutrition} />
         </div>
         <div hidden={tab !== "measurements"}>
-          <MeasurementsDraft clientId={clientId} firstName={firstName} plan={measurements} />
+          <MeasurementsDraft key={measurements.id} clientId={clientId} firstName={firstName} plan={measurements} />
         </div>
         <div hidden={tab !== "pictures"}>
           <PicturesDraft firstName={firstName} plan={pictures} />

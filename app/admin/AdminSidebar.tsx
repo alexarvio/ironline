@@ -101,6 +101,10 @@ export default function AdminSidebar({
         <Link href="/admin/profile" role="menuitem" className="ad-rail-menu-link">
           Your profile
         </Link>
+        {/* The redesign drafts, read-only, for looking at the new feel. Goes when a draft becomes the tab. */}
+        <Link href={selectedId ? `/admin/redesign?client=${selectedId}` : "/admin/redesign"} role="menuitem" className="ad-rail-menu-link">
+          Redesign preview
+        </Link>
         <form action={logoutAction}>
           <button type="submit" role="menuitem">
             Sign out
