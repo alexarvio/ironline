@@ -109,7 +109,8 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   const today = new Date().toISOString().slice(0, 10);
   const startHasCome = !!plan.startDate && plan.startDate <= today;
   const mGrid = { gridTemplateColumns: "20px minmax(200px, 1.4fr) 150px 150px minmax(160px, 1fr) 32px", columnGap: 24 } as const;
-  const nGrid = { gridTemplateColumns: "20px 130px 150px minmax(240px, 1fr) 32px", columnGap: 24 } as const;
+  // No grip column here: the date starts where the title does.
+  const nGrid = { gridTemplateColumns: "130px 150px minmax(240px, 1fr) 32px", columnGap: 24 } as const;
 
   return (
     <div className="rd">
@@ -368,7 +369,6 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
           </div>
           <div className="rd-rows">
             <div className="rd-cols" aria-hidden="true" style={nGrid}>
-              <span />
               <span>Date</span>
               <span>Check-in</span>
               <span>Note</span>
@@ -377,7 +377,6 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
             {plan.notes.map((note) => (
               <div key={note.id} className="rd-row">
                 <div className="rd-row-main static" style={nGrid}>
-                  <span />
                   <span className="rd-ex">
                     <span className="rd-ex-name">{fmtDay(note.period)}</span>
                   </span>
