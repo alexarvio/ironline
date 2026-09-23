@@ -90,3 +90,5 @@
 .rm-media-file { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; margin: 4px 8px; padding: 8px 12px; border: 1px solid #dfe3e8; border-radius: 12px; background: #f4f7fc; font-size: 13.5px; font-weight: 700; color: #1e3a6e; text-decoration: none; }
 .rm-media-file span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rm-bubble-row.mine .rm-media-file { background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.3); color: #fff; }
+
+.rm-mic.recording { width: auto; gap: 6px; padding: 0 12px; border-color: #b3471d; background: #fdf3ee; color: #b3471d; }

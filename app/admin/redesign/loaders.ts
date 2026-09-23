@@ -535,6 +535,9 @@ export function loadMessages(clientId: number): DraftMessages {
         when: when(m.created_at),
         media: m.media_path ? { path: m.media_path, type: m.media_type ?? "image", name: m.media_name ?? null } : null,
         link: view ? { area: view.area, label: view.label, gone: view.gone } : null,
+        reactions: { coach: m.reactions?.coach ?? null, client: m.reactions?.client ?? null },
+        pinned: !!m.pinned,
+        edited: !!m.edited_at,
       };
     });
   return { messages, targets: listMessageLinkTargets(clientId) };

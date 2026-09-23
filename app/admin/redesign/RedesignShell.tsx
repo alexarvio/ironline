@@ -68,7 +68,13 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
           ))}
         </nav>
         <p className="rd-banner">
-          Redesign draft · {current} of {clientName}. Read-only: every action answers with a toast and saves nothing. Compare with <Link href={`/admin?client=${clientId}&tab=${tab}`}>the current one</Link>.
+          {tab === "messages" ? (
+            <>Redesign · Messages with {clientName}. This tab is real: everything here sends and saves.</>
+          ) : (
+            <>
+              Redesign draft · {current} of {clientName}. Read-only: every action answers with a toast and saves nothing. Compare with <Link href={`/admin?client=${clientId}&tab=${tab}`}>the current one</Link>.
+            </>
+          )}
         </p>
         <div hidden={tab !== "home"}>
           <HomeDraft firstName={firstName} home={home} onOpenTab={(t) => show(t as RedesignTab)} />
@@ -90,7 +96,7 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
           <PlanDraft firstName={firstName} plan={plan} />
         </div>
         <div hidden={tab !== "messages"}>
-          <MessagesDraft firstName={firstName} plan={messages} />
+          <MessagesDraft clientId={clientId} firstName={firstName} plan={messages} />
         </div>
       </div>
       <Toaster />

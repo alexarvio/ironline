@@ -1,39 +1,41 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
-import Picker from "../Picker";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { MoreIcon } from "../../../components/icons";
-import { ConfirmDialog } from "../training/TrainingDraft";
+import Picker from "../Picker";
+import VoiceRecordButton from "../../../components/VoiceRecordButton";
+import { deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction, setMessageLinkAction } from "../../../lib/actions";
+import type { MessageLink } from "../../../lib/messageLinks";
 import type { LinkTargets } from "../../../lib/queries";
+import { ConfirmDialog } from "../training/TrainingDraft";
 
-// The calmer Messages tab, as a draft on real data, in the Training draft's
-// sheet: one chat box. The conversation fills it, the client's bubbles on
-// the left and the coach's on the right, oldest first under a heading per
-// day; the bar to write in is docked at its foot. A message can point at one
-// thing in the client's app (Link to…): a session or an exercise in it,
-// their nutrition targets or a day of their food diary, a check-in or their
-// progress pictures. The client taps straight through to it.
-// Nothing here saves: a send shows the bubble and ends in a toast.
+// The Messages tab in the redesign's sheet: one chat box, and unlike the
+// other drafts it is real. Everything here sends and saves through the same
+// actions as the old tab: the words, a picture, a video, a file or a voice
+// message; an emoji on any message; and on the coach's own, after sending,
+// reword, point it at something, pin, or take back. The client answers from
+// their app; the thread refreshes itself while it is open.
 
-export type DraftLink = { area: string; label: string; gone: boolean };
+export type DraftLink = { area: string; label: string; gone: boolean; link?: MessageLink };
 export type DraftMedia = { path: string; type: "image" | "video" | "audio" | "file"; name?: string | null };
 export type DraftMessage = { id: number; mine: boolean; text: string; when: string; media?: DraftMedia | null; link: DraftLink | null; reactions?: { coach?: string | null; client?: string | null }; pinned?: boolean; edited?: boolean };
-const REACTIONS = ["👍", "❤️", "💪", "🔥", "👏", "😂"] as const;
 /** Newest first, as the loader hands them over. */
 export type DraftMessages = { messages: DraftMessage[]; targets: LinkTargets };
+const REACTIONS = ["👍", "❤️", "💪", "🔥", "👏", "😂"] as const;
+const POLL_MS = 15000;
 
-const draftOnly = (what: string) => toast(what, { description: "A draft: nothing saves here." });
-const savedToast = (what: string) => toast.success("Sent", { description: `${what} (a draft: nothing really sent).` });
-const nowLabel = () => new Date().toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 /** "23 Sept, 14:02" → the day, and the time. */
 const dayOf = (when: string) => when.split(", ")[0] ?? when;
 const timeOf = (when: string) => when.split(", ")[1] ?? "";
 
-export default function MessagesDraft({ firstName, plan }: { firstName: string; plan: DraftMessages }) {
-  const [messages, setMessages] = useState(plan.messages);
+export default function MessagesDraft({ clientId, firstName, plan }: { clientId: number; firstName: string; plan: DraftMessages }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const messages = plan.messages;
   const [text, setText] = useState("");
   const [link, setLink] = useState<DraftLink | null>(null);
   const [linking, setLinking] = useState(false);
@@ -42,20 +44,65 @@ export default function MessagesDraft({ firstName, plan }: { firstName: string; 
   const [relink, setRelink] = useState<number | null>(null);
   const [remove, setRemove] = useState<DraftMessage | null>(null);
   const [reactOn, setReactOn] = useState<number | null>(null);
-  const patch = (id: number, fn: (m: DraftMessage) => DraftMessage) => setMessages((prev) => prev.map((m) => (m.id === id ? fn(m) : m)));
-  const react = (m: DraftMessage, emoji: string | null) => {
-    setReactOn(null);
-    patch(m.id, (x) => ({ ...x, reactions: { ...(x.reactions ?? {}), coach: emoji } }));
-    draftOnly(emoji ? `Reacted ${emoji}` : "Reaction removed");
-  };
-  const pinned = messages.filter((m) => m.pinned);
   const box = useRef<HTMLTextAreaElement>(null);
   const end = useRef<HTMLDivElement>(null);
-  const ready = text.trim().length > 0;
+  const fileInput = useRef<HTMLInputElement>(null);
+  const ready = text.trim().length > 0 && !pending;
   const t = plan.targets;
   const nothingToLink = t.training.length === 0 && !t.nutrition && t.foodDays.length === 0 && t.checkins.length === 0 && !t.photos;
 
-  // Oldest first on screen, a heading over each day.
+  // Opening reads what the client wrote (the rail's dot clears); then the
+  // thread asks for anything new every so often. Every action refreshes.
+  useEffect(() => {
+    markSeenAction(clientId, { tab: "messages" });
+    const id = setInterval(() => router.refresh(), POLL_MS);
+    return () => clearInterval(id);
+  }, [clientId, router]);
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: "end" });
+  }, [messages.length]);
+  const act = (fn: () => Promise<void>, done?: () => void) =>
+    start(async () => {
+      await fn();
+      router.refresh();
+      done?.();
+    });
+
+  const send = () => {
+    if (!ready) return;
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("text", text.trim());
+    if (link?.link) fd.set("link", JSON.stringify(link.link));
+    act(
+      () => sendChatMessageAction(fd),
+      () => {
+        setText("");
+        setLink(null);
+        if (box.current) box.current.style.height = "auto";
+        box.current?.focus();
+      }
+    );
+  };
+  const sendFile = (file: File) => {
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("text", "");
+    fd.set("file", file);
+    act(() => sendChatMessageAction(fd));
+  };
+  const react = (m: DraftMessage, emoji: string | null) => {
+    setReactOn(null);
+    act(() => reactToMessageAction(clientId, m.id, emoji));
+  };
+  function saveEdit() {
+    if (!editing || !editing.text.trim()) return;
+    const { id, text: words } = editing;
+    setEditing(null);
+    act(() => editChatMessageAction(clientId, id, words));
+  }
+
+  // Oldest first on screen, a heading over each day; the coach's pins on top.
   const days: { day: string; items: DraftMessage[] }[] = [];
   for (const m of [...messages].reverse()) {
     const last = days[days.length - 1];
@@ -63,22 +110,10 @@ export default function MessagesDraft({ firstName, plan }: { firstName: string; 
     if (last && last.day === day) last.items.push(m);
     else days.push({ day, items: [m] });
   }
-  useEffect(() => {
-    end.current?.scrollIntoView({ block: "end" });
-  }, [messages.length]);
-
-  const send = () => {
-    if (!ready) return;
-    setMessages((prev) => [{ id: -Date.now(), mine: true, text: text.trim(), when: nowLabel(), link }, ...prev]);
-    savedToast(link ? `Message about ${link.label}` : "Message");
-    setText("");
-    setLink(null);
-    if (box.current) box.current.style.height = "auto";
-    box.current?.focus();
-  };
+  const pinned = messages.filter((m) => m.pinned);
 
   const bubble = (m: DraftMessage, inPins = false) => (
-    <div key={`${inPins ? "pin-" : ""}${m.id}`} className={`rm-bubble-row${m.mine ? " mine" : " theirs"}${m.id < 0 ? " new" : ""}`}>
+    <div key={`${inPins ? "pin-" : ""}${m.id}`} className={`rm-bubble-row${m.mine ? " mine" : " theirs"}`}>
       <div className="rm-bubble-wrap">
         <div className={`rm-bubble${m.media ? " media" : ""}`}>
           {m.media && <Media media={m.media} />}
@@ -156,24 +191,8 @@ export default function MessagesDraft({ firstName, plan }: { firstName: string; 
               <DropdownMenuContent align={m.mine ? "end" : "start"} className="pb-menu">
                 {m.mine && <DropdownMenuItem onSelect={() => setEditing({ id: m.id, text: m.text })}>Edit</DropdownMenuItem>}
                 {m.mine && <DropdownMenuItem onSelect={() => setRelink(m.id)}>{m.link ? "Change the link" : "Link to…"}</DropdownMenuItem>}
-                {m.mine && m.link && (
-                  <DropdownMenuItem
-                    onSelect={() => {
-                      patch(m.id, (x) => ({ ...x, link: null }));
-                      draftOnly("Link removed");
-                    }}
-                  >
-                    Remove the link
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem
-                  onSelect={() => {
-                    patch(m.id, (x) => ({ ...x, pinned: !x.pinned }));
-                    draftOnly(m.pinned ? "Unpinned" : "Pinned to the top");
-                  }}
-                >
-                  {m.pinned ? "Unpin" : "Pin to the top"}
-                </DropdownMenuItem>
+                {m.mine && m.link && <DropdownMenuItem onSelect={() => act(() => setMessageLinkAction(clientId, m.id, null))}>Remove the link</DropdownMenuItem>}
+                <DropdownMenuItem onSelect={() => act(() => pinMessageAction(clientId, m.id, !m.pinned))}>{m.pinned ? "Unpin" : "Pin to the top"}</DropdownMenuItem>
                 {m.mine && <DropdownMenuSeparator />}
                 {m.mine && (
                   <DropdownMenuItem variant="destructive" onSelect={() => setRemove(m)}>
@@ -187,13 +206,6 @@ export default function MessagesDraft({ firstName, plan }: { firstName: string; 
       </div>
     </div>
   );
-  function saveEdit() {
-    if (!editing || !editing.text.trim()) return;
-    const { id, text: t } = editing;
-    setEditing(null);
-    patch(id, (x) => ({ ...x, text: t.trim(), edited: true }));
-    draftOnly("Message reworded");
-  }
 
   return (
     <div className="rd rm">
@@ -237,20 +249,26 @@ export default function MessagesDraft({ firstName, plan }: { firstName: string; 
             </span>
           )}
           <div className="rm-bar-row">
-            <button type="button" className="rd-btn ghost rm-linkbtn" disabled={nothingToLink} aria-label="Link to something in the app" title={nothingToLink ? `Nothing in ${firstName}'s app to point at yet` : "Link to…"} onClick={() => setLinking(true)}>
+            <button type="button" className="rd-btn ghost rm-linkbtn" disabled={nothingToLink || pending} aria-label="Link to something in the app" title={nothingToLink ? `Nothing in ${firstName}'s app to point at yet` : "Link to…"} onClick={() => setLinking(true)}>
               <LinkGlyph />
             </button>
-            <button type="button" className="rd-btn ghost rm-linkbtn" onClick={() => draftOnly("Photo, video or file")} aria-label="Send a photo, video or file" title="Photo, video or file">
+            <button type="button" className="rd-btn ghost rm-linkbtn" disabled={pending} onClick={() => fileInput.current?.click()} aria-label="Send a photo, video or file" title="Photo, video or file">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M17.5 8.5l-8 8a3.5 3.5 0 0 1-5-5l8.3-8.3a2.4 2.4 0 0 1 3.4 3.4l-8.1 8.1a1.3 1.3 0 0 1-1.9-1.9l7-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
-            <button type="button" className="rd-btn ghost rm-linkbtn" onClick={() => draftOnly("Voice message")} aria-label="Record a voice message" title="Voice message">
-              <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <rect x="9" y="3" width="6" height="11" rx="3" />
-                <path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" />
-              </svg>
-            </button>
+            <input
+              ref={fileInput}
+              type="file"
+              accept="image/*,video/*,audio/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.zip"
+              hidden
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) sendFile(f);
+              }}
+            />
+            <VoiceRecordButton className="rd-btn ghost rm-linkbtn rm-mic" onRecorded={sendFile} disabled={pending} />
             <textarea
               ref={box}
               className="rm-box"
@@ -269,9 +287,10 @@ export default function MessagesDraft({ firstName, plan }: { firstName: string; 
               }}
               placeholder={`Message ${firstName}… (Shift+Enter for a new line)`}
               aria-label={`Message ${firstName}`}
+              disabled={pending}
             />
             <button type="button" className="rd-btn primary rm-send" disabled={!ready} onClick={send} title="Send (Enter)">
-              Send
+              {pending ? "…" : "Send"}
             </button>
           </div>
         </div>
@@ -291,9 +310,9 @@ export default function MessagesDraft({ firstName, plan }: { firstName: string; 
             targets={t}
             onPick={(l) => {
               if (relink != null) {
-                patch(relink, (x) => ({ ...x, link: l }));
-                draftOnly(`Now points at ${l.label}`);
+                const id = relink;
                 setRelink(null);
+                act(() => setMessageLinkAction(clientId, id, JSON.stringify(l.link)));
               } else {
                 setLink(l);
                 setLinking(false);
@@ -311,9 +330,9 @@ export default function MessagesDraft({ firstName, plan }: { firstName: string; 
             confirm="Delete"
             danger
             onConfirm={() => {
-              setMessages((prev) => prev.filter((x) => x.id !== remove.id));
-              draftOnly("Message deleted");
+              const id = remove.id;
               setRemove(null);
+              act(() => deleteChatMessageAction(clientId, id), () => toast("Message deleted"));
             }}
           />
         )}
@@ -327,7 +346,7 @@ export default function MessagesDraft({ firstName, plan }: { firstName: string; 
 // one week at a time: each session a heading that is itself a row, its
 // exercises under it. Type to narrow any of it.
 type Area = "training" | "nutrition" | "measurements";
-function LinkDialog({ firstName, targets: t, onPick }: { firstName: string; targets: LinkTargets; onPick: (l: DraftLink) => void }) {
+function LinkDialog({ firstName, targets: t, onPick }: { firstName: string; targets: LinkTargets; onPick: (l: DraftLink & { link: MessageLink }) => void }) {
   const areas: { id: Area; label: string; empty: boolean }[] = [
     { id: "training", label: "Training", empty: t.training.length === 0 },
     { id: "nutrition", label: "Nutrition", empty: !t.nutrition && t.foodDays.length === 0 },
@@ -339,7 +358,7 @@ function LinkDialog({ firstName, targets: t, onPick }: { firstName: string; targ
   const needle = q.trim().toLowerCase();
   const hit = (name: string) => !needle || name.toLowerCase().includes(needle);
   const week = t.training[weekAt] ?? null;
-  const pick = (label: string) => onPick({ area, label, gone: false });
+  const pick = (label: string, link: MessageLink) => onPick({ area, label, gone: false, link });
   const groups = week ? week.sessions.map((s) => ({ s, rows: s.exercises.filter((x) => hit(x.name)), whole: hit(s.title) })).filter((g) => g.whole || g.rows.length > 0) : [];
 
   return (
@@ -366,12 +385,12 @@ function LinkDialog({ firstName, targets: t, onPick }: { firstName: string; targ
           <>
             {groups.map(({ s, rows }) => (
               <div key={s.dayId} className="rm-linkdlg-group">
-                <button type="button" role="option" aria-selected={false} className="rd-addrow-item rm-linkdlg-head" onClick={() => pick(`${s.title} · ${week.label}`)}>
+                <button type="button" role="option" aria-selected={false} className="rd-addrow-item rm-linkdlg-head" onClick={() => pick(`${s.title} · ${week.label}`, { kind: "session", dayId: s.dayId })}>
                   {s.title}
                   <small>the whole session</small>
                 </button>
                 {rows.map((x) => (
-                  <button key={x.assignmentId} type="button" role="option" aria-selected={false} className="rd-addrow-item rm-linkdlg-ex" onClick={() => pick(`${x.name} · ${s.title}, ${week.label}`)}>
+                  <button key={x.assignmentId} type="button" role="option" aria-selected={false} className="rd-addrow-item rm-linkdlg-ex" onClick={() => pick(`${x.name} · ${s.title}, ${week.label}`, { kind: "exercise", dayId: s.dayId, assignmentId: x.assignmentId })}>
                     {x.name}
                   </button>
                 ))}
@@ -383,7 +402,7 @@ function LinkDialog({ firstName, targets: t, onPick }: { firstName: string; targ
         {area === "nutrition" && (
           <>
             {t.nutrition && hit("targets") && (
-              <button type="button" role="option" aria-selected={false} className="rd-addrow-item" onClick={() => pick("Nutrition targets")}>
+              <button type="button" role="option" aria-selected={false} className="rd-addrow-item" onClick={() => pick("Nutrition targets", { kind: "nutrition" })}>
                 Their targets
                 <small>calories and macros</small>
               </button>
@@ -392,7 +411,7 @@ function LinkDialog({ firstName, targets: t, onPick }: { firstName: string; targ
             {t.foodDays
               .filter((d) => hit(d.label))
               .map((d) => (
-                <button key={d.date} type="button" role="option" aria-selected={false} className="rd-addrow-item" onClick={() => pick(`Food diary · ${d.label}`)}>
+                <button key={d.date} type="button" role="option" aria-selected={false} className="rd-addrow-item" onClick={() => pick(`Food diary · ${d.label}`, { kind: "food", date: d.date })}>
                   {d.label}
                 </button>
               ))}
@@ -401,15 +420,14 @@ function LinkDialog({ firstName, targets: t, onPick }: { firstName: string; targ
         {area === "measurements" && (
           <>
             {t.checkins
-              .map((c) => (c === "daily" ? "Daily check-in" : "Weekly check-in"))
-              .filter(hit)
-              .map((label) => (
-                <button key={label} type="button" role="option" aria-selected={false} className="rd-addrow-item" onClick={() => pick(label)}>
-                  {label}
+              .filter((c) => hit(c === "daily" ? "Daily check-in" : "Weekly check-in"))
+              .map((c) => (
+                <button key={c} type="button" role="option" aria-selected={false} className="rd-addrow-item" onClick={() => pick(c === "daily" ? "Daily check-in" : "Weekly check-in", { kind: "checkin", section: c })}>
+                  {c === "daily" ? "Daily check-in" : "Weekly check-in"}
                 </button>
               ))}
             {t.photos && hit("Progress pictures") && (
-              <button type="button" role="option" aria-selected={false} className="rd-addrow-item" onClick={() => pick("Progress pictures")}>
+              <button type="button" role="option" aria-selected={false} className="rd-addrow-item" onClick={() => pick("Progress pictures", { kind: "photos" })}>
                 Progress pictures
               </button>
             )}
