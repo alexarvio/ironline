@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { changePasswordAction } from "../../lib/auth-actions";
+import PasswordInput from "../PasswordInput";
 import { getSessionUser } from "../../lib/auth";
 
 // Shown once, after a coach hands out a temporary password. Every guard
@@ -37,18 +38,11 @@ export default async function ChangePasswordPage({
         <form action={changePasswordAction} className="auth-form">
           <label className="auth-field">
             <span>New password</span>
-            <input
-              name="password"
-              type="password"
-              autoComplete="new-password"
-              minLength={8}
-              required
-              autoFocus
-            />
+            <PasswordInput name="password" autoComplete="new-password" minLength={8} autoFocus />
           </label>
           <label className="auth-field">
             <span>Confirm password</span>
-            <input name="confirm" type="password" autoComplete="new-password" minLength={8} required />
+            <PasswordInput name="confirm" autoComplete="new-password" minLength={8} />
           </label>
           <button className="btn auth-submit" type="submit">
             Save and continue

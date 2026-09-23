@@ -9056,6 +9056,13 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
   outline-offset: -1px;
 }
 
+/* The eye at the end of a password field: crossed while hidden, open while shown. */
+.auth-pass { position: relative; display: flex; }
+.auth-pass input { flex: 1; min-width: 0; padding-right: 40px; }
+.auth-pass-eye { position: absolute; top: 50%; right: 6px; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; transform: translateY(-50%); border: 0; border-radius: 7px; background: none; color: var(--steel); cursor: pointer; }
+.auth-pass-eye:hover { background: #f4f6fa; color: var(--ink); }
+.auth-pass-eye svg { width: 16px; height: 16px; }
+
 .auth-submit {
   margin-top: 4px;
   width: 100%;

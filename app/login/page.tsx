@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { loginAction } from "../lib/auth-actions";
+import PasswordInput from "./PasswordInput";
 import { ensureCoachFromEnv, ensureOwnerFromEnv, getSessionUser, resetCoachFromEnv, resetWorkspaceFromEnv } from "../lib/auth";
 
 export default async function LoginPage({
@@ -50,7 +51,7 @@ export default async function LoginPage({
           </label>
           <label className="auth-field">
             <span>Password</span>
-            <input name="password" type="password" autoComplete="current-password" required />
+            <PasswordInput name="password" autoComplete="current-password" />
           </label>
           <button className="btn auth-submit" type="submit">
             Sign in
