@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState , useTransition } from "react";
 import type React from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { addClientPhaseAction, applySupplementChangesAction, deployPhaseNowAction, saveAndSchedulePhaseAction, saveCoachNutritionNoteAction, saveNutritionTargetsAction, sendChatMessageAction, unschedulePhaseAction, updateClientPhaseAction } from "../../../lib/actions";
+import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { ToggleGroup, ToggleGroupItem } from "../../../components/ui/basics";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
@@ -57,11 +60,23 @@ export type DraftNutrition = {
   logged: LoggedDaysView;
 };
 
-const draftOnly = (what: string) => toast(what, { description: "A draft: nothing saves here." });
-const savedToast = (what: string) =>
-  toast.success("Saved", {
-    description: `${what} (a draft: nothing really saved).`,
-  });
+const savedToast = (what: string) => toast.success("Saved", { description: what });
+/** A phase's fields as the actions read them. */
+const phaseForm = (v: { id?: number; clientId?: number; track: string; name: string; start: string; end: string }) => {
+  const f = new FormData();
+  if (v.id != null) f.set("id", String(v.id));
+  if (v.clientId != null) f.set("clientId", String(v.clientId));
+  f.set("track", v.track);
+  f.set("name", v.name);
+  f.set("start", v.start);
+  f.set("end", v.end);
+  return f;
+};
+const plusWeeks = (start: string, weeks: number) => {
+  const d = new Date(`${start}T00:00:00`);
+  d.setDate(d.getDate() + Math.max(0, weeks - 1) * 7);
+  return d.toISOString().slice(0, 10);
+};
 const n = (v: number) => Math.round(v).toLocaleString("en-US");
 const ON_TARGET = 200;
 const PAGE = 20;
@@ -90,7 +105,7 @@ type Targets = {
   water: string;
   note: string;
 };
-type Dlg = { kind: "photo"; date: string; meal: string } | { kind: "message"; label: string } | { kind: "targetNote" } | { kind: "dates" } | { kind: "newPhase" } | { kind: "deploy" } | { kind: "backToDraft" } | null;
+type Dlg = { kind: "photo"; date: string; meal: string } | { kind: "message"; label: string; link: MessageLink } | { kind: "targetNote" } | { kind: "dates" } | { kind: "newPhase" } | { kind: "deploy" } | { kind: "backToDraft" } | null;
 
 export default function NutritionDraft({ clientId, firstName, plan }: { clientId: number; firstName: string; plan: DraftNutrition }) {
   // ---- Targets: typed into in place, queued on the card's bar until Apply.
@@ -103,6 +118,22 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
   };
   const [saved, setSaved] = useState(initial);
   const [t, setT] = useState(initial);
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+  // Every save goes to the server, then the page re-reads; what is on screen follows.
+  const act = (fn: () => Promise<unknown>, said?: string) =>
+    startTransition(async () => {
+      await fn();
+      router.refresh();
+      if (said) savedToast(said);
+    });
+  const [seenPlan, setSeenPlan] = useState(plan);
+  if (seenPlan !== plan) {
+    setSeenPlan(plan);
+    setSaved(initial);
+    setT(initial);
+  }
+  const phaseId = plan.id > 0 ? plan.id : null;
   const targetChanges = (t.same !== saved.same ? 1 : 0) + (sameMacros(t.training, saved.training) ? 0 : 1) + (!t.same && !sameMacros(t.rest, saved.rest) ? 1 : 0) + (t.water !== saved.water ? 1 : 0);
   const trainingKcal = kcalOf(t.training);
   const restKcal = t.same ? trainingKcal : kcalOf(t.rest);
@@ -110,6 +141,12 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
   // ---- Supplements: a working copy against the saved list.
   const [suppSaved, setSuppSaved] = useState(plan.supplements);
   const [supps, setSupps] = useState(plan.supplements);
+  const [seenSupps, setSeenSupps] = useState(plan.supplements);
+  if (seenSupps !== plan.supplements) {
+    setSeenSupps(plan.supplements);
+    setSuppSaved(plan.supplements);
+    setSupps(plan.supplements);
+  }
   const suppChanges = (() => {
     const before = new Map(suppSaved.map((s) => [s.id, s]));
     let c = suppSaved.filter((s) => !supps.some((x) => x.id === s.id)).length;
@@ -263,7 +300,7 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
               <MoreIcon />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="pb-menu">
-              <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: plan.name })}>
+              <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: plan.name, link: { kind: "nutrition" } })}>
                 <ChatIcon /> Message about nutrition
               </DropdownMenuItem>
               {plan.id !== 0 && (
@@ -366,7 +403,17 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
                 const next = { ...t, rest: t.same ? t.training : t.rest };
                 setSaved(next);
                 setT(next);
-                savedToast(`Targets: ${n(trainingKcal)}${t.same ? "" : ` / ${n(restKcal)}`} kcal`);
+                const f = new FormData();
+                f.set("clientId", String(clientId));
+                f.set("t_protein", next.training.protein);
+                f.set("t_carbs", next.training.carbs);
+                f.set("t_fats", next.training.fats);
+                f.set("r_protein", next.rest.protein);
+                f.set("r_carbs", next.rest.carbs);
+                f.set("r_fats", next.rest.fats);
+                f.set("water", next.water);
+                if (phaseId) f.set("phaseId", String(phaseId));
+                act(() => saveNutritionTargetsAction(f), `Targets: ${n(trainingKcal)}${t.same ? "" : ` / ${n(restKcal)}`} kcal`);
               }}
             />
           )}
@@ -450,7 +497,20 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
                 const kept = supps.filter((s) => s.name.trim());
                 setSuppSaved(kept);
                 setSupps(kept);
-                savedToast(`Supplements: ${kept.length} ${kept.length === 1 ? "item" : "items"}`);
+                const before = new Map(suppSaved.map((s) => [s.id, s]));
+                const changes = {
+                  added: kept.filter((s) => s.id < 0).map(({ name, quantity, timing, notes }) => ({ name, quantity, timing, notes })),
+                  updated: kept
+                    .filter((s) => s.id > 0)
+                    .filter((s) => {
+                      const b = before.get(s.id);
+                      return !b || b.name !== s.name || b.quantity !== s.quantity || b.timing !== s.timing || b.notes !== s.notes;
+                    })
+                    .map(({ id, name, quantity, timing, notes }) => ({ id, name, quantity, timing, notes })),
+                  removedIds: suppSaved.filter((s) => !kept.some((k) => k.id === s.id)).map((s) => s.id),
+                  order: kept.filter((s) => s.id > 0).map((s) => s.id),
+                };
+                act(() => applySupplementChangesAction(clientId, changes), `Supplements: ${kept.length} ${kept.length === 1 ? "item" : "items"}`);
               }}
             />
           )}
@@ -496,6 +556,7 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
                   setDlg({
                     kind: "message",
                     label: `Food diary · ${fmtDay(d.date)}`,
+                    link: { kind: "food", date: d.date },
                   })
                 }
               />
@@ -543,9 +604,12 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
                 ...prev,
                 [`${dlg.date}|${photoOf.id}`]: [...(prev[`${dlg.date}|${photoOf.id}`] ?? []), { id: -Date.now(), text, when: fmtDate(today) }],
               }));
-              toast.success("Comment sent", {
-                description: `${firstName} gets a notification and sees it under ${photoOf.label.toLowerCase()} (a draft: nothing really sent).`,
-              });
+              const f = new FormData();
+              f.set("clientId", String(clientId));
+              f.set("text", text);
+              f.set("link", JSON.stringify({ kind: "food", date: dlg.date, meal: photoOf.id }));
+              act(() => sendChatMessageAction(f));
+              toast.success("Comment sent", { description: `${firstName} gets a notification and sees it under ${photoOf.label.toLowerCase()}.` });
             }}
           />
         )}
@@ -553,11 +617,15 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
           <MessageDialog
             firstName={firstName}
             label={dlg.label}
-            onSend={() => {
-              toast.success("Sent", {
-                description: `${firstName} gets it on Home, linked to ${dlg.label} (a draft: nothing really sent).`,
-              });
+            onSend={(text) => {
+              const { label, link } = dlg;
               close();
+              const f = new FormData();
+              f.set("clientId", String(clientId));
+              f.set("text", text);
+              f.set("link", JSON.stringify(link));
+              act(() => sendChatMessageAction(f));
+              toast.success("Sent", { description: `${firstName} gets it on Home, linked to ${label}.` });
             }}
           />
         )}
@@ -568,8 +636,12 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
             onSave={(v) => {
               setSaved((x) => ({ ...x, note: v }));
               setT((x) => ({ ...x, note: v }));
-              savedToast(v.trim() ? `Note to ${firstName} on the targets` : "Note removed");
               close();
+              const f = new FormData();
+              f.set("clientId", String(clientId));
+              f.set("note", v);
+              if (phaseId) f.set("phaseId", String(phaseId));
+              act(() => saveCoachNutritionNoteAction(f), v.trim() ? `Note to ${firstName} on the targets` : "Note removed");
             }}
           />
         )}
@@ -583,16 +655,17 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
             what="these targets"
             confirm="Save dates"
             onConfirm={(v) => {
-              savedToast(`${v.name || plan.name}: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
               close();
+              if (phaseId) act(() => updateClientPhaseAction(phaseForm({ id: phaseId, track: "nutrition", name: v.name || plan.name, start: v.start, end: v.end })), `${v.name || plan.name}: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
             }}
           />
         )}
         {dlg?.kind === "newPhase" && (
           <NewPhaseDialog
             onCreate={(v) => {
-              savedToast(`${v.name || "New phase"} drafted: ${v.weeks} weeks${v.start ? ` from ${fmtDate(v.start)}` : ""}`);
               close();
+              const start = v.start || today;
+              act(() => addClientPhaseAction(phaseForm({ clientId, track: "nutrition", name: v.name || "New phase", start, end: plusWeeks(start, v.weeks) })), `${v.name || "New phase"} drafted: ${v.weeks} weeks from ${fmtDate(start)}`);
             }}
           />
         )}
@@ -605,8 +678,8 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
             what="these targets"
             confirm="Schedule it"
             onConfirm={(v) => {
-              savedToast(`${plan.name} scheduled: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
               close();
+              if (phaseId) act(() => saveAndSchedulePhaseAction(phaseForm({ id: phaseId, track: "nutrition", name: plan.name, start: v.start, end: v.end })), `${plan.name} scheduled: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
             }}
           />
         )}
@@ -616,8 +689,8 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
             description={`${firstName} sees these targets and supplements from now.`}
             confirm="Make it live"
             onConfirm={() => {
-              draftOnly(`${plan.name} is live`);
               close();
+              if (phaseId) act(() => deployPhaseNowAction(phaseId), `${plan.name} is live`);
             }}
           />
         )}
@@ -627,8 +700,8 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
             description={`${plan.name} comes off ${firstName}'s schedule; only you see it until it is scheduled again.`}
             confirm="Back to draft"
             onConfirm={() => {
-              draftOnly(`${plan.name} is a draft again`);
               close();
+              if (phaseId) act(() => unschedulePhaseAction(phaseId), `${plan.name} is a draft again`);
             }}
           />
         )}

@@ -31,6 +31,8 @@ const TABS = [
   { key: "messages", label: "Messages" },
 ] as const;
 export type RedesignTab = (typeof TABS)[number]["key"];
+// The tabs that save, and how the banner names them.
+const REAL: Partial<Record<RedesignTab, string>> = { messages: "Messages with", plan: "Plan of", training: "Training of", nutrition: "Nutrition of", measurements: "Measurements of" };
 
 export type RedesignShellProps = {
   clientId: number;
@@ -68,8 +70,8 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
           ))}
         </nav>
         <p className="rd-banner">
-          {tab === "messages" || tab === "plan" || tab === "training" ? (
-            <>Redesign · {tab === "messages" ? "Messages with" : tab === "plan" ? "Plan of" : "Training of"} {clientName}. This tab is real: everything here saves.</>
+          {REAL[tab] ? (
+            <>Redesign · {REAL[tab]} {clientName}. This tab is real: everything here saves.</>
           ) : (
             <>
               Redesign draft · {current} of {clientName}. Read-only: every action answers with a toast and saves nothing. Compare with <Link href={`/admin?client=${clientId}&tab=${tab}`}>the current one</Link>.

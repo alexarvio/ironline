@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { addClientPhaseAction, applyMetricChangesAction, deployPhaseNowAction, saveAndSchedulePhaseAction, sendChatMessageAction, setCheckInDayAction, unschedulePhaseAction, updateClientPhaseAction } from "../../../lib/actions";
+import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { CalendarIcon, ChatIcon, ChevronDownIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
@@ -50,8 +53,23 @@ export type DraftMeasurements = {
   notes: { id: number; period: string; kind: "daily" | "weekly" | "measurements"; text: string }[];
 };
 
-const draftOnly = (what: string) => toast(what, { description: "A draft: nothing saves here." });
-const savedToast = (what: string) => toast.success("Saved", { description: `${what} (a draft: nothing really saved).` });
+const savedToast = (what: string) => toast.success("Saved", { description: what });
+/** A phase's fields as the actions read them. */
+const phaseForm = (v: { id?: number; clientId?: number; track: string; name: string; start: string; end: string }) => {
+  const f = new FormData();
+  if (v.id != null) f.set("id", String(v.id));
+  if (v.clientId != null) f.set("clientId", String(v.clientId));
+  f.set("track", v.track);
+  f.set("name", v.name);
+  f.set("start", v.start);
+  f.set("end", v.end);
+  return f;
+};
+const plusWeeks = (start: string, weeks: number) => {
+  const d = new Date(`${start}T00:00:00`);
+  d.setDate(d.getDate() + Math.max(0, weeks - 1) * 7);
+  return d.toISOString().slice(0, 10);
+};
 const n = (v: number) => (Number.isInteger(v) ? v.toLocaleString("en-US") : v.toLocaleString("en-US", { maximumFractionDigits: 1 }));
 // A word unit takes a space ("8 h"); a scale butts up ("4/5"); steps are self-evident.
 const tailOf = (unit: string) => {
@@ -64,7 +82,7 @@ const fmtDay = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const KIND_LABEL = { daily: "Daily check-in", weekly: "Weekly check-in", measurements: "Measurements" } as const;
 
-type Dlg = { kind: "message"; label: string } | { kind: "dates" } | { kind: "newPhase" } | { kind: "deploy" } | { kind: "backToDraft" } | null;
+type Dlg = { kind: "message"; label: string; link: MessageLink } | { kind: "dates" } | { kind: "newPhase" } | { kind: "deploy" } | { kind: "backToDraft" } | null;
 
 export default function MeasurementsDraft({ clientId, firstName, plan }: { clientId: number; firstName: string; plan: DraftMeasurements }) {
   // ---- Tracked metrics: a working list against the saved one.
@@ -72,6 +90,24 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   const [rows, setRows] = useState(plan.metrics);
   const [adding, setAdding] = useState(false);
   const [checkInDay, setCheckInDay] = useState(plan.checkInDay ?? "Monday");
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+  // Every save goes to the server, then the page re-reads; what is on screen follows.
+  const act = (fn: () => Promise<unknown>, said?: string) =>
+    startTransition(async () => {
+      await fn();
+      router.refresh();
+      if (said) savedToast(said);
+    });
+  const [seenPlan, setSeenPlan] = useState(plan);
+  if (seenPlan !== plan) {
+    setSeenPlan(plan);
+    setSaved(plan.metrics);
+    setRows(plan.metrics);
+    setCheckInDay(plan.checkInDay ?? "Monday");
+  }
+  const phaseId = plan.id > 0 ? plan.id : null;
+  const inLibrary = (name: string) => plan.library.some((p) => p.items.some((i) => i.name.toLowerCase() === name.toLowerCase()));
   const changes = (() => {
     const before = new Map(saved.map((m) => [m.id, m]));
     let c = saved.filter((m) => !rows.some((r) => r.id === m.id)).length;
@@ -176,7 +212,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
               <MoreIcon />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="pb-menu">
-              <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: "Check-ins" })}>
+              <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: "Check-ins", link: { kind: "checkin", section: cadence } })}>
                 <ChatIcon /> Message about check-ins
               </DropdownMenuItem>
               {plan.id !== 0 && (
@@ -208,7 +244,10 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                   key={d}
                   onSelect={() => {
                     setCheckInDay(d);
-                    savedToast(`Weekly check-in opens on ${d}`);
+                    const f = new FormData();
+                    f.set("clientId", String(clientId));
+                    f.set("check_in_day", d);
+                    act(() => setCheckInDayAction(f), `Weekly check-in opens on ${d}`);
                   }}
                 >
                   {d}
@@ -269,7 +308,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                         <MoreIcon />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="pb-menu">
-                        <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: m.name })}>
+                        <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: m.name, link: { kind: "checkin", section: m.frequency } })}>
                           <ChatIcon /> Message about {m.name}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
@@ -303,8 +342,16 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                 type="button"
                 className="rd-pending-apply"
                 onClick={() => {
+                  const before = new Map(saved.map((m) => [m.id, m]));
+                  const input = {
+                    clientId,
+                    phaseId,
+                    adds: rows.filter((r) => isNew(r.id)).map((r) => ({ name: r.name, unit: r.unit, group: r.groupKey, cadence: r.frequency, source: (inLibrary(r.name) ? "library" : "custom") as "library" | "custom" })),
+                    removes: saved.filter((m) => !rows.some((r) => r.id === m.id)).map((m) => m.id),
+                    cadence: rows.filter((r) => !isNew(r.id) && before.get(r.id)?.frequency !== r.frequency).map((r) => ({ id: r.id, value: r.frequency })),
+                  };
                   setSaved(rows);
-                  savedToast(`Tracked metrics: ${rows.length} ${rows.length === 1 ? "metric" : "metrics"}`);
+                  act(() => applyMetricChangesAction(input), `Tracked metrics: ${rows.length} ${rows.length === 1 ? "metric" : "metrics"}`);
                 }}
               >
                 Apply
@@ -357,7 +404,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
         ) : show === "graph" ? (
           <Graphs key={cadence} view={long.periods.length ? long : view} cadence={cadence} shortCount={cadence === "daily" ? 7 : 5} />
         ) : (
-          <CheckinFeed view={view} cadence={cadence} onMessage={(label) => setDlg({ kind: "message", label })} />
+          <CheckinFeed view={view} cadence={cadence} onMessage={(label) => setDlg({ kind: "message", label, link: { kind: "checkin", section: cadence } })} />
         )}
       </section>
 
@@ -385,7 +432,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                   </span>
                   <span className="rm-note-text">{note.text}</span>
                   <span className="rd-row-more">
-                    <button type="button" className="rd-btn ghost sm" title="Reply" aria-label={`Reply to ${firstName}'s note of ${fmtDay(note.period)}`} onClick={() => setDlg({ kind: "message", label: `${KIND_LABEL[note.kind]} · ${fmtDay(note.period)}` })}>
+                    <button type="button" className="rd-btn ghost sm" title="Reply" aria-label={`Reply to ${firstName}'s note of ${fmtDay(note.period)}`} onClick={() => setDlg({ kind: "message", label: `${KIND_LABEL[note.kind]} · ${fmtDay(note.period)}`, link: { kind: "checkin", section: note.kind === "weekly" ? "weekly" : "daily" } })}>
                       <ChatIcon />
                     </button>
                   </span>
@@ -402,9 +449,15 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
           <MessageDialog
             firstName={firstName}
             label={dlg.label}
-            onSend={() => {
-              toast.success("Sent", { description: `${firstName} gets it on Home, linked to ${dlg.label} (a draft: nothing really sent).` });
+            onSend={(text) => {
+              const { label, link } = dlg;
               close();
+              const f = new FormData();
+              f.set("clientId", String(clientId));
+              f.set("text", text);
+              f.set("link", JSON.stringify(link));
+              act(() => sendChatMessageAction(f));
+              toast.success("Sent", { description: `${firstName} gets it on Home, linked to ${label}.` });
             }}
           />
         )}
@@ -418,16 +471,17 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
             what="these metrics"
             confirm="Save dates"
             onConfirm={(v) => {
-              savedToast(`${v.name || plan.name}: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
               close();
+              if (phaseId) act(() => updateClientPhaseAction(phaseForm({ id: phaseId, track: "lifestyle", name: v.name || plan.name, start: v.start, end: v.end })), `${v.name || plan.name}: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
             }}
           />
         )}
         {dlg?.kind === "newPhase" && (
           <NewPhaseDialog
             onCreate={(v) => {
-              savedToast(`${v.name || "New phase"} drafted: ${v.weeks} weeks${v.start ? ` from ${fmtDate(v.start)}` : ""}`);
               close();
+              const start = v.start || today;
+              act(() => addClientPhaseAction(phaseForm({ clientId, track: "lifestyle", name: v.name || "New phase", start, end: plusWeeks(start, v.weeks) })), `${v.name || "New phase"} drafted: ${v.weeks} weeks from ${fmtDate(start)}`);
             }}
           />
         )}
@@ -440,8 +494,8 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
             what="these metrics"
             confirm="Schedule it"
             onConfirm={(v) => {
-              savedToast(`${plan.name} scheduled: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
               close();
+              if (phaseId) act(() => saveAndSchedulePhaseAction(phaseForm({ id: phaseId, track: "lifestyle", name: plan.name, start: v.start, end: v.end })), `${plan.name} scheduled: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
             }}
           />
         )}
@@ -451,8 +505,8 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
             description={`${firstName}'s check-in asks for these metrics from now.`}
             confirm="Make it live"
             onConfirm={() => {
-              draftOnly(`${plan.name} is live`);
               close();
+              if (phaseId) act(() => deployPhaseNowAction(phaseId), `${plan.name} is live`);
             }}
           />
         )}
@@ -462,8 +516,8 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
             description={`${plan.name} comes off ${firstName}'s schedule; only you see it until it is scheduled again.`}
             confirm="Back to draft"
             onConfirm={() => {
-              draftOnly(`${plan.name} is a draft again`);
               close();
+              if (phaseId) act(() => unschedulePhaseAction(phaseId), `${plan.name} is a draft again`);
             }}
           />
         )}
