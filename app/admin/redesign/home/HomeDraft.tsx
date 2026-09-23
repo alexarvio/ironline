@@ -270,7 +270,8 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
       </div>
 
       {/* The facts and the note, together, when asked for. */}
-      <Dialog open={details} onOpenChange={(o) => !o && setDetails(false)}>
+      {/* Non-modal: the card editor opens its form in a layer of its own, which a modal dialog would lock out. */}
+      <Dialog open={details} modal={false} onOpenChange={(o) => !o && setDetails(false)}>
         {details && (
           <DialogContent className="rd-dlg rh-dlg">
             <DialogHeader>
