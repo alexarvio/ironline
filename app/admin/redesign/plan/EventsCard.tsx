@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -120,7 +120,20 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
   const onGrid = events.filter((e) => place(e).visible).sort((a, b) => (a.start < b.start ? -1 : 1));
   const lanes: PlanEvent[][] = [];
   const laneOf = new Map<number, number>();
-  const reach = (e: PlanEvent) => (e.start === e.end ? addDays(e.start, Math.max(6, Math.round(e.title.length / 3))) : e.end);
+  // A pin's label needs room to its right: measured against the grid, so
+  // the reach is what the label takes on this screen, not a guess.
+  const lanesRef = useRef<HTMLDivElement>(null);
+  const [gridPx, setGridPx] = useState(0);
+  useEffect(() => {
+    const el = lanesRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver((entries) => setGridPx(entries[0]?.contentRect.width ?? 0));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const dayPx = gridPx > 0 ? gridPx / totalDays : 9;
+  const labelDays = (title: string) => Math.ceil((title.length * 6.6 + 28) / dayPx);
+  const reach = (e: PlanEvent) => (e.start === e.end ? addDays(e.start, labelDays(e.title)) : e.end);
   onGrid.forEach((e) => {
     let li = lanes.findIndex((l) => l.every((q) => reach(q) < e.start || q.start > reach(e)));
     if (li < 0) {
@@ -199,7 +212,7 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
                 </span>
               </div>
               <div className="rq-tl-clip">
-                <div className="rq-tl-grid rq-lanes rq-evlanes" style={{ ...cols, gridTemplateRows: `repeat(${laneCount}, 40px)` }}>
+                <div ref={lanesRef} className="rq-tl-grid rq-lanes rq-evlanes" style={{ ...cols, gridTemplateRows: `repeat(${laneCount}, 40px)` }}>
                   {weeks.map((w, i) => (
                     <span key={w} className="rq-cell" style={{ gridColumn: i + 1, gridRow: `1 / span ${laneCount}` }} />
                   ))}
