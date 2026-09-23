@@ -610,6 +610,7 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
               f.set("link", JSON.stringify({ kind: "food", date: dlg.date, meal: photoOf.id }));
               act(() => sendChatMessageAction(f));
               toast.success("Comment sent", { description: `${firstName} gets a notification and sees it under ${photoOf.label.toLowerCase()}.` });
+              close();
             }}
           />
         )}
