@@ -68,8 +68,8 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
           ))}
         </nav>
         <p className="rd-banner">
-          {tab === "messages" || tab === "plan" ? (
-            <>Redesign · {tab === "messages" ? "Messages with" : "Plan of"} {clientName}. This tab is real: everything here saves.</>
+          {tab === "messages" || tab === "plan" || tab === "training" ? (
+            <>Redesign · {tab === "messages" ? "Messages with" : tab === "plan" ? "Plan of" : "Training of"} {clientName}. This tab is real: everything here saves.</>
           ) : (
             <>
               Redesign draft · {current} of {clientName}. Read-only: every action answers with a toast and saves nothing. Compare with <Link href={`/admin?client=${clientId}&tab=${tab}`}>the current one</Link>.

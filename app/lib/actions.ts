@@ -1713,6 +1713,26 @@ export async function reactToMessageAction(clientId: number, messageId: number, 
   revalidatePath("/client");
 }
 
+/**
+ * A programme with a name and a length in one step, and, when a start is
+ * given, the training phase on the plan that carries its dates. Answers with
+ * the programme's id. Starts as a draft: only the coach sees it.
+ */
+export async function createProgramWithAction(clientId: number, name: string, weeks: number, startDate: string | null): Promise<number | null> {
+  if (!(await coachForClient(Number(clientId)))) return null;
+  const n = Math.max(1, Math.min(52, Math.round(Number(weeks) || 1)));
+  const existingWeeks = listWeekNumbers(Number(clientId));
+  const startWeek = (existingWeeks.length > 0 ? Math.max(...existingWeeks) : 0) + 1;
+  const program = createProgram(Number(clientId), String(name ?? "").trim(), n, startWeek);
+  if (startDate && /^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+    const end = new Date(`${startDate}T00:00:00`);
+    end.setDate(end.getDate() + (n - 1) * 7);
+    addClientPhase(Number(clientId), "training", String(name ?? "").trim() || "Programme", startDate, end.toISOString().slice(0, 10), program.id);
+  }
+  revalidatePath("/admin");
+  return program.id;
+}
+
 // ---- Events on the plan, and the coach's own categories for them.
 export type EventInput = { kind?: string | null; title: string; start: string; end?: string | null; note?: string | null };
 

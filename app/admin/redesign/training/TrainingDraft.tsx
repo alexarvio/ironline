@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { addExerciseToLibraryAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, createProgramWithAction, deployProgramAction, removeGymAction, removeProgramWeekAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
+import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger, ToggleGroup, ToggleGroupItem } from "../../../components/ui/basics";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
@@ -31,6 +33,8 @@ export type Gym = { id: number; name: string; home: boolean };
 export type Library = { slug: string; label: string; exercises: { id: number; name: string }[] }[];
 export type DraftRow = {
   id: number;
+  /** The library exercise behind the row: demos are set per exercise. */
+  exerciseId: number;
   name: string;
   sets: number;
   reps: string;
@@ -41,7 +45,7 @@ export type DraftRow = {
   rest: number | null;
   note: string | null;
   logged: { set: number; kg: number | null; reps: number | null; rpe: number | null; gym: string | null }[];
-  video: { state: "asked" | "in" | "replied"; note: string | null; reply: string | null } | null;
+  video: { requestId: number; state: "asked" | "in" | "replied"; note: string | null; reply: string | null } | null;
   /** The demo the client sees on this exercise: the library's, else one set on this row long ago. */
   demo: { url: string; source: "library" | "row" } | null;
   history: { week: number; label: string; target: number | null; setsPlanned: number; sets: { n: number; kg: number | null; reps: number | null; rpe: number | null }[]; best: number | null; gym: string | null; current: boolean }[];
@@ -56,6 +60,10 @@ export type DraftProgram = {
   name: string;
   status: "live" | "past" | "scheduled" | "draft";
   totalWeeks: number;
+  /** The programme's first week number in the client's calendar; a screen week index + this - 1 is the server's week. */
+  startWeek: number;
+  /** The training phase on the plan that carries its dates, if one does. */
+  phaseId: number | null;
   startDate: string | null;
   endDate: string | null;
   weekIdx: number;
@@ -68,15 +76,20 @@ export type DraftProgram = {
 };
 
 // ---- Draft-only bits ---------------------------------------------------------
-const draftOnly = (what: string) => toast(what, { description: "A draft: nothing saves here." });
-const savedToast = (what: string) => toast.success("Saved", { description: `${what} (a draft: nothing really saved).` });
+const draftOnly = (what: string) => toast(what, { description: "Not wired yet: the old Training tab still does this." });
+const savedToast = (what: string) => toast.success("Saved", { description: what });
+const fd = (o: Record<string, string | number | null | undefined>) => {
+  const f = new FormData();
+  for (const [k, v] of Object.entries(o)) if (v != null) f.set(k, String(v));
+  return f;
+};
 const LB = 2.20462;
 const kgOf = (v: number | null, lbs: boolean) => (v == null ? "—" : lbs ? `${Math.ceil((v * LB) / 0.5) * 0.5}` : `${v}`);
 const restOf = (s: number | null) => (s == null ? null : s >= 60 && s % 60 === 0 ? `${s / 60} min` : s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : `${s}s`);
 const MAX_SESSIONS = 7;
 const MAX_COLS = 6;
 
-type AddedExercise = { kind: "exercise"; name: string; sets: number; reps: string; kg: number | null };
+type AddedExercise = { kind: "exercise"; exerciseId: number | null; name: string; sets: number; reps: string; kg: number | null };
 type AddedCardio = { kind: "cardio"; name: string; time: string; pace: string; incline: string; distance: string; note: string };
 type Added = { key: number } & (AddedExercise | AddedCardio);
 type Edits = { name?: string; note?: string; sets?: string; reps?: string; kg?: number | null; gymKg?: Record<string, number | null>; rpe?: string; tempo?: string; rest?: string };
@@ -91,7 +104,7 @@ type Dlg =
   | { kind: "editCardio"; sessionId: number; cardioId: number }
   | { kind: "video"; rowId: number }
   | { kind: "demo"; rowId: number }
-  | { kind: "message"; label: string }
+  | { kind: "message"; label: string; link: MessageLink }
   | { kind: "copySession"; sessionId: number }
   | { kind: "copyWeek" }
   | { kind: "deleteSession"; sessionId: number }
@@ -117,6 +130,22 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
   // A column is on when the coach ticked it, or when any exercise in the
   // week has something in it: a tempo the coach set is never hidden.
   const [sessions, setSessions] = useState<DraftSession[]>(program.sessions);
+  const [, startTransition] = useTransition();
+  // Every save goes to the server, then the page re-reads; what is on screen
+  // follows the server's answer (derived-state resets below).
+  const act = (fn: () => Promise<unknown>, said?: string) =>
+    startTransition(async () => {
+      const r = await fn();
+      router.refresh();
+      if (r && typeof r === "object" && "ok" in r && (r as { ok: boolean }).ok === false) toast.error((r as { error?: string }).error ?? "Something went wrong");
+      else if (typeof r === "string" && r) toast.error(r);
+      else if (said) savedToast(said);
+    });
+  const [seenProgram, setSeenProgram] = useState(program);
+  if (seenProgram !== program) {
+    setSeenProgram(program);
+    setSessions(program.sessions);
+  }
   const inUse = {
     rpe: sessions.some((x) => x.rows.some((r) => r.rpe != null)),
     tempo: sessions.some((x) => x.rows.some((r) => !!r.tempo)),
@@ -125,6 +154,11 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
   const cols = { ...picked, rpe: picked.rpe || inUse.rpe, tempo: picked.tempo || inUse.tempo, rest: picked.rest || inUse.rest };
   const onCount = Object.values(cols).filter(Boolean).length;
   const [gyms, setGyms] = useState<Gym[]>(program.gyms);
+  const [seenGyms, setSeenGyms] = useState(program.gyms);
+  if (seenGyms !== program.gyms) {
+    setSeenGyms(program.gyms);
+    setGyms(program.gyms);
+  }
   const multiGym = gyms.length > 1;
   // Room for the figures: the name and the log stretch with the screen, the
   // figure columns keep a set width, so on a wide screen they get more air.
@@ -149,6 +183,13 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
   // The week's sessions, and the weeks, live in state so delete, reorder and
   // add can show what they would do.
   const [weeks, setWeeks] = useState(program.weeks);
+  const [seenWeeks, setSeenWeeks] = useState(program.weeks);
+  if (seenWeeks !== program.weeks) {
+    setSeenWeeks(program.weeks);
+    setWeeks(program.weeks);
+  }
+  /** The server's week number for a week index on screen. */
+  const weekNo = (index: number) => program.startWeek + index - 1;
   // The week on screen. The server loads one week's sessions; weeks added here
   // live only on this screen, their sessions kept by index while another week
   // shows, and the loaded week joins them the moment the coach leaves it.
@@ -166,6 +207,49 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
     const a = Number(m[1]);
     if (m[2]) return a * 60 + Number(m[2]);
     return /^m/i.test(m[3] ?? "") ? a * 60 : a;
+  };
+  /** The queued changes on a session, in the shape the server applies. */
+  const payloadOf = (s: DraftSession, p: Pending): DayChangesPayload => {
+    const str = (v: number | null | undefined) => (v == null ? "" : String(v));
+    const fields: DayChangesPayload["fields"] = {};
+    const gymsOut: NonNullable<DayChangesPayload["gyms"]> = {};
+    for (const [id, e] of Object.entries(p.edits)) {
+      const f: DayChangesPayload["fields"][string] = {};
+      if (e.sets !== undefined) f.sets = e.sets;
+      if (e.reps !== undefined) f.reps = e.reps;
+      if (e.kg !== undefined) f.targetWeight = str(e.kg);
+      if (e.rpe !== undefined) f.rpe = e.rpe;
+      if (e.tempo !== undefined) f.tempo = e.tempo;
+      if (e.rest !== undefined) f.rest = e.rest;
+      if (e.note !== undefined) f.notes = e.note;
+      if (Object.keys(f).length) fields[id] = f;
+      if (e.gymKg) {
+        const byGym: Record<string, string> = {};
+        for (const [gymName, kg] of Object.entries(e.gymKg)) {
+          const g = gyms.find((x) => x.name === gymName);
+          if (g && !g.home) byGym[String(g.id)] = str(kg);
+        }
+        if (Object.keys(byGym).length) gymsOut[id] = byGym;
+      }
+    }
+    return {
+      programDayId: s.id,
+      alsoRemaining: p.alsoRemaining,
+      label: p.renamed,
+      rest: null,
+      fields,
+      custom: {},
+      gyms: gymsOut,
+      cardio: {
+        fields: Object.fromEntries(Object.entries(p.cardioEdits).map(([id, e]) => [id, { ...e }])),
+        removed: p.cardioRemoved,
+        added: p.added.filter((a): a is Added & AddedCardio => a.kind === "cardio").map((a) => ({ name: a.name, time: a.time, pace: a.pace, incline: a.incline, distance: a.distance, notes: a.note })),
+        order: null,
+      },
+      removed: p.removed,
+      added: p.added.filter((a): a is Added & AddedExercise => a.kind === "exercise" && a.exerciseId != null).map((a) => ({ exerciseId: a.exerciseId!, fields: { sets: String(a.sets), reps: a.reps, targetWeight: str(a.kg) } })),
+      order: p.order,
+    };
   };
   const applyPending = (sessionId: number) => {
     const p = pend(sessionId);
@@ -190,7 +274,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
         });
         const addedRows: DraftRow[] = p.added
           .filter((a): a is Added & AddedExercise => a.kind === "exercise")
-          .map((a, i) => ({ id: -(Date.now() + i + 1), name: a.name, sets: a.sets, reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: null, tempo: null, rest: null, note: null, logged: [], video: null, demo: null, history: [], d7: null, d30: null }));
+          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: a.sets, reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: null, tempo: null, rest: null, note: null, logged: [], video: null, demo: null, history: [], d7: null, d30: null }));
         const addedCardio: DraftCardio[] = p.added
           .filter((a): a is Added & AddedCardio => a.kind === "cardio")
           .map((a, i) => ({ id: -(Date.now() + 500 + i), name: a.name, time: a.time, pace: a.pace, incline: a.incline, distance: a.distance, notes: a.note, done: false }));
@@ -206,10 +290,16 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
     );
     setPending((prev) => ({ ...prev, [sessionId]: emptyPending() }));
   };
-  const [open, setOpen] = useState<number | null>(program.sessions.find((s) => s.setsLogged < s.setsPlanned)?.id ?? program.sessions[0]?.id ?? null);
-  const [videos, setVideos] = useState<Record<number, DraftRow["video"]>>(() => Object.fromEntries(program.sessions.flatMap((s) => s.rows.map((r) => [r.id, r.video]))));
   // A demo set or taken off in this sitting, by row; a row not touched reads its own.
   const [demos, setDemos] = useState<Record<number, DraftRow["demo"]>>({});
+  const [open, setOpen] = useState<number | null>(program.sessions.find((s) => s.setsLogged < s.setsPlanned)?.id ?? program.sessions[0]?.id ?? null);
+  const [videos, setVideos] = useState<Record<number, DraftRow["video"]>>(() => Object.fromEntries(program.sessions.flatMap((s) => s.rows.map((r) => [r.id, r.video]))));
+  const [seenVideos, setSeenVideos] = useState(program.sessions);
+  if (seenVideos !== program.sessions) {
+    setSeenVideos(program.sessions);
+    setVideos(Object.fromEntries(program.sessions.flatMap((s) => s.rows.map((r) => [r.id, r.video]))));
+    setDemos({});
+  }
   const [noteSeen, setNoteSeen] = useState(false);
   const [dlg, setDlg] = useState<Dlg>(null);
   const close = () => setDlg(null);
@@ -259,45 +349,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
     setViewIdx(index);
     setOpen(back.find((s) => s.setsLogged < s.setsPlanned)?.id ?? back[0]?.id ?? null);
   };
-  // A new week at the end: blank, or the week on screen again with nothing logged.
-  const addWeek = (copy: boolean) => {
-    const n = weeks.length + 1;
-    const stamp = Date.now();
-    const copied: DraftSession[] = copy
-      ? sessions.map((s, i) => ({
-          ...s,
-          id: -(stamp + i + 1),
-          setsLogged: 0,
-          gym: null,
-          skip: null,
-          rows: s.rows.map((r, j) => ({ ...r, id: -(stamp + 100 * (i + 1) + j), logged: [], video: null, history: [], d7: null, d30: null })),
-          cardio: s.cardio.map((c, j) => ({ ...c, id: -(stamp + 10000 * (i + 1) + j), done: false })),
-        }))
-      : [];
-    setWeeks((prev) => [...prev, { index: n, label: `Week ${n}`, trained: copied.map(() => false), state: "ahead" }]);
-    setStash((prev) => ({ ...prev, [viewIdx]: sessions }));
-    setSessions(copied);
-    setViewIdx(n);
-    setOpen(copied[0]?.id ?? null);
-  };
-  // Only the last week can go, so the ones before keep their numbers.
-  const removeWeek = () => {
-    const back = weeks.length - 1;
-    setWeeks((prev) => prev.filter((w) => w.index !== week.index));
-    const restored = stash[back];
-    if (restored) {
-      setStash((prev) => {
-        const next = { ...prev };
-        delete next[back];
-        return next;
-      });
-      setSessions(restored);
-      setViewIdx(back);
-      setOpen(restored[0]?.id ?? null);
-    } else {
-      router.push(`/admin/redesign/training?client=${clientId}&program=${program.id}&week=${back}`);
-    }
-  };
+  // Weeks are added and removed on the server (the dialogs below); the page then lands on the right one.
   const later = weeks.filter((w) => w.index > viewIdx);
   const laterLabel = later.length === 0 ? "" : later.length === 1 ? `W${later[0].index}` : `W${later[0].index}–W${later[later.length - 1].index}`;
 
@@ -543,7 +595,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                   draggable
                   onDragStart={() => setDragSession(s.id)}
                   onDragEnd={() => {
-                    if (dragSession != null) savedToast("Session order changed");
+                    if (dragSession != null && sessions.some((x, i) => x.id !== program.sessions[i]?.id)) act(() => reorderSessionsAction(clientId, weekNo(viewIdx), sessions.map((x) => x.id)), "Session order changed");
                     setDragSession(null);
                   }}
                   title="Drag to reorder"
@@ -568,7 +620,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                     <MoreIcon />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="pb-menu">
-                    <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: `${name}, ${week.label}` })}>
+                    <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: `${name}, ${week.label}`, link: { kind: "session", dayId: s.id } })}>
                       <ChatIcon /> Message about this session
                     </DropdownMenuItem>
                     {(rows.length > 0 || s.cardio.length > 0) && (
@@ -678,7 +730,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                                 <DropdownMenuItem onSelect={() => setDlg({ kind: "demo", rowId: r.id })}>
                                   <PlayIcon /> {(demos[r.id] === undefined ? r.demo : demos[r.id]) ? "Demo video · change" : "Add demo"}
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: `${r.name} · ${name}, ${week.label}` })}>
+                                <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: `${r.name} · ${name}, ${week.label}`, link: { kind: "exercise", dayId: s.id, assignmentId: r.id } })}>
                                   <ChatIcon /> Message {firstName} about it
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
@@ -821,7 +873,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
 
                   {adding?.session === s.id ? (
                     adding.kind === "exercise" ? (
-                      <AddExerciseRow library={library} onPick={(nm) => patch(s.id, (q) => ({ ...q, added: [...q.added, { key: Date.now() + Math.random(), kind: "exercise", name: nm, sets: 3, reps: "8-10", kg: null }] }))} onClose={() => setAdding(null)} />
+                      <AddExerciseRow library={library} onPick={(nm, exerciseId) => patch(s.id, (q) => ({ ...q, added: [...q.added, { key: Date.now() + Math.random(), kind: "exercise", exerciseId, name: nm, sets: 3, reps: "8-10", kg: null }] }))} onClose={() => setAdding(null)} />
                     ) : (
                       <AddCardioRow
                         onAdd={(c) => patch(s.id, (q) => ({ ...q, added: [...q.added, { key: Date.now() + Math.random(), kind: "cardio", ...c }] }))}
@@ -846,8 +898,10 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                       onAlso={(v) => patch(s.id, (q) => ({ ...q, alsoRemaining: v }))}
                       onDiscard={() => setPending((prev) => ({ ...prev, [s.id]: emptyPending() }))}
                       onApply={() => {
-                        savedToast(`${name}: ${pendingCount(p)} ${pendingCount(p) === 1 ? "change" : "changes"} applied${p.alsoRemaining && laterLabel ? `, and to ${laterLabel}` : ""}`);
+                        const payload = payloadOf(s, p);
+                        const said = `${name}: ${pendingCount(p)} ${pendingCount(p) === 1 ? "change" : "changes"} applied${p.alsoRemaining && laterLabel ? `, and to ${laterLabel}` : ""}`;
                         applyPending(s.id);
+                        act(() => applyDayChangesAction(payload), said);
                       }}
                     />
                   )}
@@ -862,9 +916,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
             className="rd-session add"
             onClick={() => {
               const n = sessions.length + 1;
-              setSessions((prev) => [...prev, { id: -Date.now(), number: n, name: `Session ${n}`, setsPlanned: 0, setsLogged: 0, gym: null, skip: null, rows: [], cardio: [] }]);
-              setWeeks((prev) => prev.map((w) => (w.index === viewIdx ? { ...w, trained: [...w.trained, false] } : w)));
-              savedToast(`Session ${n} added`);
+              act(() => addSessionAction(fd({ clientId, week: weekNo(viewIdx) })), `Session ${n} added`);
             }}
           >
             + Add session
@@ -906,15 +958,24 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
           <DemoDialog
             row={rowById(dlg.rowId)!}
             demo={demos[dlg.rowId] === undefined ? rowById(dlg.rowId)!.demo : demos[dlg.rowId]}
-            onSave={(url) => {
-              setDemos((d) => ({ ...d, [dlg.rowId]: { url, source: "library" } }));
-              savedToast(`Demo on ${rowById(dlg.rowId)!.name} · every client's sheet with it`);
+            onSave={(v) => {
+              const row = rowById(dlg.rowId)!;
               close();
+              if (v.url) {
+                setDemos((d) => ({ ...d, [row.id]: { url: v.url!, source: "library" } }));
+                act(() => setExerciseDemoLinkAction(fd({ exerciseId: row.exerciseId, demoUrl: v.url })), `Demo on ${row.name} · every client's sheet with it`);
+              } else if (v.file) {
+                const f = new FormData();
+                f.set("exerciseId", String(row.exerciseId));
+                f.set("file", v.file);
+                act(() => uploadExerciseVideoAction(f), `Demo on ${row.name} · every client's sheet with it`);
+              }
             }}
             onRemove={() => {
-              setDemos((d) => ({ ...d, [dlg.rowId]: null }));
-              savedToast(`Demo taken off ${rowById(dlg.rowId)!.name}`);
+              const row = rowById(dlg.rowId)!;
               close();
+              setDemos((d) => ({ ...d, [row.id]: null }));
+              act(() => clearExerciseDemoAction(fd({ exerciseId: row.exerciseId })), `Demo taken off ${row.name}`);
             }}
           />
         )}
@@ -926,19 +987,19 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
             firstName={firstName}
             where={`${sessions.find((s) => s.rows.some((r) => r.id === dlg.rowId))?.name ?? "Session"}, ${week.label}`}
             onAsk={(note) => {
-              setVideos((v) => ({ ...v, [dlg.rowId]: { state: "asked", note, reply: null } }));
-              savedToast(`Video asked for. ${firstName} sees it on the exercise.`);
+              const rowId = dlg.rowId;
               close();
+              act(() => requestExerciseVideoAction(rowId, note), `Video asked for. ${firstName} sees it on the exercise.`);
             }}
             onCancel={() => {
-              setVideos((v) => ({ ...v, [dlg.rowId]: null }));
-              savedToast("Request withdrawn");
+              const v = videos[dlg.rowId];
               close();
+              if (v) act(() => removeVideoRequestAction(v.requestId), "Request withdrawn");
             }}
             onReply={(reply) => {
-              setVideos((v) => ({ ...v, [dlg.rowId]: { ...(v[dlg.rowId] ?? { state: "in", note: null }), state: "replied", reply } as DraftRow["video"] }));
-              savedToast(`Reply sent. ${firstName} gets a notification.`);
+              const v = videos[dlg.rowId];
               close();
+              if (v) act(() => sendVideoReplyAction(v.requestId, reply), `Reply sent. ${firstName} gets a notification.`);
             }}
           />
         )}
@@ -947,9 +1008,12 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
           <MessageDialog
             firstName={firstName}
             label={dlg.label}
-            onSend={() => {
-              savedToast(`Message sent. It's on ${firstName}'s Home, linked to this.`);
+            onSend={(text) => {
+              const link = dlg.link;
               close();
+              const f = fd({ clientId, text });
+              f.set("link", JSON.stringify(link));
+              act(() => sendChatMessageAction(f), `Message sent. It's on ${firstName}'s Home, linked to this.`);
             }}
           />
         )}
@@ -963,16 +1027,10 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
             laterLabel={laterLabel}
             onCopy={(to, also) => {
               const src = sessionById(dlg.sessionId)!;
-              if (to === "new") {
-                const n = sessions.length + 1;
-                setSessions((prev) => [...prev, { ...src, id: -Date.now(), number: n, name: `Session ${n}`, setsLogged: 0, gym: null, skip: null, rows: src.rows.map((r, i) => ({ ...r, id: -(Date.now() + i + 1), logged: [], video: null, d7: null, d30: null })), cardio: src.cardio.map((c, i) => ({ ...c, id: -(Date.now() + 100 + i), done: false })) }]);
-                savedToast(`Added as Session ${n}${also && laterLabel ? `, and in ${laterLabel}` : ""}`);
-              } else {
-                const target = sessionById(to)!;
-                setSessions((prev) => prev.map((x) => (x.id === to ? { ...x, rows: src.rows.map((r, i) => ({ ...r, id: -(Date.now() + i + 1), logged: [], video: null, d7: null, d30: null })), cardio: src.cardio.map((c, i) => ({ ...c, id: -(Date.now() + 100 + i), done: false })), setsPlanned: src.setsPlanned, setsLogged: 0 } : x)));
-                savedToast(`Replaced ${target.name}${also && laterLabel ? `, and in ${laterLabel}` : ""}`);
-              }
+              const n = sessions.length + 1;
+              const target = to === "new" ? null : sessionById(to);
               close();
+              act(() => copyProgramDayAction(fd({ fromDayId: src.id, toDayId: to === "new" ? "new" : to, applyToRemainingWeeks: also ? "1" : null })), to === "new" ? `Added as Session ${n}${also && laterLabel ? `, and in ${laterLabel}` : ""}` : `Replaced ${target?.name ?? "session"}${also && laterLabel ? `, and in ${laterLabel}` : ""}`);
             }}
           />
         )}
@@ -984,8 +1042,12 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
             confirm="Copy week"
             tick={laterLabel ? `Also copy it to ${laterLabel}` : null}
             onConfirm={(also) => {
-              savedToast(`Week ${viewIdx - 1} copied to ${week.label}${also ? ` and ${laterLabel}` : ""}`);
+              const from = weekNo(viewIdx - 1);
+              const targets = also ? weeks.filter((w) => w.index >= viewIdx).map((w) => weekNo(w.index)) : [weekNo(viewIdx)];
               close();
+              act(async () => {
+                for (const to of targets) await copyProgramWeekAction(fd({ clientId, fromWeek: from, toWeek: to }));
+              }, `Week ${viewIdx - 1} copied to ${week.label}${also ? ` and ${laterLabel}` : ""}`);
             }}
           />
         )}
@@ -998,10 +1060,8 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
             danger
             onConfirm={() => {
               const gone = sessionById(dlg.sessionId)!;
-              setSessions((prev) => prev.filter((x) => x.id !== dlg.sessionId).map((x, i) => ({ ...x, number: i + 1, name: /^Session \d+$/.test(x.name) ? `Session ${i + 1}` : x.name })));
-              setWeeks((prev) => prev.map((w) => (w.index === viewIdx ? { ...w, trained: w.trained.slice(0, -1) } : w)));
-              savedToast(`${gone.name} deleted`);
               close();
+              act(() => removeSessionAction(fd({ programDayId: gone.id })), `${gone.name} deleted`);
             }}
           />
         )}
@@ -1013,9 +1073,14 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
             confirm="Remove week"
             danger
             onConfirm={() => {
-              removeWeek();
-              savedToast(`${week.label} removed`);
+              const idx = viewIdx;
+              const label = week.label;
               close();
+              startTransition(async () => {
+                await removeProgramWeekAction(fd({ clientId, programId: program.id, week: idx }));
+                savedToast(`${label} removed`);
+                router.push(`/admin/redesign/training?client=${clientId}&program=${program.id}&week=${Math.max(1, idx - 1)}`);
+              });
             }}
           />
         )}
@@ -1027,9 +1092,15 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
             source={week}
             sessionCount={sessions.length}
             onAdd={(copy) => {
-              addWeek(copy);
-              savedToast(`Week ${weeks.length + 1} added${copy ? `, a copy of ${week.label}` : ""}`);
+              const n = weeks.length + 1;
+              const label = week.label;
+              const from = viewIdx;
               close();
+              startTransition(async () => {
+                await addProgramWeekAction(fd({ clientId, programId: program.id, copyFrom: copy ? from : null }));
+                savedToast(`Week ${n} added${copy ? `, a copy of ${label}` : ""}`);
+                router.push(`/admin/redesign/training?client=${clientId}&program=${program.id}&week=${n}`);
+              });
             }}
           />
         )}
@@ -1045,8 +1116,12 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
             what="the programme"
             confirm="Schedule it"
             onConfirm={(v) => {
-              savedToast(`${v.name || program.name} scheduled: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
               close();
+              act(async () => {
+                if (v.name && v.name !== program.name) await renameProgramAction(fd({ programId: program.id, name: v.name }));
+                if (program.phaseId) await updateClientPhaseAction(fd({ id: program.phaseId, track: "training", name: v.name || program.name, start: v.start, end: v.end }));
+                await scheduleProgramDeployAction(fd({ programId: program.id, date: v.start, time: "09:00" }));
+              }, `${v.name || program.name} scheduled: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
             }}
           />
         )}
@@ -1062,8 +1137,9 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
             }
             confirm={program.status === "scheduled" ? "Make it live now" : startHasCome ? "Make it live" : "Schedule it"}
             onConfirm={() => {
-              savedToast(program.status === "scheduled" || startHasCome ? `${program.name} is live` : `${program.name} scheduled`);
+              const now = program.status === "scheduled" || startHasCome;
               close();
+              act(() => (now ? deployProgramAction(fd({ programId: program.id })) : scheduleProgramDeployAction(fd({ programId: program.id, date: program.startDate, time: "09:00" }))), now ? `${program.name} is live` : `${program.name} scheduled`);
             }}
           />
         )}
@@ -1074,8 +1150,8 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
             description={`${program.name} stops being scheduled. ${firstName} won't see it until it is scheduled again.`}
             confirm="Back to draft"
             onConfirm={() => {
-              savedToast(`${program.name} is a draft again`);
               close();
+              act(() => cancelProgramScheduleAction(fd({ programId: program.id })), `${program.name} is a draft again`);
             }}
           />
         )}
@@ -1091,8 +1167,11 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
             what="the programme"
             confirm="Save dates"
             onConfirm={(v) => {
-              savedToast(`${v.name || program.name}: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
               close();
+              act(async () => {
+                if (v.name && v.name !== program.name) await renameProgramAction(fd({ programId: program.id, name: v.name }));
+                if (program.phaseId) await updateClientPhaseAction(fd({ id: program.phaseId, track: "training", name: v.name || program.name, start: v.start, end: v.end }));
+              }, `${v.name || program.name}: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
             }}
           />
         )}
@@ -1101,27 +1180,25 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
           <GymsDialog
             firstName={firstName}
             gyms={gyms}
-            onAdd={(nm) => {
-              setGyms((prev) => [...prev, { id: -Date.now(), name: nm, home: prev.length === 0 }]);
-              savedToast(`${nm} added`);
-            }}
+            onAdd={(nm) => act(() => addGymAction(clientId, nm), `${nm} added`)}
             onRemove={(id) => {
               const g = gyms.find((x) => x.id === id);
-              setGyms((prev) => prev.filter((x) => x.id !== id).map((x, i) => ({ ...x, home: i === 0 })));
-              savedToast(`${g?.name ?? "Gym"} removed`);
+              act(() => removeGymAction(id), `${g?.name ?? "Gym"} removed`);
             }}
-            onHome={(id) => {
-              setGyms((prev) => prev.map((x) => ({ ...x, home: x.id === id })));
-              savedToast("Home gym changed");
-            }}
+            onHome={(id) => act(() => setHomeGymAction(id), "Home gym changed")}
           />
         )}
 
         {dlg?.kind === "newProgram" && (
           <NewProgramDialog
             onCreate={(v) => {
-              savedToast(`${v.name || "New programme"} · ${v.weeks} weeks, a draft`);
               close();
+              startTransition(async () => {
+                const id = await createProgramWithAction(clientId, v.name, v.weeks, v.start || null);
+                savedToast(`${v.name || "New programme"} · ${v.weeks} weeks, a draft`);
+                if (id) router.push(`/admin/redesign/training?client=${clientId}&program=${id}&week=1`);
+                else router.refresh();
+              });
             }}
           />
         )}
@@ -1280,7 +1357,7 @@ export function useClickAway(wrap: React.RefObject<HTMLDivElement | null>, onClo
 /** The add-exercise row: one search bar. Type for matches; the chevron opens
  *  the groups, a group its exercises. A pick becomes a row and the bar stays
  *  for the next one. Esc, the ×, or a click away closes it. */
-function AddExerciseRow({ library, onPick, onClose }: { library: Library; onPick: (name: string) => void; onClose: () => void }) {
+function AddExerciseRow({ library, onPick, onClose }: { library: Library; onPick: (name: string, exerciseId: number) => void; onClose: () => void }) {
   const [q, setQ] = useState("");
   const [browse, setBrowse] = useState(false);
   const [group, setGroup] = useState<string | null>(null);
@@ -1299,8 +1376,13 @@ function AddExerciseRow({ library, onPick, onClose }: { library: Library; onPick
   const inGroup = !needle && group ? (library.find((g) => g.slug === group)?.exercises ?? []).map((e) => ({ id: e.id, name: e.name, group: "" })) : [];
   const list = needle ? matches : inGroup;
   const showGroups = !needle && browse && !group;
-  const pick = (name: string) => {
-    onPick(name);
+  const idOf = (name: string) => library.flatMap((g) => g.exercises).find((e) => e.name.toLowerCase() === name.toLowerCase())?.id ?? null;
+  const pick = (name: string, id: number | null = idOf(name)) => {
+    if (id == null) {
+      setCreating(true);
+      return;
+    }
+    onPick(name, id);
     setQ("");
     setCursor(0);
     setGroup(null);
@@ -1363,9 +1445,13 @@ function AddExerciseRow({ library, onPick, onClose }: { library: Library; onPick
         <CreateExercise
           library={library}
           initial={q.trim()}
-          onCreate={(name) => {
+          onCreate={async (name, group) => {
             setCreating(false);
-            pick(name);
+            const f = new FormData();
+            f.set("name", name);
+            f.set("muscleGroup", group);
+            const made = await addExerciseToLibraryAction(f);
+            if (made) pick(made.name, made.id);
           }}
           onCancel={() => {
             setCreating(false);
@@ -1417,7 +1503,7 @@ function AddExerciseRow({ library, onPick, onClose }: { library: Library; onPick
 
 /** Creating an exercise of your own: a name and its group. It goes to the
  *  library (yours, not every coach's) and onto the session. */
-function CreateExercise({ library, initial, onCreate, onCancel }: { library: Library; initial: string; onCreate: (name: string) => void; onCancel: () => void }) {
+function CreateExercise({ library, initial, onCreate, onCancel }: { library: Library; initial: string; onCreate: (name: string, group: string) => void; onCancel: () => void }) {
   const [name, setName] = useState(initial);
   const [group, setGroup] = useState(library[0]?.slug ?? "other");
   const first = useRef<HTMLInputElement>(null);
@@ -1426,7 +1512,7 @@ function CreateExercise({ library, initial, onCreate, onCancel }: { library: Lib
   }, []);
   const ok = name.trim().length > 0;
   return (
-    <div className="rd-create" onKeyDown={(e) => (e.key === "Escape" ? onCancel() : e.key === "Enter" && ok ? onCreate(name.trim()) : null)}>
+    <div className="rd-create" onKeyDown={(e) => (e.key === "Escape" ? onCancel() : e.key === "Enter" && ok ? onCreate(name.trim(), group) : null)}>
       <span className="rd-eyebrow">Create your own exercise</span>
       <div className="rd-create-row">
         <input ref={first} className="rd-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Exercise name" maxLength={60} />
@@ -1434,7 +1520,7 @@ function CreateExercise({ library, initial, onCreate, onCancel }: { library: Lib
         <button type="button" className="rd-btn" onClick={onCancel}>
           Cancel
         </button>
-        <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onCreate(name.trim())}>
+        <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onCreate(name.trim(), group)}>
           Add to library and session
         </button>
       </div>
@@ -1712,7 +1798,7 @@ function ProgressDialog({ row, lbs, unit, multiGym }: { row: DraftRow; lbs: bool
 // ---- The demo video on an exercise: what the client sees now, and a link or
 // a file to set it. Per exercise, not per row: it follows the exercise onto
 // every client's sheet until the coach changes it.
-function DemoDialog({ row, demo, onSave, onRemove }: { row: DraftRow; demo: DraftRow["demo"]; onSave: (url: string) => void; onRemove: () => void }) {
+function DemoDialog({ row, demo, onSave, onRemove }: { row: DraftRow; demo: DraftRow["demo"]; onSave: (v: { url?: string; file?: File }) => void; onRemove: () => void }) {
   const [how, setHow] = useState<"link" | "file">("link");
   const [url, setUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -1801,7 +1887,7 @@ function DemoDialog({ row, demo, onSave, onRemove }: { row: DraftRow; demo: Draf
         )}
         <span className="rd-dlg-hint grow" />
         <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onSave(how === "link" ? url.trim() : `/uploads/library/${row.id}.mp4`)}>
+        <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onSave(how === "link" ? { url: url.trim() } : { file: file! })}>
           {demo ? "Replace" : "Attach"}
         </button>
       </DialogFooter>
@@ -1881,7 +1967,7 @@ function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }:
   );
 }
 
-export function MessageDialog({ firstName, label, onSend }: { firstName: string; label: string; onSend: () => void }) {
+export function MessageDialog({ firstName, label, onSend }: { firstName: string; label: string; onSend: (text: string) => void }) {
   const [text, setText] = useState("");
   return (
     <DialogContent className="rd-dlg">
@@ -1894,12 +1980,12 @@ export function MessageDialog({ firstName, label, onSend }: { firstName: string;
       </div>
       <label className="rd-field">
         <span>Message</span>
-        <textarea rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="What you noticed, and what to do about it." autoFocus onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && text.trim() && onSend()} />
+        <textarea rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="What you noticed, and what to do about it." autoFocus onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && text.trim() && onSend(text.trim())} />
       </label>
       <DialogFooter>
         <span className="rd-dlg-hint grow">Lands on {firstName}&rsquo;s Home, linked to this.</span>
         <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!text.trim()} onClick={onSend}>
+        <button type="button" className="rd-btn primary" disabled={!text.trim()} onClick={() => onSend(text.trim())}>
           Send
         </button>
       </DialogFooter>

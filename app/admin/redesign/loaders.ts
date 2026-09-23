@@ -167,6 +167,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
       const monthBack = thisWeek ? logged.filter((h) => h.week < thisWeek.week && h.week >= thisWeek.week - 4)[0] ?? null : null;
       return {
         id: a.id,
+        exerciseId: a.exercise_id,
         name: a.exercise_name ?? "Exercise",
         sets: a.sets,
         reps: a.reps ?? "",
@@ -177,7 +178,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
         rest: a.rest_seconds,
         note: a.notes,
         logged: logs.map((l) => ({ set: l.set_number, kg: l.weight_kg, reps: l.reps, rpe: l.rpe_actual, gym: l.gym_id != null ? gymName.get(l.gym_id) ?? null : null })),
-        video: v ? { state: (v.replied_at ? "replied" : v.file_path ? "in" : "asked") as "asked" | "in" | "replied", note: v.note, reply: v.reply_note ?? null } : null,
+        video: v ? { requestId: v.id, state: (v.replied_at ? "replied" : v.file_path ? "in" : "asked") as "asked" | "in" | "replied", note: v.note, reply: v.reply_note ?? null } : null,
         demo: a.exercise_video_url ? { url: a.exercise_video_url, source: "library" as const } : a.demo_url ? { url: a.demo_url, source: "row" as const } : null,
         history,
         d7: pct(lastWeek),
@@ -199,6 +200,8 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     name: program.name ?? "Programme",
     status: stateOf(program),
     totalWeeks: program.total_weeks,
+    startWeek: program.start_week,
+    phaseId: phase?.id ?? null,
     startDate: phase?.start_week ?? null,
     endDate: phase?.end_week ?? null,
     weekIdx,
