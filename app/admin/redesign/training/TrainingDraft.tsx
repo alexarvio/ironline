@@ -1345,6 +1345,10 @@ export function useClickAway(wrap: React.RefObject<HTMLDivElement | null>, onClo
   // the pointer and the click was lost. Now the button gets its click first.
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
+      const t = e.target as Element | null;
+      // A menu the row opened (a Picker, a dropdown) floats outside the row
+      // in a layer of its own; a click in it is not a click away.
+      if (t && typeof t.closest === "function" && t.closest("[data-slot='dropdown-menu-content'], [data-radix-popper-content-wrapper], .pb-menu")) return;
       if (!wrap.current?.contains(e.target as Node)) close.current();
     };
     const t = setTimeout(() => document.addEventListener("click", onClick), 0);
