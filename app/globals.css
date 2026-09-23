@@ -16040,18 +16040,18 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .msg-attach:hover { background: #f4f6fa; color: #1e3a6e; }
 .msg-attach:disabled { opacity: 0.5; cursor: default; }
 /* ---- 2b · Measurements: its own card under the session, white with the blue on the edge and the words. */
-.hm-measure { border: 2px solid #1e3a6e; border-radius: 18px; background: #ffffff; overflow: hidden; }
+.hm-measure { border: 1.5px solid rgba(30, 58, 110, 0.35); border-radius: 18px; background: linear-gradient(135deg, rgba(62, 123, 190, 0.22), rgba(30, 58, 110, 0.12)); backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 12px 30px -22px rgba(8, 31, 92, 0.5); overflow: hidden; }
 .hm-measure-main { display: flex; align-items: center; gap: 12px; width: 100%; padding: 16px 20px; border: 0; background: none; text-align: left; font: inherit; color: inherit; cursor: pointer; }
 .hm-measure-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .hm-measure-eyebrow { color: #1e3a6e; }
 .hm-measure-title { font-size: 22px; font-weight: 800; line-height: 1.2; color: #1e3a6e; }
 .hm-measure-meta { font-size: 13px; font-weight: 600; color: #5b6474; }
-.hm-measure-cta { flex: none; display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border: 2px solid #1e3a6e; border-radius: 12px; background: #ffffff; color: #1e3a6e; font-size: 15px; font-weight: 800; }
-.hm-measure.due .hm-measure-cta { background: #e6ecf3; }
+.hm-measure-cta { flex: none; display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border: 1.5px solid rgba(30, 58, 110, 0.5); border-radius: 12px; background: rgba(255, 255, 255, 0.75); color: #1e3a6e; font-size: 15px; font-weight: 800; }
+.hm-measure.due .hm-measure-cta { background: #ffffff; }
 .hm-measure-dot { flex: none; width: 8px; height: 8px; border-radius: 999px; background: #b3471d; box-shadow: 0 0 0 3px rgba(179, 71, 29, 0.18); animation: hm-measure-pulse 1.8s ease-in-out infinite; }
 @keyframes hm-measure-pulse { 0%, 100% { box-shadow: 0 0 0 3px rgba(179, 71, 29, 0.18); } 50% { box-shadow: 0 0 0 7px rgba(179, 71, 29, 0.06); } }
 @media (prefers-reduced-motion: reduce) { .hm-measure-dot { animation: none; } }
-.hm-measure-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 13px 20px; border: 0; border-top: 1px solid #e6ecf3; background: none; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.hm-measure-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 13px 20px; border: 0; border-top: 1px solid rgba(30, 58, 110, 0.15); background: none; text-align: left; font: inherit; color: inherit; cursor: pointer; }
 .hm-measure-tick { flex: none; display: flex; align-items: center; justify-content: center; width: 16px; height: 16px; color: #1b7a4b; }
 .hm-measure-tick svg { width: 14px; height: 14px; }
 .hm-measure-row-title { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 800; color: #1e3a6e; }
