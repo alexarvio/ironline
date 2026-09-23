@@ -19,7 +19,7 @@ const VIEWS = [
   { key: "business", label: "Business", Icon: BusinessIcon },
 ] as const;
 
-export default function RedesignRail({ rail, clientId, tab }: { rail: RailData; clientId: number; tab: string }) {
+export default function RedesignRail({ rail, clientId }: { rail: RailData; clientId: number }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "needs">("all");
   const needsYou = rail.clients.filter((c) => c.attention).length;
@@ -84,7 +84,7 @@ export default function RedesignRail({ rail, clientId, tab }: { rail: RailData; 
             shown.map((c) => {
               const active = c.id === clientId;
               return (
-                <Link key={c.id} href={`/admin/redesign/${tab}?client=${c.id}`} className={`rr-row${active ? " active" : ""}`} aria-current={active ? "page" : undefined}>
+                <Link key={c.id} href={`/admin/redesign/home?client=${c.id}`} className={`rr-row${active ? " active" : ""}`} aria-current={active ? "page" : undefined}>
                   <span className={`rr-avatar${c.notSignedIn ? " pending" : ""}`} title={c.notSignedIn ? "Hasn't signed in to the app yet" : undefined}>
                     {c.avatarPath ? (
                       // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file

@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, CardioEntry } from "./db";
-import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientGym, ClientPhase, CoachProfile, PhaseTrack, VideoRequest } from "./db";
+import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientEvent, ClientGym, ClientPhase, CoachProfile, EventCategory, PhaseTrack, VideoRequest } from "./db";
 import type { CoachProfileFields, CoachProfileView } from "./coachProfileView";
 import { getCatalogFood, searchCatalog, type CatalogFood } from "./foods/catalog";
 import type { OffProduct } from "./foods/openfoodfacts";
@@ -4981,6 +4981,101 @@ export function setChatMessagePinned(clientId: number, messageId: number, pinned
   if (!msg) return;
   if (pinned) msg.pinned = true;
   else delete msg.pinned;
+  persist();
+}
+
+// ---- Events on the plan ------------------------------------------------------
+// What happens in the client's life that the plan has to live with, on the
+// Plan tab's week grid beside the phases. See ClientEvent in db.ts.
+
+const EVENT_COLORS = ["blue", "orange", "purple", "navy", "green", "amber", "rose", "teal"] as const;
+/** The four categories every coach starts with; their own come from event_categories. */
+export const EVENT_PRESETS: { id: string; label: string; color: string }[] = [
+  { id: "trip", label: "Trip", color: "blue" },
+  { id: "health", label: "Health", color: "orange" },
+  { id: "family", label: "Family", color: "purple" },
+  { id: "work", label: "Work", color: "navy" },
+];
+
+export function listClientEvents(clientId: number): ClientEvent[] {
+  return getData()
+    .client_events.filter((e) => e.client_id === clientId)
+    .sort((a, b) => (a.start_date < b.start_date ? -1 : a.start_date > b.start_date ? 1 : a.id - b.id));
+}
+
+const cleanEvent = (v: { kind?: string | null; title: string; start: string; end?: string | null; note?: string | null }) => {
+  const start = String(v.start).slice(0, 10);
+  const endRaw = String(v.end ?? start).slice(0, 10);
+  return { kind: v.kind?.trim() || null, title: v.title.trim().slice(0, 80), start, end: endRaw < start ? start : endRaw, note: (v.note ?? "").trim().slice(0, 500) };
+};
+
+export function addClientEvent(clientId: number, v: { kind?: string | null; title: string; start: string; end?: string | null; note?: string | null }): ClientEvent | null {
+  const c = cleanEvent(v);
+  if (!c.title || !/^\d{4}-\d{2}-\d{2}$/.test(c.start)) return null;
+  const data = getData();
+  const row: ClientEvent = { id: allocId("client_events"), client_id: clientId, kind: c.kind, title: c.title, start_date: c.start, end_date: c.end, note: c.note, created_at: new Date().toISOString() };
+  data.client_events.push(row);
+  persist();
+  return row;
+}
+
+export function updateClientEvent(clientId: number, eventId: number, v: { kind?: string | null; title: string; start: string; end?: string | null; note?: string | null }) {
+  const row = getData().client_events.find((e) => e.id === eventId && e.client_id === clientId);
+  const c = cleanEvent(v);
+  if (!row || !c.title || !/^\d{4}-\d{2}-\d{2}$/.test(c.start)) return;
+  row.kind = c.kind;
+  row.title = c.title;
+  row.start_date = c.start;
+  row.end_date = c.end;
+  row.note = c.note;
+  persist();
+}
+
+export function deleteClientEvent(clientId: number, eventId: number) {
+  const data = getData();
+  const before = data.client_events.length;
+  data.client_events = data.client_events.filter((e) => !(e.id === eventId && e.client_id === clientId));
+  if (data.client_events.length !== before) persist();
+}
+
+/** The coach's categories: the built-in four, then their own, oldest first. */
+export function listEventCategories(coachId: number): { id: string; label: string; color: string; custom: boolean }[] {
+  const own = getData()
+    .event_categories.filter((c) => c.coach_id === coachId)
+    .sort((a, b) => a.id - b.id)
+    .map((c) => ({ id: `c${c.id}`, label: c.label, color: c.color, custom: true }));
+  return [...EVENT_PRESETS.map((p) => ({ ...p, custom: false })), ...own];
+}
+
+const eventColor = (color: string) => ((EVENT_COLORS as readonly string[]).includes(color) ? color : "blue");
+
+export function addEventCategory(coachId: number, label: string, color: string): EventCategory | null {
+  const clean = label.trim().slice(0, 24);
+  if (!clean) return null;
+  const data = getData();
+  const row: EventCategory = { id: allocId("event_categories"), coach_id: coachId, label: clean, color: eventColor(color), created_at: new Date().toISOString() };
+  data.event_categories.push(row);
+  persist();
+  return row;
+}
+
+export function updateEventCategory(coachId: number, id: number, label: string, color: string) {
+  const row = getData().event_categories.find((c) => c.id === id && c.coach_id === coachId);
+  const clean = label.trim().slice(0, 24);
+  if (!row || !clean) return;
+  row.label = clean;
+  row.color = eventColor(color);
+  persist();
+}
+
+/** Removes a category of the coach's; its events keep their words and lose the colour. */
+export function deleteEventCategory(coachId: number, id: number) {
+  const data = getData();
+  const row = data.event_categories.find((c) => c.id === id && c.coach_id === coachId);
+  if (!row) return;
+  data.event_categories = data.event_categories.filter((c) => c !== row);
+  const key = `c${id}`;
+  for (const e of data.client_events) if (e.kind === key) e.kind = null;
   persist();
 }
 

@@ -347,6 +347,31 @@ export type CheckInNote = {
   text: string;
   created_at: string;
 };
+// Something in the client's life the plan has to live with: a trip, an
+// injury, the day they started creatine. A stretch has end_date after
+// start_date; a single day has both the same. kind is a category id
+// (an event_categories row of the coach's, or a built-in key) or null.
+export type ClientEvent = {
+  id: number;
+  client_id: number;
+  kind: string | null;
+  title: string;
+  start_date: string;
+  end_date: string;
+  note: string;
+  created_at: string;
+};
+
+// A coach's own event category beside the built-in ones: a name and one of
+// the palette's colours, shown on every client of theirs.
+export type EventCategory = {
+  id: number;
+  coach_id: number;
+  label: string;
+  color: string;
+  created_at: string;
+};
+
 export type ClientPhase = {
   id: number;
   client_id: number;
@@ -899,6 +924,8 @@ export type Data = {
   training_programs: TrainingProgram[];
   client_preferences: ClientPreferences[];
   client_phases: ClientPhase[];
+  client_events: ClientEvent[];
+  event_categories: EventCategory[];
   calorie_logs: CalorieLog[];
   food_entries: FoodEntry[];
   custom_foods: CustomFood[];
@@ -938,6 +965,8 @@ function emptyData(): Data {
     training_programs: [],
     client_preferences: [],
     client_phases: [],
+    client_events: [],
+    event_categories: [],
     calorie_logs: [],
     food_entries: [],
     custom_foods: [],

@@ -157,6 +157,12 @@ import {
   deleteChatMessage,
   setChatMessageLink,
   setChatMessagePinned,
+  addClientEvent,
+  updateClientEvent,
+  deleteClientEvent,
+  addEventCategory,
+  updateEventCategory,
+  deleteEventCategory,
   describeMessageLink,
   hasMealComment,
   isSessionComplete,
@@ -1705,6 +1711,48 @@ export async function reactToMessageAction(clientId: number, messageId: number, 
   setChatReaction(id, Number(messageId), user?.role === "coach" ? "coach" : "client", emoji);
   revalidatePath("/admin");
   revalidatePath("/client");
+}
+
+// ---- Events on the plan, and the coach's own categories for them.
+export type EventInput = { kind?: string | null; title: string; start: string; end?: string | null; note?: string | null };
+
+export async function addClientEventAction(clientId: number, v: EventInput) {
+  if (!(await coachForClient(Number(clientId)))) return null;
+  const row = addClientEvent(Number(clientId), v);
+  revalidatePath("/admin");
+  return row?.id ?? null;
+}
+
+export async function updateClientEventAction(clientId: number, eventId: number, v: EventInput) {
+  if (!(await coachForClient(Number(clientId)))) return;
+  updateClientEvent(Number(clientId), Number(eventId), v);
+  revalidatePath("/admin");
+}
+
+export async function deleteClientEventAction(clientId: number, eventId: number) {
+  if (!(await coachForClient(Number(clientId)))) return;
+  deleteClientEvent(Number(clientId), Number(eventId));
+  revalidatePath("/admin");
+}
+
+/** A category of the coach's own; answers with its id as the events store it ("c12"). */
+export async function addEventCategoryAction(label: string, color: string) {
+  const coach = await requireCoach();
+  const row = addEventCategory(coach.id, String(label ?? ""), String(color ?? ""));
+  revalidatePath("/admin");
+  return row ? `c${row.id}` : null;
+}
+
+export async function updateEventCategoryAction(id: string, label: string, color: string) {
+  const coach = await requireCoach();
+  updateEventCategory(coach.id, Number(String(id).replace(/^c/, "")), String(label ?? ""), String(color ?? ""));
+  revalidatePath("/admin");
+}
+
+export async function deleteEventCategoryAction(id: string) {
+  const coach = await requireCoach();
+  deleteEventCategory(coach.id, Number(String(id).replace(/^c/, "")));
+  revalidatePath("/admin");
 }
 
 // ---- The coach's own messages, after sending: reword, re-point, pin, take back.

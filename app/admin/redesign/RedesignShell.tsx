@@ -58,7 +58,7 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
   const current = tab === "home" ? "Home on the client" : tab === "training" ? "Training builder on the programme" : tab === "nutrition" ? "Nutrition on the plan" : tab === "measurements" ? "Measurements on the check-ins" : tab === "pictures" ? "Progress pictures on the sheets" : tab === "meetings" ? "Meetings on the calendar" : tab === "messages" ? "Messages on what was sent" : "Plan on the phases and goals";
   return (
     <div className="rd-frame">
-      <RedesignRail rail={rail} clientId={clientId} tab={tab} />
+      <RedesignRail rail={rail} clientId={clientId} />
       <div className="rd-page">
         <nav className="rd-nav" aria-label="Redesign drafts">
           {TABS.map((t) => (
@@ -68,8 +68,8 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
           ))}
         </nav>
         <p className="rd-banner">
-          {tab === "messages" ? (
-            <>Redesign · Messages with {clientName}. This tab is real: everything here sends and saves.</>
+          {tab === "messages" || tab === "plan" ? (
+            <>Redesign · {tab === "messages" ? "Messages with" : "Plan of"} {clientName}. This tab is real: everything here saves.</>
           ) : (
             <>
               Redesign draft · {current} of {clientName}. Read-only: every action answers with a toast and saves nothing. Compare with <Link href={`/admin?client=${clientId}&tab=${tab}`}>the current one</Link>.
@@ -93,7 +93,7 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
           <MeetingsDraft firstName={firstName} plan={meetings} />
         </div>
         <div hidden={tab !== "plan"}>
-          <PlanDraft firstName={firstName} plan={plan} />
+          <PlanDraft clientId={clientId} firstName={firstName} plan={plan} />
         </div>
         <div hidden={tab !== "messages"}>
           <MessagesDraft clientId={clientId} firstName={firstName} plan={messages} />

@@ -1,8 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useTransition } from "react";
 import type React from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { addClientGoalAction, addClientPhaseAction, applyGoalDoneChangesAction, removeClientGoalAction, removeClientPhaseAction, reorderClientGoalsAction, saveAndDeployPhaseNowAction, saveAndSchedulePhaseAction, setClientMainGoalAction, updateClientGoalAction, updateClientPhaseAction } from "../../../lib/actions";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { ChevronLeftIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
@@ -14,7 +16,7 @@ import { ConfirmDialog } from "../training/TrainingDraft";
 import Picker from "../Picker";
 import DatePick from "../DatePick";
 import DateText from "../DateText";
-import EventsCard from "./EventsCard";
+import EventsCard, { type Category, type PlanEvent } from "./EventsCard";
 
 // The calmer Plan tab, as a draft on real data, in the Training draft's
 // sheet. Three cards: the one headline goal, the phases as bars on a week
@@ -28,7 +30,8 @@ import EventsCard from "./EventsCard";
 // - Goals: one row a goal, its live figure, how far it is, what it tracks
 //   and where it was set. Done-ticks and a dragged order queue on the
 //   card's bar until Apply. Adding or editing a goal opens the tracker.
-// Nothing here saves: every action ends in a toast.
+// Real, not a draft: everything here saves through the same actions as
+// the old Plan tab and the page re-reads.
 
 export type DraftPlan = {
   today: string;
@@ -42,10 +45,23 @@ export type DraftPlan = {
   goalOptions: GoalEditorOptions;
   mainGoal: string;
   mainGoalSavedAt: string | null;
+  events: PlanEvent[];
+  eventCategories: Category[];
 };
 
-const draftOnly = (what: string) => toast(what, { description: "A draft: nothing saves here." });
-const savedToast = (what: string) => toast.success("Saved", { description: `${what} (a draft: nothing really saved).` });
+const savedToast = (what: string) => toast.success("Saved", { description: what });
+/** A phase's fields as the actions read them. */
+const phaseForm = (v: { id?: number; clientId?: number; name: string; track: PhaseTrack; start: string; end: string; programId?: number | null }) => {
+  const fd = new FormData();
+  if (v.id != null) fd.set("id", String(v.id));
+  if (v.clientId != null) fd.set("clientId", String(v.clientId));
+  fd.set("track", v.track);
+  fd.set("name", v.name);
+  fd.set("start", v.start);
+  fd.set("end", v.end);
+  if (v.programId != null) fd.set("programId", String(v.programId));
+  return fd;
+};
 const DAY = 86400000;
 const parse = (iso: string) => new Date(`${iso}T00:00:00`);
 const isoOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -84,14 +100,36 @@ const KIND_LABEL: Record<PlanGoalRow["kind"], string> = { metric: "Metric", exer
 
 type Dlg = { kind: "phase"; phase: PlanPhaseRow | null; track?: PhaseTrack } | { kind: "move"; id: number; start: string; end: string } | { kind: "deletePhase"; id: number } | { kind: "goal"; goal: PlanGoalRow | null } | { kind: "removeGoal"; id: number } | null;
 
-export default function PlanDraft({ firstName, plan }: { firstName: string; plan: DraftPlan }) {
+export default function PlanDraft({ clientId, firstName, plan }: { clientId: number; firstName: string; plan: DraftPlan }) {
   const { today, thisWeek, intoWeek } = plan;
+  const router = useRouter();
+  const [, start] = useTransition();
+  // Every save goes to the server, then the page re-reads; what is on screen
+  // is a working copy that follows the server's answer.
+  const act = (fn: () => Promise<unknown>, said?: string) =>
+    start(async () => {
+      await fn();
+      router.refresh();
+      if (said) savedToast(said);
+    });
   // ---- Main goal: typed, then saved on purpose.
   const [mainSaved, setMainSaved] = useState(plan.mainGoal);
   const [main, setMain] = useState(plan.mainGoal);
+  // When the server's answer differs from what was here, follow it (derived state, reset during render).
+  const [seenMain, setSeenMain] = useState(plan.mainGoal);
+  if (seenMain !== plan.mainGoal) {
+    setSeenMain(plan.mainGoal);
+    setMainSaved(plan.mainGoal);
+    setMain(plan.mainGoal);
+  }
 
   // ---- Phases: what is on screen lives here, so a drag shows what it would do.
   const [phases, setPhases] = useState(plan.phases);
+  const [seenPhases, setSeenPhases] = useState(plan.phases);
+  if (seenPhases !== plan.phases) {
+    setSeenPhases(plan.phases);
+    setPhases(plan.phases);
+  }
   const [win, setWin] = useState<Win>(13);
   const [dlg, setDlg] = useState<Dlg>(null);
   const close = () => setDlg(null);
@@ -169,6 +207,11 @@ export default function PlanDraft({ firstName, plan }: { firstName: string; plan
 
   // ---- Goals: done-ticks and a dragged order queue until Apply.
   const [goals, setGoals] = useState(plan.goals);
+  const [seenGoals, setSeenGoals] = useState(plan.goals);
+  if (seenGoals !== plan.goals) {
+    setSeenGoals(plan.goals);
+    setGoals(plan.goals);
+  }
   const [filter, setFilter] = useState<"open" | "done" | "all">("open");
   const [pendingDone, setPendingDone] = useState<Record<number, boolean>>({});
   const [order, setOrder] = useState<number[] | null>(null);
@@ -229,7 +272,7 @@ export default function PlanDraft({ firstName, plan }: { firstName: string; plan
             disabled={main.trim() === mainSaved.trim()}
             onClick={() => {
               setMainSaved(main.trim());
-              savedToast(`Main goal · shows under ${firstName}'s name on Home`);
+              act(() => setClientMainGoalAction(clientId, main.trim()), `Main goal · shows under ${firstName}'s name on Home`);
             }}
           >
             Save
@@ -383,7 +426,7 @@ export default function PlanDraft({ firstName, plan }: { firstName: string; plan
       </section>
 
       {/* ---- Events: life around the plan, on the same weeks. */}
-      <EventsCard today={today} weeks={weeks} count={count} cols={cols} months={months} nowIdx={nowIdx} nowLeft={nowLeft} win={win} windows={WINDOWS} onWin={(w) => setWin(w as Win)} />
+      <EventsCard clientId={clientId} events={plan.events} categories={plan.eventCategories} today={today} weeks={weeks} count={count} cols={cols} months={months} nowIdx={nowIdx} nowLeft={nowLeft} win={win} windows={WINDOWS} onWin={(w) => setWin(w as Win)} />
 
       {/* ---- Goals. */}
       <section className="rd-session open rn-card">
@@ -495,10 +538,16 @@ export default function PlanDraft({ firstName, plan }: { firstName: string; plan
                 type="button"
                 className="rd-pending-apply"
                 onClick={() => {
+                  const ticks = Object.entries(pendingDone).map(([id, done]) => ({ id: Number(id), done }));
+                  const newOrder = order ? ordered.map((g) => g.id) : null;
+                  const n = goalChanges;
                   setGoals(ordered.map((g) => ({ ...g, done: pendingDone[g.id] ?? g.done, pct: (pendingDone[g.id] ?? g.done) ? 100 : g.pct })));
                   setPendingDone({});
                   setOrder(null);
-                  savedToast(`Goals: ${goalChanges} ${goalChanges === 1 ? "change" : "changes"}`);
+                  act(async () => {
+                    if (ticks.length) await applyGoalDoneChangesAction(ticks);
+                    if (newOrder) await reorderClientGoalsAction(clientId, newOrder);
+                  }, `Goals: ${n} ${n === 1 ? "change" : "changes"}`);
                 }}
               >
                 Apply
@@ -521,26 +570,29 @@ export default function PlanDraft({ firstName, plan }: { firstName: string; plan
             programs={plan.programs}
             onDelete={dlg.phase ? () => setDlg({ kind: "deletePhase", id: dlg.phase!.id }) : undefined}
             onSave={(v) => {
-              if (dlg.phase) {
-                setPhases((prev) => prev.map((p) => (p.id === dlg.phase!.id ? { ...p, name: v.name, start_week: v.start, end_week: v.end } : p)));
-                savedToast(`${v.name}: ${shortDate(v.start)} → ${shortDate(addWeeks(v.end, 1))}`);
+              const was = dlg.phase;
+              close();
+              if (was) {
+                setPhases((prev) => prev.map((p) => (p.id === was.id ? { ...p, name: v.name, start_week: v.start, end_week: v.end } : p)));
+                act(() => updateClientPhaseAction(phaseForm({ id: was.id, ...v })), `${v.name}: ${shortDate(v.start)} → ${shortDate(addWeeks(v.end, 1))}`);
               } else {
-                const program = v.track === "training" ? (v.programId != null ? plan.programs.find((x) => x.id === v.programId) : null) : null;
-                setPhases((prev) => [...prev, { id: -Date.now(), track: v.track, draft: v.track !== "training", name: v.name, start_week: v.start, end_week: v.end, program: program ? { id: program.id, status: program.status, totalWeeks: program.weeks, loggedWeeks: [] } : v.track === "training" ? { id: -Date.now(), status: "draft", totalWeeks: weeksBetween(v.start, v.end) + 1, loggedWeeks: [] } : null, emptyReason: null }]);
-                savedToast(`${v.name} drafted on ${TRACK_LABEL[v.track]}: ${shortDate(v.start)} → ${shortDate(addWeeks(v.end, 1))}`);
+                act(() => addClientPhaseAction(phaseForm({ clientId, ...v })), `${v.name} drafted on ${TRACK_LABEL[v.track]}: ${shortDate(v.start)} → ${shortDate(addWeeks(v.end, 1))}`);
               }
-              close();
             }}
-            onSend={(what) => {
-              draftOnly(what);
+            onSend={(v) => {
+              const was = dlg.phase;
               close();
+              if (!was) return;
+              const fd = phaseForm({ id: was.id, ...v });
+              act(() => (v.now ? saveAndDeployPhaseNowAction(fd) : saveAndSchedulePhaseAction(fd)), v.now ? `${v.name} is live` : `${v.name} scheduled for ${fmtDay(v.start)}`);
             }}
           />
         )}
         {dlg?.kind === "move" && phases.find((p) => p.id === dlg.id) && <MoveDialog phase={phases.find((p) => p.id === dlg.id)!} start={dlg.start} end={dlg.end} today={today} onCancel={close} onSave={() => {
-          setPhases((prev) => prev.map((p) => (p.id === dlg.id ? { ...p, start_week: dlg.start, end_week: dlg.end } : p)));
-          savedToast(`${phases.find((p) => p.id === dlg.id)?.name}: ${shortDate(dlg.start)} → ${shortDate(addWeeks(dlg.end, 1))}`);
+          const p = phases.find((x) => x.id === dlg.id)!;
+          setPhases((prev) => prev.map((x) => (x.id === dlg.id ? { ...x, start_week: dlg.start, end_week: dlg.end } : x)));
           close();
+          act(() => updateClientPhaseAction(phaseForm({ id: p.id, name: p.name, track: p.track, start: dlg.start, end: dlg.end })), `${p.name}: ${shortDate(dlg.start)} → ${shortDate(addWeeks(dlg.end, 1))}`);
         }} />}
         {dlg?.kind === "deletePhase" && phases.find((p) => p.id === dlg.id) && (
           <ConfirmDialog
@@ -549,9 +601,12 @@ export default function PlanDraft({ firstName, plan }: { firstName: string; plan
             confirm="Delete phase"
             danger
             onConfirm={() => {
-              setPhases((prev) => prev.filter((p) => p.id !== dlg.id));
-              draftOnly("Phase deleted");
+              const id = dlg.id;
+              setPhases((prev) => prev.filter((p) => p.id !== id));
               close();
+              const fd = new FormData();
+              fd.set("id", String(id));
+              act(() => removeClientPhaseAction(fd), "Phase deleted");
             }}
           />
         )}
@@ -563,10 +618,14 @@ export default function PlanDraft({ firstName, plan }: { firstName: string; plan
             phases={phases}
             today={today}
             onSave={(v) => {
-              if (dlg.goal) setGoals((prev) => prev.map((g) => (g.id === dlg.goal!.id ? { ...g, text: v.text, kind: v.kind, rule: v.rule, tracking: v.tracking, by: v.by, tracks: v.tracks } : g)));
-              else setGoals((prev) => [...prev, { id: -Date.now(), text: v.text, done: false, kind: v.kind, tone: "muted", live: "", pct: 0, rule: v.rule, setIn: null, setDate: today, by: v.by, tracks: v.tracks, pace: null, tracking: v.tracking }]);
-              savedToast(`Goal: ${v.text}`);
+              const was = dlg.goal;
               close();
+              const fd = new FormData();
+              fd.set("text", v.text);
+              if (v.tracking) fd.set("tracking", JSON.stringify(v.tracking));
+              if (was) fd.set("id", String(was.id));
+              else fd.set("clientId", String(clientId));
+              act(() => (was ? updateClientGoalAction(fd) : addClientGoalAction(fd)), `Goal: ${v.text}`);
             }}
           />
         )}
@@ -577,9 +636,12 @@ export default function PlanDraft({ firstName, plan }: { firstName: string; plan
             confirm="Remove goal"
             danger
             onConfirm={() => {
-              setGoals((prev) => prev.filter((g) => g.id !== dlg.id));
-              draftOnly("Goal removed");
+              const id = dlg.id;
+              setGoals((prev) => prev.filter((g) => g.id !== id));
               close();
+              const fd = new FormData();
+              fd.set("id", String(id));
+              act(() => removeClientGoalAction(fd), "Goal removed");
             }}
           />
         )}
@@ -640,7 +702,7 @@ function MonthRange({ from, to, onPick, chrome, planned, cursor, setCursor, toda
   );
 }
 
-function PhaseDialog({ firstName, today, thisWeek, phase, track: initialTrack, others, programs, onSave, onDelete, onSend }: { firstName: string; today: string; thisWeek: string; phase: PlanPhaseRow | null; track?: PhaseTrack; others: PlanPhaseRow[]; programs: PlanProgramOption[]; onSave: (v: { name: string; track: PhaseTrack; start: string; end: string; programId: number | null }) => void; onDelete?: () => void; onSend: (what: string) => void }) {
+function PhaseDialog({ firstName, today, thisWeek, phase, track: initialTrack, others, programs, onSave, onDelete, onSend }: { firstName: string; today: string; thisWeek: string; phase: PlanPhaseRow | null; track?: PhaseTrack; others: PlanPhaseRow[]; programs: PlanProgramOption[]; onSave: (v: { name: string; track: PhaseTrack; start: string; end: string; programId: number | null }) => void; onDelete?: () => void; onSend: (v: { name: string; track: PhaseTrack; start: string; end: string; now: boolean }) => void }) {
   const editing = !!phase;
   const [track, setTrack] = useState<PhaseTrack>(phase?.track ?? initialTrack ?? "nutrition");
   const [name, setName] = useState(phase?.name ?? "");
@@ -763,7 +825,7 @@ function PhaseDialog({ firstName, today, thisWeek, phase, track: initialTrack, o
         )}
         <DialogClose className="rd-btn">Cancel</DialogClose>
         {editing && isDraft && (
-          <button type="button" className="rd-btn" disabled={!ok} onClick={() => onSend(startsNow ? `${name.trim()} is live` : `${name.trim()} scheduled for ${fmtDay(startWeek)}`)}>
+          <button type="button" className="rd-btn" disabled={!ok} onClick={() => onSend({ name: name.trim(), track, start: startWeek, end: endWeek, now: startsNow })}>
             {startsNow ? "Make it live" : "Schedule it"}
           </button>
         )}

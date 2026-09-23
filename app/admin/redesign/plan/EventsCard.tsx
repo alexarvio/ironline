@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import type React from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { addClientEventAction, addEventCategoryAction, deleteClientEventAction, deleteEventCategoryAction, updateClientEventAction, updateEventCategoryAction } from "../../../lib/actions";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { ChevronDownIcon, ChevronLeftIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { pageWindow } from "../../../lib/pager";
@@ -14,7 +16,8 @@ import DatePick from "../DatePick";
 // creatine, a car accident) is a pin. As the weeks slide under the line, a
 // coming event walks towards it; a past one slides off to the left, so the
 // log under the grid keeps every event, newest first, for looking back.
-// Nothing here saves: every action ends in a toast.
+// Real, not a draft: events and the coach's own categories save through
+// the actions in lib/actions.ts and come back from the loader.
 
 /** kind is the category's id, and optional: an event can just be an event. */
 export type PlanEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string };
@@ -33,21 +36,13 @@ const PALETTE: { id: string; tint: string; ink: string; line: string }[] = [
 const paletteOf = (id: string) => PALETTE.find((p) => p.id === id) ?? PALETTE[0];
 export type Category = { id: string; label: string; color: string; custom: boolean };
 const NONE = { tint: "#eceff3", ink: "#5b6474", line: "#c3c9d2" };
-// Four built in; the coach's own sit beside them, for every client of theirs.
-const PRESETS: Category[] = [
-  { id: "trip", label: "Trip", color: "blue", custom: false },
-  { id: "health", label: "Health", color: "orange", custom: false },
-  { id: "family", label: "Family", color: "purple", custom: false },
-  { id: "work", label: "Work", color: "navy", custom: false },
-];
+// The built-in four and the coach's own come from the loader (listEventCategories).
 /** A category's colours, or grey for none (or one since removed). */
 const chromeOf = (cats: Category[], id: string | null) => {
   const c = id ? cats.find((x) => x.id === id) : null;
   return c ? { label: c.label, ...paletteOf(c.color) } : { label: "Event", ...NONE };
 };
 
-const draftOnly = (what: string) => toast(what, { description: "A draft: nothing saves here." });
-const savedToast = (what: string) => toast.success("Saved", { description: `${what} (a draft: nothing really saved).` });
 const DAY = 86400000;
 const parse = (iso: string) => new Date(`${iso}T00:00:00`);
 const isoOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -77,15 +72,10 @@ const standing = (today: string, e: PlanEvent) => {
   return left === 0 ? "last day" : `now · ${left} day${left === 1 ? "" : "s"} left`;
 };
 
-// Example events, placed around today so the grid has something to show.
-const seed = (today: string): PlanEvent[] => [
-  { id: 1, kind: "trip", title: "Italy with the family", start: addDays(today, 22), end: addDays(today, 29), note: "Hotel gym, said he'd walk a lot. Keep the deficit light that week.", },
-  { id: 2, kind: "family", title: "Wedding in Groningen", start: addDays(today, 37), end: addDays(today, 38), note: "" },
-  { id: 3, kind: null, title: "Started creatine, 5 g a day", start: addDays(today, -9), end: addDays(today, -9), note: "Expect a kilo or two of water in the first fortnight." },
-  { id: 4, kind: "health", title: "Car accident, whiplash", start: addDays(today, -44), end: addDays(today, -44), note: "Physio cleared overhead work after two weeks." },
-];
-
 export type EventsCardProps = {
+  clientId: number;
+  events: PlanEvent[];
+  categories: Category[];
   today: string;
   /** The Monday of every column, in order, and how many there are. */
   weeks: string[];
@@ -101,9 +91,16 @@ export type EventsCardProps = {
   onWin: (weeks: number) => void;
 };
 
-export default function EventsCard({ today, weeks, count, cols, months, nowIdx, nowLeft, win, windows, onWin }: EventsCardProps) {
-  const [events, setEvents] = useState<PlanEvent[]>(() => seed(today));
-  const [cats, setCats] = useState<Category[]>(PRESETS);
+export default function EventsCard({ clientId, events, categories: cats, today, weeks, count, cols, months, nowIdx, nowLeft, win, windows, onWin }: EventsCardProps) {
+  const router = useRouter();
+  const [, start] = useTransition();
+  // Every save goes to the server and the page re-reads; the card holds no copy.
+  const act = (fn: () => Promise<unknown>, said?: string) =>
+    start(async () => {
+      await fn();
+      router.refresh();
+      if (said) toast.success(said);
+    });
   const [dlg, setDlg] = useState<{ event: PlanEvent | null } | null>(null);
   const [show, setShow] = useState<"coming" | "past" | "all">("all");
   // The log folds away under the grid; open, it is ten to a page.
@@ -343,31 +340,23 @@ export default function EventsCard({ today, weeks, count, cols, months, nowIdx, 
             today={today}
             event={dlg.event}
             cats={cats}
-            onAddCat={(label, color) => {
-              const id = `c-${Date.now()}`;
-              setCats((prev) => [...prev, { id, label, color, custom: true }]);
-              draftOnly(`Category "${label}" · yours, on every client`);
-              return id;
+            onAddCat={async (label, color) => {
+              const id = await addEventCategoryAction(label, color);
+              router.refresh();
+              toast.success(`Category "${label}" · yours, on every client`);
+              return id ?? "";
             }}
-            onRenameCat={(id, label, color) => {
-              setCats((prev) => prev.map((c) => (c.id === id ? { ...c, label, color } : c)));
-              draftOnly(`Category "${label}" changed`);
-            }}
-            onRemoveCat={(id) => {
-              setCats((prev) => prev.filter((c) => c.id !== id));
-              setEvents((prev) => prev.map((e) => (e.kind === id ? { ...e, kind: null } : e)));
-              draftOnly("Category removed · its events keep their words, lose the colour");
-            }}
+            onRenameCat={(id, label, color) => act(() => updateEventCategoryAction(id, label, color), `Category "${label}" changed`)}
+            onRemoveCat={(id) => act(() => deleteEventCategoryAction(id), "Category removed · its events keep their words, lose the colour")}
             onSave={(v) => {
-              if (dlg.event) setEvents((prev) => prev.map((e) => (e.id === dlg.event!.id ? { ...e, ...v } : e)));
-              else setEvents((prev) => [...prev, { id: -Date.now(), ...v }]);
-              savedToast(`Event: ${v.title}`);
+              const was = dlg.event;
               setDlg(null);
+              act(() => (was ? updateClientEventAction(clientId, was.id, v) : addClientEventAction(clientId, v)), `Event: ${v.title}`);
             }}
             onDelete={() => {
-              setEvents((prev) => prev.filter((e) => e.id !== dlg.event!.id));
-              draftOnly("Event removed");
+              const was = dlg.event!;
               setDlg(null);
+              act(() => deleteClientEventAction(clientId, was.id), "Event removed");
             }}
           />
         )}
@@ -377,18 +366,22 @@ export default function EventsCard({ today, weeks, count, cols, months, nowIdx, 
 }
 
 // ---- One event: what kind, what to call it, a moment or a stretch, and a note.
-function EventDialog({ today, event, cats, onAddCat, onRenameCat, onRemoveCat, onSave, onDelete }: { today: string; event: PlanEvent | null; cats: Category[]; onAddCat: (label: string, color: string) => string; onRenameCat: (id: string, label: string, color: string) => void; onRemoveCat: (id: string) => void; onSave: (v: Omit<PlanEvent, "id">) => void; onDelete: () => void }) {
+function EventDialog({ today, event, cats, onAddCat, onRenameCat, onRemoveCat, onSave, onDelete }: { today: string; event: PlanEvent | null; cats: Category[]; onAddCat: (label: string, color: string) => Promise<string>; onRenameCat: (id: string, label: string, color: string) => void; onRemoveCat: (id: string) => void; onSave: (v: Omit<PlanEvent, "id">) => void; onDelete: () => void }) {
   const [kind, setKind] = useState<string | null>(event ? event.kind : null);
   // A category being made or changed: its name and colour, in a small row under the chips.
   const [catEdit, setCatEdit] = useState<{ id: string | null; label: string; color: string } | null>(null);
   const usedColors = new Set(cats.map((c) => c.color));
   const freeColor = PALETTE.find((p) => !usedColors.has(p.id))?.id ?? PALETTE[0].id;
   const catOk = !!catEdit && catEdit.label.trim().length > 0 && !cats.some((c) => c.id !== catEdit.id && c.label.trim().toLowerCase() === catEdit.label.trim().toLowerCase());
-  const saveCat = () => {
+  const saveCat = async () => {
     if (!catEdit || !catOk) return;
-    if (catEdit.id) onRenameCat(catEdit.id, catEdit.label.trim(), catEdit.color);
-    else setKind(onAddCat(catEdit.label.trim(), catEdit.color));
+    const draft = catEdit;
     setCatEdit(null);
+    if (draft.id) onRenameCat(draft.id, draft.label.trim(), draft.color);
+    else {
+      const id = await onAddCat(draft.label.trim(), draft.color);
+      if (id) setKind(id);
+    }
   };
   const current = kind ? cats.find((c) => c.id === kind) ?? null : null;
   const [title, setTitle] = useState(event?.title ?? "");

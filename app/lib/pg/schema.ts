@@ -441,6 +441,27 @@ export const chat_messages = pgTable("chat_messages", {
   extra: extra(),
 });
 
+export const client_events = pgTable("client_events", {
+  id: id(),
+  client_id: fk("client_id"),
+  kind: text("kind"),
+  title: text("title"),
+  start_date: text("start_date"),
+  end_date: text("end_date"),
+  note: text("note"),
+  created_at: text("created_at"),
+  extra: extra(),
+});
+
+export const event_categories = pgTable("event_categories", {
+  id: id(),
+  coach_id: fk("coach_id"),
+  label: text("label"),
+  color: text("color"),
+  created_at: text("created_at"),
+  extra: extra(),
+});
+
 export const coach_activity = pgTable("coach_activity", {
   id: id(),
   client_id: fk("client_id"),
@@ -663,6 +684,8 @@ export const COLLECTIONS = [
   { name: "training_columns", table: training_columns, key: ["id"] },
   { name: "assignment_custom_values", table: assignment_custom_values, key: ["id"] },
   { name: "chat_messages", table: chat_messages, key: ["id"] },
+  { name: "client_events", table: client_events, key: ["id"] },
+  { name: "event_categories", table: event_categories, key: ["id"] },
   { name: "coach_activity", table: coach_activity, key: ["id"] },
   { name: "report_templates", table: report_templates, key: ["id"] },
   { name: "report_template_sections", table: report_template_sections, key: ["id"] },
