@@ -528,7 +528,14 @@ export function loadMessages(clientId: number): DraftMessages {
     .reverse()
     .map((m) => {
       const view = m.link ? describeMessageLink(clientId, m.link) : null;
-      return { id: m.id, mine: m.sender === "coach", text: m.text.trim() || (m.media_type === "video" ? "Sent a video" : "Sent a picture"), when: when(m.created_at), link: view ? { area: view.area, label: view.label, gone: view.gone } : null };
+      return {
+        id: m.id,
+        mine: m.sender === "coach",
+        text: m.text.trim(),
+        when: when(m.created_at),
+        media: m.media_path ? { path: m.media_path, type: m.media_type ?? "image", name: m.media_name ?? null } : null,
+        link: view ? { area: view.area, label: view.label, gone: view.gone } : null,
+      };
     });
   return { messages, targets: listMessageLinkTargets(clientId) };
 }

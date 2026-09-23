@@ -81,3 +81,12 @@
 .rm-pins-label { font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; }
 .rm-pins .rm-bubble-wrap { max-width: 100%; }
 .rm-pins + .rm-thread { border-radius: 0; }
+/* A picture, a video, a voice message or a file in a bubble. */
+.rm-bubble.media { padding: 6px 6px 8px; }
+.rm-bubble.media .rm-bubble-text, .rm-bubble.media .rm-bubble-when, .rm-bubble.media .rm-link, .rm-bubble.media .rm-edit { margin-left: 8px; margin-right: 8px; }
+.rm-media-img, .rm-media-video { display: block; width: 100%; max-width: 280px; border-radius: 12px; }
+.rm-media-video { background: #000; }
+.rm-media-audio { display: block; width: 240px; max-width: 100%; height: 36px; }
+.rm-media-file { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; margin: 4px 8px; padding: 8px 12px; border: 1px solid #dfe3e8; border-radius: 12px; background: #f4f7fc; font-size: 13.5px; font-weight: 700; color: #1e3a6e; text-decoration: none; }
+.rm-media-file span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rm-bubble-row.mine .rm-media-file { background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.3); color: #fff; }

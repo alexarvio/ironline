@@ -19,7 +19,8 @@ import type { LinkTargets } from "../../../lib/queries";
 // Nothing here saves: a send shows the bubble and ends in a toast.
 
 export type DraftLink = { area: string; label: string; gone: boolean };
-export type DraftMessage = { id: number; mine: boolean; text: string; when: string; link: DraftLink | null; reactions?: { coach?: string | null; client?: string | null }; pinned?: boolean; edited?: boolean };
+export type DraftMedia = { path: string; type: "image" | "video" | "audio" | "file"; name?: string | null };
+export type DraftMessage = { id: number; mine: boolean; text: string; when: string; media?: DraftMedia | null; link: DraftLink | null; reactions?: { coach?: string | null; client?: string | null }; pinned?: boolean; edited?: boolean };
 const REACTIONS = ["👍", "❤️", "💪", "🔥", "👏", "😂"] as const;
 /** Newest first, as the loader hands them over. */
 export type DraftMessages = { messages: DraftMessage[]; targets: LinkTargets };
@@ -79,7 +80,8 @@ export default function MessagesDraft({ firstName, plan }: { firstName: string; 
   const bubble = (m: DraftMessage, inPins = false) => (
     <div key={`${inPins ? "pin-" : ""}${m.id}`} className={`rm-bubble-row${m.mine ? " mine" : " theirs"}${m.id < 0 ? " new" : ""}`}>
       <div className="rm-bubble-wrap">
-        <div className="rm-bubble">
+        <div className={`rm-bubble${m.media ? " media" : ""}`}>
+          {m.media && <Media media={m.media} />}
           {editing?.id === m.id && !inPins ? (
             <span className="rm-edit">
               <textarea
@@ -107,7 +109,7 @@ export default function MessagesDraft({ firstName, plan }: { firstName: string; 
               </span>
             </span>
           ) : (
-            <span className="rm-bubble-text">{m.text}</span>
+            m.text && <span className="rm-bubble-text">{m.text}</span>
           )}
           {m.link && (
             <span className={`rm-link sent${m.link.gone ? " gone" : ""}`} title={m.link.gone ? "The client can't open this any more" : undefined}>
@@ -198,9 +200,7 @@ export default function MessagesDraft({ firstName, plan }: { firstName: string; 
       <header className="rd-head">
         <div className="rd-head-main">
           <span className="rd-eyebrow">Messages</span>
-          <h1 className="rd-title">
-            {firstName} <span className="rm-title-sub">· lands on their Home; they answer from the app</span>
-          </h1>
+          <h1 className="rd-title">{firstName}</h1>
         </div>
       </header>
 
@@ -421,6 +421,24 @@ function LinkDialog({ firstName, targets: t, onPick }: { firstName: string; targ
       </DialogFooter>
     </DialogContent>
   );
+}
+
+// A picture shows, a video and a voice message play, any other file downloads.
+function Media({ media }: { media: DraftMedia }) {
+  if (media.type === "video") return <video className="rm-media-video" src={media.path} controls playsInline />;
+  if (media.type === "audio") return <audio className="rm-media-audio" src={media.path} controls preload="metadata" />;
+  if (media.type === "file")
+    return (
+      <a className="rm-media-file" href={media.path} download={media.name ?? undefined} target="_blank" rel="noreferrer">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+          <path d="M14 3v5h5" />
+        </svg>
+        <span>{media.name ?? "File"}</span>
+      </a>
+    );
+  // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
+  return <img className="rm-media-img" src={media.path} alt="" />;
 }
 
 function SmileGlyph() {
