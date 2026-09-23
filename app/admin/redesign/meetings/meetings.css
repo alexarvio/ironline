@@ -1,0 +1,106 @@
+/* The Meetings draft: what it adds on top of the Training draft's sheet. */
+
+.rt-cols { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.8fr); gap: 18px; align-items: start; }
+.rt-main, .rt-side { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+@media (max-width: 1100px) { .rt-cols { grid-template-columns: 1fr; } }
+
+/* The next call: a date tile, the topic, when, and the way in. */
+.rt-band { display: flex; align-items: center; gap: 16px; padding: 4px 14px 14px 24px; }
+.rt-tile { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 58px; height: 62px; border-radius: 14px; background: #1e3a6e; color: #fff; }
+.rt-tile small { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.75; }
+.rt-tile b { font-size: 24px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.rt-tile.sm { width: 44px; height: 46px; border-radius: 10px; background: #e6ecf3; color: #1e3a6e; }
+.rt-tile.sm small { font-size: 9px; }
+.rt-tile.sm b { font-size: 17px; }
+.rt-band-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.rt-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #1b7a4b; }
+.rt-topic { width: 100%; margin-left: -6px; padding: 2px 6px; border: 1px solid transparent; border-radius: 8px; background: none; font: inherit; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; color: #141a24; }
+.rt-topic:hover { border-color: #dfe3e8; background: #fff; }
+.rt-topic:focus { outline: none; border-color: #2f5d8f; background: #fff; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.12); }
+.rt-topic::placeholder { color: #b0b6c0; }
+.rt-when { font-size: 13px; color: #5b6474; }
+.rt-band-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.rt-host { font-size: 11.5px; color: #8b93a1; }
+.rt-host button { padding: 0; border: 0; background: none; font: inherit; color: #2f5d8f; cursor: pointer; }
+
+/* Under the band: goals to review on the left, prep notes on the right. */
+.rt-body { display: grid; grid-template-columns: 1fr; gap: 16px 28px; padding: 0 14px 14px; }
+@media (max-width: 900px) { .rt-body { grid-template-columns: 1fr; } }
+.rt-col { display: flex; flex-direction: column; min-width: 0; }
+.rt-col .rd-cols { padding-left: 10px; }
+.rt-goal-dot { display: inline-block; width: 8px; height: 8px; border-radius: 999px; background: #c3c9d2; }
+.rt-goal-dot.green { background: #1b7a4b; }
+.rt-goal-dot.orange { background: #b3471d; }
+.rt-goal-status { font-size: 12.5px; font-weight: 600; color: #5b6474; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rt-goal-status.green { color: #1b7a4b; }
+.rt-goal-status.orange { color: #b3471d; }
+.rt-prep { width: 100%; max-width: none; margin: 0; height: auto; min-height: 120px; padding: 10px 12px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; font: inherit; font-size: 13.5px; font-weight: 500; line-height: 1.5; color: #141a24; resize: vertical; }
+.rt-prep:focus { outline: none; border-color: #2f5d8f; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.12); }
+.rt-actions { display: flex; align-items: center; gap: 8px; }
+.rt-goal-add { display: flex; gap: 8px; align-items: center; padding: 8px 10px 4px; }
+.rt-goal-add .rd-input { flex: 1; }
+
+/* Past calls: the recap, the notes, the goals set. */
+.rt-past { display: grid; grid-template-columns: 1fr; gap: 14px; padding: 4px 10px 14px 42px; }
+@media (max-width: 900px) { .rt-past { grid-template-columns: 1fr; } }
+.rt-recap { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 12px; background: #f4f7fc; }
+.rt-recap-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rt-recap-head .rd-cols { padding: 0; }
+.rt-recap textarea { width: 100%; min-height: 60px; padding: 8px 10px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; font-size: 13.5px; font-weight: 500; line-height: 1.5; color: #141a24; resize: vertical; box-sizing: border-box; }
+.rt-recap textarea:focus { outline: none; border-color: #2f5d8f; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.12); }
+.rt-note { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-top: 1px solid #eceff3; }
+.rt-note p { margin: 0; font-size: 13.5px; font-weight: 500; line-height: 1.5; color: #313851; white-space: pre-wrap; }
+.rt-note small { font-size: 11px; color: #8b93a1; }
+.rt-note-add { display: flex; gap: 8px; padding: 8px 10px 0; }
+.rt-note-add .rd-input { flex: 1; }
+.rt-empty { margin: 0; padding: 8px 10px; font-size: 12.5px; color: #8b93a1; }
+
+/* The month at a glance, with the picked day's bookings under it. */
+.rt-cal { padding: 0 14px 14px; }
+.rt-cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 0 8px; }
+.rt-cal-head b { font-size: 14px; font-weight: 700; color: #141a24; }
+.rt-cal-nav { display: flex; gap: 2px; }
+.rt-cal-nav .rd-btn.ghost.sm svg { width: 14px; height: 14px; }
+.rt-cal-nav .rd-btn.ghost.sm.next svg { transform: rotate(180deg); }
+/* Six rows of one height, whatever the month, so paging through the year never moves a thing. */
+.rt-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: 40px; gap: 2px; }
+.rt-cal-dow { padding: 4px 0; text-align: center; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8b93a1; }
+.rt-cal-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; height: 40px; border: 1px solid transparent; border-radius: 9px; background: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #313851; cursor: pointer; font-variant-numeric: tabular-nums; }
+.rt-cal-cell:hover { background: #f4f6fa; }
+.rt-cal-cell.today { border-color: #1e3a6e; color: #1e3a6e; }
+.rt-cal-cell.selected { background: #1e3a6e; color: #fff; }
+.rt-cal-cell.past { color: #b0b6c0; }
+.rt-cal-cell.selected.past { color: rgba(255, 255, 255, 0.7); }
+.rt-cal-dots { display: flex; gap: 2px; height: 5px; }
+.rt-cal-dots i, .rt-legend i { display: block; width: 5px; height: 5px; border-radius: 999px; background: #c3c9d2; }
+.rt-cal-dots i.mine, .rt-legend i.mine { background: #2f5d8f; }
+.rt-cal-dots i.done, .rt-legend i.done { background: #1b7a4b; }
+.rt-cal-cell.selected .rt-cal-dots i { background: rgba(255, 255, 255, 0.6); }
+.rt-cal-cell.selected .rt-cal-dots i.mine, .rt-cal-cell.selected .rt-cal-dots i.done { background: #fff; }
+.rt-day { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #eceff3; }
+.rt-day-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 700; color: #141a24; }
+.rt-day-row { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: #5b6474; }
+.rt-day-row b { font-weight: 600; color: #313851; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rt-day-row.mine b { color: #1e3a6e; }
+.rt-day-row span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt-legend { display: flex; gap: 12px; margin-top: 10px; font-size: 11px; color: #8b93a1; }
+.rt-legend span { display: inline-flex; align-items: center; gap: 5px; }
+
+/* The schedule dialog: the duration as chips. */
+.rt-durations { display: flex; gap: 6px; }
+.rt-busy { color: #b3471d; }
+.rt-free { color: #1b7a4b; }
+
+/* The calendar lives in the schedule dialog now: the month on the left, the fields on the right. */
+.rt-cols { display: block; }
+.rt-dlg { max-width: 760px; }
+.rt-dlg .rdd-cols { grid-template-columns: minmax(0, 1.1fr) minmax(240px, 0.9fr); }
+.rt-dlg-cal { padding: 12px; border-radius: 12px; background: #f4f7fc; }
+.rt-dlg-cal .rt-cal { padding: 0; }
+/* The month and the day under it keep one height whatever is on them. */
+.rt-cal-grid { user-select: none; }
+.rt-day { min-height: 118px; }
+.rt-day-list { display: flex; flex-direction: column; gap: 6px; max-height: 72px; overflow-y: auto; scrollbar-width: thin; }
+/* The bar under a note, flush with the card it sits in. */
+.rt-bar { margin: 12px 0 0; border-radius: 12px; }
+.rt-past .rt-bar { margin: 0; }

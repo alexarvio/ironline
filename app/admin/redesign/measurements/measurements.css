@@ -1,0 +1,96 @@
+/* The Measurements draft: what it adds on top of the Training draft's sheet. */
+
+/* The tracked metrics: a group pill, the cadence switch and the last figure. */
+.rm-group { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 11px; font-weight: 700; color: #313851; white-space: nowrap; }
+.rm-cadence { display: inline-flex; gap: 2px; padding: 2px; border-radius: 999px; background: #eef0f3; }
+.rm-cadence button { height: 24px; padding: 0 10px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 11.5px; font-weight: 700; color: #5b6474; cursor: pointer; }
+.rm-cadence button.on { background: #fff; color: #1e3a6e; box-shadow: 0 1px 2px rgba(20, 26, 36, 0.08); }
+.rm-cadence button.on.changed { background: #1e3a6e; color: #fff; }
+.rm-last { display: flex; flex-direction: column; gap: 1px; min-width: 0; font-size: 13.5px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; }
+.rm-last small { font-size: 11px; font-weight: 500; color: #8b93a1; }
+.rm-last.none { font-size: 12.5px; font-weight: 500; color: #b0b6c0; }
+.rd-row.going { opacity: 0.45; }
+.rd-row.going .rd-ex-name { text-decoration: line-through; }
+.rm-additem { display: block; width: 100%; margin: 8px 0 10px; padding: 12px; border-radius: 12px; }
+.rm-checkinday { display: inline-flex; align-items: center; gap: 6px; }
+.rm-checkinday b { color: #1e3a6e; }
+
+/* The add row: a taken metric stays in the list, greyed, so the coach sees it is already asked for. */
+.rd-addrow-item.taken { color: #b0b6c0; cursor: default; }
+.rd-addrow-item.taken small { color: #b0b6c0; }
+.rm-unit { flex: 0 0 150px; }
+
+/* The check-ins card: the two switches over the data. */
+.rm-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 14px 10px; }
+.rm-controls-left, .rm-controls-right { display: flex; align-items: center; gap: 10px; }
+
+/* Table: one grid for the head, every row and the Change line. */
+.rm-scroll { overflow-x: auto; scrollbar-width: thin; scrollbar-color: #dfe3e8 transparent; padding: 0 14px 12px; }
+.rm-table { display: grid; align-items: center; column-gap: 24px; min-width: max-content; }
+.rm-table .rd-cols { display: contents; }
+.rm-table .rd-cols span, .rm-th { padding: 6px 0 8px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; white-space: nowrap; }
+.rm-th { display: flex; flex-direction: column; gap: 1px; }
+.rm-th em { font-size: 10px; font-style: normal; font-weight: 700; letter-spacing: 0.06em; }
+.rm-td { padding: 10px 0; border-top: 1px solid #eceff3; font-size: 14px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rm-td.date { font-weight: 600; color: #313851; padding-left: 10px; }
+.rm-td.now { color: #1e3a6e; }
+.rm-td.none { color: #c3c9d2; font-weight: 500; }
+.rm-td.change { border-top: 1px solid #dfe3e8; font-size: 13px; color: #5b6474; }
+.rm-td.change.up { color: #1b7a4b; }
+.rm-td.change.down { color: #b3471d; }
+
+/* Feed: one row a period, the values as tiles when it opens. */
+.rm-summary { font-size: 13px; color: #5b6474; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.rm-tiles { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 10px 12px 42px; }
+.rm-tile { display: flex; flex-direction: column; gap: 2px; min-width: 110px; padding: 8px 12px; border-radius: 10px; background: #f4f7fc; }
+.rm-tile small { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8b93a1; }
+.rm-tile b { font-size: 17px; font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; }
+.rm-tile b em { font-size: 11.5px; font-style: normal; font-weight: 500; color: #8b93a1; margin-left: 3px; }
+.rm-tile.note { flex: 1 1 260px; }
+.rm-tile.note p { margin: 0; font-size: 13px; font-weight: 500; line-height: 1.5; color: #313851; white-space: pre-wrap; }
+
+/* Graph: the metric list on the left, the chart on the right. */
+.rm-graphs { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 20px; padding: 0 14px 14px; }
+.rm-graph-list { display: flex; flex-direction: column; gap: 2px; }
+.rm-graph-cat { display: flex; align-items: center; gap: 8px; padding: 10px 8px 4px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; }
+.rm-graph-cat i { display: inline-block; width: 8px; height: 8px; border-radius: 999px; }
+.rm-graph-pick { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 8px 10px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #313851; text-align: left; cursor: pointer; }
+.rm-graph-pick em { font-size: 12.5px; font-style: normal; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.rm-graph-pick:hover { background: #f4f6fa; }
+.rm-graph-pick.on { background: #e6ecf3; color: #1e3a6e; }
+.rm-graph-pick.on em { color: #1e3a6e; }
+.rm-graph { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 14px 16px 10px; border-radius: 14px; background: #f8fafd; }
+.rm-graph-head { display: flex; align-items: center; gap: 10px; }
+.rm-graph-head i { display: inline-block; width: 10px; height: 10px; border-radius: 999px; }
+.rm-graph-head b { font-size: 15px; font-weight: 700; color: #141a24; }
+.rm-graph-head span { font-size: 12.5px; color: #8b93a1; }
+.rm-graph-head .rd-btn-group { margin-left: auto; }
+.rm-graph-figure { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 14px; }
+.rm-graph-now { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; color: #141a24; font-variant-numeric: tabular-nums; }
+.rm-graph-now small { font-size: 13px; font-weight: 500; color: #8b93a1; margin-left: 4px; }
+.rm-graph-when { font-size: 12.5px; color: #5b6474; }
+.rm-graph-stats { display: flex; gap: 14px; margin-left: auto; font-size: 12.5px; color: #5b6474; font-variant-numeric: tabular-nums; }
+.rm-graph-delta { font-weight: 700; color: #313851; }
+.rm-graph-delta.good { color: #1b7a4b; }
+.rm-graph-delta.warn { color: #b3471d; }
+.rm-graph-frame { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; }
+.rm-graph-yaxis { position: relative; }
+.rm-graph-yaxis span { position: absolute; right: 0; transform: translateY(-50%); font-size: 11px; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.rm-graph-plot { position: relative; height: 240px; }
+.rm-graph-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.rm-graph-base { stroke: #e3e8ef; stroke-width: 1; }
+.rm-graph-line { fill: none; stroke: #2f5d8f; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.rm-graph-cross { stroke: #c9d5e6; stroke-width: 1; stroke-dasharray: 3 3; }
+.rm-graph-dots { position: absolute; inset: 0; pointer-events: none; }
+.rm-graph-dots i { position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 999px; background: #2f5d8f; box-shadow: 0 0 0 2px #f8fafd; }
+.rm-graph-dots i.last { width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; background: #1e3a6e; }
+.rm-graph-dots i.on { width: 12px; height: 12px; margin: -6px 0 0 -6px; background: #1e3a6e; box-shadow: 0 0 0 3px #fff, 0 0 0 5px #c9d5e6; }
+.rm-graph-axis { position: relative; height: 16px; margin-left: 52px; }
+.rm-graph-axis span { position: absolute; transform: translateX(-50%); font-size: 11px; color: #8b93a1; white-space: nowrap; }
+.rm-graph-empty { margin: 0; padding: 40px 0; text-align: center; font-size: 13px; color: #8b93a1; }
+.rd-btn-group { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: #eef0f3; }
+.rd-btn-group button { height: 26px; padding: 0 12px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 12px; font-weight: 700; color: #5b6474; cursor: pointer; }
+.rd-btn-group button.on { background: #fff; color: #1e3a6e; box-shadow: 0 1px 2px rgba(20, 26, 36, 0.08); }
+
+/* Notes from the client: date, which check-in, the words, a reply. */
+.rm-note-text { font-size: 13.5px; font-weight: 500; line-height: 1.5; color: #313851; white-space: pre-wrap; min-width: 0; }

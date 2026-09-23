@@ -250,7 +250,7 @@ export default function AppShell({
       </div>
     ) : pushView === "messages" ? (
       <div className="app-layer app-layer-push cn-screen">
-        <CoachMessagesScreen {...coachMessages} onBack={() => setPushView(null)} />
+        <CoachMessagesScreen {...coachMessages} clientId={clientId} onBack={() => setPushView(null)} />
       </div>
     ) : pushView ? (
       <div className="app-layer app-layer-push cn-screen">
@@ -376,7 +376,7 @@ export default function AppShell({
                 </div>
                 <div className="app-menu-list">
                   <button type="button" className="app-menu-item" onClick={() => go(() => openMessages())}>
-                    Messages from {coachMessages.coachName}
+                    Messages with {coachMessages.coachName}
                   </button>
                   {/* Help writes to the coach: the person who can actually do something. */}
                   {helpEmail && (

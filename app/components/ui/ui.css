@@ -1,0 +1,77 @@
+/* The shadcn/ui parts' stylesheet, loaded once by the admin shell. Tailwind's
+   theme and utilities only, no preflight: nothing here resets the rest of
+   the app, and the utilities only apply to the [data-slot] parts in ui/. */
+@layer theme, base, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@source "./";
+@source "../../admin";
+
+/* shadcn's colour names, mapped onto Ironline's design system
+   (docs/UI-GUIDELINES.md): one navy, ink text, the tint for hover. */
+@theme inline {
+  --color-background: #ffffff;
+  --color-foreground: #141a24;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #141a24;
+  --color-primary: #1e3a6e;
+  --color-primary-foreground: #ffffff;
+  --color-accent: #e6ecf3;
+  --color-accent-foreground: #1e3a6e;
+  --color-muted-foreground: #5b6474;
+  --color-border: #dfe3e8;
+  --color-ring: #2f5d8f;
+  --color-destructive: #b3261e;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 18px;
+}
+
+/* What preflight would have given the pieces we use, and only them. In the
+   base layer, so a utility (bg-primary, text-[13px]) always wins over it. */
+@layer base {
+  [data-slot],
+  [data-slot] * {
+    box-sizing: border-box;
+    border: 0 solid #dfe3e8;
+  }
+  [data-slot] {
+    font-family: var(--font-archivo), system-ui, sans-serif;
+  }
+  [data-slot] button,
+  button[data-slot] {
+    font-family: inherit;
+    background-color: transparent;
+    color: inherit;
+    padding: 0;
+    cursor: pointer;
+  }
+  [data-slot] h2,
+  [data-slot] h3,
+  [data-slot] p {
+    margin: 0;
+  }
+}
+
+/* Toasts (sonner) in the app's type and corners. */
+[data-sonner-toaster] { font-family: var(--font-archivo), system-ui, sans-serif; }
+[data-sonner-toast] { border-radius: 12px !important; border: 1px solid #dfe3e8 !important; color: #141a24 !important; box-shadow: 0 12px 30px -16px rgba(8, 31, 92, 0.35) !important; }
+[data-sonner-toast] [data-title] { font-weight: 700; font-size: 13px; }
+[data-sonner-toast] [data-description] { font-size: 12.5px; color: #5b6474; }
+[data-sonner-toast][data-type="success"] [data-icon] { color: #1b7a4b; }
+[data-sonner-toast][data-type="error"] [data-icon] { color: #b3261e; }
+
+/* The builder's ⋯ menus (SessionMenu, ExerciseRowMenu) on the Dropdown Menu:
+   the same face the hand-built .pb-session-menu had. */
+.pb-menu { min-width: 236px; padding: 5px; border-radius: 10px; box-shadow: 0 12px 28px rgba(20, 30, 50, 0.16); }
+.pb-menu [data-slot="dropdown-menu-item"] { gap: 9px; padding: 8px 10px; border-radius: 7px; font-size: 13px; font-weight: 600; color: #141a24; cursor: pointer; }
+.pb-menu [data-slot="dropdown-menu-item"] svg { width: 15px; height: 15px; color: #5b6474; }
+.pb-menu [data-slot="dropdown-menu-item"][data-variant="destructive"],
+.pb-menu [data-slot="dropdown-menu-item"][data-variant="destructive"] svg { color: #a32d2d; }
+.pb-menu [data-slot="dropdown-menu-item"][data-variant="destructive"][data-highlighted] { background: #fbeaea; }
+.pb-row-more[data-state="open"] { background: #eceff3; color: #141a24; }
+
+/* globals.css gives every h2 a 28px top margin; a dialog's title is one.
+   Unlayered, so it beats that rule where the layered reset above cannot. */
+[data-slot="dialog-title"], [data-slot="dialog-description"] { margin: 0; }

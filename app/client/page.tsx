@@ -341,8 +341,9 @@ function HomeTab({ CLIENT_ID, photos }: { CLIENT_ID: number; photos: HomePhotos 
       checkInStatus={checkInStatus}
       photos={photos}
       latestMessage={(() => {
-        const sent = coachMessagesFor(CLIENT_ID);
-        const latest = sent[0];
+        // The card on Home shows the coach's newest, with how many of theirs there are.
+        const sent = coachMessagesFor(CLIENT_ID).filter((m) => !m.mine && m.text.trim());
+        const latest = sent[sent.length - 1];
         return latest
           ? { coachName: getCoachDisplayName(CLIENT_ID), text: latest.text, whenLabel: fmtShortDate(latest.dateIso), count: sent.length, link: latest.link }
           : null;
@@ -351,18 +352,21 @@ function HomeTab({ CLIENT_ID, photos }: { CLIENT_ID: number; photos: HomePhotos 
   );
 }
 
-// The coach's one-way messages to this client, newest first, with the
-// labels the feed and Home's card show. Only the coach's side: the client
-// has no reply box, so their side of chat_messages is empty anyway.
+// The conversation with the coach, oldest first, with the labels the thread
+// and Home's card show. Both sides: the client answers from the same screen.
 function coachMessagesFor(clientId: number) {
   return listChatMessages(clientId)
-    .filter((m) => m.sender === "coach" && m.text.trim())
-    .reverse()
+    .filter((m) => m.text.trim() || m.media_path)
     .map((m) => {
       const d = new Date(m.created_at);
       return {
         id: m.id,
+        mine: m.sender === "client",
         text: m.text,
+        media: m.media_path ? { path: m.media_path, type: m.media_type ?? ("image" as const), name: m.media_name ?? null } : null,
+        reactions: { coach: m.reactions?.coach ?? null, client: m.reactions?.client ?? null },
+        pinned: !!m.pinned,
+        edited: !!m.edited_at,
         dateIso: m.created_at.slice(0, 10),
         dayLabel: d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),
         timeLabel: d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),

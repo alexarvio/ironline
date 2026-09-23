@@ -2,6 +2,8 @@
 
 import { ReactNode, useSyncExternalStore } from "react";
 import { ChevronDownIcon } from "../components/icons";
+import { Toaster } from "../components/ui/toast";
+import "../components/ui/ui.css";
 
 // Three columns: the client list, the working area, and everything else true
 // about the client.
@@ -79,6 +81,7 @@ export default function AdminShell({
     <div className={`ad-shell${panel ? "" : " no-panel"}${collapsed ? " panel-collapsed" : ""}`}>
       <aside className="ad-sidebar">{sidebar}</aside>
       <main className="ad-main">{children}</main>
+      <Toaster />
       {panel && (
         <aside className="ad-panel-col" aria-label="Client overview">
           {/* Open, the panel's own header carries the collapse chevron

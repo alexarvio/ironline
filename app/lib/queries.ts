@@ -2233,7 +2233,7 @@ export function getClientSummary(clientId: number) {
 // store — nothing here is synthesized. When a new kind of client logging is
 // built, add a branch here rather than faking events in the UI.
 
-export type FeedCategory = "training" | "nutrition" | "measurements" | "notes" | "billing";
+export type FeedCategory = "training" | "nutrition" | "measurements" | "notes" | "billing" | "messages";
 
 export type FeedEvent = {
   id: string;
@@ -2503,6 +2503,23 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
   }
   // Not the client's "My notes" on an exercise (client_exercise_notes): those
   // are their own reminders, private to them, and never shown to the coach.
+
+  // ---- Messages the client sent in the chat ----
+  // Their words ride along as the note, so Home lists an unread one under
+  // "Needs you" and the rail's dot says why.
+  for (const m of data.chat_messages) {
+    if (m.sender !== "client") continue;
+    const words = m.text.trim();
+    if (!words && !m.media_path) continue;
+    add(m.client_id, {
+      id: `chat-${m.id}`,
+      category: "messages",
+      at: stampMs(m.created_at),
+      tab: "messages",
+      text: words ? "sent you a message" : `sent you ${mediaWords(m.media_type)}`,
+      note: words || null,
+    });
+  }
 
   // ---- Billing ----
   for (const inv of data.invoices) {
@@ -4845,11 +4862,26 @@ export type ChatMessage = {
   sender: "client" | "coach";
   text: string;
   media_path: string | null;
-  media_type: "image" | "video" | null;
+  /** A picture, a video, a voice message, or any other file. */
+  media_type: ChatMediaType | null;
+  /** The file's own name, kept for a "file" so the download reads right. */
+  media_name?: string | null;
   created_at: string;
   /** What in the client's app the message is about, when the coach linked it. */
   link?: MessageLink | null;
+  /** One emoji from each side, on any message: a thumbs up on what the other wrote. */
+  reactions?: { coach?: string; client?: string };
+  /** Kept at the top of the chat by the coach. */
+  pinned?: boolean;
+  /** When the coach last reworded it. */
+  edited_at?: string | null;
 };
+
+export type ChatMediaType = "image" | "video" | "audio" | "file";
+export type ChatMedia = { path: string; type: ChatMediaType; name?: string | null };
+
+/** The reactions a message can take: a short row, the same on both sides. */
+export const MESSAGE_REACTIONS = ["👍", "❤️", "💪", "🔥", "👏", "😂"] as const;
 
 export function listChatMessages(clientId: number): ChatMessage[] {
   return getData()
@@ -4861,7 +4893,7 @@ export function sendChatMessage(
   clientId: number,
   sender: "client" | "coach",
   text: string,
-  media?: { path: string; type: "image" | "video" },
+  media?: ChatMedia,
   link?: MessageLink | null
 ) {
   const data = getData();
@@ -4872,6 +4904,7 @@ export function sendChatMessage(
     text,
     media_path: media?.path ?? null,
     media_type: media?.type ?? null,
+    ...(media?.name ? { media_name: media.name } : {}),
     created_at: new Date().toISOString(),
     ...(link ? { link } : {}),
   });
@@ -4879,8 +4912,76 @@ export function sendChatMessage(
   if (sender === "coach" && getClientPreferences(clientId).coach_notes) {
     // The notification is the message. There is no chat screen in this
     // beta, so the client reads it in full right there.
-    logCoachActivity(clientId, text || "Your coach sent you a message", { kind: "coach_note" });
+    logCoachActivity(clientId, text || `Your coach sent you ${mediaWords(media?.type ?? null)}`, { kind: "coach_note" });
   }
+}
+
+/** One side's reaction on a message: set it, swap it, or take it off (null). Only a known emoji sticks. */
+export function setChatReaction(clientId: number, messageId: number, who: "client" | "coach", emoji: string | null) {
+  const data = getData();
+  const m = data.chat_messages.find((x) => x.id === messageId && x.client_id === clientId);
+  if (!m) return;
+  if (emoji && !(MESSAGE_REACTIONS as readonly string[]).includes(emoji)) return;
+  const next = { ...(m.reactions ?? {}) };
+  if (emoji) next[who] = emoji;
+  else delete next[who];
+  if (Object.keys(next).length) m.reactions = next;
+  else delete m.reactions;
+  persist();
+}
+
+/** The coach's own message, or nothing: only theirs can be reworded, re-pointed or taken back. */
+function coachMessage(clientId: number, messageId: number) {
+  return getData().chat_messages.find((m) => m.id === messageId && m.client_id === clientId && m.sender === "coach") ?? null;
+}
+/** The notification a coach message was logged with, in the same breath and the same words. */
+function noteFor(msg: { client_id: number; text: string; created_at: string }) {
+  const sent = new Date(msg.created_at).getTime();
+  return getData().coach_activity.find((a) => a.client_id === msg.client_id && a.kind === "coach_note" && a.message === msg.text && Math.abs(new Date(a.created_at).getTime() - sent) < 5000) ?? null;
+}
+
+/**
+ * Rewords a coach message, and the notification that carried it. Quietly: a
+ * fixed typo is not news, so nothing new is sent; the client sees "edited".
+ */
+export function editChatMessage(clientId: number, messageId: number, text: string) {
+  const clean = text.trim();
+  const msg = coachMessage(clientId, messageId);
+  if (!clean || !msg || msg.text === clean) return;
+  const note = noteFor(msg);
+  if (note) note.message = clean;
+  msg.text = clean;
+  msg.edited_at = new Date().toISOString();
+  persist();
+}
+
+/** Takes a coach message back: from the chat, the client's Home and their notifications. */
+export function deleteChatMessage(clientId: number, messageId: number) {
+  const data = getData();
+  const msg = coachMessage(clientId, messageId);
+  if (!msg) return;
+  const note = noteFor(msg);
+  data.chat_messages = data.chat_messages.filter((m) => m !== msg);
+  if (note) data.coach_activity = data.coach_activity.filter((a) => a !== note);
+  persist();
+}
+
+/** Points a sent message at one thing in the client's app, or takes the link off (null). */
+export function setChatMessageLink(clientId: number, messageId: number, link: MessageLink | null) {
+  const msg = coachMessage(clientId, messageId);
+  if (!msg) return;
+  if (link) msg.link = link;
+  else delete msg.link;
+  persist();
+}
+
+/** Keeps a message (either side's) at the top of the chat, or lets it go. */
+export function setChatMessagePinned(clientId: number, messageId: number, pinned: boolean) {
+  const msg = getData().chat_messages.find((m) => m.id === messageId && m.client_id === clientId);
+  if (!msg) return;
+  if (pinned) msg.pinned = true;
+  else delete msg.pinned;
+  persist();
 }
 
 // ---- "Today" due items: was the Check-ins tab, folded into Home. Shared by
@@ -5830,14 +5931,23 @@ export function markAllNotificationsRead(clientId: number) {
 // Chat attachments: same "write to DATA_DIR/uploads, store the public path"
 // pattern as savePhotoUpload — one file per message, kept under its own
 // client-scoped folder so nothing collides across clients.
-export function saveChatMedia(clientId: number, buffer: Buffer, mimeType: string): { path: string; type: "image" | "video" } {
-  const type: "image" | "video" = mimeType.startsWith("video/") ? "video" : "image";
-  const ext = (mimeType.split("/")[1] || (type === "video" ? "mp4" : "jpg")).replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "jpg";
+/** "a picture", "a voice message": what a message with no words is. */
+export function mediaWords(type: ChatMediaType | null): string {
+  return type === "video" ? "a video" : type === "audio" ? "a voice message" : type === "file" ? "a file" : "a picture";
+}
+
+export function saveChatMedia(clientId: number, buffer: Buffer, mimeType: string, originalName?: string | null): ChatMedia {
+  const type: ChatMediaType = mimeType.startsWith("video/") ? "video" : mimeType.startsWith("audio/") ? "audio" : mimeType.startsWith("image/") ? "image" : "file";
+  // The extension: a file keeps its own; a voice message says it is audio
+  // (a .weba plays in <audio> where a .webm would be taken for a video).
+  const own = (originalName ?? "").includes(".") ? (originalName ?? "").split(".").pop()!.toLowerCase().replace(/[^a-z0-9]/g, "") : "";
+  const fromMime = (mimeType.split("/")[1] || "").split(";")[0].replace("jpeg", "jpg").replace("quicktime", "mov").replace("mpeg", "mp3").replace(/[^a-z0-9]/gi, "");
+  const ext = type === "file" ? own || fromMime || "bin" : type === "audio" ? (fromMime === "webm" ? "weba" : fromMime === "mp4" ? "m4a" : fromMime || "weba") : own || fromMime || (type === "video" ? "mp4" : "jpg");
   const dir = path.join(DATA_DIR, "uploads", "chat", String(clientId));
   fs.mkdirSync(dir, { recursive: true });
   const filename = `${Date.now()}-${allocId("chat_media")}.${ext}`;
   fs.writeFileSync(path.join(dir, filename), buffer);
-  return { path: `/uploads/chat/${clientId}/${filename}`, type };
+  return { path: `/uploads/chat/${clientId}/${filename}`, type, name: type === "file" ? originalName?.trim() || null : null };
 }
 
 export function getClientSnapshot(clientId: number): ClientSnapshot {
@@ -8099,6 +8209,10 @@ export type PlanGoalRow = {
   setIn: { meetingId: number; topic: string; date: string } | null;
   setDate: string | null;
   by: string | null;
+  /** The thing the goal watches, by name: "Weight", "Bench press", "Sleep". Null for a plain goal. */
+  tracks: string | null;
+  /** How the deadline looks from today: "on pace", "behind", "reached", "slipped", "5 kg off". Null when nothing says. */
+  pace: string | null;
   tracking: GoalTracking | null;
 };
 
@@ -8143,14 +8257,20 @@ export function getPlanData(clientId: number) {
     let pct = goal.done ? 100 : 0;
     let rule = "Text only";
     let by: string | null = null;
+    let tracks: string | null = null;
+    let pace: string | null = null;
     if (view.kind === "metric" && t?.kind === "metric") {
       const figure = (view.barLabel ?? "").split(" · ")[0];
       // The figure alone: the coach reads it against the rule underneath.
       live = figure;
       pct = view.reached ? 100 : Math.round((view.bar ?? 0) * 100);
       const s = seriesForKey(clientId, t.metricKey);
-      rule = `Metric · ${s?.name ?? "Metric"} ${t.op} ${fmtNumber(t.target)}${s?.unit ? ` ${s.unit}` : ""} · by ${fmtShort(t.byDate)}`;
+      tracks = s?.name ?? "Metric";
+      rule = `Metric · ${tracks} ${t.op} ${fmtNumber(t.target)}${s?.unit ? ` ${s.unit}` : ""} · by ${fmtShort(t.byDate)}`;
       by = fmtShort(t.byDate);
+      // The card's own verdict, read back as one word.
+      const sub = view.sub ?? "";
+      pace = view.reached ? "reached" : sub.includes("slipped") ? "slipped" : sub.includes("on pace") ? "on pace" : sub.includes("behind") ? "behind" : null;
     } else if (view.kind === "exercise" && t?.kind === "exercise") {
       live = (view.right ?? "").replace(/^best /, "").split(" · ")[0];
       const name = getData().exercises.find((e) => e.id === t.exerciseId)?.name ?? "Exercise";
@@ -8158,14 +8278,18 @@ export function getPlanData(clientId: number) {
       const best = sets.length ? Math.max(...sets.map((s) => s.weight as number)) : 0;
       pct = view.reached ? 100 : Math.max(0, Math.min(99, Math.round((best / t.weight) * 100)));
       const gym = goalGymName(clientId, t);
+      tracks = gym ? `${name} · ${gym}` : name;
       rule = `Exercise · ${name}${gym ? ` at ${gym}` : ""} · ${fmtNumber(t.weight)} × ${t.reps}${t.maxRpe != null ? ` @ ≤${t.maxRpe}` : ""}`;
       by = "ongoing";
+      pace = view.reached ? "reached" : best > 0 ? `${fmtNumber(t.weight - best)} kg off` : null;
     } else if (view.kind === "habit" && t?.kind === "habit") {
       live = `${view.segments?.done ?? 0} of ${view.segments?.total ?? 0}`;
       pct = Math.round(((view.segments?.done ?? 0) / Math.max(1, view.segments?.total ?? 1)) * 100);
       const name = getData().metric_definitions.find((m) => m.id === t.metricId)?.name ?? "Check-in";
+      tracks = name;
       rule = `Habit · ${name} ${t.op} ${t.value.toLocaleString("en-US")} · ${t.daysPerWeek} / wk`;
       by = "ongoing";
+      pace = "this week";
     }
     const meeting = goal.meeting_id ? meetingsById.get(goal.meeting_id) : undefined;
     return {
@@ -8180,6 +8304,8 @@ export function getPlanData(clientId: number) {
       setIn: meeting ? { meetingId: meeting.id, topic: meeting.topic || "Check-in call", date: meeting.date } : null,
       setDate: goal.created_at ?? null,
       by,
+      tracks,
+      pace,
       tracking: t,
     };
   });

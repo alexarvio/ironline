@@ -1,0 +1,83 @@
+/* The Messages draft: one chat box on top of the Training draft's sheet. */
+
+.rm-title-sub { font-size: 13px; font-weight: 500; letter-spacing: 0; color: #8b93a1; }
+
+/* The box: the thread fills it, the bar is docked at its foot. */
+.rm-chat { display: flex; flex-direction: column; height: calc(100dvh - 250px); min-height: 460px; overflow: hidden; }
+.rm-thread { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 16px; padding: 18px 20px; overflow-y: auto; scrollbar-width: thin; background: #f7f9fc; border-radius: 16px 16px 0 0; }
+.rm-day { display: flex; flex-direction: column; gap: 8px; }
+.rm-day-label { align-self: center; padding: 2px 0; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8b93a1; }
+.rm-bubble-row { display: flex; }
+.rm-bubble-row.mine { justify-content: flex-end; }
+.rm-bubble-row.theirs { justify-content: flex-start; }
+.rm-bubble { display: flex; flex-direction: column; gap: 5px; max-width: 68%; padding: 10px 14px; border: 1px solid #e3e7ed; border-radius: 16px 16px 16px 4px; background: #fff; }
+.rm-bubble-row.mine .rm-bubble { border-radius: 16px 16px 4px 16px; border-color: #1e3a6e; background: #1e3a6e; color: #fff; }
+.rm-bubble-row.new .rm-bubble { box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.14); }
+.rm-bubble-text { font-size: 14px; font-weight: 500; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.rm-bubble-when { font-size: 10.5px; font-weight: 700; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.rm-bubble-row.mine .rm-bubble-when { color: rgba(255, 255, 255, 0.65); }
+.rm-empty { margin: auto; padding: 24px; font-size: 13.5px; text-align: center; color: #8b93a1; }
+
+/* What a message points at. */
+.rm-link { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; height: 28px; padding: 0 6px 0 10px; border-radius: 999px; background: #e6ecf3; font-size: 12.5px; font-weight: 600; color: #1e3a6e; }
+.rm-link > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rm-link.sent { height: 24px; padding: 0 10px; font-size: 12px; align-self: flex-start; }
+.rm-bubble-row.mine .rm-link.sent { background: rgba(255, 255, 255, 0.16); color: #fff; }
+.rm-link.gone { background: #eef0f3; color: #8b93a1; }
+.rm-link.gone em { font-style: normal; font-size: 11px; color: #b3471d; }
+.rm-link-x { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 15px; line-height: 1; color: #5b6474; cursor: pointer; }
+.rm-link-x:hover { background: #fff; color: #141a24; }
+/* The Link to… dialog: areas across, a week and a search, then headed groups. */
+.rm-linkdlg { max-width: 520px; }
+.rm-linkdlg-tools { display: flex; align-items: center; gap: 8px; }
+.rm-linkdlg-tools .rd-picker.rm-week { flex: none; width: auto; min-width: 150px; height: 38px; }
+.rm-linkdlg-search { flex: 1; min-width: 0; }
+.rm-linkdlg-list { max-height: 320px; }
+.rm-linkdlg-group { display: flex; flex-direction: column; }
+.rm-linkdlg-group + .rm-linkdlg-group { margin-top: 6px; border-top: 1px solid #eceff3; padding-top: 6px; }
+.rm-linkdlg-head { font-weight: 700; }
+.rm-linkdlg-head small { letter-spacing: 0; text-transform: none; font-weight: 500; }
+.rm-linkdlg-ex { justify-content: flex-start; gap: 0; padding-left: 24px; font-weight: 500; color: #313851; }
+.rm-linkdlg-ex::before { content: ""; width: 5px; height: 5px; margin-right: 8px; border-radius: 999px; background: #c3c9d2; }
+
+/* The bar. */
+.rm-bar { flex: none; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-top: 1px solid #eceff3; background: #fff; border-radius: 0 0 16px 16px; }
+.rm-bar .rm-link { align-self: flex-start; }
+.rm-bar-row { display: flex; align-items: flex-end; gap: 8px; }
+.rm-linkbtn { width: 40px; height: 40px; flex: none; border-radius: 999px; }
+.rm-linkbtn svg { width: 17px; height: 17px; }
+.rm-linkbtn:disabled { opacity: 0.4; cursor: default; }
+.rm-box { flex: 1; min-width: 0; min-height: 40px; max-height: 140px; margin: 0; padding: 10px 14px; border: 1px solid #dfe3e8; border-radius: 20px; background: #fbfbfc; font: inherit; font-size: 14px; font-weight: 500; line-height: 1.45; color: #141a24; resize: none; overflow-y: auto; box-sizing: border-box; }
+.rm-box:focus { outline: none; border-color: #2f5d8f; background: #fff; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.12); }
+.rm-box::placeholder { color: #b0b6c0; }
+.rm-send { height: 40px; padding: 0 18px; border-radius: 20px; }
+
+/* Under a bubble: reactions on one side, the ⋯ on the other; the coach's pins at the top of the box. */
+.rm-bubble-wrap { display: flex; flex-direction: column; max-width: 68%; }
+.rm-bubble-wrap .rm-bubble { max-width: none; }
+.rm-bubble-foot { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 24px; padding: 2px 4px 0; }
+.rm-bubble-row.mine .rm-bubble-foot { flex-direction: row-reverse; }
+.rm-reacts { position: relative; display: flex; align-items: center; gap: 4px; }
+.rm-react { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; border: 1px solid #dfe3e8; border-radius: 999px; background: #fff; font: inherit; font-size: 13px; line-height: 1; }
+.rm-react.mine { border-color: #1e3a6e; background: #e6ecf3; cursor: pointer; }
+.rm-react-add { position: relative; display: inline-flex; }
+.rm-foot-btn { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: 1px solid transparent; border-radius: 999px; background: none; color: #a3aab5; cursor: pointer; opacity: 0; transition: opacity 0.12s; }
+.rm-foot-btn svg { width: 14px; height: 14px; }
+.rm-bubble-row:hover .rm-foot-btn, .rm-foot-btn[aria-expanded="true"], .rm-foot-btn[data-state="open"], .rm-foot-btn:focus-visible { opacity: 1; }
+.rm-foot-btn:hover { border-color: #dfe3e8; background: #fff; color: #1e3a6e; }
+.rm-react-row { position: absolute; bottom: calc(100% + 4px); left: 0; z-index: 4; display: flex; gap: 2px; padding: 4px; border: 1px solid #dfe3e8; border-radius: 999px; background: #fff; box-shadow: 0 8px 24px -12px rgba(8, 31, 92, 0.45); }
+.rm-bubble-row.mine .rm-react-row { left: auto; right: 0; }
+.rm-react-pick { width: 30px; height: 30px; padding: 0; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 17px; line-height: 1; cursor: pointer; }
+.rm-react-pick:hover { background: #f4f6fa; }
+.rm-react-pick.on { background: #e6ecf3; }
+.rm-edit { display: flex; flex-direction: column; gap: 6px; min-width: 260px; }
+.rm-edit-box { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 10px; background: rgba(255, 255, 255, 0.12); font: inherit; font-size: 14px; line-height: 1.45; color: #fff; resize: vertical; }
+.rm-edit-box:focus { outline: none; border-color: #fff; }
+.rm-edit-actions { display: flex; justify-content: flex-end; gap: 6px; }
+.rm-mini { height: 26px; padding: 0 10px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 999px; background: none; font: inherit; font-size: 12px; font-weight: 700; color: inherit; cursor: pointer; }
+.rm-mini.primary { background: #fff; border-color: #fff; color: #1e3a6e; }
+.rm-mini:disabled { opacity: 0.5; cursor: default; }
+.rm-pins { flex: none; display: flex; flex-direction: column; gap: 6px; max-height: 32%; overflow-y: auto; scrollbar-width: thin; padding: 12px 20px 10px; border-bottom: 1px solid #eceff3; background: #fff; border-radius: 16px 16px 0 0; }
+.rm-pins-label { font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; }
+.rm-pins .rm-bubble-wrap { max-width: 100%; }
+.rm-pins + .rm-thread { border-radius: 0; }

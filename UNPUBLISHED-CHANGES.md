@@ -938,6 +938,26 @@ Look: `/client` → Training.
 
 - [ ] `/admin/shadcn-trial/measurements` (add `?client=ID`): the phase header, tracked metrics (Accordion, Toggle Group, a ⋯ Dropdown Menu), logged data (Tabs, Table, the feed as an Accordion), the client’s notes, toasts. The client’s real data, read-only: every control answers with a toast and saves nothing. Parts live in `app/components/ui/`.
 
+## 131 · Messages are a two-way chat — LOCAL 23 Sep
+
+- [ ] **Client side**: the messages screen (Home's card, the burger menu's "Messages with Finlay", the notifications row) is now a conversation, oldest first, the coach's bubbles on the left and the client's own on the right, with a box at the foot to write back (text, or a photo / video from the paperclip). Refreshes itself every 15 seconds while open.
+- [ ] **Coach side**: the Messages tab shows the same conversation with the compose box under it; "Link to…" still points a message at one thing in the client's app. Opening the tab reads what the client wrote.
+- [ ] **A client's message is news**: it lands in the coach's Feed and the client's Home Activity under a new **Messages** filter, turns the rail's dot on, and sits under "Needs you" as "To read" with their words, until the coach opens Messages.
+- [ ] **One chat box** on the coach's tab: the thread fills the height, the bar to write in is docked at the foot (Enter sends, Shift+Enter a new line), day headings are plain text.
+- [ ] **Reactions**: either side puts one emoji on any message (👍 ❤️ 💪 🔥 👏 😂) from the smiley under the bubble; a tap on your own takes it off.
+- [ ] **After sending**, the coach's ⋯ on their own bubble: **Edit** (the client sees "edited", the notification is reworded too), **Link to… / Change the link / Remove the link**, **Pin to the top** (either side's message; the client sees "Pinned by Finlay" above their thread), **Delete** (goes from the client's Home and notifications too).
+- [ ] **Voice messages and files**, both sides: the paperclip takes a photo, video, or any file (PDF, Word, Excel, CSV, text, zip), the mic records a voice message (tap to start, tap to stop and send, Esc throws it away). A voice message plays in the bubble; a file downloads by its own name.
+- [ ] The redesign's Messages draft has all of it as a draft (toasts), with a structured **Link to…** dialog (areas across, a week picker, sessions as headed groups with their exercises under them) instead of a three-level menu.
+
+## 132 · The redesign drafts, on live for testing — 23 Sep
+
+Coach side only, at `/admin/redesign` (opens on Home; `?client=ID` picks the client). Read-only drafts on real data: every action answers with a toast and saves nothing, and each page links to "the current one" for comparing. Built from the shadcn parts (`app/components/ui/`, Tailwind loaded by their own stylesheet only), which also power the live admin's toasts and the ⋯ menus on sessions and exercises now.
+
+- [ ] **Home**: full name and photo (click to enlarge), Details dialog for member / coaching info and the coach note, the six-figure snapshot with labelled bands, Keeping up, Needs you, Activity with a Messages filter.
+- [ ] **Plan**: main goal; phases on a week grid (drag to move, edges to resize, click to edit; the track shows in the dialog); **Events** on the same grid, a bar for a period and a pin for a timestamp, categories with colours plus your own, a folded log ten a page; goals as Goal · Tracks · Live · By · Set, with "by" the end of a phase, a date, or none.
+- [ ] **Training**: the builder draft, New programme with a typed length, Add demo dialog (link or file). **Nutrition, Measurements, Progress pictures, Meetings**: as drafted earlier.
+- [ ] **Messages**: the chat box as a draft with the structured Link to… dialog.
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).

@@ -24,6 +24,7 @@ const CATEGORY_LABEL: Record<string, string> = {
   measurements: "Measurements",
   notes: "Note",
   billing: "Invoice",
+  messages: "Message",
 };
 
 // Four kinds of thing happen to a client, and the activity is read one kind
@@ -39,6 +40,7 @@ const FILTERS = [
   { id: "nutrition", label: "Nutrition", holds: ["nutrition"] },
   { id: "measurements", label: "Measurements", holds: ["measurements"] },
   { id: "invoices", label: "Invoices", holds: ["billing"] },
+  { id: "messages", label: "Messages", holds: ["messages"] },
 ] as const;
 type FilterId = (typeof FILTERS)[number]["id"];
 

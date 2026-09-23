@@ -739,10 +739,19 @@ type ChatMessage = {
   sender: "client" | "coach";
   text: string;
   media_path: string | null;
-  media_type: "image" | "video" | null;
+  /** A picture, a video, a voice message, or any other file. */
+  media_type: "image" | "video" | "audio" | "file" | null;
+  /** The file's own name, kept for a "file" so the download reads right. */
+  media_name?: string | null;
   created_at: string;
   /** What in the client's app the message is about, when the coach linked it (see messageLinks.ts). */
   link?: MessageLink | null;
+  /** One emoji from each side. */
+  reactions?: { coach?: string; client?: string };
+  /** Kept at the top of the chat by the coach. */
+  pinned?: boolean;
+  /** When the coach last reworded it; the client sees "edited". */
+  edited_at?: string | null;
 };
 
 // A log of coach-side changes worth surfacing to the client — "your coach

@@ -150,7 +150,13 @@ import {
   setMetricEntry,
   setMetricCadence,
   saveChatMedia,
+  type ChatMedia,
   sendChatMessage,
+  setChatReaction,
+  editChatMessage,
+  deleteChatMessage,
+  setChatMessageLink,
+  setChatMessagePinned,
   describeMessageLink,
   hasMealComment,
   isSessionComplete,
@@ -1663,11 +1669,11 @@ export async function sendChatMessageAction(formData: FormData) {
   const file = formData.get("file") as File | null;
   if (!clientId) return;
 
-  let media: { path: string; type: "image" | "video" } | undefined;
+  let media: ChatMedia | undefined;
   if (file && file.size > 0) {
     const buffer = Buffer.from(await file.arrayBuffer());
-    media = saveChatMedia(clientId, buffer, file.type || "image/jpeg");
-    await putUpload(media.path, buffer, file.type);
+    media = saveChatMedia(clientId, buffer, file.type || "application/octet-stream", file.name);
+    await putUpload(media.path, buffer, file.type || undefined);
   }
   if (!text && !media) return;
 
@@ -1688,6 +1694,67 @@ export async function sendChatMessageAction(formData: FormData) {
   sendChatMessage(clientId, sender, text, media, link);
   revalidatePath("/admin");
   revalidatePath("/client");
+}
+
+// A thumbs up on a message, from either side. Which side is decided by the
+// session, never by the caller; null takes the reaction off again.
+export async function reactToMessageAction(clientId: number, messageId: number, emoji: string | null) {
+  const id = await requireClientAccess(Number(clientId));
+  if (!id) return;
+  const user = await getSessionUser();
+  setChatReaction(id, Number(messageId), user?.role === "coach" ? "coach" : "client", emoji);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// ---- The coach's own messages, after sending: reword, re-point, pin, take back.
+// All coach-only; the client's side of the chat is theirs to keep.
+async function coachOn(clientId: number) {
+  const id = await requireClientAccess(Number(clientId));
+  const user = await getSessionUser();
+  return id && user?.role === "coach" ? id : null;
+}
+const bothSides = () => {
+  revalidatePath("/admin");
+  revalidatePath("/client");
+};
+
+export async function editChatMessageAction(clientId: number, messageId: number, text: string) {
+  const id = await coachOn(clientId);
+  if (!id) return;
+  editChatMessage(id, Number(messageId), String(text ?? ""));
+  bothSides();
+}
+
+export async function deleteChatMessageAction(clientId: number, messageId: number) {
+  const id = await coachOn(clientId);
+  if (!id) return;
+  deleteChatMessage(id, Number(messageId));
+  bothSides();
+}
+
+/** A link on a sent message: one that parses and the client can open, or null to take it off. */
+export async function setMessageLinkAction(clientId: number, messageId: number, raw: string | null) {
+  const id = await coachOn(clientId);
+  if (!id) return;
+  let link: MessageLink | null = null;
+  if (raw) {
+    try {
+      link = parseMessageLink(JSON.parse(raw));
+    } catch {
+      link = null;
+    }
+    if (!link || describeMessageLink(id, link).gone) return;
+  }
+  setChatMessageLink(id, Number(messageId), link);
+  bothSides();
+}
+
+export async function pinMessageAction(clientId: number, messageId: number, pinned: boolean) {
+  const id = await coachOn(clientId);
+  if (!id) return;
+  setChatMessagePinned(id, Number(messageId), !!pinned);
+  bothSides();
 }
 
 // The coach taking back a comment on a meal (a wrong meal, a typo): it goes

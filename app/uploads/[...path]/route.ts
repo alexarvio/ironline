@@ -20,6 +20,20 @@ const MIME_TYPES: Record<string, string> = {
   mov: "video/quicktime",
   webm: "video/webm",
   m4v: "video/x-m4v",
+  // Voice messages, and the files sent in the chat.
+  weba: "audio/webm",
+  m4a: "audio/mp4",
+  mp3: "audio/mpeg",
+  ogg: "audio/ogg",
+  wav: "audio/wav",
+  pdf: "application/pdf",
+  txt: "text/plain",
+  csv: "text/csv",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  zip: "application/zip",
 };
 
 export async function GET(

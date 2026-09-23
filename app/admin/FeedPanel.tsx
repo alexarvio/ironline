@@ -15,6 +15,7 @@ const FILTERS = [
   { id: "nutrition", label: "Nutrition", holds: ["nutrition"] },
   { id: "measurements", label: "Measurements", holds: ["measurements"] },
   { id: "invoices", label: "Invoices", holds: ["billing"] },
+  { id: "messages", label: "Messages", holds: ["messages"] },
 ] as const satisfies readonly { id: string; label: string; holds: readonly FeedCategory[] }[];
 type FilterId = (typeof FILTERS)[number]["id"];
 
@@ -24,6 +25,7 @@ const CATEGORY_LABEL: Record<FeedCategory, string> = {
   measurements: "Measurements",
   notes: "Note",
   billing: "Invoice",
+  messages: "Message",
 };
 
 // One screenful. Fifteen rows across two or three day headings is what fits

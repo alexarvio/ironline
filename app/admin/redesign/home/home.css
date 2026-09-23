@@ -1,0 +1,104 @@
+/* The Home draft: what it adds on top of the Training draft's sheet. */
+
+.rh-title { gap: 14px; }
+.rh-avatar { flex: none; padding: 0; border: 0; cursor: pointer; font: inherit; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 999px; overflow: hidden; background: #e6ecf3; color: #1e3a6e; font-size: 18px; font-weight: 800; }
+.rh-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.rh-avatar:disabled { cursor: default; }
+.rh-avatar:not(:disabled):hover { box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.18); }
+.rh-since { font-size: 12.5px; font-weight: 500; letter-spacing: 0; color: #8b93a1; }
+
+.rh-cols { display: block; }
+.rh-main { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+
+.rh-glance { padding-bottom: 0; overflow: hidden; }
+.rh-stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+@media (max-width: 900px) { .rh-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* Each figure like a meeting's date chip: the name on a band of its own, a line under it, then the figure. */
+.rh-stat { display: flex; flex-direction: column; border-left: 1px solid #eceff3; }
+.rh-stat:first-child { border-left: 0; }
+.rh-stat-label { padding: 8px 16px; border-bottom: 1px solid #eceff3; background: #fff; font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rh-stat:first-child .rh-stat-label { padding-left: 24px; }
+.rh-stat-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 12px 16px 14px; }
+.rh-stat:first-child .rh-stat-body { padding-left: 24px; }
+.rh-stat-body b { font-size: 21px; font-weight: 700; letter-spacing: -0.01em; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rh-stat-body b.warn { color: #b3471d; }
+.rh-stat-body small { font-size: 12px; font-weight: 500; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Keeping up: the dial and the three rows beside it. */
+.rh-board { display: grid; grid-template-columns: 176px minmax(0, 1fr); gap: 8px 24px; padding: 6px 24px 20px; align-items: center; }
+@media (max-width: 760px) { .rh-board { grid-template-columns: 1fr; } }
+.rh-score { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.rh-dial { position: relative; }
+.rh-dial-arc { stroke: #1e3a6e; }
+.rh-dial-arc.good { stroke: #1b7a4b; }
+.rh-dial-arc.mid { stroke: #c7861a; }
+.rh-dial-arc.low { stroke: #b3471d; }
+.rh-dial-figure { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 700; letter-spacing: -0.02em; color: #141a24; font-variant-numeric: tabular-nums; }
+.rh-dial-figure small { font-size: 14px; font-weight: 600; color: #8b93a1; margin-left: 1px; }
+.rh-score-word { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #5b6474; }
+.rh-trend { font-size: 11.5px; font-weight: 600; text-align: center; }
+.rh-trend.up { color: #1b7a4b; }
+.rh-trend.down { color: #b3471d; }
+.rh-trend.flat { color: #8b93a1; font-weight: 500; }
+.rh-rows { display: flex; flex-direction: column; gap: 12px; }
+.rh-score-row { display: grid; grid-template-columns: 110px 44px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 12px; align-items: center; }
+.rh-score-name { font-size: 13.5px; font-weight: 700; color: #141a24; }
+.rh-score-pct { font-size: 13.5px; font-weight: 700; color: #141a24; text-align: right; font-variant-numeric: tabular-nums; }
+.rh-score-track { display: block; height: 7px; border-radius: 999px; background: #eceff3; overflow: hidden; }
+.rh-score-fill { display: block; height: 100%; border-radius: 999px; background: #1e3a6e; }
+.rh-score-fill.good { background: #1b7a4b; }
+.rh-score-fill.mid { background: #c7861a; }
+.rh-score-fill.low { background: #b3471d; }
+.rh-score-detail { grid-column: 3; font-size: 12px; font-weight: 500; color: #8b93a1; }
+.rh-score-detail em { font-style: normal; margin-left: 8px; color: #5b6474; }
+
+/* Needs you and Activity: rows that lead somewhere. */
+.rh-row { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; column-gap: 14px; align-items: center; }
+.rh-row.static { cursor: default; }
+.rh-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rh-row-main b { font-size: 14px; font-weight: 600; color: #141a24; }
+.rh-row-main small { font-size: 12.5px; font-weight: 500; color: #8b93a1; }
+.rh-row-main small.quote { font-style: italic; color: #5b6474; }
+.rh-tone, .rh-cat { box-sizing: border-box; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #eef0f3; color: #5b6474; }
+.rh-tone.due { background: #fbeee6; color: #a8501f; }
+.rh-tone.urgent { background: #fbeaea; color: #a32d2d; }
+.rh-tone.note { background: #fff3dc; color: #8a5a12; }
+.rh-cat.training { background: #e9e7fa; color: #4c42a8; }
+.rh-cat.nutrition { background: #e0efe7; color: #1f6a52; }
+.rh-cat.measurements { background: #e6ecf3; color: #1e3a6e; }
+.rh-cat.notes { background: #fff3dc; color: #8a5a12; }
+.rh-when { font-size: 12px; font-weight: 500; color: #8b93a1; white-space: nowrap; }
+.rh-empty { margin: 0; padding: 4px 24px 18px; font-size: 13.5px; color: #8b93a1; }
+.rh-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 24px 14px; }
+.rh-pager { display: inline-flex; align-items: center; gap: 4px; }
+.rh-pager-at { font-size: 12px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
+.rh-pager .next svg { transform: rotate(180deg); }
+
+/* The rail: facts and the note. */
+.rh-info { padding-bottom: 10px; }
+.rh-edit { font-size: 12.5px; font-weight: 600; letter-spacing: 0; text-transform: none; color: #2f5d8f; }
+.rh-info-rows { margin: 0; padding: 0 24px 6px; }
+.rh-info-row { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; padding: 8px 0; border-top: 1px solid #eceff3; font-size: 13px; }
+.rh-info-row:first-child { border-top: 0; }
+.rh-info-row dt { margin: 0; font-weight: 500; color: #8b93a1; }
+.rh-info-row dd { margin: 0; font-weight: 600; color: #141a24; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rh-info-row dd.good { color: #1b7a4b; }
+.rh-info-row dd.empty { color: #c3c9d2; font-weight: 500; }
+.rh-note { margin: 0; padding: 2px 24px 10px; font-size: 13.5px; line-height: 1.55; color: #313851; white-space: pre-wrap; }
+.rh-note.empty { color: #8b93a1; }
+.rh-note-edit { display: flex; flex-direction: column; gap: 8px; padding: 2px 24px 10px; }
+.rh-note-box { width: 100%; padding: 10px 12px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; font: inherit; font-size: 13.5px; font-weight: 500; line-height: 1.5; color: #141a24; resize: vertical; box-sizing: border-box; }
+.rh-note-box:focus { outline: none; border-color: #2f5d8f; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.12); }
+.rh-note-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* The details dialog: the three rail cards, stacked. */
+.rh-dlg { max-width: 560px; }
+.rh-dlg-body { display: flex; flex-direction: column; gap: 12px; max-height: 70vh; overflow-y: auto; scrollbar-width: thin; }
+.rh-dlg .rd-session.open { box-shadow: none; border: 1px solid #eceff3; }
+.rh-dlg .rn-card-head { padding-left: 18px; }
+.rh-dlg .rh-info-rows, .rh-dlg .rh-note, .rh-dlg .rh-note-edit { padding-left: 18px; padding-right: 18px; }
+
+/* The photo, large. */
+.rh-photodlg { max-width: 520px; padding: 8px; }
+.rh-photo { display: block; width: 100%; height: auto; max-height: 80vh; object-fit: contain; border-radius: 12px; }
+.rh-cat.messages { background: #e3f0fb; color: #1d5a94; }

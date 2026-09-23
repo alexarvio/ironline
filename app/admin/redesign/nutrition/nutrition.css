@@ -1,0 +1,118 @@
+/* The Nutrition draft: what it adds on top of the Training draft's sheet.
+   Cards, rows, cells and dialogs are the rd-* ones; this only names what
+   nutrition has and training does not. */
+
+.rn-card { padding-bottom: 2px; }
+.rn-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 14px 6px 24px; }
+.rn-card-head h2 { margin: 0; font-size: 15px; font-weight: 700; color: #141a24; }
+.rn-card-head h2 span { font-size: 12.5px; font-weight: 500; color: #8b93a1; }
+
+/* A figure with its unit tucked after it; the unit only once there is a figure. */
+.rn-box { position: relative; flex-direction: row; align-items: center; justify-content: flex-start; gap: 0; }
+.rn-box .rd-cell-box { max-width: 82px; }
+.rn-box em { margin-left: -2px; font-size: 12px; font-style: normal; font-weight: 500; color: #8b93a1; pointer-events: none; }
+.rn-box.strong .rd-cell-box { font-weight: 700; }
+.rn-box.quiet .rd-cell-box { font-weight: 500; color: #5b6474; }
+.rn-wide .rn-box .rd-cell-box { max-width: none; }
+/* The targets card in two: the ring(s) on the left, the figures on the right. */
+.rn-targets { display: grid; grid-template-columns: minmax(200px, 0.9fr) minmax(420px, 1.6fr); gap: 12px 28px; align-items: start; padding-top: 4px; }
+.rn-rings { display: flex; justify-content: center; gap: 18px; align-self: center; padding: 8px 0 12px; }
+.rn-ring { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.rn-ring-dial { position: relative; width: 168px; height: 168px; }
+.rn-ring-dial svg { display: block; width: 100%; height: 100%; transform: rotate(-90deg); }
+.rn-ring-track { fill: none; stroke: #eceff3; stroke-width: 11; }
+.rn-ring-arc { fill: none; stroke-width: 11; transition: stroke-dasharray 0.35s ease, stroke-dashoffset 0.35s ease; }
+.rn-ring-arc.p { stroke: var(--macro-protein); }
+.rn-ring-arc.c { stroke: var(--macro-carbs); }
+.rn-ring-arc.f { stroke: var(--macro-fat); }
+.rn-ring-kcal { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; }
+.rn-ring-kcal b { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; color: #141a24; font-variant-numeric: tabular-nums; }
+.rn-ring-kcal small { margin-top: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; }
+.rn-ring-label { font-size: 13px; font-weight: 700; color: #141a24; }
+.rn-ring-legend { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
+.rn-ring-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 999px; margin-left: 5px; }
+.rn-ring-legend i:first-child { margin-left: 0; }
+.rn-ring-legend i.p { background: var(--macro-protein); }
+.rn-ring-legend i.c { background: var(--macro-carbs); }
+.rn-ring-legend i.f { background: var(--macro-fat); }
+.rn-tside { display: flex; flex-direction: column; min-width: 0; }
+.rn-daypick { display: flex; align-items: center; gap: 16px; margin: 0 0 10px; min-height: 32px; }
+.rn-daypick .rd-tick { font-size: 12.5px; font-weight: 600; color: #5b6474; }
+.rn-tside .rd-cols { padding-left: 10px; }
+.rn-tside .rd-cols .p { color: var(--macro-protein); }
+.rn-tside .rd-cols .c { color: var(--macro-carbs); }
+.rn-tside .rd-cols .f { color: var(--macro-fat); }
+.rn-span2 { grid-column: span 2; white-space: nowrap; }
+/* The coach's note on the targets, behind the chat icon; a dot once there is one. */
+.rn-notebtn { position: relative; margin-left: auto; color: #5b6474; }
+.rn-notebtn svg { width: 16px; height: 16px; }
+.rn-notebtn.has { color: #1e3a6e; }
+.rn-notebtn.has::after { content: ""; position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 999px; background: #1b7a4b; box-shadow: 0 0 0 2px #fff; }
+@media (max-width: 900px) { .rn-targets { grid-template-columns: 1fr; } }
+
+/* Protein · carbs · fat, as one line split by the kcal each brings. */
+.rn-split { display: flex; width: 100%; height: 8px; border-radius: 999px; overflow: hidden; background: #eceff3; }
+.rn-split i { display: block; height: 100%; }
+.rn-split i.p { background: var(--macro-protein); }
+.rn-split i.c { background: var(--macro-carbs); }
+.rn-split i.f { background: var(--macro-fat); }
+.rn-macros { display: flex; align-items: center; min-width: 0; }
+
+/* "+ Add item": the session pill, inside the card. */
+.rn-additem { display: block; width: 100%; margin: 8px 0 10px; padding: 12px; border-radius: 12px; }
+
+/* The four figures over the log. */
+.rn-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 8px 14px 14px; }
+.rn-stats > div { display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-radius: 12px; background: #f4f7fc; }
+.rn-stats small { font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; }
+.rn-stats b { font-size: 22px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; }
+.rn-stats b.warn { color: #b3471d; }
+.rn-stats span { font-size: 12px; color: #5b6474; }
+
+/* One row a day; the row itself opens the day. */
+.rn-day .rd-row-main { border-radius: 10px; }
+.rn-day.open > .rd-row-main { background: #fafbfd; }
+.rn-day > .rd-row-main:focus { outline: none; }
+.rn-day > .rd-row-main:focus-visible { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #c9d5e6; }
+.rn-vs { font-size: 12.5px; white-space: nowrap; }
+.rn-vs.up { background: #dff3ea; color: #1b7a4b; }
+.rn-vs.down { background: #fdf3ee; color: #b3471d; }
+.rd-pill.quiet { background: #eceff3; color: #5b6474; }
+
+/* The day open: its meals, each with its foods under it. */
+/* The same side padding as the day row over it, so the meal grid's edges are the row's. */
+.rn-meals { display: flex; flex-direction: column; padding: 2px 4px 12px 10px; }
+.rn-mcols { padding-left: 0; padding-right: 0; }
+.rn-mcols .p { color: var(--macro-protein); }
+.rn-mcols .c { color: var(--macro-carbs); }
+.rn-mcols .f { color: var(--macro-fat); }
+.rn-meal { border-top: 1px solid #eceff3; padding: 6px 0 8px; }
+.rn-meal-head, .rn-food { display: grid; gap: 12px; align-items: center; }
+.rn-meal-head { padding: 6px 0; }
+.rn-meal-head .rd-num { font-size: 13.5px; }
+.rn-meal-name { font-size: 14px; font-weight: 700; color: #141a24; }
+.rn-food { padding: 3px 0; font-size: 12.5px; color: #5b6474; font-variant-numeric: tabular-nums; }
+.rn-food-name { display: flex; flex-direction: column; color: #313851; font-weight: 500; min-width: 0; }
+.rn-food-name small { font-size: 11px; color: #8b93a1; }
+.rn-shot { color: #2f5d8f; }
+.rn-shot.said::after { content: ""; position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 999px; background: #1b7a4b; box-shadow: 0 0 0 2px #fff; }
+.rd-row-more .rn-shot { position: relative; }
+/* Its text starts where the meal's name does and ends where the fat figure
+   does: the box's own padding hangs into the gutters on both sides. */
+.rn-said { margin: 6px 32px 0 20px; padding: 8px 12px; border-radius: 10px; background: #f1f6fd; font-size: 12.5px; line-height: 1.5; color: #313851; white-space: pre-wrap; }
+.rn-said b { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #1e3a6e; margin-bottom: 2px; }
+
+/* The foot of the log: the count, and the pages once there are more than twenty days. */
+.rn-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 10px 2px; font-size: 12.5px; color: #8b93a1; }
+.rn-pager { display: flex; align-items: center; gap: 2px; }
+.rn-pager .rd-btn.ghost.sm { font-size: 12.5px; font-weight: 700; color: #5b6474; }
+.rn-pager .rd-btn.ghost.sm.on { background: #1e3a6e; color: #fff; }
+.rn-pager .rd-btn:disabled { opacity: 0.35; cursor: default; }
+.rn-pager .rn-next svg { transform: rotate(180deg); }
+.rn-gap { padding: 0 4px; color: #b0b6c0; }
+
+/* The picture of one meal, with the coach's comment under it. */
+.rn-shotdlg { max-width: 560px; }
+.rn-shotimg { display: block; width: 100%; max-height: 380px; object-fit: contain; border-radius: 12px; background: #0b0f16; }
+.rn-saidlist { display: flex; flex-direction: column; gap: 6px; }
+.rn-saidlist .rn-said { margin-left: 0; }

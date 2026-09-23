@@ -1,0 +1,82 @@
+/* The Progress pictures draft: what it adds on top of the Training draft's sheet. */
+
+/* Sheet setup: when sheets open, and how to take them. */
+.rp-when { display: flex; flex-direction: column; gap: 10px; padding: 4px 10px 14px; }
+.rp-when-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.rp-word { font-size: 13.5px; font-weight: 600; color: #313851; }
+.rp-date { width: 210px; height: 34px; }
+.rp-how { display: flex; flex-direction: column; gap: 2px; }
+.rp-how-label, .rp-notes-label { display: block; padding: 6px 0 4px; }
+.rp-instructions { width: 100%; max-width: none; margin-left: 0; height: auto; min-height: 38px; padding: 8px 10px; border-color: #dfe3e8; background: #fff; font-size: 13.5px; font-weight: 500; line-height: 1.45; resize: vertical; }
+
+/* The sheet rows: one dot an angle, filled once its photo is in. */
+.rp-dots { display: flex; align-items: center; gap: 4px; }
+.rp-dots i { display: block; width: 8px; height: 8px; border-radius: 999px; border: 1px solid #c3c9d2; }
+.rp-dots i.on { background: #1b7a4b; border-color: #1b7a4b; }
+.rp-delta { display: block; font-size: 11px; font-weight: 600; color: #8b93a1; }
+.rp-delta.down { color: #1b7a4b; }
+.rp-delta.up { color: #b3471d; }
+.rp-phases { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.rp-phases .rd-pill { font-size: 11px; padding: 2px 9px; }
+
+/* An open sheet: its photos, then the notes. */
+.rp-body { display: flex; flex-direction: column; gap: 14px; padding: 4px 10px 14px 42px; }
+.rp-shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.rp-shot { display: flex; flex-direction: column; gap: 6px; padding: 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; }
+.rp-shot:disabled { cursor: default; }
+.rp-shot img, .rp-hole { display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 12px; background: #eceff3; }
+.rp-shot img { transition: transform 0.15s; }
+.rp-shot:hover:not(:disabled) img { transform: scale(1.02); box-shadow: 0 8px 24px -14px rgba(8, 31, 92, 0.5); }
+.rp-hole { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 600; color: #8b93a1; border: 1px dashed #c3c9d2; background: transparent; }
+.rp-hole svg { width: 18px; height: 18px; }
+.rp-shot-cap { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.rp-shot-cap b { font-size: 13px; font-weight: 700; color: #141a24; }
+.rp-shot-cap small { font-size: 11.5px; color: #8b93a1; }
+.rp-notes { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 12px; background: #f4f7fc; }
+.rp-notes-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.rp-notes-head .rp-notes-label { padding: 0; }
+.rp-notes-tools { display: flex; align-items: center; gap: 8px; }
+.rp-saved { font-size: 12px; font-weight: 600; color: #1b7a4b; }
+.rp-notes-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.rp-notes-grid textarea { background: #fff; }
+.rp-note-read { margin: 0; font-size: 13.5px; font-weight: 500; line-height: 1.5; letter-spacing: 0; text-transform: none; color: #313851; white-space: pre-wrap; }
+.rp-note-read.empty { color: #b0b6c0; }
+@media (max-width: 1100px) { .rp-notes-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* One photo big. */
+.rp-photodlg { max-width: 720px; }
+.rp-big { position: relative; }
+.rp-big img { display: block; width: 100%; max-height: 62vh; object-fit: contain; border-radius: 12px; background: #0b0f16; }
+.rp-arrow { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255, 255, 255, 0.9); color: #141a24; }
+.rp-arrow.left { left: 10px; }
+.rp-arrow.right { right: 10px; }
+.rp-arrow.right svg { transform: rotate(180deg); }
+.rp-arrow:hover { background: #fff; }
+.rp-strip { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
+.rp-mini { display: flex; flex: none; flex-direction: column; gap: 3px; width: 64px; padding: 0; border: 0; background: none; font: inherit; cursor: pointer; }
+.rp-mini img { display: block; width: 64px; height: 84px; object-fit: cover; border-radius: 8px; border: 2px solid transparent; }
+.rp-mini.on img { border-color: #1e3a6e; }
+.rp-mini small { font-size: 10.5px; font-weight: 600; color: #5b6474; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Compare: two sheets side by side. */
+.rp-compare { display: flex; flex-direction: column; gap: 14px; padding: 4px 14px 14px; }
+.rp-compare-tools { display: flex; flex-direction: column; gap: 10px; }
+.rp-compare-picks { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.rp-menu-date { margin-left: auto; color: #8b93a1; font-weight: 500; }
+.rp-pair { display: flex; justify-content: center; gap: 16px; }
+.rp-pair-side { flex: 1 1 0; min-width: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.rp-pair-frame { display: block; width: 100%; aspect-ratio: 3 / 4; border-radius: 14px; overflow: hidden; background: #eceff3; }
+.rp-pair-frame img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.rp-pair-side figcaption { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 0 4px; }
+.rp-pair-frame.rp-hole { display: flex; }
+.rp-pair-side figcaption b { font-size: 14px; font-weight: 700; color: #141a24; }
+.rp-pair-side figcaption.accent b { color: #1e3a6e; }
+.rp-pair-side figcaption small { font-size: 12.5px; font-weight: 500; color: #5b6474; white-space: nowrap; }
+.rp-custom { display: inline-flex; align-items: center; gap: 8px; }
+.rp-weeks { width: 64px; max-width: none; margin-left: 0; height: 38px; border-color: #dfe3e8; background: #fff; font-size: 13.5px; text-align: center; }
+.rp-when-row .rd-picker { flex: 0 0 150px; }
+.rp-dots i { width: 10px; height: 10px; }
+/* Compare: the angles on the left, the size at the far right. */
+.rp-compare-picks .rd-btn-group:last-child:not(:first-child) { margin-left: auto; }
+.rp-bar { margin: 4px -14px -12px; border-radius: 0 0 12px 12px; }
+.pb-menu [data-slot="dropdown-menu-item"].on { background: #e6ecf3; color: #1e3a6e; }

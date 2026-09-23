@@ -1,0 +1,65 @@
+/* The redesign's left rail, and the two-column frame it sits in. The rail is
+   a full-height column of its own; only its client list scrolls. */
+
+.rd-frame { display: grid; grid-template-columns: 252px minmax(0, 1fr); min-height: 100vh; background: #f4f7fc; font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; }
+.rd-frame > .rd-page { min-height: 0; }
+
+.rr { position: sticky; top: 0; display: flex; flex-direction: column; height: 100vh; background: #fff; border-right: 1px solid #e6eaf0; }
+
+.rr-brand { flex: none; display: flex; align-items: center; gap: 10px; padding: 16px 16px 14px; }
+.rr-mark { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 10px; background: #1e3a6e; }
+.rr-mark img { height: 15px; width: auto; display: block; filter: brightness(0) invert(1); }
+.rr-brand-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.rr-brand-text b { font-size: 13.5px; font-weight: 800; color: #141a24; }
+.rr-brand-text small { font-size: 10.5px; font-weight: 600; color: #8b93a1; }
+
+.rr-nav { flex: none; display: flex; flex-direction: column; gap: 2px; padding: 4px 10px 10px; }
+.rr-navrow { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 13px; font-weight: 700; color: #313851; text-align: left; cursor: pointer; }
+.rr-navrow svg { width: 16px; height: 16px; flex: none; color: #5b6474; }
+.rr-navrow span { flex: 1; min-width: 0; }
+.rr-navrow:hover { background: #f4f6fa; color: #141a24; }
+.rr-navrow.active { background: #e6ecf3; color: #1e3a6e; }
+.rr-navrow.active svg { color: #1e3a6e; }
+.rr-badge { flex: none; padding: 1px 7px; border-radius: 999px; background: #fdf3ee; color: #b3471d; font-size: 10.5px; font-style: normal; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+.rr-clients { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 12px 10px 10px; border-top: 1px solid #eceff3; }
+.rr-clients-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 0 4px 8px; }
+.rr-label { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #8b93a1; }
+.rr-count { font-size: 11px; font-weight: 700; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.rr-search { flex: none; display: flex; align-items: center; gap: 7px; padding: 0 10px; height: 34px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; }
+.rr-search:focus-within { border-color: #2f5d8f; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.12); }
+.rr-search svg { width: 13px; height: 13px; flex: none; color: #8b93a1; }
+.rr-search input { flex: 1; min-width: 0; border: 0; padding: 0; background: none; outline: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #141a24; }
+.rr-search input::placeholder { color: #8b93a1; font-weight: 500; }
+.rr-filter { flex: none; display: flex; gap: 2px; margin: 8px 0; padding: 3px; border-radius: 999px; background: #eef0f3; }
+.rr-filter button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 26px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 12px; font-weight: 700; color: #5b6474; cursor: pointer; }
+.rr-filter button.on { background: #fff; color: #1e3a6e; box-shadow: 0 1px 2px rgba(20, 26, 36, 0.08); }
+.rr-filter small { font-size: 10px; font-weight: 800; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.rr-filter button.on small { color: #b3471d; }
+
+/* The one part that scrolls; a thin bar rather than none, so the length shows. */
+.rr-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; margin: 0 -4px; padding: 0 4px; scrollbar-width: thin; scrollbar-color: #dfe3e8 transparent; }
+.rr-row { display: flex; align-items: center; gap: 9px; padding: 7px 8px; border-radius: 10px; text-decoration: none; color: inherit; }
+.rr-row:hover { background: #f4f6fa; }
+.rr-row.active { background: #e6ecf3; }
+.rr-avatar { flex: none; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; overflow: hidden; border-radius: 999px; background: #eef0f3; color: #1e3a6e; font-size: 12px; font-weight: 800; }
+.rr-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.rr-row.active .rr-avatar { background: #1e3a6e; color: #fff; }
+/* Amber ring: hasn't signed in to the app themselves yet. */
+.rr-avatar.pending { box-shadow: 0 0 0 1.5px #e0a87f; }
+.rr-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: #313851; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rr-row.active .rr-name { font-weight: 800; color: #141a24; }
+.rr-dot { flex: none; width: 6px; height: 6px; border-radius: 999px; background: #b3471d; }
+.rr-empty { margin: 8px 4px; font-size: 12.5px; color: #8b93a1; }
+.rr-new { flex: none; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 8px; padding: 9px; border: 1px dashed #c3c9d2; border-radius: 10px; background: none; font: inherit; font-size: 12.5px; font-weight: 700; color: #5b6474; cursor: pointer; }
+.rr-new svg { width: 14px; height: 14px; }
+.rr-new:hover { border-color: #8b93a1; color: #141a24; }
+
+.rr-coach { flex: none; display: flex; align-items: center; gap: 9px; padding: 10px 10px 10px 14px; border-top: 1px solid #eceff3; }
+.rr-coach-avatar { flex: none; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; overflow: hidden; border-radius: 999px; background: #e6ecf3; color: #1e3a6e; font-size: 12px; font-weight: 800; }
+.rr-coach-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.rr-coach-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.rr-coach-text b { font-size: 12.5px; font-weight: 800; color: #141a24; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rr-coach-text small { font-size: 10.5px; font-weight: 600; color: #8b93a1; }
+.rr-coach .rd-btn.ghost svg { width: 16px; height: 16px; }
+.pb-menu a { display: flex; align-items: center; gap: 9px; color: inherit; text-decoration: none; }
