@@ -58,6 +58,11 @@ type ProgramDay = {
   // work trip…), in their own words. Absent or empty means nothing was said.
   skip_reason?: string;
   skip_reason_at?: string;
+  // The client's session on the app: when they opened it to train and when
+  // they pressed "End session". Absent until they do; ended sets the
+  // session's duration for the row and the coach.
+  session_started_at?: string;
+  session_ended_at?: string;
 };
 // A multi-week training program — the coach picks a name and a length
 // (total_weeks) up front; program_days for weeks [start_week, start_week +

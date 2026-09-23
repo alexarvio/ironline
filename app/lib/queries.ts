@@ -50,6 +50,8 @@ export type ProgramDay = {
   is_rest?: boolean;
   skip_reason?: string;
   skip_reason_at?: string;
+  session_started_at?: string;
+  session_ended_at?: string;
 };
 export type WorkoutAssignment = {
   id: number;
@@ -7231,6 +7233,27 @@ export function setWarmupSets(assignmentId: number, sets: { weight_kg: number | 
     .filter((s) => s.weight_kg != null || s.reps != null);
   if (clean.length) wa.warmup_sets = clean;
   else delete wa.warmup_sets;
+  persist();
+}
+
+/** The client opened the session to train: its clock starts. Kept from the
+    first opening, so coming back later carries on the same session. */
+export function startSession(programDayId: number, at: string) {
+  const data = getData();
+  const day = data.program_days.find((pd) => pd.id === programDayId);
+  if (!day || day.session_started_at) return;
+  day.session_started_at = at;
+  delete day.session_ended_at;
+  persist();
+}
+
+/** The client pressed "End session". */
+export function endSession(programDayId: number, at: string) {
+  const data = getData();
+  const day = data.program_days.find((pd) => pd.id === programDayId);
+  if (!day) return;
+  if (!day.session_started_at) day.session_started_at = at;
+  day.session_ended_at = at;
   persist();
 }
 

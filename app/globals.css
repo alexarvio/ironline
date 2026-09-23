@@ -16056,3 +16056,28 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .hm-measure-tick svg { width: 14px; height: 14px; }
 .hm-measure-row-title { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 800; color: #1e3a6e; }
 .hm-measure-chev { flex: none; display: flex; color: #1e3a6e; transform: rotate(-90deg); }
+
+/* ---- The workout session, as its own screen over the app (client). Opened
+   from a session row on the Training tab; the row stays behind it. A clock
+   runs from the first opening until the client presses "End session". ---- */
+.ws-screen { --font-sans: var(--font-archivo), "Archivo", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, sans-serif; position: relative; gap: 14px; padding: max(64px, calc(env(safe-area-inset-top, 0px) + 20px)) 20px 0; background: #F4F7FC; color: #313851; font-family: var(--font-sans); }
+.ws-head { flex-shrink: 0; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.ws-head-titles { min-width: 0; text-align: center; }
+.ws-title { margin: 0; font-size: 20px; font-weight: 700; line-height: 1.15; letter-spacing: -0.01em; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ws-head-pill { justify-self: end; }
+/* The clock: dark card, big tabular figures, a small "going" light beside it. */
+.ws-timer { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-radius: 18px; background: #141a24; color: #fff; }
+.ws-timer-kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); }
+.ws-timer-value { margin-top: 4px; font-size: 36px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.ws-timer-state { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); font-size: 13px; font-weight: 700; color: #fff; }
+.ws-timer-state.done { background: #DFF3EA; color: #2f7a3f; }
+.ws-timer-dot { width: 8px; height: 8px; border-radius: 999px; background: #7fd68f; animation: ws-pulse 1.4s ease-in-out infinite; }
+@keyframes ws-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.ws-timer.ended { background: #1e3a6e; }
+/* The exercises run to the screen edges under the dock. */
+.ws-scroll { flex: 1; min-height: 0; margin: 0 -20px; padding: 0 20px 130px; overflow-y: auto; scrollbar-width: none; }
+.ws-scroll::-webkit-scrollbar { display: none; }
+.ws-end { background: #1e3a6e; }
+/* The row on the Training tab points into the screen. */
+.tr-chev.right { transform: rotate(-45deg); }
+@media (prefers-reduced-motion: reduce) { .ws-timer-dot { animation: none; } }

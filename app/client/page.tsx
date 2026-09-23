@@ -508,6 +508,8 @@ function TrainingTab({ CLIENT_ID, week, showMyNotes }: { CLIENT_ID: number; week
                 title: day.label || `Session ${i + 1}`,
                 defaultOpen: i === firstOpenIndex,
                 skipReason: day.skip_reason ?? "",
+                startedAt: day.session_started_at ?? null,
+                endedAt: day.session_ended_at ?? null,
                 cardio: listCardioForDay(day.id).map((c) => ({ id: c.id, name: c.name, time: c.time, pace: c.pace, incline: c.incline, distance: c.distance ?? "", notes: c.notes, done: isCardioDone(c.id) })),
                 exercises: assignments.map((a) => ({
                   id: a.id,

@@ -2,11 +2,11 @@
 
 import { ReactNode, useEffect, useId, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { logSetAction, pickGymAction, saveExerciseNoteAction, saveSkipReasonAction, saveWarmupSetsAction, setCardioDoneAction, updateSetAction } from "../lib/actions";
+import { endSessionAction, logSetAction, pickGymAction, saveExerciseNoteAction, saveSkipReasonAction, saveWarmupSetsAction, setCardioDoneAction, startSessionAction, updateSetAction } from "../lib/actions";
 import ExerciseCoachNote from "./ExerciseCoachNote";
 import GymPicker, { type GymOption } from "./GymPicker";
 import VideoAskButton, { VideoGlyph, type VideoAsk } from "./VideoAskSheet";
-import { ChevronDownIcon } from "../components/icons";
+import { ChevronDownIcon, ChevronLeftIcon } from "../components/icons";
 
 // One training day, logged in focus mode: one exercise open at a time,
 // every planned set visible, one active row to type into and one button
@@ -109,6 +109,24 @@ const loggedCount = (ex: SessionExercise) => Array.from({ length: ex.sets }, (_,
 const isDone = (ex: SessionExercise) => nextMissing(ex) > ex.sets;
 const firstUnfinished = (list: SessionExercise[]) => list.find((ex) => !isDone(ex))?.id ?? null;
 
+// The session's clock, as it ticks: m:ss under an hour, h:mm:ss after.
+function clock(ms: number) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}` : `${m}:${String(sec).padStart(2, "0")}`;
+}
+// A finished session's length, for its row: "47 min", "1 h 12 min".
+function durationLabel(ms: number) {
+  const m = Math.max(0, Math.round(ms / 60000));
+  if (m < 1) return "under a minute";
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  const rest = m % 60;
+  return rest ? `${h} h ${rest} min` : `${h} h`;
+}
+
 export default function TrainingDaySession({
   title,
   dayId,
@@ -117,6 +135,8 @@ export default function TrainingDaySession({
   exercises: baseExercises,
   cardio = [],
   skipReason = "",
+  startedAt: savedStartedAt = null,
+  endedAt: savedEndedAt = null,
   open,
   onToggle,
   focusExercise = null,
@@ -135,7 +155,10 @@ export default function TrainingDaySession({
   cardio?: SessionCardio[];
   /** Why the client could not do this session, if they said. */
   skipReason?: string;
-  /** Owned by TrainingDayList so only one day is open at a time. */
+  /** When the client opened this session to train, and when they ended it. */
+  startedAt?: string | null;
+  endedAt?: string | null;
+  /** Owned by TrainingDayList so only one session screen is open at a time. */
   open: boolean;
   onToggle: () => void;
   /** Its place in the week. */
@@ -169,57 +192,74 @@ export default function TrainingDaySession({
 
   const planned = exercises.reduce((s, ex) => s + ex.sets, 0);
   const logged = exercises.reduce((s, ex) => s + loggedCount(ex), 0);
-  const dayDone = exercises.length + cardio.length > 0 && exercises.every(isDone) && cardio.every((c) => c.done);
+  const allLogged = exercises.length + cardio.length > 0 && exercises.every(isDone) && cardio.every((c) => c.done);
 
-  // The last set or cardio of the day landing: a short "Workout complete"
-  // moment, then the day folds itself away. Only on the change itself, so
-  // opening a day that was already finished does not replay it. The timer
-  // hangs off `celebrating` alone: saving refreshes the page data a moment
-  // later, and a wider dependency list would cancel it.
+  // The session's clock. It starts the first time the screen opens and is
+  // saved on the session, so a reload or a later visit carries on from the
+  // same moment; it stops when the client presses "End session". Both
+  // stamps are kept here first so the clock moves before the server answers,
+  // and the server's stamp takes over once it arrives.
+  const [localStart, setLocalStart] = useState<string | null>(null);
+  const [localEnd, setLocalEnd] = useState<string | null>(null);
+  const startedAt = savedStartedAt ?? localStart;
+  const endedAt = savedEndedAt ?? localEnd;
+  const ended = endedAt != null;
+  const dayDone = ended || allLogged;
+  const [, startTransition] = useTransition();
+  useEffect(() => {
+    if (!open || startedAt || ended || allLogged) return;
+    const at = new Date().toISOString();
+    // Set from a timer, not the effect body itself, so the first frame of
+    // the screen is not thrown away.
+    const t = setTimeout(() => {
+      setLocalStart(at);
+      void startSessionAction(dayId, at);
+    }, 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on opening
+  }, [open]);
+  // Ticks once a second while the screen is open and the session is going.
+  // Each tick brings the time it fired at; the screen's first frame reads
+  // the moment it opened.
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    if (!open || !startedAt || ended) return;
+    const first = setTimeout(() => setNow(Date.now()), 0);
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(t);
+    };
+  }, [open, startedAt, ended]);
+  const startMs = startedAt ? Date.parse(startedAt) : NaN;
+  const elapsedMs = Number.isFinite(startMs) ? (ended ? Date.parse(endedAt!) : now ?? startMs) - startMs : 0;
+
+  // "End session": a short "Workout complete" moment, then back to the week.
+  // Sets still to log are pointed out first, since ending is the client's
+  // call and not the app's.
   const [celebrating, setCelebrating] = useState(false);
-  const sectionRef = useRef<HTMLElement>(null);
-  const wasDone = useRef(dayDone);
   const openNow = useRef(open);
-  const doneNow = useRef(dayDone);
   const toggleNow = useRef(onToggle);
   useEffect(() => {
     openNow.current = open;
-    doneNow.current = dayDone;
     toggleNow.current = onToggle;
   });
-  useEffect(() => {
-    const before = wasDone.current;
-    wasDone.current = dayDone;
-    if (!before && dayDone && openNow.current) setCelebrating(true);
-  }, [dayDone]);
-  // Closing folds the body shut over a beat before it leaves, rather than
-  // vanishing; a tap on the head and the finished day's own fold both go
-  // through here. Opening unfolds the same way (CSS). A finished day also
-  // scrolls its head into view once folded.
-  const [folding, setFolding] = useState(false);
-  const scrollAfterFold = useRef(false);
-  const fold = (thenScroll = false) => {
-    if (!openNow.current) return;
-    scrollAfterFold.current = thenScroll;
-    setFolding(true);
+  const close = () => {
+    if (openNow.current) toggleNow.current();
   };
-  useEffect(() => {
-    if (!folding) return;
-    const t = setTimeout(() => {
-      setFolding(false);
-      if (openNow.current) toggleNow.current();
-      if (scrollAfterFold.current) setTimeout(() => sectionRef.current?.scrollIntoView({ block: "start", behavior: "smooth" }), 60);
-      scrollAfterFold.current = false;
-    }, FOLD_MS);
-    return () => clearTimeout(t);
-  }, [folding]);
+  const endSession = () => {
+    const left = planned - logged + cardio.filter((c) => !c.done).length;
+    if (left > 0 && !window.confirm(`${left} ${left === 1 ? "set is" : "sets are"} still to log. End the session anyway?`)) return;
+    const at = new Date().toISOString();
+    setLocalEnd(at);
+    startTransition(() => endSessionAction(dayId, at));
+    setCelebrating(true);
+  };
   useEffect(() => {
     if (!celebrating) return;
     const t = setTimeout(() => {
       setCelebrating(false);
-      // An undo during the moment (a cardio tapped back) keeps the day open.
-      if (!openNow.current || !doneNow.current) return;
-      fold(true);
+      close();
     }, 1800);
     return () => clearTimeout(t);
   }, [celebrating]);
@@ -264,13 +304,30 @@ export default function TrainingDaySession({
     return () => clearTimeout(t);
   }, [expandedId, expandedDone]);
 
-  // The line under the session's title.
+  // From a coach message's link: bring that exercise to the top of the screen.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open || focusExercise == null) return;
+    const t = setTimeout(() => {
+      const row = scrollRef.current?.querySelector<HTMLElement>(`[data-ex="${focusExercise}"]`);
+      row?.scrollIntoView({ block: "start", behavior: "auto" });
+    }, 80);
+    return () => clearTimeout(t);
+  }, [open, focusExercise]);
+
+  // The screen is laid over the whole app, the way Check-in is: a layer in
+  // the phone's stack, found from the row it belongs to.
+  const [host, setHost] = useState<HTMLElement | null>(null);
+
+  // The line under the session's title on the Training tab.
   const left = exercises.filter((ex) => !isDone(ex)).length + cardio.filter((c) => !c.done).length;
-  const sub = dayDone
+  const sub = ended
+    ? `Session complete · ${durationLabel(elapsedMs)}`
+    : allLogged
     ? "Session complete"
     : skipReason
     ? `Couldn't train · ${skipReason}`
-    : logged > 0
+    : logged > 0 || startedAt
     ? `In progress · ${left} exercise${left === 1 ? "" : "s"} left`
     : [
         exercises.length ? `${exercises.length} exercise${exercises.length === 1 ? "" : "s"}` : null,
@@ -280,23 +337,39 @@ export default function TrainingDaySession({
         .filter(Boolean)
         .join(" · ");
 
-  return (
-    <section ref={sectionRef} className={`tr-session${open ? " open" : ""}${dayDone ? " done" : skipReason ? " skipped" : ""}`}>
-      <button type="button" className="tr-session-head" onClick={() => (open ? fold() : onToggle())} aria-expanded={open}>
-        <span className="tr-session-main">
-          <span className="tr-session-title">{title}</span>
-          <span className="tr-session-sub">{sub}</span>
+  const screen = (
+    <div className="app-layer app-layer-push ws-screen" role="dialog" aria-label={title}>
+      <header className="ws-head">
+        <button type="button" className="ci-back" onClick={close} aria-label="Back to training">
+          <ChevronLeftIcon />
+        </button>
+        <div className="ws-head-titles">
+          <h1 className="ws-title">{title}</h1>
+        </div>
+        <span className={`tr-pill ws-head-pill${dayDone ? " done" : logged > 0 ? " started" : ""}`}>
+          {logged} / {planned} sets
         </span>
-        {/* Green once every set is logged; plain until then. */}
-        <span className={`tr-pill${dayDone ? " done" : skipReason ? " skipped" : ""}`}>
-          {!dayDone && skipReason ? "Skipped" : `${logged} / ${planned} sets`}
-        </span>
-        <span className={`tr-chev${open ? " up" : ""}`} aria-hidden="true" />
-      </button>
+      </header>
 
-      {open && (
-        <div className={`tr-session-fold${folding ? " folding" : ""}`}>
-        <div className="tr-session-body ts-list">
+      <div className={`ws-timer${ended ? " ended" : ""}`} role="timer" aria-live="off">
+        <div>
+          <div className="ws-timer-kicker">{ended ? "Session time" : "Session time"}</div>
+          <div className="ws-timer-value">{clock(elapsedMs)}</div>
+        </div>
+        <div className="ws-timer-side">
+          {ended ? (
+            <span className="ws-timer-state done">Ended</span>
+          ) : startedAt ? (
+            <span className="ws-timer-state">
+              <span className="ws-timer-dot" aria-hidden="true" />
+              Going
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      <div ref={scrollRef} className="ws-scroll">
+        <div className="ts-list">
           {gyms.length > 1 && <GymPicker gyms={gyms} gymId={gymId} onPick={pickGym} />}
           {exercises.map((ex, i) =>
             ex.id === expandedId ? (
@@ -323,26 +396,62 @@ export default function TrainingDaySession({
           {cardio.map((c, i) => (
             <CardioCard key={`c${c.id}`} cardio={c} index={exercises.length + i + 1} />
           ))}
-          {(!dayDone || skipReason) && <SkipReason dayId={dayId} text={skipReason} onSaved={() => fold(true)} />}
+          {(!dayDone || skipReason) && <SkipReason dayId={dayId} text={skipReason} onSaved={close} />}
         </div>
+      </div>
+
+      <div className="ci-dock ws-dock">
+        <div>
+          <div className="ci-dock-kicker">{ended ? "Ended" : allLogged ? "All logged" : `${left} exercise${left === 1 ? "" : "s"} left`}</div>
+          <div className="ci-dock-label">
+            {ended ? `${durationLabel(elapsedMs)} · ${logged} set${logged === 1 ? "" : "s"}` : `${logged} of ${planned} sets`}
+          </div>
+        </div>
+        {ended ? (
+          <button type="button" className="ci-save secondary" onClick={close}>
+            Done
+          </button>
+        ) : (
+          <button type="button" className="ci-save ws-end" onClick={endSession}>
+            End session
+          </button>
+        )}
+      </div>
+
+      {celebrating && (
+        <div className="ts-complete" role="status" aria-live="polite">
+          <div className="ts-complete-card">
+            <svg className="ts-complete-check" viewBox="0 0 52 52" aria-hidden="true">
+              <circle cx="26" cy="26" r="24" />
+              <path d="M15 27l7 7 15-15" />
+            </svg>
+            <div className="ts-complete-title">Workout complete</div>
+            <div className="ts-complete-sub">
+              {durationLabel(elapsedMs)} · {logged} set{logged === 1 ? "" : "s"} logged
+            </div>
+          </div>
         </div>
       )}
-      {celebrating &&
-        createPortal(
-          <div className="ts-complete" role="status" aria-live="polite">
-            <div className="ts-complete-card">
-              <svg className="ts-complete-check" viewBox="0 0 52 52" aria-hidden="true">
-                <circle cx="26" cy="26" r="24" />
-                <path d="M15 27l7 7 15-15" />
-              </svg>
-              <div className="ts-complete-title">Workout complete</div>
-              <div className="ts-complete-sub">
-                {title} · {logged} set{logged === 1 ? "" : "s"} logged
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
+    </div>
+  );
+
+  return (
+    <section
+      ref={(el) => setHost(el?.closest<HTMLElement>(".app-stack") ?? null)}
+      className={`tr-session${dayDone ? " done" : skipReason ? " skipped" : ""}`}
+    >
+      <button type="button" className="tr-session-head" onClick={onToggle}>
+        <span className="tr-session-main">
+          <span className="tr-session-title">{title}</span>
+          <span className="tr-session-sub">{sub}</span>
+        </span>
+        {/* Green once the session is ended or every set is logged; plain until then. */}
+        <span className={`tr-pill${dayDone ? " done" : skipReason ? " skipped" : logged > 0 ? " started" : ""}`}>
+          {!dayDone && skipReason ? "Skipped" : `${logged} / ${planned} sets`}
+        </span>
+        <span className="tr-chev right" aria-hidden="true" />
+      </button>
+      {open && host && createPortal(screen, host)}
     </section>
   );
 }

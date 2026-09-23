@@ -221,6 +221,8 @@ import {
   getClientIdForGym,
   pickGymForDay,
   setSessionSkipReason,
+  startSession,
+  endSession,
   setHomeGym,
   markClientEventsSeen,
   setCoachNote,
@@ -2621,6 +2623,28 @@ export async function saveWarmupSetsAction(assignmentId: number, sets: { weight_
   const owner = getClientIdForAssignment(Number(assignmentId));
   if (owner == null || !(await canAccessClient(owner)) || !Array.isArray(sets)) return;
   setWarmupSets(Number(assignmentId), sets);
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+// The session clock: a valid ISO timestamp from the phone, else now.
+function stampOrNow(at: unknown) {
+  const t = typeof at === "string" ? Date.parse(at) : NaN;
+  return Number.isFinite(t) ? new Date(t).toISOString() : new Date().toISOString();
+}
+
+export async function startSessionAction(programDayId: number, at?: string) {
+  const owner = clientIdForProgramDay(Number(programDayId));
+  if (owner == null || !(await canAccessClient(owner))) return;
+  startSession(Number(programDayId), stampOrNow(at));
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+export async function endSessionAction(programDayId: number, at?: string) {
+  const owner = clientIdForProgramDay(Number(programDayId));
+  if (owner == null || !(await canAccessClient(owner))) return;
+  endSession(Number(programDayId), stampOrNow(at));
   revalidatePath("/client");
   revalidatePath("/admin");
 }
