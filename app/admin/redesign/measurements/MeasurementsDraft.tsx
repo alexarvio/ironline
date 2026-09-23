@@ -477,7 +477,8 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
  *  in whichever group fits. */
 function AddMetricRow({ library, groups, have, onAdd, onClose }: { library: DraftMeasurements["library"]; groups: DraftMeasurements["groups"]; have: string[]; onAdd: (name: string, unit: string, group: string) => void; onClose: () => void }) {
   const [q, setQ] = useState("");
-  const [browse, setBrowse] = useState(false);
+  // Open on the groups, so "Create your own metric" is in view from the first moment.
+  const [browse, setBrowse] = useState(true);
   const [pack, setPack] = useState<string | null>(null);
   const [cursor, setCursor] = useState(0);
   const [creating, setCreating] = useState(false);
@@ -503,7 +504,7 @@ function AddMetricRow({ library, groups, have, onAdd, onClose }: { library: Draf
     setQ("");
     setCursor(0);
     setPack(null);
-    setBrowse(false);
+    setBrowse(true);
     box.current?.focus();
   };
   return (
@@ -567,7 +568,7 @@ function AddMetricRow({ library, groups, have, onAdd, onClose }: { library: Draf
             setCreating(false);
             onAdd(name, unit, group);
             setQ("");
-            setBrowse(false);
+            setBrowse(true);
             box.current?.focus();
           }}
           onCancel={() => {
