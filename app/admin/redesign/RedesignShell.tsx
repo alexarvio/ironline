@@ -52,6 +52,12 @@ export type RedesignShellProps = {
 
 export default function RedesignShell({ clientId, clientName, firstName, rail, initialTab, home, training, nutrition, measurements, pictures, meetings, plan, messages }: RedesignShellProps) {
   const [tab, setTab] = useState<RedesignTab>(initialTab);
+  // Another client: land where the address says (Home from the rail), never on the last client's tab.
+  const [seenClient, setSeenClient] = useState(clientId);
+  if (seenClient !== clientId) {
+    setSeenClient(clientId);
+    setTab(initialTab);
+  }
   const show = (t: RedesignTab) => {
     setTab(t);
     // Keep the other tab's query (week, programme, phase) out of this one's address.
