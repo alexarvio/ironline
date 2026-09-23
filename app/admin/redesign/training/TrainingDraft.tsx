@@ -1691,11 +1691,14 @@ function AddCardioRow({ onAdd, onClose }: { onAdd: (c: Omit<AddedCardio, "kind">
           <span>Note</span>
           <input value={c.note} onChange={set("note")} placeholder="Easy, cool-down" />
         </label>
+        <button type="button" className="rd-btn primary rd-addrow-go" disabled={!c.name.trim()} onClick={add}>
+          Add
+        </button>
         <button type="button" className="rd-addrow-x" onClick={onClose} aria-label="Close">
           ×
         </button>
       </div>
-      <p className="rd-addrow-hint">Enter adds it to the session · Esc closes. It lands on the bar below until Apply.</p>
+      <p className="rd-addrow-hint">Add (or Enter) puts it on the session · Esc closes. It lands on the bar below until Apply.</p>
     </div>
   );
 }
