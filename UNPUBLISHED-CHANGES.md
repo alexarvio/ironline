@@ -958,6 +958,13 @@ Coach side only, at `/admin/redesign` (opens on Home; `?client=ID` picks the cli
 - [ ] **Training**: the builder draft, New programme with a typed length, Add demo dialog (link or file). **Nutrition, Measurements, Progress pictures, Meetings**: as drafted earlier.
 - [ ] **Messages**: the chat box as a draft with the structured Link to… dialog.
 
+## 133 · Client Home: Measurements is its own card — LIVE 23 Sep
+
+Testers said it was not clear where the weights and the other metrics get logged: the check-in row sat inside the blue session card and read as part of the workout.
+
+- [ ] The blue "Up next" card is the session alone, with Start.
+- [ ] Under it, a white **Measurements** card with the blue kept for its edge and its words: "2 to log · daily check-in · measurements" with a Log button while something is due, "All logged for today · Open" once done. The progress-pictures reminder row sits inside it.
+
 ## ⚠ Known issue, live since 16 Sep: Start on Home no longer scrolls to the session
 
 Live: Home → Start opens the Training tab with the session open and scrolled to the top of the screen. Local: the session opens but the tab sits at its top, so the client scrolls to find it. Started somewhere in groups 50–53 (the floating top bar, the Home rebuild); the deep link itself (`focusRef` → `TrainingDayList`) still fires, only the scroll is lost. The scroll code was rewritten twice today (explicit `scrollTo` on `.app-content`, repeated at 60 / 300 / 700ms) without effect — needs a signed-in session to watch what moves. Shipped as a known issue on 16 Sep (commits a3c0e90, c6a5e46).

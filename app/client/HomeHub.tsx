@@ -107,12 +107,8 @@ export default function HomeHub({
     <div className="hm">
       <ProfileCard dateLabel={dateLabel} firstName={firstName} mainGoal={mainGoal} tracks={tracks} />
       <div className="hm-body">
-        <TodayCard
-          session={session}
-          checkInStatus={checkInStatus}
-          hasPlan={tracks.length > 0}
-          photosState={photos?.state ?? null}
-        />
+        <TodayCard session={session} hasPlan={tracks.length > 0} />
+        <MeasurementsCard checkInStatus={checkInStatus} photosState={photos?.state ?? null} />
         <MessageCard m={latestMessage} />
         <MeetingCard m={upcoming} recap={recap} />
         {goals.length > 0 && <GoalsCard goals={goals} />}
@@ -235,25 +231,9 @@ function ProfileCard({
 // for something. A session is never titled by a weekday: the client trains
 // it when they can, so "Tuesday" would be wrong by Wednesday.
 
-function TodayCard({
-  session,
-  checkInStatus,
-  hasPlan,
-  photosState,
-}: {
-  session: HomeSession;
-  checkInStatus: CheckInStatus;
-  hasPlan: boolean;
-  /** "due": a sheet is open and missing photos, a reminder row. "done": the
-      last photo went in within a day, a ticked row. Null: no row. */
-  photosState: "due" | "done" | null;
-}) {
-  const openCheckIn = useOpenCheckIn();
-  const openPhotos = useOpenPhotos();
+function TodayCard({ session, hasPlan }: { session: HomeSession; hasPlan: boolean }) {
   const goToTab = useNavigateTab();
-  const dueCount = checkInStatus.dueTypes.length;
-  const hasCheckIns = checkInStatus.configuredCount > 0;
-  if (!session && !hasCheckIns && !hasPlan && !photosState) return null;
+  if (!session && !hasPlan) return null;
 
   return (
     <section className="hm-today">
@@ -275,52 +255,52 @@ function TodayCard({
         <p className="hm-session-empty">No session left this week</p>
       )}
 
+    </section>
+  );
+}
+
+// ---- 2b · Measurements ------------------------------------------------------
+// Where the weights and the rest get logged, as a card of its own, so it
+// cannot be read as part of the session. White, with the blue kept for the
+// edge and the words: the session card is the blue one.
+function MeasurementsCard({ checkInStatus, photosState }: { checkInStatus: CheckInStatus; photosState: "due" | "done" | null }) {
+  const openCheckIn = useOpenCheckIn();
+  const openPhotos = useOpenPhotos();
+  const dueCount = checkInStatus.dueTypes.length;
+  const hasCheckIns = checkInStatus.configuredCount > 0;
+  if (!hasCheckIns && !photosState) return null;
+  const NAME: Record<string, string> = { daily: "daily check-in", weekly: "weekly check-in", measurements: "measurements" };
+  const dueWords = checkInStatus.dueTypes.map((t) => NAME[t] ?? t).join(" · ");
+  return (
+    <section className={`hm-measure${dueCount > 0 ? " due" : ""}`}>
       {hasCheckIns && (
-        <button
-          type="button"
-          className="hm-checkin"
-          onClick={() => openCheckIn?.(checkInStatus.dueTypes[0] ?? "daily")}
-        >
-          {dueCount > 0 ? (
-            <span className="hm-checkin-dot" aria-hidden="true" />
-          ) : (
-            <span className="hm-checkin-tick" aria-hidden="true">
-              <CheckIcon />
-            </span>
-          )}
-          <span className="hm-checkin-body">
-            <span className="hm-checkin-title">
-              {dueCount > 0
-                ? `${dueCount} check-in${dueCount === 1 ? "" : "s"} due`
-                : "All check-ins done"}
-            </span>
+        <button type="button" className="hm-measure-main" onClick={() => openCheckIn?.(checkInStatus.dueTypes[0] ?? "daily")}>
+          <span className="hm-measure-body">
+            <span className="hm-eyebrow hm-measure-eyebrow">Measurements</span>
+            <span className="hm-measure-title">{dueCount > 0 ? `${dueCount} to log` : "All logged for today"}</span>
+            <span className="hm-measure-meta">{dueCount > 0 ? dueWords : "Weight, check-ins and the rest live here"}</span>
           </span>
-          <span className="hm-checkin-chev" aria-hidden="true">
-            <ChevronDownIcon />
+          <span className="hm-measure-cta">
+            {dueCount > 0 && <span className="hm-measure-dot" aria-hidden="true" />}
+            {dueCount > 0 ? "Log" : "Open"}
           </span>
         </button>
       )}
 
-      {/* Progress pictures come round about once a month, so they are a
-          reminder row here rather than a card of their own: a pulsing dot
-          while a sheet is open and missing photos, a tick for a day after
-          the last one went in, then nothing (the Account tab still reaches
-          them). */}
+      {/* Progress pictures come round about once a month: a row under the
+          measurements, a pulsing dot while a sheet is open and missing photos,
+          a tick for a day after the last one went in, then nothing. */}
       {photosState && (
-        <button type="button" className="hm-checkin" onClick={() => openPhotos?.()}>
+        <button type="button" className="hm-measure-row" onClick={() => openPhotos?.()}>
           {photosState === "due" ? (
-            <span className="hm-checkin-dot" aria-hidden="true" />
+            <span className="hm-measure-dot" aria-hidden="true" />
           ) : (
-            <span className="hm-checkin-tick" aria-hidden="true">
+            <span className="hm-measure-tick" aria-hidden="true">
               <CheckIcon />
             </span>
           )}
-          <span className="hm-checkin-body">
-            <span className="hm-checkin-title">
-              {photosState === "due" ? "Progress pictures due" : "Progress pictures sent"}
-            </span>
-          </span>
-          <span className="hm-checkin-chev" aria-hidden="true">
+          <span className="hm-measure-row-title">{photosState === "due" ? "Progress pictures due" : "Progress pictures sent"}</span>
+          <span className="hm-measure-chev" aria-hidden="true">
             <ChevronDownIcon />
           </span>
         </button>
