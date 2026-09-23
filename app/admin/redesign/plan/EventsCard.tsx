@@ -66,8 +66,10 @@ const relative = (today: string, d: string) => {
 /** The words on a bar or pin: where it stands against today. */
 const standing = (today: string, e: PlanEvent) => {
   const single = e.start === e.end;
+  // A timestamp is only ever "in 3 days", "today" or "2 days ago".
+  if (single) return relative(today, e.start);
   if (today < e.start) return relative(today, e.start);
-  if (today > e.end) return single ? relative(today, e.start) : `ended ${relative(today, e.end)}`;
+  if (today > e.end) return `ended ${relative(today, e.end)}`;
   const left = daysBetween(today, e.end);
   return left === 0 ? "last day" : `now · ${left} day${left === 1 ? "" : "s"} left`;
 };
