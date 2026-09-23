@@ -292,7 +292,8 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
   };
   // A demo set or taken off in this sitting, by row; a row not touched reads its own.
   const [demos, setDemos] = useState<Record<number, DraftRow["demo"]>>({});
-  const [open, setOpen] = useState<number | null>(program.sessions.find((s) => s.setsLogged < s.setsPlanned)?.id ?? program.sessions[0]?.id ?? null);
+  // Every session starts folded; the coach opens the one they want.
+  const [open, setOpen] = useState<number | null>(null);
   const [videos, setVideos] = useState<Record<number, DraftRow["video"]>>(() => Object.fromEntries(program.sessions.flatMap((s) => s.rows.map((r) => [r.id, r.video]))));
   const [seenVideos, setSeenVideos] = useState(program.sessions);
   if (seenVideos !== program.sessions) {
