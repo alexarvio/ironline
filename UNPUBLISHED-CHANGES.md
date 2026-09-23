@@ -949,9 +949,13 @@ Look: `/client` → Training.
 - [ ] **Voice messages and files**, both sides: the paperclip takes a photo, video, or any file (PDF, Word, Excel, CSV, text, zip), the mic records a voice message (tap to start, tap to stop and send, Esc throws it away). A voice message plays in the bubble; a file downloads by its own name.
 - [ ] The redesign's Messages draft has all of it as a draft (toasts), with a structured **Link to…** dialog (areas across, a week picker, sessions as headed groups with their exercises under them) instead of a three-level menu.
 
-## 132 · The redesign drafts, on live for testing — 23 Sep
+## 132 · The redesign, on live and real — 23 Sep
 
-Coach side only, at `/admin/redesign` (opens on Home; `?client=ID` picks the client). Read-only drafts on real data: every action answers with a toast and saves nothing, and each page links to "the current one" for comparing. Built from the shadcn parts (`app/components/ui/`, Tailwind loaded by their own stylesheet only), which also power the live admin's toasts and the ⋯ menus on sessions and exercises now.
+Coach side, at `/admin/redesign` ("Redesign preview" in the account menu; opens on Home; `?client=ID` picks the client). Started the day as read-only drafts; by the evening every tab saves through the same actions as the old tabs, so a coach can work in either. Built from the shadcn parts (`app/components/ui/`, Tailwind loaded by their own stylesheet only), which also power the live admin's toasts and the ⋯ menus on sessions and exercises now.
+
+- [ ] **Real on every tab**: Home (message, coach note, the card editor in the Details dialog), Plan (main goal, phases, goals, Events), Training (a session's queued changes in one Apply, sessions, weeks, schedule / live / draft, dates, gyms, demos, video requests, messages, new programme), Nutrition (targets, supplements, note, meal comments, phase actions), Measurements (check-in day, tracked metrics, phase actions), Progress pictures (sheet setup, angles, sheet notes), Meetings (topic, prep notes, book, move, link, complete, delete, recap), Messages (the chat).
+- [ ] **Still local to the redesign**: the column toggles on Training (a view preference), and "Custom column".
+- [ ] **Events** have their own tables (`client_events`, `event_categories`; migration 0012) and the coach's own categories are per coach.
 
 - [ ] **Home**: full name and photo (click to enlarge), Details dialog for member / coaching info and the coach note, the six-figure snapshot with labelled bands, Keeping up, Needs you, Activity with a Messages filter.
 - [ ] **Plan**: main goal; phases on a week grid (drag to move, edges to resize, click to edit; the track shows in the dialog); **Events** on the same grid, a bar for a period and a pin for a timestamp, categories with colours plus your own, a folded log ten a page; goals as Goal · Tracks · Live · By · Set, with "by" the end of a phase, a date, or none.

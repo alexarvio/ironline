@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { addPhotoSlotAction, removePhotoSlotAction, reorderPhotoSlotsAction, savePhotoPeriodNoteAction, savePhotoScheduleAction, sendChatMessageAction, setPhotoSlotPausedAction } from "../../../lib/actions";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { ToggleGroup, ToggleGroupItem } from "../../../components/ui/basics";
@@ -48,7 +50,7 @@ export type DraftPictures = {
   sheets: Sheet[];
 };
 
-const savedToast = (what: string) => toast.success("Saved", { description: `${what} (a draft: nothing really saved).` });
+const savedToast = (what: string) => toast.success("Saved", { description: what });
 type Repeat = Cadence | "custom";
 const CADENCES: { value: Repeat; label: string }[] = [
   { value: "weekly", label: "Week" },
@@ -72,13 +74,33 @@ const kgDelta = (from: number, to: number) => {
 };
 
 type Setup = { cadence: Repeat; customWeeks: number; startDate: string; instructions: string; slots: DraftPictures["slots"] };
-type Dlg = { kind: "message"; label: string } | { kind: "photo"; period: string; slotId: number } | { kind: "removeAngle"; slotId: number } | null;
+type Dlg = { kind: "message"; label: string; period?: string } | { kind: "photo"; period: string; slotId: number } | { kind: "removeAngle"; slotId: number } | null;
 
-export default function PicturesDraft({ firstName, plan }: { firstName: string; plan: DraftPictures }) {
+export default function PicturesDraft({ clientId, firstName, plan }: { clientId: number; firstName: string; plan: DraftPictures }) {
   // ---- Setup: a working copy against what is live.
   const initial: Setup = { cadence: plan.cadence === "sixweekly" ? "custom" : plan.cadence, customWeeks: plan.cadence === "sixweekly" ? 6 : 3, startDate: plan.startDate ?? "", instructions: plan.instructions, slots: plan.slots };
   const [saved, setSaved] = useState(initial);
   const [s, setS] = useState(initial);
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+  // Every save goes to the server, then the page re-reads; what is on screen follows.
+  const act = (fn: () => Promise<unknown>, said?: string) =>
+    startTransition(async () => {
+      await fn();
+      router.refresh();
+      if (said) savedToast(said);
+    });
+  const fd = (o: Record<string, string | number | null | undefined>) => {
+    const f = new FormData();
+    for (const [k, v] of Object.entries(o)) if (v != null) f.set(k, String(v));
+    return f;
+  };
+  const [seenPlan, setSeenPlan] = useState(plan);
+  if (seenPlan !== plan) {
+    setSeenPlan(plan);
+    setSaved(initial);
+    setS(initial);
+  }
   const [adding, setAdding] = useState(false);
   const changes = (() => {
     let c = (s.cadence !== saved.cadence || (s.cadence === "custom" && s.customWeeks !== saved.customWeeks) ? 1 : 0) + (s.startDate !== saved.startDate ? 1 : 0) + (s.instructions.trim() !== saved.instructions.trim() ? 1 : 0);
@@ -230,7 +252,19 @@ export default function PicturesDraft({ firstName, plan }: { firstName: string; 
                   const next = { ...s, slots: s.slots.filter((x) => x.label.trim()) };
                   setSaved(next);
                   setS(next);
-                  savedToast(`Sheet setup: ${repeatLabel(next.cadence, next.customWeeks)}, ${next.slots.length} ${next.slots.length === 1 ? "angle" : "angles"}`);
+                  // The server keeps four rhythms; a custom one lands on the nearest.
+                  const cadence = next.cadence !== "custom" ? next.cadence : next.customWeeks <= 1 ? "weekly" : next.customWeeks <= 2 ? "biweekly" : next.customWeeks <= 4 ? "monthly" : "sixweekly";
+                  const before = saved.slots;
+                  act(async () => {
+                    await savePhotoScheduleAction(clientId, { startDate: next.startDate, cadence, instructions: next.instructions });
+                    for (const gone of before.filter((b) => !next.slots.some((x) => x.id === b.id))) await removePhotoSlotAction(fd({ id: gone.id }));
+                    for (const x of next.slots) {
+                      if (x.id < 0) await addPhotoSlotAction(fd({ clientId, label: x.label }));
+                      else if (before.find((b) => b.id === x.id)?.paused !== x.paused) await setPhotoSlotPausedAction(x.id, x.paused);
+                    }
+                    const kept = next.slots.filter((x) => x.id > 0).map((x) => x.id);
+                    if (kept.some((id, i) => before.filter((b) => kept.includes(b.id))[i]?.id !== id)) await reorderPhotoSlotsAction(clientId, kept);
+                  }, `Sheet setup: ${repeatLabel(next.cadence, next.customWeeks)}, ${next.slots.length} ${next.slots.length === 1 ? "angle" : "angles"}`);
                 }}
               >
                 Apply
@@ -303,7 +337,7 @@ export default function PicturesDraft({ firstName, plan }: { firstName: string; 
                           <MoreIcon />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="pb-menu">
-                          <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: `Progress pictures · ${sh.title}, ${sh.dateLabel}` })}>
+                          <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: `Progress pictures · ${sh.title}, ${sh.dateLabel}`, period: sh.period })}>
                             <ChatIcon /> Message about this sheet
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -336,7 +370,7 @@ export default function PicturesDraft({ firstName, plan }: { firstName: string; 
                         state={notes[sh.period] ?? { note: sh.note, saved: sh.savedLabel }}
                         onSave={(note) => {
                           setNotes((prev) => ({ ...prev, [sh.period]: { note, saved: "just now" } }));
-                          savedToast(`Notes on ${sh.title} · ${firstName} sees them on the sheet`);
+                          act(() => savePhotoPeriodNoteAction(fd({ clientId, period: sh.period, ...note })), `Notes on ${sh.title} · ${firstName} sees them on the sheet`);
                         }}
                       />
                     </div>
@@ -354,9 +388,13 @@ export default function PicturesDraft({ firstName, plan }: { firstName: string; 
           <MessageDialog
             firstName={firstName}
             label={dlg.label}
-            onSend={() => {
-              toast.success("Sent", { description: `${firstName} gets it on Home, linked to ${dlg.label} (a draft: nothing really sent).` });
+            onSend={(text) => {
+              const { label, period } = dlg;
               close();
+              const f = fd({ clientId, text });
+              f.set("link", JSON.stringify(period ? { kind: "photos", period } : { kind: "photos" }));
+              act(() => sendChatMessageAction(f));
+              toast.success("Sent", { description: `${firstName} gets it on Home, linked to ${label}.` });
             }}
           />
         )}

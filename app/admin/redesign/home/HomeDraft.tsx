@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { saveCoachNoteAction, sendChatMessageAction } from "../../../lib/actions";
+import ClientCardEditor from "../../ClientCardEditor";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { AccountIcon, ChatIcon, ChevronLeftIcon } from "../../../components/icons";
-import type { ClientEngagement, HomeAction, OverviewInfoRow, OverviewPanel } from "../../../lib/queries";
+import type { ClientEngagement, HomeAction, OverviewPanel } from "../../../lib/queries";
 import { MessageDialog } from "../training/TrainingDraft";
 
 // The calmer Home tab, as a draft on real data, in the Training draft's
@@ -27,8 +30,8 @@ export type DraftHome = {
   avatarPath: string | null;
   clientSince: string | null;
   snapshot: OverviewPanel["snapshot"];
-  memberInfo: OverviewInfoRow[];
-  coachingInfo: OverviewInfoRow[];
+  /** The whole client card, for the live editor in the Details dialog. */
+  panel: OverviewPanel;
   coachNote: { text: string; savedLabel: string | null };
   actions: HomeAction[];
   events: DraftEvent[];
@@ -36,8 +39,8 @@ export type DraftHome = {
   engagement: ClientEngagement;
 };
 
-const draftOnly = (what: string) => toast(what, { description: "A draft: nothing saves here." });
-const savedToast = (what: string) => toast.success("Saved", { description: `${what} (a draft: nothing really saved).` });
+const draftOnly = (what: string) => toast(what, { description: "Not in the redesign yet: the old tab still does this." });
+const savedToast = (what: string) => toast.success("Saved", { description: what });
 
 // The live tabs' ids, as the drafts name them.
 const DRAFT_TAB: Record<string, string> = { plan: "plan", training: "training", nutrition: "nutrition", measurements: "measurements", meetings: "meetings", photos: "pictures", messages: "messages" };
@@ -56,8 +59,22 @@ type FilterId = (typeof FILTERS)[number]["id"];
 const PAGE = 12;
 const tone = (pct: number) => (pct >= 80 ? "good" : pct >= 50 ? "mid" : "low");
 
-export default function HomeDraft({ firstName, home, onOpenTab }: { firstName: string; home: DraftHome; onOpenTab: (tab: string) => void }) {
+export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { clientId: number; firstName: string; home: DraftHome; onOpenTab: (tab: string) => void }) {
   const [msg, setMsg] = useState(false);
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+  // Every save goes to the server, then the page re-reads; what is on screen follows.
+  const act = (fn: () => Promise<unknown>, said?: string) =>
+    startTransition(async () => {
+      await fn();
+      router.refresh();
+      if (said) savedToast(said);
+    });
+  const fd = (o: Record<string, string | number | null | undefined>) => {
+    const f = new FormData();
+    for (const [k, v] of Object.entries(o)) if (v != null) f.set(k, String(v));
+    return f;
+  };
   // The facts about them, and the coach's note: a click away, not on the page.
   const [details, setDetails] = useState(false);
   const [photo, setPhoto] = useState(false);
@@ -261,9 +278,9 @@ export default function HomeDraft({ firstName, home, onOpenTab }: { firstName: s
               <DialogDescription hidden>Member info, coaching info and your note about {firstName}.</DialogDescription>
             </DialogHeader>
             <div className="rh-dlg-body">
-              <InfoCard title="Member info" rows={home.memberInfo} />
-              <InfoCard title="Coaching info" rows={home.coachingInfo} />
-              <NoteCard text={home.coachNote.text} savedLabel={home.coachNote.savedLabel} />
+              {/* The old tab's card editor, as is: member info and coaching info, each with an Edit. */}
+              <ClientCardEditor clientId={clientId} panel={home.panel} chrome="rail" />
+              <NoteCard text={home.coachNote.text} savedLabel={home.coachNote.savedLabel} onSave={(v) => act(() => saveCoachNoteAction(clientId, v), "Coach note")} />
             </div>
           </DialogContent>
         )}
@@ -288,9 +305,9 @@ export default function HomeDraft({ firstName, home, onOpenTab }: { firstName: s
           <MessageDialog
             firstName={firstName}
             label="Home"
-            onSend={() => {
+            onSend={(text) => {
               setMsg(false);
-              savedToast(`Message to ${firstName}`);
+              act(() => sendChatMessageAction(fd({ clientId, text })), `Message to ${firstName}`);
             }}
           />
         )}
@@ -322,30 +339,8 @@ function Dial({ pct }: { pct: number }) {
   );
 }
 
-// A rail card of label/value rows; Edit is a toast here.
-function InfoCard({ title, rows }: { title: string; rows: OverviewInfoRow[] }) {
-  return (
-    <section className="rd-session open rn-card rh-info">
-      <div className="rn-card-head">
-        <h2>{title}</h2>
-        <button type="button" className="rd-ex-btn rh-edit" onClick={() => draftOnly(`Edit ${title.toLowerCase()}`)}>
-          Edit
-        </button>
-      </div>
-      <dl className="rh-info-rows">
-        {rows.map((r) => (
-          <div key={r.label} className="rh-info-row">
-            <dt>{r.label}</dt>
-            <dd className={`${r.tone === "good" ? "good" : ""}${r.value ? "" : " empty"}`}>{r.value || "—"}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
-  );
-}
-
 // The coach's own note, theirs alone, edited in place.
-function NoteCard({ text, savedLabel }: { text: string; savedLabel: string | null }) {
+function NoteCard({ text, savedLabel, onSave }: { text: string; savedLabel: string | null; onSave: (text: string) => void }) {
   const [saved, setSaved] = useState(text);
   const [draft, setDraft] = useState(text);
   const [editing, setEditing] = useState(false);
@@ -382,7 +377,7 @@ function NoteCard({ text, savedLabel }: { text: string; savedLabel: string | nul
               onClick={() => {
                 setSaved(draft.trim());
                 setEditing(false);
-                savedToast("Coach note");
+                onSave(draft.trim());
               }}
             >
               Save

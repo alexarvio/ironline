@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { addMeetingAction, completeMeetingAction, removeMeetingAction, sendChatMessageAction, updateMeetingAction } from "../../../lib/actions";
 import type React from "react";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
@@ -52,8 +54,7 @@ export type DraftMeetings = {
   lastLink: string | null;
 };
 
-const draftOnly = (what: string) => toast(what, { description: "A draft: nothing saves here." });
-const savedToast = (what: string) => toast.success("Saved", { description: `${what} (a draft: nothing really saved).` });
+const savedToast = (what: string) => toast.success("Saved", { description: what });
 const DAY = 86400000;
 const parse = (iso: string) => new Date(`${iso}T00:00:00`);
 const isoOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -95,10 +96,29 @@ const providerOf = (link: string) => {
 
 type Dlg = { kind: "message"; label: string } | { kind: "schedule"; date: string; reschedule: DraftMeeting | null } | { kind: "link"; meetingId: number } | { kind: "complete"; meetingId: number } | { kind: "delete"; meetingId: number } | null;
 
-export default function MeetingsDraft({ firstName, plan }: { firstName: string; plan: DraftMeetings }) {
+export default function MeetingsDraft({ clientId, firstName, plan }: { clientId: number; firstName: string; plan: DraftMeetings }) {
   const today = plan.today;
   // Everything on screen lives in state so the draft can show what an action would do.
   const [meetings, setMeetings] = useState<DraftMeeting[]>([...(plan.upcoming ? [plan.upcoming] : []), ...plan.alsoScheduled, ...plan.past]);
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+  // Every save goes to the server, then the page re-reads; what is on screen follows.
+  const act = (fn: () => Promise<unknown>, said?: string) =>
+    startTransition(async () => {
+      await fn();
+      router.refresh();
+      if (said) savedToast(said);
+    });
+  const fd = (o: Record<string, string | number | null | undefined>) => {
+    const f = new FormData();
+    for (const [k, v] of Object.entries(o)) if (v != null) f.set(k, String(v));
+    return f;
+  };
+  const [seenPlan, setSeenPlan] = useState(plan);
+  if (seenPlan !== plan) {
+    setSeenPlan(plan);
+    setMeetings([...(plan.upcoming ? [plan.upcoming] : []), ...plan.alsoScheduled, ...plan.past]);
+  }
   const [dlg, setDlg] = useState<Dlg>(null);
   const close = () => setDlg(null);
   const patchMeeting = (id: number, f: Partial<DraftMeeting>) => setMeetings((prev) => prev.map((m) => (m.id === id ? { ...m, ...f } : m)));
@@ -180,7 +200,7 @@ export default function MeetingsDraft({ firstName, plan }: { firstName: string; 
                       className="rt-topic"
                       value={upcoming.topic}
                       onChange={(e) => patchMeeting(upcoming.id, { topic: e.target.value })}
-                      onBlur={() => upcoming.topic.trim() !== (plan.upcoming?.topic ?? "") && savedToast(`Topic: ${upcoming.topic.trim() || "Check-in call"}`)}
+                      onBlur={() => upcoming.topic.trim() !== (plan.upcoming?.topic ?? "") && act(() => updateMeetingAction(fd({ id: upcoming.id, topic: upcoming.topic.trim() })), `Topic: ${upcoming.topic.trim() || "Check-in call"}`)}
                       onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
                       placeholder="Topic"
                       aria-label="Topic"
@@ -216,7 +236,7 @@ export default function MeetingsDraft({ firstName, plan }: { firstName: string; 
                     value={upcoming.prepNotes}
                     onSave={(v) => {
                       patchMeeting(upcoming.id, { prepNotes: v });
-                      savedToast("Prep notes");
+                      act(() => updateMeetingAction(fd({ id: upcoming.id, prepNotes: v })), "Prep notes");
                     }}
                   />
                 </div>
@@ -323,7 +343,15 @@ export default function MeetingsDraft({ firstName, plan }: { firstName: string; 
                           </DropdownMenu>
                         </span>
                       </div>
-                      {isOpen && <PastBody m={m} onPatch={(f) => patchMeeting(m.id, f)} />}
+                      {isOpen && (
+                        <PastBody
+                          m={m}
+                          onPatch={(f) => {
+                            patchMeeting(m.id, f);
+                            if (f.summary !== undefined) act(() => updateMeetingAction(fd({ id: m.id, summary: f.summary })));
+                          }}
+                        />
+                      )}
                     </div>
                   );
                 })}
@@ -341,9 +369,11 @@ export default function MeetingsDraft({ firstName, plan }: { firstName: string; 
           <MessageDialog
             firstName={firstName}
             label={dlg.label}
-            onSend={() => {
-              toast.success("Sent", { description: `${firstName} gets it on Home, linked to ${dlg.label} (a draft: nothing really sent).` });
+            onSend={(text) => {
+              const label = dlg.label;
               close();
+              act(() => sendChatMessageAction(fd({ clientId, text })));
+              toast.success("Sent", { description: `${firstName} gets it on Home, about ${label}.` });
             }}
           />
         )}
@@ -357,10 +387,9 @@ export default function MeetingsDraft({ firstName, plan }: { firstName: string; 
             onSave={(v) => {
               if (dlg.reschedule) {
                 patchMeeting(dlg.reschedule.id, { ...v, provider: v.link ? (providerOf(v.link) ?? "Join call") : "", host: v.link ? new URL(v.link).hostname : "" });
-                savedToast(`Moved to ${longDay(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees the new time`);
+                act(() => updateMeetingAction(fd({ id: dlg.reschedule!.id, date: v.date, time: v.time, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "" })), `Moved to ${longDay(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees the new time`);
               } else {
-                setMeetings((prev) => [...prev, { id: -Date.now(), ...v, status: "scheduled", provider: v.link ? (providerOf(v.link) ?? "Join call") : "", host: v.link ? new URL(v.link).hostname : "", prepNotes: "", summary: "", notes: [], goals: [] }]);
-                savedToast(`${v.topic || "Check-in call"} on ${longDay(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees it on Home`);
+                act(() => addMeetingAction(fd({ clientId, date: v.date, time: v.time, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "" })), `${v.topic || "Check-in call"} on ${longDay(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees it on Home`);
               }
               setSelectedDay(v.date);
               close();
@@ -372,8 +401,9 @@ export default function MeetingsDraft({ firstName, plan }: { firstName: string; 
             value={byId(dlg.meetingId)!.link ?? ""}
             onSave={(link) => {
               patchMeeting(dlg.meetingId, { link: link || null, provider: link ? (providerOf(link) ?? "Join call") : "", host: link ? new URL(link).hostname : "" });
-              savedToast(link ? `Link: ${firstName} gets a Join button` : "Link removed");
+              const id = dlg.meetingId;
               close();
+              act(() => updateMeetingAction(fd({ id, link })), link ? `Link: ${firstName} gets a Join button` : "Link removed");
             }}
           />
         )}
@@ -384,8 +414,9 @@ export default function MeetingsDraft({ firstName, plan }: { firstName: string; 
             onComplete={(summary) => {
               patchMeeting(dlg.meetingId, { status: "completed", summary });
               setOpenPast(dlg.meetingId);
-              savedToast(summary ? `Completed, recap sent to ${firstName}'s Home` : "Completed");
+              const id = dlg.meetingId;
               close();
+              act(() => completeMeetingAction(fd({ id, summary })), summary ? `Completed, recap sent to ${firstName}'s Home` : "Completed");
             }}
           />
         )}
@@ -397,8 +428,9 @@ export default function MeetingsDraft({ firstName, plan }: { firstName: string; 
             danger
             onConfirm={() => {
               setMeetings((prev) => prev.filter((m) => m.id !== dlg.meetingId));
-              draftOnly("Call deleted");
+              const id = dlg.meetingId;
               close();
+              act(() => removeMeetingAction(fd({ id })), "Call deleted");
             }}
           />
         )}

@@ -32,7 +32,7 @@ const TABS = [
 ] as const;
 export type RedesignTab = (typeof TABS)[number]["key"];
 // The tabs that save, and how the banner names them.
-const REAL: Partial<Record<RedesignTab, string>> = { messages: "Messages with", plan: "Plan of", training: "Training of", nutrition: "Nutrition of", measurements: "Measurements of" };
+const REAL: Partial<Record<RedesignTab, string>> = { home: "Home of", messages: "Messages with", plan: "Plan of", training: "Training of", nutrition: "Nutrition of", measurements: "Measurements of", pictures: "Progress pictures of", meetings: "Meetings of" };
 
 export type RedesignShellProps = {
   clientId: number;
@@ -79,7 +79,7 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
           )}
         </p>
         <div hidden={tab !== "home"}>
-          <HomeDraft firstName={firstName} home={home} onOpenTab={(t) => show(t as RedesignTab)} />
+          <HomeDraft clientId={clientId} firstName={firstName} home={home} onOpenTab={(t) => show(t as RedesignTab)} />
         </div>
         <div hidden={tab !== "training"}>{training.draft ? <TrainingDraft key={`${training.draft.id}:${training.draft.weekIdx}`} clientId={clientId} firstName={firstName} program={training.draft} library={training.library} /> : <p className="rd-empty">This client has no programme yet.</p>}</div>
         <div hidden={tab !== "nutrition"}>
@@ -89,10 +89,10 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
           <MeasurementsDraft key={measurements.id} clientId={clientId} firstName={firstName} plan={measurements} />
         </div>
         <div hidden={tab !== "pictures"}>
-          <PicturesDraft firstName={firstName} plan={pictures} />
+          <PicturesDraft clientId={clientId} firstName={firstName} plan={pictures} />
         </div>
         <div hidden={tab !== "meetings"}>
-          <MeetingsDraft firstName={firstName} plan={meetings} />
+          <MeetingsDraft clientId={clientId} firstName={firstName} plan={meetings} />
         </div>
         <div hidden={tab !== "plan"}>
           <PlanDraft clientId={clientId} firstName={firstName} plan={plan} />

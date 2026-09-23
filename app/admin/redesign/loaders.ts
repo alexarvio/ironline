@@ -515,8 +515,7 @@ export function loadHome(clientId: number): DraftHome {
     clientSince: panel.clientSince,
     // "level this phase" under the weight said nothing; a real move still shows.
     snapshot: panel.snapshot.map((s) => (s.label === "Weight" && s.suffix?.startsWith("level") ? { ...s, suffix: undefined } : s)),
-    memberInfo: panel.memberInfo,
-    coachingInfo: panel.coachingInfo,
+    panel,
     coachNote: panel.coachNote,
     actions: home.actions,
     events: home.events.map((e) => ({ id: e.id, category: e.category, text: e.text, note: e.note, when: e.when, tab: e.tab })),
