@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import Link from "next/link";
 import { addClientGoalAction, addClientPhaseAction, applyGoalDoneChangesAction, removeClientGoalAction, removeClientPhaseAction, reorderClientGoalsAction, saveAndDeployPhaseNowAction, saveAndSchedulePhaseAction, setClientMainGoalAction, updateClientGoalAction, updateClientPhaseAction } from "../../../lib/actions";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
@@ -561,6 +562,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
       <Dialog open={dlg != null} onOpenChange={(o) => !o && close()}>
         {dlg?.kind === "phase" && (
           <PhaseDialog
+            clientId={clientId}
             firstName={firstName}
             today={today}
             thisWeek={thisWeek}
@@ -702,7 +704,7 @@ function MonthRange({ from, to, onPick, chrome, planned, cursor, setCursor, toda
   );
 }
 
-function PhaseDialog({ firstName, today, thisWeek, phase, track: initialTrack, others, programs, onSave, onDelete, onSend }: { firstName: string; today: string; thisWeek: string; phase: PlanPhaseRow | null; track?: PhaseTrack; others: PlanPhaseRow[]; programs: PlanProgramOption[]; onSave: (v: { name: string; track: PhaseTrack; start: string; end: string; programId: number | null }) => void; onDelete?: () => void; onSend: (v: { name: string; track: PhaseTrack; start: string; end: string; now: boolean }) => void }) {
+function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track: initialTrack, others, programs, onSave, onDelete, onSend }: { clientId: number; firstName: string; today: string; thisWeek: string; phase: PlanPhaseRow | null; track?: PhaseTrack; others: PlanPhaseRow[]; programs: PlanProgramOption[]; onSave: (v: { name: string; track: PhaseTrack; start: string; end: string; programId: number | null }) => void; onDelete?: () => void; onSend: (v: { name: string; track: PhaseTrack; start: string; end: string; now: boolean }) => void }) {
   const editing = !!phase;
   const [track, setTrack] = useState<PhaseTrack>(phase?.track ?? initialTrack ?? "nutrition");
   const [name, setName] = useState(phase?.name ?? "");
@@ -763,6 +765,19 @@ function PhaseDialog({ firstName, today, thisWeek, phase, track: initialTrack, o
             <span className="rq-state" style={{ background: chrome.chipBg, color: chrome.chipInk }}>
               {STATE_LABEL[state]}
             </span>
+            {/* Straight to the tab where the phase's contents live. */}
+            {editing && (
+              <Link
+                className="rq-open"
+                href={
+                  track === "training"
+                    ? `/admin/redesign/training?client=${clientId}${phase.program ? `&program=${phase.program.id}` : ""}`
+                    : `/admin/redesign/${track === "nutrition" ? "nutrition" : "measurements"}?client=${clientId}&phase=${phase.id}`
+                }
+              >
+                Open in {TRACK_LABEL[track] === "Lifestyle" ? "Measurements" : TRACK_LABEL[track]} ↗
+              </Link>
+            )}
           </span>
         </DialogTitle>
         {!editing && <DialogDescription>Which track, what it is called, and the weeks it runs. Weeks run Monday to Sunday.</DialogDescription>}
