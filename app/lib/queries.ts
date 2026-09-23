@@ -7889,9 +7889,25 @@ function calorieSeries(clientId: number): { name: string; unit: string; series: 
   };
 }
 
-/** Series for a graph-choice key ("field-3" / "metric-7"), or the calorie log. */
+/** The food diary's daily macro totals, one point a day, as a goal can watch them. */
+export const MACRO_GOAL_KEYS = { protein: "protein", carbs: "carbs", fat: "fat" } as const;
+function macroSeries(clientId: number, which: keyof typeof MACRO_GOAL_KEYS): { name: string; unit: string; series: SeriesPoint[] } {
+  const today = localDateStr();
+  const from = (() => {
+    const d = new Date(`${today}T00:00:00`);
+    d.setDate(d.getDate() - 400);
+    return localDateStr(d);
+  })();
+  const name = which === "protein" ? "Protein logged" : which === "carbs" ? "Carbs logged" : "Fat logged";
+  return { name, unit: "g", series: getLoggedDays(clientId, from, today).days.map((d) => ({ date: d.date, value: d[which] })).sort((a, b) => (a.date < b.date ? -1 : 1)) };
+}
+const macroKey = (key: string): keyof typeof MACRO_GOAL_KEYS | null => (key === "protein" || key === "carbs" || key === "fat" ? key : null);
+
+/** Series for a graph-choice key ("field-3" / "metric-7"), the calorie log, or a macro. */
 function seriesForKey(clientId: number, key: string): { name: string; unit: string; series: SeriesPoint[] } | null {
   if (key === KCAL_GOAL_KEY) return calorieSeries(clientId);
+  const macro = macroKey(key);
+  if (macro) return macroSeries(clientId, macro);
   const choice = listGraphChoices(clientId).find((c) => c.key === key);
   if (!choice) return null;
   return { name: choice.name, unit: choice.unit, series: choice.kind === "field" ? getMeasurementSeries(choice.id) : getMetricSeries(choice.id) };
@@ -7996,7 +8012,8 @@ export function getGoalSummaries(clientId: number): { goal: ClientGoal; view: Go
 export type GoalEditorOptions = {
   today: string;
   phaseEnd: string | null;
-  metrics: { key: string; name: string; unit: string; series: SeriesPoint[] }[];
+  /** group is the metric's category ("nutrition", "body", …): the editor sorts them into its tabs by it. */
+  metrics: { key: string; name: string; unit: string; group: string; series: SeriesPoint[] }[];
   /** Every set, each marked with its gym; the editor filters to the goal's gym. */
   exercises: { id: number; name: string; sets: LoggedSet[] }[];
   habits: { id: number; name: string; weekValues: SeriesPoint[] }[];
@@ -8018,13 +8035,18 @@ export function getGoalEditorOptions(clientId: number): GoalEditorOptions {
     today,
     phaseEnd,
     metrics: [
+      // What the client logs in the food diary comes first: nutrition goals are set on these.
+      { key: KCAL_GOAL_KEY, group: "nutrition", ...calorieSeries(clientId) },
+      { key: MACRO_GOAL_KEYS.protein, group: "nutrition", ...macroSeries(clientId, "protein") },
+      { key: MACRO_GOAL_KEYS.carbs, group: "nutrition", ...macroSeries(clientId, "carbs") },
+      { key: MACRO_GOAL_KEYS.fat, group: "nutrition", ...macroSeries(clientId, "fat") },
       ...listGraphChoices(clientId).map((c) => ({
         key: c.key,
         name: c.name,
         unit: c.unit,
+        group: c.kind === "field" ? "measurements" : metricGroup(getData().metric_definitions.find((m) => m.id === c.id)?.category ?? "other").key,
         series: c.kind === "field" ? getMeasurementSeries(c.id) : getMetricSeries(c.id),
       })),
-      { key: KCAL_GOAL_KEY, ...calorieSeries(clientId) },
     ],
     exercises: listClientExercises(clientId).map((e) => ({ ...e, sets: loggedSetsForExercise(clientId, e.id) })),
     habits: listMetricDefinitions(clientId, "daily").map((m) => ({ id: m.id, name: m.name, weekValues: habitWeekValues(m.id, today) })),

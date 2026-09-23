@@ -892,22 +892,34 @@ function MoveDialog({ phase: p, start, end, today, onCancel, onSave }: { phase: 
 // ---- The goal dialog: pick the thing to watch, say the target as one sentence, see the client's card.
 
 type Kind = PlanGoalRow["kind"];
-type Thing = { id: string; kind: Kind; name: string; hint: string; unit?: string; metricKey?: string; exerciseId?: number; habitId?: number; now?: number | null; series?: { date: string; value: number }[]; best?: { weight: number; reps: number } | null };
+type Thing = { id: string; kind: Kind; tab: Kind; name: string; hint: string; unit?: string; metricKey?: string; exerciseId?: number; habitId?: number; now?: number | null; series?: { date: string; value: number }[]; best?: { weight: number; reps: number } | null };
 
 function GoalDialog({ firstName, goal, options, phases, today, onSave }: { firstName: string; goal: PlanGoalRow | null; options: GoalEditorOptions; phases: PlanPhaseRow[]; today: string; onSave: (v: { text: string; kind: Kind; rule: string; tracking: GoalTracking | null; by: string | null; tracks: string | null }) => void }) {
   const t = goal?.tracking ?? null;
   // Everything the client already logs, in one list: what a goal can watch.
+  // A figure sits under Nutrition when it is one (calories, the macros, a
+  // nutrition-group metric); everything else the client logs is a check-in.
+  // The same name from two tables shows once, the one with data winning.
+  const seenName = new Set<string>();
   const things: Thing[] = [
-    ...options.metrics.map((m) => {
-      const latest = m.series[m.series.length - 1];
-      return { id: `m:${m.key}`, kind: "metric" as Kind, name: m.name, unit: m.unit, metricKey: m.key, now: latest?.value ?? null, series: m.series, hint: latest ? `now ${fmtNum(latest.value)}${m.unit ? ` ${m.unit}` : ""}` : "nothing logged yet" };
-    }),
+    ...[...options.metrics]
+      .sort((a, b) => (b.series.length > 0 ? 1 : 0) - (a.series.length > 0 ? 1 : 0))
+      .filter((m) => {
+        const k = m.name.trim().toLowerCase();
+        if (seenName.has(k)) return false;
+        seenName.add(k);
+        return true;
+      })
+      .map((m) => {
+        const latest = m.series[m.series.length - 1];
+        return { id: `m:${m.key}`, kind: "metric" as Kind, tab: (m.group === "nutrition" ? "metric" : "habit") as Kind, name: m.name, unit: m.unit, metricKey: m.key, now: latest?.value ?? null, series: m.series, hint: latest ? `now ${fmtNum(latest.value)}${m.unit ? ` ${m.unit}` : ""}` : "nothing logged yet" };
+      }),
     ...options.exercises.map((e) => {
       const sets = e.sets.filter((s) => s.weight != null && s.reps != null);
       const best = [...sets].sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0) || (b.reps ?? 0) - (a.reps ?? 0))[0];
-      return { id: `e:${e.id}`, kind: "exercise" as Kind, name: e.name, unit: "kg", exerciseId: e.id, best: best ? { weight: best.weight!, reps: best.reps! } : null, hint: best ? `best ${fmtNum(best.weight!)} × ${best.reps}` : "no sets logged yet" };
+      return { id: `e:${e.id}`, kind: "exercise" as Kind, tab: "exercise" as Kind, name: e.name, unit: "kg", exerciseId: e.id, best: best ? { weight: best.weight!, reps: best.reps! } : null, hint: best ? `best ${fmtNum(best.weight!)} × ${best.reps}` : "no sets logged yet" };
     }),
-    ...options.habits.map((h) => ({ id: `h:${h.id}`, kind: "habit" as Kind, name: h.name, habitId: h.id, hint: "daily check-in · days a week" })),
+    ...options.habits.map((h) => ({ id: `h:${h.id}`, kind: "habit" as Kind, tab: "habit" as Kind, name: `${h.name} · days a week`, habitId: h.id, hint: "daily check-in, as a habit" })),
   ];
   const fromTracking = (): Thing | null => {
     if (!t) return null;
@@ -1067,7 +1079,7 @@ function GoalDialog({ firstName, goal, options, phases, today, onSave }: { first
             )
               .filter(([k]) => section === k)
               .map(([k, label]) => {
-                const rows = matches.filter((x) => x.kind === k);
+                const rows = matches.filter((x) => x.tab === k);
                 if (rows.length === 0) return null;
                 return (
                   <div key={k} className="rq-group">
@@ -1081,7 +1093,7 @@ function GoalDialog({ firstName, goal, options, phases, today, onSave }: { first
                   </div>
                 );
               })}
-            {matches.filter((x) => x.kind === section).length === 0 && <p className="rd-addrow-hint">Nothing {firstName} logs matches that.</p>}
+            {matches.filter((x) => x.tab === section).length === 0 && <p className="rd-addrow-hint">Nothing {firstName} logs matches that.</p>}
           </div>
         </div>
       ) : (
