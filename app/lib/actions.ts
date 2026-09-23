@@ -1616,6 +1616,12 @@ export async function updateMeetingAction(formData: FormData) {
   if (formData.has("time")) patch.time = String(formData.get("time") ?? "");
   if (formData.has("durationMinutes")) patch.duration_minutes = Number(formData.get("durationMinutes")) || DEFAULT_MEETING_DURATION;
   updateMeeting(id, patch);
+  // A moved call is news to the client; a reworded topic or the coach's own notes are not.
+  if (patch.date || patch.time) {
+    const clientId = getClientIdForMeeting(id);
+    const when = patch.date ? new Date(`${patch.date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" }) : "the same day";
+    if (clientId != null) logCoachActivity(clientId, `Your call moved to ${when}${patch.time ? ` at ${patch.time}` : ""}`, { kind: "general", actionTab: "home", actionLabel: "View schedule" });
+  }
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1627,10 +1633,16 @@ export async function completeMeetingAction(formData: FormData) {
   // Closing the call is the moment the coach remembers what was agreed, so
   // the recap is written here. It reaches the client's Home; the prep notes
   // and the notes log stay on the coach's side.
+  const summary = formData.has("summary") ? String(formData.get("summary") ?? "").trim() : "";
   if (formData.has("summary")) {
-    updateMeeting(id, { summary: String(formData.get("summary") ?? "").trim() || null });
+    updateMeeting(id, { summary: summary || null });
   }
   completeMeeting(id);
+  // The recap is what the client takes away: tell them it is there.
+  if (summary) {
+    const clientId = getClientIdForMeeting(id);
+    if (clientId != null) logCoachActivity(clientId, "Your coach wrote up what you agreed on the call", { kind: "general", actionTab: "home", actionLabel: "Read it" });
+  }
   revalidatePath("/admin");
   revalidatePath("/client");
 }
