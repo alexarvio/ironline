@@ -153,7 +153,9 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
 export async function requireCoach(): Promise<SessionUser> {
   const user = await getSessionUser();
   if (!user) redirect("/login");
-  if (user.role !== "coach") redirect("/client");
+  // A client account at the coach door: say so, with a way to sign out,
+  // rather than bouncing them to the client app (see /login/switch).
+  if (user.role !== "coach") redirect("/login/switch?to=coach");
   if (user.must_change_password) redirect("/login/change-password");
   return user;
 }
@@ -166,7 +168,7 @@ export async function requireCoach(): Promise<SessionUser> {
 export async function requireClient(): Promise<SessionUser & { clientId: number }> {
   const user = await getSessionUser();
   if (!user) redirect("/login");
-  if (user.role !== "client" || user.client_id == null) redirect("/admin");
+  if (user.role !== "client" || user.client_id == null) redirect("/login/switch?to=client");
   if (user.must_change_password) redirect("/login/change-password");
   return { ...user, clientId: user.client_id };
 }
