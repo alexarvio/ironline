@@ -146,6 +146,8 @@ function HomeBanner({ dateLabel, firstName, goals }: { dateLabel: string; firstN
     } catch {}
   };
   const hasGoals = goals.length > 0;
+  // One chip open at a time, showing its full row under the chips.
+  const [pickedGoal, setPickedGoal] = useState<number | null>(null);
   return (
     <header className="hm-banner">
       {hasGoals ? (
@@ -166,24 +168,37 @@ function HomeBanner({ dateLabel, firstName, goals }: { dateLabel: string; firstN
             {(() => {
               const main = goals.find((g) => g.id === -1) ?? null;
               const rest = goals.filter((g) => g.id !== -1);
+              const picked = rest.find((g) => g.id === pickedGoal) ?? null;
+              const figureOf = (g: GoalRowView) => (g.kind === "metric" ? g.barLabel : g.kind === "exercise" || g.kind === "habit" ? g.right : null);
               return (
                 <>
                   {main && (
-                    <section className="hm-goalpanel hm-goalpanel-main">
-                      <div className="hm-goalpanel-head">
-                        <span className="hm-eyebrow">Main goal</span>
-                      </div>
-                      <div className="hm-goalpanel-maintext">{main.text}</div>
+                    <section className="hm-goalmain">
+                      <span className="hm-goalmain-kicker">Main goal</span>
+                      <span className="hm-goalmain-text">{main.text}</span>
                     </section>
                   )}
                   {rest.length > 0 && (
-                    <section className="hm-goalpanel">
-                      <div className="hm-goalpanel-head">
-                        <span className="hm-eyebrow">Your goals</span>
+                    <section className="hm-goalchips-wrap">
+                      <div className="hm-goalchips">
+                        {rest.map((g) => (
+                          <button
+                            key={g.id}
+                            type="button"
+                            className={`hm-goalchip ${g.tone}${g.id === pickedGoal ? " on" : ""}`}
+                            aria-pressed={g.id === pickedGoal}
+                            onClick={() => setPickedGoal((p) => (p === g.id ? null : g.id))}
+                          >
+                            <span className="hm-goalchip-text">{g.text}</span>
+                            {figureOf(g) && <span className="hm-goalchip-figure">{figureOf(g)}</span>}
+                          </button>
+                        ))}
                       </div>
-                      {rest.map((g) => (
-                        <GoalRow key={g.id} goal={g} variant="banner" animate={open} />
-                      ))}
+                      {picked && (
+                        <div className="hm-goalpanel hm-goalpick">
+                          <GoalRow goal={picked} variant="banner" animate={open} />
+                        </div>
+                      )}
                     </section>
                   )}
                 </>
