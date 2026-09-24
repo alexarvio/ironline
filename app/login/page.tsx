@@ -1,5 +1,7 @@
 import Image from "next/image";
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { resetsAvailable } from "../lib/passwordReset";
 import { loginAction } from "../lib/auth-actions";
 import PasswordInput from "./PasswordInput";
 import { ensureCoachFromEnv, ensureOwnerFromEnv, getSessionUser, resetCoachFromEnv, resetWorkspaceFromEnv } from "../lib/auth";
@@ -7,7 +9,7 @@ import { ensureCoachFromEnv, ensureOwnerFromEnv, getSessionUser, resetCoachFromE
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; deleted?: string }>;
+  searchParams: Promise<{ error?: string; deleted?: string; reset?: string }>;
 }) {
   // A fresh deployment has no accounts and no signup, so the very first
   // request to the login page is where the bootstrap coach gets created
@@ -27,7 +29,7 @@ export default async function LoginPage({
     redirect(user.role === "coach" ? "/admin/redesign" : "/client");
   }
 
-  const { error, deleted } = await searchParams;
+  const { error, deleted, reset } = await searchParams;
 
   return (
     <div className="auth-page">
@@ -39,6 +41,7 @@ export default async function LoginPage({
         <h1 className="auth-title">Sign in</h1>
 
         {deleted && <p className="auth-ok">Your account and everything in it has been deleted.</p>}
+        {reset && <p className="auth-ok">Password saved. Sign in with your new one.</p>}
         {error === "locked" ? (
           <p className="auth-error">Too many attempts. Try again in 15 minutes.</p>
         ) : (
@@ -59,6 +62,11 @@ export default async function LoginPage({
           </button>
         </form>
 
+        {resetsAvailable() && (
+          <p className="auth-note">
+            <Link href="/login/forgot">Forgot your password?</Link>
+          </p>
+        )}
         <p className="auth-note">
           Don&rsquo;t have an account? Your coach creates it for you.
         </p>
