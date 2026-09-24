@@ -89,7 +89,7 @@ const restOf = (s: number | null) => (s == null ? null : s >= 60 && s % 60 === 0
 const MAX_SESSIONS = 7;
 const MAX_COLS = 6;
 
-type AddedExercise = { kind: "exercise"; exerciseId: number | null; name: string; sets: number; reps: string; kg: number | null };
+type AddedExercise = { kind: "exercise"; exerciseId: number | null; name: string; sets: number | string; reps: string; kg: number | null; rpe?: string; tempo?: string; rest?: string };
 type AddedCardio = { kind: "cardio"; name: string; time: string; pace: string; incline: string; distance: string; note: string };
 type Added = { key: number } & (AddedExercise | AddedCardio);
 type Edits = { name?: string; note?: string; sets?: string; reps?: string; kg?: number | null; gymKg?: Record<string, number | null>; rpe?: string; tempo?: string; rest?: string };
@@ -247,7 +247,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
         order: null,
       },
       removed: p.removed,
-      added: p.added.filter((a): a is Added & AddedExercise => a.kind === "exercise" && a.exerciseId != null).map((a) => ({ exerciseId: a.exerciseId!, fields: { sets: String(a.sets), reps: a.reps, targetWeight: str(a.kg) } })),
+      added: p.added.filter((a): a is Added & AddedExercise => a.kind === "exercise" && a.exerciseId != null).map((a) => ({ exerciseId: a.exerciseId!, fields: { sets: String(a.sets), reps: a.reps, targetWeight: str(a.kg), rpe: a.rpe ?? "", tempo: a.tempo ?? "", rest: a.rest ?? "" } })),
       order: p.order,
     };
   };
@@ -274,7 +274,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
         });
         const addedRows: DraftRow[] = p.added
           .filter((a): a is Added & AddedExercise => a.kind === "exercise")
-          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: a.sets, reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: null, tempo: null, rest: null, note: null, logged: [], video: null, demo: null, history: [], d7: null, d30: null }));
+          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: Math.max(1, parseInt(String(a.sets), 10) || 3), reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: null, tempo: null, rest: null, note: null, logged: [], video: null, demo: null, history: [], d7: null, d30: null }));
         const addedCardio: DraftCardio[] = p.added
           .filter((a): a is Added & AddedCardio => a.kind === "cardio")
           .map((a, i) => ({ id: -(Date.now() + 500 + i), name: a.name, time: a.time, pace: a.pace, incline: a.incline, distance: a.distance, notes: a.note, done: false }));
@@ -843,7 +843,11 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                     );
                   })()}
 
-                  {p.added.filter((r): r is Added & AddedExercise => r.kind === "exercise").map((r) => (
+                  {p.added.filter((r): r is Added & AddedExercise => r.kind === "exercise").map((r) => {
+                    // A new row is edited in place before Apply, like any other.
+                    const editAdded = (f: Partial<AddedExercise>) =>
+                      patch(s.id, (q) => ({ ...q, added: q.added.map((x) => (x.key === r.key && x.kind === "exercise" ? { ...x, ...f } : x)) }));
+                    return (
                     <div key={r.key} className="rd-row new">
                       <div className="rd-row-main" style={colStyle}>
                         <span />
@@ -851,12 +855,12 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                           <span className="rd-ex-name">{r.name}</span>
                           <small>New · not applied yet</small>
                         </span>
-                        {cols.sets && <Cell value={String(r.sets)} onChange={() => {}} label="Sets" width="sm" />}
-                        {cols.reps && <Cell value={r.reps} onChange={() => {}} label="Reps" />}
-                        {cols.weight && <WeightCell key={unit} kg={r.kg} lbs={lbs} onChange={() => {}} />}
-                        {cols.rpe && <Cell value="" onChange={() => {}} label="RPE" width="sm" />}
-                        {cols.tempo && <Cell value="" onChange={() => {}} label="Tempo" />}
-                        {cols.rest && <Cell value="" onChange={() => {}} label="Rest" />}
+                        {cols.sets && <Cell value={String(r.sets)} onChange={(v) => editAdded({ sets: v })} label="Sets" width="sm" />}
+                        {cols.reps && <Cell value={r.reps} onChange={(v) => editAdded({ reps: v })} label="Reps" />}
+                        {cols.weight && <WeightCell key={unit} kg={r.kg} lbs={lbs} onChange={(v) => editAdded({ kg: v })} />}
+                        {cols.rpe && <Cell value={r.rpe ?? ""} onChange={(v) => editAdded({ rpe: v })} label="RPE" width="sm" />}
+                        {cols.tempo && <Cell value={r.tempo ?? ""} onChange={(v) => editAdded({ tempo: v })} label="Tempo" />}
+                        {cols.rest && <Cell value={r.rest ?? ""} onChange={(v) => editAdded({ rest: v })} label="Rest" />}
                         <span />
                         <span className="rd-did">
                           <em />
@@ -870,11 +874,12 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                         </span>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
 
                   {adding?.session === s.id ? (
                     adding.kind === "exercise" ? (
-                      <AddExerciseRow library={library} onPick={(nm, exerciseId) => patch(s.id, (q) => ({ ...q, added: [...q.added, { key: Date.now() + Math.random(), kind: "exercise", exerciseId, name: nm, sets: 3, reps: "8-10", kg: null }] }))} onClose={() => setAdding(null)} />
+                      <AddExerciseRow library={library} onPick={(nm, exerciseId) => patch(s.id, (q) => ({ ...q, added: [...q.added, { key: Date.now() + Math.random(), kind: "exercise", exerciseId, name: nm, sets: "", reps: "", kg: null }] }))} onClose={() => setAdding(null)} />
                     ) : (
                       <AddCardioRow
                         onAdd={(c) => patch(s.id, (q) => ({ ...q, added: [...q.added, { key: Date.now() + Math.random(), kind: "cardio", ...c }] }))}
