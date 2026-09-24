@@ -148,16 +148,16 @@ export default function ExercisePage({
   const [menuOpen, setMenuOpen] = useState(false);
   const openMessages = useOpenMessages();
   const [videoOpen, setVideoOpen] = useState(false);
+  // The prescription, the way the old card read it: figure and unit, one
+  // line, tempo under it.
   const targets = [
-    { label: "Sets", value: String(exercise.sets) },
-    exercise.reps ? { label: "Reps", value: exercise.reps } : null,
-    exercise.targetWeight != null ? { label: unitLabel, value: show(exercise.targetWeight) } : null,
-    exercise.targetRpe != null ? { label: "RPE", value: String(exercise.targetRpe) } : null,
-    exercise.tempo ? { label: "Tempo", value: exercise.tempo } : null,
-    exercise.rest != null ? { label: "Rest", value: exercise.rest < 60 ? `${exercise.rest}s` : `${Math.floor(exercise.rest / 60)}:${String(exercise.rest % 60).padStart(2, "0")}` } : null,
-    exercise.distance ? { label: "Distance", value: exercise.distance } : null,
-    exercise.time ? { label: "Time", value: exercise.time } : null,
-  ].filter((t): t is { label: string; value: string } => !!t);
+    exercise.targetWeight != null ? { value: show(exercise.targetWeight), unit: unitLabel } : null,
+    exercise.reps ? { value: exercise.reps, unit: "reps" } : null,
+    exercise.targetRpe != null ? { value: String(exercise.targetRpe), unit: "rpe" } : null,
+    exercise.distance ? { value: exercise.distance, unit: "distance" } : null,
+    exercise.time ? { value: exercise.time, unit: "time" } : null,
+    exercise.rest != null ? { value: exercise.rest < 60 ? `${exercise.rest}s` : `${Math.floor(exercise.rest / 60)}:${String(exercise.rest % 60).padStart(2, "0")}`, unit: "rest" } : null,
+  ].filter((t): t is { value: string; unit: string } => !!t);
   const ask = exercise.videoRequest;
 
   const numberInput = (props: { value: string; placeholder: string; label: string; decimal?: boolean; reps?: boolean; onChange: (v: string) => void; disabled?: boolean }) => (
@@ -263,17 +263,23 @@ export default function ExercisePage({
         </div>
       )}
 
-      {targets.length > 0 && (
-        <div className="wo-targets-wrap">
-          <div className="wo-targets-label">Target</div>
-          <div className="wo-targets">
-          {targets.map((t) => (
-            <div key={t.label} className="wo-target">
-              <small>{t.label}</small>
-              <b>{t.value}</b>
+      {(targets.length > 0 || exercise.tempo) && (
+        <div className="ts-target wo-target-card">
+          <div className="ts-target-label">Target</div>
+          {targets.length > 0 && (
+            <div className="ts-target-line">
+              {targets.map((t) => (
+                <span key={t.unit}>
+                  <b>{t.value}</b> <small>{t.unit}</small>
+                </span>
+              ))}
             </div>
-          ))}
-          </div>
+          )}
+          {exercise.tempo && (
+            <div className="ts-target-tempo">
+              <b>{exercise.tempo}</b> <small>tempo</small>
+            </div>
+          )}
         </div>
       )}
 
