@@ -416,6 +416,18 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
     if (latestNote.kind === "programme") return { kind: "deploy", track: "training", title: latestNote.message, body: null, cta: "View plan", ...base, actionTab: latestNote.action_tab ?? "training" };
     if (latestNote.kind === "report") return { kind: "report", title: "Sent you a progress report", body: latestNote.message, cta: "Open", ...base, actionTab: latestNote.action_tab ?? "settings" };
     if (latestNote.action_tab === "nutrition") return { kind: "deploy", track: "nutrition", title: latestNote.message, body: null, cta: "View plan", ...base };
+    // A change the coach made: read what it was from its tab and its words.
+    if (latestNote.kind === "general") {
+      const msg = latestNote.message;
+      const cta = latestNote.action_label ?? "Open";
+      const lower = msg.toLowerCase();
+      if (latestNote.action_tab === "training") return { kind: "deploy", track: "training", title: msg, body: null, cta, ...base };
+      if (lower.includes("goal")) return { kind: "goal", title: msg, body: null, cta: "See goals", ...base };
+      if (lower.includes("call") || lower.includes("meeting")) return { kind: "meeting", title: msg, body: null, cta: "See details", ...base };
+      if (lower.includes("progress pictures")) return { kind: "comment", context: "photos", title: msg, body: null, cta: "Open photos", ...base, actionTab: latestNote.action_tab ?? "home" };
+      if (lower.includes("check in") || lower.includes("check-in")) return { kind: "comment", context: "checkin", title: msg, body: null, cta: "Open check-in", ...base, actionTab: latestNote.action_tab ?? "home" };
+      return { kind: "message", title: msg, body: null, cta, ...base };
+    }
     if (latestNote.action_tab === "chat") return { kind: "message", title: "Message", body: latestNote.message, cta: "Open", ...base };
     return { kind: "message", title: latestNote.action_label ?? "Note from your coach", body: latestNote.message, cta: latestNote.action_tab ? "Open" : "See all", ...base };
   }

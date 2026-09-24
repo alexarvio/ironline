@@ -313,6 +313,7 @@ export async function addExerciseAction(formData: FormData) {
   if (formData.get("applyToRemainingWeeks") === "1") {
     addExerciseToRemainingWeeks(programDayId, exerciseId, sets, reps, targetWeight, rpe, tempo, notes);
   }
+  noteChange(clientIdForProgramDay(programDayId), "Updated your training", { tab: "training", label: "See your training", key: "training" });
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -321,6 +322,7 @@ export async function removeExerciseAction(formData: FormData) {
   const assignmentId = Number(formData.get("assignmentId"));
   if (!(await coachForClient(getClientIdForAssignment(assignmentId)))) return;
   removeAssignment(assignmentId);
+  noteChange(getClientIdForAssignment(assignmentId), "Updated your training", { tab: "training", label: "See your training", key: "training" });
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -351,6 +353,7 @@ export async function updateAssignmentAction(formData: FormData) {
     const kind = raw === "form" || raw === "load" || raw === "tempo" ? raw : null;
     setExerciseNoteKind(assignmentId, kind);
   }
+  noteChange(getClientIdForAssignment(assignmentId), "Updated your training", { tab: "training", label: "See your training", key: "training" });
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -431,6 +434,7 @@ export async function setLabelAction(formData: FormData) {
   if (!(await coachForClient(clientIdForProgramDay(programDayId)))) return;
   const label = String(formData.get("label") || "");
   setDayLabel(programDayId, label);
+  noteChange(clientIdForProgramDay(programDayId), "Updated your training", { tab: "training", label: "See your training", key: "training" });
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -479,6 +483,7 @@ export async function addProgramWeekAction(formData: FormData) {
   // published days only, so without this the new week arrived empty.
   if (program.status === "deployed") publishWeek(clientId, newWeekNumber);
 
+  noteChange(clientId, "Added a week to your programme", { tab: "training", label: "See your training", key: "training-week" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -776,6 +781,7 @@ export async function addMeasurementFieldAction(formData: FormData) {
   const unit = String(formData.get("unit") || "").trim();
   if (!name) return;
   addMeasurementField(clientId, name, unit);
+  noteChange(clientId, "Changed what you check in", { tab: "home", label: "See your tasks", key: "checkin" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -787,6 +793,7 @@ export async function updateMeasurementFieldAction(formData: FormData) {
   const unit = String(formData.get("unit") || "").trim();
   if (!name) return;
   updateMeasurementField(id, name, unit);
+  noteChange(clientIdForMeasurementField(id), "Changed what you check in", { tab: "home", label: "See your tasks", key: "checkin" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -795,6 +802,7 @@ export async function removeMeasurementFieldAction(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!(await coachForClient(clientIdForMeasurementField(id)))) return;
   removeMeasurementField(id);
+  noteChange(clientIdForMeasurementField(id), "Changed what you check in", { tab: "home", label: "See your tasks", key: "checkin" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -834,6 +842,7 @@ export async function addMetricsFromLibraryAction(formData: FormData) {
   if (!Array.isArray(picks) || picks.length === 0) return;
   const rawPhase = String(formData.get("phaseId") ?? "");
   addMetricsFromLibraryPhased(clientId, picks, /^\d+$/.test(rawPhase) ? Number(rawPhase) : null);
+  noteChange(clientId, "Changed what you check in", { tab: "home", label: "See your tasks", key: "checkin" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -864,6 +873,7 @@ export async function applyMetricChangesAction(input: {
   const library = adds.filter((a) => a.source === "library");
   if (library.length) addMetricsFromLibraryPhased(clientId, library.map(({ name, unit, group, cadence }) => ({ name, unit, group, cadence })), phaseId);
   for (const a of adds.filter((x) => x.source !== "library")) addMetricDefinition(clientId, a.group, a.name, a.unit, a.cadence, phaseId);
+  noteChange(clientId, "Changed what you check in", { tab: "home", label: "See your tasks", key: "checkin" });
   revalidatePath("/admin");
   revalidatePath("/client");
   return true;
@@ -880,6 +890,7 @@ export async function addMetricDefinitionAction(formData: FormData) {
   // Set up inside a phase: that phase is what asks for it.
   const rawPhase = String(formData.get("phaseId") ?? "");
   addMetricDefinition(clientId, category, name, unit, frequency, /^\d+$/.test(rawPhase) ? Number(rawPhase) : null);
+  noteChange(clientId, "Changed what you check in", { tab: "home", label: "See your tasks", key: "checkin" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -900,6 +911,7 @@ export async function updateMetricDefinitionAction(formData: FormData) {
   const unit = String(formData.get("unit") || "").trim();
   if (!name) return;
   updateMetricDefinition(id, category, name, unit);
+  noteChange(clientIdForMetricDefinition(id), "Changed what you check in", { tab: "home", label: "See your tasks", key: "checkin" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -908,6 +920,7 @@ export async function removeMetricDefinitionAction(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!(await coachForClient(clientIdForMetricDefinition(id)))) return;
   removeMetricDefinition(id);
+  noteChange(clientIdForMetricDefinition(id), "Changed what you check in", { tab: "home", label: "See your tasks", key: "checkin" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1009,6 +1022,7 @@ export async function addPhotoSlotAction(formData: FormData) {
   const label = String(formData.get("label") || "").trim();
   if (!label) return;
   addPhotoSlot(clientId, label);
+  noteChange(clientId, "Changed your progress pictures", { tab: "home", label: "See your tasks", key: "photos" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1038,6 +1052,7 @@ export async function setPhotoCadenceAction(formData: FormData) {
   const cadence = (["weekly", "biweekly", "monthly", "sixweekly"] as const).find((c) => c === raw);
   if (!cadence) return;
   setPhotoCadence(clientId, cadence);
+  noteChange(clientId, "Changed your progress pictures", { tab: "home", label: "See your tasks", key: "photos" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1070,6 +1085,7 @@ export async function savePhotoScheduleAction(
   setPhotoCadence(clientId, cadence);
   setPhotoStartDate(clientId, startDate);
   setPhotoInstructions(clientId, String(schedule.instructions ?? "").slice(0, 600));
+  noteChange(clientId, "Changed your progress pictures", { tab: "home", label: "See your tasks", key: "photos" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1088,6 +1104,7 @@ export async function savePhotoPeriodNoteAction(formData: FormData) {
     next_steps: String(formData.get("next_steps") || ""),
     saved_at: new Date().toISOString(),
   });
+  noteChange(clientId, "Left instructions for your progress pictures", { tab: "home", label: "See your tasks", key: "photos-note" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1135,6 +1152,7 @@ export async function requestExerciseVideoAction(assignmentId: number, note: str
   const id = Number(assignmentId);
   if (!Number.isInteger(id) || !(await coachForClient(getClientIdForAssignment(id)))) return;
   requestExerciseVideo(id, String(note ?? ""));
+  noteChange(getClientIdForAssignment(id), "Asked you for a video of an exercise", { tab: "training", label: "See which", key: `video-ask:${id}` });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1242,6 +1260,7 @@ export async function saveWaterGoalAction(formData: FormData) {
   if (!(await coachForClient(clientId))) return;
   const raw = String(formData.get("water") ?? "").trim();
   setNutritionWater(clientId, raw === "" ? null : Number(raw));
+  noteChange(clientId, "Updated your water goal", { tab: "nutrition", label: "See your targets", key: "water" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1249,6 +1268,7 @@ export async function saveWaterGoalAction(formData: FormData) {
 export async function applySupplementChangesAction(clientId: number, changes: SupplementChanges) {
   if (!(await coachForClient(clientId))) return;
   applySupplementChanges(clientId, changes);
+  noteChange(clientId, "Updated your supplements", { tab: "nutrition", label: "See your supplements", key: "supplements" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1258,6 +1278,7 @@ export async function addSupplementRowAction(formData: FormData) {
   // The name typed in the footer box starts the row off; an empty box still
   // adds a blank row, which is how "+ Add item" in the band works.
   addSupplementRow(Number(formData.get("clientId")), String(formData.get("name") ?? ""));
+  noteChange(Number(formData.get("clientId")), "Updated your supplements", { tab: "nutrition", label: "See your supplements", key: "supplements" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1269,6 +1290,7 @@ export async function updateSupplementRowAction(formData: FormData) {
   const field = String(formData.get("field") || "");
   if (field !== "name" && field !== "quantity" && field !== "timing" && field !== "notes") return;
   updateSupplementRow(clientId, rowId, field, String(formData.get("value") ?? ""));
+  noteChange(clientId, "Updated your supplements", { tab: "nutrition", label: "See your supplements", key: "supplements" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1276,6 +1298,7 @@ export async function updateSupplementRowAction(formData: FormData) {
 export async function removeSupplementRowAction(formData: FormData) {
   if (!(await coachForClient(Number(formData.get("clientId"))))) return;
   removeSupplementRow(Number(formData.get("clientId")), Number(formData.get("rowId")));
+  noteChange(Number(formData.get("clientId")), "Updated your supplements", { tab: "nutrition", label: "See your supplements", key: "supplements" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1285,6 +1308,7 @@ export async function saveCoachNutritionNoteAction(formData: FormData) {
   if (!(await coachForClient(clientId))) return;
   const phaseRaw = Number(formData.get("phaseId"));
   setNutritionNote(clientId, String(formData.get("note") ?? ""), Number.isInteger(phaseRaw) && phaseRaw > 0 ? phaseRaw : null);
+  noteChange(clientId, "Left a note on your nutrition", { tab: "nutrition", label: "Read it", key: "nutrition-note" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1355,6 +1379,7 @@ export async function setCheckInDayAction(formData: FormData) {
   const day = String(formData.get("check_in_day") ?? "").trim();
   if (!(await coachForClient(clientId))) return;
   saveClientProfile({ ...getClientProfile(clientId), check_in_day: day || null });
+  noteChange(clientId, "Moved your weekly check-in day", { tab: "home", label: "See your tasks", key: "checkin-day" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1399,6 +1424,7 @@ export async function saveClientProfileAction(formData: FormData) {
 export async function setClientMainGoalAction(clientId: number, text: string) {
   if (!(await coachForClient(clientId))) return;
   setClientMainGoal(clientId, text);
+  noteChange(clientId, text.trim() ? `Set your main goal: ${text.trim()}` : "Cleared your main goal", { tab: "home", label: "See your goals", key: `main-goal:${text.trim()}` });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1465,6 +1491,7 @@ export async function addClientGoalAction(formData: FormData) {
     const newest = mine[mine.length - 1];
     if (newest) setClientGoalStart(newest.id, startRaw);
   }
+  noteChange(clientId, `Set a new goal: ${text}`, { tab: "home", label: "See your goals", key: `goal:${text}` });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1541,6 +1568,7 @@ export async function updateClientGoalAction(formData: FormData) {
   updateClientGoal(id, text, trackingFor(clientId, coach.id, parseGoalTracking(formData.get("tracking"))));
   const startRaw = String(formData.get("start") ?? "");
   if (/^\d{4}-\d{2}-\d{2}$/.test(startRaw)) setClientGoalStart(id, startRaw);
+  noteChange(clientId, "Updated one of your goals", { tab: "home", label: "See your goals", key: "goal-update" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1656,7 +1684,9 @@ export async function removeMeetingAction(formData: FormData) {
   const coach = await requireCoach();
   const id = Number(formData.get("id"));
   if (!coachOwnsMeeting(coach.id, id)) return;
+  const meetingClient = getClientIdForMeeting(id);
   removeMeeting(id);
+  noteChange(meetingClient, "Cancelled your call", { tab: "home", label: "See your meetings", key: `meeting-cancel:${id}` });
   revalidatePath("/admin");
 }
 
@@ -1756,6 +1786,7 @@ export type EventInput = { kind?: string | null; title: string; start: string; e
 export async function addClientEventAction(clientId: number, v: EventInput) {
   if (!(await coachForClient(Number(clientId)))) return null;
   const row = addClientEvent(Number(clientId), v);
+  noteChange(Number(clientId), `Added to your calendar: ${v.title}`, { tab: "home", label: "See it", key: `event:${v.title}` });
   revalidatePath("/admin");
   return row?.id ?? null;
 }
@@ -2464,6 +2495,7 @@ export async function copyProgramDayAction(formData: FormData) {
     copyProgramDay(fromDayId, toDayId);
     if (laterWeeks) copyProgramDayToLaterWeeks(fromDayId, toDayId);
   }
+  noteChange(owner, "Updated your training", { tab: "training", label: "See your training", key: "training" });
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -2504,6 +2536,7 @@ export async function addSessionAction(formData: FormData) {
   const week = Number(formData.get("week"));
   if (!clientId || !week || !(await coachForClient(clientId))) return;
   addSession(clientId, week);
+  noteChange(clientId, "Updated your training", { tab: "training", label: "See your training", key: "training" });
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -2513,6 +2546,7 @@ export async function removeSessionAction(formData: FormData) {
   const programDayId = Number(formData.get("programDayId"));
   if (!programDayId || !(await coachForClient(clientIdForProgramDay(programDayId)))) return;
   removeSession(programDayId);
+  noteChange(clientIdForProgramDay(programDayId), "Updated your training", { tab: "training", label: "See your training", key: "training" });
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -2558,6 +2592,7 @@ export async function applyDayChangesAction(
       added: (payload.added ?? []).filter((a) => Number.isInteger(a.exerciseId)),
       order: Array.isArray(payload.order) ? payload.order.filter((id) => Number.isInteger(id)) : null,
     });
+    noteChange(clientIdForProgramDay(payload.programDayId), "Updated your training", { tab: "training", label: "See your training", key: "training" });
     revalidatePath("/client");
     revalidatePath("/admin");
     return { ok: true, skipped };
@@ -2628,6 +2663,13 @@ export async function saveWarmupSetsAction(assignmentId: number, sets: { weight_
   setWarmupSets(Number(assignmentId), sets);
   revalidatePath("/client");
   revalidatePath("/admin");
+}
+
+// Everything the coach changes reaches the client as a notification: one per
+// kind per day, so an afternoon of edits reads as one line, not thirty.
+function noteChange(clientId: number | null | undefined, message: string, opts: { tab?: "home" | "training" | "nutrition" | "settings"; label?: string; ref?: number; key: string }) {
+  if (clientId == null) return;
+  logCoachActivity(clientId, message, { kind: "general", actionTab: opts.tab, actionLabel: opts.label, actionRef: opts.ref, dedupeKey: `${opts.key}:${localDateStr()}` });
 }
 
 // The session clock: a valid ISO timestamp from the phone, else now.
