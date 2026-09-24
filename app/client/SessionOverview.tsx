@@ -209,7 +209,7 @@ function ExerciseCard({ exercise, index, done, coachName }: { exercise: SessionE
   const [open, setOpen] = useState(false);
   if (done) {
     return (
-      <div className={`so-card so-card-fold${open ? " open" : ""}`}>
+      <div className={`so-card so-card-fold${open ? " open" : ""}${exDone ? " done" : ""}`}>
         <button type="button" className="so-card-row so-card-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
           <span className={`so-index${exDone ? " done" : ""}`}>{index}</span>
           <span className="so-card-main">

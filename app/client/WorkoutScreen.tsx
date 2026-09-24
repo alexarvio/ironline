@@ -289,7 +289,7 @@ export default function WorkoutScreen({
                     const count = ex ? loggedCount(ex) : null;
                     const status = complete ? "Done" : ex && count ? `${count} of ${ex.sets}` : "Not started";
                     return (
-                      <button key={j} type="button" className="wo-check-row" onClick={() => jumpTo(j)}>
+                      <button key={j} type="button" className={`wo-check-row${complete ? " done" : ""}`} onClick={() => jumpTo(j)}>
                         <span className={`wo-check-circle${complete ? " done" : ""}`}>{complete ? "✓" : j + 1}</span>
                         <span className="wo-check-name">{ex ? shownName(ex) : day.cardio[q.index].name}</span>
                         <span className={`wo-check-status${complete ? " done" : count ? " part" : ""}`}>{status}</span>
