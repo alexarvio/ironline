@@ -16423,3 +16423,35 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .tr-row-tile.done { background: transparent; color: #2f7a3f; }
 .tr-row-tile.skipped, .tr-row-tile.missed { color: #8b93a1; }
 .tr-row.done { background: #fff; border-color: transparent; }
+/* Session overview at phone scale. */
+.so-head { padding-bottom: 16px; }
+.so-back { width: 36px; height: 36px; }
+.so-back svg { width: 18px; height: 18px; }
+.so-kicker { margin-top: 12px; font-size: 11px; }
+.so-title { font-size: 22px; }
+.so-pill { padding: 5px 9px; font-size: 11.5px; }
+.so-sub { margin-top: 6px; font-size: 13px; }
+.so-stats { margin-top: 12px; border-radius: 14px; }
+.so-stat { gap: 2px; padding: 10px 4px; }
+.so-stat b, .so-stat-text { font-size: 14px; font-weight: 700; white-space: nowrap; }
+.so-stat small { font-size: 9.5px; letter-spacing: 0.1em; }
+.so-body { padding: 16px 16px 130px; }
+.so-list-head { padding-bottom: 8px; }
+.so-list-head h2 { font-size: 16px; }
+.so-list-head span { font-size: 12px; }
+.so-list { gap: 8px; }
+.so-card { gap: 10px; padding: 12px 14px; border-radius: 16px; }
+.so-card-toggle { padding: 11px 14px; }
+.so-card-row { gap: 10px; }
+.so-index { width: 24px; height: 24px; font-size: 11.5px; }
+.so-card-name { font-size: 14.5px; }
+.so-card-summary { font-size: 12.5px; }
+.so-card-body { padding: 0 14px 12px 48px; gap: 8px; }
+.so-set { font-size: 13px; padding: 6px 0; grid-template-columns: 44px 1fr 1fr 1fr; }
+.so-card-chev { width: 7px; height: 7px; }
+.so-delta { padding: 4px 8px; font-size: 11.5px; }
+.so-chip { padding: 4px 8px; font-size: 12.5px; }
+.so-note span { font-size: 13px; }
+.so-video { font-size: 12.5px; }
+.so-start { height: 52px; font-size: 16px; border-radius: 16px; }
+.so-cta { padding: 12px 16px 26px; }

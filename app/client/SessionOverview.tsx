@@ -105,7 +105,7 @@ export default function SessionOverview({
           {done ? (
             <>
               <div className="so-stat">
-                <b>{day.endedAt ? shortDate(day.endedAt) : "—"}</b>
+                <b>{day.endedAt ? shortDate(day.endedAt).replace(/^\w+,? /, "") : "—"}</b>
                 <small>Date</small>
               </div>
               <div className="so-stat">
