@@ -181,6 +181,10 @@ import {
   VITAMIN_ITEMS,
   weekStart,
   getClientIdForAssignment,
+  clientSeesAssignment,
+  clientSeesPhase,
+  clientSeesProgramDay,
+  clientSeesTrainingWeek,
   getClientIdForSetLog,
   updateSetLog,
   publishWeek,
@@ -314,16 +318,18 @@ export async function addExerciseAction(formData: FormData) {
   if (formData.get("applyToRemainingWeeks") === "1") {
     addExerciseToRemainingWeeks(programDayId, exerciseId, sets, reps, targetWeight, rpe, tempo, notes);
   }
-  noteChange(clientIdForProgramDay(programDayId), "Updated your training", { tab: "training", label: "See your training", key: "training" });
+  if (clientSeesProgramDay(programDayId)) noteChange(clientIdForProgramDay(programDayId), "Updated your training", { tab: "training", label: "See your training", key: "training" });
   revalidatePath("/client");
   revalidatePath("/admin");
 }
 
 export async function removeExerciseAction(formData: FormData) {
   const assignmentId = Number(formData.get("assignmentId"));
-  if (!(await coachForClient(getClientIdForAssignment(assignmentId)))) return;
+  const clientId = getClientIdForAssignment(assignmentId);
+  if (!(await coachForClient(clientId))) return;
+  const seen = clientSeesAssignment(assignmentId);
   removeAssignment(assignmentId);
-  noteChange(getClientIdForAssignment(assignmentId), "Updated your training", { tab: "training", label: "See your training", key: "training" });
+  if (seen) noteChange(clientId, "Updated your training", { tab: "training", label: "See your training", key: "training" });
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -354,7 +360,7 @@ export async function updateAssignmentAction(formData: FormData) {
     const kind = raw === "form" || raw === "load" || raw === "tempo" ? raw : null;
     setExerciseNoteKind(assignmentId, kind);
   }
-  noteChange(getClientIdForAssignment(assignmentId), "Updated your training", { tab: "training", label: "See your training", key: "training" });
+  if (clientSeesAssignment(assignmentId)) noteChange(getClientIdForAssignment(assignmentId), "Updated your training", { tab: "training", label: "See your training", key: "training" });
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -435,7 +441,7 @@ export async function setLabelAction(formData: FormData) {
   if (!(await coachForClient(clientIdForProgramDay(programDayId)))) return;
   const label = String(formData.get("label") || "");
   setDayLabel(programDayId, label);
-  noteChange(clientIdForProgramDay(programDayId), "Updated your training", { tab: "training", label: "See your training", key: "training" });
+  if (clientSeesProgramDay(programDayId)) noteChange(clientIdForProgramDay(programDayId), "Updated your training", { tab: "training", label: "See your training", key: "training" });
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -484,7 +490,7 @@ export async function addProgramWeekAction(formData: FormData) {
   // published days only, so without this the new week arrived empty.
   if (program.status === "deployed") publishWeek(clientId, newWeekNumber);
 
-  noteChange(clientId, "Added a week to your programme", { tab: "training", label: "See your training", key: "training-week" });
+  if (clientSeesTrainingWeek(clientId, newWeekNumber)) noteChange(clientId, "Added a week to your programme", { tab: "training", label: "See your training", key: "training-week" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1153,7 +1159,7 @@ export async function requestExerciseVideoAction(assignmentId: number, note: str
   const id = Number(assignmentId);
   if (!Number.isInteger(id) || !(await coachForClient(getClientIdForAssignment(id)))) return;
   requestExerciseVideo(id, String(note ?? ""));
-  noteChange(getClientIdForAssignment(id), "Asked you for a video of an exercise", { tab: "training", label: "See which", key: `video-ask:${id}` });
+  if (clientSeesAssignment(id)) noteChange(getClientIdForAssignment(id), "Asked you for a video of an exercise", { tab: "training", label: "See which", key: `video-ask:${id}` });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1251,7 +1257,7 @@ export async function saveNutritionTargetsAction(formData: FormData) {
   // Water rides along on the same form — it's one row inside the same card,
   // and a second Save button for a single number would be silly.
   if (formData.has("water")) setNutritionWater(clientId, num("water"));
-  logCoachActivity(clientId, "Updated your nutrition targets", { kind: "general", actionTab: "nutrition", actionLabel: "See your targets" });
+  if (phaseId == null || clientSeesPhase(phaseId)) logCoachActivity(clientId, "Updated your nutrition targets", { kind: "general", actionTab: "nutrition", actionLabel: "See your targets" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1308,8 +1314,9 @@ export async function saveCoachNutritionNoteAction(formData: FormData) {
   const clientId = Number(formData.get("clientId"));
   if (!(await coachForClient(clientId))) return;
   const phaseRaw = Number(formData.get("phaseId"));
-  setNutritionNote(clientId, String(formData.get("note") ?? ""), Number.isInteger(phaseRaw) && phaseRaw > 0 ? phaseRaw : null);
-  noteChange(clientId, "Left a note on your nutrition", { tab: "nutrition", label: "Read it", key: "nutrition-note" });
+  const notePhase = Number.isInteger(phaseRaw) && phaseRaw > 0 ? phaseRaw : null;
+  setNutritionNote(clientId, String(formData.get("note") ?? ""), notePhase);
+  if (notePhase == null || clientSeesPhase(notePhase)) noteChange(clientId, "Left a note on your nutrition", { tab: "nutrition", label: "Read it", key: "nutrition-note" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -2497,7 +2504,7 @@ export async function copyProgramDayAction(formData: FormData) {
     copyProgramDay(fromDayId, toDayId);
     if (laterWeeks) copyProgramDayToLaterWeeks(fromDayId, toDayId);
   }
-  noteChange(owner, "Updated your training", { tab: "training", label: "See your training", key: "training" });
+  if (clientSeesProgramDay(fromDayId)) noteChange(owner, "Updated your training", { tab: "training", label: "See your training", key: "training" });
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -2538,7 +2545,7 @@ export async function addSessionAction(formData: FormData) {
   const week = Number(formData.get("week"));
   if (!clientId || !week || !(await coachForClient(clientId))) return;
   addSession(clientId, week);
-  noteChange(clientId, "Updated your training", { tab: "training", label: "See your training", key: "training" });
+  if (clientSeesTrainingWeek(clientId, week)) noteChange(clientId, "Updated your training", { tab: "training", label: "See your training", key: "training" });
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -2546,9 +2553,11 @@ export async function addSessionAction(formData: FormData) {
 // Deleting a session from its header; the ones after it move up.
 export async function removeSessionAction(formData: FormData) {
   const programDayId = Number(formData.get("programDayId"));
-  if (!programDayId || !(await coachForClient(clientIdForProgramDay(programDayId)))) return;
+  const clientId = clientIdForProgramDay(programDayId);
+  if (!programDayId || !(await coachForClient(clientId))) return;
+  const seen = clientSeesProgramDay(programDayId);
   removeSession(programDayId);
-  noteChange(clientIdForProgramDay(programDayId), "Updated your training", { tab: "training", label: "See your training", key: "training" });
+  if (seen) noteChange(clientId, "Updated your training", { tab: "training", label: "See your training", key: "training" });
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -2594,7 +2603,7 @@ export async function applyDayChangesAction(
       added: (payload.added ?? []).filter((a) => Number.isInteger(a.exerciseId)),
       order: Array.isArray(payload.order) ? payload.order.filter((id) => Number.isInteger(id)) : null,
     });
-    noteChange(clientIdForProgramDay(payload.programDayId), "Updated your training", { tab: "training", label: "See your training", key: "training" });
+    if (clientSeesProgramDay(payload.programDayId)) noteChange(clientIdForProgramDay(payload.programDayId), "Updated your training", { tab: "training", label: "See your training", key: "training" });
     revalidatePath("/client");
     revalidatePath("/admin");
     return { ok: true, skipped };

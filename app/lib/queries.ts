@@ -581,6 +581,38 @@ export function getDeployedProgram(clientId: number): TrainingProgram | null {
   return deployed.reduce((latest, p) => (p.start_week > latest.start_week ? p : latest));
 }
 
+// ---- What the client can see right now ------------------------------------
+// A coach's change is only news to the client if it lands somewhere they
+// can see. Editing a draft or a scheduled programme or phase must not
+// notify them: the notification for those comes when it goes live.
+
+/** A training week of the programme the client is on now. */
+export function clientSeesTrainingWeek(clientId: number, weekNumber: number): boolean {
+  const program = getDeployedProgram(clientId);
+  return !!program && weekNumber >= program.start_week && weekNumber < program.start_week + program.total_weeks;
+}
+
+/** A published session in the programme the client is on now. */
+export function clientSeesProgramDay(programDayId: number): boolean {
+  const day = getData().program_days.find((pd) => pd.id === programDayId);
+  return !!day && day.status === "published" && clientSeesTrainingWeek(day.client_id, day.week_number);
+}
+
+export function clientSeesAssignment(assignmentId: number): boolean {
+  const assignment = getData().workout_assignments.find((wa) => wa.id === assignmentId);
+  return !!assignment && clientSeesProgramDay(assignment.program_day_id);
+}
+
+/** A phase that is out (not a draft) and running today. */
+export function clientSeesPhase(phaseId: number): boolean {
+  const phase = getData().client_phases.find((p) => p.id === phaseId);
+  if (!phase || phase.draft) return false;
+  const today = localDateStr();
+  const d = new Date(`${phase.end_week}T00:00:00`);
+  d.setDate(d.getDate() + 6);
+  return phase.start_week <= today && localDateStr(d) >= today;
+}
+
 export function getDraftProgram(clientId: number): TrainingProgram | null {
   return listPrograms(clientId).find((p) => p.status === "draft") ?? null;
 }
