@@ -16382,3 +16382,6 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .wo-head-row2.right { justify-content: center; margin-top: -6px; }
 .wo-gym-chip { padding: 2px 2px; font-size: 12.5px; }
 .wo-segments { margin-top: 2px; }
+/* A video already sent reads green; the coach's reply stays blue. */
+.wo-video.sent { background: #DFF3EA; color: #2f7a3f; }
+.wo-video.sent .wo-video-tile { background: #2f7a3f; }
