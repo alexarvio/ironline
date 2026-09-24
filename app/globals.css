@@ -16370,3 +16370,5 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .wo-ex-tools .wo-round-btn { border: 0; background: transparent; color: #1e3a6e; cursor: pointer; padding: 0; }
 .wo-ex-tools .wo-round-btn svg { width: 22px; height: 22px; }
 .wo-ex-tools { gap: 4px; }
+/* The gym in the workout header: the pin and the name, no pill. */
+.wo-gym-chip { padding: 7px 2px; background: transparent; color: rgba(255, 255, 255, 0.85); }
