@@ -284,7 +284,19 @@ function CheckInFold({ items }: { items: CheckInItem[]; nextLabel: string }) {
       <div className="hm-tasks-list">
         {items.map((item) => (
           <button key={item.key} type="button" className={`hm-task${item.due ? "" : " done"}`} onClick={() => go(item)}>
-            {item.due && <span className="hm-task-due" aria-hidden="true" />}
+            <span className="hm-task-icon" aria-hidden="true">
+              {item.type === "photos" ? (
+                <svg viewBox="0 0 24 24">
+                  <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
+                  <circle cx="12" cy="13" r="3.5" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24">
+                  <rect x="3" y="3" width="18" height="18" rx="4" />
+                  <path d="M7 9.5a6 6 0 0 1 10 0M12 12l2.5-2.5" />
+                </svg>
+              )}
+            </span>
             <span className="hm-task-title">{item.title}</span>
             {item.total > 0 && (
               <span className="hm-task-count">

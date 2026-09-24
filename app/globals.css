@@ -16756,3 +16756,9 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .hm-task.done .hm-task-chev { border-color: #8b93a1; }
 /* Settings shares the Home banner but keeps its own overlap room. */
 .hm-banner.st-banner { padding-bottom: 58px; }
+/* Task cards: an icon on the left; a task still to do breathes orange. */
+.hm-task-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; color: #1e3a6e; }
+.hm-task-icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.hm-task.done .hm-task-icon { color: #2f7a3f; }
+@keyframes hm-due-card { 0%, 100% { border-color: #dfe3e8; box-shadow: 0 0 0 0 rgba(194, 82, 45, 0); } 50% { border-color: rgba(194, 82, 45, 0.6); box-shadow: 0 0 0 3px rgba(194, 82, 45, 0.14); } }
+@media (prefers-reduced-motion: reduce) { .hm-task:not(.done) { border-color: rgba(194, 82, 45, 0.5); } }
