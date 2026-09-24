@@ -292,8 +292,8 @@ function CheckInFold({ items }: { items: CheckInItem[]; nextLabel: string }) {
                 </svg>
               ) : (
                 <svg viewBox="0 0 24 24">
-                  <rect x="3" y="3" width="18" height="18" rx="4" />
-                  <path d="M7 9.5a6 6 0 0 1 10 0M12 12l2.5-2.5" />
+                  <path d="M3 15.5 15.5 3l5.5 5.5L8.5 21z" />
+                  <path d="M7 12l2 2M10 9l2 2M13 6l2 2" />
                 </svg>
               )}
             </span>
