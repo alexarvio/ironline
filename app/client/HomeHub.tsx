@@ -285,11 +285,6 @@ function CheckInFold({ items }: { items: CheckInItem[]; nextLabel: string }) {
         {items.map((item) => (
           <button key={item.key} type="button" className={`hm-task${item.due ? "" : " done"}`} onClick={() => go(item)}>
             {item.due && <span className="hm-task-due" aria-hidden="true" />}
-            {!item.due && (
-              <span className="hm-task-tick" aria-hidden="true">
-                ✓
-              </span>
-            )}
             <span className="hm-task-title">{item.title}</span>
             {item.total > 0 && (
               <span className="hm-task-count">

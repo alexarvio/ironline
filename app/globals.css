@@ -16749,3 +16749,8 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .hm-task:not(.done) { animation: hm-due-card 2.6s ease-in-out infinite; }
 @keyframes hm-due-card { 0%, 100% { border-color: #dfe3e8; box-shadow: 0 0 0 0 rgba(47, 93, 143, 0); } 50% { border-color: rgba(47, 93, 143, 0.55); box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.12); } }
 @media (prefers-reduced-motion: reduce) { .hm-task-due, .hm-task:not(.done) { animation: none; } .hm-task:not(.done) { border-color: rgba(47, 93, 143, 0.45); } }
+/* A done task reads like a done session: the light green wash, the name in black, the count in green. */
+.hm-task.done { background: #F3FAF5; border-color: #D5EBDC; }
+.hm-task.done .hm-task-title { color: #141a24; }
+.hm-task.done .hm-task-count { color: #2f7a3f; }
+.hm-task.done .hm-task-chev { border-color: #8b93a1; }
