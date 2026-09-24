@@ -16392,7 +16392,8 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .wo-page .ts-cardio { border-color: #eceff3; box-shadow: none; }
 .wo-wrap-sub { margin: -6px 0 0; font-size: 14.5px; color: #5b6474; }
 /* A done session: the tile stays plain like the others; the green is the Done pill alone. */
-.tr-row-tile.done { background: #e6ecf3; color: #1e3a6e; }
+.tr-row-tile.done { background: #2f7a3f; color: #fff; }
+.tr-row.done { background: #F3FAF5; border-color: #D5EBDC; }
 /* A done session on the Training tab: the number on its green tile, "Done" as bare green text. */
 .tr-row-pill.done { padding: 6px 0; background: transparent; color: #2f7a3f; }
 /* Session rows at a normal phone size. */
@@ -16406,3 +16407,14 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .tr-row-chev { width: 7px; height: 7px; }
 .tr-sessions-title { font-size: 17px; }
 .tr-sessions-count { font-size: 12.5px; }
+/* Done session: each exercise folds; the head is name and chevron, the body the sets. */
+.so-stat-text { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.so-card-fold { gap: 0; padding: 0; }
+.so-card-toggle { width: 100%; padding: 14px 16px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.so-card-chev { flex: none; width: 8px; height: 8px; border-right: 2px solid #8b93a1; border-bottom: 2px solid #8b93a1; transform: translateY(-2px) rotate(45deg); transition: transform 0.2s ease; }
+.so-card-chev.up { transform: translateY(2px) rotate(225deg); }
+.so-card-body { display: flex; flex-direction: column; gap: 10px; padding: 0 16px 14px 58px; }
+.so-sets { display: flex; flex-direction: column; }
+.so-set { display: grid; grid-template-columns: 52px 1fr 1fr 1fr; gap: 8px; padding: 7px 0; border-top: 1px solid #eceff3; font-size: 14px; font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; }
+.so-set-n { font-weight: 600; color: #5b6474; }
+.so-card-fold .so-notlogged { padding-left: 0; }

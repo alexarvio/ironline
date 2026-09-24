@@ -11,6 +11,7 @@ import {
   clock,
   durationMinutes,
   elapsedMs,
+  estimateMinutes,
   isDone,
   kgToUnit,
   loggedSets,
@@ -80,7 +81,7 @@ export default function SessionOverview({
           <ChevronLeftIcon />
         </button>
         <div className="so-kicker">
-          Week {day.week}
+          Week {day.week} · Session {day.index}
         </div>
         <div className="so-title-row">
           <h1 className="so-title">{day.title}</h1>
@@ -93,13 +94,46 @@ export default function SessionOverview({
           {live
             ? `Started${gymName ? ` at ${gymName}` : ""} · ${clock(ms)} in`
             : done
-            ? [day.endedAt ? shortDate(day.endedAt) : "Logged", gymName, minutes != null ? `${minutes} min` : null].filter(Boolean).join(" · ")
+            ? null
             : status === "skipped"
             ? `Couldn't train · ${day.skipReason}`
             : status === "missed"
             ? "Not done that week."
             : "Preview only. Nothing starts until you tap Start."}
         </p>
+        <div className="so-stats">
+          {done ? (
+            <>
+              <div className="so-stat">
+                <b>{day.endedAt ? shortDate(day.endedAt) : "—"}</b>
+                <small>Date</small>
+              </div>
+              <div className="so-stat">
+                <b className="so-stat-text">{gymName ?? "—"}</b>
+                <small>Gym</small>
+              </div>
+              <div className="so-stat">
+                <b>{minutes != null ? `${minutes}m` : "—"}</b>
+                <small>Time</small>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="so-stat">
+                <b>{day.exercises.length}</b>
+                <small>Exercises</small>
+              </div>
+              <div className="so-stat">
+                <b>{live ? `${logged}/${planned}` : planned}</b>
+                <small>Sets</small>
+              </div>
+              <div className="so-stat">
+                <b>{live ? clock(ms) : `~${estimateMinutes(day)}m`}</b>
+                <small>{live ? "Elapsed" : "Est. time"}</small>
+              </div>
+            </>
+          )}
+        </div>
       </header>
 
       <div className="so-body">
@@ -171,39 +205,59 @@ function ExerciseCard({ exercise, index, done, coachName }: { exercise: SessionE
   const top = (sets: { weight: number | null }[]) => sets.reduce<number | null>((m, s) => (s.weight != null && (m == null || s.weight > m) ? s.weight : m), null);
   const nowTop = top(exercise.logs);
   const thenTop = exercise.lastSets ? top(exercise.lastSets.sets) : null;
-  // As a share of last time's top set, when there was one to compare with.
-  const delta = nowTop != null && thenTop != null && thenTop > 0 ? Math.round(((nowTop - thenTop) / thenTop) * 100) : null;
+  const delta = nowTop != null && thenTop != null ? roundTo(nowTop - thenTop, 2) : null;
+  const [open, setOpen] = useState(false);
+  if (done) {
+    return (
+      <div className={`so-card so-card-fold${open ? " open" : ""}`}>
+        <button type="button" className="so-card-row so-card-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+          <span className={`so-index${exDone ? " done" : ""}`}>{index}</span>
+          <span className="so-card-main">
+            <span className="so-card-name">{shownName(exercise)}</span>
+          </span>
+          {delta != null && delta !== 0 && (
+            <span className={`so-delta${delta > 0 ? " up" : ""}`}>
+              {delta > 0 ? "+" : "−"}
+              {Math.abs(delta)} kg
+            </span>
+          )}
+          <span className={`so-card-chev${open ? " up" : ""}`} aria-hidden="true" />
+        </button>
+        {open && (
+          <div className="so-card-body">
+            <div className="so-card-summary">{exercise.swap ? `Swapped for ${exercise.name} · ${summary}` : summary}</div>
+            {exercise.logs.length > 0 ? (
+              <div className="so-sets">
+                {exercise.logs
+                  .slice()
+                  .sort((a, b) => a.setNumber - b.setNumber)
+                  .map((l) => (
+                    <div key={l.id} className="so-set">
+                      <span className="so-set-n">Set {l.setNumber}</span>
+                      <span>{l.weight != null ? `${kgToUnit(l.weight, "kg")} kg` : "–"}</span>
+                      <span>{l.reps != null ? `${l.reps} reps` : "–"}</span>
+                      <span>{l.rpe != null ? `RPE ${l.rpe}` : ""}</span>
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <div className="so-notlogged">Not logged</div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
   return (
     <div className={`so-card${exDone ? " done" : ""}`}>
       <div className="so-card-row">
         <span className={`so-index${exDone ? " done" : ""}`}>{exDone ? "✓" : index}</span>
         <span className="so-card-main">
           <span className="so-card-name">{shownName(exercise)}</span>
-          {(!done || exercise.swap) && <span className="so-card-summary">{exercise.swap ? (done ? `Swapped for ${exercise.name}` : `Swapped for ${exercise.name} · ${summary}`) : summary}</span>}
+          <span className="so-card-summary">{exercise.swap ? `Swapped for ${exercise.name} · ${summary}` : summary}</span>
         </span>
-        {done && delta != null && delta !== 0 && (
-          <span className={`so-delta${delta > 0 ? " up" : ""}`}>
-            {delta > 0 ? "+" : "−"}
-            {Math.abs(delta)}%
-          </span>
-        )}
       </div>
-      {done ? (
-        exercise.logs.length > 0 ? (
-          <div className="so-chips">
-            {exercise.logs
-              .slice()
-              .sort((a, b) => a.setNumber - b.setNumber)
-              .map((l) => (
-                <span key={l.id} className="so-chip">
-                  {l.weight != null ? kgToUnit(l.weight, "kg") : "–"} × {l.reps ?? "–"}
-                </span>
-              ))}
-          </div>
-        ) : (
-          <div className="so-notlogged">Not logged</div>
-        )
-      ) : (
+      {(
         <>
           {exercise.note.text && (
             <button type="button" className={`so-note${noteOpen ? " open" : ""}`} onClick={() => setNoteOpen((o) => !o)}>
