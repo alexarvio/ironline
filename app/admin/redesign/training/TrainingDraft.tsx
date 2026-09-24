@@ -201,7 +201,9 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
   const [pending, setPending] = useState<Record<number, Pending>>({});
   const pend = (id: number) => pending[id] ?? emptyPending();
   const patch = (id: number, f: (p: Pending) => Pending) => setPending((prev) => ({ ...prev, [id]: f(prev[id] ?? emptyPending()) }));
-  const [adding, setAdding] = useState<{ session: number; kind: "exercise" | "cardio" } | null>(null);
+  // What is being added, and where. A cardio being typed is already a pending
+  // change (key: its row in the session's queue), so the bar shows at once.
+  const [adding, setAdding] = useState<{ session: number; kind: "exercise" | "cardio"; key?: number } | null>(null);
   const restSeconds = (v: string): number | null => {
     const m = v.trim().match(/^(\d+)(?::(\d{2}))?\s*(s|sec|min|m)?$/i);
     if (!m) return null;
@@ -244,7 +246,8 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
       cardio: {
         fields: Object.fromEntries(Object.entries(p.cardioEdits).map(([id, e]) => [id, { ...e }])),
         removed: p.cardioRemoved,
-        added: p.added.filter((a): a is Added & AddedCardio => a.kind === "cardio").map((a) => ({ name: a.name, time: a.time, pace: a.pace, incline: a.incline, distance: a.distance, notes: a.note })),
+        // Typed without a name (the activity), it goes out as plain "Cardio".
+        added: p.added.filter((a): a is Added & AddedCardio => a.kind === "cardio").map((a) => ({ name: a.name.trim() || "Cardio", time: a.time, pace: a.pace, incline: a.incline, distance: a.distance, notes: a.note })),
         order: null,
       },
       removed: p.removed,
@@ -834,7 +837,8 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                           </div>
                         ))}
                       {p.added
-                        .filter((r): r is Added & AddedCardio => r.kind === "cardio")
+                        // The one still being typed shows in its form below, not twice.
+                        .filter((r): r is Added & AddedCardio => r.kind === "cardio" && !(adding?.kind === "cardio" && adding.key === r.key))
                         .map((r) => (
                           <div key={r.key} className="rd-row cardio new">
                             <div className="rd-row-main" style={cs.grid}>
@@ -873,7 +877,15 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                       <AddExerciseRow library={library} onPick={(nm, exerciseId) => patch(s.id, (q) => ({ ...q, added: [...q.added, { key: Date.now() + Math.random(), kind: "exercise", exerciseId, name: nm, sets: "", reps: "", kg: null }] }))} onClose={() => setAdding(null)} />
                     ) : (
                       <AddCardioRow
-                        onAdd={(c) => patch(s.id, (q) => ({ ...q, added: [...q.added, { key: Date.now() + Math.random(), kind: "cardio", ...c }] }))}
+                        onChange={(c) => {
+                          // The first keystroke queues it (the bar appears); every one after updates it; cleared or dropped, it comes off.
+                          const key = adding.key ?? Date.now() + Math.random();
+                          if (adding.key == null && c) setAdding({ ...adding, key });
+                          patch(s.id, (q) => {
+                            const rest = q.added.filter((x) => x.key !== key);
+                            return { ...q, added: c ? (q.added.some((x) => x.key === key) ? q.added.map((x) => (x.key === key ? { key, kind: "cardio", ...c } : x)) : [...rest, { key, kind: "cardio", ...c }]) : rest };
+                          });
+                        }}
                         onClose={() => setAdding(null)}
                       />
                     )
@@ -1648,27 +1660,37 @@ function EditCardioDialog({ cardio, onSave }: { cardio: DraftCardio; onSave: (v:
   );
 }
 
-/** Cardio: a short form, Enter adds. */
-function AddCardioRow({ onAdd, onClose }: { onAdd: (c: Omit<AddedCardio, "kind">) => void; onClose: () => void }) {
+// A cardio typed in place, no Add button: the first keystroke puts it on the
+// session's bar (onChange), every keystroke after updates it there. Enter,
+// clicking away or × closes the form and leaves it queued; Esc drops it.
+function AddCardioRow({ onChange, onClose }: { onChange: (c: Omit<AddedCardio, "kind"> | null) => void; onClose: () => void }) {
   const blank = { name: "", time: "", pace: "", incline: "", distance: "", note: "" };
   const [c, setC] = useState(blank);
   const first = useRef<HTMLInputElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
+  // A bare number gets its unit; anything else is kept as typed.
+  const withUnit = (v: string, u: string) => (/^\s*[\d.,]+\s*$/.test(v) ? `${v.trim()}${u}` : v.trim());
   useClickAway(wrap, onClose);
   useEffect(() => {
     first.current?.focus();
   }, []);
-  const set = (k: keyof typeof c) => (e: React.ChangeEvent<HTMLInputElement>) => setC({ ...c, [k]: e.target.value });
-  // A bare number gets its unit; anything else is kept as typed.
-  const withUnit = (v: string, u: string) => (/^s*[d.,]+s*$/.test(v) ? `${v.trim()}${u}` : v.trim());
-  const add = () => {
-    if (!c.name.trim()) return;
-    onAdd({ ...c, name: c.name.trim(), time: withUnit(c.time, " min"), pace: withUnit(c.pace, " km/h"), incline: withUnit(c.incline, "%"), distance: withUnit(c.distance, " km") });
-    setC(blank);
-    first.current?.focus();
+  const set = (k: keyof typeof c) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const next = { ...c, [k]: e.target.value };
+    setC(next);
+    const any = Object.values(next).some((v) => v.trim());
+    onChange(any ? { ...next, name: next.name.trim(), time: withUnit(next.time, " min"), pace: withUnit(next.pace, " km/h"), incline: withUnit(next.incline, "%"), distance: withUnit(next.distance, " km"), note: next.note.trim() } : null);
   };
   return (
-    <div ref={wrap} className="rd-addrow" onKeyDown={(e) => (e.key === "Escape" ? onClose() : e.key === "Enter" ? add() : null)}>
+    <div
+      ref={wrap}
+      className="rd-addrow"
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          onChange(null);
+          onClose();
+        } else if (e.key === "Enter") onClose();
+      }}
+    >
       <div className="rd-cardio-form">
         <label className="wide">
           <span>Activity</span>
@@ -1694,14 +1716,11 @@ function AddCardioRow({ onAdd, onClose }: { onAdd: (c: Omit<AddedCardio, "kind">
           <span>Note</span>
           <input value={c.note} onChange={set("note")} placeholder="Easy, cool-down" />
         </label>
-        <button type="button" className="rd-btn primary rd-addrow-go" disabled={!c.name.trim()} onClick={add}>
-          Add
-        </button>
         <button type="button" className="rd-addrow-x" onClick={onClose} aria-label="Close">
           ×
         </button>
       </div>
-      <p className="rd-addrow-hint">Add (or Enter) puts it on the session · Esc closes. It lands on the bar below until Apply.</p>
+      <p className="rd-addrow-hint">It goes on the bar below as you type, until Apply · Enter closes · Esc drops it.</p>
     </div>
   );
 }
