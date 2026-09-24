@@ -16820,3 +16820,6 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .hm-greeting { font-size: 20px; }
 .hm-greet-chev { width: 24px; height: 24px; }
 .hm-greet-chev svg { width: 12px; height: 12px; }
+/* The chevron sits at the right edge of the greeting row. */
+.hm-greet-btn { width: 100%; justify-content: space-between; }
+.hm-greet-btn .hm-greeting { flex: 0 1 auto; }
