@@ -16694,3 +16694,9 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .hm-goalchip.on .hm-goalchip-figure { opacity: 0.85; }
 .hm-goalpick { margin-top: 8px; padding: 2px 14px 2px; }
 .hm-goalpick .gp-row { border-top: 0; }
+/* Tracked goals as full-width rows on the banner, hairlines between, no card. */
+.hm-goallist { margin-top: 6px; padding: 0 2px; }
+.hm-goallist .gp-row { padding: 11px 0; border-top: 1px solid rgba(30, 58, 110, 0.12); }
+.hm-goallist .gp-row:first-of-type { border-top: 0; }
+.hm-goallist .gp-text { font-size: 14.5px; }
+.hm-goallist .gp-bar { background: rgba(30, 58, 110, 0.14); }
