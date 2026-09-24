@@ -5,7 +5,7 @@
 /* The box: the thread fills it, the bar is docked at its foot. Its height is
    set in MessagesDraft to reach the foot of the window. */
 .rm-chat { display: flex; flex-direction: column; height: calc(100dvh - 250px); min-height: 420px; overflow: hidden; }
-.rm-thread { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 18px 20px; overflow-y: auto; scrollbar-width: thin; background: #f7f9fc; border-radius: 16px 16px 0 0; }
+.rm-thread { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 18px 20px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #dfe3e8 transparent; background: #f7f9fc; border-radius: 16px 16px 0 0; }
 /* A short thread sits at the foot, by the box, as in any messenger. */
 .rm-thread-inner { margin-top: auto; display: flex; flex-direction: column; gap: 16px; }
 .rm-avatar { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; overflow: hidden; border-radius: 999px; background: #e6ecf3; color: #1e3a6e; font-size: 15px; font-weight: 800; }
@@ -88,10 +88,20 @@
 .rm-mini { height: 26px; padding: 0 10px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 999px; background: none; font: inherit; font-size: 12px; font-weight: 700; color: inherit; cursor: pointer; }
 .rm-mini.primary { background: #fff; border-color: #fff; color: #1e3a6e; }
 .rm-mini:disabled { opacity: 0.5; cursor: default; }
-.rm-pins { flex: none; display: flex; flex-direction: column; gap: 6px; max-height: 32%; overflow-y: auto; scrollbar-width: thin; padding: 12px 20px 10px; border-bottom: 1px solid #eceff3; background: #fff; border-radius: 16px 16px 0 0; }
-.rm-pins-label { font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; }
-.rm-pins .rm-bubble-wrap { max-width: 100%; }
-.rm-pins + .rm-thread { border-radius: 0; }
+/* Pinned: one slim bar over the thread, one pin at a time (WhatsApp's). */
+.rm-pinbar { flex: none; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 8px 20px; border: 0; border-bottom: 1px solid #eceff3; background: #fff; border-radius: 16px 16px 0 0; font: inherit; text-align: left; color: #313851; cursor: pointer; }
+.rm-pinbar:hover { background: #f7f9fc; }
+.rm-pinbar + .rm-thread { border-radius: 0; }
+.rm-pinbar-marks { flex: none; display: flex; flex-direction: column; gap: 2px; align-self: stretch; justify-content: center; }
+.rm-pinbar-marks i { display: block; width: 3px; height: 8px; border-radius: 2px; background: #dfe3e8; }
+.rm-pinbar-marks i.on { background: #1e3a6e; }
+.rm-pinbar-pin { flex: none; display: inline-flex; color: #8b93a1; }
+.rm-pinbar-pin svg { width: 16px; height: 16px; }
+.rm-pinbar-kind { flex: none; font-size: 14px; }
+.rm-pinbar-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; font-weight: 500; }
+.rm-pinbar-count { flex: none; font-size: 11px; font-weight: 700; color: #8b93a1; font-variant-numeric: tabular-nums; }
+/* The message a pin jumped to, lit for a moment. */
+.rm-bubble-row.flash .rm-bubble { box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.35); transition: box-shadow 0.3s; }
 /* A picture, a video, a voice message or a file in a bubble. */
 .rm-bubble.media { padding: 6px 6px 8px; }
 .rm-bubble.media .rm-bubble-body, .rm-bubble.media .rm-bubble-line, .rm-bubble.media .rm-edit { margin-left: 8px; margin-right: 8px; }

@@ -63,16 +63,29 @@ export default function MessagesDraft({ clientId, firstName, plan }: { clientId:
     const id = setInterval(() => router.refresh(), POLL_MS);
     return () => clearInterval(id);
   }, [clientId, router]);
-  // The box runs from where it starts to the foot of the window.
+  // The box takes all the room there is, from where it starts to the foot of
+  // the window, and never so much that the page itself scrolls. Measured
+  // when the tab is shown (it mounts hidden behind the other tabs) and when
+  // the window changes size.
   useLayoutEffect(() => {
     const el = chat.current;
     if (!el) return;
     const fit = () => {
-      el.style.height = `${Math.max(420, window.innerHeight - el.getBoundingClientRect().top - 20)}px`;
+      if (!el.offsetParent) return;
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      el.style.height = `${Math.max(360, window.innerHeight - top)}px`;
+      // Whatever still spills over (the page's own padding below) comes off.
+      const over = document.documentElement.scrollHeight - window.innerHeight;
+      if (over > 0) el.style.height = `${Math.max(360, el.offsetHeight - over)}px`;
     };
     fit();
+    const shown = new IntersectionObserver(() => fit());
+    shown.observe(el);
     window.addEventListener("resize", fit);
-    return () => window.removeEventListener("resize", fit);
+    return () => {
+      shown.disconnect();
+      window.removeEventListener("resize", fit);
+    };
   }, []);
   // To the latest message on opening, and whenever the thread grows (a new
   // message, a picture that finished loading) while the coach is there.
@@ -139,9 +152,25 @@ export default function MessagesDraft({ clientId, firstName, plan }: { clientId:
     else days.push({ day, items: [m] });
   }
   const pinned = messages.filter((m) => m.pinned);
+  // The pinned bar shows one pin at a time, as WhatsApp does: a tap goes to
+  // that message in the thread, and the bar moves on to the next pin.
+  const [pinAt, setPinAt] = useState(0);
+  const pinShown = pinned.length ? pinned[pinAt % pinned.length] : null;
+  const [flash, setFlash] = useState<number | null>(null);
+  const goToPin = () => {
+    if (!pinShown) return;
+    const row = thread.current?.querySelector<HTMLElement>(`[data-mid="${pinShown.id}"]`);
+    const el = thread.current;
+    if (row && el) {
+      el.scrollTo({ top: el.scrollTop + row.getBoundingClientRect().top - el.getBoundingClientRect().top - el.clientHeight / 3, behavior: "smooth" });
+      setFlash(pinShown.id);
+      setTimeout(() => setFlash((f) => (f === pinShown.id ? null : f)), 1600);
+    }
+    setPinAt((i) => (i + 1) % Math.max(1, pinned.length));
+  };
 
   const bubble = (m: DraftMessage, inPins = false) => (
-    <div key={`${inPins ? "pin-" : ""}${m.id}`} className={`rm-bubble-row${m.mine ? " mine" : " theirs"}`}>
+    <div key={`${inPins ? "pin-" : ""}${m.id}`} data-mid={inPins ? undefined : m.id} className={`rm-bubble-row${m.mine ? " mine" : " theirs"}${flash === m.id ? " flash" : ""}`}>
       <div className="rm-bubble-wrap">
         <div className={`rm-bubble${m.media ? " media" : ""}`}>
           {m.media && <Media media={m.media} />}
@@ -273,11 +302,25 @@ export default function MessagesDraft({ clientId, firstName, plan }: { clientId:
       </header>
 
       <section ref={chat} className="rd-session open rm-chat" aria-label={`Conversation with ${firstName}`}>
-        {pinned.length > 0 && (
-          <div className="rm-pins">
-            <span className="rm-pins-label">Pinned</span>
-            {pinned.map((m) => bubble(m, true))}
-          </div>
+        {pinShown && (
+          <button type="button" className="rm-pinbar" onClick={goToPin} title={pinned.length > 1 ? "Go to this pinned message; the next pin shows" : "Go to the pinned message"}>
+            {/* One mark a pin when there are several, the one showing filled. */}
+            {pinned.length > 1 && (
+              <span className="rm-pinbar-marks" aria-hidden="true">
+                {pinned.map((p, i) => (
+                  <i key={p.id} className={i === pinAt % pinned.length ? "on" : ""} />
+                ))}
+              </span>
+            )}
+            <span className="rm-pinbar-pin" aria-hidden="true">
+              <PinIcon />
+            </span>
+            {pinShown.media && <span className="rm-pinbar-kind">{pinShown.media.type === "image" ? "📷" : pinShown.media.type === "video" ? "🎥" : pinShown.media.type === "audio" ? "🎤" : "📄"}</span>}
+            <span className="rm-pinbar-text">
+              {pinShown.text || (pinShown.media ? (pinShown.media.type === "image" ? "Photo" : pinShown.media.type === "video" ? "Video" : pinShown.media.type === "audio" ? "Voice message" : pinShown.media.name ?? "File") : pinShown.link?.label ?? "")}
+            </span>
+            {pinned.length > 1 && <span className="rm-pinbar-count">{(pinAt % pinned.length) + 1}/{pinned.length}</span>}
+          </button>
         )}
         <div
           ref={thread}
