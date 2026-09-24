@@ -16754,3 +16754,5 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .hm-task.done .hm-task-title { color: #141a24; }
 .hm-task.done .hm-task-count { color: #2f7a3f; }
 .hm-task.done .hm-task-chev { border-color: #8b93a1; }
+/* Settings shares the Home banner but keeps its own overlap room. */
+.hm-banner.st-banner { padding-bottom: 58px; }
