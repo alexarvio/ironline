@@ -193,7 +193,9 @@ export default function ExercisePage({
   ].filter((t): t is { label: string; value: string } => !!t);
   const ask = exercise.videoRequest;
   const done = loggedCount(exercise);
-  const cols = 2 + (askWeight ? 1 : 0) + (askRpe ? 1 : 0) + (showLastTime ? 1 : 0);
+  // The row's columns, from what is shown: set · [last time] · [kg] · reps · [rpe] · tick.
+  // Fractions, so the row always fits the phone in one line.
+  const grid = ["30px", showLastTime ? "minmax(0, 1.15fr)" : null, askWeight ? "minmax(0, 1fr)" : null, "minmax(0, 1fr)", askRpe ? "minmax(0, 0.75fr)" : null, "40px"].filter(Boolean).join(" ");
 
   const numberInput = (props: { value: string; placeholder: string; label: string; decimal?: boolean; onChange: (v: string) => void; disabled?: boolean }) => (
     <input
@@ -281,7 +283,7 @@ export default function ExercisePage({
         </button>
       )}
 
-      <div className="wo-sets" style={{ "--wo-cols": cols } as React.CSSProperties}>
+      <div className="wo-sets" style={{ "--wo-grid": grid } as React.CSSProperties}>
         <div className="wo-sets-head">
           <span>Set</span>
           {showLastTime && <span className="wo-col-last">Last time</span>}
