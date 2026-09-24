@@ -171,7 +171,8 @@ function ExerciseCard({ exercise, index, done, coachName }: { exercise: SessionE
   const top = (sets: { weight: number | null }[]) => sets.reduce<number | null>((m, s) => (s.weight != null && (m == null || s.weight > m) ? s.weight : m), null);
   const nowTop = top(exercise.logs);
   const thenTop = exercise.lastSets ? top(exercise.lastSets.sets) : null;
-  const delta = nowTop != null && thenTop != null ? roundTo(nowTop - thenTop, 2) : null;
+  // As a share of last time's top set, when there was one to compare with.
+  const delta = nowTop != null && thenTop != null && thenTop > 0 ? Math.round(((nowTop - thenTop) / thenTop) * 100) : null;
   return (
     <div className={`so-card${exDone ? " done" : ""}`}>
       <div className="so-card-row">
@@ -183,7 +184,7 @@ function ExerciseCard({ exercise, index, done, coachName }: { exercise: SessionE
         {done && delta != null && delta !== 0 && (
           <span className={`so-delta${delta > 0 ? " up" : ""}`}>
             {delta > 0 ? "+" : "−"}
-            {Math.abs(delta)} kg
+            {Math.abs(delta)}%
           </span>
         )}
       </div>
