@@ -6,7 +6,6 @@ import { ChevronLeftIcon } from "../components/icons";
 import GymSheet from "./GymSheet";
 import type { GymOption } from "./GymPicker";
 import {
-  CardioCard,
   CoachNote,
   clock,
   durationMinutes,
@@ -197,7 +196,7 @@ export default function SessionOverview({
             <ExerciseCard key={ex.id} exercise={ex} index={i + 1} done={done} coachName={coachName} />
           ))}
           {day.cardio.map((c, i) => (
-            done ? <CardioFold key={`c${c.id}`} cardio={c} index={day.exercises.length + i + 1} /> : <CardioCard key={`c${c.id}`} cardio={c} index={day.exercises.length + i + 1} readOnly />
+            <CardioFold key={`c${c.id}`} cardio={c} index={day.exercises.length + i + 1} done={done} />
           ))}
         </div>
       </div>
@@ -322,12 +321,17 @@ function ExerciseCard({ exercise, index, done, coachName }: { exercise: SessionE
     );
   }
   return (
-    <div className={`so-card${exDone ? " done" : ""}`}>
-      <div className="so-card-row">
+    <div className={`so-card so-card-fold${open ? " open" : ""}${exDone ? " done" : ""}`}>
+      <button type="button" className="so-card-row so-card-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <span className={`so-num${exDone ? " done" : ""}`}>{index}</span>
         <span className="so-card-main">
           <span className="so-card-name">{shownName(exercise)}</span>
           {exercise.swap && <span className="so-card-summary">Swapped for {exercise.name}</span>}
+        </span>
+        <span className={`so-card-chev${open ? " up" : ""}`} aria-hidden="true" />
+      </button>
+      {open && (
+        <div className="so-card-body">
           <span className="so-targets">
             {targets.map((t) => (
               <span key={t.unit}>
@@ -335,10 +339,6 @@ function ExerciseCard({ exercise, index, done, coachName }: { exercise: SessionE
               </span>
             ))}
           </span>
-        </span>
-      </div>
-      {(
-        <>
           {exercise.note.text && <CoachNote assignmentId={exercise.id} note={exercise.note} />}
           {ask && (
             <div className={`so-video${ask.reply ? " replied" : ask.src ? " sent" : ""}`}>
@@ -349,7 +349,7 @@ function ExerciseCard({ exercise, index, done, coachName }: { exercise: SessionE
               {ask.reply ? `${coachName} replied to your video` : ask.src ? `Video sent to ${coachName}` : `${coachName} wants a video of this one`}
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );
@@ -358,8 +358,16 @@ function ExerciseCard({ exercise, index, done, coachName }: { exercise: SessionE
 // Cardio on a finished session: a folded row like the exercises. Open, it
 // shows the targets and whether it was done. The coach's note is guidance
 // for doing it, so it stays off the review.
-function CardioFold({ cardio, index }: { cardio: SessionCardio; index: number }) {
+function CardioFold({ cardio, index, done }: { cardio: SessionCardio; index: number; done: boolean }) {
   const [open, setOpen] = useState(false);
+  const cells = (
+    [
+      ["time", cardio.time],
+      ["pace", cardio.pace],
+      ["incline", cardio.incline],
+      ["distance", cardio.distance],
+    ] as const
+  ).filter(([, v]) => v);
   return (
     <div className={`so-card so-card-fold${open ? " open" : ""}${cardio.done ? " done" : ""}`}>
       <button type="button" className="so-card-row so-card-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
@@ -371,7 +379,22 @@ function CardioFold({ cardio, index }: { cardio: SessionCardio; index: number })
       </button>
       {open && (
         <div className="so-card-body">
-          <div className={cardio.done ? "so-cardio-done" : "so-notlogged"}>{cardio.done ? "Done" : "Not done"}</div>
+          {done ? (
+            <div className={cardio.done ? "so-cardio-done" : "so-notlogged"}>{cardio.done ? "Done" : "Not done"}</div>
+          ) : (
+            <>
+              {cells.length > 0 && (
+                <span className="so-targets">
+                  {cells.map(([unit, v]) => (
+                    <span key={unit}>
+                      <b>{v}</b> <small>{unit}</small>
+                    </span>
+                  ))}
+                </span>
+              )}
+              {cardio.notes && <CoachNote assignmentId={null} note={{ text: cardio.notes, dateLabel: "", unread: false }} />}
+            </>
+          )}
         </div>
       )}
     </div>

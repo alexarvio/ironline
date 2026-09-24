@@ -16490,3 +16490,5 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 /* Sheets and menus stay inside the phone, not across the desktop. */
 .app-stack { position: relative; }
 .wo-sheet-scrim, .wo-menu-scrim { position: absolute; }
+.so-card-body .so-targets { margin-top: 0; }
+.so-card-body .ts-coachnote { margin-top: 2px; }

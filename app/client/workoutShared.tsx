@@ -213,7 +213,7 @@ export const elapsedMs = (startedAt: string | null, endedAt: string | null, now:
 // ---- Pieces shared by the overview and the workout.
 
 /** The coach's note on an exercise, with the read tracking it always had. */
-export function CoachNote({ assignmentId, note }: { assignmentId: number; note: SessionExercise["note"] }) {
+export function CoachNote({ assignmentId, note }: { assignmentId: number | null; note: SessionExercise["note"] }) {
   return <ExerciseCoachNote assignmentId={assignmentId} dateLabel={note.dateLabel} text={note.text} unread={note.unread} />;
 }
 
