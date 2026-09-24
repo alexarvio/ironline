@@ -16225,8 +16225,8 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 /* The sets card: every row can be filled in and ticked, in any order. */
 .wo-sets { display: flex; flex-direction: column; padding: 8px 10px 6px; border-radius: 18px; background: #fff; }
 .wo-sets-head, .wo-set { display: grid; grid-template-columns: var(--wo-grid, 30px minmax(0, 1fr) minmax(0, 1fr) 40px); align-items: center; gap: 6px; }
-.wo-sets-head { padding: 6px 0 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8b93a1; text-align: center; border-bottom: 1px solid #eceff3; }
-.wo-sets-head > span:first-child { text-align: left; padding-left: 4px; }
+.wo-sets-head { padding: 6px 0 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8b93a1; text-align: left; border-bottom: 1px solid #eceff3; }
+.wo-sets-head > span { padding-left: 2px; }
 .wo-sets-head .ts-unit { text-transform: none; letter-spacing: 0.06em; }
 .wo-set { padding: 6px 0; border-bottom: 1px solid #eceff3; border-radius: 8px; }
 .wo-set.logged { background: #F3FAF5; margin: 0 -6px; padding-left: 6px; padding-right: 6px; }
@@ -16236,11 +16236,11 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .wo-last { min-height: 44px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; cursor: pointer; padding: 0; text-align: center; }
 .wo-last:disabled { cursor: default; color: #a0a7b3; }
 .wo-set.warm .wo-last { font-size: 12px; }
-.wo-input { width: 100%; min-width: 0; height: 44px; box-sizing: border-box; padding: 0 2px; border: 1px solid #dfe3e8; border-radius: 10px; background: #F4F7FC; font: inherit; font-size: 17px; font-weight: 700; text-align: center; color: #141a24; font-variant-numeric: tabular-nums; outline: none; -moz-appearance: textfield; }
+.wo-input { width: 100%; min-width: 0; height: 44px; box-sizing: border-box; padding: 0 2px; border: 0; border-bottom: 1.5px solid transparent; border-radius: 0; background: transparent; font: inherit; font-size: 17px; font-weight: 700; text-align: left; color: #141a24; font-variant-numeric: tabular-nums; outline: none; -moz-appearance: textfield; }
 .wo-input::-webkit-outer-spin-button, .wo-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.wo-input:focus { border-color: #2f5d8f; background: #fff; }
-.wo-input::placeholder { color: #a0a7b3; font-weight: 600; }
-.wo-set-val { display: block; text-align: center; font-size: 18px; font-weight: 700; color: #2f7a3f; font-variant-numeric: tabular-nums; }
+.wo-input:focus { border-bottom-color: #2f5d8f; }
+.wo-input::placeholder { color: #a0a7b3; font-weight: 500; }
+.wo-set-val { display: block; text-align: left; padding-left: 2px; font-size: 18px; font-weight: 700; color: #2f7a3f; font-variant-numeric: tabular-nums; }
 .wo-set-blank { display: block; }
 .wo-tick { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 44px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; color: #a0a7b3; font: inherit; font-size: 18px; font-weight: 700; cursor: pointer; }
 .wo-tick.on { background: #2f7a3f; border-color: #2f7a3f; color: #fff; }
