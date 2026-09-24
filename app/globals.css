@@ -16467,3 +16467,10 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .so-more svg { width: 20px; height: 20px; }
 .so-menu { top: calc(max(54px, calc(env(safe-area-inset-top, 0px) + 18px)) + 42px); right: 20px; }
 .so-skip-input { height: auto; padding: 12px 14px; line-height: 1.4; resize: none; }
+/* A locked week's chip reads locked, selected or not: hollow, muted, dashed. */
+.tr-wk.locked, .tr-wk.locked.on { background: transparent; border: 1px dashed rgba(30, 58, 110, 0.35); color: #8b93a1; font-weight: 600; }
+.tr-wk.locked .tr-wk-lock { opacity: 1; color: #8b93a1; }
+/* The locked card: a bare lock, the title in the app's own face. */
+.week-locked-icon { width: auto; height: auto; border: 0; background: transparent; color: #8b93a1; }
+.week-locked-icon svg { width: 18px; height: 18px; }
+.week-locked-title { font-family: inherit; font-size: 15px; font-weight: 700; }
