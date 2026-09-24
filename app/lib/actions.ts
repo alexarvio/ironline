@@ -723,7 +723,7 @@ export async function addInvoiceAction(formData: FormData) {
     | "due";
   if (!description) return;
   addInvoice(clientId, description, amount, status);
-  logCoachActivity(clientId, `Sent a new invoice: "${description}"`, { kind: "general" });
+  logCoachActivity(clientId, `Sent a new invoice: "${description}"`, { kind: "general", push: true });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1588,6 +1588,7 @@ export async function addMeetingAction(formData: FormData) {
   addMeeting(clientId, date, time, topic, duration, link || null);
   logCoachActivity(clientId, topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", {
     kind: "general",
+    push: true,
     actionTab: "home",
     actionLabel: "View schedule",
   });
@@ -1628,7 +1629,7 @@ export async function updateMeetingAction(formData: FormData) {
   if (patch.date || patch.time) {
     const clientId = getClientIdForMeeting(id);
     const when = patch.date ? new Date(`${patch.date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" }) : "the same day";
-    if (clientId != null) logCoachActivity(clientId, `Your call moved to ${when}${patch.time ? ` at ${patch.time}` : ""}`, { kind: "general", actionTab: "home", actionLabel: "View schedule" });
+    if (clientId != null) logCoachActivity(clientId, `Your call moved to ${when}${patch.time ? ` at ${patch.time}` : ""}`, { kind: "general", push: true, actionTab: "home", actionLabel: "View schedule" });
   }
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -2283,6 +2284,7 @@ export async function addCalendarEventAction(formData: FormData) {
   if (clientId) {
     logCoachActivity(clientId, topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", {
       kind: "general",
+      push: true,
       actionTab: "home",
       actionLabel: "View schedule",
     });

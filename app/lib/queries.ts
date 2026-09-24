@@ -6003,6 +6003,12 @@ export function logCoachActivity(
     // Set only by lazily-generated entries (see applyDueClientReminders) so
     // a still-due condition doesn't spawn a fresh row on every request.
     dedupeKey?: string;
+    // Whether it also goes to the lock screen. By default only a message,
+    // something going live and a report do; a "general" note says true when
+    // it is a real moment (a video reply, a call booked or moved, an invoice).
+    // A small edit (a weight, a supplement) stays in the app: a buzz for every
+    // tweak would get the app muted.
+    push?: boolean;
   }
 ) {
   const data = getData();
@@ -6022,10 +6028,12 @@ export function logCoachActivity(
     dedupe_key: opts.dedupeKey ?? null,
   });
   persist();
-  // To the lock screen too, when the client has notifications on. Not
-  // reminders: those are made whenever someone happens to load a page, so
-  // their timing means nothing and they would arrive at random hours.
-  if (opts.kind !== "reminder") {
+  // To the lock screen too, when the client has notifications on, for the
+  // moments that are worth it (see opts.push). Never reminders: those are
+  // made whenever someone happens to load a page, so their timing means
+  // nothing and they would arrive at random hours.
+  const worthABuzz = opts.push ?? (opts.kind === "coach_note" || opts.kind === "programme" || opts.kind === "report");
+  if (opts.kind !== "reminder" && worthABuzz) {
     const user = data.users.find((u) => u.role === "client" && u.client_id === clientId);
     if (user) {
       // The phone shows "Ironline" and the icon above this already, so the
@@ -9309,6 +9317,7 @@ export function sendVideoReply(id: number, note: string): boolean {
   const name = a ? data.exercises.find((e) => e.id === a.exercise_id)?.name : null;
   logCoachActivity(row.client_id, `Your coach replied to your video${name ? ` of ${name}` : ""}`, {
     kind: "general",
+    push: true,
     actionTab: "video",
     actionLabel: "Watch",
     actionRef: row.id,
