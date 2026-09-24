@@ -16767,3 +16767,30 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .hm-tasks-head, .hm-latest-head { padding-bottom: 10px; }
 /* …and more between the hero and Tasks in particular. */
 .hm-hero + .hm-tasks { margin-top: 14px; }
+
+/* ==== Home: the next meeting, glass on white with a blue corner glow. ==== */
+.hm-mt { --mt-blue: #2F6BFF; --mt-cyan: #16A3C9; --mt-ink: #12132B; --mt-text: #2E2F4A; --mt-muted: #6A6B85; --mt-faint: #8A8BA3; position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 14px; padding: 16px; border: 1px solid #EEEDF5; border-radius: 26px; background: #fff; }
+.hm-mt > * { position: relative; }
+.hm-mt-glow { position: absolute; right: -120px; top: -130px; width: 260px; height: 260px; border-radius: 50%; background: radial-gradient(circle, rgba(47, 107, 255, 0.32), rgba(47, 107, 255, 0) 68%); pointer-events: none; }
+.hm-mt-row { display: flex; align-items: center; gap: 14px; }
+.hm-mt-date { flex: none; display: flex; flex-direction: column; align-items: center; width: 56px; }
+.hm-mt-date b { font-family: var(--font-bricolage), var(--font-archivo), "Archivo", sans-serif; font-size: 40px; font-weight: 800; line-height: 0.95; background: linear-gradient(180deg, #2F6BFF, #16A3C9); -webkit-background-clip: text; background-clip: text; color: transparent; font-variant-numeric: tabular-nums; }
+.hm-mt-date small { font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mt-faint); }
+.hm-mt-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.hm-mt-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.hm-mt-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mt-faint); }
+.hm-mt-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border: 1px solid rgba(47, 107, 255, 0.25); border-radius: 999px; background: rgba(47, 107, 255, 0.1); font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mt-blue); white-space: nowrap; }
+.hm-mt-pill.today { border-color: var(--mt-blue); background: var(--mt-blue); color: #fff; }
+.hm-mt-pill.live { border-color: #12B76A; background: #12B76A; color: #fff; }
+.hm-mt-live-dot { width: 6px; height: 6px; border-radius: 999px; background: #fff; animation: ws-pulse 1.6s ease-in-out infinite; }
+.hm-mt-title { font-size: 17px; font-weight: 700; color: var(--mt-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-mt-when { font-size: 13px; font-weight: 400; color: var(--mt-muted); }
+.hm-mt-join { display: flex; align-items: center; justify-content: center; gap: 8px; height: 48px; border-radius: 14px; background: var(--mt-ink); color: #fff; font-size: 15px; font-weight: 700; text-decoration: none; }
+.hm-mt-join-glyph { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; background: #C6F432; color: var(--mt-ink); }
+.hm-mt-join-glyph svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linejoin: round; }
+.hm-mt-recap { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border: 1px solid rgba(47, 107, 255, 0.14); border-radius: 16px; background: rgba(255, 255, 255, 0.6); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.hm-mt-recap-label { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mt-faint); }
+.hm-mt-recap-text { margin: 0; font-size: 14px; line-height: 1.5; color: var(--mt-text); text-wrap: pretty; white-space: pre-wrap; }
+.hm-mt-recap-text.clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; }
+.hm-mt-more { align-self: flex-start; min-height: 44px; padding: 0 4px; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 700; color: var(--mt-blue); cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .hm-mt-live-dot { animation: none; } }

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo, Libre_Baskerville } from "next/font/google";
+import { Archivo, Bricolage_Grotesque, Libre_Baskerville } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import { applyDueClientReminders, applyDueProgramDeployments } from "./lib/queries";
@@ -36,6 +36,13 @@ const archivo = Archivo({
   variable: "--font-archivo",
   display: "swap",
 });
+// Bricolage Grotesque: only the date number on Home's meeting card.
+const bricolage = Bricolage_Grotesque({
+  subsets: ["latin"],
+  weight: ["800"],
+  variable: "--font-bricolage",
+  display: "swap",
+});
 // Kirana: the "Ironline" wordmark at the top left of the client app.
 const kirana = localFont({
   src: "./fonts/Kirana-Regular.ttf",
@@ -64,7 +71,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   // is deliberately out for now: one moving accent was enough to make both
   // apps drift away from the files they were drawn from.
   return (
-    <html lang="en" className={`${libreBaskerville.variable} ${archivo.variable} ${kirana.variable}`}>
+    <html lang="en" className={`${libreBaskerville.variable} ${archivo.variable} ${kirana.variable} ${bricolage.variable}`}>
       <body>{children}</body>
     </html>
   );

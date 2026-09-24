@@ -282,6 +282,8 @@ function HomeTab({ CLIENT_ID, photos }: { CLIENT_ID: number; photos: HomePhotos 
       link: upcomingMeeting.link ?? null,
       provider: meetingProvider(upcomingMeeting.link),
       startingNow,
+      startIso: upcomingMeeting.time ? `${upcomingMeeting.date}T${upcomingMeeting.time}:00` : null,
+      durationMinutes: upcomingMeeting.duration_minutes,
       monthCap: MONTH_CAP[when.getMonth()],
       dayNumber: String(when.getDate()),
       weekdayCap: DAY_LABELS[when.getDay()],

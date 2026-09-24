@@ -51,6 +51,9 @@ export type UpcomingMeeting = {
   inLabel: string;
   /** "Sunday 18:00 · 30 min". */
   whenLabel: string;
+  /** The start as an ISO stamp, and how long it runs, so the card can follow the clock. */
+  startIso: string | null;
+  durationMinutes: number;
 } | null;
 
 /** The coach's recap of the last call, written for the client. */
@@ -451,37 +454,67 @@ function LatestActivityCard({ a, coachFirstName }: { a: LatestActivity; coachFir
 // ---- 5 · Next meeting, only when booked ------------------------------------
 
 function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<UpcomingMeeting>; recap: MeetingRecap; coachFirstName: string }) {
+  // The pill and the Join button follow the clock: checked every minute
+  // while Home is in front, and again when the app comes back.
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    const first = setTimeout(tick, 0);
+    const t = setInterval(tick, 60000);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      clearTimeout(first);
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, []);
+  const start = m.startIso ? Date.parse(m.startIso) : NaN;
+  const minsToStart = now != null && Number.isFinite(start) ? (start - now) / 60000 : null;
+  const live = minsToStart != null ? minsToStart <= 10 && minsToStart >= -m.durationMinutes : m.startingNow;
+  const joinable = !!m.link && live;
+  const [more, setMore] = useState(false);
+  const longRecap = !!recap && recap.text.length > 220;
+  const pillLabel = live ? "Live" : m.inLabel;
   return (
-    <section className="hm-card hm-meeting">
-      <div className="hm-meeting-row">
-        <span className="hm-leaf" aria-hidden="true">
-          <span className="hm-leaf-month">{m.monthCap}</span>
-          <span className="hm-leaf-day">{m.dayNumber}</span>
-          <span className="hm-leaf-weekday">{m.weekdayCap}</span>
-        </span>
-        <div className="hm-meeting-main">
-          <div className="hm-meeting-top">
-            <span className="hm-eyebrow">Next with {coachFirstName}</span>
-            <span className={`hm-meeting-pill${m.startingNow ? " live" : ""}`}>{m.startingNow ? "Starting now" : m.inLabel}</span>
+    <section className="hm-mt" aria-label={`Next meeting with ${coachFirstName}`}>
+      <span className="hm-mt-glow" aria-hidden="true" />
+      <div className="hm-mt-row">
+        <div className="hm-mt-date">
+          <b>{m.dayNumber}</b>
+          <small>{m.monthCap}</small>
+        </div>
+        <div className="hm-mt-main">
+          <div className="hm-mt-top">
+            <span className="hm-mt-eyebrow">With {coachFirstName}</span>
+            <span className={`hm-mt-pill${live ? " live" : m.inLabel === "Today" ? " today" : ""}`} aria-label={pillLabel}>
+              {live && <span className="hm-mt-live-dot" aria-hidden="true" />}
+              {pillLabel}
+            </span>
           </div>
-          <div className="hm-meeting-topic">{m.topic}</div>
-          <div className="hm-meeting-when">{m.whenLabel}</div>
+          <div className="hm-mt-title">{m.topic}</div>
+          <div className="hm-mt-when">{m.whenLabel}</div>
         </div>
       </div>
-      {m.link && m.startingNow && (
-        <div className="hm-meeting-more">
-          <a className="hm-join" href={m.link} target="_blank" rel="noopener noreferrer">
-            Join call
-          </a>
-        </div>
+      {joinable && (
+        <a className="hm-mt-join" href={m.link!} target="_blank" rel="noopener noreferrer">
+          <span className="hm-mt-join-glyph" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <rect x="3" y="6" width="13" height="12" rx="2" />
+              <path d="M16 10l5-3v10l-5-3z" />
+            </svg>
+          </span>
+          Join call
+        </a>
       )}
       {recap && (
-        <div className="hm-recap attached">
-          <div className="hm-recap-head">
-            <span className="hm-eyebrow">From the last meeting</span>
-            <span className="hm-recap-date">{recap.dateLabel}</span>
-          </div>
-          <p className="hm-recap-text">{recap.text}</p>
+        <div className="hm-mt-recap">
+          <span className="hm-mt-recap-label">Last meeting · {recap.dateLabel}</span>
+          <p className={`hm-mt-recap-text${longRecap && !more ? " clamp" : ""}`}>{recap.text}</p>
+          {longRecap && !more && (
+            <button type="button" className="hm-mt-more" onClick={() => setMore(true)}>
+              More
+            </button>
+          )}
         </div>
       )}
     </section>
