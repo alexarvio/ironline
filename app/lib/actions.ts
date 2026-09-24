@@ -738,7 +738,7 @@ export async function addInvoiceAction(formData: FormData) {
     | "due";
   if (!description) return;
   addInvoice(clientId, description, amount, status);
-  logCoachActivity(clientId, `Sent a new invoice: "${description}"`, { kind: "general" });
+  logCoachActivity(clientId, `Sent a new invoice: "${description}"`, { kind: "general", push: true });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1626,6 +1626,7 @@ export async function addMeetingAction(formData: FormData) {
   addMeeting(clientId, date, time, topic, duration, link || null);
   logCoachActivity(clientId, topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", {
     kind: "general",
+    push: true,
     actionTab: "home",
     actionLabel: "View schedule",
   });
@@ -1666,7 +1667,7 @@ export async function updateMeetingAction(formData: FormData) {
   if (patch.date || patch.time) {
     const clientId = getClientIdForMeeting(id);
     const when = patch.date ? new Date(`${patch.date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" }) : "the same day";
-    if (clientId != null) logCoachActivity(clientId, `Your call moved to ${when}${patch.time ? ` at ${patch.time}` : ""}`, { kind: "general", actionTab: "home", actionLabel: "View schedule" });
+    if (clientId != null) logCoachActivity(clientId, `Your call moved to ${when}${patch.time ? ` at ${patch.time}` : ""}`, { kind: "general", push: true, actionTab: "home", actionLabel: "View schedule" });
   }
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -1699,7 +1700,7 @@ export async function removeMeetingAction(formData: FormData) {
   if (!coachOwnsMeeting(coach.id, id)) return;
   const meetingClient = getClientIdForMeeting(id);
   removeMeeting(id);
-  noteChange(meetingClient, "Cancelled your call", { tab: "home", label: "See your meetings", key: `meeting-cancel:${id}` });
+  noteChange(meetingClient, "Cancelled your call", { tab: "home", label: "See your meetings", key: `meeting-cancel:${id}`, push: true });
   revalidatePath("/admin");
 }
 
@@ -2324,6 +2325,7 @@ export async function addCalendarEventAction(formData: FormData) {
   if (clientId) {
     logCoachActivity(clientId, topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", {
       kind: "general",
+      push: true,
       actionTab: "home",
       actionLabel: "View schedule",
     });
@@ -2692,9 +2694,10 @@ export async function saveWarmupSetsAction(assignmentId: number, sets: { weight_
 
 // Everything the coach changes reaches the client as a notification: one per
 // kind per day, so an afternoon of edits reads as one line, not thirty.
-function noteChange(clientId: number | null | undefined, message: string, opts: { tab?: "home" | "training" | "nutrition" | "settings"; label?: string; ref?: number; key: string }) {
+// In the app only, unless push says it is a real moment (see logCoachActivity).
+function noteChange(clientId: number | null | undefined, message: string, opts: { tab?: "home" | "training" | "nutrition" | "settings"; label?: string; ref?: number; key: string; push?: boolean }) {
   if (clientId == null) return;
-  logCoachActivity(clientId, message, { kind: "general", actionTab: opts.tab, actionLabel: opts.label, actionRef: opts.ref, dedupeKey: `${opts.key}:${localDateStr()}` });
+  logCoachActivity(clientId, message, { kind: "general", actionTab: opts.tab, actionLabel: opts.label, actionRef: opts.ref, dedupeKey: `${opts.key}:${localDateStr()}`, push: opts.push });
 }
 
 // The session clock: a valid ISO timestamp from the phone, else now.
