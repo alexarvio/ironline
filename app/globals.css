@@ -16501,3 +16501,6 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .so-tbl b { font-size: 15px; font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .so-card-body .ts-coachnote { margin-top: 6px; }
 .so-sets { margin-left: 0; }
+/* The coach's note in an overview row: no box, just the label and the words. */
+.so-card-body .ts-coachnote { padding: 0; border: 0; background: transparent; margin-top: 8px; }
+.so-card-body .ts-coachnote-text { padding-left: 25px; }
