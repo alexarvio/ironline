@@ -2,13 +2,13 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { markNotificationReadAction } from "../lib/actions";
-import { ChevronDownIcon } from "../components/icons";
+import { AppleIcon, ChatIcon, ChevronDownIcon, DumbbellIcon } from "../components/icons";
 import GoalRow from "../components/GoalRow";
 import CoachMark from "./CoachMark";
 import MessageLinkChip from "./MessageLinkChip";
 import VideoReplySheet, { type VideoReplyView } from "./VideoReplySheet";
 import type { LinkView } from "../lib/messageLinks";
-import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenLink, useOpenMessages, useOpenNotifications, useOpenPhotos } from "./CheckInContext";
+import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenLink, useOpenMessages, useOpenPhotos } from "./CheckInContext";
 import { clock, elapsedMs, useTicker } from "./workoutShared";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
@@ -62,8 +62,9 @@ export type CheckInItem = {
   key: string;
   type: "daily" | "weekly" | "measurements" | "photos";
   title: string;
-  dueSub: string;
-  doneSub: string | null;
+  /** Logged so far of what is asked: 0 of 4. */
+  done: number;
+  total: number;
   due: boolean;
 };
 
@@ -80,6 +81,8 @@ export type LatestActivity = {
   actionRef?: number | null;
   /** The notification behind it, marked read when the CTA is followed. */
   notificationId?: number | null;
+  /** Coach messages not read yet. */
+  unread: number;
   /** Other coach items in the last 7 days. */
   moreThisWeek: number;
 };
@@ -267,34 +270,35 @@ function UpNextHero({ session, hasPlan, weekDone }: { session: HomeSession; hasP
 // ---- 3 · Check-in: measurements and pictures, folded -----------------------
 
 
-function CheckInFold({ items, nextLabel }: { items: CheckInItem[]; nextLabel: string }) {
+function CheckInFold({ items }: { items: CheckInItem[]; nextLabel: string }) {
   const openCheckIn = useOpenCheckIn();
   const openPhotos = useOpenPhotos();
-  const due = items.filter((i) => i.due);
-  const done = items.filter((i) => !i.due);
-  const allDone = due.length === 0;
+  const due = items.filter((i) => i.due).length;
   const go = (item: CheckInItem) => (item.type === "photos" ? openPhotos?.() : openCheckIn?.(item.type));
   return (
-    <section className={`hm-tasks${allDone ? " done" : ""}`}>
+    <section className="hm-tasks">
       <div className="hm-tasks-head">
         <span className="hm-eyebrow">Today</span>
-        <span className={`hm-tasks-count${allDone ? " done" : ""}`}>{allDone ? "All done" : `${due.length} to do`}</span>
+        <span className={`hm-tasks-count${due === 0 ? " done" : ""}`}>{due === 0 ? "All done" : `${due} due`}</span>
       </div>
       <div className="hm-tasks-list">
-        {[...due, ...done].map((item) => (
+        {items.map((item) => (
           <button key={item.key} type="button" className={`hm-task${item.due ? "" : " done"}`} onClick={() => go(item)}>
-            <span className={`hm-task-box${item.due ? "" : " done"}`} aria-hidden="true">
-              {!item.due && "✓"}
-            </span>
-            <span className="hm-task-text">
-              <span className="hm-task-title">{item.title}</span>
-              <span className="hm-task-sub">{item.due ? item.dueSub : item.doneSub ?? "Done"}</span>
-            </span>
+            {!item.due && (
+              <span className="hm-task-tick" aria-hidden="true">
+                ✓
+              </span>
+            )}
+            <span className="hm-task-title">{item.title}</span>
+            {item.total > 0 && (
+              <span className="hm-task-count">
+                {item.done} of {item.total}
+              </span>
+            )}
             <span className="hm-task-chev" aria-hidden="true" />
           </button>
         ))}
       </div>
-      {allDone && nextLabel && <div className="hm-tasks-next">{nextLabel}</div>}
     </section>
   );
 }
@@ -354,7 +358,6 @@ function KindIcon({ kind }: { kind: LatestActivity["kind"] }) {
 
 function LatestActivityCard({ a, coachFirstName }: { a: LatestActivity; coachFirstName: string }) {
   const openMessages = useOpenMessages();
-  const openNotifications = useOpenNotifications();
   const openCoach = useOpenCoach();
   const openLink = useOpenLink();
   const goToTab = useNavigateTab();
@@ -374,7 +377,6 @@ function LatestActivityCard({ a, coachFirstName }: { a: LatestActivity; coachFir
         if (a.videoReply) setWatching(true);
         return;
       case "goal":
-        window.scrollTo({ top: 0, behavior: "smooth" });
         try {
           window.sessionStorage.setItem(GOALS_KEY, "1");
         } catch {}
@@ -390,9 +392,13 @@ function LatestActivityCard({ a, coachFirstName }: { a: LatestActivity; coachFir
         goToTab?.(a.actionTab ?? "training", a.actionRef ?? undefined);
     }
   };
-  const tint = a.kind === "video" ? "video" : a.kind === "deploy" || a.kind === "goal" ? a.track ?? "training" : a.kind === "message" || a.kind === "comment" || a.kind === "welcome" ? "message" : "message";
+  // The icon says where it happened: training, nutrition, a video, or the chat.
+  const area =
+    a.kind === "video"
+      ? "video"
+      : a.track ?? (a.link?.area === "Training" ? "training" : a.link?.area === "Nutrition" ? "nutrition" : a.actionTab === "training" ? "training" : a.actionTab === "nutrition" ? "nutrition" : "chat");
   return (
-    <section className="hm-card hm-latest">
+    <section className="hm-latest">
       <div className="hm-latest-head">
         <span className="hm-eyebrow coach-eyebrow">
           <CoachMark />
@@ -400,28 +406,34 @@ function LatestActivityCard({ a, coachFirstName }: { a: LatestActivity; coachFir
         </span>
         <span className="hm-latest-when">{a.whenLabel}</span>
       </div>
-      <div className="hm-latest-body">
-        <span className={`hm-latest-tile ${tint}`} aria-hidden="true">
-          <KindIcon kind={a.kind} />
-        </span>
-        <div className="hm-latest-main">
-          <div className="hm-latest-title">{a.title}</div>
-          {a.body && <p className="hm-latest-text">{a.body}</p>}
-          {a.link && a.kind === "message" && <MessageLinkChip view={a.link} />}
-        </div>
-      </div>
-      <div className="hm-latest-foot">
-        {a.moreThisWeek > 0 ? (
-          <button type="button" className="hm-latest-more" onClick={() => openNotifications?.()}>
-            + {a.moreThisWeek} more this week
-          </button>
-        ) : (
-          <span />
-        )}
-        <button type="button" className="hm-latest-cta" onClick={follow}>
-          {a.cta}
-          <span className="hm-latest-cta-chev" aria-hidden="true" />
+      <div className="hm-card hm-latest-card">
+        <button type="button" className="hm-latest-body" onClick={() => openMessages?.()}>
+          <span className={`hm-latest-icon ${area}`} aria-hidden="true">
+            {area === "training" ? <DumbbellIcon /> : area === "nutrition" ? <AppleIcon /> : area === "video" ? <KindIcon kind="video" /> : <ChatIcon />}
+          </span>
+          <span className="hm-latest-main">
+            <span className="hm-latest-title">{a.title}</span>
+            {a.body && <span className="hm-latest-text">{a.body}</span>}
+          </span>
         </button>
+        {a.link && a.kind === "message" && (
+          <div className="hm-latest-chip">
+            <MessageLinkChip view={a.link} />
+          </div>
+        )}
+        <div className="hm-latest-foot">
+          {a.unread > 0 ? (
+            <button type="button" className="hm-latest-more" onClick={() => openMessages?.()}>
+              {a.unread} unread message{a.unread === 1 ? "" : "s"}
+            </button>
+          ) : (
+            <span />
+          )}
+          <button type="button" className="hm-latest-cta" onClick={follow}>
+            {a.cta}
+            <span className="hm-latest-cta-chev" aria-hidden="true" />
+          </button>
+        </div>
       </div>
       {watching && a.videoReply && <VideoReplySheet reply={a.videoReply} onClose={() => setWatching(false)} />}
     </section>

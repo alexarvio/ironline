@@ -301,12 +301,15 @@ function HomeTab({ CLIENT_ID, photos }: { CLIENT_ID: number; photos: HomePhotos 
   const checkInStatus = getCheckInStatus(CLIENT_ID);
   const due = new Set(checkInStatus.dueTypes);
   const TITLE = { daily: "Daily check-in", weekly: "Weekly check-in", measurements: "Measurements" } as const;
-  const DUE_SUB = { daily: "Daily · due today", weekly: "Weekly · due this week", measurements: "Due today" } as const;
-  const DONE_SUB = { daily: "Logged today", weekly: "Logged this week", measurements: "Logged today" } as const;
+  const sections = getCheckInSections(CLIENT_ID);
+  const countOf = (t: "daily" | "weekly" | "measurements") => {
+    const s = sections.sections.find((x) => x.id === t);
+    return { done: s ? s.metrics.filter((m) => m.value !== "").length : 0, total: s?.metrics.length ?? 0 };
+  };
   const checkInItems = [
-    ...checkInStatus.configured.map((t) => ({ key: t, type: t, title: TITLE[t], dueSub: DUE_SUB[t], doneSub: DONE_SUB[t], due: due.has(t) })),
+    ...checkInStatus.configured.map((t) => ({ key: t, type: t, title: TITLE[t], ...countOf(t), due: due.has(t) })),
     ...(photos
-      ? [{ key: "photos", type: "photos" as const, title: "Progress pictures", dueSub: "A sheet is open", doneSub: photos.state === "done" ? `Sent · ${photos.summary}` : null, due: photos.state === "due" }]
+      ? [{ key: "photos", type: "photos" as const, title: "Progress pictures", done: sections.photoSlots.filter((s) => s.src).length, total: sections.photoSlots.length, due: photos.state === "due" }]
       : []),
   ];
 
@@ -380,17 +383,18 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
     sent.filter((m) => new Date(`${m.dateIso}T00:00:00`).getTime() >= weekAgo).length +
     notes.filter((n) => new Date(n.created_at).getTime() >= weekAgo).length;
   const moreThisWeek = Math.max(0, more - 1);
+  const unread = getNotifications(clientId).filter((n) => n.kind === "coach_note" && !n.read).length;
 
   if (latestMsg && msgAt >= noteAt) {
     const iso = `${latestMsg.dateIso}T${latestMsg.timeLabel}:00`;
     if (latestMsg.link && !latestMsg.link.gone) {
-      return { kind: "comment", title: `Commented on ${latestMsg.link.label}`, body: latestMsg.text || null, whenLabel: relativeLabel(iso), cta: "Open", link: latestMsg.link, moreThisWeek };
+      return { kind: "comment", title: `Commented on ${latestMsg.link.label}`, body: latestMsg.text || null, whenLabel: relativeLabel(iso), cta: "Open", link: latestMsg.link, unread, moreThisWeek };
     }
-    return { kind: "message", title: "Message", body: latestMsg.text || (latestMsg.media ? "Sent you a file" : null), whenLabel: relativeLabel(iso), cta: "Reply", link: latestMsg.link, moreThisWeek };
+    return { kind: "message", title: "Message", body: latestMsg.text || (latestMsg.media ? "Sent you a file" : null), whenLabel: relativeLabel(iso), cta: "Reply", link: latestMsg.link, unread, moreThisWeek };
   }
   if (latestNote) {
     const when = relativeLabel(latestNote.created_at);
-    const base = { whenLabel: when, notificationId: latestNote.id, actionTab: latestNote.action_tab, actionRef: latestNote.action_ref, moreThisWeek };
+    const base = { whenLabel: when, notificationId: latestNote.id, actionTab: latestNote.action_tab, actionRef: latestNote.action_ref, unread, moreThisWeek };
     if (latestNote.action_tab === "video") {
       const reply = listVideoReplies(clientId).find((r) => r.id === latestNote.action_ref) ?? null;
       return { kind: "video", title: reply ? `Replied to your ${reply.exerciseName} video` : "Replied to your video", body: reply?.replyNote ?? latestNote.message, cta: "Watch", videoReply: reply, ...base };
@@ -407,6 +411,7 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
     body: `Your first session is ready. Check in each morning so ${coachFirst} can see how you're going.`,
     whenLabel: "",
     cta: `Meet ${coachFirst}`,
+    unread: 0,
     moreThisWeek: 0,
   };
 }
