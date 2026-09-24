@@ -1,41 +1,26 @@
 "use client";
 
-import { useState } from "react";
-import { AppleIcon, CalendarIcon, CheckIcon, ChevronDownIcon, DumbbellIcon, HeartIcon, TargetIcon } from "../components/icons";
+import { useEffect, useState, useTransition } from "react";
+import { markNotificationReadAction } from "../lib/actions";
+import { ChevronDownIcon } from "../components/icons";
 import GoalRow from "../components/GoalRow";
 import CoachMark from "./CoachMark";
 import MessageLinkChip from "./MessageLinkChip";
+import VideoReplySheet, { type VideoReplyView } from "./VideoReplySheet";
 import type { LinkView } from "../lib/messageLinks";
-import { useNavigateTab, useOpenCheckIn, useOpenMessages, useOpenPhotos } from "./CheckInContext";
+import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenLink, useOpenMessages, useOpenNotifications, useOpenPhotos } from "./CheckInContext";
+import { clock, elapsedMs, useTicker } from "./workoutShared";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
 // CheckInHub.tsx this replaces — a "use client" file importing queries.ts
 // breaks the dev server at runtime). All data comes in as plain props,
 // computed server-side in page.tsx. The types below mirror the ones there.
-
-export type CheckInStatus = {
-  configuredCount: number;
-  dueTypes: ("daily" | "weekly" | "measurements")[];
-  dueNames: string;
-  nextLabel: string;
-};
-
-/** One track of the coach's plan, flattened for the profile card. */
-export type HomeTrack = {
-  track: "nutrition" | "training" | "lifestyle";
-  /** "Nutrition" — the chip and tag text. */
-  label: string;
-  phaseName: string;
-  /** "2 weeks to go", or "Starts in 3 weeks" before it begins. */
-  timeLeft: string;
-  weekNow: number;
-  weekTotal: number;
-  /** 0..1 for the bar. */
-  progress: number;
-  upNext: string | null;
-  /** The coach's note on the phase, when they wrote one. */
-  coachNote: string | null;
-};
+//
+// Home, top to bottom: the greeting with the goals behind its chevron, the
+// next session as a photo card, the check-in fold, the latest thing the
+// coach did, and the next call when one is booked. Every block is either
+// due today or the client's own; coach content shows only when it exists,
+// so a brand-new client's Home is never blank.
 
 export type HomeSession = {
   dayId: number;
@@ -44,6 +29,14 @@ export type HomeSession = {
   sets: number;
   /** Begun on the app and not ended: the button says Resume. */
   live?: boolean;
+  liveStartedAt?: string | null;
+  /** Its week within the programme, its place in the week, and how many there are. */
+  weekNow: number;
+  sessionIndex: number;
+  sessionCount: number;
+  /** A rough length: sets × (rest + a set), to 5 minutes. */
+  estMinutes: number;
+  coverUrl?: string | null;
 } | null;
 
 export type UpcomingMeeting = {
@@ -63,309 +56,423 @@ export type UpcomingMeeting = {
 /** The coach's recap of the last call, written for the client. */
 export type MeetingRecap = { dateLabel: string; text: string } | null;
 
-/** The progress-pictures slot: a sheet open and missing photos, a sheet with
-    every angle in ("All four · next sheet 7 Oct"), or no sheet open. */
-export type HomePhotos = { state: "due" } | { state: "done"; summary: string } | null;
-
 export type GoalRowView = Parameters<typeof GoalRow>[0]["goal"];
 
-/** The newest of the coach's one-way messages, for the card on Home. */
-export type LatestMessage = { coachName: string; text: string; whenLabel: string; count: number; link?: LinkView | null } | null;
+export type CheckInItem = {
+  key: string;
+  type: "daily" | "weekly" | "measurements" | "photos";
+  title: string;
+  dueSub: string;
+  doneSub: string | null;
+  due: boolean;
+};
 
-// Home is the client's landing screen: who they are and where they are in
-// the plan, then the one thing to do now, then what is coming.
+export type LatestActivity = {
+  kind: "message" | "comment" | "video" | "deploy" | "goal" | "meeting" | "report" | "welcome";
+  track?: "training" | "nutrition" | "lifestyle";
+  title: string;
+  body: string | null;
+  whenLabel: string;
+  cta: string;
+  link?: LinkView | null;
+  videoReply?: VideoReplyView | null;
+  actionTab?: string | null;
+  actionRef?: number | null;
+  /** The notification behind it, marked read when the CTA is followed. */
+  notificationId?: number | null;
+  /** Other coach items in the last 7 days. */
+  moreThisWeek: number;
+};
+
 export default function HomeHub({
   dateLabel,
   firstName,
-  photoUrl,
-  initial,
-  mainGoal,
-  tracks,
-  session,
+  coach,
   goals,
+  session,
+  hasPlan,
+  weekDone,
+  checkIn,
+  latestActivity,
   upcoming,
   recap,
-  checkInStatus,
-  photos,
-  latestMessage,
 }: {
   dateLabel: string;
   firstName: string;
-  /** The photo lives in Settings for now; Home shows no avatar. */
-  photoUrl: string | null;
-  initial: string;
-  mainGoal: string | null;
-  tracks: HomeTrack[];
-  session: HomeSession;
+  coach: { firstName: string; photoPath: string | null };
+  /** The main goal first (kind "none"), then the tracked goals. */
   goals: GoalRowView[];
+  session: HomeSession;
+  hasPlan: boolean;
+  /** No session left this week: when the next one starts. */
+  weekDone: { nextWeekLabel: string } | null;
+  checkIn: { items: CheckInItem[]; nextLabel: string } | null;
+  latestActivity: LatestActivity;
   upcoming: UpcomingMeeting;
   recap: MeetingRecap;
-  checkInStatus: CheckInStatus;
-  photos: HomePhotos;
-  /** The coach's most recent message, or null when they have never sent one. */
-  latestMessage: LatestMessage;
 }) {
   return (
     <div className="hm">
-      <ProfileCard dateLabel={dateLabel} firstName={firstName} mainGoal={mainGoal} tracks={tracks} />
+      <HomeBanner dateLabel={dateLabel} firstName={firstName} coachFirstName={coach.firstName} goals={goals} />
       <div className="hm-body">
-        <TodayCard session={session} hasPlan={tracks.length > 0} />
-        <MeasurementsCard checkInStatus={checkInStatus} photosState={photos?.state ?? null} />
-        <MessageCard m={latestMessage} />
-        <MeetingCard m={upcoming} recap={recap} />
-        {goals.length > 0 && <GoalsCard goals={goals} />}
+        <UpNextHero session={session} hasPlan={hasPlan} weekDone={weekDone} />
+        {checkIn && checkIn.items.length > 0 && <CheckInFold items={checkIn.items} nextLabel={checkIn.nextLabel} />}
+        <LatestActivityCard a={latestActivity} coachFirstName={coach.firstName} />
+        {upcoming && <MeetingCard m={upcoming} recap={recap} coachFirstName={coach.firstName} />}
       </div>
     </div>
   );
 }
 
-// ---- 1 · Profile banner --------------------------------------------------
-// The tab's banner, like Training's and Nutrition's: the name and the main
-// goal, with the app's top bar floating over it. Collapsed it still says all
-// three tracks are being managed, because that is the point of showing them
-// at all; expanded it gives each one its own row. Anything longer than a
-// phrase lives behind the chevron.
+// ---- 1 · Banner: the greeting, and the goals behind its chevron ------------
 
-function ProfileCard({
-  dateLabel,
-  firstName,
-  mainGoal,
-  tracks,
-}: {
-  dateLabel: string;
-  firstName: string;
-  mainGoal: string | null;
-  tracks: HomeTrack[];
-}) {
-  // The cards fold out from the chevron beside the greeting.
+const GOALS_KEY = "ironline:home-goals-open";
+
+function HomeBanner({ dateLabel, firstName, coachFirstName, goals }: { dateLabel: string; firstName: string; coachFirstName: string; goals: GoalRowView[] }) {
   const [open, setOpen] = useState(false);
-  // Which phase card is in view, for the dots under the row.
-  const [shown, setShown] = useState(0);
-
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        if (window.sessionStorage.getItem(GOALS_KEY) === "1") setOpen(true);
+      } catch {}
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    try {
+      window.sessionStorage.setItem(GOALS_KEY, next ? "1" : "0");
+    } catch {}
+  };
+  const hasGoals = goals.length > 0;
   return (
-    <header className="hm-banner hm-profile">
-      <div className="hm-profile-row">
-        <div className="hm-profile-main">
-          {/* A plain hello, always: a time-of-day greeting ran long. */}
+    <header className="hm-banner">
+      {hasGoals ? (
+        <button type="button" className="hm-greet-btn" onClick={toggle} aria-expanded={open} aria-controls="hm-goals">
           <h1 className="hm-greeting">Hello, {firstName}.</h1>
-          <div className="hm-eyebrow hm-date">{dateLabel}</div>
-        </div>
-        {tracks.length > 0 && (
-          <button
-            type="button"
-            className={`hm-chev-btn${open ? " open" : ""}`}
-            onClick={() => setOpen((o) => !o)}
-            aria-expanded={open}
-            aria-label={open ? "Hide the plan" : "Show the plan"}
-          >
+          <span className={`hm-greet-chev${open ? " open" : ""}`} aria-hidden="true">
             <ChevronDownIcon />
-          </button>
-        )}
-      </div>
-
-      {/* Nothing at all until the coach sets one. */}
-      {mainGoal && (
-        <p className="hm-maingoal">
-          <span className="hm-maingoal-icon" aria-hidden="true">
-            <TargetIcon />
           </span>
-          {mainGoal}
-        </p>
+        </button>
+      ) : (
+        <h1 className="hm-greeting">Hello, {firstName}.</h1>
       )}
+      <div className="hm-eyebrow hm-date">{dateLabel}</div>
 
-      {/* One frosted card per track, swiped sideways; the bar fills in as the card arrives. */}
-      {tracks.length > 0 && (
-        <div className={`hm-phases-fold${open ? "" : " folded"}`} aria-hidden={!open}>
-        <div className="hm-phases-fold-inner">
-          <div
-            className="hm-phases"
-            onScroll={(e) => {
-              const el = e.currentTarget;
-              const w = el.firstElementChild?.getBoundingClientRect().width ?? 1;
-              setShown(Math.round(el.scrollLeft / (w + 10)));
-            }}
-          >
-            {tracks.map((t) => (
-              <article key={t.track} className={`hm-phase ${t.track}`} aria-label={`${t.label}: ${t.phaseName}`}>
-                <div className="hm-track-head">
-                  <span className={`hm-track-tag ${t.track}`}>
-                    <span className="hm-track-icon" aria-hidden="true">
-                      {t.track === "nutrition" ? <AppleIcon /> : t.track === "training" ? <DumbbellIcon /> : <HeartIcon />}
-                    </span>
-                    {t.label}
-                  </span>
-                  <span className={`hm-track-left ${t.track}`}>{t.timeLeft}</span>
-                </div>
-                <div className="hm-track-name">{t.phaseName}</div>
-                <div className={`hm-track-bar ${t.track}`}>
-                  <div className="hm-track-bar-fill" style={{ "--w": `${Math.round(t.progress * 100)}%` } as React.CSSProperties} />
-                </div>
-                <div className="hm-track-foot">
-                  <span>
-                    Week <b>{t.weekNow}</b> of <b>{t.weekTotal}</b>
-                  </span>
-                  {t.upNext && (
-                    <span>
-                      Up next · <b>{t.upNext}</b>
-                    </span>
-                  )}
-                </div>
-                {t.coachNote && <p className="hm-phase-note">{t.coachNote}</p>}
-              </article>
-            ))}
-          </div>
-          {tracks.length > 1 && (
-            <div className="hm-phase-dots" aria-hidden="true">
-              {tracks.map((t, i) => (
-                <span key={t.track} className={`${t.track}${i === shown ? " on" : ""}`} />
+      {hasGoals && (
+        <div id="hm-goals" className={`hm-goalpanel-fold${open ? " open" : ""}`} aria-hidden={!open}>
+          <div className="hm-goalpanel-inner">
+            <section className="hm-goalpanel">
+              <div className="hm-goalpanel-head">
+                <span className="hm-eyebrow">Your goals</span>
+                <span className="hm-goalpanel-by">Set by {coachFirstName}</span>
+              </div>
+              {goals.map((g) => (
+                <GoalRow key={g.id} goal={g} variant="banner" animate={open} />
               ))}
-            </div>
-          )}
-        </div>
+            </section>
+          </div>
         </div>
       )}
     </header>
   );
 }
 
-// ---- 2 · Today -----------------------------------------------------------
-// The only navy card on the screen, because it is the only one that asks
-// for something. A session is never titled by a weekday: the client trains
-// it when they can, so "Tuesday" would be wrong by Wednesday.
+// ---- 2 · Up next: the session as a photo card ------------------------------
 
-function TodayCard({ session, hasPlan }: { session: HomeSession; hasPlan: boolean }) {
+function UpNextHero({ session, hasPlan, weekDone }: { session: HomeSession; hasPlan: boolean; weekDone: { nextWeekLabel: string } | null }) {
   const goToTab = useNavigateTab();
+  const live = !!session?.live;
+  const now = useTicker(live);
   if (!session && !hasPlan) return null;
+  const photo = session?.coverUrl ?? "/brand/home-hero.jpg";
 
-  return (
-    <section className="hm-today">
-      <div className="hm-today-top">
-        <span className="hm-eyebrow hm-today-eyebrow">Up next</span>
-      </div>
-
-      {session ? (
-        <button type="button" className="hm-session" onClick={() => goToTab?.("training", session.dayId)}>
-          <span className="hm-session-body">
-            <span className="hm-session-name">{session.name}</span>
-            <span className="hm-session-meta">
-              {session.exercises} exercise{session.exercises === 1 ? "" : "s"} · {session.sets} sets
-            </span>
-          </span>
-          <span className="hm-session-start">{session.live ? "Resume" : "Start"}</span>
-        </button>
-      ) : (
-        <p className="hm-session-empty">No session left this week</p>
-      )}
-
-    </section>
-  );
-}
-
-// ---- 2b · Measurements ------------------------------------------------------
-// Where the weights and the rest get logged, as a card of its own, so it
-// cannot be read as part of the session. White, with the blue kept for the
-// edge and the words: the session card is the blue one.
-function MeasurementsCard({ checkInStatus, photosState }: { checkInStatus: CheckInStatus; photosState: "due" | "done" | null }) {
-  const openCheckIn = useOpenCheckIn();
-  const openPhotos = useOpenPhotos();
-  const dueCount = checkInStatus.dueTypes.length;
-  const hasCheckIns = checkInStatus.configuredCount > 0;
-  if (!hasCheckIns && !photosState) return null;
-  const NAME: Record<string, string> = { daily: "daily check-in", weekly: "weekly check-in", measurements: "measurements" };
-  const dueWords = checkInStatus.dueTypes.map((t) => NAME[t] ?? t).join(" · ");
-  return (
-    <section className={`hm-measure${dueCount > 0 ? " due" : ""}`}>
-      {hasCheckIns && (
-        <button type="button" className="hm-measure-main" onClick={() => openCheckIn?.(checkInStatus.dueTypes[0] ?? "daily")}>
-          <span className="hm-measure-body">
-            <span className="hm-eyebrow hm-measure-eyebrow">Measurements</span>
-            <span className="hm-measure-title">{dueCount > 0 ? `${dueCount} to log` : "All logged for today"}</span>
-            <span className="hm-measure-meta">{dueCount > 0 ? dueWords : "Weight, check-ins and the rest live here"}</span>
-          </span>
-          <span className="hm-measure-cta">
-            {dueCount > 0 && <span className="hm-measure-dot" aria-hidden="true" />}
-            {dueCount > 0 ? "Log" : "Open"}
-          </span>
-        </button>
-      )}
-
-      {/* Progress pictures come round about once a month: a row under the
-          measurements, a pulsing dot while a sheet is open and missing photos,
-          a tick for a day after the last one went in, then nothing. */}
-      {photosState && (
-        <button type="button" className="hm-measure-row" onClick={() => openPhotos?.()}>
-          {photosState === "due" ? (
-            <span className="hm-measure-dot" aria-hidden="true" />
-          ) : (
-            <span className="hm-measure-tick" aria-hidden="true">
-              <CheckIcon />
-            </span>
-          )}
-          <span className="hm-measure-row-title">{photosState === "due" ? "Progress pictures due" : "Progress pictures sent"}</span>
-          <span className="hm-measure-chev" aria-hidden="true">
-            <ChevronDownIcon />
-          </span>
-        </button>
-      )}
-    </section>
-  );
-}
-
-// ---- 3 · From the coach --------------------------------------------------
-// The coach's latest message, in full when short. The card opens the feed
-// of everything they have sent; a message that points at something carries
-// a link under it that goes straight there. Nothing at all until they write
-// one.
-
-function MessageCard({ m }: { m: LatestMessage }) {
-  const openMessages = useOpenMessages();
-  if (!m) return null;
-  return (
-    <div className="hm-card hm-message-card">
-      <button type="button" className="hm-message" onClick={() => openMessages?.()}>
-        <span className="hm-eyebrow coach-eyebrow">
-          <CoachMark />
-          From {m.coachName}
-        </span>
-        <p className="hm-message-text">{m.text}</p>
-        <span className="hm-message-foot">
-          <span>{m.whenLabel}</span>
-          <b>{m.count > 1 ? `All ${m.count} messages` : "Open"}</b>
-        </span>
-      </button>
-      {m.link && <MessageLinkChip view={m.link} />}
-    </div>
-  );
-}
-
-// ---- 4 · Next meeting ----------------------------------------------------
-
-// The next call, and under it what the last one settled. The recap is the
-// coach's own words to the client, so it is always visible rather than
-// hidden behind the chevron. With nothing booked the card still stands,
-// with a calendar in place of the date leaf, so a new client sees the slot
-// their coach will fill rather than a gap.
-function MeetingCard({ m, recap }: { m: UpcomingMeeting; recap: MeetingRecap }) {
-  const [open, setOpen] = useState(false);
-  // Nothing to reveal without a link: no chevron, no expanded half.
-  const canExpand = !!m?.link;
-  return (
-    <section className="hm-card hm-meeting">
-      {!m && (
-        <div className="hm-meeting-row">
-          <span className="hm-leaf hm-leaf-empty" aria-hidden="true">
-            <CalendarIcon />
-          </span>
-          <div className="hm-meeting-main">
-            <div className="hm-meeting-top">
-              <span className="hm-eyebrow">Next with your coach</span>
-            </div>
-            <div className="hm-meeting-topic muted">Nothing booked yet</div>
-            <div className="hm-meeting-when">Your coach sets the next call.</div>
+  if (!session) {
+    return (
+      <section className="hm-hero short">
+        {/* eslint-disable-next-line @next/next/no-img-element -- a static brand photo */}
+        <img className="hm-hero-photo" src={photo} alt="" loading="eager" />
+        <span className="hm-hero-scrim" aria-hidden="true" />
+        <div className="hm-hero-top">
+          <span className="hm-hero-chip">Up next</span>
+        </div>
+        <div className="hm-hero-bottom">
+          <div className="hm-hero-kicker">Training</div>
+          <h2 className="hm-hero-title">Week done</h2>
+          {weekDone && <div className="hm-hero-meta">Next week starts {weekDone.nextWeekLabel}</div>}
+          <div className="hm-hero-btns">
+            <button type="button" className="hm-hero-ghost" onClick={() => goToTab?.("training")}>
+              See this week
+            </button>
           </div>
         </div>
+      </section>
+    );
+  }
+
+  const first = session.weekNow === 1 && session.sessionIndex === 1;
+  return (
+    <section className="hm-hero">
+      {/* eslint-disable-next-line @next/next/no-img-element -- a static brand photo */}
+      <img className="hm-hero-photo" src={photo} alt="" loading="eager" />
+      <span className="hm-hero-scrim" aria-hidden="true" />
+      <div className="hm-hero-top">
+        <span className="hm-hero-chip">Up next</span>
+        <span className={`hm-hero-chip dark${live ? " live" : ""}`}>
+          {live && <span className="hm-hero-dot" aria-hidden="true" />}
+          {live ? "Live" : first ? "Your first session" : `Session ${session.sessionIndex} of ${session.sessionCount}`}
+        </span>
+      </div>
+      <div className="hm-hero-bottom">
+        <div className="hm-hero-kicker">Training · Week {session.weekNow}</div>
+        <h2 className="hm-hero-title">{session.name}</h2>
+        <div className="hm-hero-meta">
+          {session.exercises} exercise{session.exercises === 1 ? "" : "s"} · {session.sets} sets · ~{session.estMinutes} min
+        </div>
+        <div className="hm-hero-btns">
+          <button type="button" className="hm-hero-ghost" onClick={() => goToTab?.("training", session.dayId)}>
+            Preview
+          </button>
+          <button type="button" className="hm-hero-start" onClick={() => goToTab?.("training", session.dayId, { week: null, exercise: null, start: true })}>
+            {live ? (
+              `Resume · ${clock(elapsedMs(session.liveStartedAt ?? null, null, now))}`
+            ) : (
+              <>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M8 5.5v13l11-6.5z" />
+                </svg>
+                Start session
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ---- 3 · Check-in: measurements and pictures, folded -----------------------
+
+const seenKey = () => `ironline:home-checkin-seen:${new Date().toISOString().slice(0, 10)}`;
+
+function CheckInFold({ items, nextLabel }: { items: CheckInItem[]; nextLabel: string }) {
+  const openCheckIn = useOpenCheckIn();
+  const openPhotos = useOpenPhotos();
+  const due = items.filter((i) => i.due);
+  const done = items.filter((i) => !i.due);
+  const allDone = due.length === 0;
+  const [open, setOpen] = useState(false);
+  // Opens itself once a day while something is due; after that it keeps
+  // whatever the client left it at.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        if (due.length > 0 && !window.localStorage.getItem(seenKey())) {
+          setOpen(true);
+          window.localStorage.setItem(seenKey(), "1");
+        }
+      } catch {}
+    }, 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on mount
+  }, []);
+  const go = (item: CheckInItem) => (item.type === "photos" ? openPhotos?.() : openCheckIn?.(item.type));
+  const hasScale = items.some((i) => i.type !== "photos");
+  const hasCamera = items.some((i) => i.type === "photos");
+  return (
+    <section className={`hm-ci${allDone ? " done" : ""}${open ? " open" : ""}`}>
+      <button type="button" className="hm-ci-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <span className="hm-ci-icons" aria-hidden="true">
+          {hasScale && (
+            <span className="hm-ci-icon">
+              <svg viewBox="0 0 24 24">
+                <rect x="3" y="3" width="18" height="18" rx="4" />
+                <path d="M7 9.5a6 6 0 0 1 10 0M12 12l2.5-2.5" />
+              </svg>
+            </span>
+          )}
+          {hasCamera && (
+            <span className="hm-ci-icon">
+              <svg viewBox="0 0 24 24">
+                <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
+                <circle cx="12" cy="13" r="3.5" />
+              </svg>
+            </span>
+          )}
+        </span>
+        <span className="hm-ci-text">
+          <span className="hm-eyebrow">Check-in</span>
+          <span className="hm-ci-title">
+            {!allDone && <span className="hm-ci-dot" aria-hidden="true" />}
+            {allDone ? "All checked in" : `${due.length} to log`}
+          </span>
+          <span className="hm-ci-sub">{allDone ? nextLabel || "Nothing due" : due.map((i) => i.title).join(" · ")}</span>
+        </span>
+        <span className={`hm-ci-chev${open ? " open" : ""}`} aria-hidden="true">
+          <ChevronDownIcon />
+        </span>
+      </button>
+      {open && (
+        <div className="hm-ci-body">
+          {[...due, ...done].map((item) => (
+            <div key={item.key} className={`hm-ci-row${item.due ? "" : " done"}`}>
+              <button type="button" className="hm-ci-row-main" onClick={() => go(item)}>
+                <span className={`hm-ci-status${item.due ? "" : " done"}`} aria-hidden="true">
+                  {item.due ? <span className="hm-ci-dot" /> : "✓"}
+                </span>
+                <span className="hm-ci-row-text">
+                  <span className="hm-ci-row-title">{item.title}</span>
+                  <span className="hm-ci-row-sub">{item.due ? item.dueSub : item.doneSub ?? "Done"}</span>
+                </span>
+              </button>
+              {item.due && (
+                <button type="button" className="hm-ci-go" onClick={() => go(item)}>
+                  {item.type === "photos" ? "Start" : "Log"}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
       )}
-      {m && (
+    </section>
+  );
+}
+
+// ---- 4 · Latest from the coach --------------------------------------------
+
+function KindIcon({ kind }: { kind: LatestActivity["kind"] }) {
+  switch (kind) {
+    case "video":
+      return (
+        <svg viewBox="0 0 24 24">
+          <rect x="3" y="6" width="13" height="12" rx="2" />
+          <path d="M16 10l5-3v10l-5-3z" />
+        </svg>
+      );
+    case "deploy":
+      return (
+        <svg viewBox="0 0 24 24">
+          <path d="M4 7h16M4 12h16M4 17h10" />
+        </svg>
+      );
+    case "goal":
+      return (
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="8" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      );
+    case "meeting":
+      return (
+        <svg viewBox="0 0 24 24">
+          <rect x="3" y="5" width="18" height="16" rx="2" />
+          <path d="M3 10h18M8 3v4M16 3v4" />
+        </svg>
+      );
+    case "report":
+      return (
+        <svg viewBox="0 0 24 24">
+          <path d="M6 3h9l4 4v14H6z" />
+          <path d="M9 12h6M9 16h6" />
+        </svg>
+      );
+    case "welcome":
+      return (
+        <svg viewBox="0 0 24 24">
+          <path d="M12 3l2.6 5.3 5.9.9-4.2 4.1 1 5.8L12 16.4 6.7 19.1l1-5.8L3.5 9.2l5.9-.9z" />
+        </svg>
+      );
+    default:
+      return (
+        <svg viewBox="0 0 24 24">
+          <path d="M4 5h16v11H8l-4 4z" />
+        </svg>
+      );
+  }
+}
+
+function LatestActivityCard({ a, coachFirstName }: { a: LatestActivity; coachFirstName: string }) {
+  const openMessages = useOpenMessages();
+  const openNotifications = useOpenNotifications();
+  const openCoach = useOpenCoach();
+  const openLink = useOpenLink();
+  const goToTab = useNavigateTab();
+  const [watching, setWatching] = useState(false);
+  const [, startTransition] = useTransition();
+  const follow = () => {
+    if (a.notificationId != null) startTransition(() => markNotificationReadAction(a.notificationId!));
+    switch (a.kind) {
+      case "message":
+        openMessages?.();
+        return;
+      case "comment":
+        if (a.link) openLink?.(a.link);
+        else openMessages?.();
+        return;
+      case "video":
+        if (a.videoReply) setWatching(true);
+        return;
+      case "goal":
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        try {
+          window.sessionStorage.setItem(GOALS_KEY, "1");
+        } catch {}
+        goToTab?.("home");
+        return;
+      case "meeting":
+        document.querySelector(".hm-meeting")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      case "welcome":
+        openCoach?.();
+        return;
+      default:
+        goToTab?.(a.actionTab ?? "training", a.actionRef ?? undefined);
+    }
+  };
+  const tint = a.kind === "video" ? "video" : a.kind === "deploy" || a.kind === "goal" ? a.track ?? "training" : a.kind === "message" || a.kind === "comment" || a.kind === "welcome" ? "message" : "message";
+  return (
+    <section className="hm-card hm-latest">
+      <div className="hm-latest-head">
+        <span className="hm-eyebrow coach-eyebrow">
+          <CoachMark />
+          Latest from {coachFirstName}
+        </span>
+        <span className="hm-latest-when">{a.whenLabel}</span>
+      </div>
+      <div className="hm-latest-body">
+        <span className={`hm-latest-tile ${tint}`} aria-hidden="true">
+          <KindIcon kind={a.kind} />
+        </span>
+        <div className="hm-latest-main">
+          <div className="hm-latest-title">{a.title}</div>
+          {a.body && <p className="hm-latest-text">{a.body}</p>}
+          {a.link && a.kind === "message" && <MessageLinkChip view={a.link} />}
+        </div>
+      </div>
+      <div className="hm-latest-foot">
+        {a.moreThisWeek > 0 ? (
+          <button type="button" className="hm-latest-more" onClick={() => openNotifications?.()}>
+            + {a.moreThisWeek} more this week
+          </button>
+        ) : (
+          <span />
+        )}
+        <button type="button" className="hm-latest-cta" onClick={follow}>
+          {a.cta}
+          <span className="hm-latest-cta-chev" aria-hidden="true" />
+        </button>
+      </div>
+      {watching && a.videoReply && <VideoReplySheet reply={a.videoReply} onClose={() => setWatching(false)} />}
+    </section>
+  );
+}
+
+// ---- 5 · Next meeting, only when booked ------------------------------------
+
+function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<UpcomingMeeting>; recap: MeetingRecap; coachFirstName: string }) {
+  return (
+    <section className="hm-card hm-meeting">
       <div className="hm-meeting-row">
         <span className="hm-leaf" aria-hidden="true">
           <span className="hm-leaf-month">{m.monthCap}</span>
@@ -374,36 +481,20 @@ function MeetingCard({ m, recap }: { m: UpcomingMeeting; recap: MeetingRecap }) 
         </span>
         <div className="hm-meeting-main">
           <div className="hm-meeting-top">
-            <span className="hm-eyebrow">Next with your coach</span>
-            <span className={`hm-meeting-pill${m.startingNow ? " live" : ""}`}>
-              {m.startingNow ? "Starting now" : m.inLabel}
-            </span>
+            <span className="hm-eyebrow">Next with {coachFirstName}</span>
+            <span className={`hm-meeting-pill${m.startingNow ? " live" : ""}`}>{m.startingNow ? "Starting now" : m.inLabel}</span>
           </div>
           <div className="hm-meeting-topic">{m.topic}</div>
           <div className="hm-meeting-when">{m.whenLabel}</div>
         </div>
-        {canExpand && (
-          <button
-            type="button"
-            className={`hm-chev-btn${open ? " open" : ""}`}
-            onClick={() => setOpen((o) => !o)}
-            aria-expanded={open}
-            aria-label={open ? "Hide the call link" : "Show the call link"}
-          >
-            <ChevronDownIcon />
-          </button>
-        )}
       </div>
-      )}
-
-      {canExpand && open && (
+      {m.link && m.startingNow && (
         <div className="hm-meeting-more">
-          <a className="hm-join" href={m!.link!} target="_blank" rel="noopener noreferrer">
+          <a className="hm-join" href={m.link} target="_blank" rel="noopener noreferrer">
             Join call
           </a>
         </div>
       )}
-
       {recap && (
         <div className="hm-recap attached">
           <div className="hm-recap-head">
@@ -417,17 +508,22 @@ function MeetingCard({ m, recap }: { m: UpcomingMeeting; recap: MeetingRecap }) 
   );
 }
 
-// ---- 5 · Goals -----------------------------------------------------------
+// ---- Shapes the server page still builds for other tabs ---------------------
 
-function GoalsCard({ goals }: { goals: GoalRowView[] }) {
-  return (
-    <section className="hm-card hm-goals">
-      <div className="hm-goals-head">
-        <span className="hm-eyebrow">Current goals</span>
-      </div>
-      {goals.map((g) => (
-        <GoalRow key={g.id} goal={g} />
-      ))}
-    </section>
-  );
-}
+/** One track of the coach's plan, flattened. Home no longer shows them; the
+    page keeps building them to know whether there is a plan at all. */
+export type HomeTrack = {
+  track: "nutrition" | "training" | "lifestyle";
+  label: string;
+  phaseName: string;
+  timeLeft: string;
+  weekNow: number;
+  weekTotal: number;
+  progress: number;
+  upNext: string | null;
+  coachNote: string | null;
+};
+
+/** The progress-pictures slot: a sheet open and missing photos, a sheet with
+    every angle in ("All four · next sheet 7 Oct"), or no sheet open. */
+export type HomePhotos = { state: "due" } | { state: "done"; summary: string } | null;

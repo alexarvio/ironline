@@ -41,6 +41,7 @@ export default function SessionOverview({
   onBack,
   onStart,
   onResume,
+  autoStart = false,
 }: {
   day: SessionDay;
   pastWeek: boolean;
@@ -52,6 +53,8 @@ export default function SessionOverview({
   /** The client picked a gym (or there was nothing to pick) and pressed Start. */
   onStart: (gym: GymOption | null) => void;
   onResume: () => void;
+  /** Arrived from Home's Start: open the gym question (or start) at once. */
+  autoStart?: boolean;
 }) {
   const status = sessionStatus(day, pastWeek);
   const live = status === "live";
@@ -78,10 +81,19 @@ export default function SessionOverview({
   const pill = STATUS_LABEL[status];
   const pillClass = status;
 
+  const [seenAuto, setSeenAuto] = useState(false);
   const start = () => {
     if (day.gyms.length > 1) setGymOpen(true);
     else onStart(day.gyms[0] ?? null);
   };
+  // Arrived from Home's Start: straight into the gym question, or the start.
+  if (autoStart !== seenAuto) {
+    setSeenAuto(autoStart);
+    if (autoStart && !liveElsewhere && currentWeek) {
+      if (day.gyms.length > 1) setGymOpen(true);
+      else onStart(day.gyms[0] ?? null);
+    }
+  }
 
   return (
     <div className="app-layer app-layer-push so-screen" role="dialog" aria-label={day.title}>

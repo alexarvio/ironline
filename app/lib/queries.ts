@@ -5209,6 +5209,8 @@ export function setMeasurementFieldVisibleToClient(id: number, visible: boolean)
 // (this cycle). Progress pictures aren't a fourth type: they're submitted
 // as part of the measurements check-in, so they don't get their own row.
 export type CheckInStatus = {
+  /** Which check-in types the client has at all. */
+  configured: ("daily" | "weekly" | "measurements")[];
   // Zero when the coach hasn't configured any check-ins at all, which is
   // the signal to hide the section rather than claim everything's done.
   configuredCount: number;
@@ -5687,6 +5689,7 @@ export function getCheckInStatus(clientId: number): CheckInStatus {
 
   return {
     configuredCount: [dailyDefs.length, weeklyDefs.length, fields.length].filter((n) => n > 0).length,
+    configured: [dailyDefs.length > 0 ? "daily" : null, weeklyDefs.length > 0 ? "weekly" : null, fields.length > 0 ? "measurements" : null].filter((t): t is "daily" | "weekly" | "measurements" => t != null),
     dueTypes,
     dueNames,
     nextLabel: dailyDefs.length
@@ -8297,6 +8300,13 @@ export type UpNextSession = {
   sets: number;
   /** Begun on the app and not yet ended: Home says Resume, not Start. */
   live: boolean;
+  liveStartedAt: string | null;
+  /** Its week within the programme, its place in the week, and how many there are. */
+  weekNow: number;
+  sessionIndex: number;
+  sessionCount: number;
+  /** A rough length: sets × (rest + a set), to 5 minutes. */
+  estMinutes: number;
 };
 
 // The session Home offers to start: the first one this week that is not
@@ -8322,6 +8332,14 @@ export function getUpNextSession(clientId: number): UpNextSession | null {
     exercises: assignments.length,
     sets: assignments.reduce((sum, a) => sum + a.sets, 0),
     live: !!day.session_started_at && !day.session_ended_at,
+    liveStartedAt: day.session_started_at && !day.session_ended_at ? day.session_started_at : null,
+    weekNow: (() => {
+      const p = getDeployedProgram(clientId);
+      return p ? week - p.start_week + 1 : 1;
+    })(),
+    sessionIndex: index + 1,
+    sessionCount: days.length,
+    estMinutes: Math.max(5, Math.round(assignments.reduce((t, a) => t + a.sets * ((a.rest_seconds ?? 90) + 45), 0) / 60 / 5) * 5),
   };
 }
 

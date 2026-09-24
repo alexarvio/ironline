@@ -73,7 +73,7 @@ import {
 import TrainingDayList from "./TrainingDayList";
 
 import { ProgressPicturesRow, type ProgressPicturesProps } from "./ProgressPicturesScreen";
-import HomeHub, { HomePhotos, HomeTrack, UpcomingMeeting } from "./HomeHub";
+import HomeHub, { type GoalRowView, type HomePhotos, type HomeTrack, type LatestActivity, type UpcomingMeeting } from "./HomeHub";
 import NutritionTargetsCard, { type NutritionTargetSet } from "./NutritionTargetsCard";
 import CoachCard from "./CoachCard";
 import SupplementsCard, { type SupplementRow } from "./SupplementsCard";
@@ -261,22 +261,6 @@ function weekStats(CLIENT_ID: number, week: number) {
 function HomeTab({ CLIENT_ID, photos }: { CLIENT_ID: number; photos: HomePhotos }) {
   const client = getClient(CLIENT_ID);
   const profile = getClientProfile(CLIENT_ID);
-  // Home's header keeps the goal countdown to whole weeks ("11 weeks to
-  // goal") so it reads as one line next to the phase/week label instead of
-  // wrapping — getTimeToGoal's day-precision string (e.g. "11 weeks 5d") is
-  // still what the coach sees in admin's Start Page, unchanged.
-  const goalNote = (() => {
-    if (!profile.goal_date) return null;
-    const days = Math.round(
-      (new Date(`${profile.goal_date}T00:00:00`).getTime() - new Date(`${localDateStr()}T00:00:00`).getTime()) / 86400000
-    );
-    if (days < 0) return `${Math.abs(days)} day${Math.abs(days) === 1 ? "" : "s"} overdue`;
-    if (days === 0) return "Goal date is today";
-    if (days < 7) return `${days} day${days === 1 ? "" : "s"} to goal`;
-    const weeks = Math.floor(days / 7);
-    return `${weeks} week${weeks === 1 ? "" : "s"} to goal`;
-  })();
-
   const today = localDateStr();
 
   const upcomingMeeting = listMeetings(CLIENT_ID)
@@ -312,13 +296,19 @@ function HomeTab({ CLIENT_ID, photos }: { CLIENT_ID: number; photos: HomePhotos 
     };
   })();
 
-  // ---- "Today" due items (was the Check-ins tab; folded into Home) ----
-  // Computation itself lives in getDueItems() in lib/queries.ts, shared with
-  // applyDueClientReminders() so the notification feed's reminders and this
-  // list never disagree on what's due. dailyDefs/weeklyDefs/*LoggedToday are
-  // still needed here directly for the Tracker sub-tab below.
+  // ---- Check-in: one row per configured type, due ones first ----
   ensureDefaultMetrics(CLIENT_ID);
   const checkInStatus = getCheckInStatus(CLIENT_ID);
+  const due = new Set(checkInStatus.dueTypes);
+  const TITLE = { daily: "Daily check-in", weekly: "Weekly check-in", measurements: "Measurements" } as const;
+  const DUE_SUB = { daily: "Daily · due today", weekly: "Weekly · due this week", measurements: "Due today" } as const;
+  const DONE_SUB = { daily: "Logged today", weekly: "Logged this week", measurements: "Logged today" } as const;
+  const checkInItems = [
+    ...checkInStatus.configured.map((t) => ({ key: t, type: t, title: TITLE[t], dueSub: DUE_SUB[t], doneSub: DONE_SUB[t], due: due.has(t) })),
+    ...(photos
+      ? [{ key: "photos", type: "photos" as const, title: "Progress pictures", dueSub: "A sheet is open", doneSub: photos.state === "done" ? `Sent · ${photos.summary}` : null, due: photos.state === "due" }]
+      : []),
+  ];
 
   const dateLabel = new Date(`${today}T00:00:00`).toLocaleDateString("en-US", {
     weekday: "long",
@@ -326,34 +316,99 @@ function HomeTab({ CLIENT_ID, photos }: { CLIENT_ID: number; photos: HomePhotos 
     day: "numeric",
   });
 
-  // The coach's phase timeline, if they have drawn one, drives the plan
-  // rows under the header. The headline itself is the coach's main goal.
+  // The plan and the session. No session left this week: when the next starts.
   const plan = getClientPlanView(CLIENT_ID);
+  const program = getDeployedProgram(CLIENT_ID);
+  const session = getUpNextSession(CLIENT_ID);
+  const hasPlan = !!program || homeTracks(plan, CLIENT_ID).length > 0;
+  const weekDone = (() => {
+    if (session || !program) return null;
+    const next = new Date(`${weekStart(today)}T00:00:00`);
+    next.setDate(next.getDate() + 7);
+    return { nextWeekLabel: next.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) };
+  })();
 
+  // Goals: the main goal first, as a row of its own, then the tracked ones.
+  const goals: GoalRowView[] = [
+    ...(profile.main_goal ? [{ id: -1, text: profile.main_goal, done: false, kind: "none" as const, tone: "muted" as const, reached: false, bar: null, barLabel: null, segments: null, left: null, right: null, sub: null }] : []),
+    ...getGoalViews(CLIENT_ID),
+  ];
+
+  const coachFirst = getCoachFirstName(CLIENT_ID);
   return (
     <HomeHub
       dateLabel={dateLabel}
       firstName={(client?.name ?? "").trim().split(/\s+/)[0] || "there"}
-      photoUrl={client?.avatar_path ?? null}
-      initial={(client?.name ?? "?").trim().charAt(0).toUpperCase() || "?"}
-      mainGoal={profile.main_goal ?? null}
-      tracks={homeTracks(plan, CLIENT_ID)}
-      session={getUpNextSession(CLIENT_ID)}
-      goals={getGoalViews(CLIENT_ID)}
+      coach={{ firstName: coachFirst, photoPath: getCoachAvatarPath(CLIENT_ID) }}
+      goals={goals}
+      session={session}
+      hasPlan={hasPlan}
+      weekDone={weekDone}
+      checkIn={checkInItems.length ? { items: checkInItems, nextLabel: checkInStatus.nextLabel } : null}
+      latestActivity={latestCoachActivity(CLIENT_ID, coachFirst)}
       upcoming={upcoming}
       recap={getLastMeetingRecap(CLIENT_ID)}
-      checkInStatus={checkInStatus}
-      photos={photos}
-      latestMessage={(() => {
-        // The card on Home shows the coach's newest, with how many of theirs there are.
-        const sent = coachMessagesFor(CLIENT_ID).filter((m) => !m.mine && m.text.trim());
-        const latest = sent[sent.length - 1];
-        return latest
-          ? { coachName: getCoachDisplayName(CLIENT_ID), text: latest.text, whenLabel: fmtShortDate(latest.dateIso), count: sent.length, link: latest.link }
-          : null;
-      })()}
     />
   );
+}
+
+// "2 h ago", "Yesterday", "Mon", then "21 Sep".
+function relativeLabel(iso: string): string {
+  const then = new Date(iso).getTime();
+  const diff = Date.now() - then;
+  const h = Math.floor(diff / 3600000);
+  if (h < 1) return "Just now";
+  if (h < 24 && new Date(iso).toDateString() === new Date().toDateString()) return `${h} h ago`;
+  const d = Math.floor(diff / 86400000);
+  if (d <= 1) return "Yesterday";
+  if (d < 7) return new Date(iso).toLocaleDateString("en-US", { weekday: "short" });
+  return fmtShortDate(iso.slice(0, 10));
+}
+
+// The single newest thing the coach did for this client, whatever it was:
+// a chat message (with or without a link), a video reply, a programme or
+// report, or a note. Nothing yet: a welcome, so the card is never absent.
+function latestCoachActivity(clientId: number, coachFirst: string): LatestActivity {
+  const weekAgo = Date.now() - 7 * 86400000;
+  const sent = coachMessagesFor(clientId).filter((m) => !m.mine && (m.text.trim() || m.media));
+  const latestMsg = sent[sent.length - 1] ?? null;
+  const notes = getNotifications(clientId).filter((n) => n.kind !== "reminder");
+  const latestNote = notes[0] ?? null;
+  const msgAt = latestMsg ? new Date(`${latestMsg.dateIso}T${latestMsg.timeLabel}:00`).getTime() : 0;
+  const noteAt = latestNote ? new Date(latestNote.created_at).getTime() : 0;
+  const more =
+    sent.filter((m) => new Date(`${m.dateIso}T00:00:00`).getTime() >= weekAgo).length +
+    notes.filter((n) => new Date(n.created_at).getTime() >= weekAgo).length;
+  const moreThisWeek = Math.max(0, more - 1);
+
+  if (latestMsg && msgAt >= noteAt) {
+    const iso = `${latestMsg.dateIso}T${latestMsg.timeLabel}:00`;
+    if (latestMsg.link && !latestMsg.link.gone) {
+      return { kind: "comment", title: `Commented on ${latestMsg.link.label}`, body: latestMsg.text || null, whenLabel: relativeLabel(iso), cta: "Open", link: latestMsg.link, moreThisWeek };
+    }
+    return { kind: "message", title: "Message", body: latestMsg.text || (latestMsg.media ? "Sent you a file" : null), whenLabel: relativeLabel(iso), cta: "Reply", link: latestMsg.link, moreThisWeek };
+  }
+  if (latestNote) {
+    const when = relativeLabel(latestNote.created_at);
+    const base = { whenLabel: when, notificationId: latestNote.id, actionTab: latestNote.action_tab, actionRef: latestNote.action_ref, moreThisWeek };
+    if (latestNote.action_tab === "video") {
+      const reply = listVideoReplies(clientId).find((r) => r.id === latestNote.action_ref) ?? null;
+      return { kind: "video", title: reply ? `Replied to your ${reply.exerciseName} video` : "Replied to your video", body: reply?.replyNote ?? latestNote.message, cta: "Watch", videoReply: reply, ...base };
+    }
+    if (latestNote.kind === "programme") return { kind: "deploy", track: "training", title: latestNote.message, body: null, cta: "View plan", ...base, actionTab: latestNote.action_tab ?? "training" };
+    if (latestNote.kind === "report") return { kind: "report", title: "Sent you a progress report", body: latestNote.message, cta: "Open", ...base, actionTab: latestNote.action_tab ?? "settings" };
+    if (latestNote.action_tab === "nutrition") return { kind: "deploy", track: "nutrition", title: latestNote.message, body: null, cta: "View plan", ...base };
+    if (latestNote.action_tab === "chat") return { kind: "message", title: "Message", body: latestNote.message, cta: "Open", ...base };
+    return { kind: "message", title: latestNote.action_label ?? "Note from your coach", body: latestNote.message, cta: latestNote.action_tab ? "Open" : "See all", ...base };
+  }
+  return {
+    kind: "welcome",
+    title: `${coachFirst} set up your plan`,
+    body: `Your first session is ready. Check in each morning so ${coachFirst} can see how you're going.`,
+    whenLabel: "",
+    cta: `Meet ${coachFirst}`,
+    moreThisWeek: 0,
+  };
 }
 
 // The conversation with the coach, oldest first, with the labels the thread

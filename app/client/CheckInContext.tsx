@@ -53,7 +53,7 @@ export function useOpenNotifications() {
 // plus, optionally, the id of the row to open there (see action_ref in
 // db.ts). Tapping "your coach sent you a progress report" closes the
 // notifications view, switches to Settings, and expands that report.
-const NavigateContext = createContext<((tab: string, ref?: number) => void) | null>(null);
+const NavigateContext = createContext<((tab: string, ref?: number, focus?: TrainingFocus) => void) | null>(null);
 
 export const NavigateProvider = NavigateContext.Provider;
 
@@ -116,7 +116,7 @@ export function useOpenLink() {
 // Where a link into Training lands: the week to show (its strip can be on
 // any week the client has had) and the exercise to open in the session the
 // focus ref names. Null on an ordinary visit.
-export type TrainingFocus = { week: number | null; exercise: number | null };
+export type TrainingFocus = { week: number | null; exercise: number | null; /** Home's Start: go straight into starting the session. */ start?: boolean };
 
 const TrainingFocusContext = createContext<TrainingFocus | null>(null);
 

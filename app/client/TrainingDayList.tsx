@@ -64,7 +64,9 @@ export default function TrainingDayList({
 
   // Back after a reload, and a link from Home's "Start" or a coach message.
   const focus = useFocusRef();
-  const focusExercise = useTrainingFocus()?.exercise ?? null;
+  const trainingFocus = useTrainingFocus();
+  const focusExercise = trainingFocus?.exercise ?? null;
+  const focusStart = !!trainingFocus?.start;
   useEffect(() => {
     const t = setTimeout(() => {
       const stored = readView();
@@ -209,6 +211,7 @@ export default function TrainingDayList({
           onBack={() => setView(null)}
           onStart={(g) => start(openDay, g)}
           onResume={() => setView({ dayId: openDay.key, screen: "workout" })}
+          autoStart={openDay.key === focus && focusStart && !openDay.startedAt && !openDay.endedAt}
         />,
         host
       )}
