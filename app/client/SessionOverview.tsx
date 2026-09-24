@@ -90,6 +90,7 @@ export default function SessionOverview({
             {pill}
           </span>
         </div>
+        {(live || status === "skipped" || status === "missed") && (
         <p className="so-sub">
           {live
             ? `Started${gymName ? ` at ${gymName}` : ""} · ${clock(ms)} in`
@@ -99,8 +100,9 @@ export default function SessionOverview({
             ? `Couldn't train · ${day.skipReason}`
             : status === "missed"
             ? "Not done that week."
-            : "Preview only. Nothing starts until you tap Start."}
+            : null}
         </p>
+        )}
         {(done || live) && (
         <div className="so-stats">
           {done ? (
