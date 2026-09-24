@@ -1360,6 +1360,10 @@ export function useClickAway(wrap: React.RefObject<HTMLDivElement | null>, onClo
       // A menu the row opened (a Picker, a dropdown) floats outside the row
       // in a layer of its own; a click in it is not a click away.
       if (t && typeof t.closest === "function" && t.closest("[data-slot='dropdown-menu-content'], [data-radix-popper-content-wrapper], .pb-menu")) return;
+      // A button the click itself took off the page (a group opening, the
+      // list turning into the create form) is no longer inside anything, so
+      // it looked like a click away and shut the row: it was a click in it.
+      if (t && !t.isConnected) return;
       if (!wrap.current?.contains(e.target as Node)) close.current();
     };
     const t = setTimeout(() => document.addEventListener("click", onClick), 0);
