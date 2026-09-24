@@ -16364,3 +16364,5 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .wo-menu-row:disabled { color: #a0a7b3; cursor: default; }
 .wo-head-row2.right { justify-content: flex-end; }
 .wo-sets-foot { justify-content: flex-end; }
+.wo-targets-wrap { display: flex; flex-direction: column; gap: 6px; }
+.wo-targets-label { text-align: center; font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #2f5d8f; }

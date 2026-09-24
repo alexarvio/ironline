@@ -266,13 +266,16 @@ export default function ExercisePage({
       )}
 
       {targets.length > 0 && (
-        <div className="wo-targets">
+        <div className="wo-targets-wrap">
+          <div className="wo-targets-label">Target</div>
+          <div className="wo-targets">
           {targets.map((t) => (
             <div key={t.label} className="wo-target">
               <small>{t.label}</small>
               <b>{t.value}</b>
             </div>
           ))}
+          </div>
         </div>
       )}
 
