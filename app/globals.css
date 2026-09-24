@@ -16478,3 +16478,4 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .so-menu { top: calc(max(54px, calc(env(safe-area-inset-top, 0px) + 18px)) + 40px); right: 20px; width: auto; padding: 4px; border-radius: 14px; }
 .so-menu .wo-menu-row { min-height: 40px; padding: 0 12px 0 10px; font-size: 14px; white-space: nowrap; justify-content: flex-start; gap: 8px; }
 .so-menu-ico { width: 16px; height: 16px; fill: none; stroke: #b3302b; stroke-width: 2; stroke-linecap: round; }
+.so-cardio-done { font-size: 13px; font-weight: 700; color: #2f7a3f; }

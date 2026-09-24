@@ -21,6 +21,7 @@ import {
   shortDate,
   shownName,
   useTicker,
+  type SessionCardio,
   type SessionDay,
   type SessionExercise,
 } from "./workoutShared";
@@ -196,7 +197,7 @@ export default function SessionOverview({
             <ExerciseCard key={ex.id} exercise={ex} index={i + 1} done={done} coachName={coachName} />
           ))}
           {day.cardio.map((c, i) => (
-            <CardioCard key={`c${c.id}`} cardio={c} index={day.exercises.length + i + 1} readOnly />
+            done ? <CardioFold key={`c${c.id}`} cardio={c} index={day.exercises.length + i + 1} /> : <CardioCard key={`c${c.id}`} cardio={c} index={day.exercises.length + i + 1} readOnly />
           ))}
         </div>
       </div>
@@ -349,6 +350,38 @@ function ExerciseCard({ exercise, index, done, coachName }: { exercise: SessionE
             </div>
           )}
         </>
+      )}
+    </div>
+  );
+}
+
+// Cardio on a finished session: a folded row like the exercises. Open, it
+// shows the targets and whether it was done. The coach's note is guidance
+// for doing it, so it stays off the review.
+function CardioFold({ cardio, index }: { cardio: SessionCardio; index: number }) {
+  const [open, setOpen] = useState(false);
+  const cells = (
+    [
+      ["Time", cardio.time],
+      ["Pace", cardio.pace],
+      ["Incline", cardio.incline],
+      ["Distance", cardio.distance],
+    ] as const
+  ).filter(([, v]) => v);
+  return (
+    <div className={`so-card so-card-fold${open ? " open" : ""}${cardio.done ? " done" : ""}`}>
+      <button type="button" className="so-card-row so-card-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <span className={`so-index${cardio.done ? " done" : ""}`}>{index}</span>
+        <span className="so-card-main">
+          <span className="so-card-name">{cardio.name}</span>
+        </span>
+        <span className={`so-card-chev${open ? " up" : ""}`} aria-hidden="true" />
+      </button>
+      {open && (
+        <div className="so-card-body">
+          {cells.length > 0 && <div className="so-card-summary">{cells.map(([label, v]) => `${v} ${label.toLowerCase()}`).join(" · ")}</div>}
+          <div className={cardio.done ? "so-cardio-done" : "so-notlogged"}>{cardio.done ? "Done" : "Not done"}</div>
+        </div>
       )}
     </div>
   );
