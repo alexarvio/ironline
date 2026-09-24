@@ -101,6 +101,7 @@ export default function SessionOverview({
             ? "Not done that week."
             : "Preview only. Nothing starts until you tap Start."}
         </p>
+        {(done || live) && (
         <div className="so-stats">
           {done ? (
             <>
@@ -134,6 +135,7 @@ export default function SessionOverview({
             </>
           )}
         </div>
+        )}
       </header>
 
       <div className="so-body">
