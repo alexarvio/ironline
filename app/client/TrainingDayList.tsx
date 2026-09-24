@@ -207,7 +207,6 @@ export default function TrainingDayList({
           day={{ ...openDay, gymId: gymIdFor(openDay) }}
           pastWeek={pastWeek}
           currentWeek={currentWeek}
-          isNext={openDay.key === nextKey}
           liveElsewhere={liveSession && liveSession.id !== openDay.key ? liveSession.label : null}
           coachName={coachName}
           onBack={() => setView(null)}

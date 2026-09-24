@@ -16462,3 +16462,8 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .so-card.done, .so-card-fold.done { background: #F3FAF5; border: 1px solid #D5EBDC; }
 .so-card.done .so-index, .so-card-fold.done .so-index { background: #2f7a3f; border-color: #2f7a3f; color: #fff; }
 .wo-check-row.done { background: #F3FAF5; }
+/* Overview header: back on the left, ⋯ on the right; the skip sheet's box. */
+.so-head-row { display: flex; align-items: center; justify-content: space-between; }
+.so-more svg { width: 20px; height: 20px; }
+.so-menu { top: calc(max(54px, calc(env(safe-area-inset-top, 0px) + 18px)) + 42px); right: 20px; }
+.so-skip-input { height: auto; padding: 12px 14px; line-height: 1.4; resize: none; }

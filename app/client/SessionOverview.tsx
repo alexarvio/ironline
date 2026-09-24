@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { saveSkipReasonAction } from "../lib/actions";
 import { ChevronLeftIcon } from "../components/icons";
 import CoachMark from "./CoachMark";
 import GymSheet from "./GymSheet";
 import type { GymOption } from "./GymPicker";
 import {
   CardioCard,
-  SkipReason,
   clock,
   durationMinutes,
   elapsedMs,
@@ -36,7 +36,7 @@ export default function SessionOverview({
   day,
   pastWeek,
   currentWeek,
-  isNext,
+
   liveElsewhere,
   coachName,
   onBack,
@@ -46,8 +46,6 @@ export default function SessionOverview({
   day: SessionDay;
   pastWeek: boolean;
   currentWeek: boolean;
-  /** The first session of the current week still to do. */
-  isNext: boolean;
   /** Another session is live: this one cannot start until it is finished. */
   liveElsewhere: string | null;
   coachName: string;
@@ -66,8 +64,21 @@ export default function SessionOverview({
   const logged = loggedSets(day);
   const minutes = durationMinutes(day);
   const [gymOpen, setGymOpen] = useState(false);
-  const pill = isNext && status === "upcoming" ? "Up next" : STATUS_LABEL[status];
-  const pillClass = isNext && status === "upcoming" ? "next" : status;
+  // The ⋯ menu and the "couldn't do this session" sheet it opens.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [skipOpen, setSkipOpen] = useState(false);
+  const [skipDraft, setSkipDraft] = useState(day.skipReason);
+  const [skipSaving, startSkip] = useTransition();
+  const submitSkip = (value: string = skipDraft) => {
+    const next = value.trim();
+    startSkip(async () => {
+      await saveSkipReasonAction(day.key, next);
+      setSkipOpen(false);
+      if (next) onBack();
+    });
+  };
+  const pill = STATUS_LABEL[status];
+  const pillClass = status;
 
   const start = () => {
     if (day.gyms.length > 1) setGymOpen(true);
@@ -77,18 +88,50 @@ export default function SessionOverview({
   return (
     <div className="app-layer app-layer-push so-screen" role="dialog" aria-label={day.title}>
       <header className="so-head">
+        <div className="so-head-row">
         <button type="button" className="so-back" onClick={onBack} aria-label="Back to training">
           <ChevronLeftIcon />
         </button>
+        {currentWeek && !done && !live && (
+          <button type="button" className="so-back so-more" onClick={() => setMenuOpen((o) => !o)} aria-label="More" aria-expanded={menuOpen}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="5" cy="12" r="1.8" fill="currentColor" />
+              <circle cx="12" cy="12" r="1.8" fill="currentColor" />
+              <circle cx="19" cy="12" r="1.8" fill="currentColor" />
+            </svg>
+          </button>
+        )}
+        </div>
+        {menuOpen && (
+          <>
+            <button type="button" className="wo-menu-scrim" aria-label="Close menu" onClick={() => setMenuOpen(false)} />
+            <div className="wo-menu so-menu" role="menu">
+              <button
+                type="button"
+                role="menuitem"
+                className="wo-menu-row"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setSkipDraft(day.skipReason);
+                  setSkipOpen(true);
+                }}
+              >
+                Couldn&rsquo;t do this session
+              </button>
+            </div>
+          </>
+        )}
         <div className="so-kicker">
           Week {day.week} · Session {day.index}
         </div>
         <div className="so-title-row">
           <h1 className="so-title">{day.title}</h1>
+          {status !== "upcoming" && (
           <span className={`so-pill ${pillClass}`}>
             {live && <span className="so-pill-dot" aria-hidden="true" />}
             {pill}
           </span>
+          )}
         </div>
         {(live || status === "skipped" || status === "missed") && (
         <p className="so-sub">
@@ -153,8 +196,6 @@ export default function SessionOverview({
             <CardioCard key={`c${c.id}`} cardio={c} index={day.exercises.length + i + 1} readOnly />
           ))}
         </div>
-        {currentWeek && !done && !live && <SkipReason dayId={day.key} text={day.skipReason} onSaved={onBack} />}
-        {status === "skipped" && !currentWeek && <SkipReason dayId={day.key} text={day.skipReason} />}
       </div>
 
       {currentWeek && !done && status !== "skipped" && (
@@ -177,6 +218,32 @@ export default function SessionOverview({
         </div>
       )}
 
+      {skipOpen && (
+        <div className="wo-sheet-scrim" onClick={() => setSkipOpen(false)}>
+          <div className="wo-sheet" role="dialog" aria-label="Couldn't do this session" onClick={(e) => e.stopPropagation()}>
+            <span className="wo-sheet-grab" aria-hidden="true" />
+            <h2 className="wo-sheet-title">Couldn&rsquo;t do this session?</h2>
+            <p className="wo-sheet-sub">Tell {coachName} why. It shows next to the session.</p>
+            <textarea
+              className="wo-sheet-input so-skip-input"
+              value={skipDraft}
+              autoFocus
+              rows={3}
+              maxLength={300}
+              placeholder="Holiday, work trip, sick, injured, no time…"
+              onChange={(e) => setSkipDraft(e.target.value)}
+            />
+            <button type="button" className="wo-sheet-btn" disabled={!skipDraft.trim() || skipSaving} onClick={() => submitSkip()}>
+              {skipSaving ? "Sending…" : "Submit"}
+            </button>
+            {day.skipReason && (
+              <button type="button" className="wo-sheet-text" onClick={() => submitSkip("")}>
+                Remove the reason
+              </button>
+            )}
+          </div>
+        </div>
+      )}
       {gymOpen && (
         <GymSheet
           gyms={day.gyms}

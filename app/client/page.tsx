@@ -30,7 +30,6 @@ import {
   listExercises,
   videoRequestsFor,
   listVideoReplies,
-  listLiveProgramVideoReplies,
   getCurrentWeekNumber,
   getCheckInSections,
   getCheckInStatus,
@@ -84,7 +83,6 @@ import DeleteAccountRow from "./DeleteAccountRow";
 import MyDetailsCard from "./MyDetailsCard";
 import ClientWeekSwitcher from "./ClientWeekSwitcher";
 import ProgramNote from "./ProgramNote";
-import CoachVideos from "./CoachVideos";
 import AppShell, { AppTab } from "./AppShell";
 import AvatarUpload from "./AvatarUpload";
 import {
@@ -402,16 +400,6 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
   const ringC = 2 * Math.PI * ringR;
   const isCurrent = week === currentWeek;
   const isPast = week < currentWeek;
-  // The week's dates, from the programme's start.
-  const range = (() => {
-    if (!program?.deployed_at) return null;
-    const start = new Date(`${weekStart(program.deployed_at.slice(0, 10))}T00:00:00`);
-    start.setDate(start.getDate() + (week - program.start_week) * 7);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 6);
-    const f = (d: Date, month: boolean) => d.toLocaleDateString("en-GB", month ? { day: "numeric", month: "short" } : { day: "numeric" });
-    return start.getMonth() === end.getMonth() ? `${f(start, false)} – ${f(end, true)}` : `${f(start, true)} – ${f(end, true)}`;
-  })();
 
   return (
     <div className="tr-body">
@@ -471,7 +459,6 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
         </section>
       )}
 
-      <CoachVideos coachName={getCoachFirstName(CLIENT_ID)} videos={listLiveProgramVideoReplies(CLIENT_ID)} />
 
       {days.length === 0 ? (
         <p className="empty-note">Nothing deployed yet. Your coach is still building this week.</p>
@@ -501,7 +488,6 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
             <>
             <div className="tr-sessions-head">
               <h2 className="tr-sessions-title">Sessions</h2>
-              {range && <span className="tr-sessions-count">{range}</span>}
             </div>
             <div className="tr-sessions">
             <TrainingDayList
