@@ -577,6 +577,16 @@ export function getDeployedProgram(clientId: number): TrainingProgram | null {
   return deployed.reduce((latest, p) => (p.start_week > latest.start_week ? p : latest));
 }
 
+/** A phase that is out (not a draft) and running today: one the client sees. */
+export function clientSeesPhase(phaseId: number): boolean {
+  const phase = getData().client_phases.find((p) => p.id === phaseId);
+  if (!phase || phase.draft) return false;
+  const today = localDateStr();
+  const d = new Date(`${phase.end_week}T00:00:00`);
+  d.setDate(d.getDate() + 6);
+  return phase.start_week <= today && localDateStr(d) >= today;
+}
+
 export function getDraftProgram(clientId: number): TrainingProgram | null {
   return listPrograms(clientId).find((p) => p.status === "draft") ?? null;
 }

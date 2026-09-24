@@ -181,6 +181,7 @@ import {
   VITAMIN_ITEMS,
   weekStart,
   getClientIdForAssignment,
+  clientSeesPhase,
   getClientIdForSetLog,
   updateSetLog,
   publishWeek,
@@ -1228,7 +1229,8 @@ export async function saveNutritionTargetsAction(formData: FormData) {
   // Water rides along on the same form — it's one row inside the same card,
   // and a second Save button for a single number would be silly.
   if (formData.has("water")) setNutritionWater(clientId, num("water"));
-  logCoachActivity(clientId, "Updated your nutrition targets", { kind: "general", actionTab: "nutrition", actionLabel: "See your targets" });
+  // Only a phase the client is in: editing a scheduled or draft one is not news yet.
+  if (phaseId == null || clientSeesPhase(phaseId)) logCoachActivity(clientId, "Updated your nutrition targets", { kind: "general", actionTab: "nutrition", actionLabel: "See your targets" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
