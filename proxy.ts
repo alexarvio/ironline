@@ -38,6 +38,8 @@ export const config = {
   // (app/icon.png, app/apple-icon.png) and the logo under public/brand must
   // stay public too: the phone fetches them from the manifest with no cookie
   // when the client adds the app to their home screen, and the login page
-  // shows the logo before anyone has a session.
-  matcher: ["/((?!_next/static|_next/image|uploads|api/video-reply|favicon.ico|manifest.webmanifest|icon.png|apple-icon.png|icons/|brand/).*)"],
+  // shows the logo before anyone has a session. sw.js too: the browser
+  // re-checks the service worker on its own, cookie or not, and a redirect
+  // to /login there would break push notifications once a session expired.
+  matcher: ["/((?!_next/static|_next/image|uploads|api/video-reply|favicon.ico|manifest.webmanifest|icon.png|apple-icon.png|sw.js|icons/|brand/).*)"],
 };

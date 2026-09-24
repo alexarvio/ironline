@@ -1,4 +1,4 @@
-import { boolean, doublePrecision, integer, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { boolean, doublePrecision, index, integer, jsonb, pgTable, primaryKey, serial, text, timestamp } from "drizzle-orm/pg-core";
 
 // The Postgres tables behind the store (phase 1 of moving off ironline.json).
 //
@@ -526,6 +526,35 @@ export const kv = pgTable("kv", {
   key: text("key").primaryKey(),
   value: jsonb("value"),
 });
+
+// ---- Tables the app queries directly (phase 2) ----------------------------
+//
+// Not collections: these are never loaded into memory or written by
+// store.ts. The code that uses them reads and writes Postgres itself (see
+// pg/direct.ts), so they carry real types and constraints instead of the
+// all-nullable mirror of the JSON rows above.
+
+/**
+ * Where to deliver a push notification: one row per device a user turned
+ * notifications on for. `endpoint` is the delivery service's address for
+ * that device (a web push URL, or an APNs device token for the native app).
+ */
+export const push_subscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: serial("id").primaryKey(),
+    user_id: integer("user_id").notNull(),
+    kind: text("kind").notNull().$type<"web" | "apns">(),
+    endpoint: text("endpoint").notNull().unique(),
+    // Web push only: the device's encryption keys.
+    p256dh: text("p256dh"),
+    auth: text("auth"),
+    user_agent: text("user_agent"),
+    created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    last_sent_at: timestamp("last_sent_at", { withTimezone: true }),
+  },
+  (t) => [index("push_subscriptions_user_id_idx").on(t.user_id)]
+);
 
 /**
  * Every collection, with the field(s) that identify a row. store.ts walks

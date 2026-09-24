@@ -72,6 +72,8 @@ import { ProgressPicturesRow, type ProgressPicturesProps } from "./ProgressPictu
 import HomeHub, { HomePhotos, HomeTrack, UpcomingMeeting } from "./HomeHub";
 import NutritionTargetsCard, { type NutritionTargetSet } from "./NutritionTargetsCard";
 import CoachCard from "./CoachCard";
+import PushToggle from "./PushToggle";
+import { pushPublicKey } from "../lib/push";
 import SupplementsCard, { type SupplementRow } from "./SupplementsCard";
 import ReportArchiveList, { ArchiveReport } from "./ReportArchiveList";
 import NotificationRow from "./NotificationRow";
@@ -816,6 +818,8 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
 
   // Weekly summary and the units toggle are out for now: the summary is
   // not built, and the units live on the Kg | Lbs switch in a session.
+  // Push notifications, when this server has keys for them (lib/push.ts).
+  const pushKey = pushPublicKey();
   const toggleDefs: { key: "coach_notes" | "checkin_reminders"; label: string; detail: string }[] = [
     { key: "coach_notes", label: "Messages from your coach", detail: `A notification when ${getCoachFirstName(CLIENT_ID)} sends you one` },
     { key: "checkin_reminders", label: "Check-in reminders", detail: "A reminder when a check-in, measurement or photo is due" },
@@ -863,6 +867,7 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
       <section className="home-dark-section">
         <span className="home-dark-section-title">Preferences</span>
         <div className="home-dark-rows">
+          {pushKey && <PushToggle publicKey={pushKey} />}
           {toggleDefs.map((t) => {
             const on = prefs[t.key];
             return (
