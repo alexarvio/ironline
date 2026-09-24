@@ -16385,3 +16385,8 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 /* A video already sent reads green; the coach's reply stays blue. */
 .wo-video.sent { background: #DFF3EA; color: #2f7a3f; }
 .wo-video.sent .wo-video-tile { background: #2f7a3f; }
+/* Cardio on its own workout page: the name alone, no number, room before the coach's note. */
+.wo-page .ts-cardio .ts-card-head > .ts-circle { display: none; }
+.wo-page .ts-cardio .ts-card-head { margin-bottom: 4px; }
+.wo-page .ts-cardio .ts-cardio-grid + .ts-coachnote { margin-top: 14px; }
+.wo-page .ts-cardio { border-color: #eceff3; box-shadow: none; }
