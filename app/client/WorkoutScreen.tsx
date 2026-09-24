@@ -135,7 +135,6 @@ export default function WorkoutScreen({
   const ended = day.endedAt != null;
   const now = useTicker(!ended);
   const ms = elapsedMs(day.startedAt, day.endedAt, now);
-  const exercisesDone = day.exercises.filter(isDone).length;
 
   // Dock: the rest timer, restarted on a ticked set when the client wants that.
   const rest = useRestTimer();
@@ -194,22 +193,7 @@ export default function WorkoutScreen({
             </svg>
           </button>
         </div>
-        <div className="wo-head-row2">
-          <span className="wo-head-count">
-            {current.kind === "exercise" ? (
-              <>
-                Exercise <b>{current.index + 1}</b> of {day.exercises.length} · <b>{exercisesDone}</b> done
-              </>
-            ) : current.kind === "cardio" ? (
-              <>
-                Cardio <b>{current.index + 1}</b> of {day.cardio.length}
-              </>
-            ) : (
-              <>
-                <b>{exercisesDone}</b> of {day.exercises.length} exercises done
-              </>
-            )}
-          </span>
+        <div className="wo-head-row2 right">
           {day.gyms.length > 0 && (
             <button type="button" className="wo-gym-chip" onClick={() => setGymOpen(true)}>
               <svg viewBox="0 0 24 24" aria-hidden="true">

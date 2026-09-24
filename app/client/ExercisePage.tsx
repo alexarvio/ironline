@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { clearSwapAction, logSetAction, saveExerciseNoteAction, saveWarmupSetsAction, swapExerciseAction } from "../lib/actions";
 import AlternativesSheet, { type LibraryOption } from "./AlternativesSheet";
 import { VideoAskSheet, VideoGlyph } from "./VideoAskSheet";
-import { PencilIcon } from "../components/icons";
+import { ChatIcon, PencilIcon } from "../components/icons";
+import { useOpenMessages } from "./CheckInContext";
 import {
   CoachNote,
   kgToUnit,
@@ -145,6 +146,8 @@ export default function ExercisePage({
 
   // ---- Swap, video, history.
   const [swapOpen, setSwapOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const openMessages = useOpenMessages();
   const [videoOpen, setVideoOpen] = useState(false);
   const targets = [
     { label: "Sets", value: String(exercise.sets) },
@@ -181,27 +184,74 @@ export default function ExercisePage({
   return (
     <div className="wo-page-inner" data-ex={exercise.id}>
       <div className="wo-ex-head">
-        <div className="wo-ex-titles">
+        <div className="wo-ex-top">
           <div className="wo-kicker">
             Exercise {index} of {total}
           </div>
-          <h2 className="wo-ex-name">{shownName(exercise)}</h2>
-        </div>
-        <div className="wo-ex-tools">
-          {exercise.videoUrl && (
-            <a href={exercise.videoUrl} target="_blank" rel="noreferrer" className="wo-round-btn" aria-label={`Watch the ${exercise.name} demo`} title="Watch the demo">
+          <div className="wo-ex-tools">
+            {exercise.videoUrl && (
+              <a href={exercise.videoUrl} target="_blank" rel="noreferrer" className="wo-round-btn" aria-label={`Watch the ${exercise.name} demo`} title="Watch the demo">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M8 5.5v13l11-6.5z" fill="currentColor" stroke="none" />
+                </svg>
+              </a>
+            )}
+            {openMessages && (
+              <button type="button" className="wo-round-btn" onClick={openMessages} aria-label="Message your coach">
+                <ChatIcon />
+              </button>
+            )}
+            <button type="button" className="wo-round-btn" onClick={() => setMenuOpen((o) => !o)} aria-label="More" aria-expanded={menuOpen}>
               <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M8 5.5v13l11-6.5z" fill="currentColor" stroke="none" />
+                <circle cx="5" cy="12" r="1.8" fill="currentColor" stroke="none" />
+                <circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none" />
+                <circle cx="19" cy="12" r="1.8" fill="currentColor" stroke="none" />
               </svg>
-            </a>
-          )}
-          <button type="button" className="wo-swap-btn" onClick={() => setSwapOpen(true)}>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M4 7h13l-3-3M20 17H7l3 3" />
-            </svg>
-            Swap
-          </button>
+            </button>
+          </div>
         </div>
+        <h2 className="wo-ex-name">{shownName(exercise)}</h2>
+        {menuOpen && (
+          <>
+            <button type="button" className="wo-menu-scrim" aria-label="Close menu" onClick={() => setMenuOpen(false)} />
+            <div className="wo-menu wo-ex-menu" role="menu">
+              <button
+                type="button"
+                role="menuitem"
+                className="wo-menu-row"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setNoteOpen(true);
+                }}
+              >
+                {exercise.myNote.trim() ? "Edit your note" : "Add a note for yourself"}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="wo-menu-row"
+                disabled={warm.length >= MAX_WARMUPS}
+                onClick={() => {
+                  setMenuOpen(false);
+                  addWarm();
+                }}
+              >
+                Add a warm-up set
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="wo-menu-row"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setSwapOpen(true);
+                }}
+              >
+                {exercise.swap ? "Change the swap" : "Swap exercise"}
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {exercise.swap && (
@@ -328,9 +378,6 @@ export default function ExercisePage({
         )}
 
         <div className="wo-sets-foot">
-          <button type="button" className="wo-add-warm" onClick={addWarm} disabled={warm.length >= MAX_WARMUPS}>
-            + Warm-up set
-          </button>
           <span className={`wo-sets-count${done >= exercise.sets && exercise.sets > 0 ? " done" : ""}`}>
             {done >= exercise.sets && exercise.sets > 0 ? "All sets logged" : `${done} of ${exercise.sets} logged`}
           </span>
@@ -372,11 +419,7 @@ export default function ExercisePage({
           </span>
           <span className="wo-note-text">{exercise.myNote}</span>
         </button>
-      ) : (
-        <button type="button" className="wo-note-add" onClick={() => setNoteOpen(true)}>
-          + Add a note for yourself
-        </button>
-      )}
+      ) : null}
 
 
       {swapOpen && (

@@ -16354,3 +16354,12 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .wo-sets .ts-grid > :nth-child(5) { grid-column: 6; }
 .wo-sets .ts-grid > :last-child { grid-column: -2 / -1; }
 @media (max-width: 360px) { .wo-sets .ts-grid { grid-template-columns: 34px minmax(0, 1fr) repeat(var(--ts-n, 3), 68px) 34px; } }
+/* Exercise page head: kicker and the three buttons on one row, the name under, sized like a heading not a poster. */
+.wo-ex-head { position: relative; display: flex; flex-direction: column; gap: 6px; }
+.wo-ex-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.wo-ex-tools { margin-top: 0; }
+.wo-ex-name { font-size: 19px; }
+.wo-ex-menu { top: 44px; right: 0; }
+.wo-menu-row:disabled { color: #a0a7b3; cursor: default; }
+.wo-head-row2.right { justify-content: flex-end; }
+.wo-sets-foot { justify-content: flex-end; }
