@@ -300,7 +300,6 @@ function ExerciseCard({ exercise, index, done, coachName }: { exercise: SessionE
         </button>
         {open && (
           <div className="so-card-body">
-            <div className="so-card-summary">{exercise.swap ? `Swapped for ${exercise.name} · ${summary}` : summary}</div>
             {exercise.logs.length > 0 ? (
               <div className="so-sets">
                 {exercise.logs
@@ -360,14 +359,6 @@ function ExerciseCard({ exercise, index, done, coachName }: { exercise: SessionE
 // for doing it, so it stays off the review.
 function CardioFold({ cardio, index }: { cardio: SessionCardio; index: number }) {
   const [open, setOpen] = useState(false);
-  const cells = (
-    [
-      ["Time", cardio.time],
-      ["Pace", cardio.pace],
-      ["Incline", cardio.incline],
-      ["Distance", cardio.distance],
-    ] as const
-  ).filter(([, v]) => v);
   return (
     <div className={`so-card so-card-fold${open ? " open" : ""}${cardio.done ? " done" : ""}`}>
       <button type="button" className="so-card-row so-card-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
@@ -379,7 +370,6 @@ function CardioFold({ cardio, index }: { cardio: SessionCardio; index: number })
       </button>
       {open && (
         <div className="so-card-body">
-          {cells.length > 0 && <div className="so-card-summary">{cells.map(([label, v]) => `${v} ${label.toLowerCase()}`).join(" · ")}</div>}
           <div className={cardio.done ? "so-cardio-done" : "so-notlogged"}>{cardio.done ? "Done" : "Not done"}</div>
         </div>
       )}
