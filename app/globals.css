@@ -16507,3 +16507,10 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 /* …and flush with the TARGET label: the text under the label's words, nothing indented. */
 .so-card-body .ts-coachnote-text { padding-left: 0; }
 .so-card-body .ts-coachnote-label { color: #2f5d8f; }
+/* Every coach note across Training reads the same way: the blue label, the
+   words under it, no box. */
+.ts-coachnote, .wo-page .ts-coachnote, .so-card-body .ts-coachnote { padding: 0; border: 0; background: transparent; }
+.ts-coachnote-label { color: #2f5d8f; }
+.ts-coachnote-text, .wo-page .ts-coachnote-text { padding-left: 0; font-size: 14px; }
+.wo-page .ts-coachnote { margin-top: 2px; padding: 0 4px; }
+.wo-page .ts-cardio .ts-coachnote { padding: 0; }
