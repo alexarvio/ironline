@@ -173,7 +173,6 @@ export default function WorkoutScreen({
 
   const planned = plannedSets(day);
   const logged = loggedSets(day);
-  const missing = planned - logged;
   const pageDone = (p: Page) => (p.kind === "exercise" ? isDone(day.exercises[p.index]) : p.kind === "cardio" ? day.cardio[p.index].done : ended);
   const pageStarted = (p: Page) => p.kind === "exercise" && loggedCount(day.exercises[p.index]) > 0;
 
@@ -276,7 +275,6 @@ export default function WorkoutScreen({
               </div>
             ) : (
               <div className="wo-page-inner wo-wrap">
-                <div className="wo-kicker">Wrap up</div>
                 <h2 className="wo-wrap-title">Well done{clientName ? `, ${clientName}` : ""}!</h2>
                 <div className="wo-stats">
                   <div className="wo-stat">

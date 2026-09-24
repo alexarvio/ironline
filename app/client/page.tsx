@@ -466,7 +466,6 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                 return m ? { text: m.text, dateLabel: new Date(m.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) } : null;
               })()}
               coachName={getCoachFirstName(CLIENT_ID)}
-              clientName={(getClient(CLIENT_ID)?.name ?? "").trim().split(/s+/)[0] ?? ""}
             />
           )}
         </section>
@@ -509,7 +508,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
               currentWeek={isCurrent}
               pastWeek={isPast}
               coachName={getCoachFirstName(CLIENT_ID)}
-              clientName={(getClient(CLIENT_ID)?.name ?? "").trim().split(/s+/)[0] ?? ""}
+              clientName={(getClient(CLIENT_ID)?.name ?? "").trim().split(/\s+/)[0] ?? ""}
               library={library}
               liveSession={liveSessionFor(CLIENT_ID)}
               days={trainingDays.map(({ day, assignments }, i) => {
