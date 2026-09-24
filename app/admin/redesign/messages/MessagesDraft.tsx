@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
-import { MoreIcon } from "../../../components/icons";
+import { ChevronDownIcon, PinIcon } from "../../../components/icons";
 import Picker from "../Picker";
 import VoiceRecordButton from "../../../components/VoiceRecordButton";
 import { deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction, setMessageLinkAction } from "../../../lib/actions";
@@ -24,7 +24,7 @@ export type DraftLink = { area: string; label: string; gone: boolean; link?: Mes
 export type DraftMedia = { path: string; type: "image" | "video" | "audio" | "file"; name?: string | null };
 export type DraftMessage = { id: number; mine: boolean; text: string; when: string; media?: DraftMedia | null; link: DraftLink | null; reactions?: { coach?: string | null; client?: string | null }; pinned?: boolean; edited?: boolean };
 /** Newest first, as the loader hands them over. */
-export type DraftMessages = { messages: DraftMessage[]; targets: LinkTargets };
+export type DraftMessages = { messages: DraftMessage[]; targets: LinkTargets; avatarPath?: string | null };
 const REACTIONS = ["👍", "❤️", "💪", "🔥", "👏", "😂"] as const;
 const POLL_MS = 15000;
 
@@ -43,9 +43,14 @@ export default function MessagesDraft({ clientId, firstName, plan }: { clientId:
   const [editing, setEditing] = useState<{ id: number; text: string } | null>(null);
   const [relink, setRelink] = useState<number | null>(null);
   const [remove, setRemove] = useState<DraftMessage | null>(null);
-  const [reactOn, setReactOn] = useState<number | null>(null);
   const box = useRef<HTMLTextAreaElement>(null);
-  const end = useRef<HTMLDivElement>(null);
+  const chat = useRef<HTMLElement>(null);
+  const thread = useRef<HTMLDivElement>(null);
+  const threadInner = useRef<HTMLDivElement>(null);
+  // Whether the thread is at its latest message: it opens there, and stays
+  // there as messages arrive or pictures load, unless the coach has
+  // scrolled up to read back.
+  const atEnd = useRef(true);
   const fileInput = useRef<HTMLInputElement>(null);
   const ready = text.trim().length > 0 && !pending;
   const t = plan.targets;
@@ -58,8 +63,34 @@ export default function MessagesDraft({ clientId, firstName, plan }: { clientId:
     const id = setInterval(() => router.refresh(), POLL_MS);
     return () => clearInterval(id);
   }, [clientId, router]);
-  useEffect(() => {
-    end.current?.scrollIntoView({ block: "end" });
+  // The box runs from where it starts to the foot of the window.
+  useLayoutEffect(() => {
+    const el = chat.current;
+    if (!el) return;
+    const fit = () => {
+      el.style.height = `${Math.max(420, window.innerHeight - el.getBoundingClientRect().top - 20)}px`;
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, []);
+  // To the latest message on opening, and whenever the thread grows (a new
+  // message, a picture that finished loading) while the coach is there.
+  useLayoutEffect(() => {
+    const el = thread.current;
+    const inner = threadInner.current;
+    if (!el || !inner) return;
+    const toEnd = () => {
+      if (atEnd.current) el.scrollTop = el.scrollHeight;
+    };
+    toEnd();
+    const watch = new ResizeObserver(toEnd);
+    watch.observe(inner);
+    return () => watch.disconnect();
+  }, []);
+  useLayoutEffect(() => {
+    const el = thread.current;
+    if (el && atEnd.current) el.scrollTop = el.scrollHeight;
   }, [messages.length]);
   const act = (fn: () => Promise<void>, done?: () => void) =>
     start(async () => {
@@ -91,10 +122,7 @@ export default function MessagesDraft({ clientId, firstName, plan }: { clientId:
     fd.set("file", file);
     act(() => sendChatMessageAction(fd));
   };
-  const react = (m: DraftMessage, emoji: string | null) => {
-    setReactOn(null);
-    act(() => reactToMessageAction(clientId, m.id, emoji));
-  };
+  const react = (m: DraftMessage, emoji: string | null) => act(() => reactToMessageAction(clientId, m.id, emoji));
   function saveEdit() {
     if (!editing || !editing.text.trim()) return;
     const { id, text: words } = editing;
@@ -144,51 +172,40 @@ export default function MessagesDraft({ clientId, firstName, plan }: { clientId:
               </span>
             </span>
           ) : (
-            m.text && <span className="rm-bubble-text">{m.text}</span>
+            m.text && (
+              <span className="rm-bubble-body">
+                <span className="rm-bubble-text">{m.text}</span>
+                {/* The time sits in the bubble's corner, on the last line when it fits (as WhatsApp does). */}
+                {!m.link && meta(m, inPins)}
+              </span>
+            )
           )}
           {m.link && (
-            <span className={`rm-link sent${m.link.gone ? " gone" : ""}`} title={m.link.gone ? "The client can't open this any more" : undefined}>
-              <LinkGlyph />
-              <span>{m.link.label}</span>
-              {m.link.gone && <em>no longer opens</em>}
+            <span className="rm-bubble-line">
+              <span className={`rm-link sent${m.link.gone ? " gone" : ""}`} title={m.link.gone ? "The client can't open this any more" : undefined}>
+                <LinkGlyph />
+                <span>{m.link.label}</span>
+                {m.link.gone && <em>no longer opens</em>}
+              </span>
+              {meta(m, inPins)}
             </span>
           )}
-          <span className="rm-bubble-when">
-            {m.mine ? "You" : firstName} · {timeOf(m.when)}
-            {m.edited && " · edited"}
-            {m.pinned && !inPins && " · pinned"}
-          </span>
-        </div>
-        {!inPins && (
-          <div className="rm-bubble-foot">
-            {/* Reactions: theirs, yours (a tap takes it off), and the smiley to pick one. */}
-            <span className="rm-reacts">
-              {m.reactions?.client && <span className="rm-react theirs">{m.reactions.client}</span>}
-              {m.reactions?.coach && (
-                <button type="button" className="rm-react mine" onClick={() => react(m, null)} title="Take yours off">
-                  {m.reactions.coach}
-                </button>
-              )}
-              <span className="rm-react-add">
-                <button type="button" className="rm-foot-btn" onClick={() => setReactOn(reactOn === m.id ? null : m.id)} aria-label="React" aria-expanded={reactOn === m.id}>
-                  <SmileGlyph />
-                </button>
-                {reactOn === m.id && (
-                  <span className="rm-react-row" role="listbox" aria-label="Pick a reaction">
-                    {REACTIONS.map((e) => (
-                      <button key={e} type="button" role="option" aria-selected={m.reactions?.coach === e} className={`rm-react-pick${m.reactions?.coach === e ? " on" : ""}`} onClick={() => react(m, m.reactions?.coach === e ? null : e)}>
-                        {e}
-                      </button>
-                    ))}
-                  </span>
-                )}
-              </span>
-            </span>
+          {!m.text && !m.link && <span className="rm-bubble-line end">{meta(m, inPins)}</span>}
+          {/* The chevron in the corner: react, and on the coach's own, reword, link, pin or delete. */}
+          {!inPins && editing?.id !== m.id && (
             <DropdownMenu modal={false}>
-              <DropdownMenuTrigger className="rm-foot-btn" aria-label="More for this message">
-                <MoreIcon />
+              <DropdownMenuTrigger className="rm-chev" aria-label="Message options">
+                <ChevronDownIcon />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align={m.mine ? "end" : "start"} className="pb-menu">
+              <DropdownMenuContent align={m.mine ? "end" : "start"} className="pb-menu rm-menu">
+                <div className="rm-menu-reacts" role="group" aria-label="React">
+                  {REACTIONS.map((e) => (
+                    <DropdownMenuItem key={e} className={`rm-react-pick${m.reactions?.coach === e ? " on" : ""}`} onSelect={() => react(m, m.reactions?.coach === e ? null : e)} aria-label={`React ${e}`}>
+                      {e}
+                    </DropdownMenuItem>
+                  ))}
+                </div>
+                <DropdownMenuSeparator />
                 {m.mine && <DropdownMenuItem onSelect={() => setEditing({ id: m.id, text: m.text })}>Edit</DropdownMenuItem>}
                 {m.mine && <DropdownMenuItem onSelect={() => setRelink(m.id)}>{m.link ? "Change the link" : "Link to…"}</DropdownMenuItem>}
                 {m.mine && m.link && <DropdownMenuItem onSelect={() => act(() => setMessageLinkAction(clientId, m.id, null))}>Remove the link</DropdownMenuItem>}
@@ -201,29 +218,76 @@ export default function MessagesDraft({ clientId, firstName, plan }: { clientId:
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
+          )}
+        </div>
+        {/* Reactions hang off the bubble's foot: theirs, and yours (a tap takes it off). */}
+        {!inPins && (m.reactions?.client || m.reactions?.coach) && (
+          <span className="rm-reacts">
+            {m.reactions?.client && (
+              <span className="rm-react theirs" title={`${firstName}'s reaction`}>
+                {m.reactions.client}
+              </span>
+            )}
+            {m.reactions?.coach && (
+              <button type="button" className="rm-react mine" onClick={() => react(m, null)} title="Take yours off">
+                {m.reactions.coach}
+              </button>
+            )}
+          </span>
         )}
       </div>
     </div>
   );
+  // Pinned, edited, and the time: no name, as the side it is on says who.
+  function meta(m: DraftMessage, inPins: boolean) {
+    return (
+      <span className="rm-meta">
+        {m.pinned && !inPins && (
+          <span className="rm-meta-pin" title="Pinned">
+            <PinIcon filled />
+          </span>
+        )}
+        {m.edited && "Edited "}
+        {inPins ? m.when : timeOf(m.when)}
+      </span>
+    );
+  }
 
   return (
     <div className="rd rm">
       <header className="rd-head">
         <div className="rd-head-main">
           <span className="rd-eyebrow">Messages</span>
-          <h1 className="rd-title">{firstName}</h1>
+          <h1 className="rd-title">
+            <span className="rm-avatar" aria-hidden="true">
+              {plan.avatarPath ? (
+                // eslint-disable-next-line @next/next/no-img-element -- the client's own upload, served by the app
+                <img src={plan.avatarPath} alt="" />
+              ) : (
+                firstName.charAt(0).toUpperCase()
+              )}
+            </span>
+            {firstName}
+          </h1>
         </div>
       </header>
 
-      <section className="rd-session open rm-chat" aria-label={`Conversation with ${firstName}`}>
+      <section ref={chat} className="rd-session open rm-chat" aria-label={`Conversation with ${firstName}`}>
         {pinned.length > 0 && (
           <div className="rm-pins">
             <span className="rm-pins-label">Pinned</span>
             {pinned.map((m) => bubble(m, true))}
           </div>
         )}
-        <div className="rm-thread">
+        <div
+          ref={thread}
+          className="rm-thread"
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            atEnd.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+          }}
+        >
+          <div ref={threadInner} className="rm-thread-inner">
           {days.length === 0 ? (
             <p className="rm-empty">Nothing yet. What you write lands on {firstName}&rsquo;s Home, and they answer from their app.</p>
           ) : (
@@ -234,7 +298,7 @@ export default function MessagesDraft({ clientId, firstName, plan }: { clientId:
               </div>
             ))
           )}
-          <div ref={end} />
+          </div>
         </div>
 
         {/* The bar at the foot: the link, if one, then the box and Send. */}
@@ -457,18 +521,6 @@ function Media({ media }: { media: DraftMedia }) {
     );
   // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
   return <img className="rm-media-img" src={media.path} alt="" />;
-}
-
-function SmileGlyph() {
-  return (
-    <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" aria-hidden="true">
-      <circle cx="8" cy="8" r="6.2" />
-      <path d="M5.5 9.5c.6.9 1.5 1.4 2.5 1.4s1.9-.5 2.5-1.4" />
-      <circle cx="6" cy="6.5" r=".6" fill="currentColor" />
-      <circle cx="10" cy="6.5" r=".6" fill="currentColor" />
-      <path d="M12.5 2.5v3M11 4h3" />
-    </svg>
-  );
 }
 
 function LinkGlyph() {

@@ -11,6 +11,7 @@ import { CameraIcon, ChatIcon, ChevronDownIcon, ChevronLeftIcon, MoreIcon, PlusI
 import { ConfirmDialog, MessageDialog, useClickAway } from "../training/TrainingDraft";
 import Picker from "../Picker";
 import DatePick from "../DatePick";
+import { SortableItem, SortableList } from "../Sortable";
 
 // The calmer Progress pictures tab, as a draft on real data, in the Training
 // draft's sheet. Two cards: what is asked for, and what came in.
@@ -111,6 +112,9 @@ export default function PicturesDraft({ clientId, firstName, plan }: { clientId:
       if (!b) c += 1;
       else if (b.paused !== x.paused || b.label !== x.label) c += 1;
     }
+    // The angles dragged into a new order: one change.
+    const kept = s.slots.filter((x) => before.has(x.id)).map((x) => x.id);
+    if (kept.some((id, i) => id !== saved.slots.filter((b) => kept.includes(b.id))[i]?.id)) c += 1;
     return c;
   })();
   const isNew = (id: number) => !saved.slots.some((x) => x.id === id);
@@ -190,12 +194,14 @@ export default function PicturesDraft({ clientId, firstName, plan }: { clientId:
               <span />
             </div>
           )}
+          <SortableList ids={s.slots.map((a) => a.id)} label="angle" onMove={(ids) => setS((x) => ({ ...x, slots: ids.map((id) => x.slots.find((y) => y.id === id)!).filter(Boolean) }))}>
           {s.slots.map((a) => {
             const latest = sheets.find((x) => x.cells.some((c) => c.slotId === a.id && c.src));
             return (
-              <div key={a.id} className={`rd-row${isNew(a.id) ? " new" : ""}`}>
+              <SortableItem key={a.id} id={a.id} className={`rd-row${isNew(a.id) ? " new" : ""}`}>
+                {(angleGrip) => (
                 <div className="rd-row-main static" style={aGrid}>
-                  <span className="rd-grip" title="Drag to reorder" aria-hidden="true">
+                  <span className="rd-grip" {...angleGrip}>
                     ⋮⋮
                   </span>
                   <span className="rd-ex">
@@ -226,9 +232,11 @@ export default function PicturesDraft({ clientId, firstName, plan }: { clientId:
                     </DropdownMenu>
                   </span>
                 </div>
-              </div>
+                )}
+              </SortableItem>
             );
           })}
+          </SortableList>
           {adding ? (
             <AddAngleRow have={s.slots.map((x) => x.label.toLowerCase())} onAdd={(label) => setS((x) => ({ ...x, slots: [...x.slots, { id: -(Date.now() + x.slots.length), label, paused: false, count: 0 }] }))} onClose={() => setAdding(false)} />
           ) : (
