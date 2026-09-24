@@ -16418,3 +16418,8 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .so-set { display: grid; grid-template-columns: 52px 1fr 1fr 1fr; gap: 8px; padding: 7px 0; border-top: 1px solid #eceff3; font-size: 14px; font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; }
 .so-set-n { font-weight: 600; color: #5b6474; }
 .so-card-fold .so-notlogged { padding-left: 0; }
+/* The session number as a bare figure: green once done, navy otherwise. */
+.tr-row-tile, .tr-row-tile.live, .tr-row-tile.next, .tr-row-tile.skipped, .tr-row-tile.missed { width: 28px; height: 36px; border-radius: 0; background: transparent; color: #1e3a6e; font-size: 17px; }
+.tr-row-tile.done { background: transparent; color: #2f7a3f; }
+.tr-row-tile.skipped, .tr-row-tile.missed { color: #8b93a1; }
+.tr-row.done { background: #fff; border-color: transparent; }
