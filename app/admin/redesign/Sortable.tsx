@@ -56,10 +56,13 @@ export function SortableItem({
   as: Tag = "div",
   className,
   style,
+  anchor,
   children,
 }: {
   id: Id;
   as?: "div" | "section" | "li";
+  /** An id for the element, so a link (#anchor) can land on it. */
+  anchor?: string;
   className?: string;
   style?: CSSProperties;
   children: (grip: GripProps, dragging: boolean) => ReactNode;
@@ -77,6 +80,7 @@ export function SortableItem({
   return (
     <Tag
       ref={setNodeRef}
+      id={anchor}
       className={`${className ?? ""}${isDragging ? " rd-sorting" : ""}`}
       style={{ ...style, transform: CSS.Translate.toString(transform), transition, position: "relative", zIndex: isDragging ? 20 : undefined }}
     >

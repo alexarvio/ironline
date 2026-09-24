@@ -207,7 +207,11 @@ export default function AppShell({
         goToTab("nutrition");
         return;
       case "food":
-        if (!foodDiary) return;
+        // No diary on this client (switched off since): their Nutrition tab instead.
+        if (!foodDiary) {
+          goToTab("nutrition");
+          return;
+        }
         setFoodDate(l.date);
         setFoodMeal(l.meal ?? null);
         setPushView("food");

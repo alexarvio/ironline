@@ -67,6 +67,7 @@ import type { DraftGoal, DraftMeeting, DraftMeetings } from "./meetings/Meetings
 import type { DraftPlan } from "./plan/PlanDraft";
 import type { DraftHome } from "./home/HomeDraft";
 import type { DraftMessages } from "./messages/MessagesDraft";
+import type { MessageLink } from "../../lib/messageLinks";
 
 // What the redesign drafts read, gathered on the server for the shell that
 // shows them side by side. Read-only: the drafts save nothing.
@@ -527,6 +528,27 @@ export function loadHome(clientId: number): DraftHome {
 
 export function loadMessages(clientId: number): DraftMessages {
   const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  // Where a link in a message opens on the coach's side: the tab, and the
+  // programme and week, or the day, it points at (the #part unfolds it there).
+  const programs = listPrograms(clientId);
+  const hrefFor = (link: MessageLink, week: number | null): string => {
+    const tab = (name: string, rest = "") => `/admin/redesign/${name}?client=${clientId}${rest}`;
+    switch (link.kind) {
+      case "session":
+      case "exercise": {
+        const p = week == null ? null : programs.find((x) => week >= x.start_week && week < x.start_week + x.total_weeks);
+        return p ? tab("training", `&program=${p.id}&week=${week! - p.start_week + 1}#session-${link.dayId}`) : tab("training");
+      }
+      case "food":
+        return tab("nutrition", `#day-${link.date}`);
+      case "nutrition":
+        return tab("nutrition");
+      case "checkin":
+        return tab("measurements");
+      case "photos":
+        return tab("pictures");
+    }
+  };
   // Both sides, newest first: the client answers from their app.
   const messages = listChatMessages(clientId)
     .filter((m) => m.text.trim() || m.media_path)
@@ -539,7 +561,7 @@ export function loadMessages(clientId: number): DraftMessages {
         text: m.text.trim(),
         when: when(m.created_at),
         media: m.media_path ? { path: m.media_path, type: m.media_type ?? "image", name: m.media_name ?? null } : null,
-        link: view ? { area: view.area, label: view.label, gone: view.gone } : null,
+        link: view ? { area: view.area, label: view.label, gone: view.gone, href: view.gone ? undefined : hrefFor(m.link!, view.week) } : null,
         reactions: { coach: m.reactions?.coach ?? null, client: m.reactions?.client ?? null },
         pinned: !!m.pinned,
         edited: !!m.edited_at,
