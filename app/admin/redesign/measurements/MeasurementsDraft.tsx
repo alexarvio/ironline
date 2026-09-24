@@ -13,6 +13,7 @@ import { CalendarIcon, ChatIcon, ChevronDownIcon, MoreIcon, PlusIcon, TrashIcon 
 import type { LoggedMetric, LoggedValues } from "../../../lib/queries";
 import { ConfirmDialog, MessageDialog, fmtDate, stateLabel, useClickAway } from "../training/TrainingDraft";
 import PhaseDatesDialog from "../PhaseDatesDialog";
+import { SortableItem, SortableList } from "../Sortable";
 import Picker from "../Picker";
 import DatePick from "../DatePick";
 
@@ -114,6 +115,9 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   }
   const phaseId = plan.id > 0 ? plan.id : null;
   const inLibrary = (name: string) => plan.library.some((p) => p.items.some((i) => i.name.toLowerCase() === name.toLowerCase()));
+  // The saved metrics' order on screen differs from how they were saved: a drag.
+  const kept = rows.filter((r) => saved.some((m) => m.id === r.id)).map((r) => r.id);
+  const reordered = kept.some((id, i) => id !== saved.filter((m) => kept.includes(m.id))[i]?.id);
   const changes = (() => {
     const before = new Map(saved.map((m) => [m.id, m]));
     let c = saved.filter((m) => !rows.some((r) => r.id === m.id)).length;
@@ -122,6 +126,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
       if (!b) c += 1;
       else if (b.frequency !== r.frequency) c += 1;
     }
+    if (reordered) c += 1;
     return c;
   })();
   const isNew = (id: number) => !saved.some((m) => m.id === id);
@@ -273,12 +278,14 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
               <span />
             </div>
           )}
+          <SortableList ids={rows.map((m) => m.id)} label="metric" onMove={(ids) => setRows((prev) => ids.map((id) => prev.find((r) => r.id === id)!).filter(Boolean))}>
           {rows.map((m) => {
             const was = saved.find((s) => s.id === m.id);
             return (
-              <div key={m.id} className={`rd-row${isNew(m.id) ? " new" : ""}`}>
+              <SortableItem key={m.id} id={m.id} className={`rd-row${isNew(m.id) ? " new" : ""}`}>
+                {(metricGrip) => (
                 <div className="rd-row-main static" style={mGrid}>
-                  <span className="rd-grip" title="Drag to reorder" aria-hidden="true">
+                  <span className="rd-grip" {...metricGrip}>
                     ⋮⋮
                   </span>
                   <span className="rd-ex">
@@ -325,9 +332,11 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                     </DropdownMenu>
                   </span>
                 </div>
-              </div>
+                )}
+              </SortableItem>
             );
           })}
+          </SortableList>
           {adding ? (
             <AddMetricRow library={plan.library} groups={plan.groups} have={rows.map((r) => r.name.toLowerCase())} onAdd={addMetric} onClose={() => setAdding(false)} />
           ) : (
@@ -355,6 +364,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                     adds: rows.filter((r) => isNew(r.id)).map((r) => ({ name: r.name, unit: r.unit, group: r.groupKey, cadence: r.frequency, source: (inLibrary(r.name) ? "library" : "custom") as "library" | "custom" })),
                     removes: saved.filter((m) => !rows.some((r) => r.id === m.id)).map((m) => m.id),
                     cadence: rows.filter((r) => !isNew(r.id) && before.get(r.id)?.frequency !== r.frequency).map((r) => ({ id: r.id, value: r.frequency })),
+                    order: reordered ? kept : null,
                   };
                   setSaved(rows);
                   act(() => applyMetricChangesAction(input), `Tracked metrics: ${rows.length} ${rows.length === 1 ? "metric" : "metrics"}`);

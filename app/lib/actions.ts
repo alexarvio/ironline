@@ -182,6 +182,7 @@ import {
   VITAMIN_ITEMS,
   weekStart,
   getClientIdForAssignment,
+  setMetricOrder,
   clientSeesPhase,
   getClientIdForSetLog,
   updateSetLog,
@@ -846,6 +847,8 @@ export async function applyMetricChangesAction(input: {
   adds: { name: string; unit: string; group: string; cadence: "daily" | "weekly"; source: "library" | "custom" }[];
   removes: number[];
   cadence: { id: number; value: "daily" | "weekly" }[];
+  /** The metrics on screen in the order the coach dragged them into, when they did. */
+  order?: number[] | null;
 }): Promise<boolean> {
   const clientId = Number(input?.clientId);
   if (!clientId || !(await coachForClient(clientId))) return false;
@@ -856,6 +859,7 @@ export async function applyMetricChangesAction(input: {
   for (const c of Array.isArray(input.cadence) ? input.cadence : []) {
     if (mine(c.id) && (c.value === "daily" || c.value === "weekly")) setMetricCadence(c.id, c.value);
   }
+  if (Array.isArray(input.order) && input.order.length && input.order.every(mine)) setMetricOrder(clientId, input.order);
   const adds = (Array.isArray(input.adds) ? input.adds : [])
     .map((a) => ({ name: String(a.name ?? "").trim().slice(0, 60), unit: String(a.unit ?? "").trim().slice(0, 20), group: String(a.group ?? "other"), cadence: a.cadence === "weekly" ? ("weekly" as const) : ("daily" as const), source: a.source }))
     .filter((a) => a.name);

@@ -16,6 +16,10 @@ const DB_PATH = path.join(DATA_DIR, "ironline.json");
 type Client = {
   id: number;
   name: string;
+  // Set once the coach drags the Tracked metrics into an order of their own:
+  // from then on that order (order_index) is the order, instead of grouped
+  // by category (listAllMetrics).
+  metrics_custom_order?: boolean;
   // The coach account (users.id) this client belongs to. Coaches only ever
   // see their own clients. Optional only for rows from before multi-coach;
   // claimUnownedRows fills it when the store loads.

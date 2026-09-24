@@ -3236,14 +3236,37 @@ export function listAllMetrics(clientId: number): MetricDefinition[] {
   // within a group, the order they were added. Cadence no longer sorts,
   // since it is a toggle on the row and a column can change rhythm without
   // jumping around the list.
+  // Once the coach has put them in an order of their own, that order.
   const groupRank = new Map<string, number>(METRIC_GROUPS.map((g, i) => [g.key as string, i]));
+  const custom = !!getData().clients.find((c) => c.id === clientId)?.metrics_custom_order;
   return getData()
     .metric_definitions.filter((m) => m.client_id === clientId)
     .sort((a, b) => {
-      const g = (groupRank.get(metricGroup(a.category).key) ?? 99) - (groupRank.get(metricGroup(b.category).key) ?? 99);
+      const g = custom ? 0 : (groupRank.get(metricGroup(a.category).key) ?? 99) - (groupRank.get(metricGroup(b.category).key) ?? 99);
       if (g !== 0) return g;
       return a.order_index - b.order_index;
     });
+}
+
+/**
+ * The coach dragged the metrics on screen (one phase's, or the standing set)
+ * into this order. Every metric of the client is numbered again, the ones on
+ * screen in the new order and the rest where they were, and the client's
+ * list follows that order from now on (metrics_custom_order).
+ */
+export function setMetricOrder(clientId: number, ids: number[]) {
+  const data = getData();
+  const all = listAllMetrics(clientId);
+  const queue = ids.filter((id) => all.some((m) => m.id === id));
+  const onScreen = new Set(queue);
+  const next = all.map((m) => (onScreen.has(m.id) ? queue.shift()! : m.id));
+  next.forEach((id, i) => {
+    const m = data.metric_definitions.find((x) => x.id === id);
+    if (m) m.order_index = i;
+  });
+  const client = data.clients.find((c) => c.id === clientId);
+  if (client) client.metrics_custom_order = true;
+  persist();
 }
 
 /** Adds every ticked library item that isn't already on this client. */
