@@ -56,9 +56,8 @@ import {
   MUSCLE_GROUPS,
   programWeekLabel,
   videoRequestsFor,
-  weekStart,
 } from "../../lib/queries";
-import { phaseWeekIndex, phaseWeeks } from "../../lib/phases";
+import { phaseCovers, phaseWeekIndex, phaseWeeks } from "../../lib/phases";
 import type { DraftProgram, Library } from "./training/TrainingDraft";
 import type { DraftNutrition } from "./nutrition/NutritionDraft";
 import type { DraftMeasurements } from "./measurements/MeasurementsDraft";
@@ -412,10 +411,8 @@ export function loadPictures(clientId: number): DraftPictures {
   };
   // The Plan tab's phase that covered the week a sheet opened in.
   const phases = listClientPhases(clientId).filter((p) => !p.draft);
-  const phaseOn = (track: "nutrition" | "training", day: string) => {
-    const week = weekStart(day);
-    return phases.find((p) => p.track === track && p.start_week <= week && p.end_week >= week)?.name ?? null;
-  };
+  const phaseOn = (track: "nutrition" | "training", day: string) =>
+    phases.find((p) => p.track === track && phaseCovers(p.start_week, p.end_week, day))?.name ?? null;
 
   const sheets = periods.map((period, i) => {
     const cells = slots

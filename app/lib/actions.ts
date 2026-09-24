@@ -14,6 +14,7 @@ import {
   requireCoach,
 } from "./auth";
 import { eraseClient } from "./erase";
+import { endWeekFor } from "./phases";
 import { sendInviteEmail } from "./mail";
 import { parseMessageLink, type MessageLink } from "./messageLinks";
 import { headers } from "next/headers";
@@ -2334,11 +2335,17 @@ function readPhaseForm(formData: FormData) {
   const trackRaw = String(formData.get("track") ?? "");
   const track = PHASE_TRACKS.find((t) => t.id === trackRaw)?.id ?? null;
   const name = String(formData.get("name") ?? "").trim();
+  const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
+  // A form that means the exact days sends firstDay and lastDay (a nutrition
+  // or lifestyle phase can start and end on any day); start and end are any
+  // day of the first and last week, as before.
+  const firstDay = String(formData.get("firstDay") ?? "");
+  const lastDay = String(formData.get("lastDay") ?? "");
+  if (track && name && isDate(firstDay) && isDate(lastDay)) return { track, name, start: firstDay, end: endWeekFor(lastDay), exact: true };
   const start = String(formData.get("start") ?? "");
   const end = String(formData.get("end") ?? "");
-  const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
   if (!track || !name || !isDate(start) || !isDate(end)) return null;
-  return { track, name, start, end };
+  return { track, name, start, end, exact: false };
 }
 
 export async function addClientPhaseAction(formData: FormData) {
@@ -2348,7 +2355,7 @@ export async function addClientPhaseAction(formData: FormData) {
   const rawProgram = String(formData.get("programId") ?? "");
   // Only one of this client's own programmes can be linked.
   const programId = /^\d+$/.test(rawProgram) && getClientIdForProgram(Number(rawProgram)) === clientId ? Number(rawProgram) : null;
-  addClientPhase(clientId, fields.track, fields.name, fields.start, fields.end, programId);
+  addClientPhase(clientId, fields.track, fields.name, fields.start, fields.end, programId, fields.exact);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -2358,7 +2365,9 @@ export async function schedulePhaseAction(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id || !(await coachForClient(getClientIdForPhase(id)))) return;
   if (phaseEmptyReason(id)) return;
-  schedulePhase(id, String(formData.get("name") ?? ""), String(formData.get("start") ?? ""), String(formData.get("end") ?? ""));
+  const fields = readPhaseForm(formData);
+  if (!fields) return;
+  schedulePhase(id, fields.name, fields.start, fields.end, fields.exact);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -2371,7 +2380,8 @@ export async function schedulePhaseOnItsDatesAction(id: number) {
   if (phaseEmptyReason(phaseId)) return;
   const phase = getPhaseById(phaseId);
   if (!phase) return;
-  schedulePhase(phaseId, phase.name, phase.start_week, phase.end_week);
+  // Its stored dates, as they are.
+  schedulePhase(phaseId, phase.name, phase.start_week, phase.end_week, true);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -2393,9 +2403,9 @@ export async function saveAndSchedulePhaseAction(formData: FormData) {
   const id = Number(formData.get("id"));
   const fields = readPhaseForm(formData);
   if (!id || !fields || !(await coachForClient(getClientIdForPhase(id)))) return;
-  updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1");
+  updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1", fields.exact);
   // The edits are kept; an empty draft just doesn't go out.
-  if (!phaseEmptyReason(id)) schedulePhase(id, fields.name, fields.start, fields.end);
+  if (!phaseEmptyReason(id)) schedulePhase(id, fields.name, fields.start, fields.end, fields.exact);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -2404,7 +2414,7 @@ export async function saveAndDeployPhaseNowAction(formData: FormData) {
   const id = Number(formData.get("id"));
   const fields = readPhaseForm(formData);
   if (!id || !fields || !(await coachForClient(getClientIdForPhase(id)))) return;
-  updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1");
+  updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1", fields.exact);
   if (!phaseEmptyReason(id)) deployPhaseNow(id);
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -2421,7 +2431,7 @@ export async function updateClientPhaseAction(formData: FormData) {
   const id = Number(formData.get("id"));
   const fields = readPhaseForm(formData);
   if (!id || !fields || !(await coachForClient(getClientIdForPhase(id)))) return;
-  updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1");
+  updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1", fields.exact);
   revalidatePath("/admin");
   revalidatePath("/client");
 }

@@ -88,6 +88,7 @@ import ClientWeekSwitcher from "./ClientWeekSwitcher";
 import ProgramNote from "./ProgramNote";
 import AppShell, { AppTab } from "./AppShell";
 import AvatarUpload from "./AvatarUpload";
+import { phaseCovers, phaseDays, phaseWeekIndex, phaseWeeks } from "../lib/phases";
 import {
   AccountIcon,
   AppleIcon,
@@ -180,7 +181,8 @@ function homeTracks(plan: ReturnType<typeof getClientPlanView>, clientId: number
     const shown = running ?? sorted.find((ph) => ph.startWeek > today) ?? null;
     if (!shown) return null;
     const weekTotal = shown.weeks;
-    const totalDays = weekTotal * 7;
+    // Its real days: a nutrition or lifestyle phase need not be whole weeks.
+    const totalDays = daysApart(shown.startWeek, addDaysIso(shown.endWeek, 6)) + 1;
     let timeLeft: string;
     let doneDays = 0;
     if (running) {
@@ -675,9 +677,6 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
     d.setDate(d.getDate() + days);
     return localDateStr(d);
   };
-  const weeksBetween = (a: string, b: string) =>
-    Math.round((new Date(`${b}T00:00:00`).getTime() - new Date(`${a}T00:00:00`).getTime()) / (7 * 86400000));
-
   // Both day types' targets up front, so the tabs switch with no server
   // round trip. A macro's share is of the kcal the three macros make up.
   const targetSet = (kcal: number, protein: number, carbs: number, fats: number): NutritionTargetSet => {
@@ -701,11 +700,11 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   const nutritionPhase = getCurrentPhase(CLIENT_ID, "nutrition");
   const phaseSlot = nutritionPhase ? (
     (() => {
-      const total = weeksBetween(nutritionPhase.start_week, nutritionPhase.end_week) + 1;
-      const current = Math.min(total, Math.max(1, weeksBetween(nutritionPhase.start_week, weekStart(today)) + 1));
+      const total = phaseWeeks(nutritionPhase.start_week, nutritionPhase.end_week);
+      const current = phaseWeekIndex(nutritionPhase.start_week, nutritionPhase.end_week, today);
       // The bar is one line for the phase's days, filled up to today. With
       // under a week to go, the count switches from weeks to days.
-      const totalDays = total * 7;
+      const totalDays = phaseDays(nutritionPhase.start_week, nutritionPhase.end_week);
       const dayIndex = Math.min(
         totalDays,
         Math.max(1, Math.round((new Date(`${today}T00:00:00`).getTime() - new Date(`${nutritionPhase.start_week}T00:00:00`).getTime()) / 86400000) + 1)
@@ -790,8 +789,7 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   const nutritionPhases = listClientPhases(CLIENT_ID).filter((p) => p.track === "nutrition" && !p.draft);
   const kcalOf = (m: { protein: number | null; carbs: number | null; fats: number | null }) => (m.protein ?? 0) * 4 + (m.carbs ?? 0) * 4 + (m.fats ?? 0) * 9;
   const targetOn = (date: string, trained: boolean) => {
-    const week = weekStart(date);
-    const phase = nutritionPhases.find((p) => p.start_week <= week && p.end_week >= week);
+    const phase = nutritionPhases.find((p) => phaseCovers(p.start_week, p.end_week, date));
     const targets = phase?.nutrition?.day_targets ?? storedPlan.day_targets;
     const kcal = targets ? kcalOf(trained ? targets.training : targets.rest) : trained ? summary.trainingKcal : summary.restKcal;
     return kcal > 0 ? kcal : null;

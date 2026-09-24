@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listClientPhases, listClients, listPrograms, localDateStr, weekStart } from "../lib/queries";
 import { phaseChrome } from "./phaseChrome";
+import { phaseCovers, phaseLastDay, phaseWeekIndex, phaseWeeks } from "../lib/phases";
 
 // Every client's phases on one week grid: the Plan tab's timeline, a row per
 // client. Read-only, and built to answer "whose phase is about to end?" at a
@@ -16,7 +17,6 @@ const addWeeks = (monday: string, n: number) => {
   d.setDate(d.getDate() + n * 7);
   return iso(d);
 };
-const weeksBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / (7 * DAY));
 const shortDate = (d: string) => parse(d).toLocaleDateString("en-US", { day: "numeric", month: "short" });
 const monthName = (d: string) => parse(d).toLocaleDateString("en-US", { month: "short" });
 function isoWeek(monday: string): number {
@@ -41,7 +41,10 @@ export default function PhasesOverviewPanel({ coachId, win }: { coachId: number;
   // weeks slide under it, so the grid is two weeks wider than what shows.
   const shown = WINDOWS.find((w) => String(w.weeks) === win)?.weeks ?? 13;
   const count = shown + 2;
-  const thisWeek = weekStart(localDateStr());
+  const today = localDateStr();
+  const thisWeek = weekStart(today);
+  // The column a day falls in: a phase that starts or ends mid-week fills the weeks it touches.
+  const colOf = (day: string) => Math.floor(Math.round((parse(day).getTime() - parse(first).getTime()) / DAY) / 7);
   const first = addWeeks(thisWeek, -2);
   const last = addWeeks(first, count - 1);
   const weeks = Array.from({ length: count }, (_, i) => addWeeks(first, i));
@@ -66,8 +69,8 @@ export default function PhasesOverviewPanel({ coachId, win }: { coachId: number;
   const clients = listClients(coachId).map((c) => {
     const draftPrograms = new Set(listPrograms(c.id).filter((p) => p.status === "draft").map((p) => p.id));
     const phases = listClientPhases(c.id).map((p) => {
-      const running = p.start_week <= thisWeek && p.end_week >= thisWeek;
-      const weeksLeft = running ? weeksBetween(thisWeek, p.end_week) + 1 : null;
+      const running = phaseCovers(p.start_week, p.end_week, today);
+      const weeksLeft = running ? phaseWeeks(today, p.end_week) : null;
       // Something already planned to follow it on the same track takes the worry away.
       const followed = listClientPhases(c.id).some((q) => q.track === p.track && q.id !== p.id && q.start_week > p.start_week && q.start_week <= addWeeks(p.end_week, 1));
       return {
@@ -190,11 +193,11 @@ export default function PhasesOverviewPanel({ coachId, win }: { coachId: number;
                     <div className="pho-tracks">
                       {/* Always the same three rows, in the same order, filled or not. */}
                       {TRACKS.map((t) => {
-                        const mine = c.phases.filter((p) => p.track === t && p.end_week >= first && p.start_week <= last);
+                        const mine = c.phases.filter((p) => p.track === t && phaseLastDay(p.end_week) >= first && p.start_week <= phaseLastDay(last));
                         // Two phases on one track over the same weeks share the row's height.
                         const lanes: (typeof c.phases)[] = [];
                         for (const p of mine) {
-                          let lane = lanes.find((r) => r.every((q) => q.end_week < p.start_week || q.start_week > p.end_week));
+                          let lane = lanes.find((r) => r.every((q) => phaseLastDay(q.end_week) < p.start_week || q.start_week > phaseLastDay(p.end_week)));
                           if (!lane) lanes.push((lane = []));
                           lane.push(p);
                         }
@@ -209,21 +212,21 @@ export default function PhasesOverviewPanel({ coachId, win }: { coachId: number;
                               ))}
                               {lanes.map((lane, li) =>
                                 lane.map((p) => {
-                                  const from = Math.max(0, weeksBetween(first, p.start_week));
-                                  const to = Math.min(count - 1, weeksBetween(first, p.end_week));
-                                  const total = weeksBetween(p.start_week, p.end_week) + 1;
+                                  const from = Math.max(0, colOf(p.start_week));
+                                  const to = Math.min(count - 1, colOf(phaseLastDay(p.end_week)));
+                                  const total = phaseWeeks(p.start_week, p.end_week);
                                   // Coloured by state, as on the client's Plan tab (phaseChrome).
-                                  const chrome = phaseChrome(p.track, p.isDraft ? "draft" : p.running ? "live" : p.start_week > thisWeek ? "scheduled" : "past");
-                                  const state = p.isDraft ? "draft" : p.running ? `week ${weeksBetween(p.start_week, thisWeek) + 1} of ${total}` : p.start_week > thisWeek ? `starts ${shortDate(p.start_week)}` : "done";
+                                  const chrome = phaseChrome(p.track, p.isDraft ? "draft" : p.running ? "live" : p.start_week > today ? "scheduled" : "past");
+                                  const state = p.isDraft ? "draft" : p.running ? `week ${phaseWeekIndex(p.start_week, p.end_week, today)} of ${total}` : p.start_week > today ? `starts ${shortDate(p.start_week)}` : "done";
                                   return (
                                     <Link
                                       key={p.id}
                                       href={`/admin?client=${c.id}&tab=plan`}
-                                      className={`pl-bar pho-bar ${p.track}${p.isDraft ? " draft" : ""}${p.soon ? " soon" : ""}${weeksBetween(first, p.start_week) < 0 ? " clip-start" : ""}${weeksBetween(first, p.end_week) > count - 1 ? " clip-end" : ""}`}
+                                      className={`pl-bar pho-bar ${p.track}${p.isDraft ? " draft" : ""}${p.soon ? " soon" : ""}${colOf(p.start_week) < 0 ? " clip-start" : ""}${colOf(phaseLastDay(p.end_week)) > count - 1 ? " clip-end" : ""}`}
                                       // A bar that starts under the clipped left edge keeps its name in view.
                                       // An ending-soon bar keeps its orange outline; every other bar takes its state's.
                                       style={{ gridColumn: `${from + 1} / span ${to - from + 1}`, gridRow: li + 1, paddingLeft: `calc(8px + ${(Math.max(0, 0.5 + intoWeek - from) / (to - from + 1)) * 100}%)`, background: chrome.band, color: chrome.edge, ...(p.soon ? {} : { borderColor: chrome.line, borderStyle: chrome.dashed ? "dashed" : "solid" }) }}
-                                      title={`${c.name} · ${TRACK_LABEL[p.track]} · ${p.name} · ${total} wk, ${shortDate(p.start_week)} → ${shortDate(addWeeks(p.end_week, 1))} · ${state}`}
+                                      title={`${c.name} · ${TRACK_LABEL[p.track]} · ${p.name} · ${total} wk, ${shortDate(p.start_week)} – ${shortDate(phaseLastDay(p.end_week))} · ${state}`}
                                     >
                                       <span className="pl-bar-name">{p.name}</span>
                                       {p.soon && <span className="pho-left">{p.weeksLeft === 1 ? "last wk" : `${p.weeksLeft} wk left`}</span>}

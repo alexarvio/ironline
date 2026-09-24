@@ -8,6 +8,7 @@ import type { OffProduct } from "./foods/openfoodfacts";
 import type { LinkView, MessageLink } from "./messageLinks";
 import { coachIdOfClient } from "./tenancy";
 import { LOCK_MS, type LockScope } from "./loginLockout";
+import { endWeekFor, phaseCovers, phaseDays, phaseLastDay, phaseWeekIndex, phaseWeeks } from "./phases";
 
 // "Today" (or any Date) as a local YYYY-MM-DD calendar-date string. This is
 // deliberately NOT `date.toISOString().slice(0, 10)` — toISOString always
@@ -2156,9 +2157,8 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
       .map((track) => {
         const ph = getCurrentPhase(clientId, track);
         if (!ph) return null;
-        // Phases are whole weeks, Monday to Monday, so both figures count weeks.
-        const week = (a: string, b: string) => Math.round((new Date(`${b}T00:00:00`).getTime() - new Date(`${a}T00:00:00`).getTime()) / (7 * 86400000));
-        return { track, label: ph.name, weekNow: week(ph.start_week, weekStart(today)) + 1, weeks: week(ph.start_week, ph.end_week) + 1 };
+        // Weeks counted from the phase's first day, which need not be a Monday.
+        return { track, label: ph.name, weekNow: phaseWeekIndex(ph.start_week, ph.end_week, today), weeks: phaseWeeks(ph.start_week, ph.end_week) };
       })
       .filter((t): t is { track: "training" | "nutrition" | "lifestyle"; label: string; weekNow: number; weeks: number } => !!t),
     meta: {
@@ -2747,24 +2747,24 @@ export function getNutritionPlan(clientId: number): NutritionPlan {
 // Nutrition phases the coach can still set numbers for: the running one and
 // everything ahead, plus last week's for context. Oldest first.
 export function listNutritionPhases(clientId: number): (ClientPhase & { status: "past" | "now" | "next" | "draft" })[] {
-  const week = weekStart(localDateStr());
-  const d = new Date(`${week}T00:00:00`);
+  const today = localDateStr();
+  const d = new Date(`${weekStart(today)}T00:00:00`);
   d.setDate(d.getDate() - 7);
   const lastWeek = localDateStr(d);
   return listClientPhases(clientId)
-    .filter((p) => p.track === "nutrition" && p.end_week >= lastWeek)
-    .map((p) => ({ ...p, status: p.draft ? "draft" : p.end_week < week ? "past" : p.start_week > week ? "next" : "now" }));
+    .filter((p) => p.track === "nutrition" && phaseLastDay(p.end_week) >= lastWeek)
+    .map((p) => ({ ...p, status: p.draft ? "draft" : phaseLastDay(p.end_week) < today ? "past" : p.start_week > today ? "next" : "now" }));
 }
 
 /** The lifestyle phases, with the same states the nutrition rail uses. */
 export function listLifestylePhases(clientId: number): (ClientPhase & { status: "past" | "now" | "next" | "draft" })[] {
-  const week = weekStart(localDateStr());
-  const d = new Date(`${week}T00:00:00`);
+  const today = localDateStr();
+  const d = new Date(`${weekStart(today)}T00:00:00`);
   d.setDate(d.getDate() - 7);
   const lastWeek = localDateStr(d);
   return listClientPhases(clientId)
-    .filter((p) => p.track === "lifestyle" && p.end_week >= lastWeek)
-    .map((p) => ({ ...p, status: p.draft ? "draft" : p.end_week < week ? "past" : p.start_week > week ? "next" : "now" }));
+    .filter((p) => p.track === "lifestyle" && phaseLastDay(p.end_week) >= lastWeek)
+    .map((p) => ({ ...p, status: p.draft ? "draft" : phaseLastDay(p.end_week) < today ? "past" : p.start_week > today ? "next" : "now" }));
 }
 
 function nutritionPhaseFor(clientId: number, phaseId: number): ClientPhase | null {
@@ -2780,7 +2780,7 @@ export function setNutritionPhaseDraft(phaseId: number, draft: boolean): boolean
   const phase = getData().client_phases.find((p) => p.id === phaseId);
   if (!phase || phase.track !== "nutrition" || !!phase.draft === draft) return false;
   if (draft) {
-    if (phase.start_week <= weekStart(localDateStr())) return false;
+    if (phase.start_week <= localDateStr()) return false;
     phase.draft = true;
   } else {
     delete phase.draft;
@@ -2788,7 +2788,7 @@ export function setNutritionPhaseDraft(phaseId: number, draft: boolean): boolean
   persist();
   // Going live now tells the client, as a deployed programme does. A
   // scheduled phase stays quiet: its targets are not theirs to see yet.
-  if (!draft && phase.start_week <= weekStart(localDateStr())) {
+  if (!draft && phase.start_week <= localDateStr()) {
     logCoachActivity(phase.client_id, `Your coach set new nutrition targets${phase.name ? `: ${phase.name}` : ""}. Check them out`, {
       kind: "programme",
       actionTab: "nutrition",
@@ -3333,9 +3333,8 @@ export function listMetricDefinitions(
 
 /** The lifestyle phase the client is in this week, if any. */
 function runningLifestylePhaseId(clientId: number): number | null {
-  const week = weekStart(localDateStr());
   return (
-    listClientPhases(clientId).find((p) => p.track === "lifestyle" && !p.draft && p.start_week <= week && p.end_week >= week)?.id ?? null
+    listClientPhases(clientId).find((p) => p.track === "lifestyle" && !p.draft && phaseCovers(p.start_week, p.end_week, localDateStr()))?.id ?? null
   );
 }
 
@@ -6572,12 +6571,27 @@ export function getClientIdForPhase(phaseId: number): number | null {
 // weekdays still line up in whole-week columns.
 // `programId`: for a training phase, an existing programme to be the plan
 // for instead of a fresh draft.
-export function addClientPhase(clientId: number, track: PhaseTrack, name: string, startDate: string, endDate: string, programId: number | null = null): ClientPhase {
+/**
+ * A phase's stored start_week and end_week from the dates the coach picked.
+ * `exact`: `start` is the first day and `end` an end_week (the last day
+ * minus 6, see ClientPhase), kept as they are for a nutrition or lifestyle
+ * phase. Otherwise both are any day of their week and snap to its Monday, as
+ * every phase did before phases could start on any day; a training phase
+ * always snaps, as a programme runs in Monday-to-Sunday weeks.
+ */
+function phaseSpanFor(track: PhaseTrack, start: string, end: string, exact: boolean): { first: string; last: string } {
+  if (track === "training" || !exact) {
+    const a = weekStart(start);
+    const b = weekStart(end);
+    return a <= b ? { first: a, last: b } : { first: b, last: a };
+  }
+  // At least one day long: a last day before the first becomes the first.
+  return { first: start, last: phaseLastDay(end) < start ? endWeekFor(start) : end };
+}
+
+export function addClientPhase(clientId: number, track: PhaseTrack, name: string, startDate: string, endDate: string, programId: number | null = null, exact = false): ClientPhase {
   const data = getData();
-  const start = weekStart(startDate);
-  const end = weekStart(endDate);
-  const first = start <= end ? start : end;
-  const last = start <= end ? end : start;
+  const { first, last } = phaseSpanFor(track, startDate, endDate, exact);
   const phase: ClientPhase = {
     id: allocId("client_phases"),
     client_id: clientId,
@@ -6615,15 +6629,14 @@ export function updateClientPhase(
   name: string,
   startDate: string,
   endDate: string,
-  adjustProgram = false
+  adjustProgram = false,
+  exact = false
 ) {
   const data = getData();
   const phase = data.client_phases.find((p) => p.id === phaseId);
   if (!phase) return;
-  let start = weekStart(startDate);
-  let end = weekStart(endDate);
-  if (start > end) [start, end] = [end, start];
   const program = phase.program_id ? data.training_programs.find((p) => p.id === phase.program_id) : undefined;
+  let { first: start, last: end } = phaseSpanFor(program ? "training" : track, startDate, endDate, exact);
   // A programme starts on its deploy week. Moving the phase's start moves
   // that week with it, unless the client has already trained in the
   // programme: then the start stays put and only the end can move.
@@ -6777,9 +6790,9 @@ function alignPhaseDraft(phase: ClientPhase, program: TrainingProgram): boolean 
 // The phase a track is in this week, if any: what the client's Home line
 // and the card's Goal / phase fact can read off instead of retyping.
 export function getCurrentPhase(clientId: number, track: PhaseTrack): ClientPhase | null {
-  const week = weekStart(localDateStr());
+  const today = localDateStr();
   // A draft is the coach's alone, so it is never the phase anyone is in.
-  return listClientPhases(clientId).find((p) => !p.draft && p.track === track && p.start_week <= week && p.end_week >= week) ?? null;
+  return listClientPhases(clientId).find((p) => !p.draft && p.track === track && phaseCovers(p.start_week, p.end_week, today)) ?? null;
 }
 
 // Goal / phase as the app should show it: the nutrition phase running this
@@ -6846,7 +6859,8 @@ export function getClientPlanView(clientId: number): ClientPlanView | null {
   // Phases that began earlier are clipped to that edge; their label still
   // says their full length.
   const first = addWeeks(week, -1);
-  let last = phases.map((p) => p.end_week).reduce((a, b) => (a > b ? a : b));
+  // Columns are weeks; a phase that starts or ends mid-week fills the weeks it touches.
+  let last = phases.map((p) => weekStart(phaseLastDay(p.end_week))).reduce((a, b) => (a > b ? a : b));
   if (last < week) last = week;
   const count = weeksBetween(first, last) + 1;
   let lastMonth = "";
@@ -6863,42 +6877,47 @@ export function getClientPlanView(clientId: number): ClientPlanView | null {
     return { monday, num, monthLabel, now: monday === week };
   });
 
-  const view = (p: ClientPhase): PlanPhaseView => ({
+  const today = localDateStr();
+  const view = (p: ClientPhase): PlanPhaseView => {
+    const fromWeek = weekStart(p.start_week);
+    const toWeek = weekStart(phaseLastDay(p.end_week));
+    return {
     id: p.id,
     name: p.name,
-    status: p.end_week < week ? "past" : p.start_week > week ? "next" : "now",
+    status: phaseLastDay(p.end_week) < today ? "past" : p.start_week > today ? "next" : "now",
     rangeLabel: `${short(p.start_week)} – ${short(endOfWeek(p.end_week))}`,
-    weeks: weeksBetween(p.start_week, p.end_week) + 1,
-    startIndex: Math.max(0, weeksBetween(first, p.start_week)),
-    span: weeksBetween(p.start_week < first ? first : p.start_week, p.end_week) + 1,
+    weeks: phaseWeeks(p.start_week, p.end_week),
+    startIndex: Math.max(0, weeksBetween(first, fromWeek)),
+    span: weeksBetween(fromWeek < first ? first : fromWeek, toWeek) + 1,
     startWeek: p.start_week,
     endWeek: p.end_week,
-  });
+    };
+  };
 
   // Headline track: nutrition if it has phases, else whichever track does.
   const headlineTrack =
     PHASE_TRACKS.find((t) => t.id === "nutrition" && phases.some((p) => p.track === "nutrition"))?.id ??
     PHASE_TRACKS.find((t) => phases.some((p) => p.track === t.id))!.id;
   const onTrack = phases.filter((p) => p.track === headlineTrack);
-  const currentPhase = onTrack.find((p) => p.start_week <= week && p.end_week >= week) ?? null;
-  const nextPhase = onTrack.find((p) => p.start_week > (currentPhase?.end_week ?? week)) ?? null;
+  const currentPhase = onTrack.find((p) => phaseCovers(p.start_week, p.end_week, today)) ?? null;
+  const nextPhase = onTrack.find((p) => p.start_week > (currentPhase ? phaseLastDay(currentPhase.end_week) : today)) ?? null;
 
   return {
     current: currentPhase
-      ? { name: currentPhase.name, weeksLeft: weeksBetween(week, currentPhase.end_week) + 1, endLabel: short(endOfWeek(currentPhase.end_week)) }
+      ? { name: currentPhase.name, weeksLeft: phaseWeeks(today, currentPhase.end_week), endLabel: short(endOfWeek(currentPhase.end_week)) }
       : null,
     next: nextPhase ? { name: nextPhase.name, startLabel: short(nextPhase.start_week) } : null,
     // Phases that ended before last week are history and stay off the phone.
     tracks: PHASE_TRACKS.map((t) => ({
       track: t.id,
       label: t.label,
-      phases: phases.filter((p) => p.track === t.id && p.end_week >= first).map(view),
+      phases: phases.filter((p) => p.track === t.id && phaseLastDay(p.end_week) >= first).map(view),
     })).filter(
       (t) => t.phases.length > 0
     ),
     weeks,
     nowIndex: weeksBetween(first, week),
-    today: localDateStr(),
+    today,
   };
 }
 
@@ -7030,18 +7049,17 @@ export function homeGymId(clientId: number): number | null {
  * A training phase's length is its programme's, so its weeks come from the
  * builder rather than from here; the start is still the coach's to pick.
  */
-export function schedulePhase(phaseId: number, name: string, startDate: string, endDate: string): boolean {
+export function schedulePhase(phaseId: number, name: string, startDate: string, endDate: string, exact = false): boolean {
   const data = getData();
   const phase = data.client_phases.find((p) => p.id === phaseId);
   if (!phase) return false;
-  const start = weekStart(startDate);
-  const end = weekStart(endDate);
+  const { first, last } = phaseSpanFor(phase.program_id ? "training" : phase.track, startDate, endDate, exact);
   phase.name = name.trim() || phase.name;
-  phase.start_week = start <= end ? start : end;
-  phase.end_week = start <= end ? end : start;
+  phase.start_week = first;
+  phase.end_week = last;
   delete phase.draft;
   persist();
-  const live = phase.start_week <= weekStart(localDateStr());
+  const live = phase.start_week <= localDateStr();
   const program = phase.program_id ? data.training_programs.find((p) => p.id === phase.program_id) : null;
   if (program) {
     // The phase's name is the programme's; the sync below reads it back.
@@ -7083,18 +7101,21 @@ export function deployPhaseNow(phaseId: number): boolean {
   if (!phase) return false;
   const program = phase.program_id ? data.training_programs.find((p) => p.id === phase.program_id) : null;
   if (program && !program.name?.trim()) return false;
-  const thisWeek = weekStart(localDateStr());
-  const shift = (monday: string, weeks: number) => {
-    const d = new Date(`${monday}T00:00:00`);
-    d.setDate(d.getDate() + weeks * 7);
+  // From today; a training phase from this week's Monday, as it runs in
+  // whole weeks (see phaseSpanFor).
+  const from = phase.track === "training" || program ? weekStart(localDateStr()) : localDateStr();
+  const shift = (day: string, days: number) => {
+    const d = new Date(`${day}T00:00:00`);
+    d.setDate(d.getDate() + days);
     return localDateStr(d);
   };
   const sameTrack = data.client_phases.filter(
     (o) => o.id !== phase.id && o.client_id === phase.client_id && o.track === phase.track && !o.draft
   );
   for (const other of sameTrack) {
-    if (other.start_week > thisWeek || other.end_week < thisWeek) continue;
-    if (other.start_week < thisWeek) other.end_week = shift(thisWeek, -1);
+    if (!phaseCovers(other.start_week, other.end_week, from)) continue;
+    // The running one ends the day before.
+    if (other.start_week < from) other.end_week = endWeekFor(shift(from, -1));
     // A programme that went out this week stays out; the new one is simply
     // the latest to have started.
     else if (!other.program_id) other.draft = true;
@@ -7104,12 +7125,13 @@ export function deployPhaseNow(phaseId: number): boolean {
     deployProgram(program.id);
     return true;
   }
-  const weeks = Math.max(1, Math.round((new Date(`${phase.end_week}T00:00:00`).getTime() - new Date(`${phase.start_week}T00:00:00`).getTime()) / (7 * 86400000)) + 1);
-  const next = sameTrack.filter((o) => !o.draft && o.start_week > thisWeek).map((o) => o.start_week).sort()[0];
-  let end = shift(thisWeek, weeks - 1);
-  if (next && end >= next) end = shift(next, -1);
-  phase.start_week = thisWeek;
-  phase.end_week = end;
+  // Same length, up to the day before the next phase already set.
+  const days = phaseDays(phase.start_week, phase.end_week);
+  const next = sameTrack.filter((o) => !o.draft && o.start_week > from).map((o) => o.start_week).sort()[0];
+  let lastDay = shift(from, days - 1);
+  if (next && lastDay >= next) lastDay = shift(next, -1);
+  phase.start_week = from;
+  phase.end_week = endWeekFor(lastDay);
   delete phase.draft;
   persist();
   const where = { nutrition: "nutrition", training: "training", lifestyle: "home" } as const;
@@ -7168,7 +7190,7 @@ export function programEmptyReason(programId: number): string | null {
 export function unschedulePhase(phaseId: number): boolean {
   const phase = getData().client_phases.find((p) => p.id === phaseId);
   if (!phase || phase.draft) return false;
-  if (phase.start_week <= weekStart(localDateStr())) return false;
+  if (phase.start_week <= localDateStr()) return false;
   phase.draft = true;
   persist();
   return true;

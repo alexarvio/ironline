@@ -16,7 +16,7 @@ import NutritionLoggedDays from "./NutritionLoggedDays";
 import { PhaseDialog } from "./PhaseDialogButton";
 import DragList from "../components/DragList";
 import DeployNowDialog from "./DeployNowDialog";
-import { phaseRange, phaseWeekIndex, phaseWeeks } from "../lib/phases";
+import { phaseDays, phaseRange, phaseWeekIndex, phaseWeeks } from "../lib/phases";
 import PhaseHeader, { usePhases, type PhaseOption } from "./PhaseHeader";
 import { ChevronDownIcon, TrashIcon } from "../components/icons";
 import MessageAboutButton from "./MessageAbout";
@@ -237,7 +237,7 @@ function TargetsCard({
   // Schedule it / Make it live: out on its dates, or live this week, from
   // one confirm.
   const [deploying, setDeploying] = useState(false);
-  const startsLater = phase.phase.start_week > mondayOf(p.today);
+  const startsLater = phase.phase.start_week > p.today;
   const scheduleIt = phase.status === "draft" && startsLater;
   const runningNow = p.phases.find((x) => x.id !== phase.id && x.id !== 0 && x.status === "now") ?? null;
   const nextSet = p.phases.filter((x) => x.id !== phase.id && x.status === "next").sort((a, b) => a.phase.start_week.localeCompare(b.phase.start_week))[0] ?? null;
@@ -258,6 +258,7 @@ function TargetsCard({
           track="nutrition"
           name={phase.name}
           weeks={phaseWeeks(phase.phase.start_week, phase.phase.end_week)}
+          days={phaseDays(phase.phase.start_week, phase.phase.end_week)}
           today={p.today}
           running={runningNow ? { name: runningNow.name, start_week: runningNow.phase.start_week } : null}
           next={nextSet ? { name: nextSet.name, start_week: nextSet.phase.start_week } : null}
