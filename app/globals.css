@@ -16810,3 +16810,9 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .hm-coach-alive { display: inline-flex; border-radius: 999px; animation: hm-coach-pulse 2s ease-in-out infinite; }
 @keyframes hm-coach-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(47, 93, 143, 0.45); } 60% { box-shadow: 0 0 0 6px rgba(47, 93, 143, 0); } }
 @media (prefers-reduced-motion: reduce) { .hm-hero-photo, .hm-coach-alive { animation: none; } }
+/* The greeting stays one line whatever it says: smaller, and it shrinks a step to fit. */
+.hm-greeting { font-size: clamp(19px, 6vw, 24px); line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.hm-greet-btn { max-width: 100%; }
+.hm-greet-btn .hm-greeting { flex: 1; min-width: 0; }
+.hm-greet-chev { width: 26px; height: 26px; }
+.hm-greet-chev svg { width: 13px; height: 13px; }
