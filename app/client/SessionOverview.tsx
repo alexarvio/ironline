@@ -11,7 +11,6 @@ import {
   clock,
   durationMinutes,
   elapsedMs,
-  estimateMinutes,
   isDone,
   kgToUnit,
   loggedSets,
@@ -21,8 +20,6 @@ import {
   shortDate,
   shownName,
   useTicker,
-  volumeKg,
-  volumeLabel,
   type SessionDay,
   type SessionExercise,
 } from "./workoutShared";
@@ -83,7 +80,7 @@ export default function SessionOverview({
           <ChevronLeftIcon />
         </button>
         <div className="so-kicker">
-          Week {day.week} · Session {day.index}
+          Week {day.week}
         </div>
         <div className="so-title-row">
           <h1 className="so-title">{day.title}</h1>
@@ -96,46 +93,13 @@ export default function SessionOverview({
           {live
             ? `Started${gymName ? ` at ${gymName}` : ""} · ${clock(ms)} in`
             : done
-            ? `${day.endedAt ? shortDate(day.endedAt) : "Logged"}${gymName ? ` · ${gymName}` : ""}`
+            ? [day.endedAt ? shortDate(day.endedAt) : "Logged", gymName, minutes != null ? `${minutes} min` : null].filter(Boolean).join(" · ")
             : status === "skipped"
             ? `Couldn't train · ${day.skipReason}`
             : status === "missed"
             ? "Not done that week."
             : "Preview only. Nothing starts until you tap Start."}
         </p>
-        <div className="so-stats">
-          {done ? (
-            <>
-              <div className="so-stat">
-                <b>{minutes != null ? `${minutes}m` : "—"}</b>
-                <small>Time</small>
-              </div>
-              <div className="so-stat">
-                <b>{logged}</b>
-                <small>Sets</small>
-              </div>
-              <div className="so-stat">
-                <b>{volumeLabel(volumeKg(day))}</b>
-                <small>Volume</small>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="so-stat">
-                <b>{day.exercises.length}</b>
-                <small>Exercises</small>
-              </div>
-              <div className="so-stat">
-                <b>{live ? `${logged}/${planned}` : planned}</b>
-                <small>Sets</small>
-              </div>
-              <div className="so-stat">
-                <b>{live ? clock(ms) : `~${estimateMinutes(day)}m`}</b>
-                <small>{live ? "Elapsed" : "Est. time"}</small>
-              </div>
-            </>
-          )}
-        </div>
       </header>
 
       <div className="so-body">
@@ -214,7 +178,7 @@ function ExerciseCard({ exercise, index, done, coachName }: { exercise: SessionE
         <span className={`so-index${exDone ? " done" : ""}`}>{exDone ? "✓" : index}</span>
         <span className="so-card-main">
           <span className="so-card-name">{shownName(exercise)}</span>
-          <span className="so-card-summary">{exercise.swap ? `Swapped for ${exercise.name} · ${summary}` : summary}</span>
+          {(!done || exercise.swap) && <span className="so-card-summary">{exercise.swap ? (done ? `Swapped for ${exercise.name}` : `Swapped for ${exercise.name} · ${summary}`) : summary}</span>}
         </span>
         {done && delta != null && delta !== 0 && (
           <span className={`so-delta${delta > 0 ? " up" : ""}`}>
