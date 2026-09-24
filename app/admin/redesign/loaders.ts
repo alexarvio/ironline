@@ -24,6 +24,7 @@ import {
   getClientHome,
   getOverviewPanel,
   describeMessageLink,
+  getClient,
   listChatMessages,
   listMessageLinkTargets,
   getPhotoCadence,
@@ -547,5 +548,5 @@ export function loadMessages(clientId: number): DraftMessages {
         edited: !!m.edited_at,
       };
     });
-  return { messages, targets: listMessageLinkTargets(clientId) };
+  return { messages, targets: listMessageLinkTargets(clientId), avatarPath: getClient(clientId)?.avatar_path ?? null };
 }
