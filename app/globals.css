@@ -16504,3 +16504,6 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 /* The coach's note in an overview row: no box, just the label and the words. */
 .so-card-body .ts-coachnote { padding: 0; border: 0; background: transparent; margin-top: 8px; }
 .so-card-body .ts-coachnote-text { padding-left: 25px; }
+/* …and flush with the TARGET label: the text under the label's words, nothing indented. */
+.so-card-body .ts-coachnote-text { padding-left: 0; }
+.so-card-body .ts-coachnote-label { color: #2f5d8f; }
