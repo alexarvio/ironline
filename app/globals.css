@@ -16516,3 +16516,9 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .wo-page .ts-cardio .ts-coachnote { padding: 0; }
 /* The strip's labels sit above their figures, like the target table. */
 .so-stat { flex-direction: column-reverse; gap: 3px; }
+/* The overview's head carries the Training banner's blue, the strip white on it. */
+.so-head { background: linear-gradient(180deg, #D5DEEF 0%, #E3E9F5 60%, #EEF2F9 100%); border-bottom: 0; }
+.so-back { background: rgba(255, 255, 255, 0.7); border-color: rgba(30, 58, 110, 0.16); }
+.so-kicker { color: #1e3a6e; }
+.so-stats { background: #fff; box-shadow: 0 8px 20px -14px rgba(8, 31, 92, 0.35); }
+.so-stat + .so-stat { border-left-color: #eceff3; }
