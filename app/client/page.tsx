@@ -1254,6 +1254,7 @@ export default async function ClientPage({
       icon: <DumbbellIcon />,
       // Draws its own light banner; the top bar floats over it.
       bare: true,
+      darkBanner: true,
       content: (
         <div className="tr">
           <ClientWeekSwitcher

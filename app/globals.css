@@ -16536,3 +16536,17 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .so-pill.done { color: #7fd68f; }
 .so-pill.live { background: rgba(255, 255, 255, 0.16); color: #fff; }
 .so-stats { background: rgba(255, 255, 255, 0.94); box-shadow: none; }
+/* The Training banner over the kettlebell photo: dark fade, white words, chips as frosted glass. */
+.tr-banner { position: relative; background: #0b0f16 url("/img/session-head.jpg") center 45% / cover no-repeat; color: #fff; }
+.tr-banner::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8, 12, 20, 0.6) 0%, rgba(8, 12, 20, 0.35) 45%, rgba(8, 12, 20, 0.8) 100%); pointer-events: none; }
+.tr-banner > * { position: relative; }
+.tr-kicker { color: rgba(255, 255, 255, 0.72); }
+.tr-name { color: #fff; }
+.tr-progress { background: rgba(255, 255, 255, 0.22); }
+.tr-progress span { background: linear-gradient(90deg, #fff 0%, #fff 35%, #c9d6ea 50%, #fff 65%, #fff 100%); background-size: 200% 100%; }
+.tr-progress-foot { color: rgba(255, 255, 255, 0.78); }
+.tr-progress-foot b { color: #fff; }
+.tr-wk { background: rgba(255, 255, 255, 0.16); border-color: rgba(255, 255, 255, 0.35); color: #fff; }
+.tr-wk.on { background: #fff; border-color: #fff; color: #1e3a6e; }
+.tr-wk.locked, .tr-wk.locked.on { background: transparent; border: 1px dashed rgba(255, 255, 255, 0.45); color: rgba(255, 255, 255, 0.65); }
+.tr-wk.locked .tr-wk-lock { color: rgba(255, 255, 255, 0.65); }
