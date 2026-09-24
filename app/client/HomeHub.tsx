@@ -113,7 +113,7 @@ export default function HomeHub({
 }) {
   return (
     <div className="hm">
-      <HomeBanner dateLabel={dateLabel} firstName={firstName} coachFirstName={coach.firstName} goals={goals} />
+      <HomeBanner dateLabel={dateLabel} firstName={firstName} goals={goals} />
       <div className="hm-body">
         <UpNextHero session={session} hasPlan={hasPlan} weekDone={weekDone} />
         {checkIn && checkIn.items.length > 0 && <CheckInFold items={checkIn.items} nextLabel={checkIn.nextLabel} />}
@@ -128,7 +128,7 @@ export default function HomeHub({
 
 const GOALS_KEY = "ironline:home-goals-open";
 
-function HomeBanner({ dateLabel, firstName, coachFirstName, goals }: { dateLabel: string; firstName: string; coachFirstName: string; goals: GoalRowView[] }) {
+function HomeBanner({ dateLabel, firstName, goals }: { dateLabel: string; firstName: string; goals: GoalRowView[] }) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
     const t = setTimeout(() => {
@@ -163,15 +163,32 @@ function HomeBanner({ dateLabel, firstName, coachFirstName, goals }: { dateLabel
       {hasGoals && (
         <div id="hm-goals" className={`hm-goalpanel-fold${open ? " open" : ""}`} aria-hidden={!open}>
           <div className="hm-goalpanel-inner">
-            <section className="hm-goalpanel">
-              <div className="hm-goalpanel-head">
-                <span className="hm-eyebrow">Your goals</span>
-                <span className="hm-goalpanel-by">Set by {coachFirstName}</span>
-              </div>
-              {goals.map((g) => (
-                <GoalRow key={g.id} goal={g} variant="banner" animate={open} />
-              ))}
-            </section>
+            {(() => {
+              const main = goals.find((g) => g.id === -1) ?? null;
+              const rest = goals.filter((g) => g.id !== -1);
+              return (
+                <>
+                  {main && (
+                    <section className="hm-goalpanel hm-goalpanel-main">
+                      <div className="hm-goalpanel-head">
+                        <span className="hm-eyebrow">Main goal</span>
+                      </div>
+                      <div className="hm-goalpanel-maintext">{main.text}</div>
+                    </section>
+                  )}
+                  {rest.length > 0 && (
+                    <section className="hm-goalpanel">
+                      <div className="hm-goalpanel-head">
+                        <span className="hm-eyebrow">Your goals</span>
+                      </div>
+                      {rest.map((g) => (
+                        <GoalRow key={g.id} goal={g} variant="banner" animate={open} />
+                      ))}
+                    </section>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
