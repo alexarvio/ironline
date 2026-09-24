@@ -5954,7 +5954,16 @@ export function logCoachActivity(
   if (opts.kind !== "reminder") {
     const user = data.users.find((u) => u.role === "client" && u.client_id === clientId);
     if (user) {
-      const lockScreen = { title: getCoachDisplayName(clientId), body: message, url: "/client", tag: opts.dedupeKey };
+      // The phone shows "Ironline" and the icon above this already, so the
+      // title says what kind of news it is and the body what happened.
+      const coach = getCoachDisplayName(clientId);
+      const title =
+        opts.actionTab === "video" ? `${coach} replied to your video`
+        : opts.kind === "coach_note" ? `Message from ${coach}`
+        : opts.kind === "report" ? `New progress report from ${coach}`
+        : opts.kind === "programme" ? `New program from ${coach}`
+        : `Update from ${coach}`;
+      const lockScreen = { title, body: message, url: "/client", tag: opts.dedupeKey };
       void import("./push").then((push) => push.sendPushInBackground(user.id, lockScreen)).catch(() => {});
     }
   }
