@@ -4,7 +4,9 @@ import type { GoalView } from "../lib/goalView";
 // preview, so the two never drift apart. The "banner" variant is the row in
 // Home's goals panel: the kind above the name, the figure on the right, the
 // bar under, the small line last.
-const KIND_LABEL: Record<GoalView["kind"], string> = { none: "Main goal", metric: "Measurement", exercise: "Exercise", habit: "Habit" };
+// The main goal is the row the page puts first, with id -1; any other
+// untracked goal is just a goal.
+const KIND_LABEL: Record<GoalView["kind"], string> = { none: "Goal", metric: "Measurement", exercise: "Exercise", habit: "Habit" };
 
 export default function GoalRow({ goal, variant = "card", animate = true }: { goal: GoalView; variant?: "card" | "banner"; animate?: boolean }) {
   const dotClass = goal.done && goal.kind === "none" ? "done" : goal.tone;
@@ -13,7 +15,7 @@ export default function GoalRow({ goal, variant = "card", animate = true }: { go
     const figure = goal.kind === "metric" ? goal.barLabel : goal.kind === "exercise" ? goal.right : goal.kind === "habit" ? goal.right : null;
     return (
       <div className={`gp-row${goal.done ? " is-done" : ""}`}>
-        <div className="gp-kind">{goal.kind === "exercise" && goal.left ? `Exercise · ${goal.left.split(" · ")[0]}` : KIND_LABEL[goal.kind]}</div>
+        <div className="gp-kind">{goal.id === -1 ? "Main goal" : goal.kind === "exercise" && goal.left ? `Exercise · ${goal.left.split(" · ")[0]}` : KIND_LABEL[goal.kind]}</div>
         <div className="gp-head">
           <div className="gp-text">{goal.text}</div>
           {figure && <span className="gp-figure">{figure}</span>}

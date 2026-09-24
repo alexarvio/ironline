@@ -16653,3 +16653,13 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
   .hm-hero-dot, .hm-ci-dot { animation: none; }
   .hm-goalpanel-fold, .gp-bar-fill, .hm-ci-status.done { transition: none; animation: none; }
 }
+/* Goals panel rows at phone scale. */
+.hm-goalpanel { padding: 12px 14px 2px; }
+.hm-goalpanel-head { padding-bottom: 2px; }
+.gp-row { gap: 4px; padding: 9px 0; }
+.gp-kind { font-size: 9.5px; }
+.gp-text { font-size: 13.5px; }
+.gp-figure { font-size: 12px; }
+.gp-bar { height: 4px; }
+.gp-sub { font-size: 11.5px; }
+.gp-row .gr-segments { transform: scale(0.85); transform-origin: left center; }
