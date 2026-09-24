@@ -1654,27 +1654,30 @@ function EditCardioDialog({ cardio, onSave }: { cardio: DraftCardio; onSave: (v:
   );
 }
 
-/** Cardio: a short form, Enter adds. */
+/** Cardio: a short form. Enter, or clicking away, puts the row on the change bar; Esc or × drops it. */
 function AddCardioRow({ onAdd, onClose }: { onAdd: (c: Omit<AddedCardio, "kind">) => void; onClose: () => void }) {
   const blank = { name: "", time: "", pace: "", incline: "", distance: "", note: "" };
   const [c, setC] = useState(blank);
   const first = useRef<HTMLInputElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
-  useClickAway(wrap, onClose);
+  // A bare number gets its unit; anything else is kept as typed.
+  const withUnit = (v: string, u: string) => (/^\s*[\d.,]+\s*$/.test(v) ? `${v.trim()}${u}` : v.trim());
+  const commit = () => {
+    if (!c.name.trim()) return;
+    onAdd({ ...c, name: c.name.trim(), time: withUnit(c.time, " min"), pace: withUnit(c.pace, " km/h"), incline: withUnit(c.incline, "%"), distance: withUnit(c.distance, " km") });
+    setC(blank);
+  };
+  const done = () => {
+    commit();
+    onClose();
+  };
+  useClickAway(wrap, done);
   useEffect(() => {
     first.current?.focus();
   }, []);
   const set = (k: keyof typeof c) => (e: React.ChangeEvent<HTMLInputElement>) => setC({ ...c, [k]: e.target.value });
-  // A bare number gets its unit; anything else is kept as typed.
-  const withUnit = (v: string, u: string) => (/^s*[d.,]+s*$/.test(v) ? `${v.trim()}${u}` : v.trim());
-  const add = () => {
-    if (!c.name.trim()) return;
-    onAdd({ ...c, name: c.name.trim(), time: withUnit(c.time, " min"), pace: withUnit(c.pace, " km/h"), incline: withUnit(c.incline, "%"), distance: withUnit(c.distance, " km") });
-    setC(blank);
-    first.current?.focus();
-  };
   return (
-    <div ref={wrap} className="rd-addrow" onKeyDown={(e) => (e.key === "Escape" ? onClose() : e.key === "Enter" ? add() : null)}>
+    <div ref={wrap} className="rd-addrow" onKeyDown={(e) => (e.key === "Escape" ? onClose() : e.key === "Enter" ? done() : null)}>
       <div className="rd-cardio-form">
         <label className="wide">
           <span>Activity</span>
@@ -1700,14 +1703,11 @@ function AddCardioRow({ onAdd, onClose }: { onAdd: (c: Omit<AddedCardio, "kind">
           <span>Note</span>
           <input value={c.note} onChange={set("note")} placeholder="Easy, cool-down" />
         </label>
-        <button type="button" className="rd-btn primary rd-addrow-go" disabled={!c.name.trim()} onClick={add}>
-          Add
-        </button>
         <button type="button" className="rd-addrow-x" onClick={onClose} aria-label="Close">
           ×
         </button>
       </div>
-      <p className="rd-addrow-hint">Add (or Enter) puts it on the session · Esc closes. It lands on the bar below until Apply.</p>
+      <p className="rd-addrow-hint">Enter, or clicking away, puts it on the bar below until Apply · Esc drops it.</p>
     </div>
   );
 }
