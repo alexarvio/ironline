@@ -5964,6 +5964,16 @@ export function logCoachActivity(
     dedupe_key: opts.dedupeKey ?? null,
   });
   persist();
+  // To the lock screen too, when the client has notifications on. Not
+  // reminders: those are made whenever someone happens to load a page, so
+  // their timing means nothing and they would arrive at random hours.
+  if (opts.kind !== "reminder") {
+    const user = data.users.find((u) => u.role === "client" && u.client_id === clientId);
+    if (user) {
+      const lockScreen = { title: getCoachDisplayName(clientId), body: message, url: "/client", tag: opts.dedupeKey };
+      void import("./push").then((push) => push.sendPushInBackground(user.id, lockScreen)).catch(() => {});
+    }
+  }
 }
 
 export function getLatestCoachActivity(clientId: number) {
