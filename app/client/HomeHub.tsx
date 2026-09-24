@@ -165,6 +165,7 @@ function HomeBanner({ dateLabel, firstName, goals }: { dateLabel: string; firstN
   const hasGoals = goals.length > 0;
   return (
     <header className="hm-banner">
+      <div className="hm-eyebrow hm-date">{dateLabel}</div>
       {hasGoals ? (
         <button type="button" className="hm-greet-btn" onClick={toggle} aria-expanded={open} aria-controls="hm-goals">
           <h1 className="hm-greeting">{hello}, {firstName}.</h1>
@@ -175,7 +176,6 @@ function HomeBanner({ dateLabel, firstName, goals }: { dateLabel: string; firstN
       ) : (
         <h1 className="hm-greeting">{hello}, {firstName}.</h1>
       )}
-      <div className="hm-eyebrow hm-date">{dateLabel}</div>
 
       {hasGoals && (
         <div id="hm-goals" className={`hm-goalpanel-fold${open ? " open" : ""}`} aria-hidden={!open}>

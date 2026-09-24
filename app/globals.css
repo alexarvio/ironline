@@ -16823,3 +16823,5 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 /* The chevron sits at the right edge of the greeting row. */
 .hm-greet-btn { width: 100%; justify-content: space-between; }
 .hm-greet-btn .hm-greeting { flex: 0 1 auto; }
+/* The date above the greeting. */
+.hm-date { margin: 0 0 4px; }
