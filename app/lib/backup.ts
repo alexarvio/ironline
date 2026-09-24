@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { PutObjectCommand, HeadObjectCommand, ListObjectsV2Command, DeleteObjectsCommand, S3Client } from "@aws-sdk/client-s3";
 import { DATA_DIR, getData } from "./db";
+import { deleteAllUnder } from "./storage";
 
 // Nightly copy of everything on the volume to a bucket that is not the
 // volume: the JSON store as a dated snapshot, the uploads folder mirrored
@@ -28,6 +29,18 @@ function client(): { s3: S3Client; bucket: string } | null {
       credentials: { accessKeyId: BACKUP_ACCESS_KEY_ID, secretAccessKey: BACKUP_SECRET_ACCESS_KEY },
     }),
   };
+}
+
+/**
+ * Removes a folder of uploads ("progress/9/") from the backup's mirror, which
+ * otherwise keeps every file forever: an erased client's photos must not live
+ * on here. Snapshots of the store still hold their rows until they age out
+ * (KEEP_SNAPSHOTS days).
+ */
+export async function deleteBackupUploads(folder: string): Promise<number> {
+  const c = client();
+  if (!c) return 0;
+  return deleteAllUnder(c.s3, c.bucket, `uploads/${folder}`);
 }
 
 export function backupConfigured(): boolean {

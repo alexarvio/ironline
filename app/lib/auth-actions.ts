@@ -13,6 +13,7 @@ import {
   findUserByEmail,
   getSessionUser,
   getUserForClient,
+  requireClient,
   requireOwner,
   setPassword,
   startSession,
@@ -20,6 +21,7 @@ import {
 } from "./auth";
 import { getData } from "./db";
 import { deleteUserForClient } from "./auth";
+import { eraseClient } from "./erase";
 
 // Server actions for logging in and out, and for the coach handing a client
 // their credentials. Kept separate from actions.ts so the auth surface is
@@ -71,6 +73,26 @@ export async function changePasswordAction(formData: FormData) {
 
   setPassword(user.id, password, false);
   redirect(user.role === "coach" ? "/admin/redesign" : "/client");
+}
+
+// A client deleting their own account (Settings → Delete account), as the App
+// Store requires. Their password and the word DELETE, then everything of
+// theirs goes at once but the invoices (lib/erase.ts), and they're signed
+// out. Wrong passwords count toward the same lockout as signing in, so a
+// borrowed phone can't be used to guess one.
+export async function deleteOwnAccountAction(_prev: { error: string } | null, formData: FormData): Promise<{ error: string } | null> {
+  const session = await requireClient();
+  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (String(formData.get("confirm") ?? "").trim().toUpperCase() !== "DELETE") return { error: "Type DELETE to confirm." };
+  if (isLoginLocked(session.email, ip)) return { error: "Too many wrong passwords. Try again in 15 minutes." };
+  const user = getData().users.find((u) => u.id === session.id);
+  if (!user || !verifyPassword(String(formData.get("password") ?? ""), user.password_hash)) {
+    recordLoginFailure(session.email, ip);
+    return { error: "That password isn't right." };
+  }
+  await eraseClient(session.clientId, { selfDeleted: true });
+  await endSession();
+  redirect("/login?deleted=1");
 }
 
 // ---- Coach-side account management --------------------------------------

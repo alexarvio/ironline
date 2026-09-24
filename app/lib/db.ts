@@ -460,6 +460,11 @@ type Invoice = {
   status: "unpaid" | "sent" | "paid" | "due";
   created_at: string;
   updated_at: string;
+  // Set when the client deleted their account: invoices are business records
+  // the coach must keep (7 years in the Netherlands), so they stay, carrying
+  // only who they were for. client_id then points at no client.
+  client_name?: string;
+  coach_id?: number | null;
 };
 
 type MealMacros = { protein: number | null; fats: number | null; carbs: number | null };
@@ -955,6 +960,9 @@ export type Data = {
   // Sign-in locks as they started (lib/loginLockout.ts), oldest first, the
   // last 200 kept. Shown to the coach and the owner in the Feed.
   login_lock_events?: { id: number; at: string; email: string; ip: string; scope: "device" | "account"; cleared?: boolean }[];
+  // Clients who deleted their own account, so their coach's Feed can say so.
+  // The name and when, nothing else: everything of theirs is gone.
+  account_deletions?: { id: number; at: string; coach_id: number | null; client_id: number; name: string }[];
   _seq: Record<string, number>;
 };
 

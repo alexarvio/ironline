@@ -13,6 +13,7 @@ import {
   requireClientAccess,
   requireCoach,
 } from "./auth";
+import { eraseClient } from "./erase";
 import { sendInviteEmail } from "./mail";
 import { parseMessageLink, type MessageLink } from "./messageLinks";
 import { headers } from "next/headers";
@@ -2210,7 +2211,8 @@ export async function markReportOpenedAction(id: number) {
 export async function deleteClientAction(formData: FormData) {
   const clientId = Number(formData.get("clientId"));
   if (!(await coachForClient(clientId))) return;
-  removeClient(clientId);
+  // Their files and push devices too, not only the rows.
+  await eraseClient(clientId, { selfDeleted: false });
   revalidatePath("/admin");
   revalidatePath("/client");
   redirect("/admin");

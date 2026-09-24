@@ -9082,6 +9082,17 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
   font-weight: 600;
 }
 
+.auth-ok {
+  margin: 0 0 14px;
+  background: #e9f5ee;
+  border: 1px solid #bfe0cc;
+  color: #1f6b43;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 0.83rem;
+  font-weight: 600;
+}
+
 .auth-note a { color: var(--accent); font-weight: 600; }
 .auth-note b { color: var(--ink); }
 .auth-note {
@@ -14675,6 +14686,13 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .st-delete-text { margin: 0; font-size: 13.5px; line-height: 1.5; color: #7a2430; }
 .st-delete-cancel { align-self: flex-start; min-height: 40px; padding: 0 16px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; color: #141a24; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
 .settings-dark .home-dark-section:has(.st-delete-panel) { padding-bottom: 0; overflow: hidden; }
+.st-delete-field { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; font-weight: 600; color: #7a2430; }
+.st-delete-field input { min-height: 42px; padding: 0 12px; border: 1px solid #e6c3c7; border-radius: 12px; background: #fff; color: #141a24; font: inherit; font-size: 15px; font-weight: 500; }
+.st-delete-field input:focus { outline: 2px solid #c8343f; outline-offset: 1px; }
+.st-delete-error { margin: 0; font-size: 13px; font-weight: 600; color: #b3261e; }
+.st-delete-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.st-delete-confirm { min-height: 40px; padding: 0 16px; border: 0; border-radius: 12px; background: #c8343f; color: #fff; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.st-delete-confirm:disabled, .st-delete-cancel:disabled { opacity: 0.6; cursor: default; }
 @media (prefers-reduced-motion: reduce) { .settings-dark .st-delete-row svg { transition: none; } }
 
 /* Settings: Your details, rows at rest and fields while editing. */
