@@ -15,7 +15,7 @@ export default async function ChangePasswordPage({
   const user = await getSessionUser();
   if (!user) redirect("/login");
   if (!user.must_change_password) {
-    redirect(user.role === "coach" ? "/admin" : "/client");
+    redirect(user.role === "coach" ? "/admin/redesign" : "/client");
   }
 
   const { error } = await searchParams;

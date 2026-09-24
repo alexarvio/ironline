@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Toaster } from "../../components/ui/toast";
 import TrainingDraft, { type DraftProgram, type Library } from "./training/TrainingDraft";
 import NutritionDraft, { type DraftNutrition } from "./nutrition/NutritionDraft";
@@ -31,8 +30,6 @@ const TABS = [
   { key: "messages", label: "Messages" },
 ] as const;
 export type RedesignTab = (typeof TABS)[number]["key"];
-// The tabs that save, and how the banner names them.
-const REAL: Partial<Record<RedesignTab, string>> = { home: "Home of", messages: "Messages with", plan: "Plan of", training: "Training of", nutrition: "Nutrition of", measurements: "Measurements of", pictures: "Progress pictures of", meetings: "Meetings of" };
 
 export type RedesignShellProps = {
   clientId: number;
@@ -50,7 +47,7 @@ export type RedesignShellProps = {
   messages: DraftMessages;
 };
 
-export default function RedesignShell({ clientId, clientName, firstName, rail, initialTab, home, training, nutrition, measurements, pictures, meetings, plan, messages }: RedesignShellProps) {
+export default function RedesignShell({ clientId, firstName, rail, initialTab, home, training, nutrition, measurements, pictures, meetings, plan, messages }: RedesignShellProps) {
   const [tab, setTab] = useState<RedesignTab>(initialTab);
   // Another client: land where the address says (Home from the rail), never on the last client's tab.
   const [seenClient, setSeenClient] = useState(clientId);
@@ -63,7 +60,6 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
     // Keep the other tab's query (week, programme, phase) out of this one's address.
     window.history.replaceState(null, "", `/admin/redesign/${t}?client=${clientId}`);
   };
-  const current = tab === "home" ? "Home on the client" : tab === "training" ? "Training builder on the programme" : tab === "nutrition" ? "Nutrition on the plan" : tab === "measurements" ? "Measurements on the check-ins" : tab === "pictures" ? "Progress pictures on the sheets" : tab === "meetings" ? "Meetings on the calendar" : tab === "messages" ? "Messages on what was sent" : "Plan on the phases and goals";
   return (
     <div className="rd-frame">
       <RedesignRail rail={rail} clientId={clientId} />
@@ -75,15 +71,6 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
             </button>
           ))}
         </nav>
-        <p className="rd-banner">
-          {REAL[tab] ? (
-            <>Redesign · {REAL[tab]} {clientName}. This tab is real: everything here saves.</>
-          ) : (
-            <>
-              Redesign draft · {current} of {clientName}. Read-only: every action answers with a toast and saves nothing. Compare with <Link href={`/admin?client=${clientId}&tab=${tab}`}>the current one</Link>.
-            </>
-          )}
-        </p>
         <div hidden={tab !== "home"}>
           <HomeDraft clientId={clientId} firstName={firstName} home={home} onOpenTab={(t) => show(t as RedesignTab)} />
         </div>

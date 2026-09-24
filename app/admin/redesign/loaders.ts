@@ -1,5 +1,6 @@
 import { getData } from "../../lib/db";
 import { getUserForClient, isOwner } from "../../lib/auth";
+import { mailConfigured } from "../../lib/mail";
 import {
   clientAttention,
   getActivityFeed,
@@ -280,7 +281,7 @@ export function loadNutrition(clientId: number, params: { phase?: string }): Dra
 // ---- The rail ------------------------------------------------------------------
 
 export type RailClient = { id: number; name: string; avatarPath: string | null; attention: string | null; notSignedIn: boolean };
-export type RailData = { clients: RailClient[]; coach: { name: string; photoPath: string | null }; isOwner: boolean };
+export type RailData = { clients: RailClient[]; coach: { name: string; photoPath: string | null }; isOwner: boolean; inviteReady: boolean };
 
 /** The left rail's data: every client with whether they need the coach, and the coach at the foot. */
 export function loadRail(coach: { id: number; email: string; role: "coach" | "client" }): RailData {
@@ -290,7 +291,7 @@ export function loadRail(coach: { id: number; email: string; role: "coach" | "cl
     return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, attention: clientAttention(c.id, feed), notSignedIn: !user || user.must_change_password };
   });
   const profile = getCoachProfile(coach.id);
-  return { clients, coach: { name: profile?.display_name?.trim() || nameFromEmail(coach.email), photoPath: profile?.avatar_path ?? null }, isOwner: isOwner(coach) };
+  return { clients, coach: { name: profile?.display_name?.trim() || nameFromEmail(coach.email), photoPath: profile?.avatar_path ?? null }, isOwner: isOwner(coach), inviteReady: mailConfigured() };
 }
 
 // A coach account has an email but no name; "finlay.smith@…" reads as "Finlay Smith".

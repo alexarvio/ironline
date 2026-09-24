@@ -21,6 +21,7 @@ import { getClient, getClientEngagement, getClientHome, getOverviewPanel, listCl
 import { coachOwnsClient } from "../lib/tenancy";
 import CoachesPanel from "./CoachesPanel";
 
+import { redirect } from "next/navigation";
 import { isOwner, requireCoach } from "../lib/auth";
 
 // Reads live from the JSON store on every request — without this, Next
@@ -34,12 +35,16 @@ export const dynamic = "force-dynamic";
 // editor, app access and delete live only in that panel.
 const SHOW_CLIENT_PANEL = false;
 
+const REDESIGN_TABS = ["home", "messages", "plan", "training", "nutrition", "measurements", "pictures", "meetings"];
+
 export default async function AdminPage({
   searchParams,
 }: {
   searchParams: Promise<{
     client?: string;
     tab?: string;
+    /** The old client tabs, kept for comparing: without it a client opens in the redesign. */
+    old?: string;
     /** Opens the card straight into edit mode. Nothing sets it any more:
         the New client dialog collects the member info before the client
         exists. Kept so an old link still opens the card. */
@@ -76,6 +81,15 @@ export default async function AdminPage({
     params.view === "feed" || params.view === "calendar" || params.view === "phases" || params.view === "business" || params.view === "style" || (params.view === "coaches" && owner)
       ? params.view
       : null;
+  // A client opens in the redesign, the default since 24 Sep; the cross-client
+  // views above are not redrawn yet and stay here. ?old=1 keeps the old tabs.
+  if (!view && params.old !== "1") {
+    const tab = params.tab === "photos" ? "pictures" : REDESIGN_TABS.includes(params.tab ?? "") ? params.tab! : "home";
+    const carry = new URLSearchParams(
+      Object.entries({ client: params.client, phase: params.phase }).filter((e): e is [string, string] => !!e[1])
+    ).toString();
+    redirect(`/admin/redesign/${tab}${carry ? `?${carry}` : ""}`);
+  }
   // ?client= only opens one of this coach's own clients; anything else lands
   // on their first client, as if no client had been asked for.
   const asked = params.client ? Number(params.client) : null;

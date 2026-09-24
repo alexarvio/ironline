@@ -8,5 +8,5 @@ export default async function Home() {
   const user = await getSessionUser();
   if (!user) redirect("/login");
   if (user.must_change_password) redirect("/login/change-password");
-  redirect(user.role === "coach" ? "/admin" : "/client");
+  redirect(user.role === "coach" ? "/admin/redesign" : "/client");
 }
