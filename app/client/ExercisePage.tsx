@@ -9,7 +9,6 @@ import { useOpenMessages } from "./CheckInContext";
 import {
   CoachNote,
   kgToUnit,
-  loggedCount,
   shownName,
   tidyDecimal,
   unitToKg,
@@ -160,7 +159,6 @@ export default function ExercisePage({
     exercise.time ? { label: "Time", value: exercise.time } : null,
   ].filter((t): t is { label: string; value: string } => !!t);
   const ask = exercise.videoRequest;
-  const done = loggedCount(exercise);
 
   const numberInput = (props: { value: string; placeholder: string; label: string; decimal?: boolean; reps?: boolean; onChange: (v: string) => void; disabled?: boolean }) => (
     <input
@@ -380,11 +378,6 @@ export default function ExercisePage({
           </button>
         )}
 
-        <div className="wo-sets-foot">
-          <span className={`wo-sets-count${done >= exercise.sets && exercise.sets > 0 ? " done" : ""}`}>
-            {done >= exercise.sets && exercise.sets > 0 ? "All sets logged" : `${done} of ${exercise.sets} logged`}
-          </span>
-        </div>
       </div>
 
       {noteOpen ? (
