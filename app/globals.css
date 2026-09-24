@@ -16522,3 +16522,5 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .so-kicker { color: #1e3a6e; }
 .so-stats { background: #fff; box-shadow: 0 8px 20px -14px rgba(8, 31, 92, 0.35); }
 .so-stat + .so-stat { border-left-color: #eceff3; }
+/* Done on the overview head: green letters, no pill, like the tab rows. */
+.so-pill.done { padding: 5px 0; background: transparent; color: #2f7a3f; }
