@@ -4,7 +4,6 @@ import { useEffect, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { pickGymAction, startSessionAction } from "../lib/actions";
 import type { GymOption } from "./GymPicker";
-import type { LibraryOption } from "./AlternativesSheet";
 import SessionOverview, { STATUS_LABEL } from "./SessionOverview";
 import WorkoutScreen from "./WorkoutScreen";
 import { useFocusRef, useTrainingFocus } from "./CheckInContext";
@@ -40,7 +39,6 @@ export default function TrainingDayList({
   pastWeek,
   coachName,
   clientName = "",
-  library,
   liveSession,
 }: {
   days: SessionDay[];
@@ -50,7 +48,6 @@ export default function TrainingDayList({
   pastWeek: boolean;
   coachName: string;
   clientName?: string;
-  library: LibraryOption[];
   /** The client's session in progress, wherever it is. */
   liveSession: { id: number; label: string; startedAt: string } | null;
 }) {
@@ -223,7 +220,6 @@ export default function TrainingDayList({
           gymId={gymIdFor(openDay)}
           onPickGym={(g) => pickGym(openDay, g)}
           coachName={coachName}
-          library={library}
           clientName={clientName}
           focusExercise={openDay.key === focus ? focusExercise : null}
           onBack={() => setView({ dayId: openDay.key, screen: "overview" })}

@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { discardSessionAction, endSessionAction } from "../lib/actions";
 import { ChevronLeftIcon } from "../components/icons";
 import type { GymOption } from "./GymPicker";
-import type { LibraryOption } from "./AlternativesSheet";
 import ExercisePage from "./ExercisePage";
 import GymSheet from "./GymSheet";
 import RestTimerPill, { useRestTimer } from "./RestTimer";
@@ -51,7 +50,6 @@ export default function WorkoutScreen({
   onPickGym,
   coachName,
   clientName = "",
-  library,
   focusExercise,
   onBack,
   onEnded,
@@ -63,7 +61,6 @@ export default function WorkoutScreen({
   coachName: string;
   /** The client's first name, for the wrap-up. */
   clientName?: string;
-  library: LibraryOption[];
   focusExercise: number | null;
   /** Back to the overview; the session keeps going. */
   onBack: () => void;
@@ -259,7 +256,6 @@ export default function WorkoutScreen({
                 total={day.exercises.length}
                 gymId={gymId}
                 coachName={coachName}
-                library={library}
                 onSetLogged={() => {
                   if (autoRest) rest.begin();
                 }}

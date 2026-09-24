@@ -481,8 +481,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
             allGyms.map((g) => [g.id, showMyNotes ? getClientExerciseNotes(CLIENT_ID, g.id) : new Map<number, string>()] as const)
           );
           const coachId = getClient(CLIENT_ID)?.coach_id ?? null;
-          const library = coachId != null ? listExercises(coachId).map((e) => ({ id: e.id, name: e.name })) : [];
-          const libraryName = new Map(library.map((e) => [e.id, e.name]));
+          const libraryName = new Map(coachId != null ? listExercises(coachId).map((e) => [e.id, e.name] as const) : []);
           const videoReplies = listVideoReplies(CLIENT_ID);
           return (
             <>
@@ -495,7 +494,6 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
               pastWeek={isPast}
               coachName={getCoachFirstName(CLIENT_ID)}
               clientName={(getClient(CLIENT_ID)?.name ?? "").trim().split(/\s+/)[0] ?? ""}
-              library={library}
               liveSession={liveSessionFor(CLIENT_ID)}
               days={trainingDays.map(({ day, assignments }, i) => {
                 const gymId = dayGymId(day.id);

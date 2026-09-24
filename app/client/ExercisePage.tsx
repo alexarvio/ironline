@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { clearSwapAction, logSetAction, saveExerciseNoteAction, saveWarmupSetsAction, swapExerciseAction } from "../lib/actions";
-import AlternativesSheet, { type LibraryOption } from "./AlternativesSheet";
+import AlternativesSheet from "./AlternativesSheet";
 import { VideoAskSheet, VideoGlyph } from "./VideoAskSheet";
 import { ChatIcon, PencilIcon } from "../components/icons";
 import { useOpenMessages } from "./CheckInContext";
@@ -31,7 +31,6 @@ export default function ExercisePage({
   total,
   gymId,
   coachName,
-  library,
 
   onSetLogged,
 }: {
@@ -40,7 +39,6 @@ export default function ExercisePage({
   total: number;
   gymId: number | null;
   coachName: string;
-  library: LibraryOption[];
 
   /** A working set was ticked: the dock's rest timer may want to know. */
   onSetLogged?: () => void;
@@ -428,7 +426,7 @@ export default function ExercisePage({
         <AlternativesSheet
           exerciseName={exercise.name}
           coachName={coachName}
-          library={library}
+          suggested={[]}
           swapped={exercise.swap}
           onPick={(choice) => {
             setSwapOpen(false);

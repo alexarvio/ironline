@@ -16486,3 +16486,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .so-targets b { font-size: 13.5px; font-weight: 700; color: #2f5d8f; font-variant-numeric: tabular-nums; }
 .so-targets small { font-size: 10px; font-weight: 700; color: #2f5d8f; }
 .so-card .ts-coachnote { margin-top: 0; }
+.wo-sheet-empty { margin: 0 0 16px; padding: 12px 14px; border-radius: 12px; background: #F4F7FC; font-size: 13.5px; color: #5b6474; }
+/* Sheets and menus stay inside the phone, not across the desktop. */
+.app-stack { position: relative; }
+.wo-sheet-scrim, .wo-menu-scrim { position: absolute; }
