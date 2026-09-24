@@ -312,11 +312,6 @@ export default function WorkoutScreen({
                   <textarea className="wo-note-input" rows={2} value={note} placeholder="How did it feel? Anything to flag?" onChange={(e) => setNote(e.target.value)} disabled={ended} />
                 </div>
                 <SwipeToEnd onEnd={end} done={ended} />
-                {missing > 0 && !ended && (
-                  <p className="wo-wrap-missing">
-                    {missing} set{missing === 1 ? "" : "s"} not logged. You can still end the session.
-                  </p>
-                )}
               </div>
             )}
           </section>
