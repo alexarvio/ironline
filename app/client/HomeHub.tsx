@@ -228,7 +228,7 @@ function UpNextHero({ session, hasPlan, weekDone }: { session: HomeSession; hasP
         <div className="hm-hero-kicker">Training · Week {session.weekNow}</div>
         <h2 className="hm-hero-title">{session.name}</h2>
         <div className="hm-hero-meta">
-          {session.exercises} exercise{session.exercises === 1 ? "" : "s"} · {session.sets} sets · ~{session.estMinutes} min
+          {session.exercises} exercise{session.exercises === 1 ? "" : "s"}
         </div>
         <div className="hm-hero-btns">
           <button type="button" className="hm-hero-ghost" onClick={() => goToTab?.("training", session.dayId)}>
