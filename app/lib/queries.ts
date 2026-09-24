@@ -5646,6 +5646,15 @@ export function clientAttention(clientId: number, feed?: FeedEvent[]): string | 
   return actions.length === 1 ? actions[0].title : `${actions[0].title} · and ${actions.length - 1} more`;
 }
 
+/** A client the coach has not set any check-in up for still gets somewhere
+    to log: a daily Weight, which the coach can rename, add to or remove. */
+export function ensureDefaultMetrics(clientId: number) {
+  const data = getData();
+  const any = data.metric_definitions.some((m) => m.client_id === clientId) || data.measurement_fields.some((f) => f.client_id === clientId);
+  if (any) return;
+  addMetricDefinition(clientId, "Body", "Weight", "kg", "daily");
+}
+
 export function getCheckInStatus(clientId: number): CheckInStatus {
   const today = localDateStr();
   const thisWeek = weekStart(today);

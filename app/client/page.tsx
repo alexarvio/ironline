@@ -33,6 +33,7 @@ import {
   getCurrentWeekNumber,
   getCheckInSections,
   getCheckInStatus,
+  ensureDefaultMetrics,
   getClientPreferences,
   listClientReports,
   listPublishedWeekNumbers,
@@ -316,6 +317,7 @@ function HomeTab({ CLIENT_ID, photos }: { CLIENT_ID: number; photos: HomePhotos 
   // applyDueClientReminders() so the notification feed's reminders and this
   // list never disagree on what's due. dailyDefs/weeklyDefs/*LoggedToday are
   // still needed here directly for the Tracker sub-tab below.
+  ensureDefaultMetrics(CLIENT_ID);
   const checkInStatus = getCheckInStatus(CLIENT_ID);
 
   const dateLabel = new Date(`${today}T00:00:00`).toLocaleDateString("en-US", {
