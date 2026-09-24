@@ -266,7 +266,6 @@ function UpNextHero({ session, hasPlan, weekDone }: { session: HomeSession; hasP
 
 // ---- 3 · Check-in: measurements and pictures, folded -----------------------
 
-const seenKey = () => `ironline:home-checkin-seen:${new Date().toISOString().slice(0, 10)}`;
 
 function CheckInFold({ items, nextLabel }: { items: CheckInItem[]; nextLabel: string }) {
   const openCheckIn = useOpenCheckIn();
@@ -274,79 +273,28 @@ function CheckInFold({ items, nextLabel }: { items: CheckInItem[]; nextLabel: st
   const due = items.filter((i) => i.due);
   const done = items.filter((i) => !i.due);
   const allDone = due.length === 0;
-  const [open, setOpen] = useState(false);
-  // Opens itself once a day while something is due; after that it keeps
-  // whatever the client left it at.
-  useEffect(() => {
-    const t = setTimeout(() => {
-      try {
-        if (due.length > 0 && !window.localStorage.getItem(seenKey())) {
-          setOpen(true);
-          window.localStorage.setItem(seenKey(), "1");
-        }
-      } catch {}
-    }, 0);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on mount
-  }, []);
   const go = (item: CheckInItem) => (item.type === "photos" ? openPhotos?.() : openCheckIn?.(item.type));
-  const hasScale = items.some((i) => i.type !== "photos");
-  const hasCamera = items.some((i) => i.type === "photos");
   return (
-    <section className={`hm-ci${allDone ? " done" : ""}${open ? " open" : ""}`}>
-      <button type="button" className="hm-ci-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        <span className="hm-ci-icons" aria-hidden="true">
-          {hasScale && (
-            <span className="hm-ci-icon">
-              <svg viewBox="0 0 24 24">
-                <rect x="3" y="3" width="18" height="18" rx="4" />
-                <path d="M7 9.5a6 6 0 0 1 10 0M12 12l2.5-2.5" />
-              </svg>
+    <section className={`hm-tasks${allDone ? " done" : ""}`}>
+      <div className="hm-tasks-head">
+        <span className="hm-eyebrow">Today</span>
+        <span className={`hm-tasks-count${allDone ? " done" : ""}`}>{allDone ? "All done" : `${due.length} to do`}</span>
+      </div>
+      <div className="hm-tasks-list">
+        {[...due, ...done].map((item) => (
+          <button key={item.key} type="button" className={`hm-task${item.due ? "" : " done"}`} onClick={() => go(item)}>
+            <span className={`hm-task-box${item.due ? "" : " done"}`} aria-hidden="true">
+              {!item.due && "✓"}
             </span>
-          )}
-          {hasCamera && (
-            <span className="hm-ci-icon">
-              <svg viewBox="0 0 24 24">
-                <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
-                <circle cx="12" cy="13" r="3.5" />
-              </svg>
+            <span className="hm-task-text">
+              <span className="hm-task-title">{item.title}</span>
+              <span className="hm-task-sub">{item.due ? item.dueSub : item.doneSub ?? "Done"}</span>
             </span>
-          )}
-        </span>
-        <span className="hm-ci-text">
-          <span className="hm-eyebrow">Check-in</span>
-          <span className="hm-ci-title">
-            {!allDone && <span className="hm-ci-dot" aria-hidden="true" />}
-            {allDone ? "All checked in" : `${due.length} to log`}
-          </span>
-          <span className="hm-ci-sub">{allDone ? nextLabel || "Nothing due" : due.map((i) => i.title).join(" · ")}</span>
-        </span>
-        <span className={`hm-ci-chev${open ? " open" : ""}`} aria-hidden="true">
-          <ChevronDownIcon />
-        </span>
-      </button>
-      {open && (
-        <div className="hm-ci-body">
-          {[...due, ...done].map((item) => (
-            <div key={item.key} className={`hm-ci-row${item.due ? "" : " done"}`}>
-              <button type="button" className="hm-ci-row-main" onClick={() => go(item)}>
-                <span className={`hm-ci-status${item.due ? "" : " done"}`} aria-hidden="true">
-                  {item.due ? <span className="hm-ci-dot" /> : "✓"}
-                </span>
-                <span className="hm-ci-row-text">
-                  <span className="hm-ci-row-title">{item.title}</span>
-                  <span className="hm-ci-row-sub">{item.due ? item.dueSub : item.doneSub ?? "Done"}</span>
-                </span>
-              </button>
-              {item.due && (
-                <button type="button" className="hm-ci-go" onClick={() => go(item)}>
-                  {item.type === "photos" ? "Start" : "Log"}
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+            <span className="hm-task-chev" aria-hidden="true" />
+          </button>
+        ))}
+      </div>
+      {allDone && nextLabel && <div className="hm-tasks-next">{nextLabel}</div>}
     </section>
   );
 }
