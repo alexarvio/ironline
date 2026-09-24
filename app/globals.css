@@ -16816,3 +16816,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .hm-greet-btn .hm-greeting { flex: 1; min-width: 0; }
 .hm-greet-chev { width: 26px; height: 26px; }
 .hm-greet-chev svg { width: 13px; height: 13px; }
+/* Smaller still. */
+.hm-greeting { font-size: 20px; }
+.hm-greet-chev { width: 24px; height: 24px; }
+.hm-greet-chev svg { width: 12px; height: 12px; }
