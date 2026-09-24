@@ -8286,6 +8286,8 @@ export type UpNextSession = {
   name: string;
   exercises: number;
   sets: number;
+  /** Begun on the app and not yet ended: Home says Resume, not Start. */
+  live: boolean;
 };
 
 // The session Home offers to start: the first one this week that is not
@@ -8297,11 +8299,11 @@ export function getUpNextSession(clientId: number): UpNextSession | null {
   const days = getPublishedWeek(clientId, week)
     .map((day) => ({ day, assignments: getAssignmentsForDay(day.id) }))
     .filter((d) => d.assignments.length > 0);
-  // A session the client said they could not do is settled, as a finished
-  // one is: Home's "Start" moves on to the next rather than sending them
-  // back to the one they skipped.
+  // A session the client said they could not do, or ended on the app, is
+  // settled, as a fully logged one is: Home moves on to the next. One begun
+  // and not ended is the one to come back to.
   const index = days.findIndex(({ day, assignments }) =>
-    !day.skip_reason && !assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets)
+    !day.skip_reason && !day.session_ended_at && !assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets)
   );
   if (index < 0) return null;
   const { day, assignments } = days[index];
@@ -8310,6 +8312,7 @@ export function getUpNextSession(clientId: number): UpNextSession | null {
     name: day.label || `Session ${index + 1}`,
     exercises: assignments.length,
     sets: assignments.reduce((sum, a) => sum + a.sets, 0),
+    live: !!day.session_started_at && !day.session_ended_at,
   };
 }
 

@@ -42,6 +42,8 @@ export type HomeSession = {
   name: string;
   exercises: number;
   sets: number;
+  /** Begun on the app and not ended: the button says Resume. */
+  live?: boolean;
 } | null;
 
 export type UpcomingMeeting = {
@@ -249,7 +251,7 @@ function TodayCard({ session, hasPlan }: { session: HomeSession; hasPlan: boolea
               {session.exercises} exercise{session.exercises === 1 ? "" : "s"} · {session.sets} sets
             </span>
           </span>
-          <span className="hm-session-start">Start</span>
+          <span className="hm-session-start">{session.live ? "Resume" : "Start"}</span>
         </button>
       ) : (
         <p className="hm-session-empty">No session left this week</p>
