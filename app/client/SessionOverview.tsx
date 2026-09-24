@@ -3,11 +3,11 @@
 import { useState, useTransition } from "react";
 import { saveSkipReasonAction } from "../lib/actions";
 import { ChevronLeftIcon } from "../components/icons";
-import CoachMark from "./CoachMark";
 import GymSheet from "./GymSheet";
 import type { GymOption } from "./GymPicker";
 import {
   CardioCard,
+  CoachNote,
   clock,
   durationMinutes,
   elapsedMs,
@@ -265,16 +265,15 @@ export default function SessionOverview({
 }
 
 function ExerciseCard({ exercise, index, done, coachName }: { exercise: SessionExercise; index: number; done: boolean; coachName: string }) {
-  const [noteOpen, setNoteOpen] = useState(false);
   const exDone = isDone(exercise);
-  const summary = [
-    `${exercise.sets} × ${exercise.reps || "?"}`,
-    exercise.targetWeight != null ? `${roundTo(exercise.targetWeight, 2)} kg` : "bodyweight",
-    exercise.targetRpe != null ? `RPE ${exercise.targetRpe}` : null,
-    exercise.tempo ? `tempo ${exercise.tempo}` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  // The prescription as figure-and-unit pairs, like the workout's target line.
+  const targets = [
+    { value: String(exercise.sets), unit: "sets" },
+    exercise.reps ? { value: exercise.reps, unit: "reps" } : null,
+    exercise.targetWeight != null ? { value: String(roundTo(exercise.targetWeight, 2)), unit: "kg" } : null,
+    exercise.targetRpe != null ? { value: String(exercise.targetRpe), unit: "rpe" } : null,
+    exercise.tempo ? { value: exercise.tempo, unit: "tempo" } : null,
+  ].filter((t): t is { value: string; unit: string } => !!t);
   const ask = exercise.videoRequest;
   // Against the last time: the heaviest set then and now.
   const top = (sets: { weight: number | null }[]) => sets.reduce<number | null>((m, s) => (s.weight != null && (m == null || s.weight > m) ? s.weight : m), null);
@@ -286,7 +285,7 @@ function ExerciseCard({ exercise, index, done, coachName }: { exercise: SessionE
     return (
       <div className={`so-card so-card-fold${open ? " open" : ""}${exDone ? " done" : ""}`}>
         <button type="button" className="so-card-row so-card-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-          <span className={`so-index${exDone ? " done" : ""}`}>{index}</span>
+          <span className={`so-num${exDone ? " done" : ""}`}>{index}</span>
           <span className="so-card-main">
             <span className="so-card-name">{shownName(exercise)}</span>
           </span>
@@ -325,20 +324,22 @@ function ExerciseCard({ exercise, index, done, coachName }: { exercise: SessionE
   return (
     <div className={`so-card${exDone ? " done" : ""}`}>
       <div className="so-card-row">
-        <span className={`so-index${exDone ? " done" : ""}`}>{exDone ? "✓" : index}</span>
+        <span className={`so-num${exDone ? " done" : ""}`}>{index}</span>
         <span className="so-card-main">
           <span className="so-card-name">{shownName(exercise)}</span>
-          <span className="so-card-summary">{exercise.swap ? `Swapped for ${exercise.name} · ${summary}` : summary}</span>
+          {exercise.swap && <span className="so-card-summary">Swapped for {exercise.name}</span>}
+          <span className="so-targets">
+            {targets.map((t) => (
+              <span key={t.unit}>
+                <b>{t.value}</b> <small>{t.unit}</small>
+              </span>
+            ))}
+          </span>
         </span>
       </div>
       {(
         <>
-          {exercise.note.text && (
-            <button type="button" className={`so-note${noteOpen ? " open" : ""}`} onClick={() => setNoteOpen((o) => !o)}>
-              <CoachMark />
-              <span>{exercise.note.text}</span>
-            </button>
-          )}
+          {exercise.note.text && <CoachNote assignmentId={exercise.id} note={exercise.note} />}
           {ask && (
             <div className={`so-video${ask.reply ? " replied" : ask.src ? " sent" : ""}`}>
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -362,7 +363,7 @@ function CardioFold({ cardio, index }: { cardio: SessionCardio; index: number })
   return (
     <div className={`so-card so-card-fold${open ? " open" : ""}${cardio.done ? " done" : ""}`}>
       <button type="button" className="so-card-row so-card-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        <span className={`so-index${cardio.done ? " done" : ""}`}>{index}</span>
+        <span className={`so-num${cardio.done ? " done" : ""}`}>{index}</span>
         <span className="so-card-main">
           <span className="so-card-name">{cardio.name}</span>
         </span>
