@@ -121,7 +121,7 @@ export default function HomeHub({
 }) {
   return (
     <div className="hm">
-      <HomeBanner dateLabel={dateLabel} firstName={firstName} goals={goals} line={dayLine(session, checkIn?.items ?? [])} />
+      <HomeBanner dateLabel={dateLabel} firstName={firstName} goals={goals} />
       <div className="hm-body">
         <UpNextHero session={session} hasPlan={hasPlan} weekDone={weekDone} />
         {checkIn && checkIn.items.length > 0 && <CheckInFold items={checkIn.items} nextLabel={checkIn.nextLabel} />}
@@ -136,7 +136,7 @@ export default function HomeHub({
 
 const GOALS_KEY = "ironline:home-goals-open";
 
-function HomeBanner({ dateLabel, firstName, goals, line }: { dateLabel: string; firstName: string; goals: GoalRowView[]; line: string }) {
+function HomeBanner({ dateLabel, firstName, goals }: { dateLabel: string; firstName: string; goals: GoalRowView[] }) {
   // "Hello" on the server, the time of day once the phone says what it is.
   const [hello, setHello] = useState("Hello");
   useEffect(() => {
@@ -176,7 +176,6 @@ function HomeBanner({ dateLabel, firstName, goals, line }: { dateLabel: string; 
         <h1 className="hm-greeting">{hello}, {firstName}.</h1>
       )}
       <div className="hm-eyebrow hm-date">{dateLabel}</div>
-      {line && <p className="hm-dayline">{line}</p>}
 
       {hasGoals && (
         <div id="hm-goals" className={`hm-goalpanel-fold${open ? " open" : ""}`} aria-hidden={!open}>
@@ -588,11 +587,3 @@ function CountUp({ n }: { n: number }) {
   return <>{n <= 0 ? 0 : shown}</>;
 }
 
-/** One line under the date that reads the day: the session, and what is to log. */
-function dayLine(session: HomeSession, items: CheckInItem[]): string {
-  const due = items.filter((i) => i.due).length;
-  const toLog = due === 0 ? "Nothing to log today." : due === 1 ? "One thing to log first." : `${due} things to log first.`;
-  if (session?.live) return `${session.name} is under way.`;
-  if (session) return `${session.name} is up. ${toLog}`;
-  return `Week done. ${due === 0 ? "Nothing to log today." : toLog.replace(" first", "")}`;
-}
