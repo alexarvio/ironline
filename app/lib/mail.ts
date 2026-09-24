@@ -14,6 +14,37 @@ export function mailConfigured(): boolean {
 
 const escape = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
+async function send(to: string, subject: string, text: string, html: string, what: string): Promise<boolean> {
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: process.env.MAIL_FROM, to: [to], subject, text, html }),
+    });
+    if (!res.ok) console.error(`[mail] ${what} to ${to} failed: ${res.status} ${await res.text().catch(() => "")}`);
+    return res.ok;
+  } catch (error) {
+    console.error(`[mail] ${what} failed:`, error instanceof Error ? error.message : error);
+    return false;
+  }
+}
+
+/** A "forgot password" link. Resolves false rather than throwing. */
+export async function sendPasswordResetEmail({ to, resetUrl }: { to: string; resetUrl: string }): Promise<boolean> {
+  if (!mailConfigured()) return false;
+  const text = [
+    "Someone asked to reset the password for your Ironline account.",
+    "",
+    `Choose a new password: ${resetUrl}`,
+    "",
+    "The link works once, for the next hour. If you didn't ask for this, ignore this email: your password stays as it is.",
+  ].join("\n");
+  const html = `<p>Someone asked to reset the password for your Ironline account.</p>
+<p><a href="${escape(resetUrl)}">Choose a new password</a></p>
+<p>The link works once, for the next hour. If you didn&rsquo;t ask for this, ignore this email: your password stays as it is.</p>`;
+  return send(to, "Reset your Ironline password", text, html, "password reset");
+}
+
 /** The client's first sign-in details. Resolves false rather than throwing: the client exists either way. */
 export async function sendInviteEmail({
   to,

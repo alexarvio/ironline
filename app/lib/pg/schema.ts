@@ -557,6 +557,23 @@ export const push_subscriptions = pgTable(
 );
 
 /**
+ * "Forgot password" links. Only a hash of the token is kept, so someone who
+ * reads this table can't use a link that is still open. One use, one hour.
+ */
+export const password_resets = pgTable(
+  "password_resets",
+  {
+    id: serial("id").primaryKey(),
+    user_id: integer("user_id").notNull(),
+    token_hash: text("token_hash").notNull().unique(),
+    created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    expires_at: timestamp("expires_at", { withTimezone: true }).notNull(),
+    used_at: timestamp("used_at", { withTimezone: true }),
+  },
+  (t) => [index("password_resets_user_id_idx").on(t.user_id)]
+);
+
+/**
  * Every collection, with the field(s) that identify a row. store.ts walks
  * this list to load and save; a collection missing here would not be saved.
  */

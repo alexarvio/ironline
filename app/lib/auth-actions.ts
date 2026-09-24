@@ -22,6 +22,7 @@ import {
 import { getData } from "./db";
 import { deleteUserForClient } from "./auth";
 import { eraseClient } from "./erase";
+import { completePasswordReset, requestPasswordReset } from "./passwordReset";
 
 // Server actions for logging in and out, and for the coach handing a client
 // their credentials. Kept separate from actions.ts so the auth surface is
@@ -73,6 +74,26 @@ export async function changePasswordAction(formData: FormData) {
 
   setPassword(user.id, password, false);
   redirect(user.role === "coach" ? "/admin/redesign" : "/client");
+}
+
+// "Forgot password" (lib/passwordReset.ts). The answer is the same whether or
+// not the email has an account, so the form can't be used to find out.
+export async function requestPasswordResetAction(formData: FormData) {
+  const email = String(formData.get("email") ?? "").trim();
+  // Not awaited: waiting would make an email with an account answer slower
+  // (the database work, the send), which gives the answer away by timing.
+  if (email) requestPasswordReset(email).catch((error) => console.error("[reset] request failed:", error));
+  redirect("/login/forgot?sent=1");
+}
+
+export async function completePasswordResetAction(formData: FormData) {
+  const token = String(formData.get("token") ?? "");
+  const password = String(formData.get("password") ?? "");
+  const back = (error: string) => `/login/reset?token=${encodeURIComponent(token)}&error=${error}`;
+  if (password.length < 8) redirect(back("short"));
+  if (password !== String(formData.get("confirm") ?? "")) redirect(back("match"));
+  if (!(await completePasswordReset(token, password))) redirect("/login/reset?error=expired");
+  redirect("/login?reset=1");
 }
 
 // A client deleting their own account (Settings → Delete account), as the App
