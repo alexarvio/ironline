@@ -63,6 +63,13 @@ export async function removeSubscription(userId: number, endpoint: string) {
   await db.delete(push_subscriptions).where(and(eq(push_subscriptions.user_id, userId), eq(push_subscriptions.endpoint, endpoint)));
 }
 
+/** Forgets every device of these users (their account is being deleted). */
+export async function removeAllSubscriptions(userIds: number[]) {
+  const db = await pg();
+  if (!db || userIds.length === 0) return;
+  await db.delete(push_subscriptions).where(inArray(push_subscriptions.user_id, userIds));
+}
+
 /** Whether this device is subscribed for this user. */
 export async function hasSubscription(userId: number, endpoint: string): Promise<boolean> {
   const db = await pg();

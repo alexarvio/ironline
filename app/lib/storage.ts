@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, DeleteObjectsCommand, GetObjectCommand, HeadObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { DATA_DIR } from "./db";
 
@@ -118,6 +118,35 @@ export async function deleteUpload(publicPath: string | null | undefined) {
   } catch {
     /* already gone */
   }
+}
+
+/** Deletes every object whose key starts with `prefix` ("progress/9/"); returns how many. */
+export async function deleteAllUnder(s3: S3Client, bucketName: string, prefix: string): Promise<number> {
+  let deleted = 0;
+  let token: string | undefined;
+  do {
+    const listed = await s3.send(new ListObjectsV2Command({ Bucket: bucketName, Prefix: prefix, ContinuationToken: token }));
+    const keys = (listed.Contents ?? []).filter((o) => o.Key).map((o) => ({ Key: o.Key! }));
+    if (keys.length) {
+      await s3.send(new DeleteObjectsCommand({ Bucket: bucketName, Delete: { Objects: keys, Quiet: true } }));
+      deleted += keys.length;
+    }
+    token = listed.IsTruncated ? listed.NextContinuationToken : undefined;
+  } while (token);
+  return deleted;
+}
+
+/**
+ * Deletes a folder of uploads ("progress/9/") everywhere it lives: the disk
+ * and the bucket. For erasing a client; one file at a time is deleteUpload.
+ */
+export async function deleteUploadFolder(folder: string) {
+  if (!/^[a-z]+\/\d+\/$/.test(folder)) throw new Error(`Not a client upload folder: ${folder}`);
+  fs.rmSync(path.join(DATA_DIR, "uploads", folder), { recursive: true, force: true });
+  const b = bucket();
+  if (!b) return;
+  for (const key of inBucket) if (key.startsWith(folder)) inBucket.delete(key);
+  await deleteAllUnder(b.s3, b.bucket, folder);
 }
 
 /** A link into the bucket that expires, or null to serve the file from the disk. */

@@ -7,7 +7,7 @@ import { ensureCoachFromEnv, ensureOwnerFromEnv, getSessionUser, resetCoachFromE
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; deleted?: string }>;
 }) {
   // A fresh deployment has no accounts and no signup, so the very first
   // request to the login page is where the bootstrap coach gets created
@@ -27,7 +27,7 @@ export default async function LoginPage({
     redirect(user.role === "coach" ? "/admin/redesign" : "/client");
   }
 
-  const { error } = await searchParams;
+  const { error, deleted } = await searchParams;
 
   return (
     <div className="auth-page">
@@ -38,6 +38,7 @@ export default async function LoginPage({
         </div>
         <h1 className="auth-title">Sign in</h1>
 
+        {deleted && <p className="auth-ok">Your account and everything in it has been deleted.</p>}
         {error === "locked" ? (
           <p className="auth-error">Too many attempts. Try again in 15 minutes.</p>
         ) : (

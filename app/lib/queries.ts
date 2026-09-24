@@ -227,9 +227,19 @@ export function createClient(name: string, coachId: number | null) {
 // notifications, preferences and their login. Coach-level things (the
 // exercise library, template packs, report templates) are untouched.
 // Uploaded photo/video files stay on disk; nothing references them after this.
-export function removeClient(clientId: number) {
+/**
+ * Deletes a client and every row of theirs from the store: the rows that hang
+ * off another row (a set log off its exercise, an entry off its metric) by
+ * following those links, then every collection's rows carrying their
+ * client_id, so a collection added later is covered without touching this.
+ * `keepInvoices` keeps their invoices, labelled with their name (see
+ * Invoice.client_name). Files and push devices are the caller's: see
+ * eraseClient in lib/erase.ts.
+ */
+export function removeClient(clientId: number, opts: { keepInvoices?: boolean } = {}) {
   const data = getData();
-  if (!data.clients.some((c) => c.id === clientId)) return;
+  const client = data.clients.find((c) => c.id === clientId);
+  if (!client) return;
 
   const dayIds = new Set(data.program_days.filter((pd) => pd.client_id === clientId).map((pd) => pd.id));
   const assignmentIds = new Set(
@@ -259,17 +269,27 @@ export function removeClient(clientId: number) {
   data.photo_period_notes = data.photo_period_notes.filter((n) => n.client_id !== clientId);
 
   data.meeting_notes = data.meeting_notes.filter((n) => !meetingIds.has(n.meeting_id));
-  data.meetings = data.meetings.filter((m) => m.client_id !== clientId);
-  data.invoices = data.invoices.filter((i) => i.client_id !== clientId);
-  data.nutrition_plans = data.nutrition_plans.filter((p) => p.client_id !== clientId);
-  data.client_profiles = data.client_profiles.filter((p) => p.client_id !== clientId);
-  data.client_goals = data.client_goals.filter((g) => g.client_id !== clientId);
-  data.client_preferences = data.client_preferences.filter((p) => p.client_id !== clientId);
-  data.client_gyms = data.client_gyms.filter((g) => g.client_id !== clientId);
-  data.client_reports = data.client_reports.filter((r) => r.client_id !== clientId);
-  data.chat_messages = data.chat_messages.filter((m) => m.client_id !== clientId);
-  data.coach_activity = data.coach_activity.filter((a) => a.client_id !== clientId);
+
+  if (opts.keepInvoices) {
+    for (const inv of data.invoices) {
+      if (inv.client_id !== clientId) continue;
+      inv.client_name = client.name;
+      inv.coach_id = client.coach_id ?? null;
+    }
+  }
+
+  // Their login, and the record of its lockouts (which carry the email).
+  const emails = new Set(data.users.filter((u) => u.role === "client" && u.client_id === clientId).map((u) => u.email));
   data.users = data.users.filter((u) => !(u.role === "client" && u.client_id === clientId));
+  if (data.login_lock_events) data.login_lock_events = data.login_lock_events.filter((e) => !emails.has(e.email));
+
+  // Everything else of theirs: every collection's rows with their client_id.
+  const store = data as unknown as Record<string, unknown>;
+  for (const [name, value] of Object.entries(store)) {
+    if (!Array.isArray(value) || name === "users" || name === "account_deletions") continue;
+    if (name === "invoices" && opts.keepInvoices) continue;
+    store[name] = value.filter((row) => !(row && typeof row === "object" && (row as { client_id?: unknown }).client_id === clientId));
+  }
   data.clients = data.clients.filter((c) => c.id !== clientId);
   persist();
 }
@@ -1913,6 +1933,8 @@ export type Invoice = {
   status: "unpaid" | "sent" | "paid" | "due";
   created_at: string;
   updated_at: string;
+  client_name?: string;
+  coach_id?: number | null;
 };
 
 export function listInvoices(clientId: number): Invoice[] {
@@ -2533,6 +2555,26 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       at: stampMs(inv.updated_at),
       tab: "plan",
       text: `had their invoice “${inv.description}” marked ${inv.status}`,
+    });
+  }
+
+  // ---- Accounts ----
+  // A client who deleted their own account: not in clientsById any more,
+  // so added directly. Their row opens the coach's default client.
+  for (const d of data.account_deletions ?? []) {
+    const at = stampMs(d.at);
+    if (d.coach_id !== coachId || !Number.isFinite(at)) continue;
+    events.push({
+      id: `account-deleted-${d.id}`,
+      category: "notes",
+      clientId: d.client_id,
+      clientName: d.name,
+      at,
+      timeKnown: true,
+      tab: "home",
+      text: "deleted their account and all their data",
+      note: null,
+      thumbs: [],
     });
   }
 
