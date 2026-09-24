@@ -6,10 +6,10 @@ import { ChevronLeftIcon } from "../../components/icons";
 import DateText from "./DateText";
 
 // When a programme or phase reaches the client: a month to click the dates
-// on, and the same dates as fields to type into. Phases run Monday to
-// Sunday, so a click snaps to its week. A programme's length is however many
-// weeks are on its rail, so only its start is picked and the end follows; a
-// nutrition or lifestyle phase has both ends open.
+// on, and the same dates as fields to type into. A programme runs Monday to
+// Sunday, so a click snaps to its week, and its length is however many weeks
+// are on its rail, so only its start is picked and the end follows. A
+// nutrition or lifestyle phase (byDay) has both ends open, on any day.
 
 const DAY = 86400000;
 const parse = (d: string) => new Date(`${d}T00:00:00`);
@@ -36,6 +36,7 @@ export default function PhaseDatesDialog({
   what,
   confirm,
   onConfirm,
+  byDay = false,
 }: {
   title: string;
   /** Editable when given: a draft programme is named here too. */
@@ -48,27 +49,33 @@ export default function PhaseDatesDialog({
   /** "the programme", "these targets", "these metrics": what reaches the client. */
   what: string;
   confirm: string;
+  /** `end` is the last day. */
   onConfirm: (v: { name: string; start: string; end: string }) => void;
+  /** Any day, not whole weeks: a nutrition or lifestyle phase. `end` (given) is still its stored end_week. */
+  byDay?: boolean;
 }) {
   const fixed = weeks != null && weeks > 0;
   const nextMonday = mondayOf(shift(today(), 7));
   const initialStart = start ?? nextMonday;
   const [nm, setNm] = useState(name ?? "");
-  const [from, setFrom] = useState(mondayOf(initialStart));
-  const [to, setTo] = useState(fixed ? shift(mondayOf(initialStart), weeks * 7 - 1) : sundayOf(end && end >= initialStart ? end : shift(initialStart, 27)));
+  const snap = (d: string) => (byDay ? d : mondayOf(d));
+  const [from, setFrom] = useState(snap(initialStart));
+  const [to, setTo] = useState(
+    fixed ? shift(mondayOf(initialStart), weeks * 7 - 1) : byDay ? (end ? shift(end, 6) : shift(initialStart, 27)) : sundayOf(end && end >= initialStart ? end : shift(initialStart, 27))
+  );
   const [cursor, setCursor] = useState(from.slice(0, 7));
   // With both ends open, the first click sets the start and the next the end.
   const [picking, setPicking] = useState<"start" | "end">("start");
 
   const setStart = (d: string) => {
-    const s = mondayOf(d);
+    const s = snap(d);
     setFrom(s);
     if (fixed) setTo(shift(s, weeks * 7 - 1));
-    else if (to < s) setTo(sundayOf(s));
+    else if (to < s) setTo(byDay ? s : sundayOf(s));
     setCursor(s.slice(0, 7));
   };
   const setEnd = (d: string) => {
-    const e = sundayOf(d);
+    const e = byDay ? d : sundayOf(d);
     if (e < from) {
       setStart(d);
       return;
@@ -94,6 +101,10 @@ export default function PhaseDatesDialog({
   while (cells.length < 42) cells.push(null);
   const move = (n: number) => setCursor(isoOf(new Date(y, mo - 1 + n, 1)).slice(0, 7));
   const length = weeksBetween(from, to);
+  const days = Math.round((parse(to).getTime() - parse(from).getTime()) / DAY) + 1;
+  const lengthLabel = byDay
+    ? [Math.floor(days / 7), days % 7].map((n, i) => (n ? `${n} ${i === 0 ? "week" : "day"}${n === 1 ? "" : "s"}` : "")).filter(Boolean).join(" ")
+    : `${length} ${length === 1 ? "week" : "weeks"}`;
   const ok = (!name || nm.trim().length > 0) && from <= to;
   const now = today();
   const startsNow = from <= now;
@@ -103,7 +114,7 @@ export default function PhaseDatesDialog({
       <DialogHeader>
         <DialogTitle>{title}</DialogTitle>
         <DialogDescription>
-          {fixed ? `Its length is the ${weeks} weeks on the rail; pick the week it starts.` : "Pick the week it starts and the week it ends."} Weeks run Monday to Sunday.
+          {fixed ? `Its length is the ${weeks} weeks on the rail; pick the week it starts. Weeks run Monday to Sunday.` : byDay ? "Pick the day it starts and the day it ends." : "Pick the week it starts and the week it ends. Weeks run Monday to Sunday."}
         </DialogDescription>
       </DialogHeader>
       {name !== undefined && (
@@ -162,7 +173,7 @@ export default function PhaseDatesDialog({
           <div className="rd-field">
             <span>Length</span>
             <span className="rdd-length">
-              {length} {length === 1 ? "week" : "weeks"}
+              {lengthLabel}
               <small>
                 {fmtShort(from)} – {fmtShort(to)}
               </small>
@@ -171,13 +182,13 @@ export default function PhaseDatesDialog({
           <div className="rd-field">
             <span>Quick</span>
             <div className="rdd-quick">
-              <button type="button" className={`rd-chip${from === mondayOf(now) ? " on" : ""}`} onClick={() => setStart(now)}>
-                This week
+              <button type="button" className={`rd-chip${from === snap(now) ? " on" : ""}`} onClick={() => setStart(now)}>
+                {byDay ? "Today" : "This week"}
               </button>
               <button type="button" className={`rd-chip${from === nextMonday ? " on" : ""}`} onClick={() => setStart(nextMonday)}>
                 Next Monday
               </button>
-              <button type="button" className={`rd-chip${from === mondayOf(shift(now, 14)) ? " on" : ""}`} onClick={() => setStart(shift(now, 14))}>
+              <button type="button" className={`rd-chip${from === snap(shift(now, 14)) ? " on" : ""}`} onClick={() => setStart(shift(now, 14))}>
                 In two weeks
               </button>
             </div>

@@ -377,6 +377,11 @@ export type ClientPhase = {
   client_id: number;
   track: PhaseTrack;
   name: string;
+  // The phase's first day, and its last day minus 6 (so end_week + 6 is
+  // always the last day; lib/phases.ts reads them). A training phase runs in
+  // whole Monday-to-Sunday weeks, so these are the Mondays of its first and
+  // last week, as every phase's were before nutrition and lifestyle phases
+  // could start and end on any day (Sept 2026).
   start_week: string;
   end_week: string;
   // A nutrition phase's own daily targets and note, so the coach can set a

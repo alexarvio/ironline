@@ -12,11 +12,11 @@ import {
   listPhotoUploads,
   localDateStr,
   photoSheetFor,
-  weekStart,
 } from "../lib/queries";
 import PhotoAngleChips from "./PhotoAngleChips";
 import PhotoGallery, { type GallerySheet } from "./PhotoGallery";
 import PhotoScheduleForm from "./PhotoScheduleForm";
+import { phaseCovers } from "../lib/phases";
 
 const PERIOD_UNIT = { weekly: "Week", biweekly: "Check-in", monthly: "Month", sixweekly: "Block" } as const;
 const PERIOD_SHORT = { weekly: "Wk", biweekly: "Check-in", monthly: "Month", sixweekly: "Block" } as const;
@@ -70,13 +70,10 @@ export default function ProgressPicturesPanel({ clientId }: { clientId: number }
     return last ? Math.round(last.value * 10) / 10 : null;
   };
 
-  // The Plan tab's phase that covered the week a sheet opened in. Phases are
-  // stored as whole weeks, Monday to Monday.
+  // The Plan tab's phase that covered the day a sheet opened.
   const phases = listClientPhases(clientId).filter((p) => !p.draft);
-  const phaseOn = (track: "nutrition" | "training", day: string) => {
-    const week = weekStart(day);
-    return phases.find((p) => p.track === track && p.start_week <= week && p.end_week >= week)?.name ?? null;
-  };
+  const phaseOn = (track: "nutrition" | "training", day: string) =>
+    phases.find((p) => p.track === track && phaseCovers(p.start_week, p.end_week, day))?.name ?? null;
 
   const sheets: GallerySheet[] = periods.map((period, i) => {
     const isLive = period === live;

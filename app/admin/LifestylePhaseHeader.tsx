@@ -5,7 +5,7 @@ import type { ClientPhase } from "../lib/db";
 import { PhaseDialog } from "./PhaseDialogButton";
 import DeployNowDialog from "./DeployNowDialog";
 import { deployPhaseNowAction, schedulePhaseOnItsDatesAction } from "../lib/actions";
-import { phaseRange, phaseWeekIndex, phaseWeeks } from "../lib/phases";
+import { phaseDays, phaseRange, phaseWeekIndex, phaseWeeks } from "../lib/phases";
 import PhaseHeader, { usePhases, type PhaseOption } from "./PhaseHeader";
 
 // The Measurements tab's phase band: which lifestyle phase the metrics below
@@ -88,7 +88,7 @@ export default function LifestylePhaseHeader({
               disabled={!!emptyReason && phase.id === selectedId}
               title={phase.id === selectedId ? emptyReason ?? undefined : undefined}
             >
-              {phase.start_week > thisWeek ? "Schedule it" : "Make it live"}
+              {phase.start_week > today ? "Schedule it" : "Make it live"}
             </button>
           ) : phase && phase.status === "next" ? (
             <button type="button" className="ph-primary" onClick={() => setDeploying(phase)}>
@@ -115,12 +115,13 @@ export default function LifestylePhaseHeader({
           track="lifestyle"
           name={deploying.name}
           weeks={phaseWeeks(deploying.start_week, deploying.end_week)}
+          days={phaseDays(deploying.start_week, deploying.end_week)}
           today={today}
           running={runningNow && runningNow.id !== deploying.id ? { name: runningNow.name, start_week: runningNow.start_week } : null}
           next={nextSet(deploying.id)}
-          startsOn={deploying.status === "draft" && deploying.start_week > thisWeek ? deploying.start_week : null}
+          startsOn={deploying.status === "draft" && deploying.start_week > today ? deploying.start_week : null}
           onConfirm={() =>
-            deploying.status === "draft" && deploying.start_week > thisWeek ? schedulePhaseOnItsDatesAction(deploying.id) : deployPhaseNowAction(deploying.id)
+            deploying.status === "draft" && deploying.start_week > today ? schedulePhaseOnItsDatesAction(deploying.id) : deployPhaseNowAction(deploying.id)
           }
           onClose={() => setDeploying(null)}
         />

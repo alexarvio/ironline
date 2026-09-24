@@ -62,7 +62,9 @@ export type DraftNutrition = {
 
 const savedToast = (what: string) => toast.success("Saved", { description: what });
 /** A phase's fields as the actions read them. */
-const phaseForm = (v: { id?: number; clientId?: number; track: string; name: string; start: string; end: string }) => {
+// exact: start and end are the first and last day, kept as they are (the
+// Dates dialog picks days); otherwise any day of the first and last week.
+const phaseForm = (v: { id?: number; clientId?: number; track: string; name: string; start: string; end: string; exact?: boolean }) => {
   const f = new FormData();
   if (v.id != null) f.set("id", String(v.id));
   if (v.clientId != null) f.set("clientId", String(v.clientId));
@@ -70,6 +72,10 @@ const phaseForm = (v: { id?: number; clientId?: number; track: string; name: str
   f.set("name", v.name);
   f.set("start", v.start);
   f.set("end", v.end);
+  if (v.exact) {
+    f.set("firstDay", v.start);
+    f.set("lastDay", v.end);
+  }
   return f;
 };
 const plusWeeks = (start: string, weeks: number) => {
@@ -648,6 +654,7 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
         )}
         {dlg?.kind === "dates" && (
           <PhaseDatesDialog
+            byDay
             title="Dates"
             name={plan.name}
             start={plan.startDate}
@@ -657,7 +664,7 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
             confirm="Save dates"
             onConfirm={(v) => {
               close();
-              if (phaseId) act(() => updateClientPhaseAction(phaseForm({ id: phaseId, track: "nutrition", name: v.name || plan.name, start: v.start, end: v.end })), `${v.name || plan.name}: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
+              if (phaseId) act(() => updateClientPhaseAction(phaseForm({ id: phaseId, track: "nutrition", name: v.name || plan.name, start: v.start, end: v.end, exact: true })), `${v.name || plan.name}: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
             }}
           />
         )}
@@ -672,6 +679,7 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
         )}
         {dlg?.kind === "deploy" && !startHasCome && (
           <PhaseDatesDialog
+            byDay
             title={`Schedule ${plan.name}`}
             start={plan.startDate}
             end={plan.endDate}
@@ -680,7 +688,7 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
             confirm="Schedule it"
             onConfirm={(v) => {
               close();
-              if (phaseId) act(() => saveAndSchedulePhaseAction(phaseForm({ id: phaseId, track: "nutrition", name: plan.name, start: v.start, end: v.end })), `${plan.name} scheduled: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
+              if (phaseId) act(() => saveAndSchedulePhaseAction(phaseForm({ id: phaseId, track: "nutrition", name: plan.name, start: v.start, end: v.end, exact: true })), `${plan.name} scheduled: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
             }}
           />
         )}

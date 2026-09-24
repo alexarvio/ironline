@@ -24,6 +24,7 @@ export default function DeployNowDialog({
   track,
   name,
   weeks,
+  days,
   today,
   running,
   next = null,
@@ -38,6 +39,8 @@ export default function DeployNowDialog({
   startsOn?: string | null;
   /** How long it runs from this week. */
   weeks: number;
+  /** A nutrition or lifestyle phase's exact length in days: it goes live today rather than this Monday. */
+  days?: number;
   today: string;
   /** The phase live on this track now, which makes room for this one. */
   running: { name: string; start_week: string } | null;
@@ -55,17 +58,24 @@ export default function DeployNowDialog({
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Scheduled for a later week, on its own dates; otherwise live now.
-  const later = !!startsOn && startsOn > isoOf(mondayOf(today));
-  const start = later ? parse(startsOn!) : mondayOf(today);
-  const full = new Date(start.getTime() + (weeks * 7 - 1) * DAY);
+  // Scheduled on its own dates when it starts later; otherwise live now:
+  // from today for a nutrition or lifestyle phase, from this Monday for a
+  // programme, which runs in whole weeks (deployPhaseNow does the same).
+  const byDay = track !== "training";
+  const later = !!startsOn && startsOn > (byDay ? today : isoOf(mondayOf(today)));
+  const start = later ? parse(startsOn!) : byDay ? parse(today) : mondayOf(today);
+  const full = new Date(start.getTime() + ((byDay && days ? days : weeks * 7) - 1) * DAY);
   // A nutrition or lifestyle phase stops short of the next one; a programme
   // keeps its weeks, and the next one takes over when it starts.
   const nextDay = next ? parse(next.start_week) : null;
   const cut = !later && !!nextDay && track !== "training" && full >= nextDay;
   const end = cut && nextDay ? new Date(nextDay.getTime() - DAY) : full;
-  const shown = Math.max(1, Math.round((end.getTime() - start.getTime() + DAY) / (7 * DAY)));
-  const lastSunday = new Date(start.getTime() - DAY);
+  const spanDays = Math.max(1, Math.round((end.getTime() - start.getTime()) / DAY) + 1);
+  const runs = [Math.floor(spanDays / 7), spanDays % 7]
+    .map((n, i) => (n ? `${n} ${i === 0 ? "week" : "day"}${n === 1 ? "" : "s"}` : ""))
+    .filter(Boolean)
+    .join(" ");
+  const dayBefore = new Date(start.getTime() - DAY);
   const chrome = phaseChrome(track, later ? "scheduled" : "live");
   const palette = TRACK_PALETTE[track];
   const what = track === "training" ? "this programme" : track === "nutrition" ? "these nutrition targets" : "this lifestyle phase";
@@ -75,8 +85,8 @@ export default function DeployNowDialog({
     : track === "training"
       ? `It replaces ${running.name} as the programme the client trains.`
       : running.start_week < isoOf(start)
-        ? `${running.name} ends last week, on ${fmt(lastSunday)}.`
-        : `${running.name} only started this week, so it goes back to a draft.`;
+        ? `${running.name} ends ${byDay ? "yesterday" : "last week"}, on ${fmt(dayBefore)}.`
+        : `${running.name} only started ${byDay ? "today" : "this week"}, so it goes back to a draft.`;
 
   return createPortal(
     <div className="pl-dlg-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
@@ -101,7 +111,7 @@ export default function DeployNowDialog({
             <div className="pl-move-row">
               <span className="pl-dlg-label">Runs</span>
               <b style={{ gridColumn: "2 / -1" }}>
-                {shown} week{shown === 1 ? "" : "s"}, to {fmt(end)}
+                {runs}, to {fmt(end)}
               </b>
             </div>
           </div>

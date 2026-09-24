@@ -17,6 +17,7 @@ import { ConfirmDialog } from "../training/TrainingDraft";
 import Picker from "../Picker";
 import DatePick from "../DatePick";
 import DateText from "../DateText";
+import { phaseLengthLabel, phaseWeeks } from "../../../lib/phases";
 import EventsCard, { type Category, type PlanEvent } from "./EventsCard";
 
 // The calmer Plan tab, as a draft on real data, in the Training draft's
@@ -60,6 +61,12 @@ const phaseForm = (v: { id?: number; clientId?: number; name: string; track: Pha
   fd.set("name", v.name);
   fd.set("start", v.start);
   fd.set("end", v.end);
+  // start and end here are always a phase's stored values (first day, last
+  // day minus 6), so a nutrition or lifestyle phase is sent as its exact days.
+  if (v.track !== "training") {
+    fd.set("firstDay", v.start);
+    fd.set("lastDay", addDays(v.end, 6));
+  }
   if (v.programId != null) fd.set("programId", String(v.programId));
   return fd;
 };
@@ -200,9 +207,14 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
     const live = drag?.id === p.id ? drag : dlg?.kind === "move" && dlg.id === p.id ? dlg : null;
     const s = live ? live.start : p.start_week;
     const e = live ? live.end : p.end_week;
-    const a = Math.max(0, weeksBetween(first, s));
-    const b = Math.min(count - 1, weeksBetween(first, e));
-    return { a, b, s, e, visible: b >= 0 && a <= count - 1, clippedStart: weeksBetween(first, s) < 0, clippedEnd: weeksBetween(first, e) > count - 1 };
+    // The columns its first and last day fall in: a phase that starts or
+    // ends mid-week fills the weeks it touches.
+    const col = (day: string) => Math.floor(Math.round((parse(day).getTime() - parse(first).getTime()) / DAY) / 7);
+    const sc = col(s);
+    const ec = col(addDays(e, 6));
+    const a = Math.max(0, sc);
+    const b = Math.min(count - 1, ec);
+    return { a, b, s, e, visible: b >= 0 && a <= count - 1, clippedStart: sc < 0, clippedEnd: ec > count - 1 };
   };
   const stateOf = (p: PlanPhaseRow, s = p.start_week, e = p.end_week): PhaseState => phaseStateOf({ draft: p.draft || p.program?.status === "draft", startWeek: s, endWeek: e, today });
 
@@ -333,7 +345,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                 const lanes: PlanPhaseRow[][] = [];
                 const laneOf = new Map<number, number>();
                 mine.forEach((p) => {
-                  let li = lanes.findIndex((l) => l.every((q) => q.end_week < p.start_week || q.start_week > p.end_week));
+                  let li = lanes.findIndex((l) => l.every((q) => addDays(q.end_week, 6) < p.start_week || q.start_week > addDays(p.end_week, 6)));
                   if (li < 0) {
                     lanes.push([]);
                     li = lanes.length - 1;
@@ -576,9 +588,9 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
               close();
               if (was) {
                 setPhases((prev) => prev.map((p) => (p.id === was.id ? { ...p, name: v.name, start_week: v.start, end_week: v.end } : p)));
-                act(() => updateClientPhaseAction(phaseForm({ id: was.id, ...v })), `${v.name}: ${shortDate(v.start)} → ${shortDate(addWeeks(v.end, 1))}`);
+                act(() => updateClientPhaseAction(phaseForm({ id: was.id, ...v })), `${v.name}: ${shortDate(v.start)} – ${shortDate(addDays(v.end, 6))}`);
               } else {
-                act(() => addClientPhaseAction(phaseForm({ clientId, ...v })), `${v.name} drafted on ${TRACK_LABEL[v.track]}: ${shortDate(v.start)} → ${shortDate(addWeeks(v.end, 1))}`);
+                act(() => addClientPhaseAction(phaseForm({ clientId, ...v })), `${v.name} drafted on ${TRACK_LABEL[v.track]}: ${shortDate(v.start)} – ${shortDate(addDays(v.end, 6))}`);
               }
             }}
             onSend={(v) => {
@@ -594,7 +606,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
           const p = phases.find((x) => x.id === dlg.id)!;
           setPhases((prev) => prev.map((x) => (x.id === dlg.id ? { ...x, start_week: dlg.start, end_week: dlg.end } : x)));
           close();
-          act(() => updateClientPhaseAction(phaseForm({ id: p.id, name: p.name, track: p.track, start: dlg.start, end: dlg.end })), `${p.name}: ${shortDate(dlg.start)} → ${shortDate(addWeeks(dlg.end, 1))}`);
+          act(() => updateClientPhaseAction(phaseForm({ id: p.id, name: p.name, track: p.track, start: dlg.start, end: dlg.end })), `${p.name}: ${shortDate(dlg.start)} – ${shortDate(addDays(dlg.end, 6))}`);
         }} />}
         {dlg?.kind === "deletePhase" && phases.find((p) => p.id === dlg.id) && (
           <ConfirmDialog
@@ -716,23 +728,27 @@ function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track: initi
   // A live programme starts on the week it went out, where the client began it: only the end moves.
   const startLocked = !!phase?.program && phase.program.status === "live";
   const isDraft = !phase ? true : phase.draft || phase.program?.status === "draft";
-  const startWeek = mondayOf(from);
-  const endWeek = mondayOf(to);
+  // Training runs in Monday-to-Sunday weeks (a programme's weeks); nutrition
+  // and lifestyle phases start and end on the days picked. What is saved is
+  // the first day and the last day minus 6 (see ClientPhase).
+  const byDay = track !== "training";
+  const startWeek = byDay ? from : mondayOf(from);
+  const endWeek = byDay ? addDays(to, -6) : mondayOf(to);
   const state = phaseStateOf({ draft: isDraft, startWeek, endWeek, today });
   const chrome = phaseChrome(track, state);
-  const weeks = weeksBetween(startWeek, endWeek) + 1;
+  const weeks = phaseWeeks(startWeek, endWeek);
   const planned = others.filter((o) => o.track === track && o.id !== phase?.id).map((o) => ({ name: o.name, from: o.start_week, to: addDays(o.end_week, 6) }));
   const overlap = planned.find((p) => p.from <= to && p.to >= from) ?? null;
 
   const setStart = (d: string) => {
     if (startLocked) return;
-    const s = mondayOf(d);
+    const s = byDay ? d : mondayOf(d);
     setFrom(s);
-    if (to < s) setTo(addDays(s, 6));
+    if (to < s) setTo(byDay ? s : addDays(s, 6));
     setCursor(s.slice(0, 7));
   };
   const setEnd = (d: string) => {
-    const e = addDays(mondayOf(d), 6);
+    const e = byDay ? d : addDays(mondayOf(d), 6);
     if (e < from) return setStart(d);
     setTo(e);
   };
@@ -780,7 +796,7 @@ function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track: initi
             )}
           </span>
         </DialogTitle>
-        {!editing && <DialogDescription>Which track, what it is called, and the weeks it runs. Weeks run Monday to Sunday.</DialogDescription>}
+        {!editing && <DialogDescription>Which track, what it is called, and when it runs. Nutrition and lifestyle phases can start on any day; training runs in weeks, Monday to Sunday.</DialogDescription>}
       </DialogHeader>
       {!editing && (
         <div className="rd-field">
@@ -812,9 +828,9 @@ function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track: initi
           <div className="rd-field">
             <span>Length</span>
             <span className="rdd-length">
-              {weeks} {weeks === 1 ? "week" : "weeks"}
+              {phaseLengthLabel(startWeek, endWeek)}
               <small>
-                {shortDate(from)} – {shortDate(to)}
+                {shortDate(startWeek)} – {shortDate(addDays(endWeek, 6))}
               </small>
             </span>
           </div>
@@ -862,7 +878,7 @@ function MoveDialog({ phase: p, start, end, today, onCancel, onSave }: { phase: 
   const rows = [
     { label: "Start", was: fmtDay(p.start_week), now: fmtDay(start) },
     { label: "End", was: last(p.end_week), now: last(end) },
-    { label: "Length", was: `${weeksBetween(p.start_week, p.end_week) + 1} weeks`, now: `${weeksBetween(start, end) + 1} weeks` },
+    { label: "Length", was: phaseLengthLabel(p.start_week, p.end_week), now: phaseLengthLabel(start, end) },
   ];
   return (
     <DialogContent className="rd-dlg">
