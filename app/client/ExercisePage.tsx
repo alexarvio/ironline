@@ -23,13 +23,7 @@ import {
 
 const MAX_WARMUPS = 8;
 type Draft = { weight: string; reps: string; rpe: string };
-const emptyDraft: Draft = { weight: "", reps: "", rpe: "" };
 
-// The top of a rep range: "8-10" → 10, "12" → 12.
-const topOfRange = (reps: string) => {
-  const m = reps.match(/\d+(?!.*\d)/);
-  return m ? m[0] : "";
-};
 
 export default function ExercisePage({
   exercise,
@@ -62,57 +56,46 @@ export default function ExercisePage({
 
   const askWeight = exercise.targetWeight != null;
   const askRpe = exercise.targetRpe != null;
-  const lastFor = (n: number) => exercise.lastSets?.sets.find((s) => s.setNumber === n) ?? null;
 
-  // ---- Working sets: what is typed in each row, and which logged rows are reopened.
-  const [drafts, setDrafts] = useState<Record<number, Draft>>({});
-  const [editing, setEditing] = useState<Set<number>>(new Set());
-  const [busy, setBusy] = useState<Set<number>>(new Set());
-  const draftOf = (n: number) => drafts[n] ?? emptyDraft;
-  const setDraft = (n: number, patch: Partial<Draft>) => setDrafts((d) => ({ ...d, [n]: { ...draftOf(n), ...patch } }));
-  const setBusyFor = (n: number, on: boolean) =>
-    setBusy((b) => {
-      const next = new Set(b);
-      if (on) next.add(n);
-      else next.delete(n);
-      return next;
-    });
-  const reopen = (n: number) => {
-    const log = exercise.logs.find((l) => l.setNumber === n);
-    setDraft(n, { weight: log ? show(log.weight) : "", reps: log?.reps != null ? String(log.reps) : "", rpe: log?.rpe != null ? String(log.rpe) : "" });
-    setEditing((e) => new Set(e).add(n));
+  // ---- Working sets, one at a time: the next set to log has the row to
+  // type into, logged rows read back in green with an Edit, and the rest
+  // wait in grey. One button under the rows logs the active set.
+  const nextSet = (() => {
+    for (let n = 1; n <= exercise.sets; n++) if (!exercise.logs.some((l) => l.setNumber === n)) return n;
+    return exercise.sets + 1;
+  })();
+  const [editingN, setEditingN] = useState<number | null>(null);
+  const activeN = editingN ?? (nextSet <= exercise.sets ? nextSet : null);
+  const freshDraft = (n: number | null): Draft => {
+    const log = n != null ? exercise.logs.find((l) => l.setNumber === n) ?? null : null;
+    if (log) return { weight: show(log.weight), reps: log.reps != null ? String(log.reps) : "", rpe: log.rpe != null ? String(log.rpe) : "" };
+    return { weight: show(exercise.targetWeight), reps: "", rpe: exercise.targetRpe != null ? String(exercise.targetRpe) : "" };
   };
-  const tick = async (n: number) => {
-    const d = draftOf(n);
-    const last = lastFor(n);
-    // Empty boxes fall back: weight to the target, reps to last time's, else
-    // the top of the range.
-    const weightKg = d.weight.trim() !== "" ? toKg(d.weight) : askWeight ? exercise.targetWeight : null;
-    const repsText = d.reps.trim() !== "" ? d.reps : last?.reps != null ? String(last.reps) : topOfRange(exercise.reps);
-    const reps = Number(repsText);
-    const rpeText = d.rpe.trim() !== "" ? d.rpe : askRpe && exercise.targetRpe != null ? String(exercise.targetRpe) : "";
+  const [draft, setDraft] = useState<Draft>(() => freshDraft(activeN));
+  // A new active row (a set landed, an edit opened, the unit flipped) starts
+  // the boxes over.
+  const [seenActive, setSeenActive] = useState(`${activeN}:${unit}:${gymId}`);
+  if (seenActive !== `${activeN}:${unit}:${gymId}`) {
+    setSeenActive(`${activeN}:${unit}:${gymId}`);
+    setDraft(freshDraft(activeN));
+  }
+  const [pending, setPending] = useState(false);
+  const logActive = async () => {
+    if (activeN == null || draft.reps.trim() === "") return;
     const fd = new FormData();
     fd.set("assignmentId", String(exercise.id));
-    fd.set("setNumber", String(n));
+    fd.set("setNumber", String(activeN));
     fd.set("gymId", gymId == null ? "" : String(gymId));
-    fd.set("weight", weightKg == null ? "" : String(weightKg));
-    fd.set("reps", Number.isFinite(reps) && repsText !== "" ? String(reps) : "");
-    fd.set("rpe", rpeText);
-    setBusyFor(n, true);
+    const kg = draft.weight.trim() === "" ? null : toKg(draft.weight);
+    fd.set("weight", kg == null ? "" : String(kg));
+    fd.set("reps", draft.reps.trim());
+    fd.set("rpe", draft.rpe.trim());
+    setPending(true);
     try {
       await logSetAction(fd);
     } finally {
-      setBusyFor(n, false);
-      setEditing((e) => {
-        const next = new Set(e);
-        next.delete(n);
-        return next;
-      });
-      setDrafts((all) => {
-        const next = { ...all };
-        delete next[n];
-        return next;
-      });
+      setPending(false);
+      setEditingN(null);
       onSetLogged?.();
     }
   };
@@ -175,13 +158,10 @@ export default function ExercisePage({
   ].filter((t): t is { label: string; value: string } => !!t);
   const ask = exercise.videoRequest;
   const done = loggedCount(exercise);
-  // The row's columns, from what is shown: set · [last time] · [kg] · reps · [rpe] · tick.
-  // Fractions, so the row always fits the phone in one line.
-  const grid = ["30px", askWeight ? "minmax(0, 1fr)" : null, "minmax(0, 1fr)", askRpe ? "minmax(0, 0.75fr)" : null, "40px"].filter(Boolean).join(" ");
 
-  const numberInput = (props: { value: string; placeholder: string; label: string; decimal?: boolean; onChange: (v: string) => void; disabled?: boolean }) => (
+  const numberInput = (props: { value: string; placeholder: string; label: string; decimal?: boolean; reps?: boolean; onChange: (v: string) => void; disabled?: boolean }) => (
     <input
-      className="wo-input"
+      className={`ts-input${props.reps ? " reps" : ""}`}
       type={props.decimal ? "text" : "number"}
       inputMode={props.decimal ? "decimal" : "numeric"}
       autoComplete="off"
@@ -265,8 +245,8 @@ export default function ExercisePage({
         </button>
       )}
 
-      <div className="wo-sets" style={{ "--wo-grid": grid } as React.CSSProperties}>
-        <div className="wo-sets-head">
+      <div className="wo-sets ts-card-flat" style={{ "--ts-n": 1 + (askWeight ? 1 : 0) + (askRpe ? 1 : 0) } as React.CSSProperties}>
+        <div className="ts-grid ts-cols">
           <span>Set</span>
           {askWeight && (
             <span>
@@ -277,55 +257,75 @@ export default function ExercisePage({
             </span>
           )}
           <span>Reps</span>
-          {askRpe && <span>RPE</span>}
+          {askRpe && <span>Rpe</span>}
           <span />
         </div>
 
         {warm.map((w, i) => (
-          <div key={`w${i}`} className={`wo-set warm${w.saved ? " logged" : ""}`}>
-            <span className="wo-set-n warm">W</span>
+          <div key={`w${i}`} className={`ts-grid ts-set warm${w.saved ? " logged" : " active"}`}>
+            <span className="ts-circle warm">W</span>
             {askWeight && numberInput({ value: w.weight, placeholder: unitLabel, label: `Warm-up ${i + 1} weight`, decimal: true, onChange: (v) => setWarm(warm.map((r, j) => (j === i ? { ...r, weight: v, saved: false } : r))) })}
             {numberInput({ value: w.reps, placeholder: "reps", label: `Warm-up ${i + 1} reps`, onChange: (v) => setWarm(warm.map((r, j) => (j === i ? { ...r, reps: v, saved: false } : r))) })}
-            {askRpe && <span className="wo-set-blank" />}
-            <button type="button" className={`wo-tick${w.saved ? " on" : ""}`} onClick={() => tickWarm(i)} aria-label={w.saved ? "Saved" : "Save this warm-up set"}>
-              ✓
+            {askRpe && <span />}
+            <button type="button" className={`ts-edit${w.saved ? " muted" : ""}`} onClick={() => tickWarm(i)} aria-label={w.saved ? "Remove this warm-up set" : "Save this warm-up set"}>
+              {w.saved ? "✕" : "✓"}
             </button>
           </div>
         ))}
 
         {Array.from({ length: exercise.sets }, (_, i) => i + 1).map((n) => {
           const log = exercise.logs.find((l) => l.setNumber === n) ?? null;
-          const logged = !!log && !editing.has(n);
-          const d = draftOf(n);
-          const isBusy = busy.has(n);
+          if (n === activeN) {
+            return (
+              <div key={n} className="ts-grid ts-set active">
+                <span className="ts-circle active">{n}</span>
+                {askWeight && numberInput({ value: draft.weight, placeholder: unitLabel, label: `Set ${n} weight in ${unitLabel}`, decimal: true, disabled: pending, onChange: (v) => setDraft({ ...draft, weight: v }) })}
+                {numberInput({ value: draft.reps, placeholder: exercise.reps || "reps", label: `Set ${n} reps`, disabled: pending, reps: true, onChange: (v) => setDraft({ ...draft, reps: v }) })}
+                {askRpe && numberInput({ value: draft.rpe, placeholder: "RPE", label: `Set ${n} RPE`, decimal: true, disabled: pending, onChange: (v) => setDraft({ ...draft, rpe: v }) })}
+                <span />
+              </div>
+            );
+          }
+          if (log) {
+            return (
+              <div key={n} className="ts-grid ts-set logged">
+                <span className="ts-circle done">✓</span>
+                {askWeight && <span>{log.weight == null ? "–" : show(log.weight)}</span>}
+                <span>{log.reps ?? "–"}</span>
+                {askRpe && <span>{log.rpe ?? "–"}</span>}
+                <button type="button" className="ts-edit" onClick={() => setEditingN(n)}>
+                  Edit
+                </button>
+              </div>
+            );
+          }
           return (
-            <div key={n} className={`wo-set${logged ? " logged" : ""}`}>
-              <span className={`wo-set-n${log ? " done" : ""}`}>{n}</span>
-              {logged ? (
-                <>
-                  {askWeight && <span className="wo-set-val">{log!.weight == null ? "–" : show(log!.weight)}</span>}
-                  <span className="wo-set-val">{log!.reps ?? "–"}</span>
-                  {askRpe && <span className="wo-set-val">{log!.rpe ?? "–"}</span>}
-                </>
-              ) : (
-                <>
-                  {askWeight && numberInput({ value: d.weight, placeholder: show(exercise.targetWeight) || unitLabel, label: `Set ${n} weight in ${unitLabel}`, decimal: true, disabled: isBusy, onChange: (v) => setDraft(n, { weight: v }) })}
-                  {numberInput({ value: d.reps, placeholder: exercise.reps || "reps", label: `Set ${n} reps`, disabled: isBusy, onChange: (v) => setDraft(n, { reps: v }) })}
-                  {askRpe && numberInput({ value: d.rpe, placeholder: exercise.targetRpe != null ? String(exercise.targetRpe) : "RPE", label: `Set ${n} RPE`, decimal: true, disabled: isBusy, onChange: (v) => setDraft(n, { rpe: v }) })}
-                </>
-              )}
-              <button
-                type="button"
-                className={`wo-tick${log ? " on" : ""}${logged ? " logged" : ""}`}
-                disabled={isBusy}
-                onClick={() => (logged ? reopen(n) : tick(n))}
-                aria-label={logged ? `Edit set ${n}` : `Log set ${n}`}
-              >
-                {isBusy ? "…" : "✓"}
-              </button>
+            <div key={n} className="ts-grid ts-set upcoming">
+              <span className="ts-circle">{n}</span>
+              {askWeight && <span>{exercise.targetWeight == null ? "–" : show(exercise.targetWeight)}</span>}
+              <span>{exercise.reps}</span>
+              {askRpe && <span>{exercise.targetRpe}</span>}
+              <span />
             </div>
           );
         })}
+
+        {editingN != null ? (
+          <div className="ts-actions">
+            <button type="button" className="ts-primary" disabled={pending || draft.reps.trim() === ""} onClick={logActive}>
+              {pending ? "Saving…" : `Save set ${editingN}`}
+            </button>
+            <button type="button" className="ts-cancel" onClick={() => setEditingN(null)} disabled={pending}>
+              Cancel
+            </button>
+          </div>
+        ) : activeN == null ? (
+          <div className="ts-all-logged">All {exercise.sets} sets logged</div>
+        ) : (
+          <button type="button" className="ts-primary" disabled={pending || draft.reps.trim() === ""} onClick={logActive}>
+            {pending ? "Logging…" : `Log set ${activeN} of ${exercise.sets}`}
+          </button>
+        )}
 
         <div className="wo-sets-foot">
           <button type="button" className="wo-add-warm" onClick={addWarm} disabled={warm.length >= MAX_WARMUPS}>

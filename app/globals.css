@@ -16335,3 +16335,11 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
   .tr-row-dot, .so-pill-dot { animation: none; }
 }
 @keyframes ws-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+/* The sets card in the workout: the old logging, one active row with boxes. */
+.wo-sets.ts-card-flat { padding: 4px 12px 8px; }
+.wo-sets .ts-cols { margin-top: 4px; }
+.wo-sets .ts-primary { margin-top: 12px; }
+.wo-sets .ts-actions { margin-top: 12px; }
+.wo-sets .ts-set.warm .ts-circle.warm { background: #FBF1DF; border-color: #FBF1DF; color: #9a5b0c; font-size: 11px; }
+.wo-sets .ts-edit.muted { color: #a0a7b3; }
+.wo-sets .ts-set .ts-edit { justify-self: center; }
