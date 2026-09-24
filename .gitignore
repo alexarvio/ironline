@@ -8,3 +8,6 @@ ironline.json
 public/uploads
 .claude
 .env*.local
+
+# Local Postgres (PGlite) data folder
+/.pglite-local/
