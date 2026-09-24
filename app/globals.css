@@ -16391,3 +16391,5 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .wo-page .ts-cardio .ts-cardio-grid + .ts-coachnote { margin-top: 14px; }
 .wo-page .ts-cardio { border-color: #eceff3; box-shadow: none; }
 .wo-wrap-sub { margin: -6px 0 0; font-size: 14.5px; color: #5b6474; }
+/* A done session: its number on green, and "Done" as plain green words. */
+.tr-row-pill.done { background: transparent; padding-left: 0; padding-right: 4px; }

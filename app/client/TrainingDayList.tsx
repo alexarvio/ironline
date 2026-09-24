@@ -146,7 +146,7 @@ export default function TrainingDayList({
           const tone = status === "done" ? "done" : status === "live" ? "live" : isNext ? "next" : status;
           return (
             <button key={d.key} type="button" className={`tr-row ${tone}`} onClick={() => setView({ dayId: d.key, screen: "overview" })}>
-              <span className={`tr-row-tile ${tone}`}>{status === "done" ? "✓" : d.index}</span>
+              <span className={`tr-row-tile ${tone}`}>{d.index}</span>
               <span className="tr-row-main">
                 <span className="tr-row-title">{d.title}</span>
                 <span className="tr-row-sub">{sub}</span>
