@@ -9,7 +9,6 @@ import {
   CoachNote,
   kgToUnit,
   loggedCount,
-  shortDate,
   shownName,
   tidyDecimal,
   unitToKg,
@@ -39,7 +38,7 @@ export default function ExercisePage({
   gymId,
   coachName,
   library,
-  showLastTime,
+
   onSetLogged,
 }: {
   exercise: SessionExercise;
@@ -48,7 +47,7 @@ export default function ExercisePage({
   gymId: number | null;
   coachName: string;
   library: LibraryOption[];
-  showLastTime: boolean;
+
   /** A working set was ticked: the dock's rest timer may want to know. */
   onSetLogged?: () => void;
 }) {
@@ -64,8 +63,6 @@ export default function ExercisePage({
   const askWeight = exercise.targetWeight != null;
   const askRpe = exercise.targetRpe != null;
   const lastFor = (n: number) => exercise.lastSets?.sets.find((s) => s.setNumber === n) ?? null;
-  const lastLabel = (s: { weight: number | null; reps: number | null } | null) =>
-    !s || (s.weight == null && s.reps == null) ? "—" : `${s.weight != null ? kgToUnit(s.weight, unit) : "–"} × ${s.reps ?? "–"}`;
 
   // ---- Working sets: what is typed in each row, and which logged rows are reopened.
   const [drafts, setDrafts] = useState<Record<number, Draft>>({});
@@ -119,15 +116,6 @@ export default function ExercisePage({
       onSetLogged?.();
     }
   };
-  const copyLast = (n: number) => {
-    const last = lastFor(n);
-    if (!last) return;
-    const d = draftOf(n);
-    setDraft(n, {
-      weight: d.weight.trim() === "" && last.weight != null ? String(kgToUnit(last.weight, unit)) : d.weight,
-      reps: d.reps.trim() === "" && last.reps != null ? String(last.reps) : d.reps,
-    });
-  };
 
   // ---- Warm-ups: the client's own rows above the working sets. Kept here
   // as they are typed, saved whole whenever a row is ticked or removed.
@@ -149,11 +137,6 @@ export default function ExercisePage({
   const tickWarm = (i: number) => {
     const rows = warm.map((r, j) => (j === i ? { ...r, saved: true } : r));
     const kept = rows.filter((r) => r.weight.trim() !== "" || r.reps.trim() !== "");
-    setWarm(kept);
-    persistWarm(kept);
-  };
-  const removeWarm = (i: number) => {
-    const kept = warm.filter((_, j) => j !== i);
     setWarm(kept);
     persistWarm(kept);
   };
@@ -180,7 +163,6 @@ export default function ExercisePage({
   // ---- Swap, video, history.
   const [swapOpen, setSwapOpen] = useState(false);
   const [videoOpen, setVideoOpen] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const targets = [
     { label: "Sets", value: String(exercise.sets) },
     exercise.reps ? { label: "Reps", value: exercise.reps } : null,
@@ -195,7 +177,7 @@ export default function ExercisePage({
   const done = loggedCount(exercise);
   // The row's columns, from what is shown: set · [last time] · [kg] · reps · [rpe] · tick.
   // Fractions, so the row always fits the phone in one line.
-  const grid = ["30px", showLastTime ? "minmax(0, 1.15fr)" : null, askWeight ? "minmax(0, 1fr)" : null, "minmax(0, 1fr)", askRpe ? "minmax(0, 0.75fr)" : null, "40px"].filter(Boolean).join(" ");
+  const grid = ["30px", askWeight ? "minmax(0, 1fr)" : null, "minmax(0, 1fr)", askRpe ? "minmax(0, 0.75fr)" : null, "40px"].filter(Boolean).join(" ");
 
   const numberInput = (props: { value: string; placeholder: string; label: string; decimal?: boolean; onChange: (v: string) => void; disabled?: boolean }) => (
     <input
@@ -286,7 +268,6 @@ export default function ExercisePage({
       <div className="wo-sets" style={{ "--wo-grid": grid } as React.CSSProperties}>
         <div className="wo-sets-head">
           <span>Set</span>
-          {showLastTime && <span className="wo-col-last">Last time</span>}
           {askWeight && (
             <span>
               <button type="button" className="ts-unit" onClick={flipUnit} aria-label={unit === "kg" ? "Weights in kg. Switch to lbs" : "Weights in lbs. Switch to kg"}>
@@ -303,11 +284,6 @@ export default function ExercisePage({
         {warm.map((w, i) => (
           <div key={`w${i}`} className={`wo-set warm${w.saved ? " logged" : ""}`}>
             <span className="wo-set-n warm">W</span>
-            {showLastTime && (
-              <button type="button" className="wo-col-last wo-last" onClick={() => removeWarm(i)} aria-label="Remove this warm-up set">
-                {w.saved ? "remove" : lastLabel(exercise.lastWarmups[i] ?? null)}
-              </button>
-            )}
             {askWeight && numberInput({ value: w.weight, placeholder: unitLabel, label: `Warm-up ${i + 1} weight`, decimal: true, onChange: (v) => setWarm(warm.map((r, j) => (j === i ? { ...r, weight: v, saved: false } : r))) })}
             {numberInput({ value: w.reps, placeholder: "reps", label: `Warm-up ${i + 1} reps`, onChange: (v) => setWarm(warm.map((r, j) => (j === i ? { ...r, reps: v, saved: false } : r))) })}
             {askRpe && <span className="wo-set-blank" />}
@@ -321,16 +297,10 @@ export default function ExercisePage({
           const log = exercise.logs.find((l) => l.setNumber === n) ?? null;
           const logged = !!log && !editing.has(n);
           const d = draftOf(n);
-          const last = lastFor(n);
           const isBusy = busy.has(n);
           return (
             <div key={n} className={`wo-set${logged ? " logged" : ""}`}>
               <span className={`wo-set-n${log ? " done" : ""}`}>{n}</span>
-              {showLastTime && (
-                <button type="button" className="wo-col-last wo-last" onClick={() => !logged && copyLast(n)} disabled={!last || logged} aria-label="Use last time's figures">
-                  {lastLabel(last)}
-                </button>
-              )}
               {logged ? (
                 <>
                   {askWeight && <span className="wo-set-val">{log!.weight == null ? "–" : show(log!.weight)}</span>}
@@ -408,34 +378,6 @@ export default function ExercisePage({
         </button>
       )}
 
-      {showLastTime && exercise.history.length > 0 && (
-        <div className="wo-history">
-          <button type="button" className="wo-history-head" onClick={() => setHistoryOpen((o) => !o)} aria-expanded={historyOpen}>
-            Previous sessions
-            <span className={`wo-history-chev${historyOpen ? " up" : ""}`} aria-hidden="true" />
-          </button>
-          {historyOpen &&
-            exercise.history.map((h) => {
-              const top = h.sets.reduce<{ w: number; r: number } | null>((best, s) => {
-                const w = s.weight ?? 0;
-                return !best || w > best.w ? { w, r: s.reps ?? 0 } : best;
-              }, null);
-              return (
-                <div key={h.date} className="wo-history-row">
-                  <div className="wo-history-meta">
-                    <span>{h.date ? shortDate(h.date) : "Earlier"}{h.gym ? ` · ${h.gym}` : ""}</span>
-                    {top && (
-                      <span>
-                        Top {kgToUnit(top.w, unit)} × {top.r}
-                      </span>
-                    )}
-                  </div>
-                  <div className="wo-history-sets">{h.sets.map((s) => `${s.weight != null ? kgToUnit(s.weight, unit) : "–"} × ${s.reps ?? "–"}`).join(" · ")}</div>
-                </div>
-              );
-            })}
-        </div>
-      )}
 
       {swapOpen && (
         <AlternativesSheet

@@ -140,7 +140,6 @@ export default function WorkoutScreen({
   // Dock: the rest timer, restarted on a ticked set when the client wants that.
   const rest = useRestTimer();
   const [autoRest, setAutoRest] = useLocalFlag("ironline:auto-rest", false);
-  const [showLast, setShowLast] = useLocalFlag("ironline:show-last-time", true);
   const current = pages[Math.min(page, pages.length - 1)];
   const currentRest = current.kind === "exercise" ? day.exercises[current.index].rest : null;
 
@@ -240,10 +239,6 @@ export default function WorkoutScreen({
           <>
             <button type="button" className="wo-menu-scrim" aria-label="Close menu" onClick={() => setMenuOpen(false)} />
             <div className="wo-menu" role="menu">
-              <button type="button" role="menuitemcheckbox" aria-checked={showLast} className="wo-menu-row" onClick={() => setShowLast(!showLast)}>
-                Show last time
-                <span className={`wo-switch${showLast ? " on" : ""}`} aria-hidden="true" />
-              </button>
               <button type="button" role="menuitemcheckbox" aria-checked={autoRest} className="wo-menu-row" onClick={() => setAutoRest(!autoRest)}>
                 Auto-start rest timer
                 <span className={`wo-switch${autoRest ? " on" : ""}`} aria-hidden="true" />
@@ -281,7 +276,6 @@ export default function WorkoutScreen({
                 gymId={gymId}
                 coachName={coachName}
                 library={library}
-                showLastTime={showLast}
                 onSetLogged={() => {
                   if (autoRest) rest.begin();
                 }}
