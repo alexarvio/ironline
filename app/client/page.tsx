@@ -324,7 +324,24 @@ function HomeTab({ CLIENT_ID, photos }: { CLIENT_ID: number; photos: HomePhotos 
   // The plan and the session. No session left this week: when the next starts.
   const plan = getClientPlanView(CLIENT_ID);
   const program = getDeployedProgram(CLIENT_ID);
-  const session = getUpNextSession(CLIENT_ID);
+  const session = (() => {
+    const s = getUpNextSession(CLIENT_ID);
+    if (!s) return null;
+    // Weeks in a row with at least one session done, counting back from this one.
+    const current = getCurrentWeekNumber(CLIENT_ID);
+    let streak = 0;
+    for (let w = current; w >= 1; w--) {
+      const days = getWeekDays(CLIENT_ID, w).filter((d) => d.assignments.length > 0);
+      if (days.length === 0) break;
+      const done = days.some(({ day, assignments }) => !!day.session_ended_at || assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets));
+      if (!done) {
+        if (w === current) continue;
+        break;
+      }
+      streak++;
+    }
+    return { ...s, streak };
+  })();
   const hasPlan = !!program || homeTracks(plan, CLIENT_ID).length > 0;
   const weekDone = (() => {
     if (session || !program) return null;

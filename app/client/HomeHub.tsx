@@ -37,6 +37,8 @@ export type HomeSession = {
   /** A rough length: sets × (rest + a set), to 5 minutes. */
   estMinutes: number;
   coverUrl?: string | null;
+  /** Weeks in a row with a session done, this one included. */
+  streak?: number;
 } | null;
 
 export type UpcomingMeeting = {
@@ -119,7 +121,7 @@ export default function HomeHub({
 }) {
   return (
     <div className="hm">
-      <HomeBanner dateLabel={dateLabel} firstName={firstName} goals={goals} />
+      <HomeBanner dateLabel={dateLabel} firstName={firstName} goals={goals} line={dayLine(session, checkIn?.items ?? [])} />
       <div className="hm-body">
         <UpNextHero session={session} hasPlan={hasPlan} weekDone={weekDone} />
         {checkIn && checkIn.items.length > 0 && <CheckInFold items={checkIn.items} nextLabel={checkIn.nextLabel} />}
@@ -134,7 +136,16 @@ export default function HomeHub({
 
 const GOALS_KEY = "ironline:home-goals-open";
 
-function HomeBanner({ dateLabel, firstName, goals }: { dateLabel: string; firstName: string; goals: GoalRowView[] }) {
+function HomeBanner({ dateLabel, firstName, goals, line }: { dateLabel: string; firstName: string; goals: GoalRowView[]; line: string }) {
+  // "Hello" on the server, the time of day once the phone says what it is.
+  const [hello, setHello] = useState("Hello");
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const h = new Date().getHours();
+      setHello(h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening");
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
   const [open, setOpen] = useState(false);
   useEffect(() => {
     const t = setTimeout(() => {
@@ -156,15 +167,16 @@ function HomeBanner({ dateLabel, firstName, goals }: { dateLabel: string; firstN
     <header className="hm-banner">
       {hasGoals ? (
         <button type="button" className="hm-greet-btn" onClick={toggle} aria-expanded={open} aria-controls="hm-goals">
-          <h1 className="hm-greeting">Hello, {firstName}.</h1>
+          <h1 className="hm-greeting">{hello}, {firstName}.</h1>
           <span className={`hm-greet-chev${open ? " open" : ""}`} aria-hidden="true">
             <ChevronDownIcon />
           </span>
         </button>
       ) : (
-        <h1 className="hm-greeting">Hello, {firstName}.</h1>
+        <h1 className="hm-greeting">{hello}, {firstName}.</h1>
       )}
       <div className="hm-eyebrow hm-date">{dateLabel}</div>
+      {line && <p className="hm-dayline">{line}</p>}
 
       {hasGoals && (
         <div id="hm-goals" className={`hm-goalpanel-fold${open ? " open" : ""}`} aria-hidden={!open}>
@@ -243,7 +255,10 @@ function UpNextHero({ session, hasPlan, weekDone }: { session: HomeSession; hasP
         </span>
       </div>
       <div className="hm-hero-bottom">
-        <div className="hm-hero-kicker">Training · Week {session.weekNow}</div>
+        <div className="hm-hero-kicker">
+          Training · Week {session.weekNow}
+          {(session.streak ?? 0) >= 2 && ` · ${session.streak} weeks in a row`}
+        </div>
         <h2 className="hm-hero-title">{session.name}</h2>
         <div className="hm-hero-meta">
           {session.exercises} exercise{session.exercises === 1 ? "" : "s"}
@@ -277,6 +292,16 @@ function CheckInFold({ items }: { items: CheckInItem[]; nextLabel: string }) {
   const openCheckIn = useOpenCheckIn();
   const openPhotos = useOpenPhotos();
   const due = items.filter((i) => i.due).length;
+  // A task just landed: a short buzz on phones that can.
+  const [seenDue, setSeenDue] = useState(due);
+  if (seenDue !== due) {
+    setSeenDue(due);
+    if (due < seenDue) {
+      try {
+        navigator.vibrate?.(40);
+      } catch {}
+    }
+  }
   const go = (item: CheckInItem) => (item.type === "photos" ? openPhotos?.() : openCheckIn?.(item.type));
   return (
     <section className="hm-tasks">
@@ -303,7 +328,7 @@ function CheckInFold({ items }: { items: CheckInItem[]; nextLabel: string }) {
             <span className="hm-task-title">{item.title}</span>
             {item.total > 0 && (
               <span className="hm-task-count">
-                {item.done} of {item.total}
+                <CountUp n={item.done} /> of {item.total}
               </span>
             )}
             <span className="hm-task-chev" aria-hidden="true" />
@@ -387,7 +412,9 @@ function LatestActivityCard({ a, coachFirstName }: { a: LatestActivity; coachFir
       case "video":
         if (a.videoReply) setWatching(true);
         return;
-      case "goal":
+          <span className={a.unread > 0 ? "hm-coach-alive" : undefined}>
+            <CoachMark />
+          </span>
         try {
           window.sessionStorage.setItem(GOALS_KEY, "1");
         } catch {}
@@ -540,3 +567,32 @@ export type HomeTrack = {
 /** The progress-pictures slot: a sheet open and missing photos, a sheet with
     every angle in ("All four · next sheet 7 Oct"), or no sheet open. */
 export type HomePhotos = { state: "due" } | { state: "done"; summary: string } | null;
+
+// ---- Small pieces ----------------------------------------------------------
+
+/** A figure that counts up from zero the first time it shows. */
+function CountUp({ n }: { n: number }) {
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    if (n <= 0) return;
+    const t0 = performance.now();
+    let raf = 0;
+    const step = (t: number) => {
+      const p = Math.min(1, (t - t0) / 600);
+      setShown(Math.round(n * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [n]);
+  return <>{n <= 0 ? 0 : shown}</>;
+}
+
+/** One line under the date that reads the day: the session, and what is to log. */
+function dayLine(session: HomeSession, items: CheckInItem[]): string {
+  const due = items.filter((i) => i.due).length;
+  const toLog = due === 0 ? "Nothing to log today." : due === 1 ? "One thing to log first." : `${due} things to log first.`;
+  if (session?.live) return `${session.name} is under way.`;
+  if (session) return `${session.name} is up. ${toLog}`;
+  return `Week done. ${due === 0 ? "Nothing to log today." : toLog.replace(" first", "")}`;
+}

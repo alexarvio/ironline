@@ -16803,3 +16803,10 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .hm-body > :nth-child(5) { animation-delay: 0.28s; }
 @keyframes hm-arrive { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .hm-body > * { animation: none; } }
+/* Alive: the hero photo breathes, the day line under the date, a pulsing coach mark when unread. */
+.hm-hero-photo { animation: hm-breathe 24s ease-in-out infinite alternate; transform-origin: 50% 40%; }
+@keyframes hm-breathe { from { transform: scale(1); } to { transform: scale(1.06); } }
+.hm-dayline { margin: 8px 0 0; font-size: 14.5px; font-weight: 500; line-height: 1.35; color: #313851; }
+.hm-coach-alive { display: inline-flex; border-radius: 999px; animation: hm-coach-pulse 2s ease-in-out infinite; }
+@keyframes hm-coach-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(47, 93, 143, 0.45); } 60% { box-shadow: 0 0 0 6px rgba(47, 93, 143, 0); } }
+@media (prefers-reduced-motion: reduce) { .hm-hero-photo, .hm-coach-alive { animation: none; } }
