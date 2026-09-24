@@ -2,13 +2,13 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { markNotificationReadAction } from "../lib/actions";
-import { AppleIcon, ChatIcon, ChevronDownIcon, DumbbellIcon } from "../components/icons";
+import { AppleIcon, CalendarIcon, CameraIcon, ChatIcon, ChevronDownIcon, DumbbellIcon, HeartIcon, TargetIcon } from "../components/icons";
 import GoalRow from "../components/GoalRow";
 import CoachMark from "./CoachMark";
 import MessageLinkChip from "./MessageLinkChip";
 import VideoReplySheet, { type VideoReplyView } from "./VideoReplySheet";
 import type { LinkView } from "../lib/messageLinks";
-import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenLink, useOpenMessages, useOpenPhotos } from "./CheckInContext";
+import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenLink, useOpenMessages, useOpenNotifications, useOpenPhotos } from "./CheckInContext";
 import { clock, elapsedMs, useTicker } from "./workoutShared";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
@@ -76,6 +76,10 @@ export type CheckInItem = {
 export type LatestActivity = {
   kind: "message" | "comment" | "video" | "deploy" | "goal" | "meeting" | "report" | "welcome";
   track?: "training" | "nutrition" | "lifestyle";
+  /** For a comment: what it was on. */
+  context?: "training" | "nutrition" | "checkin" | "photos";
+  /** Not seen yet: a dot and a bolder title. */
+  unseen: boolean;
   title: string;
   body: string | null;
   whenLabel: string;
@@ -125,7 +129,7 @@ export default function HomeHub({
       <div className="hm-body">
         <UpNextHero session={session} hasPlan={hasPlan} weekDone={weekDone} />
         {checkIn && checkIn.items.length > 0 && <CheckInFold items={checkIn.items} nextLabel={checkIn.nextLabel} />}
-        <LatestActivityCard a={latestActivity} coachFirstName={coach.firstName} />
+        <LatestActivityCard a={latestActivity} coach={coach} />
         {upcoming && <MeetingCard m={upcoming} recap={recap} coachFirstName={coach.firstName} />}
       </div>
     </div>
@@ -339,59 +343,51 @@ function CheckInFold({ items }: { items: CheckInItem[]; nextLabel: string }) {
 
 // ---- 4 · Latest from the coach --------------------------------------------
 
-function KindIcon({ kind }: { kind: LatestActivity["kind"] }) {
-  switch (kind) {
+// The badge on the coach's avatar says what they did: play for a video
+// reply, the dumbbell for training, the apple for nutrition, and so on.
+function badgeOf(a: LatestActivity): { cls: string; icon: React.ReactNode } {
+  const stroke = (d: string) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={d} />
+    </svg>
+  );
+  switch (a.kind) {
     case "video":
-      return (
-        <svg viewBox="0 0 24 24">
-          <rect x="3" y="6" width="13" height="12" rx="2" />
-          <path d="M16 10l5-3v10l-5-3z" />
-        </svg>
-      );
+      return { cls: "video", icon: <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor" /></svg> };
+    case "comment":
+      if (a.context === "nutrition") return { cls: "nutrition", icon: <AppleIcon /> };
+      if (a.context === "checkin") return { cls: "checkin", icon: stroke("M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8 11a4 4 0 0 1 8 0M12 13l2-2") };
+      if (a.context === "photos") return { cls: "photos", icon: <CameraIcon /> };
+      return { cls: "training", icon: <DumbbellIcon /> };
     case "deploy":
-      return (
-        <svg viewBox="0 0 24 24">
-          <path d="M4 7h16M4 12h16M4 17h10" />
-        </svg>
-      );
+      if (a.track === "nutrition") return { cls: "nutrition", icon: <AppleIcon /> };
+      if (a.track === "lifestyle") return { cls: "lifestyle", icon: <HeartIcon /> };
+      return { cls: "training", icon: <DumbbellIcon /> };
     case "goal":
-      return (
-        <svg viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="8" />
-          <circle cx="12" cy="12" r="3" />
-        </svg>
-      );
+      return { cls: "message", icon: <TargetIcon /> };
     case "meeting":
-      return (
-        <svg viewBox="0 0 24 24">
-          <rect x="3" y="5" width="18" height="16" rx="2" />
-          <path d="M3 10h18M8 3v4M16 3v4" />
-        </svg>
-      );
-    case "report":
-      return (
-        <svg viewBox="0 0 24 24">
-          <path d="M6 3h9l4 4v14H6z" />
-          <path d="M9 12h6M9 16h6" />
-        </svg>
-      );
+      return { cls: "message", icon: <CalendarIcon /> };
     case "welcome":
-      return (
-        <svg viewBox="0 0 24 24">
-          <path d="M12 3l2.6 5.3 5.9.9-4.2 4.1 1 5.8L12 16.4 6.7 19.1l1-5.8L3.5 9.2l5.9-.9z" />
-        </svg>
-      );
+      return { cls: "welcome", icon: stroke("M12 3l2.4 5.6L20 9.3l-4.4 4 1.2 6L12 16.4 7.2 19.3l1.2-6L4 9.3l5.6-.7z") };
     default:
-      return (
-        <svg viewBox="0 0 24 24">
-          <path d="M4 5h16v11H8l-4 4z" />
-        </svg>
-      );
+      return { cls: "message", icon: <ChatIcon /> };
   }
 }
 
-function LatestActivityCard({ a, coachFirstName }: { a: LatestActivity; coachFirstName: string }) {
+const KIND_WORDS: Record<LatestActivity["kind"], string> = {
+  video: "video reply",
+  comment: "comment",
+  message: "message",
+  deploy: "update",
+  goal: "new goal",
+  meeting: "meeting",
+  report: "report",
+  welcome: "welcome",
+};
+
+function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstName: string; photoPath: string | null } }) {
   const openMessages = useOpenMessages();
+  const openNotifications = useOpenNotifications();
   const openCoach = useOpenCoach();
   const openLink = useOpenLink();
   const goToTab = useNavigateTab();
@@ -410,16 +406,14 @@ function LatestActivityCard({ a, coachFirstName }: { a: LatestActivity; coachFir
       case "video":
         if (a.videoReply) setWatching(true);
         return;
-          <span className={a.unread > 0 ? "hm-coach-alive" : undefined}>
-            <CoachMark />
-          </span>
+      case "goal":
         try {
           window.sessionStorage.setItem(GOALS_KEY, "1");
         } catch {}
         goToTab?.("home");
         return;
       case "meeting":
-        document.querySelector(".hm-meeting")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        document.querySelector(".hm-mt")?.scrollIntoView({ behavior: "smooth", block: "start" });
         return;
       case "welcome":
         openCoach?.();
@@ -428,51 +422,55 @@ function LatestActivityCard({ a, coachFirstName }: { a: LatestActivity; coachFir
         goToTab?.(a.actionTab ?? "training", a.actionRef ?? undefined);
     }
   };
-  // The icon says where it happened: training, nutrition, a video, or the chat.
-  const area =
-    a.kind === "video"
-      ? "video"
-      : a.track ?? (a.link?.area === "Training" ? "training" : a.link?.area === "Nutrition" ? "nutrition" : a.actionTab === "training" ? "training" : a.actionTab === "nutrition" ? "nutrition" : "chat");
+  const kindWord = a.kind === "deploy" ? (a.track === "nutrition" ? "new nutrition phase" : a.track === "lifestyle" ? "lifestyle update" : "new training") : KIND_WORDS[a.kind];
+  const badge = badgeOf(a);
+  const initial = (coach.firstName || "C").trim().charAt(0).toUpperCase();
   return (
-    <section className="hm-latest">
-      <div className="hm-latest-head">
-        <span className="hm-eyebrow coach-eyebrow">
-          <CoachMark />
-          Latest from {coachFirstName}
-        </span>
-        <span className="hm-latest-when">{a.whenLabel}</span>
-      </div>
-      <div className="hm-card hm-latest-card">
-        <button type="button" className="hm-latest-body" onClick={() => openMessages?.()}>
-          <span className={`hm-latest-icon ${area}`} aria-hidden="true">
-            {area === "training" ? <DumbbellIcon /> : area === "nutrition" ? <AppleIcon /> : area === "video" ? <KindIcon kind="video" /> : <ChatIcon />}
-          </span>
-          <span className="hm-latest-main">
-            <span className="hm-latest-title">{a.title}</span>
-            {a.body && <span className="hm-latest-text">{a.body}</span>}
-          </span>
-        </button>
-        {a.link && a.kind === "message" && (
-          <div className="hm-latest-chip">
-            <MessageLinkChip view={a.link} />
+    <article className="hm-lt" aria-label={`Latest from ${coach.firstName}: ${a.title}`}>
+      <div className="hm-lt-inner">
+        {/* Keyed on the title so a new item cross-fades in and its badge pops. */}
+        <div key={a.title} className={`hm-lt-body${a.unseen ? " unseen" : ""}`}>
+          <button type="button" className="hm-lt-avatar" onClick={() => openCoach?.()} aria-label={`Open ${coach.firstName}'s profile`}>
+            {coach.photoPath ? (
+              // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
+              <img src={coach.photoPath} alt="" />
+            ) : (
+              <span className="hm-lt-initial">{initial}</span>
+            )}
+            <span className={`hm-lt-badge ${badge.cls}`} aria-hidden="true">
+              {badge.icon}
+            </span>
+          </button>
+          <div className="hm-lt-text">
+            <div className="hm-lt-meta">
+              <span>
+                {a.unseen && <span className="hm-lt-dot" aria-hidden="true" />}
+                {coach.firstName} · {kindWord}
+              </span>
+              <span>{a.whenLabel}</span>
+            </div>
+            <h3 className="hm-lt-title">{a.title}</h3>
+            {a.body && <p className="hm-lt-desc">{a.body}</p>}
+            {a.link && a.kind === "message" && (
+              <div className="hm-lt-chip">
+                <MessageLinkChip view={a.link} />
+              </div>
+            )}
           </div>
-        )}
-        <div className="hm-latest-foot">
-          {a.unread > 0 ? (
-            <button type="button" className="hm-latest-more" onClick={() => openMessages?.()}>
-              {a.unread} unread message{a.unread === 1 ? "" : "s"}
+        </div>
+        <div className="hm-lt-foot">
+          {a.moreThisWeek > 0 && (
+            <button type="button" className="hm-lt-more" onClick={() => openNotifications?.()}>
+              + {a.moreThisWeek} more
             </button>
-          ) : (
-            <span />
           )}
-          <button type="button" className="hm-latest-cta" onClick={follow}>
-            {a.cta}
-            <span className="hm-latest-cta-chev" aria-hidden="true" />
+          <button type="button" className="hm-lt-cta" onClick={follow}>
+            {a.cta} →
           </button>
         </div>
       </div>
       {watching && a.videoReply && <VideoReplySheet reply={a.videoReply} onClose={() => setWatching(false)} />}
-    </section>
+    </article>
   );
 }
 

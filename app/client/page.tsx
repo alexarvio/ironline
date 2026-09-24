@@ -407,13 +407,16 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
   if (latestMsg && msgAt >= noteAt) {
     const iso = `${latestMsg.dateIso}T${latestMsg.timeLabel}:00`;
     if (latestMsg.link && !latestMsg.link.gone) {
-      return { kind: "comment", title: `Commented on ${latestMsg.link.label}`, body: latestMsg.text || null, whenLabel: relativeLabel(iso), cta: "Open", link: latestMsg.link, unread, moreThisWeek };
+      const k = latestMsg.link.link.kind;
+      const context = k === "food" || k === "nutrition" ? "nutrition" : k === "checkin" ? "checkin" : k === "photos" ? "photos" : "training";
+      const cta = context === "nutrition" ? "Open meal" : context === "checkin" ? "Open check-in" : context === "photos" ? "Open photos" : "Open session";
+      return { kind: "comment", context, title: `Commented on ${latestMsg.link.label}`, body: latestMsg.text || null, whenLabel: relativeLabel(iso), cta, link: latestMsg.link, unread, unseen: unread > 0, moreThisWeek };
     }
-    return { kind: "message", title: "Message", body: latestMsg.text || (latestMsg.media ? "Sent you a file" : null), whenLabel: relativeLabel(iso), cta: "Reply", link: latestMsg.link, unread, moreThisWeek };
+    return { kind: "message", title: "Message", body: latestMsg.text || (latestMsg.media ? "Sent you a file" : null), whenLabel: relativeLabel(iso), cta: "Reply", link: latestMsg.link, unread, unseen: unread > 0, moreThisWeek };
   }
   if (latestNote) {
     const when = relativeLabel(latestNote.created_at);
-    const base = { whenLabel: when, notificationId: latestNote.id, actionTab: latestNote.action_tab, actionRef: latestNote.action_ref, unread, moreThisWeek };
+    const base = { whenLabel: when, notificationId: latestNote.id, actionTab: latestNote.action_tab, actionRef: latestNote.action_ref, unread, unseen: !latestNote.read, moreThisWeek };
     if (latestNote.action_tab === "video") {
       const reply = listVideoReplies(clientId).find((r) => r.id === latestNote.action_ref) ?? null;
       return { kind: "video", title: reply ? `Replied to your ${reply.exerciseName} video` : "Replied to your video", body: reply?.replyNote ?? latestNote.message, cta: "Watch", videoReply: reply, ...base };
@@ -431,6 +434,7 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
     whenLabel: "",
     cta: `Meet ${coachFirst}`,
     unread: 0,
+    unseen: false,
     moreThisWeek: 0,
   };
 }
