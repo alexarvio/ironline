@@ -8,7 +8,6 @@ import type { GymOption } from "./GymPicker";
 import {
   CoachNote,
   clock,
-  durationMinutes,
   elapsedMs,
   estimateMinutes,
   isDone,
@@ -62,7 +61,6 @@ export default function SessionOverview({
   const gymName = day.gyms.find((g) => g.id === day.gymId)?.name ?? null;
   const planned = plannedSets(day);
   const logged = loggedSets(day);
-  const minutes = durationMinutes(day);
   const [gymOpen, setGymOpen] = useState(false);
   // The ⋯ menu and the "couldn't do this session" sheet it opens.
   const [menuOpen, setMenuOpen] = useState(false);
@@ -163,7 +161,7 @@ export default function SessionOverview({
                 <small>Gym</small>
               </div>
               <div className="so-stat">
-                <b>{minutes != null ? `${minutes}m` : "—"}</b>
+                <b>{day.startedAt && day.endedAt ? clock(elapsedMs(day.startedAt, day.endedAt, null)) : "—"}</b>
                 <small>Time</small>
               </div>
             </>
