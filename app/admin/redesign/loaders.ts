@@ -97,6 +97,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
 
   // The coach's library, for the add-exercise row; cardio has its own form.
   const byGroup = listExercisesByGroup(coachId);
+  const libName = new Map(Object.values(byGroup).flat().map((e) => [e.id, e.name] as const));
   const library: Library = MUSCLE_GROUPS.filter((g) => g.slug !== "cardio" && (byGroup[g.slug]?.length ?? 0) > 0).map((g) => ({
     slug: g.slug,
     label: g.label,
@@ -181,6 +182,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
         video: v ? { requestId: v.id, state: (v.replied_at ? "replied" : v.file_path ? "in" : "asked") as "asked" | "in" | "replied", note: v.note, reply: v.reply_note ?? null } : null,
         demo: a.exercise_video_url ? { url: a.exercise_video_url, source: "library" as const } : a.demo_url ? { url: a.demo_url, source: "row" as const } : null,
         history,
+        swap: a.swap ? (a.swap.library_exercise_id != null ? libName.get(a.swap.library_exercise_id) ?? null : null) ?? a.swap.custom_name ?? null : null,
         d7: pct(lastWeek),
         d30: pct(monthBack),
       };
@@ -189,7 +191,8 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     const setsPlanned = rows.reduce((t, r) => t + r.sets, 0);
     const setsLogged = rows.reduce((t, r) => t + r.logged.length, 0);
     const gym = rows.flatMap((r) => r.logged).find((l) => l.gym)?.gym ?? null;
-    return { id: d.id, number: si + 1, name: d.label || `Session ${si + 1}`, rows, cardio, setsPlanned, setsLogged, gym, skip: d.skip_reason ?? null };
+    const duration = d.session_started_at && d.session_ended_at ? Math.max(0, Math.round((Date.parse(d.session_ended_at) - Date.parse(d.session_started_at)) / 60000)) : null;
+    return { id: d.id, number: si + 1, name: d.label || `Session ${si + 1}`, rows, cardio, setsPlanned, setsLogged, gym, skip: d.skip_reason ?? null, duration, ended: d.session_ended_at ?? null, note: d.session_note ?? null };
   });
 
   const phase = getData().client_phases.find((p) => p.program_id === program.id) ?? null;

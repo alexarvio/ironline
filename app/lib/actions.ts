@@ -223,6 +223,9 @@ import {
   setSessionSkipReason,
   startSession,
   endSession,
+  discardSession,
+  setExerciseSwap,
+  listExercises,
   setHomeGym,
   markClientEventsSeen,
   setCoachNote,
@@ -2633,18 +2636,54 @@ function stampOrNow(at: unknown) {
   return Number.isFinite(t) ? new Date(t).toISOString() : new Date().toISOString();
 }
 
-export async function startSessionAction(programDayId: number, at?: string) {
+/** The client began the session. One live session per client: another one
+    still going is named instead, so the app can say "Finish X first". */
+export async function startSessionAction(programDayId: number, at?: string): Promise<{ ok: boolean; other?: string }> {
+  const owner = clientIdForProgramDay(Number(programDayId));
+  if (owner == null || !(await canAccessClient(owner))) return { ok: false };
+  const r = startSession(Number(programDayId), stampOrNow(at));
+  if (r.ok) {
+    revalidatePath("/client");
+    revalidatePath("/admin");
+    return { ok: true };
+  }
+  return { ok: false, other: r.other };
+}
+
+export async function endSessionAction(programDayId: number, opts?: { note?: string; at?: string }) {
   const owner = clientIdForProgramDay(Number(programDayId));
   if (owner == null || !(await canAccessClient(owner))) return;
-  startSession(Number(programDayId), stampOrNow(at));
+  endSession(Number(programDayId), stampOrNow(opts?.at), String(opts?.note ?? ""));
   revalidatePath("/client");
   revalidatePath("/admin");
 }
 
-export async function endSessionAction(programDayId: number, at?: string) {
+/** The client threw the session away: its sets, warm-ups and swaps with it. */
+export async function discardSessionAction(programDayId: number) {
   const owner = clientIdForProgramDay(Number(programDayId));
   if (owner == null || !(await canAccessClient(owner))) return;
-  endSession(Number(programDayId), stampOrNow(at));
+  discardSession(Number(programDayId));
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+/** The client did another exercise instead: one from the library, or a name they typed. */
+export async function swapExerciseAction(assignmentId: number, payload: { libraryExerciseId?: number | null; customName?: string | null }) {
+  const owner = getClientIdForAssignment(Number(assignmentId));
+  if (owner == null || !(await canAccessClient(owner))) return;
+  const lib = payload.libraryExerciseId != null ? Number(payload.libraryExerciseId) : null;
+  // A library exercise must be the coach's own.
+  const coachId = getClient(owner)?.coach_id ?? null;
+  const libOk = lib != null && coachId != null && listExercises(coachId).some((e) => e.id === lib);
+  setExerciseSwap(Number(assignmentId), { library_exercise_id: libOk ? lib : null, custom_name: libOk ? null : String(payload.customName ?? "") });
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+export async function clearSwapAction(assignmentId: number) {
+  const owner = getClientIdForAssignment(Number(assignmentId));
+  if (owner == null || !(await canAccessClient(owner))) return;
+  setExerciseSwap(Number(assignmentId), null);
   revalidatePath("/client");
   revalidatePath("/admin");
 }

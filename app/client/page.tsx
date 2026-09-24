@@ -24,6 +24,10 @@ import {
   targetAtGym,
   getLogsForAssignment,
   getLastWarmupSets,
+  getLastSets,
+  getExerciseHistory,
+  liveSessionFor,
+  listExercises,
   videoRequestsFor,
   listVideoReplies,
   listLiveProgramVideoReplies,
@@ -67,7 +71,7 @@ import {
   VITAMIN_ITEMS,
 } from "../lib/queries";
 import TrainingDayList from "./TrainingDayList";
-import ExerciseCoachNote from "./ExerciseCoachNote";
+
 import { ProgressPicturesRow, type ProgressPicturesProps } from "./ProgressPicturesScreen";
 import HomeHub, { HomePhotos, HomeTrack, UpcomingMeeting } from "./HomeHub";
 import NutritionTargetsCard, { type NutritionTargetSet } from "./NutritionTargetsCard";
@@ -375,7 +379,7 @@ function coachMessagesFor(clientId: number) {
     });
 }
 
-function TrainingTab({ CLIENT_ID, week, showMyNotes }: { CLIENT_ID: number; week: number; showMyNotes: boolean }) {
+function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID: number; week: number; currentWeek: number; showMyNotes: boolean }) {
   const days = getWeekDays(CLIENT_ID, week);
   // The client's note about the whole programme sits between the week's
   // figures and its sessions, outside any day.
@@ -383,31 +387,44 @@ function TrainingTab({ CLIENT_ID, week, showMyNotes }: { CLIENT_ID: number; week
   const trainingDays = days.filter((d) => d.assignments.length > 0 || listCardioForDay(d.day.id).length > 0);
   const stats = weekStats(CLIENT_ID, week);
   const dayTarget = stats.totalDays || 7;
-  // Sessions finished this week: every set logged and any cardio ticked.
+  // Sessions finished this week: ended on the app, or every set logged and
+  // any cardio ticked.
   const sessionsDone = trainingDays.filter(
     ({ day, assignments }) =>
-      assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets) && listCardioForDay(day.id).every((c) => isCardioDone(c.id))
+      !!day.session_ended_at || (assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets) && listCardioForDay(day.id).every((c) => isCardioDone(c.id)))
   ).length;
-  const pct = Math.round((Math.min(stats.daysTrained, dayTarget) / dayTarget) * 100);
+  const pct = Math.round((Math.min(sessionsDone, dayTarget) / dayTarget) * 100);
   // A session skipped with a reason is settled: it is not still "left" to
   // do. It does not count as trained either, so the ring stays honest.
   const skipped = trainingDays.filter(({ day, assignments }) => !!day.skip_reason && !assignments.some((a) => getLogsForAssignment(a.id).length > 0)).length;
-  const sessionsLeft = dayTarget - stats.daysTrained - skipped;
+  const sessionsLeft = dayTarget - sessionsDone - skipped;
   const ringR = 43;
   const ringC = 2 * Math.PI * ringR;
+  const isCurrent = week === currentWeek;
+  const isPast = week < currentWeek;
+  // The week's dates, from the programme's start.
+  const range = (() => {
+    if (!program?.deployed_at) return null;
+    const start = new Date(`${weekStart(program.deployed_at.slice(0, 10))}T00:00:00`);
+    start.setDate(start.getDate() + (week - program.start_week) * 7);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    const f = (d: Date, month: boolean) => d.toLocaleDateString("en-GB", month ? { day: "numeric", month: "short" } : { day: "numeric" });
+    return start.getMonth() === end.getMonth() ? `${f(start, false)} – ${f(end, true)}` : `${f(start, true)} – ${f(end, true)}`;
+  })();
 
   return (
     <div className="tr-body">
-      {/* Days trained, overlapping the banner, with the programme note as its footer row. */}
+      {/* The week's sessions done, overlapping the banner, with the programme note as its footer row. */}
       {(trainingDays.length > 0 || program) && (
         <section className="tr-days">
           {trainingDays.length > 0 && (
             <div className="tr-days-top">
               <div>
-                <div className="tr-label">Days trained</div>
+                <div className="tr-label">{isCurrent ? "This week" : `Week ${week - (program?.start_week ?? 1) + 1}`}</div>
                 <div className="tr-days-figure">
-                  <span className="tr-days-num">{stats.daysTrained}</span>
-                  <span className="tr-days-of">of {dayTarget}</span>
+                  <span className="tr-days-num">{sessionsDone}</span>
+                  <span className="tr-days-of">of {dayTarget} sessions</span>
                 </div>
                 <div className={`tr-days-status${sessionsLeft <= 0 ? " done" : ""}`}>
                   {sessionsLeft <= 0 ? "Week complete" : `${sessionsLeft} session${sessionsLeft === 1 ? "" : "s"} left`}
@@ -465,9 +482,6 @@ function TrainingTab({ CLIENT_ID, week, showMyNotes }: { CLIENT_ID: number; week
         </p>
       ) : (
         (() => {
-          // Every session starts folded. The only thing that opens one is
-          // Home's "Start", which hands TrainingDayList the day to land on.
-          const firstOpenIndex = -1;
           // "My notes" are private to the client: a coach previewing the app
           // gets empty ones.
           const myNotes = showMyNotes ? getClientExerciseNotes(CLIENT_ID) : new Map<number, string>();
@@ -479,26 +493,34 @@ function TrainingTab({ CLIENT_ID, week, showMyNotes }: { CLIENT_ID: number; week
           const notesByGym = new Map(
             allGyms.map((g) => [g.id, showMyNotes ? getClientExerciseNotes(CLIENT_ID, g.id) : new Map<number, string>()] as const)
           );
+          const coachId = getClient(CLIENT_ID)?.coach_id ?? null;
+          const library = coachId != null ? listExercises(coachId).map((e) => ({ id: e.id, name: e.name })) : [];
+          const libraryName = new Map(library.map((e) => [e.id, e.name]));
+          const videoReplies = listVideoReplies(CLIENT_ID);
           return (
             <>
             <div className="tr-sessions-head">
               <h2 className="tr-sessions-title">Sessions</h2>
-              <span className="tr-sessions-count">
-                {sessionsDone} of {trainingDays.length} done
-              </span>
+              {range && <span className="tr-sessions-count">{range}</span>}
             </div>
             <div className="tr-sessions">
             <TrainingDayList
+              currentWeek={isCurrent}
+              pastWeek={isPast}
+              coachName={getCoachFirstName(CLIENT_ID)}
+              library={library}
+              liveSession={liveSessionFor(CLIENT_ID)}
               days={trainingDays.map(({ day, assignments }, i) => {
                 const gymId = dayGymId(day.id);
                 // Videos the coach asked for in this session.
                 const videoAsks = videoRequestsFor(assignments.map((a) => a.id));
-                const videoReplies = listVideoReplies(CLIENT_ID);
                 // A removed gym still shows on a session that was trained there.
                 const dayGym = allGyms.find((g) => g.id === gymId);
                 const dayGyms = dayGym?.archived ? [...gyms, dayGym] : gyms;
                 return {
                 key: day.id,
+                index: i + 1,
+                week: week - (program?.start_week ?? 1) + 1,
                 gyms: dayGyms.map((g) => ({ id: g.id, name: g.name })),
                 gymId,
                 // The coach's own name for the session. Without one it is
@@ -506,14 +528,17 @@ function TrainingTab({ CLIENT_ID, week, showMyNotes }: { CLIENT_ID: number; week
                 // shown here, so a session skipped to another day still
                 // reads correctly.
                 title: day.label || `Session ${i + 1}`,
-                defaultOpen: i === firstOpenIndex,
                 skipReason: day.skip_reason ?? "",
                 startedAt: day.session_started_at ?? null,
                 endedAt: day.session_ended_at ?? null,
+                sessionNote: day.session_note ?? "",
                 cardio: listCardioForDay(day.id).map((c) => ({ id: c.id, name: c.name, time: c.time, pace: c.pace, incline: c.incline, distance: c.distance ?? "", notes: c.notes, done: isCardioDone(c.id) })),
                 exercises: assignments.map((a) => ({
                   id: a.id,
                   name: a.exercise_name ?? "Exercise",
+                  swap: a.swap
+                    ? { libraryExerciseId: a.swap.library_exercise_id, name: (a.swap.library_exercise_id != null ? libraryName.get(a.swap.library_exercise_id) : null) ?? a.swap.custom_name ?? "Another exercise" }
+                    : null,
                   sets: a.sets,
                   reps: a.reps,
                   targetWeight: a.target_weight_kg,
@@ -541,14 +566,9 @@ function TrainingTab({ CLIENT_ID, week, showMyNotes }: { CLIENT_ID: number; week
                     reps: l.reps,
                     rpe: l.rpe_actual,
                   })),
-                  note: (
-                    <ExerciseCoachNote
-                      assignmentId={a.id}
-                      dateLabel={noteDateLabel(a.note_at)}
-                      text={a.notes}
-                      unread={!!a.notes && !a.note_read}
-                    />
-                  ),
+                  note: { text: a.notes, dateLabel: noteDateLabel(a.note_at), unread: !!a.notes && !a.note_read },
+                  lastSets: getLastSets(a.id, gymId),
+                  history: getExerciseHistory(a.id, 3),
                 })),
                 };
               })}
@@ -1184,7 +1204,7 @@ export default async function ClientPage({
   const trainingWeekLabels = deployedProgram
     ? Object.fromEntries(trainingWeeks.map((w) => [w, programWeekLabel(deployedProgram, w)]))
     : undefined;
-  const trainingWeekContents = Object.fromEntries(trainingWeeks.map((w) => [w, <TrainingTab key={w} CLIENT_ID={CLIENT_ID} week={w} showMyNotes={viewerIsClient} />]));
+  const trainingWeekContents = Object.fromEntries(trainingWeeks.map((w) => [w, <TrainingTab key={w} CLIENT_ID={CLIENT_ID} week={w} currentWeek={currentWeekNum} showMyNotes={viewerIsClient} />]));
   // A week is complete when every planned set on every training day is
   // logged — the same rule TrainingTab's progress ring uses for 100%.
   const completedWeeks = trainingWeeks.filter((w) => {

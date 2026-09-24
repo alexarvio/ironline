@@ -53,7 +53,7 @@ export default function VideoAskButton({ ask, exerciseName }: { ask: VideoAsk; e
   );
 }
 
-function VideoAskSheet({ ask, exerciseName, onClose }: { ask: VideoAsk; exerciseName: string; onClose: () => void }) {
+export function VideoAskSheet({ ask, exerciseName, onClose }: { ask: VideoAsk; exerciseName: string; onClose: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);

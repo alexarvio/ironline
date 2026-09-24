@@ -52,6 +52,7 @@ export type ProgramDay = {
   skip_reason_at?: string;
   session_started_at?: string;
   session_ended_at?: string;
+  session_note?: string;
 };
 export type WorkoutAssignment = {
   id: number;
@@ -74,6 +75,7 @@ export type WorkoutAssignment = {
   target_set_at?: string | null;
   gym_targets?: Record<string, { kg: number | null; set_at?: string | null }>;
   warmup_sets?: { weight_kg: number | null; reps: number | null }[];
+  swap?: { library_exercise_id: number | null; custom_name: string | null; at: string };
   exercise_name?: string;
   exercise_video_url?: string | null;
 };
@@ -7236,25 +7238,127 @@ export function setWarmupSets(assignmentId: number, sets: { weight_kg: number | 
   persist();
 }
 
-/** The client opened the session to train: its clock starts. Kept from the
-    first opening, so coming back later carries on the same session. */
-export function startSession(programDayId: number, at: string) {
+// ---- The client's session on the app: begun, ended, discarded ----------
+
+/** The session this client is in the middle of, if any: begun and not ended. */
+export function liveSessionFor(clientId: number): { id: number; label: string; startedAt: string } | null {
+  const data = getData();
+  const day = data.program_days.find((pd) => pd.client_id === clientId && pd.session_started_at && !pd.session_ended_at);
+  if (!day) return null;
+  const week = data.program_days.filter((pd) => pd.client_id === clientId && pd.week_number === day.week_number).sort((a, b) => a.day_of_week - b.day_of_week);
+  const idx = week.findIndex((pd) => pd.id === day.id);
+  return { id: day.id, label: day.label || `Session ${idx + 1}`, startedAt: day.session_started_at! };
+}
+
+/** The client began the session: its clock starts. One live session per
+    client, so another one still going is returned instead of starting. */
+export function startSession(programDayId: number, at: string): { ok: true } | { ok: false; other: string } {
   const data = getData();
   const day = data.program_days.find((pd) => pd.id === programDayId);
-  if (!day || day.session_started_at) return;
+  if (!day) return { ok: false, other: "" };
+  if (day.session_started_at && !day.session_ended_at) return { ok: true };
+  const live = liveSessionFor(day.client_id);
+  if (live && live.id !== day.id) return { ok: false, other: live.label };
   day.session_started_at = at;
   delete day.session_ended_at;
   persist();
+  return { ok: true };
 }
 
-/** The client pressed "End session". */
-export function endSession(programDayId: number, at: string) {
+/** The client ended the session, with a word to the coach or not. */
+export function endSession(programDayId: number, at: string, note: string) {
   const data = getData();
   const day = data.program_days.find((pd) => pd.id === programDayId);
   if (!day) return;
   if (!day.session_started_at) day.session_started_at = at;
   day.session_ended_at = at;
+  const text = note.trim().slice(0, 1000);
+  if (text) day.session_note = text;
+  else delete day.session_note;
   persist();
+}
+
+/** The client threw the session away: its sets, warm-ups and swaps go, and
+    it reads as never begun. */
+export function discardSession(programDayId: number) {
+  const data = getData();
+  const day = data.program_days.find((pd) => pd.id === programDayId);
+  if (!day) return;
+  const ids = new Set(data.workout_assignments.filter((wa) => wa.program_day_id === day.id).map((wa) => wa.id));
+  data.set_logs = data.set_logs.filter((sl) => !ids.has(sl.workout_assignment_id));
+  for (const wa of data.workout_assignments) {
+    if (!ids.has(wa.id)) continue;
+    delete wa.warmup_sets;
+    delete wa.swap;
+  }
+  const cardioIds = new Set(listCardioForDay(day.id).map((c) => c.id));
+  data.cardio_logs = (data.cardio_logs ?? []).filter((c) => !cardioIds.has(c.cardio_entry_id));
+  delete day.session_started_at;
+  delete day.session_ended_at;
+  delete day.session_note;
+  persist();
+}
+
+/** The client did another exercise instead of the prescribed one. Null clears it. */
+export function setExerciseSwap(assignmentId: number, swap: { library_exercise_id: number | null; custom_name: string | null } | null) {
+  const wa = getData().workout_assignments.find((x) => x.id === assignmentId);
+  if (!wa) return;
+  const name = swap?.custom_name?.trim().slice(0, 80) || null;
+  const lib = swap?.library_exercise_id ?? null;
+  if (swap && (lib != null || name)) wa.swap = { library_exercise_id: lib, custom_name: lib != null ? null : name, at: new Date().toISOString() };
+  else delete wa.swap;
+  persist();
+}
+
+export type LastSet = { setNumber: number; weight: number | null; reps: number | null; rpe: number | null };
+export type ExerciseHistoryEntry = { date: string; gym: string | null; sets: LastSet[] };
+
+/** Where an exercise's sets were logged, for "last time" and the history:
+    the exercise's earlier assignments for this client, with their logs,
+    most recent day first. A swapped assignment looks up the swap's library
+    exercise; a typed swap has no history. */
+function exerciseHistoryFor(assignmentId: number): { day: ProgramDay; logs: SetLog[] }[] {
+  const data = getData();
+  const wa = data.workout_assignments.find((x) => x.id === assignmentId);
+  const day = wa && data.program_days.find((pd) => pd.id === wa.program_day_id);
+  if (!wa || !day) return [];
+  const exerciseId = wa.swap ? wa.swap.library_exercise_id : wa.exercise_id;
+  if (exerciseId == null) return [];
+  const days = new Map(data.program_days.filter((pd) => pd.client_id === day.client_id).map((pd) => [pd.id, pd]));
+  const at = (pd: { week_number: number; day_of_week: number }) => pd.week_number * 100 + pd.day_of_week;
+  const out: { day: ProgramDay; logs: SetLog[] }[] = [];
+  for (const other of data.workout_assignments) {
+    if (other.id === wa.id) continue;
+    const otherExercise = other.swap ? other.swap.library_exercise_id : other.exercise_id;
+    if (otherExercise !== exerciseId) continue;
+    const pd = days.get(other.program_day_id);
+    if (!pd || at(pd) >= at(day)) continue;
+    const logs = data.set_logs.filter((sl) => sl.workout_assignment_id === other.id).sort((a, b) => a.set_number - b.set_number);
+    if (!logs.length) continue;
+    out.push({ day: pd, logs });
+  }
+  return out.sort((a, b) => at(b.day) - at(a.day));
+}
+
+const setView = (l: SetLog): LastSet => ({ setNumber: l.set_number, weight: l.weight_kg, reps: l.reps, rpe: l.rpe_actual });
+const dayDate = (pd: ProgramDay, logs: SetLog[]) => (pd.session_ended_at ?? logs[0]?.logged_at ?? "").slice(0, 10);
+
+/** The sets from the last time the client did this exercise: the same gym
+    when there is a session there, else the most recent anywhere. */
+export function getLastSets(assignmentId: number, gymId: number | null): { date: string; sets: LastSet[] } | null {
+  const history = exerciseHistoryFor(assignmentId);
+  if (!history.length) return null;
+  const pick = (gymId != null && history.find((h) => (h.logs[0]?.gym_id ?? null) === gymId)) || history[0];
+  return { date: dayDate(pick.day, pick.logs), sets: pick.logs.map(setView) };
+}
+
+/** The last few sessions of this exercise, most recent first. */
+export function getExerciseHistory(assignmentId: number, limit = 3): ExerciseHistoryEntry[] {
+  const data = getData();
+  const gyms = new Map(data.client_gyms.map((g) => [g.id, g.name] as const));
+  return exerciseHistoryFor(assignmentId)
+    .slice(0, limit)
+    .map((h) => ({ date: dayDate(h.day, h.logs), gym: h.logs[0]?.gym_id != null ? gyms.get(h.logs[0].gym_id!) ?? null : null, sets: h.logs.map(setView) }));
 }
 
 /** The client's reason for not doing a session; empty text clears it. */

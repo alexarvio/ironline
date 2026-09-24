@@ -49,11 +49,13 @@ export type DraftRow = {
   /** The demo the client sees on this exercise: the library's, else one set on this row long ago. */
   demo: { url: string; source: "library" | "row" } | null;
   history: { week: number; label: string; target: number | null; setsPlanned: number; sets: { n: number; kg: number | null; reps: number | null; rpe: number | null }[]; best: number | null; gym: string | null; current: boolean }[];
+  /** What the client did instead, when they swapped the exercise. */
+  swap: string | null;
   d7: number | null;
   d30: number | null;
 };
 export type DraftCardio = { id: number; name: string; time: string; pace: string; incline: string; distance: string; notes: string; done: boolean };
-export type DraftSession = { id: number; number: number; name: string; setsPlanned: number; setsLogged: number; gym: string | null; skip: string | null; rows: DraftRow[]; cardio: DraftCardio[] };
+export type DraftSession = { id: number; number: number; name: string; setsPlanned: number; setsLogged: number; gym: string | null; skip: string | null; duration: number | null; ended: string | null; note: string | null; rows: DraftRow[]; cardio: DraftCardio[] };
 export type DraftProgram = {
   id: number;
   programs: { id: number; name: string; weeks: number; state: "live" | "past" | "scheduled" | "draft" }[];
@@ -274,7 +276,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
         });
         const addedRows: DraftRow[] = p.added
           .filter((a): a is Added & AddedExercise => a.kind === "exercise")
-          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: a.sets, reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: null, tempo: null, rest: null, note: null, logged: [], video: null, demo: null, history: [], d7: null, d30: null }));
+          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: a.sets, reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: null, tempo: null, rest: null, note: null, logged: [], video: null, demo: null, history: [], swap: null, d7: null, d30: null }));
         const addedCardio: DraftCardio[] = p.added
           .filter((a): a is Added & AddedCardio => a.kind === "cardio")
           .map((a, i) => ({ id: -(Date.now() + 500 + i), name: a.name, time: a.time, pace: a.pace, incline: a.incline, distance: a.distance, notes: a.note, done: false }));
@@ -614,6 +616,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                   {rows.length} {rows.length === 1 ? "exercise" : "exercises"}
                   {s.cardio.length ? ` · ${s.cardio.length} cardio` : ""}
                   {s.gym ? ` · ${s.gym}` : ""}
+                  {s.duration != null ? ` · ${s.duration} min` : ""}
                 </span>
                 {status && <span className={`rd-pill ${status.cls}`}>{status.text}</span>}
                 <DropdownMenu modal={false}>
@@ -640,6 +643,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
               {isOpen && (
                 <div className="rd-rows">
                   {s.skip && <p className="rd-skip">{firstName} couldn&rsquo;t train: &ldquo;{s.skip}&rdquo;</p>}
+                  {s.note && <p className="rd-session-note">{firstName} wrote: &ldquo;{s.note}&rdquo;</p>}
                   <div className="rd-cols" aria-hidden="true" style={colStyle}>
                     <span />
                     <span>Exercise</span>
@@ -682,6 +686,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                               <button type="button" className="rd-ex-btn" onClick={() => setDlg({ kind: "editExercise", sessionId: s.id, rowId: r.id })} title="Edit this exercise">
                                 {shownName}
                               </button>
+                              {r.swap && <span className="rd-swap" title="What they did instead">→ {r.swap}</span>}
                               {video && <i className={`rd-vid ${video.state}`} title={video.state === "asked" ? "Video asked for" : video.state === "in" ? "Their video is in" : "Video replied"} />}
                             </span>
                           </span>

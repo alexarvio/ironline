@@ -63,6 +63,8 @@ type ProgramDay = {
   // session's duration for the row and the coach.
   session_started_at?: string;
   session_ended_at?: string;
+  // What the client wrote to the coach on ending the session.
+  session_note?: string;
 };
 // A multi-week training program — the coach picks a name and a length
 // (total_weeks) up front; program_days for weeks [start_week, start_week +
@@ -445,6 +447,11 @@ type WorkoutAssignment = {
   // fill in, and kept off set_logs so progression, goals and the set counts
   // never see them. Not carried along when a day or week is copied.
   warmup_sets?: { weight_kg: number | null; reps: number | null }[];
+  // The client did something else instead (machine taken): a library
+  // exercise or a name they typed. Sets logged after the swap belong to it;
+  // the prescription stays, so the coach sees what was asked against what
+  // was done. Absent when nothing was swapped.
+  swap?: { library_exercise_id: number | null; custom_name: string | null; at: string };
 };
 type SetLog = {
   id: number;
