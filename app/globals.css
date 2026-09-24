@@ -16514,3 +16514,5 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .ts-coachnote-text, .wo-page .ts-coachnote-text { padding-left: 0; font-size: 14px; }
 .wo-page .ts-coachnote { margin-top: 2px; padding: 0 4px; }
 .wo-page .ts-cardio .ts-coachnote { padding: 0; }
+/* The strip's labels sit above their figures, like the target table. */
+.so-stat { flex-direction: column-reverse; gap: 3px; }
