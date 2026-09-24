@@ -39,6 +39,7 @@ export default function TrainingDayList({
   currentWeek,
   pastWeek,
   coachName,
+  clientName = "",
   library,
   liveSession,
 }: {
@@ -48,6 +49,7 @@ export default function TrainingDayList({
   /** The selected week is over: sessions read as done, skipped or missed. */
   pastWeek: boolean;
   coachName: string;
+  clientName?: string;
   library: LibraryOption[];
   /** The client's session in progress, wherever it is. */
   liveSession: { id: number; label: string; startedAt: string } | null;
@@ -221,6 +223,7 @@ export default function TrainingDayList({
           onPickGym={(g) => pickGym(openDay, g)}
           coachName={coachName}
           library={library}
+          clientName={clientName}
           focusExercise={openDay.key === focus ? focusExercise : null}
           onBack={() => setView({ dayId: openDay.key, screen: "overview" })}
           onEnded={() => {

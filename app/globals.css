@@ -16271,7 +16271,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .wo-history-sets { font-size: 14.5px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; }
 /* Wrap up. */
 .wo-wrap { gap: 16px; padding-top: 4px; }
-.wo-wrap-title { margin: -8px 0 0; font-family: "Baskerville", "Libre Baskerville", Georgia, serif; font-size: 30px; font-weight: 500; line-height: 1.1; color: #141a24; }
+.wo-wrap-title { margin: -8px 0 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.1; color: #141a24; }
 .wo-stats { display: grid; grid-template-columns: repeat(3, 1fr); border-radius: 18px; background: #fff; overflow: hidden; }
 .wo-stat { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 14px 6px; border-left: 1px solid #eceff3; }
 .wo-stat:first-child { border-left: 0; }

@@ -50,6 +50,7 @@ export default function WorkoutScreen({
   gymId,
   onPickGym,
   coachName,
+  clientName = "",
   library,
   focusExercise,
   onBack,
@@ -60,6 +61,8 @@ export default function WorkoutScreen({
   gymId: number | null;
   onPickGym: (gym: GymOption) => void;
   coachName: string;
+  /** The client's first name, for the wrap-up. */
+  clientName?: string;
   library: LibraryOption[];
   focusExercise: number | null;
   /** Back to the overview; the session keeps going. */
@@ -274,7 +277,7 @@ export default function WorkoutScreen({
             ) : (
               <div className="wo-page-inner wo-wrap">
                 <div className="wo-kicker">Wrap up</div>
-                <h2 className="wo-wrap-title">{missing <= 0 && day.cardio.every((c) => c.done) ? "Good session" : "Nearly there"}</h2>
+                <h2 className="wo-wrap-title">Well done{clientName ? `, ${clientName}` : ""}!</h2>
                 <div className="wo-stats">
                   <div className="wo-stat">
                     <b>{clock(ms)}</b>
