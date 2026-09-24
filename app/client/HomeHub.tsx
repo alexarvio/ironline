@@ -278,7 +278,7 @@ function CheckInFold({ items }: { items: CheckInItem[]; nextLabel: string }) {
   return (
     <section className="hm-tasks">
       <div className="hm-tasks-head">
-        <span className="hm-eyebrow">Tasks</span>
+        <span className="hm-eyebrow">Today&rsquo;s tasks</span>
         <span className={`hm-tasks-count${due === 0 ? " done" : ""}`}>{due === 0 ? "All done" : `${due} due`}</span>
       </div>
       <div className="hm-tasks-list">
