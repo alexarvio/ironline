@@ -16377,3 +16377,8 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .wo-page .ts-target.wo-target-card { margin-top: 0; padding: 12px 8px 13px; border-radius: 16px; }
 .wo-page .ts-target.wo-target-card b { font-size: 15px; }
 .wo-page .ts-target.wo-target-card small { font-size: 10px; }
+/* The gym sits centred right under the clock, and the segments follow close behind. */
+.wo-head { gap: 8px; }
+.wo-head-row2.right { justify-content: center; margin-top: -6px; }
+.wo-gym-chip { padding: 2px 2px; font-size: 12.5px; }
+.wo-segments { margin-top: 2px; }
