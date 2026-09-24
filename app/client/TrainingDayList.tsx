@@ -151,10 +151,12 @@ export default function TrainingDayList({
                 <span className="tr-row-title">{d.title}</span>
                 <span className="tr-row-sub">{sub}</span>
               </span>
+              {(status !== "upcoming" || isNext || logged > 0) && (
               <span className={`tr-row-pill ${tone}`}>
                 {status === "live" && <span className="tr-row-dot" aria-hidden="true" />}
                 {isNext && status === "upcoming" ? "Up next" : status === "upcoming" && logged > 0 ? "Started" : STATUS_LABEL[status]}
               </span>
+              )}
               <span className="tr-row-chev" aria-hidden="true" />
             </button>
           );
