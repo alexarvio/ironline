@@ -16375,5 +16375,5 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 /* The note text starts under the words of the label, past the coach mark (18px + 7px gap). */
 .wo-page .ts-coachnote-text { padding-left: 25px; }
 .wo-page .ts-target.wo-target-card { margin-top: 0; padding: 12px 8px 13px; border-radius: 16px; }
-.wo-page .ts-target.wo-target-card b { font-size: 18px; }
-.wo-page .ts-target.wo-target-card small { font-size: 11px; }
+.wo-page .ts-target.wo-target-card b { font-size: 15px; }
+.wo-page .ts-target.wo-target-card small { font-size: 10px; }
