@@ -16524,3 +16524,15 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .so-stat + .so-stat { border-left-color: #eceff3; }
 /* Done on the overview head: green letters, no pill, like the tab rows. */
 .so-pill.done { padding: 5px 0; background: transparent; color: #2f7a3f; }
+/* Trying a photo behind the overview head: the kettlebell, darkened, with the words in white. */
+.so-head { position: relative; background: #0b0f16 url("/img/session-head.jpg") center 40% / cover no-repeat; color: #fff; }
+.so-head::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8, 12, 20, 0.55) 0%, rgba(8, 12, 20, 0.35) 55%, rgba(8, 12, 20, 0.75) 100%); pointer-events: none; }
+.so-head > * { position: relative; }
+.so-back { background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.25); color: #fff; }
+.so-kicker { color: rgba(255, 255, 255, 0.75); }
+.so-title { color: #fff; }
+.so-sub { color: rgba(255, 255, 255, 0.8); }
+.so-more { color: #fff; }
+.so-pill.done { color: #7fd68f; }
+.so-pill.live { background: rgba(255, 255, 255, 0.16); color: #fff; }
+.so-stats { background: rgba(255, 255, 255, 0.94); box-shadow: none; }
