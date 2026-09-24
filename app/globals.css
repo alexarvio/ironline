@@ -16366,3 +16366,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .wo-sets-foot { justify-content: flex-end; }
 .wo-targets-wrap { display: flex; flex-direction: column; gap: 6px; }
 .wo-targets-label { text-align: center; font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #2f5d8f; }
+/* Bare icons on the exercise head: no circle, a touch darker, same 36px hit area. */
+.wo-ex-tools .wo-round-btn { border: 0; background: transparent; color: #1e3a6e; cursor: pointer; padding: 0; }
+.wo-ex-tools .wo-round-btn svg { width: 22px; height: 22px; }
+.wo-ex-tools { gap: 4px; }
