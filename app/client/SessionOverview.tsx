@@ -111,7 +111,6 @@ export default function SessionOverview({
             </svg>
           </button>
         )}
-        </div>
         {menuOpen && (
           <>
             <button type="button" className="wo-menu-scrim" aria-label="Close menu" onClick={() => setMenuOpen(false)} />
@@ -135,6 +134,7 @@ export default function SessionOverview({
             </div>
           </>
         )}
+        </div>
         <div className="so-kicker">
           Week {day.week} · Session {day.index}
         </div>

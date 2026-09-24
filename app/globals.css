@@ -16671,3 +16671,4 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .so-back, .so-more { border: 0; background: transparent; color: #fff; }
 .so-back svg { width: 22px; height: 22px; }
 .so-more svg { width: 24px; height: 24px; }
+.so-menu { top: 40px; }
