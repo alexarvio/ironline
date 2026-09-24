@@ -186,7 +186,6 @@ export default function SessionOverview({
       <div className="so-body">
         <div className="so-list-head">
           <h2>{done ? "What you did" : "Exercises"}</h2>
-          <span>{done ? `${logged} set${logged === 1 ? "" : "s"} logged` : `${planned} sets`}</span>
         </div>
         <div className="so-list">
           {day.exercises.map((ex, i) => (
