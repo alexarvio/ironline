@@ -16663,3 +16663,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .gp-bar { height: 4px; }
 .gp-sub { font-size: 11.5px; }
 .gp-row .gr-segments { transform: scale(0.85); transform-origin: left center; }
+/* The overview's ⋯ menu hangs off its button row, whatever the head behind it. */
+.so-head-row { position: relative; z-index: 3; }
+.so-menu { position: absolute; top: 44px; right: 0; left: auto; bottom: auto; }
+.so-head .wo-menu-scrim { position: fixed; inset: 0; }
