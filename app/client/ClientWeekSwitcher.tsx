@@ -78,7 +78,7 @@ export default function ClientWeekSwitcher({
               aria-disabled={locked}
               title={locked ? "Unlocks when this week starts" : done ? "Week complete, every set logged" : undefined}
             >
-              {(weekLabels?.[w] ?? `Week ${w}`).replace(/^Week /, "Wk ")}
+              {weekLabels?.[w] ?? `Week ${w}`}
               {locked ? (
                 <span className="tr-wk-lock" aria-label="Locked until this week starts">
                   <LockIcon />
