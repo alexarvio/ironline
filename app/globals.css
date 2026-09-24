@@ -16743,3 +16743,9 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .hm-latest-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .hm-latest-title { display: block; }
 .hm-latest-text { display: -webkit-box; margin: 0; }
+/* A task still to do: a pulsing dot before its name, and the card breathes a soft ring. */
+.hm-task-due { flex: none; width: 9px; height: 9px; border-radius: 999px; background: #c2522d; box-shadow: 0 0 0 0 rgba(194, 82, 45, 0.45); animation: hm-due-dot 1.8s ease-out infinite; }
+@keyframes hm-due-dot { 0% { box-shadow: 0 0 0 0 rgba(194, 82, 45, 0.45); } 70% { box-shadow: 0 0 0 7px rgba(194, 82, 45, 0); } 100% { box-shadow: 0 0 0 0 rgba(194, 82, 45, 0); } }
+.hm-task:not(.done) { animation: hm-due-card 2.6s ease-in-out infinite; }
+@keyframes hm-due-card { 0%, 100% { border-color: #dfe3e8; box-shadow: 0 0 0 0 rgba(47, 93, 143, 0); } 50% { border-color: rgba(47, 93, 143, 0.55); box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.12); } }
+@media (prefers-reduced-motion: reduce) { .hm-task-due, .hm-task:not(.done) { animation: none; } .hm-task:not(.done) { border-color: rgba(47, 93, 143, 0.45); } }
