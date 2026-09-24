@@ -299,6 +299,18 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
   const [demos, setDemos] = useState<Record<number, DraftRow["demo"]>>({});
   // Every session starts folded; the coach opens the one they want.
   const [open, setOpen] = useState<number | null>(null);
+  // Arriving from a link in a message (#session-ID): that session unfolds and
+  // comes into view. After the first paint, so the server's closed rows match.
+  useEffect(() => {
+    const m = /^#session-(d+)$/.exec(window.location.hash);
+    if (!m) return;
+    const id = Number(m[1]);
+    const frame = requestAnimationFrame(() => {
+      setOpen(id);
+      setTimeout(() => document.getElementById(`session-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
   const [videos, setVideos] = useState<Record<number, DraftRow["video"]>>(() => Object.fromEntries(program.sessions.flatMap((s) => s.rows.map((r) => [r.id, r.video]))));
   const [seenVideos, setSeenVideos] = useState(program.sessions);
   if (seenVideos !== program.sessions) {
@@ -575,7 +587,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
             .map((id) => s.rows.find((r) => r.id === id)!)
             .filter((r) => r && !p.removed.includes(r.id));
           return (
-            <SortableItem key={s.id} id={s.id} as="section" className={`rd-session${isOpen ? " open" : ""}`}>
+            <SortableItem key={s.id} id={s.id} as="section" anchor={`session-${s.id}`} className={`rd-session${isOpen ? " open" : ""}`}>
               {(sessionGrip) => (
               <>
               <div className="rd-session-head">
@@ -731,6 +743,41 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                   })}
                   </SortableList>
 
+                  {/* Exercises added but not applied yet: under the others, where Apply puts them, above the cardio. */}
+                  {p.added.filter((r): r is Added & AddedExercise => r.kind === "exercise").map((r) => {
+                    // A new row is edited in place before Apply, like any other.
+                    const editAdded = (f: Partial<AddedExercise>) =>
+                      patch(s.id, (q) => ({ ...q, added: q.added.map((x) => (x.key === r.key && x.kind === "exercise" ? { ...x, ...f } : x)) }));
+                    return (
+                    <div key={r.key} className="rd-row new">
+                      <div className="rd-row-main" style={colStyle}>
+                        <span />
+                        <span className="rd-ex">
+                          <span className="rd-ex-name">{r.name}</span>
+                          <small>New · not applied yet</small>
+                        </span>
+                        {cols.sets && <Cell value={String(r.sets)} onChange={(v) => editAdded({ sets: v })} label="Sets" width="sm" />}
+                        {cols.reps && <Cell value={r.reps} onChange={(v) => editAdded({ reps: v })} label="Reps" />}
+                        {cols.weight && <WeightCell key={unit} kg={r.kg} lbs={lbs} onChange={(v) => editAdded({ kg: v })} />}
+                        {cols.rpe && <Cell value={r.rpe ?? ""} onChange={(v) => editAdded({ rpe: v })} label="RPE" width="sm" />}
+                        {cols.tempo && <Cell value={r.tempo ?? ""} onChange={(v) => editAdded({ tempo: v })} label="Tempo" />}
+                        {cols.rest && <Cell value={r.rest ?? ""} onChange={(v) => editAdded({ rest: v })} label="Rest" />}
+                        <span />
+                        <span className="rd-did">
+                          <em />
+                        </span>
+                        <span />
+                        <span />
+                        <span className="rd-row-more">
+                          <button type="button" className="rd-btn ghost sm" onClick={() => patch(s.id, (q) => ({ ...q, added: q.added.filter((x) => x.key !== r.key) }))} aria-label={`Don't add ${r.name}`} title="Don't add it">
+                            <TrashIcon />
+                          </button>
+                        </span>
+                      </div>
+                    </div>
+                    );
+                  })}
+
                   {(s.cardio.some((c) => !p.cardioRemoved.includes(c.id)) || p.added.some((r) => r.kind === "cardio")) && (() => {
                     const live = s.cardio.filter((c) => !p.cardioRemoved.includes(c.id));
                     const fresh = p.added.filter((r): r is Added & AddedCardio => r.kind === "cardio");
@@ -827,40 +874,6 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                     </div>
                     );
                   })()}
-
-                  {p.added.filter((r): r is Added & AddedExercise => r.kind === "exercise").map((r) => {
-                    // A new row is edited in place before Apply, like any other.
-                    const editAdded = (f: Partial<AddedExercise>) =>
-                      patch(s.id, (q) => ({ ...q, added: q.added.map((x) => (x.key === r.key && x.kind === "exercise" ? { ...x, ...f } : x)) }));
-                    return (
-                    <div key={r.key} className="rd-row new">
-                      <div className="rd-row-main" style={colStyle}>
-                        <span />
-                        <span className="rd-ex">
-                          <span className="rd-ex-name">{r.name}</span>
-                          <small>New · not applied yet</small>
-                        </span>
-                        {cols.sets && <Cell value={String(r.sets)} onChange={(v) => editAdded({ sets: v })} label="Sets" width="sm" />}
-                        {cols.reps && <Cell value={r.reps} onChange={(v) => editAdded({ reps: v })} label="Reps" />}
-                        {cols.weight && <WeightCell key={unit} kg={r.kg} lbs={lbs} onChange={(v) => editAdded({ kg: v })} />}
-                        {cols.rpe && <Cell value={r.rpe ?? ""} onChange={(v) => editAdded({ rpe: v })} label="RPE" width="sm" />}
-                        {cols.tempo && <Cell value={r.tempo ?? ""} onChange={(v) => editAdded({ tempo: v })} label="Tempo" />}
-                        {cols.rest && <Cell value={r.rest ?? ""} onChange={(v) => editAdded({ rest: v })} label="Rest" />}
-                        <span />
-                        <span className="rd-did">
-                          <em />
-                        </span>
-                        <span />
-                        <span />
-                        <span className="rd-row-more">
-                          <button type="button" className="rd-btn ghost sm" onClick={() => patch(s.id, (q) => ({ ...q, added: q.added.filter((x) => x.key !== r.key) }))} aria-label={`Don't add ${r.name}`} title="Don't add it">
-                            <TrashIcon />
-                          </button>
-                        </span>
-                      </div>
-                    </div>
-                    );
-                  })}
 
                   {adding?.session === s.id ? (
                     adding.kind === "exercise" ? (

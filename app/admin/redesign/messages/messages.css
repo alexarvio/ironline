@@ -43,6 +43,9 @@
 .rm-link.sent { height: 24px; padding: 0 10px; font-size: 12px; align-self: flex-start; }
 .rm-bubble-row.mine .rm-link.sent { background: rgba(255, 255, 255, 0.16); color: #fff; }
 .rm-link.gone { background: #eef0f3; color: #8b93a1; }
+a.rm-link.open { text-decoration: none; cursor: pointer; }
+a.rm-link.open:hover { background: #d9e2ee; }
+.rm-bubble-row.mine a.rm-link.open:hover { background: rgba(255, 255, 255, 0.26); }
 .rm-link.gone em { font-style: normal; font-size: 11px; color: #b3471d; }
 .rm-link-x { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 15px; line-height: 1; color: #5b6474; cursor: pointer; }
 .rm-link-x:hover { background: #fff; color: #141a24; }

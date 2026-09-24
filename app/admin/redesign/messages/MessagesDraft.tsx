@@ -20,7 +20,8 @@ import { ConfirmDialog } from "../training/TrainingDraft";
 // reword, point it at something, pin, or take back. The client answers from
 // their app; the thread refreshes itself while it is open.
 
-export type DraftLink = { area: string; label: string; gone: boolean; link?: MessageLink };
+/** href: where it opens on the coach's side (sent links that still open). */
+export type DraftLink = { area: string; label: string; gone: boolean; link?: MessageLink; href?: string };
 export type DraftMedia = { path: string; type: "image" | "video" | "audio" | "file"; name?: string | null };
 export type DraftMessage = { id: number; mine: boolean; text: string; when: string; media?: DraftMedia | null; link: DraftLink | null; reactions?: { coach?: string | null; client?: string | null }; pinned?: boolean; edited?: boolean };
 /** Newest first, as the loader hands them over. */
@@ -211,11 +212,18 @@ export default function MessagesDraft({ clientId, firstName, plan }: { clientId:
           )}
           {m.link && (
             <span className="rm-bubble-line">
-              <span className={`rm-link sent${m.link.gone ? " gone" : ""}`} title={m.link.gone ? "The client can't open this any more" : undefined}>
-                <LinkGlyph />
-                <span>{m.link.label}</span>
-                {m.link.gone && <em>no longer opens</em>}
-              </span>
+              {m.link.href ? (
+                <a className="rm-link sent open" href={m.link.href} title={`Open ${m.link.label}`}>
+                  <LinkGlyph />
+                  <span>{m.link.label}</span>
+                </a>
+              ) : (
+                <span className={`rm-link sent${m.link.gone ? " gone" : ""}`} title={m.link.gone ? "The client can't open this any more" : undefined}>
+                  <LinkGlyph />
+                  <span>{m.link.label}</span>
+                  {m.link.gone && <em>no longer opens</em>}
+                </span>
+              )}
               {meta(m, inPins)}
             </span>
           )}
@@ -568,9 +576,9 @@ function Media({ media }: { media: DraftMedia }) {
 
 function LinkGlyph() {
   return (
-    <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M6.5 9.5a3 3 0 0 0 4.2 0l2-2a3 3 0 0 0-4.2-4.2l-1 1" />
-      <path d="M9.5 6.5a3 3 0 0 0-4.2 0l-2 2a3 3 0 0 0 4.2 4.2l1-1" />
+    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
     </svg>
   );
 }
