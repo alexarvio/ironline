@@ -16492,3 +16492,12 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .wo-sheet-scrim, .wo-menu-scrim { position: absolute; }
 .so-card-body .so-targets { margin-top: 0; }
 .so-card-body .ts-coachnote { margin-top: 2px; }
+/* The target table inside an overview row: labels across, figures under. */
+.so-card-body { padding: 0 14px 12px 14px; }
+.so-tbl-wrap { display: flex; flex-direction: column; gap: 4px; }
+.so-tbl-label { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #2f5d8f; }
+.so-tbl { display: grid; column-gap: 8px; row-gap: 6px; padding: 8px 0 2px; border-top: 1px solid #eceff3; }
+.so-tbl small { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.so-tbl b { font-size: 15px; font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.so-card-body .ts-coachnote { margin-top: 6px; }
+.so-sets { margin-left: 0; }

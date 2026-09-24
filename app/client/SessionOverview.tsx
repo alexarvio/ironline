@@ -263,6 +263,24 @@ export default function SessionOverview({
   );
 }
 
+// The prescription as a small table: labels across, figures under them.
+function TargetTable({ cells }: { cells: { unit: string; value: string }[] }) {
+  if (!cells.length) return null;
+  return (
+    <div className="so-tbl-wrap">
+      <div className="so-tbl-label">Target</div>
+      <div className="so-tbl" style={{ gridTemplateColumns: `repeat(${cells.length}, minmax(0, 1fr))` }}>
+        {cells.map((c) => (
+          <small key={`h-${c.unit}`}>{c.unit}</small>
+        ))}
+        {cells.map((c) => (
+          <b key={`v-${c.unit}`}>{c.value}</b>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ExerciseCard({ exercise, index, done, coachName }: { exercise: SessionExercise; index: number; done: boolean; coachName: string }) {
   const exDone = isDone(exercise);
   // The prescription as figure-and-unit pairs, like the workout's target line.
@@ -332,13 +350,7 @@ function ExerciseCard({ exercise, index, done, coachName }: { exercise: SessionE
       </button>
       {open && (
         <div className="so-card-body">
-          <span className="so-targets">
-            {targets.map((t) => (
-              <span key={t.unit}>
-                <b>{t.value}</b> <small>{t.unit}</small>
-              </span>
-            ))}
-          </span>
+          <TargetTable cells={targets} />
           {exercise.note.text && <CoachNote assignmentId={exercise.id} note={exercise.note} />}
           {ask && (
             <div className={`so-video${ask.reply ? " replied" : ask.src ? " sent" : ""}`}>
@@ -383,15 +395,7 @@ function CardioFold({ cardio, index, done }: { cardio: SessionCardio; index: num
             <div className={cardio.done ? "so-cardio-done" : "so-notlogged"}>{cardio.done ? "Done" : "Not done"}</div>
           ) : (
             <>
-              {cells.length > 0 && (
-                <span className="so-targets">
-                  {cells.map(([unit, v]) => (
-                    <span key={unit}>
-                      <b>{v}</b> <small>{unit}</small>
-                    </span>
-                  ))}
-                </span>
-              )}
+              <TargetTable cells={cells.map(([unit, v]) => ({ unit, value: v }))} />
               {cardio.notes && <CoachNote assignmentId={null} note={{ text: cardio.notes, dateLabel: "", unread: false }} />}
             </>
           )}
