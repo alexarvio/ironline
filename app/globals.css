@@ -16765,3 +16765,5 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 /* A little air above the floating headings, between the hero and Tasks, and Tasks and Latest. */
 .hm-tasks, .hm-latest { margin-top: 6px; }
 .hm-tasks-head, .hm-latest-head { padding-bottom: 10px; }
+/* …and more between the hero and Tasks in particular. */
+.hm-hero + .hm-tasks { margin-top: 14px; }
