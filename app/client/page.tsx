@@ -374,16 +374,8 @@ function HomeTab({ CLIENT_ID, photos }: { CLIENT_ID: number; photos: HomePhotos 
   );
 }
 
-// "2 h ago", "Yesterday", "Mon", then "21 Sep".
+// The date the coach did it, as "21 Sep".
 function relativeLabel(iso: string): string {
-  const then = new Date(iso).getTime();
-  const diff = Date.now() - then;
-  const h = Math.floor(diff / 3600000);
-  if (h < 1) return "Just now";
-  if (h < 24 && new Date(iso).toDateString() === new Date().toDateString()) return `${h} h ago`;
-  const d = Math.floor(diff / 86400000);
-  if (d <= 1) return "Yesterday";
-  if (d < 7) return new Date(iso).toLocaleDateString("en-US", { weekday: "short" });
   return fmtShortDate(iso.slice(0, 10));
 }
 

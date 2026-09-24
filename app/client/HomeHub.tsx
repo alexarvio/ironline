@@ -4,11 +4,10 @@ import { useEffect, useState, useTransition } from "react";
 import { markNotificationReadAction } from "../lib/actions";
 import { AppleIcon, CalendarIcon, CameraIcon, ChatIcon, ChevronDownIcon, DumbbellIcon, HeartIcon, TargetIcon } from "../components/icons";
 import GoalRow from "../components/GoalRow";
-import CoachMark from "./CoachMark";
 import MessageLinkChip from "./MessageLinkChip";
 import VideoReplySheet, { type VideoReplyView } from "./VideoReplySheet";
 import type { LinkView } from "../lib/messageLinks";
-import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenLink, useOpenMessages, useOpenNotifications, useOpenPhotos } from "./CheckInContext";
+import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenLink, useOpenMessages, useOpenPhotos } from "./CheckInContext";
 import { clock, elapsedMs, useTicker } from "./workoutShared";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
@@ -374,20 +373,9 @@ function badgeOf(a: LatestActivity): { cls: string; icon: React.ReactNode } {
   }
 }
 
-const KIND_WORDS: Record<LatestActivity["kind"], string> = {
-  video: "video reply",
-  comment: "comment",
-  message: "message",
-  deploy: "update",
-  goal: "new goal",
-  meeting: "meeting",
-  report: "report",
-  welcome: "welcome",
-};
 
 function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstName: string; photoPath: string | null } }) {
   const openMessages = useOpenMessages();
-  const openNotifications = useOpenNotifications();
   const openCoach = useOpenCoach();
   const openLink = useOpenLink();
   const goToTab = useNavigateTab();
@@ -422,7 +410,6 @@ function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstNam
         goToTab?.(a.actionTab ?? "training", a.actionRef ?? undefined);
     }
   };
-  const kindWord = a.kind === "deploy" ? (a.track === "nutrition" ? "new nutrition phase" : a.track === "lifestyle" ? "lifestyle update" : "new training") : KIND_WORDS[a.kind];
   const badge = badgeOf(a);
   const initial = (coach.firstName || "C").trim().charAt(0).toUpperCase();
   return (
@@ -445,7 +432,7 @@ function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstNam
             <div className="hm-lt-meta">
               <span>
                 {a.unseen && <span className="hm-lt-dot" aria-hidden="true" />}
-                {coach.firstName} · {kindWord}
+                {coach.firstName}
               </span>
               <span>{a.whenLabel}</span>
             </div>
@@ -459,13 +446,13 @@ function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstNam
           </div>
         </div>
         <div className="hm-lt-foot">
-          {a.moreThisWeek > 0 && (
-            <button type="button" className="hm-lt-more" onClick={() => openNotifications?.()}>
-              + {a.moreThisWeek} more
+          {a.unread > 0 && (
+            <button type="button" className="hm-lt-more" onClick={() => openMessages?.()}>
+              Unread
             </button>
           )}
           <button type="button" className="hm-lt-cta" onClick={follow}>
-            {a.cta} →
+            {a.cta}
           </button>
         </div>
       </div>
