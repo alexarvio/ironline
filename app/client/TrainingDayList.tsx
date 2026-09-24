@@ -26,7 +26,8 @@ export type TrainingDayProps = {
 // button comes back to this list where it was.
 export default function TrainingDayList({ days }: { days: TrainingDayProps[] }) {
   const [openKey, setOpenKey] = useState<number | null>(() => days.find((d) => d.defaultOpen)?.key ?? null);
-  // Arriving from Home's "Start" or a coach message's link: open that session.
+  // Arriving from Home's "Start" or a coach message's link: unfold that session;
+  // the session itself goes straight into the workout (autoStart).
   const focus = useFocusRef();
   // From a coach message's link: the exercise in that session to open.
   const focusExercise = useTrainingFocus()?.exercise ?? null;
@@ -55,6 +56,7 @@ export default function TrainingDayList({ days }: { days: TrainingDayProps[] }) 
             endedAt={d.endedAt}
             open={openKey === d.key}
             focusExercise={d.key === focus ? focusExercise : null}
+            autoStart={d.key === focus}
             onToggle={() => setOpenKey((k) => (k === d.key ? null : d.key))}
           />
         </div>

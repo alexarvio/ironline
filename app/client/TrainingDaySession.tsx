@@ -4,9 +4,10 @@ import { ReactNode, useEffect, useId, useRef, useState, useTransition } from "re
 import { createPortal } from "react-dom";
 import { endSessionAction, logSetAction, pickGymAction, saveExerciseNoteAction, saveSkipReasonAction, saveWarmupSetsAction, setCardioDoneAction, startSessionAction, updateSetAction } from "../lib/actions";
 import ExerciseCoachNote from "./ExerciseCoachNote";
-import GymPicker, { type GymOption } from "./GymPicker";
-import VideoAskButton, { VideoGlyph, type VideoAsk } from "./VideoAskSheet";
-import { ChevronDownIcon, ChevronLeftIcon } from "../components/icons";
+import type { GymOption } from "./GymPicker";
+import VideoAskButton, { type VideoAsk } from "./VideoAskSheet";
+import { ChatIcon, ChevronDownIcon, ChevronLeftIcon } from "../components/icons";
+import { useOpenMessages } from "./CheckInContext";
 
 // One training day, logged in focus mode: one exercise open at a time,
 // every planned set visible, one active row to type into and one button
@@ -66,8 +67,6 @@ function tidyDecimal(e: React.FormEvent<HTMLInputElement>) {
 // weight typed in lbs is saved back as kg, so progression, goals and the
 // coach's view are untouched. Remembered per exercise on this phone, since
 // it is the machine that decides the unit.
-// How long the session body takes to fold shut (matches .tr-session-fold).
-const FOLD_MS = 420;
 type WeightUnit = "kg" | "lb";
 const KG_PER_LB = 0.45359237;
 const roundTo = (n: number, dp: number) => Math.round(n * 10 ** dp) / 10 ** dp;
@@ -107,7 +106,6 @@ const nextMissing = (ex: SessionExercise) => {
 };
 const loggedCount = (ex: SessionExercise) => Array.from({ length: ex.sets }, (_, i) => i + 1).filter((n) => hasSet(ex, n)).length;
 const isDone = (ex: SessionExercise) => nextMissing(ex) > ex.sets;
-const firstUnfinished = (list: SessionExercise[]) => list.find((ex) => !isDone(ex))?.id ?? null;
 
 // The session's clock, as it ticks: m:ss under an hour, h:mm:ss after.
 function clock(ms: number) {
@@ -126,6 +124,12 @@ function durationLabel(ms: number) {
   const rest = m % 60;
   return rest ? `${h} h ${rest} min` : `${h} h`;
 }
+// A weight for the overview, in kg, tidy: 80, 82.5.
+const kgLabel = (kg: number | null) => (kg == null ? null : `${roundTo(kg, 2)} kg`);
+
+// The pages of a workout: one per exercise, one for the cardio, and the
+// finish. The gym question comes before the first, when there is one.
+type WorkoutPage = { kind: "exercise"; index: number } | { kind: "cardio" } | { kind: "finish" };
 
 export default function TrainingDaySession({
   title,
@@ -140,31 +144,34 @@ export default function TrainingDaySession({
   open,
   onToggle,
   focusExercise = null,
+  autoStart = false,
 }: {
   /** The coach's name for the session, e.g. "Push day". Never a weekday:
       the client trains it whenever they can, so "Tuesday" would be a lie by
       Wednesday. The weekday stays on the coach's side. */
   title: string;
   dayId: number;
-  /** The coach's gyms for this client; the picker shows with two or more. */
+  /** The coach's gyms for this client; the question is asked with two or more. */
   gyms?: GymOption[];
   /** The gym this session is at: where its sets were logged, else the last pick. */
   gymId?: number | null;
   exercises: SessionExercise[];
-  /** Cardio the coach put on the day, shown after the exercises. */
+  /** Cardio the coach put on the day, after the exercises. */
   cardio?: SessionCardio[];
   /** Why the client could not do this session, if they said. */
   skipReason?: string;
-  /** When the client opened this session to train, and when they ended it. */
+  /** When the client began this session, and when they ended it. */
   startedAt?: string | null;
   endedAt?: string | null;
-  /** Owned by TrainingDayList so only one session screen is open at a time. */
+  /** The overview is unfolded. Owned by TrainingDayList: one at a time. */
   open: boolean;
   onToggle: () => void;
   /** Its place in the week. */
   index?: number;
-  /** A coach message linked this exercise: open it rather than the next to do. */
+  /** A coach message linked this exercise: the workout opens on it. */
   focusExercise?: number | null;
+  /** Home's "Start" or a coach's link: go straight into the workout. */
+  autoStart?: boolean;
 }) {
   // The gym is picked here and saved straight away; the server's answer
   // takes over whenever it changes.
@@ -185,18 +192,40 @@ export default function TrainingDaySession({
         }));
   const pickGym = (gym: GymOption) => {
     const logged = baseExercises.reduce((s, ex) => s + ex.logs.length, 0);
-    if (logged > 0 && gymId != null && !window.confirm(`Move the ${logged} set${logged === 1 ? "" : "s"} logged in this session to ${gym.name}?`)) return;
+    if (logged > 0 && gymId != null && gymId !== gym.id && !window.confirm(`Move the ${logged} set${logged === 1 ? "" : "s"} logged in this session to ${gym.name}?`)) return false;
     setGymId(gym.id);
     void pickGymAction(dayId, gym.id);
+    return true;
   };
 
   const planned = exercises.reduce((s, ex) => s + ex.sets, 0);
   const logged = exercises.reduce((s, ex) => s + loggedCount(ex), 0);
+  const cardioLeft = cardio.filter((c) => !c.done).length;
   const allLogged = exercises.length + cardio.length > 0 && exercises.every(isDone) && cardio.every((c) => c.done);
 
-  // The session's clock. It starts the first time the screen opens and is
-  // saved on the session, so a reload or a later visit carries on from the
-  // same moment; it stops when the client presses "End session". Both
+  // The workout screen: laid over the whole app, the way Check-in is. It
+  // opens from the overview's button, or straight away from Home's "Start".
+  const [training, setTraining] = useState(false);
+  const [seenAuto, setSeenAuto] = useState(false);
+  const [stage, setStage] = useState<"gym" | "go">("go");
+  const [page, setPage] = useState(0);
+  const [jumpOpen, setJumpOpen] = useState(false);
+  const pages: WorkoutPage[] = [
+    ...exercises.map((_, index) => ({ kind: "exercise", index }) as WorkoutPage),
+    ...(cardio.length ? [{ kind: "cardio" } as WorkoutPage] : []),
+    { kind: "finish" },
+  ];
+  const firstPage = () => {
+    const linked = focusExercise != null ? exercises.findIndex((e) => e.id === focusExercise) : -1;
+    if (linked >= 0) return linked;
+    const next = exercises.findIndex((e) => !isDone(e));
+    if (next >= 0) return next;
+    return cardio.length && cardioLeft > 0 ? exercises.length : 0;
+  };
+
+  // The session's clock. It starts when the client begins the workout and
+  // is saved on the session, so a reload or a later visit carries on from
+  // the same moment; it stops when the client presses "End session". Both
   // stamps are kept here first so the clock moves before the server answers,
   // and the server's stamp takes over once it arrives.
   const [localStart, setLocalStart] = useState<string | null>(null);
@@ -206,31 +235,45 @@ export default function TrainingDaySession({
   const ended = endedAt != null;
   const dayDone = ended || allLogged;
   const [, startTransition] = useTransition();
+  // The clock starts once the workout is on its first page: from the
+  // overview's button, or straight from Home's "Start". Fired from a
+  // timer rather than the effect body, so nothing is set mid-render.
   useEffect(() => {
-    if (!open || startedAt || ended || allLogged) return;
+    if (!training || stage !== "go" || startedAt || ended) return;
     const at = new Date().toISOString();
-    // Set from a timer, not the effect body itself, so the first frame of
-    // the screen is not thrown away.
     const t = setTimeout(() => {
       setLocalStart(at);
       void startSessionAction(dayId, at);
     }, 0);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on opening
-  }, [open]);
-  // Ticks once a second while the screen is open and the session is going.
-  // Each tick brings the time it fired at; the screen's first frame reads
-  // the moment it opened.
+  }, [training, stage, startedAt, ended, dayId]);
+  const openWorkout = () => {
+    setPage(firstPage());
+    setJumpOpen(false);
+    // Which gym, first, when there is a choice and the session is new.
+    setStage(gyms.length > 1 && !startedAt && !ended ? "gym" : "go");
+    setTraining(true);
+  };
+  if (autoStart !== seenAuto) {
+    setSeenAuto(autoStart);
+    if (autoStart && !training) openWorkout();
+  }
+  const closeWorkout = () => {
+    setTraining(false);
+    setJumpOpen(false);
+  };
+
+  // Ticks once a second while the workout is open and the session is going.
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
-    if (!open || !startedAt || ended) return;
+    if (!training || !startedAt || ended) return;
     const first = setTimeout(() => setNow(Date.now()), 0);
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => {
       clearTimeout(first);
       clearInterval(t);
     };
-  }, [open, startedAt, ended]);
+  }, [training, startedAt, ended]);
   const startMs = startedAt ? Date.parse(startedAt) : NaN;
   const elapsedMs = Number.isFinite(startMs) ? (ended ? Date.parse(endedAt!) : now ?? startMs) - startMs : 0;
 
@@ -238,17 +281,8 @@ export default function TrainingDaySession({
   // Sets still to log are pointed out first, since ending is the client's
   // call and not the app's.
   const [celebrating, setCelebrating] = useState(false);
-  const openNow = useRef(open);
-  const toggleNow = useRef(onToggle);
-  useEffect(() => {
-    openNow.current = open;
-    toggleNow.current = onToggle;
-  });
-  const close = () => {
-    if (openNow.current) toggleNow.current();
-  };
   const endSession = () => {
-    const left = planned - logged + cardio.filter((c) => !c.done).length;
+    const left = planned - logged + cardioLeft;
     if (left > 0 && !window.confirm(`${left} ${left === 1 ? "set is" : "sets are"} still to log. End the session anyway?`)) return;
     const at = new Date().toISOString();
     setLocalEnd(at);
@@ -259,68 +293,24 @@ export default function TrainingDaySession({
     if (!celebrating) return;
     const t = setTimeout(() => {
       setCelebrating(false);
-      close();
+      setTraining(false);
     }, 1800);
     return () => clearTimeout(t);
   }, [celebrating]);
 
-  // Which exercise is expanded; starts on the first with sets still to log.
-  const [expandedId, setExpandedId] = useState<number | null>(() =>
-    focusExercise != null && exercises.some((e) => e.id === focusExercise) ? focusExercise : firstUnfinished(exercises) ?? exercises[0]?.id ?? null
-  );
-  const activeId = firstUnfinished(exercises);
-
-  // When the expanded exercise's last set lands, hold the green card for a
-  // beat, then fold it and open the next one with sets left.
-  const expanded = exercises.find((ex) => ex.id === expandedId) ?? null;
-  const expandedDone = !!expanded && isDone(expanded);
-  // Remembered per exercise, so opening one that was already finished
-  // does not read as "just finished" and snap away.
-  const last = useRef<{ id: number | null; done: boolean }>({ id: expandedId, done: expandedDone });
-  // The latest exercises, read when the timer fires. Not a dependency of the
-  // effect below: saving a set refreshes the page data (a new array) a moment
-  // after the set lands, and re-running the effect then cancelled the timer,
-  // so the finished exercise closed and the next one never opened.
-  const latest = useRef(exercises);
-  useEffect(() => {
-    latest.current = exercises;
-  }, [exercises]);
-  // The exercise whose body is folding shut right now; its card stays until
-  // the fold has run, then the next one unfolds (CSS) in its place.
-  const [closingId, setClosingId] = useState<number | null>(null);
-  const closeExercise = (id: number, then: () => number | null) => {
-    setClosingId(id);
-    setTimeout(() => {
-      setClosingId(null);
-      setExpandedId(then());
-    }, FOLD_MS);
-  };
-  useEffect(() => {
-    const prev = last.current;
-    last.current = { id: expandedId, done: expandedDone };
-    const justFinished = expandedId != null && prev.id === expandedId && !prev.done && expandedDone;
-    if (!justFinished) return;
-    const t = setTimeout(() => closeExercise(expandedId, () => firstUnfinished(latest.current)), 600);
-    return () => clearTimeout(t);
-  }, [expandedId, expandedDone]);
-
   // From a coach message's link: bring that exercise to the top of the screen.
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!open || focusExercise == null) return;
-    const t = setTimeout(() => {
-      const row = scrollRef.current?.querySelector<HTMLElement>(`[data-ex="${focusExercise}"]`);
-      row?.scrollIntoView({ block: "start", behavior: "auto" });
-    }, 80);
-    return () => clearTimeout(t);
-  }, [open, focusExercise]);
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [page, stage]);
 
-  // The screen is laid over the whole app, the way Check-in is: a layer in
-  // the phone's stack, found from the row it belongs to.
+  // The screen is a layer in the phone's stack, found from the row it
+  // belongs to.
   const [host, setHost] = useState<HTMLElement | null>(null);
+  const openMessages = useOpenMessages();
 
   // The line under the session's title on the Training tab.
-  const left = exercises.filter((ex) => !isDone(ex)).length + cardio.filter((c) => !c.done).length;
+  const left = exercises.filter((ex) => !isDone(ex)).length + cardioLeft;
   const sub = ended
     ? `Session complete · ${durationLabel(elapsedMs)}`
     : allLogged
@@ -337,84 +327,266 @@ export default function TrainingDaySession({
         .filter(Boolean)
         .join(" · ");
 
+  // ---- The overview: the plan, and what was lifted, without starting anything.
+  const overview = (
+    <div className="tr-ov">
+      <ul className="tr-ov-list">
+        {exercises.map((ex, i) => {
+          const done = isDone(ex);
+          const plan = [
+            `${ex.sets} × ${ex.reps || "?"}`,
+            ex.targetWeight != null ? kgLabel(ex.targetWeight) : null,
+            ex.targetRpe != null ? `RPE ${ex.targetRpe}` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ");
+          const lifted = ex.logs
+            .slice()
+            .sort((a, b) => a.setNumber - b.setNumber)
+            .map((l) => `${l.weight != null ? roundTo(l.weight, 2) : "–"}×${l.reps ?? "–"}`)
+            .join("  ");
+          return (
+            <li key={ex.id} className={`tr-ov-row${done ? " done" : ""}`}>
+              <span className={`ts-circle${done ? " done" : ""}`}>{done ? "✓" : i + 1}</span>
+              <span className="tr-ov-main">
+                <span className="tr-ov-name">{ex.name}</span>
+                <span className="tr-ov-plan">{plan}</span>
+                {lifted && <span className="tr-ov-lifted">{lifted}</span>}
+              </span>
+            </li>
+          );
+        })}
+        {cardio.map((c, i) => (
+          <li key={`c${c.id}`} className={`tr-ov-row${c.done ? " done" : ""}`}>
+            <span className={`ts-circle${c.done ? " done" : ""}`}>{c.done ? "✓" : exercises.length + i + 1}</span>
+            <span className="tr-ov-main">
+              <span className="tr-ov-name">{c.name}</span>
+              <span className="tr-ov-plan">{[c.time, c.distance, c.pace, c.incline].filter(Boolean).join(" · ") || "Cardio"}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      {exercises.length + cardio.length > 0 && (
+        <button type="button" className={`tr-ov-begin${ended ? " secondary" : ""}`} onClick={openWorkout}>
+          {ended ? "View session" : startedAt || logged > 0 ? "Continue workout" : "Begin workout"}
+        </button>
+      )}
+      {(!dayDone || skipReason) && <SkipReason dayId={dayId} text={skipReason} onSaved={onToggle} />}
+    </div>
+  );
+
+  // ---- The workout, one exercise per screen.
+  const current = pages[Math.min(page, pages.length - 1)];
+  const exercisePages = exercises.length;
+  const pageTitle =
+    current.kind === "exercise" ? `Exercise ${current.index + 1} of ${exercisePages}` : current.kind === "cardio" ? "Cardio" : "Finish";
+  const pageDone = (p: WorkoutPage) =>
+    p.kind === "exercise" ? isDone(exercises[p.index]) : p.kind === "cardio" ? cardioLeft === 0 : ended;
+  const goNext = () => setPage((p) => Math.min(p + 1, pages.length - 1));
+  const goPrev = () => setPage((p) => Math.max(p - 1, 0));
+  const nextLabel = (() => {
+    const n = pages[page + 1];
+    if (!n) return null;
+    if (n.kind === "exercise") return "Next exercise";
+    if (n.kind === "cardio") return "Cardio";
+    return "Finish";
+  })();
+
   const screen = (
     <div className="app-layer app-layer-push ws-screen" role="dialog" aria-label={title}>
       <header className="ws-head">
-        <button type="button" className="ci-back" onClick={close} aria-label="Back to training">
+        <button type="button" className="ci-back" onClick={closeWorkout} aria-label="Back to training">
           <ChevronLeftIcon />
         </button>
         <div className="ws-head-titles">
           <h1 className="ws-title">{title}</h1>
-        </div>
-        <span className={`tr-pill ws-head-pill${dayDone ? " done" : logged > 0 ? " started" : ""}`}>
-          {logged} / {planned} sets
-        </span>
-      </header>
-
-      <div className={`ws-timer${ended ? " ended" : ""}`} role="timer" aria-live="off">
-        <div>
-          <div className="ws-timer-kicker">{ended ? "Session time" : "Session time"}</div>
-          <div className="ws-timer-value">{clock(elapsedMs)}</div>
-        </div>
-        <div className="ws-timer-side">
-          {ended ? (
-            <span className="ws-timer-state done">Ended</span>
-          ) : startedAt ? (
-            <span className="ws-timer-state">
-              <span className="ws-timer-dot" aria-hidden="true" />
-              Going
-            </span>
-          ) : null}
-        </div>
-      </div>
-
-      <div ref={scrollRef} className="ws-scroll">
-        <div className="ts-list">
-          {gyms.length > 1 && <GymPicker gyms={gyms} gymId={gymId} onPick={pickGym} />}
-          {exercises.map((ex, i) =>
-            ex.id === expandedId ? (
-              <ExpandedExercise
-                key={ex.id}
-                exercise={ex}
-                gymId={gymId}
-                index={i + 1}
-                closing={closingId === ex.id}
-                onCollapse={() => closeExercise(ex.id, () => null)}
-              />
-            ) : (
-              <CollapsedExercise
-                key={ex.id}
-                exercise={ex}
-                index={i + 1}
-                // The next one to do is only picked out while nothing is open;
-                // with another exercise open, that card has the highlight.
-                active={ex.id === activeId && expandedId == null}
-                onOpen={() => setExpandedId(ex.id)}
-              />
-            )
+          {stage === "go" && (
+            <div className={`ws-clock${ended ? " ended" : ""}`}>
+              {!ended && <span className="ws-timer-dot" aria-hidden="true" />}
+              {clock(elapsedMs)}
+              {ended && " · ended"}
+            </div>
           )}
-          {cardio.map((c, i) => (
-            <CardioCard key={`c${c.id}`} cardio={c} index={exercises.length + i + 1} />
-          ))}
-          {(!dayDone || skipReason) && <SkipReason dayId={dayId} text={skipReason} onSaved={close} />}
         </div>
-      </div>
-
-      <div className="ci-dock ws-dock">
-        <div>
-          <div className="ci-dock-kicker">{ended ? "Ended" : allLogged ? "All logged" : `${left} exercise${left === 1 ? "" : "s"} left`}</div>
-          <div className="ci-dock-label">
-            {ended ? `${durationLabel(elapsedMs)} · ${logged} set${logged === 1 ? "" : "s"}` : `${logged} of ${planned} sets`}
-          </div>
-        </div>
-        {ended ? (
-          <button type="button" className="ci-save secondary" onClick={close}>
-            Done
+        {/* A word to the coach, over the workout: the chat opens on top. */}
+        {openMessages ? (
+          <button type="button" className="ci-back ws-chat" onClick={openMessages} aria-label="Message your coach">
+            <ChatIcon />
           </button>
         ) : (
-          <button type="button" className="ci-save ws-end" onClick={endSession}>
-            End session
+          <span className="cn-icon-spacer" aria-hidden="true" />
+        )}
+      </header>
+
+      {stage === "gym" ? (
+        <div className="ws-scroll">
+          <div className="ws-gym">
+            <div className="ws-gym-kicker">Before you start</div>
+            <h2 className="ws-gym-title">Where are you training?</h2>
+            <p className="ws-gym-sub">Weights and your notes follow the gym: machines differ.</p>
+            <div className="ws-gym-list">
+              {gyms.map((g) => (
+                <button
+                  key={g.id}
+                  type="button"
+                  className={`ws-gym-btn${g.id === gymId ? " on" : ""}`}
+                  aria-pressed={g.id === gymId}
+                  onClick={() => pickGym(g)}
+                >
+                  {g.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          <button type="button" className="ws-progress" onClick={() => setJumpOpen((o) => !o)} aria-expanded={jumpOpen}>
+            <span className="ws-progress-label">
+              {pageTitle}
+              <ChevronDownIcon />
+            </span>
+            <span className="ws-progress-bar" aria-hidden="true">
+              {pages.map((p, i) => (
+                <span key={i} className={`ws-progress-seg${i === page ? " now" : ""}${pageDone(p) ? " done" : ""}`} />
+              ))}
+            </span>
           </button>
+          {jumpOpen && (
+            <div className="ws-jump">
+              {pages.map((p, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className={`ws-jump-row${i === page ? " now" : ""}${pageDone(p) ? " done" : ""}`}
+                  onClick={() => {
+                    setPage(i);
+                    setJumpOpen(false);
+                  }}
+                >
+                  <span className={`ts-circle${pageDone(p) ? " done" : i === page ? " active" : ""}`}>{pageDone(p) ? "✓" : i + 1}</span>
+                  <span className="ws-jump-name">{p.kind === "exercise" ? exercises[p.index].name : p.kind === "cardio" ? "Cardio" : "Finish"}</span>
+                  {p.kind === "exercise" && (
+                    <span className="ws-jump-count">
+                      {loggedCount(exercises[p.index])}/{exercises[p.index].sets}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+          <div ref={scrollRef} className="ws-scroll">
+            {current.kind === "exercise" && (
+              <>
+                <ExpandedExercise key={exercises[current.index].id} exercise={exercises[current.index]} gymId={gymId} index={current.index + 1} standalone onCollapse={goNext} />
+                {/* The rest of the session under the exercise, so the screen
+                    reads as the whole workout and a tap jumps anywhere. */}
+                {pages.length > 2 && (
+                  <div className="ws-rest">
+                    <div className="ws-rest-label">The session</div>
+                    <ul className="tr-ov-list">
+                      {pages.map((p, i) => {
+                        if (p.kind === "finish" || i === page) return null;
+                        const ex = p.kind === "exercise" ? exercises[p.index] : null;
+                        const done = pageDone(p);
+                        return (
+                          <li key={i}>
+                            <button type="button" className={`tr-ov-row ws-rest-row${done ? " done" : ""}`} onClick={() => setPage(i)}>
+                              <span className={`ts-circle${done ? " done" : ""}`}>{done ? "✓" : i + 1}</span>
+                              <span className="tr-ov-main">
+                                <span className="tr-ov-name">{ex ? ex.name : "Cardio"}</span>
+                                <span className="tr-ov-plan">
+                                  {ex
+                                    ? [`${ex.sets} × ${ex.reps || "?"}`, ex.targetWeight != null ? kgLabel(ex.targetWeight) : null].filter(Boolean).join(" · ")
+                                    : `${cardio.length} to tick off`}
+                                </span>
+                              </span>
+                              {ex && (
+                                <span className="ws-jump-count">
+                                  {loggedCount(ex)}/{ex.sets}
+                                </span>
+                              )}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+              </>
+            )}
+            {current.kind === "cardio" && (
+              <div className="ts-list">
+                {cardio.map((c, i) => (
+                  <CardioCard key={`c${c.id}`} cardio={c} index={exercises.length + i + 1} />
+                ))}
+              </div>
+            )}
+            {current.kind === "finish" && (
+              <div className="ws-finish">
+                <div className="ws-finish-kicker">{ended ? "Session ended" : allLogged ? "All logged" : "Nearly there"}</div>
+                <div className="ws-finish-time">{clock(elapsedMs)}</div>
+                <div className="ws-finish-grid">
+                  <div className="ws-finish-cell">
+                    <b>{logged}</b>
+                    <small>of {planned} sets</small>
+                  </div>
+                  <div className="ws-finish-cell">
+                    <b>{exercises.filter(isDone).length}</b>
+                    <small>of {exercises.length} exercises</small>
+                  </div>
+                  {cardio.length > 0 && (
+                    <div className="ws-finish-cell">
+                      <b>{cardio.length - cardioLeft}</b>
+                      <small>of {cardio.length} cardio</small>
+                    </div>
+                  )}
+                </div>
+                {!ended && left > 0 && (
+                  <p className="ws-finish-note">
+                    {left} exercise{left === 1 ? "" : "s"} still {left === 1 ? "has" : "have"} sets to log. You can end anyway.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      <div className="ci-dock ws-dock">
+        {stage === "gym" ? (
+          <button
+            type="button"
+            className="ci-save ws-wide"
+            disabled={gymId == null}
+            onClick={() => setStage("go")}
+          >
+            Begin workout
+          </button>
+        ) : current.kind === "finish" ? (
+          <>
+            <button type="button" className="ws-prev" onClick={goPrev} aria-label="Previous">
+              <ChevronLeftIcon />
+            </button>
+            {ended ? (
+              <button type="button" className="ci-save secondary ws-grow" onClick={closeWorkout}>
+                Done
+              </button>
+            ) : (
+              <button type="button" className="ci-save ws-grow" onClick={endSession}>
+                End session
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            <button type="button" className="ws-prev" onClick={goPrev} disabled={page === 0} aria-label="Previous">
+              <ChevronLeftIcon />
+            </button>
+            <button type="button" className={`ci-save ws-grow${pageDone(current) ? "" : " secondary"}`} onClick={goNext}>
+              {nextLabel}
+            </button>
+          </>
         )}
       </div>
 
@@ -438,9 +610,9 @@ export default function TrainingDaySession({
   return (
     <section
       ref={(el) => setHost(el?.closest<HTMLElement>(".app-stack") ?? null)}
-      className={`tr-session${dayDone ? " done" : skipReason ? " skipped" : ""}`}
+      className={`tr-session${open ? " open" : ""}${dayDone ? " done" : skipReason ? " skipped" : ""}`}
     >
-      <button type="button" className="tr-session-head" onClick={onToggle}>
+      <button type="button" className="tr-session-head" onClick={onToggle} aria-expanded={open}>
         <span className="tr-session-main">
           <span className="tr-session-title">{title}</span>
           <span className="tr-session-sub">{sub}</span>
@@ -449,9 +621,14 @@ export default function TrainingDaySession({
         <span className={`tr-pill${dayDone ? " done" : skipReason ? " skipped" : logged > 0 ? " started" : ""}`}>
           {!dayDone && skipReason ? "Skipped" : `${logged} / ${planned} sets`}
         </span>
-        <span className="tr-chev right" aria-hidden="true" />
+        <span className={`tr-chev${open ? " up" : ""}`} aria-hidden="true" />
       </button>
-      {open && host && createPortal(screen, host)}
+      {open && (
+        <div className="tr-session-fold">
+          <div className="tr-session-body">{overview}</div>
+        </div>
+      )}
+      {training && host && createPortal(screen, host)}
     </section>
   );
 }
@@ -499,45 +676,13 @@ function CardioCard({ cardio, index }: { cardio: SessionCardio; index: number })
   );
 }
 
-function CollapsedExercise({
-  exercise,
-  index,
-  active,
-  onOpen,
-}: {
-  exercise: SessionExercise;
-  index: number;
-  active: boolean;
-  onOpen: () => void;
-}) {
-  const done = isDone(exercise);
-  const started = exercise.logs.length > 0;
-  const tone = done ? "done" : active ? "active" : started ? "started" : "idle";
-  return (
-    <button type="button" className={`ts-row ${tone}`} onClick={onOpen} data-ex={exercise.id}>
-      <span className="ts-circle">{done ? "✓" : index}</span>
-      <span className="ts-row-name">{exercise.name}</span>
-      {/* A video the coach is waiting for, visible without opening the card. */}
-      {exercise.videoRequest && !exercise.videoRequest.src && (
-        <span className="ts-row-video" aria-label="Your coach asked for a video" title="Your coach asked for a video">
-          <VideoGlyph />
-        </span>
-      )}
-      <span className="ts-row-count">
-        {loggedCount(exercise)}/{exercise.sets}
-      </span>
-      <span className="ts-chev">
-        <ChevronDownIcon />
-      </span>
-    </button>
-  );
-}
 
 function ExpandedExercise({
   exercise,
   gymId,
   index,
   closing = false,
+  standalone = false,
   onCollapse,
 }: {
   exercise: SessionExercise;
@@ -545,6 +690,8 @@ function ExpandedExercise({
   index: number;
   /** Folding shut: the body slides away before the card gives way to the next. */
   closing?: boolean;
+  /** Its own screen in the workout: no number circle, no collapse. */
+  standalone?: boolean;
   onCollapse: () => void;
 }) {
   const done = isDone(exercise);
@@ -686,9 +833,9 @@ function ExpandedExercise({
   );
 
   return (
-    <div className={`ts-card${done ? " done" : ""}`} style={{ "--ts-n": colCount } as React.CSSProperties} data-ex={exercise.id}>
+    <div className={`ts-card${done ? " done" : ""}${standalone ? " standalone" : ""}`} style={{ "--ts-n": colCount } as React.CSSProperties} data-ex={exercise.id}>
       <div className="ts-card-head">
-        <span className={`ts-circle ${done ? "done" : "active"}`}>{done ? "✓" : index}</span>
+        {!standalone && <span className={`ts-circle ${done ? "done" : "active"}`}>{done ? "✓" : index}</span>}
         <span className="ts-card-name">{exercise.name}</span>
         <span className="ts-card-tools">
           {/* A video the coach asked for: a camera that opens the sheet to
@@ -702,9 +849,11 @@ function ExpandedExercise({
               </svg>
             </a>
           )}
+          {!standalone && (
           <button type="button" className="ts-chev up" onClick={onCollapse} aria-label="Collapse">
             <ChevronDownIcon />
           </button>
+          )}
         </span>
       </div>
       <div className={`ts-fold${closing ? " folding" : ""}`}>

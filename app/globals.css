@@ -16057,27 +16057,88 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .hm-measure-row-title { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 800; color: #1e3a6e; }
 .hm-measure-chev { flex: none; display: flex; color: #1e3a6e; transform: rotate(-90deg); }
 
-/* ---- The workout session, as its own screen over the app (client). Opened
-   from a session row on the Training tab; the row stays behind it. A clock
-   runs from the first opening until the client presses "End session". ---- */
-.ws-screen { --font-sans: var(--font-archivo), "Archivo", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, sans-serif; position: relative; gap: 14px; padding: max(64px, calc(env(safe-area-inset-top, 0px) + 20px)) 20px 0; background: #F4F7FC; color: #313851; font-family: var(--font-sans); }
-.ws-head { flex-shrink: 0; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+/* ---- Training tab: a session's overview. Unfolds under its row: the plan
+   per exercise, what was lifted when it has been, and one button into the
+   workout. Nothing here logs anything. ---- */
+.tr-ov { display: flex; flex-direction: column; gap: 12px; }
+.tr-ov-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.tr-ov-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 6px; border-bottom: 1px solid #eceff3; }
+.tr-ov-row:last-child { border-bottom: 0; }
+.tr-ov-row .ts-circle { flex: none; margin-top: 1px; }
+.tr-ov-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tr-ov-name { font-size: 15px; font-weight: 700; color: #313851; line-height: 1.25; }
+.tr-ov-row.done .tr-ov-name { color: #5b6474; }
+.tr-ov-plan { font-size: 13px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
+.tr-ov-lifted { font-size: 13px; font-weight: 700; color: #2f7a3f; font-variant-numeric: tabular-nums; white-space: pre-wrap; }
+.tr-ov-begin { display: block; width: 100%; height: 50px; border: 0; border-radius: 14px; background: #1e3a6e; color: #fff; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 20px rgba(30, 58, 110, 0.25); }
+.tr-ov-begin.secondary { background: #fff; color: #1e3a6e; border: 1px solid #dfe3e8; box-shadow: none; }
+
+/* ---- The workout, as its own screen over the app (client). Opened from a
+   session's overview; one exercise per page, the cardio on one, the finish
+   on the last. A small clock runs under the title from "Begin workout" to
+   "End session". Under the app's own pushed views (chat), which sit at 5. ---- */
+.ws-screen { --font-sans: var(--font-archivo), "Archivo", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, sans-serif; position: relative; z-index: 4; gap: 12px; padding: max(56px, calc(env(safe-area-inset-top, 0px) + 16px)) 20px 0; background: #F4F7FC; color: #313851; font-family: var(--font-sans); }
+.ws-head { flex-shrink: 0; display: grid; grid-template-columns: 40px minmax(0, 1fr) 40px; align-items: center; gap: 12px; }
 .ws-head-titles { min-width: 0; text-align: center; }
-.ws-title { margin: 0; font-size: 20px; font-weight: 700; line-height: 1.15; letter-spacing: -0.01em; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ws-head-pill { justify-self: end; }
-/* The clock: dark card, big tabular figures, a small "going" light beside it. */
-.ws-timer { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-radius: 18px; background: #141a24; color: #fff; }
-.ws-timer-kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); }
-.ws-timer-value { margin-top: 4px; font-size: 36px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.ws-timer-state { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); font-size: 13px; font-weight: 700; color: #fff; }
-.ws-timer-state.done { background: #DFF3EA; color: #2f7a3f; }
-.ws-timer-dot { width: 8px; height: 8px; border-radius: 999px; background: #7fd68f; animation: ws-pulse 1.4s ease-in-out infinite; }
-@keyframes ws-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
-.ws-timer.ended { background: #1e3a6e; }
-/* The exercises run to the screen edges under the dock. */
+.ws-title { margin: 0; font-size: 19px; font-weight: 700; line-height: 1.15; letter-spacing: -0.01em; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ws-clock { display: inline-flex; align-items: center; gap: 6px; margin-top: 3px; font-size: 13px; font-weight: 700; color: #1e3a6e; font-variant-numeric: tabular-nums; }
+.ws-clock.ended { color: #2f7a3f; }
+.ws-chat { color: #1e3a6e; }
+.ws-chat svg { width: 22px; height: 22px; }
+.ws-timer-dot { width: 7px; height: 7px; border-radius: 999px; background: #2f7a3f; animation: ws-pulse 1.4s ease-in-out infinite; }
+@keyframes ws-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+/* Where in the workout: "Exercise 2 of 6" and one segment per page. Tapping opens the jump list. */
+.ws-progress { flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; width: 100%; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.ws-progress-label { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #5b6474; }
+.ws-progress-label svg { width: 14px; height: 14px; }
+.ws-progress-bar { display: flex; gap: 4px; }
+.ws-progress-seg { flex: 1; height: 4px; border-radius: 999px; background: #dfe3e8; }
+.ws-progress-seg.done { background: #2f7a3f; }
+.ws-progress-seg.now { background: #1e3a6e; }
+.ws-jump { flex-shrink: 0; display: flex; flex-direction: column; max-height: 46vh; overflow-y: auto; border: 1px solid #dfe3e8; border-radius: 14px; background: #fff; box-shadow: 0 14px 30px rgba(20, 30, 50, 0.12); }
+.ws-jump-row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border: 0; border-bottom: 1px solid #eceff3; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.ws-jump-row:last-child { border-bottom: 0; }
+.ws-jump-row.now { background: #f4f7fc; }
+.ws-jump-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; color: #313851; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ws-jump-row.done .ws-jump-name { color: #5b6474; }
+.ws-jump-count { font-size: 12px; font-weight: 700; color: #8b93a1; font-variant-numeric: tabular-nums; }
+/* The page runs to the screen edges under the dock. */
 .ws-scroll { flex: 1; min-height: 0; margin: 0 -20px; padding: 0 20px 130px; overflow-y: auto; scrollbar-width: none; }
 .ws-scroll::-webkit-scrollbar { display: none; }
-.ws-end { background: #1e3a6e; }
-/* The row on the Training tab points into the screen. */
-.tr-chev.right { transform: rotate(-45deg); }
+/* The exercise on its own page: no card border, room to breathe, a bigger name. */
+.ws-screen .ts-card.standalone { border: 0; box-shadow: none; padding: 18px 16px 16px; }
+.ws-screen .ts-card.standalone .ts-card-name { font-size: 22px; line-height: 1.15; }
+.ws-screen .ts-card.standalone .ts-target { margin-top: 14px; padding: 12px 0 13px; }
+.ws-screen .ts-card.standalone .ts-target b { font-size: 18px; }
+.ws-screen .ts-card.standalone .ts-target small { font-size: 11px; }
+.ws-screen .ts-card.standalone .ts-set { padding: 10px 0; font-size: 16px; }
+/* The gym question, before the first exercise. */
+.ws-gym { display: flex; flex-direction: column; gap: 6px; padding: 24px 4px 0; }
+.ws-gym-kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #1e3a6e; }
+.ws-gym-title { margin: 0; font-size: 26px; font-weight: 700; line-height: 1.15; letter-spacing: -0.01em; color: #141a24; }
+.ws-gym-sub { margin: 4px 0 14px; font-size: 14px; color: #5b6474; }
+.ws-gym-list { display: flex; flex-direction: column; gap: 10px; }
+.ws-gym-btn { width: 100%; min-height: 56px; padding: 0 18px; border: 1.5px solid #dfe3e8; border-radius: 14px; background: #fff; font: inherit; font-size: 16px; font-weight: 700; text-align: left; color: #313851; cursor: pointer; }
+.ws-gym-btn.on { border-color: #1e3a6e; background: #1e3a6e; color: #fff; }
+/* The finish page: the clock large, the session's figures under it. */
+.ws-finish { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 28px 4px 0; text-align: center; }
+.ws-finish-kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #1e3a6e; }
+.ws-finish-time { font-size: 48px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; color: #141a24; font-variant-numeric: tabular-nums; }
+.ws-finish-grid { display: flex; gap: 10px; width: 100%; margin-top: 18px; }
+.ws-finish-cell { flex: 1; display: flex; flex-direction: column; gap: 2px; padding: 14px 8px; border-radius: 14px; background: #fff; border: 1px solid #dfe3e8; }
+.ws-finish-cell b { font-size: 22px; font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; }
+.ws-finish-cell small { font-size: 12px; font-weight: 600; color: #5b6474; }
+.ws-finish-note { margin: 14px 0 0; font-size: 13px; color: #5b6474; }
+/* The dock: previous on the left, the one next step filling the rest. */
+.ws-dock { gap: 10px; }
+.ws-prev { flex: none; display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; color: #1e3a6e; cursor: pointer; }
+.ws-prev:disabled { opacity: 0.35; cursor: default; }
+.ws-prev svg { width: 20px; height: 20px; }
+.ws-grow { flex: 1; padding: 0 16px; }
+.ws-wide { flex: 1; }
 @media (prefers-reduced-motion: reduce) { .ws-timer-dot { animation: none; } }
+/* The rest of the session under the open exercise: same rows as the overview, tappable. */
+.ws-rest { margin-top: 18px; padding: 0 4px; }
+.ws-rest-label { padding: 0 6px 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
+.ws-rest-row { width: 100%; border: 0; border-bottom: 1px solid #e6e9ee; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.ws-rest .tr-ov-list li:last-child .ws-rest-row { border-bottom: 0; }
