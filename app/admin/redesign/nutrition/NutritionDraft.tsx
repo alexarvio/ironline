@@ -16,6 +16,7 @@ import { pageWindow } from "../../../lib/pager";
 import DatePick from "../DatePick";
 import { ConfirmDialog, MessageDialog, fmtDate, stateLabel } from "../training/TrainingDraft";
 import PhaseDatesDialog from "../PhaseDatesDialog";
+import { SortableItem, SortableList } from "../Sortable";
 
 // The calmer Nutrition tab, as a draft on real data, cut like the Training
 // draft: the same header, the same white cards, the same grid rows with the
@@ -167,19 +168,8 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
     return c;
   })();
   const editSupp = (id: number, f: Partial<DraftSupplement>) => setSupps((prev) => prev.map((s) => (s.id === id ? { ...s, ...f } : s)));
-  const [dragSupp, setDragSupp] = useState<number | null>(null);
-  const moveSupp = (overId: number) => {
-    if (dragSupp == null || dragSupp === overId) return;
-    setSupps((prev) => {
-      const next = prev.filter((x) => x.id !== dragSupp);
-      next.splice(
-        next.findIndex((x) => x.id === overId),
-        0,
-        prev.find((x) => x.id === dragSupp)!,
-      );
-      return next;
-    });
-  };
+  // A drop sets the new order; it is saved with the rest on Apply.
+  const moveSupps = (ids: (number | string)[]) => setSupps((prev) => ids.map((id) => prev.find((x) => x.id === id)!).filter(Boolean));
 
   // ---- The log: one day open at a time, twenty days a page.
   const [open, setOpen] = useState<string | null>(null);
@@ -442,19 +432,12 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
               <span />
             </div>
           )}
+          <SortableList ids={supps.map((s) => s.id)} label="supplement" onMove={moveSupps}>
           {supps.map((s) => (
-            <div
-              key={s.id}
-              className={`rd-row${suppSaved.some((x) => x.id === s.id) ? "" : " new"}${dragSupp === s.id ? " dragging" : ""}`}
-              onDragOver={(e) => {
-                if (dragSupp != null) {
-                  e.preventDefault();
-                  moveSupp(s.id);
-                }
-              }}
-            >
+            <SortableItem key={s.id} id={s.id} className={`rd-row${suppSaved.some((x) => x.id === s.id) ? "" : " new"}`}>
+              {(suppGrip) => (
               <div className="rd-row-main static rn-wide" style={sGrid}>
-                <span className="rd-grip" draggable onDragStart={() => setDragSupp(s.id)} onDragEnd={() => setDragSupp(null)} title="Drag to reorder" aria-label={`Drag ${s.name || "item"}`}>
+                <span className="rd-grip" {...suppGrip}>
                   ⋮⋮
                 </span>
                 <Box value={s.name} onChange={(v) => editSupp(s.id, { name: v })} label="Item" placeholder="Creatine" strong autoFocus={!s.name} />
@@ -474,8 +457,10 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
                   </DropdownMenu>
                 </span>
               </div>
-            </div>
+              )}
+            </SortableItem>
           ))}
+          </SortableList>
           <button
             type="button"
             className="rd-session add rn-additem"

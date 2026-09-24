@@ -13,6 +13,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { CalendarIcon, ChatIcon, ChevronDownIcon, ColumnsIcon, CopyIcon, DumbbellIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { VideoIcon } from "../../VideoRequestButton";
 import PhaseDatesDialog from "../PhaseDatesDialog";
+import { SortableItem, SortableList } from "../Sortable";
 import Picker from "../Picker";
 import DatePick from "../DatePick";
 
@@ -313,26 +314,8 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
 
   // Drag to reorder: exercises inside a session (queued on its bar), and
   // sessions inside the week.
-  const [dragRow, setDragRow] = useState<{ session: number; id: number } | null>(null);
-  const [dragSession, setDragSession] = useState<number | null>(null);
+  // (SortableList / SortableItem; the order is saved on drop.)
   const orderOf = (s: DraftSession) => pend(s.id).order ?? s.rows.map((r) => r.id);
-  const moveRow = (s: DraftSession, overId: number) => {
-    if (!dragRow || dragRow.session !== s.id || dragRow.id === overId) return;
-    const cur = orderOf(s);
-    const next = cur.filter((id) => id !== dragRow.id);
-    next.splice(next.indexOf(overId), 0, dragRow.id);
-    const same = next.every((id, i) => id === s.rows[i]?.id);
-    patch(s.id, (p) => ({ ...p, order: same ? null : next }));
-  };
-  const moveSession = (overId: number) => {
-    if (dragSession == null || dragSession === overId) return;
-    setSessions((prev) => {
-      const next = prev.filter((x) => x.id !== dragSession);
-      const dragged = prev.find((x) => x.id === dragSession)!;
-      next.splice(next.findIndex((x) => x.id === overId), 0, dragged);
-      return next;
-    });
-  };
 
   const today = new Date().toISOString().slice(0, 10);
   const weekDate = (index: number) => {
@@ -573,6 +556,14 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
       </div>
 
       <div className="rd-sessions">
+        <SortableList
+          ids={sessions.map((s) => s.id)}
+          label="session"
+          onMove={(ids) => {
+            setSessions(ids.map((id) => sessions.find((x) => x.id === id)!));
+            act(() => reorderSessionsAction(clientId, weekNo(viewIdx), ids as number[]), "Session order changed");
+          }}
+        >
         {sessions.map((s) => {
           const p = pend(s.id);
           const isOpen = open === s.id;
@@ -584,28 +575,11 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
             .map((id) => s.rows.find((r) => r.id === id)!)
             .filter((r) => r && !p.removed.includes(r.id));
           return (
-            <section
-              key={s.id}
-              className={`rd-session${isOpen ? " open" : ""}${dragSession === s.id ? " dragging" : ""}`}
-              onDragOver={(e) => {
-                if (dragSession != null) {
-                  e.preventDefault();
-                  moveSession(s.id);
-                }
-              }}
-            >
+            <SortableItem key={s.id} id={s.id} as="section" className={`rd-session${isOpen ? " open" : ""}`}>
+              {(sessionGrip) => (
+              <>
               <div className="rd-session-head">
-                <span
-                  className="rd-grip"
-                  draggable
-                  onDragStart={() => setDragSession(s.id)}
-                  onDragEnd={() => {
-                    if (dragSession != null && sessions.some((x, i) => x.id !== program.sessions[i]?.id)) act(() => reorderSessionsAction(clientId, weekNo(viewIdx), sessions.map((x) => x.id)), "Session order changed");
-                    setDragSession(null);
-                  }}
-                  title="Drag to reorder"
-                  aria-label={`Drag ${name}`}
-                >
+                <span className="rd-grip" {...sessionGrip}>
                   ⋮⋮
                 </span>
                 <button type="button" className="rd-session-toggle" onClick={() => setOpen(isOpen ? null : s.id)} aria-expanded={isOpen} aria-label={isOpen ? `Fold ${name}` : `Open ${name}`}>
@@ -662,6 +636,16 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                     <span />
                   </div>
 
+                  <SortableList
+                    ids={rows.map((r) => r.id)}
+                    label="exercise"
+                    onMove={(ids) => {
+                      // Rows taken off the session stay at the end of the order, unseen.
+                      const next = [...(ids as number[]), ...orderOf(s).filter((id) => !ids.includes(id))];
+                      const same = next.every((id, i) => id === s.rows[i]?.id);
+                      patch(s.id, (q) => ({ ...q, order: same ? null : next }));
+                    }}
+                  >
                   {rows.map((r) => {
                     const e = p.edits[r.id] ?? {};
                     const edit = (f: Edits) => patch(s.id, (q) => ({ ...q, edits: { ...q.edits, [r.id]: { ...(q.edits[r.id] ?? {}), ...f } } }));
@@ -669,18 +653,10 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                     const shownName = e.name ?? r.name;
                     const under = e.note !== undefined ? e.note : (r.note ?? "");
                     return (
-                      <div
-                        key={r.id}
-                        className={`rd-row${Object.keys(e).length ? " edited" : ""}${dragRow?.id === r.id ? " dragging" : ""}`}
-                        onDragOver={(ev) => {
-                          if (dragRow?.session === s.id) {
-                            ev.preventDefault();
-                            moveRow(s, r.id);
-                          }
-                        }}
-                      >
+                      <SortableItem key={r.id} id={r.id} className={`rd-row${Object.keys(e).length ? " edited" : ""}`}>
+                        {(rowGrip) => (
                         <div className="rd-row-main" style={colStyle}>
-                          <span className="rd-grip" draggable onDragStart={() => setDragRow({ session: s.id, id: r.id })} onDragEnd={() => setDragRow(null)} title="Drag to reorder" aria-label={`Drag ${r.name}`}>
+                          <span className="rd-grip" {...rowGrip}>
                             ⋮⋮
                           </span>
                           <span className="rd-ex">
@@ -749,9 +725,11 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                             </DropdownMenu>
                           </span>
                         </div>
-                      </div>
+                        )}
+                      </SortableItem>
                     );
                   })}
+                  </SortableList>
 
                   {(s.cardio.some((c) => !p.cardioRemoved.includes(c.id)) || p.added.some((r) => r.kind === "cardio")) && (() => {
                     const live = s.cardio.filter((c) => !p.cardioRemoved.includes(c.id));
@@ -920,9 +898,12 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                   )}
                 </div>
               )}
-            </section>
+              </>
+              )}
+            </SortableItem>
           );
         })}
+        </SortableList>
         {sessions.length < MAX_SESSIONS ? (
           <button
             type="button"

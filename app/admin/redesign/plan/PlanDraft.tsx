@@ -18,6 +18,7 @@ import Picker from "../Picker";
 import DatePick from "../DatePick";
 import DateText from "../DateText";
 import { phaseLengthLabel, phaseWeeks } from "../../../lib/phases";
+import { SortableItem, SortableList } from "../Sortable";
 import EventsCard, { type Category, type PlanEvent } from "./EventsCard";
 
 // The calmer Plan tab, as a draft on real data, in the Training draft's
@@ -228,7 +229,6 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
   const [filter, setFilter] = useState<"open" | "done" | "all">("open");
   const [pendingDone, setPendingDone] = useState<Record<number, boolean>>({});
   const [order, setOrder] = useState<number[] | null>(null);
-  const [dragGoal, setDragGoal] = useState<number | null>(null);
   const doneOf = (g: PlanGoalRow) => pendingDone[g.id] ?? g.done;
   const toggleDone = (g: PlanGoalRow) =>
     setPendingDone((p) => {
@@ -241,11 +241,11 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
   const ordered = order ? [...goals].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id)) : goals;
   const shown = ordered.filter((g) => (filter === "all" ? true : pendingDone[g.id] != null ? true : filter === "done" ? g.done : !g.done));
   const goalChanges = Object.keys(pendingDone).length + (order ? 1 : 0);
-  const moveGoal = (overId: number) => {
-    if (dragGoal == null || dragGoal === overId) return;
-    const cur = ordered.map((g) => g.id);
-    const next = cur.filter((id) => id !== dragGoal);
-    next.splice(next.indexOf(overId), 0, dragGoal);
+  // A drop reorders the goals on screen; ones the filter hides keep their places.
+  const moveGoals = (ids: (number | string)[]) => {
+    const queue = [...ids] as number[];
+    const onScreen = new Set(queue);
+    const next = ordered.map((g) => (onScreen.has(g.id) ? queue.shift()! : g.id));
     setOrder(next.every((id, i) => id === goals[i]?.id) ? null : next);
   };
 
@@ -467,23 +467,16 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
             </div>
           )}
           {shown.length === 0 && <p className="rd-full">{filter === "done" ? "Nothing closed yet." : `No goals yet. Add the first one; ${firstName} sees them on Home.`}</p>}
+          <SortableList ids={shown.map((g) => g.id)} label="goal" onMove={moveGoals}>
           {shown.map((g) => {
             const isDone = doneOf(g);
             const queued = pendingDone[g.id] != null;
             const textOnly = g.kind === "none";
             return (
-              <div
-                key={g.id}
-                className={`rd-row${isDone ? " done" : ""}${g.id < 0 ? " new" : ""}${dragGoal === g.id ? " dragging" : ""}`}
-                onDragOver={(e) => {
-                  if (dragGoal != null) {
-                    e.preventDefault();
-                    moveGoal(g.id);
-                  }
-                }}
-              >
+              <SortableItem key={g.id} id={g.id} className={`rd-row${isDone ? " done" : ""}${g.id < 0 ? " new" : ""}`}>
+                {(goalGrip) => (
                 <div className="rd-row-main static" style={gGrid}>
-                  <span className="rd-grip" draggable onDragStart={() => setDragGoal(g.id)} onDragEnd={() => setDragGoal(null)} title="Drag to reorder" aria-label={`Drag ${g.text}`}>
+                  <span className="rd-grip" {...goalGrip}>
                     ⋮⋮
                   </span>
                   {/* One mark for every goal: done, on track, off track, or (text goals) simply open. Marking done lives in the row's menu. */}
@@ -525,9 +518,11 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                     </DropdownMenu>
                   </span>
                 </div>
-              </div>
+                )}
+              </SortableItem>
             );
           })}
+          </SortableList>
           <button type="button" className="rd-session add rm-additem" onClick={() => setDlg({ kind: "goal", goal: null })}>
             + Add goal
           </button>
