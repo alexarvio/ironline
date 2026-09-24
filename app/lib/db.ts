@@ -1162,9 +1162,10 @@ export function claimUnownedRows(data: Data = globalForDb._jsonDb!): number {
 }
 
 // Where the data lives between restarts. Postgres only when STORE=postgres
-// AND DATABASE_URL are both set; the JSON file otherwise (local dev, and
-// production until the switch). Either way the app works on one in-memory
-// copy through getData().
+// AND DATABASE_URL are both set (production, staging, and local dev with
+// DATABASE_URL=pglite:<folder>); the JSON file otherwise (the scripts in
+// scripts/, which don't read .env.local). Either way the app works on one
+// in-memory copy through getData().
 //
 // Never during `next build`: Railway hands the service's variables to the
 // build too, but instrumentation.ts (which loads the Postgres store) only runs
@@ -1225,9 +1226,10 @@ export function getData(): Data {
 
 export function persist() {
   const data = getData();
-  // The JSON file is written in both modes: it is the store in JSON mode, and
-  // in Postgres mode a safety copy while the switch settles.
-  save(data);
+  // Postgres mode writes to Postgres only. The JSON file was kept up to date
+  // as a safety copy for the first days after the switch; the nightly backup
+  // (lib/backup.ts) has covered that since, so the file is left as it was.
+  if (STORE_MODE === "json") save(data);
   globalForDb._pgSave?.(data);
 }
 
