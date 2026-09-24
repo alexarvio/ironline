@@ -16393,3 +16393,5 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .wo-wrap-sub { margin: -6px 0 0; font-size: 14.5px; color: #5b6474; }
 /* A done session: the tile stays plain like the others; the green is the Done pill alone. */
 .tr-row-tile.done { background: #e6ecf3; color: #1e3a6e; }
+/* A done session on the Training tab: the number on its green tile, "Done" as bare green text. */
+.tr-row-pill.done { padding: 6px 0; background: transparent; color: #2f7a3f; }
