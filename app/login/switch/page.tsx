@@ -16,10 +16,10 @@ export default async function SwitchAccountPage({ searchParams }: { searchParams
   const { to } = await searchParams;
   const want = to === "client" ? "client" : "coach";
   // Already the right kind: nothing to switch.
-  if (user.role === want) redirect(want === "coach" ? "/admin" : "/client");
+  if (user.role === want) redirect(want === "coach" ? "/admin/redesign" : "/client");
 
   const who = user.role === "client" && user.client_id != null ? getClient(user.client_id)?.name ?? user.email : user.email;
-  const here = user.role === "coach" ? "/admin" : "/client";
+  const here = user.role === "coach" ? "/admin/redesign" : "/client";
 
   return (
     <div className="auth-page">
