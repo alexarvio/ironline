@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useDismiss } from "./useDismiss";
 import { useKeyboardInset } from "./useKeyboardInset";
 import { saveSkipReasonAction } from "../lib/actions";
 import { ChevronLeftIcon } from "../components/icons";
@@ -70,6 +71,7 @@ export default function SessionOverview({
   // The sheet rides on the keyboard, so the reason box stays in view while typing.
   const kb = useKeyboardInset();
   const [menuOpen, setMenuOpen] = useState(false);
+  useDismiss(menuOpen, () => setMenuOpen(false));
   const [skipOpen, setSkipOpen] = useState(false);
   const [skipDraft, setSkipDraft] = useState(day.skipReason);
   const [skipSaving, startSkip] = useTransition();

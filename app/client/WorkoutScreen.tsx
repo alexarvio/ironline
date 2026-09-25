@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { useDismiss } from "./useDismiss";
 import { discardSessionAction, endSessionAction } from "../lib/actions";
 import { ChevronLeftIcon } from "../components/icons";
 import type { GymOption } from "./GymPicker";
@@ -142,6 +143,7 @@ export default function WorkoutScreen({
 
   // The ⋯ menu and the sheets.
   const [menuOpen, setMenuOpen] = useState(false);
+  useDismiss(menuOpen, () => setMenuOpen(false));
   const [gymOpen, setGymOpen] = useState(false);
   const [, startTransition] = useTransition();
   const gymName = day.gyms.find((g) => g.id === gymId)?.name ?? null;
