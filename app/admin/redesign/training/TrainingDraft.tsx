@@ -54,6 +54,8 @@ export type DraftRow = {
   history: { week: number; label: string; target: number | null; setsPlanned: number; sets: { n: number; kg: number | null; reps: number | null; rpe: number | null }[]; best: number | null; gym: string | null; current: boolean }[];
   /** What the client did instead, when they swapped the exercise. */
   swap: string | null;
+  /** The swap in full: what, when, and the sets logged on it (kept out of this row's numbers). */
+  swapInfo: { name: string; typed: boolean; when: string; sets: { set: number; kg: number | null; reps: number | null; rpe: number | null; gym: string | null }[] } | null;
   /** What the coach offers instead when the machine is taken. */
   alternatives: { exerciseId: number; name: string; note: string }[];
   d7: number | null;
@@ -291,7 +293,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
         });
         const addedRows: DraftRow[] = p.added
           .filter((a): a is Added & AddedExercise => a.kind === "exercise")
-          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: Math.max(1, parseInt(String(a.sets), 10) || 3), reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: null, tempo: null, rest: null, note: null, logged: [], video: null, demo: null, history: [], swap: null, alternatives: [], d7: null, d30: null }));
+          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: Math.max(1, parseInt(String(a.sets), 10) || 3), reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: null, tempo: null, rest: null, note: null, logged: [], video: null, demo: null, history: [], swap: null, swapInfo: null, alternatives: [], d7: null, d30: null }));
         const addedCardio: DraftCardio[] = p.added
           .filter((a): a is Added & AddedCardio => a.kind === "cardio")
           .map((a, i) => ({ id: -(Date.now() + 500 + i), name: a.name, time: a.time, pace: a.pace, incline: a.incline, distance: a.distance, notes: a.note, done: false }));
@@ -317,6 +319,9 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
   // server's closed rows match. (The pattern read "d+" for a while, so no
   // link ever matched and the week opened folded.)
   const [flashRow, setFlashRow] = useState<number | null>(null);
+  // Rows whose swap is opened underneath them.
+  const [openSwaps, setOpenSwaps] = useState<number[]>([]);
+  const toggleSwap = (id: number) => setOpenSwaps((o) => (o.includes(id) ? o.filter((x) => x !== id) : [...o, id]));
   useEffect(() => {
     const m = /^#session-(\d+)(?:-ex-(\d+))?$/.exec(window.location.hash);
     if (!m) return;
@@ -638,6 +643,16 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                   {s.gym ? ` · ${s.gym}` : ""}
                   {s.duration != null ? ` · ${s.duration} min` : ""}
                 </span>
+                {/* Swaps made in this session, seen without opening it. */}
+                {(() => {
+                  const n = rows.filter((r) => r.swap).length;
+                  return n > 0 ? (
+                    <span className="rd-swapdot static" title={`${firstName} swapped ${n} exercise${n === 1 ? "" : "s"} in this session`} aria-label={`${n} swapped`}>
+                      <SwapIcon />
+                      {n > 1 && <b>{n}</b>}
+                    </span>
+                  ) : null;
+                })()}
                 {status && <span className={`rd-pill ${status.cls}`}>{status.text}</span>}
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger className="rd-btn ghost" aria-label={`More for ${name}`}>
@@ -699,6 +714,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                     return (
                       <SortableItem key={r.id} id={r.id} anchor={`row-${r.id}`} className={`rd-row${Object.keys(e).length ? " edited" : ""}${flashRow === r.id ? " flash" : ""}`}>
                         {(rowGrip) => (
+                        <>
                         <div className="rd-row-main" style={colStyle}>
                           <span className="rd-grip" {...rowGrip}>
                             ⋮⋮
@@ -708,7 +724,18 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                               <button type="button" className="rd-ex-btn" onClick={() => setDlg({ kind: "editExercise", sessionId: s.id, rowId: r.id })} title="Edit this exercise">
                                 {shownName}
                               </button>
-                              {r.swap && <span className="rd-swap" title="What they did instead">→ {r.swap}</span>}
+                              {r.swap && (
+                                <button
+                                  type="button"
+                                  className={`rd-swapdot${openSwaps.includes(r.id) ? " on" : ""}`}
+                                  onClick={() => toggleSwap(r.id)}
+                                  aria-expanded={openSwaps.includes(r.id)}
+                                  title={`${firstName} did ${r.swap} instead`}
+                                  aria-label={`Swapped for ${r.swap}: show what they did`}
+                                >
+                                  <SwapIcon />
+                                </button>
+                              )}
                               {video && <i className={`rd-vid ${video.state}`} title={video.state === "asked" ? "Video asked for" : video.state === "in" ? "Their video is in" : "Video replied"} />}
                             </span>
                           </span>
@@ -772,6 +799,41 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                             </DropdownMenu>
                           </span>
                         </div>
+                        {/* What they did instead, opened from the orange circle: the
+                            exercise, when, and the sets logged on it. Those sets are
+                            the swap's, so they stay out of this row's numbers. */}
+                        {r.swapInfo && (
+                          <div className={`rd-swaprow${openSwaps.includes(r.id) ? " open" : ""}`} aria-hidden={!openSwaps.includes(r.id)}>
+                            <div className="rd-swaprow-clip">
+                              <div className="rd-swaprow-body">
+                                <span className="rd-swapdot static" aria-hidden="true">
+                                  <SwapIcon />
+                                </span>
+                                <span className="rd-swaprow-text">
+                                  <b>
+                                    {firstName} did {r.swapInfo.name} instead
+                                  </b>
+                                  <small>
+                                    {r.swapInfo.typed ? "Typed in by " + firstName : "From your alternatives or library"} · swapped {r.swapInfo.when} · not counted in {r.name}&rsquo;s trends or progress
+                                  </small>
+                                </span>
+                                <span className="rd-did rd-swaprow-sets">
+                                  {r.swapInfo.sets.length === 0 ? (
+                                    <em>No sets logged on it yet</em>
+                                  ) : (
+                                    r.swapInfo.sets.map((l) => (
+                                      <span key={l.set} className="rd-set" title={l.gym ?? undefined}>
+                                        {kgOf(l.kg, lbs)}×{l.reps ?? "—"}
+                                        {l.rpe != null && <small>@{l.rpe}</small>}
+                                      </span>
+                                    ))
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        </>
                         )}
                       </SortableItem>
                     );
@@ -2339,3 +2401,15 @@ function NoteDialog({ firstName, note, onSeen }: { firstName: string; note: { te
   );
 }
 
+
+// Two arrows passing each other: a swap.
+function SwapIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M7 4 3 8l4 4" />
+      <path d="M3 8h13" />
+      <path d="m17 20 4-4-4-4" />
+      <path d="M21 16H8" />
+    </svg>
+  );
+}

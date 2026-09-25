@@ -146,7 +146,9 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
         const wn = program.start_week + i;
         const wd = getWeek(clientId, wn).find((x) => x.day_of_week === d.day_of_week);
         const wa = wd ? getAssignmentsForDay(wd.id).find((x) => x.exercise_id === a.exercise_id) : undefined;
-        if (!wa) return null;
+        // A week the client swapped it out: those sets were another exercise,
+        // so they stay out of this one's history, trends and progress.
+        if (!wa || wa.swap) return null;
         const wl = [...getLogsForAssignment(wa.id)].sort((p, q) => p.set_number - q.set_number);
         const kgs = wl.map((l) => l.weight_kg ?? 0);
         return {
@@ -180,7 +182,16 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
         tempo: a.tempo,
         rest: a.rest_seconds,
         note: a.notes,
-        logged: logs.map((l) => ({ set: l.set_number, kg: l.weight_kg, reps: l.reps, rpe: l.rpe_actual, gym: l.gym_id != null ? gymName.get(l.gym_id) ?? null : null })),
+        // Swapped: the sets belong to what they did instead (swapInfo), not to the prescription.
+        logged: a.swap ? [] : logs.map((l) => ({ set: l.set_number, kg: l.weight_kg, reps: l.reps, rpe: l.rpe_actual, gym: l.gym_id != null ? gymName.get(l.gym_id) ?? null : null })),
+        swapInfo: a.swap
+          ? {
+              name: (a.swap.library_exercise_id != null ? libName.get(a.swap.library_exercise_id) ?? null : null) ?? a.swap.custom_name ?? "Another exercise",
+              typed: a.swap.library_exercise_id == null,
+              when: new Date(a.swap.at).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }),
+              sets: logs.map((l) => ({ set: l.set_number, kg: l.weight_kg, reps: l.reps, rpe: l.rpe_actual, gym: l.gym_id != null ? gymName.get(l.gym_id) ?? null : null })),
+            }
+          : null,
         video: v ? { requestId: v.id, state: (v.replied_at ? "replied" : v.file_path ? "in" : "asked") as "asked" | "in" | "replied", note: v.note, reply: v.reply_note ?? null } : null,
         demo: a.exercise_video_url ? { url: a.exercise_video_url, source: "library" as const } : a.demo_url ? { url: a.demo_url, source: "row" as const } : null,
         history,
@@ -192,8 +203,9 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     });
     const cardio = listCardioForDay(d.id).map((c) => ({ id: c.id, name: c.name, time: c.time, pace: c.pace, incline: c.incline, distance: c.distance ?? "", notes: c.notes, done: isCardioDone(c.id) }));
     const setsPlanned = rows.reduce((t, r) => t + r.sets, 0);
-    const setsLogged = rows.reduce((t, r) => t + r.logged.length, 0);
-    const gym = rows.flatMap((r) => r.logged).find((l) => l.gym)?.gym ?? null;
+    // A swapped exercise's sets still count as done for the session.
+    const setsLogged = rows.reduce((t, r) => t + r.logged.length + (r.swapInfo?.sets.length ?? 0), 0);
+    const gym = rows.flatMap((r) => [...r.logged, ...(r.swapInfo?.sets ?? [])]).find((l) => l.gym)?.gym ?? null;
     const duration = d.session_started_at && d.session_ended_at ? Math.max(0, Math.round((Date.parse(d.session_ended_at) - Date.parse(d.session_started_at)) / 60000)) : null;
     return { id: d.id, number: si + 1, name: d.label || `Session ${si + 1}`, rows, cardio, setsPlanned, setsLogged, gym, skip: d.skip_reason ?? null, duration, ended: d.session_ended_at ?? null, note: d.session_note ?? null };
   });
