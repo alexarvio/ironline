@@ -590,3 +590,9 @@
 .rp-table td.rp-change { font-size: 12px; }
 .rp-howto { margin: 0; font-size: 11.5px; line-height: 1.5; color: #8b93a1; }
 .rp-howto b { color: #5b6474; font-weight: 700; }
+/* Against the coach's targets, a week at a time (25 Sep). */
+.rp-hit { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.rp-hit.top { background: #e3ecf8; color: #1e3a6e; }
+.rp-hit.up { background: #e8f6ee; color: #1b7a4b; }
+.rp-hit.flat { background: #fdf4e4; color: #9a5b00; }
+.rp-hit.down { background: #fdeee8; color: #b3471d; }
