@@ -17332,3 +17332,5 @@ button.ci-hint { cursor: pointer; }
    top-left corner instead, solid white like on the coach's, since the
    see-through white vanished against the page where it pokes out. */
 .cm-msg.mine .cm-linkdot, .cm-msg.mine.media .cm-linkdot { right: auto; left: -11px; border-color: #dfe3e8; background: #fff; color: #1e3a6e; }
+/* Chat: unpin a pinned message from the pinned list at the top (25 Sep). */
+.cm-unpin { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-left: 2px; border: 0; border-radius: 999px; background: transparent; font-size: 18px; line-height: 1; color: #8b93a1; cursor: pointer; }

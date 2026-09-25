@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronDownIcon, ChevronLeftIcon } from "../components/icons";
 import ChatComposeForm from "../components/ChatComposeForm";
 import MessageReactions from "../components/MessageReactions";
-import { deleteMyChatMessageAction, editMyChatMessageAction } from "../lib/actions";
+import { deleteMyChatMessageAction, editMyChatMessageAction, unpinMessageAction } from "../lib/actions";
 import CoachMark from "./CoachMark";
 import { useOpenLink } from "./CheckInContext";
 import type { LinkView, MessageAbout } from "../lib/messageLinks";
@@ -107,6 +107,12 @@ export default function CoachMessagesScreen({ coachName, messages, viewerIsClien
       router.refresh();
     });
   };
+  // Off the top: either side may take a pin away.
+  const unpin = (m: CoachMessageView) =>
+    startTransition(async () => {
+      await unpinMessageAction(clientId, m.id);
+      router.refresh();
+    });
   const remove = (m: CoachMessageView) => {
     if (!window.confirm("Delete this message? It goes for both of you.")) return;
     startTransition(async () => {
@@ -163,7 +169,13 @@ export default function CoachMessagesScreen({ coachName, messages, viewerIsClien
                     onCopy={m.text ? () => navigator.clipboard?.writeText(m.text).catch(() => {}) : null}
                     onEdit={() => setEditing({ id: m.id, text: m.text })}
                     onDelete={() => remove(m)}
+                    onUnpin={m.pinned ? () => unpin(m) : null}
                   />
+                )}
+                {inPins && (
+                  <button type="button" className="cm-unpin" onClick={() => unpin(m)} aria-label="Unpin this message">
+                    ×
+                  </button>
                 )}
               </span>
             </div>
@@ -215,7 +227,7 @@ export default function CoachMessagesScreen({ coachName, messages, viewerIsClien
 
 // The chevron on a message: Copy for any, Edit and Delete on your own. Goes
 // on a pick, a tap anywhere else, or Escape.
-function MessageMenu({ canChange, canEdit, onCopy, onEdit, onDelete }: { canChange: boolean; canEdit: boolean; onCopy: (() => void) | null; onEdit: () => void; onDelete: () => void }) {
+function MessageMenu({ canChange, canEdit, onCopy, onEdit, onDelete, onUnpin = null }: { canChange: boolean; canEdit: boolean; onCopy: (() => void) | null; onEdit: () => void; onDelete: () => void; onUnpin?: (() => void) | null }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLSpanElement>(null);
   useEffect(() => {
@@ -251,6 +263,11 @@ function MessageMenu({ canChange, canEdit, onCopy, onEdit, onDelete }: { canChan
           {canEdit && (
             <button type="button" role="menuitem" onClick={pick(onEdit)}>
               Edit
+            </button>
+          )}
+          {onUnpin && (
+            <button type="button" role="menuitem" onClick={pick(onUnpin)}>
+              Unpin
             </button>
           )}
           {canChange && (
