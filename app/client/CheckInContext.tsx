@@ -125,3 +125,13 @@ export const TrainingFocusProvider = TrainingFocusContext.Provider;
 export function useTrainingFocus() {
   return useContext(TrainingFocusContext);
 }
+
+// Same bridge for the Meetings screen, opened from Home's meeting card and
+// the menu. Null outside AppShell's tab content (the screen itself).
+const MeetingsContext = createContext<(() => void) | null>(null);
+
+export const MeetingsProvider = MeetingsContext.Provider;
+
+export function useOpenMeetings() {
+  return useContext(MeetingsContext);
+}

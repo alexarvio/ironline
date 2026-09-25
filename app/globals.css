@@ -17154,3 +17154,35 @@ button.ci-hint { cursor: pointer; }
 /* The frosted panel is the whole card (25 Sep): no dark rim around it. */
 .qa { padding: 0; }
 .qa-panel { border-radius: inherit; }
+
+/* Meetings screen (25 Sep): the next call as Home's card, the others booked,
+   then a log of past calls with what was agreed. */
+.hm-mt-join.early { border: 1px solid rgba(18, 19, 43, 0.14); background: transparent; color: var(--mt-ink); }
+.hm-mt-join.early .hm-mt-join-glyph { background: #eef1f6; }
+.hm-mt-all { align-self: center; min-height: 36px; padding: 0 8px; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 700; color: var(--mt-blue); cursor: pointer; }
+.hm-mt-all-link { border: 0; padding: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 700; color: #2F6BFF; cursor: pointer; }
+.mts-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 40px; display: flex; flex-direction: column; gap: 24px; }
+.mts-section { display: flex; flex-direction: column; gap: 10px; }
+.mts-head { padding: 0 4px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
+.mts-empty { margin: 0; padding: 16px; border-radius: 20px; background: #fff; border: 1px solid #EEEDF5; font-size: 14px; line-height: 1.45; color: #5b6474; }
+.mts-list { margin: 0; padding: 0; list-style: none; border-radius: 20px; background: #fff; border: 1px solid #EEEDF5; overflow: hidden; }
+.mts-list > li + li { border-top: 1px solid rgba(20, 26, 36, 0.07); }
+.mts-row { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 16px; }
+.mts-row-btn { border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.mts-leaf { flex: none; display: flex; flex-direction: column; align-items: center; width: 40px; }
+.mts-leaf b { font-size: 24px; font-weight: 800; line-height: 1; color: #141a24; font-variant-numeric: tabular-nums; }
+.mts-leaf small { margin-top: 2px; font-size: 9.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #8A8BA3; }
+.mts-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mts-row-title { font-size: 15px; font-weight: 700; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mts-row-sub { font-size: 12.5px; font-weight: 600; color: #6A6B85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mts-row-link { flex: none; height: 30px; padding: 0 13px; display: inline-flex; align-items: center; border-radius: 999px; background: #141a24; color: #fff; font-size: 12.5px; font-weight: 700; text-decoration: none; }
+.mts-past.missed .mts-row-title { color: #8A8BA3; }
+.mts-chev { flex: none; display: inline-flex; color: #5b6474; transition: transform 0.25s ease; }
+.mts-chev svg { width: 16px; height: 16px; }
+.mts-chev.open { transform: rotate(180deg); }
+.mts-body { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease; }
+.mts-body.open { grid-template-rows: 1fr; opacity: 1; }
+.mts-clip { min-height: 0; overflow: hidden; }
+.mts-text { margin: 0; padding: 0 16px 16px 70px; font-size: 14.5px; line-height: 1.5; color: #313851; white-space: pre-wrap; }
+@media (prefers-reduced-motion: reduce) { .mts-chev, .mts-body { transition: none; } }
+.hm-mt.link { cursor: pointer; }

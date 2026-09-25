@@ -7,7 +7,7 @@ import PhaseCards, { type HomePhase, type PhaseFoodToday } from "./PhaseCards";
 import ProgressPicsCard, { type ProgressPics } from "./ProgressPicsCard";
 import QuickActions from "./QuickActions";
 import type { LinkView } from "../lib/messageLinks";
-import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenLink, useOpenMessages, useOpenPhotos } from "./CheckInContext";
+import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenLink, useOpenMeetings, useOpenMessages, useOpenPhotos } from "./CheckInContext";
 
 // Deliberately does NOT import from ../lib/queries (see the note in the old
 // CheckInHub.tsx this replaces — a "use client" file importing queries.ts
@@ -286,7 +286,9 @@ function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstNam
 
 // ---- 5 · Next meeting, only when booked ------------------------------------
 
-function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<UpcomingMeeting>; recap: MeetingRecap; coachFirstName: string }) {
+export function MeetingCard({ m, recap, coachFirstName, showLink = false }: { m: NonNullable<UpcomingMeeting>; recap: MeetingRecap; coachFirstName: string; /** The call's link before it starts too (the Meetings screen). */ showLink?: boolean }) {
+  // On Home: a way to every meeting, past and to come.
+  const openMeetings = useOpenMeetings();
   // The pill and the Join button follow the clock: checked every minute
   // while Home is in front, and again when the app comes back.
   const [now, setNow] = useState<number | null>(null);
@@ -309,7 +311,7 @@ function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<UpcomingMeet
   const longRecap = !!recap && recap.text.length > 220;
   const pillLabel = live ? "Live" : m.inLabel;
   return (
-    <section className="hm-mt" aria-label={`Next meeting with ${coachFirstName}`}>
+    <section className={`hm-mt${openMeetings ? " link" : ""}`} aria-label={`Next meeting with ${coachFirstName}`} onClick={openMeetings ? (e) => openFromCard(e, openMeetings) : undefined}>
       <span className="hm-mt-glow" aria-hidden="true" />
       <div className="hm-mt-row">
         <div className="hm-mt-date">
@@ -328,15 +330,15 @@ function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<UpcomingMeet
           <div className="hm-mt-when">{m.whenLabel}</div>
         </div>
       </div>
-      {joinable && (
-        <a className="hm-mt-join" href={m.link!} target="_blank" rel="noopener noreferrer">
+      {(joinable || (showLink && !!m.link)) && (
+        <a className={`hm-mt-join${joinable ? "" : " early"}`} href={m.link!} target="_blank" rel="noopener noreferrer">
           <span className="hm-mt-join-glyph" aria-hidden="true">
             <svg viewBox="0 0 24 24">
               <rect x="3" y="6" width="13" height="12" rx="2" />
               <path d="M16 10l5-3v10l-5-3z" />
             </svg>
           </span>
-          Join call
+          {joinable ? "Join call" : "Open meeting link"}
         </a>
       )}
       {recap && (
@@ -350,21 +352,39 @@ function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<UpcomingMeet
           )}
         </div>
       )}
+      {openMeetings && (
+        <button type="button" className="hm-mt-all" onClick={openMeetings}>
+          All meetings
+        </button>
+      )}
     </section>
   );
+}
+
+// On Home, a tap anywhere on a meeting card opens the Meetings screen; its
+// own buttons and the call's link keep doing their thing.
+function openFromCard(e: React.MouseEvent, open: () => void) {
+  if ((e.target as HTMLElement).closest("a, button")) return;
+  open();
 }
 
 // Nothing booked: the coach's notes from the last call instead.
 function LastMeetingCard({ recap, coachFirstName }: { recap: NonNullable<MeetingRecap>; coachFirstName: string }) {
   const [more, setMore] = useState(false);
   const long = recap.text.length > 220;
+  const openMeetings = useOpenMeetings();
   // A heading above, like "Latest from": the card holds the date and the notes.
   return (
     <section className="hm-last-meeting" aria-label={`Notes from your last meeting with ${coachFirstName}`}>
       <div className="hm-tasks-head">
         <span className="hm-eyebrow">Last meeting with {coachFirstName}</span>
+        {openMeetings && (
+          <button type="button" className="hm-mt-all-link" onClick={openMeetings}>
+            All meetings
+          </button>
+        )}
       </div>
-      <div className="hm-mt hm-mt-last">
+      <div className={`hm-mt hm-mt-last${openMeetings ? " link" : ""}`} onClick={openMeetings ? (e) => openFromCard(e, openMeetings) : undefined}>
         <span className="hm-mt-glow" aria-hidden="true" />
         <div className="hm-mt-top">
           <span className="hm-mt-pill">{recap.dateLabel}</span>

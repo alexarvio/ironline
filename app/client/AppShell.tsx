@@ -9,6 +9,7 @@ import ProgressPicturesScreen, { type ProgressPicturesProps } from "./ProgressPi
 import CoachProfileScreen from "./CoachProfileScreen";
 import CoachMessagesScreen, { type CoachMessagesProps } from "./CoachMessagesScreen";
 import FoodDiaryScreen, { type FoodDiaryProps } from "./FoodDiaryScreen";
+import MeetingsScreen, { type MeetingsProps } from "./MeetingsScreen";
 import type { CoachProfileView } from "../lib/coachProfileView";
 import {
   CheckInProvider,
@@ -21,6 +22,7 @@ import {
   NavigateProvider,
   NotificationsProvider,
   PhotosProvider,
+  MeetingsProvider,
   TrainingFocusProvider,
   type TrainingFocus,
 } from "./CheckInContext";
@@ -39,7 +41,7 @@ export type AppTab = {
   darkBanner?: boolean;
 };
 
-type PushView = "notifications" | "checkin" | "photos" | "coach" | "messages" | "food" | null;
+type PushView = "notifications" | "checkin" | "photos" | "coach" | "messages" | "food" | "meetings" | null;
 
 // The active bottom tab lives in sessionStorage, not just React state. A full
 // page load — a form that posts before hydration finishes on a slow phone, a
@@ -103,6 +105,7 @@ export default function AppShell({
   coachProfile = null,
   coachAvatarPath = null,
   foodDiary = null,
+  meetings = null,
 }: {
   clientName: string;
   tabs: AppTab[];
@@ -122,6 +125,8 @@ export default function AppShell({
   coachAvatarPath?: string | null;
   /** Today's food diary, opened from the ring on Nutrition. */
   foodDiary?: FoodDiaryProps | null;
+  /** Every call with the coach: to come and past, for the Meetings screen. */
+  meetings?: MeetingsProps | null;
 }) {
   const storedTab = useSyncExternalStore(subscribeTab, readTab, () => null);
   const activeId = storedTab && tabs.some((t) => t.id === storedTab) ? storedTab : tabs[0]?.id;
@@ -255,6 +260,10 @@ export default function AppShell({
       <div className="app-layer app-layer-push cn-screen">
         <FoodDiaryScreen clientId={clientId} diary={foodDiary} initialDate={foodDate} initialMeal={foodMeal} onBack={() => setPushView(null)} />
       </div>
+    ) : pushView === "meetings" && meetings ? (
+      <div className="app-layer app-layer-push cn-screen">
+        <MeetingsScreen {...meetings} coachName={coachMessages.coachName} onBack={() => setPushView(null)} />
+      </div>
     ) : pushView === "messages" ? (
       <div className="app-layer app-layer-push cn-screen">
         <CoachMessagesScreen {...coachMessages} clientId={clientId} onBack={() => setPushView(null)} />
@@ -327,6 +336,7 @@ export default function AppShell({
                         : null
                     }
                   >
+                <MeetingsProvider value={meetings ? () => setPushView("meetings") : null}>
                 <CoachProvider value={coachProfile ? () => setPushView("coach") : null}>
                     <NotificationsProvider value={() => setPushView("notifications")}>
                       <NavigateProvider value={goToTab}>
@@ -336,6 +346,7 @@ export default function AppShell({
                       </NavigateProvider>
                     </NotificationsProvider>
                   </CoachProvider>
+                </MeetingsProvider>
                 </FoodProvider>
                 </MessagesProvider>
               </PhotosProvider>
@@ -385,6 +396,11 @@ export default function AppShell({
                   <button type="button" className="app-menu-item" onClick={() => go(() => openMessages())}>
                     Messages with {coachMessages.coachName}
                   </button>
+                  {meetings && (
+                    <button type="button" className="app-menu-item" onClick={() => go(() => setPushView("meetings"))}>
+                      Meetings
+                    </button>
+                  )}
                   {/* Help writes to the coach: the person who can actually do something. */}
                   {helpEmail && (
                     <a

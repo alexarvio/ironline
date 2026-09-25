@@ -73,6 +73,7 @@ import TrainingDayList from "./TrainingDayList";
 
 import { ProgressPicturesRow, type ProgressPicturesProps } from "./ProgressPicturesScreen";
 import HomeHub, { type LatestActivity, type UpcomingMeeting } from "./HomeHub";
+import type { PastMeetingView } from "./MeetingsScreen";
 import type { ProgressPics } from "./ProgressPicsCard";
 import NutritionTargetsCard, { type NutritionTargetSet } from "./NutritionTargetsCard";
 import CoachCard from "./CoachCard";
@@ -212,6 +213,56 @@ function weekStats(CLIENT_ID: number, week: number) {
   return { daysTrained, totalDays };
 }
 
+// A booked call as its card shows it: on Home (the next one) and on the
+// Meetings screen (every one still to come).
+function meetingCardView(m: ReturnType<typeof listMeetings>[number], today: string): NonNullable<UpcomingMeeting> {
+  const when = new Date(`${m.date}T00:00:00`);
+  const days = Math.round((when.getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000);
+  // "Starting now" from ten minutes before the start until the end.
+  const startingNow = (() => {
+    if (m.date !== today || !m.time) return false;
+    const [h, mi] = m.time.split(":").map((n) => Number(n) || 0);
+    const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+    const start = h * 60 + mi;
+    return nowMin >= start - 10 && nowMin <= start + m.duration_minutes;
+  })();
+  return {
+    link: m.link ?? null,
+    provider: meetingProvider(m.link),
+    startingNow,
+    startIso: m.time ? `${m.date}T${m.time}:00` : null,
+    durationMinutes: m.duration_minutes,
+    monthCap: MONTH_CAP[when.getMonth()],
+    dayNumber: String(when.getDate()),
+    weekdayCap: DAY_LABELS[when.getDay()],
+    topic: m.topic || "Check-in call",
+    inLabel: days <= 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days} days`,
+    whenLabel: [
+      when.toLocaleDateString("en-US", { weekday: "long" }),
+      m.time || null,
+    ]
+      .filter(Boolean)
+      .join(" ") + ` · ${m.duration_minutes} min`,
+  };
+}
+
+// A call that has happened, for the Meetings screen's log: what it was
+// about and the recap the coach wrote for the client (never the coach's
+// own prep notes or running notes).
+function pastMeetingView(m: ReturnType<typeof listMeetings>[number]): PastMeetingView {
+  const when = new Date(`${m.date}T12:00:00`);
+  return {
+    id: m.id,
+    dayNumber: String(when.getDate()),
+    monthCap: MONTH_CAP[when.getMonth()],
+    dateLabel: when.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),
+    topic: m.topic || "Check-in call",
+    title: (m.summary_title ?? "").trim() || null,
+    text: (m.summary ?? "").trim() || null,
+    missed: m.status === "no-show",
+  };
+}
+
 function HomeTab({ CLIENT_ID, photos, food }: { CLIENT_ID: number; photos: ProgressPics; food: PhaseFoodToday }) {
   const client = getClient(CLIENT_ID);
   const today = localDateStr();
@@ -219,37 +270,7 @@ function HomeTab({ CLIENT_ID, photos, food }: { CLIENT_ID: number; photos: Progr
   const upcomingMeeting = listMeetings(CLIENT_ID)
     .filter((m) => m.status === "scheduled" && m.date >= today)
     .sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1))[0];
-  const upcoming: UpcomingMeeting = (() => {
-    if (!upcomingMeeting) return null;
-    const when = new Date(`${upcomingMeeting.date}T00:00:00`);
-    const days = Math.round((when.getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000);
-    // "Starting now" from ten minutes before the start until the end.
-    const startingNow = (() => {
-      if (upcomingMeeting.date !== today || !upcomingMeeting.time) return false;
-      const [h, mi] = upcomingMeeting.time.split(":").map((n) => Number(n) || 0);
-      const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
-      const start = h * 60 + mi;
-      return nowMin >= start - 10 && nowMin <= start + upcomingMeeting.duration_minutes;
-    })();
-    return {
-      link: upcomingMeeting.link ?? null,
-      provider: meetingProvider(upcomingMeeting.link),
-      startingNow,
-      startIso: upcomingMeeting.time ? `${upcomingMeeting.date}T${upcomingMeeting.time}:00` : null,
-      durationMinutes: upcomingMeeting.duration_minutes,
-      monthCap: MONTH_CAP[when.getMonth()],
-      dayNumber: String(when.getDate()),
-      weekdayCap: DAY_LABELS[when.getDay()],
-      topic: upcomingMeeting.topic || "Check-in call",
-      inLabel: days <= 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days} days`,
-      whenLabel: [
-        when.toLocaleDateString("en-US", { weekday: "long" }),
-        upcomingMeeting.time || null,
-      ]
-        .filter(Boolean)
-        .join(" ") + ` · ${upcomingMeeting.duration_minutes} min`,
-    };
-  })();
+  const upcoming: UpcomingMeeting = upcomingMeeting ? meetingCardView(upcomingMeeting, today) : null;
 
   // ---- The check-in, counted the way its screen shows it (today's, plus
   // the week's while its window is open), for the lifestyle card. ----
@@ -1322,6 +1343,19 @@ export default async function ClientPage({
   // Today's food diary, opened from the ring on Nutrition.
   const foodDiary = getFoodDiary(CLIENT_ID, localDateStr());
 
+  // The Meetings screen: every call still to come (soonest first), then the
+  // ones that happened (newest first). Cancelled calls are left out.
+  const meetings = (() => {
+    const today = localDateStr();
+    const all = listMeetings(CLIENT_ID).filter((m) => m.status !== "cancelled");
+    const upcoming = all
+      .filter((m) => m.status === "scheduled" && m.date >= today)
+      .sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1))
+      .map((m) => meetingCardView(m, today));
+    const past = all.filter((m) => m.status !== "scheduled" || m.date < today).map(pastMeetingView);
+    return { upcoming, past };
+  })();
+
   const tabs: AppTab[] = [
     // Draws its own light banner (name and main goal); the top bar floats over it.
     { id: "home", label: "Home", icon: <HomeIcon />, bare: true, content: <HomeTab CLIENT_ID={CLIENT_ID} photos={homePhotos} food={{ eaten: foodDiary.eaten.kcal, target: foodDiary.target?.kcal ?? null, mealsLogged: foodDiary.meals.filter((m) => m.entries.length > 0).length, mealsTotal: foodDiary.meals.length }} /> },
@@ -1372,6 +1406,7 @@ export default async function ClientPage({
       coachProfile={getCoachProfileForClient(CLIENT_ID)}
       coachAvatarPath={getCoachAvatarPath(CLIENT_ID)}
       foodDiary={foodDiary}
+      meetings={meetings}
     />
   );
 }
