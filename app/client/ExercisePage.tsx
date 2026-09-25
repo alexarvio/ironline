@@ -227,7 +227,17 @@ export default function ExercisePage({
             </button>
           </div>
         </div>
-        <h2 className="wo-ex-name">{shownName(exercise)}</h2>
+        {/* The name, and on its right what comes next, so the machine can be
+            checked while resting; a tap goes there. */}
+        <div className="wo-ex-title-row">
+          <h2 className="wo-ex-name">{shownName(exercise)}</h2>
+          {nextName && (
+            <button type="button" className="wo-nextup" onClick={onNext} aria-label={`Next up: ${nextName}`}>
+              <span className="wo-nextup-label">Next up</span>
+              <span className="wo-nextup-name">{nextName}</span>
+            </button>
+          )}
+        </div>
         {menuOpen && (
           <>
             <button type="button" className="wo-menu-scrim" aria-label="Close menu" onClick={() => setMenuOpen(false)} />
@@ -436,14 +446,6 @@ export default function ExercisePage({
         )}
 
       </div>
-
-      {nextName && (
-        <button type="button" className="wo-nextup" onClick={onNext}>
-          <span className="wo-nextup-label">Next</span>
-          <span className="wo-nextup-name">{nextName}</span>
-          <span className="wo-nextup-go" aria-hidden="true">›</span>
-        </button>
-      )}
 
       {noteOpen ? (
         <div className="wo-note editing">

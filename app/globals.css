@@ -17288,3 +17288,9 @@ button.ci-hint { cursor: pointer; }
 .ts-last-note span { font-weight: 600; color: #5b6474; }
 .wo-note-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .wo-note-pen { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 999px; background: #f4f7fc; color: #1e3a6e; }
+/* Next up beside the exercise name, on the right (25 Sep). */
+.wo-ex-title-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
+.wo-ex-title-row .wo-ex-name { flex: 1; min-width: 0; }
+.wo-ex-title-row .wo-nextup { flex: 0 1 auto; max-width: 45%; width: auto; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; text-align: right; }
+.wo-ex-title-row .wo-nextup-label { font-size: 10px; }
+.wo-ex-title-row .wo-nextup-name { max-width: 100%; font-size: 14px; font-weight: 700; color: #1e3a6e; }
