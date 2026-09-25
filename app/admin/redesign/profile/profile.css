@@ -61,3 +61,9 @@
 
 .rpf-preview { position: sticky; top: 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .rpf-preview-note { font-size: 12px; color: #8b93a1; }
+/* On the shadcn form parts (25 Sep): the old input overrides no longer apply. */
+.rpf-select { width: 260px; }
+.rpf-chip-input { flex: 1; min-width: 180px; width: auto; height: 32px; border-style: dashed; border-radius: 999px; }
+.rpf-row [data-slot="input"] { height: 36px; }
+.rpf-publish-label { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 500; }
+.rpf-publish-label b { color: #141a24; font-weight: 700; }
