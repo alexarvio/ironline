@@ -61,6 +61,12 @@ export default function ExercisePage({
 
   const askWeight = exercise.targetWeight != null;
   const askRpe = exercise.targetRpe != null;
+  // Swapped for something else: the weight, RPE and tempo were set for the
+  // prescribed exercise, so only the reps carry over; the boxes stay, empty.
+  const swapped = exercise.swap != null;
+  const targetWeight = swapped ? null : exercise.targetWeight;
+  const targetRpe = swapped ? null : exercise.targetRpe;
+  const tempo = swapped ? null : exercise.tempo;
 
   // ---- Working sets, one at a time: the next set to log has the row to
   // type into, logged rows read back in green with an Edit, and the rest
@@ -80,14 +86,14 @@ export default function ExercisePage({
   const freshDraft = (n: number | null): Draft => {
     const log = n != null ? exercise.logs.find((l) => l.setNumber === n) ?? null : null;
     if (log) return { weight: show(log.weight), reps: log.reps != null ? String(log.reps) : "", rpe: log.rpe != null ? String(log.rpe) : "" };
-    return { weight: show(exercise.targetWeight), reps: "", rpe: exercise.targetRpe != null ? String(exercise.targetRpe) : "" };
+    return { weight: show(targetWeight), reps: "", rpe: targetRpe != null ? String(targetRpe) : "" };
   };
   const [draft, setDraft] = useState<Draft>(() => freshDraft(activeN));
   // A new active row (a set landed, an edit opened, the unit flipped) starts
   // the boxes over.
-  const [seenActive, setSeenActive] = useState(`${activeN}:${unit}:${gymId}`);
-  if (seenActive !== `${activeN}:${unit}:${gymId}`) {
-    setSeenActive(`${activeN}:${unit}:${gymId}`);
+  const [seenActive, setSeenActive] = useState(`${activeN}:${unit}:${gymId}:${swapped}`);
+  if (seenActive !== `${activeN}:${unit}:${gymId}:${swapped}`) {
+    setSeenActive(`${activeN}:${unit}:${gymId}:${swapped}`);
     setDraft(freshDraft(activeN));
   }
   const [pending, setPending] = useState(false);
@@ -176,12 +182,12 @@ export default function ExercisePage({
   // The prescription, the way the old card read it: figure and unit, one
   // line, tempo under it.
   const targets = [
-    exercise.targetWeight != null ? { value: show(exercise.targetWeight), unit: unitLabel } : null,
+    targetWeight != null ? { value: show(targetWeight), unit: unitLabel } : null,
     exercise.reps ? { value: exercise.reps, unit: "reps" } : null,
-    exercise.targetRpe != null ? { value: String(exercise.targetRpe), unit: "rpe" } : null,
-    exercise.distance ? { value: exercise.distance, unit: "distance" } : null,
-    exercise.time ? { value: exercise.time, unit: "time" } : null,
-    exercise.rest != null ? { value: exercise.rest < 60 ? `${exercise.rest}s` : `${Math.floor(exercise.rest / 60)}:${String(exercise.rest % 60).padStart(2, "0")}`, unit: "rest" } : null,
+    targetRpe != null ? { value: String(targetRpe), unit: "rpe" } : null,
+    !swapped && exercise.distance ? { value: exercise.distance, unit: "distance" } : null,
+    !swapped && exercise.time ? { value: exercise.time, unit: "time" } : null,
+    !swapped && exercise.rest != null ? { value: exercise.rest < 60 ? `${exercise.rest}s` : `${Math.floor(exercise.rest / 60)}:${String(exercise.rest % 60).padStart(2, "0")}`, unit: "rest" } : null,
   ].filter((t): t is { value: string; unit: string } => !!t);
   const ask = exercise.videoRequest;
 
@@ -245,7 +251,7 @@ export default function ExercisePage({
         </div>
       )}
 
-      {(targets.length > 0 || exercise.tempo) && (
+      {(targets.length > 0 || tempo) && (
         <div className="ts-target wo-target-card">
           <div className="ts-target-label">Target</div>
           {targets.length > 0 && (
@@ -257,9 +263,9 @@ export default function ExercisePage({
               ))}
             </div>
           )}
-          {exercise.tempo && (
+          {tempo && (
             <div className="ts-target-tempo">
-              <b>{exercise.tempo}</b> <small>tempo</small>
+              <b>{tempo}</b> <small>tempo</small>
             </div>
           )}
         </div>
@@ -368,9 +374,9 @@ export default function ExercisePage({
           return (
             <div key={n} className="ts-grid ts-set upcoming">
               <span className="ts-circle">{n}</span>
-              {askWeight && <span>{exercise.targetWeight == null ? "–" : show(exercise.targetWeight)}</span>}
+              {askWeight && <span>{targetWeight == null ? "" : show(targetWeight)}</span>}
               <span>{exercise.reps}</span>
-              {askRpe && <span>{exercise.targetRpe}</span>}
+              {askRpe && <span>{targetRpe}</span>}
               <span />
             </div>
           );
