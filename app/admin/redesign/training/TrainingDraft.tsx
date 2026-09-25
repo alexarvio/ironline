@@ -771,7 +771,9 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                                 const demo = demos[r.id] === undefined ? r.demo : demos[r.id];
                                 return demo ? (
                                   <a className="rd-demo" href={demo.url} target="_blank" rel="noopener noreferrer" title="Demo set · play it" aria-label={`Play the demo for ${r.name}`}>
-                                    <PlayIcon />
+                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                      <path d="M8 5.5v13l11-6.5z" fill="currentColor" />
+                                    </svg>
                                   </a>
                                 ) : null;
                               })()}
