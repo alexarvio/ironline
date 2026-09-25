@@ -2042,7 +2042,13 @@ function ProgressDialog({ row, lbs, unit, multiGym }: { row: DraftRow; lbs: bool
   const lo = values.length ? Math.min(...values) : 0;
   const hi = values.length ? Math.max(...values) : 1;
   const span = hi - lo || Math.max(1, hi * 0.1);
-  const x = (i: number) => pad.l + (h.length <= 1 ? (W - pad.l - pad.r) / 2 : (i / (h.length - 1)) * (W - pad.l - pad.r));
+  // Weeks placed by their number, so a gap of five weeks looks like one.
+  const firstWk = h.length ? h[0].week : 1;
+  const lastWk = h.length ? h[h.length - 1].week : 1;
+  const x = (i: number) => {
+    const wk = h[i]?.week ?? firstWk;
+    return pad.l + (lastWk === firstWk ? (W - pad.l - pad.r) / 2 : ((wk - firstWk) / (lastWk - firstWk)) * (W - pad.l - pad.r));
+  };
   const y = (v: number) => pad.t + (1 - (v - (lo - span * 0.15)) / (span * 1.3)) * (H - pad.t - pad.b);
   const pts = h.map((w, i) => (w.sets.length > 0 && w.best != null ? { i, w, px: x(i), py: y(w.best) } : null)).filter((q): q is NonNullable<typeof q> => q != null);
   const target = cur?.target ?? row.kg;
@@ -2094,6 +2100,7 @@ function ProgressDialog({ row, lbs, unit, multiGym }: { row: DraftRow; lbs: bool
         <div className={`rp-stat ${tone(row.d7)}`}>
           <small>vs last week</small>
           <b>{pct(row.d7)}</b>
+          {row.d7 == null && upTo.length > 0 && <em>Not logged the week before</em>}
         </div>
         <div className={`rp-stat ${tone(row.d30)}`}>
           <small>over 4 weeks</small>

@@ -177,7 +177,9 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
       // earliest logged week within the last four.
       const pct = (from: (typeof history)[number] | null) =>
         thisWeek?.best != null && from?.best != null && from !== thisWeek && from.best > 0 ? Math.round(((thisWeek.best - from.best) / from.best) * 1000) / 10 : null;
-      const lastWeek = thisWeek ? logged.filter((h) => h.week < thisWeek.week).slice(-1)[0] ?? null : null;
+      // Last week means the week before, logged: an older week is not "7 days"
+      // (week 1 against week 6 read as +650%).
+      const lastWeek = thisWeek ? logged.find((h) => h.week === thisWeek.week - 1) ?? null : null;
       const monthBack = thisWeek ? logged.filter((h) => h.week < thisWeek.week && h.week >= thisWeek.week - 4)[0] ?? null : null;
       return {
         id: a.id,
