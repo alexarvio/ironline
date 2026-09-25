@@ -430,6 +430,7 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
     }
     if (latestNote.kind === "report") return { kind: "report", title: "Sent you a progress report", body: null, cta: "View report", ...base, actionTab: latestNote.action_tab ?? "settings" };
     if (latestNote.action_tab === "nutrition") return { kind: "deploy", track: "nutrition", title, body: null, cta: "View nutrition", ...base };
+    if (latestNote.action_tab === "invoices") return { kind: "invoice", title, body: null, cta: "View invoices", ...base };
     // A change the coach made: read what it was from its tab and its words.
     if (latestNote.kind === "general") {
       const lower = latestNote.message.toLowerCase();
@@ -1224,7 +1225,7 @@ function progressPicturesData(CLIENT_ID: number): ProgressPicturesProps {
 export default async function ClientPage({
   searchParams,
 }: {
-  searchParams: Promise<{ client?: string }>;
+  searchParams: Promise<{ client?: string; open?: string }>;
 }) {
   const params = await searchParams;
   const CLIENT_ID = await resolveClientId(params.client);
@@ -1449,6 +1450,7 @@ export default async function ClientPage({
       foodDiary={foodDiary}
       meetings={meetings}
       invoices={invoices}
+      initialPush={params.open === "invoices" ? "invoices" : null}
       initialTab={initialTab}
     />
   );

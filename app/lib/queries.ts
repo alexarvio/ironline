@@ -6250,7 +6250,8 @@ export function logCoachActivity(
         : opts.kind === "report" ? `New progress report from ${coach}`
         : opts.kind === "programme" ? `New program from ${coach}`
         : `Update from ${coach}`;
-      const lockScreen = { title, body: message, url: "/client", tag: opts.dedupeKey };
+      // Tapped, it opens where the news is: the Invoices screen for an invoice, else the app.
+      const lockScreen = { title, body: message, url: opts.actionTab === "invoices" ? "/client?open=invoices" : "/client", tag: opts.dedupeKey };
       void import("./push").then((push) => push.sendPushInBackground(user.id, lockScreen)).catch(() => {});
     }
   }
