@@ -91,7 +91,7 @@ export default function RedesignShell({ clientId, firstName, rail, initialTab, h
           <PlanDraft clientId={clientId} firstName={firstName} plan={plan} />
         </div>
         <div hidden={tab !== "messages"}>
-          <MessagesDraft clientId={clientId} firstName={firstName} plan={messages} />
+          <MessagesDraft clientId={clientId} firstName={firstName} plan={messages} active={tab === "messages"} />
         </div>
       </div>
       <Toaster />

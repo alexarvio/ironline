@@ -33,7 +33,7 @@ const POLL_MS = 15000;
 const dayOf = (when: string) => when.split(", ")[0] ?? when;
 const timeOf = (when: string) => when.split(", ")[1] ?? "";
 
-export default function MessagesDraft({ clientId, firstName, plan }: { clientId: number; firstName: string; plan: DraftMessages }) {
+export default function MessagesDraft({ clientId, firstName, plan, active }: { clientId: number; firstName: string; plan: DraftMessages; /** The tab is the one showing. */ active: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const messages = plan.messages;
@@ -59,11 +59,15 @@ export default function MessagesDraft({ clientId, firstName, plan }: { clientId:
 
   // Opening reads what the client wrote (the rail's dot clears); then the
   // thread asks for anything new every so often. Every action refreshes.
+  // Only while the tab is showing: it stays mounted behind the others, and
+  // polling from there re-read the whole page every 15 s, which reset the
+  // other tabs under the coach's typing (and cleared the dot unread).
   useEffect(() => {
+    if (!active) return;
     markSeenAction(clientId, { tab: "messages" });
     const id = setInterval(() => router.refresh(), POLL_MS);
     return () => clearInterval(id);
-  }, [clientId, router]);
+  }, [clientId, router, active]);
   // The box takes all the room there is, from where it starts to the foot of
   // the window, and never so much that the page itself scrolls. Measured
   // when the tab is shown (it mounts hidden behind the other tabs) and when
