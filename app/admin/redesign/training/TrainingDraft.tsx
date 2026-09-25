@@ -660,7 +660,10 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                     gym: (left to right) a swap, the client's note, the time,
                     the gym, the state. */}
                 <span className="rd-session-tags">
-                  <span className="rd-tagslot sm">
+                  {/* The swap and the client's note come and go, so they pack
+                      against the time with no empty slot; the time, gym and
+                      state keep their set columns. */}
+                  <span className="rd-tagextras">
                     {(() => {
                       const n = rows.filter((r) => r.swap).length;
                       return n > 0 ? (
@@ -670,8 +673,6 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                         </span>
                       ) : null;
                     })()}
-                  </span>
-                  <span className="rd-tagslot sm">
                     {s.note && (
                       <span className="rd-tag note" title={`${firstName}'s note: ${s.note}`} aria-label={`${firstName} left a note: ${s.note}`}>
                         <ChatIcon />

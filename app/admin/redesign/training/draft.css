@@ -536,3 +536,5 @@
    the dialog itself never grows past the window (25 Sep). */
 .rd-dlg .rd-addrow-list { max-height: 300px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 .rd-dlg { max-height: calc(100vh - 48px); overflow-y: auto; }
+.rd-tagextras { display: inline-flex; align-items: center; gap: 4px; }
+.rd-tagextras .rd-swapdot { margin-left: 0; }
