@@ -625,7 +625,8 @@ function ScheduleDialog({ date: initialDate, reschedule, lastLink, dots, today, 
           <MiniCalendar today={today} selected={date} dots={dots} onPick={setDate} />
         </div>
         <div className="rdd-fields">
-          <div className="rd-field-row">
+          {/* Date, time and the timezone the time is in, on one row. */}
+          <div className="rd-field-row rt-when-row">
             <label className="rd-field">
               <span>Date</span>
               <DateText value={date} onChange={setDate} label="Date" />
@@ -633,7 +634,10 @@ function ScheduleDialog({ date: initialDate, reschedule, lastLink, dots, today, 
             <label className="rd-field">
               <span>Time · 24h</span>
               <input type="text" inputMode="numeric" value={time} onChange={(e) => setTime(e.target.value)} onBlur={() => setTime(tidyTime(time))} placeholder="14:30" />
-              <select className="rt-tz" value={tz} onChange={(e) => setTz(e.target.value)} aria-label="Timezone">
+            </label>
+            <label className="rd-field">
+              <span>Timezone</span>
+              <select className="rt-tz" value={tz} onChange={(e) => setTz(e.target.value)}>
                 {zones.map((z) => (
                   <option key={z} value={z}>
                     {tzLabel(z)}
