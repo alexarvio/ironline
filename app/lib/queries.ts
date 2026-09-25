@@ -1154,7 +1154,8 @@ export function copyProgramWeek(clientId: number, fromWeek: number, toWeek: numb
       .sort((a, b) => a.order_index - b.order_index);
     for (const wa of srcAssignments) {
       const id = allocId("workout_assignments");
-      data.workout_assignments.push({ ...wa, warmup_sets: undefined, id, program_day_id: dest.id });
+      // The prescription only: what the client did (warm-ups, a swap) stays on the week they did it.
+      data.workout_assignments.push({ ...wa, warmup_sets: undefined, swap: undefined, id, program_day_id: dest.id });
       // Custom columns are part of the plan too, so they come along.
       for (const v of data.assignment_custom_values.filter((v) => v.workout_assignment_id === wa.id)) {
         data.assignment_custom_values.push({
@@ -7867,7 +7868,8 @@ export function copyProgramDay(fromDayId: number, toDayId: number) {
     .sort((a, b) => a.order_index - b.order_index);
   for (const wa of srcAssignments) {
     const id = allocId("workout_assignments");
-    data.workout_assignments.push({ ...wa, warmup_sets: undefined, id, program_day_id: dest.id });
+    // The prescription only: what the client did (warm-ups, a swap) stays on the week they did it.
+    data.workout_assignments.push({ ...wa, warmup_sets: undefined, swap: undefined, id, program_day_id: dest.id });
     for (const v of data.assignment_custom_values.filter((v) => v.workout_assignment_id === wa.id)) {
       data.assignment_custom_values.push({ ...v, id: allocId("assignment_custom_values"), workout_assignment_id: id });
     }
