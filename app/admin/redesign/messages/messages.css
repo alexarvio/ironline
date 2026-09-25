@@ -130,3 +130,11 @@ a.rm-link.open:hover { background: #d9e2ee; }
 .rm-bubble-row.theirs .rm-linkdot-tip { right: 0; }
 .rm-linkdot:hover .rm-linkdot-tip, .rm-linkdot:focus-visible .rm-linkdot-tip { opacity: 1; transform: none; }
 .rm-linkdot-tip em { font-style: normal; color: #c9d0db; }
+/* The hover label grows into the open side of the chat: to the right on the
+   client's bubbles (left-hand), to the left on the coach's; hidden labels no
+   longer widen the thread, which never scrolls sideways (25 Sep). */
+.rm-bubble-row.mine .rm-linkdot-tip { left: auto; right: 0; }
+.rm-bubble-row.theirs .rm-linkdot-tip { right: auto; left: 0; }
+.rm-linkdot-tip { visibility: hidden; }
+.rm-linkdot:hover .rm-linkdot-tip, .rm-linkdot:focus-visible .rm-linkdot-tip { visibility: visible; }
+.rm-thread { overflow-x: hidden; }
