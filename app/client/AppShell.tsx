@@ -26,7 +26,7 @@ import {
   TrainingFocusProvider,
   type TrainingFocus,
 } from "./CheckInContext";
-import type { LinkView } from "../lib/messageLinks";
+import type { LinkView, MessageAbout } from "../lib/messageLinks";
 
 export type AppTab = {
   id: string;
@@ -161,7 +161,10 @@ export default function AppShell({
   };
   // Opening the coach's feed reads every message, so the bell clears.
   const [, startTransition] = useTransition();
-  const openMessages = () => {
+  // Opened from an exercise in the workout: the next message is about it.
+  const [messageAbout, setMessageAbout] = useState<MessageAbout | null>(null);
+  const openMessages = (about?: MessageAbout) => {
+    setMessageAbout(about && "link" in about ? about : null);
     setPushView("messages");
     startTransition(() => {
       markCoachNotesReadAction(clientId);
@@ -266,7 +269,7 @@ export default function AppShell({
       </div>
     ) : pushView === "messages" ? (
       <div className="app-layer app-layer-push cn-screen">
-        <CoachMessagesScreen {...coachMessages} clientId={clientId} onBack={() => setPushView(null)} />
+        <CoachMessagesScreen {...coachMessages} clientId={clientId} onBack={() => setPushView(null)} about={messageAbout} onClearAbout={() => setMessageAbout(null)} />
       </div>
     ) : pushView ? (
       <div className="app-layer app-layer-push cn-screen">

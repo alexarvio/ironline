@@ -8,7 +8,7 @@ import MessageReactions from "../components/MessageReactions";
 import { deleteMyChatMessageAction, editMyChatMessageAction } from "../lib/actions";
 import CoachMark from "./CoachMark";
 import { useOpenLink } from "./CheckInContext";
-import type { LinkView } from "../lib/messageLinks";
+import type { LinkView, MessageAbout } from "../lib/messageLinks";
 
 // The conversation with the coach: their messages on the left, the client's
 // own on the right, oldest first, grouped by day, and a box to answer from
@@ -44,7 +44,7 @@ export type CoachMessagesProps = {
 // How often the thread asks for anything new while it is open.
 const POLL_MS = 15000;
 
-export default function CoachMessagesScreen({ coachName, messages, viewerIsClient, clientId, onBack }: CoachMessagesProps & { clientId: number; onBack: () => void }) {
+export default function CoachMessagesScreen({ coachName, messages, viewerIsClient, clientId, onBack, about = null, onClearAbout }: CoachMessagesProps & { clientId: number; onBack: () => void; about?: MessageAbout | null; onClearAbout?: () => void }) {
   const router = useRouter();
   const end = useRef<HTMLDivElement>(null);
   const [, startTransition] = useTransition();
@@ -178,7 +178,7 @@ export default function CoachMessagesScreen({ coachName, messages, viewerIsClien
       <footer className="cm-compose">
         {/* A coach previewing the app writes as the coach, not as the client. */}
         {!viewerIsClient && <p className="cm-preview-note">You&rsquo;re previewing as {coachName}: what you send here comes from {coachName}.</p>}
-        <ChatComposeForm clientId={clientId} sender={viewerIsClient ? "client" : "coach"} />
+        <ChatComposeForm clientId={clientId} sender={viewerIsClient ? "client" : "coach"} about={about} onClearAbout={onClearAbout} />
       </footer>
     </>
   );

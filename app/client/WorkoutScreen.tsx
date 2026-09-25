@@ -250,6 +250,8 @@ export default function WorkoutScreen({
                 total={day.exercises.length}
                 gymId={gymId}
                 coachName={coachName}
+                dayId={day.key}
+                sessionTitle={day.title}
               />
             ) : p.kind === "cardio" ? (
               <div className="wo-page-inner">

@@ -31,7 +31,8 @@ export default function ExercisePage({
   total,
   gymId,
   coachName,
-
+  dayId,
+  sessionTitle,
   onSetLogged,
 }: {
   exercise: SessionExercise;
@@ -39,7 +40,9 @@ export default function ExercisePage({
   total: number;
   gymId: number | null;
   coachName: string;
-
+  /** The session it is in, for a message about it. */
+  dayId: number;
+  sessionTitle: string;
   /** A working set was ticked: the dock's rest timer may want to know. */
   onSetLogged?: () => void;
 }) {
@@ -193,7 +196,12 @@ export default function ExercisePage({
               </a>
             )}
             {openMessages && (
-              <button type="button" className="wo-round-btn" onClick={openMessages} aria-label="Message your coach">
+              <button
+                type="button"
+                className="wo-round-btn"
+                onClick={() => openMessages({ link: { kind: "exercise", dayId, assignmentId: exercise.id }, label: `${shownName(exercise)} · ${sessionTitle}` })}
+                aria-label={`Message ${coachName} about ${shownName(exercise)}`}
+              >
                 <ChatIcon />
               </button>
             )}

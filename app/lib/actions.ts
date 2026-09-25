@@ -1756,15 +1756,17 @@ export async function sendChatMessageAction(formData: FormData) {
   }
   if (!text && !media) return;
 
-  // A link only from the coach, only one that parses, and only one the
-  // client can actually open.
+  // A link only one that parses, and only one the client can actually open.
+  // The client links only their own sessions and exercises (asking about one
+  // from the workout); describeMessageLink checks the day is theirs.
   let link: MessageLink | null = null;
-  if (sender === "coach") {
+  {
     try {
       link = parseMessageLink(JSON.parse(String(formData.get("link") || "null")));
     } catch {
       link = null;
     }
+    if (link && sender === "client" && link.kind !== "session" && link.kind !== "exercise") link = null;
     if (link && describeMessageLink(clientId, link).gone) link = null;
     // A meal takes one comment: a second send (two tabs, a double click) is dropped.
     if (link?.kind === "food" && link.meal && hasMealComment(clientId, link.date, link.meal)) return;

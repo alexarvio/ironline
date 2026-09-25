@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import type { LinkView } from "../lib/messageLinks";
+import type { LinkView, MessageAbout } from "../lib/messageLinks";
 
 // Check-in is a full-screen pushed view (its own header, its own save bar,
 // no bottom nav), so AppShell owns it the same way it owns Chat and
@@ -95,7 +95,9 @@ export function useCoachIdentity() {
 
 // Same bridge for the coach's messages: the read-only feed opened from the
 // card on Home and from a "Coach note" row in Notifications.
-const MessagesContext = createContext<(() => void) | null>(null);
+// With something to talk about (an exercise, from the workout), the chat
+// opens with it attached to the next message.
+const MessagesContext = createContext<((about?: MessageAbout) => void) | null>(null);
 
 export const MessagesProvider = MessagesContext.Provider;
 

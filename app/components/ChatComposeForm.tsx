@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { sendChatMessageAction } from "../lib/actions";
+import type { MessageAbout } from "../lib/messageLinks";
 import VoiceRecordButton from "./VoiceRecordButton";
 
 // Deliberately does NOT import from ../lib/queries (see CheckInHub.tsx for
@@ -12,7 +13,7 @@ import VoiceRecordButton from "./VoiceRecordButton";
 // spot: the mic while the box is empty, Send as soon as anything is typed.
 const ACCEPT = "image/*,video/*,audio/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.zip";
 
-export default function ChatComposeForm({ clientId, sender }: { clientId: number; sender: "client" | "coach" }) {
+export default function ChatComposeForm({ clientId, sender, about = null, onClearAbout }: { clientId: number; sender: "client" | "coach"; /** What the next message is about: a chip over the box, sent as its link. */ about?: MessageAbout | null; onClearAbout?: () => void }) {
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pending, start] = useTransition();
@@ -23,12 +24,26 @@ export default function ChatComposeForm({ clientId, sender }: { clientId: number
     fd.set("clientId", String(clientId));
     fd.set("text", "");
     fd.set("file", file);
+    if (about) fd.set("link", JSON.stringify(about.link));
     start(async () => {
       await sendChatMessageAction(fd);
+      onClearAbout?.();
     });
   };
 
   return (
+    <>
+    {about && (
+      <div className="chat-about">
+        <span className="chat-about-text">
+          <span className="chat-about-label">About</span>
+          <span className="chat-about-name">{about.label}</span>
+        </span>
+        <button type="button" className="chat-about-x" onClick={onClearAbout} aria-label="Don't attach this">
+          ×
+        </button>
+      </div>
+    )}
     <form
       ref={formRef}
       className="chat-compose-form"
@@ -38,9 +53,11 @@ export default function ChatComposeForm({ clientId, sender }: { clientId: number
         const fd = new FormData();
         fd.set("clientId", String(clientId));
         fd.set("text", text.trim());
+        if (about) fd.set("link", JSON.stringify(about.link));
         start(async () => {
           await sendChatMessageAction(fd);
           setText("");
+          onClearAbout?.();
         });
       }}
     >
@@ -77,5 +94,6 @@ export default function ChatComposeForm({ clientId, sender }: { clientId: number
         <VoiceRecordButton className="chat-attach-btn chat-mic-btn" onRecorded={sendFile} disabled={pending} />
       )}
     </form>
+    </>
   );
 }

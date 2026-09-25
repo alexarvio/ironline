@@ -17186,3 +17186,9 @@ button.ci-hint { cursor: pointer; }
 .mts-text { margin: 0; padding: 0 16px 16px 70px; font-size: 14.5px; line-height: 1.5; color: #313851; white-space: pre-wrap; }
 @media (prefers-reduced-motion: reduce) { .mts-chev, .mts-body { transition: none; } }
 .hm-mt.link { cursor: pointer; }
+/* The chat opened from an exercise: what the next message is about, over the box. */
+.chat-about { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; padding: 8px 8px 8px 12px; border-radius: 12px; background: #eef2f8; }
+.chat-about-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.chat-about-label { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
+.chat-about-name { font-size: 13.5px; font-weight: 600; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-about-x { flex: none; width: 28px; height: 28px; border: 0; border-radius: 999px; background: transparent; font-size: 18px; line-height: 1; color: #5b6474; cursor: pointer; }
