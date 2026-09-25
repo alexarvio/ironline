@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Toaster } from "../../components/ui/toast";
 import TrainingDraft, { type DraftProgram, type Library } from "./training/TrainingDraft";
 import NutritionDraft, { type DraftNutrition } from "./nutrition/NutritionDraft";
@@ -55,8 +55,13 @@ export default function RedesignShell({ clientId, firstName, rail, initialTab, h
     setSeenClient(clientId);
     setTab(initialTab);
   }
+  // Each tab keeps its own place on the page: leaving one remembers how far
+  // down it was, coming back puts it there (a new one opens at the top).
+  const scrolls = useRef<Partial<Record<RedesignTab, number>>>({});
   const show = (t: RedesignTab) => {
+    scrolls.current[tab] = window.scrollY;
     setTab(t);
+    requestAnimationFrame(() => window.scrollTo(0, scrolls.current[t] ?? 0));
     // Keep the other tab's query (week, programme, phase) out of this one's address.
     window.history.replaceState(null, "", `/admin/redesign/${t}?client=${clientId}`);
   };
@@ -74,7 +79,7 @@ export default function RedesignShell({ clientId, firstName, rail, initialTab, h
         <div hidden={tab !== "home"}>
           <HomeDraft clientId={clientId} firstName={firstName} home={home} onOpenTab={(t) => show(t as RedesignTab)} />
         </div>
-        <div hidden={tab !== "training"}>{training.draft ? <TrainingDraft key={`${training.draft.id}:${training.draft.weekIdx}`} clientId={clientId} firstName={firstName} program={training.draft} library={training.library} /> : <p className="rd-empty">This client has no programme yet.</p>}</div>
+        <div hidden={tab !== "training"}>{training.draft ? <TrainingDraft key={training.draft.id} clientId={clientId} firstName={firstName} program={training.draft} library={training.library} /> : <p className="rd-empty">This client has no programme yet.</p>}</div>
         <div hidden={tab !== "nutrition"}>
           <NutritionDraft key={nutrition.id} clientId={clientId} firstName={firstName} plan={nutrition} />
         </div>

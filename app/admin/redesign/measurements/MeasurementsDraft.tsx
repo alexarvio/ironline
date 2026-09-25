@@ -182,7 +182,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                 <DropdownMenuContent align="start" className="pb-menu rd-switch-menu">
                   {plan.phases.map((p) => (
                     <DropdownMenuItem key={p.id} asChild>
-                      <Link href={`/admin/redesign/measurements?client=${clientId}&phase=${p.id}`} className={p.id === plan.id ? "on" : ""}>
+                      <Link href={`/admin/redesign/measurements?client=${clientId}&phase=${p.id}`} scroll={false} className={p.id === plan.id ? "on" : ""}>
                         <span className="rd-switch-name">{p.name}</span>
                         <span className={`rd-status ${p.state}`}>{stateLabel(p.state)}</span>
                         <small>{p.weeks} wk</small>

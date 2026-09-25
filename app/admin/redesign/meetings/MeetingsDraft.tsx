@@ -120,9 +120,12 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
     for (const [k, v] of Object.entries(o)) if (v != null) f.set(k, String(v));
     return f;
   };
-  const [seenPlan, setSeenPlan] = useState(plan);
-  if (seenPlan !== plan) {
-    setSeenPlan(plan);
+  // Compared by content: every refresh hands in new objects with the same
+  // values, and resetting on those collapsed panels and threw work away.
+  const planKey = JSON.stringify([plan.upcoming, plan.alsoScheduled, plan.past]);
+  const [seenPlan, setSeenPlan] = useState(planKey);
+  if (seenPlan !== planKey) {
+    setSeenPlan(planKey);
     setMeetings([...(plan.upcoming ? [plan.upcoming] : []), ...plan.alsoScheduled, ...plan.past]);
   }
   const [dlg, setDlg] = useState<Dlg>(null);

@@ -161,9 +161,12 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
       else if (typeof r === "string" && r) toast.error(r);
       else if (said) savedToast(said);
     });
-  const [seenProgram, setSeenProgram] = useState(program);
-  if (seenProgram !== program) {
-    setSeenProgram(program);
+  // Compared by content: every refresh hands in new objects with the same
+  // values, and resetting on those collapsed panels and threw work away.
+  const sessionsKey = JSON.stringify(program.sessions);
+  const [seenProgram, setSeenProgram] = useState(sessionsKey);
+  if (seenProgram !== sessionsKey) {
+    setSeenProgram(sessionsKey);
     setSessions(program.sessions);
   }
   const inUse = {
@@ -174,9 +177,10 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
   const cols = { ...picked, rpe: picked.rpe || inUse.rpe, tempo: picked.tempo || inUse.tempo, rest: picked.rest || inUse.rest };
   const onCount = Object.values(cols).filter(Boolean).length;
   const [gyms, setGyms] = useState<Gym[]>(program.gyms);
-  const [seenGyms, setSeenGyms] = useState(program.gyms);
-  if (seenGyms !== program.gyms) {
-    setSeenGyms(program.gyms);
+  const gymsKey = JSON.stringify(program.gyms);
+  const [seenGyms, setSeenGyms] = useState(gymsKey);
+  if (seenGyms !== gymsKey) {
+    setSeenGyms(gymsKey);
     setGyms(program.gyms);
   }
   const multiGym = gyms.length > 1;
@@ -203,9 +207,10 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
   // The week's sessions, and the weeks, live in state so delete, reorder and
   // add can show what they would do.
   const [weeks, setWeeks] = useState(program.weeks);
-  const [seenWeeks, setSeenWeeks] = useState(program.weeks);
-  if (seenWeeks !== program.weeks) {
-    setSeenWeeks(program.weeks);
+  const weeksKey = JSON.stringify(program.weeks);
+  const [seenWeeks, setSeenWeeks] = useState(weeksKey);
+  if (seenWeeks !== weeksKey) {
+    setSeenWeeks(weeksKey);
     setWeeks(program.weeks);
   }
   /** The server's week number for a week index on screen. */
@@ -319,6 +324,19 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
   const [demos, setDemos] = useState<Record<number, DraftRow["demo"]>>({});
   // Every session starts folded; the coach opens the one they want.
   const [open, setOpen] = useState<number | null>(null);
+  // Another week loaded (a week chip, a link): the screen stays (units,
+  // columns, scroll), the week on it changes and its sessions start folded.
+  const [seenWeekIdx, setSeenWeekIdx] = useState(program.weekIdx);
+  if (seenWeekIdx !== program.weekIdx) {
+    setSeenWeekIdx(program.weekIdx);
+    setViewIdx(program.weekIdx);
+    setOpen(null);
+    setStash((prev) => {
+      const next = { ...prev };
+      delete next[program.weekIdx];
+      return next;
+    });
+  }
   // Arriving from a link in a message (#session-ID, or #session-ID-ex-ROW for
   // an exercise): that session unfolds and comes into view; an exercise's row
   // is scrolled to and marked for a moment. After the first paint, so the
@@ -351,9 +369,9 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
     };
   }, []);
   const [videos, setVideos] = useState<Record<number, DraftRow["video"]>>(() => Object.fromEntries(program.sessions.flatMap((s) => s.rows.map((r) => [r.id, r.video]))));
-  const [seenVideos, setSeenVideos] = useState(program.sessions);
-  if (seenVideos !== program.sessions) {
-    setSeenVideos(program.sessions);
+  const [seenVideos, setSeenVideos] = useState(sessionsKey);
+  if (seenVideos !== sessionsKey) {
+    setSeenVideos(sessionsKey);
     setVideos(Object.fromEntries(program.sessions.flatMap((s) => s.rows.map((r) => [r.id, r.video]))));
     setDemos({});
   }
@@ -408,7 +426,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                 <DropdownMenuContent align="start" className="pb-menu rd-switch-menu">
                   {program.programs.map((p) => (
                     <DropdownMenuItem key={p.id} asChild>
-                      <Link href={`/admin/redesign/training?client=${clientId}&program=${p.id}`} className={p.id === program.id ? "on" : ""}>
+                      <Link href={`/admin/redesign/training?client=${clientId}&program=${p.id}`} scroll={false} className={p.id === program.id ? "on" : ""}>
                         <span className="rd-switch-name">{p.name}</span>
                         <span className={`rd-status ${p.state}`}>{stateLabel(p.state)}</span>
                         <small>{p.weeks} wk</small>
@@ -556,6 +574,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
             {weeks.map((w) => (
               <TabsTrigger key={w.index} value={String(w.index)} asChild>
                 <Link
+                  scroll={false}
                   href={`/admin/redesign/training?client=${clientId}&program=${program.id}&week=${w.index}`}
                   className={`rd-week ${w.state}`}
                   title={`${w.label}: ${w.trained.filter(Boolean).length} of ${w.trained.length} sessions done`}
@@ -1305,7 +1324,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
               startTransition(async () => {
                 await removeProgramWeekAction(fd({ clientId, programId: program.id, week: idx }));
                 savedToast(`${label} removed`);
-                router.push(`/admin/redesign/training?client=${clientId}&program=${program.id}&week=${Math.max(1, idx - 1)}`);
+                router.push(`/admin/redesign/training?client=${clientId}&program=${program.id}&week=${Math.max(1, idx - 1)}`, { scroll: false });
               });
             }}
           />
@@ -1325,7 +1344,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
               startTransition(async () => {
                 await addProgramWeekAction(fd({ clientId, programId: program.id, copyFrom: copy ? from : null }));
                 savedToast(`Week ${n} added${copy ? `, a copy of ${label}` : ""}`);
-                router.push(`/admin/redesign/training?client=${clientId}&program=${program.id}&week=${n}`);
+                router.push(`/admin/redesign/training?client=${clientId}&program=${program.id}&week=${n}`, { scroll: false });
               });
             }}
           />
@@ -1422,7 +1441,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
               startTransition(async () => {
                 const id = await createProgramWithAction(clientId, v.name, v.weeks, v.start || null);
                 savedToast(`${v.name || "New programme"} · ${v.weeks} weeks, a draft`);
-                if (id) router.push(`/admin/redesign/training?client=${clientId}&program=${id}&week=1`);
+                if (id) router.push(`/admin/redesign/training?client=${clientId}&program=${id}&week=1`, { scroll: false });
                 else router.refresh();
               });
             }}
