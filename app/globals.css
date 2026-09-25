@@ -17362,3 +17362,13 @@ button.ci-hint { cursor: pointer; }
    chat pictures hold a shape while they load so the thread doesn't shift. */
 .so-screen.still { animation: none; }
 .cm-msg-img, .cm-msg-video { aspect-ratio: auto 4 / 5; object-fit: cover; }
+
+/* The client's Invoices screen (InvoicesScreen.tsx): the Meetings screen's rows, with the total and where it stands. */
+.inv-row { text-decoration: none; color: inherit; }
+.inv-state { font-weight: 700; }
+.inv-state.pay { color: #1d5a94; }
+.inv-state.late { color: #b3471d; }
+.inv-state.paid { color: #1b7a4b; }
+.inv-total { flex: none; font-size: 15px; font-weight: 800; color: #141a24; font-variant-numeric: tabular-nums; }
+.inv-chev { flex: none; display: inline-flex; color: #8A8BA3; }
+.inv-chev svg { width: 16px; height: 16px; }

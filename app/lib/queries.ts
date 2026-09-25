@@ -6182,7 +6182,7 @@ export function getCheckInSections(clientId: number): CheckInData {
 export type CoachActivityKind = "coach_note" | "report" | "programme" | "reminder" | "general";
 // Where a notification's action link should take the client — the four
 // bottom-nav tabs, or "chat" to open the chat/notifications panel itself.
-export type CoachActivityActionTab = "home" | "training" | "nutrition" | "settings" | "chat" | "video";
+export type CoachActivityActionTab = "home" | "training" | "nutrition" | "settings" | "chat" | "video" | "invoices";
 
 export type ClientNotification = {
   id: number;
@@ -10555,3 +10555,12 @@ export function getInvoiceView(invoiceId: number) {
   };
 }
 export type InvoiceView = NonNullable<ReturnType<typeof getInvoiceView>>;
+
+/** The client's own invoices, newest first: only the ones the coach has sent (never "Not sent"). */
+export function listClientInvoices(clientId: number): InvoiceView[] {
+  return listInvoices(clientId)
+    .filter((i) => i.status !== "unpaid")
+    .map((i) => getInvoiceView(i.id))
+    .filter((v): v is InvoiceView => !!v)
+    .sort((a, b) => (a.issueDate === b.issueDate ? b.id - a.id : a.issueDate < b.issueDate ? 1 : -1));
+}

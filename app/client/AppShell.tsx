@@ -10,6 +10,7 @@ import CoachProfileScreen from "./CoachProfileScreen";
 import CoachMessagesScreen, { type CoachMessagesProps } from "./CoachMessagesScreen";
 import FoodDiaryScreen, { type FoodDiaryProps } from "./FoodDiaryScreen";
 import MeetingsScreen, { type MeetingsProps } from "./MeetingsScreen";
+import InvoicesScreen, { type InvoicesProps } from "./InvoicesScreen";
 import type { CoachProfileView } from "../lib/coachProfileView";
 import {
   CheckInProvider,
@@ -41,7 +42,7 @@ export type AppTab = {
   darkBanner?: boolean;
 };
 
-type PushView = "notifications" | "checkin" | "photos" | "coach" | "messages" | "food" | "meetings" | null;
+type PushView = "notifications" | "checkin" | "photos" | "coach" | "messages" | "food" | "meetings" | "invoices" | null;
 
 // The active bottom tab lives in sessionStorage, not just React state. A full
 // page load — a form that posts before hydration finishes on a slow phone, a
@@ -113,6 +114,7 @@ export default function AppShell({
   coachAvatarPath = null,
   foodDiary = null,
   meetings = null,
+  invoices = null,
   initialTab = null,
 }: {
   clientName: string;
@@ -135,6 +137,8 @@ export default function AppShell({
   foodDiary?: FoodDiaryProps | null;
   /** Every call with the coach: to come and past, for the Meetings screen. */
   meetings?: MeetingsProps | null;
+  /** The coach's invoices that reached the client; null, none yet (the menu leaves the row out). */
+  invoices?: InvoicesProps | null;
   /** The tab the client was on (its cookie), so the server draws that one. */
   initialTab?: string | null;
 }) {
@@ -214,6 +218,11 @@ export default function AppShell({
   const clearBar = !!active?.bare && !scrolled;
 
   const goToTab = (tab: string, ref?: number, focus?: TrainingFocus) => {
+    // Not a tab: the invoice notification opens the Invoices screen.
+    if (tab === "invoices") {
+      if (invoices) setPushView("invoices");
+      return;
+    }
     if (!tabs.some((t) => t.id === tab)) return;
     setScrolled(false);
     setPushView(null);
@@ -289,6 +298,10 @@ export default function AppShell({
     ) : pushView === "meetings" && meetings ? (
       <div className="app-layer app-layer-push cn-screen">
         <MeetingsScreen {...meetings} coachName={coachMessages.coachName} onBack={() => setPushView(null)} />
+      </div>
+    ) : pushView === "invoices" && invoices ? (
+      <div className="app-layer app-layer-push cn-screen">
+        <InvoicesScreen {...invoices} onBack={() => setPushView(null)} />
       </div>
     ) : pushView === "messages" ? (
       <div className="app-layer app-layer-push cn-screen">
@@ -435,6 +448,11 @@ export default function AppShell({
                   {meetings && (
                     <button type="button" className="app-menu-item" onClick={() => go(() => setPushView("meetings"))}>
                       Meetings
+                    </button>
+                  )}
+                  {invoices && (
+                    <button type="button" className="app-menu-item" onClick={() => go(() => setPushView("invoices"))}>
+                      Invoices
                     </button>
                   )}
                   {/* Help writes to the coach: the person who can actually do something. */}
