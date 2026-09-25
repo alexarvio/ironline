@@ -63,7 +63,7 @@ export type MeetingRecap = { dateLabel: string; title: string; text: string } | 
 
 
 export type LatestActivity = {
-  kind: "message" | "comment" | "video" | "deploy" | "goal" | "meeting" | "report" | "welcome";
+  kind: "message" | "comment" | "video" | "deploy" | "goal" | "meeting" | "report" | "welcome" | "invoice";
   track?: "training" | "nutrition" | "lifestyle";
   /** For a comment: what it was on. */
   context?: "training" | "nutrition" | "checkin" | "photos";

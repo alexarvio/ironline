@@ -115,6 +115,7 @@ export default function AppShell({
   foodDiary = null,
   meetings = null,
   invoices = null,
+  initialPush = null,
   initialTab = null,
 }: {
   clientName: string;
@@ -139,6 +140,8 @@ export default function AppShell({
   meetings?: MeetingsProps | null;
   /** The coach's invoices that reached the client; null, none yet (the menu leaves the row out). */
   invoices?: InvoicesProps | null;
+  /** A screen to open on arrival: a lock-screen notification's link (/client?open=invoices). */
+  initialPush?: "invoices" | null;
   /** The tab the client was on (its cookie), so the server draws that one. */
   initialTab?: string | null;
 }) {
@@ -150,7 +153,11 @@ export default function AppShell({
   // client chooses otherwise. The other pushed views start closed, since
   // they hang off something on the tab underneath.
   const storedPush = useSyncExternalStore(subscribePush, readPush, () => null);
-  const [chosenPush, setChosenPush] = useState<PushView | undefined>(undefined);
+  const [chosenPush, setChosenPush] = useState<PushView | undefined>(initialPush && invoices ? initialPush : undefined);
+  // The link has done its job: a reload opens the app as usual.
+  useEffect(() => {
+    if (initialPush) window.history.replaceState(null, "", "/client");
+  }, [initialPush]);
   const pushView: PushView = chosenPush !== undefined ? chosenPush : storedPush === "food" && foodDiary ? "food" : null;
   const setPushView = (v: PushView) => {
     setChosenPush(v);
