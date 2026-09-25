@@ -55,8 +55,8 @@ export type DraftRow = {
   /** What the client did instead, when they swapped the exercise. */
   swap: string | null;
   /** The swap in full: what, when, and the sets logged on it (kept out of this row's numbers). */
-  /** The client's chat messages about this exercise. */
-  clientNotes: { text: string; when: string }[];
+  /** The chat about this exercise, both sides, oldest first. */
+  exerciseChat: { mine: boolean; text: string; when: string }[];
   swapInfo: { name: string; typed: boolean; when: string; sets: { set: number; kg: number | null; reps: number | null; rpe: number | null; gym: string | null }[] } | null;
   /** What the coach offers instead when the machine is taken. */
   alternatives: { exerciseId: number; name: string; note: string }[];
@@ -123,6 +123,7 @@ type Dlg =
   | { kind: "video"; rowId: number }
   | { kind: "demo"; rowId: number }
   | { kind: "alternatives"; rowId: number }
+  | { kind: "exerciseChat"; sessionId: number; rowId: number }
   | { kind: "message"; label: string; link: MessageLink }
   | { kind: "copySession"; sessionId: number }
   | { kind: "copyWeek" }
@@ -298,7 +299,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
         });
         const addedRows: DraftRow[] = p.added
           .filter((a): a is Added & AddedExercise => a.kind === "exercise")
-          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: Math.max(1, parseInt(String(a.sets), 10) || 3), reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: null, tempo: null, rest: null, note: null, logged: [], video: null, demo: null, history: [], swap: null, swapInfo: null, clientNotes: [], alternatives: [], d7: null, d30: null }));
+          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: Math.max(1, parseInt(String(a.sets), 10) || 3), reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: null, tempo: null, rest: null, note: null, logged: [], video: null, demo: null, history: [], swap: null, swapInfo: null, exerciseChat: [], alternatives: [], d7: null, d30: null }));
         const addedCardio: DraftCardio[] = p.added
           .filter((a): a is Added & AddedCardio => a.kind === "cardio")
           .map((a, i) => ({ id: -(Date.now() + 500 + i), name: a.name, time: a.time, pace: a.pace, incline: a.incline, distance: a.distance, notes: a.note, done: false }));
@@ -817,15 +818,16 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                                 )}
                               </span>
                               <span className="rd-flag-slot">
-                                {r.clientNotes.length > 0 && (
-                                  <a
+                                {r.exerciseChat.some((m) => !m.mine) && (
+                                  <button
+                                    type="button"
                                     className="rd-flag chat"
-                                    href={`/admin/redesign/messages?client=${clientId}`}
-                                    title={r.clientNotes.map((n) => `${n.when}: ${n.text}`).join("\n")}
-                                    aria-label={`${firstName} wrote about ${r.name}: ${r.clientNotes[r.clientNotes.length - 1].text}`}
+                                    onClick={() => setDlg({ kind: "exerciseChat", sessionId: s.id, rowId: r.id })}
+                                    title={`${firstName} wrote about ${r.name} · read and reply`}
+                                    aria-label={`Read what ${firstName} wrote about ${r.name}, and reply`}
                                   >
                                     <ChatIcon />
-                                  </a>
+                                  </button>
                                 )}
                               </span>
                               <span className="rd-flag-slot">
@@ -1198,6 +1200,18 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
               const v = videos[dlg.rowId];
               close();
               if (v) act(() => sendVideoReplyAction(v.requestId, reply), `Reply sent. ${firstName} gets a notification.`);
+            }}
+          />
+        )}
+
+        {dlg?.kind === "exerciseChat" && rowById(dlg.rowId) && (
+          <ExerciseChatDialog
+            row={rowById(dlg.rowId)!}
+            firstName={firstName}
+            onSend={(text) => {
+              const f = fd({ clientId, text });
+              f.set("link", JSON.stringify({ kind: "exercise", dayId: dlg.sessionId, assignmentId: dlg.rowId }));
+              act(() => sendChatMessageAction(f));
             }}
           />
         )}
@@ -2233,6 +2247,59 @@ function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }:
           </DialogFooter>
         </>
       )}
+    </DialogContent>
+  );
+}
+
+/** The chat about one exercise, over the Training screen: both sides' messages
+ *  about it, oldest first, and a reply linked to it. The reply is an ordinary
+ *  chat message, so it is in the full chat and on the client's side too. */
+function ExerciseChatDialog({ row, firstName, onSend }: { row: DraftRow; firstName: string; onSend: (text: string) => void }) {
+  const [text, setText] = useState("");
+  const list = useRef<HTMLDivElement>(null);
+  // Always at the newest, on opening and when a reply lands.
+  useEffect(() => {
+    const el = list.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [row.exerciseChat.length]);
+  const send = () => {
+    const t = text.trim();
+    if (!t) return;
+    onSend(t);
+    setText("");
+  };
+  return (
+    <DialogContent className="rd-dlg rd-exchat">
+      <DialogHeader>
+        <DialogTitle>{row.name}</DialogTitle>
+        <DialogDescription>What you and {firstName} said about it.</DialogDescription>
+      </DialogHeader>
+      <div ref={list} className="rd-exchat-list">
+        {row.exerciseChat.map((m, i) => (
+          <div key={i} className={`rd-exchat-msg${m.mine ? " mine" : ""}`}>
+            <span className="rd-exchat-text">{m.text}</span>
+            <small>{m.when}</small>
+          </div>
+        ))}
+      </div>
+      <div className="rd-exchat-compose">
+        <textarea
+          rows={2}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder={`Reply to ${firstName}…`}
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              send();
+            }
+          }}
+        />
+        <button type="button" className="rd-btn primary" disabled={!text.trim()} onClick={send}>
+          Send
+        </button>
+      </div>
     </DialogContent>
   );
 }
