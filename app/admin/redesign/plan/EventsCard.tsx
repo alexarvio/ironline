@@ -9,6 +9,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { ChevronDownIcon, ChevronLeftIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { pageWindow } from "../../../lib/pager";
 import DatePick from "../DatePick";
+import { PALETTE, paletteOf } from "../palette";
 
 // Events on the plan: what happens in the client's life that the plan has to
 // live with, on the same week grid as the phases, under the same "now" line.
@@ -22,18 +23,6 @@ import DatePick from "../DatePick";
 /** kind is the category's id, and optional: an event can just be an event. */
 export type PlanEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string };
 
-/** The eight colours a category can wear: a wash for the bar, an ink for its words, a line for its edge. */
-const PALETTE: { id: string; tint: string; ink: string; line: string }[] = [
-  { id: "blue", tint: "#e3f0fb", ink: "#1d5a94", line: "#9cc3e6" },
-  { id: "orange", tint: "#fdf3ee", ink: "#b3471d", line: "#e5b39a" },
-  { id: "purple", tint: "#f1e9fb", ink: "#5a3d9a", line: "#c9b5ea" },
-  { id: "navy", tint: "#e6ecf3", ink: "#1e3a6e", line: "#b8c6d9" },
-  { id: "green", tint: "#dff3ea", ink: "#1b7a4b", line: "#9fd3bb" },
-  { id: "amber", tint: "#fff3dc", ink: "#8a5a12", line: "#e7cf9a" },
-  { id: "rose", tint: "#fbe9ee", ink: "#9b2c4a", line: "#e7a9b8" },
-  { id: "teal", tint: "#e0f2f2", ink: "#146b6b", line: "#9dd0d0" },
-];
-const paletteOf = (id: string) => PALETTE.find((p) => p.id === id) ?? PALETTE[0];
 export type Category = { id: string; label: string; color: string; custom: boolean };
 const NONE = { tint: "#eceff3", ink: "#5b6474", line: "#c3c9d2" };
 // The built-in four and the coach's own come from the loader (listEventCategories).

@@ -381,6 +381,8 @@ export type EventCategory = {
   label: string;
   color: string;
   created_at: string;
+  /** "calendar": one of the Calendar's categories, not the Plan events'. */
+  scope?: "calendar" | null;
 };
 
 export type ClientPhase = {
@@ -773,6 +775,10 @@ type Meeting = {
   /** Reminder pushes sent to the client, each against the start (ISO) it was
       for, so a moved call is reminded again (lib/meetingReminders.ts). */
   reminders_sent?: { day?: string; hour?: string };
+  /** The Calendar's colour: a preset id ("call", "admin"…) or a coach's own ("c12"). */
+  category?: string | null;
+  /** The whole day, no time (time is ""); the Calendar lists it above the hours. */
+  all_day?: boolean;
 };
 type MeetingNote = {
   id: number;

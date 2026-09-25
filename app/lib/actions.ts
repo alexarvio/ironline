@@ -165,6 +165,10 @@ import {
   addEventCategory,
   updateEventCategory,
   deleteEventCategory,
+  addCalendarEntry,
+  updateCalendarEntry,
+  getCalendarEntry,
+  type CalendarEntryInput,
   describeMessageLink,
   hasMealComment,
   isSessionComplete,
@@ -2381,6 +2385,56 @@ export async function addCalendarEventAction(formData: FormData) {
   revalidatePath("/client");
   // Back to the Calendar (the redesign's since 25 Sep), on the day it went into.
   redirect(`/admin/redesign/calendar?month=${date.slice(0, 7)}&day=${date}`);
+}
+
+// The redesign's Calendar dialog: the same entry with a category, a note
+// (the coach-only prep notes) and all day. Called from the client, which
+// refreshes; answers with the entry's id.
+export async function addCalendarEntryAction(v: CalendarEntryInput) {
+  const coach = await requireCoach();
+  const clientId = v.clientId == null ? null : Number(v.clientId);
+  if (clientId != null && !(await coachForClient(clientId))) return null;
+  const id = addCalendarEntry(coach.id, { ...v, clientId });
+  if (id != null && clientId != null) {
+    const topic = String(v.topic ?? "").trim();
+    logCoachActivity(clientId, topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", { kind: "general", push: true, actionTab: "home", actionLabel: "View schedule" });
+  }
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  return id;
+}
+
+export async function updateCalendarEntryAction(id: number, v: CalendarEntryInput) {
+  const coach = await requireCoach();
+  const clientId = v.clientId == null ? null : Number(v.clientId);
+  if (!coachOwnsMeeting(coach.id, Number(id))) return;
+  if (clientId != null && !(await coachForClient(clientId))) return;
+  const before = getCalendarEntry(Number(id));
+  updateCalendarEntry(coach.id, Number(id), { ...v, clientId });
+  // The client hears when their call moves, not when the coach's note or colour changes.
+  if (clientId != null && before && (before.client_id !== clientId || before.date !== v.date || before.time !== (v.allDay ? "" : v.time))) {
+    noteChange(clientId, "Moved your call", { tab: "home", label: "See your meetings", key: `meeting-move:${id}`, push: true });
+  }
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function removeCalendarEntryAction(id: number) {
+  const coach = await requireCoach();
+  if (!coachOwnsMeeting(coach.id, Number(id))) return;
+  const meetingClient = getClientIdForMeeting(Number(id));
+  removeMeeting(Number(id));
+  noteChange(meetingClient, "Cancelled your call", { tab: "home", label: "See your meetings", key: `meeting-cancel:${id}`, push: true });
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+/** A Calendar category of the coach's own; answers with its id ("c12"). Rename and remove are the Plan's actions. */
+export async function addCalendarCategoryAction(label: string, color: string) {
+  const coach = await requireCoach();
+  const row = addEventCategory(coach.id, String(label ?? ""), String(color ?? ""), "calendar");
+  revalidatePath("/admin");
+  return row ? `c${row.id}` : null;
 }
 
 // ---- Phase timeline (coach only) ----------------------------------------
