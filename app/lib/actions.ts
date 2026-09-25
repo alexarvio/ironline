@@ -1916,6 +1916,15 @@ export async function setMessageLinkAction(clientId: number, messageId: number, 
   bothSides();
 }
 
+// Taking a message off the top: the coach or the client, either may (only
+// the coach pins).
+export async function unpinMessageAction(clientId: number, messageId: number) {
+  const id = await requireClientAccess(Number(clientId));
+  if (!id) return;
+  setChatMessagePinned(id, Number(messageId), false);
+  bothSides();
+}
+
 export async function pinMessageAction(clientId: number, messageId: number, pinned: boolean) {
   const id = await coachOn(clientId);
   if (!id) return;

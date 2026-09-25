@@ -318,6 +318,7 @@ export default function MessagesDraft({ clientId, firstName, plan, active }: { c
 
       <section ref={chat} className="rd-session open rm-chat" aria-label={`Conversation with ${firstName}`}>
         {pinShown && (
+          <div className="rm-pinbar-wrap">
           <button type="button" className="rm-pinbar" onClick={goToPin} title={pinned.length > 1 ? "Go to this pinned message; the next pin shows" : "Go to the pinned message"}>
             {/* One mark a pin when there are several, the one showing filled. */}
             {pinned.length > 1 && (
@@ -336,6 +337,11 @@ export default function MessagesDraft({ clientId, firstName, plan, active }: { c
             </span>
             {pinned.length > 1 && <span className="rm-pinbar-count">{(pinAt % pinned.length) + 1}/{pinned.length}</span>}
           </button>
+          {/* Off the top straight from the bar. */}
+          <button type="button" className="rm-pinbar-x" onClick={() => act(() => pinMessageAction(clientId, pinShown.id, false))} aria-label="Unpin this message" title="Unpin">
+            ×
+          </button>
+          </div>
         )}
         <div
           ref={thread}
