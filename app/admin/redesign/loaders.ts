@@ -167,16 +167,20 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
           setsPlanned: wa.sets,
           sets: wl.map((l) => ({ n: l.set_number, kg: l.weight_kg, reps: l.reps, rpe: l.rpe_actual })),
           best: kgs.length ? Math.max(...kgs) : null,
+          // The best set with its reps counted: estimated one-rep max (Epley,
+          // weight × (1 + reps / 30)). What the % and the trend follow, so
+          // 60 kg × 22 then 60.5 kg × 8 reads as a drop, not +0.4%.
+          e1rm: wl.length ? Math.max(...wl.map((l) => (l.weight_kg ?? 0) * (1 + (l.reps ?? 0) / 30))) : null,
           gym: wl[0]?.gym_id != null ? gymName.get(wl[0].gym_id) ?? null : null,
           current: i + 1 === weekIdx,
         };
       }).filter((h): h is NonNullable<typeof h> => h != null);
       const logged = history.filter((h) => h.sets.length > 0);
       const thisWeek = history.find((h) => h.current) ?? null;
-      // 7 days: this week's best against last week's. 30 days: against the
-      // earliest logged week within the last four.
+      // 7 days: this week's estimated one-rep max against last week's. 30 days:
+      // against the earliest logged week within the last four.
       const pct = (from: (typeof history)[number] | null) =>
-        thisWeek?.best != null && from?.best != null && from !== thisWeek && from.best > 0 ? Math.round(((thisWeek.best - from.best) / from.best) * 1000) / 10 : null;
+        thisWeek?.e1rm != null && from?.e1rm != null && from !== thisWeek && from.e1rm > 0 ? Math.round(((thisWeek.e1rm - from.e1rm) / from.e1rm) * 1000) / 10 : null;
       // Last week means the week before, logged: an older week is not "7 days"
       // (week 1 against week 6 read as +650%).
       const lastWeek = thisWeek ? logged.find((h) => h.week === thisWeek.week - 1) ?? null : null;
