@@ -199,6 +199,7 @@ function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstNam
   const openLink = useOpenLink();
   const openCheckIn = useOpenCheckIn();
   const openPhotos = useOpenPhotos();
+  const openMeetings = useOpenMeetings();
   const goToTab = useNavigateTab();
   const [watching, setWatching] = useState(false);
   const [, startTransition] = useTransition();
@@ -225,6 +226,11 @@ function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstNam
         openMessages?.();
         return;
       case "meeting":
+        // The Meetings screen: the next call, and what was agreed on the last.
+        if (openMeetings) {
+          openMeetings();
+          return;
+        }
         {
           const card = document.querySelector(".hm-mt");
           if (card) card.scrollIntoView({ behavior: "smooth", block: "start" });
