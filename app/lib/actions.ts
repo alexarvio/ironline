@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import type { CoachBusiness, CoachInvoicing } from "./db";
+import { getData, type CoachBusiness, type CoachInvoicing } from "./db";
 import { lookupOpenFoodFacts, searchOpenFoodFacts } from "./foods/openfoodfacts";
 import { revalidatePath } from "next/cache";
 import {
@@ -2859,7 +2859,7 @@ export async function saveWarmupSetsAction(assignmentId: number, sets: { weight_
 // Everything the coach changes reaches the client as a notification: one per
 // kind per day, so an afternoon of edits reads as one line, not thirty.
 // In the app only, unless push says it is a real moment (see logCoachActivity).
-function noteChange(clientId: number | null | undefined, message: string, opts: { tab?: "home" | "training" | "nutrition" | "settings"; label?: string; ref?: number; key: string; push?: boolean }) {
+function noteChange(clientId: number | null | undefined, message: string, opts: { tab?: "home" | "training" | "nutrition" | "settings" | "invoices"; label?: string; ref?: number; key: string; push?: boolean }) {
   if (clientId == null) return;
   logCoachActivity(clientId, message, { kind: "general", actionTab: opts.tab, actionLabel: opts.label, actionRef: opts.ref, dedupeKey: `${opts.key}:${localDateStr()}`, push: opts.push });
 }
@@ -3353,15 +3353,33 @@ export async function createInvoiceAction(clientId: number, v: NewInvoice) {
   const coach = await coachForClient(Number(clientId));
   if (!coach) return null;
   const id = createInvoice(coach.id, Number(clientId), v);
+  if (id != null && v.sent) tellClientAboutInvoice(id, "unpaid");
   revalidatePath("/admin");
+  revalidatePath("/client");
   return id;
 }
 
 export async function setInvoiceStatusByIdAction(invoiceId: number, status: "unpaid" | "sent" | "paid" | "due") {
   if (!(await coachForClient(clientIdForInvoice(Number(invoiceId))))) return;
   if (!["unpaid", "sent", "paid", "due"].includes(status)) return;
+  const before = getData().invoices.find((i) => i.id === Number(invoiceId))?.status;
   setInvoiceStatusFrozen(Number(invoiceId), status);
+  if (before) tellClientAboutInvoice(Number(invoiceId), before);
   revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// The client hears about an invoice when it first reaches them (a buzz) and
+// when it is marked paid (in the app only). "Not sent" is never theirs to see.
+function tellClientAboutInvoice(invoiceId: number, before: string) {
+  const inv = getData().invoices.find((i) => i.id === invoiceId);
+  if (!inv || inv.status === before) return;
+  const name = inv.number ?? "an invoice";
+  if (before === "unpaid" && inv.status !== "unpaid" && inv.status !== "paid") {
+    noteChange(inv.client_id, `Sent you invoice ${name}`, { tab: "invoices", label: "See your invoices", key: `invoice-sent:${invoiceId}`, push: true });
+  } else if (inv.status === "paid") {
+    noteChange(inv.client_id, `Marked invoice ${name} paid`, { tab: "invoices", label: "See your invoices", key: `invoice-paid:${invoiceId}` });
+  }
 }
 
 export async function deleteInvoiceAction(invoiceId: number) {

@@ -59,6 +59,7 @@ import {
   listClients,
   meetingProvider,
   listMeetings,
+  listClientInvoices,
   listPhotoPeriods,
   listPhotoSlots,
   listPhotoUploads,
@@ -1373,6 +1374,29 @@ export default async function ClientPage({
     return { upcoming, past };
   })();
 
+  // The Invoices screen: what the coach has sent, to pay first. Absent until the first one arrives.
+  const invoices = (() => {
+    const today = localDateStr();
+    const list = listClientInvoices(CLIENT_ID);
+    if (list.length === 0) return null;
+    const short = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    const rows = list.map((v) => {
+      const when = new Date(`${v.issueDate}T12:00:00`);
+      const late = v.status !== "paid" && (v.status === "due" || (!!v.dueDate && v.dueDate < today));
+      return {
+        id: v.id,
+        number: v.number,
+        dayNumber: String(when.getDate()),
+        monthCap: MONTH_CAP[when.getMonth()],
+        what: (v.lines[0]?.description ?? "Invoice") + (v.lines.length > 1 ? ` + ${v.lines.length - 1} more` : ""),
+        total: new Intl.NumberFormat("en-GB", { style: "currency", currency: v.currency }).format(v.total),
+        state: v.status === "paid" ? ("paid" as const) : late ? ("late" as const) : ("pay" as const),
+        stateLabel: v.status === "paid" ? "Paid" : late ? (v.dueDate ? `Overdue since ${short(v.dueDate)}` : "Overdue") : v.dueDate ? `Due ${short(v.dueDate)}` : "To pay",
+      };
+    });
+    return { invoices: rows };
+  })();
+
   const tabs: AppTab[] = [
     // Draws its own light banner (name and main goal); the top bar floats over it.
     { id: "home", label: "Home", icon: <HomeIcon />, bare: true, content: <HomeTab CLIENT_ID={CLIENT_ID} phoneTz={phoneTz} photos={homePhotos} food={{ eaten: foodDiary.eaten.kcal, target: foodDiary.target?.kcal ?? null, mealsLogged: foodDiary.meals.filter((m) => m.entries.length > 0).length, mealsTotal: foodDiary.meals.length }} /> },
@@ -1424,6 +1448,7 @@ export default async function ClientPage({
       coachAvatarPath={getCoachAvatarPath(CLIENT_ID)}
       foodDiary={foodDiary}
       meetings={meetings}
+      invoices={invoices}
       initialTab={initialTab}
     />
   );
