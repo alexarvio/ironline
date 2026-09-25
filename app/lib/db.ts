@@ -502,7 +502,26 @@ type Invoice = {
   // only who they were for. client_id then points at no client.
   client_name?: string;
   coach_id?: number | null;
+  // Invoices made since 25 Sep carry the rest (older ones are just a line and
+  // an amount). amount stays the total the client pays, VAT included.
+  number?: string;
+  issue_date?: string;
+  due_date?: string;
+  currency?: "EUR" | "USD" | "GBP";
+  lines?: InvoiceLine[];
+  vat_rate?: number;
+  prices_include_vat?: boolean;
+  subtotal?: number;
+  vat?: number;
+  /** Printed under the lines. */
+  note?: string;
+  /** Who it is from, frozen once it leaves "Not sent" (until then the coach's settings are read live). */
+  from?: InvoiceParty;
+  /** Who it is for, frozen with `from`. */
+  to?: { name: string; email?: string; address?: string };
 };
+export type InvoiceLine = { description: string; quantity: number; unit_price: number };
+export type InvoiceParty = CoachBusiness & Pick<CoachInvoicing, "iban" | "bic" | "account_holder" | "footer">;
 
 type MealMacros = { protein: number | null; fats: number | null; carbs: number | null };
 type NutritionPlan = {

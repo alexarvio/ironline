@@ -169,6 +169,10 @@ import {
   addCalendarEntry,
   saveCoachBusiness,
   saveCoachInvoicing,
+  createInvoice,
+  setInvoiceStatusFrozen,
+  deleteUnsentInvoice,
+  type NewInvoice,
   updateCalendarEntry,
   getCalendarEntry,
   type CalendarEntryInput,
@@ -3341,4 +3345,28 @@ export async function saveCoachInvoicingAction(i: CoachInvoicing) {
   const coach = await requireCoach();
   saveCoachInvoicing(coach.id, i ?? {});
   revalidatePath("/admin/redesign/settings");
+}
+
+// ---- Invoices in the redesign (the client's Invoices tab) ----
+
+export async function createInvoiceAction(clientId: number, v: NewInvoice) {
+  const coach = await coachForClient(Number(clientId));
+  if (!coach) return null;
+  const id = createInvoice(coach.id, Number(clientId), v);
+  revalidatePath("/admin");
+  return id;
+}
+
+export async function setInvoiceStatusByIdAction(invoiceId: number, status: "unpaid" | "sent" | "paid" | "due") {
+  if (!(await coachForClient(clientIdForInvoice(Number(invoiceId))))) return;
+  if (!["unpaid", "sent", "paid", "due"].includes(status)) return;
+  setInvoiceStatusFrozen(Number(invoiceId), status);
+  revalidatePath("/admin");
+}
+
+export async function deleteInvoiceAction(invoiceId: number) {
+  if (!(await coachForClient(clientIdForInvoice(Number(invoiceId))))) return false;
+  const ok = deleteUnsentInvoice(Number(invoiceId));
+  revalidatePath("/admin");
+  return ok;
 }

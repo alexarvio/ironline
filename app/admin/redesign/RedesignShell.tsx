@@ -10,8 +10,9 @@ import MeetingsDraft, { type DraftMeetings } from "./meetings/MeetingsDraft";
 import PlanDraft, { type DraftPlan } from "./plan/PlanDraft";
 import HomeDraft, { type DraftHome } from "./home/HomeDraft";
 import MessagesDraft, { type DraftMessages } from "./messages/MessagesDraft";
+import InvoicesDraft from "./invoices/InvoicesDraft";
 import RedesignRail from "./RedesignRail";
-import type { RailData } from "./loaders";
+import type { DraftInvoices, RailData } from "./loaders";
 
 // The redesign drafts on one page: the rail on the left, and Training,
 // Nutrition and Measurements all loaded on the right, one shown at a time.
@@ -26,6 +27,7 @@ const TABS = [
   { key: "measurements", label: "Measurements" },
   { key: "pictures", label: "Progress pictures" },
   { key: "meetings", label: "Meetings" },
+  { key: "invoices", label: "Invoices" },
   // Messages is always the last tab.
   { key: "messages", label: "Messages" },
 ] as const;
@@ -45,9 +47,10 @@ export type RedesignShellProps = {
   meetings: DraftMeetings;
   plan: DraftPlan;
   messages: DraftMessages;
+  invoices: DraftInvoices;
 };
 
-export default function RedesignShell({ clientId, firstName, rail, initialTab, home, training, nutrition, measurements, pictures, meetings, plan, messages }: RedesignShellProps) {
+export default function RedesignShell({ clientId, clientName, firstName, rail, initialTab, home, training, nutrition, measurements, pictures, meetings, plan, messages, invoices }: RedesignShellProps) {
   const [tab, setTab] = useState<RedesignTab>(initialTab);
   // Another client: land where the address says (Home from the rail), never on the last client's tab.
   const [seenClient, setSeenClient] = useState(clientId);
@@ -94,6 +97,9 @@ export default function RedesignShell({ clientId, firstName, rail, initialTab, h
         </div>
         <div hidden={tab !== "plan"}>
           <PlanDraft clientId={clientId} firstName={firstName} plan={plan} />
+        </div>
+        <div hidden={tab !== "invoices"}>
+          <InvoicesDraft clientId={clientId} firstName={firstName} clientName={clientName} plan={invoices} />
         </div>
         <div hidden={tab !== "messages"}>
           <MessagesDraft clientId={clientId} firstName={firstName} plan={messages} active={tab === "messages"} />

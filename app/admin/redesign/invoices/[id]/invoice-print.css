@@ -1,0 +1,48 @@
+/* One invoice as it prints (25 Sep). Prefix ivp-. On screen an A4 sheet on
+   the page's grey; printed, only the sheet. */
+.ivp { min-height: 100vh; padding: 20px 16px 60px; background: #eef1f5; font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; }
+.ivp-bar { display: flex; align-items: center; gap: 12px; max-width: 794px; margin: 0 auto 12px; }
+.ivp-state { flex: 1; font-size: 12.5px; font-weight: 600; color: #5b6474; }
+.ivp-btn { display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; font-size: 13px; font-weight: 700; color: #1e3a6e; text-decoration: none; cursor: pointer; }
+.ivp-btn.primary { background: #1e3a6e; border-color: #1e3a6e; color: #fff; }
+.ivp-missing { max-width: 794px; margin: 0 auto 12px; padding: 10px 14px; border: 1px solid #f3d6c9; border-radius: 10px; background: #fdf3ee; font-size: 13px; color: #b3471d; box-sizing: border-box; }
+.ivp-missing a { color: #b3471d; font-weight: 700; }
+
+.ivp-sheet { box-sizing: border-box; width: 100%; max-width: 794px; min-height: 1123px; margin: 0 auto; padding: 64px 64px 48px; background: #fff; box-shadow: 0 16px 40px -20px rgba(8, 31, 92, 0.3); display: flex; flex-direction: column; font-size: 13px; line-height: 1.5; color: #313851; }
+.ivp-head { display: flex; justify-content: space-between; gap: 32px; }
+.ivp-from { display: flex; flex-direction: column; }
+.ivp-seller { margin-bottom: 4px; font-size: 18px; font-weight: 800; color: #1e3a6e; }
+.ivp-title { text-align: right; }
+.ivp-title h1 { margin: 0 0 10px; font-size: 30px; font-weight: 800; letter-spacing: -0.01em; color: #141a24; }
+.ivp-title dl, .ivp-totals { display: grid; grid-template-columns: auto auto; gap: 3px 18px; margin: 0; justify-content: end; }
+.ivp-title dt, .ivp-totals dt { color: #8b93a1; font-weight: 600; }
+.ivp-title dd, .ivp-totals dd { margin: 0; text-align: right; font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; }
+.ivp-to { display: flex; flex-direction: column; margin: 40px 0 28px; }
+.ivp-to small, .ivp-pay small { margin-bottom: 4px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #8b93a1; }
+.ivp-to b { font-size: 15px; color: #141a24; }
+.ivp-lines { width: 100%; border-collapse: collapse; }
+.ivp-lines th { padding: 8px 0; border-bottom: 2px solid #1e3a6e; font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #1e3a6e; text-align: left; }
+.ivp-lines td { padding: 10px 0; border-bottom: 1px solid #eceff3; vertical-align: top; }
+.ivp-lines .n { text-align: right; padding-left: 16px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ivp-totals { margin-top: 16px; }
+.ivp-totals .grand { padding-top: 6px; border-top: 1px solid #dfe3e8; font-size: 16px; font-weight: 800; color: #141a24; }
+.ivp-small { margin: 8px 0 0; font-size: 12px; color: #8b93a1; text-align: right; }
+.ivp-note { margin: 28px 0 0; white-space: pre-wrap; }
+.ivp-pay { display: flex; flex-direction: column; margin-top: 32px; padding: 14px 16px; border-radius: 10px; background: #f4f7fc; }
+.ivp-pay p { margin: 0; }
+.ivp-pay .ivp-small { text-align: left; }
+.ivp-foot { margin-top: auto; padding-top: 32px; font-size: 11.5px; color: #8b93a1; text-align: center; }
+.ivp-foot p { margin: 0 0 4px; white-space: pre-wrap; }
+
+@media (max-width: 700px) {
+  .ivp-sheet { min-height: 0; padding: 28px 20px; }
+  .ivp-head { flex-direction: column; }
+  .ivp-title { text-align: left; }
+  .ivp-title dl { justify-content: start; }
+}
+@page { size: A4; margin: 0; }
+@media print {
+  .ivp { padding: 0; background: #fff; }
+  .ivp-bar, .ivp-missing { display: none; }
+  .ivp-sheet { max-width: none; min-height: 297mm; box-shadow: none; }
+}

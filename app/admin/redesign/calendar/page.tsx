@@ -12,6 +12,7 @@ import "../../../components/ui/ui.css";
 import "../training/draft.css";
 import "../plan/plan.css";
 import "../rail.css";
+import "../ncdialog.css";
 import "./calendar.css";
 
 // The Calendar in the redesign, the rail on its left (replaces

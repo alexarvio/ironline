@@ -3,23 +3,22 @@ import { loadHome, loadMeasurements, loadMeetings, loadMessages, loadNutrition, 
 import RedesignShell from "../RedesignShell";
 import "../../../components/ui/ui.css";
 import "../training/draft.css";
-import "./nutrition.css";
+import "../nutrition/nutrition.css";
 import "../measurements/measurements.css";
 import "../pictures/pictures.css";
 import "../meetings/meetings.css";
 import "../plan/plan.css";
 import "../home/home.css";
 import "../messages/messages.css";
-import "../invoices/invoices.css";
+import "./invoices.css";
 import "../ncdialog.css";
 import "../rail.css";
 
-// The redesign drafts, opened on Nutrition. Read-only: nothing here saves.
-// Local only, not for live.
-//   /admin/redesign/nutrition?client=ID&phase=ID
+// The client's tabs, opened on Invoices.
+//   /admin/redesign/invoices?client=ID
 export const dynamic = "force-dynamic";
 
-export default async function NutritionRedesignPage({ searchParams }: { searchParams: Promise<{ client?: string; week?: string; program?: string; phase?: string }> }) {
+export default async function InvoicesRedesignPage({ searchParams }: { searchParams: Promise<{ client?: string; week?: string; program?: string; phase?: string }> }) {
   const coach = await requireCoach();
   const params = await searchParams;
   const { client, firstName } = pickClient(coach.id, params.client);
@@ -30,7 +29,7 @@ export default async function NutritionRedesignPage({ searchParams }: { searchPa
       clientName={client.name ?? "Client"}
       firstName={firstName}
       rail={loadRail(coach)}
-      initialTab="nutrition"
+      initialTab="invoices"
       home={loadHome(client.id)}
       training={loadTraining(coach.id, client.id, params)}
       nutrition={loadNutrition(client.id, params)}

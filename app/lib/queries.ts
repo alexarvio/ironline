@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, CardioEntry } from "./db";
-import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientEvent, ClientGym, ClientPhase, CoachProfile, CoachBusiness, CoachInvoicing, CoachSettings, EventCategory, PhaseTrack, VideoRequest } from "./db";
+import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientEvent, ClientGym, ClientPhase, CoachProfile, CoachBusiness, CoachInvoicing, CoachSettings, Data, EventCategory, InvoiceLine, InvoiceParty, PhaseTrack, VideoRequest } from "./db";
 import type { CoachProfileFields, CoachProfileView } from "./coachProfileView";
 import { getCatalogFood, searchCatalog, type CatalogFood } from "./foods/catalog";
 import type { OffProduct } from "./foods/openfoodfacts";
@@ -1962,17 +1962,7 @@ export function getExerciseWeightTrendPct(
 
 // ---- Admin panel: client summary + invoices + the trend graph ----
 
-export type Invoice = {
-  id: number;
-  client_id: number;
-  description: string;
-  amount: number;
-  status: "unpaid" | "sent" | "paid" | "due";
-  created_at: string;
-  updated_at: string;
-  client_name?: string;
-  coach_id?: number | null;
-};
+export type Invoice = Data["invoices"][number];
 
 export function listInvoices(clientId: number): Invoice[] {
   return getData()
@@ -10420,3 +10410,148 @@ export function saveCoachInvoicing(coachId: number, i: CoachInvoicing) {
     }),
   });
 }
+
+// ---- Invoices from the coach's settings ---------------------------------------
+// A new invoice is numbered from Invoicing (prefix + next number, which then
+// moves on), priced with its VAT rate and whether typed prices include VAT,
+// and due after its payment terms. Who it is from (Business details and the
+// bank) and who it is for are read live while it is "Not sent" ("unpaid"),
+// and frozen onto it the moment it is sent or paid, so a later change in
+// Settings never rewrites an invoice the client already has.
+
+const cents = (n: number) => Math.round(n * 100) / 100;
+
+export function invoiceTotals(lines: InvoiceLine[], vatRate: number, pricesIncludeVat: boolean) {
+  const sum = cents(lines.reduce((s, l) => s + (Number(l.quantity) || 0) * (Number(l.unit_price) || 0), 0));
+  const r = Math.max(0, Number(vatRate) || 0) / 100;
+  if (pricesIncludeVat) {
+    const subtotal = cents(sum / (1 + r));
+    return { subtotal, vat: cents(sum - subtotal), total: sum };
+  }
+  const vat = cents(sum * r);
+  return { subtotal: sum, vat, total: cents(sum + vat) };
+}
+
+function coachParty(coachId: number): InvoiceParty {
+  const s = getCoachSettings(coachId);
+  const i = s.invoicing ?? {};
+  return { ...(s.business ?? {}), iban: i.iban, bic: i.bic, account_holder: i.account_holder, footer: i.footer };
+}
+
+function clientParty(clientId: number): { name: string; email?: string; address?: string } {
+  const client = getData().clients.find((c) => c.id === clientId);
+  const p = getClientProfile(clientId);
+  return { name: client?.name ?? "Client", email: p.email ?? undefined, address: p.address ?? undefined };
+}
+
+const addDaysIso = (iso: string, n: number) => {
+  const d = new Date(`${iso}T12:00:00`);
+  d.setDate(d.getDate() + n);
+  return localDateStr(d);
+};
+const formatNumber = (prefix: string, n: number, issueDate: string) => `${prefix.replaceAll("{year}", issueDate.slice(0, 4))}${String(n).padStart(4, "0")}`;
+
+export type NewInvoice = { issueDate: string; lines: InvoiceLine[]; note?: string; sent?: boolean };
+
+export function createInvoice(coachId: number, clientId: number, v: NewInvoice): number | null {
+  const lines = (v.lines ?? [])
+    .map((l) => ({ description: String(l.description ?? "").trim().slice(0, 200), quantity: cents(Number(l.quantity) || 0), unit_price: cents(Number(l.unit_price) || 0) }))
+    .filter((l) => l.description && l.quantity > 0);
+  const issue = /^\d{4}-\d{2}-\d{2}$/.test(String(v.issueDate)) ? String(v.issueDate) : localDateStr();
+  if (lines.length === 0) return null;
+  const data = getData();
+  const user = data.users.find((u) => u.id === coachId && u.role === "coach");
+  if (!user) return null;
+  const inv = user.coach_settings?.invoicing ?? {};
+  const rate = inv.vat_rate ?? 21;
+  const incl = inv.prices_include_vat ?? true;
+  const next = Math.max(1, Math.round(inv.next_number ?? 1));
+  const t = invoiceTotals(lines, rate, incl);
+  const now = new Date().toISOString().replace("T", " ").slice(0, 19);
+  const id = allocId("invoices");
+  const sent = !!v.sent;
+  data.invoices.push({
+    id,
+    client_id: clientId,
+    coach_id: coachId,
+    description: lines[0].description + (lines.length > 1 ? ` + ${lines.length - 1} more` : ""),
+    amount: t.total,
+    status: sent ? "sent" : "unpaid",
+    created_at: now,
+    updated_at: now,
+    number: formatNumber(inv.number_prefix ?? "", next, issue),
+    issue_date: issue,
+    due_date: addDaysIso(issue, inv.payment_terms_days ?? 14),
+    currency: inv.currency ?? "EUR",
+    lines,
+    vat_rate: rate,
+    prices_include_vat: incl,
+    subtotal: t.subtotal,
+    vat: t.vat,
+    note: String(v.note ?? "").trim().slice(0, 600) || undefined,
+    ...(sent ? { from: coachParty(coachId), to: clientParty(clientId) } : {}),
+  });
+  user.coach_settings = { ...(user.coach_settings ?? {}), invoicing: { ...inv, next_number: next + 1 } };
+  persist();
+  return id;
+}
+
+/** A status change; leaving "Not sent" freezes who it is from and for. */
+export function setInvoiceStatusFrozen(invoiceId: number, status: Invoice["status"]) {
+  const inv = getData().invoices.find((i) => i.id === invoiceId);
+  if (!inv) return;
+  if (status !== "unpaid" && inv.number && !inv.from) {
+    const coachId = inv.coach_id ?? coachIdOfClient(inv.client_id);
+    if (coachId != null) inv.from = coachParty(coachId);
+    inv.to = clientParty(inv.client_id);
+  }
+  inv.status = status;
+  inv.updated_at = new Date().toISOString().replace("T", " ").slice(0, 19);
+  persist();
+}
+
+/** Only an invoice not sent yet can go; the newest gives its number back. */
+export function deleteUnsentInvoice(invoiceId: number): boolean {
+  const data = getData();
+  const inv = data.invoices.find((i) => i.id === invoiceId);
+  if (!inv || inv.status !== "unpaid") return false;
+  data.invoices = data.invoices.filter((i) => i !== inv);
+  const coachId = inv.coach_id ?? coachIdOfClient(inv.client_id);
+  const user = data.users.find((u) => u.id === coachId);
+  const s = user?.coach_settings?.invoicing;
+  if (user && s && inv.number && inv.issue_date && s.next_number && formatNumber(s.number_prefix ?? "", s.next_number - 1, inv.issue_date) === inv.number) {
+    user.coach_settings = { ...user.coach_settings, invoicing: { ...s, next_number: s.next_number - 1 } };
+  }
+  persist();
+  return true;
+}
+
+/** One invoice as it prints: its parties resolved (live while not sent), older ones filled in from what they have. */
+export function getInvoiceView(invoiceId: number) {
+  const inv = getData().invoices.find((i) => i.id === invoiceId);
+  if (!inv) return null;
+  const coachId = inv.coach_id ?? coachIdOfClient(inv.client_id);
+  const lines = inv.lines?.length ? inv.lines : [{ description: inv.description, quantity: 1, unit_price: inv.amount }];
+  const rate = inv.vat_rate ?? 0;
+  const incl = inv.prices_include_vat ?? true;
+  const totals = inv.subtotal != null && inv.vat != null ? { subtotal: inv.subtotal, vat: inv.vat, total: inv.amount } : invoiceTotals(lines, rate, incl);
+  return {
+    id: inv.id,
+    clientId: inv.client_id,
+    coachId,
+    number: inv.number ?? `#${inv.id}`,
+    issueDate: inv.issue_date ?? inv.created_at.slice(0, 10),
+    dueDate: inv.due_date ?? null,
+    currency: inv.currency ?? "EUR",
+    status: inv.status,
+    lines,
+    vatRate: rate,
+    pricesIncludeVat: incl,
+    ...totals,
+    note: inv.note ?? "",
+    from: inv.from ?? (coachId != null ? coachParty(coachId) : {}),
+    to: inv.to ?? (inv.client_name ? { name: inv.client_name } : clientParty(inv.client_id)),
+    frozen: !!inv.from,
+  };
+}
+export type InvoiceView = NonNullable<ReturnType<typeof getInvoiceView>>;

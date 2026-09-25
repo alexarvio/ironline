@@ -1,5 +1,5 @@
 import { requireCoach } from "../../../lib/auth";
-import { loadHome, loadMeasurements, loadMeetings, loadMessages, loadNutrition, loadPictures, loadPlan, loadRail, loadTraining, pickClient } from "../loaders";
+import { loadHome, loadMeasurements, loadMeetings, loadMessages, loadNutrition, loadPictures, loadPlan, loadRail, loadTraining, pickClient, loadInvoices } from "../loaders";
 import RedesignShell from "../RedesignShell";
 import "../../../components/ui/ui.css";
 import "../training/draft.css";
@@ -10,6 +10,8 @@ import "./meetings.css";
 import "../plan/plan.css";
 import "../home/home.css";
 import "../messages/messages.css";
+import "../invoices/invoices.css";
+import "../ncdialog.css";
 import "../rail.css";
 
 // The redesign drafts, opened on Meetings. Read-only: nothing here saves.
@@ -37,6 +39,7 @@ export default async function MeetingsRedesignPage({ searchParams }: { searchPar
       meetings={loadMeetings(client.id)}
       plan={loadPlan(client.id)}
       messages={loadMessages(client.id)}
+      invoices={loadInvoices(coach.id, client.id)}
     />
   );
 }
