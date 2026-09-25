@@ -311,17 +311,33 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
   const [demos, setDemos] = useState<Record<number, DraftRow["demo"]>>({});
   // Every session starts folded; the coach opens the one they want.
   const [open, setOpen] = useState<number | null>(null);
-  // Arriving from a link in a message (#session-ID): that session unfolds and
-  // comes into view. After the first paint, so the server's closed rows match.
+  // Arriving from a link in a message (#session-ID, or #session-ID-ex-ROW for
+  // an exercise): that session unfolds and comes into view; an exercise's row
+  // is scrolled to and marked for a moment. After the first paint, so the
+  // server's closed rows match. (The pattern read "d+" for a while, so no
+  // link ever matched and the week opened folded.)
+  const [flashRow, setFlashRow] = useState<number | null>(null);
   useEffect(() => {
-    const m = /^#session-(d+)$/.exec(window.location.hash);
+    const m = /^#session-(\d+)(?:-ex-(\d+))?$/.exec(window.location.hash);
     if (!m) return;
     const id = Number(m[1]);
+    const row = m[2] ? Number(m[2]) : null;
+    let clear: ReturnType<typeof setTimeout> | undefined;
     const frame = requestAnimationFrame(() => {
       setOpen(id);
-      setTimeout(() => document.getElementById(`session-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+      setTimeout(() => {
+        const target = (row != null && document.getElementById(`row-${row}`)) || document.getElementById(`session-${id}`);
+        target?.scrollIntoView({ behavior: "smooth", block: row != null ? "center" : "start" });
+        if (row != null) {
+          setFlashRow(row);
+          clear = setTimeout(() => setFlashRow(null), 2400);
+        }
+      }, 80);
     });
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(frame);
+      if (clear) clearTimeout(clear);
+    };
   }, []);
   const [videos, setVideos] = useState<Record<number, DraftRow["video"]>>(() => Object.fromEntries(program.sessions.flatMap((s) => s.rows.map((r) => [r.id, r.video]))));
   const [seenVideos, setSeenVideos] = useState(program.sessions);
@@ -681,7 +697,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                     const shownName = e.name ?? r.name;
                     const under = e.note !== undefined ? e.note : (r.note ?? "");
                     return (
-                      <SortableItem key={r.id} id={r.id} className={`rd-row${Object.keys(e).length ? " edited" : ""}`}>
+                      <SortableItem key={r.id} id={r.id} anchor={`row-${r.id}`} className={`rd-row${Object.keys(e).length ? " edited" : ""}${flashRow === r.id ? " flash" : ""}`}>
                         {(rowGrip) => (
                         <div className="rd-row-main" style={colStyle}>
                           <span className="rd-grip" {...rowGrip}>

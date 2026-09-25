@@ -116,3 +116,17 @@ a.rm-link.open:hover { background: #d9e2ee; }
 .rm-bubble-row.mine .rm-media-file { background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.3); color: #fff; }
 
 .rm-mic.recording { width: auto; gap: 6px; padding: 0 12px; border-color: #b3471d; background: #fdf3ee; color: #b3471d; }
+
+/* The link on a message as a round dot on the bubble's top corner, like the
+   client's app (25 Sep): top-left on the coach's (right-hand) bubbles,
+   top-right on the client's; hovering it shows what it opens. */
+.rm-bubble.linked { margin-top: 12px; }
+.rm-linkdot { position: absolute; top: -13px; z-index: 2; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border: 1px solid #dfe3e8; border-radius: 999px; background: #fff; color: #1e3a6e; box-shadow: 0 0 0 3px #f7f8fb; text-decoration: none; cursor: pointer; }
+.rm-bubble-row.mine .rm-linkdot { left: -11px; }
+.rm-bubble-row.theirs .rm-linkdot { right: -11px; }
+.rm-linkdot.gone { color: #8b93a1; cursor: default; }
+.rm-linkdot-tip { position: absolute; bottom: calc(100% + 6px); z-index: 5; width: max-content; max-width: 280px; padding: 6px 10px; border-radius: 8px; background: #141a24; color: #fff; font-size: 12px; font-weight: 600; line-height: 1.35; white-space: normal; pointer-events: none; opacity: 0; transform: translateY(2px); transition: opacity 0.12s ease, transform 0.12s ease; }
+.rm-bubble-row.mine .rm-linkdot-tip { left: 0; }
+.rm-bubble-row.theirs .rm-linkdot-tip { right: 0; }
+.rm-linkdot:hover .rm-linkdot-tip, .rm-linkdot:focus-visible .rm-linkdot-tip { opacity: 1; transform: none; }
+.rm-linkdot-tip em { font-style: normal; color: #c9d0db; }

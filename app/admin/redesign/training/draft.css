@@ -436,3 +436,7 @@
 .rd-alt-name { font-size: 14px; font-weight: 600; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rd-alt-add { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; }
 .rd-alt-add svg { width: 14px; height: 14px; }
+
+/* An exercise opened from a message's link: marked for a moment (25 Sep). */
+@keyframes rd-row-flash { 0%, 60% { background: rgba(47, 93, 143, 0.14); } 100% { background: transparent; } }
+.rd-row.flash { animation: rd-row-flash 2.4s ease-out; border-radius: 10px; }
