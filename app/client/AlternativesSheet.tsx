@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 
-export type LibraryOption = { id: number; name: string };
+export type LibraryOption = { id: number; name: string; note?: string | null };
 
-// Machine taken: the client logs what they did instead. Only what the coach
-// suggests is offered; anything else is typed in. The coach sees the swap
+// Machine taken: the client logs what they did instead. What the coach
+// suggests is offered (with the coach's note); anything else is typed in.
+// With no suggestions, that section is left out altogether. The coach sees the swap
 // against what was prescribed.
 export default function AlternativesSheet({
   exerciseName,
@@ -40,8 +41,9 @@ export default function AlternativesSheet({
         <span className="wo-sheet-grab" aria-hidden="true" />
         <h2 className="wo-sheet-title">Swap {exerciseName}</h2>
         <p className="wo-sheet-sub">Machine taken? Log what you did instead. {coachName} sees the swap.</p>
-        <div className="wo-sheet-kicker">Suggested by {coachName}</div>
-        {suggested.length > 0 ? (
+        {suggested.length > 0 && (
+          <>
+          <div className="wo-sheet-kicker">Suggested by {coachName}</div>
           <div className="wo-sheet-list">
             {suggested.map((e) => (
               <button
@@ -55,14 +57,16 @@ export default function AlternativesSheet({
                 }}
               >
                 <span className="wo-radio" aria-hidden="true" />
-                <span className="wo-option-name">{e.name}</span>
+                <span className="wo-option-text">
+                  <span className="wo-option-name">{e.name}</span>
+                  {e.note && <span className="wo-option-note">{e.note}</span>}
+                </span>
               </button>
             ))}
           </div>
-        ) : (
-          <p className="wo-sheet-empty">No alternatives from {coachName} for this one yet.</p>
+          </>
         )}
-        <div className="wo-sheet-kicker">Or write it down</div>
+        <div className="wo-sheet-kicker">{suggested.length > 0 ? "Or write it down" : "What you did instead"}</div>
         <input
           className="wo-sheet-input"
           type="text"

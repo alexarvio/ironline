@@ -17196,3 +17196,6 @@ button.ci-hint { cursor: pointer; }
    typed in gets a soft tint so it's clear where the number goes. */
 .ts-input, .ts-input.reps, .ts-warm .ts-input.reps { border: 1px solid transparent; background: transparent; transition: background-color 0.15s ease; }
 .ts-input:focus { outline: none; background: #eef2f8; }
+/* The coach's alternatives in the swap sheet: the name with the coach's note under it. */
+.wo-option-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; text-align: left; }
+.wo-option-note { font-size: 13px; font-weight: 500; color: #5b6474; }

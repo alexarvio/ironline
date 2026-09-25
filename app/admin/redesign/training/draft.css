@@ -429,3 +429,10 @@
 .rd-addrow-go { flex: none; height: 30px; padding: 0 12px; margin-right: 2px; }
 .rd-session-note { margin: 0 0 8px; padding: 8px 12px; border-radius: 10px; background: #eef3f9; font-size: 12.5px; color: #1e3a6e; }
 .rd-swap { margin-left: 6px; padding: 2px 7px; border-radius: 999px; background: #FBF1DF; color: #9a5b0c; font-size: 11px; font-weight: 700; white-space: nowrap; }
+
+/* Alternatives for an exercise (25 Sep): a row per alternative with its note. */
+.rd-alt-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.rd-alt-row { display: grid; grid-template-columns: minmax(120px, 0.8fr) 1.4fr auto; align-items: center; gap: 10px; }
+.rd-alt-name { font-size: 14px; font-weight: 600; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rd-alt-add { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; }
+.rd-alt-add svg { width: 14px; height: 14px; }

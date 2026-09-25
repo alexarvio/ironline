@@ -78,6 +78,8 @@ export type WorkoutAssignment = {
   gym_targets?: Record<string, { kg: number | null; set_at?: string | null }>;
   warmup_sets?: { weight_kg: number | null; reps: number | null }[];
   swap?: { library_exercise_id: number | null; custom_name: string | null; at: string };
+  /** The coach's alternatives (see db.ts). */
+  alternatives?: { exercise_id: number; note: string | null }[];
   exercise_name?: string;
   exercise_video_url?: string | null;
 };
@@ -7647,6 +7649,34 @@ export function setExerciseSwap(assignmentId: number, swap: { library_exercise_i
   if (swap && (lib != null || name)) wa.swap = { library_exercise_id: lib, custom_name: lib != null ? null : name, at: new Date().toISOString() };
   else delete wa.swap;
   persist();
+}
+
+/** The coach's alternatives for an exercise, set on this row and on the
+ *  same exercise in the same session for the rest of its programme, so they
+ *  hold week after week. Returns how many rows took them. */
+export function setExerciseAlternatives(assignmentId: number, list: { exercise_id: number; note: string | null }[]): number {
+  const data = getData();
+  const wa = data.workout_assignments.find((x) => x.id === assignmentId);
+  const day = wa ? data.program_days.find((d) => d.id === wa.program_day_id) : undefined;
+  if (!wa || !day) return 0;
+  const clean = list
+    .filter((x, i, all) => x.exercise_id !== wa.exercise_id && all.findIndex((y) => y.exercise_id === x.exercise_id) === i)
+    .slice(0, 8)
+    .map((x) => ({ exercise_id: x.exercise_id, note: x.note?.trim().slice(0, 200) || null }));
+  const program = data.training_programs.find((p) => p.client_id === day.client_id && day.week_number >= p.start_week && day.week_number < p.start_week + p.total_weeks);
+  const lastWeek = program ? program.start_week + program.total_weeks - 1 : day.week_number;
+  const days = new Set(
+    data.program_days.filter((d) => d.client_id === day.client_id && d.day_of_week === day.day_of_week && d.week_number >= day.week_number && d.week_number <= lastWeek).map((d) => d.id)
+  );
+  let n = 0;
+  for (const x of data.workout_assignments) {
+    if (x.id !== wa.id && (x.exercise_id !== wa.exercise_id || !days.has(x.program_day_id))) continue;
+    if (clean.length) x.alternatives = clean.map((c) => ({ ...c }));
+    else delete x.alternatives;
+    n++;
+  }
+  persist();
+  return n;
 }
 
 export type LastSet = { setNumber: number; weight: number | null; reps: number | null; rpe: number | null };

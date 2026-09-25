@@ -434,7 +434,7 @@ export default function ExercisePage({
         <AlternativesSheet
           exerciseName={exercise.name}
           coachName={coachName}
-          suggested={[]}
+          suggested={exercise.alternatives}
           swapped={exercise.swap}
           onPick={(choice) => {
             setSwapOpen(false);

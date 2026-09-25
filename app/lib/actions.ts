@@ -231,6 +231,7 @@ import {
   startSession,
   endSession,
   discardSession,
+  setExerciseAlternatives,
   setExerciseSwap,
   listExercises,
   setHomeGym,
@@ -2838,6 +2839,22 @@ export async function swapExerciseAction(assignmentId: number, payload: { librar
   setExerciseSwap(Number(assignmentId), { library_exercise_id: libOk ? lib : null, custom_name: libOk ? null : String(payload.customName ?? "") });
   revalidatePath("/client");
   revalidatePath("/admin");
+}
+
+// The coach's alternatives for an exercise (the row's ⋯ menu). Library
+// exercises only, the coach's own.
+export async function setExerciseAlternativesAction(assignmentId: number, list: { exerciseId: number; note: string }[]) {
+  const id = Number(assignmentId);
+  const owner = Number.isInteger(id) ? getClientIdForAssignment(id) : null;
+  if (owner == null || !(await coachForClient(owner))) return;
+  const coachId = getClient(owner)?.coach_id ?? null;
+  const mine = new Set(coachId != null ? listExercises(coachId).map((e) => e.id) : []);
+  const clean = (Array.isArray(list) ? list : [])
+    .map((x) => ({ exercise_id: Number(x?.exerciseId), note: typeof x?.note === "string" ? x.note : null }))
+    .filter((x) => Number.isInteger(x.exercise_id) && mine.has(x.exercise_id));
+  setExerciseAlternatives(id, clean);
+  revalidatePath("/admin");
+  revalidatePath("/client");
 }
 
 export async function clearSwapAction(assignmentId: number) {

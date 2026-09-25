@@ -5,7 +5,7 @@ import type React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { addExerciseToLibraryAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, createProgramWithAction, deployProgramAction, removeGymAction, removeProgramWeekAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, saveTrainingNoteAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
+import { addExerciseToLibraryAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, createProgramWithAction, deployProgramAction, removeGymAction, removeProgramWeekAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, saveTrainingNoteAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger, ToggleGroup, ToggleGroupItem } from "../../../components/ui/basics";
@@ -54,6 +54,8 @@ export type DraftRow = {
   history: { week: number; label: string; target: number | null; setsPlanned: number; sets: { n: number; kg: number | null; reps: number | null; rpe: number | null }[]; best: number | null; gym: string | null; current: boolean }[];
   /** What the client did instead, when they swapped the exercise. */
   swap: string | null;
+  /** What the coach offers instead when the machine is taken. */
+  alternatives: { exerciseId: number; name: string; note: string }[];
   d7: number | null;
   d30: number | null;
 };
@@ -113,6 +115,7 @@ type Dlg =
   | { kind: "editCardio"; sessionId: number; cardioId: number }
   | { kind: "video"; rowId: number }
   | { kind: "demo"; rowId: number }
+  | { kind: "alternatives"; rowId: number }
   | { kind: "message"; label: string; link: MessageLink }
   | { kind: "copySession"; sessionId: number }
   | { kind: "copyWeek" }
@@ -288,7 +291,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
         });
         const addedRows: DraftRow[] = p.added
           .filter((a): a is Added & AddedExercise => a.kind === "exercise")
-          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: Math.max(1, parseInt(String(a.sets), 10) || 3), reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: null, tempo: null, rest: null, note: null, logged: [], video: null, demo: null, history: [], swap: null, d7: null, d30: null }));
+          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: Math.max(1, parseInt(String(a.sets), 10) || 3), reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: null, tempo: null, rest: null, note: null, logged: [], video: null, demo: null, history: [], swap: null, alternatives: [], d7: null, d30: null }));
         const addedCardio: DraftCardio[] = p.added
           .filter((a): a is Added & AddedCardio => a.kind === "cardio")
           .map((a, i) => ({ id: -(Date.now() + 500 + i), name: a.name, time: a.time, pace: a.pace, incline: a.incline, distance: a.distance, notes: a.note, done: false }));
@@ -739,6 +742,9 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                                 <DropdownMenuItem onSelect={() => setDlg({ kind: "demo", rowId: r.id })}>
                                   <PlayIcon /> {(demos[r.id] === undefined ? r.demo : demos[r.id]) ? "Demo video · change" : "Add demo"}
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => setDlg({ kind: "alternatives", rowId: r.id })}>
+                                  <DumbbellIcon /> {r.alternatives.length ? `Alternatives · ${r.alternatives.length}` : "Add alternative"}
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: `${r.name} · ${name}, ${week.label}`, link: { kind: "exercise", dayId: s.id, assignmentId: r.id } })}>
                                   <ChatIcon /> Message {firstName} about it
                                 </DropdownMenuItem>
@@ -979,6 +985,22 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
               const { sessionId, cardioId } = dlg;
               patch(sessionId, (q) => ({ ...q, cardioEdits: { ...q.cardioEdits, [cardioId]: { ...(q.cardioEdits[cardioId] ?? {}), ...v } } }));
               close();
+            }}
+          />
+        )}
+
+        {dlg?.kind === "alternatives" && rowById(dlg.rowId) && (
+          <AlternativesDialog
+            row={rowById(dlg.rowId)!}
+            firstName={firstName}
+            library={library}
+            onSave={(list) => {
+              const row = rowById(dlg.rowId)!;
+              close();
+              act(
+                () => setExerciseAlternativesAction(row.id, list.map((x) => ({ exerciseId: x.exerciseId, note: x.note }))),
+                list.length ? `${list.length} alternative${list.length === 1 ? "" : "s"} for ${row.name}` : `Alternatives taken off ${row.name}`
+              );
             }}
           />
         )}
@@ -1629,6 +1651,59 @@ function EditExerciseDialog({ row, current, library, onSave }: { row: DraftRow; 
       <DialogFooter>
         <DialogClose className="rd-btn">Cancel</DialogClose>
         <button type="button" className="rd-btn primary" onClick={() => onSave({ ...(name !== row.name ? { name } : {}), ...(note !== (row.note ?? "") ? { note } : {}) })}>
+          Save
+        </button>
+      </DialogFooter>
+    </DialogContent>
+  );
+}
+
+/** What the client can do instead when the machine is taken: exercises from
+ *  the library (the add-exercise search), each with an optional note. Saved
+ *  on this session for the rest of the programme. */
+function AlternativesDialog({ row, firstName, library, onSave }: { row: DraftRow; firstName: string; library: Library; onSave: (list: DraftRow["alternatives"]) => void }) {
+  const [list, setList] = useState(row.alternatives);
+  const [adding, setAdding] = useState(row.alternatives.length === 0);
+  const edit = (exerciseId: number, note: string) => setList((l) => l.map((x) => (x.exerciseId === exerciseId ? { ...x, note } : x)));
+  return (
+    <DialogContent className="rd-dlg">
+      <DialogHeader>
+        <DialogTitle>Alternatives for {row.name}</DialogTitle>
+        <DialogDescription>What {firstName} can do instead when the machine is taken. They pick one from the swap in their workout.</DialogDescription>
+      </DialogHeader>
+      {list.length > 0 && (
+        <ul className="rd-alt-list">
+          {list.map((x) => (
+            <li key={x.exerciseId} className="rd-alt-row">
+              <span className="rd-alt-name">{x.name}</span>
+              <input className="rd-input" value={x.note} onChange={(e) => edit(x.exerciseId, e.target.value)} placeholder="Note · optional, e.g. same reps, a little lighter" maxLength={200} />
+              <button type="button" className="rd-btn ghost sm" onClick={() => setList((l) => l.filter((y) => y.exerciseId !== x.exerciseId))} aria-label={`Remove ${x.name}`}>
+                <TrashIcon />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {adding ? (
+        <AddExerciseRow
+          library={library}
+          onPick={(name, exerciseId) => {
+            if (exerciseId !== row.exerciseId && !list.some((x) => x.exerciseId === exerciseId)) setList((l) => [...l, { exerciseId, name, note: "" }]);
+            setAdding(false);
+          }}
+          onClose={() => setAdding(false)}
+        />
+      ) : (
+        list.length < 8 && (
+          <button type="button" className="rd-btn rd-alt-add" onClick={() => setAdding(true)}>
+            <PlusIcon /> Add alternative
+          </button>
+        )
+      )}
+      <p className="rd-addrow-hint">Saved on this session for the rest of the programme.</p>
+      <DialogFooter>
+        <DialogClose className="rd-btn">Cancel</DialogClose>
+        <button type="button" className="rd-btn primary" onClick={() => onSave(list)}>
           Save
         </button>
       </DialogFooter>

@@ -471,6 +471,10 @@ type WorkoutAssignment = {
   // the prescription stays, so the coach sees what was asked against what
   // was done. Absent when nothing was swapped.
   swap?: { library_exercise_id: number | null; custom_name: string | null; at: string };
+  // What the coach offers instead when the machine is taken: exercises from
+  // their library, each with an optional note. The client picks one from the
+  // swap sheet. Absent or empty: the sheet offers only "write it down".
+  alternatives?: { exercise_id: number; note: string | null }[];
 };
 type SetLog = {
   id: number;

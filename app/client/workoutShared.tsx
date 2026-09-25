@@ -23,6 +23,8 @@ export type SessionExercise = {
   name: string;
   /** What the client did instead, when they swapped. */
   swap: { libraryExerciseId: number | null; name: string } | null;
+  /** What the coach offers instead when the machine is taken. */
+  alternatives: { id: number; name: string; note: string | null }[];
   sets: number;
   reps: string;
   targetWeight: number | null;

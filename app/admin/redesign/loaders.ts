@@ -185,6 +185,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
         demo: a.exercise_video_url ? { url: a.exercise_video_url, source: "library" as const } : a.demo_url ? { url: a.demo_url, source: "row" as const } : null,
         history,
         swap: a.swap ? (a.swap.library_exercise_id != null ? libName.get(a.swap.library_exercise_id) ?? null : null) ?? a.swap.custom_name ?? null : null,
+        alternatives: (a.alternatives ?? []).filter((x) => libName.has(x.exercise_id)).map((x) => ({ exerciseId: x.exercise_id, name: libName.get(x.exercise_id)!, note: x.note ?? "" })),
         d7: pct(lastWeek),
         d30: pct(monthBack),
       };
