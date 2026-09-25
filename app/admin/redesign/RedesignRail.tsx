@@ -19,7 +19,7 @@ const VIEWS = [
   { key: "business", label: "Business", Icon: BusinessIcon },
 ] as const;
 // Views already redrawn here open in the redesign; the rest where they always were.
-const REDRAWN: Partial<Record<string, string>> = { phases: "/admin/redesign/phases" };
+const REDRAWN: Partial<Record<string, string>> = { phases: "/admin/redesign/phases", business: "/admin/redesign/business" };
 
 export default function RedesignRail({ rail, clientId }: { rail: RailData; clientId: number }) {
   const [query, setQuery] = useState("");
