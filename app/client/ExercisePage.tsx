@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useDismiss } from "./useDismiss";
 import { clearSwapAction, logSetAction, saveExerciseNoteAction, saveWarmupSetsAction, swapExerciseAction } from "../lib/actions";
 import AlternativesSheet from "./AlternativesSheet";
 import { VideoAskSheet, VideoGlyph } from "./VideoAskSheet";
@@ -160,6 +161,7 @@ export default function ExercisePage({
   // ---- Swap, video, history.
   const [swapOpen, setSwapOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  useDismiss(menuOpen, () => setMenuOpen(false));
   const openMessages = useOpenMessages();
   const [videoOpen, setVideoOpen] = useState(false);
   // The prescription, the way the old card read it: figure and unit, one
