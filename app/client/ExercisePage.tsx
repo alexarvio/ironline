@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { clearSwapAction, logSetAction, saveExerciseNoteAction, saveWarmupSetsAction, swapExerciseAction } from "../lib/actions";
 import AlternativesSheet from "./AlternativesSheet";
 import { VideoAskSheet, VideoGlyph } from "./VideoAskSheet";
-import { ChatIcon, PencilIcon } from "../components/icons";
+import { ChatIcon } from "../components/icons";
 import { useOpenMessages } from "./CheckInContext";
 import {
   CoachNote,
@@ -33,6 +33,8 @@ export default function ExercisePage({
   coachName,
   dayId,
   sessionTitle,
+  nextName = null,
+  onNext,
   onSetLogged,
 }: {
   exercise: SessionExercise;
@@ -43,6 +45,9 @@ export default function ExercisePage({
   /** The session it is in, for a message about it. */
   dayId: number;
   sessionTitle: string;
+  /** The exercise (or cardio) after this one, so the machine can be checked while resting. */
+  nextName?: string | null;
+  onNext?: () => void;
   /** A working set was ticked: the dock's rest timer may want to know. */
   onSetLogged?: () => void;
 }) {
@@ -66,6 +71,12 @@ export default function ExercisePage({
     return exercise.sets + 1;
   })();
   const [editingN, setEditingN] = useState<number | null>(null);
+  // "Last time": the sets not logged yet show what was done the last time
+  // this exercise came round, set by set; off again, the boxes are back as
+  // they were left.
+  const [showLast, setShowLast] = useState(false);
+  const last = exercise.lastSets;
+  const lastOf = (n: number) => last?.sets.find((s) => s.setNumber === n) ?? null;
   const activeN = editingN ?? (nextSet <= exercise.sets ? nextSet : null);
   const freshDraft = (n: number | null): Draft => {
     const log = n != null ? exercise.logs.find((l) => l.setNumber === n) ?? null : null;
@@ -130,13 +141,15 @@ export default function ExercisePage({
     setWarm([...warm, { weight: "", reps: "", saved: false }].map((r, i) => (i === warm.length && hint ? { ...r, weight: hint.weight != null ? String(kgToUnit(hint.weight, unit)) : "", reps: hint.reps != null ? String(hint.reps) : "" } : r)));
   };
 
-  // ---- Your note.
+  // ---- Your note: the one for the gym trained at; where that gym has none,
+  // the home gym's, else the latest from any gym, so a note never seems gone.
+  const myNote = (gymId != null ? exercise.gymNotes?.[gymId] : "") || exercise.myNote;
   const [noteOpen, setNoteOpen] = useState(false);
-  const [noteDraft, setNoteDraft] = useState(exercise.myNote);
+  const [noteDraft, setNoteDraft] = useState(myNote);
   const saveNote = () => {
     const next = noteDraft.trim();
     setNoteOpen(false);
-    if (next === exercise.myNote.trim()) return;
+    if (next === myNote.trim()) return;
     const fd = new FormData();
     fd.set("assignmentId", String(exercise.id));
     fd.set("gymId", gymId == null ? "" : String(gymId));
@@ -228,7 +241,7 @@ export default function ExercisePage({
                   setNoteOpen(true);
                 }}
               >
-                {exercise.myNote.trim() ? "Edit your note" : "Add a note for yourself"}
+                {myNote.trim() ? "Edit your note" : "Add a note for yourself"}
               </button>
               <button
                 type="button"
@@ -321,7 +334,21 @@ export default function ExercisePage({
           )}
           <span>Reps</span>
           {askRpe && <span>Rpe</span>}
-          <span />
+          {last ? (
+            <button
+              type="button"
+              className={`ts-last-toggle${showLast ? " on" : ""}`}
+              aria-pressed={showLast}
+              aria-label={showLast ? "Back to this session" : "Show last time's numbers"}
+              title={showLast ? "Back to this session" : "Last time"}
+              disabled={editingN != null}
+              onClick={() => setShowLast((v) => !v)}
+            >
+              <LastTimeIcon />
+            </button>
+          ) : (
+            <span />
+          )}
         </div>
 
         {warm.map((w, i) => (
@@ -338,6 +365,19 @@ export default function ExercisePage({
 
         {Array.from({ length: exercise.sets }, (_, i) => i + 1).map((n) => {
           const log = exercise.logs.find((l) => l.setNumber === n) ?? null;
+          // Last time's numbers in the rows still to do; what is logged stays.
+          if (showLast && !log) {
+            const prev = lastOf(n);
+            return (
+              <div key={n} className="ts-grid ts-set last">
+                <span className="ts-circle">{n}</span>
+                {askWeight && <span>{prev?.weight == null ? "–" : show(prev.weight)}</span>}
+                <span>{prev?.reps ?? "–"}</span>
+                {askRpe && <span>{prev?.rpe ?? "–"}</span>}
+                <span />
+              </div>
+            );
+          }
           if (n === activeN) {
             return (
               <div key={n} className="ts-grid ts-set active">
@@ -373,7 +413,12 @@ export default function ExercisePage({
           );
         })}
 
-        {editingN != null ? (
+        {showLast && last ? (
+          <button type="button" className="ts-last-note" onClick={() => setShowLast(false)}>
+            Last time · {Number(last.date.slice(8, 10))} {MONTHS_SHORT[Number(last.date.slice(5, 7)) - 1]}
+            <span>Back to this session</span>
+          </button>
+        ) : editingN != null ? (
           <div className="ts-actions">
             <button type="button" className="ts-primary" disabled={pending || draft.reps.trim() === ""} onClick={logActive}>
               {pending ? "Saving…" : `Save set ${editingN}`}
@@ -392,6 +437,14 @@ export default function ExercisePage({
 
       </div>
 
+      {nextName && (
+        <button type="button" className="wo-nextup" onClick={onNext}>
+          <span className="wo-nextup-label">Next</span>
+          <span className="wo-nextup-name">{nextName}</span>
+          <span className="wo-nextup-go" aria-hidden="true">›</span>
+        </button>
+      )}
+
       {noteOpen ? (
         <div className="wo-note editing">
           <span className="wo-note-label">Your note</span>
@@ -408,7 +461,7 @@ export default function ExercisePage({
               type="button"
               className="wo-note-cancel"
               onClick={() => {
-                setNoteDraft(exercise.myNote);
+                setNoteDraft(myNote);
                 setNoteOpen(false);
               }}
             >
@@ -419,13 +472,22 @@ export default function ExercisePage({
             </button>
           </div>
         </div>
-      ) : exercise.myNote.trim() ? (
-        <button type="button" className="wo-note" onClick={() => setNoteOpen(true)}>
-          <span className="wo-note-label">
-            <PencilIcon />
-            Your note
+      ) : myNote.trim() ? (
+        <button
+          type="button"
+          className="wo-note"
+          onClick={() => {
+            setNoteDraft(myNote);
+            setNoteOpen(true);
+          }}
+        >
+          <span className="wo-note-head">
+            <span className="wo-note-label">Your note</span>
+            <span className="wo-note-pen" aria-hidden="true">
+              <EditPen />
+            </span>
           </span>
-          <span className="wo-note-text">{exercise.myNote}</span>
+          <span className="wo-note-text">{myNote}</span>
         </button>
       ) : null}
 
@@ -452,3 +514,26 @@ export default function ExercisePage({
   );
 }
 
+
+const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// A clock turning back: "last time".
+function LastTimeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+      <path d="M3 3v5h5" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  );
+}
+
+// A clean pencil, for editing the note.
+function EditPen() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z" />
+      <path d="m15 5 4 4" />
+    </svg>
+  );
+}

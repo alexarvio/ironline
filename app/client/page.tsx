@@ -23,6 +23,7 @@ import {
   getLogsForAssignment,
   getLastWarmupSets,
   getLastSets,
+  getLatestClientExerciseNotes,
   getExerciseHistory,
   liveSessionFor,
   listExercises,
@@ -581,6 +582,8 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
           // "My notes" are private to the client: a coach previewing the app
           // gets empty ones.
           const myNotes = showMyNotes ? getClientExerciseNotes(CLIENT_ID) : new Map<number, string>();
+          // Where the home gym has no note, the latest one from any gym.
+          const latestNotes = showMyNotes ? getLatestClientExerciseNotes(CLIENT_ID) : new Map<number, string>();
           // Gyms: each exercise carries its target and note at every gym, so
           // switching gym in the session changes them without a round trip.
           const gyms = listClientGyms(CLIENT_ID);
@@ -645,7 +648,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                   // The coach's demo for this prescription wins; the exercise
                   // library's own video is the fallback.
                   videoUrl: a.exercise_video_url ?? a.demo_url ?? null,
-                  myNote: myNotes.get(a.exercise_id) ?? "",
+                  myNote: myNotes.get(a.exercise_id) || latestNotes.get(a.exercise_id) || "",
                   warmups: (a.warmup_sets ?? []).map((w) => ({ weight: w.weight_kg, reps: w.reps })),
                   lastWarmups: getLastWarmupSets(a.id).map((w) => ({ weight: w.weight_kg, reps: w.reps })),
                   videoRequest: (() => {

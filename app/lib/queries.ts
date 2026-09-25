@@ -7219,6 +7219,19 @@ export function getClientExerciseNotes(clientId: number, gymId: number | null = 
   return out;
 }
 
+/** exercise_id -> the client's most recent note on it, at whichever gym: the
+ *  fallback where the gym being trained at has none of its own, so a note
+ *  written at one gym is still there at another. */
+export function getLatestClientExerciseNotes(clientId: number): Map<number, string> {
+  const latest = new Map<number, { text: string; at: string }>();
+  for (const n of getData().client_exercise_notes ?? []) {
+    if (n.client_id !== clientId) continue;
+    const had = latest.get(n.exercise_id);
+    if (!had || (n.updated_at ?? "") > had.at) latest.set(n.exercise_id, { text: n.text, at: n.updated_at ?? "" });
+  }
+  return new Map([...latest].map(([id, v]) => [id, v.text]));
+}
+
 export function setClientExerciseNote(clientId: number, exerciseId: number, text: string, gymId: number | null = null) {
   const data = getData();
   if (!data.client_exercise_notes) data.client_exercise_notes = [];

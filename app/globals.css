@@ -17274,3 +17274,17 @@ button.ci-hint { cursor: pointer; }
    white with a light rim, blurring what is behind. Sizes stay (25 Sep). */
 .pc-start, .qa-btn { background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.35); color: #fff; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
 .pc-start:active, .qa-btn:active { background: rgba(255, 255, 255, 0.26); }
+/* Workout (25 Sep): the next exercise under the sets, the "last time"
+   toggle in the table's head, and the note's pencil as a small button. */
+.wo-nextup { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 12px; padding: 12px 14px; border: 1px solid #eceff3; border-radius: 16px; background: #fff; font: inherit; color: #141a24; text-align: left; cursor: pointer; }
+.wo-nextup-label { flex: none; font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
+.wo-nextup-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wo-nextup-go { flex: none; font-size: 20px; line-height: 1; color: #8b93a1; }
+.ts-last-toggle { justify-self: center; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; color: #5b6474; cursor: pointer; }
+.ts-last-toggle.on { background: #1e3a6e; border-color: #1e3a6e; color: #fff; }
+.ts-last-toggle:disabled { opacity: 0.4; cursor: default; }
+.ts-set.last { background: #f4f7fc; color: #5b6474; border-radius: 10px; }
+.ts-last-note { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin-top: 10px; padding: 12px 14px; border: 0; border-radius: 14px; background: #eef2f8; font: inherit; font-size: 13.5px; font-weight: 700; color: #1e3a6e; cursor: pointer; }
+.ts-last-note span { font-weight: 600; color: #5b6474; }
+.wo-note-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.wo-note-pen { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 999px; background: #f4f7fc; color: #1e3a6e; }

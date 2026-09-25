@@ -252,6 +252,11 @@ export default function WorkoutScreen({
                 coachName={coachName}
                 dayId={day.key}
                 sessionTitle={day.title}
+                nextName={(() => {
+                  const n = pages[i + 1];
+                  return n?.kind === "exercise" ? shownName(day.exercises[n.index]) : n?.kind === "cardio" ? day.cardio[n.index].name : null;
+                })()}
+                onNext={() => jumpTo(i + 1)}
               />
             ) : p.kind === "cardio" ? (
               <div className="wo-page-inner">
