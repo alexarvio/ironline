@@ -17338,3 +17338,12 @@ button.ci-hint { cursor: pointer; }
 .wo-note-head { justify-content: flex-start; gap: 8px; }
 .wo-note-pen { width: auto; height: auto; border-radius: 0; background: none; color: #5b6474; }
 .wo-note-pen svg { width: 14px; height: 14px; }
+/* The set being logged reads as fields (25 Sep): a typing line under each
+   box; the reps box, still to fill, has a navy line that gently pulses;
+   the box being typed in keeps its tint and a solid navy line. Logged and
+   upcoming rows stay bare numbers. */
+@keyframes ts-line-pulse { 0%, 100% { border-bottom-color: #1e3a6e; } 50% { border-bottom-color: rgba(30, 58, 110, 0.3); } }
+.ts-set.active .ts-input { border: 0; border-bottom: 2px solid #d5dce6; border-radius: 8px 8px 0 0; }
+.ts-set.active .ts-input.reps:placeholder-shown { border-bottom-color: #1e3a6e; animation: ts-line-pulse 1.6s ease-in-out infinite; }
+.ts-set.active .ts-input:focus { border-bottom-color: #1e3a6e; animation: none; }
+@media (prefers-reduced-motion: reduce) { .ts-set.active .ts-input.reps:placeholder-shown { animation: none; } }
