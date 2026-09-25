@@ -19,10 +19,14 @@ export default function PhaseGoalsCard({ phaseId, phaseName, firstName, goals }:
   const fill = (g: string[]) => Array.from({ length: PHASE_OBJECTIVES_MAX }, (_, i) => g[i] ?? "");
   const [rows, setRows] = useState(() => fill(goals));
   const [open, setOpen] = useState(false);
-  // Another phase picked, or the page re-read: what is saved shows.
-  const [seen, setSeen] = useState(goals);
-  if (seen !== goals) {
-    setSeen(goals);
+  // Another phase picked, or the saved goals changed: what is saved shows.
+  // Compared by what they say, not by the array: every re-read of the page
+  // (any save on it, a refresh in the background) hands in a new array with
+  // the same goals, and resetting on that wiped whatever was being typed.
+  const savedKey = `${phaseId}:${goals.join("|")}`;
+  const [seen, setSeen] = useState(savedKey);
+  if (seen !== savedKey) {
+    setSeen(savedKey);
     setRows(fill(goals));
   }
   if (!phaseId) return null;

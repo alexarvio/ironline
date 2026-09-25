@@ -96,9 +96,13 @@ export default function PicturesDraft({ clientId, firstName, plan }: { clientId:
     for (const [k, v] of Object.entries(o)) if (v != null) f.set(k, String(v));
     return f;
   };
-  const [seenPlan, setSeenPlan] = useState(plan);
-  if (seenPlan !== plan) {
-    setSeenPlan(plan);
+  // Reset only when what is saved actually changed: every re-read of the
+  // page (a save on another card) hands in new objects with the same values,
+  // and resetting on those wiped edits not yet applied.
+  const planKey = JSON.stringify(initial);
+  const [seenPlan, setSeenPlan] = useState(planKey);
+  if (seenPlan !== planKey) {
+    setSeenPlan(planKey);
     setSaved(initial);
     setS(initial);
   }

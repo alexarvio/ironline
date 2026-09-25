@@ -109,9 +109,13 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
       router.refresh();
       if (said) savedToast(said);
     });
-  const [seenPlan, setSeenPlan] = useState(plan);
-  if (seenPlan !== plan) {
-    setSeenPlan(plan);
+  // Reset only when what is saved actually changed: every re-read of the
+  // page (a save on another card) hands in new objects with the same values,
+  // and resetting on those wiped edits not yet applied.
+  const planKey = JSON.stringify([plan.id, plan.metrics, plan.checkInDay]);
+  const [seenPlan, setSeenPlan] = useState(planKey);
+  if (seenPlan !== planKey) {
+    setSeenPlan(planKey);
     setSaved(plan.metrics);
     setRows(plan.metrics);
     setCheckInDay(plan.checkInDay ?? "Monday");

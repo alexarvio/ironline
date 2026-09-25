@@ -138,9 +138,13 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
       router.refresh();
       if (said) savedToast(said);
     });
-  const [seenPlan, setSeenPlan] = useState(plan);
-  if (seenPlan !== plan) {
-    setSeenPlan(plan);
+  // Reset only when what is saved actually changed: every re-read of the
+  // page (a save on another card) hands in new objects with the same values,
+  // and resetting on those wiped edits not yet applied.
+  const planKey = JSON.stringify([plan.id, initial]);
+  const [seenPlan, setSeenPlan] = useState(planKey);
+  if (seenPlan !== planKey) {
+    setSeenPlan(planKey);
     setSaved(initial);
     setT(initial);
   }
@@ -152,9 +156,10 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
   // ---- Supplements: a working copy against the saved list.
   const [suppSaved, setSuppSaved] = useState(plan.supplements);
   const [supps, setSupps] = useState(plan.supplements);
-  const [seenSupps, setSeenSupps] = useState(plan.supplements);
-  if (seenSupps !== plan.supplements) {
-    setSeenSupps(plan.supplements);
+  const suppsKey = JSON.stringify(plan.supplements);
+  const [seenSupps, setSeenSupps] = useState(suppsKey);
+  if (seenSupps !== suppsKey) {
+    setSeenSupps(suppsKey);
     setSuppSaved(plan.supplements);
     setSupps(plan.supplements);
   }
