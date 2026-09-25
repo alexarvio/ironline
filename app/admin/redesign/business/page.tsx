@@ -52,6 +52,8 @@ export default async function BusinessPage() {
       height: p.height_cm ?? null,
       weight: getLatestWeight(c.id) ?? p.starting_weight_kg ?? null,
       tenureDays: p.coaching_start_date ? Math.max(0, daysSince(p.coaching_start_date, today)) : null,
+      // The latest invoice's day: when they were last billed.
+      lastBilled: invoices.map((i) => i.created_at.slice(0, 10)).sort().at(-1) ?? null,
       paid: invoices.filter((i) => i.status === "paid").reduce((s, i) => s + (i.amount || 0), 0),
       open: invoices.filter((i) => i.status !== "paid").reduce((s, i) => s + (i.amount || 0), 0),
     };
@@ -202,6 +204,7 @@ export default async function BusinessPage() {
                       <TableHead>Age</TableHead>
                       <TableHead>Gender</TableHead>
                       <TableHead>With you</TableHead>
+                      <TableHead>Last billed</TableHead>
                       <TableHead className="num">Paid</TableHead>
                       <TableHead className="num">Outstanding</TableHead>
                     </TableRow>
@@ -217,6 +220,7 @@ export default async function BusinessPage() {
                         <TableCell>{c.age ?? "–"}</TableCell>
                         <TableCell>{c.gender ?? "–"}</TableCell>
                         <TableCell>{c.tenureDays != null ? span(c.tenureDays) : "–"}</TableCell>
+                        <TableCell>{c.lastBilled ? new Date(`${c.lastBilled}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "–"}</TableCell>
                         <TableCell className="num">{c.paid ? money(c.paid) : "–"}</TableCell>
                         <TableCell className="num">{c.open ? <Badge className="bzd-open">{money(c.open)}</Badge> : "–"}</TableCell>
                       </TableRow>
