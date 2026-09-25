@@ -17358,3 +17358,7 @@ button.ci-hint { cursor: pointer; }
 .tr-row.unfinished { background: #FDF7EC; border-color: #F3E0BF; }
 .tr-row-tile.unfinished { background: transparent; color: #c27a12; }
 .tr-row-pill.unfinished { padding: 5px 0; background: transparent; color: #b06d0c; }
+/* Less jumping (25 Sep): a session put back after a reload shows in place;
+   chat pictures hold a shape while they load so the thread doesn't shift. */
+.so-screen.still { animation: none; }
+.cm-msg-img, .cm-msg-video { aspect-ratio: auto 4 / 5; object-fit: cover; }

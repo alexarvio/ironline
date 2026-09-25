@@ -94,7 +94,8 @@ import AppShell, { AppTab } from "./AppShell";
 import AvatarUpload from "./AvatarUpload";
 import { phaseCovers, phaseDays, phaseLastDay, phaseWeekIndex, phaseWeeks } from "../lib/phases";
 import { defaultPhaseCover } from "../lib/phaseCovers";
-import { SERVER_TZ, zonedToUtc } from "../lib/timezones";
+import { SERVER_TZ, hourIn, isTimezone, meetingLabelsIn, zonedToUtc } from "../lib/timezones";
+import { cookies } from "next/headers";
 import type { HomePhase, PhaseFoodToday } from "./PhaseCards";
 import {
   AccountIcon,
@@ -217,7 +218,7 @@ function weekStats(CLIENT_ID: number, week: number) {
 
 // A booked call as its card shows it: on Home (the next one) and on the
 // Meetings screen (every one still to come).
-function meetingCardView(m: ReturnType<typeof listMeetings>[number], today: string): NonNullable<UpcomingMeeting> {
+function meetingCardView(m: ReturnType<typeof listMeetings>[number], today: string, phoneTz: string | null = null): NonNullable<UpcomingMeeting> {
   const when = new Date(`${m.date}T00:00:00`);
   const days = Math.round((when.getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000);
   // The start as a real moment, from the timezone the coach typed the time
@@ -244,6 +245,9 @@ function meetingCardView(m: ReturnType<typeof listMeetings>[number], today: stri
     ]
       .filter(Boolean)
       .join(" ") + ` · ${m.duration_minutes} min`,
+    // In the phone's timezone when its cookie says which, worded as the phone
+    // words them, so nothing changes once the page is on screen.
+    ...(phoneTz && startAt ? meetingLabelsIn(startAt.toISOString(), m.duration_minutes, phoneTz, nowMs) : {}),
   };
 }
 
@@ -264,14 +268,14 @@ function pastMeetingView(m: ReturnType<typeof listMeetings>[number]): PastMeetin
   };
 }
 
-function HomeTab({ CLIENT_ID, photos, food }: { CLIENT_ID: number; photos: ProgressPics; food: PhaseFoodToday }) {
+function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; photos: ProgressPics; food: PhaseFoodToday; phoneTz: string | null }) {
   const client = getClient(CLIENT_ID);
   const today = localDateStr();
 
   const upcomingMeeting = listMeetings(CLIENT_ID)
     .filter((m) => m.status === "scheduled" && m.date >= today)
     .sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1))[0];
-  const upcoming: UpcomingMeeting = upcomingMeeting ? meetingCardView(upcomingMeeting, today) : null;
+  const upcoming: UpcomingMeeting = upcomingMeeting ? meetingCardView(upcomingMeeting, today, phoneTz) : null;
 
   // ---- The check-in, counted the way its screen shows it (today's, plus
   // the week's while its window is open), for the lifestyle card. ----
@@ -348,6 +352,7 @@ function HomeTab({ CLIENT_ID, photos, food }: { CLIENT_ID: number; photos: Progr
       upcoming={upcoming}
       recap={getLastMeetingRecap(CLIENT_ID)}
       phases={phases}
+      hello={phoneTz ? (hourIn(phoneTz) < 12 ? "Good morning" : hourIn(phoneTz) < 18 ? "Good afternoon" : "Good evening") : "Hello"}
       checkInCount={onScreen.length ? checkInCount : null}
       weekDone={weekDone}
       trainedToday={trainedToday}
@@ -1222,6 +1227,12 @@ export default async function ClientPage({
 }) {
   const params = await searchParams;
   const CLIENT_ID = await resolveClientId(params.client);
+  // The phone's timezone and the tab it was on, from cookies AppShell sets:
+  // the page is drawn as the phone will show it, so nothing jumps on load.
+  const jar = await cookies();
+  const tzCookie = decodeURIComponent(jar.get("ironline_tz")?.value ?? "");
+  const phoneTz = tzCookie && isTimezone(tzCookie) ? tzCookie : null;
+  const initialTab = jar.get("ironline_tab")?.value ?? null;
   // Only the client themselves sees their private "My notes", never a coach
   // previewing the app.
   const viewerIsClient = (await getSessionUser())?.role === "client";
@@ -1357,14 +1368,14 @@ export default async function ClientPage({
     const upcoming = all
       .filter((m) => m.status === "scheduled" && m.date >= today)
       .sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1))
-      .map((m) => meetingCardView(m, today));
+      .map((m) => meetingCardView(m, today, phoneTz));
     const past = all.filter((m) => m.status !== "scheduled" || m.date < today).map(pastMeetingView);
     return { upcoming, past };
   })();
 
   const tabs: AppTab[] = [
     // Draws its own light banner (name and main goal); the top bar floats over it.
-    { id: "home", label: "Home", icon: <HomeIcon />, bare: true, content: <HomeTab CLIENT_ID={CLIENT_ID} photos={homePhotos} food={{ eaten: foodDiary.eaten.kcal, target: foodDiary.target?.kcal ?? null, mealsLogged: foodDiary.meals.filter((m) => m.entries.length > 0).length, mealsTotal: foodDiary.meals.length }} /> },
+    { id: "home", label: "Home", icon: <HomeIcon />, bare: true, content: <HomeTab CLIENT_ID={CLIENT_ID} phoneTz={phoneTz} photos={homePhotos} food={{ eaten: foodDiary.eaten.kcal, target: foodDiary.target?.kcal ?? null, mealsLogged: foodDiary.meals.filter((m) => m.entries.length > 0).length, mealsTotal: foodDiary.meals.length }} /> },
     {
       id: "training",
       label: "Training",
@@ -1413,6 +1424,7 @@ export default async function ClientPage({
       coachAvatarPath={getCoachAvatarPath(CLIENT_ID)}
       foodDiary={foodDiary}
       meetings={meetings}
+      initialTab={initialTab}
     />
   );
 }

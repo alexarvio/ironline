@@ -95,6 +95,7 @@ export default function HomeHub({
   upcoming,
   recap,
   phases,
+  hello = "Hello",
   checkInCount,
   weekDone,
   trainedToday,
@@ -112,6 +113,8 @@ export default function HomeHub({
   upcoming: UpcomingMeeting;
   recap: MeetingRecap;
   phases: HomePhase[];
+  /** "Good afternoon", worked out on the server in the phone's timezone. */
+  hello?: string;
   /** The check-in as the screen shows it, for the lifestyle card. */
   checkInCount: { done: number; total: number } | null;
   /** No session left this week: when the next one starts. */
@@ -123,7 +126,7 @@ export default function HomeHub({
 }) {
   return (
     <div className="hm">
-      <HomeBanner dateLabel={dateLabel} firstName={firstName} />
+      <HomeBanner dateLabel={dateLabel} firstName={firstName} initialHello={hello} />
       <div className="hm-body">
         {/* "Your plan" first: a card a live phase, each with its one thing to do. */}
         {phases.length > 0 && <PhaseCards phases={phases} coachName={coach.firstName} today={today} nextSession={session ? { dayId: session.dayId, name: session.name, live: !!session.live } : null} food={food} weekDone={weekDone} checkInCount={checkInCount} />}
@@ -150,9 +153,10 @@ export default function HomeHub({
 
 // ---- 1 · Banner: the date and the greeting, nothing under it ------------
 
-function HomeBanner({ dateLabel, firstName }: { dateLabel: string; firstName: string }) {
-  // "Hello" on the server, the time of day once the phone says what it is.
-  const [hello, setHello] = useState("Hello");
+function HomeBanner({ dateLabel, firstName, initialHello }: { dateLabel: string; firstName: string; initialHello: string }) {
+  // Drawn by the server in the phone's timezone (its cookie); the phone only
+  // confirms it, so the greeting doesn't change after it shows.
+  const [hello, setHello] = useState(initialHello);
   useEffect(() => {
     const t = setTimeout(() => {
       const h = new Date().getHours();

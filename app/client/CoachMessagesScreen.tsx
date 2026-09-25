@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDownIcon, ChevronLeftIcon } from "../components/icons";
 import ChatComposeForm from "../components/ChatComposeForm";
@@ -71,7 +71,8 @@ export default function CoachMessagesScreen({ coachName, messages, viewerIsClien
   // back, it stops following, until a new message comes in.
   const body = useRef<HTMLElement>(null);
   const atEnd = useRef(true);
-  useEffect(() => {
+  // A layout effect: at the bottom before the first paint, not a jump after it.
+  useLayoutEffect(() => {
     const el = body.current;
     if (!el) return;
     const toEnd = () => {

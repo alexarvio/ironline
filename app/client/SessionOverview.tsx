@@ -34,6 +34,7 @@ import {
 export const STATUS_LABEL = { done: "Completed", unfinished: "Unfinished", live: "Live", skipped: "Skipped", missed: "Missed", upcoming: "Upcoming" } as const;
 
 export default function SessionOverview({
+  still = false,
   day,
   pastWeek,
   currentWeek,
@@ -45,6 +46,8 @@ export default function SessionOverview({
   onResume,
   autoStart = false,
 }: {
+  /** Put back after a reload: no slide in. */
+  still?: boolean;
   day: SessionDay;
   pastWeek: boolean;
   currentWeek: boolean;
@@ -102,7 +105,7 @@ export default function SessionOverview({
   }
 
   return (
-    <div className="app-layer app-layer-push so-screen" role="dialog" aria-label={day.title}>
+    <div className={`app-layer app-layer-push so-screen${still ? " still" : ""}`} role="dialog" aria-label={day.title}>
       <header className="so-head">
         <div className="so-head-row">
         <button type="button" className="so-back" onClick={onBack} aria-label="Back to training">
