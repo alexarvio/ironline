@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, CardioEntry } from "./db";
-import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientEvent, ClientGym, ClientPhase, CoachProfile, EventCategory, PhaseTrack, VideoRequest } from "./db";
+import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientEvent, ClientGym, ClientPhase, CoachProfile, CoachBusiness, CoachInvoicing, CoachSettings, EventCategory, PhaseTrack, VideoRequest } from "./db";
 import type { CoachProfileFields, CoachProfileView } from "./coachProfileView";
 import { getCatalogFood, searchCatalog, type CatalogFood } from "./foods/catalog";
 import type { OffProduct } from "./foods/openfoodfacts";
@@ -10357,4 +10357,66 @@ export function getFoodDiary(clientId: number, date: string): FoodDiaryView {
     previous,
     loggedDays: [...new Set(getData().food_entries.filter((e) => e.client_id === clientId && e.date >= monthAgo && e.date <= today).map((e) => e.date))],
   };
+}
+
+// ---- A coach's settings (Settings in the redesign's rail) --------------------
+// Who bills and how: kept on the coach's own user row (its extra jsonb), so
+// every coach has a place for them without a profile. Each save replaces one
+// section whole; empty strings are dropped.
+
+export function getCoachSettings(coachId: number): CoachSettings {
+  const user = getData().users.find((u) => u.id === coachId && u.role === "coach");
+  return user?.coach_settings ?? {};
+}
+
+const clipText = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
+const dropEmpty = <T extends Record<string, unknown>>(o: T): T => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== "" && v != null && !(typeof v === "number" && !Number.isFinite(v)))) as T;
+
+function setSettings(coachId: number, patch: Partial<CoachSettings>) {
+  const user = getData().users.find((u) => u.id === coachId && u.role === "coach");
+  if (!user) return;
+  user.coach_settings = { ...(user.coach_settings ?? {}), ...patch };
+  persist();
+}
+
+export function saveCoachBusiness(coachId: number, b: CoachBusiness) {
+  setSettings(coachId, {
+    business: dropEmpty({
+      business_name: clipText(b.business_name, 80),
+      legal_name: clipText(b.legal_name, 80),
+      company_number: clipText(b.company_number, 30),
+      vat_number: clipText(b.vat_number, 30),
+      address: clipText(b.address, 120),
+      postcode: clipText(b.postcode, 16),
+      city: clipText(b.city, 60),
+      country: clipText(b.country, 60),
+      billing_email: clipText(b.billing_email, 120).toLowerCase(),
+      phone: clipText(b.phone, 30),
+      website: clipText(b.website, 120),
+    }),
+  });
+}
+
+export function saveCoachInvoicing(coachId: number, i: CoachInvoicing) {
+  const num = (v: unknown, lo: number, hi: number) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : undefined;
+  };
+  setSettings(coachId, {
+    invoicing: dropEmpty({
+      currency: (["EUR", "USD", "GBP"] as const).find((c) => c === i.currency) ?? "EUR",
+      vat_rate: num(i.vat_rate, 0, 50),
+      prices_include_vat: !!i.prices_include_vat,
+      payment_terms_days: num(i.payment_terms_days, 0, 120),
+      number_prefix: clipText(i.number_prefix, 12),
+      next_number: (() => {
+        const n = num(i.next_number, 1, 999999);
+        return n == null ? undefined : Math.round(n);
+      })(),
+      iban: clipText(i.iban, 40).replace(/\s+/g, "").toUpperCase(),
+      bic: clipText(i.bic, 11).replace(/\s+/g, "").toUpperCase(),
+      account_holder: clipText(i.account_holder, 80),
+      footer: clipText(i.footer, 400),
+    }),
+  });
 }
