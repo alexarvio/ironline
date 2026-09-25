@@ -1023,10 +1023,11 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
             <div className="home-dark-row-title">Export my data</div>
             <span className="st-soon">Soon</span>
           </div>
-          <div className="settings-data-row">
+          {/* The public page (/privacy), in a new tab so the app stays where it was. */}
+          <a className="settings-data-row st-link-row" href="/privacy" target="_blank" rel="noopener noreferrer">
             <div className="home-dark-row-title">Privacy policy</div>
-            <span className="st-soon">Soon</span>
-          </div>
+            <span className="st-link-go" aria-hidden="true">›</span>
+          </a>
           <DeleteAccountRow coachName={getCoachFirstName(CLIENT_ID)} />
         </div>
       </section>

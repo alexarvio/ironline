@@ -70,6 +70,9 @@ export default async function LoginPage({
         <p className="auth-note">
           Don&rsquo;t have an account? Your coach creates it for you.
         </p>
+        <p className="auth-note auth-legal">
+          <Link href="/privacy">Privacy policy</Link> · <Link href="/support">Support</Link>
+        </p>
       </div>
     </div>
   );

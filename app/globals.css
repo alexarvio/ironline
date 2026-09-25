@@ -17260,3 +17260,7 @@ button.ci-hint { cursor: pointer; }
 .wo-sheet-scrim > .wo-sheet { max-height: min(85vh, calc(100% - 24px)); }
 /* The phase cards' button half as big again (25 Sep). */
 .pc-start { height: 60px; padding: 0 27px; font-size: 20px; }
+/* Account → Data: the privacy policy row opens the public page. */
+.st-link-row { color: inherit; text-decoration: none; cursor: pointer; }
+.st-link-go { font-size: 20px; line-height: 1; color: #8b93a1; }
+.auth-legal { font-size: 12.5px; opacity: 0.85; }
