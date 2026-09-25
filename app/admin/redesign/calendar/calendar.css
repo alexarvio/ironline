@@ -1,0 +1,44 @@
+/* The Calendar in the redesign (25 Sep). Prefix rcl-. The day's hour
+   timeline inside is the old DayTimeline, styled in globals.css. */
+.rcl { display: flex; flex-direction: column; gap: 18px; max-width: 1500px; }
+.rcl-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.rcl-title { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; color: #141a24; }
+.rcl-sub { margin: 4px 0 0; font-size: 13.5px; color: #5b6474; }
+.rcl-nav { display: flex; align-items: center; gap: 6px; }
+.rcl-month { min-width: 150px; text-align: center; font-size: 15px; font-weight: 700; color: #141a24; }
+.rcl-btn { display: inline-flex; align-items: center; justify-content: center; height: 34px; padding: 0 14px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font-size: 13px; font-weight: 700; color: #1e3a6e; text-decoration: none; }
+.rcl-btn.icon { width: 34px; padding: 0; font-size: 18px; }
+.rcl-btn:hover { background: #f4f7fc; }
+
+.rcl-conflicts { border-color: #f3d6c9; }
+.rcl-conflicts [data-slot="card-title"] { color: #b3471d; }
+.rcl-conflict-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #313851; }
+.rcl-conflict-list a { color: #1e3a6e; font-weight: 700; }
+
+.rcl-cols { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(340px, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 1150px) { .rcl-cols { grid-template-columns: 1fr; } }
+.rcl-grid-wrap { padding: 10px !important; }
+.rcl-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.rcl-weekday { padding: 4px 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; }
+.rcl-cell { position: relative; display: flex; flex-direction: column; gap: 4px; min-height: 96px; padding: 6px; border: 1px solid #eef1f5; border-radius: 10px; background: #fff; }
+.rcl-cell.outside { background: #f7f9fc; }
+.rcl-cell.outside .rcl-date { color: #b0b6c0; }
+.rcl-cell.today .rcl-date { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; background: #1e3a6e; color: #fff; }
+.rcl-cell.selected { border-color: #1e3a6e; box-shadow: 0 0 0 2px rgba(30, 58, 110, 0.12); }
+.rcl-cell-link { position: absolute; inset: 0; border-radius: inherit; }
+.rcl-cell:hover { background: #f7f9fc; }
+.rcl-date { position: relative; align-self: flex-start; font-size: 13px; font-weight: 700; color: #141a24; pointer-events: none; }
+.rcl-chips { position: relative; display: flex; flex-direction: column; gap: 3px; }
+.rcl-chip { position: relative; z-index: 1; display: block; padding: 2px 6px; border-radius: 6px; background: #e3ecf8; font-size: 11px; font-weight: 500; color: #1e3a6e; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rcl-chip b { font-weight: 800; }
+.rcl-chip.own { background: #eef1f5; color: #5b6474; }
+.rcl-chip.done { opacity: 0.6; }
+.rcl-chip.conflict { background: #fdeee8; color: #b3471d; box-shadow: 0 0 0 1px #e5b39a inset; }
+.rcl-more { position: relative; font-size: 11px; font-weight: 600; color: #8b93a1; }
+
+.rcl-day { position: sticky; top: 20px; }
+.rcl-day-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.rcl-day-title { font-size: 18px; }
+.rcl-day-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.rcl-day-count { background: #eef1f5; color: #5b6474; }
+.rcl-day-body { max-height: calc(100vh - 200px); overflow-y: auto; scrollbar-width: thin; }
