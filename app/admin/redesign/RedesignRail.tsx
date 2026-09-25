@@ -18,6 +18,8 @@ const VIEWS = [
   { key: "phases", label: "Phases", Icon: PhasesIcon },
   { key: "business", label: "Business", Icon: BusinessIcon },
 ] as const;
+// Views already redrawn here open in the redesign; the rest where they always were.
+const REDRAWN: Partial<Record<string, string>> = { phases: "/admin/redesign/phases" };
 
 export default function RedesignRail({ rail, clientId }: { rail: RailData; clientId: number }) {
   const [query, setQuery] = useState("");
@@ -43,7 +45,7 @@ export default function RedesignRail({ rail, clientId }: { rail: RailData; clien
       <nav className="rr-nav" aria-label="Views">
         {/* The cross-client views are not redrawn yet: they open where they always were. */}
         {VIEWS.map(({ key, label, Icon }) => (
-          <Link key={key} href={`/admin?view=${key}`} className="rr-navrow">
+          <Link key={key} href={REDRAWN[key] ?? `/admin?view=${key}`} className="rr-navrow">
             <Icon />
             <span>{label}</span>
             {key === "feed" && needsYou > 0 && (

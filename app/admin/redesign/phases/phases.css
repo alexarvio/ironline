@@ -1,0 +1,55 @@
+/* The Phases board (25 Sep): every client's tracks and events on one
+   timeline. Prefix pbd- (pb- and ph- are taken). */
+.pbd { display: flex; flex-direction: column; gap: 18px; max-width: 1400px; }
+.pbd-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.pbd-title { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; color: #141a24; }
+.pbd-sub { margin: 4px 0 0; font-size: 13.5px; color: #5b6474; }
+.pbd-card { border-radius: 16px; }
+.pbd-empty { margin: 0; color: #8b93a1; font-size: 13.5px; }
+
+.pbd-soon { display: flex; flex-direction: column; gap: 2px; }
+.pbd-soon-row { display: grid; grid-template-columns: 92px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 10px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 13.5px; color: #141a24; text-align: left; cursor: pointer; }
+.pbd-soon-row:hover { background: #f4f7fc; }
+.pbd-soon-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pbd-soon-left { font-size: 12.5px; font-weight: 600; color: #b3471d; white-space: nowrap; }
+.pbd-track { justify-content: center; }
+.pbd-track.training { background: #e6e4fa; color: #3a3390; }
+.pbd-track.nutrition { background: #dff3ea; color: #0f5c46; }
+.pbd-track.lifestyle { background: #efede6; color: #4a4a45; }
+
+.pbd-board { display: flex; flex-direction: column; overflow-x: auto; }
+.pbd-row { display: grid; grid-template-columns: 110px minmax(560px, 1fr); align-items: stretch; }
+.pbd-track-area { position: relative; min-height: 30px; }
+.pbd-months .pbd-track-area { height: 24px; min-height: 0; border-bottom: 1px solid #eceff3; }
+.pbd-month { position: absolute; top: 4px; padding-left: 4px; border-left: 1px solid #dfe3e8; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #8b93a1; }
+.pbd-now-label { position: absolute; top: 3px; transform: translateX(-50%); padding: 1px 6px; border-radius: 999px; background: #1e3a6e; font-size: 10px; font-weight: 700; color: #fff; }
+
+.pbd-client { display: flex; flex-direction: column; padding: 10px 0 12px; border-bottom: 1px solid #eceff3; }
+.pbd-client:last-child { border-bottom: 0; }
+.pbd-client-name { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; margin: 0 0 6px; font-size: 14px; font-weight: 700; color: #141a24; text-decoration: none; }
+.pbd-client-name:hover { text-decoration: underline; text-underline-offset: 3px; }
+.pbd-dot { width: 7px; height: 7px; border-radius: 999px; background: #d9480f; }
+.pbd-row-label { align-self: center; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #8b93a1; }
+.pbd-row-label.events { color: #5b6474; }
+/* A faint line at each week, the weeks behind today shaded. */
+.pbd-grid { background-image: linear-gradient(to right, #eef1f5 1px, transparent 1px); background-repeat: repeat-x; border-radius: 6px; }
+.pbd-now { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #1e3a6e; opacity: 0.55; z-index: 1; }
+
+.pbd-bar { position: absolute; z-index: 2; display: flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border: 1px solid; border-radius: 7px; font: inherit; font-size: 12px; font-weight: 700; text-align: left; white-space: nowrap; overflow: hidden; cursor: pointer; box-sizing: border-box; }
+.pbd-bar span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.pbd-bar em { flex: none; margin-left: auto; font-style: normal; font-size: 10.5px; font-weight: 700; color: #b3471d; }
+.pbd-bar.soon { border-color: #d98a1c; box-shadow: 0 0 0 1px #d98a1c inset; }
+.pbd-bar.event { font-weight: 600; }
+.pbd-bar.clip-start { border-top-left-radius: 0; border-bottom-left-radius: 0; border-left-width: 0; }
+.pbd-bar.clip-end { border-top-right-radius: 0; border-bottom-right-radius: 0; border-right-width: 0; }
+.pbd-bar:hover { filter: brightness(0.97); }
+
+.pbd-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 14px; font-size: 12px; color: #5b6474; }
+.pbd-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.pbd-legend i { display: inline-block; width: 16px; height: 10px; border: 1px solid; border-radius: 3px; }
+.pbd-legend i.soon { background: #fff; border: 2px solid #d98a1c; }
+
+.pbd-facts { display: flex; flex-direction: column; gap: 10px; margin: 0; }
+.pbd-facts div { display: grid; grid-template-columns: 70px 1fr; gap: 12px; }
+.pbd-facts dt { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8b93a1; padding-top: 2px; }
+.pbd-facts dd { margin: 0; font-size: 14px; color: #141a24; white-space: pre-wrap; }
