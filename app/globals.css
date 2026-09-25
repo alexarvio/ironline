@@ -17212,3 +17212,10 @@ button.ci-hint { cursor: pointer; }
 .hm-recap-text { margin: 0; padding-top: 8px; font-size: 14.5px; line-height: 1.5; color: #313851; white-space: pre-wrap; transform: translateY(-4px); transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1); }
 .hm-recap-body.open .hm-recap-text { transform: none; }
 @media (prefers-reduced-motion: reduce) { .hm-recap-chev, .hm-recap-body, .hm-recap-text { transition: none; } }
+/* Progress (25 Sep): the metric's name and its chevrons off the photo, on the
+   page in black. The body starts 36px up into the banner, so the row drops
+   past that and sits 12px under the photo's edge. */
+.cg-switch { margin-top: 48px; margin-bottom: 0; }
+.cg-switch-btn { color: #141a24; }
+.cg-switch-name { font-size: 20px; color: #141a24; letter-spacing: -0.01em; }
+.cg-switch + .cg-slide .cg-plot { padding-top: 4px; }
