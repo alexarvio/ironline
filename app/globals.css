@@ -17254,3 +17254,5 @@ button.ci-hint { cursor: pointer; }
     font-size: 17px; font-weight: 700; text-align: center;
   }
 }
+/* The phase cards' button a size up (25 Sep). */
+.pc-start { height: 40px; padding: 0 18px; font-size: 15px; }
