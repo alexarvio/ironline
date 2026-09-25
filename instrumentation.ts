@@ -19,6 +19,17 @@ export async function register() {
   // not have yet, in the background so the server starts straight away.
   const { copyDiskUploadsToBucket } = await import("./app/lib/storage");
   void copyDiskUploadsToBucket().catch((e) => console.error("[uploads] copy to bucket failed:", e instanceof Error ? e.message : e));
+  // Reminder pushes for booked calls (a day and an hour before), checked
+  // every five minutes on the live server.
+  const { meetingRemindersOn, runMeetingReminders } = await import("./app/lib/meetingReminders");
+  if (meetingRemindersOn()) {
+    const remind = () =>
+      void runMeetingReminders()
+        .then((n) => n && console.log(`[reminders] sent ${n}`))
+        .catch((e) => console.error("[reminders] failed:", e instanceof Error ? e.message : e));
+    setInterval(remind, 5 * 60_000).unref?.();
+    setTimeout(remind, 90_000).unref?.();
+  }
   const { runBackup, msUntilNextRun, backupConfigured } = await import("./app/lib/backup");
   if (!backupConfigured()) return;
 
