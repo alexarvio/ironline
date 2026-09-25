@@ -7731,7 +7731,19 @@ const dayDate = (pd: ProgramDay, logs: SetLog[]) => (pd.session_ended_at ?? logs
 export function getLastSets(assignmentId: number, gymId: number | null): { date: string; sets: LastSet[] } | null {
   const history = exerciseHistoryFor(assignmentId);
   if (!history.length) return null;
-  const pick = (gymId != null && history.find((h) => (h.logs[0]?.gym_id ?? null) === gymId)) || history[0];
+  // The same session in an earlier week first (week 4's session 2 against week
+  // 3's session 2): an exercise in two sessions a week, one heavy and one
+  // light, otherwise compared each with the other and the change flipped
+  // sign week to week. Then the same gym, then the most recent anywhere.
+  const data = getData();
+  const wa = data.workout_assignments.find((x) => x.id === assignmentId);
+  const own = wa ? data.program_days.find((pd) => pd.id === wa.program_day_id) : undefined;
+  const sameGym = (h: (typeof history)[number]) => gymId != null && (h.logs[0]?.gym_id ?? null) === gymId;
+  const sameSlot = history.filter((h) => h.day.day_of_week === own?.day_of_week);
+  // Another session only from an earlier week, never the same week's.
+  const earlier = history.filter((h) => own == null || h.day.week_number < own.week_number);
+  const pick = sameSlot.find(sameGym) || sameSlot[0] || earlier.find(sameGym) || earlier[0];
+  if (!pick) return null;
   return { date: dayDate(pick.day, pick.logs), sets: pick.logs.map(setView) };
 }
 
