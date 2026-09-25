@@ -2,6 +2,7 @@ import { getData } from "../../lib/db";
 import { getUserForClient, isOwner } from "../../lib/auth";
 import { mailConfigured } from "../../lib/mail";
 import { getCoachSettings, getInvoiceView, listInvoices, type InvoiceView } from "../../lib/queries";
+import { hasBankDetails, invoicingFor } from "../../lib/countries";
 import {
   clientAttention,
   getActivityFeed,
@@ -622,7 +623,7 @@ export function loadMessages(clientId: number): DraftMessages {
 export type DraftInvoices = {
   today: string;
   invoices: InvoiceView[];
-  defaults: { currency: "EUR" | "USD" | "GBP"; vatRate: number; pricesIncludeVat: boolean; termsDays: number; nextNumber: string };
+  defaults: { currency: string; vatRate: number; taxLabel: string; pricesIncludeVat: boolean; termsDays: number; nextNumber: string };
   missing: string[];
 };
 
@@ -636,15 +637,17 @@ export function loadInvoices(coachId: number, clientId: number): DraftInvoices {
     .map((inv) => getInvoiceView(inv.id))
     .filter((v): v is InvoiceView => !!v)
     .sort((a, b2) => (a.issueDate === b2.issueDate ? b2.id - a.id : a.issueDate < b2.issueDate ? 1 : -1));
-  const missing = [!b.business_name && "business name", !(b.address && b.city) && "address", !i.iban && "IBAN"].filter(Boolean) as string[];
+  const eff = invoicingFor(b, i);
+  const missing = [!b.business_name && "business name", !(b.address && b.city) && "address", !hasBankDetails(i, eff.country) && "bank details"].filter(Boolean) as string[];
   return {
     today,
     invoices,
     defaults: {
-      currency: i.currency ?? "EUR",
-      vatRate: i.vat_rate ?? 21,
-      pricesIncludeVat: i.prices_include_vat ?? true,
-      termsDays: i.payment_terms_days ?? 14,
+      currency: eff.currency,
+      vatRate: eff.rate,
+      taxLabel: eff.taxLabel,
+      pricesIncludeVat: eff.pricesIncludeVat,
+      termsDays: eff.termsDays,
       nextNumber: `${(i.number_prefix ?? "").replaceAll("{year}", today.slice(0, 4))}${String(next).padStart(4, "0")}`,
     },
     missing,

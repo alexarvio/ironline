@@ -7,6 +7,7 @@ import { getCatalogFood, searchCatalog, type CatalogFood } from "./foods/catalog
 import type { OffProduct } from "./foods/openfoodfacts";
 import type { LinkView, MessageLink } from "./messageLinks";
 import { coachIdOfClient } from "./tenancy";
+import { countryOf, invoicingFor } from "./countries";
 import { LOCK_MS, type LockScope } from "./loginLockout";
 import { endWeekFor, phaseCovers, phaseDays, phaseLastDay, phaseWeekIndex, phaseWeeks } from "./phases";
 import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "./phaseCovers";
@@ -10380,7 +10381,10 @@ export function saveCoachBusiness(coachId: number, b: CoachBusiness) {
       address: clipText(b.address, 120),
       postcode: clipText(b.postcode, 16),
       city: clipText(b.city, 60),
-      country: clipText(b.country, 60),
+      region: clipText(b.region, 60),
+      country_code: countryOf(clipText(b.country_code, 2).toUpperCase()).code,
+      // Named from the list; typed only for a country not on it.
+      country: countryOf(clipText(b.country_code, 2).toUpperCase()).code ? countryOf(clipText(b.country_code, 2).toUpperCase()).name : clipText(b.country, 60),
       billing_email: clipText(b.billing_email, 120).toLowerCase(),
       phone: clipText(b.phone, 30),
       website: clipText(b.website, 120),
@@ -10395,9 +10399,9 @@ export function saveCoachInvoicing(coachId: number, i: CoachInvoicing) {
   };
   setSettings(coachId, {
     invoicing: dropEmpty({
-      currency: (["EUR", "USD", "GBP"] as const).find((c) => c === i.currency) ?? "EUR",
+      currency: /^[A-Z]{3}$/.test(String(i.currency ?? "").toUpperCase()) ? String(i.currency).toUpperCase() : undefined,
       vat_rate: num(i.vat_rate, 0, 50),
-      prices_include_vat: !!i.prices_include_vat,
+      prices_include_vat: i.prices_include_vat == null ? undefined : !!i.prices_include_vat,
       payment_terms_days: num(i.payment_terms_days, 0, 120),
       number_prefix: clipText(i.number_prefix, 12),
       next_number: (() => {
@@ -10406,7 +10410,13 @@ export function saveCoachInvoicing(coachId: number, i: CoachInvoicing) {
       })(),
       iban: clipText(i.iban, 40).replace(/\s+/g, "").toUpperCase(),
       bic: clipText(i.bic, 11).replace(/\s+/g, "").toUpperCase(),
+      sort_code: clipText(i.sort_code, 12),
+      routing_number: clipText(i.routing_number, 12).replace(/\s+/g, ""),
+      bsb: clipText(i.bsb, 9),
+      account_number: clipText(i.account_number, 34),
+      bank_details: clipText(i.bank_details, 400),
       account_holder: clipText(i.account_holder, 80),
+      tax_note: clipText(i.tax_note, 200),
       footer: clipText(i.footer, 400),
     }),
   });
@@ -10436,7 +10446,7 @@ export function invoiceTotals(lines: InvoiceLine[], vatRate: number, pricesInclu
 function coachParty(coachId: number): InvoiceParty {
   const s = getCoachSettings(coachId);
   const i = s.invoicing ?? {};
-  return { ...(s.business ?? {}), iban: i.iban, bic: i.bic, account_holder: i.account_holder, footer: i.footer };
+  return { ...(s.business ?? {}), iban: i.iban, bic: i.bic, sort_code: i.sort_code, routing_number: i.routing_number, bsb: i.bsb, account_number: i.account_number, bank_details: i.bank_details, account_holder: i.account_holder, tax_note: i.tax_note, footer: i.footer };
 }
 
 function clientParty(clientId: number): { name: string; email?: string; address?: string } {
@@ -10464,8 +10474,9 @@ export function createInvoice(coachId: number, clientId: number, v: NewInvoice):
   const user = data.users.find((u) => u.id === coachId && u.role === "coach");
   if (!user) return null;
   const inv = user.coach_settings?.invoicing ?? {};
-  const rate = inv.vat_rate ?? 21;
-  const incl = inv.prices_include_vat ?? true;
+  const eff = invoicingFor(user.coach_settings?.business ?? {}, inv);
+  const rate = eff.rate;
+  const incl = eff.pricesIncludeVat;
   const next = Math.max(1, Math.round(inv.next_number ?? 1));
   const t = invoiceTotals(lines, rate, incl);
   const now = new Date().toISOString().replace("T", " ").slice(0, 19);
@@ -10482,8 +10493,9 @@ export function createInvoice(coachId: number, clientId: number, v: NewInvoice):
     updated_at: now,
     number: formatNumber(inv.number_prefix ?? "", next, issue),
     issue_date: issue,
-    due_date: addDaysIso(issue, inv.payment_terms_days ?? 14),
-    currency: inv.currency ?? "EUR",
+    due_date: addDaysIso(issue, eff.termsDays),
+    currency: eff.currency,
+    tax_label: eff.taxLabel,
     lines,
     vat_rate: rate,
     prices_include_vat: incl,
@@ -10544,6 +10556,7 @@ export function getInvoiceView(invoiceId: number) {
     issueDate: inv.issue_date ?? inv.created_at.slice(0, 10),
     dueDate: inv.due_date ?? null,
     currency: inv.currency ?? "EUR",
+    taxLabel: inv.tax_label ?? "VAT",
     status: inv.status,
     lines,
     vatRate: rate,

@@ -507,7 +507,9 @@ type Invoice = {
   number?: string;
   issue_date?: string;
   due_date?: string;
-  currency?: "EUR" | "USD" | "GBP";
+  currency?: string;
+  /** "VAT", "Sales tax", "GST": what the tax was called where it was issued. */
+  tax_label?: string;
   lines?: InvoiceLine[];
   vat_rate?: number;
   prices_include_vat?: boolean;
@@ -521,7 +523,7 @@ type Invoice = {
   to?: { name: string; email?: string; address?: string };
 };
 export type InvoiceLine = { description: string; quantity: number; unit_price: number };
-export type InvoiceParty = CoachBusiness & Pick<CoachInvoicing, "iban" | "bic" | "account_holder" | "footer">;
+export type InvoiceParty = CoachBusiness & Pick<CoachInvoicing, "iban" | "bic" | "sort_code" | "routing_number" | "bsb" | "account_number" | "bank_details" | "account_holder" | "tax_note" | "footer">;
 
 type MealMacros = { protein: number | null; fats: number | null; carbs: number | null };
 type NutritionPlan = {
@@ -962,7 +964,9 @@ type User = {
   coach_settings?: CoachSettings;
 };
 
-/** What a coach's invoices say about who sends them. Every field optional: filled in over time. */
+/** What a coach's invoices say about who sends them. Every field optional: filled in over time.
+    The country (lib/countries.ts) names the rest: company_number is its registration
+    number (KvK, Company number, ACN…), vat_number its tax number (VAT, EIN, ABN…). */
 export type CoachBusiness = {
   business_name?: string;
   legal_name?: string;
@@ -971,6 +975,11 @@ export type CoachBusiness = {
   address?: string;
   postcode?: string;
   city?: string;
+  /** State or province, where the country has them. */
+  region?: string;
+  /** ISO code ("NL", "US"); "" or absent is Other. */
+  country_code?: string;
+  /** The country's name, as typed before country_code (still printed for Other). */
   country?: string;
   billing_email?: string;
   phone?: string;
@@ -978,7 +987,8 @@ export type CoachBusiness = {
 };
 /** How a coach's invoices are numbered, priced and paid. */
 export type CoachInvoicing = {
-  currency?: "EUR" | "USD" | "GBP";
+  /** ISO 4217 ("EUR", "USD", "SEK"). */
+  currency?: string;
   vat_rate?: number;
   prices_include_vat?: boolean;
   payment_terms_days?: number;
@@ -986,7 +996,16 @@ export type CoachInvoicing = {
   next_number?: number;
   iban?: string;
   bic?: string;
+  /** The UK's sort code, the US routing number, Australia's BSB: the bank's own number where there is no IBAN. */
+  sort_code?: string;
+  routing_number?: string;
+  bsb?: string;
+  account_number?: string;
+  /** Anywhere else: how to pay, in the coach's own words. */
+  bank_details?: string;
   account_holder?: string;
+  /** Printed under the totals: "VAT exempt under article 25", "Reverse charge". */
+  tax_note?: string;
   footer?: string;
 };
 export type CoachSettings = { business?: CoachBusiness; invoicing?: CoachInvoicing };
