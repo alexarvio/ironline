@@ -770,6 +770,9 @@ type Meeting = {
       prep_notes and from the meeting_notes log, both of which are the
       coach's own. */
   summary?: string | null;
+  /** Reminder pushes sent to the client, each against the start (ISO) it was
+      for, so a moved call is reminded again (lib/meetingReminders.ts). */
+  reminders_sent?: { day?: string; hour?: string };
 };
 type MeetingNote = {
   id: number;
