@@ -14,7 +14,8 @@ import type { NextRequest } from "next/server";
 // protected route before redirecting. Never move an authorization decision
 // up here.
 
-const PUBLIC_PATHS = ["/login"];
+// The privacy policy and support page are public: the App Store links to them.
+const PUBLIC_PATHS = ["/login", "/privacy", "/support"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
