@@ -134,9 +134,12 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
 
   // ---- Phases: what is on screen lives here, so a drag shows what it would do.
   const [phases, setPhases] = useState(plan.phases);
-  const [seenPhases, setSeenPhases] = useState(plan.phases);
-  if (seenPhases !== plan.phases) {
-    setSeenPhases(plan.phases);
+  // Compared by content: every refresh hands in new objects with the same
+  // values, and resetting on those collapsed panels and threw work away.
+  const phasesKey = JSON.stringify(plan.phases);
+  const [seenPhases, setSeenPhases] = useState(phasesKey);
+  if (seenPhases !== phasesKey) {
+    setSeenPhases(phasesKey);
     setPhases(plan.phases);
   }
   const [win, setWin] = useState<Win>(13);
@@ -221,9 +224,10 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
 
   // ---- Goals: done-ticks and a dragged order queue until Apply.
   const [goals, setGoals] = useState(plan.goals);
-  const [seenGoals, setSeenGoals] = useState(plan.goals);
-  if (seenGoals !== plan.goals) {
-    setSeenGoals(plan.goals);
+  const goalsKey = JSON.stringify(plan.goals);
+  const [seenGoals, setSeenGoals] = useState(goalsKey);
+  if (seenGoals !== goalsKey) {
+    setSeenGoals(goalsKey);
     setGoals(plan.goals);
   }
   const [filter, setFilter] = useState<"open" | "done" | "all">("open");

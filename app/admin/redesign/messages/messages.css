@@ -144,3 +144,6 @@ a.rm-link.open:hover { background: #d9e2ee; }
 .rm-pinbar-wrap .rm-pinbar { padding-right: 56px; }
 .rm-pinbar-x { position: absolute; top: 50%; right: 14px; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 0; border-radius: 999px; background: transparent; font-size: 20px; line-height: 1; color: #8b93a1; cursor: pointer; }
 .rm-pinbar-x:hover { background: #f1f3f7; color: #141a24; }
+
+/* Pictures hold a shape while they load, so the thread doesn't shift (25 Sep). */
+.rm-media-img { aspect-ratio: auto 4 / 3; object-fit: cover; }
