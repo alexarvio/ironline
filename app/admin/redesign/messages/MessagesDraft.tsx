@@ -177,7 +177,7 @@ export default function MessagesDraft({ clientId, firstName, plan, active }: { c
   const bubble = (m: DraftMessage, inPins = false) => (
     <div key={`${inPins ? "pin-" : ""}${m.id}`} data-mid={inPins ? undefined : m.id} className={`rm-bubble-row${m.mine ? " mine" : " theirs"}${flash === m.id ? " flash" : ""}`}>
       <div className="rm-bubble-wrap">
-        <div className={`rm-bubble${m.media ? " media" : ""}`}>
+        <div className={`rm-bubble${m.media ? " media" : ""}${m.link ? " linked" : ""}`}>
           {m.media && <Media media={m.media} />}
           {editing?.id === m.id && !inPins ? (
             <span className="rm-edit">
@@ -210,28 +210,31 @@ export default function MessagesDraft({ clientId, firstName, plan, active }: { c
               <span className="rm-bubble-body">
                 <span className="rm-bubble-text">{m.text}</span>
                 {/* The time sits in the bubble's corner, on the last line when it fits (as WhatsApp does). */}
-                {!m.link && meta(m, inPins)}
+                {meta(m, inPins)}
               </span>
             )
           )}
-          {m.link && (
-            <span className="rm-bubble-line">
-              {m.link.href ? (
-                <a className="rm-link sent open" href={m.link.href} title={`Open ${m.link.label}`}>
-                  <LinkGlyph />
-                  <span>{m.link.label}</span>
-                </a>
-              ) : (
-                <span className={`rm-link sent${m.link.gone ? " gone" : ""}`} title={m.link.gone ? "The client can't open this any more" : undefined}>
-                  <LinkGlyph />
-                  <span>{m.link.label}</span>
-                  {m.link.gone && <em>no longer opens</em>}
+          {/* What the message is about: a round link on the bubble's top
+              corner (the side away from the edge), as in the client's app;
+              hovering it says what it opens before a click. */}
+          {m.link &&
+            (m.link.href ? (
+              <a className="rm-linkdot" href={m.link.href} aria-label={`Open ${m.link.label}`}>
+                <LinkGlyph />
+                <span className="rm-linkdot-tip" aria-hidden="true">
+                  {m.link.label}
                 </span>
-              )}
-              {meta(m, inPins)}
-            </span>
-          )}
-          {!m.text && !m.link && <span className="rm-bubble-line end">{meta(m, inPins)}</span>}
+              </a>
+            ) : (
+              <span className={`rm-linkdot${m.link.gone ? " gone" : ""}`} tabIndex={0} aria-label={m.link.gone ? `${m.link.label}: the client can't open this any more` : m.link.label}>
+                <LinkGlyph />
+                <span className="rm-linkdot-tip" aria-hidden="true">
+                  {m.link.label}
+                  {m.link.gone && <em> · no longer opens</em>}
+                </span>
+              </span>
+            ))}
+          {!m.text && <span className="rm-bubble-line end">{meta(m, inPins)}</span>}
           {/* The chevron in the corner: react, and on the coach's own, reword, link, pin or delete. */}
           {!inPins && editing?.id !== m.id && (
             <DropdownMenu modal={false}>

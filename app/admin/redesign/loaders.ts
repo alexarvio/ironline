@@ -540,7 +540,8 @@ export function loadHome(clientId: number): DraftHome {
 export function loadMessages(clientId: number): DraftMessages {
   const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   // Where a link in a message opens on the coach's side: the tab, and the
-  // programme and week, or the day, it points at (the #part unfolds it there).
+  // programme and week, or the day, it points at (the #part unfolds it there;
+  // for an exercise, #session-DAY-ex-ROW scrolls to and marks the row).
   const programs = listPrograms(clientId);
   const hrefFor = (link: MessageLink, week: number | null): string => {
     const tab = (name: string, rest = "") => `/admin/redesign/${name}?client=${clientId}${rest}`;
@@ -548,7 +549,8 @@ export function loadMessages(clientId: number): DraftMessages {
       case "session":
       case "exercise": {
         const p = week == null ? null : programs.find((x) => week >= x.start_week && week < x.start_week + x.total_weeks);
-        return p ? tab("training", `&program=${p.id}&week=${week! - p.start_week + 1}#session-${link.dayId}`) : tab("training");
+        const part = link.kind === "exercise" ? `#session-${link.dayId}-ex-${link.assignmentId}` : `#session-${link.dayId}`;
+        return p ? tab("training", `&program=${p.id}&week=${week! - p.start_week + 1}${part}`) : tab("training");
       }
       case "food":
         return tab("nutrition", `#day-${link.date}`);

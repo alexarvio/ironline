@@ -192,7 +192,7 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
   // the day unfolded and in view. After the first paint, so the server's
   // closed rows match.
   useEffect(() => {
-    const m = /^#day-(d{4}-d{2}-d{2})$/.exec(window.location.hash);
+    const m = /^#day-(\d{4}-\d{2}-\d{2})$/.exec(window.location.hash);
     if (!m) return;
     const date = m[1];
     const idx = view.days.findIndex((d) => d.date === date);
