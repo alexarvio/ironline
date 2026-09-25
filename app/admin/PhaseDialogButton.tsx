@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { addClientPhaseAction, removeClientPhaseAction, saveAndDeployPhaseNowAction, saveAndSchedulePhaseAction, schedulePhaseAction, updateClientPhaseAction } from "../lib/actions";
+import { addClientPhaseAction, removeClientPhaseAction, saveAndDeployPhaseNowAction, saveAndSchedulePhaseAction, schedulePhaseAction, setPhaseCoverAction, updateClientPhaseAction, uploadPhaseCoverAction } from "../lib/actions";
+import { defaultPhaseCover, PHASE_COVERS, PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "../lib/phaseCovers";
 import type { ClientPhase, PhaseTrack } from "../lib/db";
 import PhaseCalendar, { isoWeek, mondayOf, monthOf, type CalMonth, type PlannedRange } from "./PhaseCalendar";
 import { phaseChrome, phaseStateOf, STATE_LABEL, TRACK_LABEL, TRACK_PALETTE, type PhaseState } from "./phaseChrome";
@@ -159,6 +160,8 @@ export function PhaseDialog({
   const [confirming, setConfirming] = useState(false);
   // Delete asks first: one click used to remove the phase outright.
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  // What the client's Home card lists under "Objectives from {coach}".
+  const [objectives, setObjectives] = useState<string[]>(() => (phase?.objectives?.length ? phase.objectives : [""]));
 
   const nameRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -317,6 +320,8 @@ export function PhaseDialog({
             <input type="hidden" name="start" value={startWeek} />
             <input type="hidden" name="end" value={endWeek} />
             {program && weekDelta !== 0 && adjust && <input type="hidden" name="adjustProgram" value="1" />}
+            <input type="hidden" name="objectivesSent" value="1" />
+            {objectives.map((o, i) => o.trim() && <input key={i} type="hidden" name="objectives" value={o} />)}
             {!phase && track === "training" && <input type="hidden" name="programId" value={programChoice} />}
 
             {/* Only where the track is genuinely an open question: the Plan
@@ -452,6 +457,9 @@ export function PhaseDialog({
                 {overlap && <small className="pl-overlap">Overlaps a phase already on this track</small>}
               </div>
             </div>
+
+            <PhaseObjectivesField value={objectives} onChange={setObjectives} />
+            {phase && <PhaseCoverField phase={phase} track={track} />}
 
             {endLocked && <p className="ph-note">Its length follows the programme: add or remove weeks in Training.</p>}
             {startLocked && program && (
@@ -606,5 +614,142 @@ export function PhaseDialog({
       </div>
     </div>,
     document.body
+  );
+}
+
+// The coach's objectives for the phase, in the order the client reads them:
+// typed one per row, moved up and down, at most three.
+function PhaseObjectivesField({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+  const set = (i: number, text: string) => onChange(value.map((o, j) => (j === i ? text : o)));
+  const move = (i: number, by: -1 | 1) => {
+    const next = [...value];
+    [next[i], next[i + by]] = [next[i + by], next[i]];
+    onChange(next);
+  };
+  const remove = (i: number) => onChange(value.length === 1 ? [""] : value.filter((_, j) => j !== i));
+  return (
+    <div className="pl-dlg-field">
+      <span className="pl-dlg-label">Objectives</span>
+      <ol className="pl-obj-list">
+        {value.map((o, i) => (
+          <li key={i} className="pl-obj-row">
+            <span className="pl-obj-n">{i + 1}</span>
+            <input
+              type="text"
+              className="pl-dlg-input"
+              value={o}
+              maxLength={PHASE_OBJECTIVE_CHARS}
+              placeholder={i === 0 ? "What this phase is for" : "Another objective"}
+              onChange={(e) => set(i, e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return;
+                e.preventDefault();
+                if (value.length < PHASE_OBJECTIVES_MAX && o.trim()) onChange([...value, ""]);
+              }}
+              aria-label={`Objective ${i + 1}`}
+            />
+            <button type="button" className="pl-obj-btn" onClick={() => move(i, -1)} disabled={i === 0} aria-label="Move up">
+              ↑
+            </button>
+            <button type="button" className="pl-obj-btn" onClick={() => move(i, 1)} disabled={i === value.length - 1} aria-label="Move down">
+              ↓
+            </button>
+            <button type="button" className="pl-obj-btn" onClick={() => remove(i)} aria-label="Remove">
+              ×
+            </button>
+          </li>
+        ))}
+      </ol>
+      {value.length < PHASE_OBJECTIVES_MAX && (
+        <button type="button" className="pl-text-btn pl-obj-add" onClick={() => onChange([...value, ""])}>
+          + Add objective
+        </button>
+      )}
+      <small className="pl-hint">Shown on the client&rsquo;s Home, in this order.</small>
+    </div>
+  );
+}
+
+// Cut to the carousel card's 3:4 (900×1200) in the browser, so what goes up
+// is small and already the right shape.
+async function coverJpeg(file: File): Promise<Blob | null> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((ok, fail) => {
+      const i = new Image();
+      i.onload = () => ok(i);
+      i.onerror = fail;
+      i.src = url;
+    });
+    const W = 900, H = 1200;
+    const scale = Math.max(W / img.naturalWidth, H / img.naturalHeight);
+    const w = img.naturalWidth * scale, h = img.naturalHeight * scale;
+    const canvas = document.createElement("canvas");
+    canvas.width = W;
+    canvas.height = H;
+    canvas.getContext("2d")!.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+    return await new Promise((ok) => canvas.toBlob(ok, "image/jpeg", 0.85));
+  } catch {
+    return null;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+// The picture on the client's Home card: an upload, one of the stock ones,
+// or the track's default. Saved as it is picked, not with the form.
+function PhaseCoverField({ phase, track }: { phase: ClientPhase; track: PhaseTrack }) {
+  const [cover, setCover] = useState<string | null>(phase.cover_path ?? null);
+  const [busy, setBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const shown = cover ?? defaultPhaseCover(track, phase.id);
+  const stock = PHASE_COVERS[track];
+  const pickStock = async (p: string | null) => {
+    setCover(p);
+    setBusy(true);
+    await setPhaseCoverAction(phase.id, p);
+    setBusy(false);
+  };
+  const upload = async (file: File | undefined) => {
+    if (!file) return;
+    setBusy(true);
+    const blob = await coverJpeg(file);
+    if (blob) {
+      const fd = new FormData();
+      fd.set("id", String(phase.id));
+      fd.set("file", new File([blob], "cover.jpg", { type: "image/jpeg" }));
+      await uploadPhaseCoverAction(fd);
+      setCover(URL.createObjectURL(blob));
+    }
+    setBusy(false);
+  };
+  return (
+    <div className="pl-dlg-field">
+      <span className="pl-dlg-label">Cover picture</span>
+      <div className={`pl-cover${busy ? " busy" : ""}`}>
+        <span className="pl-cover-preview" data-track={track}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- an upload or a public file */}
+          {shown && <img src={shown} alt="" />}
+        </span>
+        <div className="pl-cover-picks">
+          {stock.map((p) => (
+            <button key={p} type="button" className={`pl-cover-pick${cover === p ? " on" : ""}`} onClick={() => pickStock(p)} aria-label="Use this picture">
+              {/* eslint-disable-next-line @next/next/no-img-element -- a public file */}
+              <img src={p} alt="" />
+            </button>
+          ))}
+          <button type="button" className="pl-text-btn" onClick={() => fileRef.current?.click()}>
+            Upload…
+          </button>
+          {cover && (
+            <button type="button" className="pl-text-btn" onClick={() => pickStock(null)}>
+              Use default
+            </button>
+          )}
+          <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => upload(e.target.files?.[0])} />
+        </div>
+      </div>
+      <small className="pl-hint">Saved as you pick. Shown behind the phase on the client&rsquo;s Home.</small>
+    </div>
   );
 }

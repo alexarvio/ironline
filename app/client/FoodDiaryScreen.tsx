@@ -512,7 +512,8 @@ export default function FoodDiaryScreen({
 
   return (
     <div className="fdi-screen app-layer-main">
-      <header className={`app-header dark overlay${scrolled ? "" : " clear"}`}>
+      {/* White over the photo banner until the page scrolls, as on Nutrition. */}
+      <header className={`app-header dark overlay${scrolled ? "" : " clear on-dark"}`}>
         <button type="button" className="app-header-icon-btn" onClick={onBack} aria-label="Back">
           <ChevronLeftIcon />
         </button>
@@ -535,7 +536,7 @@ export default function FoodDiaryScreen({
               swipeStart.current = null;
             }}
           >
-          <header className="nd-banner fdi-banner">
+          <header className="nd-banner nd-photo fdi-banner">
             <div className="fdi-banner-titles">
               <div className="fdi-eyebrow">Food diary</div>
               <h1 className="fdi-date">{dayTitle}</h1>

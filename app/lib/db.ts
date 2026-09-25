@@ -411,6 +411,16 @@ export type ClientPhase = {
   // follow the programme; the programme's dates follow the phase until it
   // is deployed or scheduled.
   program_id?: number | null;
+  // What the client's Home phase card shows: the coach's objectives for the
+  // phase, in order (max 3, 80 characters each), and its picture: an upload
+  // ("/uploads/phases/...") or one of the stock covers ("/phase/..."). None
+  // set: a default for the track (lib/phaseCovers.ts).
+  objectives?: string[];
+  cover_path?: string | null;
+  // The coach's note to the client on this phase, read at the top of its tab
+  // (Training; a nutrition phase keeps its note in nutrition.coach_notes).
+  client_note?: string;
+  client_note_at?: string;
 };
 type WorkoutAssignment = {
   id: number;

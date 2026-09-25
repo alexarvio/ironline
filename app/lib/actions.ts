@@ -291,6 +291,8 @@ import {
 import { writeReportNarrative } from "./reportAi";
 import { COACH_PROFILE_LIMITS } from "./coachProfileView";
 import { deleteUpload, keyOf, putUpload } from "./storage";
+import { setPhaseObjectives, savePhaseCover, setPhaseCoverPath, editClientChatMessage, deleteClientChatMessage, setPhaseClientNote } from "./queries";
+import { isStockCover } from "./phaseCovers";
 import type { ReportSectionType } from "./reportSectionTypes";
 
 // OWNERSHIP RULE for every coach action below: a coach may only touch their
@@ -1863,6 +1865,27 @@ export async function deleteChatMessageAction(clientId: number, messageId: numbe
   bothSides();
 }
 
+// The client app's chat: whoever is signed in edits or deletes their OWN
+// messages only. A coach previewing the app acts on the coach's; the client
+// on theirs. Who you are comes from the session, never from the page.
+export async function editMyChatMessageAction(clientId: number, messageId: number, text: string) {
+  const id = await requireClientAccess(Number(clientId));
+  if (!id) return;
+  const user = await getSessionUser();
+  if (user?.role === "coach") editChatMessage(id, Number(messageId), String(text ?? ""));
+  else editClientChatMessage(id, Number(messageId), String(text ?? ""));
+  bothSides();
+}
+
+export async function deleteMyChatMessageAction(clientId: number, messageId: number) {
+  const id = await requireClientAccess(Number(clientId));
+  if (!id) return;
+  const user = await getSessionUser();
+  if (user?.role === "coach") deleteChatMessage(id, Number(messageId));
+  else deleteClientChatMessage(id, Number(messageId));
+  bothSides();
+}
+
 /** A link on a sent message: one that parses and the client can open, or null to take it off. */
 export async function setMessageLinkAction(clientId: number, messageId: number, raw: string | null) {
   const id = await coachOn(clientId);
@@ -2354,6 +2377,13 @@ function readPhaseForm(formData: FormData) {
   return { track, name, start, end, exact: false };
 }
 
+// The phase dialog posts its objectives as repeated "objectives" fields, and
+// "objectivesSent" so a form without the list leaves them as they are.
+function saveObjectivesFrom(phaseId: number, formData: FormData) {
+  if (formData.get("objectivesSent") !== "1") return;
+  setPhaseObjectives(phaseId, formData.getAll("objectives").map(String));
+}
+
 export async function addClientPhaseAction(formData: FormData) {
   const clientId = Number(formData.get("clientId"));
   const fields = readPhaseForm(formData);
@@ -2361,7 +2391,8 @@ export async function addClientPhaseAction(formData: FormData) {
   const rawProgram = String(formData.get("programId") ?? "");
   // Only one of this client's own programmes can be linked.
   const programId = /^\d+$/.test(rawProgram) && getClientIdForProgram(Number(rawProgram)) === clientId ? Number(rawProgram) : null;
-  addClientPhase(clientId, fields.track, fields.name, fields.start, fields.end, programId, fields.exact);
+  const added = addClientPhase(clientId, fields.track, fields.name, fields.start, fields.end, programId, fields.exact);
+  saveObjectivesFrom(added.id, formData);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -2374,6 +2405,7 @@ export async function schedulePhaseAction(formData: FormData) {
   const fields = readPhaseForm(formData);
   if (!fields) return;
   schedulePhase(id, fields.name, fields.start, fields.end, fields.exact);
+  saveObjectivesFrom(id, formData);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -2410,6 +2442,7 @@ export async function saveAndSchedulePhaseAction(formData: FormData) {
   const fields = readPhaseForm(formData);
   if (!id || !fields || !(await coachForClient(getClientIdForPhase(id)))) return;
   updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1", fields.exact);
+  saveObjectivesFrom(id, formData);
   // The edits are kept; an empty draft just doesn't go out.
   if (!phaseEmptyReason(id)) schedulePhase(id, fields.name, fields.start, fields.end, fields.exact);
   revalidatePath("/admin");
@@ -2421,6 +2454,7 @@ export async function saveAndDeployPhaseNowAction(formData: FormData) {
   const fields = readPhaseForm(formData);
   if (!id || !fields || !(await coachForClient(getClientIdForPhase(id)))) return;
   updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1", fields.exact);
+  saveObjectivesFrom(id, formData);
   if (!phaseEmptyReason(id)) deployPhaseNow(id);
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -2438,6 +2472,50 @@ export async function updateClientPhaseAction(formData: FormData) {
   const fields = readPhaseForm(formData);
   if (!id || !fields || !(await coachForClient(getClientIdForPhase(id)))) return;
   updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1", fields.exact);
+  saveObjectivesFrom(id, formData);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// A phase's picture on the client's Home: an upload (already cut to 900×1200
+// in the browser), a stock one, or back to the track's default.
+export async function uploadPhaseCoverAction(formData: FormData) {
+  const id = Number(formData.get("id"));
+  const file = formData.get("file") as File | null;
+  if (!id || !(await coachForClient(getClientIdForPhase(id)))) return;
+  if (!file || file.size === 0 || file.size > 6 * 1024 * 1024 || !file.type.startsWith("image/")) return;
+  const body = Buffer.from(await file.arrayBuffer());
+  const r = savePhaseCover(id, body, file.type);
+  if (!r) return;
+  if (r.previous && keyOf(r.previous) !== keyOf(r.saved)) await deleteUpload(r.previous);
+  await putUpload(r.saved, body, file.type);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// The coach's goals for a phase, from its tab (Training, Nutrition,
+// Measurements): up to three, in order, shown on the client's Home.
+export async function setPhaseGoalsAction(phaseId: number, goals: string[]) {
+  if (!Number.isInteger(phaseId) || !Array.isArray(goals) || !(await coachForClient(getClientIdForPhase(phaseId)))) return;
+  setPhaseObjectives(phaseId, goals.map(String));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// The coach's note on a training phase, from the Training tab; the client
+// reads it at the top of theirs.
+export async function saveTrainingNoteAction(phaseId: number, text: string) {
+  if (!Number.isInteger(phaseId) || !(await coachForClient(getClientIdForPhase(phaseId)))) return;
+  const clientId = setPhaseClientNote(phaseId, String(text ?? ""));
+  if (clientId != null && String(text ?? "").trim() && clientSeesPhase(phaseId)) noteChange(clientId, "Left a note on your training", { tab: "training", label: "Read it", key: "training-note" });
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+export async function setPhaseCoverAction(id: number, cover: string | null) {
+  if (!Number.isInteger(id) || !(await coachForClient(getClientIdForPhase(id)))) return;
+  if (cover !== null && !isStockCover(cover)) return;
+  await deleteUpload(setPhaseCoverPath(id, cover));
   revalidatePath("/admin");
   revalidatePath("/client");
 }

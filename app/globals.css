@@ -4013,163 +4013,45 @@ a.cd-entry:hover { border-color: var(--accent); }
   font-family: var(--font-sans);
 }
 /* Back on the left, the count on the right, the title dead centre between them. */
-.ci-head { flex-shrink: 0; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
 .ci-back { flex: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 0; border-radius: 999px; background: transparent; color: #141a24; cursor: pointer; }
 .ci-back svg { width: 20px; height: 20px; }
-.ci-head-titles { min-width: 0; text-align: center; }
-.ci-kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #1e3a6e; }
 .ci-title { margin: 0; font-size: 22px; font-weight: 700; line-height: 1.15; letter-spacing: -0.01em; color: #141a24; }
-.ci-seg { flex-shrink: 0; display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: #eef0f3; }
 .ci-count { flex: none; justify-self: end; display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px 6px 8px; border-radius: 999px; background: #e6ecf3; font-size: 13px; font-weight: 700; color: #1e3a6e; font-variant-numeric: tabular-nums; }
 .ci-count-dot { width: 8px; height: 8px; margin-right: 3px; border-radius: 999px; background: #2f5d8f; }
 .ci-count-total { font-weight: 600; color: #8b93a1; }
-.ci-seg-btn { flex: 1; height: 38px; border: 0; border-radius: 999px; background: transparent; font: inherit; font-size: 14px; font-weight: 700; text-align: center; color: #5b6474; cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease; }
-.ci-seg-btn.on { background: #fff; color: #1e3a6e; box-shadow: 0 1px 2px rgba(20, 30, 50, 0.12); }
 /* The list runs to the screen edges under the dock. */
 .ci-scroll { flex: 1; min-height: 0; margin: 0 -20px; padding: 0 20px 120px; overflow-y: auto; scrollbar-width: none; }
 .ci-scroll::-webkit-scrollbar { display: none; }
-.ci-list { display: flex; flex-direction: column; gap: 12px; }
-.ci-intro { margin: 0; padding: 0 4px 6px; font-size: 13px; font-weight: 500; color: #5b6474; }
 .ci-empty { margin: 0; padding: 24px 4px; font-size: 14px; color: #5b6474; }
-.ci-extras { padding: 0 18px; }
 
-.ci-card { flex-shrink: 0; overflow: hidden; border: 1px solid #dfe3e8; border-radius: 18px; background: #fff; }
-.ci-row { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; transition: background-color 0.15s ease; }
-.ci-row + .ci-row { border-top: 1px solid #eceff3; }
-.ci-row.logged { background: transparent; }
-.ci-row-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.ci-row-labels { flex: 1; min-width: 0; }
-.ci-row-name { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; color: #5b6474; }
-.ci-row-name span { overflow: hidden; text-overflow: ellipsis; }
-.ci-row-name svg { flex: none; width: 14px; height: 14px; }
-.ci-row.logged .ci-row-name { color: #1e3a6e; }
-.ci-row-last { margin-top: 3px; font-size: 13px; font-weight: 500; color: #8b93a1; }
 /* As on the live version: the underline is the figure box itself, one fixed width, right-aligned; the unit sits in a fixed slot after it, so every figure ends on the same line. */
-.ci-pill { flex-shrink: 0; display: flex; align-items: baseline; gap: 6px; }
-label.ci-pill { cursor: text; }
-.ci-pill-input, .ci-pill-value { display: block; box-sizing: border-box; width: 100px; max-width: 38vw; min-height: 44px; padding: 0 2px 2px 0; border: 0; border-bottom: 2px solid #dfe3e8; background: transparent; font: inherit; font-size: 26px; font-weight: 500; letter-spacing: -0.01em; line-height: 42px; text-align: right; color: #141a24; font-variant-numeric: tabular-nums; outline: none; transition: border-color 0.15s ease; }
-.ci-pill-input:focus { border-bottom-color: #2f5d8f; }
-.ci-pill-input::placeholder { color: #8b93a1; }
-.ci-pill-unit { flex: none; width: 34px; font-size: 13px; font-weight: 600; color: #8b93a1; white-space: nowrap; }
-.ci-row.logged .ci-pill-input, .ci-row.logged .ci-pill-value { border-bottom-color: #1e3a6e; }
-.ci-row.logged .ci-pill-input, .ci-row.logged .ci-pill-value { color: #141a24; }
-.ci-row.logged .ci-pill-unit { color: #5b6474; }
-.ci-scale { display: grid; gap: 6px; }
-.ci-scale-btn { height: 40px; padding: 0; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; font-size: 14px; font-weight: 700; text-align: center; color: #313851; cursor: pointer; font-variant-numeric: tabular-nums; }
-.ci-scale-btn.on { background: #1e3a6e; border-color: #1e3a6e; color: #fff; }
 
 /* Save, pinned over the bottom of the list. */
 .ci-dock { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px 32px; background: linear-gradient(rgba(244, 247, 252, 0), #F4F7FC 40%); }
 .ci-dock-kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
-.ci-dock-label { margin-top: 2px; font-size: 13px; font-weight: 600; color: #313851; }
-.ci-save { flex: none; height: 48px; padding: 0 28px; border: 0; border-radius: 12px; background: #1e3a6e; color: #fff; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 20px rgba(30, 58, 110, 0.3); }
-.ci-save:disabled { background: #dfe3e8; color: #8b93a1; box-shadow: none; cursor: default; }
-.ci-save.secondary { border: 1px solid #dfe3e8; background: #fff; color: #1e3a6e; box-shadow: none; }
 
 /* The saved summary and the note, in the same palette. */
-.ci-screen .ci-saved-banner { background: #1e3a6e; color: #fff; }
-.ci-screen .ci-saved-home { background: #fff; color: #1e3a6e; }
-.ci-screen .ci-done-list { border-color: #dfe3e8; background: #fff; }
-.ci-screen .ci-done-row, .ci-screen .ci-done-note { border-bottom-color: #eceff3; }
-.ci-screen .ci-done-name, .ci-screen .ci-done-note-label { color: #5b6474; }
-.ci-screen .ci-done-value { font-family: var(--font-sans); font-weight: 600; color: #141a24; }
-.ci-screen .ci-notefield { margin-top: 6px; }
-.ci-screen .ci-notefield-label { font-weight: 700; letter-spacing: 0.12em; color: #5b6474; }
-.ci-screen .ci-notefield textarea { border-color: #dfe3e8; border-radius: 10px; background: #fff; font-size: 16px; color: #313851; }
 @media (prefers-reduced-motion: reduce) {
-  .ci-seg-btn, .ci-row, .ci-pill, .ci-saved-chev { transition: none; }
 }
 
 /* Confirmation after a check-in lands: big, unmissable, and says where it
    went. Replaces relying on the Save button's label quietly turning into
    "Saved ✓". */
-.ci-saved-banner {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 0 0 14px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: var(--fp-accent);
-  color: var(--fp-accent-fg);
-}
 
 /* A bare white tick, no disc. */
-.ci-saved-icon { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; }
-.ci-saved-icon svg { width: 18px; height: 18px; }
 
-.ci-saved-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 /* The banner's left half is the fold toggle; Edit keeps its own button. */
-.ci-saved-toggle { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
-.ci-saved-chev { flex: none; display: flex; opacity: 0.8; transition: transform 0.15s ease; }
-.ci-saved-chev.open { transform: rotate(180deg); }
-.ci-done.closed .ci-saved-banner { border-radius: 12px; }
-.ci-saved-title { font-weight: 800; font-size: 0.95rem; }
-.ci-saved-sub { font-size: 0.78rem; opacity: 0.85; margin-top: 1px; }
 
-.ci-saved-home {
-  flex-shrink: 0;
-  height: 34px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--fp-accent-fg);
-  color: var(--fp-accent);
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 800;
-  cursor: pointer;
-}
 
 /* Collapsed "done" card: what was sent, folded up so the section reads as
    finished, with a way back in if something was typed wrong. */
-.ci-done {
-  padding-top: 4px;
-}
 
-.ci-done .ci-saved-banner {
-  margin-bottom: 0;
-  border-radius: 12px 12px 0 0;
-}
 
-.ci-done-list {
-  border: 1px solid var(--fp-line);
-  border-top: 0;
-  border-radius: 0 0 12px 12px;
-  padding: 4px 14px;
-}
 
-.ci-done-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 9px 0;
-  border-bottom: 1px solid var(--fp-line);
-}
 
-.ci-done-row:last-child {
-  border-bottom: 0;
-}
 
-.ci-done-name {
-  font-size: 0.66rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--fp-dim);
-}
 
-.ci-done-value {
-  font-family: var(--font-serif);
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--fp-text);
-}
 
-.ci-done-value.empty {
-  color: var(--fp-dim);
-}
 
 /* Week switcher: a completed week shows a tick instead of the current dot. */
 .week-done-tick {
@@ -4240,39 +4122,11 @@ label.ci-pill { cursor: text; }
 .week-progress-card.complete { border-color: var(--good); }
 .week-progress-card.complete .week-progress-label { color: var(--good); }
 
-.ci-section {
-  padding-top: 22px;
-}
 
-.ci-section-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-}
 
-.ci-section-title {
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--fp-dim);
-}
 
-.ci-section-meta {
-  font-size: 0.7rem;
-  color: var(--fp-dim);
-}
 
-.ci-section-count {
-  font-size: 0.72rem;
-  font-weight: 800;
-  color: var(--fp-dim);
-}
 
-.ci-section-count.complete {
-  color: var(--fp-accent);
-}
 
 .ci-deltas {
   display: flex;
@@ -4281,127 +4135,25 @@ label.ci-pill { cursor: text; }
   flex-wrap: wrap;
 }
 
-.ci-delta {
-  flex: 1;
-  min-width: 64px;
-}
 
-.ci-delta-name {
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--fp-dim);
-}
 
-.ci-delta-value-row {
-  display: flex;
-  align-items: baseline;
-  gap: 2px;
-  margin-top: 2px;
-}
 
-.ci-delta-value {
-  font-family: var(--font-serif);
-  font-size: 1.3rem;
-  font-weight: 600;
-  color: var(--fp-text);
-  line-height: 1.1;
-}
 
-.ci-delta-unit {
-  font-size: 0.66rem;
-  font-weight: 700;
-  color: var(--fp-dim);
-}
 
-.ci-photos {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  margin-top: 10px;
-}
 
-.ci-photo-form {
-  display: block;
-}
 
-.ci-photo {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  aspect-ratio: 3 / 4;
-  border: 1px dashed var(--fp-input);
-  border-radius: 12px;
-  cursor: pointer;
-  overflow: hidden;
-  position: relative;
-}
 
-.ci-photo.filled {
-  border-style: solid;
-  border-color: var(--fp-accent);
-  background: var(--fp-accent-tint);
-}
 
 /* Set already complete — the tiles still show what was taken, but they're
    not upload targets any more. */
-.ci-photo.done {
-  cursor: default;
-  border-style: solid;
-  border-color: var(--fp-line);
-}
 
-.ci-photo.done.filled {
-  border-color: var(--fp-accent);
-}
 
-.ci-photo-icon {
-  display: flex;
-  color: var(--fp-dim);
-}
 
-.ci-photo-label {
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--fp-dim);
-}
 
-.ci-photo.filled .ci-photo-label {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 3px 0;
-  background: rgba(14, 14, 12, 0.72);
-  color: var(--fp-accent);
-}
 
-.ci-photo-img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
 
-.ci-photo-input {
-  display: none;
-}
 
-.ci-photo-note {
-  font-size: 0.72rem;
-  color: var(--fp-dim);
-  margin-top: 10px;
-}
 
-.ci-photo-history {
-  margin-top: 18px;
-}
 
 /* ---- Nutrition (client only, dark) ---- */
 
@@ -4429,6 +4181,19 @@ label.ci-pill { cursor: text; }
 .nd-banner::before { width: 360px; height: 360px; right: -120px; top: -40px; border: 70px solid rgba(255, 255, 255, 0.28); }
 .nd-banner::after { width: 420px; height: 420px; left: -160px; top: 120px; border: 60px solid rgba(255, 255, 255, 0.18); }
 .nd-banner > * { position: relative; z-index: 1; }
+/* Nutrition's banner over the lunchbox photo, like Training's: a dark fade, the words in white. */
+.nd-banner.nd-photo { background: #0b0f16 url("/img/nutrition-head.jpg") right center / cover no-repeat; }
+.nd-banner.nd-photo::after { display: none; }
+.nd-banner.nd-photo::before { inset: 0; width: auto; height: auto; border: 0; border-radius: 0; background: linear-gradient(180deg, rgba(8, 12, 20, 0.6) 0%, rgba(8, 12, 20, 0.45) 45%, rgba(8, 12, 20, 0.8) 100%); }
+.nd-photo .nd-kicker { color: rgba(255, 255, 255, 0.72); }
+.nd-photo .nd-phase-name { color: #fff; }
+.nd-photo .nd-progress { background: rgba(255, 255, 255, 0.22); }
+.nd-photo .nd-progress span { background: linear-gradient(90deg, #fff 0%, #fff 35%, #c9d6ea 50%, #fff 65%, #fff 100%); background-size: 200% 100%; }
+.nd-photo .nd-timeline-foot, .nd-photo .nd-phase-week { color: rgba(255, 255, 255, 0.78); }
+.nd-photo .nd-phase-week b { color: #fff; }
+.nd-photo .nd-tabs { border-bottom-color: rgba(255, 255, 255, 0.22); }
+.nd-photo .nd-tab { color: rgba(255, 255, 255, 0.6); }
+.nd-photo .nd-tab.on { color: #fff; border-bottom-color: #fff; }
 .nd-tabs { display: flex; justify-content: center; gap: 36px; margin-top: 18px; border-bottom: 1px solid rgba(30, 58, 110, 0.14); }
 .nd-tab { position: relative; height: 38px; margin-bottom: -1px; padding: 0; border: 0; border-bottom: 2px solid transparent; background: none; font: inherit; font-size: 11.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #8b93a1; cursor: pointer; }
 .nd-tab::after { content: ""; position: absolute; inset: -3px -8px; }
@@ -4567,7 +4332,7 @@ label.ci-pill { cursor: text; }
 .nd-avatar { flex: none; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; overflow: hidden; border-radius: 999px; background: #1e3a6e; color: #fff; font-size: 16px; font-weight: 600; }
 .nd-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .nd-coach-name { font-size: 14px; font-weight: 600; color: #141a24; }
-.nd-coach-date { font-size: 11.5px; color: #8b93a1; }
+.nd-coach-date { margin-left: auto; font-size: 11.5px; color: #8b93a1; }
 .nd-coach-note { margin: 12px 0 0; font-size: 14px; font-weight: 400; line-height: 1.5; color: #313851; white-space: pre-wrap; }
 
 /* 5 · Last 7 days */
@@ -12822,12 +12587,6 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .cl-note-hint { font-size: 11px; color: var(--fp-dim); }
 .cl-note-add { grid-column: 1 / -1; justify-self: start; margin-top: 6px; border: 0; background: none; padding: 0; font: inherit; font-size: 12px; font-weight: 700; color: var(--fp-accent); cursor: pointer; }
 .cl-day-note { display: block; font-size: 11px; color: var(--fp-dim); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ci-notefield { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
-.ci-notefield-label { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fp-dim); }
-.ci-notefield textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--fp-line); background: var(--fp-raised); font: inherit; font-size: 14px; line-height: 1.4; color: var(--fp-text); resize: vertical; }
-.ci-done-note { display: flex; flex-direction: column; gap: 2px; padding: 10px 0; border-bottom: 1px solid var(--fp-line); }
-.ci-done-note-label { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fp-dim); }
-.ci-done-note-text { font-size: 13.5px; color: var(--fp-text); line-height: 1.4; }
 .nt-cal-note { font-size: 11px; color: var(--steel); font-style: italic; margin-top: 2px; white-space: normal; }
 /* ---- Admin Feed (fd-*) ----
    Every client log across clients, grouped by day. Category pills follow the
@@ -13235,8 +12994,8 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .hm-profile-main { flex: 1; min-width: 0; }
 
 .hm-greeting {
-  font-family: Baskerville, var(--font-libre-baskerville), "Libre Baskerville", Georgia, serif;
-  letter-spacing: -0.01em;
+  font-family: var(--font-archivo), "Archivo", -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: -0.02em;
   font-size: 30px;
   font-weight: 600;
   line-height: 1.15;
@@ -13790,51 +13549,6 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
   line-height: 1.45;
   color: #313851;
 }
-
-/* ---- 4 · Goals ---- */
-
-.hm-goals-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  padding-bottom: 4px;
-}
-
-.hm-goals-meta {
-  font-size: 12px;
-  font-weight: 600;
-  color: #8b93a1;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-/* GoalRow is shared with the coach's "client sees" preview, so Home's
-   sizing is scoped here rather than changed in the component. */
-.hm-goals .gr { padding: 14px 0; border-top: 1px solid #eceff3; }
-.hm-goals .gr:last-child { padding-bottom: 0; }
-.hm-goals .gr-text { font-size: 13.5px; font-weight: 800; color: #141a24; }
-.hm-goals .gr-figure { font-size: 13px; font-weight: 800; }
-.hm-goals .gr-bar { height: 6px; background: #eceff3; margin-top: 8px; }
-.hm-goals .gr-bar.orange { background: #eceff3; }
-.hm-goals .gr-muted { font-size: 12px; color: #5b6474; }
-.hm-goals .gr-sub { font-size: 12px; font-weight: 500; }
-.hm-goals .gr-seg { width: 8px; height: 8px; border-radius: 999px; background: #eceff3; }
-.hm-goals .gr-seg.on { background: #2f5d8f; }
-.hm-goals .gr-segments.green .gr-seg { background: #eceff3; }
-.hm-goals .gr-segments.green .gr-seg.on { background: #2f5d8f; }
-
-.hm-goals .gr-dot.done {
-  width: 22px;
-  height: 22px;
-  margin-top: 0;
-  background: #dff3ea;
-  color: #2f7a3f;
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 22px;
-}
-
 
 
 /* Recap the coach writes for the client, on a past meeting row. */
@@ -14558,7 +14272,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .cm-msg.mine .cm-msg-time { color: rgba(255, 255, 255, 0.65); }
 .cm-msg .cm-msg-time { display: block; margin-top: 4px; text-align: right; }
 .cm-msg.media { padding: 6px 6px 10px; }
-.cm-msg.media .cm-msg-text, .cm-msg.media .cm-msg-time, .cm-msg.media .cm-link { margin-left: 10px; margin-right: 10px; }
+.cm-msg.media .cm-msg-text, .cm-msg.media .cm-msg-time { margin-left: 10px; margin-right: 10px; }
 .cm-msg-img, .cm-msg-video { display: block; width: 100%; max-width: 260px; border-radius: 14px; }
 .cm-msg-video { background: #000; }
 .cm-compose { flex: none; padding: 10px 14px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid #eceff3; background: #fff; }
@@ -14576,15 +14290,6 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .hm-message-card .hm-message { padding: 0; border: 0; background: none; }
 
 /* A coach message's link: where it goes, in words, and a tap goes there. */
-.cm-link { display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box; margin-top: 10px; padding: 10px 12px; border: 1px solid #dfe3e8; border-radius: 12px; background: #f4f7fc; font: inherit; text-align: left; color: #1e3a6e; cursor: pointer; }
-.cm-link:active { background: #e6ecf3; }
-.cm-link svg { flex: none; }
-.cm-link-label { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; font-size: 14px; font-weight: 700; line-height: 1.3; color: #141a24; }
-.cm-link-label small { font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #5b6474; }
-.cm-link-go { flex: none; font-size: 16px; font-weight: 800; color: #1e3a6e; }
-.cm-link.gone { cursor: default; border-style: dashed; background: #f4f6f9; color: #8b93a1; }
-.cm-link.gone .cm-link-label { font-weight: 600; color: #8b93a1; }
-.cm-link.gone em { flex: none; font-style: normal; font-size: 11.5px; font-weight: 700; }
 
 /* Notifications: the coach's messages as one row at the top, apart from the rest. */
 .cn-coach-row { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 4px; padding: 14px 16px; border: 1px solid #dfe3e8; border-radius: 18px; background: #fff; font: inherit; color: inherit; text-align: left; cursor: pointer; }
@@ -16083,7 +15788,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .tr-rows { display: flex; flex-direction: column; gap: 12px; }
 .tr-row { display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px 16px 16px 18px; border: 1px solid transparent; border-radius: 20px; background: #fff; font: inherit; color: inherit; text-align: left; cursor: pointer; transition: transform 0.12s ease; }
 .tr-row:active { transform: scale(0.985); }
-.tr-row.live { border-color: #2f5d8f; }
+.tr-row.live { border-color: #1e3a6e; }
 .tr-row-tile { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 14px; background: #e6ecf3; color: #1e3a6e; font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .tr-row-tile.done { background: #2f7a3f; color: #fff; }
 .tr-row-tile.live, .tr-row-tile.next { background: #1e3a6e; color: #fff; }
@@ -16093,7 +15798,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .tr-row-sub { font-size: 13.5px; color: #5b6474; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 .tr-row-pill { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; background: #eef0f3; color: #5b6474; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
 .tr-row-pill.done { background: #DFF3EA; color: #2f7a3f; }
-.tr-row-pill.live { background: #2f5d8f; color: #fff; }
+.tr-row-pill.live { background: #1e3a6e; color: #fff; }
 .tr-row-pill.next { background: #e6ecf3; color: #1e3a6e; }
 .tr-row-pill.skipped { background: #fbeaea; color: #a32d2d; }
 .tr-row-dot { width: 6px; height: 6px; border-radius: 999px; background: #7fd68f; animation: ws-pulse 1.4s ease-in-out infinite; }
@@ -16128,7 +15833,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .so-title { margin: 0; font-size: 30px; font-weight: 700; line-height: 1.1; letter-spacing: -0.01em; color: #141a24; min-width: 0; }
 .so-pill { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; background: #eef0f3; color: #5b6474; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
 .so-pill.done { background: #DFF3EA; color: #2f7a3f; }
-.so-pill.live { background: #2f5d8f; color: #fff; }
+.so-pill.live { background: #1e3a6e; color: #fff; }
 .so-pill.next { background: #e6ecf3; color: #1e3a6e; }
 .so-pill.skipped { background: #fbeaea; color: #a32d2d; }
 .so-pill-dot { width: 6px; height: 6px; border-radius: 999px; background: #7fd68f; animation: ws-pulse 1.4s ease-in-out infinite; }
@@ -16201,7 +15906,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .wo-menu-divider { height: 1px; margin: 4px 8px; background: #eceff3; }
 .wo-switch { position: relative; flex: none; width: 38px; height: 22px; border-radius: 999px; background: #dfe3e8; transition: background 0.15s ease; }
 .wo-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 999px; background: #fff; box-shadow: 0 1px 2px rgba(20, 30, 50, 0.2); transition: transform 0.15s ease; }
-.wo-switch.on { background: #2f5d8f; }
+.wo-switch.on { background: #1e3a6e; }
 .wo-switch.on::after { transform: translateX(16px); }
 /* The pager: one page per exercise, snapping. */
 .wo-pager { flex: 1; min-height: 0; display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; }
@@ -16232,7 +15937,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .wo-video { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border: 0; border-radius: 16px; background: #FBF1DF; font: inherit; color: #6b4a12; text-align: left; cursor: pointer; }
 .wo-video.sent, .wo-video.replied { background: #e6ecf3; color: #1e3a6e; }
 .wo-video-tile { position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; background: #B7791F; color: #fff; }
-.wo-video.sent .wo-video-tile, .wo-video.replied .wo-video-tile { background: #2f5d8f; }
+.wo-video.sent .wo-video-tile, .wo-video.replied .wo-video-tile { background: #1e3a6e; }
 .wo-video-tile svg { width: 22px; height: 22px; }
 .wo-video.asked .wo-video-tile::after, .wo-video.unseen .wo-video-tile::after { content: ""; position: absolute; top: -3px; right: -3px; width: 11px; height: 11px; border: 2px solid #FBF1DF; border-radius: 999px; background: #d64545; }
 .wo-video.unseen .wo-video-tile::after { border-color: #e6ecf3; }
@@ -16325,7 +16030,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .wo-dock-btn svg { width: 20px; height: 20px; }
 .wo-rest { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 14px; border: 1px solid #dfe3e8; border-radius: 999px; background: #fff; color: #313851; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; font-variant-numeric: tabular-nums; }
 .wo-rest svg { flex: none; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
-.wo-rest.running { background: #2f5d8f; border-color: #2f5d8f; color: #fff; }
+.wo-rest.running { background: #1e3a6e; border-color: #1e3a6e; color: #fff; }
 .wo-rest.over { color: #7fd68f; }
 .wo-rest-stop { padding: 4px 9px; border-radius: 999px; background: rgba(255, 255, 255, 0.18); font-size: 12px; }
 /* Bottom sheets: the gym question, the swap. */
@@ -16568,26 +16273,21 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .tr-wk.on { background: #fff; border-color: #fff; color: #1e3a6e; }
 .tr-wk.locked, .tr-wk.locked.on { background: transparent; border: 1px dashed rgba(255, 255, 255, 0.45); color: rgba(255, 255, 255, 0.65); }
 .tr-wk.locked .tr-wk-lock { color: rgba(255, 255, 255, 0.65); }
+/* Training and Nutrition banners line up exactly, so switching tabs doesn't
+   jump: a one-line title (FitTitle shrinks a long one), the same foot line
+   and a 40px row of tabs under it. */
+.tr-name, .nd-phase-name { height: 36px; line-height: 36px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nd-phase-titles { flex: 1; }
+.nd-timeline-foot { align-items: normal; }
+.nd-timeline-foot .nd-phase-week { font-size: inherit; }
+.nd-timeline-foot .nd-phase-week b { font-family: inherit; font-size: inherit; font-weight: 700; }
+.nd-tab { height: 40px; }
 
 /* ==== Client Home v3: banner with the goals panel, the photo hero, the
    check-in fold, the latest from the coach, the next call. ==== */
 .hm-banner { padding: calc(var(--topbar-h) + 2px) 22px 26px; }
 .hm-body > :first-child { margin-top: 0; }
 .hm-body { gap: 14px; }
-/* Greeting with the goals chevron. */
-.hm-greet-btn { display: flex; align-items: center; gap: 10px; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
-.hm-greet-btn .hm-greeting { margin: 0; }
-.hm-greet-chev { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 999px; background: rgba(255, 255, 255, 0.6); color: #1e3a6e; transition: background 0.2s ease; }
-.hm-greet-chev svg { width: 15px; height: 15px; transition: transform 0.25s ease; }
-.hm-greet-chev.open { background: #fff; }
-.hm-greet-chev.open svg { transform: rotate(180deg); }
-/* The goals panel, folding under the date. */
-.hm-goalpanel-fold { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
-.hm-goalpanel-fold.open { grid-template-rows: 1fr; }
-.hm-goalpanel-inner { min-height: 0; overflow: hidden; }
-.hm-goalpanel { margin-top: 12px; padding: 14px 16px 4px; border: 1px solid rgba(255, 255, 255, 0.9); border-radius: 18px; background: rgba(255, 255, 255, 0.72); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-.hm-goalpanel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding-bottom: 4px; }
-.hm-goalpanel-by { font-size: 12px; font-weight: 600; color: #8b93a1; }
 .gp-row { display: flex; flex-direction: column; gap: 7px; padding: 12px 0; border-top: 1px solid rgba(30, 58, 110, 0.1); }
 .gp-row:first-of-type { border-top: 0; }
 .gp-kind { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; }
@@ -16669,11 +16369,9 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .hm-join { display: flex; align-items: center; justify-content: center; height: 44px; border-radius: 12px; background: #1e3a6e; color: #fff; font-size: 14px; font-weight: 700; text-decoration: none; }
 @media (prefers-reduced-motion: reduce) {
   .hm-hero-dot, .hm-ci-dot { animation: none; }
-  .hm-goalpanel-fold, .gp-bar-fill, .hm-ci-status.done { transition: none; animation: none; }
+  .gp-bar-fill, .hm-ci-status.done { transition: none; animation: none; }
 }
-/* Goals panel rows at phone scale. */
-.hm-goalpanel { padding: 12px 14px 2px; }
-.hm-goalpanel-head { padding-bottom: 2px; }
+/* Goal rows (the coach's preview of what the client sees) at phone scale. */
 .gp-row { gap: 4px; padding: 9px 0; }
 .gp-kind { font-size: 9.5px; }
 .gp-text { font-size: 13.5px; }
@@ -16690,34 +16388,6 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .so-back svg { width: 22px; height: 22px; }
 .so-more svg { width: 24px; height: 24px; }
 .so-menu { top: 40px; }
-/* Two panels: the main goal on its own, the tracked goals together. */
-.hm-goalpanel + .hm-goalpanel { margin-top: 10px; }
-.hm-goalpanel-main { padding-bottom: 12px; }
-.hm-goalpanel-maintext { margin-top: 4px; font-size: 15px; font-weight: 700; color: #141a24; line-height: 1.3; }
-.hm-goalpanel .gp-row:first-of-type { border-top: 0; }
-/* Goals as a navy main-goal card and a row of chips; a tapped chip opens its row. */
-.hm-goalmain { display: flex; flex-direction: column; gap: 3px; margin-top: 12px; padding: 12px 14px; border-radius: 16px; background: #1e3a6e; color: #fff; box-shadow: 0 10px 24px -16px rgba(8, 31, 92, 0.6); }
-.hm-goalmain-kicker { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255, 255, 255, 0.7); }
-.hm-goalmain-text { font-size: 16px; font-weight: 700; line-height: 1.25; }
-.hm-goalchips-wrap { margin-top: 10px; }
-.hm-goalchips { display: flex; flex-wrap: wrap; gap: 6px; }
-.hm-goalchip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 32px; padding: 6px 11px; border: 1px solid rgba(30, 58, 110, 0.18); border-radius: 999px; background: rgba(255, 255, 255, 0.7); font: inherit; font-size: 12.5px; font-weight: 700; color: #1e3a6e; cursor: pointer; }
-.hm-goalchip-text { max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hm-goalchip-figure { flex: none; font-weight: 700; opacity: 0.75; font-variant-numeric: tabular-nums; }
-.hm-goalchip-figure::before { content: "·"; margin-right: 6px; opacity: 0.6; }
-.hm-goalchip.green { background: #E4F2E8; border-color: #CFE5D6; color: #2f7a3f; }
-.hm-goalchip.orange { background: #E6EEF8; border-color: rgba(47, 93, 143, 0.25); color: #2f5d8f; }
-.hm-goalchip.muted { color: #5b6474; }
-.hm-goalchip.on { background: #1e3a6e; border-color: #1e3a6e; color: #fff; }
-.hm-goalchip.on .hm-goalchip-figure { opacity: 0.85; }
-.hm-goalpick { margin-top: 8px; padding: 2px 14px 2px; }
-.hm-goalpick .gp-row { border-top: 0; }
-/* Tracked goals as full-width rows on the banner, hairlines between, no card. */
-.hm-goallist { margin-top: 6px; padding: 0 2px; }
-.hm-goallist .gp-row { padding: 11px 0; border-top: 1px solid rgba(30, 58, 110, 0.12); }
-.hm-goallist .gp-row:first-of-type { border-top: 0; }
-.hm-goallist .gp-text { font-size: 14.5px; }
-.hm-goallist .gp-bar { background: rgba(30, 58, 110, 0.14); }
 /* Today's tasks: the check-ins as a list to tick off. */
 .hm-tasks { border: 1px solid #dfe3e8; border-radius: 20px; background: #fff; overflow: hidden; }
 .hm-tasks.done { border-color: #CFE5D6; }
@@ -16810,6 +16480,9 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .hm-mt-recap-label { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mt-faint); }
 .hm-mt-recap-text { margin: 0; font-size: 14px; line-height: 1.5; color: var(--mt-text); text-wrap: pretty; white-space: pre-wrap; }
 .hm-mt-recap-text.clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; }
+/* Nothing booked: just the notes from the last call. */
+.hm-mt-last { gap: 10px; }
+.hm-mt-last .hm-mt-more { min-height: 32px; margin-top: -6px; }
 .hm-mt-more { align-self: flex-start; min-height: 44px; padding: 0 4px; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 700; color: var(--mt-blue); cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .hm-mt-live-dot { animation: none; } }
 /* Home's cards arrive one after another: a few pixels up and in, 60 ms apart. */
@@ -16830,22 +16503,13 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 @media (prefers-reduced-motion: reduce) { .hm-hero-photo, .hm-coach-alive { animation: none; } }
 /* The greeting stays one line whatever it says: smaller, and it shrinks a step to fit. */
 .hm-greeting { font-size: clamp(19px, 6vw, 24px); line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.hm-greet-btn { max-width: 100%; }
-.hm-greet-btn .hm-greeting { flex: 1; min-width: 0; }
-.hm-greet-chev { width: 26px; height: 26px; }
-.hm-greet-chev svg { width: 13px; height: 13px; }
 /* Smaller still. */
 .hm-greeting { font-size: 20px; }
-.hm-greet-chev { width: 24px; height: 24px; }
-.hm-greet-chev svg { width: 12px; height: 12px; }
-/* The chevron sits at the right edge of the greeting row. */
-.hm-greet-btn { width: 100%; justify-content: space-between; }
-.hm-greet-btn .hm-greeting { flex: 0 1 auto; }
 /* The date above the greeting. */
 .hm-date { margin: 0 0 4px; }
 
 /* ==== Home: latest from the coach, a gradient-edged card with the avatar badge. ==== */
-.hm-lt { padding: 1.5px; border-radius: 26px; background: linear-gradient(135deg, #2F6BFF, #19C3B1 55%, #FFB547); box-shadow: 0 18px 34px -24px rgba(47, 107, 255, 0.7); }
+.hm-lt { padding: 1.5px; border-radius: 26px; background: #1e3a6e; box-shadow: 0 18px 34px -24px rgba(30, 58, 110, 0.7); }
 .hm-lt-inner { border-radius: 24.5px; background: #fff; overflow: hidden; }
 .hm-lt-body { display: flex; gap: 12px; padding: 16px; animation: hm-lt-in 0.25s ease both; }
 @keyframes hm-lt-in { from { opacity: 0; } to { opacity: 1; } }
@@ -16880,3 +16544,594 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .hm-lt-more + .hm-lt-cta { border-left: 1px solid #F0EFF6; }
 .hm-lt-more:active, .hm-lt-cta:active { background: #F7F8FC; }
 @media (prefers-reduced-motion: reduce) { .hm-lt-body, .hm-lt-badge { animation: none; } }
+
+/* Something due today: an orange dot, pulsing, at the right of Today's tasks. */
+.hm-tasks-head { align-items: center; }
+.hm-tasks-due { flex: none; width: 9px; height: 9px; margin-right: 4px; border-radius: 999px; background: #FF7A1A; animation: hm-due-pulse 1.8s ease-out infinite; }
+@keyframes hm-due-pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 122, 26, 0.55); } 70%, 100% { box-shadow: 0 0 0 8px rgba(255, 122, 26, 0); } }
+@media (prefers-reduced-motion: reduce) { .hm-tasks-due { animation: none; } }
+
+
+/* Home's latest from the coach: the old card's layout, plain white, navy for the way there. */
+.hm-lt { padding: 0; border: 1px solid #dfe3e8; border-radius: 18px; background: #fff; box-shadow: none; overflow: hidden; }
+.hm-lt-body { width: 100%; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.hm-lt-body:active { background: #F7F8FC; }
+.hm-lt-avatar { cursor: inherit; }
+.hm-lt-avatar img { display: block; width: 44px; height: 44px; border-radius: 999px; object-fit: cover; }
+.hm-lt-initial { background: #1e3a6e; }
+.hm-lt-meta { color: #8b93a1; }
+.hm-lt-dot { background: #1e3a6e; }
+.hm-lt-title { color: #141a24; }
+.hm-lt-desc { color: #313851; }
+.hm-lt-foot { border-top-color: #eceff3; }
+.hm-lt-more + .hm-lt-cta { border-left-color: #eceff3; }
+.hm-lt-more { color: #5b6474; }
+.hm-lt-cta { color: #1e3a6e; }
+.hm-lt-more { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.hm-lt-unread { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #1e3a6e; color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; }
+
+/* Progress pictures: earlier sheets' rows, one per angle; no purple, navy for actions. */
+.pp-app-fail { margin: 0 0 10px; font-size: 12.5px; font-weight: 600; line-height: 1.4; color: #b42318; }
+.pp-rows { display: flex; flex-direction: column; gap: 8px; }
+.pp-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; box-sizing: border-box; padding: 8px 8px 8px 14px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; font: inherit; color: inherit; text-align: left; }
+button.pp-row { cursor: zoom-in; }
+.pp-row-thumb { flex: none; width: 40px; height: 52px; margin-left: -6px; overflow: hidden; border-radius: 8px; background: #F4F7FC; }
+.pp-row-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.pp-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pp-row-name { font-size: 14.5px; font-weight: 600; color: #141a24; }
+.pp-row-view { flex: none; padding: 0 8px; font-size: 13.5px; font-weight: 700; color: #1e3a6e; }
+.pp-row-missing { flex: none; padding: 0 8px; font-size: 12px; font-weight: 600; color: #8b93a1; }
+.pp-app-save-btn { background: #1e3a6e; }
+.pp-app-save-btn:disabled { background: #c9d1dd; }
+.pp-app-save-btn.secondary { border-color: #dfe3e8; background: #fff; color: #1e3a6e; }
+.pp-app-edit-photos { border-color: #dfe3e8; color: #1e3a6e; }
+
+/* The sheet to do, like a Training session card: a big title, a To do pill,
+   and small numbered rows with a plain navy Add. */
+.pp-app-body { scrollbar-width: none; }
+.pp-app-body::-webkit-scrollbar { display: none; }
+.pp-todo { border-radius: 18px; background: #fff; box-shadow: 0 12px 30px -20px rgba(8, 31, 92, 0.4); overflow: hidden; }
+.pp-todo-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 18px 20px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.pp-todo-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pp-todo-title { font-size: 19px; font-weight: 700; line-height: 1.2; color: #141a24; }
+.pp-todo-sub { font-size: 13.5px; color: #5b6474; }
+.pp-todo-pill { flex: none; padding: 6px 11px; border-radius: 999px; background: #FFF1E6; color: #C2570C; font-size: 12.5px; font-weight: 700; }
+.pp-todo-body { padding: 4px 20px 16px; border-top: 1px solid #eceff3; }
+.pp-todo-rows { margin: 0; padding: 0; list-style: none; }
+.pp-todo-row { display: flex; align-items: center; gap: 12px; min-height: 48px; border-bottom: 1px solid #eceff3; }
+.pp-todo-row:last-child { border-bottom: 0; }
+.pp-todo-num { flex: none; display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 8px; background: #e6ecf3; color: #1e3a6e; font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pp-todo-thumb { flex: none; width: 26px; height: 34px; overflow: hidden; border-radius: 6px; background: #F4F7FC; }
+.pp-todo-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.pp-todo-name { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; font-size: 14.5px; font-weight: 500; color: #141a24; }
+.pp-todo-state { font-size: 12px; font-weight: 600; color: #1e3a6e; }
+.pp-todo-state.sent { color: #2f7a3f; }
+.pp-todo-add { flex: none; min-height: 44px; padding: 0 2px 0 12px; border: 0; background: none; font: inherit; font-size: 14px; font-weight: 500; color: #1e3a6e; cursor: pointer; }
+.pp-todo-add:disabled { opacity: 0.4; cursor: default; }
+.pp-todo-save { display: flex; justify-content: flex-end; align-items: center; gap: 4px; padding-top: 12px; border-top: 1px solid #eceff3; }
+.pp-todo-save .pp-app-save-btn { min-height: 44px; font-weight: 600; }
+.pp-todo-coach { margin-top: 12px; padding-top: 12px; border-top: 1px solid #eceff3; }
+
+/* ---- Home · "Your plan": the live phase on each track (PhaseCards) ----
+   One set of markup for all three tracks; data-track sets the colours. */
+/* No track colours (25 Sep): every card wears the app's navy and white, like the
+   Up Next card and the Training banner. The variables stay so the markup can too. */
+[data-track] { --ph-color: #1e3a6e; --ph-ink: #1e3a6e; --ph-fill: linear-gradient(90deg, #1e3a6e, #1e3a6e); --ph-bar: rgba(30, 58, 110, 0.12); --ph-halo: rgba(30, 58, 110, 0.1); --ph-shadow: rgba(20, 26, 36, 0.45); --ph-ring: rgba(30, 58, 110, 0.1); --ph-soft: #F4F7FC; --ph-deep: #0b1220; }
+
+.pc-plan { font-family: var(--font-archivo), "Archivo", -apple-system, BlinkMacSystemFont, sans-serif; color: #12132B; }
+
+/* Shared: the track icon circle, the bar, the objectives. */
+.pc-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 999px; background: var(--ph-color); color: #fff; }
+.pc-icon svg { width: 11px; height: 11px; }
+.pc-bar { position: relative; height: 10px; border-radius: 99px; background: var(--ph-bar); }
+.pc-bar-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 99px; background: var(--ph-fill); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 4px 10px -3px var(--ph-shadow); transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+.pc-bar-knob { position: absolute; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; box-sizing: border-box; border-radius: 999px; background: #fff; border: 3px solid var(--ph-color); box-shadow: 0 0 0 4px var(--ph-halo); transition: left 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+.pc-bar.sm { height: 8px; }
+.pc-bar.sm .pc-bar-knob { width: 14px; height: 14px; margin: -7px 0 0 -7px; box-shadow: none; }
+.pc-bar.open { height: 0; border-radius: 0; background: none; border-top: 2px dashed rgba(18, 19, 43, 0.14); margin: 4px 0; }
+.pc-left { font-size: 13px; font-weight: 800; color: var(--ph-ink); white-space: nowrap; }
+.pc-left.overdue { font-weight: 600; color: #8A8BA3; white-space: normal; text-align: right; }
+.pc-obj-label { font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #8A8BA3; }
+.pc-obj-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.pc-obj-list li { display: flex; align-items: flex-start; gap: 9px; }
+.pc-obj-n { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-top: 1px; border-radius: 999px; background: var(--ph-halo); color: var(--ph-ink); font-size: 10.5px; font-weight: 800; }
+.pc-obj-text { font-size: 14px; font-weight: 600; line-height: 1.35; color: #2E2F4A; }
+.pc-cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+/* A · carousel: bleeds to the screen edges out of Home's 16px padding. */
+.pc-scroller { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 20px 30px; scroll-padding: 0 20px; margin: 0 -16px; scrollbar-width: none; outline: none; }
+.pc-scroller::-webkit-scrollbar { display: none; }
+.pc-card { flex: 0 0 300px; height: 452px; position: relative; border-radius: 28px; overflow: hidden; scroll-snap-align: start; background: var(--ph-deep); box-shadow: 0 22px 34px -22px var(--ph-shadow); }
+.pc-card.link { cursor: pointer; }
+@media (max-width: 359px) { .pc-card { flex-basis: calc(100vw - 72px); } }
+.pc-scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0) 24%); pointer-events: none; }
+.pc-top { position: absolute; top: 14px; left: 14px; right: 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pc-track-chip { display: inline-flex; align-items: center; gap: 7px; height: 30px; box-sizing: border-box; padding: 0 11px 0 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.72); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border: 1px solid rgba(255, 255, 255, 0.85); font-size: 11.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ph-ink); }
+.pc-week-chip { display: inline-flex; align-items: center; height: 30px; box-sizing: border-box; padding: 0 11px; border-radius: 999px; background: rgba(10, 14, 36, 0.4); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); font-size: 12px; font-weight: 700; color: #fff; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pc-panel { position: absolute; left: 8px; right: 8px; bottom: 8px; display: flex; flex-direction: column; gap: 14px; padding: 16px 16px 14px; border-radius: 22px; background: rgba(255, 255, 255, 0.76); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.9); box-shadow: inset 0 1px 0 #fff; }
+.pc-name { margin: 0; font-family: var(--font-bricolage), var(--font-archivo), sans-serif; font-size: 28px; font-weight: 800; line-height: 1.02; letter-spacing: -0.02em; color: #12132B; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.pc-dates { margin-top: 5px; font-size: 13px; font-weight: 600; color: #5A5B75; }
+.pc-progress { display: flex; flex-direction: column; gap: 7px; }
+.pc-progress-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.pc-through { font-size: 12.5px; font-weight: 700; color: #5A5B75; white-space: nowrap; }
+.pc-ends { display: flex; justify-content: space-between; font-size: 11.5px; font-weight: 600; color: #8A8BA3; font-variant-numeric: tabular-nums; }
+.pc-obj { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid rgba(18, 19, 43, 0.08); }
+.pc-obj-more { font-size: 13px; font-weight: 700; color: var(--ph-ink); }
+.pc-dots { display: flex; justify-content: center; gap: 6px; margin-top: -18px; }
+.pc-dot { width: 6px; height: 6px; border-radius: 99px; background: #DAD9E6; transition: width 0.25s ease, background-color 0.25s ease; }
+.pc-dot.on { width: 18px; background: var(--ph-color); }
+
+/* B · stack: in line with the other Home cards. */
+.pc-stack { display: flex; flex-direction: column; gap: 14px; }
+.pc-scard { border-radius: 24px; background: #fff; overflow: hidden; box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04), 0 16px 28px -20px var(--ph-shadow), inset 0 0 0 1px var(--ph-ring); }
+.pc-shead { display: flex; align-items: stretch; gap: 12px; width: 100%; padding: 10px 14px 12px 10px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.pc-thumb { position: relative; flex: none; width: 88px; min-height: 96px; border-radius: 16px; overflow: hidden; background: var(--ph-deep); }
+.pc-thumb .pc-icon { position: absolute; left: 6px; bottom: 6px; width: 24px; height: 24px; box-sizing: border-box; border: 2px solid #fff; }
+.pc-thumb .pc-icon svg { width: 12px; height: 12px; }
+.pc-scol { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
+.pc-srow { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.pc-strack { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ph-ink); }
+.pc-sweek { flex: none; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 12px; font-weight: 700; color: #8A8BA3; font-variant-numeric: tabular-nums; }
+.pc-chev { display: inline-flex; transition: transform 0.25s ease; }
+.pc-chev svg { width: 13px; height: 13px; }
+.pc-chev.open { transform: rotate(180deg); }
+.pc-sname { font-family: var(--font-bricolage), var(--font-archivo), sans-serif; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.1; color: #12132B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pc-sdates { font-size: 12px; font-weight: 600; color: #8A8BA3; white-space: nowrap; }
+.pc-scard .pc-left { font-size: 12px; }
+.pc-sbody-wrap { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.25s ease; }
+.pc-sbody-wrap.open { grid-template-rows: 1fr; }
+.pc-sbody-clip { min-height: 0; overflow: hidden; }
+.pc-sbody { display: flex; flex-direction: column; gap: 8px; margin: 0 10px 10px; padding: 12px 14px; border-radius: 16px; background: var(--ph-soft); }
+.pc-sbody .pc-obj-n { background: #fff; }
+.pc-snote { margin: 0; padding-top: 8px; border-top: 1px solid rgba(18, 19, 43, 0.06); font-size: 13px; line-height: 1.45; font-style: italic; color: #5A5B75; }
+.pc-sopen { align-self: flex-end; padding: 4px 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 700; color: var(--ph-ink); cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pc-bar-fill, .pc-bar-knob, .pc-dot, .pc-chev, .pc-sbody-wrap { transition: none; }
+}
+
+/* The phase dialog's Objectives and Cover picture fields (admin). */
+.pl-obj-list { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.pl-obj-row { display: flex; align-items: center; gap: 6px; }
+.pl-obj-row .pl-dlg-input { flex: 1; min-width: 0; }
+.pl-obj-n { flex: none; width: 18px; font-size: 12px; font-weight: 700; color: #8b93a1; text-align: center; font-variant-numeric: tabular-nums; }
+.pl-obj-btn { flex: none; width: 26px; height: 26px; border: 0; border-radius: 6px; background: transparent; color: #5b6474; font: inherit; font-size: 13px; cursor: pointer; }
+.pl-obj-btn:hover:not(:disabled) { background: #eef1f5; }
+.pl-obj-btn:disabled { opacity: 0.3; cursor: default; }
+.pl-obj-add { align-self: flex-start; margin-top: 4px; }
+.pl-cover { display: flex; align-items: center; gap: 12px; }
+.pl-cover.busy { opacity: 0.6; pointer-events: none; }
+.pl-cover-preview { position: relative; flex: none; width: 54px; height: 72px; border-radius: 10px; overflow: hidden; background: var(--ph-deep); }
+.pl-cover-preview img, .pl-cover-pick img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pl-cover-picks { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pl-cover-pick { width: 36px; height: 48px; padding: 0; border: 2px solid transparent; border-radius: 8px; overflow: hidden; background: #eef1f5; cursor: pointer; }
+.pl-cover-pick.on { border-color: #1e3a6e; }
+
+/* Home "Your plan" carousel, clean (25 Sep): the Up Next card's photo and
+   navy, and the Training banner's frosted white pills (.tr-wk): white text
+   on white glass, no track colours. */
+.pc-card { background: linear-gradient(180deg, #0b0f16 0%, #1e3a6e 100%); box-shadow: 0 22px 34px -22px rgba(20, 26, 36, 0.55); }
+.pc-scrim { background: linear-gradient(180deg, rgba(8, 12, 20, 0.45) 0%, rgba(8, 12, 20, 0.1) 30%, rgba(8, 12, 20, 0.25) 55%, rgba(12, 24, 52, 0.85) 100%); }
+.pc-track-chip, .pc-week-chip { background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.35); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); color: #fff; }
+.pc-track-chip { padding: 0 12px 0 10px; font-size: 11px; letter-spacing: 0.12em; }
+.pc-track-chip .pc-icon { width: auto; height: auto; background: none; }
+.pc-track-chip .pc-icon svg { width: 14px; height: 14px; }
+.pc-week-chip { padding: 0 12px; font-size: 12.5px; }
+.pc-panel { gap: 12px; padding: 16px 16px 14px; background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.35); box-shadow: none; -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); color: #fff; }
+.pc-name { font-family: var(--font-archivo), "Archivo", sans-serif; font-size: 28px; font-weight: 700; line-height: 1.1; letter-spacing: -0.015em; color: #fff; }
+.pc-left { font-size: 13.5px; font-weight: 700; color: #fff; }
+.pc-card .pc-bar { height: 4px; background: rgba(255, 255, 255, 0.22); }
+.pc-card .pc-bar-fill { top: -1px; bottom: -1px; background: #fff; box-shadow: none; }
+.pc-card .pc-bar-knob { width: 12px; height: 12px; margin: -6px 0 0 -6px; border: 0; background: #fff; box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.22); }
+.pc-ends { font-size: 12px; color: rgba(255, 255, 255, 0.72); }
+.pc-obj { padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.2); }
+.pc-card .pc-obj-label { color: rgba(255, 255, 255, 0.72); }
+.pc-card .pc-obj-n { background: rgba(255, 255, 255, 0.2); color: #fff; }
+.pc-card .pc-obj-text { font-weight: 500; color: #fff; }
+.pc-card .pc-obj-more { color: #fff; }
+.pc-dot.on { background: #1e3a6e; }
+.pc-card .pc-left.overdue { color: rgba(255, 255, 255, 0.72); text-align: left; }
+/* The nutrition stock photo: its food sits on the right, so show that side. */
+.pc-cover[src*="nutrition-head"] { object-position: 80% center; }
+/* The card you are on sits in the middle, a bit of the next and previous
+   either side. The side padding centres the first and last too: the
+   scroller is the plan section plus the 16px bleed each side. */
+.pc-plan { container-type: inline-size; }
+.pc-scroller { padding-left: calc((100cqw + 32px - 300px) / 2); padding-right: calc((100cqw + 32px - 300px) / 2); scroll-padding: 0; }
+.pc-card { scroll-snap-align: center; }
+@media (max-width: 359px) { .pc-scroller { padding-left: 36px; padding-right: 36px; } }
+/* The bar is live: it runs up to today on arrival, a sheen keeps travelling
+   forward along it (the Training banner's), and the knob sends out a ring. */
+@keyframes pc-fill-in { from { width: 0; } }
+@keyframes pc-knob-in { from { left: 0; } }
+@keyframes pc-pulse { from { box-shadow: 0 0 0 0 rgba(30, 58, 110, 0.35); } to { box-shadow: 0 0 0 9px rgba(30, 58, 110, 0); } }
+@keyframes pc-pulse-light { from { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.55); } to { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); } }
+.pc-bar-fill { background: linear-gradient(90deg, #1e3a6e 0%, #1e3a6e 35%, #5b80b8 50%, #1e3a6e 65%, #1e3a6e 100%); background-size: 200% 100%; animation: pc-fill-in 1.4s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both, nd-sheen 2.2s linear 1.6s infinite; }
+.pc-card .pc-bar-fill { background: linear-gradient(90deg, #fff 0%, #fff 35%, #c9d6ea 50%, #fff 65%, #fff 100%); background-size: 200% 100%; }
+.pc-bar-knob { animation: pc-knob-in 1.4s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both, pc-pulse 1.8s ease-out 1.6s infinite; }
+.pc-card .pc-bar-knob { animation-name: pc-knob-in, pc-pulse-light; }
+@media (prefers-reduced-motion: reduce) {
+  .pc-bar-fill, .pc-bar-knob { animation: none; }
+}
+/* The training card's Start button: the Up Next card's white button, sized for the panel. */
+.pc-start { display: flex; align-items: center; gap: 8px; width: 100%; height: 46px; padding: 0 16px; border: 0; border-radius: 14px; background: #fff; color: #141a24; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; transition: transform 0.12s ease; }
+.pc-start:active { transform: scale(0.98); }
+.pc-start svg { flex: none; width: 13px; height: 13px; fill: currentColor; }
+
+/* Home "Your plan" cards, tighter (25 Sep): smaller, lighter titles; the next
+   session as a row (Up next and its name on the left, a small white Start on
+   the right); objectives folded behind a chevron so every card opens the
+   same size. */
+.pc-name { font-size: 22px; font-weight: 600; line-height: 1.15; letter-spacing: -0.01em; }
+.pc-next { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.2); }
+.pc-next-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pc-next-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255, 255, 255, 0.72); }
+.pc-next-name { font-size: 15px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pc-start { flex: none; display: inline-flex; align-items: center; gap: 6px; width: auto; height: 34px; padding: 0 14px; border-radius: 999px; font-size: 13.5px; font-weight: 700; }
+.pc-start svg { width: 10px; height: 10px; }
+.pc-obj { gap: 10px; padding-top: 10px; }
+.pc-obj-toggle { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 2px 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.pc-obj-chev { flex: none; display: inline-flex; color: rgba(255, 255, 255, 0.8); transition: transform 0.2s ease; }
+.pc-obj-chev svg { width: 14px; height: 14px; }
+.pc-obj-chev.open { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .pc-obj-chev { transition: none; } }
+/* One line always, so every card opens the same size: FitTitle steps a long
+   name down to 16px, then it ends in an ellipsis. */
+.pc-name-h { margin: 0; font: inherit; }
+.pc-name { display: block; height: 28px; line-height: 28px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; -webkit-line-clamp: unset; }
+/* The active pager dot in black. */
+.pc-dot.on { background: #141a24; }
+/* Smaller (25 Sep): the card 380px tall instead of 452 (less photo above the
+   panel), and the chips and the panel scaled down as one, so every size in
+   them keeps its proportion. zoom rather than transform, so the layout
+   follows (Safari has always had it). */
+.pc-card { height: 380px; }
+.pc-top, .pc-panel { zoom: 0.88; }
+/* Objectives open smoothly: the list's height eases from 0, so the panel
+   (anchored at the card's foot) slides up, and the rows fade and rise in. */
+.pc-card .pc-obj { gap: 0; }
+.pc-obj-body { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease; }
+.pc-obj-body.open { grid-template-rows: 1fr; opacity: 1; }
+.pc-obj-clip { min-height: 0; overflow: hidden; }
+.pc-obj-body .pc-obj-list { padding-top: 10px; transform: translateY(6px); transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1); }
+.pc-obj-body.open .pc-obj-list { transform: none; }
+@media (prefers-reduced-motion: reduce) { .pc-obj-body, .pc-obj-body .pc-obj-list { transition: none; } }
+
+/* ---- Check-in as one list (25 Sep) ----
+   A photo banner the Training and Nutrition banners' size (the same
+   .tr-banner rules and top-bar height, the lifestyle picture), its own
+   back / title / count row floating where the app's top bar sits, then one
+   card a group (Today; This week while the weekly window is open) pulled up
+   over the banner's foot like Training's. */
+.ci-screen.ci-one { --topbar-h: 105px; padding: 0; gap: 0; }
+@media (max-width: 480px), (max-height: 760px) { .ci-screen.ci-one { --topbar-h: 67px; } }
+.ci-one .ci-scroll { margin: 0; padding: 0 0 140px; }
+.tr-banner.ci-banner { background: #0b0f16 url("/img/lifestyle-head.jpg") center 62% / cover no-repeat; }
+.tr-banner.ci-banner > .ci-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 2; height: var(--topbar-h); box-sizing: border-box; display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 12px; padding: 0 16px 10px; }
+.ci-one .ci-back { color: #fff; }
+.ci-one .ci-title { margin: 0; font-size: 18px; font-weight: 700; line-height: 40px; color: #fff; }
+.ci-one .ci-count { justify-self: end; background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.35); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); color: #fff; }
+.ci-one .ci-count-total { color: rgba(255, 255, 255, 0.72); }
+.ci-one .ci-count-dot { background: #fff; }
+.ci-banner .tr-weeks .tr-wk { cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; }
+.ci-banner .tr-weeks .tr-wk.locked { cursor: default; }
+.ci-body { position: relative; z-index: 2; margin-top: -36px; padding: 0 16px; }
+.ci-group { scroll-margin-top: 16px; }
+.ci-group-label { margin: 0; padding: 14px 16px 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
+.ci-one .ci-empty { margin: 52px 4px 0; }
+.ci-one .ci-count { margin-bottom: 6px; }
+/* A saved check-in: a done row like a finished session (.tr-row.done): the
+   light green wash and edge, a green tick tile, Edit in green where the
+   session says Done. */
+/* Dragged with a mouse (the phone preview on a computer): no text selection on the way. */
+.pc-scroller { -webkit-user-select: none; user-select: none; }
+/* No "Your plan" heading: the cards sit close under the greeting. */
+.hm-banner { padding-bottom: 12px; }
+
+/* ---- Check-in: Today / Progress and the charts (25 Sep) ---- */
+/* Progress: the metric switcher on the banner's foot and its chart on the
+   page (no frame). */
+.cg { display: flex; flex-direction: column; gap: 12px; }
+.cg-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.cg-range { flex: none; display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: #eef1f6; }
+.cg-range button { height: 28px; padding: 0 10px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 12px; font-weight: 700; color: #5b6474; cursor: pointer; }
+.cg-range button.on { background: #1e3a6e; color: #fff; }
+.cg-chart { position: relative; margin: 6px -4px 0; touch-action: pan-y; -webkit-user-select: none; user-select: none; }
+.cg-chart svg { display: block; overflow: visible; }
+.cg-grid { stroke: #e9edf2; stroke-width: 1; }
+.cg-ylabel, .cg-xlabel { font-size: 11px; font-weight: 500; fill: #8b93a1; font-variant-numeric: tabular-nums; }
+.cg-line { fill: none; stroke: #1e3a6e; stroke-width: 2.25; stroke-linejoin: round; stroke-linecap: round; }
+.cg-dot { fill: #1e3a6e; stroke: #fff; stroke-width: 1.5; }
+.cg-dot.on { fill: #fff; stroke: #1e3a6e; stroke-width: 3; }
+.cg-guide { stroke: #1e3a6e; stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.45; }
+.cg-tip { position: absolute; width: 76px; box-sizing: border-box; padding: 6px 6px 5px; border-radius: 10px; background: #1e3a6e; color: #fff; text-align: center; pointer-events: none; box-shadow: 0 8px 18px -10px rgba(8, 31, 92, 0.6); transition: left 0.15s ease, top 0.15s ease; }
+.cg-tip b { display: block; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cg-tip small { display: block; font-size: 10.5px; opacity: 0.8; }
+.cg-empty { position: absolute; inset: 56px 0 28px 38px; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #8b93a1; }
+@media (prefers-reduced-motion: reduce) { .cg-tip { transition: none; } }
+/* The foot of the check-in scroll: room for the Save bar only while it shows. */
+.ci-one .ci-scroll { padding-bottom: 32px; }
+.ci-one .ci-scroll.docked { padding-bottom: 140px; }
+
+/* Progress, one metric at a time (25 Sep): its name centred in white on the
+   banner's foot, a chevron either end; the chart and list slide in the way
+   the chevron went. The chart has no frame, it sits on the page; no dates
+   along the bottom (holding a reading says its date), the values up the side. */
+.cg-switch { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 36px; margin: 0 -6px; overflow: hidden; }
+.cg-switch-btn { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 0; border-radius: 999px; background: none; color: #fff; cursor: pointer; }
+.cg-switch-btn svg { width: 22px; height: 22px; }
+.cg-switch-btn:disabled { opacity: 0.35; cursor: default; }
+.cg-switch-name { flex: 1; min-width: 0; text-align: center; font-size: 17px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@keyframes cg-from-right { from { transform: translateX(28px); opacity: 0; } }
+@keyframes cg-from-left { from { transform: translateX(-28px); opacity: 0; } }
+.cg-switch-name.next, .cg-slide.next { animation: cg-from-right 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+.cg-switch-name.prev, .cg-slide.prev { animation: cg-from-left 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+.cg-slide { display: flex; flex-direction: column; gap: 12px; }
+.cg-plot { padding: 16px 0 0; background: transparent; }
+.cg-head { align-items: center; }
+.cg-chart.scrubbing { cursor: grabbing; }
+.cg-tip { width: 92px; }
+.cg-empty { inset: 52px 0 12px 38px; }
+@media (prefers-reduced-motion: reduce) { .cg-switch-name.next, .cg-switch-name.prev, .cg-slide.next, .cg-slide.prev { animation: none; } }
+/* The metric name centred in the photo's strip under the pills: that strip is
+   58px (the banner's foot) and the row 36px, so it rises 11px off the edge. */
+.cg-switch { margin-top: -11px; margin-bottom: 11px; }
+/* Trial (25 Sep): the metric groups with no card, straight on the page, rows
+   on the page gutter with hairlines between. Off the photo, since a clear
+   card can't sit over it: the list starts 16px under the banner (the body is
+   pulled up 36px for Progress's switcher). */
+.ci-one .ci-group-label { padding: 0 0 2px; }
+/* Wider cards (25 Sep): the screen's width less a peek either side (the
+   12px gap and 16px of the next card), up to 420px; the side padding centres
+   the first and last. 100cqw is the plan section; the scroller bleeds 16px
+   past it each side. */
+.pc-card { flex-basis: min(420px, calc(100cqw - 24px)); }
+.pc-scroller { padding-left: calc((100cqw + 32px - min(420px, calc(100cqw - 24px))) / 2); padding-right: calc((100cqw + 32px - min(420px, calc(100cqw - 24px))) / 2); }
+
+/* ---- Home · the progress-pictures card, top of Today's tasks (25 Sep) ----
+   A small sibling of the phase cards: a stock photo (never the client's own),
+   a dark scrim, glass chips and a frosted panel. The whole card is the tap. */
+.hm-pp { position: relative; display: block; width: 100%; height: 156px; padding: 0; border: 0; border-radius: 24px; overflow: hidden; background: #141821; box-shadow: 0 16px 28px -18px rgba(10, 14, 30, 0.7); font: inherit; color: #fff; text-align: left; cursor: pointer; transition: transform 0.12s ease; }
+.hm-pp:active { transform: scale(0.99); }
+.hm-pp:focus-visible { outline: 2px solid #2F6BFF; outline-offset: 3px; }
+.hm-pp-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 30%; }
+.hm-pp-scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0) 35%, rgba(0, 0, 0, 0.25) 100%); pointer-events: none; }
+.hm-pp-top { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.hm-pp-chip, .hm-pp-status { display: flex; align-items: center; gap: 6px; height: 26px; box-sizing: border-box; border-radius: 999px; background: rgba(20, 24, 33, 0.45); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.28); color: #fff; white-space: nowrap; }
+.hm-pp-chip { padding: 0 10px 0 8px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.hm-pp-chip svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linejoin: round; }
+.hm-pp-status { padding: 0 10px; font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums; animation: hm-pp-in 0.2s ease; }
+.hm-pp-status.done { background: rgba(18, 183, 106, 0.55); }
+.hm-pp-dot { width: 6px; height: 6px; border-radius: 999px; background: #FF6B5A; animation: hm-pp-pulse 1.6s ease-in-out infinite; }
+@keyframes hm-pp-pulse { 50% { opacity: 0.3; } }
+@keyframes hm-pp-in { from { opacity: 0; } }
+.hm-pp-panel { position: absolute; left: 8px; right: 8px; bottom: 8px; display: flex; align-items: center; gap: 14px; padding: 12px 12px 12px 14px; border-radius: 18px; background: rgba(255, 255, 255, 0.14); -webkit-backdrop-filter: blur(20px) saturate(140%); backdrop-filter: blur(20px) saturate(140%); border: 1px solid rgba(255, 255, 255, 0.3); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+.hm-pp-title { flex: 1; min-width: 0; font-size: 16px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-pp-btn { flex: none; display: inline-flex; align-items: center; height: 36px; padding: 0 16px; border-radius: 999px; background: #fff; color: #141a24; font-size: 14px; font-weight: 800; animation: hm-pp-in 0.2s ease; }
+@media (prefers-reduced-motion: reduce) { .hm-pp-dot, .hm-pp-status, .hm-pp-btn { animation: none; } .hm-pp { transition: none; } }
+/* The progress-pics photo is light (a beige wall, leaves): white text on the
+   light glass wouldn't read, so the panel is the chips' dark glass. */
+.hm-pp-panel { background: rgba(20, 24, 33, 0.42); border-color: rgba(255, 255, 255, 0.28); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12); }
+
+/* Progress pictures under the check-in's photo banner (25 Sep): the same
+   .tr-banner.ci-banner size and bar, the progress-pics photo, full bleed out
+   of the body's 16px padding; the open sheet pulled up over its foot. */
+.pp-one { --topbar-h: 105px; }
+@media (max-width: 480px), (max-height: 760px) { .pp-one { --topbar-h: 67px; } }
+.pp-one .pp-banner { flex-shrink: 0; margin: 0 -16px; }
+.tr-banner.ci-banner.pp-banner { background: #0b0f16 url("/home/progress-pics.jpg") center 35% / cover no-repeat; }
+.pp-one .pp-banner + * { position: relative; z-index: 2; margin-top: -54px; }
+/* Check-in, tighter (25 Sep): the date smaller and straight above the pills
+   (no gap), the chosen pill's text and the range toggle in black. The
+   range sits alone on its row: the metric's name is already above. */
+.ci-banner .tr-name { height: 30px; font-size: 24px; line-height: 30px; }
+.ci-banner .ci-views { margin-top: 14px; }
+.ci-banner .tr-wk.on { color: #141a24; }
+.cg-head { justify-content: flex-end; }
+.cg-range button.on { background: #141a24; }
+/* The held reading's label in black, like the range toggle. */
+.cg-tip { background: #141a24; box-shadow: 0 8px 18px -10px rgba(10, 14, 30, 0.6); }
+/* Home on one edge (25 Sep): the phase card sits 28px in (12px gap + 16px
+   peek of the next), so the greeting, the section labels and every card
+   below line up on that same 28px. Scoped to Home: Settings shares the banner. */
+.hm > .hm-banner:not(.st-banner) { padding-left: 28px; padding-right: 28px; }
+.hm > .hm-body > :not(.pc-plan) { margin-left: 12px; margin-right: 12px; }
+.hm > .hm-body .hm-tasks-head { padding-left: 0; padding-right: 0; }
+
+/* The client's Compare on progress pictures (25 Sep): a white card like the
+   sheet's (it rides up over the banner's foot the same way): the two sheets
+   picked, the angle from chips, the pair side by side, how far apart. */
+.pc-cmp, .pc-cmp-empty { border-radius: 18px; background: #fff; box-shadow: 0 16px 36px -24px rgba(8, 31, 92, 0.45); }
+.pc-cmp { display: flex; flex-direction: column; gap: 12px; padding: 14px; }
+.pc-cmp-empty { margin: 0; padding: 18px 16px; font-size: 14px; line-height: 1.45; color: #5b6474; }
+.pc-cmp-picks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pc-cmp-pick { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.pc-cmp-pick span { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
+.pc-cmp-pick select { width: 100%; height: 40px; padding: 0 10px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; font-size: 14px; font-weight: 600; color: #141a24; }
+.pc-cmp-angles { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.pc-cmp-angles::-webkit-scrollbar { display: none; }
+.pc-cmp-angles button { flex: none; height: 32px; padding: 0 12px; border: 1px solid #dfe3e8; border-radius: 999px; background: #fff; font: inherit; font-size: 13px; font-weight: 700; color: #5b6474; cursor: pointer; }
+.pc-cmp-angles button.on { border-color: #141a24; background: #141a24; color: #fff; }
+.pc-cmp-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pc-cmp-side { display: flex; flex-direction: column; gap: 6px; min-width: 0; margin: 0; }
+.pc-cmp-side img, .pc-cmp-hole { display: block; width: 100%; aspect-ratio: 3 / 4; border-radius: 12px; }
+.pc-cmp-side img { object-fit: cover; background: #eef1f6; }
+.pc-cmp-hole { display: flex; align-items: center; justify-content: center; box-sizing: border-box; border: 1px dashed #dfe3e8; background: #f6f8fb; font-size: 13px; color: #8b93a1; }
+.pc-cmp-side figcaption { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; padding: 0 2px; }
+.pc-cmp-side figcaption b { font-size: 13px; font-weight: 700; color: #141a24; }
+.pc-cmp-side figcaption small { font-size: 12px; color: #5b6474; }
+.pc-cmp-apart { margin: 0; text-align: center; font-size: 12.5px; font-weight: 600; color: #5b6474; }
+
+/* ---- Check-in as a ledger (25 Sep): no card, a line a metric on the page,
+   the coach's name for it small on the left with the last reading under it,
+   a big number on the right, a hairline under each. Filled: the name turns
+   green (no tick: the app has no check marks). Scales: round buttons. ---- */
+.ci-ledger { display: flex; flex-direction: column; margin-top: 36px; padding: 8px 6px 0; }
+.ci-ledger .ci-group-label { padding: 22px 0 0; }
+.ci-line { display: flex; flex-direction: column; gap: 10px; padding: 18px 0 16px; border-bottom: 1px solid #E3E8F0; cursor: text; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+.ci-line.scale { cursor: default; }
+.ci-line:focus-within { border-bottom-color: #2F6BFF; box-shadow: 0 0.5px 0 #2F6BFF; }
+.ci-line-head { display: flex; align-items: flex-end; gap: 12px; }
+.ci-line-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
+.ci-label { display: block; max-width: 100%; font-size: 11.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #5b6474; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.2s ease; }
+.ci-line.filled .ci-label { color: #067647; }
+.ci-hint { display: block; max-width: 100%; margin: -8px 0; padding: 8px 0; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 500; color: #7A8394; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+button.ci-hint { cursor: pointer; }
+.ci-value { display: flex; align-items: baseline; gap: 6px; }
+.ci-num { width: 120px; padding: 0; border: 0; background: none; outline: none; font: inherit; font-size: 34px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; color: #141a24; text-align: right; font-variant-numeric: tabular-nums; caret-color: #2F6BFF; }
+.ci-num::placeholder { color: #B4BCCB; }
+.ci-unit { width: 22px; font-size: 14px; font-weight: 700; color: #8b93a1; }
+.ci-scale-row { display: flex; gap: 8px; }
+.ci-scale-btn { flex: 1; height: 44px; border: 1.5px solid #DCE3EE; border-radius: 999px; background: #fff; font: inherit; font-size: 15px; font-weight: 700; color: #141a24; cursor: pointer; transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease; }
+.ci-scale-btn.on { border-color: #141a24; background: #141a24; color: #fff; }
+.ci-note { display: flex; flex-direction: column; gap: 10px; padding-top: 20px; }
+.ci-note textarea { width: 100%; padding: 0 0 10px; border: 0; border-bottom: 1px solid #E3E8F0; background: none; outline: none; resize: none; font: inherit; font-size: 16px; line-height: 1.5; color: #141a24; transition: border-color 0.2s ease; }
+.ci-note textarea:focus { border-bottom-color: #2F6BFF; }
+.ci-note textarea::placeholder { color: #B4BCCB; }
+/* The header chip's dot: amber while lines are empty, green once all are in. */
+.ci-one .ci-count-dot { background: #FFB547; }
+.ci-one .ci-count-dot.done { background: #5EE0A5; }
+/* The dock: TODAY / READY / SENT and a line under it; Send (partial is fine),
+   Done once sent. It rides on the keyboard when one is open. */
+.ci-dock.ci-dock-ledger { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; align-items: center; gap: 12px; padding: 12px 16px 28px; border: 0; background: linear-gradient(180deg, rgba(244, 247, 252, 0), #F4F7FC 32%); box-shadow: none; }
+.ci-dock-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ci-dock-ledger .ci-dock-kicker { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #5b6474; }
+.ci-dock-sub { font-size: 13px; font-weight: 600; color: #141a24; }
+.ci-send { flex: none; height: 50px; padding: 0 24px; border: 0; border-radius: 16px; background: #141a24; font: inherit; font-size: 15.5px; font-weight: 800; color: #fff; cursor: pointer; box-shadow: 0 12px 22px -12px rgba(20, 26, 36, 0.6); transition: background-color 0.2s ease; }
+.ci-send:disabled { background: #9AA3B5; box-shadow: none; cursor: default; }
+.ci-send.done { border: 1px solid #DCE3EE; background: #fff; color: #141a24; box-shadow: none; }
+@media (prefers-reduced-motion: reduce) { .ci-line, .ci-label, .ci-scale-btn, .ci-note textarea, .ci-send { transition: none; } }
+/* The food diary on the Nutrition photo (25 Sep): the same .nd-photo banner,
+   and its own parts in white on it: the day, the week strip, the arrows. */
+.nd-photo .fdi-eyebrow { color: rgba(255, 255, 255, 0.72); }
+.nd-photo .fdi-date { color: #fff; }
+.nd-photo .fdi-date-sub { color: rgba(255, 255, 255, 0.78); }
+.nd-photo .fdi-week-arrow { color: #fff; }
+.nd-photo .fdi-week-arrow:disabled { color: rgba(255, 255, 255, 0.4); }
+.nd-photo .fdi-day-letter { color: rgba(255, 255, 255, 0.72); }
+.nd-photo .fdi-day-num { color: #fff; }
+.nd-photo .fdi-day.off .fdi-day-letter, .nd-photo .fdi-day.off .fdi-day-num { color: rgba(255, 255, 255, 0.4); }
+.nd-photo .fdi-day.on { background: #fff; }
+.nd-photo .fdi-day.on .fdi-day-letter { color: #5b6474; }
+.nd-photo .fdi-day.on .fdi-day-num { color: #141a24; }
+.nd-photo .fdi-day-dot.logged { background: rgba(255, 255, 255, 0.85); }
+.nd-photo .fdi-day-dot.on { background: #141a24; }
+
+/* ---- The coach's phase objectives on Training, Nutrition and the check-in
+   (PhaseObjectives): folded to one row, a chevron opens the numbered list.
+   A white card on the tabs; a ledger line on the check-in. ---- */
+.po-card { border: 1px solid #dfe3e8; border-radius: 18px; background: #fff; }
+.po-head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 14px 16px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.po-label { min-width: 0; font-size: 11.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #5b6474; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.po-count { flex: none; margin-right: auto; padding: 1px 7px; border-radius: 999px; background: #eef1f6; font-size: 11px; font-weight: 700; color: #5b6474; font-variant-numeric: tabular-nums; }
+.po-chev { flex: none; display: inline-flex; color: #5b6474; transition: transform 0.25s ease; }
+.po-chev svg { width: 16px; height: 16px; }
+.po-chev.open { transform: rotate(180deg); }
+.po-body { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease; }
+.po-body.open { grid-template-rows: 1fr; opacity: 1; }
+.po-clip { min-height: 0; overflow: hidden; }
+.po-list { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0 16px 16px; list-style: none; }
+.po-list li { display: flex; align-items: flex-start; gap: 10px; }
+.po-n { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; margin-top: 1px; border-radius: 999px; background: #eef1f6; font-size: 11px; font-weight: 800; color: #141a24; }
+.po-text { font-size: 14px; font-weight: 600; line-height: 1.4; color: #141a24; }
+.po-line { border-bottom: 1px solid #E3E8F0; }
+.po-line .po-head { padding: 16px 0; }
+.po-line .po-list { padding: 0 0 16px; }
+
+/* ---- A sent check-in, folded (25 Sep): Done closes the lines into the
+   green done row (like a finished session), the last seven days under it. */
+@keyframes ci-fold-out { to { opacity: 0; transform: translateY(-24px) scaleY(0.7); } }
+@keyframes ci-fold-in { from { opacity: 0; transform: translateY(10px) scale(0.97); } }
+.ci-ledger.folding { transform-origin: top center; animation: ci-fold-out 0.28s cubic-bezier(0.4, 0, 1, 1) forwards; pointer-events: none; }
+.ci-folded { display: flex; flex-direction: column; gap: 14px; }
+.ci-done-row-card { display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; border: 1px solid #D5EBDC; border-radius: 16px; background: #F3FAF5; box-shadow: 0 12px 30px -24px rgba(47, 122, 63, 0.45); animation: ci-fold-in 0.34s cubic-bezier(0.22, 1, 0.36, 1); }
+.ci-done-row-card .ci-saved-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ci-done-row-card .ci-saved-title { font-size: 15.5px; font-weight: 700; color: #141a24; }
+.ci-done-row-card .ci-saved-sub { font-size: 12.5px; color: #5b6474; }
+.ci-done-edit { flex: none; height: 34px; padding: 0 14px; border: 1px solid #D5EBDC; border-radius: 999px; background: #fff; font: inherit; font-size: 13.5px; font-weight: 700; color: #2f7a3f; cursor: pointer; }
+.ci-feed { display: flex; flex-direction: column; gap: 8px; animation: ci-fold-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.06s both; }
+.ci-feed-title { margin: 0; padding: 4px 4px 2px; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
+.ci-day { border: 1px solid #dfe3e8; border-radius: 16px; background: #fff; overflow: hidden; }
+.ci-day.done { border-color: #D5EBDC; background: #F3FAF5; }
+.ci-day-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.ci-day-head:disabled { cursor: default; }
+.ci-day-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ci-day-date { font-size: 15px; font-weight: 700; color: #141a24; }
+.ci-day:not(.done) .ci-day-date { color: #8b93a1; font-weight: 600; }
+.ci-day-sub { font-size: 12.5px; color: #8b93a1; }
+.ci-day.done .ci-day-sub { color: #2f7a3f; font-weight: 600; }
+.ci-day-chev { flex: none; display: inline-flex; color: #5b6474; transition: transform 0.25s ease; }
+.ci-day-chev svg { width: 16px; height: 16px; }
+.ci-day-chev.open { transform: rotate(180deg); }
+.ci-day-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+.ci-day-body.open { grid-template-rows: 1fr; }
+.ci-day-clip { min-height: 0; overflow: hidden; }
+.ci-day-list { display: flex; flex-direction: column; margin: 0 14px 12px; border-top: 1px solid #D5EBDC; }
+.ci-day-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 0 0; font-size: 14px; color: #313851; }
+.ci-day-row b { font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; }
+.ci-day-note { margin: 10px 0 0; font-size: 13px; line-height: 1.45; font-style: italic; color: #5b6474; }
+@media (prefers-reduced-motion: reduce) { .po-chev, .po-body, .ci-day-chev, .ci-day-body { transition: none; } .ci-ledger.folding, .ci-done-row-card, .ci-feed { animation: none; } }
+/* "Latest from" in the faintest frost (25 Sep): not quite white, the page's
+   grey just showing through, a white edge and a soft shadow. */
+.hm-lt { border-color: rgba(255, 255, 255, 0.9); background: rgba(255, 255, 255, 0.62); -webkit-backdrop-filter: blur(16px) saturate(140%); backdrop-filter: blur(16px) saturate(140%); box-shadow: 0 10px 26px -20px rgba(20, 30, 60, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.9); }
+.hm-lt-foot { border-top-color: rgba(20, 26, 36, 0.07); }
+.hm-lt-more + .hm-lt-cta { border-left-color: rgba(20, 26, 36, 0.07); }
+.hm-lt-body:active, .hm-lt-more:active, .hm-lt-cta:active { background: rgba(255, 255, 255, 0.5); }
+/* A compared photo is a button: tapped, it opens full screen. */
+.pc-cmp-zoom { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
+/* The food diary scrolls to its last meal and a little more, not half a screen past it. */
+.fdi-page { padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px)); }
+
+/* ---- Client chat, refined (25 Sep) ---- */
+/* A message about something in the app: a small round link bubble on its
+   top corner that goes there (the old full-width chip is gone). */
+.cm-msg { position: relative; }
+.cm-msg.linked { padding-right: 46px; }
+.cm-linkdot { position: absolute; top: 8px; right: 8px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 1px solid #dfe3e8; border-radius: 999px; background: #eef1f6; color: #1e3a6e; cursor: pointer; }
+.cm-linkdot::after { content: ""; position: absolute; inset: -8px; }
+.cm-msg.mine .cm-linkdot { border-color: rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.16); color: #fff; }
+.cm-linkdot.gone { opacity: 0.4; cursor: default; }
+.cm-msg.media .cm-linkdot { top: 12px; right: 12px; z-index: 1; }
+/* The time and the chevron share the foot of the bubble. */
+.cm-msg-foot { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 4px; }
+.cm-msg .cm-msg-foot .cm-msg-time { display: inline; margin: 0; }
+.cm-msg.media .cm-msg-foot { margin-left: 10px; margin-right: 6px; }
+.cm-menu { position: relative; display: inline-flex; }
+.cm-chev { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; margin: -4px -6px -4px 0; padding: 0; border: 0; border-radius: 999px; background: none; color: #8b93a1; cursor: pointer; }
+.cm-chev svg { width: 14px; height: 14px; transition: transform 0.2s ease; }
+.cm-chev.open svg { transform: rotate(180deg); }
+.cm-msg.mine .cm-chev { color: rgba(255, 255, 255, 0.7); }
+.cm-menu-list { position: absolute; right: -6px; bottom: calc(100% + 6px); z-index: 20; display: flex; flex-direction: column; min-width: 132px; padding: 4px; border: 1px solid #e3e8f0; border-radius: 12px; background: #fff; box-shadow: 0 14px 30px -14px rgba(20, 30, 60, 0.35); }
+.cm-menu-list button { height: 38px; padding: 0 12px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 14px; font-weight: 600; color: #141a24; text-align: left; cursor: pointer; }
+.cm-menu-list button:active, .cm-menu-list button:hover { background: #f4f6fa; }
+.cm-menu-list button.danger { color: #b3261e; }
+/* Editing in place: the text becomes a box with Cancel and Save. */
+.cm-edit { display: flex; flex-direction: column; gap: 8px; min-width: 220px; }
+.cm-edit textarea { width: 100%; padding: 8px 10px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; font-size: 15px; line-height: 1.45; color: #141a24; resize: vertical; outline: none; }
+.cm-edit textarea:focus { border-color: #2F6BFF; }
+.cm-edit-actions { display: flex; justify-content: flex-end; gap: 6px; }
+.cm-edit-cancel, .cm-edit-save { height: 32px; padding: 0 12px; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.cm-edit-cancel { border: 1px solid #dfe3e8; background: #fff; color: #5b6474; }
+.cm-edit-save { border: 0; background: #141a24; color: #fff; }
+.cm-edit-save:disabled { background: #9AA3B5; cursor: default; }
+.cm-msg.mine .cm-edit-cancel { border-color: rgba(255, 255, 255, 0.4); background: none; color: #fff; }
+.cm-msg.mine .cm-edit-save { background: #fff; color: #1e3a6e; }
+/* A coach previewing the app: a line over the box saying who the messages come from. */
+.cm-preview-note { margin: 0 4px 8px; font-size: 12px; line-height: 1.4; color: #8b93a1; }
+/* The compose bar: paperclip, the box, then the mic (empty) or Send (typed) on the right. */
+.cm-compose .chat-compose-form { align-items: center; }
+.cm-compose .chat-mic-btn { order: 3; }
+.cm-compose .chat-send-btn { height: 38px; }
+/* The last meeting's notes under their own heading, like "Latest from": the date pill alone on the card's top row, on the right. */
+.hm-mt-last .hm-mt-top { justify-content: flex-end; }
+/* A message on one row (25 Sep): the text, then the time and the chevron at
+   the end of the row; a long text wraps and they drop to the right under it.
+   The link bubble sits mostly outside the top-right corner, ringed in the
+   page colour so it reads as its own thing. */
+.cm-msg:not(.media) { display: flex; flex-wrap: wrap; align-items: flex-end; column-gap: 12px; row-gap: 2px; }
+.cm-msg:not(.media) .cm-msg-text { flex: 1 1 auto; min-width: 0; }
+.cm-msg:not(.media) .cm-msg-foot { margin: 0 0 1px auto; }
+.cm-msg .cm-edit { flex: 1 1 100%; }
+.cm-msg.linked { padding-right: 16px; }
+.cm-linkdot { top: -15px; right: -11px; z-index: 2; box-shadow: 0 0 0 3px #F4F7FC; }
+.cm-msg.media .cm-linkdot { top: -15px; right: -11px; }

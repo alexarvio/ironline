@@ -5,7 +5,7 @@ import type React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { addExerciseToLibraryAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, createProgramWithAction, deployProgramAction, removeGymAction, removeProgramWeekAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
+import { addExerciseToLibraryAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, createProgramWithAction, deployProgramAction, removeGymAction, removeProgramWeekAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, saveTrainingNoteAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger, ToggleGroup, ToggleGroupItem } from "../../../components/ui/basics";
@@ -13,6 +13,8 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { CalendarIcon, ChatIcon, ChevronDownIcon, ColumnsIcon, CopyIcon, DumbbellIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { VideoIcon } from "../../VideoRequestButton";
 import PhaseDatesDialog from "../PhaseDatesDialog";
+import PhaseGoalsCard from "../PhaseGoalsCard";
+import CoachNoteCard from "../CoachNoteCard";
 import { SortableItem, SortableList } from "../Sortable";
 import Picker from "../Picker";
 import DatePick from "../DatePick";
@@ -67,6 +69,10 @@ export type DraftProgram = {
   startWeek: number;
   /** The training phase on the plan that carries its dates, if one does. */
   phaseId: number | null;
+  /** The coach's goals for the phase, up to three. */
+  goals: string[];
+  /** The coach's note to the client on this phase, top of their Training tab. */
+  coachNote: string;
   startDate: string | null;
   endDate: string | null;
   weekIdx: number;
@@ -508,6 +514,10 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
           </DropdownMenu>
         </div>
       </header>
+
+      {/* ---- The coach's goals for this phase, shown on the client's Home. */}
+      <PhaseGoalsCard phaseId={program.phaseId} phaseName={program.name} firstName={firstName} goals={program.goals} />
+      {program.phaseId != null && <CoachNoteCard firstName={firstName} note={program.coachNote} what="training" save={(text) => saveTrainingNoteAction(program.phaseId!, text)} />}
 
       {/* ---- The weeks: plain chips, one pill a session. */}
       <div className="rd-weekrow">

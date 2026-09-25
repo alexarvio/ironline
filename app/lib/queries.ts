@@ -9,6 +9,7 @@ import type { LinkView, MessageLink } from "./messageLinks";
 import { coachIdOfClient } from "./tenancy";
 import { LOCK_MS, type LockScope } from "./loginLockout";
 import { endWeekFor, phaseCovers, phaseDays, phaseLastDay, phaseWeekIndex, phaseWeeks } from "./phases";
+import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "./phaseCovers";
 
 // "Today" (or any Date) as a local YYYY-MM-DD calendar-date string. This is
 // deliberately NOT `date.toISOString().slice(0, 10)` — toISOString always
@@ -2856,6 +2857,8 @@ export type MeasurementValue = {
   field_id: number;
   date: string;
   value: number | null;
+  /** When the client saved it (ISO); missing on older rows. */
+  logged_at?: string;
 };
 export type SkinfoldEntry = {
   id: number;
@@ -3128,6 +3131,8 @@ export type MetricEntry = {
   metric_definition_id: number;
   period: string;
   value: number | null;
+  /** When the client saved it (ISO); missing on older rows. */
+  logged_at?: string;
 };
 
 export type MetricCadence = "daily" | "weekly" | "monthly";
@@ -5066,6 +5071,24 @@ export function deleteChatMessage(clientId: number, messageId: number) {
   persist();
 }
 
+/** The client rewords one of their own messages (never the coach's). */
+export function editClientChatMessage(clientId: number, messageId: number, text: string) {
+  const clean = text.trim();
+  const msg = getData().chat_messages.find((m) => m.id === messageId && m.client_id === clientId && m.sender === "client");
+  if (!clean || !msg || msg.text === clean) return;
+  msg.text = clean;
+  msg.edited_at = new Date().toISOString();
+  persist();
+}
+
+/** The client takes back one of their own messages (never the coach's). */
+export function deleteClientChatMessage(clientId: number, messageId: number) {
+  const data = getData();
+  const before = data.chat_messages.length;
+  data.chat_messages = data.chat_messages.filter((m) => !(m.id === messageId && m.client_id === clientId && m.sender === "client"));
+  if (data.chat_messages.length !== before) persist();
+}
+
 /** Points a sent message at one thing in the client's app, or takes the link off (null). */
 export function setChatMessageLink(clientId: number, messageId: number, link: MessageLink | null) {
   const msg = coachMessage(clientId, messageId);
@@ -5824,6 +5847,11 @@ export type CheckInMetric = {
   // client has something to anchor against while typing.
   hint: string | null;
   scaleMax: number | null;
+  // The same last reading as data, for the check-in's "Yesterday 2.5 L · tap
+  // to copy": its value, and the day it was for (a weekly one's Monday).
+  last: { value: number; period: string } | null;
+  // When this period's reading was saved (ISO), if it was.
+  loggedAt: string | null;
 };
 
 export type CheckInSection = {
@@ -5854,6 +5882,80 @@ export type CheckInData = {
   photosDue: boolean;
   photosNextLabel: string;
 };
+
+// Every metric's readings, all of them, for the check-in's Progress charts,
+// and the seven days before today for the feed under a sent check-in.
+// Shaped for CheckInProgress.tsx, which mirrors these types (a client file
+// can't import this one).
+export type CheckInSeries = {
+  key: string;
+  name: string;
+  unit: string;
+  scaleMax: number | null;
+  cadence: "daily" | "weekly" | "measurement";
+  /** Oldest first: the day it is for (a weekly one's Monday), and when it was saved. */
+  points: { date: string; value: number; at: string | null }[];
+};
+export type CheckInFeedDay = {
+  date: string;
+  items: { name: string; value: string }[];
+  note: string | null;
+};
+export type CheckInHistory = { series: CheckInSeries[]; days: CheckInFeedDay[] };
+
+export function getCheckInHistory(clientId: number): CheckInHistory {
+  const today = localDateStr();
+  const series: CheckInSeries[] = [];
+  for (const cadence of ["daily", "weekly"] as const) {
+    const defs = listMetricDefinitions(clientId, cadence).filter(deployedToClient);
+    const entries = getMetricEntries(defs.map((d) => d.id));
+    for (const def of defs) {
+      const scaleMax = ratingScaleMax(def.unit);
+      const mine = entries.filter((e) => e.metric_definition_id === def.id && e.value != null && e.period <= today);
+      series.push({
+        key: `${cadence}${def.id}`,
+        name: def.name,
+        unit: scaleMax ? "" : def.unit,
+        scaleMax,
+        cadence,
+        points: mine.map((e) => ({ date: e.period, value: e.value!, at: e.logged_at ?? null })).sort((a, b) => (a.date < b.date ? -1 : 1)),
+      });
+    }
+  }
+  const fields = listMeasurementFields(clientId).filter(deployedToClient);
+  const values = getMeasurementValues(fields.map((f) => f.id));
+  for (const f of fields) {
+    series.push({
+      key: `measurement${f.id}`,
+      name: f.name,
+      unit: f.unit,
+      scaleMax: null,
+      cadence: "measurement",
+      points: values
+        .filter((v) => v.field_id === f.id && v.value != null && v.date <= today)
+        .map((v) => ({ date: v.date, value: v.value!, at: v.logged_at ?? null }))
+        .sort((a, b) => (a.date < b.date ? -1 : 1)),
+    });
+  }
+
+  // The seven days before today, newest first: what was logged on each (a
+  // weekly reading on the day it was saved).
+  const shown = (s: CheckInSeries, v: number) => (s.scaleMax ? `${v}/${s.scaleMax}` : `${v}${s.unit ? ` ${s.unit}` : ""}`);
+  const days: CheckInFeedDay[] = [];
+  for (let i = 1; i <= 7; i++) {
+    const d = new Date(`${today}T00:00:00`);
+    d.setDate(d.getDate() - i);
+    const date = localDateStr(d);
+    const items: { name: string; value: string }[] = [];
+    for (const s of series) {
+      const p = s.cadence === "weekly" ? s.points.find((x) => x.at && localDateStr(new Date(x.at)) === date) : s.points.find((x) => x.date === date);
+      if (p) items.push({ name: s.name, value: shown(s, p.value) });
+    }
+    const note = [getCheckInNote(clientId, "daily", date), getCheckInNote(clientId, "measurements", date)].filter((n): n is string => !!n?.trim()).join("\n") || null;
+    days.push({ date, items, note });
+  }
+  return { series, days };
+}
 
 export function getCheckInSections(clientId: number): CheckInData {
   const today = localDateStr();
@@ -5894,6 +5996,8 @@ export function getCheckInSections(clientId: number): CheckInData {
             ? `${previous.value}${def.unit && !scaleMax ? ` ${def.unit}` : scaleMax ? `/${scaleMax}` : ""} on ${fmtDate(previous.period)}`
             : null,
           scaleMax,
+          last: previous?.value != null ? { value: previous.value, period: previous.period } : null,
+          loggedAt: current?.logged_at ?? null,
         };
       }),
     };
@@ -5937,6 +6041,8 @@ export function getCheckInSections(clientId: number): CheckInData {
           value: current != null ? String(current) : "",
           hint: previous != null ? `${previous}${f.unit ? ` ${f.unit}` : ""} on ${fmtDate(previousDate!)}` : null,
           scaleMax: null,
+          last: previous != null ? { value: previous, period: previousDate! } : null,
+          loggedAt: measurementValues.find((v) => v.field_id === f.id && v.date === today)?.logged_at ?? null,
         };
       }),
     });
@@ -6648,6 +6754,74 @@ export function addClientPhase(clientId: number, track: PhaseTrack, name: string
   persist();
   if (track === "training" && programId != null) linkPhaseToProgram(phase.id, programId);
   return phase;
+}
+
+/** The coach's objectives for a phase, trimmed, blanks dropped, capped. */
+export function setPhaseObjectives(phaseId: number, objectives: string[]) {
+  const phase = getData().client_phases.find((p) => p.id === phaseId);
+  if (!phase) return;
+  phase.objectives = objectives
+    .map((o) => o.trim().slice(0, PHASE_OBJECTIVE_CHARS))
+    .filter(Boolean)
+    .slice(0, PHASE_OBJECTIVES_MAX);
+  persist();
+}
+
+/** The coach's note to the client on a phase (Training's); empty takes it off. */
+export function setPhaseClientNote(phaseId: number, text: string) {
+  const phase = getData().client_phases.find((p) => p.id === phaseId);
+  if (!phase) return null;
+  const clean = text.trim().slice(0, 1000);
+  if (clean) {
+    phase.client_note = clean;
+    phase.client_note_at = new Date().toISOString();
+  } else {
+    delete phase.client_note;
+    delete phase.client_note_at;
+  }
+  persist();
+  return phase.client_id;
+}
+
+/** An uploaded cover. Returns the old path, for the storage bucket. */
+export function savePhaseCover(phaseId: number, buffer: Buffer, mimeType: string): { saved: string; previous: string | null } | null {
+  const phase = getData().client_phases.find((p) => p.id === phaseId);
+  if (!phase) return null;
+  const ext = (mimeType.split("/")[1] || "jpg").replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "jpg";
+  const dir = path.join(DATA_DIR, "uploads", "phases", String(phase.client_id));
+  fs.mkdirSync(dir, { recursive: true });
+  const filename = `${phaseId}.${ext}`;
+  fs.writeFileSync(path.join(dir, filename), buffer);
+  const previous = phase.cover_path ?? null;
+  const prevFile = previous?.startsWith("/uploads/phases/") ? previous.split("?")[0].split("/").pop() : null;
+  if (prevFile && prevFile !== filename) {
+    try {
+      fs.unlinkSync(path.join(dir, prevFile));
+    } catch {
+      /* already gone */
+    }
+  }
+  const saved = `/uploads/phases/${phase.client_id}/${filename}?v=${Date.now()}`;
+  phase.cover_path = saved;
+  persist();
+  return { saved, previous: previous?.startsWith("/uploads/") ? previous : null };
+}
+
+/** A stock cover, or none (null: the track's default). Returns an uploaded
+    cover it replaced, for the storage bucket. */
+export function setPhaseCoverPath(phaseId: number, cover: string | null): string | null {
+  const phase = getData().client_phases.find((p) => p.id === phaseId);
+  if (!phase) return null;
+  const previous = phase.cover_path ?? null;
+  phase.cover_path = cover;
+  persist();
+  if (!previous?.startsWith("/uploads/phases/")) return null;
+  try {
+    fs.unlinkSync(path.join(DATA_DIR, previous.split("?")[0].slice(1)));
+  } catch {
+    /* already gone */
+  }
+  return previous;
 }
 
 // `adjustProgram`: for a phase that is a training programme, also make the

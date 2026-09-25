@@ -16,6 +16,8 @@ import { pageWindow } from "../../../lib/pager";
 import DatePick from "../DatePick";
 import { ConfirmDialog, MessageDialog, fmtDate, stateLabel } from "../training/TrainingDraft";
 import PhaseDatesDialog from "../PhaseDatesDialog";
+import PhaseGoalsCard from "../PhaseGoalsCard";
+import CoachNoteCard from "../CoachNoteCard";
 import { SortableItem, SortableList } from "../Sortable";
 
 // The calmer Nutrition tab, as a draft on real data, cut like the Training
@@ -45,6 +47,8 @@ export type DraftSupplement = {
 };
 export type DraftNutrition = {
   id: number;
+  /** The coach's goals for the phase, up to three. */
+  goals: string[];
   phases: { id: number; name: string; weeks: number; state: State }[];
   name: string;
   status: State;
@@ -112,7 +116,7 @@ type Targets = {
   water: string;
   note: string;
 };
-type Dlg = { kind: "photo"; date: string; meal: string } | { kind: "message"; label: string; link: MessageLink } | { kind: "targetNote" } | { kind: "dates" } | { kind: "newPhase" } | { kind: "deploy" } | { kind: "backToDraft" } | null;
+type Dlg = { kind: "photo"; date: string; meal: string } | { kind: "message"; label: string; link: MessageLink } | { kind: "dates" } | { kind: "newPhase" } | { kind: "deploy" } | { kind: "backToDraft" } | null;
 
 export default function NutritionDraft({ clientId, firstName, plan }: { clientId: number; firstName: string; plan: DraftNutrition }) {
   // ---- Targets: typed into in place, queued on the card's bar until Apply.
@@ -329,6 +333,23 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
         </div>
       </header>
 
+      {/* ---- The coach's goals for this phase, shown on the client's Home. */}
+      <PhaseGoalsCard phaseId={phaseId} phaseName={plan.name} firstName={firstName} goals={plan.goals} />
+      <CoachNoteCard
+        firstName={firstName}
+        note={saved.note}
+        what="nutrition"
+        save={async (text) => {
+          const f = new FormData();
+          f.set("clientId", String(clientId));
+          f.set("note", text);
+          if (phaseId) f.set("phaseId", String(phaseId));
+          await saveCoachNutritionNoteAction(f);
+          setSaved((x) => ({ ...x, note: text }));
+          setT((x) => ({ ...x, note: text }));
+        }}
+      />
+
       {/* ---- Daily targets: the kcal as a ring on the left, split by the
            macros typed in on the right. */}
       <section className="rd-session open rn-card">
@@ -362,9 +383,6 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
                   />
                   Same on training and rest days
                 </label>
-                <button type="button" className={`rd-btn ghost rn-notebtn${saved.note.trim() ? " has" : ""}`} onClick={() => setDlg({ kind: "targetNote" })} title={saved.note.trim() ? `Your note to ${firstName}` : `Add a note to ${firstName}`} aria-label={`Note to ${firstName} on the targets`}>
-                  <ChatIcon />
-                </button>
               </div>
               <div className="rd-cols" aria-hidden="true" style={tGrid}>
                 <span>Day</span>
@@ -634,22 +652,6 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
               f.set("link", JSON.stringify(link));
               act(() => sendChatMessageAction(f));
               toast.success("Sent", { description: `${firstName} gets it on Home, linked to ${label}.` });
-            }}
-          />
-        )}
-        {dlg?.kind === "targetNote" && (
-          <TargetNoteDialog
-            firstName={firstName}
-            note={saved.note}
-            onSave={(v) => {
-              setSaved((x) => ({ ...x, note: v }));
-              setT((x) => ({ ...x, note: v }));
-              close();
-              const f = new FormData();
-              f.set("clientId", String(clientId));
-              f.set("note", v);
-              if (phaseId) f.set("phaseId", String(phaseId));
-              act(() => saveCoachNutritionNoteAction(f), v.trim() ? `Note to ${firstName} on the targets` : "Note removed");
             }}
           />
         )}
@@ -958,30 +960,6 @@ function PhotoDialog({ firstName, date, meal, comments, onSend }: { firstName: s
   );
 }
 
-/** The coach's note on the targets: why these numbers, what to watch. */
-function TargetNoteDialog({ firstName, note, onSave }: { firstName: string; note: string; onSave: (v: string) => void }) {
-  const [text, setText] = useState(note);
-  const changed = text.trim() !== note.trim();
-  return (
-    <DialogContent className="rd-dlg">
-      <DialogHeader>
-        <DialogTitle>Note to {firstName}</DialogTitle>
-        <DialogDescription>Shown under the targets in {firstName}&rsquo;s app.</DialogDescription>
-      </DialogHeader>
-      <label className="rd-field">
-        <span>Note</span>
-        <textarea rows={5} value={text} onChange={(e) => setText(e.target.value)} placeholder="Why these numbers, what to watch…" autoFocus onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && changed && onSave(text)} />
-      </label>
-      <DialogFooter>
-        <span className="rd-dlg-hint grow">Ctrl + Enter saves.</span>
-        <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!changed} onClick={() => onSave(text)}>
-          Save
-        </button>
-      </DialogFooter>
-    </DialogContent>
-  );
-}
 
 function NewPhaseDialog({ onCreate }: { onCreate: (v: { name: string; weeks: number; start: string }) => void }) {
   const [name, setName] = useState("");

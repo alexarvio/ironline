@@ -15,10 +15,8 @@ export default function CoachCard({ coachName, photoPath, note, noteDate }: { co
               coachName.charAt(0).toUpperCase()
             )}
           </span>
-          <div>
-            <div className="nd-coach-name">{coachName}</div>
-            {noteDate && <div className="nd-coach-date">{noteDate}</div>}
-          </div>
+          <div className="nd-coach-name">{coachName}</div>
+          {noteDate && <div className="nd-coach-date">{noteDate}</div>}
         </div>
         <p className="nd-coach-note">{note}</p>
       </div>

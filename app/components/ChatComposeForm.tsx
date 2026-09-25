@@ -8,7 +8,8 @@ import VoiceRecordButton from "./VoiceRecordButton";
 // why a "use client" file importing queries.ts breaks the dev server).
 // Three ways to send: type and hit Send; tap the paperclip to pick a photo,
 // video or any file, which goes at once; or hold the mic for a voice
-// message, which goes when it stops.
+// message, which goes when it stops. The mic and Send share the right-hand
+// spot: the mic while the box is empty, Send as soon as anything is typed.
 const ACCEPT = "image/*,video/*,audio/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.zip";
 
 export default function ChatComposeForm({ clientId, sender }: { clientId: number; sender: "client" | "coach" }) {
@@ -67,11 +68,14 @@ export default function ChatComposeForm({ clientId, sender }: { clientId: number
           if (f) sendFile(f);
         }}
       />
-      <VoiceRecordButton className="chat-attach-btn chat-mic-btn" onRecorded={sendFile} disabled={pending} />
       <input name="text" type="text" placeholder="Message…" autoComplete="off" value={text} onChange={(e) => setText(e.target.value)} disabled={pending} />
-      <button type="submit" className="btn" disabled={!text.trim() || pending}>
-        {pending ? "…" : "Send"}
-      </button>
+      {text.trim() ? (
+        <button type="submit" className="btn chat-send-btn" disabled={pending}>
+          {pending ? "…" : "Send"}
+        </button>
+      ) : (
+        <VoiceRecordButton className="chat-attach-btn chat-mic-btn" onRecorded={sendFile} disabled={pending} />
+      )}
     </form>
   );
 }

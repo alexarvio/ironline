@@ -207,6 +207,8 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     totalWeeks: program.total_weeks,
     startWeek: program.start_week,
     phaseId: phase?.id ?? null,
+    goals: phase?.objectives ?? [],
+    coachNote: phase?.client_note ?? "",
     startDate: phase?.start_week ?? null,
     endDate: phase?.end_week ?? null,
     weekIdx,
@@ -223,6 +225,9 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
 
 const EMPTY = { protein: null, carbs: null, fats: null };
 const STATE = { draft: "draft", now: "live", next: "scheduled", past: "past" } as const;
+
+// The coach's goals for a phase (up to three), shown on the client's Home.
+const goalsOf = (phaseId: number | null | undefined): string[] => (phaseId ? getData().client_phases.find((p) => p.id === phaseId)?.objectives ?? [] : []);
 
 export function loadNutrition(clientId: number, params: { phase?: string }): DraftNutrition {
   const today = localDateStr();
@@ -266,6 +271,7 @@ export function loadNutrition(clientId: number, params: { phase?: string }): Dra
 
   return {
     id: phase.id,
+    goals: goalsOf(phase.id),
     phases: phases.map((p) => ({ id: p.id, name: p.name, weeks: p.weeks, state: p.state })),
     name: phase.name,
     status: phase.state,
@@ -351,6 +357,7 @@ export function loadMeasurements(clientId: number, params: { phase?: string }): 
   const startsOn = selected ? new Date(`${selected.start_week}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "";
   return {
     id: selected?.id ?? 0,
+    goals: goalsOf(selected?.id),
     phases,
     name: selected?.name ?? "Check-ins",
     status: selected ? STATE[selected.status] : "live",

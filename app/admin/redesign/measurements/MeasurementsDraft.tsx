@@ -13,6 +13,7 @@ import { CalendarIcon, ChatIcon, ChevronDownIcon, MoreIcon, PlusIcon, TrashIcon 
 import type { LoggedMetric, LoggedValues } from "../../../lib/queries";
 import { ConfirmDialog, MessageDialog, fmtDate, stateLabel, useClickAway } from "../training/TrainingDraft";
 import PhaseDatesDialog from "../PhaseDatesDialog";
+import PhaseGoalsCard from "../PhaseGoalsCard";
 import { SortableItem, SortableList } from "../Sortable";
 import Picker from "../Picker";
 import DatePick from "../DatePick";
@@ -35,6 +36,8 @@ type Cadence = "daily" | "weekly";
 export type DraftMetric = { id: number; name: string; unit: string; frequency: Cadence; groupKey: string; groupLabel: string; tint: string; last: { value: number; when: string } | null };
 export type DraftMeasurements = {
   id: number;
+  /** The coach's goals for the phase, up to three. */
+  goals: string[];
   phases: { id: number; name: string; weeks: number; state: State }[];
   name: string;
   status: State;
@@ -239,6 +242,9 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
           </DropdownMenu>
         </div>
       </header>
+
+      {/* ---- The coach's goals for this phase, shown on the client's Home. */}
+      <PhaseGoalsCard phaseId={phaseId} phaseName={plan.name} firstName={firstName} goals={plan.goals} />
 
       {/* ---- Tracked metrics: what the client is asked for. */}
       <section className="rd-session open rn-card">

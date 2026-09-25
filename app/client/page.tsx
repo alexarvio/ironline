@@ -5,7 +5,6 @@ import {
   getAssignmentsForDay,
   getClient,
   getClientProfile,
-  getClientPlanView,
   getClientProgramNoteMeta,
   listCardioForDay,
   describeMessageLink,
@@ -13,7 +12,6 @@ import {
   isCardioDone,
   getLastMeetingRecap,
   getUpNextSession,
-  getCalorieLog,
   listCalorieLogs,
   getDeployedProgram,
   getClientExerciseNotes,
@@ -32,6 +30,7 @@ import {
   listVideoReplies,
   getCurrentWeekNumber,
   getCheckInSections,
+  getCheckInHistory,
   getCheckInStatus,
   ensureDefaultMetrics,
   getClientPreferences,
@@ -51,13 +50,13 @@ import {
   getStoredNutritionPlan,
   listClientPhases,
   weekStart,
+  weeklyCheckInOpen,
   getPhotoCadence,
   getPhotoInstructions,
   getPhotoPeriodNote,
   getPublishedWeek,
   listClients,
   meetingProvider,
-  getGoalViews,
   listMeetings,
   listPhotoPeriods,
   listPhotoSlots,
@@ -73,9 +72,12 @@ import {
 import TrainingDayList from "./TrainingDayList";
 
 import { ProgressPicturesRow, type ProgressPicturesProps } from "./ProgressPicturesScreen";
-import HomeHub, { type GoalRowView, type HomePhotos, type HomeTrack, type LatestActivity, type UpcomingMeeting } from "./HomeHub";
+import HomeHub, { type LatestActivity, type UpcomingMeeting } from "./HomeHub";
+import type { ProgressPics } from "./ProgressPicsCard";
 import NutritionTargetsCard, { type NutritionTargetSet } from "./NutritionTargetsCard";
 import CoachCard from "./CoachCard";
+import FitTitle from "./FitTitle";
+import PhaseObjectives from "./PhaseObjectives";
 import PushToggle from "./PushToggle";
 import { pushPublicKey } from "../lib/push";
 import SupplementsCard, { type SupplementRow } from "./SupplementsCard";
@@ -88,7 +90,9 @@ import ClientWeekSwitcher from "./ClientWeekSwitcher";
 import ProgramNote from "./ProgramNote";
 import AppShell, { AppTab } from "./AppShell";
 import AvatarUpload from "./AvatarUpload";
-import { phaseCovers, phaseDays, phaseWeekIndex, phaseWeeks } from "../lib/phases";
+import { phaseCovers, phaseDays, phaseLastDay, phaseWeekIndex, phaseWeeks } from "../lib/phases";
+import { defaultPhaseCover } from "../lib/phaseCovers";
+import type { HomePhase, PhaseFoodToday } from "./PhaseCards";
 import {
   AccountIcon,
   AppleIcon,
@@ -152,60 +156,6 @@ const fmtShortDate = (iso: string) => {
   return `${d.getDate()} ${MONTH_CAP[d.getMonth()]}`;
 };
 
-// ---- The coach's plan, flattened for Home's profile card ----------------
-// One row per track in a fixed order, each showing the phase running now
-// (or the next one due to start) with how far through it the client is.
-const HOME_TRACK_ORDER = ["nutrition", "training", "lifestyle"] as const;
-const DAY_MS = 86400000;
-const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const daysApart = (a: string, b: string) =>
-  Math.round((new Date(`${b}T00:00:00`).getTime() - new Date(`${a}T00:00:00`).getTime()) / DAY_MS);
-const addDaysIso = (iso: string, n: number) => {
-  const d = new Date(`${iso}T00:00:00`);
-  d.setDate(d.getDate() + n);
-  return isoDay(d);
-};
-const countWord = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-/** "8 weeks" from a week or more, rounded up; "6 days" under one. */
-const spanWords = (days: number) => (days >= 7 ? countWord(Math.ceil(days / 7), "week") : countWord(days, "day"));
-
-function homeTracks(plan: ReturnType<typeof getClientPlanView>, clientId: number): HomeTrack[] {
-  if (!plan) return [];
-  const raw = listClientPhases(clientId).filter((ph) => !ph.draft);
-  const today = plan.today;
-  return HOME_TRACK_ORDER.map((id) => {
-    const t = plan.tracks.find((x) => x.track === id);
-    if (!t) return null;
-    const sorted = [...t.phases].sort((a, b) => (a.startWeek < b.startWeek ? -1 : 1));
-    const running = sorted.find((ph) => ph.startWeek <= today && addDaysIso(ph.endWeek, 6) >= today) ?? null;
-    const shown = running ?? sorted.find((ph) => ph.startWeek > today) ?? null;
-    if (!shown) return null;
-    const weekTotal = shown.weeks;
-    // Its real days: a nutrition or lifestyle phase need not be whole weeks.
-    const totalDays = daysApart(shown.startWeek, addDaysIso(shown.endWeek, 6)) + 1;
-    let timeLeft: string;
-    let doneDays = 0;
-    if (running) {
-      const remaining = daysApart(today, addDaysIso(shown.endWeek, 6)) + 1;
-      timeLeft = remaining <= 1 ? "Last day" : `${spanWords(remaining)} to go`;
-      doneDays = Math.min(totalDays, Math.max(0, daysApart(shown.startWeek, today)));
-    } else {
-      timeLeft = `Starts in ${spanWords(daysApart(today, shown.startWeek))}`;
-    }
-    return {
-      track: id,
-      label: t.label,
-      phaseName: shown.name,
-      timeLeft,
-      weekNow: Math.min(weekTotal, Math.floor(doneDays / 7) + 1),
-      weekTotal,
-      progress: totalDays > 0 ? doneDays / totalDays : 0,
-      upNext: sorted.find((ph) => ph.startWeek > shown.endWeek)?.name ?? null,
-      coachNote: raw.find((ph) => ph.track === id && ph.start_week === shown.startWeek && ph.name === shown.name)?.nutrition?.coach_notes?.trim() || null,
-    };
-  }).filter((r): r is HomeTrack => !!r);
-}
-
 // Settings' progress-report list is the only place reports appear — a sent
 // report's sections_snapshot parsed, plus up to 3 stat deltas derived from
 // whichever sections it actually has. No domain knowledge of which
@@ -262,9 +212,8 @@ function weekStats(CLIENT_ID: number, week: number) {
   return { daysTrained, totalDays };
 }
 
-function HomeTab({ CLIENT_ID, photos }: { CLIENT_ID: number; photos: HomePhotos }) {
+function HomeTab({ CLIENT_ID, photos, food }: { CLIENT_ID: number; photos: ProgressPics; food: PhaseFoodToday }) {
   const client = getClient(CLIENT_ID);
-  const profile = getClientProfile(CLIENT_ID);
   const today = localDateStr();
 
   const upcomingMeeting = listMeetings(CLIENT_ID)
@@ -302,22 +251,13 @@ function HomeTab({ CLIENT_ID, photos }: { CLIENT_ID: number; photos: HomePhotos 
     };
   })();
 
-  // ---- Check-in: one row per configured type, due ones first ----
+  // ---- The check-in, counted the way its screen shows it (today's, plus
+  // the week's while its window is open), for the lifestyle card. ----
   ensureDefaultMetrics(CLIENT_ID);
-  const checkInStatus = getCheckInStatus(CLIENT_ID);
-  const due = new Set(checkInStatus.dueTypes);
-  const TITLE = { daily: "Daily check-in", weekly: "Weekly check-in", measurements: "Measurements" } as const;
   const sections = getCheckInSections(CLIENT_ID);
-  const countOf = (t: "daily" | "weekly" | "measurements") => {
-    const s = sections.sections.find((x) => x.id === t);
-    return { done: s ? s.metrics.filter((m) => m.value !== "").length : 0, total: s?.metrics.length ?? 0 };
-  };
-  const checkInItems = [
-    ...checkInStatus.configured.map((t) => ({ key: t, type: t, title: TITLE[t], ...countOf(t), due: due.has(t) })),
-    ...(photos
-      ? [{ key: "photos", type: "photos" as const, title: "Progress pictures", done: sections.photoSlots.filter((s) => s.src).length, total: sections.photoSlots.length, due: photos.state === "due" }]
-      : []),
-  ];
+  const weeklyOpen = weeklyCheckInOpen(CLIENT_ID);
+  const onScreen = sections.sections.filter((s) => s.id === "daily" || weeklyOpen).flatMap((s) => s.metrics);
+  const checkInCount = { done: onScreen.filter((m) => m.value !== "").length, total: onScreen.length };
 
   const dateLabel = new Date(`${today}T00:00:00`).toLocaleDateString("en-US", {
     weekday: "long",
@@ -325,9 +265,7 @@ function HomeTab({ CLIENT_ID, photos }: { CLIENT_ID: number; photos: HomePhotos 
     day: "numeric",
   });
 
-  // The plan and the session. No session left this week: when the next starts.
-  const plan = getClientPlanView(CLIENT_ID);
-  const program = getDeployedProgram(CLIENT_ID);
+  // The next session, for the training card's Start.
   const session = (() => {
     const s = getUpNextSession(CLIENT_ID);
     if (!s) return null;
@@ -346,34 +284,47 @@ function HomeTab({ CLIENT_ID, photos }: { CLIENT_ID: number; photos: HomePhotos 
     }
     return { ...s, streak };
   })();
-  const hasPlan = !!program || homeTracks(plan, CLIENT_ID).length > 0;
+  // No session left this week on a live programme: when the next week starts.
   const weekDone = (() => {
-    if (session || !program) return null;
+    if (session || !getDeployedProgram(CLIENT_ID)) return null;
     const next = new Date(`${weekStart(today)}T00:00:00`);
     next.setDate(next.getDate() + 7);
     return { nextWeekLabel: next.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) };
   })();
 
-  // Goals: the main goal first, as a row of its own, then the tracked ones.
-  const goals: GoalRowView[] = [
-    ...(profile.main_goal ? [{ id: -1, text: profile.main_goal, done: false, kind: "none" as const, tone: "muted" as const, reached: false, bar: null, barLabel: null, segments: null, left: null, right: null, sub: null }] : []),
-    ...getGoalViews(CLIENT_ID),
-  ];
-
   const coachFirst = getCoachFirstName(CLIENT_ID);
+  // "Your plan": the live phase on each track, in this order; none, no section.
+  const phases: HomePhase[] = (["training", "nutrition", "lifestyle"] as const).flatMap((track) => {
+    const ph = getCurrentPhase(CLIENT_ID, track);
+    if (!ph) return [];
+    return [
+      {
+        id: ph.id,
+        track,
+        name: ph.name,
+        start: ph.start_week,
+        end: phaseLastDay(ph.end_week),
+        coverUrl: ph.cover_path ?? defaultPhaseCover(track, ph.id),
+        objectives: ph.objectives ?? [],
+        note: ph.nutrition?.coach_notes?.trim() || null,
+      },
+    ];
+  });
   return (
     <HomeHub
       dateLabel={dateLabel}
       firstName={(client?.name ?? "").trim().split(/\s+/)[0] || "there"}
       coach={{ firstName: coachFirst, photoPath: getCoachAvatarPath(CLIENT_ID) }}
-      goals={goals}
       session={session}
-      hasPlan={hasPlan}
-      weekDone={weekDone}
-      checkIn={checkInItems.length ? { items: checkInItems, nextLabel: checkInStatus.nextLabel } : null}
+      progressPics={photos}
       latestActivity={latestCoachActivity(CLIENT_ID, coachFirst)}
       upcoming={upcoming}
       recap={getLastMeetingRecap(CLIENT_ID)}
+      phases={phases}
+      checkInCount={onScreen.length ? checkInCount : null}
+      weekDone={weekDone}
+      today={today}
+      food={food}
     />
   );
 }
@@ -386,6 +337,24 @@ function relativeLabel(iso: string): string {
 // The single newest thing the coach did for this client, whatever it was:
 // a chat message (with or without a link), a video reply, a programme or
 // report, or a note. Nothing yet: a welcome, so the card is never absent.
+// Home's "Latest from" card says only what the coach did, never the thing's
+// name: "Set a new lifestyle phase", not "…: hyper". Notifications stored
+// with the name (or a date, or "Check it out") are cut back to the action;
+// the coach's name is already above the title, so "Your coach" goes too.
+function actionOnly(message: string): string {
+  let t = message.trim().replace(/^your coach\s+/i, "");
+  if (/^your call moved/i.test(t)) return "Moved your call";
+  if (/^wrote up what you agreed/i.test(t)) return "Wrote up your call";
+  if (/^replied to your video/i.test(t)) return "Replied to your video";
+  t = t.replace(/\.\s*check (it|them) out\.?$/i, "").replace(/\s*\([^)]*\)\s*$/, "");
+  const colon = t.indexOf(":");
+  if (colon > 0) t = t.slice(0, colon);
+  t = t.replace(/[.\s]+$/, "");
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+// What a comment was on, in words: "Commented on your nutrition".
+const COMMENT_ON = { nutrition: "your nutrition", checkin: "your check-in", photos: "your progress pictures", training: "your training" } as const;
+
 function latestCoachActivity(clientId: number, coachFirst: string): LatestActivity {
   const weekAgo = Date.now() - 7 * 86400000;
   const sent = coachMessagesFor(clientId).filter((m) => !m.mine && (m.text.trim() || m.media));
@@ -405,35 +374,41 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
     if (latestMsg.link && !latestMsg.link.gone) {
       const k = latestMsg.link.link.kind;
       const context = k === "food" || k === "nutrition" ? "nutrition" : k === "checkin" ? "checkin" : k === "photos" ? "photos" : "training";
-      const cta = context === "nutrition" ? "Open meal" : context === "checkin" ? "Open check-in" : context === "photos" ? "Open photos" : "Open session";
-      return { kind: "comment", context, title: `Commented on ${latestMsg.link.label}`, body: latestMsg.text || null, whenLabel: relativeLabel(iso), cta, link: latestMsg.link, unread, unseen: unread > 0, moreThisWeek };
+      const cta = context === "nutrition" ? "View meal" : context === "checkin" ? "View check-in" : context === "photos" ? "View pictures" : "View session";
+      return { kind: "comment", context, title: `Commented on ${COMMENT_ON[context]}`, body: latestMsg.text || null, whenLabel: relativeLabel(iso), cta, link: latestMsg.link, unread, unseen: unread > 0, moreThisWeek };
     }
-    return { kind: "message", title: "Message", body: latestMsg.text || (latestMsg.media ? "Sent you a file" : null), whenLabel: relativeLabel(iso), cta: "Reply", link: latestMsg.link, unread, unseen: unread > 0, moreThisWeek };
+    return { kind: "message", title: "Sent you a message", body: latestMsg.text || (latestMsg.media ? "Sent you a file" : null), whenLabel: relativeLabel(iso), cta: "Reply", link: latestMsg.link, unread, unseen: unread > 0, moreThisWeek };
   }
   if (latestNote) {
     const when = relativeLabel(latestNote.created_at);
     const base = { whenLabel: when, notificationId: latestNote.id, actionTab: latestNote.action_tab, actionRef: latestNote.action_ref, unread, unseen: !latestNote.read, moreThisWeek };
     if (latestNote.action_tab === "video") {
       const reply = listVideoReplies(clientId).find((r) => r.id === latestNote.action_ref) ?? null;
-      return { kind: "video", title: reply ? `Replied to your ${reply.exerciseName} video` : "Replied to your video", body: reply?.replyNote ?? latestNote.message, cta: "Watch", videoReply: reply, ...base };
+      return { kind: "video", title: "Replied to your video", body: reply?.replyNote || null, cta: "Watch", videoReply: reply, ...base };
     }
-    if (latestNote.kind === "programme") return { kind: "deploy", track: "training", title: latestNote.message, body: null, cta: "View plan", ...base, actionTab: latestNote.action_tab ?? "training" };
-    if (latestNote.kind === "report") return { kind: "report", title: "Sent you a progress report", body: latestNote.message, cta: "Open", ...base, actionTab: latestNote.action_tab ?? "settings" };
-    if (latestNote.action_tab === "nutrition") return { kind: "deploy", track: "nutrition", title: latestNote.message, body: null, cta: "View plan", ...base };
+    // The button says where it goes, after what changed: View training,
+    // View nutrition, View check-in (a lifestyle phase), and so on.
+    const title = actionOnly(latestNote.message);
+    if (latestNote.kind === "programme") {
+      if (latestNote.action_tab === "nutrition") return { kind: "deploy", track: "nutrition", title, body: null, cta: "View nutrition", ...base };
+      if (latestNote.action_tab === "home") return { kind: "comment", context: "checkin", title, body: null, cta: "View check-in", ...base };
+      return { kind: "deploy", track: "training", title, body: null, cta: "View training", ...base, actionTab: latestNote.action_tab ?? "training" };
+    }
+    if (latestNote.kind === "report") return { kind: "report", title: "Sent you a progress report", body: null, cta: "View report", ...base, actionTab: latestNote.action_tab ?? "settings" };
+    if (latestNote.action_tab === "nutrition") return { kind: "deploy", track: "nutrition", title, body: null, cta: "View nutrition", ...base };
     // A change the coach made: read what it was from its tab and its words.
     if (latestNote.kind === "general") {
-      const msg = latestNote.message;
-      const cta = latestNote.action_label ?? "Open";
-      const lower = msg.toLowerCase();
-      if (latestNote.action_tab === "training") return { kind: "deploy", track: "training", title: msg, body: null, cta, ...base };
-      if (lower.includes("goal")) return { kind: "goal", title: msg, body: null, cta: "See goals", ...base };
-      if (lower.includes("call") || lower.includes("meeting")) return { kind: "meeting", title: msg, body: null, cta: "See details", ...base };
-      if (lower.includes("progress pictures")) return { kind: "comment", context: "photos", title: msg, body: null, cta: "Open photos", ...base, actionTab: latestNote.action_tab ?? "home" };
-      if (lower.includes("check in") || lower.includes("check-in")) return { kind: "comment", context: "checkin", title: msg, body: null, cta: "Open check-in", ...base, actionTab: latestNote.action_tab ?? "home" };
-      return { kind: "message", title: msg, body: null, cta, ...base };
+      const lower = latestNote.message.toLowerCase();
+      if (latestNote.action_tab === "training") return { kind: "deploy", track: "training", title, body: null, cta: lower.includes("video") ? "View exercise" : "View training", ...base };
+      if (lower.includes("goal")) return { kind: "goal", title, body: null, cta: "Open chat", ...base };
+      if (lower.includes("call") || lower.includes("meeting")) return { kind: "meeting", title, body: null, cta: "View meeting", ...base };
+      if (lower.includes("progress pictures")) return { kind: "comment", context: "photos", title, body: null, cta: "View pictures", ...base, actionTab: latestNote.action_tab ?? "home" };
+      if (lower.includes("check in") || lower.includes("check-in")) return { kind: "comment", context: "checkin", title, body: null, cta: "View check-in", ...base, actionTab: latestNote.action_tab ?? "home" };
+      if (lower.includes("calendar")) return { kind: "message", title, body: null, cta: "Open chat", ...base };
+      return { kind: "message", title, body: null, cta: latestNote.action_label ?? "Open", ...base };
     }
-    if (latestNote.action_tab === "chat") return { kind: "message", title: "Message", body: latestNote.message, cta: "Open", ...base };
-    return { kind: "message", title: latestNote.action_label ?? "Note from your coach", body: latestNote.message, cta: latestNote.action_tab ? "Open" : "See all", ...base };
+    if (latestNote.action_tab === "chat") return { kind: "message", title: "Sent you a message", body: latestNote.message, cta: "Reply", ...base };
+    return { kind: "message", title: latestNote.action_label ?? "Sent you a note", body: latestNote.message, cta: latestNote.action_tab ? "Open" : "Open chat", ...base };
   }
   return {
     kind: "welcome",
@@ -552,6 +527,20 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
         </section>
       )}
 
+      {/* The coach's objectives for the training phase, as on its Home card,
+          and their note on it. */}
+      <PhaseObjectives coachName={getCoachFirstName(CLIENT_ID)} objectives={getCurrentPhase(CLIENT_ID, "training")?.objectives ?? []} />
+      {(() => {
+        const ph = getCurrentPhase(CLIENT_ID, "training");
+        return (
+          <CoachCard
+            coachName={getCoachFirstName(CLIENT_ID)}
+            photoPath={getCoachAvatarPath(CLIENT_ID)}
+            note={ph?.client_note?.trim() || null}
+            noteDate={ph?.client_note_at ? new Date(ph.client_note_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null}
+          />
+        );
+      })()}
 
       {days.length === 0 ? (
         <p className="empty-note">Nothing deployed yet. Your coach is still building this week.</p>
@@ -666,10 +655,9 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   const storedPlan = getStoredNutritionPlan(CLIENT_ID);
 
   const today = localDateStr();
-  // Sessions have no weekday, so today is a training day once the client has
-  // logged a set today; the Training day / Rest day tabs switch either way.
+  // Sessions have no weekday: a day counts as a training day once a set was
+  // logged on it (the last seven days below read their targets by it).
   const trainedOn = trainingDates(CLIENT_ID);
-  const isTrainingDay = trainedOn.has(today);
   const coachName = getCoachFirstName(CLIENT_ID);
   const short = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   const addDays = (iso: string, days: number) => {
@@ -715,7 +703,7 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
           <div className="nd-phase">
             <div className="nd-phase-titles">
               <div className="nd-kicker">Nutrition</div>
-              <div className="nd-phase-name">{nutritionPhase.name}</div>
+              <FitTitle className="nd-phase-name">{nutritionPhase.name}</FitTitle>
             </div>
           </div>
           <div
@@ -780,7 +768,6 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
 
   const supplements: SupplementRow[] = referenceRows.map((r) => ({ name: r.item, quantity: r.quantity, timing: r.timing, notes: r.notes }));
 
-  const todayLog = getCalorieLog(CLIENT_ID, today);
 
   // The last seven days before today that the client logged, each judged
   // against that day's own target: the deployed nutrition phase the day fell
@@ -821,7 +808,6 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
         delta,
       };
     });
-  const onTarget = lastWeek.filter((d) => d.delta.tone === "ok").length;
 
 
   return (
@@ -829,9 +815,8 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
       <NutritionTargetsCard
         training={training}
         rest={rest}
-        // Opens on the day type the client logged today, else on whether a
-        // set was logged today.
-        initialIsTraining={todayLog?.day_type ? todayLog.day_type === "training" : isTrainingDay}
+        // Always opens on Training day; Rest day is a tap away.
+        initialIsTraining
         hasTargets={hasTargets}
         phase={phaseSlot}
         eatenKcal={listFoodEntries(CLIENT_ID, today).reduce((s, e) => s + e.kcal, 0)}
@@ -839,21 +824,18 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
       />
 
       <div className="nd-body">
+        {/* The coach's objectives for the nutrition phase, as on its Home card. */}
+        <PhaseObjectives coachName={coachName} objectives={nutritionPhase?.objectives ?? []} />
         <CoachCard
           coachName={coachName}
           photoPath={getCoachAvatarPath(CLIENT_ID)}
           note={plan.coach_notes?.trim() || null}
-          noteDate={nutritionPhase ? `Since ${short(nutritionPhase.start_week)}` : null}
+          noteDate={nutritionPhase ? short(nutritionPhase.start_week) : null}
         />
 
         <section className="nd-days">
           <div className="nd-section-head">
             <h2 className="nd-card-title">Last 7 days</h2>
-            {lastWeek.length > 0 && (
-              <span className="nd-card-count">
-                <b>{onTarget}</b> of 7 on target
-              </span>
-            )}
           </div>
           <div className="nd-card">
             {lastWeek.length === 0 ? (
@@ -1229,30 +1211,24 @@ export default async function ClientPage({
   // Same source Home reads, so the tab dots and Home's count can't disagree.
   const checkInStatusForScreen = getCheckInStatus(CLIENT_ID);
   // Home's progress-pictures card, from the same sheet the check-in shows:
-  // a prompt while it is missing photos, "sent" once every angle is in, and
-  // nothing when no sheet is open (no photo is ever filed outside one).
+  // due while the open sheet is missing angles (none or some), Completed for
+  // the rest of the local day its last angle went in, and gone otherwise.
+  // The total is the coach's sheet, never a fixed five.
   const photoCount = checkInData.photoSlots.length;
-  // "Sent" shows on Home for a day after the last photo of the sheet went
-  // in, as a tick where the reminder was; after that Home says nothing
-  // about pictures until the next sheet opens.
-  const photosSentRecently = (() => {
+  const photosIn = checkInData.photoSlots.filter((p) => p.src).length;
+  const lastPhotoDay = (() => {
     const period = photoSheetFor(CLIENT_ID, localDateStr());
     const latest = listPhotoUploads(listPhotoSlots(CLIENT_ID).map((s) => s.id))
       .filter((u) => u.period === period)
       .map((u) => u.uploaded_at)
       .sort()
       .at(-1);
-    return !!latest && Date.now() - new Date(latest).getTime() < 24 * 60 * 60 * 1000;
+    return latest ? localDateStr(new Date(latest)) : null;
   })();
-  const homePhotos: HomePhotos = checkInData.photosDue
-    ? { state: "due" }
-    : photoCount > 0 && checkInData.photoSlots.every((p) => p.src) && photosSentRecently
-    ? {
-        state: "done",
-        summary: `${photoCount}/${photoCount} · next sheet ${fmtShortDate(
-          upcomingPhotoSheets(CLIENT_ID, localDateStr(), 1)[0]
-        )}`,
-      }
+  const homePhotos: ProgressPics = checkInData.photosDue
+    ? { status: "due", uploaded: photosIn, total: photoCount, coverUrl: null }
+    : photoCount > 0 && photosIn === photoCount && lastPhotoDay === localDateStr()
+    ? { status: "completed", uploaded: photoCount, total: photoCount, coverUrl: null }
     : null;
   const checkIn = {
     dateLabel: new Date(`${localDateStr()}T00:00:00`).toLocaleDateString("en-US", {
@@ -1263,6 +1239,9 @@ export default async function ClientPage({
     today: localDateStr(),
     sections: checkInData.sections,
     dueSections: checkInStatusForScreen.dueTypes as string[],
+    weeklyOpen: weeklyCheckInOpen(CLIENT_ID),
+    objectives: getCurrentPhase(CLIENT_ID, "lifestyle")?.objectives ?? [],
+    history: getCheckInHistory(CLIENT_ID),
   };
   const progressPictures = progressPicturesData(CLIENT_ID);
   const hasUnreadNotifications = getNotifications(CLIENT_ID).some((n) => !n.read);
@@ -1309,7 +1288,7 @@ export default async function ClientPage({
     return (
       <>
         <div className="tr-kicker">Programme</div>
-        <div className="tr-name">{deployedProgram?.name || "Your programme"}</div>
+        <FitTitle className="tr-name">{deployedProgram?.name || "Your programme"}</FitTitle>
         {deployedProgram && start && (
           <>
             <div
@@ -1339,7 +1318,7 @@ export default async function ClientPage({
 
   const tabs: AppTab[] = [
     // Draws its own light banner (name and main goal); the top bar floats over it.
-    { id: "home", label: "Home", icon: <HomeIcon />, bare: true, content: <HomeTab CLIENT_ID={CLIENT_ID} photos={homePhotos} /> },
+    { id: "home", label: "Home", icon: <HomeIcon />, bare: true, content: <HomeTab CLIENT_ID={CLIENT_ID} photos={homePhotos} food={{ eaten: foodDiary.eaten.kcal, target: foodDiary.target?.kcal ?? null }} /> },
     {
       id: "training",
       label: "Training",
@@ -1364,8 +1343,9 @@ export default async function ClientPage({
       id: "nutrition",
       label: "Nutrition",
       icon: <AppleIcon />,
-      // Draws its own light banner; the top bar floats over it in navy.
+      // Draws its own photo banner, darkened; the top bar floats over it in white.
       bare: true,
+      darkBanner: true,
       content: <NutritionTab CLIENT_ID={CLIENT_ID} />,
     },
     // Draws its own light banner (name, since when, the photo); the top bar floats over it.
@@ -1381,7 +1361,7 @@ export default async function ClientPage({
       clientId={CLIENT_ID}
       checkIn={checkIn}
       photos={progressPictures}
-      coachMessages={{ coachName: getCoachDisplayName(CLIENT_ID), messages: coachMessagesFor(CLIENT_ID) }}
+      coachMessages={{ coachName: getCoachDisplayName(CLIENT_ID), messages: coachMessagesFor(CLIENT_ID), viewerIsClient }}
       helpEmail={getCoachEmail(CLIENT_ID)}
       coachProfile={getCoachProfileForClient(CLIENT_ID)}
       coachAvatarPath={getCoachAvatarPath(CLIENT_ID)}

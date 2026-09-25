@@ -16,8 +16,8 @@ export const NOTE_LABELS: { key: keyof HistoryNote; label: string }[] = [
 ];
 
 // Read-only view of one earlier photo sheet on the Progress pictures screen.
-// Collapsed it is the title and counts; open, the photos (tap one for full
-// screen) and whatever the coach wrote about them, empty fields skipped.
+// Collapsed it is the title and counts; open, a row per photo (tap one for
+// full screen) and whatever the coach wrote about them, empty fields skipped.
 // The screen owns which row is open, so only one is at a time.
 export default function PhotoPeriodHistoryRow({
   title,
@@ -62,27 +62,37 @@ export default function PhotoPeriodHistoryRow({
 
       {open && (
         <div className="pp-app-past-body">
-          <div className="pp-app-past-grid">
-            {photos.map((p) => (
-              <figure key={p.slotId} className="pp-app-past-cell">
-                {p.src ? (
-                  // Opens in the app, not as a link: from the home screen a
-                  // link to the image has no browser bar and no way back.
-                  <button
-                    type="button"
-                    className="pp-app-past-photo"
-                    aria-label={`${p.label}, full size`}
-                    onClick={() => setViewing(sent.findIndex((s) => s.slotId === p.slotId))}
-                  >
+          {/* A row per angle, as it was asked for: the photo (tap for full screen) and its name. */}
+          <div className="pp-rows">
+            {photos.map((p) =>
+              p.src ? (
+                // Opens in the app, not as a link: from the home screen a
+                // link to the image has no browser bar and no way back.
+                <button
+                  key={p.slotId}
+                  type="button"
+                  className="pp-row in"
+                  aria-label={`${p.label}, full size`}
+                  onClick={() => setViewing(sent.findIndex((s) => s.slotId === p.slotId))}
+                >
+                  <span className="pp-row-thumb">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={p.src} alt={p.label} />
-                  </button>
-                ) : (
-                  <span className="pp-app-past-photo empty">Not sent</span>
-                )}
-                <figcaption className="pp-app-past-name">{p.label}</figcaption>
-              </figure>
-            ))}
+                    <img src={p.src} alt="" />
+                  </span>
+                  <span className="pp-row-text">
+                    <span className="pp-row-name">{p.label}</span>
+                  </span>
+                  <span className="pp-row-view">View</span>
+                </button>
+              ) : (
+                <div key={p.slotId} className="pp-row">
+                  <span className="pp-row-text">
+                    <span className="pp-row-name">{p.label}</span>
+                  </span>
+                  <span className="pp-row-missing">Not sent</span>
+                </div>
+              )
+            )}
           </div>
 
           {notes.length > 0 && (
@@ -109,7 +119,7 @@ export default function PhotoPeriodHistoryRow({
 
 // Full screen over the app: one photo at a time, arrows (or a swipe) to the
 // sheet's other photos, and a close button that is always there.
-function PhotoViewer({
+export function PhotoViewer({
   photos,
   index,
   onIndex,

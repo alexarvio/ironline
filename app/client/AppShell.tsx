@@ -236,6 +236,9 @@ export default function AppShell({
           sections={checkIn.sections}
           initialSection={checkInSection}
           dueSections={checkIn.dueSections}
+          weeklyOpen={checkIn.weeklyOpen}
+          objectives={checkIn.objectives}
+          history={checkIn.history}
           onBack={() => setPushView(null)}
         />
       </div>

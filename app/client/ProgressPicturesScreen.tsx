@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { uploadProgressPhotoAction } from "../lib/actions";
-import { ArrowRightIcon, CameraIcon, CheckIcon, ChevronLeftIcon } from "../components/icons";
+import { ArrowRightIcon, ChevronLeftIcon } from "../components/icons";
 import { useOpenPhotos } from "./CheckInContext";
 import CoachMark from "./CoachMark";
+import FitTitle from "./FitTitle";
+import ProgressCompare from "./ProgressCompare";
 import PhotoPeriodHistoryRow, { NOTE_LABELS, type HistoryNote } from "./PhotoPeriodHistoryRow";
 
 // Deliberately does not import from ../lib/queries (a "use client" file
@@ -58,26 +60,50 @@ export default function ProgressPicturesScreen({
     onBack();
   };
 
+  const open = data.openSheet;
+  const sent = open ? open.slots.filter((s) => s.src).length : 0;
+  // The sheet (and the ones before it), or two sheets side by side.
+  const [view, setView] = useState<"sheet" | "compare">("sheet");
   return (
     <>
-      <header className="cn-header pp-app-header">
-        <button type="button" className="cn-icon-btn pp-app-back" onClick={back} aria-label="Back">
-          <ChevronLeftIcon />
-        </button>
-        <div className="cn-header-titles">
-          <h1 className="pp-app-title">Progress pictures</h1>
-        </div>
-        <span className="cn-icon-spacer" aria-hidden="true" />
-      </header>
+      <main className="pp-app-body pp-one ci-one">
+        {/* The photo banner, the check-in's: the same size and the same bar
+            over the photo, the sheet open now as its title, and two pills
+            that switch the screen between the sheet and Compare. */}
+        <header className="tr-banner ci-banner pp-banner">
+          <div className="ci-bar">
+            <button type="button" className="ci-back" onClick={back} aria-label="Back">
+              <ChevronLeftIcon />
+            </button>
+            <h1 className="ci-title">Progress pictures</h1>
+            <span aria-hidden="true" />
+          </div>
+          <div className="tr-kicker">{open ? "Open now" : "Progress pictures"}</div>
+          <FitTitle className="tr-name">{open ? open.title : "No sheet open"}</FitTitle>
+          <div className="tr-weeks ci-views" role="tablist" aria-label="Progress pictures">
+            <button type="button" role="tab" aria-selected={view === "sheet"} className={`tr-wk${view === "sheet" ? " on" : ""}`} onClick={() => setView("sheet")}>
+              {open ? `${sent} of ${open.slots.length} sent` : "Sheets"}
+            </button>
+            <button type="button" role="tab" aria-selected={view === "compare"} className={`tr-wk${view === "compare" ? " on" : ""}`} onClick={() => setView("compare")}>
+              Compare
+            </button>
+          </div>
+        </header>
 
-      <main className="pp-app-body">
-        {data.openSheet ? (
+        {view === "compare" ? (
+          <ProgressCompare
+            sheets={[
+              ...(open ? [{ period: open.period, title: open.title, cells: open.slots.map((x) => ({ slotId: x.id, label: x.label, src: x.src })) }] : []),
+              ...data.earlier.map((e) => ({ period: e.period, title: e.title, cells: e.photos })),
+            ]}
+          />
+        ) : data.openSheet ? (
           <OpenSheet clientId={data.clientId} sheet={data.openSheet} onUnsentChange={setUnsent} />
         ) : (
           !data.hasAngles && <p className="pp-app-empty">Your coach hasn&rsquo;t asked for progress pictures yet.</p>
         )}
 
-        {data.earlier.length > 0 && (
+        {view === "sheet" && data.earlier.length > 0 && (
           <section>
             <div className="pp-app-section-head">
               <span className="pp-app-section-title">Earlier sheets</span>
@@ -102,7 +128,7 @@ export default function ProgressPicturesScreen({
           </section>
         )}
 
-        {data.hasAngles && (
+        {view === "sheet" && data.hasAngles && (
           <p className="pp-app-foot">
             {data.nextLabel && `Next sheet opens ${data.nextLabel}. `}Only your coach sees these.
           </p>
@@ -114,9 +140,10 @@ export default function ProgressPicturesScreen({
 
 type Staged = { file: File; preview: string };
 
-// The open sheet, like a check-in: pick a photo for each angle (it waits on
-// the phone, outlined), press Save to send them, and the sheet folds into a
-// row like the earlier ones, with Edit inside to reopen it. Save sends one
+// The open sheet, like a check-in, as a section that comes open while it is
+// to do: a row per angle with Add on the right (camera or library), Save to
+// send them, and once all are in it folds like the earlier ones, with Edit
+// inside to reopen it. Save sends one
 // photo at a time so a weak connection fails on one photo, not all of them.
 function OpenSheet({
   clientId,
@@ -137,6 +164,8 @@ function OpenSheet({
   const [failed, setFailed] = useState(false);
   // Whether the folded "sent" row is opened up.
   const [sentOpen, setSentOpen] = useState(false);
+  // The sheet still to do comes open; its head folds it.
+  const [open, setOpen] = useState(true);
   const [saving, startSaving] = useTransition();
 
   // Every preview made on this visit, released when the screen closes.
@@ -153,8 +182,8 @@ function OpenSheet({
 
   const total = sheet.slots.length;
   const inCount = sheet.slots.filter((s) => s.src).length;
-  // Folded once something has been sent and nothing new is waiting.
-  const collapsed = inCount > 0 && stagedCount === 0 && !editing && !saving;
+  // Folded once every angle is in and nothing new is waiting.
+  const collapsed = inCount === total && stagedCount === 0 && !editing && !saving;
 
   const pick = (slot: Slot, file: File) => {
     const preview = URL.createObjectURL(file);
@@ -243,122 +272,109 @@ function OpenSheet({
   }
 
   return (
-    <section className="pp-app-open">
-      <div className="pp-app-open-head">
-        <div className="pp-app-open-top">
-          <div>
-            <div className="pp-app-open-eyebrow">Open now</div>
-            <div className="pp-app-open-title">{sheet.title}</div>
-          </div>
-          <span className="pp-app-open-count">
-            {inCount} of {total}
+    <article className="pp-todo">
+      <button type="button" className="pp-todo-head" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <span className="pp-todo-titles">
+          <span className="pp-todo-title">{sheet.title}</span>
+          <span className="pp-todo-sub">
+            {total} {total === 1 ? "photo" : "photos"}
           </span>
-        </div>
-        <div className="pp-app-bar" aria-hidden="true">
-          {sheet.slots.map((s) => {
-            const waiting = !!staged[s.id] && !sent.includes(s.id);
-            return <span key={s.id} className={`pp-app-bar-seg${waiting ? " pending" : s.src || sent.includes(s.id) ? " in" : ""}`} />;
-          })}
-        </div>
-        <p className="pp-app-open-meta" role={failed ? "alert" : undefined}>
-          {failed
-            ? "A photo didn’t send. Check your connection and press Save again."
-            : `Opened ${sheet.openedLabel} · add a photo for each angle, then Save`}
-        </p>
-      </div>
+        </span>
+        {!editing && <span className="pp-todo-pill">To do</span>}
+        <span className={`tr-chev${open ? " up" : ""}`} aria-hidden="true" />
+      </button>
 
-      <div className="pp-app-slots">
-        {sheet.slots.map((s) => {
-          const item = staged[s.id];
-          const uploading = uploadingId === s.id;
-          const src = item?.preview ?? s.src;
-          const ticked = item ? sent.includes(s.id) : !!s.src;
-          const ready = !!item && !ticked && !uploading;
-          return (
-            <button
-              key={s.id}
-              type="button"
-              className="pp-app-slot"
-              disabled={saving}
-              onClick={() => setPicking(s)}
-              aria-label={`${s.label}: ${uploading ? "sending" : ready ? "ready to send, tap to change" : ticked ? "sent, tap to replace" : "add photo"}`}
-            >
-              {src ? (
-                <span className={`pp-app-frame${ready ? " ready" : ""}`}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt="" />
-                  {uploading && (
-                    <span className="pp-app-uploading">
-                      <span className="pp-app-uploading-label">Uploading</span>
-                      <span className="pp-app-uploading-bar" />
+      {open && (
+        <div className="pp-todo-body">
+          {failed && (
+            <p className="pp-app-fail" role="alert">
+              A photo didn&rsquo;t send. Check your connection and press Save again.
+            </p>
+          )}
+
+          {/* One numbered row per angle the coach asks for, Add on the right. */}
+          <ol className="pp-todo-rows">
+            {sheet.slots.map((s, i) => {
+              const item = staged[s.id];
+              const uploading = uploadingId === s.id;
+              const src = item?.preview ?? s.src;
+              const ticked = item ? sent.includes(s.id) : !!s.src;
+              const ready = !!item && !ticked && !uploading;
+              return (
+                <li key={s.id} className={`pp-todo-row${ready ? " ready" : ""}`}>
+                  {src ? (
+                    <span className="pp-todo-thumb">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={src} alt="" />
+                    </span>
+                  ) : (
+                    <span className="pp-todo-num" aria-hidden="true">
+                      {i + 1}
                     </span>
                   )}
-                  {ticked && !uploading && (
-                    <span className="pp-app-tick" aria-hidden="true">
-                      <CheckIcon />
-                    </span>
-                  )}
-                </span>
-              ) : (
-                <span className="pp-app-frame empty">
-                  <span className="pp-app-add">
-                    <CameraIcon />
-                    <span className="pp-app-add-label">Add photo</span>
+                  <span className="pp-todo-name">
+                    {s.label}
+                    {(uploading || ready || ticked) && (
+                      <span className={`pp-todo-state${ticked && !uploading ? " sent" : ""}`}>
+                        {uploading ? "Sending…" : ready ? "Ready" : "Sent"}
+                      </span>
+                    )}
                   </span>
-                </span>
+                  <button
+                    type="button"
+                    className="pp-todo-add"
+                    disabled={saving}
+                    onClick={() => setPicking(s)}
+                    aria-label={src ? `Change ${s.label}` : `Add ${s.label}`}
+                  >
+                    {src ? "Change" : "Add"}
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+
+          {(stagedCount > 0 || editing || saving) && (
+            <div className="pp-todo-save">
+              {stagedCount > 0 && inCount > 0 && !saving && (
+                <button type="button" className="pp-app-save-cancel" onClick={cancel}>
+                  Cancel
+                </button>
               )}
-              <span className="pp-app-slot-name">{s.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="pp-app-save">
-        <span className="pp-app-save-text">
-          {saving
-            ? "Sending…"
-            : stagedCount > 0
-            ? `${stagedCount} ${stagedCount === 1 ? "photo" : "photos"} ready to send`
-            : `${inCount} of ${total} with your coach`}
-        </span>
-        <span className="pp-app-save-actions">
-          {stagedCount > 0 && inCount > 0 && !saving && (
-            <button type="button" className="pp-app-save-cancel" onClick={cancel}>
-              Cancel
-            </button>
-          )}
-          {stagedCount === 0 && editing && !saving ? (
-            <button type="button" className="pp-app-save-btn secondary" onClick={() => setEditing(false)}>
-              Done
-            </button>
-          ) : (
-            <button type="button" className="pp-app-save-btn" onClick={save} disabled={stagedCount === 0 || saving}>
-              {saving ? "Sending…" : "Save"}
-            </button>
-          )}
-        </span>
-      </div>
-
-      {sheet.instructions && (
-        <div className="pp-app-coach">
-          <span className="pp-app-coach-label coach-eyebrow">
-            <CoachMark />
-            From your coach
-          </span>
-          <p className="pp-app-coach-text">{sheet.instructions}</p>
-        </div>
-      )}
-
-      {/* The coach's notes on this sheet, once they have written some. */}
-      {NOTE_LABELS.some(({ key }) => sheet.note[key].trim()) && (
-        <div className="pp-app-notes pp-app-open-notes">
-          <span className="pp-app-notes-label">What your coach said</span>
-          {NOTE_LABELS.filter(({ key }) => sheet.note[key].trim()).map(({ key, label }) => (
-            <div key={key}>
-              <div className="pp-app-note-label">{label}</div>
-              <div className="pp-app-note-text">{sheet.note[key]}</div>
+              {stagedCount === 0 && editing && !saving ? (
+                <button type="button" className="pp-app-save-btn secondary" onClick={() => setEditing(false)}>
+                  Done
+                </button>
+              ) : (
+                <button type="button" className="pp-app-save-btn" onClick={save} disabled={saving}>
+                  {saving ? "Sending…" : stagedCount === 1 ? "Send 1 photo" : `Send ${stagedCount} photos`}
+                </button>
+              )}
             </div>
-          ))}
+          )}
+
+          {sheet.instructions && (
+            <div className="pp-todo-coach">
+              <span className="pp-app-coach-label coach-eyebrow">
+                <CoachMark />
+                From your coach
+              </span>
+              <p className="pp-app-coach-text">{sheet.instructions}</p>
+            </div>
+          )}
+
+          {/* The coach's notes on this sheet, once they have written some. */}
+          {NOTE_LABELS.some(({ key }) => sheet.note[key].trim()) && (
+            <div className="pp-app-notes">
+              <span className="pp-app-notes-label">What your coach said</span>
+              {NOTE_LABELS.filter(({ key }) => sheet.note[key].trim()).map(({ key, label }) => (
+                <div key={key}>
+                  <div className="pp-app-note-label">{label}</div>
+                  <div className="pp-app-note-text">{sheet.note[key]}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -392,7 +408,7 @@ function OpenSheet({
           </div>
         </div>
       )}
-    </section>
+    </article>
   );
 }
 

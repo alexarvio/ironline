@@ -1,0 +1,25 @@
+/* PhaseGoalsCard: the coach's up-to-three goals for a phase, on each tab.
+   Folded to its head row; the chevron on the far right opens it. */
+.rd-goals { border-radius: 16px; background: #fff; box-shadow: 0 12px 30px -22px rgba(8, 31, 92, 0.45); }
+.rd-goals-h { margin: 0; font: inherit; }
+.rd-goals-head { display: flex; align-items: center; gap: 10px; width: 100%; padding: 14px 14px 14px 24px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; border-radius: 16px; }
+.rd-goals-title { font-size: 15px; font-weight: 700; color: #141a24; }
+.rd-goals-sub { flex: 1; min-width: 0; font-size: 12.5px; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rd-goals-chev { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; color: #5b6474; transition: transform 0.2s ease, background-color 0.15s ease; }
+.rd-goals-head:hover .rd-goals-chev { background: #f4f6fa; }
+.rd-goals-chev svg { width: 16px; height: 16px; }
+.rd-goals-chev.open { transform: rotate(180deg); }
+.rd-goals-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0 24px 16px; list-style: none; }
+.rd-goals-list li { display: flex; align-items: center; gap: 10px; }
+.rd-goals-n { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; background: #eef1f6; color: #1e3a6e; font-size: 12px; font-weight: 700; }
+.rd-goals-list input { flex: 1; min-width: 0; height: 36px; padding: 0 10px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; font-size: 14px; color: #141a24; outline: none; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+.rd-goals-list input::placeholder { color: #a3aab5; }
+.rd-goals-list input:hover { border-color: #c3c9d2; }
+.rd-goals-list input:focus { border-color: #2f5d8f; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.14); }
+/* The pending bar runs to the card's edges and foot. */
+.rd-goals .rd-pending { margin: 0; }
+@media (prefers-reduced-motion: reduce) { .rd-goals-chev { transition: none; } }
+/* CoachNoteCard: the note box inside the folded card. */
+.rd-note-body { padding: 0 24px 16px; }
+.rd-note-body textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; font-size: 14px; line-height: 1.5; color: #141a24; resize: vertical; outline: none; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+.rd-note-body textarea:focus { border-color: #2f5d8f; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.14); }

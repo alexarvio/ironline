@@ -12,7 +12,7 @@ import { deleteUploadFolder } from "./storage";
 // out after 30 days.
 
 // Every uploads folder that is per client: <kind>/<clientId>/...
-const CLIENT_UPLOAD_KINDS = ["avatars", "chat", "demos", "meals", "progress", "videos"] as const;
+const CLIENT_UPLOAD_KINDS = ["avatars", "chat", "demos", "meals", "phases", "progress", "videos"] as const;
 
 export async function eraseClient(clientId: number, opts: { selfDeleted: boolean }) {
   const data = getData();

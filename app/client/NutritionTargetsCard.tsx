@@ -88,7 +88,7 @@ export default function NutritionTargetsCard({
 
   return (
     <>
-      <header className="nd-banner">
+      <header className="nd-banner nd-photo">
         {phase}
 
         <div className="nd-tabs" role="tablist" aria-label="Day type">

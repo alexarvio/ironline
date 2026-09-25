@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { reactToMessageAction } from "../lib/actions";
 
 // The reactions under a chat bubble, on both sides of the chat. What is
@@ -27,6 +27,21 @@ export default function MessageReactions({
 }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
+  // The picker goes on a tap anywhere else, or Escape.
+  const box = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => {
+      if (!box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("pointerdown", away);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [open]);
   const set = (emoji: string | null) => {
     setOpen(false);
     start(() => reactToMessageAction(clientId, messageId, emoji));
@@ -43,7 +58,7 @@ export default function MessageReactions({
           {mine}
         </button>
       )}
-      <span className="mr-add">
+      <span className="mr-add" ref={box}>
         <button type="button" className="mr-btn" onClick={() => setOpen((o) => !o)} aria-label={mine ? "Change your reaction" : "React"} aria-expanded={open}>
           <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" aria-hidden="true">
             <circle cx="8" cy="8" r="6.2" />

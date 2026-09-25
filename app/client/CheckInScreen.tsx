@@ -1,8 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { CheckIcon, ChevronDownIcon, ChevronLeftIcon } from "../components/icons";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ChevronDownIcon, ChevronLeftIcon } from "../components/icons";
 import { logMetricPeriodAction, saveMeasurementCheckInAction } from "../lib/actions";
+import FitTitle from "./FitTitle";
+import CheckInProgress, { type CheckInFeedDay, type CheckInHistory } from "./CheckInProgress";
+import CheckInLine from "./CheckInLine";
+import PhaseObjectives from "./PhaseObjectives";
+import { useCoachIdentity } from "./CheckInContext";
 
 // Deliberately does NOT import from ../lib/queries (see HomeHub.tsx for why
 // a "use client" file importing queries.ts breaks the dev server). All data
@@ -15,6 +20,10 @@ export type CheckInMetric = {
   value: string;
   hint: string | null;
   scaleMax: number | null;
+  /** The last reading before this period, and the day it was for. */
+  last: { value: number; period: string } | null;
+  /** When this period's reading was saved (ISO), if it was. */
+  loggedAt: string | null;
 };
 export type CheckInSection = {
   id: "daily" | "weekly" | "measurements";
@@ -32,50 +41,37 @@ export type CheckInProps = {
   sections: CheckInSection[];
   // Which segments still have no entry for their current period.
   dueSections: string[];
+  /** The weekly check-in's window is open (from the coach's weekday to the week's end). */
+  weeklyOpen: boolean;
+  /** Every metric's readings, for Progress. */
+  history: CheckInHistory;
+  /** The coach's objectives for the lifestyle phase, as on its Home card. */
+  objectives: string[];
 };
 
-// The check-in as two tabs, Daily and Weekly, with the coach's measurements
-// riding in Weekly. Each tab is one card of rows: the metric, its last
-// reading, and a value pill (typed, or picked from a 1–N scale under it). A
-// row already logged for this period turns steel blue. Save posts to the
-// same server actions as before with the same fields: the weekly metrics to
-// logMetricPeriodAction, the measurements to saveMeasurementCheckInAction.
+// The check-in under a photo banner (the Training and Nutrition banners'
+// size), as a ledger: no card, a line a metric on the page (CheckInLine),
+// today's first, then, while the weekly window is open, the week's metrics
+// and the coach's measurements; the note to the coach last. The dock says
+// how far in it is (TODAY, READY, SENT) and sends what changed, partial or
+// not, to the same server actions as before: the daily and weekly metrics
+// to logMetricPeriodAction, the measurements to saveMeasurementCheckInAction.
 
-type RowSource = "tracker" | "measurements";
+type RowSource = "daily" | "weekly" | "measurements";
 type Row = { key: string; source: RowSource; metric: CheckInMetric };
-type Tab = {
-  id: "daily" | "weekly";
-  label: string;
-  intro: string;
-  /** The tracker frequency posted with the metrics; null when the tab only holds measurements. */
-  frequency: "daily" | "weekly" | null;
-  note: string | null;
-  rows: Row[];
-};
+type Group = { id: "today" | "week"; label: string; rows: Row[] };
 
-function buildTabs(sections: CheckInSection[]): Tab[] {
+function buildGroups(sections: CheckInSection[], weeklyOpen: boolean): Group[] {
   const daily = sections.find((s) => s.id === "daily");
   const weekly = sections.find((s) => s.id === "weekly");
   const measure = sections.find((s) => s.id === "measurements");
-  const trackerRows = (s: CheckInSection): Row[] => s.metrics.map((m) => ({ key: `t${m.id}`, source: "tracker", metric: m }));
-  const tabs: Tab[] = [];
-  if (daily) {
-    tabs.push({ id: "daily", label: "Daily", intro: "Every day, about twenty seconds.", frequency: "daily", note: daily.note, rows: trackerRows(daily) });
-  }
-  if (weekly || measure) {
-    tabs.push({
-      id: "weekly",
-      label: "Weekly",
-      intro: "Once a week, then it closes.",
-      frequency: weekly ? "weekly" : null,
-      note: weekly ? weekly.note : measure?.note ?? null,
-      rows: [
-        ...(weekly ? trackerRows(weekly) : []),
-        ...(measure?.metrics ?? []).map((m): Row => ({ key: `m${m.id}`, source: "measurements", metric: m })),
-      ],
-    });
-  }
-  return tabs;
+  const rowsOf = (s: CheckInSection | undefined, source: RowSource): Row[] => (s?.metrics ?? []).map((m) => ({ key: `${source}${m.id}`, source, metric: m }));
+  const groups: Group[] = [];
+  const today = rowsOf(daily, "daily");
+  if (today.length) groups.push({ id: "today", label: "Today", rows: today });
+  const week = weeklyOpen ? [...rowsOf(weekly, "weekly"), ...rowsOf(measure, "measurements")] : [];
+  if (week.length) groups.push({ id: "week", label: "This week", rows: week });
+  return groups;
 }
 
 // "82.5", "82,5" and "82.50" are the same reading: the server stores the
@@ -87,29 +83,14 @@ function sameNumber(a: string, b: string) {
   return Number(a.replace(",", ".")) === Number(b.replace(",", "."));
 }
 
-// The input is plain text with a decimal keypad rather than type="number":
-// on phones set to Finnish (and most of Europe) the keypad offers a comma,
-// which a number input silently rejects, so the client could not type
-// decimals. Here the comma becomes a dot and anything else non-numeric is
-// dropped as it's typed. Rating scales take whole numbers only.
-function cleanNumeric(raw: string, wholeOnly: boolean) {
-  let out = "";
-  let seenDot = false;
-  for (const ch of raw) {
-    if (ch >= "0" && ch <= "9") out += ch;
-    else if ((ch === "." || ch === ",") && !wholeOnly && !seenDot) {
-      out += ".";
-      seenDot = true;
-    }
-  }
-  return out;
-}
-
 export default function CheckInScreen({
   clientId,
   dateLabel,
   today,
   sections,
+  weeklyOpen,
+  history,
+  objectives,
   initialSection,
   onBack,
 }: {
@@ -117,39 +98,37 @@ export default function CheckInScreen({
   dateLabel: string;
   today: string;
   sections: CheckInSection[];
+  weeklyOpen: boolean;
+  history: CheckInHistory;
+  objectives: string[];
   initialSection: string;
   dueSections: string[];
   onBack: () => void;
 }) {
-  const tabs = buildTabs(sections);
-  // Home opens straight on whatever is due; measurements now live in Weekly.
-  const wanted = initialSection === "measurements" ? "weekly" : initialSection;
-  const [tabId, setTabId] = useState<Tab["id"] | undefined>(() => (tabs.find((t) => t.id === wanted) ?? tabs[0])?.id);
+  const groups = buildGroups(sections, weeklyOpen);
+  const rows = groups.flatMap((g) => g.rows);
+  // The one note goes with the first period on screen: today's when there
+  // are daily metrics, else the week's, else the measurements'.
+  const noteSource: RowSource | null = rows[0]?.source ?? null;
+  const savedNote = (noteSource && sections.find((s) => s.id === noteSource)?.note) ?? "";
+
   // Seeded from what's already logged for the current period, so reopening
   // the screen shows what was sent rather than blanking it out.
-  const [values, setValues] = useState<Record<string, Record<string, string>>>(() =>
-    Object.fromEntries(tabs.map((t) => [t.id, Object.fromEntries(t.rows.map((r) => [r.key, r.metric.value]))]))
-  );
-  // The note for the coach, per tab, edited alongside the numbers.
-  const [notes, setNotes] = useState<Record<string, string>>(() => Object.fromEntries(tabs.map((t) => [t.id, t.note ?? ""])));
+  const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(rows.map((r) => [r.key, r.metric.value])));
+  const [note, setNote] = useState(savedNote);
   const [pending, setPending] = useState(false);
+  // Today (log it, and the week behind it) or Progress (a chart a metric).
+  const [view, setView] = useState<"today" | "progress">("today");
 
-  const active = tabs.find((t) => t.id === tabId) ?? tabs[0];
-
-  // Derived from the active tab; all computed before the early return below
-  // so the hooks that follow run in the same order on every render.
-  const activeValues = active ? values[active.id] ?? {} : {};
-  const activeNote = active ? notes[active.id] ?? "" : "";
-  const noteDirty = !!active && activeNote.trim() !== (active.note ?? "").trim();
-  const rows = active?.rows ?? [];
-  const filled = rows.filter((r) => (activeValues[r.key] ?? "").length > 0);
+  const noteDirty = note.trim() !== savedNote.trim();
+  const filled = rows.filter((r) => (values[r.key] ?? "").length > 0);
   const complete = filled.length === rows.length && rows.length > 0;
   const remaining = rows.length - filled.length;
 
   // metric.value is what's actually persisted for this period, so comparing
   // the two tells us whether there's anything left to send. After a save the
   // server re-renders with the new values, so this settles on its own.
-  const changedRow = (r: Row) => !sameNumber(activeValues[r.key] ?? "", r.metric.value);
+  const changedRow = (r: Row) => !sameNumber(values[r.key] ?? "", r.metric.value);
   const dirty = rows.some(changedRow) || noteDirty;
   const savedSomething = rows.some((r) => r.metric.value.length > 0);
   const isSaved = !dirty && savedSomething;
@@ -157,83 +136,104 @@ export default function CheckInScreen({
   // only thing sent for a period with nothing logged.
   const canSave = dirty && (filled.length > 0 || (noteDirty && savedSomething));
 
-  // The confirmation shows after a save THIS visit lands, not on merely
-  // opening a tab that was saved earlier.
-  const submitted = useRef(false);
-  const [justSaved, setJustSaved] = useState(false);
-  // A saved tab folds into a "done" card; Edit reopens it, and a fresh save,
-  // or Done, folds it back up.
-  const [editing, setEditing] = useState(false);
-  // The folded done card, opened to show the readings.
-  const [expanded, setExpanded] = useState(false);
-  useEffect(() => {
-    if (isSaved && submitted.current) {
-      submitted.current = false;
-      const t = setTimeout(() => {
-        setJustSaved(true);
-        setEditing(false);
-      }, 0);
-      return () => clearTimeout(t);
-    }
-  }, [isSaved]);
-  const collapsed = isSaved && !editing;
+  // The dock, on Today: TODAY while lines are empty, READY when all are in,
+  // SENT once what is on screen is what the coach has, with the time of the
+  // last save ("All updated · 09:12"); Send turns to Done then, which closes.
+  // Sent and nothing changed since: the lines fold into the green done row
+  // (with the last seven days under it). Opening an already-sent check-in
+  // starts folded; Done folds it with a short close; Edit opens it again.
+  const [folded, setFolded] = useState(isSaved);
+  const [folding, setFolding] = useState(false);
+  const fold = () => {
+    setFolding(true);
+    setTimeout(() => {
+      setFolding(false);
+      setFolded(true);
+      scroller.current?.scrollTo({ top: 0, behavior: "smooth" });
+    }, 280);
+  };
+  const docked = view === "today" && rows.length > 0 && !folded;
+  const lastSaved = rows.map((r) => r.metric.loggedAt).filter((x): x is string => !!x).sort().at(-1) ?? null;
+  const savedTime = lastSaved ? new Date(lastSaved).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : null;
+  const coach = useCoachIdentity();
+  const coachFirst = coach?.name.trim().split(/\s+/)[0] || "your coach";
 
-  if (!active) {
-    return (
-      <div className="ci-screen">
-        <header className="ci-head">
-          <button type="button" className="ci-back" onClick={onBack} aria-label="Back to home">
-            <ChevronLeftIcon />
-          </button>
-        </header>
-        <p className="ci-empty">Your coach hasn&rsquo;t set up any check-in metrics yet.</p>
-      </div>
-    );
-  }
+  // The typed lines in order, for Next on the keyboard.
+  const inputs = useRef<(HTMLInputElement | null)[]>([]);
+  const typedKeys = rows.filter((r) => !r.metric.scaleMax).map((r) => r.key);
+  const scroller = useRef<HTMLDivElement>(null);
+  const dock = useRef<HTMLDivElement>(null);
+  // The keyboard's height, from the visual viewport: the dock rides on it,
+  // and the line being typed in is scrolled clear of the dock.
+  const [kb, setKb] = useState(0);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const on = () => setKb(Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)));
+    vv.addEventListener("resize", on);
+    vv.addEventListener("scroll", on);
+    return () => {
+      vv.removeEventListener("resize", on);
+      vv.removeEventListener("scroll", on);
+    };
+  }, []);
+  const reveal = (el: HTMLElement) => {
+    const box = scroller.current;
+    const line = el.closest(".ci-line") as HTMLElement | null;
+    if (!box || !line) return;
+    const dockTop = dock.current?.getBoundingClientRect().top ?? box.getBoundingClientRect().bottom;
+    const over = line.getBoundingClientRect().bottom + 16 - dockTop;
+    if (over > 0) box.scrollTo({ top: box.scrollTop + over, behavior: "smooth" });
+  };
+  // The note grows with what is typed, up to six lines.
+  const noteBox = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const el = noteBox.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const line = parseFloat(getComputedStyle(el).lineHeight) || 24;
+    el.style.height = `${Math.min(el.scrollHeight, line * 6 + 10)}px`;
+  }, [note, view]);
+
+  // Opened for the week (a coach's message about the weekly check-in): the
+  // week's group, scrolled to once the screen is up.
+  useEffect(() => {
+    if (initialSection !== "weekly") return;
+    const t = setTimeout(() => document.getElementById("ci-group-week")?.scrollIntoView({ behavior: "smooth", block: "start" }), 250);
+    return () => clearTimeout(t);
+  }, [initialSection]);
 
   const setValue = (key: string, v: string) => {
-    setJustSaved(false);
-    setValues((prev) => ({ ...prev, [active.id]: { ...prev[active.id], [key]: v } }));
+    setValues((prev) => ({ ...prev, [key]: v }));
   };
-  const switchTab = (id: Tab["id"]) => {
-    setTabId(id);
-    setEditing(false);
-    setExpanded(false);
-    setJustSaved(false);
-  };
-  // Leaving edit mode without saving puts back what the coach actually has.
-  const stopEditing = () => {
-    setValues((prev) => ({ ...prev, [active.id]: Object.fromEntries(active.rows.map((r) => [r.key, r.metric.value])) }));
-    setEditing(false);
-  };
-  const showValue = (m: CheckInMetric) => (m.scaleMax ? `${m.value}/${m.scaleMax}` : `${m.value}${m.unit ? ` ${m.unit}` : ""}`);
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSave || pending) return;
-    submitted.current = true;
-    setJustSaved(false);
     setPending(true);
     try {
-      const trackerRows = active.rows.filter((r) => r.source === "tracker");
-      const measureRows = active.rows.filter((r) => r.source === "measurements");
-      // The note belongs to the tracker period when there is one.
-      const noteWithTracker = active.frequency != null;
-      if (trackerRows.length > 0 && active.frequency) {
+      // Each period is posted only when something in it changed, or when it
+      // carries the note and the note changed.
+      for (const source of ["daily", "weekly"] as const) {
+        const mine = rows.filter((r) => r.source === source);
+        const withNote = noteSource === source;
+        if (mine.length === 0 || !(mine.some(changedRow) || (withNote && noteDirty))) continue;
         const fd = new FormData();
         fd.set("clientId", String(clientId));
         fd.set("date", today);
-        fd.set("frequency", active.frequency);
-        trackerRows.forEach((r) => fd.set(`metric_${r.metric.id}`, activeValues[r.key] ?? ""));
-        fd.set("note", activeNote);
+        fd.set("frequency", source);
+        mine.forEach((r) => fd.set(`metric_${r.metric.id}`, values[r.key] ?? ""));
+        fd.set("note", withNote ? note : sections.find((s) => s.id === source)?.note ?? "");
         await logMetricPeriodAction(fd);
       }
-      if (measureRows.length > 0 && (measureRows.some(changedRow) || (!noteWithTracker && noteDirty))) {
+      const measureRows = rows.filter((r) => r.source === "measurements");
+      const noteWithMeasure = noteSource === "measurements";
+      if (measureRows.length > 0 && (measureRows.some(changedRow) || (noteWithMeasure && noteDirty))) {
         const fd = new FormData();
         fd.set("clientId", String(clientId));
         fd.set("date", today);
-        measureRows.forEach((r) => fd.set(`field_${r.metric.id}`, activeValues[r.key] ?? ""));
-        if (!noteWithTracker) fd.set("note", activeNote);
+        measureRows.forEach((r) => fd.set(`field_${r.metric.id}`, values[r.key] ?? ""));
+        if (noteWithMeasure) fd.set("note", note);
         await saveMeasurementCheckInAction(fd);
       }
     } finally {
@@ -242,187 +242,164 @@ export default function CheckInScreen({
   };
 
   return (
-    <div className="ci-screen">
-      <header className="ci-head">
-        <button type="button" className="ci-back" onClick={onBack} aria-label="Back to home">
-          <ChevronLeftIcon />
-        </button>
-        <div className="ci-head-titles">
-          <h1 className="ci-title">Check-in</h1>
-        </div>
-        <div className="ci-count" aria-label={`${filled.length} of ${rows.length} filled in`}>
-          <span className="ci-count-dot" aria-hidden="true" />
-          {filled.length}
-          <span className="ci-count-total">/ {rows.length}</span>
-        </div>
-      </header>
-
-      {tabs.length > 1 && (
-        <div className="ci-seg" role="tablist" aria-label="Check-in">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              role="tab"
-              aria-selected={t.id === active.id}
-              className={`ci-seg-btn${t.id === active.id ? " on" : ""}`}
-              onClick={() => switchTab(t.id)}
-            >
-              {t.label}
+    <div className="ci-screen ci-one">
+      {/* Room at the foot for the Save bar only while it shows. */}
+      <div ref={scroller} className={`ci-scroll${docked ? " docked" : ""}`}>
+        {/* The photo banner, the Training and Nutrition banners' size: the
+            date, and two pills that switch the screen between Today and
+            Progress. */}
+        <header className="tr-banner ci-banner">
+          <div className="ci-bar">
+            <button type="button" className="ci-back" onClick={onBack} aria-label="Back to home">
+              <ChevronLeftIcon />
             </button>
-          ))}
-        </div>
-      )}
+            <h1 className="ci-title">Check-in</h1>
+            <div className="ci-count" aria-label={`${filled.length} of ${rows.length} filled in`}>
+              <span className={`ci-count-dot${complete ? " done" : ""}`} aria-hidden="true" />
+              {filled.length}
+              <span className="ci-count-total">/ {rows.length}</span>
+            </div>
+          </div>
+          <div className="tr-kicker">{weeklyOpen ? "Daily · weekly" : "Daily"}</div>
+          <FitTitle className="tr-name">{dateLabel}</FitTitle>
+          <div className="tr-weeks ci-views" role="tablist" aria-label="Check-in">
+            {(["today", "progress"] as const).map((v) => (
+              <button key={v} type="button" role="tab" aria-selected={view === v} className={`tr-wk${view === v ? " on" : ""}`} onClick={() => setView(v)}>
+                {v === "today" ? "Today" : "Progress"}
+              </button>
+            ))}
+          </div>
+        </header>
 
-      <div className="ci-scroll">
-        {collapsed ? (
-          <div className="ci-list">
-            {/* Folded to its banner once logged; the banner opens the readings, Edit reopens the form. */}
-            <div className={`ci-done${expanded ? "" : " closed"}`} role="status" aria-live="polite">
-              <div className="ci-saved-banner">
-                <button
-                  type="button"
-                  className="ci-saved-toggle"
-                  onClick={() => setExpanded((x) => !x)}
-                  aria-expanded={expanded}
-                  aria-label={expanded ? "Hide what was logged" : "Show what was logged"}
-                >
-                  <span className="ci-saved-icon" aria-hidden="true">
-                    <CheckIcon />
+        <div className="ci-body">
+          {view === "progress" ? (
+            <CheckInProgress history={history} today={today} />
+          ) : rows.length === 0 ? (
+            <p className="ci-empty">Your coach hasn&rsquo;t set up any check-in metrics yet.</p>
+          ) : folded ? (
+            <div className="ci-folded">
+              {/* Sent: a done row like a finished session on Training (the
+                  light green wash), with Edit where the session says Done. */}
+              <div className="ci-done-row-card" role="status" aria-live="polite">
+                <span className="ci-saved-text">
+                  <span className="ci-saved-title">{dateLabel}</span>
+                  <span className="ci-saved-sub">
+                    {filled.length} of {rows.length} logged
                   </span>
-                  <span className="ci-saved-text">
-                    <span className="ci-saved-title">{dateLabel}</span>
-                    <span className="ci-saved-sub">{justSaved ? "Your coach can see it now." : "Your coach has it."}</span>
-                  </span>
-                  <span className={`ci-saved-chev${expanded ? " open" : ""}`} aria-hidden="true">
-                    <ChevronDownIcon />
-                  </span>
-                </button>
-                <button type="button" className="ci-saved-home" onClick={() => setEditing(true)}>
+                </span>
+                <button type="button" className="ci-done-edit" onClick={() => setFolded(false)}>
                   Edit
                 </button>
               </div>
-              {expanded && (
-              <div className="ci-done-list">
-                {(active.note ?? "").trim() !== "" && (
-                  <div className="ci-done-note">
-                    <span className="ci-done-note-label">Your note</span>
-                    <span className="ci-done-note-text">{active.note}</span>
-                  </div>
-                )}
-                {active.rows.map((r) => (
-                  <div key={r.key} className="ci-done-row">
-                    <span className="ci-done-name">{r.metric.name}</span>
-                    <span className={`ci-done-value${r.metric.value ? "" : " empty"}`}>{r.metric.value ? showValue(r.metric) : "–"}</span>
-                  </div>
-                ))}
-              </div>
-              )}
+              <CheckInFeed days={history.days} />
             </div>
-          </div>
-        ) : (
-          // Keyed by tab, so switching resets anything uncontrolled.
-          <form key={active.id} id="ci-form" className="ci-list" onSubmit={save}>
-            <p className="ci-intro">{active.intro}</p>
+          ) : (
+            <form id="ci-form" className={`ci-ledger${folding ? " folding" : ""}`} onSubmit={save} onFocus={(e) => reveal(e.target as HTMLElement)}>
+              {/* The lifestyle phase's objectives, as a line like the rest. */}
+              <PhaseObjectives coachName={coachFirst} objectives={objectives} variant="line" />
+              {groups.map((g) => (
+                <section key={g.id} id={`ci-group-${g.id}`} className="ci-group">
+                  {/* Today's lines need no heading (the banner says it); the
+                      week's get one when both are on screen. */}
+                  {g.id === "week" && groups.length > 1 && <h2 className="ci-group-label">{g.label}</h2>}
+                  {g.rows.map((r) => {
+                    const t = typedKeys.indexOf(r.key);
+                    return (
+                      <CheckInLine
+                        key={r.key}
+                        ref={(el) => {
+                          if (t >= 0) inputs.current[t] = el;
+                        }}
+                        metric={r.metric}
+                        value={values[r.key] ?? ""}
+                        today={today}
+                        weekly={r.source === "weekly"}
+                        lastTyped={t === typedKeys.length - 1}
+                        onChange={(v) => setValue(r.key, v)}
+                        onNext={() => inputs.current[t + 1]?.focus()}
+                      />
+                    );
+                  })}
+                </section>
+              ))}
 
-            <div className="ci-card">
-              {active.rows.map((r) => {
-                const m = r.metric;
-                const value = activeValues[r.key] ?? "";
-                // Logged: saved for this period and not changed since.
-                const logged = m.value.length > 0 && sameNumber(value, m.value);
-                const unit = m.scaleMax ? `/${m.scaleMax}` : m.unit || "";
-                return (
-                  <div key={r.key} className={`ci-row${logged ? " logged" : ""}`}>
-                    <div className="ci-row-head">
-                      <div className="ci-row-labels">
-                        <div className="ci-row-name">
-                          <span>{m.name}</span>
-                          {logged && <CheckIcon />}
-                        </div>
-                        {m.hint && <div className="ci-row-last">{m.hint}</div>}
-                      </div>
-                      {m.scaleMax ? (
-                        <div className="ci-pill">
-                          <span className="ci-pill-value">{value || "—"}</span>
-                          <span className="ci-pill-unit">{unit}</span>
-                        </div>
-                      ) : (
-                        <label className="ci-pill">
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            autoComplete="off"
-                            placeholder="—"
-                            value={value}
-                            onChange={(e) => setValue(r.key, cleanNumeric(e.target.value, false))}
-                            aria-label={m.name}
-                            className="ci-pill-input"
-                          />
-                          <span className="ci-pill-unit">{unit}</span>
-                        </label>
-                      )}
-                    </div>
-                    {m.scaleMax && (
-                      <div className="ci-scale" style={{ gridTemplateColumns: `repeat(${m.scaleMax}, minmax(0, 1fr))` }}>
-                        {Array.from({ length: m.scaleMax }, (_, i) => {
-                          const n = String(i + 1);
-                          const on = value === n;
-                          return (
-                            <button
-                              key={n}
-                              type="button"
-                              className={`ci-scale-btn${on ? " on" : ""}`}
-                              onClick={() => setValue(r.key, on ? "" : n)}
-                              aria-pressed={on}
-                              aria-label={`${m.name} ${n} of ${m.scaleMax}`}
-                            >
-                              {n}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <label className="ci-notefield">
-              <span className="ci-notefield-label">Note for your coach</span>
-              <textarea
-                value={activeNote}
-                onChange={(e) => setNotes((n) => ({ ...n, [active.id]: e.target.value }))}
-                placeholder="Anything the numbers don't say: a tennis session, a bad night, a day off…"
-                maxLength={500}
-                rows={2}
-              />
-            </label>
-          </form>
-        )}
+              <label className="ci-note">
+                <span className="ci-label">Note for {coachFirst}</span>
+                <textarea ref={noteBox} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Anything worth knowing today?" maxLength={500} rows={2} />
+              </label>
+            </form>
+          )}
+        </div>
       </div>
 
-      {/* No dock once the tab is folded up: the done card is the whole story,
-          and its own Edit is the way back in. */}
-      {!collapsed && (
-        <div className="ci-dock">
-          <div>
-            <div className="ci-dock-kicker">{isSaved ? "Sent" : "Goes to your coach"}</div>
-            <div className="ci-dock-label">
-              {isSaved ? (complete ? "All updated" : "Your coach has it") : complete ? "All logged" : `${remaining} still empty`}
+      {docked && (
+        <div ref={dock} className="ci-dock ci-dock-ledger" style={kb ? { bottom: kb } : undefined}>
+          <div className="ci-dock-text">
+            <div className="ci-dock-kicker">{isSaved ? "Sent" : complete ? "Ready" : "Today"}</div>
+            <div className="ci-dock-sub">
+              {isSaved ? `All updated${savedTime ? ` · ${savedTime}` : ""}` : complete ? "Everything filled in" : `${remaining} still to fill`}
             </div>
           </div>
           {isSaved ? (
-            <button type="button" className="ci-save secondary" onClick={stopEditing}>
+            <button type="button" className="ci-send done" onClick={fold} disabled={folding}>
               Done
             </button>
           ) : (
-            <button type="submit" form="ci-form" className="ci-save" disabled={!canSave || pending}>
-              {pending ? "Saving…" : "Save"}
+            <button type="submit" form="ci-form" className="ci-send" disabled={!canSave || pending}>
+              {pending ? "Sending…" : "Send"}
             </button>
           )}
         </div>
       )}
     </div>
+  );
+}
+
+
+// The seven days before today, newest first: a green row a day something was
+// logged (tap to see what), a plain one a day nothing was. Read only: a
+// day's check-in can only be changed on the day.
+function CheckInFeed({ days }: { days: CheckInFeedDay[] }) {
+  const [open, setOpen] = useState<string | null>(null);
+  if (days.length === 0) return null;
+  const label = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  return (
+    <section className="ci-feed" aria-label="The last seven days">
+      <h2 className="ci-feed-title">Last 7 days</h2>
+      {days.map((d) => {
+        const done = d.items.length > 0;
+        const isOpen = open === d.date;
+        return (
+          <div key={d.date} className={`ci-day${done ? " done" : ""}`}>
+            <button type="button" className="ci-day-head" disabled={!done} aria-expanded={done ? isOpen : undefined} onClick={() => setOpen(isOpen ? null : d.date)}>
+              <span className="ci-day-text">
+                <span className="ci-day-date">{label(d.date)}</span>
+                <span className="ci-day-sub">{done ? `${d.items.length} logged` : "Nothing logged"}</span>
+              </span>
+              {done && (
+                <span className={`ci-day-chev${isOpen ? " open" : ""}`} aria-hidden="true">
+                  <ChevronDownIcon />
+                </span>
+              )}
+            </button>
+            {done && (
+              <div className={`ci-day-body${isOpen ? " open" : ""}`}>
+                <div className="ci-day-clip">
+                  <div className="ci-day-list">
+                    {d.items.map((it) => (
+                      <div key={it.name} className="ci-day-row">
+                        <span>{it.name}</span>
+                        <b>{it.value}</b>
+                      </div>
+                    ))}
+                    {d.note && <p className="ci-day-note">&ldquo;{d.note}&rdquo;</p>}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </section>
   );
 }
