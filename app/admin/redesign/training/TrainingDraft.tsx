@@ -51,7 +51,7 @@ export type DraftRow = {
   video: { requestId: number; state: "asked" | "in" | "replied"; note: string | null; reply: string | null } | null;
   /** The demo the client sees on this exercise: the library's, else one set on this row long ago. */
   demo: { url: string; source: "library" | "row" } | null;
-  history: { week: number; label: string; target: number | null; setsPlanned: number; sets: { n: number; kg: number | null; reps: number | null; rpe: number | null }[]; best: number | null; e1rm: number | null; gym: string | null; current: boolean }[];
+  history: { week: number; label: string; target: number | null; targetReps: string; setsPlanned: number; sets: { n: number; kg: number | null; reps: number | null; rpe: number | null }[]; best: number | null; e1rm: number | null; gym: string | null; current: boolean }[];
   /** What the client did instead, when they swapped the exercise. */
   swap: string | null;
   /** The swap in full: what, when, and the sets logged on it (kept out of this row's numbers). */
@@ -2034,6 +2034,31 @@ function ProgressDialog({ row, lbs, unit, multiGym }: { row: DraftRow; lbs: bool
       : stall === 1
       ? { text: "Flat last week", cls: "flat" }
       : { text: "Progressing", cls: "up" };
+  // Against the coach's targets, a week at a time: each set on target when
+  // its reps reach the bottom of the range at the target weight or heavier;
+  // at the top when they reach the top of it. With no weight set, reps only.
+  const range = (r: string): { lo: number; hi: number } | null => {
+    const m = r.match(/(\d+)\s*(?:[-–to]+\s*(\d+))?/);
+    if (!m) return null;
+    const lo = Number(m[1]);
+    const hi = m[2] ? Number(m[2]) : lo;
+    return { lo: Math.min(lo, hi), hi: Math.max(lo, hi) };
+  };
+  const onTarget = (w: (typeof h)[number]) => {
+    const r = range(w.targetReps);
+    if (!r || w.sets.length === 0) return null;
+    const heavyEnough = (kg: number | null) => w.target == null || (kg != null && kg >= w.target - 0.01);
+    const hit = w.sets.filter((st) => st.reps != null && st.reps >= r.lo && heavyEnough(st.kg)).length;
+    const top = w.sets.filter((st) => st.reps != null && st.reps >= r.hi && heavyEnough(st.kg)).length;
+    const n = w.sets.length;
+    return top === n && r.hi > r.lo
+      ? { text: "Top of range", cls: "top" }
+      : hit === n
+      ? { text: "On target", cls: "up" }
+      : hit === 0
+      ? { text: "Below target", cls: "down" }
+      : { text: `${hit} of ${n} on target`, cls: "flat" };
+  };
   const pct = (v: number | null) => (v == null ? "—" : v === 0 ? "0%" : `${v > 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`);
   const tone = (v: number | null) => (v == null ? "none" : v > 0 ? "up" : v < 0 ? "down" : "flat");
 
@@ -2156,6 +2181,7 @@ function ProgressDialog({ row, lbs, unit, multiGym }: { row: DraftRow; lbs: bool
             <th>Reps</th>
             <th>RPE</th>
             {h.some((w) => w.gym) && <th>Gym</th>}
+            <th>Target</th>
             <th>Change</th>
           </tr>
         </thead>
@@ -2163,6 +2189,7 @@ function ProgressDialog({ row, lbs, unit, multiGym }: { row: DraftRow; lbs: bool
           {[...winLogged].reverse().map((w) => {
             const prev = logged.find((q) => q.week === w.week - 1) ?? null;
             const stepPct = prev && est(prev) > 0 ? Math.round(((est(w) - est(prev)) / est(prev)) * 1000) / 10 : null;
+            const verdictW = onTarget(w);
             return w.sets.map((st, i) => {
               return (
                 <tr key={`${w.week}-${st.n}`} className={`${w.current ? "now" : ""}${i === 0 ? " first" : ""}`}>
@@ -2172,6 +2199,7 @@ function ProgressDialog({ row, lbs, unit, multiGym }: { row: DraftRow; lbs: bool
                   <td>{st.reps ?? "—"}</td>
                   <td>{st.rpe ?? "—"}</td>
                   {h.some((q) => q.gym) && <td>{i === 0 ? w.gym ?? "" : ""}</td>}
+                  <td>{i === 0 && verdictW && <span className={`rp-hit ${verdictW.cls}`}>{verdictW.text}</span>}</td>
                   <td className={`rp-change ${stepPct == null ? "none" : stepPct > 0 ? "up" : stepPct < 0 ? "down" : "flat"}`}>{i === 0 ? pct(stepPct) : ""}</td>
                 </tr>
               );
@@ -2179,14 +2207,14 @@ function ProgressDialog({ row, lbs, unit, multiGym }: { row: DraftRow; lbs: bool
           })}
           {winLogged.length === 0 && (
             <tr className="none">
-              <td colSpan={7}>Nothing logged on this exercise in the last four weeks.</td>
+              <td colSpan={8}>Nothing logged on this exercise in the last four weeks.</td>
             </tr>
           )}
         </tbody>
       </table>
       <p className="rp-howto">
         The percentages and the trend compare each week&rsquo;s best set with its reps counted, as an estimated one-rep max (weight × (1 + reps ÷ 30)): more reps at the same weight is progress, and fewer reps at a little more weight is not. <b>Vs last week</b> is against the week before;{" "}
-        <b>over 4 weeks</b> against the earliest week logged in the last four; <b>Change</b> is each week against the one before. The chart shows the heaviest weight each week, with your target dashed.
+        <b>over 4 weeks</b> against the earliest week logged in the last four; <b>Change</b> is each week against the one before. <b>Target</b> checks each set against what you asked that week: on target when its reps reach the bottom of the range at the target weight or heavier, <b>top of range</b> when every set reached the top (time to go heavier). The chart shows the heaviest weight each week, with your target dashed.
       </p>
     </DialogContent>
   );

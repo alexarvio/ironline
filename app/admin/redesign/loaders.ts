@@ -164,6 +164,8 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
           week: i + 1,
           label: programWeekLabel(program, wn),
           target: wa.target_weight_kg,
+          /** The reps asked that week ("8-10"), for the on-target verdict. */
+          targetReps: wa.reps ?? "",
           setsPlanned: wa.sets,
           sets: wl.map((l) => ({ n: l.set_number, kg: l.weight_kg, reps: l.reps, rpe: l.rpe_actual })),
           best: kgs.length ? Math.max(...kgs) : null,
