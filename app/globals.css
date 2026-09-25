@@ -17269,3 +17269,8 @@ button.ci-hint { cursor: pointer; }
 /* The session's name (Pull) sized to the row the big button makes (25 Sep). */
 .pc-next-name { font-size: 24px; font-weight: 700; line-height: 1.15; letter-spacing: -0.01em; }
 .pc-next-text { gap: 4px; }
+/* The phase cards' button and the quick action's button as frosted glass,
+   the Training banner's week chips (.tr-wk): white text on a see-through
+   white with a light rim, blurring what is behind. Sizes stay (25 Sep). */
+.pc-start, .qa-btn { background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.35); color: #fff; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.pc-start:active, .qa-btn:active { background: rgba(255, 255, 255, 0.26); }
