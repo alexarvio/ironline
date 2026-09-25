@@ -17327,3 +17327,8 @@ button.ci-hint { cursor: pointer; }
 .ts-last-toggle svg { width: 20px; height: 20px; }
 .ts-set.last { background: transparent; color: #313851; border-radius: 0; }
 .ts-last-note { display: block; justify-content: normal; margin-top: 12px; padding: 4px 0; border: 0; border-radius: 0; background: transparent; font-size: 13px; font-weight: 600; line-height: 1.4; color: #5b6474; text-align: center; }
+/* The link bubble on the client's own messages (25 Sep): those sit against
+   the right edge, so the top-right corner was off screen; it goes on the
+   top-left corner instead, solid white like on the coach's, since the
+   see-through white vanished against the page where it pokes out. */
+.cm-msg.mine .cm-linkdot, .cm-msg.mine.media .cm-linkdot { right: auto; left: -11px; border-color: #dfe3e8; background: #fff; color: #1e3a6e; }
