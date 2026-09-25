@@ -2001,95 +2001,182 @@ function AddCardioRow({ onChange, onClose }: { onChange: (c: Omit<AddedCardio, "
 // ---- Dialogs ------------------------------------------------------------------
 
 function ProgressDialog({ row, lbs, unit, multiGym }: { row: DraftRow; lbs: boolean; unit: string; multiGym: boolean }) {
+  // The breakdown behind the 7 / 30 day figures, read top to bottom: what is
+  // asked, the verdict in three numbers, the curve, then week by week.
   const h = row.history;
-  const hasGym = h.some((w) => w.gym);
+  const logged = h.filter((w) => w.sets.length > 0 && w.best != null);
+  const shown = (kg: number) => (lbs ? Math.round(kg * LB * 2) / 2 : Math.round(kg * 2) / 2);
+  // Up to the week on screen: the verdict is about where the client is now.
+  const cur = h.find((w) => w.current) ?? null;
+  const upTo = logged.filter((w) => !cur || w.week <= cur.week);
+  // The weeks in a row, most recent back, where the best set did not go up.
+  const stall = (() => {
+    let n = 0;
+    for (let i = upTo.length - 1; i > 0; i--) {
+      if (upTo[i].best! > upTo[i - 1].best!) break;
+      n++;
+    }
+    return n;
+  })();
+  const lastStep = upTo.length > 1 ? upTo[upTo.length - 1].best! - upTo[upTo.length - 2].best! : null;
+  const verdict =
+    upTo.length === 0
+      ? { text: "Nothing logged yet", cls: "none" }
+      : upTo.length === 1
+      ? { text: "First week logged", cls: "none" }
+      : lastStep != null && lastStep < 0
+      ? { text: "Dropping", cls: "down" }
+      : stall >= 2
+      ? { text: `Stalled ${stall} weeks`, cls: "flat" }
+      : stall === 1
+      ? { text: "Flat last week", cls: "flat" }
+      : { text: "Progressing", cls: "up" };
+  const pct = (v: number | null) => (v == null ? "—" : v === 0 ? "0%" : `${v > 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`);
+  const tone = (v: number | null) => (v == null ? "none" : v > 0 ? "up" : v < 0 ? "down" : "flat");
+
+  // The curve: each week's best set, the target dashed across.
+  const W = 520;
+  const H = 130;
+  const pad = { l: 34, r: 12, t: 12, b: 22 };
+  const values = [...logged.map((w) => w.best!), ...h.map((w) => w.target).filter((t): t is number => t != null)];
+  const lo = values.length ? Math.min(...values) : 0;
+  const hi = values.length ? Math.max(...values) : 1;
+  const span = hi - lo || Math.max(1, hi * 0.1);
+  const x = (i: number) => pad.l + (h.length <= 1 ? (W - pad.l - pad.r) / 2 : (i / (h.length - 1)) * (W - pad.l - pad.r));
+  const y = (v: number) => pad.t + (1 - (v - (lo - span * 0.15)) / (span * 1.3)) * (H - pad.t - pad.b);
+  const pts = h.map((w, i) => (w.sets.length > 0 && w.best != null ? { i, w, px: x(i), py: y(w.best) } : null)).filter((q): q is NonNullable<typeof q> => q != null);
+  const target = cur?.target ?? row.kg;
+
   return (
-    <DialogContent className="rd-dlg rd-progress">
+    <DialogContent className="rd-dlg rd-progress rd-progress2">
       <DialogHeader>
         <DialogTitle>{row.name}</DialogTitle>
       </DialogHeader>
-      <div className="rd-prescribed">
-        <span className="rd-eyebrow">Targets</span>
-        <div className="rd-prescribed-row">
+
+      {/* 1 · What is asked, on one line. */}
+      <div className="rp-target">
+        <span>
+          <b>
+            {row.sets} × {row.reps || "—"}
+          </b>
+        </span>
+        <span>
+          <b>{kgOf(row.kg, lbs)}</b> {unit}
+        </span>
+        {multiGym &&
+          row.gymKg
+            .filter((g) => g.kg !== row.kg)
+            .map((g) => (
+              <span key={g.gym}>
+                <b>{kgOf(g.kg, lbs)}</b> {unit} at {g.gym}
+              </span>
+            ))}
+        {row.rpe != null && (
           <span>
-            <small>Sets × reps</small>
-            <b>
-              {row.sets} × {row.reps || "—"}
-            </b>
+            RPE <b>{row.rpe}</b>
           </span>
+        )}
+        {row.tempo && (
           <span>
-            <small>Weight</small>
-            <b>
-              {kgOf(row.kg, lbs)} {row.kg != null && <em>{unit}</em>}
-            </b>
+            Tempo <b>{row.tempo}</b>
           </span>
-          {multiGym &&
-            row.gymKg
-              .filter((g) => g.kg !== row.kg)
-              .map((g) => (
-                <span key={g.gym}>
-                  <small>at {g.gym}</small>
-                  <b>
-                    {kgOf(g.kg, lbs)} <em>{unit}</em>
-                  </b>
-                </span>
-              ))}
+        )}
+        {restOf(row.rest) && (
           <span>
-            <small>RPE</small>
-            <b>{row.rpe ?? "—"}</b>
+            Rest <b>{restOf(row.rest)}</b>
           </span>
-          {row.tempo && (
-            <span>
-              <small>Tempo</small>
-              <b>{row.tempo}</b>
-            </span>
-          )}
-          {restOf(row.rest) && (
-            <span>
-              <small>Rest</small>
-              <b>{restOf(row.rest)}</b>
-            </span>
-          )}
-        </div>
-        {row.note && <p className="rd-prescribed-note">&ldquo;{row.note}&rdquo;</p>}
+        )}
+        {row.note && <em>&ldquo;{row.note}&rdquo;</em>}
       </div>
-      <table className="rd-progress-table">
-        <thead>
-          <tr>
-            <th>Week</th>
-            <th>Set</th>
-            <th>Weight ({unit})</th>
-            <th>Reps</th>
-            <th>RPE</th>
-            {hasGym && <th>Gym</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {[...h]
-            .reverse()
-            .filter((w) => w.sets.length > 0)
-            .map((w) =>
-              w.sets.map((st, i) => {
-                const over = st.kg != null && w.target != null ? st.kg - w.target : null;
-                return (
-                  <tr key={`${w.week}-${st.n}`} className={`${w.current ? "now" : ""}${i === 0 ? " first" : ""}`}>
-                    <td>{i === 0 && w.label}</td>
-                    <td>{st.n}</td>
-                    <td className={over == null ? "" : over > 0 ? "up" : over < 0 ? "down" : ""}>{st.kg != null ? kgOf(st.kg, lbs) : "—"}</td>
-                    <td>{st.reps ?? "—"}</td>
-                    <td>{st.rpe ?? "—"}</td>
-                    {hasGym && <td>{i === 0 ? w.gym ?? "" : ""}</td>}
-                  </tr>
-                );
-              })
-            )}
-          {h.every((w) => w.sets.length === 0) && (
-            <tr className="none">
-              <td colSpan={hasGym ? 6 : 5}>Nothing logged on this exercise yet.</td>
-            </tr>
+
+      {/* 2 · The verdict in three numbers. */}
+      <div className="rp-stats">
+        <div className={`rp-stat ${tone(row.d7)}`}>
+          <small>vs last week</small>
+          <b>{pct(row.d7)}</b>
+        </div>
+        <div className={`rp-stat ${tone(row.d30)}`}>
+          <small>over 4 weeks</small>
+          <b>{pct(row.d30)}</b>
+        </div>
+        <div className={`rp-stat ${verdict.cls}`}>
+          <small>Trend</small>
+          <b>{verdict.text}</b>
+        </div>
+      </div>
+
+      {/* 3 · The curve: the best set each week, the target dashed. */}
+      {pts.length > 0 && (
+        <svg className="rp-chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${row.name}: best set by week`}>
+          {target != null && (
+            <>
+              <line x1={pad.l} x2={W - pad.r} y1={y(target)} y2={y(target)} className="rp-target-line" />
+              <text x={pad.l - 6} y={y(target) + 3} className="rp-axis" textAnchor="end">
+                {shown(target)}
+              </text>
+            </>
           )}
-        </tbody>
-      </table>
+          {pts.length > 1 && <polyline points={pts.map((q) => `${q.px},${q.py}`).join(" ")} className="rp-line" />}
+          {pts.map((q) => (
+            <g key={q.w.week}>
+              <circle cx={q.px} cy={q.py} r={q.w.current ? 5 : 3.5} className={`rp-dot${q.w.current ? " now" : ""}`} />
+              <text x={q.px} y={q.py - 9} className="rp-val" textAnchor="middle">
+                {shown(q.w.best!)}
+              </text>
+            </g>
+          ))}
+          {h.map((w, i) => (
+            <text key={w.week} x={x(i)} y={H - 6} className={`rp-axis${w.current ? " now" : ""}`} textAnchor="middle">
+              {w.label.replace("Week ", "W")}
+            </text>
+          ))}
+        </svg>
+      )}
+
+      {/* 4 · Week by week, newest first: the sets, the best, the step from the week before. */}
+      {logged.length === 0 ? (
+        <p className="rp-none">Nothing logged on this exercise yet.</p>
+      ) : (
+        <div className="rp-weeks">
+          <div className="rp-week head">
+            <span>Week</span>
+            <span>Sets</span>
+            <span>Best</span>
+            <span>Change</span>
+          </div>
+          {[...logged].reverse().map((w) => {
+            const i = logged.indexOf(w);
+            const prev = i > 0 ? logged[i - 1] : null;
+            const step = prev ? w.best! - prev.best! : null;
+            const stepPct = prev && prev.best! > 0 ? Math.round(((w.best! - prev.best!) / prev.best!) * 1000) / 10 : null;
+            return (
+              <div key={w.week} className={`rp-week${w.current ? " now" : ""}`}>
+                <span className="rp-week-name">
+                  {w.label}
+                  {w.gym && <small>{w.gym}</small>}
+                </span>
+                <span className="rp-sets">
+                  {w.sets.map((st) => {
+                    const over = st.kg != null && w.target != null ? st.kg - w.target : null;
+                    return (
+                      <span key={st.n} className={`rd-set${over == null ? "" : over > 0 ? " up" : over < 0 ? " down" : ""}`}>
+                        {st.kg != null ? kgOf(st.kg, lbs) : "—"}×{st.reps ?? "—"}
+                        {st.rpe != null && <small>@{st.rpe}</small>}
+                      </span>
+                    );
+                  })}
+                </span>
+                <span className="rp-best">
+                  {shown(w.best!)} <small>{unit}</small>
+                </span>
+                <span className={`rp-change ${step == null ? "none" : step > 0 ? "up" : step < 0 ? "down" : "flat"}`}>
+                  {step == null ? "—" : step === 0 ? "No change" : `${step > 0 ? "▲" : "▼"} ${shown(Math.abs(step))} ${unit} · ${pct(stepPct)}`}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </DialogContent>
   );
 }

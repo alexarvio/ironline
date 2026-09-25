@@ -542,3 +542,37 @@
 .rd-demo { width: 24px; height: 24px; background: #1e3a6e; color: #fff; box-shadow: 0 2px 6px -2px rgba(30, 58, 110, 0.5); }
 .rd-demo:hover { background: #2f5d8f; }
 .rd-demo svg { width: 12px; height: 12px; margin-left: 1px; }
+
+/* The progress breakdown, reworked (25 Sep): the target on a line, three
+   headline numbers, the curve of best sets, then a line a week. */
+.rd-progress2 { max-width: 720px; gap: 16px; }
+.rp-target { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; padding: 10px 14px; border-radius: 12px; background: #f4f7fc; font-size: 13px; color: #5b6474; }
+.rp-target b { font-size: 14.5px; color: #141a24; }
+.rp-target em { flex-basis: 100%; font-style: normal; color: #5b6474; }
+.rp-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.rp-stat { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 12px; background: #f4f7fc; }
+.rp-stat small { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; }
+.rp-stat b { font-size: 20px; font-weight: 800; color: #141a24; font-variant-numeric: tabular-nums; }
+.rp-stat.up { background: #e8f6ee; } .rp-stat.up b { color: #1b7a4b; }
+.rp-stat.down { background: #fdeee8; } .rp-stat.down b { color: #b3471d; }
+.rp-stat.flat { background: #fdf4e4; } .rp-stat.flat b { color: #9a5b00; }
+.rp-chart { width: 100%; height: auto; }
+.rp-line { fill: none; stroke: #1e3a6e; stroke-width: 2; stroke-linejoin: round; }
+.rp-dot { fill: #fff; stroke: #1e3a6e; stroke-width: 2; }
+.rp-dot.now { fill: #1e3a6e; }
+.rp-target-line { stroke: #8b93a1; stroke-width: 1; stroke-dasharray: 4 4; }
+.rp-val { font-size: 10.5px; font-weight: 700; fill: #313851; }
+.rp-axis { font-size: 10px; fill: #8b93a1; }
+.rp-axis.now { fill: #1e3a6e; font-weight: 800; }
+.rp-weeks { display: flex; flex-direction: column; max-height: 300px; overflow-y: auto; scrollbar-width: thin; }
+.rp-week { display: grid; grid-template-columns: 120px 1fr 80px 150px; align-items: center; gap: 12px; padding: 9px 8px; border-top: 1px solid #eceff3; font-size: 13px; }
+.rp-week.head { border-top: 0; padding-top: 0; font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; }
+.rp-week.now { background: #f1f5fb; border-radius: 8px; }
+.rp-week-name { display: flex; flex-direction: column; font-weight: 700; color: #141a24; }
+.rp-week-name small { font-size: 11px; font-weight: 500; color: #8b93a1; }
+.rp-sets { display: flex; flex-wrap: wrap; gap: 4px; }
+.rp-best { font-weight: 800; color: #141a24; font-variant-numeric: tabular-nums; }
+.rp-best small { font-size: 11px; font-weight: 600; color: #8b93a1; }
+.rp-change { font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rp-change.up { color: #1b7a4b; } .rp-change.down { color: #b3471d; } .rp-change.flat { color: #9a5b00; } .rp-change.none { color: #b0b6c0; }
+.rp-none { margin: 0; color: #8b93a1; font-size: 13.5px; }
