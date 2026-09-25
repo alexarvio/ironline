@@ -89,8 +89,8 @@ export default function MeetingsScreen({ upcoming, past, coachName, onBack }: Me
             <div className="mts-head">Past meetings</div>
             {past.length ? (
               <ul className="mts-list">
-                {past.map((p, i) => (
-                  <PastRow key={p.id} p={p} defaultOpen={i === 0} />
+                {past.map((p) => (
+                  <PastRow key={p.id} p={p} />
                 ))}
               </ul>
             ) : (
@@ -104,10 +104,10 @@ export default function MeetingsScreen({ upcoming, past, coachName, onBack }: Me
 }
 
 // One past call: the date leaf, what it was about, the recap's title; tap to
-// read what was agreed. The newest opens on arrival.
-function PastRow({ p, defaultOpen }: { p: PastMeetingView; defaultOpen: boolean }) {
+// read what was agreed. All start folded.
+function PastRow({ p }: { p: PastMeetingView }) {
   const hasRecap = !!p.text;
-  const [open, setOpen] = useState(defaultOpen && hasRecap);
+  const [open, setOpen] = useState(false);
   const head = (
     <>
       <span className="mts-leaf" aria-hidden="true">
