@@ -664,6 +664,22 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                       against the time with no empty slot; the time, gym and
                       state keep their set columns. */}
                   <span className="rd-tagextras">
+                    {s.note && (
+                      <span className="rd-tag note" title={`${firstName}'s note: ${s.note}`} aria-label={`${firstName} left a note: ${s.note}`}>
+                        <ChatIcon />
+                      </span>
+                    )}
+                    {(() => {
+                      // A video from the client in this session: waiting for a reply, or answered.
+                      const vs = rows.map((r) => videos[r.id] ?? null).filter((v) => v && (v.state === "in" || v.state === "replied"));
+                      if (vs.length === 0) return null;
+                      const waiting = vs.some((v) => v!.state === "in");
+                      return (
+                        <span className={`rd-flag video ${waiting ? "in" : "replied"}`} title={waiting ? `${firstName} sent a video · waiting for your reply` : "Their video · replied"} aria-label={waiting ? "A video is waiting for your reply" : "Video replied"}>
+                          <VideoIcon />
+                        </span>
+                      );
+                    })()}
                     {(() => {
                       const n = rows.filter((r) => r.swap).length;
                       return n > 0 ? (
@@ -673,11 +689,6 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                         </span>
                       ) : null;
                     })()}
-                    {s.note && (
-                      <span className="rd-tag note" title={`${firstName}'s note: ${s.note}`} aria-label={`${firstName} left a note: ${s.note}`}>
-                        <ChatIcon />
-                      </span>
-                    )}
                   </span>
                   <span className="rd-tagslot time">{s.duration != null && <span className="rd-tag time">{s.duration} min</span>}</span>
                   <span className="rd-tagslot gym">{s.gym && <span className="rd-tag gym" title={s.gym}>{s.gym}</span>}</span>
@@ -801,23 +812,9 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                           ))}
                           <span className="rd-row-more">
                             {/* Three fixed slots, so each kind lines up down the table:
-                                a swap (opens what they did), their messages about it,
-                                a video they sent. */}
+                                their messages about it, a video they sent, a swap
+                                (opens what they did). */}
                             <span className="rd-flags">
-                              <span className="rd-flag-slot">
-                                {r.swap && (
-                                  <button
-                                    type="button"
-                                    className={`rd-swapdot${openSwaps.includes(r.id) ? " on" : ""}`}
-                                    onClick={() => toggleSwap(r.id)}
-                                    aria-expanded={openSwaps.includes(r.id)}
-                                    title={`${firstName} did ${r.swap} instead`}
-                                    aria-label={`Swapped for ${r.swap}: show what they did`}
-                                  >
-                                    <SwapIcon />
-                                  </button>
-                                )}
-                              </span>
                               <span className="rd-flag-slot">
                                 {r.exerciseChat.some((m) => !m.mine) && (
                                   <button
@@ -841,6 +838,20 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                                     aria-label={video.state === "in" ? `Watch ${firstName}'s video` : "Their video, replied"}
                                   >
                                     <VideoIcon />
+                                  </button>
+                                )}
+                              </span>
+                              <span className="rd-flag-slot">
+                                {r.swap && (
+                                  <button
+                                    type="button"
+                                    className={`rd-swapdot${openSwaps.includes(r.id) ? " on" : ""}`}
+                                    onClick={() => toggleSwap(r.id)}
+                                    aria-expanded={openSwaps.includes(r.id)}
+                                    title={`${firstName} did ${r.swap} instead`}
+                                    aria-label={`Swapped for ${r.swap}: show what they did`}
+                                  >
+                                    <SwapIcon />
                                   </button>
                                 )}
                               </span>
