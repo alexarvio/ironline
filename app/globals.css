@@ -17352,3 +17352,9 @@ button.ci-hint { cursor: pointer; }
 .tr-row-tile.unfinished { background: #d98a1c; color: #fff; }
 .tr-row-pill.unfinished { padding: 5px 10px; background: #FDF1DC; color: #9a5b00; }
 .so-pill.unfinished { padding: 5px 10px; border-radius: 999px; background: rgba(253, 241, 220, 0.18); color: #ffcf7a; }
+/* An unfinished session exactly like a done one, in amber (25 Sep): the
+   row's light wash and border, the number as amber text (no filled
+   square), "Unfinished" as bare amber text. */
+.tr-row.unfinished { background: #FDF7EC; border-color: #F3E0BF; }
+.tr-row-tile.unfinished { background: transparent; color: #c27a12; }
+.tr-row-pill.unfinished { padding: 5px 0; background: transparent; color: #b06d0c; }
