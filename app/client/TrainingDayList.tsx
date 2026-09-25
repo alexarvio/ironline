@@ -129,8 +129,8 @@ export default function TrainingDayList({
           const gymName = d.gyms.find((g) => g.id === d.gymId)?.name ?? null;
           const minutes = durationMinutes(d);
           const sub =
-            status === "done"
-              ? [d.endedAt ? shortDate(d.endedAt) : "Logged", minutes != null ? `${minutes} min` : null, gymName].filter(Boolean).join(" · ")
+            status === "done" || status === "unfinished"
+              ? [d.endedAt ? shortDate(d.endedAt) : "Logged", minutes != null ? `${minutes} min` : null, status === "unfinished" && planned ? `${logged} of ${planned} sets` : gymName].filter(Boolean).join(" · ")
               : status === "live"
               ? `In progress · ${clock(elapsedMs(d.startedAt, null, now))}`
               : status === "skipped"
@@ -142,7 +142,7 @@ export default function TrainingDayList({
                 ]
                   .filter(Boolean)
                   .join(" · ");
-          const tone = status === "done" ? "done" : status === "live" ? "live" : isNext ? "next" : status;
+          const tone = status === "done" ? "done" : status === "unfinished" ? "unfinished" : status === "live" ? "live" : isNext ? "next" : status;
           return (
             <button key={d.key} type="button" className={`tr-row ${tone}`} onClick={() => setView({ dayId: d.key, screen: "overview" })}>
               <span className={`tr-row-tile ${tone}`}>{d.index}</span>

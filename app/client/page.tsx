@@ -481,17 +481,18 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
   const trainingDays = days.filter((d) => d.assignments.length > 0 || listCardioForDay(d.day.id).length > 0);
   const stats = weekStats(CLIENT_ID, week);
   const dayTarget = stats.totalDays || 7;
-  // Sessions finished this week: ended on the app, or every set logged and
-  // any cardio ticked.
-  const sessionsDone = trainingDays.filter(
-    ({ day, assignments }) =>
-      !!day.session_ended_at || (assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets) && listCardioForDay(day.id).every((c) => isCardioDone(c.id)))
-  ).length;
+  // Sessions finished this week: every set logged and any cardio ticked, the
+  // rule the coach's Complete uses. One ended with sets missing is
+  // unfinished: not counted as done, and not still "left" either.
+  const complete = ({ day, assignments }: (typeof trainingDays)[number]) =>
+    assignments.every((a) => getLogsForAssignment(a.id).length >= a.sets) && listCardioForDay(day.id).every((c) => isCardioDone(c.id));
+  const sessionsDone = trainingDays.filter(complete).length;
+  const unfinished = trainingDays.filter((d) => !!d.day.session_ended_at && !complete(d)).length;
   const pct = Math.round((Math.min(sessionsDone, dayTarget) / dayTarget) * 100);
   // A session skipped with a reason is settled: it is not still "left" to
   // do. It does not count as trained either, so the ring stays honest.
   const skipped = trainingDays.filter(({ day, assignments }) => !!day.skip_reason && !assignments.some((a) => getLogsForAssignment(a.id).length > 0)).length;
-  const sessionsLeft = dayTarget - sessionsDone - skipped;
+  const sessionsLeft = dayTarget - sessionsDone - unfinished - skipped;
   const ringR = 43;
   const ringC = 2 * Math.PI * ringR;
   const isCurrent = week === currentWeek;
@@ -511,7 +512,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                   <span className="tr-days-of">of {dayTarget} sessions</span>
                 </div>
                 <div className={`tr-days-status${sessionsLeft <= 0 ? " done" : ""}`}>
-                  {sessionsLeft <= 0 ? "Week complete" : `${sessionsLeft} session${sessionsLeft === 1 ? "" : "s"} left`}
+                  {[sessionsLeft <= 0 ? (unfinished ? "No sessions left" : "Week complete") : `${sessionsLeft} session${sessionsLeft === 1 ? "" : "s"} left`, unfinished ? `${unfinished} unfinished` : null].filter(Boolean).join(" · ")}
                 </div>
               </div>
               {/* Green once the week is complete, like a finished session's pill. */}

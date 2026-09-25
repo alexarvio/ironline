@@ -31,7 +31,7 @@ import {
 // they did with the change against last week. Read only; the workout is the
 // only place that logs.
 
-export const STATUS_LABEL = { done: "Done", live: "Live", skipped: "Skipped", missed: "Missed", upcoming: "Upcoming" } as const;
+export const STATUS_LABEL = { done: "Done", unfinished: "Unfinished", live: "Live", skipped: "Skipped", missed: "Missed", upcoming: "Upcoming" } as const;
 
 export default function SessionOverview({
   day,
@@ -60,7 +60,8 @@ export default function SessionOverview({
 }) {
   const status = sessionStatus(day, pastWeek);
   const live = status === "live";
-  const done = status === "done";
+  // Ended counts as over, finished or not.
+  const done = status === "done" || status === "unfinished";
   const now = useTicker(live);
   const ms = elapsedMs(day.startedAt, day.endedAt, now);
   const gymName = day.gyms.find((g) => g.id === day.gymId)?.name ?? null;
