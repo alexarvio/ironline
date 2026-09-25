@@ -17135,28 +17135,6 @@ button.ci-hint { cursor: pointer; }
 .cm-msg.linked { padding-right: 16px; }
 .cm-linkdot { top: -15px; right: -11px; z-index: 2; box-shadow: 0 0 0 3px #F4F7FC; }
 .cm-msg.media .cm-linkdot { top: -15px; right: -11px; }
-/* The call's link before it starts: the same button, outlined, so it is there but not shouting. */
-.hm-mt-join.early { border: 1px solid rgba(18, 19, 43, 0.14); background: transparent; color: var(--mt-ink); }
-.hm-mt-join.early .hm-mt-join-glyph { background: #eef1f6; }
-/* The last call's recap (25 Sep): no card, just the title on one line with
-   a chevron on the far right; open, what was agreed under it. */
-.hm-last-date { font-size: 12px; font-weight: 700; color: #8b93a1; font-variant-numeric: tabular-nums; }
-.hm-recap { border-top: 1px solid rgba(20, 26, 36, 0.08); border-bottom: 1px solid rgba(20, 26, 36, 0.08); }
-.hm-mt .hm-recap { border: 0; }
-.hm-recap-head { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
-.hm-recap-title { flex: 1; min-width: 0; font-size: 15.5px; font-weight: 700; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hm-recap-chev { flex: none; display: inline-flex; color: #5b6474; transition: transform 0.25s ease; }
-.hm-recap-chev svg { width: 16px; height: 16px; }
-.hm-recap-chev.open { transform: rotate(180deg); }
-.hm-recap-body { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease; }
-.hm-recap-body.open { grid-template-rows: 1fr; opacity: 1; }
-.hm-recap-clip { min-height: 0; overflow: hidden; }
-.hm-recap-text { margin: 0; padding: 0 0 14px; font-size: 14.5px; line-height: 1.5; color: #313851; white-space: pre-wrap; }
-@media (prefers-reduced-motion: reduce) { .hm-recap-chev, .hm-recap-body { transition: none; } }
-/* Inside the next call's card, the last recap has no box either: a hairline over it. */
-.hm-mt .hm-mt-recap { padding: 12px 0 0; border: 0; border-top: 1px solid rgba(20, 26, 36, 0.08); border-radius: 0; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.hm-mt .hm-mt-recap .hm-recap-head { padding: 8px 0 4px; }
-
 /* Home "Quick actions" (25 Sep): what is left today, under the phase cards.
    The phase card's look, small: a stock photo blurred to a wash, the frosted
    white panel, white text, a small white pill per row. */

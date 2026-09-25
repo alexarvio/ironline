@@ -92,7 +92,6 @@ import AppShell, { AppTab } from "./AppShell";
 import AvatarUpload from "./AvatarUpload";
 import { phaseCovers, phaseDays, phaseLastDay, phaseWeekIndex, phaseWeeks } from "../lib/phases";
 import { defaultPhaseCover } from "../lib/phaseCovers";
-import { SERVER_TZ, zonedToUtc } from "../lib/timezones";
 import type { HomePhase, PhaseFoodToday } from "./PhaseCards";
 import {
   AccountIcon,
@@ -224,17 +223,19 @@ function HomeTab({ CLIENT_ID, photos, food }: { CLIENT_ID: number; photos: Progr
     if (!upcomingMeeting) return null;
     const when = new Date(`${upcomingMeeting.date}T00:00:00`);
     const days = Math.round((when.getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000);
-    // The start as a real moment, from the timezone the coach set the time in
-    // (the server's for older meetings): the phone shows it in its own.
-    const startAt = upcomingMeeting.time ? zonedToUtc(upcomingMeeting.date, upcomingMeeting.time, upcomingMeeting.tz || SERVER_TZ) : null;
     // "Starting now" from ten minutes before the start until the end.
-    const nowMs = new Date().getTime();
-    const startingNow = !!startAt && nowMs >= startAt.getTime() - 10 * 60000 && nowMs <= startAt.getTime() + upcomingMeeting.duration_minutes * 60000;
+    const startingNow = (() => {
+      if (upcomingMeeting.date !== today || !upcomingMeeting.time) return false;
+      const [h, mi] = upcomingMeeting.time.split(":").map((n) => Number(n) || 0);
+      const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+      const start = h * 60 + mi;
+      return nowMin >= start - 10 && nowMin <= start + upcomingMeeting.duration_minutes;
+    })();
     return {
       link: upcomingMeeting.link ?? null,
       provider: meetingProvider(upcomingMeeting.link),
       startingNow,
-      startIso: startAt ? startAt.toISOString() : null,
+      startIso: upcomingMeeting.time ? `${upcomingMeeting.date}T${upcomingMeeting.time}:00` : null,
       durationMinutes: upcomingMeeting.duration_minutes,
       monthCap: MONTH_CAP[when.getMonth()],
       dayNumber: String(when.getDate()),

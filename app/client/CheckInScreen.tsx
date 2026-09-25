@@ -136,9 +136,8 @@ export default function CheckInScreen({
   // only thing sent for a period with nothing logged.
   const canSave = dirty && (filled.length > 0 || (noteDirty && savedSomething));
 
-  // The dock, on Today: TODAY while lines are empty, READY when all are in,
-  // SENT once what is on screen is what the coach has, with the time of the
-  // last save ("All updated · 09:12"); Send turns to Done then, which closes.
+  // The dock, on Today: TODAY while lines are empty, READY when all are in;
+  // once what is on screen is what the coach has, just Done, which closes.
   // Sent and nothing changed since: the lines fold into the green done row
   // (with the last seven days under it). Opening an already-sent check-in
   // starts folded; Done folds it with a short close; Edit opens it again.
@@ -153,8 +152,6 @@ export default function CheckInScreen({
     }, 280);
   };
   const docked = view === "today" && rows.length > 0 && !folded;
-  const lastSaved = rows.map((r) => r.metric.loggedAt).filter((x): x is string => !!x).sort().at(-1) ?? null;
-  const savedTime = lastSaved ? new Date(lastSaved).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : null;
   const coach = useCoachIdentity();
   const coachFirst = coach?.name.trim().split(/\s+/)[0] || "your coach";
 
