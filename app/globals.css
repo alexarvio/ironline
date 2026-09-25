@@ -17219,3 +17219,5 @@ button.ci-hint { cursor: pointer; }
 .cg-switch-btn { color: #141a24; }
 .cg-switch-name { font-size: 20px; color: #141a24; letter-spacing: -0.01em; }
 .cg-switch + .cg-slide .cg-plot { padding-top: 4px; }
+/* The last meeting inside the next call's card: no outline (25 Sep). */
+.hm-mt-recap { border-color: transparent; }
