@@ -17319,3 +17319,11 @@ button.ci-hint { cursor: pointer; }
 .wo-head-right { display: flex; justify-content: flex-end; gap: 4px; }
 .wo-head-btn svg { width: 22px; height: 22px; }
 .wo-ex-top { min-height: 0; margin-bottom: 6px; }
+/* Last time, quieter (25 Sep): the clock floats with no box (navy when on),
+   the rows show the numbers with no wash, and the line under them is plain
+   text saying what they are. */
+.ts-last-toggle, .ts-last-toggle.on { border: 0; background: transparent; color: #8b93a1; }
+.ts-last-toggle.on { color: #1e3a6e; }
+.ts-last-toggle svg { width: 20px; height: 20px; }
+.ts-set.last { background: transparent; color: #313851; border-radius: 0; }
+.ts-last-note { display: block; justify-content: normal; margin-top: 12px; padding: 4px 0; border: 0; border-radius: 0; background: transparent; font-size: 13px; font-weight: 600; line-height: 1.4; color: #5b6474; text-align: center; }

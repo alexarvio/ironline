@@ -374,8 +374,7 @@ export default function ExercisePage({
 
         {showLast && last ? (
           <button type="button" className="ts-last-note" onClick={() => setShowLast(false)}>
-            Last time · {Number(last.date.slice(8, 10))} {MONTHS_SHORT[Number(last.date.slice(5, 7)) - 1]}
-            <span>Back to this session</span>
+            Your numbers from the last time you did this exercise, {Number(last.date.slice(8, 10))} {MONTHS_SHORT[Number(last.date.slice(5, 7)) - 1]}
           </button>
         ) : editingN != null ? (
           <div className="ts-actions">
