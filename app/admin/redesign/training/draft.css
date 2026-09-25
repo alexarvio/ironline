@@ -440,3 +440,21 @@
 /* An exercise opened from a message's link: marked for a moment (25 Sep). */
 @keyframes rd-row-flash { 0%, 60% { background: rgba(47, 93, 143, 0.14); } 100% { background: transparent; } }
 .rd-row.flash { animation: rd-row-flash 2.4s ease-out; border-radius: 10px; }
+
+/* Swaps (25 Sep): an orange circle with the swap arrows on the session's
+   head (how many, when more than one) and on the swapped exercise; the
+   exercise's circle opens a row under it with what was done instead. */
+.rd-swapdot { display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 22px; height: 22px; margin-left: 8px; padding: 0 6px; border: 0; border-radius: 999px; background: #FBE7C6; color: #9a5b0c; font: inherit; font-size: 11px; font-weight: 800; vertical-align: middle; cursor: pointer; transition: background-color 0.15s ease; }
+.rd-swapdot.static { cursor: default; }
+.rd-swapdot:not(.static):hover, .rd-swapdot.on { background: #d98a1c; color: #fff; }
+.rd-swapdot b { font-weight: 800; }
+.rd-swaprow { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease; }
+.rd-swaprow.open { grid-template-rows: 1fr; opacity: 1; }
+.rd-swaprow-clip { min-height: 0; overflow: hidden; }
+.rd-swaprow-body { display: flex; align-items: center; gap: 12px; margin: 0 0 10px 30px; padding: 10px 14px; border-radius: 12px; background: #FDF6EA; border: 1px solid #F3DFBC; }
+.rd-swaprow-body .rd-swapdot { margin-left: 0; flex: none; }
+.rd-swaprow-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rd-swaprow-text b { font-size: 13.5px; color: #141a24; }
+.rd-swaprow-text small { font-size: 12px; color: #8a6a3a; }
+.rd-swaprow-sets { flex: none; }
+@media (prefers-reduced-motion: reduce) { .rd-swaprow { transition: none; } }
