@@ -1,0 +1,43 @@
+/* The client's Invoices tab in the redesign (25 Sep). Prefix riv-. The
+   new-invoice dialog is the shared ncd- layout (../ncdialog.css). */
+.riv { display: flex; flex-direction: column; gap: 16px; }
+.riv-missing { margin: 0; padding: 10px 14px; border: 1px solid #f3d6c9; border-radius: 12px; background: #fdf3ee; font-size: 13px; color: #b3471d; }
+.riv-missing a { color: #b3471d; font-weight: 700; }
+.riv-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 800px) { .riv-stats { grid-template-columns: 1fr; } }
+.riv-stat { display: flex; flex-direction: column; gap: 2px; padding-top: 16px !important; }
+.riv-stat small { font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #8b93a1; }
+.riv-stat b { font-size: 22px; font-weight: 800; color: #141a24; font-variant-numeric: tabular-nums; }
+.riv-stat b.warn { color: #b3471d; }
+.riv-stat span { font-size: 12px; color: #8b93a1; }
+.riv-empty { padding-top: 18px !important; font-size: 13.5px; color: #8b93a1; }
+.riv-number { font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.riv-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.riv-what { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.riv-what small { color: #8b93a1; }
+.riv-late { color: #b3471d; font-weight: 700; }
+.riv .rd-picker.riv-status { flex: none; width: 124px; height: 30px; font-size: 12.5px; font-weight: 700; border-radius: 999px; }
+.riv-status.s-unpaid { background: #eef1f5; color: #5b6474; }
+.riv-status.s-sent { background: #e3f0fb; color: #1d5a94; border-color: #9cc3e6; }
+.riv-status.s-paid { background: #dff3ea; color: #1b7a4b; border-color: #9fd3bb; }
+.riv-status.s-due { background: #fdf3ee; color: #b3471d; border-color: #e5b39a; }
+.riv-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.riv-open { display: inline-flex; align-items: center; gap: 5px; padding: 0 8px; font-size: 12.5px; font-weight: 700; color: #2f5d8f; text-decoration: none; white-space: nowrap; }
+.riv-open:hover { text-decoration: underline; text-underline-offset: 3px; }
+.riv-open svg { width: 13px; height: 13px; }
+
+/* The dialog's lines: description, qty, price, amount, remove. */
+.riv-dlg { width: 640px !important; }
+.riv-lines { gap: 4px; }
+.riv-line { display: grid; grid-template-columns: minmax(0, 1fr) 56px 90px 90px 28px; align-items: center; gap: 10px; padding: 3px 0; border-bottom: 1px dashed #eceff3; }
+.riv-line.head { padding: 2px 0 0; border-bottom: 0; font-size: 10.5px; font-weight: 700; color: #a0a7b3; }
+.riv-line.head span:nth-child(n + 2), .riv-line-amt { text-align: right; }
+.riv-line input[type="number"] { text-align: right; }
+.riv-line-amt { font-size: 13px; font-weight: 700; color: #313851; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.riv-line .rd-btn.ghost.sm { font-size: 16px; }
+.riv-addline { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; padding: 4px 0; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 700; color: #2f5d8f; cursor: pointer; }
+.riv-addline svg { width: 13px; height: 13px; }
+.riv-totals { display: grid; grid-template-columns: auto 110px; gap: 2px 16px; justify-content: end; margin: 8px 38px 0 0; }
+.riv-totals dt { font-size: 12.5px; font-weight: 600; color: #8b93a1; text-align: right; }
+.riv-totals dd { margin: 0; font-size: 13px; font-weight: 700; color: #313851; text-align: right; font-variant-numeric: tabular-nums; }
+.riv-totals .grand { padding-top: 4px; font-size: 15px; font-weight: 800; color: #141a24; }

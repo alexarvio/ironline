@@ -237,16 +237,16 @@ function EntryDialog({ open, cats, clients, onDone }: { open: Open; cats: Catego
   };
 
   return (
-    <DialogContent className="cal-dlg" aria-describedby={undefined}>
-      <header className="cal-dlg-head">
+    <DialogContent className="ncd" aria-describedby={undefined}>
+      <header className="ncd-head">
         <div>
-          <DialogTitle className="cal-dlg-title">{e ? "Entry" : "New entry"}</DialogTitle>
-          <DialogDescription className="cal-dlg-sub">
+          <DialogTitle className="ncd-title">{e ? "Entry" : "New entry"}</DialogTitle>
+          <DialogDescription className="ncd-sub">
             {date ? longDate(date) : "No day yet"}
             {e?.clientId != null && (
               <>
                 {" · "}
-                <Link href={`/admin/redesign/meetings?client=${e.clientId}`} className="cal-dlg-link">
+                <Link href={`/admin/redesign/meetings?client=${e.clientId}`} className="ncd-link">
                   Open {e.clientName.split(" ")[0]}&rsquo;s meetings
                 </Link>
               </>
@@ -258,7 +258,7 @@ function EntryDialog({ open, cats, clients, onDone }: { open: Open; cats: Catego
         </DialogClose>
       </header>
 
-      <div className="cal-dlg-body">
+      <div className="ncd-body">
         <div className="nc-grid">
           <label className="nc-row full">
             <span className="nc-label">What</span>
@@ -270,12 +270,12 @@ function EntryDialog({ open, cats, clients, onDone }: { open: Open; cats: Catego
           <div className="nc-row">
             <span className="nc-label">Day</span>
             <span className="nc-control">
-              <DatePick value={date} onChange={setDate} label="Day" className="cal-flat" />
+              <DatePick value={date} onChange={setDate} label="Day" className="ncd-flat" />
             </span>
           </div>
           <label className="nc-row">
             <span className="nc-label">All day</span>
-            <span className="nc-control cal-switch">
+            <span className="nc-control ncd-switch">
               <Switch checked={allDay} onCheckedChange={setAllDay} aria-label="All day" />
               <span>{allDay ? "Yes, no time" : "No"}</span>
             </span>
@@ -292,7 +292,7 @@ function EntryDialog({ open, cats, clients, onDone }: { open: Open; cats: Catego
               <div className="nc-row">
                 <span className="nc-label">Length</span>
                 <span className="nc-control">
-                  <Picker value={length} onChange={setLength} label="Length" className="cal-flat" options={lengths.map((m) => ({ value: String(m), label: lengthLabel(m), hint: time ? `until ${hhmm(toMin(time) + m)}` : undefined }))} />
+                  <Picker value={length} onChange={setLength} label="Length" className="ncd-flat" options={lengths.map((m) => ({ value: String(m), label: lengthLabel(m), hint: time ? `until ${hhmm(toMin(time) + m)}` : undefined }))} />
                 </span>
               </div>
             </>
@@ -308,7 +308,7 @@ function EntryDialog({ open, cats, clients, onDone }: { open: Open; cats: Catego
                   if (!catTouched) setCat(v ? "call" : null);
                 }}
                 label="With"
-                className="cal-flat"
+                className="ncd-flat"
                 options={[{ value: "", label: "Just you", hint: "no client" }, ...clients.map((c) => ({ value: String(c.id), label: c.name }))]}
               />
             </span>
@@ -394,16 +394,16 @@ function EntryDialog({ open, cats, clients, onDone }: { open: Open; cats: Catego
 
           <label className="nc-row full">
             <span className="nc-label">
-              Note <span className="cal-aside">only you see it</span>
+              Note <span className="ncd-aside">only you see it</span>
             </span>
             <span className="nc-control">
-              <textarea className="nc-input cal-note" rows={3} value={note} onChange={(x) => setNote(x.target.value)} placeholder="What to bring up, what to prepare…" maxLength={2000} />
+              <textarea className="nc-input ncd-note" rows={3} value={note} onChange={(x) => setNote(x.target.value)} placeholder="What to bring up, what to prepare…" maxLength={2000} />
             </span>
           </label>
         </div>
       </div>
 
-      <footer className="cal-dlg-foot">
+      <footer className="ncd-foot">
         {e && (
           <button
             type="button"
@@ -416,7 +416,7 @@ function EntryDialog({ open, cats, clients, onDone }: { open: Open; cats: Catego
             <TrashIcon /> Remove
           </button>
         )}
-        <span className={`cal-dlg-status${ok ? "" : " bad"}`}>{ok ? "" : `Still needed: ${missing.join(", ")}`}</span>
+        <span className={`ncd-status${ok ? "" : " bad"}`}>{ok ? "" : `Still needed: ${missing.join(", ")}`}</span>
         <DialogClose className="rd-btn">Cancel</DialogClose>
         <button type="button" className="rd-btn primary" disabled={!ok} onClick={save}>
           {e ? "Save" : "Add"}

@@ -1,0 +1,23 @@
+/* The redesign's dialogs in the New client dialog's layout (globals .nc-*):
+   a tinted head, hairline rows two to a line, a foot with what is still
+   needed. Prefix ncd-. The Calendar's entry and a new invoice use it. */
+.ncd { gap: 0 !important; padding: 0 !important; width: 560px !important; max-width: calc(100% - 2rem) !important; max-height: calc(100vh - 48px); overflow: hidden; display: flex !important; flex-direction: column; border: 0 !important; border-radius: 14px !important; box-shadow: 0 26px 64px rgba(20, 26, 36, 0.32) !important; font-family: var(--font-archivo), system-ui, sans-serif; color: #313851; }
+.ncd-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 22px; background: #e6ecf3; }
+.ncd-title { font-size: 12px !important; font-weight: 800 !important; letter-spacing: 0.14em; text-transform: uppercase; color: #1e3a6e; }
+.ncd-sub { margin-top: 3px !important; font-size: 12px !important; font-weight: 600; color: #5b6474 !important; }
+.ncd-link { color: #2f5d8f; font-weight: 700; text-decoration: none; }
+.ncd-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.ncd-body { flex: 1; min-height: 0; overflow-y: auto; padding: 6px 22px 16px; }
+.ncd-foot { flex: none; display: flex; align-items: center; gap: 8px; padding: 12px 22px; border-top: 1px solid #eceff3; background: #fafbfc; }
+.ncd-status { flex: 1; font-size: 12.5px; font-weight: 600; color: #5b6474; }
+.ncd-status.bad { color: #b3471d; }
+.ncd .nc-control { width: 100%; }
+/* The pickers sit flat on the hairline, like the inputs around them. */
+.ncd .ncd-flat { flex: 1; width: 100%; height: 28px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none !important; font-size: 14px; font-weight: 700; color: #141a24; }
+.ncd .ncd-flat svg { color: #8b93a1; }
+.ncd .rdp-field.ncd-flat { gap: 8px; }
+.ncd-switch { gap: 10px; font-size: 13px; font-weight: 600; color: #5b6474; }
+.cal-cats { flex-wrap: wrap; gap: 6px; padding: 4px 0 2px; }
+.ncd .rq-cat-own { margin-top: 6px; }
+.ncd-aside { font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; color: #a0a7b3; }
+.ncd-note { height: auto; min-height: 60px; padding: 4px 0; resize: vertical; font-weight: 500; line-height: 1.5; }
