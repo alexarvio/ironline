@@ -1,6 +1,6 @@
 /* The Phases board (25 Sep): every client's tracks and events on one
    timeline. Prefix pbd- (pb- and ph- are taken). */
-.pbd { display: flex; flex-direction: column; gap: 18px; max-width: 1400px; }
+.pbd { display: flex; flex-direction: column; gap: 18px; }
 .pbd-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
 .pbd-title { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; color: #141a24; }
 .pbd-sub { margin: 4px 0 0; font-size: 13.5px; color: #5b6474; }

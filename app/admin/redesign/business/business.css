@@ -1,5 +1,5 @@
 /* The Business view in the redesign (25 Sep). Prefix bzd- (biz- is the old one). */
-.bzd { display: flex; flex-direction: column; gap: 20px; max-width: 1200px; }
+.bzd { display: flex; flex-direction: column; gap: 20px; }
 .bzd-title { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; color: #141a24; }
 .bzd-sub { margin: 4px 0 0; font-size: 13.5px; color: #5b6474; }
 .bzd-section { display: flex; flex-direction: column; gap: 10px; }
@@ -30,3 +30,17 @@
 .bzd-tiles.four { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
 .bzd-tile { padding: 0; }
 .bzd-tile > * { padding: 18px 20px 16px; gap: 6px; }
+
+/* The whole screen (25 Sep): the numbers in a column on the left, By client
+   beside them, its rows scrolling inside when there are many. */
+.bzd-cols { display: grid; grid-template-columns: minmax(380px, 0.85fr) minmax(0, 1.4fr); gap: 16px; align-items: start; }
+.bzd-left { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.bzd-left .bzd-tiles { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.bzd-left .bzd-tiles.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.bzd-left .bzd-two { grid-template-columns: 1fr; }
+.bzd-right { position: sticky; top: 20px; max-height: calc(100vh - 40px); min-width: 0; }
+.bzd-right [data-slot="card-content"] { flex: 1; min-height: 0; overflow: auto; scrollbar-width: thin; }
+@media (max-width: 1150px) {
+  .bzd-cols { grid-template-columns: 1fr; }
+  .bzd-right { position: static; max-height: none; }
+}
