@@ -636,24 +636,36 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                     <ChevronDownIcon />
                   </span>
                 </button>
-                <SessionName value={name} onChange={(v) => patch(s.id, (q) => ({ ...q, renamed: v === s.name ? null : v }))} />
-                <span className="rd-session-meta">
-                  {rows.length} {rows.length === 1 ? "exercise" : "exercises"}
-                  {s.cardio.length ? ` · ${s.cardio.length} cardio` : ""}
-                  {s.gym ? ` · ${s.gym}` : ""}
-                  {s.duration != null ? ` · ${s.duration} min` : ""}
+                {/* The name, then the counts in columns of their own, so every
+                    session's line up down the week. */}
+                <span className="rd-session-namecol">
+                  <SessionName value={name} onChange={(v) => patch(s.id, (q) => ({ ...q, renamed: v === s.name ? null : v }))} />
                 </span>
-                {/* Swaps made in this session, seen without opening it. */}
-                {(() => {
-                  const n = rows.filter((r) => r.swap).length;
-                  return n > 0 ? (
-                    <span className="rd-swapdot static" title={`${firstName} swapped ${n} exercise${n === 1 ? "" : "s"} in this session`} aria-label={`${n} swapped`}>
-                      <SwapIcon />
-                      {n > 1 && <b>{n}</b>}
+                <span className="rd-session-count">
+                  {rows.length} {rows.length === 1 ? "exercise" : "exercises"}
+                </span>
+                <span className="rd-session-count">{s.cardio.length ? `${s.cardio.length} cardio` : ""}</span>
+                {/* On the right, right to left: the state, the time, the gym,
+                    a swap, the client's note. */}
+                <span className="rd-session-tags">
+                  {s.note && (
+                    <span className="rd-tag note" title={`${firstName}'s note: ${s.note}`} aria-label={`${firstName} left a note: ${s.note}`}>
+                      <ChatIcon />
                     </span>
-                  ) : null;
-                })()}
-                {status && <span className={`rd-pill ${status.cls}`}>{status.text}</span>}
+                  )}
+                  {(() => {
+                    const n = rows.filter((r) => r.swap).length;
+                    return n > 0 ? (
+                      <span className="rd-swapdot static" title={`${firstName} swapped ${n} exercise${n === 1 ? "" : "s"} in this session`} aria-label={`${n} swapped`}>
+                        <SwapIcon />
+                        {n > 1 && <b>{n}</b>}
+                      </span>
+                    ) : null;
+                  })()}
+                  {s.gym && <span className="rd-tag gym">{s.gym}</span>}
+                  {s.duration != null && <span className="rd-tag time">{s.duration} min</span>}
+                  {status && <span className={`rd-pill ${status.cls}`}>{status.text}</span>}
+                </span>
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger className="rd-btn ghost" aria-label={`More for ${name}`}>
                     <MoreIcon />
