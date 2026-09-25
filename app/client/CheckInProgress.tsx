@@ -59,21 +59,72 @@ export default function CheckInProgress({ history, today }: { history: CheckInHi
   const [range, setRange] = useState<Range>("1M");
   const series = tracked[index] ?? tracked[0];
 
-  if (!series) return <p className="ci-empty">Your coach hasn&rsquo;t set up anything to track yet.</p>;
-
   const step = (by: 1 | -1) => {
     setDir(by === 1 ? "next" : "prev");
     setIndex((i) => (i + by + tracked.length) % tracked.length);
   };
 
-  // All: from the first reading to today, however long that is (a week at least).
+  // A sideways swipe anywhere under the banner steps too: the page follows
+  // the finger, and past a quarter of the width (or a quick flick) it moves
+  // on, the next metric sliding in from that side; short of that it springs
+  // back. Up and down stays the page's scroll, and a reading held on the
+  // chart is never taken for a swipe.
+  const wrap = useRef<HTMLDivElement>(null);
+  const swipe = useRef<{ x: number; y: number; t: number; axis: "x" | "y" | null; dx: number } | null>(null);
+  const setShift = (dx: number, animate: boolean) => {
+    const el = wrap.current;
+    if (!el) return;
+    el.style.transition = animate ? "transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease" : "none";
+    el.style.transform = dx ? `translateX(${dx}px)` : "";
+    el.style.opacity = dx ? String(Math.max(0.4, 1 - Math.abs(dx) / 600)) : "";
+  };
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (tracked.length < 2 || e.touches.length !== 1) return;
+    swipe.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now(), axis: null, dx: 0 };
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    const sw = swipe.current;
+    if (!sw) return;
+    if (wrap.current?.querySelector(".cg-chart.scrubbing")) {
+      swipe.current = null;
+      setShift(0, true);
+      return;
+    }
+    const dx = e.touches[0].clientX - sw.x;
+    const dy = e.touches[0].clientY - sw.y;
+    if (!sw.axis) {
+      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+      sw.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+    }
+    if (sw.axis !== "x") return;
+    sw.dx = dx;
+    setShift(dx, false);
+  };
+  const onTouchEnd = () => {
+    const sw = swipe.current;
+    swipe.current = null;
+    if (!sw || sw.axis !== "x") return;
+    const width = wrap.current?.clientWidth ?? 320;
+    const flick = Math.abs(sw.dx) > 40 && Date.now() - sw.t < 300;
+    if (Math.abs(sw.dx) > width / 4 || flick) {
+      setShift(0, false);
+      step(sw.dx < 0 ? 1 : -1);
+    } else setShift(0, true);
+  };
+
+  if (!series) return <p className="ci-empty">Your coach hasn&rsquo;t set up anything to track yet.</p>;
+
+  // The range back from today; with less history than that (21 days of
+  // readings on 1M), the chart spans what there is, first reading to today,
+  // so it never opens on an empty stretch. All: from the first reading.
   const end = dayNum(today);
   const firstDay = series.points.length ? dayNum(series.points[0].date) : end - 29;
-  const start = range === "7D" ? end - 6 : range === "1M" ? end - 29 : Math.min(firstDay, end - 6);
+  const rangeStart = range === "7D" ? end - 6 : range === "1M" ? end - 29 : firstDay;
+  const start = series.points.length ? Math.min(Math.max(rangeStart, firstDay), end - 1) : rangeStart;
   const points = series.points.filter((p) => dayNum(p.date) >= start && dayNum(p.date) <= end);
 
   return (
-    <div className="cg">
+    <div ref={wrap} className="cg" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
       {/* The metric: its name centred, a chevron either end to step through. */}
       <div className="cg-switch">
         <button type="button" className="cg-switch-btn" onClick={() => step(-1)} disabled={tracked.length < 2} aria-label="Previous metric">
@@ -101,9 +152,53 @@ export default function CheckInProgress({ history, today }: { history: CheckInHi
           </div>
           <Chart key={range} series={series} points={points} start={start} end={end} />
         </section>
+        <ReadingsLog series={series} />
 
       </div>
     </div>
+  );
+}
+
+// Every reading of the metric, newest first, twenty to a page: the date on
+// the left, the reading on the right. Older pages behind the arrows.
+const PAGE = 20;
+function ReadingsLog({ series }: { series: CheckInSeries }) {
+  const [page, setPage] = useState(0);
+  const rows = [...series.points].reverse();
+  if (rows.length === 0) return null;
+  const pages = Math.ceil(rows.length / PAGE);
+  const shown = rows.slice(page * PAGE, page * PAGE + PAGE);
+  const weekday = (d: string) => new Date(Date.UTC(Number(d.slice(0, 4)), Number(d.slice(5, 7)) - 1, Number(d.slice(8, 10)))).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" });
+  return (
+    <section className="cg-log" aria-label={`${series.name}: every reading`}>
+      <div className="cg-log-head">
+        <span>Log</span>
+        <span>
+          {rows.length} reading{rows.length === 1 ? "" : "s"}
+        </span>
+      </div>
+      <ul className="cg-log-list">
+        {shown.map((p) => (
+          <li key={p.date} className="cg-log-row">
+            <span className="cg-log-date">{series.cadence === "weekly" ? dateText(series, p.date) : `${weekday(p.date)} ${dm(p.date)}`}</span>
+            <span className="cg-log-value">{valueText(series, p.value)}</span>
+          </li>
+        ))}
+      </ul>
+      {pages > 1 && (
+        <div className="cg-log-pager">
+          <button type="button" onClick={() => setPage((n) => Math.max(0, n - 1))} disabled={page === 0} aria-label="Newer readings">
+            <ChevronLeftIcon />
+          </button>
+          <span>
+            {page + 1} of {pages}
+          </span>
+          <button type="button" onClick={() => setPage((n) => Math.min(pages - 1, n + 1))} disabled={page >= pages - 1} aria-label="Older readings">
+            <ChevronRightIcon />
+          </button>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -125,7 +220,7 @@ function Chart({ series, points, start, end }: { series: CheckInSeries; points: 
   // Nothing is picked until a finger (or the mouse) is held on the chart;
   // then the label follows it, and it goes when it lets go.
   const [picked, setPicked] = useState<number | null>(null);
-  const hold = useRef<{ timer: ReturnType<typeof setTimeout> | null; x: number; on: boolean }>({ timer: null, x: 0, on: false });
+  const hold = useRef<{ timer: ReturnType<typeof setTimeout> | null; x: number; sx: number; sy: number; on: boolean }>({ timer: null, x: 0, sx: 0, sy: 0, on: false });
   useEffect(() => {
     const el = box.current;
     // While a reading is held the page doesn't scroll under the finger.
@@ -177,7 +272,7 @@ function Chart({ series, points, start, end }: { series: CheckInSeries; points: 
   };
   const release = () => {
     if (hold.current.timer) clearTimeout(hold.current.timer);
-    hold.current = { timer: null, x: 0, on: false };
+    hold.current = { timer: null, x: 0, sx: 0, sy: 0, on: false };
     setPicked(null);
   };
 
@@ -195,6 +290,8 @@ function Chart({ series, points, start, end }: { series: CheckInSeries; points: 
         const el = e.currentTarget;
         const id = e.pointerId;
         hold.current.x = e.clientX;
+        hold.current.sx = e.clientX;
+        hold.current.sy = e.clientY;
         hold.current.timer = setTimeout(() => {
           hold.current.on = true;
           try {
@@ -205,6 +302,11 @@ function Chart({ series, points, start, end }: { series: CheckInSeries; points: 
       }}
       onPointerMove={(e) => {
         hold.current.x = e.clientX;
+        // Moving before the hold lands: a swipe or a scroll, so no reading.
+        if (!hold.current.on && hold.current.timer && (Math.abs(e.clientX - hold.current.sx) > 8 || Math.abs(e.clientY - hold.current.sy) > 8)) {
+          clearTimeout(hold.current.timer);
+          hold.current.timer = null;
+        }
         if (hold.current.on) setPicked(nearest(e.clientX));
       }}
       onPointerUp={release}

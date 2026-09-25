@@ -17221,3 +17221,19 @@ button.ci-hint { cursor: pointer; }
 .cg-switch + .cg-slide .cg-plot { padding-top: 4px; }
 /* The last meeting inside the next call's card: no outline (25 Sep). */
 .hm-mt-recap { border-color: transparent; }
+/* Progress (25 Sep): every reading of the metric under the chart, newest
+   first, twenty to a page. No card: rows on the page with hairlines. */
+.cg-log { display: flex; flex-direction: column; margin-top: 18px; padding-bottom: 32px; }
+.cg-log-head { display: flex; align-items: baseline; justify-content: space-between; padding: 0 2px 8px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
+.cg-log-head span + span { letter-spacing: 0.04em; text-transform: none; font-size: 12px; font-weight: 600; color: #8b93a1; }
+.cg-log-list { margin: 0; padding: 0; list-style: none; }
+.cg-log-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 2px; border-top: 1px solid rgba(20, 26, 36, 0.07); }
+.cg-log-row:last-child { border-bottom: 1px solid rgba(20, 26, 36, 0.07); }
+.cg-log-date { font-size: 14px; font-weight: 500; color: #5b6474; }
+.cg-log-value { font-size: 15px; font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; }
+.cg-log-pager { display: flex; align-items: center; justify-content: center; gap: 18px; padding-top: 14px; font-size: 13px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
+.cg-log-pager button { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid #dfe3e8; border-radius: 999px; background: #fff; color: #141a24; cursor: pointer; }
+.cg-log-pager button svg { width: 18px; height: 18px; }
+.cg-log-pager button:disabled { opacity: 0.35; cursor: default; }
+/* Swiping between metrics: the browser keeps the up-and-down scroll, the page handles sideways. */
+.cg { touch-action: pan-y; will-change: transform; }
