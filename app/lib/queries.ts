@@ -9005,7 +9005,7 @@ export function getPlanData(clientId: number) {
       pct = Math.round(((view.segments?.done ?? 0) / Math.max(1, view.segments?.total ?? 1)) * 100);
       const name = getData().metric_definitions.find((m) => m.id === t.metricId)?.name ?? "Check-in";
       tracks = name;
-      rule = `Habit · ${name} ${t.op} ${t.value.toLocaleString("en-US")} · ${t.daysPerWeek} / wk`;
+      rule = `Habit · ${name} ${t.op} ${t.value.toLocaleString("en-US")} · ${t.daysPerWeek} / week`;
       by = "ongoing";
       pace = "this week";
     }

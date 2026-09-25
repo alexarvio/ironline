@@ -476,7 +476,7 @@ export function PhaseDialog({
                   <option value="new">Create new programme (draft) · {weeks || "?"} weeks</option>
                   {available.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} · {p.status} · {p.weeks} wk
+                      {p.name} · {p.status} · {p.weeks} {p.weeks === 1 ? "week" : "weeks"}
                     </option>
                   ))}
                 </select>

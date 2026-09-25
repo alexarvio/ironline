@@ -13,7 +13,10 @@ const daysSince = (iso: string, today: string) => Math.floor((new Date(`${today}
 const money = (n: number) => `€${Math.round(n).toLocaleString("en-US")}`;
 function span(days: number): string {
   const months = days / 30.44;
-  if (months < 1) return `${Math.max(0, Math.round(days / 7))} wk`;
+  if (months < 1) {
+    const w = Math.max(0, Math.round(days / 7));
+    return `${w} ${w === 1 ? "week" : "weeks"}`;
+  }
   if (months < 12) return `${round1(months)} mo`;
   return `${round1(months / 12)} yr`;
 }

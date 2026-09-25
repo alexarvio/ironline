@@ -324,7 +324,7 @@ export default function PlanPhasesCard({
                         <span className="pl-bar-main">
                           <span className="pl-bar-name">{p.name}</span>
                           <span className="pl-bar-meta">
-                            {total} wk · {shortDate(sp.s)} → {shortDate(addWeeks(sp.e, 1))}
+                            {total} {total === 1 ? "week" : "weeks"} · {shortDate(sp.s)} → {shortDate(addWeeks(sp.e, 1))}
                           </span>
                         </span>
                         {/* Only a label: the bar opens the phase dialog wherever it is
@@ -333,7 +333,7 @@ export default function PlanPhasesCard({
                           <span className="pl-bar-pill draft">Draft</span>
                         ) : isRunning ? (
                           <span className="pl-bar-pill running">
-                            wk {weeksBetween(sp.s, thisWeek) + 1} / {total}
+                            week {weeksBetween(sp.s, thisWeek) + 1} of {total}
                           </span>
                         ) : isFuture ? (
                           <span className="pl-bar-pill future">starts {shortDate(sp.s)}</span>
