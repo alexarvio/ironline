@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { requireCoach } from "../../../lib/auth";
-import { getClientProfile, getLatestWeight, listClients, listInvoices, localDateStr } from "../../../lib/queries";
+import { getUserForClient, requireCoach } from "../../../lib/auth";
+import { getClientProfile, getLatestWeight, listClients, listInvoices, listPrograms, localDateStr } from "../../../lib/queries";
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/basics";
 import { loadRail } from "../loaders";
 import RedesignRail from "../RedesignRail";
@@ -51,7 +51,16 @@ export default async function BusinessPage() {
       gender: gender.startsWith("m") ? "Male" : gender.startsWith("f") || gender.startsWith("w") ? "Female" : gender ? "Other" : null,
       height: p.height_cm ?? null,
       weight: getLatestWeight(c.id) ?? p.starting_weight_kg ?? null,
-      tenureDays: p.coaching_start_date ? Math.max(0, daysSince(p.coaching_start_date, today)) : null,
+      // With you since: the coaching start date on their card; else the day
+      // their login was made; else when their first programme went live.
+      tenureDays: (() => {
+        const firstProgram = listPrograms(c.id)
+          .map((pr) => pr.deployed_at?.slice(0, 10))
+          .filter((d): d is string => !!d)
+          .sort()[0];
+        const since = p.coaching_start_date || getUserForClient(c.id)?.created_at?.slice(0, 10) || firstProgram || null;
+        return since ? Math.max(0, daysSince(since, today)) : null;
+      })(),
       // The latest invoice's day: when they were last billed.
       lastBilled: invoices.map((i) => i.created_at.slice(0, 10)).sort().at(-1) ?? null,
       paid: invoices.filter((i) => i.status === "paid").reduce((s, i) => s + (i.amount || 0), 0),
