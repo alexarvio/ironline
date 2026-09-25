@@ -10,7 +10,8 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { CalendarIcon, ChatIcon, ChevronDownIcon, ChevronLeftIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import DateText from "../DateText";
 import { ConfirmDialog, MessageDialog } from "../training/TrainingDraft";
-import { allTimezones, SERVER_TZ, tzLabel } from "../../../lib/timezones";
+import { allTimezones, SERVER_TZ } from "../../../lib/timezones";
+import TimezonePicker from "./TimezonePicker";
 
 // The calmer Meetings tab, as a draft on real data, in the Training draft's
 // sheet. The next call with everything to prepare it, the calls after it,
@@ -625,7 +626,7 @@ function ScheduleDialog({ date: initialDate, reschedule, lastLink, dots, today, 
           <MiniCalendar today={today} selected={date} dots={dots} onPick={setDate} />
         </div>
         <div className="rdd-fields">
-          {/* Date, time and the timezone the time is in, on one row. */}
+          {/* Date and time side by side, the timezone they are in under them. */}
           <div className="rd-field-row rt-when-row">
             <label className="rd-field">
               <span>Date</span>
@@ -635,16 +636,10 @@ function ScheduleDialog({ date: initialDate, reschedule, lastLink, dots, today, 
               <span>Time · 24h</span>
               <input type="text" inputMode="numeric" value={time} onChange={(e) => setTime(e.target.value)} onBlur={() => setTime(tidyTime(time))} placeholder="14:30" />
             </label>
-            <label className="rd-field">
-              <span>Timezone</span>
-              <select className="rt-tz" value={tz} onChange={(e) => setTz(e.target.value)}>
-                {zones.map((z) => (
-                  <option key={z} value={z}>
-                    {tzLabel(z)}
-                  </option>
-                ))}
-              </select>
-            </label>
+          </div>
+          <div className="rd-field">
+            <span>Timezone</span>
+            <TimezonePicker value={tz} zones={zones} onChange={setTz} />
           </div>
           <div className="rd-field">
             <span>Duration</span>

@@ -108,8 +108,20 @@
 .rt-tz { width: 100%; margin-top: 6px; padding: 5px 8px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; font: inherit; font-size: 12.5px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #5b6474; }
 /* A past call's recap: the one-line title over what was agreed. */
 .rt-recap-title { width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 9px 12px; border: 1px solid #dfe3e8; border-radius: 10px; font: inherit; font-size: 14px; font-weight: 700; color: #141a24; }
-/* Date, time and timezone on one row (25 Sep): the timezone a field like the others. */
-.rt-when-row { display: grid; grid-template-columns: 1.15fr 0.75fr 1.4fr; gap: 8px; align-items: end; }
+/* Date and time as two equal fields, the timezone a full row under them (25 Sep). */
+.rt-when-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: end; }
 .rt-when-row .rd-field { min-width: 0; }
-.rt-when-row input { padding: 9px 10px; font-size: 13.5px; }
-.rt-when-row .rt-tz { height: 38px; margin-top: 0; padding: 0 8px; border-radius: 10px; font-size: 13px; color: #141a24; text-overflow: ellipsis; }
+.rt-when-row input { width: 100%; height: 38px; box-sizing: border-box; }
+.rt-tzp { position: relative; }
+.rt-tzp-btn { display: flex; width: 100%; height: 38px; flex: none; }
+.rt-tzp-btn small { font-size: inherit; font-weight: 500; color: #5b6474; }
+.rt-tzp-pop { position: absolute; z-index: 60; top: calc(100% + 6px); left: 0; right: 0; display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; box-shadow: 0 16px 32px -12px rgba(20, 26, 36, 0.25); text-transform: none; letter-spacing: 0; }
+.rt-tzp-search { height: 34px; font-size: 13.5px; }
+.rt-tzp-list { max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; scrollbar-width: thin; }
+.rt-tzp-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 7px 8px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 13.5px; font-weight: 500; color: #141a24; text-align: left; cursor: pointer; }
+.rt-tzp-item:hover { background: #f4f7fc; }
+.rt-tzp-item.on { background: #e6ecf3; color: #1e3a6e; }
+.rt-tzp-item span { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.rt-tzp-item small { font-size: 11.5px; color: #8b93a1; font-weight: 500; }
+.rt-tzp-item em { flex: none; font-style: normal; font-size: 12.5px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
+.rt-tzp-none { margin: 6px 8px; font-size: 13px; font-weight: 500; color: #8b93a1; }
