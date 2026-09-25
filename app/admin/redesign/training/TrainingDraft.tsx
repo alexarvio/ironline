@@ -627,7 +627,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
           // The states worth a word: done, skipped, or begun and left with
           // sets or cardio still to log (ended early, or partly logged), as
           // the client's app calls it too.
-          const status = s.skip ? { text: "Skipped", cls: "warn" } : complete ? { text: "Complete", cls: "good" } : s.ended || s.setsLogged > 0 ? { text: "Unfinished", cls: "unfinished" } : null;
+          const status = s.skip ? { text: "Skipped", cls: "warn" } : complete ? { text: "Completed", cls: "good" } : s.ended || s.setsLogged > 0 ? { text: "Unfinished", cls: "unfinished" } : null;
           const rows = orderOf(s)
             .map((id) => s.rows.find((r) => r.id === id)!)
             .filter((r) => r && !p.removed.includes(r.id));

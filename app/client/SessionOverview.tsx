@@ -31,7 +31,7 @@ import {
 // they did with the change against last week. Read only; the workout is the
 // only place that logs.
 
-export const STATUS_LABEL = { done: "Done", unfinished: "Unfinished", live: "Live", skipped: "Skipped", missed: "Missed", upcoming: "Upcoming" } as const;
+export const STATUS_LABEL = { done: "Completed", unfinished: "Unfinished", live: "Live", skipped: "Skipped", missed: "Missed", upcoming: "Upcoming" } as const;
 
 export default function SessionOverview({
   day,
