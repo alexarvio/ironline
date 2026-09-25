@@ -17313,3 +17313,9 @@ button.ci-hint { cursor: pointer; }
 .cpf-back, .cpf-back:hover, .cpf-back.solid { background: transparent; box-shadow: none; border-color: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .cpf-back { color: #fff; filter: drop-shadow(0 1px 3px rgba(8, 15, 35, 0.55)); }
 .cpf-back.solid { color: #1e3a6e; filter: none; }
+/* The workout's top bar carries the chat beside ⋯ (25 Sep); the exercise
+   page has no icons of its own any more, bar the demo video when there is one. */
+.wo-head-row { grid-template-columns: 84px minmax(0, 1fr) 84px; }
+.wo-head-right { display: flex; justify-content: flex-end; gap: 4px; }
+.wo-head-btn svg { width: 22px; height: 22px; }
+.wo-ex-top { min-height: 0; margin-bottom: 6px; }
