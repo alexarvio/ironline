@@ -10,6 +10,7 @@ import type { CoachBusiness, CoachInvoicing } from "../../../lib/db";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/basics";
 import { Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch, Textarea } from "../../../components/ui/form";
 import { ArrowRightIcon } from "../../../components/icons";
+import { COUNTRIES, CURRENCIES, countryCodeFromName, countryOf, currencyName, formatMoney, invoicingFor } from "../../../lib/countries";
 
 // Settings' sections, on the shadcn parts: cards of fields, and a bar at the
 // foot that appears once something is changed, with Save and Discard. Each
@@ -131,9 +132,13 @@ export function AccountSettings({ email }: { email: string }) {
   );
 }
 
-// ---- Business details: who the invoices are from.
+// ---- Business details: who the invoices are from. The country comes first:
+// it names the numbers and the address lines (lib/countries.ts).
+const OTHER = "other";
+
 export function BusinessSettings({ initial }: { initial: CoachBusiness }) {
-  const d = useDraft<CoachBusiness>(initial, saveCoachBusinessAction, "Business details saved");
+  const d = useDraft<CoachBusiness>({ ...initial, country_code: initial.country_code ?? countryCodeFromName(initial.country) }, saveCoachBusinessAction, "Business details saved");
+  const country = countryOf(d.v.country_code);
   const text = (k: keyof CoachBusiness, label: string, opts: { hint?: string; wide?: boolean; placeholder?: string; type?: string } = {}) => (
     <Field label={label} hint={opts.hint} wide={opts.wide}>
       <Input type={opts.type ?? "text"} value={d.v[k] ?? ""} onChange={(e) => d.set(k, e.target.value)} placeholder={opts.placeholder} />
@@ -143,13 +148,36 @@ export function BusinessSettings({ initial }: { initial: CoachBusiness }) {
     <div className="rst-cards">
       <Card>
         <CardHeader>
+          <CardTitle>Where you do business</CardTitle>
+        </CardHeader>
+        <CardContent className="rst-grid">
+          <Field label="Country" hint="Names the numbers below, and sets the tax, currency and bank fields your invoices use.">
+            <Select value={country.code || OTHER} onValueChange={(v) => d.set("country_code", v === OTHER ? "" : v)}>
+              <SelectTrigger aria-label="Country">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="max-h-80">
+                {COUNTRIES.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+                <SelectItem value={OTHER}>Somewhere else</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          {!country.code && text("country", "Country name", { placeholder: "Where you are registered" })}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
           <CardTitle>Business</CardTitle>
         </CardHeader>
         <CardContent className="rst-grid">
           {text("business_name", "Business name", { placeholder: "Full Potential Coaching" })}
           {text("legal_name", "Legal name", { placeholder: "As registered" })}
-          {text("company_number", "Chamber of Commerce (KvK) number", { placeholder: "12345678" })}
-          {text("vat_number", "VAT number", { placeholder: "NL000000000B01" })}
+          {text("company_number", country.registration ?? "Business registration", { hint: country.registration ? undefined : "If you have one." })}
+          {text("vat_number", country.taxId, { hint: country.code === "US" ? "Leave empty if you invoice as yourself." : undefined })}
         </CardContent>
       </Card>
       <Card>
@@ -158,9 +186,9 @@ export function BusinessSettings({ initial }: { initial: CoachBusiness }) {
         </CardHeader>
         <CardContent className="rst-grid">
           {text("address", "Street and number", { wide: true })}
-          {text("postcode", "Postcode")}
           {text("city", "City")}
-          {text("country", "Country", { placeholder: "Netherlands" })}
+          {country.region && text("region", country.region)}
+          {text("postcode", country.postcode)}
         </CardContent>
       </Card>
       <Card>
@@ -178,50 +206,62 @@ export function BusinessSettings({ initial }: { initial: CoachBusiness }) {
   );
 }
 
-// ---- Invoicing & payments: how invoices are numbered, priced and paid.
-const CURRENCIES = [
-  { value: "EUR", label: "Euro (€)" },
-  { value: "USD", label: "US dollar ($)" },
-  { value: "GBP", label: "Pound sterling (£)" },
-] as const;
-
+// ---- Invoicing & payments: how invoices are numbered, priced and paid. The
+// country from Business details fills in what is left open.
 export function InvoicingSettings({ initial, business }: { initial: CoachInvoicing; business: CoachBusiness }) {
-  const d = useDraft<CoachInvoicing>({ currency: "EUR", vat_rate: 21, prices_include_vat: true, payment_terms_days: 14, number_prefix: "", next_number: 1, ...initial }, saveCoachInvoicingAction, "Invoicing saved");
+  const eff = invoicingFor(business, initial);
+  const country = eff.country;
+  const d = useDraft<CoachInvoicing>({ currency: eff.currency, vat_rate: eff.rate, prices_include_vat: eff.pricesIncludeVat, payment_terms_days: eff.termsDays, number_prefix: "", next_number: 1, ...initial }, saveCoachInvoicingAction, "Invoicing saved");
   const num = (k: "vat_rate" | "payment_terms_days" | "next_number", s: string) => d.set(k, s === "" ? undefined : Number(s));
+  const text = (k: keyof CoachInvoicing, label: string, opts: { hint?: string; wide?: boolean; placeholder?: string; upper?: boolean; bad?: boolean } = {}) => (
+    <Field label={label} hint={opts.hint} wide={opts.wide}>
+      <Input value={String(d.v[k] ?? "")} onChange={(e) => d.set(k, (opts.upper ? e.target.value.toUpperCase() : e.target.value) as never)} placeholder={opts.placeholder} aria-invalid={opts.bad} />
+    </Field>
+  );
   const year = new Date().getFullYear();
-  const example = `${(d.v.number_prefix ?? "").replace("{year}", String(year))}${String(d.v.next_number ?? 1).padStart(4, "0")}`;
+  const example = `${(d.v.number_prefix ?? "").replaceAll("{year}", String(year))}${String(d.v.next_number ?? 1).padStart(4, "0")}`;
   const ibanBad = !!d.v.iban && !/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(d.v.iban.replace(/\s+/g, "").toUpperCase());
+  const tax = country.tax;
+  const currencies = CURRENCIES.includes(d.v.currency ?? "") ? CURRENCIES : [d.v.currency ?? "EUR", ...CURRENCIES];
+  const where = country.code ? country.name : "your country";
+  const rateHint =
+    country.code === "US"
+      ? "Coaching is usually not taxed in the US; if your state taxes it, put its rate here."
+      : country.code
+        ? `${country.rate}% is the standard rate in ${country.name}; 0% if you are exempt or below the threshold.`
+        : "0% if you don't charge tax.";
   return (
     <div className="rst-cards">
       <Card>
         <CardHeader>
-          <CardTitle>Prices and VAT</CardTitle>
+          <CardTitle>Prices and {tax}</CardTitle>
+          {country.code && <Badge className="rst-example">{country.name}</Badge>}
         </CardHeader>
         <CardContent className="rst-grid">
           <Field label="Currency">
-            <Select value={d.v.currency ?? "EUR"} onValueChange={(v) => d.set("currency", v as CoachInvoicing["currency"])}>
+            <Select value={d.v.currency ?? eff.currency} onValueChange={(v) => d.set("currency", v)}>
               <SelectTrigger aria-label="Currency">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                {CURRENCIES.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>
-                    {c.label}
+              <SelectContent className="max-h-80">
+                {currencies.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c} · {currencyName(c)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </Field>
-          <Field label="VAT rate" hint="21% is the standard Dutch rate; 0% if you are exempt (KOR).">
+          <Field label={`${tax} rate`} hint={rateHint}>
             <div className="rst-suffixed">
-              <Input type="number" inputMode="decimal" min={0} max={50} step={0.5} value={d.v.vat_rate ?? ""} onChange={(e) => num("vat_rate", e.target.value)} />
+              <Input type="number" inputMode="decimal" min={0} max={50} step={0.1} value={d.v.vat_rate ?? ""} onChange={(e) => num("vat_rate", e.target.value)} />
               <em>%</em>
             </div>
           </Field>
           <Field label="Prices you type" wide>
             <label className="rst-switch">
               <Switch checked={!!d.v.prices_include_vat} onCheckedChange={(v) => d.set("prices_include_vat", v)} />
-              <span>{d.v.prices_include_vat ? "Include VAT: €120 is €120 on the invoice" : "Exclude VAT: it is added on top"}</span>
+              <span>{d.v.prices_include_vat ? `Include ${tax}: ${formatMoney(120, d.v.currency ?? eff.currency, country.code)} is what the client pays` : `Exclude ${tax}: it is added on top`}</span>
             </label>
           </Field>
           <Field label="Payment terms">
@@ -230,6 +270,7 @@ export function InvoicingSettings({ initial, business }: { initial: CoachInvoici
               <em>days</em>
             </div>
           </Field>
+          {text("tax_note", `${tax} note on invoices`, { placeholder: country.code === "NL" ? "Vrijgesteld van btw (KOR)" : "VAT exempt, reverse charge…", hint: "Optional; printed under the totals." })}
         </CardContent>
       </Card>
 
@@ -251,27 +292,55 @@ export function InvoicingSettings({ initial, business }: { initial: CoachInvoici
       <Card>
         <CardHeader>
           <CardTitle>Bank transfer</CardTitle>
+          {!country.code && (
+            <Link href="/admin/redesign/settings/business" className="rst-open">
+              Set your country
+            </Link>
+          )}
         </CardHeader>
         <CardContent className="rst-grid">
-          <Field label="Account holder">
-            <Input value={d.v.account_holder ?? ""} onChange={(e) => d.set("account_holder", e.target.value)} placeholder={business.legal_name || business.business_name || ""} />
-          </Field>
-          <Field label="IBAN" hint={ibanBad ? "That doesn't look like an IBAN." : undefined}>
-            <Input value={d.v.iban ?? ""} onChange={(e) => d.set("iban", e.target.value.toUpperCase())} placeholder="NL00 BANK 0123 4567 89" aria-invalid={ibanBad} />
-          </Field>
-          <Field label="BIC">
-            <Input value={d.v.bic ?? ""} onChange={(e) => d.set("bic", e.target.value.toUpperCase())} placeholder="INGBNL2A" />
-          </Field>
+          {text("account_holder", "Account holder", { placeholder: business.legal_name || business.business_name || "", wide: country.bank === "other" })}
+          {country.bank === "iban" && (
+            <>
+              {text("iban", "IBAN", { upper: true, placeholder: `${country.code || "NL"}00 BANK 0123 4567 89`, hint: ibanBad ? "That doesn't look like an IBAN." : undefined, bad: ibanBad })}
+              {text("bic", "BIC / SWIFT", { upper: true })}
+            </>
+          )}
+          {country.bank === "uk" && (
+            <>
+              {text("sort_code", "Sort code", { placeholder: "12-34-56" })}
+              {text("account_number", "Account number", { placeholder: "12345678" })}
+              {text("iban", "IBAN", { upper: true, hint: ibanBad ? "That doesn't look like an IBAN." : "For clients paying from abroad.", bad: ibanBad })}
+              {text("bic", "BIC / SWIFT", { upper: true })}
+            </>
+          )}
+          {country.bank === "us" && (
+            <>
+              {text("routing_number", "Routing number (ABA)", { placeholder: "021000021" })}
+              {text("account_number", "Account number")}
+            </>
+          )}
+          {country.bank === "au" && (
+            <>
+              {text("bsb", "BSB", { placeholder: "062-000" })}
+              {text("account_number", "Account number")}
+            </>
+          )}
+          {country.bank === "other" && (
+            <Field label="How to pay you" hint={`Your bank details as clients in ${where} would use them.`} wide>
+              <Textarea value={d.v.bank_details ?? ""} onChange={(e) => d.set("bank_details", e.target.value)} rows={3} placeholder="Bank, account number, and any code the bank needs" />
+            </Field>
+          )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Card and iDEAL payments</CardTitle>
+          <CardTitle>Online payments</CardTitle>
           <Badge className="rst-soon">Soon</Badge>
         </CardHeader>
         <CardContent>
-          <p className="rst-para">Clients pay an invoice from a link, by card or iDEAL, and it marks itself paid. Through Stripe or Mollie, connected here.</p>
+          <p className="rst-para">Clients pay an invoice in the app by card, iDEAL, PayPal or whatever works where they are, and it marks itself paid. Through your own Stripe account, connected here.</p>
         </CardContent>
       </Card>
 

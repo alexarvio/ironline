@@ -80,7 +80,7 @@ export default function InvoicesDraft({ clientId, firstName, clientName, plan }:
       {plan.missing.length > 0 && (
         <p className="riv-missing">
           Your invoices still need your {plan.missing.join(", ").replace(/, ([^,]*)$/, " and $1")}.{" "}
-          <Link href={plan.missing.includes("IBAN") && plan.missing.length === 1 ? "/admin/redesign/settings/invoicing" : "/admin/redesign/settings/business"}>Add them in Settings</Link>
+          <Link href={plan.missing.includes("bank details") && plan.missing.length === 1 ? "/admin/redesign/settings/invoicing" : "/admin/redesign/settings/business"}>Add them in Settings</Link>
         </p>
       )}
 
@@ -106,7 +106,7 @@ export default function InvoicesDraft({ clientId, firstName, clientName, plan }:
             <small>Next number</small>
             <b>{plan.defaults.nextNumber}</b>
             <span>
-              VAT {plan.defaults.vatRate}% · {plan.defaults.termsDays} days to pay
+              {plan.defaults.taxLabel} {plan.defaults.vatRate}% · {plan.defaults.termsDays} days to pay
             </span>
           </CardContent>
         </Card>
@@ -235,7 +235,7 @@ function NewInvoiceDialog({ clientName, plan, onCreate }: { clientName: string; 
 
           <div className="nc-row full riv-lines">
             <span className="nc-label">
-              What for <span className="ncd-aside">prices {d.pricesIncludeVat ? "include" : "exclude"} VAT</span>
+              What for <span className="ncd-aside">prices {d.pricesIncludeVat ? "include" : "exclude"} {d.taxLabel}</span>
             </span>
             <div className="riv-line head" aria-hidden="true">
               <span>Description</span>
@@ -261,7 +261,9 @@ function NewInvoiceDialog({ clientName, plan, onCreate }: { clientName: string; 
             <dl className="riv-totals">
               <dt>Subtotal</dt>
               <dd>{money(t.subtotal, d.currency)}</dd>
-              <dt>VAT {d.vatRate}%</dt>
+              <dt>
+                {d.taxLabel} {d.vatRate}%
+              </dt>
               <dd>{money(t.vat, d.currency)}</dd>
               <dt className="grand">Total</dt>
               <dd className="grand">{money(t.total, d.currency)}</dd>

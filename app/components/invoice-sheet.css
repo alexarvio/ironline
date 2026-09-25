@@ -47,3 +47,5 @@
   .ivp-bar, .ivp-missing { display: none; }
   .ivp-sheet { max-width: none; min-height: 297mm; box-shadow: none; }
 }
+.ivp-pay .ivp-bank { margin-top: 4px; font-variant-numeric: tabular-nums; }
+.ivp-pre { white-space: pre-wrap; }
