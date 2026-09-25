@@ -116,9 +116,13 @@ export default function ExercisePage({
   const [warm, setWarm] = useState<{ weight: string; reps: string; saved: boolean }[]>(() =>
     exercise.warmups.map((w) => ({ weight: w.weight != null ? String(kgToUnit(w.weight, "kg")) : "", reps: w.reps != null ? String(w.reps) : "", saved: true }))
   );
-  const [seenWarm, setSeenWarm] = useState(exercise.warmups);
-  if (seenWarm !== exercise.warmups) {
-    setSeenWarm(exercise.warmups);
+  // By content: every refresh of the page (the chat's, any save) hands in a
+  // new array with the same sets, and resetting on that wiped rows typed but
+  // not yet ticked.
+  const warmKey = JSON.stringify(exercise.warmups);
+  const [seenWarm, setSeenWarm] = useState(warmKey);
+  if (seenWarm !== warmKey) {
+    setSeenWarm(warmKey);
     setWarm(exercise.warmups.map((w) => ({ weight: w.weight != null ? String(kgToUnit(w.weight, unit)) : "", reps: w.reps != null ? String(w.reps) : "", saved: true })));
   }
   const [, startTransition] = useTransition();

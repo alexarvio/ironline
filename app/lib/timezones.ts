@@ -61,3 +61,23 @@ export function zonedToUtc(date: string, time: string, tz: string): Date {
   t = wall - offset(t);
   return new Date(t);
 }
+
+/** A booked call's day and time in a timezone, exactly as the phone words
+ *  them (HomeHub's localMeetingLabels): the server draws them in the phone's
+ *  zone from its cookie, so they don't change a moment after the page shows. */
+export function meetingLabelsIn(startIso: string, durationMinutes: number, tz: string, nowMs: number) {
+  const d = new Date(startIso);
+  const ymd = (x: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(x);
+  const days = Math.round((Date.parse(`${ymd(d)}T00:00:00Z`) - Date.parse(`${ymd(new Date(nowMs))}T00:00:00Z`)) / 86400000);
+  return {
+    dayNumber: new Intl.DateTimeFormat("en-US", { timeZone: tz, day: "numeric" }).format(d),
+    monthCap: new Intl.DateTimeFormat("en-US", { timeZone: tz, month: "short" }).format(d).toUpperCase(),
+    inLabel: days <= 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days} days`,
+    whenLabel: `${new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "long" }).format(d)} ${new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit" }).format(d)} ${tzShort(tz, d)} · ${durationMinutes} min`,
+  };
+}
+
+/** The hour (0–23) now in a timezone. */
+export function hourIn(tz: string, at: Date = new Date()): number {
+  return Number(new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", hourCycle: "h23" }).format(at));
+}

@@ -52,7 +52,10 @@ export default function TrainingDayList({
   liveSession: { id: number; label: string; startedAt: string } | null;
 }) {
   const [view, setViewState] = useState<View>(null);
+  // Put back from storage after a reload: shown in place, not slid in.
+  const [restored, setRestored] = useState(false);
   const setView = (v: View) => {
+    setRestored(false);
     setViewState(v);
     writeView(v);
   };
@@ -70,7 +73,10 @@ export default function TrainingDayList({
   useEffect(() => {
     const t = setTimeout(() => {
       const stored = readView();
-      if (stored && days.some((d) => d.key === stored.dayId)) setViewState(stored);
+      if (stored && days.some((d) => d.key === stored.dayId)) {
+        setRestored(true);
+        setViewState(stored);
+      }
     }, 0);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on mount
@@ -203,6 +209,7 @@ export default function TrainingDayList({
 
       {openDay && host && view?.screen === "overview" && createPortal(
         <SessionOverview
+          still={restored}
           day={{ ...openDay, gymId: gymIdFor(openDay) }}
           pastWeek={pastWeek}
           currentWeek={currentWeek}

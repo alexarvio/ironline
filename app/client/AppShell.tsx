@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useState, useSyncExternalStore, useTransition } from "react";
+import { ReactNode, useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { markCoachNotesReadAction } from "../lib/actions";
 import { logoutAction } from "../lib/auth-actions";
 import { BellIcon, ChevronLeftIcon, MenuIcon } from "../components/icons";
@@ -64,6 +64,8 @@ function subscribePush() {
   return () => {};
 }
 const TAB_EVENT = "ironline:tab";
+/** The tab, for the server (page.tsx reads it). */
+export const TAB_COOKIE = "ironline_tab";
 
 function readTab(): string | null {
   try {
@@ -84,6 +86,11 @@ function writeTab(id: string) {
   } catch {
     /* blocked storage: the tab still switches for this page */
   }
+  // And in a cookie for this visit, so a reload is drawn on this tab by the
+  // server instead of Home first and then this one.
+  try {
+    document.cookie = `${TAB_COOKIE}=${encodeURIComponent(id)}; path=/; samesite=lax`;
+  } catch {}
   window.dispatchEvent(new Event(TAB_EVENT));
 }
 
@@ -106,6 +113,7 @@ export default function AppShell({
   coachAvatarPath = null,
   foodDiary = null,
   meetings = null,
+  initialTab = null,
 }: {
   clientName: string;
   tabs: AppTab[];
@@ -127,8 +135,10 @@ export default function AppShell({
   foodDiary?: FoodDiaryProps | null;
   /** Every call with the coach: to come and past, for the Meetings screen. */
   meetings?: MeetingsProps | null;
+  /** The tab the client was on (its cookie), so the server draws that one. */
+  initialTab?: string | null;
 }) {
-  const storedTab = useSyncExternalStore(subscribeTab, readTab, () => null);
+  const storedTab = useSyncExternalStore(subscribeTab, readTab, () => initialTab);
   const activeId = storedTab && tabs.some((t) => t.id === storedTab) ? storedTab : tabs[0]?.id;
   const setActiveId = (id: string) => writeTab(id);
   // The food diary stays open across a reload (a deploy landing mid-session
@@ -170,10 +180,22 @@ export default function AppShell({
       markCoachNotesReadAction(clientId);
     });
   };
-  // Bumped when the tab changes and used as a key on the content below, so
-  // a tab comes up fresh when switched to. A tap on the tab already showing
-  // is ignored: rebuilding it read as the screen jumping to the top.
-  const [navResetKey, setNavResetKey] = useState(0);
+  // Every tab opened stays mounted, hidden while another shows, each with its
+  // own scroll: switching back finds it as it was left, with no entrance
+  // animations replaying and no carousel, week or open session reset. It is
+  // rebuilt only when a link sends the client to something inside it.
+  const [visited, setVisited] = useState<string[]>(() => (activeId ? [activeId] : []));
+  if (activeId && !visited.includes(activeId)) setVisited([...visited, activeId]);
+  const [rebuilt, setRebuilt] = useState<Record<string, number>>({});
+  const scrollers = useRef<Record<string, HTMLElement | null>>({});
+  // The phone's timezone, for the server: Home's greeting and a call's time
+  // are drawn in it from the first paint instead of changing a moment later.
+  useEffect(() => {
+    try {
+      const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (zone) document.cookie = `ironline_tz=${encodeURIComponent(zone)}; path=/; max-age=31536000; samesite=lax`;
+    } catch {}
+  }, []);
   // Which row the tab we're switching to should open on arrival, set only by
   // a notification's deep link and cleared by any ordinary nav tap.
   const [focusRef, setFocusRef] = useState<number | null>(null);
@@ -198,7 +220,8 @@ export default function AppShell({
     setActiveId(tab);
     setFocusRef(ref ?? null);
     setTrainingFocus(focus ?? null);
-    setNavResetKey((k) => k + 1);
+    // Sent to something inside it: that tab comes up fresh, at its top.
+    setRebuilt((r) => ({ ...r, [tab]: (r[tab] ?? 0) + 1 }));
   };
 
   // A coach message's link: straight to the thing it is about, from Home's
@@ -315,11 +338,6 @@ export default function AppShell({
             </div>
           </header>
 
-          <main
-            className="app-content dark"
-            key={`${activeId}-${navResetKey}`}
-            onScroll={active?.bare ? (e) => setScrolled(e.currentTarget.scrollTop > 4) : undefined}
-          >
             <CheckInProvider value={openCheckIn}>
               <PhotosProvider
                 value={() => {
@@ -343,9 +361,25 @@ export default function AppShell({
                 <CoachProvider value={coachProfile ? () => setPushView("coach") : null}>
                     <NotificationsProvider value={() => setPushView("notifications")}>
                       <NavigateProvider value={goToTab}>
-                        <FocusRefProvider value={focusRef}>
-                          <TrainingFocusProvider value={trainingFocus}>{active?.content}</TrainingFocusProvider>
-                        </FocusRefProvider>
+                        {tabs
+                          .filter((t) => visited.includes(t.id))
+                          .map((t) => (
+                            <main
+                              key={`${t.id}-${rebuilt[t.id] ?? 0}`}
+                              ref={(el) => {
+                                scrollers.current[t.id] = el;
+                              }}
+                              className="app-content dark"
+                              style={t.id === activeId ? undefined : { display: "none" }}
+                              aria-hidden={t.id === activeId ? undefined : true}
+                              onScroll={t.bare ? (e) => t.id === activeId && setScrolled(e.currentTarget.scrollTop > 4) : undefined}
+                            >
+                              {/* A deep link's target is for the tab it was sent to only. */}
+                              <FocusRefProvider value={t.id === activeId ? focusRef : null}>
+                                <TrainingFocusProvider value={t.id === activeId ? trainingFocus : null}>{t.content}</TrainingFocusProvider>
+                              </FocusRefProvider>
+                            </main>
+                          ))}
                       </NavigateProvider>
                     </NotificationsProvider>
                   </CoachProvider>
@@ -354,7 +388,6 @@ export default function AppShell({
                 </MessagesProvider>
               </PhotosProvider>
             </CheckInProvider>
-          </main>
 
           {active?.footer && <div className="app-sticky-footer">{active.footer}</div>}
 
@@ -368,10 +401,10 @@ export default function AppShell({
                   // A tap on the tab already showing does nothing. It used to
                   // rebuild the tab, which read as the screen jumping to the top.
                   if (t.id === activeId) return;
-                  setScrolled(false);
+                  // The tab as it was left, scroll and all.
+                  setScrolled((scrollers.current[t.id]?.scrollTop ?? 0) > 4);
                   setActiveId(t.id);
                   setFocusRef(null);
-                  setNavResetKey((k) => k + 1);
                 }}
               >
                 <span className="app-tab-icon" aria-label={t.label}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { useTrainingFocus } from "./CheckInContext";
 
 // Read-only week switcher for the client's own Training tab — every
@@ -52,7 +52,8 @@ export default function ClientWeekSwitcher({
   // strip cannot scroll that far, so the current week drifts right on its own.
   const scrolls = weeks.length > 3;
   const stripRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
+  // Before the first paint, so the strip opens in place instead of sliding there.
+  useLayoutEffect(() => {
     const strip = stripRef.current;
     if (!strip || !scrolls) return;
     const anchor = strip.querySelector<HTMLElement>(`[data-week="${currentWeek}"]`);
