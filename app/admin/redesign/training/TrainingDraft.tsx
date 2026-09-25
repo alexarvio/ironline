@@ -1421,7 +1421,7 @@ function Cell({ value, onChange, label, placeholder, width }: { value: string; o
 /** A weight cell: kept in kg, typed and shown in the unit picked. Keyed by
  *  unit where it is used, so a flip re-reads the figure. */
 function WeightCell({ kg, lbs, label, onChange }: { kg: number | null; lbs: boolean; label?: string; onChange: (kg: number | null) => void }) {
-  const [text, setText] = useState(kg == null ? "" : lbs ? String(Math.ceil((kg * LB) / 0.5) * 0.5) : String(kg));
+  const [text, setText] = useState(kg == null ? "" : String(half(lbs ? kg * LB : kg)));
   return (
     <span className="rd-cell">
       {label && <small>{label}</small>}
