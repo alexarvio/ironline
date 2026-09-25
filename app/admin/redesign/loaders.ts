@@ -377,7 +377,10 @@ export function loadMeasurements(clientId: number, params: { phase?: string }): 
     end.setDate(end.getDate() + 6);
     until = localDateStr(end);
   }
-  const scope = real.length ? { metrics, until } : undefined;
+  // The table's columns are the metrics tracked now (the card above), with or
+  // without phases: every definition the client ever had made repeated and
+  // removed columns (three Weights, an old Resting HR).
+  const scope = { metrics, until };
   const fmtWhen = (period: string) => {
     const days = Math.round((new Date(`${period}T00:00:00`).getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000);
     if (days === 0) return "today";

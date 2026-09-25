@@ -10192,10 +10192,22 @@ export function getLoggedValues(
 
   const keys = new Set(periods.map((p) => p.key));
   const values: Record<string, number> = {};
-  const ids = new Set(defs.map((m) => m.id));
+  // Readings logged under an older definition of the same metric (a phase's
+  // own "Weight", say) show in the column of the one tracked now, so the
+  // history stays when a metric was set up again. Its own readings win.
+  const byName = new Map(defs.map((m) => [m.name.trim().toLowerCase(), m.id] as const));
+  const target = new Map<number, number>(defs.map((m) => [m.id, m.id] as const));
+  for (const m of data.metric_definitions) {
+    if (m.client_id !== clientId || target.has(m.id)) continue;
+    const to = byName.get(m.name.trim().toLowerCase());
+    if (to != null) target.set(m.id, to);
+  }
   for (const e of data.metric_entries) {
-    if (!ids.has(e.metric_definition_id) || e.value == null || !keys.has(e.period)) continue;
-    values[`${e.metric_definition_id}:${e.period}`] = e.value;
+    const to = target.get(e.metric_definition_id);
+    if (to == null || e.value == null || !keys.has(e.period)) continue;
+    const key = `${to}:${e.period}`;
+    if (e.metric_definition_id !== to && key in values) continue;
+    values[key] = e.value;
   }
 
   const notes: Record<string, string> = {};
