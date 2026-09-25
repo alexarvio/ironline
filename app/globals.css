@@ -17295,3 +17295,11 @@ button.ci-hint { cursor: pointer; }
 .wo-ex-title-row .wo-nextup-label { font-size: 10px; }
 .wo-ex-title-row .wo-nextup-name { max-width: 100%; font-size: 14px; font-weight: 700; color: #1e3a6e; }
 .wo-ex-title-row .wo-nextup-name { color: #141a24; }
+/* The exercise name closer under "Exercise 1 of 2" (25 Sep): the icon row is
+   36px for the buttons' sake, so the name tucks up into its foot. Next up on
+   one line ("NEXT UP  Leg Press") so it stays clear of the icons above. */
+.wo-ex-head { gap: 0; }
+.wo-ex-top { margin-bottom: -6px; }
+.wo-ex-title-row { align-items: baseline; }
+.wo-ex-title-row .wo-nextup { flex-direction: row; align-items: baseline; gap: 6px; }
+.wo-ex-title-row .wo-nextup-label { flex: none; }
