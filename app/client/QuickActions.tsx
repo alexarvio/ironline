@@ -3,9 +3,11 @@
 import { useNavigateTab, useOpenCheckIn, useOpenFood, useOpenPhotos } from "./CheckInContext";
 import type { PhaseFoodToday, PhaseNextSession } from "./PhaseCards";
 
-// Home's "Quick actions": what is still to do today, each a row with a small
-// white button that goes straight there (the phase cards' action rows, one
-// card). Done things drop out; with nothing left it says so. The background
+// Home's "Quick actions": the most important thing still to do today, one
+// at a time, as a row with a small white button that goes straight there
+// (the phase cards' action rows, one card). In order: the check-in, progress
+// pictures when due, training, food. Done things drop out and the next one
+// shows; with nothing left it says so. The background
 // is one of the stock photos, blurred to a wash, a different one each day.
 
 const BACKGROUNDS = ["/img/lifestyle-head.jpg", "/img/session-head.jpg", "/img/nutrition-head.jpg"];
@@ -45,6 +47,9 @@ export default function QuickActions({
       onClick: () => openCheckIn("daily"),
     });
   }
+  if (picsDue && openPhotos) {
+    actions.push({ key: "photos", label: "Progress pictures", name: "Due today", button: "Add", onClick: () => openPhotos() });
+  }
   // A session begun and not ended is always there; otherwise the next one, until one is done today.
   if (nextSession && (nextSession.live || !trainedToday)) {
     actions.push({
@@ -69,9 +74,6 @@ export default function QuickActions({
       });
     }
   }
-  if (picsDue && openPhotos) {
-    actions.push({ key: "photos", label: "Progress pictures", name: "Due today", button: "Add", onClick: () => openPhotos() });
-  }
 
   const dayOfYear = Math.floor((Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)) - 1, Number(today.slice(8, 10))) - Date.UTC(Number(today.slice(0, 4)), 0, 1)) / 86400000);
   const bg = BACKGROUNDS[dayOfYear % BACKGROUNDS.length];
@@ -87,7 +89,7 @@ export default function QuickActions({
           {actions.length > 0 && <span className="qa-count">{actions.length} left</span>}
         </div>
         {actions.length ? (
-          actions.map((a) => (
+          actions.slice(0, 1).map((a) => (
             <div key={a.key} className="qa-row">
               <span className="qa-text">
                 <span className="qa-label">{a.label}</span>
