@@ -7,6 +7,7 @@ import PhaseCards, { type HomePhase, type PhaseFoodToday } from "./PhaseCards";
 import ProgressPicsCard, { type ProgressPics } from "./ProgressPicsCard";
 import QuickActions from "./QuickActions";
 import { ChevronDownIcon } from "../components/icons";
+import { tzShort } from "../lib/timezones";
 import type { LinkView } from "../lib/messageLinks";
 import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenLink, useOpenMeetings, useOpenMessages, useOpenPhotos } from "./CheckInContext";
 
@@ -52,7 +53,7 @@ export type UpcomingMeeting = {
   inLabel: string;
   /** "Sunday 18:00 · 30 min". */
   whenLabel: string;
-  /** The start as an ISO stamp, and how long it runs, so the card can follow the clock. */
+  /** The start as a UTC moment (ISO), and how long it runs: the card shows it in the phone's timezone and follows the clock. */
   startIso: string | null;
   durationMinutes: number;
 } | null;
@@ -293,6 +294,25 @@ function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstNam
 
 // ---- 5 · Next meeting, only when booked ------------------------------------
 
+/** A booked call's day and time in the phone's own timezone ("Wednesday
+ *  14:30 GMT+7 · 30 min" in Bangkok for 09:30 in Amsterdam). Until the phone
+ *  is known (the server render), the labels as the coach typed them. */
+export function localMeetingLabels(m: NonNullable<UpcomingMeeting>, now: number | null) {
+  const start = m.startIso ? Date.parse(m.startIso) : NaN;
+  if (now == null || !Number.isFinite(start)) return { dayNumber: m.dayNumber, monthCap: m.monthCap, inLabel: m.inLabel, whenLabel: m.whenLabel };
+  const d = new Date(start);
+  const t = new Date(now);
+  const dayOf = (x: Date) => Date.UTC(x.getFullYear(), x.getMonth(), x.getDate());
+  const days = Math.round((dayOf(d) - dayOf(t)) / 86400000);
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return {
+    dayNumber: String(d.getDate()),
+    monthCap: d.toLocaleDateString("en-US", { month: "short" }).toUpperCase(),
+    inLabel: days <= 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days} days`,
+    whenLabel: `${d.toLocaleDateString("en-US", { weekday: "long" })} ${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })} ${tzShort(zone, d)} · ${m.durationMinutes} min`,
+  };
+}
+
 export function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<UpcomingMeeting>; recap: MeetingRecap; coachFirstName: string }) {
   // On Home: a way to every meeting, past and to come.
   const openMeetings = useOpenMeetings();
@@ -314,25 +334,26 @@ export function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<Upcom
   const minsToStart = now != null && Number.isFinite(start) ? (start - now) / 60000 : null;
   const live = minsToStart != null ? minsToStart <= 10 && minsToStart >= -m.durationMinutes : m.startingNow;
   const joinable = !!m.link && live;
-  const pillLabel = live ? "Live" : m.inLabel;
+  const shown = localMeetingLabels(m, now);
+  const pillLabel = live ? "Live" : shown.inLabel;
   return (
     <section className={`hm-mt${openMeetings ? " link" : ""}`} aria-label={`Next meeting with ${coachFirstName}`} onClick={openMeetings ? (e) => openFromCard(e, openMeetings) : undefined}>
       <span className="hm-mt-glow" aria-hidden="true" />
       <div className="hm-mt-row">
         <div className="hm-mt-date">
-          <b>{m.dayNumber}</b>
-          <small>{m.monthCap}</small>
+          <b>{shown.dayNumber}</b>
+          <small>{shown.monthCap}</small>
         </div>
         <div className="hm-mt-main">
           <div className="hm-mt-top">
             <span className="hm-mt-eyebrow">With {coachFirstName}</span>
-            <span className={`hm-mt-pill${live ? " live" : m.inLabel === "Today" ? " today" : ""}`} aria-label={pillLabel}>
+            <span className={`hm-mt-pill${live ? " live" : shown.inLabel === "Today" ? " today" : ""}`} aria-label={pillLabel}>
               {live && <span className="hm-mt-live-dot" aria-hidden="true" />}
               {pillLabel}
             </span>
           </div>
           <div className="hm-mt-title">{m.topic}</div>
-          <div className="hm-mt-when">{m.whenLabel}</div>
+          <div className="hm-mt-when">{shown.whenLabel}</div>
         </div>
       </div>
       {/* The call's link is always there: Open meeting link before, Join call

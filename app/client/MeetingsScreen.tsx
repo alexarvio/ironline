@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDownIcon, ChevronLeftIcon } from "../components/icons";
-import { MeetingCard, type UpcomingMeeting } from "./HomeHub";
+import { localMeetingLabels, MeetingCard, type UpcomingMeeting } from "./HomeHub";
 
 // Every call with the coach in one place: the next one as Home shows it
 // (its link included), any booked after it, and a log of
@@ -29,6 +29,12 @@ export type MeetingsProps = { upcoming: NonNullable<UpcomingMeeting>[]; past: Pa
 export default function MeetingsScreen({ upcoming, past, coachName, onBack }: MeetingsProps & { coachName: string; onBack: () => void }) {
   const coachFirst = coachName.trim().split(/\s+/)[0] || "your coach";
   const [next, ...later] = upcoming;
+  // The phone's clock and timezone, once on the phone: the calls in its time.
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    const t = setTimeout(() => setNow(Date.now()), 0);
+    return () => clearTimeout(t);
+  }, []);
   return (
     <>
       <header className="cn-header">
@@ -55,15 +61,17 @@ export default function MeetingsScreen({ upcoming, past, coachName, onBack }: Me
             <section className="mts-section" aria-label="Also booked">
               <div className="mts-head">Also booked</div>
               <ul className="mts-list">
-                {later.map((m, i) => (
+                {later.map((m, i) => {
+                  const l = localMeetingLabels(m, now);
+                  return (
                   <li key={i} className="mts-row">
                     <span className="mts-leaf" aria-hidden="true">
-                      <b>{m.dayNumber}</b>
-                      <small>{m.monthCap}</small>
+                      <b>{l.dayNumber}</b>
+                      <small>{l.monthCap}</small>
                     </span>
                     <span className="mts-row-text">
                       <span className="mts-row-title">{m.topic}</span>
-                      <span className="mts-row-sub">{m.whenLabel}</span>
+                      <span className="mts-row-sub">{l.whenLabel}</span>
                     </span>
                     {m.link && (
                       <a className="mts-row-link" href={m.link} target="_blank" rel="noopener noreferrer">
@@ -71,7 +79,8 @@ export default function MeetingsScreen({ upcoming, past, coachName, onBack }: Me
                       </a>
                     )}
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             </section>
           )}

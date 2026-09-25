@@ -93,6 +93,7 @@ import AppShell, { AppTab } from "./AppShell";
 import AvatarUpload from "./AvatarUpload";
 import { phaseCovers, phaseDays, phaseLastDay, phaseWeekIndex, phaseWeeks } from "../lib/phases";
 import { defaultPhaseCover } from "../lib/phaseCovers";
+import { SERVER_TZ, zonedToUtc } from "../lib/timezones";
 import type { HomePhase, PhaseFoodToday } from "./PhaseCards";
 import {
   AccountIcon,
@@ -218,19 +219,18 @@ function weekStats(CLIENT_ID: number, week: number) {
 function meetingCardView(m: ReturnType<typeof listMeetings>[number], today: string): NonNullable<UpcomingMeeting> {
   const when = new Date(`${m.date}T00:00:00`);
   const days = Math.round((when.getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000);
-  // "Starting now" from ten minutes before the start until the end.
-  const startingNow = (() => {
-    if (m.date !== today || !m.time) return false;
-    const [h, mi] = m.time.split(":").map((n) => Number(n) || 0);
-    const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
-    const start = h * 60 + mi;
-    return nowMin >= start - 10 && nowMin <= start + m.duration_minutes;
-  })();
+  // The start as a real moment, from the timezone the coach typed the time
+  // in (the server's, Amsterdam, for meetings from before it was asked): the
+  // phone shows it in its own. "Starting now" from ten minutes before the
+  // start until the end.
+  const startAt = m.time ? zonedToUtc(m.date, m.time, m.tz || SERVER_TZ) : null;
+  const nowMs = new Date().getTime();
+  const startingNow = !!startAt && nowMs >= startAt.getTime() - 10 * 60000 && nowMs <= startAt.getTime() + m.duration_minutes * 60000;
   return {
     link: m.link ?? null,
     provider: meetingProvider(m.link),
     startingNow,
-    startIso: m.time ? `${m.date}T${m.time}:00` : null,
+    startIso: startAt ? startAt.toISOString() : null,
     durationMinutes: m.duration_minutes,
     monthCap: MONTH_CAP[when.getMonth()],
     dayNumber: String(when.getDate()),
