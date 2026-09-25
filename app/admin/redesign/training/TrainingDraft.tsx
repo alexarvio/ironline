@@ -2086,7 +2086,6 @@ function ProgressDialog({ row, lbs, unit, multiGym }: { row: DraftRow; lbs: bool
   const y = (v: number) => pad.t + (1 - (v - yLo) / (yHi - yLo)) * (H - pad.t - pad.b);
   const pts = winLogged.map((w) => ({ w, px: xw(w.week), py: y(w.best!) }));
   const labelOf = (wk: number) => h.find((w) => w.week === wk)?.label.replace("Week ", "W") ?? `W${wk}`;
-  const target = cur?.target ?? row.kg;
 
   return (
     <DialogContent className="rd-dlg rd-progress rd-progress2">
@@ -2150,14 +2149,6 @@ function ProgressDialog({ row, lbs, unit, multiGym }: { row: DraftRow; lbs: bool
       {/* 3 · The curve over the last four weeks: the best set each week, the target dashed. */}
       {pts.length > 0 && (
         <svg className="rp-chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${row.name}: best set by week`}>
-          {target != null && (
-            <>
-              <line x1={pad.l} x2={W - pad.r} y1={y(target)} y2={y(target)} className="rp-target-line" />
-              <text x={pad.l - 6} y={y(target) + 3} className="rp-axis" textAnchor="end">
-                {shown(target)}
-              </text>
-            </>
-          )}
           {/* The scale's top and bottom, so the headroom reads. */}
           <text x={pad.l - 6} y={y(yHi) + 3} className="rp-axis" textAnchor="end">
             {shown(yHi)}
@@ -2226,7 +2217,7 @@ function ProgressDialog({ row, lbs, unit, multiGym }: { row: DraftRow; lbs: bool
       </table>
       <p className="rp-howto">
         The percentages and the trend compare each week&rsquo;s best set with its reps counted, as an estimated one-rep max (weight × (1 + reps ÷ 30)): more reps at the same weight is progress, and fewer reps at a little more weight is not. <b>Vs last week</b> is against the week before;{" "}
-        <b>over 4 weeks</b> against the earliest week logged in the last four; <b>Change</b> is each week against the one before. <b>Target</b> checks each set against what you asked that week: on target when its reps reach the bottom of the range at the target weight or heavier, <b>top of range</b> when every set reached the top (time to go heavier). The chart shows the heaviest weight each week, with your target dashed.
+        <b>over 4 weeks</b> against the earliest week logged in the last four; <b>Change</b> is each week against the one before. <b>Target</b> checks each set against what you asked that week: on target when its reps reach the bottom of the range at the target weight or heavier, <b>top of range</b> when every set reached the top (time to go heavier). The chart shows the heaviest weight each week.
       </p>
     </DialogContent>
   );
