@@ -128,7 +128,7 @@ export default function RedesignRail({ rail, clientId }: { rail: RailData; clien
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" side="top" className="pb-menu">
             <DropdownMenuItem asChild>
-              <Link href="/admin/profile">
+              <Link href="/admin/redesign/profile">
                 <AccountIcon /> Your profile
               </Link>
             </DropdownMenuItem>
