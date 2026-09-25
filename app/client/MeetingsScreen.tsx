@@ -5,7 +5,7 @@ import { ChevronDownIcon, ChevronLeftIcon } from "../components/icons";
 import { MeetingCard, type UpcomingMeeting } from "./HomeHub";
 
 // Every call with the coach in one place: the next one as Home shows it
-// (with its link, before it starts too), any booked after it, and a log of
+// (its link included), any booked after it, and a log of
 // the ones that happened with what was agreed. Pushed over the tabs from
 // Home's meeting card and the menu. Plain props, built in page.tsx.
 
@@ -45,7 +45,7 @@ export default function MeetingsScreen({ upcoming, past, coachName, onBack }: Me
           <section className="mts-section" aria-label="Next meeting">
             <div className="mts-head">Next</div>
             {next ? (
-              <MeetingCard m={next} recap={null} coachFirstName={coachFirst} showLink />
+              <MeetingCard m={next} recap={null} coachFirstName={coachFirst} />
             ) : (
               <p className="mts-empty">Nothing booked yet. When {coachFirst} books a call, it shows here.</p>
             )}

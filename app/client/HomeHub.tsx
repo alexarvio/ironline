@@ -286,7 +286,7 @@ function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstNam
 
 // ---- 5 · Next meeting, only when booked ------------------------------------
 
-export function MeetingCard({ m, recap, coachFirstName, showLink = false }: { m: NonNullable<UpcomingMeeting>; recap: MeetingRecap; coachFirstName: string; /** The call's link before it starts too (the Meetings screen). */ showLink?: boolean }) {
+export function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<UpcomingMeeting>; recap: MeetingRecap; coachFirstName: string }) {
   // On Home: a way to every meeting, past and to come.
   const openMeetings = useOpenMeetings();
   // The pill and the Join button follow the clock: checked every minute
@@ -330,7 +330,9 @@ export function MeetingCard({ m, recap, coachFirstName, showLink = false }: { m:
           <div className="hm-mt-when">{m.whenLabel}</div>
         </div>
       </div>
-      {(joinable || (showLink && !!m.link)) && (
+      {/* The call's link is always there: Open meeting link before, Join call
+          from ten minutes before to the end. */}
+      {m.link && (
         <a className={`hm-mt-join${joinable ? "" : " early"}`} href={m.link!} target="_blank" rel="noopener noreferrer">
           <span className="hm-mt-join-glyph" aria-hidden="true">
             <svg viewBox="0 0 24 24">
