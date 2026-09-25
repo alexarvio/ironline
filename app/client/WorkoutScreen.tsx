@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useDismiss } from "./useDismiss";
 import { discardSessionAction, endSessionAction } from "../lib/actions";
-import { ChevronLeftIcon } from "../components/icons";
+import { ChatIcon, ChevronLeftIcon } from "../components/icons";
+import { useOpenMessages } from "./CheckInContext";
 import type { GymOption } from "./GymPicker";
-import ExercisePage from "./ExercisePage";
+import ExercisePage, { MAX_WARMUPS, type ExerciseRequest } from "./ExercisePage";
 import GymSheet from "./GymSheet";
 import RestTimerPill, { useRestTimer } from "./RestTimer";
 import SwipeToEnd from "./SwipeToEnd";
@@ -145,6 +146,15 @@ export default function WorkoutScreen({
   const [menuOpen, setMenuOpen] = useState(false);
   useDismiss(menuOpen, () => setMenuOpen(false));
   const [gymOpen, setGymOpen] = useState(false);
+  // The exercise on screen, for the menu's note / warm-up / swap and the chat.
+  const currentEx = current.kind === "exercise" ? day.exercises[current.index] : null;
+  const [request, setRequest] = useState<(ExerciseRequest & { page: number }) | null>(null);
+  const ask = (kind: ExerciseRequest["kind"]) => {
+    setMenuOpen(false);
+    setRequest({ kind, page, n: Date.now() });
+  };
+  const openMessages = useOpenMessages();
+  const currentNote = currentEx ? ((gymId != null ? currentEx.gymNotes?.[gymId] : "") || currentEx.myNote).trim() : "";
   const [, startTransition] = useTransition();
   const gymName = day.gyms.find((g) => g.id === gymId)?.name ?? null;
 
@@ -182,13 +192,28 @@ export default function WorkoutScreen({
             <div className="wo-head-kicker">{day.title}</div>
             <div className={`wo-head-clock${ended ? " ended" : ""}`}>{clock(ms)}</div>
           </div>
-          <button type="button" className="wo-head-btn" onClick={() => setMenuOpen((o) => !o)} aria-label="More" aria-expanded={menuOpen}>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="5" cy="12" r="1.8" fill="currentColor" stroke="none" />
-              <circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none" />
-              <circle cx="19" cy="12" r="1.8" fill="currentColor" stroke="none" />
-            </svg>
-          </button>
+          <div className="wo-head-right">
+            {/* The chat, about the exercise on screen when there is one. */}
+            {openMessages && (
+              <button
+                type="button"
+                className="wo-head-btn"
+                onClick={() =>
+                  currentEx ? openMessages({ link: { kind: "exercise", dayId: day.key, assignmentId: currentEx.id }, label: `${shownName(currentEx)} · ${day.title}` }) : openMessages()
+                }
+                aria-label={currentEx ? `Message ${coachName} about ${shownName(currentEx)}` : `Message ${coachName}`}
+              >
+                <ChatIcon />
+              </button>
+            )}
+            <button type="button" className="wo-head-btn" onClick={() => setMenuOpen((o) => !o)} aria-label="More" aria-expanded={menuOpen}>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="5" cy="12" r="1.8" fill="currentColor" stroke="none" />
+                <circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none" />
+                <circle cx="19" cy="12" r="1.8" fill="currentColor" stroke="none" />
+              </svg>
+            </button>
+          </div>
         </div>
         <div className="wo-head-row2 right">
           {day.gyms.length > 0 && (
@@ -233,6 +258,19 @@ export default function WorkoutScreen({
                   Change gym
                 </button>
               )}
+              {currentEx && (
+                <>
+                  <button type="button" role="menuitem" className="wo-menu-row" onClick={() => ask("note")}>
+                    {currentNote ? "Edit your note" : "Add a note for yourself"}
+                  </button>
+                  <button type="button" role="menuitem" className="wo-menu-row" disabled={currentEx.warmups.length >= MAX_WARMUPS} onClick={() => ask("warmup")}>
+                    Add a warm-up set
+                  </button>
+                  <button type="button" role="menuitem" className="wo-menu-row" onClick={() => ask("swap")}>
+                    {currentEx.swap ? "Change the swap" : "Swap exercise"}
+                  </button>
+                </>
+              )}
               <div className="wo-menu-divider" />
               <button type="button" role="menuitem" className="wo-menu-row danger" onClick={discard}>
                 Discard session
@@ -252,13 +290,12 @@ export default function WorkoutScreen({
                 total={day.exercises.length}
                 gymId={gymId}
                 coachName={coachName}
-                dayId={day.key}
-                sessionTitle={day.title}
                 nextName={(() => {
                   const n = pages[i + 1];
                   return n?.kind === "exercise" ? shownName(day.exercises[n.index]) : n?.kind === "cardio" ? day.cardio[n.index].name : null;
                 })()}
                 onNext={() => jumpTo(i + 1)}
+                request={request?.page === i ? request : null}
               />
             ) : p.kind === "cardio" ? (
               <div className="wo-page-inner">

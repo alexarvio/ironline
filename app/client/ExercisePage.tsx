@@ -1,12 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useDismiss } from "./useDismiss";
 import { clearSwapAction, logSetAction, saveExerciseNoteAction, saveWarmupSetsAction, swapExerciseAction } from "../lib/actions";
 import AlternativesSheet from "./AlternativesSheet";
 import { VideoAskSheet, VideoGlyph } from "./VideoAskSheet";
-import { ChatIcon } from "../components/icons";
-import { useOpenMessages } from "./CheckInContext";
 import {
   CoachNote,
   kgToUnit,
@@ -22,7 +19,10 @@ import {
 // again. Warm-ups sit above the working sets and are never counted. "Last
 // time" is what this exercise's sets were the last time it came round.
 
-const MAX_WARMUPS = 8;
+export const MAX_WARMUPS = 8;
+
+/** What the workout's ⋯ menu asks of the exercise on screen; n makes each ask new. */
+export type ExerciseRequest = { kind: "note" | "warmup" | "swap"; n: number };
 type Draft = { weight: string; reps: string; rpe: string };
 
 
@@ -32,10 +32,9 @@ export default function ExercisePage({
   total,
   gymId,
   coachName,
-  dayId,
-  sessionTitle,
   nextName = null,
   onNext,
+  request = null,
   onSetLogged,
 }: {
   exercise: SessionExercise;
@@ -43,12 +42,11 @@ export default function ExercisePage({
   total: number;
   gymId: number | null;
   coachName: string;
-  /** The session it is in, for a message about it. */
-  dayId: number;
-  sessionTitle: string;
   /** The exercise (or cardio) after this one, so the machine can be checked while resting. */
   nextName?: string | null;
   onNext?: () => void;
+  /** An ask from the workout's ⋯ menu, for this exercise. */
+  request?: ExerciseRequest | null;
   /** A working set was ticked: the dock's rest timer may want to know. */
   onSetLogged?: () => void;
 }) {
@@ -160,10 +158,17 @@ export default function ExercisePage({
 
   // ---- Swap, video, history.
   const [swapOpen, setSwapOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  useDismiss(menuOpen, () => setMenuOpen(false));
-  const openMessages = useOpenMessages();
   const [videoOpen, setVideoOpen] = useState(false);
+  // The workout's ⋯ menu (note, warm-up, swap) lands here, once per ask.
+  const [seenRequest, setSeenRequest] = useState(request?.n ?? 0);
+  if (request && request.n !== seenRequest) {
+    setSeenRequest(request.n);
+    if (request.kind === "note") {
+      setNoteDraft(myNote);
+      setNoteOpen(true);
+    } else if (request.kind === "warmup") addWarm();
+    else setSwapOpen(true);
+  }
   // The prescription, the way the old card read it: figure and unit, one
   // line, tempo under it.
   const targets = [
@@ -210,23 +215,6 @@ export default function ExercisePage({
                 </svg>
               </a>
             )}
-            {openMessages && (
-              <button
-                type="button"
-                className="wo-round-btn"
-                onClick={() => openMessages({ link: { kind: "exercise", dayId, assignmentId: exercise.id }, label: `${shownName(exercise)} · ${sessionTitle}` })}
-                aria-label={`Message ${coachName} about ${shownName(exercise)}`}
-              >
-                <ChatIcon />
-              </button>
-            )}
-            <button type="button" className="wo-round-btn" onClick={() => setMenuOpen((o) => !o)} aria-label="More" aria-expanded={menuOpen}>
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="5" cy="12" r="1.8" fill="currentColor" stroke="none" />
-                <circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none" />
-                <circle cx="19" cy="12" r="1.8" fill="currentColor" stroke="none" />
-              </svg>
-            </button>
           </div>
         </div>
         {/* The name, and on its right what comes next, so the machine can be
@@ -240,47 +228,6 @@ export default function ExercisePage({
             </button>
           )}
         </div>
-        {menuOpen && (
-          <>
-            <button type="button" className="wo-menu-scrim" aria-label="Close menu" onClick={() => setMenuOpen(false)} />
-            <div className="wo-menu wo-ex-menu" role="menu">
-              <button
-                type="button"
-                role="menuitem"
-                className="wo-menu-row"
-                onClick={() => {
-                  setMenuOpen(false);
-                  setNoteOpen(true);
-                }}
-              >
-                {myNote.trim() ? "Edit your note" : "Add a note for yourself"}
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                className="wo-menu-row"
-                disabled={warm.length >= MAX_WARMUPS}
-                onClick={() => {
-                  setMenuOpen(false);
-                  addWarm();
-                }}
-              >
-                Add a warm-up set
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                className="wo-menu-row"
-                onClick={() => {
-                  setMenuOpen(false);
-                  setSwapOpen(true);
-                }}
-              >
-                {exercise.swap ? "Change the swap" : "Swap exercise"}
-              </button>
-            </div>
-          </>
-        )}
       </div>
 
       {exercise.swap && (
