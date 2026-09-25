@@ -524,3 +524,10 @@
 .rd-exchat-compose textarea:focus { outline: none; border-color: #2f5d8f; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.12); }
 /* The live week's done sessions stay green when another week is on screen (25 Sep): the live tint above was painting over them. */
 .rd-week.live .rd-pills i.on { background: #1f7a3f; }
+/* The session head's slots closer together (25 Sep): each just wider than
+   its widest pill, a small gap between; still a set width, still centred. */
+.rd-session-tags { gap: 4px; }
+.rd-tagslot.sm { width: 24px; }
+.rd-tagslot.time { width: 52px; }
+.rd-tagslot.gym { width: 112px; }
+.rd-tagslot.state { width: 86px; }
