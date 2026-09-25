@@ -55,6 +55,8 @@ export type DraftRow = {
   /** What the client did instead, when they swapped the exercise. */
   swap: string | null;
   /** The swap in full: what, when, and the sets logged on it (kept out of this row's numbers). */
+  /** The client's chat messages about this exercise. */
+  clientNotes: { text: string; when: string }[];
   swapInfo: { name: string; typed: boolean; when: string; sets: { set: number; kg: number | null; reps: number | null; rpe: number | null; gym: string | null }[] } | null;
   /** What the coach offers instead when the machine is taken. */
   alternatives: { exerciseId: number; name: string; note: string }[];
@@ -181,7 +183,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
   // figure columns keep a set width, so on a wide screen they get more air.
   const GAP = 24;
   const exWidths = [cols.sets && 72, cols.reps && 88, cols.weight && 92, cols.rpe && 68, cols.tempo && 88, cols.rest && 84].filter((w): w is number => typeof w === "number");
-  const gridCols = `20px minmax(220px, 1.5fr)${exWidths.map((w) => ` ${w}px`).join("")} minmax(180px, 1fr) minmax(260px, 1.3fr) 80px 80px 32px`;
+  const gridCols = `20px minmax(220px, 1.5fr)${exWidths.map((w) => ` ${w}px`).join("")} minmax(180px, 1fr) minmax(260px, 1.3fr) 80px 80px 112px`;
   const colStyle = { gridTemplateColumns: gridCols, columnGap: GAP } as const;
   // The band the exercise figures take up, gaps included: cardio's figures
   // share it, so the name, "did" and ⋯ columns line up across both tables.
@@ -192,7 +194,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
     const m = Object.values(show).filter(Boolean).length;
     // With the exercise band too narrow for the figures, the band grows.
     const w = Math.max(bandW, m * 92 + Math.max(0, m - 1) * GAP);
-    return { grid: { gridTemplateColumns: `20px minmax(220px, 1.5fr) ${w}px minmax(180px, 1fr) minmax(260px, 1.3fr) 80px 80px 32px`, columnGap: GAP } as const, band: { gridTemplateColumns: `repeat(${Math.max(1, m)}, minmax(0, 1fr))`, columnGap: GAP } as const };
+    return { grid: { gridTemplateColumns: `20px minmax(220px, 1.5fr) ${w}px minmax(180px, 1fr) minmax(260px, 1.3fr) 80px 80px 112px`, columnGap: GAP } as const, band: { gridTemplateColumns: `repeat(${Math.max(1, m)}, minmax(0, 1fr))`, columnGap: GAP } as const };
   };
   // Old rows kept bare figures ("6"); shown with the unit the form now adds.
   const unitOf = (v: string, u: string) => (!v ? "—" : /^\s*[\d.,]+\s*$/.test(v) ? `${v.trim()}${u}` : v);
@@ -296,7 +298,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
         });
         const addedRows: DraftRow[] = p.added
           .filter((a): a is Added & AddedExercise => a.kind === "exercise")
-          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: Math.max(1, parseInt(String(a.sets), 10) || 3), reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: null, tempo: null, rest: null, note: null, logged: [], video: null, demo: null, history: [], swap: null, swapInfo: null, alternatives: [], d7: null, d30: null }));
+          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: Math.max(1, parseInt(String(a.sets), 10) || 3), reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: null, tempo: null, rest: null, note: null, logged: [], video: null, demo: null, history: [], swap: null, swapInfo: null, clientNotes: [], alternatives: [], d7: null, d30: null }));
         const addedCardio: DraftCardio[] = p.added
           .filter((a): a is Added & AddedCardio => a.kind === "cardio")
           .map((a, i) => ({ id: -(Date.now() + 500 + i), name: a.name, time: a.time, pace: a.pace, incline: a.incline, distance: a.distance, notes: a.note, done: false }));
@@ -621,8 +623,10 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
           const isOpen = open === s.id;
           const name = p.renamed ?? s.name;
           const complete = s.setsPlanned > 0 && s.setsLogged >= s.setsPlanned && s.cardio.every((c) => c.done);
-          // Only the two states worth a word: done, or skipped by the client.
-          const status = s.skip ? { text: "Skipped", cls: "warn" } : complete ? { text: "Complete", cls: "good" } : null;
+          // The states worth a word: done, skipped, or begun and left with
+          // sets or cardio still to log (ended early, or partly logged), as
+          // the client's app calls it too.
+          const status = s.skip ? { text: "Skipped", cls: "warn" } : complete ? { text: "Complete", cls: "good" } : s.ended || s.setsLogged > 0 ? { text: "Unfinished", cls: "unfinished" } : null;
           const rows = orderOf(s)
             .map((id) => s.rows.find((r) => r.id === id)!)
             .filter((r) => r && !p.removed.includes(r.id));
@@ -739,19 +743,17 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                               <button type="button" className="rd-ex-btn" onClick={() => setDlg({ kind: "editExercise", sessionId: s.id, rowId: r.id })} title="Edit this exercise">
                                 {shownName}
                               </button>
-                              {r.swap && (
-                                <button
-                                  type="button"
-                                  className={`rd-swapdot${openSwaps.includes(r.id) ? " on" : ""}`}
-                                  onClick={() => toggleSwap(r.id)}
-                                  aria-expanded={openSwaps.includes(r.id)}
-                                  title={`${firstName} did ${r.swap} instead`}
-                                  aria-label={`Swapped for ${r.swap}: show what they did`}
-                                >
-                                  <SwapIcon />
-                                </button>
-                              )}
-                              {video && <i className={`rd-vid ${video.state}`} title={video.state === "asked" ? "Video asked for" : video.state === "in" ? "Their video is in" : "Video replied"} />}
+                            </span>
+                            {/* The demo set on it, in the same spot on every row. */}
+                            <span className="rd-demo-slot">
+                              {(() => {
+                                const demo = demos[r.id] === undefined ? r.demo : demos[r.id];
+                                return demo ? (
+                                  <a className="rd-demo" href={demo.url} target="_blank" rel="noopener noreferrer" title="Demo set · play it" aria-label={`Play the demo for ${r.name}`}>
+                                    <PlayIcon />
+                                  </a>
+                                ) : null;
+                              })()}
                             </span>
                           </span>
                           {cols.sets && <Cell value={e.sets ?? String(r.sets)} onChange={(v) => edit({ sets: v })} label="Sets" width="sm" />}
@@ -788,6 +790,50 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                             </button>
                           ))}
                           <span className="rd-row-more">
+                            {/* Three fixed slots, so each kind lines up down the table:
+                                a swap (opens what they did), their messages about it,
+                                a video they sent. */}
+                            <span className="rd-flags">
+                              <span className="rd-flag-slot">
+                                {r.swap && (
+                                  <button
+                                    type="button"
+                                    className={`rd-swapdot${openSwaps.includes(r.id) ? " on" : ""}`}
+                                    onClick={() => toggleSwap(r.id)}
+                                    aria-expanded={openSwaps.includes(r.id)}
+                                    title={`${firstName} did ${r.swap} instead`}
+                                    aria-label={`Swapped for ${r.swap}: show what they did`}
+                                  >
+                                    <SwapIcon />
+                                  </button>
+                                )}
+                              </span>
+                              <span className="rd-flag-slot">
+                                {r.clientNotes.length > 0 && (
+                                  <a
+                                    className="rd-flag chat"
+                                    href={`/admin/redesign/messages?client=${clientId}`}
+                                    title={r.clientNotes.map((n) => `${n.when}: ${n.text}`).join("\n")}
+                                    aria-label={`${firstName} wrote about ${r.name}: ${r.clientNotes[r.clientNotes.length - 1].text}`}
+                                  >
+                                    <ChatIcon />
+                                  </a>
+                                )}
+                              </span>
+                              <span className="rd-flag-slot">
+                                {video && (video.state === "in" || video.state === "replied") && (
+                                  <button
+                                    type="button"
+                                    className={`rd-flag video ${video.state}`}
+                                    onClick={() => setDlg({ kind: "video", rowId: r.id })}
+                                    title={video.state === "in" ? `${firstName}'s video is in · watch and reply` : "Their video · replied"}
+                                    aria-label={video.state === "in" ? `Watch ${firstName}'s video` : "Their video, replied"}
+                                  >
+                                    <VideoIcon />
+                                  </button>
+                                )}
+                              </span>
+                            </span>
                             <DropdownMenu modal={false}>
                               <DropdownMenuTrigger className="rd-btn ghost sm" aria-label={`More for ${r.name}`}>
                                 <MoreIcon />
