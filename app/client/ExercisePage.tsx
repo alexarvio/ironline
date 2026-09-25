@@ -432,10 +432,10 @@ export default function ExercisePage({
           }}
         >
           <span className="wo-note-head">
-            <span className="wo-note-label">Your note</span>
             <span className="wo-note-pen" aria-hidden="true">
               <EditPen />
             </span>
+            <span className="wo-note-label">Your note</span>
           </span>
           <span className="wo-note-text">{myNote}</span>
         </button>
