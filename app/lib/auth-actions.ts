@@ -202,3 +202,16 @@ export async function removeClientLoginAction(formData: FormData) {
   deleteUserForClient(clientId);
   redirect(`/admin?client=${clientId}&loginOk=removed`);
 }
+
+// Settings → Account & security: a signed-in coach changes their own password,
+// proving the current one first. Answers rather than redirects, for the form.
+export async function changeOwnPasswordAction(current: string, next: string): Promise<{ ok: boolean; error?: string }> {
+  const user = await getSessionUser();
+  if (!user) return { ok: false, error: "Signed out. Sign in again." };
+  const row = getData().users.find((u) => u.id === user.id);
+  if (!row || !verifyPassword(String(current ?? ""), row.password_hash)) return { ok: false, error: "That isn't your current password." };
+  const pw = String(next ?? "");
+  if (pw.length < 8) return { ok: false, error: "At least 8 characters." };
+  setPassword(user.id, pw, false);
+  return { ok: true };
+}

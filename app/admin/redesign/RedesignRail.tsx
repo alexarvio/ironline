@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../components/ui/dropdown-menu";
-import { AccountIcon, BusinessIcon, CalendarIcon, FeedIcon, GearIcon, PhasesIcon, PlusIcon, SearchIcon } from "../../components/icons";
+import { AccountIcon, BusinessIcon, CalendarIcon, ChevronDownIcon, FeedIcon, PhasesIcon, PlusIcon, SearchIcon } from "../../components/icons";
+import { SETTINGS, type SettingsKey } from "./settingsNav";
 import { logoutAction } from "../../lib/auth-actions";
 import NewClientDialog from "../NewClientDialog";
 import type { RailData } from "./loaders";
 
 // The left rail, in the redesign's sheet: the brand, the coach's cross-client
 // views as icon rows, every client in one scrolling list, and the coach at
-// the foot with their account menu. Only the client list scrolls.
+// the foot. A click on the coach opens Settings: it grows up from the foot
+// and the client list folds away; a click on Clients (or the coach again)
+// brings the list back. Only the client list scrolls.
 
 const VIEWS = [
   { key: "feed", label: "Feed", Icon: FeedIcon },
@@ -21,7 +23,9 @@ const VIEWS = [
 // Views already redrawn here open in the redesign; the rest where they always were.
 const REDRAWN: Partial<Record<string, string>> = { feed: "/admin/redesign/feed", calendar: "/admin/redesign/calendar", phases: "/admin/redesign/phases", business: "/admin/redesign/business" };
 
-export default function RedesignRail({ rail, clientId }: { rail: RailData; clientId: number }) {
+
+export default function RedesignRail({ rail, clientId, settings }: { rail: RailData; clientId: number; /** The settings page open, if any: the rail opens on Settings. */ settings?: SettingsKey }) {
+  const [settingsOpen, setSettingsOpen] = useState(!!settings);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "needs">("all");
   const needsYou = rail.clients.filter((c) => c.attention).length;
@@ -63,11 +67,12 @@ export default function RedesignRail({ rail, clientId }: { rail: RailData; clien
         )}
       </nav>
 
-      <div className="rr-clients">
-        <div className="rr-clients-head">
-          <span className="rr-label">Clients</span>
-          <span className="rr-count">{q || filter === "needs" ? `${shown.length} of ${rail.clients.length}` : rail.clients.length}</span>
-        </div>
+      <button type="button" className={`rr-clients-head${settingsOpen ? " folded" : ""}`} onClick={() => setSettingsOpen(false)} aria-expanded={!settingsOpen} disabled={!settingsOpen}>
+        <span className="rr-label">Clients</span>
+        <span className="rr-count">{q || filter === "needs" ? `${shown.length} of ${rail.clients.length}` : rail.clients.length}</span>
+        {settingsOpen && <ChevronDownIcon />}
+      </button>
+      <div className={`rr-clients${settingsOpen ? " folded" : ""}`} aria-hidden={settingsOpen} inert={settingsOpen}>
         <label className="rr-search">
           <SearchIcon />
           <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search clients" aria-label="Search clients" autoComplete="off" />
@@ -109,7 +114,22 @@ export default function RedesignRail({ rail, clientId }: { rail: RailData; clien
         </button>
       </div>
 
-      <div className="rr-coach">
+      <div className={`rr-settings${settingsOpen ? " open" : ""}`} aria-hidden={!settingsOpen} inert={!settingsOpen}>
+        <span className="rr-label">Settings</span>
+        <nav className="rr-settings-list" aria-label="Settings">
+          {SETTINGS.map(({ key, label, href, Icon }) => (
+            <Link key={key} href={href} className={`rr-navrow${settings === key ? " active" : ""}`} aria-current={settings === key ? "page" : undefined}>
+              <Icon />
+              <span>{label}</span>
+            </Link>
+          ))}
+        </nav>
+        <button type="button" className="rr-navrow rr-signout" onClick={() => logoutAction()}>
+          <span>Sign out</span>
+        </button>
+      </div>
+
+      <button type="button" className={`rr-coach${settingsOpen ? " open" : ""}`} onClick={() => setSettingsOpen(!settingsOpen)} aria-expanded={settingsOpen} aria-label={settingsOpen ? "Close settings" : "Open settings"}>
         <span className="rr-coach-avatar" aria-hidden="true">
           {rail.coach.photoPath ? (
             // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route
@@ -122,21 +142,10 @@ export default function RedesignRail({ rail, clientId }: { rail: RailData; clien
           <b>{rail.coach.name}</b>
           <small>{rail.isOwner ? "Owner · Coach" : "Coach"}</small>
         </span>
-        <DropdownMenu modal={false}>
-          <DropdownMenuTrigger className="rd-btn ghost" aria-label="Account">
-            <GearIcon />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" side="top" className="pb-menu">
-            <DropdownMenuItem asChild>
-              <Link href="/admin/redesign/profile">
-                <AccountIcon /> Your profile
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => logoutAction()}>Sign out</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+        <span className="rr-coach-chev" aria-hidden="true">
+          <ChevronDownIcon />
+        </span>
+      </button>
       {adding && <NewClientDialog inviteReady={rail.inviteReady} onClose={() => setAdding(false)} />}
     </aside>
   );

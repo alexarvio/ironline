@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import type { CoachBusiness, CoachInvoicing } from "./db";
 import { lookupOpenFoodFacts, searchOpenFoodFacts } from "./foods/openfoodfacts";
 import { revalidatePath } from "next/cache";
 import {
@@ -166,6 +167,8 @@ import {
   updateEventCategory,
   deleteEventCategory,
   addCalendarEntry,
+  saveCoachBusiness,
+  saveCoachInvoicing,
   updateCalendarEntry,
   getCalendarEntry,
   type CalendarEntryInput,
@@ -3324,4 +3327,18 @@ export async function addSavedDayAction(formData: FormData) {
   addSavedDay(clientId, id, date);
   revalidatePath("/client");
   revalidatePath("/admin");
+}
+
+// ---- Settings (the redesign's rail): the coach's business and invoicing ----
+
+export async function saveCoachBusinessAction(b: CoachBusiness) {
+  const coach = await requireCoach();
+  saveCoachBusiness(coach.id, b ?? {});
+  revalidatePath("/admin/redesign/settings");
+}
+
+export async function saveCoachInvoicingAction(i: CoachInvoicing) {
+  const coach = await requireCoach();
+  saveCoachInvoicing(coach.id, i ?? {});
+  revalidatePath("/admin/redesign/settings");
 }

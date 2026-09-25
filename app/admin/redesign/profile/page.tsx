@@ -25,7 +25,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   const coaches = owner ? listCoachAccounts().map((c) => ({ id: c.id, email: c.email })) : [];
   return (
     <div className="rd-frame">
-      <RedesignRail rail={loadRail(coach)} clientId={0} />
+      <RedesignRail rail={loadRail(coach)} clientId={0} settings="profile" />
       <div className="rd-page">
         {profile ? <ProfileEditor key={coachId} profile={profile} coaches={coaches} currentCoachId={coach.id} /> : <p className="rpf-empty">This account has no coach profile.</p>}
       </div>

@@ -939,7 +939,38 @@ type User = {
   // through a password change before they can reach any real page.
   must_change_password: boolean;
   created_at: string;
+  /** A coach's settings (Settings in the rail): who bills, and how. Kept in the row's extra jsonb. */
+  coach_settings?: CoachSettings;
 };
+
+/** What a coach's invoices say about who sends them. Every field optional: filled in over time. */
+export type CoachBusiness = {
+  business_name?: string;
+  legal_name?: string;
+  company_number?: string;
+  vat_number?: string;
+  address?: string;
+  postcode?: string;
+  city?: string;
+  country?: string;
+  billing_email?: string;
+  phone?: string;
+  website?: string;
+};
+/** How a coach's invoices are numbered, priced and paid. */
+export type CoachInvoicing = {
+  currency?: "EUR" | "USD" | "GBP";
+  vat_rate?: number;
+  prices_include_vat?: boolean;
+  payment_terms_days?: number;
+  number_prefix?: string;
+  next_number?: number;
+  iban?: string;
+  bic?: string;
+  account_holder?: string;
+  footer?: string;
+};
+export type CoachSettings = { business?: CoachBusiness; invoicing?: CoachInvoicing };
 
 export type Data = {
   users: User[];
