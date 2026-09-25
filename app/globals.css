@@ -8011,7 +8011,8 @@ label.ci-pill { cursor: text; }
 .ad-rail-nav-row:hover { background: #eef0f3; }
 .ad-rail-nav-row.active { background: #e6ecf3; color: #1e3a6e; font-weight: 800; }
 .ad-rail-nav-label { flex: 1; min-width: 0; }
-.ad-rail-badge { flex: none; padding: 1px 7px; border-radius: 999px; background: #fbe9e0; color: #b3471d; font-size: 10.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
+/* A kit Badge (components/ui): its tracking is for words, not a count. */
+.ad-rail-badge { flex: none; padding: 1px 7px; border-radius: 999px; background: #fbe9e0; color: #b3471d; font-size: 10.5px; font-weight: 800; letter-spacing: normal; font-variant-numeric: tabular-nums; }
 
 .ad-rail-clients { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 12px 10px 0; border-top: 1px solid #eceff3; }
 .ad-rail-clients-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
@@ -8024,8 +8025,10 @@ label.ci-pill { cursor: text; }
 .ad-rail-search input { flex: 1; min-width: 0; border: 0; padding: 0; background: none; outline: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #141a24; }
 .ad-rail-search input::placeholder { color: #8b93a1; }
 
-.ad-rail-filter { flex: none; display: flex; gap: 2px; margin: 8px 0; padding: 2px; border-radius: 8px; background: #eef0f3; }
-.ad-rail-filter button {
+/* The kit's Toggle Group (components/ui) in the rail's own face: a grey
+   track with a white pill on the chosen one, rather than the kit's navy. */
+.ad-rail-filter { flex: none; width: auto; display: flex; gap: 2px; margin: 8px 0; padding: 2px; border: 0; border-radius: 8px; background: #eef0f3; }
+.ad-rail-filter [data-slot="toggle-group-item"] {
   flex: 1;
   display: inline-flex;
   align-items: center;
@@ -8039,12 +8042,15 @@ label.ci-pill { cursor: text; }
   font: inherit;
   font-size: 11.5px;
   font-weight: 800;
+  height: auto;
+  letter-spacing: normal;
+  text-transform: none;
   cursor: pointer;
   transition: background-color 0.2s, color 0.2s;
 }
-.ad-rail-filter button.on { background: #fff; color: #141a24; box-shadow: 0 1px 2px rgba(20, 26, 36, 0.12); }
-.ad-rail-filter-count { font-size: 10px; font-weight: 800; color: #8b93a1; font-variant-numeric: tabular-nums; }
-.ad-rail-filter button.on .ad-rail-filter-count { color: #b3471d; }
+.ad-rail-filter [data-slot="toggle-group-item"][data-state="on"] { background: #fff; color: #141a24; box-shadow: 0 1px 2px rgba(20, 26, 36, 0.12); }
+.ad-rail-filter-count { padding: 0; font-size: 10px; font-weight: 800; letter-spacing: normal; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.ad-rail-filter [data-state="on"] .ad-rail-filter-count { color: #b3471d; }
 
 /* The scroller has no side padding or negative margin: rows share the edges
    of the search field, the filter and New client. No native scrollbar. */
@@ -8514,12 +8520,12 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 }
 .ad-rail-gear:hover,
 .ad-rail-gear[aria-expanded="true"] { background: #eef0f3; color: #313851; }
-.ad-rail-menu { position: absolute; right: 10px; bottom: calc(100% + 4px); min-width: 150px; padding: 4px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; box-shadow: 0 8px 24px rgba(20, 26, 36, 0.12); }
-.ad-rail-menu form { display: block; }
-.ad-rail-menu button { width: 100%; padding: 8px 10px; border: 0; border-radius: 6px; background: none; color: #313851; font: inherit; font-size: 12.5px; font-weight: 700; text-align: left; cursor: pointer; }
-.ad-rail-menu button:hover { background: #eef0f3; }
-.ad-rail-menu a { display: block; box-sizing: border-box; width: 100%; padding: 8px 10px; border-radius: 6px; color: #313851; font-size: 12.5px; font-weight: 700; text-decoration: none; }
-.ad-rail-menu a:hover { background: #eef0f3; }
+/* The account menu is the kit's Dropdown Menu (components/ui), which places
+   itself above the gear; these give it the rail's smaller face. */
+.ad-rail-menu { min-width: 150px; padding: 4px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; box-shadow: 0 8px 24px rgba(20, 26, 36, 0.12); }
+.ad-rail-menu form { display: block; margin: 0; }
+.ad-rail-menu [data-slot="dropdown-menu-item"] { display: block; width: 100%; padding: 8px 10px; border-radius: 6px; color: #313851; font: inherit; font-size: 12.5px; font-weight: 700; text-align: left; text-decoration: none; cursor: pointer; }
+.ad-rail-menu [data-slot="dropdown-menu-item"][data-highlighted] { background: #eef0f3; color: #313851; }
 
 /* ---- Sidebar ---- */
 
@@ -15707,11 +15713,12 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .ad-panel-col .nc-grid { grid-template-columns: 1fr; }
 
 /* ---- New client: who they are, then how they get into the app ------------ */
-.nc-scrim { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(20, 26, 36, 0.28); }
-.nc-dialog { display: flex; flex-direction: column; width: 560px; max-width: 100%; max-height: calc(100vh - 48px); border-radius: 14px; background: #fff; box-shadow: 0 26px 64px rgba(20, 26, 36, 0.32); overflow: hidden; font-family: var(--font-archivo), "Archivo", -apple-system, BlinkMacSystemFont, sans-serif; color: #313851; }
+/* The kit's DialogContent (components/ui) centres it and draws the scrim;
+   these undo its padding, gap and border for the dialog's own sections. */
+.nc-dialog { display: flex; flex-direction: column; gap: 0; width: 560px; max-width: calc(100% - 48px); max-height: calc(100vh - 48px); padding: 0; border: 0; border-radius: 14px; background: #fff; box-shadow: 0 26px 64px rgba(20, 26, 36, 0.32); overflow: hidden; font-family: var(--font-archivo), "Archivo", -apple-system, BlinkMacSystemFont, sans-serif; color: #313851; }
 .nc-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 22px; background: #e6ecf3; }
-.nc-title { font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #1e3a6e; }
-.nc-sub { margin-top: 2px; font-size: 12px; font-weight: 600; color: #5b6474; }
+.nc-title { font-size: 12px; font-weight: 800; line-height: 1.5; letter-spacing: 0.14em; text-transform: uppercase; color: #1e3a6e; }
+.nc-dialog .nc-sub { margin-top: 2px; line-height: 1.5; font-size: 12px; font-weight: 600; color: #5b6474; }
 
 .nc-steps { flex: none; display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid #eceff3; }
 .nc-step { display: flex; align-items: center; gap: 10px; padding: 11px 22px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: #fafbfc; font: inherit; text-align: left; cursor: pointer; }

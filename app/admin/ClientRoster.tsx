@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import NewClientDialog from "./NewClientDialog";
 import { SearchIcon } from "../components/icons";
+import { Badge, ToggleGroup, ToggleGroupItem } from "../components/ui/basics";
+import { Dialog, DialogTrigger } from "../components/ui/dialog";
 
 export type RosterClient = {
   id: number;
@@ -57,14 +59,20 @@ export default function ClientRoster({
         />
       </label>
 
-      <div className="ad-rail-filter" role="group" aria-label="Which clients">
-        <button type="button" className={filter === "all" ? "on" : undefined} aria-pressed={filter === "all"} onClick={() => setFilter("all")}>
-          All
-        </button>
-        <button type="button" className={filter === "needs" ? "on" : undefined} aria-pressed={filter === "needs"} onClick={() => setFilter("needs")}>
-          Needs you <span className="ad-rail-filter-count">{needsYou}</span>
-        </button>
-      </div>
+      {/* A single-choice Toggle Group: arrow keys move between the two, and
+          clicking the one already on keeps it on rather than clearing it. */}
+      <ToggleGroup
+        type="single"
+        className="ad-rail-filter"
+        aria-label="Which clients"
+        value={filter}
+        onValueChange={(v) => v && setFilter(v as "all" | "needs")}
+      >
+        <ToggleGroupItem value="all">All</ToggleGroupItem>
+        <ToggleGroupItem value="needs">
+          Needs you <Badge className="ad-rail-filter-count">{needsYou}</Badge>
+        </ToggleGroupItem>
+      </ToggleGroup>
 
       <div className="ad-rail-list">
         {clients.length === 0 ? (
@@ -98,16 +106,19 @@ export default function ClientRoster({
       </div>
 
       {/* The two-step New client dialog: who they are, then their login.
-          Nothing exists until its last button. */}
-      <div className="ad-rail-new">
-        <button type="button" className="ad-rail-new-btn" onClick={() => setAdding(true)}>
-          <span className="ad-rail-new-plus" aria-hidden="true">
-            +
-          </span>
-          New client
-        </button>
-      </div>
-      {adding && <NewClientDialog inviteReady={inviteReady} onClose={() => setAdding(false)} />}
+          Nothing exists until its last button. The dialog's content only
+          mounts while open, so a cancelled draft starts empty next time. */}
+      <Dialog open={adding} onOpenChange={setAdding}>
+        <div className="ad-rail-new">
+          <DialogTrigger className="ad-rail-new-btn">
+            <span className="ad-rail-new-plus" aria-hidden="true">
+              +
+            </span>
+            New client
+          </DialogTrigger>
+        </div>
+        {adding && <NewClientDialog inviteReady={inviteReady} onClose={() => setAdding(false)} />}
+      </Dialog>
     </div>
   );
 }

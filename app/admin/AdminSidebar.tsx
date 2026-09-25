@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { logoutAction } from "../lib/auth-actions";
 import { getUserForClient } from "../lib/auth";
 import { clientAttention, getActivityFeed, getCoachProfile, listClients } from "../lib/queries";
 import { AccountIcon, BusinessIcon, CalendarIcon, FeedIcon, PhasesIcon } from "../components/icons";
 import ClientRoster, { type RosterClient } from "./ClientRoster";
 import { mailConfigured } from "../lib/mail";
 import CoachFooter from "./CoachFooter";
+import { Badge } from "../components/ui/basics";
 
 // The left rail: brand, the coach's cross-client views, the client roster
 // (the only part that scrolls) and the coach at the foot.
@@ -62,9 +62,9 @@ export default function AdminSidebar({
           <FeedIcon />
           <span className="ad-rail-nav-label">Feed</span>
           {needsYou > 0 && (
-            <span className="ad-rail-badge" title={`${needsYou} client${needsYou === 1 ? "" : "s"} need you`}>
+            <Badge className="ad-rail-badge" title={`${needsYou} client${needsYou === 1 ? "" : "s"} need you`}>
               {needsYou}
-            </span>
+            </Badge>
           )}
         </Link>
         <Link href="/admin?view=calendar" className={`ad-rail-nav-row${view === "calendar" ? " active" : ""}`}>
@@ -97,20 +97,11 @@ export default function AdminSidebar({
 
       <ClientRoster clients={clients} selectedId={selectedId} inviteReady={mailConfigured()} />
 
-      <CoachFooter name={getCoachProfile(coachId)?.display_name?.trim() || nameFromEmail(coachEmail)} photoPath={getCoachProfile(coachId)?.avatar_path ?? null}>
-        <Link href="/admin/profile" role="menuitem" className="ad-rail-menu-link">
-          Your profile
-        </Link>
-        {/* The redesign drafts, read-only, for looking at the new feel. Goes when a draft becomes the tab. */}
-        <Link href={selectedId ? `/admin/redesign?client=${selectedId}` : "/admin/redesign"} role="menuitem" className="ad-rail-menu-link">
-          Redesign preview
-        </Link>
-        <form action={logoutAction}>
-          <button type="submit" role="menuitem">
-            Sign out
-          </button>
-        </form>
-      </CoachFooter>
+      <CoachFooter
+        name={getCoachProfile(coachId)?.display_name?.trim() || nameFromEmail(coachEmail)}
+        photoPath={getCoachProfile(coachId)?.avatar_path ?? null}
+        redesignHref={selectedId ? `/admin/redesign?client=${selectedId}` : "/admin/redesign"}
+      />
     </>
   );
 }
