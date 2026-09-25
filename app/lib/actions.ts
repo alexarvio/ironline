@@ -293,6 +293,7 @@ import { COACH_PROFILE_LIMITS } from "./coachProfileView";
 import { deleteUpload, keyOf, putUpload } from "./storage";
 import { setPhaseObjectives, savePhaseCover, setPhaseCoverPath, editClientChatMessage, deleteClientChatMessage, setPhaseClientNote } from "./queries";
 import { isStockCover } from "./phaseCovers";
+import { isTimezone, SERVER_TZ, tzShort, zonedToUtc } from "./timezones";
 import type { ReportSectionType } from "./reportSectionTypes";
 
 // OWNERSHIP RULE for every coach action below: a coach may only touch their
@@ -1624,8 +1625,9 @@ export async function addMeetingAction(formData: FormData) {
   const duration = Number(formData.get("durationMinutes")) || undefined;
   const topic = String(formData.get("topic") || "").trim();
   const link = String(formData.get("link") || "").trim();
+  const tzRaw = String(formData.get("tz") || "").trim();
   if (!date) return;
-  addMeeting(clientId, date, time, topic, duration, link || null);
+  addMeeting(clientId, date, time, topic, duration, link || null, null, tzRaw && isTimezone(tzRaw) ? tzRaw : null);
   logCoachActivity(clientId, topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", {
     kind: "general",
     push: true,
@@ -1658,18 +1660,25 @@ export async function updateMeetingAction(formData: FormData) {
   if (formData.has("link")) patch.link = String(formData.get("link") ?? "").trim() || null;
   if (formData.has("prepNotes")) patch.prep_notes = String(formData.get("prepNotes") ?? "");
   if (formData.has("summary")) patch.summary = String(formData.get("summary") ?? "").trim() || null;
+  if (formData.has("summaryTitle")) patch.summary_title = String(formData.get("summaryTitle") ?? "").trim().slice(0, 80) || null;
   if (formData.has("date")) {
     const date = String(formData.get("date") ?? "");
     if (/^\d{4}-\d{2}-\d{2}$/.test(date)) patch.date = date;
   }
   if (formData.has("time")) patch.time = String(formData.get("time") ?? "");
+  if (formData.has("tz")) {
+    const tz = String(formData.get("tz") ?? "").trim();
+    patch.tz = tz && isTimezone(tz) ? tz : null;
+  }
   if (formData.has("durationMinutes")) patch.duration_minutes = Number(formData.get("durationMinutes")) || DEFAULT_MEETING_DURATION;
   updateMeeting(id, patch);
   // A moved call is news to the client; a reworded topic or the coach's own notes are not.
   if (patch.date || patch.time) {
     const clientId = getClientIdForMeeting(id);
     const when = patch.date ? new Date(`${patch.date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" }) : "the same day";
-    if (clientId != null) logCoachActivity(clientId, `Your call moved to ${when}${patch.time ? ` at ${patch.time}` : ""}`, { kind: "general", push: true, actionTab: "home", actionLabel: "View schedule" });
+    const zone = patch.tz ?? SERVER_TZ;
+    const at = patch.time ? ` at ${patch.time} ${tzShort(zone, zonedToUtc(patch.date ?? localDateStr(), patch.time, zone))}` : "";
+    if (clientId != null) logCoachActivity(clientId, `Your call moved to ${when}${at}`, { kind: "general", push: true, actionTab: "home", actionLabel: "View schedule" });
   }
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -1686,6 +1695,7 @@ export async function completeMeetingAction(formData: FormData) {
   if (formData.has("summary")) {
     updateMeeting(id, { summary: summary || null });
   }
+  if (formData.has("summaryTitle")) updateMeeting(id, { summary_title: String(formData.get("summaryTitle") ?? "").trim().slice(0, 80) || null });
   completeMeeting(id);
   // The recap is what the client takes away: tell them it is there.
   if (summary) {

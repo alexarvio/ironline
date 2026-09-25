@@ -17135,3 +17135,41 @@ button.ci-hint { cursor: pointer; }
 .cm-msg.linked { padding-right: 16px; }
 .cm-linkdot { top: -15px; right: -11px; z-index: 2; box-shadow: 0 0 0 3px #F4F7FC; }
 .cm-msg.media .cm-linkdot { top: -15px; right: -11px; }
+/* The call's link before it starts: the same button, outlined, so it is there but not shouting. */
+.hm-mt-join.early { border: 1px solid rgba(18, 19, 43, 0.14); background: transparent; color: var(--mt-ink); }
+.hm-mt-join.early .hm-mt-join-glyph { background: #eef1f6; }
+/* The last call's recap (25 Sep): no card, just the title on one line with
+   a chevron on the far right; open, what was agreed under it. */
+.hm-last-date { font-size: 12px; font-weight: 700; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.hm-recap { border-top: 1px solid rgba(20, 26, 36, 0.08); border-bottom: 1px solid rgba(20, 26, 36, 0.08); }
+.hm-mt .hm-recap { border: 0; }
+.hm-recap-head { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.hm-recap-title { flex: 1; min-width: 0; font-size: 15.5px; font-weight: 700; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-recap-chev { flex: none; display: inline-flex; color: #5b6474; transition: transform 0.25s ease; }
+.hm-recap-chev svg { width: 16px; height: 16px; }
+.hm-recap-chev.open { transform: rotate(180deg); }
+.hm-recap-body { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease; }
+.hm-recap-body.open { grid-template-rows: 1fr; opacity: 1; }
+.hm-recap-clip { min-height: 0; overflow: hidden; }
+.hm-recap-text { margin: 0; padding: 0 0 14px; font-size: 14.5px; line-height: 1.5; color: #313851; white-space: pre-wrap; }
+@media (prefers-reduced-motion: reduce) { .hm-recap-chev, .hm-recap-body { transition: none; } }
+/* Inside the next call's card, the last recap has no box either: a hairline over it. */
+.hm-mt .hm-mt-recap { padding: 12px 0 0; border: 0; border-top: 1px solid rgba(20, 26, 36, 0.08); border-radius: 0; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.hm-mt .hm-mt-recap .hm-recap-head { padding: 8px 0 4px; }
+
+/* Home "Quick actions" (25 Sep): what is left today, under the phase cards.
+   The phase card's look, small: a stock photo blurred to a wash, the frosted
+   white panel, white text, a small white pill per row. */
+.qa { position: relative; overflow: hidden; border-radius: 24px; padding: 8px; background: linear-gradient(180deg, #0b0f16 0%, #1e3a6e 100%); box-shadow: 0 18px 30px -22px rgba(20, 26, 36, 0.55); font-family: var(--font-archivo), "Archivo", -apple-system, BlinkMacSystemFont, sans-serif; color: #fff; isolation: isolate; }
+.qa-bg { position: absolute; inset: -40px; width: calc(100% + 80px); height: calc(100% + 80px); object-fit: cover; filter: blur(22px) saturate(140%); transform: scale(1.1); z-index: -2; pointer-events: none; }
+.qa-scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8, 12, 20, 0.35) 0%, rgba(12, 24, 52, 0.6) 100%); z-index: -1; pointer-events: none; }
+.qa-panel { display: flex; flex-direction: column; padding: 12px 14px 4px; border-radius: 18px; background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.35); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+.qa-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding-bottom: 8px; }
+.qa-title { font-size: 16px; font-weight: 700; letter-spacing: -0.005em; }
+.qa-count { font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.72); }
+.qa-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.2); }
+.qa-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.qa-label { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255, 255, 255, 0.72); }
+.qa-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qa-btn { flex: none; height: 30px; padding: 0 13px; border: 0; border-radius: 999px; background: #fff; color: #141a24; font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; transition: transform 0.12s ease; }
+.qa-btn:active { transform: scale(0.97); }

@@ -10,6 +10,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { CalendarIcon, ChatIcon, ChevronDownIcon, ChevronLeftIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import DateText from "../DateText";
 import { ConfirmDialog, MessageDialog } from "../training/TrainingDraft";
+import { allTimezones, SERVER_TZ, tzLabel } from "../../../lib/timezones";
 
 // The calmer Meetings tab, as a draft on real data, in the Training draft's
 // sheet. The next call with everything to prepare it, the calls after it,
@@ -31,6 +32,8 @@ export type DraftMeeting = {
   id: number;
   date: string;
   time: string;
+  /** The timezone the time was set in; null: the server's (Amsterdam). */
+  tz: string | null;
   durationMinutes: number;
   topic: string;
   status: "scheduled" | "completed" | "no-show" | "cancelled";
@@ -39,6 +42,8 @@ export type DraftMeeting = {
   host: string;
   prepNotes: string;
   summary: string;
+  /** The recap's one-line title, over the body on the client's Home. */
+  summaryTitle: string;
   notes: DraftNote[];
   goals: DraftGoal[];
 };
@@ -348,7 +353,7 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                           m={m}
                           onPatch={(f) => {
                             patchMeeting(m.id, f);
-                            if (f.summary !== undefined) act(() => updateMeetingAction(fd({ id: m.id, summary: f.summary })));
+                            if (f.summary !== undefined || f.summaryTitle !== undefined) act(() => updateMeetingAction(fd({ id: m.id, summary: f.summary ?? m.summary, summaryTitle: f.summaryTitle ?? m.summaryTitle })));
                           }}
                         />
                       )}
@@ -387,9 +392,9 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
             onSave={(v) => {
               if (dlg.reschedule) {
                 patchMeeting(dlg.reschedule.id, { ...v, provider: v.link ? (providerOf(v.link) ?? "Join call") : "", host: v.link ? new URL(v.link).hostname : "" });
-                act(() => updateMeetingAction(fd({ id: dlg.reschedule!.id, date: v.date, time: v.time, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "" })), `Moved to ${longDay(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees the new time`);
+                act(() => updateMeetingAction(fd({ id: dlg.reschedule!.id, date: v.date, time: v.time, tz: v.tz, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "" })), `Moved to ${longDay(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees the new time`);
               } else {
-                act(() => addMeetingAction(fd({ clientId, date: v.date, time: v.time, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "" })), `${v.topic || "Check-in call"} on ${longDay(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees it on Home`);
+                act(() => addMeetingAction(fd({ clientId, date: v.date, time: v.time, tz: v.tz, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "" })), `${v.topic || "Check-in call"} on ${longDay(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees it on Home`);
               }
               setSelectedDay(v.date);
               close();
@@ -411,12 +416,13 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
           <CompleteDialog
             firstName={firstName}
             value={byId(dlg.meetingId)!.summary}
-            onComplete={(summary) => {
-              patchMeeting(dlg.meetingId, { status: "completed", summary });
+            title={byId(dlg.meetingId)!.summaryTitle}
+            onComplete={(summary, summaryTitle) => {
+              patchMeeting(dlg.meetingId, { status: "completed", summary, summaryTitle });
               setOpenPast(dlg.meetingId);
               const id = dlg.meetingId;
               close();
-              act(() => completeMeetingAction(fd({ id, summary })), summary ? `Completed, recap sent to ${firstName}'s Home` : "Completed");
+              act(() => completeMeetingAction(fd({ id, summary, summaryTitle })), summary || summaryTitle ? `Completed, recap sent to ${firstName}'s Home` : "Completed");
             }}
           />
         )}
@@ -469,22 +475,38 @@ function PrepNotes({ value, onSave }: { value: string; onSave: (v: string) => vo
 /** An open past call: what was agreed, written for the client. */
 function PastBody({ m, onPatch }: { m: DraftMeeting; onPatch: (f: Partial<DraftMeeting>) => void }) {
   const [recap, setRecap] = useState(m.summary);
+  const [title, setTitle] = useState(m.summaryTitle);
+  // The title and the body, each a change of its own.
+  const changes = (recap.trim() !== m.summary.trim() ? 1 : 0) + (title.trim() !== m.summaryTitle.trim() ? 1 : 0);
+  const save = () => {
+    onPatch({ summary: recap.trim(), summaryTitle: title.trim() });
+    savedToast(`Agreed on ${shortDay(m.date)}`);
+  };
   return (
     <div className="rt-past">
       <div className="rt-recap">
         <div className="rt-recap-head">
           <span className="rd-cols">What was agreed</span>
         </div>
-        <textarea value={recap} onChange={(e) => setRecap(e.target.value)} rows={3} placeholder="What you covered and what you agreed…" aria-label="What was agreed" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && recap.trim() !== m.summary.trim() && (onPatch({ summary: recap.trim() }), savedToast(`Agreed on ${shortDay(m.date)}`))} />
+        {/* The title is the one line the client sees on Home; the body opens under it. */}
+        <input className="rt-recap-title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} placeholder="Title: the one line on the client's Home" aria-label="Recap title" />
+        <textarea value={recap} onChange={(e) => setRecap(e.target.value)} rows={3} placeholder="What you covered and what you agreed…" aria-label="What was agreed" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && changes > 0 && save()} />
       </div>
-      {recap.trim() !== m.summary.trim() && (
+      {changes > 0 && (
         <div className="rd-pending rt-bar">
-          <span className="rd-pending-count">1</span>
-          <span className="rd-pending-text">What was agreed changed · lands on {"the client's"} Home under the next call</span>
-          <button type="button" className="rd-pending-ghost" onClick={() => setRecap(m.summary)}>
+          <span className="rd-pending-count">{changes}</span>
+          <span className="rd-pending-text">What was agreed changed · lands on {"the client's"} Home</span>
+          <button
+            type="button"
+            className="rd-pending-ghost"
+            onClick={() => {
+              setRecap(m.summary);
+              setTitle(m.summaryTitle);
+            }}
+          >
             Discard
           </button>
-          <button type="button" className="rd-pending-apply" onClick={() => (onPatch({ summary: recap.trim() }), savedToast(`Agreed on ${shortDay(m.date)}`))}>
+          <button type="button" className="rd-pending-apply" onClick={save}>
             Save
           </button>
         </div>
@@ -577,9 +599,16 @@ function MiniCalendar({ today, selected, dots, onPick }: { today: string; select
 }
 
 /** Booking a call, or moving one: the day, a 24-hour time, how long, what about, the way in. */
-function ScheduleDialog({ date: initialDate, reschedule, lastLink, dots, today, onSave }: { date: string; reschedule: DraftMeeting | null; lastLink: string | null; dots: DraftDot[]; today: string; onSave: (v: { date: string; time: string; durationMinutes: number; topic: string; link: string | null }) => void }) {
+function ScheduleDialog({ date: initialDate, reschedule, lastLink, dots, today, onSave }: { date: string; reschedule: DraftMeeting | null; lastLink: string | null; dots: DraftDot[]; today: string; onSave: (v: { date: string; time: string; tz: string; durationMinutes: number; topic: string; link: string | null }) => void }) {
   const [date, setDate] = useState(reschedule?.date ?? initialDate);
   const [time, setTime] = useState(reschedule?.time ?? "");
+  // The time is in the coach's own timezone unless they pick another; a
+  // reschedule keeps the meeting's. The client sees it in theirs.
+  const [tz, setTz] = useState(() => reschedule ? reschedule.tz || SERVER_TZ : Intl.DateTimeFormat().resolvedOptions().timeZone || SERVER_TZ);
+  const [zones] = useState(() => {
+    const list = allTimezones();
+    return list.includes(tz) ? list : [tz, ...list];
+  });
   const [duration, setDuration] = useState(reschedule?.durationMinutes ?? 30);
   const [topic, setTopic] = useState(reschedule?.topic ?? "");
   const [link, setLink] = useState(reschedule?.link ?? "");
@@ -604,6 +633,13 @@ function ScheduleDialog({ date: initialDate, reschedule, lastLink, dots, today, 
             <label className="rd-field">
               <span>Time · 24h</span>
               <input type="text" inputMode="numeric" value={time} onChange={(e) => setTime(e.target.value)} onBlur={() => setTime(tidyTime(time))} placeholder="14:30" />
+              <select className="rt-tz" value={tz} onChange={(e) => setTz(e.target.value)} aria-label="Timezone">
+                {zones.map((z) => (
+                  <option key={z} value={z}>
+                    {tzLabel(z)}
+                  </option>
+                ))}
+              </select>
             </label>
           </div>
           <div className="rd-field">
@@ -636,7 +672,7 @@ function ScheduleDialog({ date: initialDate, reschedule, lastLink, dots, today, 
       <DialogFooter>
         <span className="rd-dlg-hint grow">{link.trim() && !linkOk ? "That does not look like a link yet." : ""}</span>
         <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!date || !linkOk} onClick={() => onSave({ date, time: tidyTime(time), durationMinutes: duration, topic: topic.trim(), link: link.trim() || null })}>
+        <button type="button" className="rd-btn primary" disabled={!date || !linkOk} onClick={() => onSave({ date, time: tidyTime(time), tz, durationMinutes: duration, topic: topic.trim(), link: link.trim() || null })}>
           {reschedule ? "Move the call" : "Schedule"}
         </button>
       </DialogFooter>
@@ -670,23 +706,29 @@ function LinkDialog({ value, onSave }: { value: string; onSave: (link: string) =
 }
 
 /** Marking a call completed: the last chance to tell the client what came out of it. */
-function CompleteDialog({ firstName, value, onComplete }: { firstName: string; value: string; onComplete: (summary: string) => void }) {
+function CompleteDialog({ firstName, value, title: initialTitle, onComplete }: { firstName: string; value: string; title: string; onComplete: (summary: string, title: string) => void }) {
   const [recap, setRecap] = useState(value);
+  const [title, setTitle] = useState(initialTitle);
   return (
     <DialogContent className="rd-dlg">
       <DialogHeader>
         <DialogTitle>How did the call go?</DialogTitle>
         <DialogDescription>What you write here reaches {firstName} on their Home, under their next call. Your prep notes stay yours.</DialogDescription>
       </DialogHeader>
+      {/* A title first (the one line on the client's Home), then what was agreed (opens under it). */}
       <label className="rd-field">
-        <span>Recap for {firstName}</span>
-        <textarea rows={4} value={recap} onChange={(e) => setRecap(e.target.value)} placeholder="What you covered and what you agreed…" autoFocus onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && recap.trim() && onComplete(recap.trim())} />
+        <span>Title</span>
+        <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} placeholder="Calories held, bench to 100 kg" autoFocus />
+      </label>
+      <label className="rd-field">
+        <span>What was agreed</span>
+        <textarea rows={4} value={recap} onChange={(e) => setRecap(e.target.value)} placeholder="What you covered and what you agreed…" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && recap.trim() && onComplete(recap.trim(), title.trim())} />
       </label>
       <DialogFooter>
-        <button type="button" className="rd-btn" onClick={() => onComplete("")}>
+        <button type="button" className="rd-btn" onClick={() => onComplete("", "")}>
           Complete without one
         </button>
-        <button type="button" className="rd-btn primary" disabled={!recap.trim()} onClick={() => onComplete(recap.trim())}>
+        <button type="button" className="rd-btn primary" disabled={!recap.trim()} onClick={() => onComplete(recap.trim(), title.trim())}>
           Save and complete
         </button>
       </DialogFooter>

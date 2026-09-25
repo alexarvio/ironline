@@ -334,11 +334,14 @@ export default function CheckInScreen({
 
       {docked && (
         <div ref={dock} className="ci-dock ci-dock-ledger" style={kb ? { bottom: kb } : undefined}>
+          {/* Sent: just Done on the right (the empty text keeps it there). */}
           <div className="ci-dock-text">
-            <div className="ci-dock-kicker">{isSaved ? "Sent" : complete ? "Ready" : "Today"}</div>
-            <div className="ci-dock-sub">
-              {isSaved ? `All updated${savedTime ? ` · ${savedTime}` : ""}` : complete ? "Everything filled in" : `${remaining} still to fill`}
-            </div>
+            {!isSaved && (
+              <>
+                <div className="ci-dock-kicker">{complete ? "Ready" : "Today"}</div>
+                <div className="ci-dock-sub">{complete ? "Everything filled in" : `${remaining} still to fill`}</div>
+              </>
+            )}
           </div>
           {isSaved ? (
             <button type="button" className="ci-send done" onClick={fold} disabled={folding}>

@@ -5,6 +5,9 @@ import { markNotificationReadAction } from "../lib/actions";
 import VideoReplySheet, { type VideoReplyView } from "./VideoReplySheet";
 import PhaseCards, { type HomePhase, type PhaseFoodToday } from "./PhaseCards";
 import ProgressPicsCard, { type ProgressPics } from "./ProgressPicsCard";
+import QuickActions from "./QuickActions";
+import { tzShort } from "../lib/timezones";
+import { ChevronDownIcon } from "../components/icons";
 import type { LinkView } from "../lib/messageLinks";
 import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenLink, useOpenMessages, useOpenPhotos } from "./CheckInContext";
 
@@ -50,13 +53,13 @@ export type UpcomingMeeting = {
   inLabel: string;
   /** "Sunday 18:00 · 30 min". */
   whenLabel: string;
-  /** The start as an ISO stamp, and how long it runs, so the card can follow the clock. */
+  /** The start as a UTC moment (ISO), and how long it runs: the card shows it in the phone's timezone and follows the clock. */
   startIso: string | null;
   durationMinutes: number;
 } | null;
 
 /** The coach's recap of the last call, written for the client. */
-export type MeetingRecap = { dateLabel: string; text: string } | null;
+export type MeetingRecap = { dateLabel: string; title: string; text: string } | null;
 
 
 export type LatestActivity = {
@@ -94,6 +97,7 @@ export default function HomeHub({
   phases,
   checkInCount,
   weekDone,
+  trainedToday,
   today,
   food,
 }: {
@@ -112,6 +116,8 @@ export default function HomeHub({
   checkInCount: { done: number; total: number } | null;
   /** No session left this week: when the next one starts. */
   weekDone: { nextWeekLabel: string } | null;
+  /** A session was ended today. */
+  trainedToday: boolean;
   today: string;
   food: PhaseFoodToday;
 }) {
@@ -121,6 +127,15 @@ export default function HomeHub({
       <div className="hm-body">
         {/* "Your plan" first: a card a live phase, each with its one thing to do. */}
         {phases.length > 0 && <PhaseCards phases={phases} coachName={coach.firstName} today={today} nextSession={session ? { dayId: session.dayId, name: session.name, live: !!session.live } : null} food={food} weekDone={weekDone} checkInCount={checkInCount} />}
+        {/* What is still to do today, one tap each; "All completed" once it is all done. */}
+        <QuickActions
+          today={today}
+          checkInCount={checkInCount}
+          nextSession={session ? { dayId: session.dayId, name: session.name, live: !!session.live } : null}
+          trainedToday={trainedToday}
+          food={food}
+          picsDue={progressPics?.status === "due"}
+        />
         {progressPics && <TodaysTasks pics={progressPics} />}
         <LatestActivityCard a={latestActivity} coach={coach} />
         {upcoming ? (
@@ -246,7 +261,6 @@ function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstNam
           <span className="hm-lt-text">
             <span className="hm-lt-meta">
               <span>
-                {a.unseen && <span className="hm-lt-dot" aria-hidden="true" />}
                 {coach.firstName}
               </span>
               <span>{a.whenLabel}</span>
@@ -293,78 +307,100 @@ function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<UpcomingMeet
   const minsToStart = now != null && Number.isFinite(start) ? (start - now) / 60000 : null;
   const live = minsToStart != null ? minsToStart <= 10 && minsToStart >= -m.durationMinutes : m.startingNow;
   const joinable = !!m.link && live;
-  const [more, setMore] = useState(false);
-  const longRecap = !!recap && recap.text.length > 220;
-  const pillLabel = live ? "Live" : m.inLabel;
+  // Once on the phone: the day and the time in its own timezone ("Wednesday
+  // 14:30 GMT+7 · 30 min" in Bangkok for 09:30 in Amsterdam).
+  const local = (() => {
+    if (now == null || !Number.isFinite(start)) return null;
+    const d = new Date(start);
+    const t = new Date(now);
+    const dayOf = (x: Date) => Date.UTC(x.getFullYear(), x.getMonth(), x.getDate());
+    const days = Math.round((dayOf(d) - dayOf(t)) / 86400000);
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return {
+      dayNumber: String(d.getDate()),
+      monthCap: d.toLocaleDateString("en-US", { month: "short" }).toUpperCase(),
+      inLabel: days <= 0 ? "Today" : days === 1 ? "Tomorrow" : `In ${days} days`,
+      whenLabel: `${d.toLocaleDateString("en-US", { weekday: "long" })} ${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })} ${tzShort(zone, d)} · ${m.durationMinutes} min`,
+    };
+  })();
+  const shown = local ?? { dayNumber: m.dayNumber, monthCap: m.monthCap, inLabel: m.inLabel, whenLabel: m.whenLabel };
+  const pillLabel = live ? "Live" : shown.inLabel;
   return (
     <section className="hm-mt" aria-label={`Next meeting with ${coachFirstName}`}>
       <span className="hm-mt-glow" aria-hidden="true" />
       <div className="hm-mt-row">
         <div className="hm-mt-date">
-          <b>{m.dayNumber}</b>
-          <small>{m.monthCap}</small>
+          <b>{shown.dayNumber}</b>
+          <small>{shown.monthCap}</small>
         </div>
         <div className="hm-mt-main">
           <div className="hm-mt-top">
             <span className="hm-mt-eyebrow">With {coachFirstName}</span>
-            <span className={`hm-mt-pill${live ? " live" : m.inLabel === "Today" ? " today" : ""}`} aria-label={pillLabel}>
+            <span className={`hm-mt-pill${live ? " live" : shown.inLabel === "Today" ? " today" : ""}`} aria-label={pillLabel}>
               {live && <span className="hm-mt-live-dot" aria-hidden="true" />}
               {pillLabel}
             </span>
           </div>
           <div className="hm-mt-title">{m.topic}</div>
-          <div className="hm-mt-when">{m.whenLabel}</div>
+          <div className="hm-mt-when">{shown.whenLabel}</div>
         </div>
       </div>
-      {joinable && (
-        <a className="hm-mt-join" href={m.link!} target="_blank" rel="noopener noreferrer">
+      {/* The call's link is always there: Join call once it is about to
+          start (ten minutes before, to the end), Open meeting link before. */}
+      {m.link && (
+        <a className={`hm-mt-join${joinable ? "" : " early"}`} href={m.link} target="_blank" rel="noopener noreferrer">
           <span className="hm-mt-join-glyph" aria-hidden="true">
             <svg viewBox="0 0 24 24">
               <rect x="3" y="6" width="13" height="12" rx="2" />
               <path d="M16 10l5-3v10l-5-3z" />
             </svg>
           </span>
-          Join call
+          {joinable ? "Join call" : "Open meeting link"}
         </a>
       )}
       {recap && (
         <div className="hm-mt-recap">
           <span className="hm-mt-recap-label">Last meeting · {recap.dateLabel}</span>
-          <p className={`hm-mt-recap-text${longRecap && !more ? " clamp" : ""}`}>{recap.text}</p>
-          {longRecap && !more && (
-            <button type="button" className="hm-mt-more" onClick={() => setMore(true)}>
-              More
-            </button>
-          )}
+          <RecapFold recap={recap} />
         </div>
       )}
     </section>
   );
 }
 
-// Nothing booked: the coach's notes from the last call instead.
+// Nothing booked: the last call's recap under its own heading (the date on
+// its right), no card: the title on one line with a chevron that opens what
+// was agreed.
 function LastMeetingCard({ recap, coachFirstName }: { recap: NonNullable<MeetingRecap>; coachFirstName: string }) {
-  const [more, setMore] = useState(false);
-  const long = recap.text.length > 220;
-  // A heading above, like "Latest from": the card holds the date and the notes.
   return (
     <section className="hm-last-meeting" aria-label={`Notes from your last meeting with ${coachFirstName}`}>
       <div className="hm-tasks-head">
         <span className="hm-eyebrow">Last meeting with {coachFirstName}</span>
+        <span className="hm-last-date">{recap.dateLabel}</span>
       </div>
-      <div className="hm-mt hm-mt-last">
-        <span className="hm-mt-glow" aria-hidden="true" />
-        <div className="hm-mt-top">
-          <span className="hm-mt-pill">{recap.dateLabel}</span>
-        </div>
-        <p className={`hm-mt-recap-text${long && !more ? " clamp" : ""}`}>{recap.text}</p>
-        {long && !more && (
-          <button type="button" className="hm-mt-more" onClick={() => setMore(true)}>
-            More
-          </button>
-        )}
-      </div>
+      <RecapFold recap={recap} />
     </section>
+  );
+}
+
+// A recap folded to its title: one line, a chevron on the far right; open,
+// the body under it.
+function RecapFold({ recap }: { recap: NonNullable<MeetingRecap> }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={`hm-recap${open ? " open" : ""}`}>
+      <button type="button" className="hm-recap-head" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <span className="hm-recap-title">{recap.title}</span>
+        <span className={`hm-recap-chev${open ? " open" : ""}`} aria-hidden="true">
+          <ChevronDownIcon />
+        </span>
+      </button>
+      <div className={`hm-recap-body${open ? " open" : ""}`} aria-hidden={!open}>
+        <div className="hm-recap-clip">
+          <p className="hm-recap-text">{recap.text}</p>
+        </div>
+      </div>
+    </div>
   );
 }
 

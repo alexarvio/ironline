@@ -12,7 +12,7 @@ import FitTitle from "./FitTitle";
 /** The next session, for the training card's Start button. */
 export type PhaseNextSession = { dayId: number; name: string; live: boolean } | null;
 /** Today's food diary, for the nutrition card's Log button. */
-export type PhaseFoodToday = { eaten: number; target: number | null } | null;
+export type PhaseFoodToday = { eaten: number; target: number | null; mealsLogged?: number; mealsTotal?: number } | null;
 
 export type HomePhase = {
   id: number;

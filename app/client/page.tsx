@@ -92,6 +92,7 @@ import AppShell, { AppTab } from "./AppShell";
 import AvatarUpload from "./AvatarUpload";
 import { phaseCovers, phaseDays, phaseLastDay, phaseWeekIndex, phaseWeeks } from "../lib/phases";
 import { defaultPhaseCover } from "../lib/phaseCovers";
+import { SERVER_TZ, zonedToUtc } from "../lib/timezones";
 import type { HomePhase, PhaseFoodToday } from "./PhaseCards";
 import {
   AccountIcon,
@@ -223,19 +224,17 @@ function HomeTab({ CLIENT_ID, photos, food }: { CLIENT_ID: number; photos: Progr
     if (!upcomingMeeting) return null;
     const when = new Date(`${upcomingMeeting.date}T00:00:00`);
     const days = Math.round((when.getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000);
+    // The start as a real moment, from the timezone the coach set the time in
+    // (the server's for older meetings): the phone shows it in its own.
+    const startAt = upcomingMeeting.time ? zonedToUtc(upcomingMeeting.date, upcomingMeeting.time, upcomingMeeting.tz || SERVER_TZ) : null;
     // "Starting now" from ten minutes before the start until the end.
-    const startingNow = (() => {
-      if (upcomingMeeting.date !== today || !upcomingMeeting.time) return false;
-      const [h, mi] = upcomingMeeting.time.split(":").map((n) => Number(n) || 0);
-      const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
-      const start = h * 60 + mi;
-      return nowMin >= start - 10 && nowMin <= start + upcomingMeeting.duration_minutes;
-    })();
+    const nowMs = new Date().getTime();
+    const startingNow = !!startAt && nowMs >= startAt.getTime() - 10 * 60000 && nowMs <= startAt.getTime() + upcomingMeeting.duration_minutes * 60000;
     return {
       link: upcomingMeeting.link ?? null,
       provider: meetingProvider(upcomingMeeting.link),
       startingNow,
-      startIso: upcomingMeeting.time ? `${upcomingMeeting.date}T${upcomingMeeting.time}:00` : null,
+      startIso: startAt ? startAt.toISOString() : null,
       durationMinutes: upcomingMeeting.duration_minutes,
       monthCap: MONTH_CAP[when.getMonth()],
       dayNumber: String(when.getDate()),
@@ -292,6 +291,11 @@ function HomeTab({ CLIENT_ID, photos, food }: { CLIENT_ID: number; photos: Progr
     return { nextWeekLabel: next.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) };
   })();
 
+  // A session ended today: training is done for the day (Quick actions).
+  const trainedToday = getDeployedProgram(CLIENT_ID)
+    ? getWeekDays(CLIENT_ID, getCurrentWeekNumber(CLIENT_ID)).some(({ day }) => !!day.session_ended_at && localDateStr(new Date(day.session_ended_at)) === today)
+    : false;
+
   const coachFirst = getCoachFirstName(CLIENT_ID);
   // "Your plan": the live phase on each track, in this order; none, no section.
   const phases: HomePhase[] = (["training", "nutrition", "lifestyle"] as const).flatMap((track) => {
@@ -323,6 +327,7 @@ function HomeTab({ CLIENT_ID, photos, food }: { CLIENT_ID: number; photos: Progr
       phases={phases}
       checkInCount={onScreen.length ? checkInCount : null}
       weekDone={weekDone}
+      trainedToday={trainedToday}
       today={today}
       food={food}
     />
@@ -1318,7 +1323,7 @@ export default async function ClientPage({
 
   const tabs: AppTab[] = [
     // Draws its own light banner (name and main goal); the top bar floats over it.
-    { id: "home", label: "Home", icon: <HomeIcon />, bare: true, content: <HomeTab CLIENT_ID={CLIENT_ID} photos={homePhotos} food={{ eaten: foodDiary.eaten.kcal, target: foodDiary.target?.kcal ?? null }} /> },
+    { id: "home", label: "Home", icon: <HomeIcon />, bare: true, content: <HomeTab CLIENT_ID={CLIENT_ID} photos={homePhotos} food={{ eaten: foodDiary.eaten.kcal, target: foodDiary.target?.kcal ?? null, mealsLogged: foodDiary.meals.filter((m) => m.entries.length > 0).length, mealsTotal: foodDiary.meals.length }} /> },
     {
       id: "training",
       label: "Training",

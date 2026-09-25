@@ -4690,6 +4690,8 @@ export type Meeting = {
   client_id: number | null;
   date: string;
   time: string;
+  /** The timezone date and time are in (IANA). Absent: the server's, Europe/Amsterdam. */
+  tz?: string | null;
   duration_minutes: number;
   topic: string;
   status: "scheduled" | "completed" | "no-show" | "cancelled";
@@ -4698,6 +4700,8 @@ export type Meeting = {
   prep_notes?: string | null;
   /** The coach's recap of the call, written for the client. */
   summary?: string | null;
+  /** Its one-line title, over the body on the client's Home. */
+  summary_title?: string | null;
 };
 export type MeetingNote = {
   id: number;
@@ -4723,7 +4727,9 @@ export function addMeeting(
   durationMinutes: number = DEFAULT_MEETING_DURATION,
   link: string | null = null,
   /** The coach whose calendar a personal block (no client) goes on. */
-  blockCoachId: number | null = null
+  blockCoachId: number | null = null,
+  /** The timezone date and time are in; null: the server's. */
+  tz: string | null = null
 ) {
   const data = getData();
   data.meetings.push({
@@ -4732,6 +4738,7 @@ export function addMeeting(
     coach_id: clientId == null ? blockCoachId : null,
     date,
     time,
+    ...(tz ? { tz } : {}),
     duration_minutes: durationMinutes || DEFAULT_MEETING_DURATION,
     topic,
     status: "scheduled",
@@ -8593,6 +8600,8 @@ export function getHomeDataTiles(clientId: number, weightGoalIsDown: boolean | n
 export type MeetingRecap = {
   /** "11 Sep" — when the call was. */
   dateLabel: string;
+  /** The coach's one-line title; recaps from before titles read "What we agreed". */
+  title: string;
   text: string;
 };
 
@@ -8608,7 +8617,7 @@ export function getLastMeetingRecap(clientId: number): MeetingRecap | null {
   if (!m) return null;
   const d = new Date(`${m.date}T12:00:00`);
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  return { dateLabel: `${d.getDate()} ${MONTHS[d.getMonth()]}`, text: (m.summary ?? "").trim() };
+  return { dateLabel: `${d.getDate()} ${MONTHS[d.getMonth()]}`, title: (m.summary_title ?? "").trim() || "What we agreed", text: (m.summary ?? "").trim() };
 }
 
 export type UpNextSession = {
@@ -8687,7 +8696,7 @@ function linkHost(link: string): string {
 
 export function updateMeeting(
   id: number,
-  patch: Partial<Pick<Meeting, "topic" | "link" | "prep_notes" | "summary" | "date" | "time" | "duration_minutes">>
+  patch: Partial<Pick<Meeting, "topic" | "link" | "prep_notes" | "summary" | "summary_title" | "date" | "time" | "tz" | "duration_minutes">>
 ) {
   const data = getData();
   const m = data.meetings.find((x) => x.id === id);
@@ -8717,6 +8726,8 @@ export type WorkspaceMeeting = {
   id: number;
   date: string;
   time: string;
+  /** The timezone the time was set in; null: the server's. */
+  tz: string | null;
   durationMinutes: number;
   topic: string;
   status: Meeting["status"];
@@ -8725,6 +8736,7 @@ export type WorkspaceMeeting = {
   host: string;
   prepNotes: string;
   summary: string;
+  summaryTitle: string;
   notes: { id: number; text: string; createdAt: string }[];
 };
 
@@ -8735,6 +8747,7 @@ export function getMeetingsWorkspaceData(clientId: number) {
     id: m.id,
     date: m.date,
     time: m.time,
+    tz: m.tz ?? null,
     durationMinutes: m.duration_minutes,
     topic: m.topic,
     status: m.status,
@@ -8743,6 +8756,7 @@ export function getMeetingsWorkspaceData(clientId: number) {
     host: m.link ? linkHost(m.link) : "",
     prepNotes: m.prep_notes ?? "",
     summary: m.summary ?? "",
+    summaryTitle: m.summary_title ?? "",
     notes: listMeetingNotes(m.id).map((n) => ({ id: n.id, text: n.text, createdAt: n.created_at })),
   });
   const mine = listMeetings(clientId);

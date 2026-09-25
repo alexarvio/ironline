@@ -34,9 +34,17 @@ export default function ClientWeekSwitcher({
 }) {
   // A coach message's link can land on an earlier week; otherwise this one.
   const focus = useTrainingFocus();
-  const [selected, setSelected] = useState(() =>
+  const [selected, setSelectedState] = useState(() =>
     focus?.week != null && weeks.includes(focus.week) && focus.week <= currentWeek ? focus.week : currentWeek
   );
+  // Every week opened stays mounted, only hidden, so going back to one shows
+  // it exactly as it was left: remounting re-ran its arrival (the last Start
+  // link from Home opened that session again).
+  const [visited, setVisited] = useState<number[]>(() => [selected]);
+  const setSelected = (w: number) => {
+    setSelectedState(w);
+    setVisited((v) => (v.includes(w) ? v : [...v, w]));
+  };
   // With more weeks than fit, the strip scrolls and always opens with the
   // current week in the same place: just in from the left edge, with a sliver
   // of last week showing behind it so the row reads as scrollable. Week 1 has
@@ -107,7 +115,14 @@ export default function ClientWeekSwitcher({
       ) : (
         strip
       )}
-      {isLocked(selected) ? (
+      {visited
+        .filter((w) => !isLocked(w))
+        .map((w) => (
+          <div key={w} hidden={w !== selected}>
+            {contents[w]}
+          </div>
+        ))}
+      {isLocked(selected) && (
         <div className="week-locked-card">
           <span className="week-locked-icon" aria-hidden="true">
             <LockIcon />
@@ -120,8 +135,6 @@ export default function ClientWeekSwitcher({
             </div>
           </div>
         </div>
-      ) : (
-        contents[selected]
       )}
     </div>
   );

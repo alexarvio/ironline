@@ -750,11 +750,15 @@ type Meeting = {
   coach_id?: number | null;
   date: string;
   time: string;
+  /** The timezone date and time are in (IANA). Absent: the server's, Europe/Amsterdam. */
+  tz?: string | null;
   duration_minutes: number;
   topic: string;
   status: "scheduled" | "completed" | "no-show" | "cancelled";
   /** Any call URL; the provider is read off its host. */
   link?: string | null;
+  /** The recap's one-line title, over its body (summary), on the client's Home. */
+  summary_title?: string | null;
   /** Coach-only notes written before the call. Never sent to the client. */
   prep_notes?: string | null;
   /** The coach's recap of what was covered and agreed, written FOR the
