@@ -2069,9 +2069,10 @@ function ProgressDialog({ row, lbs, unit, multiGym }: { row: DraftRow; lbs: bool
   const win = h.filter((w) => w.week >= firstWk && w.week <= lastWk);
   const winLogged = win.filter((w) => w.sets.length > 0 && w.best != null);
   // The curve: each week's best set, the target dashed across.
+  // Taller than it is busy, so the line has room to rise and fall.
   const W = 480;
-  const H = 96;
-  const pad = { l: 34, r: 14, t: 16, b: 18 };
+  const H = 150;
+  const pad = { l: 34, r: 14, t: 24, b: 22 };
   const values = [...winLogged.map((w) => w.best!), ...win.map((w) => w.target).filter((t): t is number => t != null)];
   const lo = values.length ? Math.min(...values) : 0;
   const hi = values.length ? Math.max(...values) : 1;
