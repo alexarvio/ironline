@@ -492,3 +492,10 @@
 .rd-demo svg { width: 11px; height: 11px; }
 .rd-pill.unfinished { background: #FDF1DC; color: #9a5b00; }
 .rd-row.new .rd-ex { flex-direction: column; align-items: flex-start; gap: 2px; }
+/* The swap row on the exercise row's own columns (25 Sep): its sets in the
+   "did" column as orange chips, matching the swap circle; no subtitle. */
+.rd-swaprow-body { display: grid; align-items: center; margin: 0 0 8px; padding: 10px; border: 0; border-radius: 12px; background: #FDF6EA; box-shadow: inset 0 0 0 1px #F3DFBC; }
+.rd-swaprow-text { display: flex; flex-direction: row; align-items: center; gap: 10px; }
+.rd-swaprow-text .rd-swapdot { margin-left: 0; }
+.rd-set.swap { background: #FBE7C6; color: #9a5b0c; }
+.rd-set.swap small { color: #b9853f; }

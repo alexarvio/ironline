@@ -866,24 +866,24 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                         {r.swapInfo && (
                           <div className={`rd-swaprow${openSwaps.includes(r.id) ? " open" : ""}`} aria-hidden={!openSwaps.includes(r.id)}>
                             <div className="rd-swaprow-clip">
-                              <div className="rd-swaprow-body">
-                                <span className="rd-swapdot static" aria-hidden="true">
-                                  <SwapIcon />
-                                </span>
-                                <span className="rd-swaprow-text">
+                              {/* On the row's own columns: the words under the name, the
+                                  sets in the "did" column, in the swap's orange. */}
+                              <div className="rd-swaprow-body" style={colStyle}>
+                                <span />
+                                <span className="rd-swaprow-text" style={{ gridColumn: `2 / ${4 + exWidths.length}` }}>
+                                  <span className="rd-swapdot static" aria-hidden="true">
+                                    <SwapIcon />
+                                  </span>
                                   <b>
                                     {firstName} did {r.swapInfo.name} instead
                                   </b>
-                                  <small>
-                                    {r.swapInfo.typed ? "Typed in by " + firstName : "From your alternatives or library"} · swapped {r.swapInfo.when} · not counted in {r.name}&rsquo;s trends or progress
-                                  </small>
                                 </span>
                                 <span className="rd-did rd-swaprow-sets">
                                   {r.swapInfo.sets.length === 0 ? (
                                     <em>No sets logged on it yet</em>
                                   ) : (
                                     r.swapInfo.sets.map((l) => (
-                                      <span key={l.set} className="rd-set" title={l.gym ?? undefined}>
+                                      <span key={l.set} className="rd-set swap" title={l.gym ?? undefined}>
                                         {kgOf(l.kg, lbs)}×{l.reps ?? "—"}
                                         {l.rpe != null && <small>@{l.rpe}</small>}
                                       </span>
