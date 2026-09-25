@@ -134,6 +134,15 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   });
 
   const days = getWeek(clientId, weekNumber);
+  // What the client wrote about an exercise (the workout's chat button links
+  // the message to it), by assignment, newest last.
+  const aboutExercise = new Map<number, { text: string; when: string }[]>();
+  for (const m of listChatMessages(clientId)) {
+    if (m.sender !== "client" || m.link?.kind !== "exercise") continue;
+    const list = aboutExercise.get(m.link.assignmentId) ?? [];
+    list.push({ text: m.text || "A file", when: new Date(m.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) });
+    aboutExercise.set(m.link.assignmentId, list);
+  }
   const sessions = days.map((d, si) => {
     const assignments = getAssignmentsForDay(d.id);
     const videos = videoRequestsFor(assignments.map((a) => a.id));
@@ -184,6 +193,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
         note: a.notes,
         // Swapped: the sets belong to what they did instead (swapInfo), not to the prescription.
         logged: a.swap ? [] : logs.map((l) => ({ set: l.set_number, kg: l.weight_kg, reps: l.reps, rpe: l.rpe_actual, gym: l.gym_id != null ? gymName.get(l.gym_id) ?? null : null })),
+        clientNotes: aboutExercise.get(a.id) ?? [],
         swapInfo: a.swap
           ? {
               name: (a.swap.library_exercise_id != null ? libName.get(a.swap.library_exercise_id) ?? null : null) ?? a.swap.custom_name ?? "Another exercise",

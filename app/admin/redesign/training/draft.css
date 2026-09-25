@@ -472,3 +472,23 @@
 .rd-tag.gym { background: #e3ecf8; color: #1e3a6e; }
 .rd-tag.note { width: 22px; padding: 0; justify-content: center; background: #e3ecf8; color: #1e3a6e; cursor: help; }
 .rd-tag.note svg { width: 13px; height: 13px; }
+
+/* An exercise row's signals (25 Sep): in front of its ⋯, three fixed slots
+   (a swap, the client's messages about it, a video they sent) so each kind
+   lines up down the table; a demo's play button at the right end of the name. */
+.rd-row-more { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.rd-flags { display: flex; align-items: center; gap: 2px; }
+.rd-flag-slot { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; }
+.rd-flag-slot .rd-swapdot { margin: 0; padding: 0; min-width: 22px; width: 22px; }
+.rd-flag { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 999px; background: #e3ecf8; color: #1e3a6e; cursor: pointer; text-decoration: none; }
+.rd-flag svg { width: 13px; height: 13px; }
+.rd-flag.video.in { background: #d9480f; color: #fff; }
+.rd-flag.video.replied { background: #dff3ea; color: #1b7a4b; }
+.rd-ex { flex-direction: row; align-items: center; gap: 8px; }
+.rd-ex > .rd-ex-name { flex: 1; min-width: 0; }
+.rd-demo-slot { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; }
+.rd-demo { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; background: #eef2f8; color: #1e3a6e; }
+.rd-demo:hover { background: #1e3a6e; color: #fff; }
+.rd-demo svg { width: 11px; height: 11px; }
+.rd-pill.unfinished { background: #FDF1DC; color: #9a5b00; }
+.rd-row.new .rd-ex { flex-direction: column; align-items: flex-start; gap: 2px; }
