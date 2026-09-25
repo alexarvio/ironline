@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useKeyboardInset } from "./useKeyboardInset";
 
 export type LibraryOption = { id: number; name: string; note?: string | null };
 
@@ -28,6 +29,8 @@ export default function AlternativesSheet({
   onClose: () => void;
 }) {
   const [typed, setTyped] = useState("");
+  // Lifted over the keyboard while "what you did instead" is typed.
+  const kb = useKeyboardInset();
   const [picked, setPicked] = useState<number | null>(swapped?.libraryExerciseId ?? null);
   const name = typed.trim();
   const canUse = picked != null || name.length > 0;
@@ -36,7 +39,7 @@ export default function AlternativesSheet({
     else if (name) onPick({ libraryExerciseId: null, customName: name });
   };
   return (
-    <div className="wo-sheet-scrim" onClick={onClose}>
+    <div className="wo-sheet-scrim" style={kb ? { paddingBottom: kb } : undefined} onClick={onClose}>
       <div className="wo-sheet" role="dialog" aria-label={`Swap ${exerciseName}`} onClick={(e) => e.stopPropagation()}>
         <span className="wo-sheet-grab" aria-hidden="true" />
         <h2 className="wo-sheet-title">Swap {exerciseName}</h2>

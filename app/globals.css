@@ -17256,3 +17256,7 @@ button.ci-hint { cursor: pointer; }
 }
 /* The phase cards' button a size up (25 Sep). */
 .pc-start { height: 40px; padding: 0 18px; font-size: 15px; }
+/* A sheet lifted over the keyboard never runs off the top: it scrolls within what is left. */
+.wo-sheet-scrim > .wo-sheet { max-height: min(85vh, calc(100% - 24px)); }
+/* The phase cards' button half as big again (25 Sep). */
+.pc-start { height: 60px; padding: 0 27px; font-size: 20px; }

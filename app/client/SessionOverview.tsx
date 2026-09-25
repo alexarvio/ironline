@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useKeyboardInset } from "./useKeyboardInset";
 import { saveSkipReasonAction } from "../lib/actions";
 import { ChevronLeftIcon } from "../components/icons";
 import GymSheet from "./GymSheet";
@@ -66,6 +67,8 @@ export default function SessionOverview({
   const logged = loggedSets(day);
   const [gymOpen, setGymOpen] = useState(false);
   // The ⋯ menu and the "couldn't do this session" sheet it opens.
+  // The sheet rides on the keyboard, so the reason box stays in view while typing.
+  const kb = useKeyboardInset();
   const [menuOpen, setMenuOpen] = useState(false);
   const [skipOpen, setSkipOpen] = useState(false);
   const [skipDraft, setSkipDraft] = useState(day.skipReason);
@@ -232,7 +235,7 @@ export default function SessionOverview({
       )}
 
       {skipOpen && (
-        <div className="wo-sheet-scrim" onClick={() => setSkipOpen(false)}>
+        <div className="wo-sheet-scrim" style={kb ? { paddingBottom: kb } : undefined} onClick={() => setSkipOpen(false)}>
           <div className="wo-sheet" role="dialog" aria-label="Couldn't do this session" onClick={(e) => e.stopPropagation()}>
             <span className="wo-sheet-grab" aria-hidden="true" />
             <h2 className="wo-sheet-title">Couldn&rsquo;t do this session?</h2>
