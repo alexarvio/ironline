@@ -17347,3 +17347,8 @@ button.ci-hint { cursor: pointer; }
 .ts-set.active .ts-input.reps:placeholder-shown { border-bottom-color: #1e3a6e; animation: ts-line-pulse 1.6s ease-in-out infinite; }
 .ts-set.active .ts-input:focus { border-bottom-color: #1e3a6e; animation: none; }
 @media (prefers-reduced-motion: reduce) { .ts-set.active .ts-input.reps:placeholder-shown { animation: none; } }
+/* An unfinished session (25 Sep): ended with sets still to log. Amber, no
+   green wash; the coach's admin says Complete only when every set is in. */
+.tr-row-tile.unfinished { background: #d98a1c; color: #fff; }
+.tr-row-pill.unfinished { padding: 5px 10px; background: #FDF1DC; color: #9a5b00; }
+.so-pill.unfinished { padding: 5px 10px; border-radius: 999px; background: rgba(253, 241, 220, 0.18); color: #ffcf7a; }

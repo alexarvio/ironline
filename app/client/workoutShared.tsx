@@ -163,11 +163,13 @@ export const estimateMinutes = (day: SessionDay) => {
   return Math.max(5, Math.round(s / 60 / 5) * 5);
 };
 
-export type SessionStatus = "done" | "live" | "skipped" | "missed" | "upcoming";
+export type SessionStatus = "done" | "unfinished" | "live" | "skipped" | "missed" | "upcoming";
 /** Derived, never stored. A day logged before sessions were begun on the app
     counts as done once every set is in. */
 export function sessionStatus(day: SessionDay, pastWeek: boolean): SessionStatus {
-  if (day.endedAt) return "done";
+  // Ended with sets or cardio still to do: unfinished, as the coach sees it
+  // (the admin says Complete only when every set is in).
+  if (day.endedAt) return allLogged(day) ? "done" : "unfinished";
   if (day.startedAt) return "live";
   if (day.skipReason) return "skipped";
   if (allLogged(day)) return "done";
