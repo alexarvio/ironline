@@ -1749,7 +1749,8 @@ function CreateExercise({ library, initial, onCreate, onCancel }: { library: Lib
   );
 }
 
-/** Editing an exercise row: swap the exercise (or create your own), and its note. */
+/** Editing an exercise row: replace the exercise (or create your own), and its note.
+ *  "Replace", not "swap": a swap is the client doing something else for a session. */
 function EditExerciseDialog({ row, current, library, onSave }: { row: DraftRow; current: Edits; library: Library; onSave: (v: { name?: string; note?: string }) => void }) {
   const [name, setName] = useState(current.name ?? row.name);
   const [note, setNote] = useState(current.note ?? row.note ?? "");
@@ -1761,7 +1762,7 @@ function EditExerciseDialog({ row, current, library, onSave }: { row: DraftRow; 
     <DialogContent className="rd-dlg">
       <DialogHeader>
         <DialogTitle>Edit {row.name}</DialogTitle>
-        <DialogDescription>Swap the exercise, or change the note {row.logged.length ? "· what the client logged stays" : ""}.</DialogDescription>
+        <DialogDescription>Replace the exercise in the programme, or change the note {row.logged.length ? "· what the client logged stays" : ""}.</DialogDescription>
       </DialogHeader>
       <div className="rd-field">
         <span>Exercise</span>
@@ -1780,7 +1781,7 @@ function EditExerciseDialog({ row, current, library, onSave }: { row: DraftRow; 
         />
       ) : (
         <div className="rd-field">
-          <span>Swap for</span>
+          <span>Replace with</span>
           <input className="rd-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search the library" />
           {needle && (
             <div className="rd-addrow-list">
