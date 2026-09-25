@@ -1,0 +1,47 @@
+/* The Feed in the redesign (25 Sep). Prefix rfd- (fd- is the old one). */
+.rfd { display: flex; flex-direction: column; gap: 18px; max-width: 980px; }
+.rfd-head { display: flex; flex-direction: column; gap: 12px; }
+.rfd-title { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; color: #141a24; }
+.rfd-filters { display: inline-flex; flex-wrap: wrap; align-self: flex-start; gap: 4px; padding: 4px; border-radius: 12px; background: #e9edf3; }
+.rfd-filter { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 9px; font-size: 13px; font-weight: 700; color: #5b6474; text-decoration: none; }
+.rfd-filter:hover { color: #141a24; }
+.rfd-filter.on { background: #fff; color: #1e3a6e; box-shadow: 0 1px 3px rgba(20, 26, 36, 0.12); }
+.rfd-count { min-width: 20px; justify-content: center; padding: 0 6px; background: #1e3a6e; color: #fff; font-size: 11px; }
+.rfd-empty { margin: 0; font-size: 14px; color: #8b93a1; }
+
+.rfd-locks { border-color: #f3d6c9; }
+.rfd-lock-list { display: flex; flex-direction: column; gap: 10px; }
+.rfd-lock { display: grid; grid-template-columns: 10px 1fr; gap: 10px; align-items: start; }
+.rfd-lock-dot { width: 8px; height: 8px; margin-top: 6px; border-radius: 999px; background: #c3c9d2; }
+.rfd-lock-dot.on { background: #d9480f; }
+.rfd-lock-text { font-size: 13.5px; color: #141a24; }
+.rfd-lock-text a { color: #1e3a6e; font-weight: 700; }
+.rfd-lock-meta { margin-top: 2px; font-size: 12px; color: #8b93a1; }
+
+.rfd-day { display: flex; flex-direction: column; gap: 8px; }
+.rfd-day-label { margin: 0; padding: 0 4px; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
+.rfd-card > [data-slot] { padding: 0; }
+.rfd-rows { display: flex; flex-direction: column; padding: 4px 0 !important; }
+.rfd-row { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; align-items: start; gap: 14px; padding: 12px 18px; border-top: 1px solid #eef1f5; color: inherit; text-decoration: none; }
+.rfd-row:first-child { border-top: 0; }
+.rfd-row:hover { background: #f7f9fc; }
+.rfd-cat { justify-content: center; }
+.rfd-cat.training, .rfd-cat.notes { background: #e6e4fa; color: #3a3390; }
+.rfd-cat.nutrition { background: #dff3ea; color: #0f5c46; }
+.rfd-cat.measurements { background: #efede6; color: #4a4a45; }
+.rfd-cat.billing { background: #fff3dc; color: #8a5a12; }
+.rfd-cat.messages { background: #e3ecf8; color: #1e3a6e; }
+.rfd-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.rfd-text { font-size: 13.5px; line-height: 1.45; color: #313851; }
+.rfd-text b { color: #141a24; }
+.rfd-note { font-size: 13px; color: #5b6474; font-style: italic; }
+.rfd-thumbs { display: flex; gap: 6px; }
+.rfd-thumb { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; }
+.rfd-when { font-size: 12px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.rfd-pager { display: flex; align-items: center; gap: 4px; }
+.rfd-page { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; padding: 0 8px; border: 1px solid #dfe3e8; border-radius: 9px; background: #fff; font-size: 13px; font-weight: 700; color: #141a24; text-decoration: none; }
+.rfd-page.on { background: #1e3a6e; border-color: #1e3a6e; color: #fff; }
+.rfd-page.off { opacity: 0.35; }
+.rfd-gap { padding: 0 4px; color: #8b93a1; }
+.rfd-pager-count { margin-left: 10px; font-size: 12.5px; color: #8b93a1; }

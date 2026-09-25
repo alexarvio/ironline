@@ -1715,6 +1715,8 @@ export async function removeMeetingAction(formData: FormData) {
   removeMeeting(id);
   noteChange(meetingClient, "Cancelled your call", { tab: "home", label: "See your meetings", key: `meeting-cancel:${id}`, push: true });
   revalidatePath("/admin");
+  // The Calendar's day panel removes from here too.
+  revalidatePath("/admin/redesign/calendar");
 }
 
 export async function addMeetingNoteAction(formData: FormData) {
@@ -2377,7 +2379,8 @@ export async function addCalendarEventAction(formData: FormData) {
   }
   revalidatePath("/admin");
   revalidatePath("/client");
-  redirect(`/admin?view=calendar&month=${date.slice(0, 7)}&day=${date}`);
+  // Back to the Calendar (the redesign's since 25 Sep), on the day it went into.
+  redirect(`/admin/redesign/calendar?month=${date.slice(0, 7)}&day=${date}`);
 }
 
 // ---- Phase timeline (coach only) ----------------------------------------
