@@ -51,7 +51,7 @@ export type DraftRow = {
   video: { requestId: number; state: "asked" | "in" | "replied"; note: string | null; reply: string | null } | null;
   /** The demo the client sees on this exercise: the library's, else one set on this row long ago. */
   demo: { url: string; source: "library" | "row" } | null;
-  history: { week: number; label: string; target: number | null; setsPlanned: number; sets: { n: number; kg: number | null; reps: number | null; rpe: number | null }[]; best: number | null; gym: string | null; current: boolean }[];
+  history: { week: number; label: string; target: number | null; setsPlanned: number; sets: { n: number; kg: number | null; reps: number | null; rpe: number | null }[]; best: number | null; e1rm: number | null; gym: string | null; current: boolean }[];
   /** What the client did instead, when they swapped the exercise. */
   swap: string | null;
   /** The swap in full: what, when, and the sets logged on it (kept out of this row's numbers). */
@@ -2009,22 +2009,25 @@ function ProgressDialog({ row, lbs, unit, multiGym }: { row: DraftRow; lbs: bool
   // Up to the week on screen: the verdict is about where the client is now.
   const cur = h.find((w) => w.current) ?? null;
   const upTo = logged.filter((w) => !cur || w.week <= cur.week);
-  // The weeks in a row, most recent back, where the best set did not go up.
+  // The weeks in a row, most recent back, where the estimated one-rep max did
+  // not go up (weight and reps together, so fewer reps at a bit more weight
+  // is not progress).
+  const est = (w: (typeof h)[number]) => w.e1rm ?? 0;
   const stall = (() => {
     let n = 0;
     for (let i = upTo.length - 1; i > 0; i--) {
-      if (upTo[i].best! > upTo[i - 1].best!) break;
+      if (est(upTo[i]) > est(upTo[i - 1]) + 0.05) break;
       n++;
     }
     return n;
   })();
-  const lastStep = upTo.length > 1 ? upTo[upTo.length - 1].best! - upTo[upTo.length - 2].best! : null;
+  const lastStep = upTo.length > 1 ? est(upTo[upTo.length - 1]) - est(upTo[upTo.length - 2]) : null;
   const verdict =
     upTo.length === 0
       ? { text: "Nothing logged yet", cls: "none" }
       : upTo.length === 1
       ? { text: "First week logged", cls: "none" }
-      : lastStep != null && lastStep < 0
+      : lastStep != null && lastStep < -0.05
       ? { text: "Dropping", cls: "down" }
       : stall >= 2
       ? { text: `Stalled ${stall} weeks`, cls: "flat" }
@@ -2159,14 +2162,13 @@ function ProgressDialog({ row, lbs, unit, multiGym }: { row: DraftRow; lbs: bool
         <tbody>
           {[...winLogged].reverse().map((w) => {
             const prev = logged.find((q) => q.week === w.week - 1) ?? null;
-            const stepPct = prev && prev.best! > 0 ? Math.round(((w.best! - prev.best!) / prev.best!) * 1000) / 10 : null;
+            const stepPct = prev && est(prev) > 0 ? Math.round(((est(w) - est(prev)) / est(prev)) * 1000) / 10 : null;
             return w.sets.map((st, i) => {
-              const over = st.kg != null && w.target != null ? st.kg - w.target : null;
               return (
                 <tr key={`${w.week}-${st.n}`} className={`${w.current ? "now" : ""}${i === 0 ? " first" : ""}`}>
                   <td>{i === 0 && w.label}</td>
                   <td>{st.n}</td>
-                  <td className={over == null ? "" : over > 0 ? "up" : over < 0 ? "down" : ""}>{st.kg != null ? kgOf(st.kg, lbs) : "—"}</td>
+                  <td>{st.kg != null ? kgOf(st.kg, lbs) : "—"}</td>
                   <td>{st.reps ?? "—"}</td>
                   <td>{st.rpe ?? "—"}</td>
                   {h.some((q) => q.gym) && <td>{i === 0 ? w.gym ?? "" : ""}</td>}
@@ -2182,6 +2184,10 @@ function ProgressDialog({ row, lbs, unit, multiGym }: { row: DraftRow; lbs: bool
           )}
         </tbody>
       </table>
+      <p className="rp-howto">
+        The percentages and the trend compare each week&rsquo;s best set with its reps counted, as an estimated one-rep max (weight × (1 + reps ÷ 30)): more reps at the same weight is progress, and fewer reps at a little more weight is not. <b>Vs last week</b> is against the week before;{" "}
+        <b>over 4 weeks</b> against the earliest week logged in the last four; <b>Change</b> is each week against the one before. The chart shows the heaviest weight each week, with your target dashed.
+      </p>
     </DialogContent>
   );
 }
