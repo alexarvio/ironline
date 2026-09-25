@@ -21,7 +21,6 @@ const WINDOWS = [
 ];
 const DAY = 86400000;
 const dayNum = (s: string) => Date.UTC(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10))) / DAY;
-const isoOf = (n: number) => new Date(n * DAY).toISOString().slice(0, 10);
 const short = (s: string) => new Date(`${s}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
 /** The eight colours an event category wears (EventsCard's palette). */
@@ -122,15 +121,23 @@ export default function PhasesBoard({ data }: { data: PhasesBoardData }) {
       <Card className="pbd-card">
         <CardHeader>
           <CardTitle>All clients</CardTitle>
-          <CardDescription>
-            {short(isoOf(first))} → {short(isoOf(last))}
-          </CardDescription>
         </CardHeader>
         <CardContent>
           {data.clients.length === 0 ? (
             <p className="pbd-empty">No clients yet.</p>
           ) : (
-            <div className="pbd-board">
+            <div className="pbd-board" style={{ "--pbd-now": ((today - first) / total).toString() } as React.CSSProperties}>
+              {/* Today's pill on a row of its own above the months, so it never
+                  covers a month's name; its line runs unbroken down every client. */}
+              <div className="pbd-row pbd-today-row">
+                <span />
+                <div className="pbd-track-area">
+                  <span className="pbd-now-label" style={{ left: pct(today) }}>
+                    Today
+                  </span>
+                </div>
+              </div>
+              <span className="pbd-now-line" aria-hidden="true" />
               {/* The months along the top, over the same track width as the rows. */}
               <div className="pbd-row pbd-months">
                 <span />
@@ -140,9 +147,6 @@ export default function PhasesBoard({ data }: { data: PhasesBoardData }) {
                       {m.label}
                     </span>
                   ))}
-                  <span className="pbd-now-label" style={{ left: pct(today) }}>
-                    Today
-                  </span>
                 </div>
               </div>
 
@@ -162,7 +166,6 @@ export default function PhasesBoard({ data }: { data: PhasesBoardData }) {
                       <div key={row} className="pbd-row">
                         <span className={`pbd-row-label ${row}`}>{row === "events" ? "Events" : TRACK_LABEL[row]}</span>
                         <div className="pbd-track-area pbd-grid" style={{ ...gridStyle, height: `${Math.max(1, lanes.length) * 26 + 4}px` }}>
-                          <span className="pbd-now" style={{ left: pct(today) }} aria-hidden="true" />
                           {lanes.map((lane, li) =>
                             lane.map((it) => {
                               const sp = span(it.start, it.end)!;
