@@ -4705,6 +4705,10 @@ export type Meeting = {
   summary?: string | null;
   /** Its one-line title, over the body on the client's Home. */
   summary_title?: string | null;
+  /** The Calendar's colour: a preset id or a coach's own ("c12"). */
+  category?: string | null;
+  /** The whole day, no time. */
+  all_day?: boolean;
 };
 export type MeetingNote = {
   id: number;
@@ -4768,6 +4772,46 @@ export function removeMeeting(id: number) {
   data.client_goals.forEach((g) => {
     if (g.meeting_id === id) g.meeting_id = null;
   });
+  persist();
+}
+
+/** One entry as the Calendar's dialog writes it. note is the coach-only prep_notes. */
+export type CalendarEntryInput = { date: string; time: string; durationMinutes: number; allDay: boolean; topic: string; clientId: number | null; category: string | null; note: string };
+
+const cleanEntry = (v: CalendarEntryInput) => {
+  const allDay = !!v.allDay;
+  return {
+    date: String(v.date).slice(0, 10),
+    time: allDay ? "" : /^\d{2}:\d{2}$/.test(String(v.time)) ? String(v.time) : "",
+    duration_minutes: allDay ? DEFAULT_MEETING_DURATION : Math.max(5, Math.min(24 * 60, Math.round(Number(v.durationMinutes) || DEFAULT_MEETING_DURATION))),
+    all_day: allDay,
+    topic: String(v.topic ?? "").trim().slice(0, 120),
+    category: v.category ? String(v.category).slice(0, 24) : null,
+    prep_notes: String(v.note ?? "").trim().slice(0, 2000) || null,
+  };
+};
+const entryOk = (c: ReturnType<typeof cleanEntry>) => /^\d{4}-\d{2}-\d{2}$/.test(c.date) && (c.all_day || !!c.time);
+
+/** A new Calendar entry: a client's meeting, or the coach's own block when clientId is null. */
+export function addCalendarEntry(coachId: number, v: CalendarEntryInput): number | null {
+  const c = cleanEntry(v);
+  if (!entryOk(c)) return null;
+  const id = allocId("meetings");
+  getData().meetings.push({ id, client_id: v.clientId, coach_id: v.clientId == null ? coachId : null, ...c, status: "scheduled", link: null });
+  persist();
+  return id;
+}
+
+export function getCalendarEntry(id: number): Meeting | null {
+  return getData().meetings.find((m) => m.id === id) ?? null;
+}
+
+/** Changes an entry in place; the caller has checked the coach owns it and the client. */
+export function updateCalendarEntry(coachId: number, id: number, v: CalendarEntryInput) {
+  const row = getData().meetings.find((m) => m.id === id);
+  const c = cleanEntry(v);
+  if (!row || !entryOk(c)) return;
+  Object.assign(row, c, { client_id: v.clientId, coach_id: v.clientId == null ? coachId : null });
   persist();
 }
 
@@ -5174,19 +5218,35 @@ export function deleteClientEvent(clientId: number, eventId: number) {
 /** The coach's categories: the built-in four, then their own, oldest first. */
 export function listEventCategories(coachId: number): { id: string; label: string; color: string; custom: boolean }[] {
   const own = getData()
-    .event_categories.filter((c) => c.coach_id === coachId)
+    .event_categories.filter((c) => c.coach_id === coachId && !c.scope)
     .sort((a, b) => a.id - b.id)
     .map((c) => ({ id: `c${c.id}`, label: c.label, color: c.color, custom: true }));
   return [...EVENT_PRESETS.map((p) => ({ ...p, custom: false })), ...own];
 }
 
+/** The Calendar's four to start with; the coach's own are event_categories rows with scope "calendar". */
+export const CALENDAR_PRESETS: { id: string; label: string; color: string }[] = [
+  { id: "call", label: "Client call", color: "blue" },
+  { id: "training", label: "Training", color: "green" },
+  { id: "admin", label: "Admin", color: "amber" },
+  { id: "personal", label: "Personal", color: "purple" },
+];
+
+export function listCalendarCategories(coachId: number): { id: string; label: string; color: string; custom: boolean }[] {
+  const own = getData()
+    .event_categories.filter((c) => c.coach_id === coachId && c.scope === "calendar")
+    .sort((a, b) => a.id - b.id)
+    .map((c) => ({ id: `c${c.id}`, label: c.label, color: c.color, custom: true }));
+  return [...CALENDAR_PRESETS.map((p) => ({ ...p, custom: false })), ...own];
+}
+
 const eventColor = (color: string) => ((EVENT_COLORS as readonly string[]).includes(color) ? color : "blue");
 
-export function addEventCategory(coachId: number, label: string, color: string): EventCategory | null {
+export function addEventCategory(coachId: number, label: string, color: string, scope: "calendar" | null = null): EventCategory | null {
   const clean = label.trim().slice(0, 24);
   if (!clean) return null;
   const data = getData();
-  const row: EventCategory = { id: allocId("event_categories"), coach_id: coachId, label: clean, color: eventColor(color), created_at: new Date().toISOString() };
+  const row: EventCategory = { id: allocId("event_categories"), coach_id: coachId, label: clean, color: eventColor(color), created_at: new Date().toISOString(), ...(scope ? { scope } : {}) };
   data.event_categories.push(row);
   persist();
   return row;
@@ -5209,6 +5269,7 @@ export function deleteEventCategory(coachId: number, id: number) {
   data.event_categories = data.event_categories.filter((c) => c !== row);
   const key = `c${id}`;
   for (const e of data.client_events) if (e.kind === key) e.kind = null;
+  for (const m of data.meetings) if (m.category === key) m.category = null;
   persist();
 }
 

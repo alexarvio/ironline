@@ -244,7 +244,7 @@ function meetingCardView(m: ReturnType<typeof listMeetings>[number], today: stri
       m.time || null,
     ]
       .filter(Boolean)
-      .join(" ") + ` · ${m.duration_minutes} min`,
+      .join(" ") + (m.all_day ? " · All day" : ` · ${m.duration_minutes} min`),
     // In the phone's timezone when its cookie says which, worded as the phone
     // words them, so nothing changes once the page is on screen.
     ...(phoneTz && startAt ? meetingLabelsIn(startAt.toISOString(), m.duration_minutes, phoneTz, nowMs) : {}),
