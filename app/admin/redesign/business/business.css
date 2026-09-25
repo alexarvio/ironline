@@ -1,0 +1,27 @@
+/* The Business view in the redesign (25 Sep). Prefix bzd- (biz- is the old one). */
+.bzd { display: flex; flex-direction: column; gap: 20px; max-width: 1200px; }
+.bzd-title { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; color: #141a24; }
+.bzd-sub { margin: 4px 0 0; font-size: 13.5px; color: #5b6474; }
+.bzd-section { display: flex; flex-direction: column; gap: 10px; }
+.bzd-h { margin: 0; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
+.bzd-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.bzd-tiles.four { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.bzd-tile > * { display: flex; flex-direction: column; gap: 4px; }
+.bzd-label { font-size: 12px; font-weight: 600; color: #5b6474; }
+.bzd-value { font-size: 24px; font-weight: 800; color: #141a24; font-variant-numeric: tabular-nums; }
+.bzd-value small { font-size: 13px; font-weight: 600; color: #8b93a1; }
+.bzd-basis { font-size: 11.5px; color: #8b93a1; }
+.bzd-tile.warn .bzd-value { color: #b3471d; }
+.bzd-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+.bzd-bars { display: flex; flex-direction: column; gap: 10px; }
+.bzd-bar-row { display: grid; grid-template-columns: 80px 1fr 70px; align-items: center; gap: 12px; font-size: 13px; }
+.bzd-bar-label { color: #313851; font-weight: 600; }
+.bzd-bar-track { height: 10px; border-radius: 999px; background: #eef1f5; overflow: hidden; }
+.bzd-bar-fill { display: block; height: 100%; border-radius: 999px; background: #1e3a6e; }
+.bzd-bar-num { text-align: right; font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; }
+.bzd-bar-num small { font-weight: 500; color: #8b93a1; }
+.bzd-empty { margin: 0; font-size: 13.5px; color: #8b93a1; }
+.bzd-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.bzd-name { font-weight: 700; color: #141a24; text-decoration: none; }
+.bzd-name:hover { text-decoration: underline; text-underline-offset: 3px; }
+.bzd-open { background: #fdeee8; color: #b3471d; }
