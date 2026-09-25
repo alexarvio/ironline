@@ -2034,23 +2034,25 @@ function ProgressDialog({ row, lbs, unit, multiGym }: { row: DraftRow; lbs: bool
   const pct = (v: number | null) => (v == null ? "—" : v === 0 ? "0%" : `${v > 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`);
   const tone = (v: number | null) => (v == null ? "none" : v > 0 ? "up" : v < 0 ? "down" : "flat");
 
+  // The last four weeks, up to the one on screen (fewer when the programme
+  // is younger): the chart and the table both show just these.
+  const lastWk = cur?.week ?? (h.length ? h[h.length - 1].week : 1);
+  const firstWk = Math.max(h.length ? h[0].week : 1, lastWk - 3);
+  const win = h.filter((w) => w.week >= firstWk && w.week <= lastWk);
+  const winLogged = win.filter((w) => w.sets.length > 0 && w.best != null);
   // The curve: each week's best set, the target dashed across.
-  const W = 520;
-  const H = 130;
-  const pad = { l: 34, r: 12, t: 12, b: 22 };
-  const values = [...logged.map((w) => w.best!), ...h.map((w) => w.target).filter((t): t is number => t != null)];
+  const W = 480;
+  const H = 96;
+  const pad = { l: 34, r: 14, t: 16, b: 18 };
+  const values = [...winLogged.map((w) => w.best!), ...win.map((w) => w.target).filter((t): t is number => t != null)];
   const lo = values.length ? Math.min(...values) : 0;
   const hi = values.length ? Math.max(...values) : 1;
   const span = hi - lo || Math.max(1, hi * 0.1);
-  // Weeks placed by their number, so a gap of five weeks looks like one.
-  const firstWk = h.length ? h[0].week : 1;
-  const lastWk = h.length ? h[h.length - 1].week : 1;
-  const x = (i: number) => {
-    const wk = h[i]?.week ?? firstWk;
-    return pad.l + (lastWk === firstWk ? (W - pad.l - pad.r) / 2 : ((wk - firstWk) / (lastWk - firstWk)) * (W - pad.l - pad.r));
-  };
+  const weeksShown = Array.from({ length: lastWk - firstWk + 1 }, (_, i) => firstWk + i);
+  const xw = (wk: number) => pad.l + (lastWk === firstWk ? (W - pad.l - pad.r) / 2 : ((wk - firstWk) / (lastWk - firstWk)) * (W - pad.l - pad.r));
   const y = (v: number) => pad.t + (1 - (v - (lo - span * 0.15)) / (span * 1.3)) * (H - pad.t - pad.b);
-  const pts = h.map((w, i) => (w.sets.length > 0 && w.best != null ? { i, w, px: x(i), py: y(w.best) } : null)).filter((q): q is NonNullable<typeof q> => q != null);
+  const pts = winLogged.map((w) => ({ w, px: xw(w.week), py: y(w.best!) }));
+  const labelOf = (wk: number) => h.find((w) => w.week === wk)?.label.replace("Week ", "W") ?? `W${wk}`;
   const target = cur?.target ?? row.kg;
 
   return (
@@ -2112,7 +2114,7 @@ function ProgressDialog({ row, lbs, unit, multiGym }: { row: DraftRow; lbs: bool
         </div>
       </div>
 
-      {/* 3 · The curve: the best set each week, the target dashed. */}
+      {/* 3 · The curve over the last four weeks: the best set each week, the target dashed. */}
       {pts.length > 0 && (
         <svg className="rp-chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${row.name}: best set by week`}>
           {target != null && (
@@ -2127,63 +2129,59 @@ function ProgressDialog({ row, lbs, unit, multiGym }: { row: DraftRow; lbs: bool
           {pts.map((q) => (
             <g key={q.w.week}>
               <circle cx={q.px} cy={q.py} r={q.w.current ? 5 : 3.5} className={`rp-dot${q.w.current ? " now" : ""}`} />
-              <text x={q.px} y={q.py - 9} className="rp-val" textAnchor="middle">
+              <text x={q.px} y={q.py - 8} className="rp-val" textAnchor="middle">
                 {shown(q.w.best!)}
               </text>
             </g>
           ))}
-          {h.map((w, i) => (
-            <text key={w.week} x={x(i)} y={H - 6} className={`rp-axis${w.current ? " now" : ""}`} textAnchor="middle">
-              {w.label.replace("Week ", "W")}
+          {weeksShown.map((wk) => (
+            <text key={wk} x={xw(wk)} y={H - 4} className={`rp-axis${wk === lastWk ? " now" : ""}`} textAnchor="middle">
+              {labelOf(wk)}
             </text>
           ))}
         </svg>
       )}
 
-      {/* 4 · Week by week, newest first: the sets, the best, the step from the week before. */}
-      {logged.length === 0 ? (
-        <p className="rp-none">Nothing logged on this exercise yet.</p>
-      ) : (
-        <div className="rp-weeks">
-          <div className="rp-week head">
-            <span>Week</span>
-            <span>Sets</span>
-            <span>Best</span>
-            <span>Change</span>
-          </div>
-          {[...logged].reverse().map((w) => {
-            const i = logged.indexOf(w);
-            const prev = i > 0 ? logged[i - 1] : null;
-            const step = prev ? w.best! - prev.best! : null;
+      {/* 4 · The last four weeks set by set, as before, with each week's change
+          from the week before on its first row. */}
+      <table className="rd-progress-table rp-table">
+        <thead>
+          <tr>
+            <th>Week</th>
+            <th>Set</th>
+            <th>Weight ({unit})</th>
+            <th>Reps</th>
+            <th>RPE</th>
+            {h.some((w) => w.gym) && <th>Gym</th>}
+            <th>Change</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[...winLogged].reverse().map((w) => {
+            const prev = logged.find((q) => q.week === w.week - 1) ?? null;
             const stepPct = prev && prev.best! > 0 ? Math.round(((w.best! - prev.best!) / prev.best!) * 1000) / 10 : null;
-            return (
-              <div key={w.week} className={`rp-week${w.current ? " now" : ""}`}>
-                <span className="rp-week-name">
-                  {w.label}
-                  {w.gym && <small>{w.gym}</small>}
-                </span>
-                <span className="rp-sets">
-                  {w.sets.map((st) => {
-                    const over = st.kg != null && w.target != null ? st.kg - w.target : null;
-                    return (
-                      <span key={st.n} className={`rd-set${over == null ? "" : over > 0 ? " up" : over < 0 ? " down" : ""}`}>
-                        {st.kg != null ? kgOf(st.kg, lbs) : "—"}×{st.reps ?? "—"}
-                        {st.rpe != null && <small>@{st.rpe}</small>}
-                      </span>
-                    );
-                  })}
-                </span>
-                <span className="rp-best">
-                  {shown(w.best!)} <small>{unit}</small>
-                </span>
-                <span className={`rp-change ${step == null ? "none" : step > 0 ? "up" : step < 0 ? "down" : "flat"}`}>
-                  {step == null ? "—" : step === 0 ? "No change" : `${step > 0 ? "▲" : "▼"} ${shown(Math.abs(step))} ${unit} · ${pct(stepPct)}`}
-                </span>
-              </div>
-            );
+            return w.sets.map((st, i) => {
+              const over = st.kg != null && w.target != null ? st.kg - w.target : null;
+              return (
+                <tr key={`${w.week}-${st.n}`} className={`${w.current ? "now" : ""}${i === 0 ? " first" : ""}`}>
+                  <td>{i === 0 && w.label}</td>
+                  <td>{st.n}</td>
+                  <td className={over == null ? "" : over > 0 ? "up" : over < 0 ? "down" : ""}>{st.kg != null ? kgOf(st.kg, lbs) : "—"}</td>
+                  <td>{st.reps ?? "—"}</td>
+                  <td>{st.rpe ?? "—"}</td>
+                  {h.some((q) => q.gym) && <td>{i === 0 ? w.gym ?? "" : ""}</td>}
+                  <td className={`rp-change ${stepPct == null ? "none" : stepPct > 0 ? "up" : stepPct < 0 ? "down" : "flat"}`}>{i === 0 ? pct(stepPct) : ""}</td>
+                </tr>
+              );
+            });
           })}
-        </div>
-      )}
+          {winLogged.length === 0 && (
+            <tr className="none">
+              <td colSpan={7}>Nothing logged on this exercise in the last four weeks.</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
     </DialogContent>
   );
 }
