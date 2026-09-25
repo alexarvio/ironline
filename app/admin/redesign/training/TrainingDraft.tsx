@@ -2076,10 +2076,14 @@ function ProgressDialog({ row, lbs, unit, multiGym }: { row: DraftRow; lbs: bool
   const values = [...winLogged.map((w) => w.best!), ...win.map((w) => w.target).filter((t): t is number => t != null)];
   const lo = values.length ? Math.min(...values) : 0;
   const hi = values.length ? Math.max(...values) : 1;
-  const span = hi - lo || Math.max(1, hi * 0.1);
+  // Room above the highest point and below the lowest: at least 2.5% of the
+  // weight and 1 kg, more on a wide range (60 to 60.5 draws from about 58.5 to 62).
+  const margin = Math.max(1, hi * 0.025, (hi - lo) * 0.25);
+  const yLo = lo - margin;
+  const yHi = hi + margin;
   const weeksShown = Array.from({ length: lastWk - firstWk + 1 }, (_, i) => firstWk + i);
   const xw = (wk: number) => pad.l + (lastWk === firstWk ? (W - pad.l - pad.r) / 2 : ((wk - firstWk) / (lastWk - firstWk)) * (W - pad.l - pad.r));
-  const y = (v: number) => pad.t + (1 - (v - (lo - span * 0.15)) / (span * 1.3)) * (H - pad.t - pad.b);
+  const y = (v: number) => pad.t + (1 - (v - yLo) / (yHi - yLo)) * (H - pad.t - pad.b);
   const pts = winLogged.map((w) => ({ w, px: xw(w.week), py: y(w.best!) }));
   const labelOf = (wk: number) => h.find((w) => w.week === wk)?.label.replace("Week ", "W") ?? `W${wk}`;
   const target = cur?.target ?? row.kg;
@@ -2154,6 +2158,13 @@ function ProgressDialog({ row, lbs, unit, multiGym }: { row: DraftRow; lbs: bool
               </text>
             </>
           )}
+          {/* The scale's top and bottom, so the headroom reads. */}
+          <text x={pad.l - 6} y={y(yHi) + 3} className="rp-axis" textAnchor="end">
+            {shown(yHi)}
+          </text>
+          <text x={pad.l - 6} y={y(yLo) + 3} className="rp-axis" textAnchor="end">
+            {shown(yLo)}
+          </text>
           {pts.length > 1 && <polyline points={pts.map((q) => `${q.px},${q.py}`).join(" ")} className="rp-line" />}
           {pts.map((q) => (
             <g key={q.w.week}>
