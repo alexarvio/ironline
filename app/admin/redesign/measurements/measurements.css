@@ -94,3 +94,5 @@
 
 /* Notes from the client: date, which check-in, the words, a reply. */
 .rm-note-text { font-size: 13.5px; font-weight: 500; line-height: 1.5; color: #313851; white-space: pre-wrap; min-width: 0; }
+/* No lifestyle phase yet: set one up before adding metrics (25 Sep). */
+.rm-needphase { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 8px; padding: 14px 16px; border: 1px dashed #d5dce6; border-radius: 12px; font-size: 13.5px; color: #5b6474; }

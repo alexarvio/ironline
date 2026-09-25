@@ -347,7 +347,16 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
             );
           })}
           </SortableList>
-          {adding ? (
+          {/* Metrics belong to a lifestyle phase: with none yet, the way to add
+              one is to set the phase up first. */}
+          {!phaseId ? (
+            <div className="rm-needphase">
+              <span>Metrics belong to a lifestyle phase. Set one up for {firstName} first, then add what to track.</span>
+              <button type="button" className="rd-btn primary" onClick={() => setDlg({ kind: "newPhase" })}>
+                New lifestyle phase
+              </button>
+            </div>
+          ) : adding ? (
             <AddMetricRow library={plan.library} groups={plan.groups} have={rows.map((r) => r.name.toLowerCase())} onAdd={addMetric} onClose={() => setAdding(false)} />
           ) : (
             <button type="button" className="rd-session add rm-additem" onClick={() => setAdding(true)}>
