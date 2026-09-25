@@ -581,3 +581,10 @@
 .rd-progress2 > * { flex-shrink: 0; }
 .rp-weeks { max-height: none; overflow: visible; }
 .rp-stat em { font-style: normal; font-size: 11.5px; color: #8b93a1; }
+/* The breakdown compact enough to fit without a scrollbar (25 Sep). */
+.rd-progress2 { gap: 12px; }
+.rp-target { padding: 8px 12px; }
+.rp-stat { padding: 8px 12px; gap: 2px; }
+.rp-stat b { font-size: 17px; }
+.rp-table td, .rp-table th { padding-top: 5px; padding-bottom: 5px; }
+.rp-table td.rp-change { font-size: 12px; }
