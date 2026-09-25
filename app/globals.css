@@ -17199,3 +17199,16 @@ button.ci-hint { cursor: pointer; }
 /* The coach's alternatives in the swap sheet: the name with the coach's note under it. */
 .wo-option-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; text-align: left; }
 .wo-option-note { font-size: 13px; font-weight: 500; color: #5b6474; }
+/* The last call's recap on Home (25 Sep): its title with a chevron; the
+   coach's full text eases open under it. */
+.hm-recap-head { display: flex; align-items: center; gap: 10px; width: 100%; padding: 2px 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.hm-recap-title { flex: 1; min-width: 0; font-size: 15.5px; font-weight: 700; color: #141a24; }
+.hm-recap-chev { flex: none; display: inline-flex; color: #5b6474; transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+.hm-recap-chev svg { width: 16px; height: 16px; }
+.hm-recap-chev.open { transform: rotate(180deg); }
+.hm-recap-body { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease; }
+.hm-recap-body.open { grid-template-rows: 1fr; opacity: 1; }
+.hm-recap-clip { min-height: 0; overflow: hidden; }
+.hm-recap-text { margin: 0; padding-top: 8px; font-size: 14.5px; line-height: 1.5; color: #313851; white-space: pre-wrap; transform: translateY(-4px); transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1); }
+.hm-recap-body.open .hm-recap-text { transform: none; }
+@media (prefers-reduced-motion: reduce) { .hm-recap-chev, .hm-recap-body, .hm-recap-text { transition: none; } }

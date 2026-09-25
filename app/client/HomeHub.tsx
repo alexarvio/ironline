@@ -6,6 +6,7 @@ import VideoReplySheet, { type VideoReplyView } from "./VideoReplySheet";
 import PhaseCards, { type HomePhase, type PhaseFoodToday } from "./PhaseCards";
 import ProgressPicsCard, { type ProgressPics } from "./ProgressPicsCard";
 import QuickActions from "./QuickActions";
+import { ChevronDownIcon } from "../components/icons";
 import type { LinkView } from "../lib/messageLinks";
 import { useNavigateTab, useOpenCheckIn, useOpenCoach, useOpenLink, useOpenMeetings, useOpenMessages, useOpenPhotos } from "./CheckInContext";
 
@@ -307,8 +308,6 @@ export function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<Upcom
   const minsToStart = now != null && Number.isFinite(start) ? (start - now) / 60000 : null;
   const live = minsToStart != null ? minsToStart <= 10 && minsToStart >= -m.durationMinutes : m.startingNow;
   const joinable = !!m.link && live;
-  const [more, setMore] = useState(false);
-  const longRecap = !!recap && recap.text.length > 220;
   const pillLabel = live ? "Live" : m.inLabel;
   return (
     <section className={`hm-mt${openMeetings ? " link" : ""}`} aria-label={`Next meeting with ${coachFirstName}`} onClick={openMeetings ? (e) => openFromCard(e, openMeetings) : undefined}>
@@ -346,12 +345,7 @@ export function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<Upcom
       {recap && (
         <div className="hm-mt-recap">
           <span className="hm-mt-recap-label">Last meeting · {recap.dateLabel}</span>
-          <p className={`hm-mt-recap-text${longRecap && !more ? " clamp" : ""}`}>{recap.text}</p>
-          {longRecap && !more && (
-            <button type="button" className="hm-mt-more" onClick={() => setMore(true)}>
-              More
-            </button>
-          )}
+          <RecapFold recap={recap} />
         </div>
       )}
       {openMeetings && (
@@ -372,8 +366,6 @@ function openFromCard(e: React.MouseEvent, open: () => void) {
 
 // Nothing booked: the coach's notes from the last call instead.
 function LastMeetingCard({ recap, coachFirstName }: { recap: NonNullable<MeetingRecap>; coachFirstName: string }) {
-  const [more, setMore] = useState(false);
-  const long = recap.text.length > 220;
   const openMeetings = useOpenMeetings();
   // A heading above, like "Latest from": the card holds the date and the notes.
   return (
@@ -391,14 +383,30 @@ function LastMeetingCard({ recap, coachFirstName }: { recap: NonNullable<Meeting
         <div className="hm-mt-top">
           <span className="hm-mt-pill">{recap.dateLabel}</span>
         </div>
-        <p className={`hm-mt-recap-text${long && !more ? " clamp" : ""}`}>{recap.text}</p>
-        {long && !more && (
-          <button type="button" className="hm-mt-more" onClick={() => setMore(true)}>
-            More
-          </button>
-        )}
+        <RecapFold recap={recap} />
       </div>
     </section>
+  );
+}
+
+// What was agreed, folded to its title: a chevron opens the coach's full
+// recap under it, eased open.
+function RecapFold({ recap }: { recap: NonNullable<MeetingRecap> }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="hm-recap">
+      <button type="button" className="hm-recap-head" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <span className="hm-recap-title">{recap.title}</span>
+        <span className={`hm-recap-chev${open ? " open" : ""}`} aria-hidden="true">
+          <ChevronDownIcon />
+        </span>
+      </button>
+      <div className={`hm-recap-body${open ? " open" : ""}`} aria-hidden={!open}>
+        <div className="hm-recap-clip">
+          <p className="hm-recap-text">{recap.text}</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
