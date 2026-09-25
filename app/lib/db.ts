@@ -521,6 +521,11 @@ type Invoice = {
   from?: InvoiceParty;
   /** Who it is for, frozen with `from`. */
   to?: { name: string; email?: string; address?: string };
+  /** When it was paid, and how: the coach marking it, or Stripe telling us. */
+  paid_at?: string;
+  paid_via?: "manual" | "stripe";
+  /** The Stripe checkout it was paid through. */
+  stripe_session_id?: string;
 };
 export type InvoiceLine = { description: string; quantity: number; unit_price: number };
 export type InvoiceParty = CoachBusiness & Pick<CoachInvoicing, "iban" | "bic" | "sort_code" | "routing_number" | "bsb" | "account_number" | "bank_details" | "account_holder" | "tax_note" | "footer">;
@@ -1008,7 +1013,9 @@ export type CoachInvoicing = {
   tax_note?: string;
   footer?: string;
 };
-export type CoachSettings = { business?: CoachBusiness; invoicing?: CoachInvoicing };
+/** The coach's own Stripe account (lib/stripe.ts), once they start connecting it. */
+export type CoachPayments = { stripe_account_id?: string; stripe_status?: "pending" | "active"; stripe_checked_at?: string };
+export type CoachSettings = { business?: CoachBusiness; invoicing?: CoachInvoicing; payments?: CoachPayments };
 
 export type Data = {
   users: User[];

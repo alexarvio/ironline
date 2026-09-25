@@ -29,7 +29,7 @@ export function resetsAvailable(): boolean {
 
 // Where links point. Never the request's Host header: that is the asker's to
 // choose, and a link to their own domain would hand them the token.
-function appUrl(): string | null {
+export function appUrl(): string | null {
   const set = process.env.APP_URL?.trim().replace(/\/+$/, "");
   if (set) return set;
   const railway = process.env.RAILWAY_PUBLIC_DOMAIN?.trim();

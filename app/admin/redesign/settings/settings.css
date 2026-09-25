@@ -35,3 +35,5 @@
 .rst-bar { position: sticky; bottom: 16px; z-index: 5; display: flex; align-items: center; gap: 8px; padding: 10px 12px 10px 18px; border: 1px solid #dfe3e8; border-radius: 14px; background: #fff; box-shadow: 0 14px 34px -16px rgba(8, 31, 92, 0.35); }
 .rst-bar > span { flex: 1; font-size: 13px; font-weight: 700; color: #313851; }
 .rst-bar > span.bad { color: #b3471d; }
+.rst-ok { background: #dff3ea; color: #1b7a4b; }
+.rst-pay { display: flex; flex-direction: column; gap: 12px; }

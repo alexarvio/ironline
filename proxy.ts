@@ -33,7 +33,8 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Everything except Next's own assets, the uploads route and the coach's
+  // Everything except Next's own assets, the uploads route, Stripe's webhook
+  // (signed, no cookie) and the coach's
   // video-reply upload (which do their own per-request authorization; the
   // proxy would also buffer and cut off a big upload body), and common static files. The app icons
   // (app/icon.png, app/apple-icon.png) and the logo under public/brand must
@@ -42,5 +43,5 @@ export const config = {
   // shows the logo before anyone has a session. sw.js too: the browser
   // re-checks the service worker on its own, cookie or not, and a redirect
   // to /login there would break push notifications once a session expired.
-  matcher: ["/((?!_next/static|_next/image|uploads|api/video-reply|favicon.ico|manifest.webmanifest|icon.png|apple-icon.png|sw.js|icons/|brand/).*)"],
+  matcher: ["/((?!_next/static|_next/image|uploads|api/video-reply|api/stripe/webhook|favicon.ico|manifest.webmanifest|icon.png|apple-icon.png|sw.js|icons/|brand/).*)"],
 };
