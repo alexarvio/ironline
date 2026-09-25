@@ -97,7 +97,10 @@ const fd = (o: Record<string, string | number | null | undefined>) => {
   return f;
 };
 const LB = 2.20462;
-const kgOf = (v: number | null, lbs: boolean) => (v == null ? "—" : lbs ? `${Math.ceil((v * LB) / 0.5) * 0.5}` : `${v}`);
+// Weights to the nearest half: a set logged in pounds is stored as kilos
+// with long decimals (110 lb is 49.8952 kg), which read as noise.
+const half = (x: number) => Math.round(x * 2) / 2;
+const kgOf = (v: number | null, lbs: boolean) => (v == null ? "—" : `${half(lbs ? v * LB : v)}`);
 const restOf = (s: number | null) => (s == null ? null : s >= 60 && s % 60 === 0 ? `${s / 60} min` : s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : `${s}s`);
 const MAX_SESSIONS = 7;
 const MAX_COLS = 6;
