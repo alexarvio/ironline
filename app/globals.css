@@ -17303,3 +17303,13 @@ button.ci-hint { cursor: pointer; }
 .wo-ex-title-row { align-items: baseline; }
 .wo-ex-title-row .wo-nextup { flex-direction: row; align-items: baseline; gap: 6px; }
 .wo-ex-title-row .wo-nextup-label { flex: none; }
+/* Back and ⋯ in headers: the icon alone, no round background, across the
+   client app (25 Sep). Over a photo (the coach profile) the arrow keeps a
+   soft shadow so it reads. */
+.wo-head-btn, .wo-head-btn:hover, .wo-head-btn:active,
+.so-back, .so-back:hover, .so-more, .so-more:hover,
+.ci-back, .ci-back:hover,
+.cn-icon-btn, .cn-icon-btn:active,
+.cpf-back, .cpf-back:hover, .cpf-back.solid { background: transparent; box-shadow: none; border-color: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.cpf-back { color: #fff; filter: drop-shadow(0 1px 3px rgba(8, 15, 35, 0.55)); }
+.cpf-back.solid { color: #1e3a6e; filter: none; }
