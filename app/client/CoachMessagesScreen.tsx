@@ -65,8 +65,37 @@ export default function CoachMessagesScreen({ coachName, messages, viewerIsClien
     const t = setInterval(() => router.refresh(), POLL_MS);
     return () => clearInterval(t);
   }, [router]);
+  // Open at the newest message, and stay there while pictures and videos
+  // load in above it (they grow the thread after the first jump, which used
+  // to leave it somewhere in the middle). Once the client scrolls up to read
+  // back, it stops following, until a new message comes in.
+  const body = useRef<HTMLElement>(null);
+  const atEnd = useRef(true);
   useEffect(() => {
-    end.current?.scrollIntoView({ block: "end" });
+    const el = body.current;
+    if (!el) return;
+    const toEnd = () => {
+      if (atEnd.current) el.scrollTop = el.scrollHeight;
+    };
+    const onScroll = () => {
+      atEnd.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    };
+    toEnd();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    const ro = new ResizeObserver(toEnd);
+    for (const child of Array.from(el.children)) ro.observe(child);
+    // Pictures loading in grow the thread without a resize the observer sees on the scroller itself.
+    el.addEventListener("load", toEnd, true);
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      el.removeEventListener("load", toEnd, true);
+      ro.disconnect();
+    };
+  }, []);
+  useEffect(() => {
+    atEnd.current = true;
+    const el = body.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages.length]);
 
   const saveEdit = () => {
@@ -162,7 +191,7 @@ export default function CoachMessagesScreen({ coachName, messages, viewerIsClien
           {pinned.map((m) => bubble(m, true))}
         </section>
       )}
-      <main className="cm-body">
+      <main ref={body} className="cm-body">
         {days.length === 0 ? (
           <p className="cm-empty">Nothing yet. {coachName} writes here between calls: a nudge, a tweak to the plan, a well done. You can write back any time.</p>
         ) : (

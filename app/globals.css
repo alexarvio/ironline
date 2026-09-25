@@ -17237,3 +17237,20 @@ button.ci-hint { cursor: pointer; }
 .cg-log-pager button:disabled { opacity: 0.35; cursor: default; }
 /* Swiping between metrics: the browser keeps the up-and-down scroll, the page handles sideways. */
 .cg { touch-action: pan-y; will-change: transform; }
+/* Chat bubbles (25 Sep): three quarters of the row at most, either side. */
+.cm-msg-row .cm-msg-wrap, .cm-item.mine .cm-msg-row .cm-msg-wrap { flex: 0 1 auto; max-width: 75%; }
+.cm-item:not(.mine) .cm-msg-row .cm-msg-wrap { align-items: flex-start; }
+/* A phone turned sideways (25 Sep): iOS ignores the manifest's portrait lock
+   for web apps, and the app is built upright, so it asks to be turned back.
+   Phones only (a short, wide screen), never a tablet or a computer; and not
+   the Android keyboard, which shortens the screen without making it wide. */
+@media (orientation: landscape) and (max-height: 500px) and (min-aspect-ratio: 3/2) {
+  .phone-frame::after {
+    content: "Turn your phone upright to use Ironline";
+    position: fixed; inset: 0; z-index: 10000;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+    background: #F4F7FC; color: #141a24;
+    font-family: var(--font-archivo), "Archivo", -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 17px; font-weight: 700; text-align: center;
+  }
+}
