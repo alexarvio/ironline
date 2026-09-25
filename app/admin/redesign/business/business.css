@@ -25,3 +25,8 @@
 .bzd-name { font-weight: 700; color: #141a24; text-decoration: none; }
 .bzd-name:hover { text-decoration: underline; text-underline-offset: 3px; }
 .bzd-open { background: #fdeee8; color: #b3471d; }
+/* Tiles (25 Sep): room above the titles, and each row of them stretched to the page's width. */
+.bzd-tiles { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.bzd-tiles.four { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.bzd-tile { padding: 0; }
+.bzd-tile > * { padding: 18px 20px 16px; gap: 6px; }
