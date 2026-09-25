@@ -133,7 +133,10 @@ export default function InvoicesDraft({ clientId, firstName, clientName, plan }:
                 const late = inv.status === "sent" && !!inv.dueDate && inv.dueDate < plan.today;
                 return (
                   <TableRow key={inv.id}>
-                    <TableCell className="riv-number">{inv.number}</TableCell>
+                    <TableCell className="riv-number">
+                      {inv.number}
+                      {inv.paidVia === "stripe" && <small className="riv-online">paid online</small>}
+                    </TableCell>
                     <TableCell>{shortDate(inv.issueDate)}</TableCell>
                     <TableCell className={late ? "riv-late" : ""}>{inv.dueDate ? shortDate(inv.dueDate) : "–"}</TableCell>
                     <TableCell className="riv-what">

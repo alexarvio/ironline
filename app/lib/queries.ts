@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, CardioEntry } from "./db";
-import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientEvent, ClientGym, ClientPhase, CoachProfile, CoachBusiness, CoachInvoicing, CoachSettings, Data, EventCategory, InvoiceLine, InvoiceParty, PhaseTrack, VideoRequest } from "./db";
+import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientEvent, ClientGym, ClientPhase, CoachProfile, CoachBusiness, CoachInvoicing, CoachPayments, CoachSettings, Data, EventCategory, InvoiceLine, InvoiceParty, PhaseTrack, VideoRequest } from "./db";
 import type { CoachProfileFields, CoachProfileView } from "./coachProfileView";
 import { getCatalogFood, searchCatalog, type CatalogFood } from "./foods/catalog";
 import type { OffProduct } from "./foods/openfoodfacts";
@@ -10518,6 +10518,14 @@ export function setInvoiceStatusFrozen(invoiceId: number, status: Invoice["statu
     if (coachId != null) inv.from = coachParty(coachId);
     inv.to = clientParty(inv.client_id);
   }
+  // Paid: when, and (unless Stripe says so right after) by the coach's hand.
+  if (status === "paid" && inv.status !== "paid") {
+    inv.paid_at = new Date().toISOString();
+    inv.paid_via = "manual";
+  } else if (status !== "paid") {
+    delete inv.paid_at;
+    delete inv.paid_via;
+  }
   inv.status = status;
   inv.updated_at = new Date().toISOString().replace("T", " ").slice(0, 19);
   persist();
@@ -10558,6 +10566,8 @@ export function getInvoiceView(invoiceId: number) {
     currency: inv.currency ?? "EUR",
     taxLabel: inv.tax_label ?? "VAT",
     status: inv.status,
+    paidAt: inv.paid_at ?? null,
+    paidVia: inv.paid_via ?? null,
     lines,
     vatRate: rate,
     pricesIncludeVat: incl,
@@ -10577,4 +10587,38 @@ export function listClientInvoices(clientId: number): InvoiceView[] {
     .map((i) => getInvoiceView(i.id))
     .filter((v): v is InvoiceView => !!v)
     .sort((a, b) => (a.issueDate === b.issueDate ? b.id - a.id : a.issueDate < b.issueDate ? 1 : -1));
+}
+
+// ---- Online payments (lib/stripe.ts): the coach's Stripe account ------------
+
+export function getCoachPayments(coachId: number): CoachPayments {
+  return getCoachSettings(coachId).payments ?? {};
+}
+
+/** Changes or (null) forgets the coach's Stripe connection. */
+export function setCoachPayments(coachId: number, patch: CoachPayments | null) {
+  const user = getData().users.find((u) => u.id === coachId && u.role === "coach");
+  if (!user) return;
+  const settings = { ...(user.coach_settings ?? {}) };
+  if (patch == null) delete settings.payments;
+  else settings.payments = { ...(settings.payments ?? {}), ...patch, stripe_checked_at: new Date().toISOString() };
+  user.coach_settings = settings;
+  persist();
+}
+
+export function coachIdForStripeAccount(account: string): number | null {
+  return getData().users.find((u) => u.role === "coach" && u.coach_settings?.payments?.stripe_account_id === account)?.id ?? null;
+}
+
+/** Stripe says the checkout went through: paid, if it is this coach's account and this invoice. Answers the invoice when it changed. */
+export function markInvoicePaidOnline(invoiceId: number, sessionId: string, account: string | undefined) {
+  const inv = getData().invoices.find((i) => i.id === invoiceId);
+  if (!inv || inv.status === "paid") return null;
+  const coachId = inv.coach_id ?? coachIdOfClient(inv.client_id);
+  if (coachId == null || !account || getCoachPayments(coachId).stripe_account_id !== account) return null;
+  setInvoiceStatusFrozen(invoiceId, "paid");
+  inv.paid_via = "stripe";
+  inv.stripe_session_id = sessionId;
+  persist();
+  return inv;
 }

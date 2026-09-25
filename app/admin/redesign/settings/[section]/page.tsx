@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { requireCoach } from "../../../../lib/auth";
 import { getCoachSettings } from "../../../../lib/queries";
 import { LEGAL } from "../../../../lib/legal";
+import { paymentsState, refreshCoachStripe } from "../../../../lib/payments";
 import { loadRail } from "../../loaders";
 import RedesignRail from "../../RedesignRail";
 import { SETTINGS, type SettingsKey } from "../../settingsNav";
@@ -17,11 +18,15 @@ import "../settings.css";
 //   /admin/redesign/settings/account | business | invoicing | privacy
 export const dynamic = "force-dynamic";
 
-export default async function SettingsPage({ params }: { params: Promise<{ section: string }> }) {
+export default async function SettingsPage({ params, searchParams }: { params: Promise<{ section: string }>; searchParams: Promise<{ stripe?: string }> }) {
   const coach = await requireCoach();
   const { section } = await params;
+  const { stripe } = await searchParams;
   const meta = SETTINGS.find((s) => s.key === section && s.key !== "profile");
   if (!meta) notFound();
+  // Back from Stripe (?stripe=back), or still unfinished: ask Stripe where the account stands.
+  const known = paymentsState(coach.id);
+  const payments = section === "invoicing" && (stripe || known.status === "pending") ? await refreshCoachStripe(coach.id) : known;
   const settings = getCoachSettings(coach.id);
 
   return (
@@ -35,7 +40,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ secti
           </header>
           {section === "account" && <AccountSettings email={coach.email} />}
           {section === "business" && <BusinessSettings key={JSON.stringify(settings.business ?? {})} initial={settings.business ?? {}} />}
-          {section === "invoicing" && <InvoicingSettings key={JSON.stringify(settings.invoicing ?? {})} initial={settings.invoicing ?? {}} business={settings.business ?? {}} />}
+          {section === "invoicing" && <InvoicingSettings key={JSON.stringify(settings.invoicing ?? {})} initial={settings.invoicing ?? {}} business={settings.business ?? {}} payments={payments} />}
           {section === "privacy" && <PrivacySettings company={LEGAL.company} country={LEGAL.country} contactEmail={LEGAL.contactEmail} updated={LEGAL.updated} />}
         </div>
       </div>

@@ -41,3 +41,4 @@
 .riv-totals dt { font-size: 12.5px; font-weight: 600; color: #8b93a1; text-align: right; }
 .riv-totals dd { margin: 0; font-size: 13px; font-weight: 700; color: #313851; text-align: right; font-variant-numeric: tabular-nums; }
 .riv-totals .grand { padding-top: 4px; font-size: 15px; font-weight: 800; color: #141a24; }
+.riv-online { display: block; font-size: 11px; font-weight: 600; color: #1b7a4b; }

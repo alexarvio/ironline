@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { saveCoachBusinessAction, saveCoachInvoicingAction } from "../../../lib/actions";
+import { connectStripeAction, disconnectStripeAction, saveCoachBusinessAction, saveCoachInvoicingAction } from "../../../lib/actions";
+import type { PaymentsState } from "../../../lib/payments";
 import { changeOwnPasswordAction, logoutAction } from "../../../lib/auth-actions";
 import type { CoachBusiness, CoachInvoicing } from "../../../lib/db";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/basics";
@@ -208,7 +209,55 @@ export function BusinessSettings({ initial }: { initial: CoachBusiness }) {
 
 // ---- Invoicing & payments: how invoices are numbered, priced and paid. The
 // country from Business details fills in what is left open.
-export function InvoicingSettings({ initial, business }: { initial: CoachInvoicing; business: CoachBusiness }) {
+// Online payments: the coach's own Stripe account (lib/stripe.ts). Off until
+// the server has Stripe's keys; then Connect, finish on Stripe, Connected.
+function OnlinePayments({ state }: { state: PaymentsState }) {
+  const router = useRouter();
+  const [busy, start] = useTransition();
+  const [error, setError] = useState("");
+  const go = () =>
+    start(async () => {
+      const r = await connectStripeAction();
+      if (r.url) window.location.href = r.url;
+      else setError(r.error ?? "Stripe did not answer. Try again.");
+    });
+  const badge =
+    state.status === "active" ? <Badge className="rst-ok">Connected</Badge> : state.status === "pending" ? <Badge className="rst-warn">Not finished</Badge> : state.status === "off" ? <Badge className="rst-soon">Soon</Badge> : null;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Online payments{state.testMode ? " · test mode" : ""}</CardTitle>
+        {badge}
+      </CardHeader>
+      <CardContent className="rst-pay">
+        <p className="rst-para">
+          {state.status === "active"
+            ? "Clients see a Pay button on every invoice you send, and pay by card, iDEAL, PayPal or whatever you have switched on in Stripe. Paid invoices mark themselves paid. The money goes to your Stripe account."
+            : state.status === "pending"
+              ? "Stripe still needs a few details before your clients can pay you online."
+              : "Clients pay an invoice in the app by card, iDEAL, PayPal or whatever works where they are, and it marks itself paid. Through your own Stripe account, connected here."}
+        </p>
+        {state.status !== "off" && (
+          <div className="rst-row-end">
+            <span className={`rst-note${error ? " bad" : ""}`}>{error}</span>
+            {state.status !== "none" && (
+              <Button variant="ghost" disabled={busy} onClick={() => start(async () => { await disconnectStripeAction(); router.refresh(); toast.success("Stripe disconnected here"); })}>
+                Disconnect
+              </Button>
+            )}
+            {state.status !== "active" && (
+              <Button onClick={go} disabled={busy}>
+                {busy ? "Opening Stripe…" : state.status === "pending" ? "Finish on Stripe" : "Connect Stripe"}
+              </Button>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export function InvoicingSettings({ initial, business, payments }: { initial: CoachInvoicing; business: CoachBusiness; payments: PaymentsState }) {
   const eff = invoicingFor(business, initial);
   const country = eff.country;
   const d = useDraft<CoachInvoicing>({ currency: eff.currency, vat_rate: eff.rate, prices_include_vat: eff.pricesIncludeVat, payment_terms_days: eff.termsDays, number_prefix: "", next_number: 1, ...initial }, saveCoachInvoicingAction, "Invoicing saved");
@@ -334,15 +383,7 @@ export function InvoicingSettings({ initial, business }: { initial: CoachInvoici
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Online payments</CardTitle>
-          <Badge className="rst-soon">Soon</Badge>
-        </CardHeader>
-        <CardContent>
-          <p className="rst-para">Clients pay an invoice in the app by card, iDEAL, PayPal or whatever works where they are, and it marks itself paid. Through your own Stripe account, connected here.</p>
-        </CardContent>
-      </Card>
+      <OnlinePayments state={payments} />
 
       <Card>
         <CardHeader>

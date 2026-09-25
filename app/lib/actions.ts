@@ -2,6 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { getData, type CoachBusiness, type CoachInvoicing } from "./db";
+import { createCoachAccount, invoiceCheckout, onboardingLink, stripeConfigured } from "./stripe";
+import { canPayOnline } from "./payments";
+import { appUrl } from "./passwordReset";
 import { lookupOpenFoodFacts, searchOpenFoodFacts } from "./foods/openfoodfacts";
 import { revalidatePath } from "next/cache";
 import {
@@ -172,6 +175,10 @@ import {
   createInvoice,
   setInvoiceStatusFrozen,
   deleteUnsentInvoice,
+  getCoachPayments,
+  setCoachPayments,
+  getCoachSettings,
+  listClientInvoices,
   type NewInvoice,
   updateCalendarEntry,
   getCalendarEntry,
@@ -3387,4 +3394,60 @@ export async function deleteInvoiceAction(invoiceId: number) {
   const ok = deleteUnsentInvoice(Number(invoiceId));
   revalidatePath("/admin");
   return ok;
+}
+
+// ---- Online payments (lib/stripe.ts, lib/payments.ts) ----
+
+/** The coach starts or finishes connecting Stripe: answers with Stripe onboarding page to go to. */
+export async function connectStripeAction(): Promise<{ url?: string; error?: string }> {
+  const coach = await requireCoach();
+  if (!stripeConfigured()) return { error: "Online payments are not switched on yet." };
+  const base = appUrl();
+  if (!base) return { error: "The app does not know its own address (APP_URL)." };
+  try {
+    let account = getCoachPayments(coach.id).stripe_account_id;
+    if (!account) {
+      const b = getCoachSettings(coach.id).business ?? {};
+      account = await createCoachAccount(b.billing_email || coach.email, b.country_code || null);
+      setCoachPayments(coach.id, { stripe_account_id: account, stripe_status: "pending" });
+    }
+    const back = `${base}/admin/redesign/settings/invoicing?stripe=back`;
+    return { url: await onboardingLink(account, back, `${base}/admin/redesign/settings/invoicing?stripe=retry`) };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Stripe did not answer. Try again." };
+  }
+}
+
+/** Forgets the connection here; the Stripe account itself stays the coach own. */
+export async function disconnectStripeAction() {
+  const coach = await requireCoach();
+  setCoachPayments(coach.id, null);
+  revalidatePath("/admin/redesign/settings");
+}
+
+/** The client pays one of their invoices: answers with the Stripe checkout to go to. */
+export async function payInvoiceAction(invoiceId: number): Promise<{ url?: string; error?: string }> {
+  const client = await getSessionUser();
+  if (!client || client.role !== "client" || client.client_id == null) return { error: "Signed out. Sign in again." };
+  const v = listClientInvoices(client.client_id).find((i) => i.id === Number(invoiceId));
+  if (!v || v.status === "paid") return { error: "This invoice is already paid." };
+  const pay = v.coachId != null ? getCoachPayments(v.coachId) : {};
+  if (!canPayOnline(v.coachId) || !pay.stripe_account_id) return { error: "Paying online is not available for this invoice. Use the bank details on it." };
+  const base = appUrl();
+  if (!base) return { error: "Paying online is not available right now." };
+  try {
+    const s = await invoiceCheckout(pay.stripe_account_id, {
+      invoiceId: v.id,
+      number: v.number,
+      amount: v.total,
+      currency: v.currency,
+      seller: v.from.business_name || v.from.legal_name || "",
+      email: v.to.email,
+      successUrl: `${base}/client/invoices/${v.id}?paid=1`,
+      cancelUrl: `${base}/client/invoices/${v.id}`,
+    });
+    return { url: s.url };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Stripe did not answer. Try again." };
+  }
 }
