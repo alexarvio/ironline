@@ -499,3 +499,14 @@
 .rd-swaprow-text .rd-swapdot { margin-left: 0; }
 .rd-set.swap { background: #FBE7C6; color: #9a5b0c; }
 .rd-set.swap small { color: #b9853f; }
+/* The session head's right side as unlabelled columns (25 Sep): a slot a
+   kind, a set width, the pill centred, so they line up down the week. */
+.rd-session-tags { gap: 8px; }
+.rd-tagslot { flex: none; display: inline-flex; align-items: center; justify-content: center; min-width: 0; }
+.rd-tagslot.sm { width: 26px; }
+.rd-tagslot.time { width: 60px; }
+.rd-tagslot.gym { width: 132px; }
+.rd-tagslot.state { width: 92px; }
+.rd-tagslot .rd-tag, .rd-tagslot .rd-pill { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.rd-tag.time { background: #f1f3f7; color: #8b93a1; }
+.rd-pill.idle { background: #e4e8ee; color: #5b6474; }

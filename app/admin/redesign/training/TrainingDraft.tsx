@@ -654,24 +654,32 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                 <span className="rd-session-count">{s.cardio.length ? `${s.cardio.length} cardio` : ""}</span>
                 {/* On the right, right to left: the state, the time, the gym,
                     a swap, the client's note. */}
+                {/* Unlabelled columns on the right, each a set width with its
+                    pill centred, so they line up down the week whatever the
+                    gym: (left to right) a swap, the client's note, the time,
+                    the gym, the state. */}
                 <span className="rd-session-tags">
-                  {s.note && (
-                    <span className="rd-tag note" title={`${firstName}'s note: ${s.note}`} aria-label={`${firstName} left a note: ${s.note}`}>
-                      <ChatIcon />
-                    </span>
-                  )}
-                  {(() => {
-                    const n = rows.filter((r) => r.swap).length;
-                    return n > 0 ? (
-                      <span className="rd-swapdot static" title={`${firstName} swapped ${n} exercise${n === 1 ? "" : "s"} in this session`} aria-label={`${n} swapped`}>
-                        <SwapIcon />
-                        {n > 1 && <b>{n}</b>}
+                  <span className="rd-tagslot sm">
+                    {(() => {
+                      const n = rows.filter((r) => r.swap).length;
+                      return n > 0 ? (
+                        <span className="rd-swapdot static" title={`${firstName} swapped ${n} exercise${n === 1 ? "" : "s"} in this session`} aria-label={`${n} swapped`}>
+                          <SwapIcon />
+                          {n > 1 && <b>{n}</b>}
+                        </span>
+                      ) : null;
+                    })()}
+                  </span>
+                  <span className="rd-tagslot sm">
+                    {s.note && (
+                      <span className="rd-tag note" title={`${firstName}'s note: ${s.note}`} aria-label={`${firstName} left a note: ${s.note}`}>
+                        <ChatIcon />
                       </span>
-                    ) : null;
-                  })()}
-                  {s.gym && <span className="rd-tag gym">{s.gym}</span>}
-                  {s.duration != null && <span className="rd-tag time">{s.duration} min</span>}
-                  {status && <span className={`rd-pill ${status.cls}`}>{status.text}</span>}
+                    )}
+                  </span>
+                  <span className="rd-tagslot time">{s.duration != null && <span className="rd-tag time">{s.duration} min</span>}</span>
+                  <span className="rd-tagslot gym">{s.gym && <span className="rd-tag gym" title={s.gym}>{s.gym}</span>}</span>
+                  <span className="rd-tagslot state">{status ? <span className={`rd-pill ${status.cls}`}>{status.text}</span> : rows.length + s.cardio.length > 0 ? <span className="rd-pill idle">Not started</span> : null}</span>
                 </span>
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger className="rd-btn ghost" aria-label={`More for ${name}`}>
