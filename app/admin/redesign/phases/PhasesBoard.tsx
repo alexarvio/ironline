@@ -183,7 +183,7 @@ export default function PhasesBoard({ data }: { data: PhasesBoardData }) {
                                     title={`${c.name} · ${TRACK_LABEL[p.track]} · ${p.name} · ${short(p.start)} – ${short(p.end)}`}
                                   >
                                     <span>{p.name}</span>
-                                    {p.soon && <em>{p.weeksLeft === 1 ? "last wk" : `${p.weeksLeft} wk left`}</em>}
+                                    {p.soon && <em>{p.weeksLeft === 1 ? "last week" : `${p.weeksLeft} weeks left`}</em>}
                                   </button>
                                 );
                               }

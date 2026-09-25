@@ -429,7 +429,9 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                       <Link href={`/admin/redesign/training?client=${clientId}&program=${p.id}`} scroll={false} className={p.id === program.id ? "on" : ""}>
                         <span className="rd-switch-name">{p.name}</span>
                         <span className={`rd-status ${p.state}`}>{stateLabel(p.state)}</span>
-                        <small>{p.weeks} wk</small>
+                        <small>
+                          {p.weeks} {p.weeks === 1 ? "week" : "weeks"}
+                        </small>
                       </Link>
                     </DropdownMenuItem>
                   ))}

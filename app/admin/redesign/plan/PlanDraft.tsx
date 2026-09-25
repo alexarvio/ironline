@@ -1040,7 +1040,7 @@ function GoalDialog({ firstName, goal, options, phases, today, onSave }: { first
     if (!th || !tracking) return "Text only";
     if (tracking.kind === "metric") return `Metric · ${th.name} ${dir} ${fmtNum(tracking.target)}${unit ? ` ${unit}` : ""} · ${byRule}`;
     if (tracking.kind === "exercise") return `Exercise · ${th.name}${multiGym ? ` at ${options.gyms.find((g) => String(g.id) === gymId)?.name ?? "gym"}` : ""} · ${fmtNum(tracking.weight)} × ${tracking.reps}`;
-    return `Habit · ${th.name} ${dir} ${fmtNum(tracking.value)} · ${tracking.daysPerWeek} / wk`;
+    return `Habit · ${th.name} ${dir} ${fmtNum(tracking.value)} · ${tracking.daysPerWeek} / week`;
   })();
 
   // The client's card, as it would read today.

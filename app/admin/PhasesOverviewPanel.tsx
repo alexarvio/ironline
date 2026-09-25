@@ -226,10 +226,10 @@ export default function PhasesOverviewPanel({ coachId, win }: { coachId: number;
                                       // A bar that starts under the clipped left edge keeps its name in view.
                                       // An ending-soon bar keeps its orange outline; every other bar takes its state's.
                                       style={{ gridColumn: `${from + 1} / span ${to - from + 1}`, gridRow: li + 1, paddingLeft: `calc(8px + ${(Math.max(0, 0.5 + intoWeek - from) / (to - from + 1)) * 100}%)`, background: chrome.band, color: chrome.edge, ...(p.soon ? {} : { borderColor: chrome.line, borderStyle: chrome.dashed ? "dashed" : "solid" }) }}
-                                      title={`${c.name} · ${TRACK_LABEL[p.track]} · ${p.name} · ${total} wk, ${shortDate(p.start_week)} – ${shortDate(phaseLastDay(p.end_week))} · ${state}`}
+                                      title={`${c.name} · ${TRACK_LABEL[p.track]} · ${p.name} · ${total} ${total === 1 ? "week" : "weeks"}, ${shortDate(p.start_week)} – ${shortDate(phaseLastDay(p.end_week))} · ${state}`}
                                     >
                                       <span className="pl-bar-name">{p.name}</span>
-                                      {p.soon && <span className="pho-left">{p.weeksLeft === 1 ? "last wk" : `${p.weeksLeft} wk left`}</span>}
+                                      {p.soon && <span className="pho-left">{p.weeksLeft === 1 ? "last week" : `${p.weeksLeft} weeks left`}</span>}
                                     </Link>
                                   );
                                 })

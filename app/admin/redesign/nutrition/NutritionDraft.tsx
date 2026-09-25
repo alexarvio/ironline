@@ -276,7 +276,9 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
                       <Link href={`/admin/redesign/nutrition?client=${clientId}&phase=${p.id}`} scroll={false} className={p.id === plan.id ? "on" : ""}>
                         <span className="rd-switch-name">{p.name}</span>
                         <span className={`rd-status ${p.state}`}>{stateLabel(p.state)}</span>
-                        <small>{p.weeks} wk</small>
+                        <small>
+                          {p.weeks} {p.weeks === 1 ? "week" : "weeks"}
+                        </small>
                       </Link>
                     </DropdownMenuItem>
                   ))}
