@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import DragList from "../../../components/DragList";
 import CoachProfileScreen from "../../../client/CoachProfileScreen";
 import AvatarCropDialog from "../../AvatarCropDialog";
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/basics";
+import { Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch, Textarea } from "../../../components/ui/form";
 import { publishCoachProfileAction, removeCoachPhotoAction, saveCoachProfileAction, uploadCoachPhotoAction } from "../../../lib/actions";
 import { COACH_PROFILE_LIMITS as LIMIT, type CoachProfileView, type CoachRole, type CoachStudy } from "../../../lib/coachProfileView";
 
@@ -163,13 +164,18 @@ export default function ProfileEditor({ profile, coaches, currentCoachId }: { pr
         <div className="rpf-head-right">
           <Badge className={`rpf-state${published ? " on" : ""}`}>{published ? "Published" : "Not published"}</Badge>
           {coaches.length > 1 && (
-            <select className="rd-input rpf-select" value={profile.coachId} onChange={(e) => router.push(`/admin/redesign/profile?coachId=${e.target.value}`)} aria-label="Whose profile">
-              {coaches.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.email}
-                </option>
-              ))}
-            </select>
+            <Select value={String(profile.coachId)} onValueChange={(v) => router.push(`/admin/redesign/profile?coachId=${v}`)}>
+              <SelectTrigger className="rpf-select" aria-label="Whose profile">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {coaches.map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    {c.email}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
         </div>
       </header>
@@ -239,7 +245,7 @@ export default function ProfileEditor({ profile, coaches, currentCoachId }: { pr
                   </Badge>
                 ))}
                 {specialties.length < LIMIT.specialties && (
-                  <input
+                  <Input
                     className="rpf-chip-input"
                     value={chipDraft}
                     maxLength={40}
@@ -275,9 +281,9 @@ export default function ProfileEditor({ profile, coaches, currentCoachId }: { pr
                     id: s.key,
                     node: (
                       <div className="rpf-row">
-                        <input className="rd-input" value={s.title} maxLength={80} placeholder="MSc Sports science" aria-label="What was studied" onChange={(e) => setStudies((list) => list.map((r) => (r.key === s.key ? { ...r, title: e.target.value } : r)))} />
-                        <input className="rd-input" value={s.place} maxLength={80} placeholder="University of Jyväskylä" aria-label="Where" onChange={(e) => setStudies((list) => list.map((r) => (r.key === s.key ? { ...r, place: e.target.value } : r)))} />
-                        <input className="rd-input" value={s.year} maxLength={12} placeholder="2014" aria-label="Year" onChange={(e) => setStudies((list) => list.map((r) => (r.key === s.key ? { ...r, year: e.target.value } : r)))} />
+                        <Input value={s.title} maxLength={80} placeholder="MSc Sports science" aria-label="What was studied" onChange={(e) => setStudies((list) => list.map((r) => (r.key === s.key ? { ...r, title: e.target.value } : r)))} />
+                        <Input value={s.place} maxLength={80} placeholder="University of Jyväskylä" aria-label="Where" onChange={(e) => setStudies((list) => list.map((r) => (r.key === s.key ? { ...r, place: e.target.value } : r)))} />
+                        <Input value={s.year} maxLength={12} placeholder="2014" aria-label="Year" onChange={(e) => setStudies((list) => list.map((r) => (r.key === s.key ? { ...r, year: e.target.value } : r)))} />
                         <Button variant="ghost" size="icon" aria-label="Remove this study" onClick={() => setStudies((list) => list.filter((r) => r.key !== s.key))}>
                           ×
                         </Button>
@@ -306,9 +312,9 @@ export default function ProfileEditor({ profile, coaches, currentCoachId }: { pr
                     id: r.key,
                     node: (
                       <div className="rpf-row exp">
-                        <input className="rd-input" value={r.years} maxLength={20} placeholder="2019 – now" aria-label="Years" onChange={(e) => setExperience((list) => list.map((x) => (x.key === r.key ? { ...x, years: e.target.value } : x)))} />
-                        <input className="rd-input" value={r.role} maxLength={80} placeholder="Head coach" aria-label="Role" onChange={(e) => setExperience((list) => list.map((x) => (x.key === r.key ? { ...x, role: e.target.value } : x)))} />
-                        <input className="rd-input" value={r.place} maxLength={80} placeholder="Full Potential Coaching" aria-label="Where" onChange={(e) => setExperience((list) => list.map((x) => (x.key === r.key ? { ...x, place: e.target.value } : x)))} />
+                        <Input value={r.years} maxLength={20} placeholder="2019 – now" aria-label="Years" onChange={(e) => setExperience((list) => list.map((x) => (x.key === r.key ? { ...x, years: e.target.value } : x)))} />
+                        <Input value={r.role} maxLength={80} placeholder="Head coach" aria-label="Role" onChange={(e) => setExperience((list) => list.map((x) => (x.key === r.key ? { ...x, role: e.target.value } : x)))} />
+                        <Input value={r.place} maxLength={80} placeholder="Full Potential Coaching" aria-label="Where" onChange={(e) => setExperience((list) => list.map((x) => (x.key === r.key ? { ...x, place: e.target.value } : x)))} />
                         <Button variant="ghost" size="icon" aria-label="Remove this role" onClick={() => setExperience((list) => list.filter((x) => x.key !== r.key))}>
                           ×
                         </Button>
@@ -330,12 +336,12 @@ export default function ProfileEditor({ profile, coaches, currentCoachId }: { pr
             </Button>
             <span className={`rpf-saved${dirty ? " dirty" : ""}`}>{dirty ? "Unsaved changes" : savedAt ? `Saved · ${ago(savedAt, now)}` : "Not saved yet"}</span>
             {error && <span className="rpf-error">{error}</span>}
-            <label className="rpf-publish">
-              <span>
+            <div className="rpf-publish">
+              <Label htmlFor="rpf-published" className="rpf-publish-label">
                 <b>{published ? "Published" : "Not published"}</b> · clients see it from their Account tab
-              </span>
-              <button type="button" role="switch" aria-checked={published} aria-label="Published" className={`rpf-switch${published ? " on" : ""}`} onClick={togglePublished} disabled={saving} />
-            </label>
+              </Label>
+              <Switch id="rpf-published" checked={published} onCheckedChange={togglePublished} disabled={saving} aria-label="Published" />
+            </div>
           </div>
         </div>
 
@@ -369,10 +375,11 @@ function TextField({
   placeholder?: string;
   inputMode?: "numeric";
 }) {
+  const id = useId();
   return (
-    <label className="rpf-field">
+    <div className="rpf-field">
       <span className="rpf-label-row">
-        <span className="rpf-label">{label}</span>
+        <Label htmlFor={id}>{label}</Label>
         {counted && max != null && (
           <span className={`rpf-count${value.length >= max ? " full" : ""}`}>
             {value.length} / {max}
@@ -380,11 +387,11 @@ function TextField({
         )}
       </span>
       {multiline ? (
-        <textarea className="rd-input rpf-textarea" value={value} maxLength={max} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+        <Textarea id={id} value={value} maxLength={max} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
       ) : (
-        <input className="rd-input" value={value} maxLength={max} placeholder={placeholder} inputMode={inputMode} onChange={(e) => onChange(e.target.value)} />
+        <Input id={id} value={value} maxLength={max} placeholder={placeholder} inputMode={inputMode} onChange={(e) => onChange(e.target.value)} />
       )}
-    </label>
+    </div>
   );
 }
 
@@ -415,7 +422,7 @@ function PhotoSlot({ coachId, kind, label, hint, path }: { coachId: number; kind
   };
   return (
     <div className={`rpf-photo ${kind}`}>
-      <span className="rpf-label">{label}</span>
+      <Label>{label}</Label>
       <button
         type="button"
         className={`rpf-drop${over ? " over" : ""}${path ? " has" : ""}${busy ? " busy" : ""}`}
