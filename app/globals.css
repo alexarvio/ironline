@@ -17144,7 +17144,9 @@ button.ci-hint { cursor: pointer; }
 .qa-panel { display: flex; flex-direction: column; padding: 12px 14px 4px; border-radius: 18px; background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.35); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
 .qa-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding-bottom: 8px; }
 .qa-title { font-size: 16px; font-weight: 700; letter-spacing: -0.005em; }
-.qa-count { font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.72); }
+.qa-count { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.72); }
+.qa-due { flex: none; width: 8px; height: 8px; border-radius: 999px; background: #FF7A1A; animation: hm-due-pulse 1.8s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) { .qa-due { animation: none; } }
 .qa-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.2); }
 .qa-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .qa-label { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255, 255, 255, 0.72); }
@@ -17372,3 +17374,20 @@ button.ci-hint { cursor: pointer; }
 .inv-total { flex: none; font-size: 15px; font-weight: 800; color: #141a24; font-variant-numeric: tabular-nums; }
 .inv-chev { flex: none; display: inline-flex; color: #8A8BA3; }
 .inv-chev svg { width: 16px; height: 16px; }
+
+/* Quick actions pulse (26 Sep): while something is left to do, the card
+   breathes a soft glow and the button sends out a ring, every 2.4 s. */
+.qa:has(.qa-btn) { animation: qa-breathe 2.4s ease-in-out infinite; }
+.qa-btn { position: relative; }
+.qa-btn::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; border: 2px solid rgba(255, 255, 255, 0.7); pointer-events: none; animation: qa-ring 2.4s ease-out infinite; }
+@keyframes qa-breathe {
+  0%, 100% { box-shadow: 0 18px 30px -22px rgba(20, 26, 36, 0.55), 0 0 0 0 rgba(90, 130, 210, 0); }
+  50% { box-shadow: 0 18px 30px -22px rgba(20, 26, 36, 0.55), 0 0 0 5px rgba(90, 130, 210, 0.22); }
+}
+@keyframes qa-ring {
+  0% { transform: scale(1); opacity: 0.8; }
+  70%, 100% { transform: scale(1.18, 1.45); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qa:has(.qa-btn), .qa-btn::after { animation: none; }
+}
