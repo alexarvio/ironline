@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { AccountIcon, BusinessIcon, CalendarIcon, ChevronDownIcon, FeedIcon, PhasesIcon, PlusIcon, SearchIcon } from "../../components/icons";
 import { SETTINGS, type SettingsKey } from "./settingsNav";
 import { logoutAction } from "../../lib/auth-actions";
@@ -26,6 +27,8 @@ const REDRAWN: Partial<Record<string, string>> = { feed: "/admin/redesign/feed",
 
 export default function RedesignRail({ rail, clientId, settings }: { rail: RailData; clientId: number; /** The settings page open, if any: the rail opens on Settings. */ settings?: SettingsKey }) {
   const [settingsOpen, setSettingsOpen] = useState(!!settings);
+  // The view you are on (Feed, Calendar…) is marked, as the client you are on is.
+  const path = usePathname();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "needs">("all");
   const needsYou = rail.clients.filter((c) => c.attention).length;
@@ -49,7 +52,7 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
       <nav className="rr-nav" aria-label="Views">
         {/* The cross-client views are not redrawn yet: they open where they always were. */}
         {VIEWS.map(({ key, label, Icon }) => (
-          <Link key={key} href={REDRAWN[key] ?? `/admin?view=${key}`} className="rr-navrow">
+          <Link key={key} href={REDRAWN[key] ?? `/admin?view=${key}`} className={`rr-navrow${REDRAWN[key] && path?.startsWith(REDRAWN[key]!) ? " active" : ""}`} aria-current={REDRAWN[key] && path?.startsWith(REDRAWN[key]!) ? "page" : undefined}>
             <Icon />
             <span>{label}</span>
             {key === "feed" && needsYou > 0 && (
