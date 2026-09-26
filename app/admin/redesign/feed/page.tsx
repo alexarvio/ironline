@@ -125,18 +125,6 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
           ) : (
             <Card className="rfd-card">
               <CardContent className="rfd-rows">
-              </CardContent>
-            </Card>
-          )}
-
-          {visible.length === 0 ? (
-            <p className="rfd-empty">
-              Nothing under {FILTERS.find((f) => f.id === filter)!.label.toLowerCase()}
-              {clientId != null ? ` from ${rail.clients.find((c) => c.id === clientId)?.name}` : ""} yet.
-            </p>
-          ) : (
-            <Card className="rfd-card">
-              <CardContent className="rfd-rows">
                 {visible.map((e) => {
                   const to = feedHref(e);
                   const row = (
