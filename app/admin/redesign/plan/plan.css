@@ -157,7 +157,11 @@
 .rq-evrow-rel { font-size: 12px; font-weight: 600; color: #8b93a1; text-align: right; white-space: nowrap; }
 .rq-evrow-rel.coming { color: #1d5a94; }
 .rq-ev-past .rq-evrow-main b { color: #5b6474; }
-.rq-ev-dlg { max-width: 560px; }
+/* The event dialog is the phase dialog's twin (26 Sep): same width, same columns. */
+.rq-ev-dlg { max-width: 720px; }
+.rq-ev-dlg .rdd-cols { grid-template-columns: minmax(0, 1.15fr) minmax(220px, 0.85fr); }
+.rq-ev-dlg .rdd-fields .rq-groups button { padding: 0 10px; }
+.rq-ev-dlg .rdd-fields textarea { min-height: 64px; }
 .rq-ev-dlg .rd-dlg-hint { letter-spacing: 0; text-transform: none; font-weight: 500; }
 
 /* The event dialog's dates: two boxes on one line, their labels level, the length under both. */

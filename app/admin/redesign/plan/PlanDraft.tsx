@@ -666,7 +666,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
 // ---- The phase dialog: track, name, dates on a month, and for training the programme behind it.
 
 /** Six rows of a month, the picked weeks tinted in the phase's own colours, other phases on the track as a grey mark. */
-function MonthRange({ from, to, onPick, chrome, planned, cursor, setCursor, today }: { from: string; to: string; onPick: (day: string) => void; chrome: ReturnType<typeof phaseChrome>; planned: { name: string; from: string; to: string }[]; cursor: string; setCursor: (m: string) => void; today: string }) {
+export function MonthRange({ from, to, onPick, chrome, planned, cursor, setCursor, today }: { from: string; to: string; onPick: (day: string) => void; chrome: ReturnType<typeof phaseChrome>; planned: { name: string; from: string; to: string }[]; cursor: string; setCursor: (m: string) => void; today: string }) {
   const [y, mo] = cursor.split("-").map(Number);
   const first = new Date(y, mo - 1, 1);
   const gridStart = mondayOf(isoOf(first));
