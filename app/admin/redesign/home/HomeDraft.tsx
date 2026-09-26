@@ -1,12 +1,13 @@
 "use client";
 
+import Pager from "../Pager";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveCoachNoteAction, sendChatMessageAction } from "../../../lib/actions";
 import ClientCardEditor from "../../ClientCardEditor";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
-import { AccountIcon, ChatIcon, ChevronLeftIcon } from "../../../components/icons";
+import { AccountIcon, ChatIcon } from "../../../components/icons";
 import type { ClientEngagement, HomeAction, OverviewPanel } from "../../../lib/queries";
 import { MessageDialog } from "../training/TrainingDraft";
 
@@ -248,22 +249,7 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
             ) : (
               <p className="rh-empty">{home.events.length ? "Nothing of that kind yet." : "Nothing logged yet."}</p>
             )}
-            <div className="rh-foot">
-              <span className="rd-eyebrow">{matching.length === 0 ? `0 of ${home.eventTotal} events` : `${from + 1}–${from + shown.length} of ${matching.length}`}</span>
-              {pages > 1 && (
-                <span className="rh-pager">
-                  <button type="button" className="rd-btn ghost sm" onClick={() => setPage(at - 1)} disabled={at === 1} aria-label="Newer">
-                    <ChevronLeftIcon />
-                  </button>
-                  <span className="rh-pager-at">
-                    {at} / {pages}
-                  </span>
-                  <button type="button" className="rd-btn ghost sm next" onClick={() => setPage(at + 1)} disabled={at === pages} aria-label="Older">
-                    <ChevronLeftIcon />
-                  </button>
-                </span>
-              )}
-            </div>
+            <Pager className="rh-foot" page={at} pages={pages} from={from} shown={shown.length} total={matching.length} label="Activity pages" onPage={setPage} />
           </section>
         </div>
 
