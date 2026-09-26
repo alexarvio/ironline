@@ -16,16 +16,35 @@ import { PhaseDialog, phaseForm, type DraftPlan } from "./plan/PlanDraft";
 // its usual screen (26 Sep).
 
 const WORD: Record<PhaseTrack, string> = { training: "training", nutrition: "nutrition", lifestyle: "lifestyle" };
+// The tab's own header, as its usual screen has it.
+const HEAD: Record<PhaseTrack, { eyebrow: string; title: string }> = {
+  training: { eyebrow: "Training", title: "Programme" },
+  nutrition: { eyebrow: "Nutrition", title: "Targets" },
+  lifestyle: { eyebrow: "Measurements", title: "Check-ins" },
+};
 
 export default function NoPhase({ clientId, firstName, track, plan }: { clientId: number; firstName: string; track: PhaseTrack; plan: DraftPlan }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   return (
-    <div className="rd-nophase">
-      <button type="button" className="rd-btn primary rd-nophase-btn" onClick={() => setOpen(true)} disabled={pending}>
-        <PlusIcon /> Create a {WORD[track]} phase
-      </button>
+    <div className="rd">
+      <header className="rd-head">
+        <div className="rd-head-main">
+          <span className="rd-eyebrow">{HEAD[track].eyebrow}</span>
+          <h1 className="rd-title">{HEAD[track].title}</h1>
+        </div>
+      </header>
+      <section className="rd-session open rn-card rd-nophase">
+        <div className="rd-needphase">
+          <span>
+            {firstName} has no {WORD[track]} phase yet.
+          </span>
+          <button type="button" className="rd-btn primary" onClick={() => setOpen(true)} disabled={pending}>
+            <PlusIcon /> Create a {WORD[track]} phase
+          </button>
+        </div>
+      </section>
       <Dialog open={open} onOpenChange={setOpen}>
         {open && (
           <PhaseDialog
