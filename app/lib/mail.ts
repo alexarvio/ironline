@@ -14,12 +14,26 @@ export function mailConfigured(): boolean {
 
 const escape = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
-async function send(to: string, subject: string, text: string, html: string, what: string): Promise<boolean> {
+/**
+ * Who an email is from. The address is always the platform's (MAIL_FROM,
+ * on the domain verified at Resend): a coach's own Gmail can't be sent as
+ * by anyone but Google. What the client reads is the coach's name, and a
+ * reply goes to the coach's own inbox (26 Sep).
+ */
+function sender(fromName?: string | null): string {
+  const from = process.env.MAIL_FROM ?? "";
+  const name = fromName?.replace(/["<>\r\n]/g, "").trim();
+  if (!name) return from;
+  const address = /<([^>]+)>/.exec(from)?.[1] ?? from.trim();
+  return `"${name}" <${address}>`;
+}
+
+async function send(to: string, subject: string, text: string, html: string, what: string, opts: { fromName?: string | null; replyTo?: string | null } = {}): Promise<boolean> {
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: process.env.MAIL_FROM, to: [to], subject, text, html }),
+      body: JSON.stringify({ from: sender(opts.fromName), to: [to], subject, text, html, ...(opts.replyTo ? { reply_to: opts.replyTo } : {}) }),
     });
     if (!res.ok) console.error(`[mail] ${what} to ${to} failed: ${res.status} ${await res.text().catch(() => "")}`);
     return res.ok;
@@ -45,21 +59,9 @@ export async function sendPasswordResetEmail({ to, resetUrl }: { to: string; res
   return send(to, "Reset your Ironline password", text, html, "password reset");
 }
 
-/** The client's first sign-in details. Resolves false rather than throwing: the client exists either way. */
-export async function sendInviteEmail({
-  to,
-  firstName,
-  coachName,
-  password,
-  signInUrl,
-}: {
-  to: string;
-  firstName: string;
-  coachName: string;
-  password: string;
-  signInUrl: string;
-}): Promise<boolean> {
-  if (!mailConfigured()) return false;
+/** The invite's words, as text and as HTML: sent below, and shown on the onboarding board. */
+export function inviteEmail({ to, firstName, coachName, password, signInUrl }: { to: string; firstName: string; coachName: string; password: string; signInUrl: string }) {
+  const subject = "Your Ironline login";
   const text = [
     `Hi ${firstName},`,
     "",
@@ -77,16 +79,12 @@ export async function sendInviteEmail({
 Email: <b>${escape(to)}</b><br>
 Temporary password: <b style="letter-spacing:0.04em">${escape(password)}</b></p>
 <p>The app asks you to choose your own password the first time you sign in.</p>`;
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: process.env.MAIL_FROM, to: [to], subject: "Your Ironline login", text, html }),
-    });
-    if (!res.ok) console.error(`[mail] invite to ${to} failed: ${res.status} ${await res.text().catch(() => "")}`);
-    return res.ok;
-  } catch (error) {
-    console.error("[mail] invite failed:", error instanceof Error ? error.message : error);
-    return false;
-  }
+  return { subject, text, html };
+}
+
+/** The client's first sign-in details, from the coach by name, answered to the coach. Resolves false rather than throwing: the client exists either way. */
+export async function sendInviteEmail({ coachEmail, ...details }: { to: string; firstName: string; coachName: string; coachEmail: string; password: string; signInUrl: string }): Promise<boolean> {
+  if (!mailConfigured()) return false;
+  const { subject, text, html } = inviteEmail(details);
+  return send(details.to, subject, text, html, "invite", { fromName: details.coachName, replyTo: coachEmail });
 }
