@@ -139,9 +139,10 @@ export default function CheckInScreen({
   // The dock, on Today: TODAY while lines are empty, READY when all are in;
   // once what is on screen is what the coach has, just Done, which closes.
   // Sent and nothing changed since: the lines fold into the green done row
-  // (with the last seven days under it). Opening an already-sent check-in
-  // starts folded; Done folds it with a short close; Edit opens it again.
-  const [folded, setFolded] = useState(isSaved);
+  // (with the last seven days under it). Opening a check-in sent in full
+  // starts folded; one with lines still empty opens ready to type. Done
+  // folds it with a short close; Edit opens it again.
+  const [folded, setFolded] = useState(isSaved && complete);
   const [folding, setFolding] = useState(false);
   const fold = () => {
     setFolding(true);
