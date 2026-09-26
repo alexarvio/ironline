@@ -17397,3 +17397,34 @@ button.ci-hint { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   .qa:has(.qa-btn), .qa-btn::after { animation: none; }
 }
+
+/* The client's chat, WhatsApp-style (26 Sep): the coach's picture and name
+   in the header, one pinned bar over the thread (one pin at a time), day
+   labels centred, reactions and an in-menu Delete check in the chevron's
+   menu, and a box that grows with what is typed. */
+.cm-header { display: flex; align-items: center; gap: 10px; padding-left: 8px; }
+.cm-header .coach-mark.lg { width: 38px; height: 38px; font-size: 15px; }
+.cm-header-name { flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; color: #141a24; }
+.cm-day-label { align-self: center; }
+.cm-pinbar-wrap { position: relative; flex: none; border-bottom: 1px solid #eceff3; background: #fff; }
+.cm-pinbar { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 46px; padding: 8px 52px 8px 18px; border: 0; background: none; font: inherit; text-align: left; color: #313851; cursor: pointer; }
+.cm-pinbar-marks { flex: none; display: flex; flex-direction: column; justify-content: center; gap: 2px; align-self: stretch; }
+.cm-pinbar-marks i { display: block; width: 3px; height: 8px; border-radius: 2px; background: #dfe3e8; }
+.cm-pinbar-marks i.on { background: #1e3a6e; }
+.cm-pinbar-pin { flex: none; display: inline-flex; color: #8b93a1; }
+.cm-pinbar-pin svg { width: 16px; height: 16px; }
+.cm-pinbar-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 500; }
+.cm-pinbar-count { flex: none; font-size: 11px; font-weight: 700; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.cm-pinbar-wrap .cm-unpin { position: absolute; top: 50%; right: 10px; margin: 0; transform: translateY(-50%); }
+.cm-msg-pin { display: inline-flex; margin-right: 3px; vertical-align: -1px; }
+.cm-msg-pin svg { width: 11px; height: 11px; }
+.cm-item.flash .cm-msg { box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.35); transition: box-shadow 0.3s; }
+.cm-reacts { position: relative; z-index: 1; display: flex; gap: 4px; margin: -6px 8px 0; }
+.cm-item.mine .cm-reacts { align-self: flex-end; }
+.cm-menu-list.left { right: auto; left: -6px; }
+.cm-menu-list.down { top: calc(100% + 6px); bottom: auto; }
+.cm-menu-reacts { display: flex; gap: 2px; margin-bottom: 2px; padding: 2px 2px 4px; border-bottom: 1px solid #eef0f3; }
+.cm-menu-list .cm-menu-reacts .mr-pick { width: 30px; height: 30px; padding: 0; border-radius: 999px; font-size: 18px; text-align: center; }
+.cm-menu-ask { padding: 8px 12px 4px; font-size: 13px; font-weight: 600; color: #5b6474; white-space: nowrap; }
+.chat-compose-form .chat-compose-box { flex: 1; min-width: 0; min-height: 38px; max-height: 120px; margin: 0; padding: 9px 14px; border: 1px solid var(--border); border-radius: 20px; box-sizing: border-box; font: inherit; font-size: 0.9rem; line-height: 1.35; resize: none; overflow-y: auto; }
+.cm-compose .chat-compose-form { align-items: flex-end; }
