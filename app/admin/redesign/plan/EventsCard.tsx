@@ -1,13 +1,13 @@
 "use client";
 
+import Pager from "../Pager";
 import { useEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { addClientEventAction, addEventCategoryAction, deleteClientEventAction, deleteEventCategoryAction, updateClientEventAction, updateEventCategoryAction } from "../../../lib/actions";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
-import { ChevronDownIcon, ChevronLeftIcon, PlusIcon, TrashIcon } from "../../../components/icons";
-import { pageWindow } from "../../../lib/pager";
+import { ChevronDownIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import DatePick from "../DatePick";
 import { PALETTE, paletteOf } from "../palette";
 
@@ -308,32 +308,7 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
                 </div>
               );
             })}
-            {pages > 1 && (
-              <div className="rq-evlog-foot">
-                <span>
-                  {from + 1}–{from + onPage.length} of {listed.length}
-                </span>
-                <nav className="rn-pager" aria-label="Log pages">
-                  <button type="button" className="rd-btn ghost sm" onClick={() => setPage(at - 1)} disabled={at === 1} aria-label="Newer">
-                    <ChevronLeftIcon />
-                  </button>
-                  {pageWindow(at, pages).map((p, i) =>
-                    p === "gap" ? (
-                      <span key={`gap${i}`} className="rn-gap" aria-hidden="true">
-                        …
-                      </span>
-                    ) : (
-                      <button key={p} type="button" className={`rd-btn ghost sm${p === at ? " on" : ""}`} aria-current={p === at ? "page" : undefined} onClick={() => setPage(p)}>
-                        {p}
-                      </button>
-                    ),
-                  )}
-                  <button type="button" className="rd-btn ghost sm rn-next" onClick={() => setPage(at + 1)} disabled={at === pages} aria-label="Older">
-                    <ChevronLeftIcon />
-                  </button>
-                </nav>
-              </div>
-            )}
+            <Pager className="rq-evlog-foot" page={at} pages={pages} from={from} shown={onPage.length} total={listed.length} label="Log pages" onPage={setPage} />
           </div>
         )}
       </div>

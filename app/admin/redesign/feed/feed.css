@@ -46,3 +46,14 @@
 .rfd-page.off { opacity: 0.35; }
 .rfd-gap { padding: 0 4px; color: #8b93a1; }
 .rfd-pager-count { margin-left: 10px; font-size: 12.5px; color: #8b93a1; }
+
+/* One table (26 Sep): who, what kind, what, when, the same on every page
+   and every kind; the client picker beside the kinds. */
+.rfd-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.rfd-tools .rfd-filters { align-self: auto; }
+.rfd-tools .rd-picker.rfd-client { flex: 0 0 210px; height: 40px; border-radius: 12px; }
+.rfd-row { grid-template-columns: 190px 110px minmax(0, 1fr) auto; align-items: center; }
+.rfd-who { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 13.5px; color: #141a24; }
+.rfd-who b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rfd-avatar { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; overflow: hidden; border-radius: 999px; background: #e6ecf3; color: #1e3a6e; font-size: 12px; font-weight: 800; }
+.rfd-avatar img { width: 100%; height: 100%; object-fit: cover; }

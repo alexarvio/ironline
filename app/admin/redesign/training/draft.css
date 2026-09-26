@@ -596,3 +596,12 @@
 .rp-hit.up { background: #e8f6ee; color: #1b7a4b; }
 .rp-hit.flat { background: #fdf4e4; color: #9a5b00; }
 .rp-hit.down { background: #fdeee8; color: #b3471d; }
+
+/* The pager under every paged list (Pager.tsx, 26 Sep): the Feed's. */
+.rpg { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.rpg-page { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; padding: 0 8px; border: 1px solid #dfe3e8; border-radius: 9px; background: #fff; font: inherit; font-size: 13px; font-weight: 700; color: #141a24; text-decoration: none; cursor: pointer; }
+.rpg-page:hover { border-color: #c3c9d2; }
+.rpg-page.on { background: #1e3a6e; border-color: #1e3a6e; color: #fff; }
+.rpg-page.off { opacity: 0.35; cursor: default; }
+.rpg-gap { padding: 0 4px; color: #8b93a1; }
+.rpg-count { margin-left: 10px; font-size: 12.5px; color: #8b93a1; font-variant-numeric: tabular-nums; }

@@ -1,5 +1,6 @@
 "use client";
 
+import Pager from "../Pager";
 import { useEffect, useState, useTransition } from "react";
 import type React from "react";
 import Link from "next/link";
@@ -10,9 +11,8 @@ import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { ToggleGroup, ToggleGroupItem } from "../../../components/ui/basics";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
-import { CalendarIcon, CameraIcon, ChatIcon, ChevronDownIcon, ChevronLeftIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { CalendarIcon, CameraIcon, ChatIcon, ChevronDownIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import type { LoggedDay, LoggedDaysView, LoggedMeal, MealComment } from "../../../lib/queries";
-import { pageWindow } from "../../../lib/pager";
 import DatePick from "../DatePick";
 import { ConfirmDialog, MessageDialog, fmtDate, stateLabel } from "../training/TrainingDraft";
 import PhaseDatesDialog from "../PhaseDatesDialog";
@@ -593,32 +593,20 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
                 }
               />
             ))}
-            {pages > 1 && (
-              <div className="rn-foot">
-                <span>
-                  {from + 1}–{from + days.length} of {view.days.length} days
-                </span>
-                <nav className="rn-pager" aria-label="Logged day pages">
-                  <button type="button" className="rd-btn ghost sm" onClick={() => (setPage(at - 1), setOpen(null))} disabled={at === 1} aria-label="Newer">
-                    <ChevronLeftIcon />
-                  </button>
-                  {pageWindow(at, pages).map((p, i) =>
-                    p === "gap" ? (
-                      <span key={`gap${i}`} className="rn-gap" aria-hidden="true">
-                        …
-                      </span>
-                    ) : (
-                      <button key={p} type="button" className={`rd-btn ghost sm${p === at ? " on" : ""}`} aria-current={p === at ? "page" : undefined} onClick={() => (setPage(p), setOpen(null))}>
-                        {p}
-                      </button>
-                    ),
-                  )}
-                  <button type="button" className="rd-btn ghost sm rn-next" onClick={() => (setPage(at + 1), setOpen(null))} disabled={at === pages} aria-label="Older">
-                    <ChevronLeftIcon />
-                  </button>
-                </nav>
-              </div>
-            )}
+            <Pager
+              className="rn-foot"
+              page={at}
+              pages={pages}
+              from={from}
+              shown={days.length}
+              total={view.days.length}
+              noun="days"
+              label="Logged day pages"
+              onPage={(p) => {
+                setPage(p);
+                setOpen(null);
+              }}
+            />
           </div>
         )}
       </section>
