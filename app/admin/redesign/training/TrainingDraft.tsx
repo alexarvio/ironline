@@ -2645,7 +2645,7 @@ function AddWeekDialog({ next, date, source, sessionCount, onAdd }: { next: numb
   );
 }
 
-function NewProgramDialog({ onCreate }: { onCreate: (v: { name: string; weeks: number; start: string }) => void }) {
+export function NewProgramDialog({ onCreate }: { onCreate: (v: { name: string; weeks: number; start: string }) => void }) {
   const [name, setName] = useState("");
   // Typed, not picked: any whole number of weeks from 1 to 52.
   const [weeksText, setWeeksText] = useState("8");

@@ -9,6 +9,7 @@ import PicturesDraft, { type DraftPictures } from "./pictures/PicturesDraft";
 import MeetingsDraft, { type DraftMeetings } from "./meetings/MeetingsDraft";
 import PlanDraft, { type DraftPlan } from "./plan/PlanDraft";
 import HomeDraft, { type DraftHome } from "./home/HomeDraft";
+import NoProgramme from "./training/NoProgramme";
 import MessagesDraft, { type DraftMessages } from "./messages/MessagesDraft";
 import InvoicesDraft from "./invoices/InvoicesDraft";
 import RedesignRail from "./RedesignRail";
@@ -82,7 +83,7 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
         <div hidden={tab !== "home"}>
           <HomeDraft clientId={clientId} firstName={firstName} home={home} onOpenTab={(t) => show(t as RedesignTab)} />
         </div>
-        <div hidden={tab !== "training"}>{training.draft ? <TrainingDraft key={training.draft.id} clientId={clientId} firstName={firstName} program={training.draft} library={training.library} /> : <p className="rd-empty">This client has no programme yet.</p>}</div>
+        <div hidden={tab !== "training"}>{training.draft ? <TrainingDraft key={training.draft.id} clientId={clientId} firstName={firstName} program={training.draft} library={training.library} /> : <NoProgramme clientId={clientId} firstName={firstName} />}</div>
         <div hidden={tab !== "nutrition"}>
           <NutritionDraft key={nutrition.id} clientId={clientId} firstName={firstName} plan={nutrition} />
         </div>
