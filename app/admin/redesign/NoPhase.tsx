@@ -35,15 +35,14 @@ export default function NoPhase({ clientId, firstName, track, plan }: { clientId
           <h1 className="rd-title">{HEAD[track].title}</h1>
         </div>
       </header>
-      <section className="rd-session open rn-card rd-nophase">
-        <div className="rd-needphase">
-          <span>
-            {firstName} has no {WORD[track]} phase yet.
-          </span>
-          <button type="button" className="rd-btn primary" onClick={() => setOpen(true)} disabled={pending}>
-            <PlusIcon /> Create a {WORD[track]} phase
-          </button>
-        </div>
+      {/* One card, everything centred in it: what is missing, and the button. */}
+      <section className="rd-session open rd-nophase">
+        <b className="rd-nophase-title">
+          {firstName} has no {WORD[track]} phase yet
+        </b>
+        <button type="button" className="rd-btn primary rd-nophase-btn" onClick={() => setOpen(true)} disabled={pending}>
+          <PlusIcon /> Create a {WORD[track]} phase
+        </button>
       </section>
       <Dialog open={open} onOpenChange={setOpen}>
         {open && (
