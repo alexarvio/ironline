@@ -608,7 +608,8 @@
 .rd-noprog { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
 .rd-noprog .rd-empty { margin: 0; }
 .rd-noprog .rd-btn svg { width: 14px; height: 14px; }
-/* A track with nothing on it yet (NoPhase.tsx, 26 Sep): one button, in the middle. */
-.rd-nophase { display: flex; justify-content: center; padding: 18vh 0 0; }
-.rd-nophase-btn { height: 44px; padding: 0 22px; font-size: 14px; }
-.rd-nophase-btn svg { width: 15px; height: 15px; }
+/* A track with nothing on it yet (NoPhase.tsx, 26 Sep): the tab's header, then a card
+   with one dashed row, as Measurements' "Metrics belong to a lifestyle phase". */
+.rd-nophase { padding: 16px; }
+.rd-needphase { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border: 1px dashed #d5dce6; border-radius: 12px; font-size: 13.5px; color: #5b6474; }
+.rd-needphase .rd-btn svg { width: 14px; height: 14px; }
