@@ -17144,9 +17144,7 @@ button.ci-hint { cursor: pointer; }
 .qa-panel { display: flex; flex-direction: column; padding: 12px 14px 4px; border-radius: 18px; background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.35); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
 .qa-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding-bottom: 8px; }
 .qa-title { font-size: 16px; font-weight: 700; letter-spacing: -0.005em; }
-.qa-count { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.72); }
-.qa-due { flex: none; width: 8px; height: 8px; border-radius: 999px; background: #FF7A1A; animation: hm-due-pulse 1.8s ease-out infinite; }
-@media (prefers-reduced-motion: reduce) { .qa-due { animation: none; } }
+.qa-count { font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.72); }
 .qa-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.2); }
 .qa-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .qa-label { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255, 255, 255, 0.72); }

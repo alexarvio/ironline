@@ -86,13 +86,7 @@ export default function QuickActions({
       <div className="qa-panel">
         <div className="qa-head">
           <span className="qa-title">Quick actions</span>
-          {/* The same pulsing orange dot as Home's tasks: something is still to do. */}
-          {actions.length > 0 && (
-            <span className="qa-count">
-              <i className="qa-due" aria-hidden="true" />
-              {actions.length} left
-            </span>
-          )}
+          {actions.length > 0 && <span className="qa-count">{actions.length} left</span>}
         </div>
         {actions.length ? (
           actions.slice(0, 1).map((a) => (
