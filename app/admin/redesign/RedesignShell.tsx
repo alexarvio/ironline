@@ -10,6 +10,7 @@ import MeetingsDraft, { type DraftMeetings } from "./meetings/MeetingsDraft";
 import PlanDraft, { type DraftPlan } from "./plan/PlanDraft";
 import HomeDraft, { type DraftHome } from "./home/HomeDraft";
 import NoProgramme from "./training/NoProgramme";
+import NoPhase from "./NoPhase";
 import MessagesDraft, { type DraftMessages } from "./messages/MessagesDraft";
 import InvoicesDraft from "./invoices/InvoicesDraft";
 import RedesignRail from "./RedesignRail";
@@ -69,6 +70,13 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
     // Keep the other tab's query (week, programme, phase) out of this one's address.
     window.history.replaceState(null, "", `/admin/redesign/${t}?client=${clientId}`);
   };
+  // A track with no phase and nothing set up yet opens on one button,
+  // "Create a … phase" (NoPhase). Anything already there (targets, logs,
+  // metrics) keeps the usual screen, phase or not.
+  const hasPhase = (track: string) => plan.phases.some((p) => p.track === track);
+  const noMacros = (m: { protein: number | null; carbs: number | null; fats: number | null }) => m.protein == null && m.carbs == null && m.fats == null;
+  const nutritionBlank = !hasPhase("nutrition") && noMacros(nutrition.training) && noMacros(nutrition.rest) && nutrition.waterL == null && !nutrition.note.trim() && nutrition.supplements.length === 0 && nutrition.logged.days.length === 0;
+  const measurementsBlank = !hasPhase("lifestyle") && measurements.metrics.length === 0 && measurements.daily.periods.length === 0 && measurements.weekly.periods.length === 0 && measurements.notes.length === 0;
   return (
     <div className="rd-frame">
       <RedesignRail rail={rail} clientId={clientId} />
@@ -83,12 +91,20 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
         <div hidden={tab !== "home"}>
           <HomeDraft clientId={clientId} firstName={firstName} home={home} onOpenTab={(t) => show(t as RedesignTab)} />
         </div>
-        <div hidden={tab !== "training"}>{training.draft ? <TrainingDraft key={training.draft.id} clientId={clientId} firstName={firstName} program={training.draft} library={training.library} /> : <NoProgramme clientId={clientId} firstName={firstName} />}</div>
+        <div hidden={tab !== "training"}>
+          {training.draft ? (
+            <TrainingDraft key={training.draft.id} clientId={clientId} firstName={firstName} program={training.draft} library={training.library} />
+          ) : hasPhase("training") ? (
+            <NoProgramme clientId={clientId} firstName={firstName} />
+          ) : (
+            <NoPhase clientId={clientId} firstName={firstName} track="training" plan={plan} />
+          )}
+        </div>
         <div hidden={tab !== "nutrition"}>
-          <NutritionDraft key={nutrition.id} clientId={clientId} firstName={firstName} plan={nutrition} />
+          {nutritionBlank ? <NoPhase clientId={clientId} firstName={firstName} track="nutrition" plan={plan} /> : <NutritionDraft key={nutrition.id} clientId={clientId} firstName={firstName} plan={nutrition} />}
         </div>
         <div hidden={tab !== "measurements"}>
-          <MeasurementsDraft key={measurements.id} clientId={clientId} firstName={firstName} plan={measurements} />
+          {measurementsBlank ? <NoPhase clientId={clientId} firstName={firstName} track="lifestyle" plan={plan} /> : <MeasurementsDraft key={measurements.id} clientId={clientId} firstName={firstName} plan={measurements} />}
         </div>
         <div hidden={tab !== "pictures"}>
           <PicturesDraft clientId={clientId} firstName={firstName} plan={pictures} />

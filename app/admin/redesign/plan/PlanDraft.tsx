@@ -54,7 +54,7 @@ export type DraftPlan = {
 
 const savedToast = (what: string) => toast.success("Saved", { description: what });
 /** A phase's fields as the actions read them. */
-const phaseForm = (v: { id?: number; clientId?: number; name: string; track: PhaseTrack; start: string; end: string; programId?: number | null }) => {
+export const phaseForm = (v: { id?: number; clientId?: number; name: string; track: PhaseTrack; start: string; end: string; programId?: number | null }) => {
   const fd = new FormData();
   if (v.id != null) fd.set("id", String(v.id));
   if (v.clientId != null) fd.set("clientId", String(v.clientId));
@@ -715,7 +715,7 @@ function MonthRange({ from, to, onPick, chrome, planned, cursor, setCursor, toda
   );
 }
 
-function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track: initialTrack, others, programs, onSave, onDelete, onSend }: { clientId: number; firstName: string; today: string; thisWeek: string; phase: PlanPhaseRow | null; track?: PhaseTrack; others: PlanPhaseRow[]; programs: PlanProgramOption[]; onSave: (v: { name: string; track: PhaseTrack; start: string; end: string; programId: number | null }) => void; onDelete?: () => void; onSend: (v: { name: string; track: PhaseTrack; start: string; end: string; now: boolean }) => void }) {
+export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track: initialTrack, others, programs, onSave, onDelete, onSend }: { clientId: number; firstName: string; today: string; thisWeek: string; phase: PlanPhaseRow | null; track?: PhaseTrack; others: PlanPhaseRow[]; programs: PlanProgramOption[]; onSave: (v: { name: string; track: PhaseTrack; start: string; end: string; programId: number | null }) => void; onDelete?: () => void; onSend: (v: { name: string; track: PhaseTrack; start: string; end: string; now: boolean }) => void }) {
   const editing = !!phase;
   const [track, setTrack] = useState<PhaseTrack>(phase?.track ?? initialTrack ?? "nutrition");
   const [name, setName] = useState(phase?.name ?? "");
