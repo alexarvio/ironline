@@ -138,7 +138,7 @@ function FullProfile({ profile, onBack, onBook }: { profile: CoachProfileView; o
   const tabPad = clamp(y - (HERO - STRIP), 0, STRIP);
   const pills = [
     profile.yearsCoaching != null ? { key: "years", tone: "blue", text: `${profile.yearsCoaching} year${profile.yearsCoaching === 1 ? "" : "s"} coaching` } : null,
-    profile.clientCount > 0 ? { key: "clients", tone: "green", text: `${profile.clientCount} client${profile.clientCount === 1 ? "" : "s"}` } : null,
+    // No client count (26 Sep): how many clients a coach has is theirs to say, not a badge.
     degree ? { key: "degree", tone: "amber", text: degree } : null,
   ].filter((p): p is { key: string; tone: string; text: string } => !!p);
   const yearsWord =
