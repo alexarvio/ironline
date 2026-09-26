@@ -6,7 +6,7 @@ import { pickGymAction, startSessionAction } from "../lib/actions";
 import type { GymOption } from "./GymPicker";
 import SessionOverview, { STATUS_LABEL } from "./SessionOverview";
 import WorkoutScreen from "./WorkoutScreen";
-import { useFocusRef, useTrainingFocus } from "./CheckInContext";
+import { useFocusRef, useOpenMessages, useTrainingFocus, type TrainingFocus } from "./CheckInContext";
 import { clock, durationMinutes, elapsedMs, loggedSets, plannedSets, sessionStatus, shortDate, useTicker, type SessionDay } from "./workoutShared";
 
 // The week's sessions as rows on the Training tab. A row opens the
@@ -70,6 +70,10 @@ export default function TrainingDayList({
   const trainingFocus = useTrainingFocus();
   const focusExercise = trainingFocus?.exercise ?? null;
   const focusStart = !!trainingFocus?.start;
+  const openMessages = useOpenMessages();
+  // The link from the chat whose way back has been used, so opening the same
+  // session again from the list comes back to the list.
+  const [chatDone, setChatDone] = useState<TrainingFocus | null>(null);
   useEffect(() => {
     const t = setTimeout(() => {
       const stored = readView();
@@ -215,7 +219,14 @@ export default function TrainingDayList({
           currentWeek={currentWeek}
           liveElsewhere={liveSession && liveSession.id !== openDay.key ? liveSession.label : null}
           coachName={coachName}
-          onBack={() => setView(null)}
+          onBack={() => {
+            setView(null);
+            // Opened from a link in the chat: Back goes back to the chat, once.
+            if (openDay.key === focus && trainingFocus?.fromChat && chatDone !== trainingFocus && openMessages) {
+              setChatDone(trainingFocus);
+              openMessages();
+            }
+          }}
           onStart={(g) => start(openDay, g)}
           onResume={() => setView({ dayId: openDay.key, screen: "workout" })}
           autoStart={openDay.key === focus && focusStart && !openDay.startedAt && !openDay.endedAt}

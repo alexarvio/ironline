@@ -242,36 +242,55 @@ export default function AppShell({
 
   // A coach message's link: straight to the thing it is about, from Home's
   // card or the messages feed. One that can no longer open does nothing.
+  // Opened from the chat, Back comes back to the chat instead of the tab
+  // underneath: this names the screen that should (a session in Training
+  // carries it in its focus instead).
+  const [chatReturn, setChatReturn] = useState<"food" | "checkin" | "photos" | "nutrition" | null>(null);
   const openLink = (view: LinkView) => {
     if (view.gone) return;
     const l = view.link;
+    const fromChat = pushView === "messages";
+    const returnTo = (v: NonNullable<typeof chatReturn>) => setChatReturn(fromChat ? v : null);
     switch (l.kind) {
       case "session":
       case "exercise":
-        goToTab("training", l.dayId, { week: view.week, exercise: l.kind === "exercise" ? l.assignmentId : null });
+        setChatReturn(null);
+        goToTab("training", l.dayId, { week: view.week, exercise: l.kind === "exercise" ? l.assignmentId : null, fromChat });
         return;
       case "nutrition":
         goToTab("nutrition");
+        returnTo("nutrition");
         return;
       case "food":
         // No diary on this client (switched off since): their Nutrition tab instead.
         if (!foodDiary) {
           goToTab("nutrition");
+          returnTo("nutrition");
           return;
         }
         setFoodDate(l.date);
         setFoodMeal(l.meal ?? null);
         setPushView("food");
+        returnTo("food");
         return;
       case "checkin":
         openCheckIn(l.section);
+        returnTo("checkin");
         return;
       case "photos":
         setPhotosPeriod(l.period ?? null);
         setPushView("photos");
+        returnTo("photos");
         return;
     }
   };
+  const backToChat = () => {
+    setChatReturn(null);
+    setMessageAbout(null);
+    setPushView("messages");
+  };
+  // Back on a pushed screen: to the chat when that is where it came from.
+  const backFrom = (v: NonNullable<typeof chatReturn>) => () => (chatReturn === v ? backToChat() : setPushView(null));
 
   const pushedLayer =
     pushView === "checkin" ? (
@@ -286,7 +305,7 @@ export default function AppShell({
           weeklyOpen={checkIn.weeklyOpen}
           objectives={checkIn.objectives}
           history={checkIn.history}
-          onBack={() => setPushView(null)}
+          onBack={backFrom("checkin")}
         />
       </div>
     ) : pushView === "coach" && coachProfile ? (
@@ -296,11 +315,11 @@ export default function AppShell({
       </div>
     ) : pushView === "photos" ? (
       <div className="app-layer app-layer-push pp-app-screen">
-        <ProgressPicturesScreen data={photos} initialPeriod={photosPeriod} onBack={() => setPushView(null)} />
+        <ProgressPicturesScreen data={photos} initialPeriod={photosPeriod} onBack={backFrom("photos")} />
       </div>
     ) : pushView === "food" && foodDiary ? (
       <div className="app-layer app-layer-push cn-screen">
-        <FoodDiaryScreen clientId={clientId} diary={foodDiary} initialDate={foodDate} initialMeal={foodMeal} onBack={() => setPushView(null)} />
+        <FoodDiaryScreen clientId={clientId} diary={foodDiary} initialDate={foodDate} initialMeal={foodMeal} onBack={backFrom("food")} />
       </div>
     ) : pushView === "meetings" && meetings ? (
       <div className="app-layer app-layer-push cn-screen">
@@ -410,8 +429,14 @@ export default function AppShell({
             </CheckInProvider>
 
           {active?.footer && <div className="app-sticky-footer">{active.footer}</div>}
-
           <nav className="app-bottom-nav dark">
+            {/* A tab has no Back of its own: sent here from the chat, this takes the client back to it. */}
+            {chatReturn === "nutrition" && activeId === "nutrition" && (
+              <button type="button" className="app-chat-return" onClick={backToChat}>
+                <ChevronLeftIcon />
+                Back to chat
+              </button>
+            )}
             {tabs.map((t) => (
               <button
                 key={t.id}
@@ -422,6 +447,7 @@ export default function AppShell({
                   // rebuild the tab, which read as the screen jumping to the top.
                   if (t.id === activeId) return;
                   // The tab as it was left, scroll and all.
+                  setChatReturn(null);
                   setScrolled((scrollers.current[t.id]?.scrollTop ?? 0) > 4);
                   setActiveId(t.id);
                   setFocusRef(null);
