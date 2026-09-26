@@ -17,8 +17,12 @@ function span(days: number): string {
     const w = Math.max(0, Math.round(days / 7));
     return `${w} ${w === 1 ? "week" : "weeks"}`;
   }
-  if (months < 12) return `${round1(months)} mo`;
-  return `${round1(months / 12)} yr`;
+  if (months < 12) {
+    const m = round1(months);
+    return `${m} ${m === 1 ? "month" : "months"}`;
+  }
+  const y = round1(months / 12);
+  return `${y} ${y === 1 ? "year" : "years"}`;
 }
 
 const AGE_BANDS: { label: string; min: number; max: number }[] = [
