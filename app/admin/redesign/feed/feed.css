@@ -1,5 +1,6 @@
 /* The Feed in the redesign (25 Sep). Prefix rfd- (fd- is the old one). */
-.rfd { display: flex; flex-direction: column; gap: 18px; max-width: 980px; }
+/* Fills the width of the screen, like the Calendar (26 Sep). */
+.rfd { display: flex; flex-direction: column; gap: 18px; }
 .rfd-head { display: flex; flex-direction: column; gap: 12px; }
 .rfd-title { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; color: #141a24; }
 .rfd-filters { display: inline-flex; flex-wrap: wrap; align-self: flex-start; gap: 4px; padding: 4px; border-radius: 12px; background: #e9edf3; }
