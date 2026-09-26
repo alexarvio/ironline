@@ -197,7 +197,7 @@ export default function ProfileEditor({ profile, coaches, currentCoachId, detail
           <Card>
             <CardHeader>
               <CardTitle>Photos</CardTitle>
-              <CardDescription>They upload the moment you drop them</CardDescription>
+              <CardDescription>Shown on the phone beside the form</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="rpf-photos">
@@ -434,28 +434,27 @@ function PhotoSlot({ coachId, kind, label, hint, path }: { coachId: number; kind
     fd.set("kind", kind);
     start(() => removeCoachPhotoAction(fd));
   };
+  // A row, not a picture (26 Sep): the phone beside the form already shows
+  // every photo, so here it is only its name, whether it is in, and the buttons.
   return (
-    <div className={`rpf-photo ${kind}`}>
-      <Label>{label}</Label>
-      <button
-        type="button"
-        className={`rpf-drop${over ? " over" : ""}${path ? " has" : ""}${busy ? " busy" : ""}`}
-        style={path ? { backgroundImage: `url("${path}")` } : undefined}
-        onClick={() => inputRef.current?.click()}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setOver(true);
-        }}
-        onDragLeave={() => setOver(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setOver(false);
-          upload(e.dataTransfer.files[0]);
-        }}
-        aria-label={path ? `Replace the ${label.toLowerCase()}` : `Add a ${label.toLowerCase()}`}
-      >
-        {!path && <span className="rpf-drop-text">Drop a photo or click</span>}
-      </button>
+    <div
+      className={`rpf-photo ${kind}${over ? " over" : ""}${busy ? " busy" : ""}`}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setOver(true);
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setOver(false);
+        upload(e.dataTransfer.files[0]);
+      }}
+    >
+      <span className="rpf-photo-main">
+        <b>{label}</b>
+        <span className="rpf-hint">{hint} · up to 6 MB</span>
+      </span>
+      <span className={`rpf-photo-state${path ? " on" : ""}`}>{busy ? "Uploading…" : path ? "Uploaded" : "None yet"}</span>
       <input
         ref={inputRef}
         type="file"
@@ -466,17 +465,16 @@ function PhotoSlot({ coachId, kind, label, hint, path }: { coachId: number; kind
           e.target.value = "";
         }}
       />
-      {path && (
-        <div className="rpf-photo-actions">
-          <Button variant="outline" size="sm" onClick={() => inputRef.current?.click()} disabled={busy}>
-            Replace
-          </Button>
+      <span className="rpf-photo-actions">
+        <Button variant="outline" size="sm" onClick={() => inputRef.current?.click()} disabled={busy}>
+          {path ? "Replace" : "Upload"}
+        </Button>
+        {path && (
           <Button variant="ghost" size="sm" className="rpf-danger" onClick={remove} disabled={busy}>
             Remove
           </Button>
-        </div>
-      )}
-      <span className="rpf-hint">{hint} · up to 6 MB</span>
+        )}
+      </span>
       {framing && (
         <AvatarCropDialog
           file={framing}

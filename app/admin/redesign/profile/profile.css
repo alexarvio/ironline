@@ -77,3 +77,13 @@
 .rpf-select-menu { max-height: 300px; }
 .rpf-details [data-slot="input"], .rpf-details [data-slot="select-trigger"] { height: 38px; }
 .rpf-details .nc-phone .nc-input, .rpf-details .nc-phone .nc-dial { height: 38px; }
+/* Photos as rows, not big pictures (26 Sep): the preview phone shows them. */
+.rpf-photos { display: flex; flex-direction: column; gap: 0; grid-template-columns: none; }
+.rpf-photo { display: flex; flex-direction: row; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid #eef1f5; border-radius: 8px; }
+.rpf-photo:first-child { border-top: 0; }
+.rpf-photo.over { background: #eef3f9; }
+.rpf-photo.busy { opacity: 0.6; }
+.rpf-photo-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 13.5px; color: #141a24; }
+.rpf-photo-state { font-size: 12.5px; font-weight: 600; color: #8b93a1; }
+.rpf-photo-state.on { color: #1b7a4b; }
+.rpf-photo-actions { display: flex; gap: 6px; }
