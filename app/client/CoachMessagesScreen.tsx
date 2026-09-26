@@ -2,20 +2,21 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDownIcon, ChevronLeftIcon } from "../components/icons";
+import { ChevronDownIcon, ChevronLeftIcon, PinIcon } from "../components/icons";
 import ChatComposeForm from "../components/ChatComposeForm";
-import MessageReactions from "../components/MessageReactions";
-import { deleteMyChatMessageAction, editMyChatMessageAction, unpinMessageAction } from "../lib/actions";
+import { REACTIONS } from "../components/MessageReactions";
+import { deleteMyChatMessageAction, editMyChatMessageAction, reactToMessageAction, unpinMessageAction } from "../lib/actions";
 import CoachMark from "./CoachMark";
 import { useOpenLink } from "./CheckInContext";
 import type { LinkView, MessageAbout } from "../lib/messageLinks";
 
-// The conversation with the coach: their messages on the left, the client's
-// own on the right, oldest first, grouped by day, and a box to answer from
-// at the foot. What the coach pinned stays at the top. Either side can put
-// one emoji on a message. Every message has a chevron (Copy; Edit and Delete
-// on your own), and a message about something in the app carries a small
-// link bubble on its corner that goes there.
+// The conversation with the coach, laid out as WhatsApp does: the coach's
+// picture and name in the header, their messages on the left and the
+// client's own on the right, oldest first under a day label, and a box to
+// answer from at the foot. What is pinned shows in one bar over the thread,
+// one pin at a time. Every message has a chevron: a reaction, Copy, and Edit
+// and Delete on your own. A message about something in the app carries a
+// small link bubble on its corner that goes there.
 export type CoachMessageView = {
   id: number;
   /** The client's own message. */
@@ -44,9 +45,12 @@ export type CoachMessagesProps = {
 // How often the thread asks for anything new while it is open.
 const POLL_MS = 15000;
 
+/** What a message is, in a word, when it has no words of its own. */
+const mediaWord = (m: CoachMessageView) =>
+  !m.media ? "" : m.media.type === "image" ? "Photo" : m.media.type === "video" ? "Video" : m.media.type === "audio" ? "Voice message" : (m.media.name ?? "File");
+
 export default function CoachMessagesScreen({ coachName, messages, viewerIsClient, clientId, onBack, about = null, onClearAbout }: CoachMessagesProps & { clientId: number; onBack: () => void; about?: MessageAbout | null; onClearAbout?: () => void }) {
   const router = useRouter();
-  const end = useRef<HTMLDivElement>(null);
   const [, startTransition] = useTransition();
   const [editing, setEditing] = useState<{ id: number; text: string } | null>(null);
   const days: { label: string; items: CoachMessageView[] }[] = [];
@@ -59,6 +63,9 @@ export default function CoachMessagesScreen({ coachName, messages, viewerIsClien
   // Your own messages are the ones you can change: the client's, or the
   // coach's when a coach is previewing the app (they send as the coach).
   const own = (m: CoachMessageView) => (viewerIsClient ? m.mine : !m.mine);
+  // Which side's reaction is yours, and which is theirs.
+  const mySide = viewerIsClient ? "client" : "coach";
+  const theirSide = viewerIsClient ? "coach" : "client";
 
   // Keep it fresh while it is open, and stay at the newest message.
   useEffect(() => {
@@ -99,35 +106,48 @@ export default function CoachMessagesScreen({ coachName, messages, viewerIsClien
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages.length]);
 
+  const act = (fn: () => Promise<void>) =>
+    startTransition(async () => {
+      await fn();
+      router.refresh();
+    });
   const saveEdit = () => {
     if (!editing) return;
     const { id, text } = editing;
     setEditing(null);
-    startTransition(async () => {
-      await editMyChatMessageAction(clientId, id, text);
-      router.refresh();
-    });
+    act(() => editMyChatMessageAction(clientId, id, text));
   };
   // Off the top: either side may take a pin away.
-  const unpin = (m: CoachMessageView) =>
-    startTransition(async () => {
-      await unpinMessageAction(clientId, m.id);
-      router.refresh();
-    });
-  const remove = (m: CoachMessageView) => {
-    if (!window.confirm("Delete this message? It goes for both of you.")) return;
-    startTransition(async () => {
-      await deleteMyChatMessageAction(clientId, m.id);
-      router.refresh();
-    });
+  const unpin = (m: CoachMessageView) => act(() => unpinMessageAction(clientId, m.id));
+  const remove = (m: CoachMessageView) => act(() => deleteMyChatMessageAction(clientId, m.id));
+  const react = (m: CoachMessageView, emoji: string | null) => act(() => reactToMessageAction(clientId, m.id, emoji));
+
+  // The pinned bar shows one pin at a time: a tap goes to that message in
+  // the thread and lights it for a moment, and the bar moves on to the next.
+  const [pinAt, setPinAt] = useState(0);
+  const pinShown = pinned.length ? pinned[pinAt % pinned.length] : null;
+  const [flash, setFlash] = useState<number | null>(null);
+  const goToPin = () => {
+    if (!pinShown) return;
+    const el = body.current;
+    const row = el?.querySelector<HTMLElement>(`[data-mid="${pinShown.id}"]`);
+    if (row && el) {
+      atEnd.current = false;
+      el.scrollTo({ top: el.scrollTop + row.getBoundingClientRect().top - el.getBoundingClientRect().top - el.clientHeight / 3, behavior: "smooth" });
+      const id = pinShown.id;
+      setFlash(id);
+      setTimeout(() => setFlash((f) => (f === id ? null : f)), 1600);
+    }
+    setPinAt((i) => (i + 1) % Math.max(1, pinned.length));
   };
 
-  const bubble = (m: CoachMessageView, inPins = false) => {
-    const isEditing = !inPins && editing?.id === m.id;
+  const bubble = (m: CoachMessageView) => {
+    const isEditing = editing?.id === m.id;
+    const mine = m.reactions?.[mySide] ?? null;
+    const theirs = m.reactions?.[theirSide] ?? null;
     return (
-      <article key={`${inPins ? "pin-" : ""}${m.id}`} className={`cm-item${m.mine ? " mine" : ""}`}>
+      <article key={m.id} data-mid={m.id} className={`cm-item${m.mine ? " mine" : ""}${flash === m.id ? " flash" : ""}`}>
         <div className="cm-msg-row">
-          {!m.mine && <CoachMark size="lg" />}
           <div className="cm-msg-wrap">
             <div className={`cm-msg${m.mine ? " mine" : ""}${m.media ? " media" : ""}${m.link ? " linked" : ""}`}>
               {/* What it is about: a small bubble on the corner that goes there. */}
@@ -157,14 +177,22 @@ export default function CoachMessagesScreen({ coachName, messages, viewerIsClien
               ) : (
                 m.text && <p className="cm-msg-text">{m.text}</p>
               )}
+              {/* Pinned, edited and the time, in the bubble's corner: no name, the side says who. */}
               <span className="cm-msg-foot">
                 <span className="cm-msg-time">
+                  {m.pinned && (
+                    <span className="cm-msg-pin" title="Pinned">
+                      <PinIcon filled />
+                    </span>
+                  )}
+                  {m.edited && "Edited "}
                   {m.timeLabel}
-                  {m.edited && " · edited"}
-                  {m.pinned && !inPins && " · pinned"}
                 </span>
-                {!inPins && !isEditing && (
+                {!isEditing && (
                   <MessageMenu
+                    align={m.mine ? "right" : "left"}
+                    reaction={mine}
+                    onReact={(e) => react(m, e)}
                     canChange={own(m)}
                     canEdit={own(m) && !!m.text}
                     onCopy={m.text ? () => navigator.clipboard?.writeText(m.text).catch(() => {}) : null}
@@ -173,14 +201,23 @@ export default function CoachMessagesScreen({ coachName, messages, viewerIsClien
                     onUnpin={m.pinned ? () => unpin(m) : null}
                   />
                 )}
-                {inPins && (
-                  <button type="button" className="cm-unpin" onClick={() => unpin(m)} aria-label="Unpin this message">
-                    ×
+              </span>
+            </div>
+            {/* Reactions hang off the bubble's foot: theirs, and yours (a tap takes it off). */}
+            {(mine || theirs) && (
+              <span className="cm-reacts">
+                {theirs && (
+                  <span className="mr-chip theirs" title="Their reaction">
+                    {theirs}
+                  </span>
+                )}
+                {mine && (
+                  <button type="button" className="mr-chip mine" onClick={() => react(m, null)} title="Take yours off" aria-label={`Your reaction ${mine}, tap to remove`}>
+                    {mine}
                   </button>
                 )}
               </span>
-            </div>
-            {!inPins && <MessageReactions clientId={clientId} messageId={m.id} mine={m.reactions?.client ?? null} theirs={m.reactions?.coach ?? null} align={m.mine ? "right" : "left"} />}
+            )}
           </div>
         </div>
       </article>
@@ -189,20 +226,38 @@ export default function CoachMessagesScreen({ coachName, messages, viewerIsClien
 
   return (
     <>
-      <header className="cn-header">
+      <header className="cn-header cm-header">
         <button type="button" className="cn-icon-btn" onClick={onBack} aria-label="Back">
           <ChevronLeftIcon />
         </button>
-        <div className="cn-header-titles">
-          <h1 className="cn-title">{coachName}</h1>
-        </div>
-        <span className="cn-icon-spacer" aria-hidden="true" />
+        <CoachMark size="lg" />
+        <h1 className="cm-header-name">{coachName}</h1>
       </header>
-      {pinned.length > 0 && (
-        <section className="cm-pins" aria-label="Pinned by your coach">
-          <span className="cm-pins-label">Pinned by {coachName}</span>
-          {pinned.map((m) => bubble(m, true))}
-        </section>
+      {pinShown && (
+        <div className="cm-pinbar-wrap">
+          <button type="button" className="cm-pinbar" onClick={goToPin} aria-label={pinned.length > 1 ? "Go to this pinned message; the next pin shows" : "Go to the pinned message"}>
+            {/* One mark a pin when there are several, the one showing filled. */}
+            {pinned.length > 1 && (
+              <span className="cm-pinbar-marks" aria-hidden="true">
+                {pinned.map((p, i) => (
+                  <i key={p.id} className={i === pinAt % pinned.length ? "on" : ""} />
+                ))}
+              </span>
+            )}
+            <span className="cm-pinbar-pin" aria-hidden="true">
+              <PinIcon />
+            </span>
+            <span className="cm-pinbar-text">{pinShown.text || mediaWord(pinShown) || pinShown.link?.label}</span>
+            {pinned.length > 1 && (
+              <span className="cm-pinbar-count">
+                {(pinAt % pinned.length) + 1}/{pinned.length}
+              </span>
+            )}
+          </button>
+          <button type="button" className="cm-unpin" onClick={() => unpin(pinShown)} aria-label="Unpin this message">
+            ×
+          </button>
+        </div>
       )}
       <main ref={body} className="cm-body">
         {days.length === 0 ? (
@@ -215,7 +270,6 @@ export default function CoachMessagesScreen({ coachName, messages, viewerIsClien
             </section>
           ))
         )}
-        <div ref={end} />
       </main>
       <footer className="cm-compose">
         {/* A coach previewing the app writes as the coach, not as the client. */}
@@ -226,10 +280,34 @@ export default function CoachMessagesScreen({ coachName, messages, viewerIsClien
   );
 }
 
-// The chevron on a message: Copy for any, Edit and Delete on your own. Goes
-// on a pick, a tap anywhere else, or Escape.
-function MessageMenu({ canChange, canEdit, onCopy, onEdit, onDelete, onUnpin = null }: { canChange: boolean; canEdit: boolean; onCopy: (() => void) | null; onEdit: () => void; onDelete: () => void; onUnpin?: (() => void) | null }) {
+// The chevron on a message: a row of reactions across the top, then Copy,
+// and Edit, Unpin and Delete where they apply. Delete asks once, in the menu
+// itself. Goes on a pick, a tap anywhere else, or Escape. Opens upward,
+// or downward when the message is near the top of the screen.
+function MessageMenu({
+  align,
+  reaction,
+  onReact,
+  canChange,
+  canEdit,
+  onCopy,
+  onEdit,
+  onDelete,
+  onUnpin = null,
+}: {
+  align: "left" | "right";
+  reaction: string | null;
+  onReact: (emoji: string | null) => void;
+  canChange: boolean;
+  canEdit: boolean;
+  onCopy: (() => void) | null;
+  onEdit: () => void;
+  onDelete: () => void;
+  onUnpin?: (() => void) | null;
+}) {
   const [open, setOpen] = useState(false);
+  const [down, setDown] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const box = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     if (!open) return;
@@ -244,37 +322,66 @@ function MessageMenu({ canChange, canEdit, onCopy, onEdit, onDelete, onUnpin = n
       document.removeEventListener("keydown", esc);
     };
   }, [open]);
-  if (!onCopy && !canChange) return null;
+  const toggle = () => {
+    if (!open) {
+      const scroller = box.current?.closest(".cm-body");
+      const top = box.current?.getBoundingClientRect().top ?? 0;
+      setDown(top - (scroller?.getBoundingClientRect().top ?? 0) < 280);
+      setConfirming(false);
+    }
+    setOpen((o) => !o);
+  };
   const pick = (fn: () => void) => () => {
     setOpen(false);
     fn();
   };
   return (
     <span className="cm-menu" ref={box}>
-      <button type="button" className={`cm-chev${open ? " open" : ""}`} onClick={() => setOpen((o) => !o)} aria-label="Message options" aria-expanded={open}>
+      <button type="button" className={`cm-chev${open ? " open" : ""}`} onClick={toggle} aria-label="Message options" aria-expanded={open}>
         <ChevronDownIcon />
       </button>
       {open && (
-        <span className="cm-menu-list" role="menu">
-          {onCopy && (
-            <button type="button" role="menuitem" onClick={pick(onCopy)}>
-              Copy
-            </button>
-          )}
-          {canEdit && (
-            <button type="button" role="menuitem" onClick={pick(onEdit)}>
-              Edit
-            </button>
-          )}
-          {onUnpin && (
-            <button type="button" role="menuitem" onClick={pick(onUnpin)}>
-              Unpin
-            </button>
-          )}
-          {canChange && (
-            <button type="button" role="menuitem" className="danger" onClick={pick(onDelete)}>
-              Delete
-            </button>
+        <span className={`cm-menu-list ${align}${down ? " down" : ""}`} role="menu">
+          {confirming ? (
+            <>
+              <span className="cm-menu-ask">Delete for both of you?</span>
+              <button type="button" role="menuitem" onClick={() => setConfirming(false)}>
+                Cancel
+              </button>
+              <button type="button" role="menuitem" className="danger" onClick={pick(onDelete)}>
+                Delete
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="cm-menu-reacts" role="group" aria-label="React">
+                {REACTIONS.map((e) => (
+                  <button key={e} type="button" className={`mr-pick${reaction === e ? " on" : ""}`} onClick={pick(() => onReact(reaction === e ? null : e))} aria-label={`React ${e}`} aria-pressed={reaction === e}>
+                    {e}
+                  </button>
+                ))}
+              </span>
+              {onCopy && (
+                <button type="button" role="menuitem" onClick={pick(onCopy)}>
+                  Copy
+                </button>
+              )}
+              {canEdit && (
+                <button type="button" role="menuitem" onClick={pick(onEdit)}>
+                  Edit
+                </button>
+              )}
+              {onUnpin && (
+                <button type="button" role="menuitem" onClick={pick(onUnpin)}>
+                  Unpin
+                </button>
+              )}
+              {canChange && (
+                <button type="button" role="menuitem" className="danger" onClick={() => setConfirming(true)}>
+                  Delete
+                </button>
+              )}
+            </>
           )}
         </span>
       )}

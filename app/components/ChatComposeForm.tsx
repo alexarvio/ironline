@@ -18,6 +18,12 @@ export default function ChatComposeForm({ clientId, sender, about = null, onClea
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pending, start] = useTransition();
   const [text, setText] = useState("");
+  const boxRef = useRef<HTMLTextAreaElement>(null);
+  const fit = (el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+  };
 
   const sendFile = (file: File) => {
     const fd = new FormData();
@@ -57,6 +63,7 @@ export default function ChatComposeForm({ clientId, sender, about = null, onClea
         start(async () => {
           await sendChatMessageAction(fd);
           setText("");
+          if (boxRef.current) boxRef.current.style.height = "auto";
           onClearAbout?.();
         });
       }}
@@ -85,7 +92,28 @@ export default function ChatComposeForm({ clientId, sender, about = null, onClea
           if (f) sendFile(f);
         }}
       />
-      <input name="text" type="text" placeholder="Message…" autoComplete="off" value={text} onChange={(e) => setText(e.target.value)} disabled={pending} />
+      {/* Grows with what is typed, up to a few lines, then scrolls. Enter
+          sends at a keyboard; on a phone it is a new line and Send sends. */}
+      <textarea
+        ref={boxRef}
+        name="text"
+        className="chat-compose-box"
+        rows={1}
+        placeholder="Message…"
+        autoComplete="off"
+        value={text}
+        onChange={(e) => {
+          setText(e.target.value);
+          fit(e.currentTarget);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && !window.matchMedia("(pointer: coarse)").matches) {
+            e.preventDefault();
+            formRef.current?.requestSubmit();
+          }
+        }}
+        disabled={pending}
+      />
       {text.trim() ? (
         <button type="submit" className="btn chat-send-btn" disabled={pending}>
           {pending ? "…" : "Send"}
