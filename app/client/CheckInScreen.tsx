@@ -145,6 +145,11 @@ export default function CheckInScreen({
   const [folded, setFolded] = useState(isSaved && complete);
   const [folding, setFolding] = useState(false);
   const fold = () => {
+    // Lines still empty: Done just closes, so the day never reads as finished.
+    if (!complete) {
+      onBack();
+      return;
+    }
     setFolding(true);
     setTimeout(() => {
       setFolding(false);
