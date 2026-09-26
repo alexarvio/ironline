@@ -24,7 +24,8 @@ import { MessageDialog } from "../training/TrainingDraft";
 // Nothing here saves: every action ends in a toast. A row that leads to a
 // tab does open that tab, in the drafts.
 
-export type DraftEvent = { id: string; category: string; text: string; note: string | null; when: string; tab: string };
+/** href: the thing itself (a session, a food day, an invoice), from feedHref. */
+export type DraftEvent = { id: string; category: string; text: string; note: string | null; when: string; tab: string; href: string | null };
 export type DraftHome = {
   name: string;
   initial: string;
@@ -235,7 +236,7 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
               <div className="rd-rows">
                 {shown.map((e) => (
                   <div key={e.id} className="rd-row">
-                    <button type="button" className="rd-row-main rh-row" onClick={() => go(e.tab)}>
+                    <button type="button" className="rd-row-main rh-row" onClick={() => (e.href ? router.push(e.href) : go(e.tab))}>
                       <span className={`rh-cat ${e.category}`}>{CATEGORY_LABEL[e.category] ?? e.category}</span>
                       <span className="rh-row-main">
                         <b>{e.text.charAt(0).toUpperCase() + e.text.slice(1)}</b>

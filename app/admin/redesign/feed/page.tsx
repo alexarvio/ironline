@@ -4,7 +4,7 @@ import ClientFilter from "./ClientFilter";
 import { requireCoach, isOwner } from "../../../lib/auth";
 import { feedClock, getActivityFeed, listLoginLocks, localDateStr, type FeedCategory, type FeedEvent } from "../../../lib/queries";
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/basics";
-import { loadRail } from "../loaders";
+import { feedHref, loadRail } from "../loaders";
 import RedesignRail from "../RedesignRail";
 import "../../../components/ui/ui.css";
 import "../training/draft.css";
@@ -35,9 +35,6 @@ const PAGE = 15;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const matches = (e: FeedEvent, filter: FilterId) => (FILTERS.find((f) => f.id === filter)!.holds as readonly FeedCategory[]).includes(e.category);
 
-/** Where a row opens: the client's tab in the redesign. */
-const TAB_ROUTE: Record<string, string> = { photos: "pictures" };
-const rowHref = (e: FeedEvent) => `/admin/redesign/${TAB_ROUTE[e.tab] ?? e.tab}?client=${e.clientId}`;
 
 export default async function FeedPage({ searchParams }: { searchParams: Promise<{ cat?: string; client?: string; page?: string }> }) {
   const coach = await requireCoach();
@@ -128,8 +125,22 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
           ) : (
             <Card className="rfd-card">
               <CardContent className="rfd-rows">
-                {visible.map((e) => (
-                  <Link key={e.id} href={rowHref(e)} className="rfd-row">
+              </CardContent>
+            </Card>
+          )}
+
+          {visible.length === 0 ? (
+            <p className="rfd-empty">
+              Nothing under {FILTERS.find((f) => f.id === filter)!.label.toLowerCase()}
+              {clientId != null ? ` from ${rail.clients.find((c) => c.id === clientId)?.name}` : ""} yet.
+            </p>
+          ) : (
+            <Card className="rfd-card">
+              <CardContent className="rfd-rows">
+                {visible.map((e) => {
+                  const to = feedHref(e);
+                  const row = (
+                  <>
                     <span className="rfd-who">
                       <span className="rfd-avatar" aria-hidden="true">
                         {avatar.get(e.clientId) ? (
@@ -155,8 +166,19 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
                       )}
                     </span>
                     <span className="rfd-when">{when(e)}</span>
-                  </Link>
-                ))}
+                  </>
+                  );
+                  // Nothing to open for a client who deleted their account: the row just reads.
+                  return to ? (
+                    <Link key={e.id} href={to} className="rfd-row">
+                      {row}
+                    </Link>
+                  ) : (
+                    <div key={e.id} className="rfd-row still">
+                      {row}
+                    </div>
+                  );
+                })}
               </CardContent>
             </Card>
           )}

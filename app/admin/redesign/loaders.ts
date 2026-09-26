@@ -1,7 +1,7 @@
 import { getData } from "../../lib/db";
 import { getUserForClient, isOwner } from "../../lib/auth";
 import { mailConfigured } from "../../lib/mail";
-import { getCoachSettings, getInvoiceView, listInvoices, type InvoiceView } from "../../lib/queries";
+import { getCoachSettings, getInvoiceView, listInvoices, type FeedEvent, type InvoiceView } from "../../lib/queries";
 import { hasBankDetails, invoicingFor } from "../../lib/countries";
 import {
   clientAttention,
@@ -551,6 +551,29 @@ export function loadPlan(clientId: number): DraftPlan {
 
 // ---- Home ------------------------------------------------------------------------
 
+/**
+ * Where a Feed row lands in the redesign: on the very thing it is about. A
+ * session opens in its programme and week and unfolds (#session-); a food
+ * log opens its day in Nutrition (#day-); a programme note opens that
+ * programme; an invoice opens the invoice. The rest open their tab. Null
+ * for a client who deleted their account: there is nothing left to open.
+ */
+export function feedHref(e: Pick<FeedEvent, "clientId" | "tab" | "category" | "target">): string | null {
+  const tab = (name: string, rest = "") => `/admin/redesign/${name}?client=${e.clientId}${rest}`;
+  const t = e.target;
+  if (t?.kind === "gone") return null;
+  if (t?.kind === "invoice") return `/admin/redesign/invoices/${t.invoiceId}`;
+  if (t?.kind === "food") return tab("nutrition", `#day-${t.date}`);
+  if (t?.kind === "program") return tab("training", `&program=${t.programId}`);
+  if (t?.kind === "session") {
+    const p = listPrograms(e.clientId).find((x) => t.week >= x.start_week && t.week < x.start_week + x.total_weeks);
+    return p ? tab("training", `&program=${p.id}&week=${t.week - p.start_week + 1}#session-${t.dayId}`) : tab("training");
+  }
+  if (e.category === "billing") return tab("invoices");
+  const route: Record<string, string> = { photos: "pictures" };
+  return tab(route[e.tab] ?? e.tab);
+}
+
 export function loadHome(clientId: number): DraftHome {
   const panel = getOverviewPanel(clientId);
   const home = getClientHome(clientId);
@@ -564,7 +587,7 @@ export function loadHome(clientId: number): DraftHome {
     panel,
     coachNote: panel.coachNote,
     actions: home.actions,
-    events: home.events.map((e) => ({ id: e.id, category: e.category, text: e.text, note: e.note, when: e.when, tab: e.tab })),
+    events: home.events.map((e) => ({ id: e.id, category: e.category, text: e.text, note: e.note, when: e.when, tab: e.tab, href: feedHref(e) })),
     eventTotal: home.eventTotal,
     engagement: getClientEngagement(clientId),
   };

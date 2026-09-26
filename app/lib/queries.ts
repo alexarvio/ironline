@@ -2302,6 +2302,9 @@ export type FeedEvent = {
   tab: string;
   /** The training session the event is about, so its card can carry the dot. */
   dayId?: number;
+  /** Exactly what the row is about, for a link that lands on it (the redesign's
+      feedHref): a session in its week, a food day, a programme, an invoice. */
+  target?: { kind: "session"; dayId: number; week: number } | { kind: "food"; date: string } | { kind: "program"; programId: number } | { kind: "invoice"; invoiceId: number } | { kind: "gone" };
   /** What happened, written to follow the client's name. */
   text: string;
   /** The client's own words, when the event carries them. */
@@ -2338,7 +2341,7 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
   const events: FeedEvent[] = [];
   const add = (
     clientId: number,
-    e: Pick<FeedEvent, "id" | "category" | "at" | "tab" | "text"> & Partial<Pick<FeedEvent, "note" | "thumbs" | "timeKnown" | "dayId">>
+    e: Pick<FeedEvent, "id" | "category" | "at" | "tab" | "text"> & Partial<Pick<FeedEvent, "note" | "thumbs" | "timeKnown" | "dayId" | "target">>
   ) => {
     const client = clientsById.get(clientId);
     if (!client || !Number.isFinite(e.at)) return;
@@ -2388,6 +2391,7 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       at: stampMs(completedAt),
       tab: "training",
       dayId,
+      target: { kind: "session", dayId, week: day.week_number },
       text: `completed ${dayTitle(day)} · ${plural(assignments.length, "exercise")}, ${plural(logs.length, "set")}`,
     });
   });
@@ -2402,6 +2406,7 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       at: stampMs(log.done_at),
       tab: "training",
       dayId: day?.id,
+      target: day ? { kind: "session", dayId: day.id, week: day.week_number } : undefined,
       text: `ticked off cardio${what ? `: ${what}` : ""}${day ? ` · ${dayTitle(day)}` : ""}`,
     });
   }
@@ -2415,6 +2420,7 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       at: stampMs(day.skip_reason_at),
       tab: "training",
       dayId: day.id,
+      target: { kind: "session", dayId: day.id, week: day.week_number },
       text: `couldn't do ${dayTitle(day)}`,
       note: day.skip_reason,
     });
@@ -2429,6 +2435,7 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       at: c.logged_at ? stampMs(c.logged_at) : middayMs(c.date),
       timeKnown: !!c.logged_at,
       tab: "nutrition",
+      target: { kind: "food", date: c.date },
       text: `logged ${c.kcal.toLocaleString("en-GB")} kcal for ${feedDay(c.date)}`,
       note: c.note?.trim() || null,
     });
@@ -2537,6 +2544,7 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       at: stampMs(v.submitted_at),
       tab: "training",
       dayId: day.id,
+      target: { kind: "session", dayId: day.id, week: day.week_number },
       text: `sent the video you asked for: ${name}, ${day.label || `Session ${day.day_of_week}`}`,
     });
   }
@@ -2550,6 +2558,7 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       category: "notes",
       at: stampMs(n.updated_at),
       tab: "training",
+      target: n.program_id != null ? { kind: "program", programId: n.program_id } : undefined,
       text: `wrote a note on ${program?.name || "their programme"}`,
       note: n.text,
     });
@@ -2581,6 +2590,7 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       category: "billing",
       at: stampMs(inv.updated_at),
       tab: "plan",
+      target: { kind: "invoice", invoiceId: inv.id },
       text: `had their invoice “${inv.description}” marked ${inv.status}`,
     });
   }
@@ -2599,6 +2609,7 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       at,
       timeKnown: true,
       tab: "home",
+      target: { kind: "gone" },
       text: "deleted their account and all their data",
       note: null,
       thumbs: [],
