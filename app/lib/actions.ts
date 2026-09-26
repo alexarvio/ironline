@@ -742,6 +742,7 @@ export async function createClientWithLoginAction(
     to: email,
     firstName: first,
     coachName: getCoachProfile(coach.id)?.display_name || "Your coach",
+    coachEmail: coach.email,
     password,
     signInUrl: `${proto}://${host}/login`,
   });
