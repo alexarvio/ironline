@@ -780,6 +780,7 @@ export async function saveMeasurementCheckInAction(formData: FormData) {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const date = String(formData.get("date") || "");
   if (!date) return;
+  if (await checkInLocked(date, "daily")) return;
 
   const fields = listMeasurementFields(clientId);
   const loggedAt = new Date().toISOString();
@@ -1025,12 +1026,22 @@ export async function applyMetricTemplateAction(formData: FormData) {
 // Logs every metric field present on the form for one period at once — the
 // "log today" / "log this week" form submits all currently-defined metrics
 // in a single action rather than one action per field.
+// A client's check-in is theirs to change only while its period is open:
+// today's, this week's. Once the next one rolls out the old one is locked,
+// finished or not. The coach can still correct any day.
+async function checkInLocked(date: string, frequency: string) {
+  if ((await getSessionUser())?.role !== "client") return false;
+  const today = localDateStr();
+  return frequency === "weekly" ? weekStart(date) !== weekStart(today) : date !== today;
+}
+
 export async function logMetricPeriodAction(formData: FormData) {
   // Ignores the posted client id for clients — they always write their own.
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const frequency = String(formData.get("frequency") || "daily") as "daily" | "weekly" | "monthly";
   const dateRaw = String(formData.get("date") || "");
   if (!dateRaw) return;
+  if (await checkInLocked(dateRaw, frequency)) return;
   const period = frequency === "weekly" ? weekStart(dateRaw) : dateRaw;
 
   const definitions = listMetricDefinitions(clientId, frequency);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ChevronDownIcon, ChevronLeftIcon } from "../components/icons";
+import { ChevronDownIcon, ChevronLeftIcon, LockIcon } from "../components/icons";
 import { logMetricPeriodAction, saveMeasurementCheckInAction } from "../lib/actions";
 import FitTitle from "./FitTitle";
 import CheckInProgress, { type CheckInFeedDay, type CheckInHistory } from "./CheckInProgress";
@@ -374,14 +374,20 @@ function CheckInFeed({ days }: { days: CheckInFeedDay[] }) {
       <h2 className="ci-feed-title">Last 7 days</h2>
       {days.map((d) => {
         const done = d.items.length > 0;
+        const unfinished = done && d.dailyTotal > 0 && d.dailyDone < d.dailyTotal;
         const isOpen = open === d.date;
         return (
-          <div key={d.date} className={`ci-day${done ? " done" : ""}`}>
+          <div key={d.date} className={`ci-day${done ? " done" : ""}${unfinished ? " unfinished" : ""}`}>
             <button type="button" className="ci-day-head" disabled={!done} aria-expanded={done ? isOpen : undefined} onClick={() => setOpen(isOpen ? null : d.date)}>
               <span className="ci-day-text">
                 <span className="ci-day-date">{label(d.date)}</span>
                 <span className="ci-day-sub">{done ? `${d.items.length} logged` : "Nothing logged"}</span>
               </span>
+              {unfinished && (
+                <span className="ci-day-state">
+                  <LockIcon /> Unfinished
+                </span>
+              )}
               {done && (
                 <span className={`ci-day-chev${isOpen ? " open" : ""}`} aria-hidden="true">
                   <ChevronDownIcon />

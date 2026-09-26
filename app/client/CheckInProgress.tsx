@@ -21,7 +21,7 @@ export type CheckInSeries = {
   cadence: "daily" | "weekly" | "measurement";
   points: { date: string; value: number; at: string | null }[];
 };
-export type CheckInFeedDay = { date: string; items: { name: string; value: string }[]; note: string | null };
+export type CheckInFeedDay = { date: string; items: { name: string; value: string }[]; note: string | null; dailyTotal: number; dailyDone: number };
 export type CheckInHistory = { series: CheckInSeries[]; days: CheckInFeedDay[] };
 
 type Range = "7D" | "1M" | "All";
