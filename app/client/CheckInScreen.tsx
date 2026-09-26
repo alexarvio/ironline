@@ -282,17 +282,18 @@ export default function CheckInScreen({
               {/* Sent: a row like a session on Training. All in: the light
                   green wash and Completed. Lines still empty: the amber of an
                   unfinished session and Unfinished. Edit opens it again. */}
-              <div className={`ci-done-row-card${complete ? "" : " unfinished"}`} role="status" aria-live="polite">
-                <span className="ci-saved-text">
-                  <span className="ci-saved-title">{dateLabel}</span>
-                  <span className="ci-saved-sub">
-                    <b className="ci-saved-state">{complete ? "Completed" : "Unfinished"}</b> · {filled.length} of {rows.length} logged
+              <button type="button" className={`tr-row ci-row ${complete ? "done" : "unfinished"}`} onClick={() => setFolded(false)} aria-label={`${dateLabel}: ${complete ? "completed" : "unfinished"}, ${filled.length} of ${rows.length} logged. Open to edit`}>
+                <span className="tr-row-main">
+                  <span className="tr-row-title">{dateLabel}</span>
+                  <span className="tr-row-sub">
+                    {filled.length} of {rows.length} logged
                   </span>
                 </span>
-                <button type="button" className="ci-done-edit" onClick={() => setFolded(false)}>
-                  Edit
-                </button>
-              </div>
+                <span className={`tr-row-pill ${complete ? "done" : "unfinished"}`} role="status" aria-live="polite">
+                  {complete ? "Completed" : "Unfinished"}
+                </span>
+                <span className="tr-row-chev" aria-hidden="true" />
+              </button>
               <CheckInFeed days={history.days} />
             </div>
           ) : (
