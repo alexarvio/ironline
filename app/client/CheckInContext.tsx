@@ -118,7 +118,7 @@ export function useOpenLink() {
 // Where a link into Training lands: the week to show (its strip can be on
 // any week the client has had) and the exercise to open in the session the
 // focus ref names. Null on an ordinary visit.
-export type TrainingFocus = { week: number | null; exercise: number | null; /** Home's Start: go straight into starting the session. */ start?: boolean };
+export type TrainingFocus = { week: number | null; exercise: number | null; /** Home's Start: go straight into starting the session. */ start?: boolean; /** Opened from a link in the chat: Back on the session goes back to the chat. */ fromChat?: boolean };
 
 const TrainingFocusContext = createContext<TrainingFocus | null>(null);
 

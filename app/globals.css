@@ -17428,3 +17428,10 @@ button.ci-hint { cursor: pointer; }
 .cm-menu-ask { padding: 8px 12px 4px; font-size: 13px; font-weight: 600; color: #5b6474; white-space: nowrap; }
 .chat-compose-form .chat-compose-box { flex: 1; min-width: 0; min-height: 38px; max-height: 120px; margin: 0; padding: 9px 14px; border: 1px solid var(--border); border-radius: 20px; box-sizing: border-box; font: inherit; font-size: 0.9rem; line-height: 1.35; resize: none; overflow-y: auto; }
 .cm-compose .chat-compose-form { align-items: flex-end; }
+
+/* Sent to a tab from a link in the chat (26 Sep): a pill floating over the
+   bottom nav takes the client back to the chat (a pushed screen's own Back
+   does it there). */
+.app-bottom-nav { position: relative; }
+.app-chat-return { position: absolute; bottom: calc(100% + 12px); left: 50%; z-index: 5; display: inline-flex; align-items: center; gap: 4px; height: 40px; padding: 0 16px 0 10px; border: 0; border-radius: 999px; background: #141a24; box-shadow: 0 10px 24px -12px rgba(8, 20, 50, 0.6); font: inherit; font-size: 14px; font-weight: 700; color: #fff; white-space: nowrap; transform: translateX(-50%); cursor: pointer; }
+.app-chat-return svg { width: 18px; height: 18px; }
