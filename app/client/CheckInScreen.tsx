@@ -145,11 +145,6 @@ export default function CheckInScreen({
   const [folded, setFolded] = useState(isSaved && complete);
   const [folding, setFolding] = useState(false);
   const fold = () => {
-    // Lines still empty: Done just closes, so the day never reads as finished.
-    if (!complete) {
-      onBack();
-      return;
-    }
     setFolding(true);
     setTimeout(() => {
       setFolding(false);
@@ -239,6 +234,9 @@ export default function CheckInScreen({
         if (noteWithMeasure) fd.set("note", note);
         await saveMeasurementCheckInAction(fd);
       }
+      // Sent, all of it or some: the lines fold into the day's row, which
+      // says Completed or Unfinished.
+      fold();
     } finally {
       setPending(false);
     }
@@ -281,13 +279,14 @@ export default function CheckInScreen({
             <p className="ci-empty">Your coach hasn&rsquo;t set up any check-in metrics yet.</p>
           ) : folded ? (
             <div className="ci-folded">
-              {/* Sent: a done row like a finished session on Training (the
-                  light green wash), with Edit where the session says Done. */}
-              <div className="ci-done-row-card" role="status" aria-live="polite">
+              {/* Sent: a row like a session on Training. All in: the light
+                  green wash and Completed. Lines still empty: the amber of an
+                  unfinished session and Unfinished. Edit opens it again. */}
+              <div className={`ci-done-row-card${complete ? "" : " unfinished"}`} role="status" aria-live="polite">
                 <span className="ci-saved-text">
                   <span className="ci-saved-title">{dateLabel}</span>
                   <span className="ci-saved-sub">
-                    {filled.length} of {rows.length} logged
+                    <b className="ci-saved-state">{complete ? "Completed" : "Unfinished"}</b> · {filled.length} of {rows.length} logged
                   </span>
                 </span>
                 <button type="button" className="ci-done-edit" onClick={() => setFolded(false)}>
