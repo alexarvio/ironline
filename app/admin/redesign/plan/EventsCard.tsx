@@ -8,7 +8,8 @@ import { toast } from "sonner";
 import { addClientEventAction, addEventCategoryAction, deleteClientEventAction, deleteEventCategoryAction, updateClientEventAction, updateEventCategoryAction } from "../../../lib/actions";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { ChevronDownIcon, PlusIcon, TrashIcon } from "../../../components/icons";
-import DatePick from "../DatePick";
+import DateText from "../DateText";
+import { MonthRange } from "./PlanDraft";
 import { PALETTE, paletteOf } from "../palette";
 
 // Events on the plan: what happens in the client's life that the plan has to
@@ -370,6 +371,33 @@ function EventDialog({ today, event, cats, onAddCat, onRenameCat, onRemoveCat, o
   const [note, setNote] = useState(event?.note ?? "");
   const k = chromeOf(cats, kind);
   const endOk = shape === "event" || end >= start;
+  // The calendar: which month shows, and which end a click sets (a period).
+  const [cursor, setCursor] = useState(start.slice(0, 7));
+  const [picking, setPicking] = useState<"start" | "end">("start");
+  // Blue until a category is picked (grey on the calendar could not be seen), then that category's colour.
+  const cal = kind ? k : paletteOf("blue");
+  const calChrome = { band: cal.tint, edge: cal.ink, soft: cal.tint, line: cal.line, chipBg: cal.tint, chipInk: cal.ink, dashed: false };
+  const days = Math.round((parse(end).getTime() - parse(start).getTime()) / DAY) + 1;
+  const shortDay = (d: string) => parse(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const pickAs = (which: "start" | "end", d: string) => {
+    if (which === "start" || d < start) {
+      setStart(d);
+      if (end < d) setEnd(d);
+      setPicking("end");
+    } else {
+      setEnd(d);
+      setPicking("start");
+    }
+    setCursor(d.slice(0, 7));
+  };
+  const pick = (d: string) => {
+    if (shape === "event") {
+      setStart(d);
+      setEnd(d);
+      return;
+    }
+    pickAs(picking, d);
+  };
   const ok = title.trim().length > 0 && !!start && endOk;
   const placeholder = kind === "trip" ? "Italy with the family" : kind === "health" ? "Sprained ankle" : kind === "family" ? "Wedding in Groningen" : kind === "work" ? "Night shifts all week" : "Started creatine, 5 g a day";
   return (
@@ -383,13 +411,8 @@ function EventDialog({ today, event, cats, onAddCat, onRenameCat, onRemoveCat, o
             </span>
           </span>
         </DialogTitle>
-        <DialogDescription hidden>Something in their life the plan has to live with.</DialogDescription>
+        <DialogDescription hidden={!!event}>What happened, which kind, and when. A timestamp is one day; a period runs from one day to another.</DialogDescription>
       </DialogHeader>
-
-      <label className="rd-field">
-        <span>What</span>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={placeholder} maxLength={80} autoFocus={!event} />
-      </label>
 
       <div className="rd-field">
         <span>Category</span>
@@ -453,42 +476,70 @@ function EventDialog({ today, event, cats, onAddCat, onRenameCat, onRemoveCat, o
         )}
       </div>
 
-      <div className="rd-field">
-        <span>When</span>
-        <div className="rd-btn-group rq-groups" role="group" aria-label="A timestamp or a period">
-          <button type="button" className={shape === "event" ? "on" : ""} aria-pressed={shape === "event"} onClick={() => setShape("event")}>
-            Timestamp
-          </button>
-          <button type="button" className={shape === "period" ? "on" : ""} aria-pressed={shape === "period"} onClick={() => setShape("period")}>
-            A period
-          </button>
+      <label className="rd-field">
+        <span>What</span>
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={placeholder} maxLength={80} autoFocus={!event} />
+      </label>
+
+      {/* The phase dialog's layout (26 Sep): the month to click on the left,
+          in the category's colour, the dates as fields on the right. A
+          timestamp is one day; a period takes a click for its first day and
+          one for its last, as a phase does. */}
+      <div className="rdd-cols">
+        <MonthRange from={start} to={shape === "event" ? start : end} onPick={pick} chrome={calChrome} planned={[]} cursor={cursor} setCursor={setCursor} today={today} />
+        <div className="rdd-fields">
+          <div className="rd-field">
+            <span>When</span>
+            <div className="rd-btn-group rq-groups" role="group" aria-label="A timestamp or a period">
+              <button type="button" className={shape === "event" ? "on" : ""} aria-pressed={shape === "event"} onClick={() => setShape("event")}>
+                Timestamp
+              </button>
+              <button type="button" className={shape === "period" ? "on" : ""} aria-pressed={shape === "period"} onClick={() => setShape("period")}>
+                A period
+              </button>
+            </div>
+          </div>
+          {shape === "event" ? (
+            <label className="rd-field">
+              <span>On</span>
+              <DateText
+                value={start}
+                onChange={(d) => {
+                  setStart(d);
+                  setEnd(d);
+                  setCursor(d.slice(0, 7));
+                }}
+                label="On"
+              />
+            </label>
+          ) : (
+            <>
+              <label className="rd-field">
+                <span>Starts</span>
+                <DateText value={start} onChange={(d) => pickAs("start", d)} label="Starts" onFocus={() => setPicking("start")} />
+              </label>
+              <label className="rd-field">
+                <span>Ends</span>
+                <DateText value={end} onChange={(d) => pickAs("end", d)} label="Ends" onFocus={() => setPicking("end")} />
+              </label>
+              <div className="rd-field">
+                <span>Length</span>
+                <span className="rdd-length">
+                  {endOk ? `${days} ${days === 1 ? "day" : "days"}` : "Ends before it starts"}
+                  <small>
+                    {shortDay(start)} – {shortDay(end)}
+                  </small>
+                </span>
+              </div>
+            </>
+          )}
+          <p className="rdd-picking">{shape === "event" ? "Click the day it happened." : picking === "start" ? "Click a day for the start." : "Now click a day for the end."}</p>
+          <label className="rd-field">
+            <span>Note</span>
+            <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="What it means for the plan, for you alone." />
+          </label>
         </div>
       </div>
-      <div className="rd-field-row rq-ev-dates">
-        <label className="rd-field">
-          <span>{shape === "event" ? "On" : "From"}</span>
-          <DatePick
-            value={start}
-            onChange={(d) => {
-              setStart(d);
-              if (end < d) setEnd(d);
-            }}
-            label={shape === "event" ? "On" : "From"}
-          />
-        </label>
-        {shape === "period" && (
-          <label className="rd-field">
-            <span>To</span>
-            <DatePick value={end} onChange={setEnd} label="To" />
-          </label>
-        )}
-      </div>
-      {shape === "period" && !endOk && <small className="rd-dlg-hint rq-ev-len">Ends before it starts.</small>}
-
-      <label className="rd-field">
-        <span>Note</span>
-        <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="What it means for the plan, for you alone." />
-      </label>
 
       <DialogFooter>
         {event && (
