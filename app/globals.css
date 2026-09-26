@@ -17063,6 +17063,11 @@ button.ci-hint { cursor: pointer; }
 .ci-day:not(.done) .ci-day-date { color: #8b93a1; font-weight: 600; }
 .ci-day-sub { font-size: 12.5px; color: #8b93a1; }
 .ci-day.done .ci-day-sub { color: #2f7a3f; font-weight: 600; }
+/* A day only partly logged (26 Sep): the amber of an unfinished session, Unfinished with a lock, since it can't be changed any more. */
+.ci-day.unfinished { border-color: #F3E0BF; background: #FDF7EC; }
+.ci-day.unfinished .ci-day-sub { color: #b06d0c; }
+.ci-day-state { flex: none; display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; color: #b06d0c; }
+.ci-day-state svg { width: 12px; height: 12px; }
 .ci-day-chev { flex: none; display: inline-flex; color: #5b6474; transition: transform 0.25s ease; }
 .ci-day-chev svg { width: 16px; height: 16px; }
 .ci-day-chev.open { transform: rotate(180deg); }

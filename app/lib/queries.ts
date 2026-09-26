@@ -5962,6 +5962,9 @@ export type CheckInFeedDay = {
   date: string;
   items: { name: string; value: string }[];
   note: string | null;
+  /** The day's own (daily) lines: how many there were and how many were logged. */
+  dailyTotal: number;
+  dailyDone: number;
 };
 export type CheckInHistory = { series: CheckInSeries[]; days: CheckInFeedDay[] };
 
@@ -6014,7 +6017,8 @@ export function getCheckInHistory(clientId: number): CheckInHistory {
       if (p) items.push({ name: s.name, value: shown(s, p.value) });
     }
     const note = [getCheckInNote(clientId, "daily", date), getCheckInNote(clientId, "measurements", date)].filter((n): n is string => !!n?.trim()).join("\n") || null;
-    days.push({ date, items, note });
+    const daily = series.filter((s) => s.cadence === "daily");
+    days.push({ date, items, note, dailyTotal: daily.length, dailyDone: daily.filter((s) => s.points.some((x) => x.date === date)).length });
   }
   return { series, days };
 }
