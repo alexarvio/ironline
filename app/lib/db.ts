@@ -1015,7 +1015,9 @@ export type CoachInvoicing = {
 };
 /** The coach's own Stripe account (lib/stripe.ts), once they start connecting it. */
 export type CoachPayments = { stripe_account_id?: string; stripe_status?: "pending" | "active"; stripe_checked_at?: string };
-export type CoachSettings = { business?: CoachBusiness; invoicing?: CoachInvoicing; payments?: CoachPayments };
+export type CoachSettings = { business?: CoachBusiness; invoicing?: CoachInvoicing; payments?: CoachPayments; /** The coach's own contact details (Your profile, Your details): not the business on invoices. */ contact?: CoachContact };
+/** A coach's phone and address, as on any account profile. Every field optional. */
+export type CoachContact = { phone_code?: string; phone?: string; address?: string; postcode?: string; city?: string; country_code?: string };
 
 export type Data = {
   users: User[];
