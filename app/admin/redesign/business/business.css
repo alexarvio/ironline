@@ -44,3 +44,12 @@
   .bzd-cols { grid-template-columns: 1fr; }
   .bzd-right { position: static; max-height: none; }
 }
+
+/* One column (26 Sep): the numbers across the full width on top (each row
+   of tiles on one line, Gender and Age side by side), By client below them
+   at full width, scrolling with the page. */
+.bzd-cols { grid-template-columns: 1fr; gap: 20px; }
+.bzd-left .bzd-tiles { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.bzd-left .bzd-tiles.four { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.bzd-left .bzd-two { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.bzd-right { position: static; max-height: none; }
