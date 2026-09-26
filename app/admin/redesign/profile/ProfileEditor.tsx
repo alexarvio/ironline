@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import DragList from "../../../components/DragList";
 import CoachProfileScreen from "../../../client/CoachProfileScreen";
 import AvatarCropDialog from "../../AvatarCropDialog";
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/basics";
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/basics";
+import ProfileDetails, { type ProfileDetailsData } from "./ProfileDetails";
 import { Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch, Textarea } from "../../../components/ui/form";
 import { publishCoachProfileAction, removeCoachPhotoAction, saveCoachProfileAction, uploadCoachPhotoAction } from "../../../lib/actions";
 import { COACH_PROFILE_LIMITS as LIMIT, type CoachProfileView, type CoachRole, type CoachStudy } from "../../../lib/coachProfileView";
@@ -51,7 +52,7 @@ function ago(iso: string, now: number): string {
   return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
-export default function ProfileEditor({ profile, coaches, currentCoachId }: { profile: CoachProfileView; coaches: { id: number; email: string }[]; currentCoachId: number }) {
+export default function ProfileEditor({ profile, coaches, currentCoachId, details, countries }: { profile: CoachProfileView; coaches: { id: number; email: string }[]; currentCoachId: number; /** Your details: email, phone, address (the other tab). */ details: ProfileDetailsData; countries: { code: string; name: string }[] }) {
   const router = useRouter();
   const initialFields: Fields = {
     displayName: profile.published || profile.updatedAt ? profile.displayName : "",
@@ -159,7 +160,7 @@ export default function ProfileEditor({ profile, coaches, currentCoachId }: { pr
       <header className="rpf-head">
         <div>
           <h1 className="rpf-title">{ownProfile ? "Your profile" : `${profile.displayName}'s profile`}</h1>
-          <p className="rpf-sub">What clients read when they open Coach on their Account tab.</p>
+
         </div>
         <div className="rpf-head-right">
           <Badge className={`rpf-state${published ? " on" : ""}`}>{published ? "Published" : "Not published"}</Badge>
@@ -180,6 +181,17 @@ export default function ProfileEditor({ profile, coaches, currentCoachId }: { pr
         </div>
       </header>
 
+      {/* Two parts (26 Sep): the account basics, and the public profile, the
+          write-up clients read (and, one day, people looking for a coach). */}
+      <Tabs defaultValue="details" className="rpf-tabs">
+        <TabsList className="rpf-tablist">
+          <TabsTrigger value="details">Your details</TabsTrigger>
+          <TabsTrigger value="public">Public profile</TabsTrigger>
+        </TabsList>
+        <TabsContent value="details">
+          <ProfileDetails coachId={profile.coachId} data={details} countries={countries} />
+        </TabsContent>
+        <TabsContent value="public">
       <div className="rpf-cols">
         <div className="rpf-form">
           <Card>
@@ -352,6 +364,8 @@ export default function ProfileEditor({ profile, coaches, currentCoachId }: { pr
           <span className="rpf-preview-note">{published ? "Live for your clients" : "Clients see a minimal card until you publish"}</span>
         </aside>
       </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -1,5 +1,7 @@
 import { isOwner, requireCoach } from "../../../lib/auth";
-import { getCoachProfileView, listCoachAccounts } from "../../../lib/queries";
+import { getCoachProfileView, getCoachSettings, listCoachAccounts } from "../../../lib/queries";
+import { getData } from "../../../lib/db";
+import { COUNTRIES } from "../../../lib/countries";
 import { loadRail } from "../loaders";
 import RedesignRail from "../RedesignRail";
 import ProfileEditor from "./ProfileEditor";
@@ -23,11 +25,23 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   const coachId = owner && Number.isInteger(asked) && asked > 0 && getCoachProfileView(asked) ? asked : coach.id;
   const profile = getCoachProfileView(coachId);
   const coaches = owner ? listCoachAccounts().map((c) => ({ id: c.id, email: c.email })) : [];
+  // Your details: the account basics, beside the public profile.
+  const contact = getCoachSettings(coachId).contact ?? {};
+  const details = {
+    email: getData().users.find((u) => u.id === coachId)?.email ?? "",
+    phoneCode: contact.phone_code ?? "",
+    phone: contact.phone ?? "",
+    address: contact.address ?? "",
+    postcode: contact.postcode ?? "",
+    city: contact.city ?? "",
+    countryCode: contact.country_code ?? "",
+  };
+  const countries = COUNTRIES.map((c) => ({ code: c.code, name: c.name }));
   return (
     <div className="rd-frame">
       <RedesignRail rail={loadRail(coach)} clientId={0} settings="profile" />
       <div className="rd-page">
-        {profile ? <ProfileEditor key={coachId} profile={profile} coaches={coaches} currentCoachId={coach.id} /> : <p className="rpf-empty">This account has no coach profile.</p>}
+        {profile ? <ProfileEditor key={coachId} profile={profile} coaches={coaches} currentCoachId={coach.id} details={details} countries={countries} /> : <p className="rpf-empty">This account has no coach profile.</p>}
       </div>
     </div>
   );

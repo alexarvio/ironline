@@ -1,5 +1,5 @@
 /* The coach profile editor in the redesign (25 Sep). Prefix rpf-. */
-.rpf { display: flex; flex-direction: column; gap: 18px; max-width: 1280px; }
+.rpf { display: flex; flex-direction: column; gap: 18px; }
 .rpf-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
 .rpf-title { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; color: #141a24; }
 .rpf-sub { margin: 4px 0 0; font-size: 13.5px; color: #5b6474; }
@@ -67,3 +67,13 @@
 .rpf-row [data-slot="input"] { height: 36px; }
 .rpf-publish-label { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 500; }
 .rpf-publish-label b { color: #141a24; font-weight: 700; }
+
+/* Two tabs (26 Sep): Your details and Public profile; the page uses the full width. */
+.rpf-tabs { display: flex; flex-direction: column; gap: 16px; }
+.rpf-tablist { align-self: flex-start; }
+.rpf-details { display: flex; flex-direction: column; gap: 14px; }
+.rpf-grid3 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1.4fr); gap: 12px 14px; }
+.rpf-readonly { background: #f4f7fc; color: #5b6474; }
+.rpf-select-menu { max-height: 300px; }
+.rpf-details [data-slot="input"], .rpf-details [data-slot="select-trigger"] { height: 38px; }
+.rpf-details .nc-phone .nc-input, .rpf-details .nc-phone .nc-dial { height: 38px; }

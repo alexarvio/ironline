@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { getData, type CoachBusiness, type CoachInvoicing } from "./db";
+import { getData, persist, type CoachBusiness, type CoachInvoicing } from "./db";
 import { createCoachAccount, invoiceCheckout, onboardingLink, stripeConfigured } from "./stripe";
 import { canPayOnline } from "./payments";
 import { appUrl } from "./passwordReset";
@@ -3462,4 +3462,29 @@ export async function payInvoiceAction(invoiceId: number): Promise<{ url?: strin
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Stripe did not answer. Try again." };
   }
+}
+
+/**
+ * Your profile → Your details: the coach's own phone and address (the
+ * public profile is saveCoachProfileAction). The owner may fill these in
+ * for another coach, as with the profile.
+ */
+export async function saveCoachContactAction(formData: FormData): Promise<{ ok: boolean }> {
+  const coachId = await profileCoachId(formData);
+  const user = getData().users.find((u) => u.id === coachId && u.role === "coach");
+  if (!user) return { ok: false };
+  const clip = (k: string, max: number) => String(formData.get(k) ?? "").trim().slice(0, max);
+  const code = clip("phone_code", 6);
+  const contact = {
+    phone_code: /^\+[0-9]{1,4}$/.test(code) ? code : "",
+    phone: clip("phone", 30),
+    address: clip("address", 160),
+    postcode: clip("postcode", 20),
+    city: clip("city", 80),
+    country_code: clip("country_code", 3).toUpperCase(),
+  };
+  user.coach_settings = { ...(user.coach_settings ?? {}), contact: Object.fromEntries(Object.entries(contact).filter(([, v]) => v)) };
+  persist();
+  revalidatePath("/admin/redesign/profile");
+  return { ok: true };
 }
