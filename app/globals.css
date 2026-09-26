@@ -17049,11 +17049,9 @@ button.ci-hint { cursor: pointer; }
 .ci-done-row-card .ci-saved-title { font-size: 15.5px; font-weight: 700; color: #141a24; }
 .ci-done-row-card .ci-saved-sub { font-size: 12.5px; color: #5b6474; }
 .ci-done-edit { flex: none; height: 34px; padding: 0 14px; border: 1px solid #D5EBDC; border-radius: 999px; background: #fff; font: inherit; font-size: 13.5px; font-weight: 700; color: #2f7a3f; cursor: pointer; }
-/* The state on the row (26 Sep): Completed in green, or Unfinished in the amber of an unfinished session on Training. */
-.ci-saved-state { font-weight: 700; color: #2f7a3f; }
-.ci-done-row-card.unfinished { background: #FDF7EC; border-color: #F3E0BF; box-shadow: 0 12px 30px -24px rgba(176, 109, 12, 0.45); }
-.ci-done-row-card.unfinished .ci-saved-state { color: #b06d0c; }
-.ci-done-row-card.unfinished .ci-done-edit { border-color: #F3E0BF; color: #b06d0c; }
+/* The sent day as a session row on Training (26 Sep): the same .tr-row, green and Completed, or amber and Unfinished; a tap opens it again. */
+.ci-row { animation: ci-fold-in 0.34s cubic-bezier(0.22, 1, 0.36, 1); }
+@media (prefers-reduced-motion: reduce) { .ci-row { animation: none; } }
 .ci-feed { display: flex; flex-direction: column; gap: 8px; animation: ci-fold-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.06s both; }
 .ci-feed-title { margin: 0; padding: 4px 4px 2px; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
 .ci-day { border: 1px solid #dfe3e8; border-radius: 16px; background: #fff; overflow: hidden; }
