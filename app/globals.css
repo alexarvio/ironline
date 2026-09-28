@@ -2770,12 +2770,11 @@ a.cd-entry:hover { border-color: var(--accent); }
   min-height: 44px;
 }
 
+/* The kind's icon on its own, no bubble (28 Sep); blue while unread. */
 .cn-notif-icon {
   flex-shrink: 0;
   width: 32px;
   height: 32px;
-  border-radius: 999px;
-  background: #eef0f3;
   color: #5b6474;
   display: flex;
   align-items: center;
@@ -2783,13 +2782,12 @@ a.cd-entry:hover { border-color: var(--accent); }
 }
 
 .cn-notif-icon.unread {
-  background: #e6ecf3;
   color: #2f5d8f;
 }
 
 .cn-notif-icon svg {
-  width: 15px;
-  height: 15px;
+  width: 18px;
+  height: 18px;
 }
 
 .cn-notif-body {
