@@ -351,7 +351,7 @@ export async function addExerciseAction(formData: FormData) {
   if (formData.get("applyToRemainingWeeks") === "1") {
     addExerciseToRemainingWeeks(programDayId, exerciseId, sets, reps, targetWeight, rpe, tempo, notes);
   }
-  if (clientSeesProgramDay(programDayId)) trainingChange(clientIdForProgramDay(programDayId), programDayId, `Added ${exerciseWords(exerciseId)} to ${dayWords(programDayId)}`);
+  if (clientSeesProgramDay(programDayId)) trainingChange(clientIdForProgramDay(programDayId), programDayId, `Added ${exerciseWords(exerciseId)} to ${dayWords(programDayId)}${formData.get("applyToRemainingWeeks") === "1" ? " and the weeks after" : ""}`);
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -1411,11 +1411,14 @@ export async function applySupplementChangesAction(clientId: number, changes: Su
   const rowsBefore = getData().nutrition_plans.find((p) => p.client_id === clientId)?.supplement_rows ?? [];
   const removedNames = (changes.removedIds ?? []).map((id) => rowsBefore.find((r) => r.id === id)?.name.trim() || "a row");
   applySupplementChanges(clientId, changes);
+  // The sheet always sends the order: only a different one is a reorder.
+  const keptBefore = rowsBefore.filter((r) => !(changes.removedIds ?? []).includes(r.id)).map((r) => r.id);
+  const reordered = !!changes.order?.length && changes.order.filter((id) => keptBefore.includes(id)).join(",") !== keptBefore.join(",");
   const parts = [
     changes.added?.length ? `Added ${changes.added.map((a) => a.name.trim() || "a row").join(", ")}` : null,
     removedNames.length ? `Removed ${removedNames.join(", ")}` : null,
     changes.updated?.length ? `Changed ${changes.updated.map((u) => u.name.trim() || "a row").join(", ")}` : null,
-    changes.order?.length ? "Reordered them" : null,
+    reordered ? "Reordered them" : null,
   ].filter(Boolean);
   if (parts.length) supplementChange(clientId, parts.join(", "));
   revalidatePath("/admin");
@@ -3049,7 +3052,8 @@ function assignmentWords(assignmentId: number): { name: string; dayId: number | 
   return { name: a ? exerciseWords(a.exercise_id) : "an exercise", dayId: a?.program_day_id ?? null };
 }
 function trainingChange(clientId: number | null | undefined, programDayId: number | null | undefined, detail: string) {
-  noteChange(clientId, `Updated your training: ${detail}`, { tab: "training", label: "See your training", key: "training", ref: programDayId ?? undefined, detail });
+  // One note a session a day: its changes join, and View opens that session.
+  noteChange(clientId, `Updated your training: ${detail}`, { tab: "training", label: "See your training", key: programDayId != null ? `training:${programDayId}` : "training", ref: programDayId ?? undefined, detail });
 }
 // The same for the check-in's metrics ("Changed what you check in: Added
 // Screen time, Removed Mood for hyper") and the supplements.
