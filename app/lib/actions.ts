@@ -706,16 +706,17 @@ export async function createClientWithLoginAction(
   const email = s(p?.email).toLowerCase();
   const password = String(p?.password ?? "");
   if (!first || !last) return { ok: false, error: "A first and a last name are needed." };
-  if (!EMAIL_RE.test(email)) return { ok: false, error: "That email doesn't look right." };
-  if (password.length < 8) return { ok: false, error: "The password needs at least 8 characters." };
-  if (findUserByEmail(email)) return { ok: false, error: "That email already has an account." };
+  // The email can wait: the login is made later, from App access.
+  if (email && !EMAIL_RE.test(email)) return { ok: false, error: "That email doesn't look right." };
+  if (password && password.length < 8) return { ok: false, error: "The password needs at least 8 characters." };
+  if (email && findUserByEmail(email)) return { ok: false, error: "That email already has an account." };
 
   // The record, then the login. If the login cannot be made, the record goes
   // too: a client with no way in, that the coach did not ask for, is worse
   // than trying again.
   const client = createClient(`${first} ${last}`, coach.id);
   try {
-    createUser(email, password, "client", client.id, true);
+    if (password) createUser(email, password, "client", client.id, true);
   } catch (error) {
     removeClient(client.id);
     return { ok: false, error: error instanceof Error ? error.message : "The login could not be made." };
@@ -727,7 +728,7 @@ export async function createClientWithLoginAction(
     gender: GENDERS.has(s(p.gender)) ? s(p.gender) : null,
     height_cm: num(p.heightCm),
     starting_weight_kg: num(p.startingWeightKg),
-    email,
+    email: email || null,
     // The dial code and the national number are kept apart, and joined only
     // for show, so a country is never guessed back out of a typed string.
     phone_code: /^\+[0-9]{1,4}$/.test(phoneCode) ? phoneCode : null,
@@ -736,7 +737,7 @@ export async function createClientWithLoginAction(
   });
   revalidatePath("/admin");
 
-  if (!p.invite) return { ok: true, clientId: client.id, invited: false, inviteFailed: false };
+  if (!p.invite || !password) return { ok: true, clientId: client.id, invited: false, inviteFailed: false };
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
   const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");

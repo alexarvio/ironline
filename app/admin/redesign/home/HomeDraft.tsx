@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { AccountIcon, ChatIcon } from "../../../components/icons";
 import type { ClientEngagement, HomeAction, OverviewPanel } from "../../../lib/queries";
 import { MessageDialog } from "../training/TrainingDraft";
+import AppAccessButton from "./AppAccessButton";
 
 // The calmer Home tab, as a draft on real data, in the Training draft's
 // sheet. Where the coach lands for a client: who this is and where they are,
@@ -121,6 +122,7 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
           </h1>
         </div>
         <div className="rd-head-actions">
+          <AppAccessButton key={clientId} clientId={clientId} firstName={firstName} />
           <button type="button" className="rd-btn" onClick={() => setDetails(true)}>
             <AccountIcon /> Details
           </button>

@@ -102,3 +102,15 @@
 .rh-photodlg { max-width: 520px; padding: 8px; }
 .rh-photo { display: block; width: 100%; height: auto; max-height: 80vh; object-fit: contain; border-radius: 12px; }
 .rh-cat.messages { background: #e3f0fb; color: #1d5a94; }
+
+/* App access: the login's rows, and a new temporary password. */
+.rh-access-edit { gap: 10px; }
+.rh-access-field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 600; color: #8b93a1; }
+.rh-access-pw { display: flex; gap: 8px; }
+.rh-access-input { flex: 1; min-width: 0; height: 34px; padding: 0 12px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; font-size: 13.5px; font-weight: 600; color: #141a24; box-sizing: border-box; }
+.rh-access-input.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.04em; }
+.rh-access-input:focus { outline: none; border-color: #2f5d8f; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.12); }
+.rh-access-check { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #313851; }
+.rh-access-error { margin: 0; font-size: 12.5px; font-weight: 600; color: #a32d2d; }
+.rh-access-given { display: flex; align-items: center; gap: 12px; }
+.rh-access-given code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13.5px; letter-spacing: 0.04em; }
