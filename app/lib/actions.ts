@@ -351,7 +351,7 @@ export async function addExerciseAction(formData: FormData) {
   if (formData.get("applyToRemainingWeeks") === "1") {
     addExerciseToRemainingWeeks(programDayId, exerciseId, sets, reps, targetWeight, rpe, tempo, notes);
   }
-  if (clientSeesProgramDay(programDayId)) noteChange(clientIdForProgramDay(programDayId), "Updated your training", { tab: "training", label: "See your training", key: "training" });
+  if (clientSeesProgramDay(programDayId)) trainingChange(clientIdForProgramDay(programDayId), programDayId, `Added ${exerciseWords(exerciseId)} to ${dayWords(programDayId)}`);
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -361,8 +361,9 @@ export async function removeExerciseAction(formData: FormData) {
   const clientId = getClientIdForAssignment(assignmentId);
   if (!(await coachForClient(clientId))) return;
   const seen = clientSeesAssignment(assignmentId);
+  const was = assignmentWords(assignmentId);
   removeAssignment(assignmentId);
-  if (seen) noteChange(clientId, "Updated your training", { tab: "training", label: "See your training", key: "training" });
+  if (seen) trainingChange(clientId, was.dayId, `Removed ${was.name} from ${was.dayId != null ? dayWords(was.dayId) : "a session"}`);
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -393,7 +394,18 @@ export async function updateAssignmentAction(formData: FormData) {
     const kind = raw === "form" || raw === "load" || raw === "tempo" ? raw : null;
     setExerciseNoteKind(assignmentId, kind);
   }
-  if (clientSeesAssignment(assignmentId)) noteChange(getClientIdForAssignment(assignmentId), "Updated your training", { tab: "training", label: "See your training", key: "training" });
+  if (clientSeesAssignment(assignmentId)) {
+    const was = assignmentWords(assignmentId);
+    const bits = [
+      fields.sets != null ? `${fields.sets} sets` : null,
+      fields.reps != null ? `${fields.reps} reps` : null,
+      "target_weight_kg" in fields ? (fields.target_weight_kg != null ? `${fields.target_weight_kg} kg` : "no weight") : null,
+      "rpe_target" in fields ? (fields.rpe_target != null ? `RPE ${fields.rpe_target}` : "no RPE") : null,
+      "tempo" in fields ? (fields.tempo ? `tempo ${fields.tempo}` : "no tempo") : null,
+      "notes" in fields ? (fields.notes ? "a note" : "no note") : null,
+    ].filter(Boolean);
+    trainingChange(getClientIdForAssignment(assignmentId), was.dayId, `Changed ${was.name}${bits.length ? ` to ${bits.join(", ")}` : ""} in ${was.dayId != null ? dayWords(was.dayId) : "a session"}`);
+  }
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -474,7 +486,7 @@ export async function setLabelAction(formData: FormData) {
   if (!(await coachForClient(clientIdForProgramDay(programDayId)))) return;
   const label = String(formData.get("label") || "");
   setDayLabel(programDayId, label);
-  if (clientSeesProgramDay(programDayId)) noteChange(clientIdForProgramDay(programDayId), "Updated your training", { tab: "training", label: "See your training", key: "training" });
+  if (clientSeesProgramDay(programDayId)) trainingChange(clientIdForProgramDay(programDayId), programDayId, `Renamed a session to ${dayWords(programDayId)}`);
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -2770,7 +2782,7 @@ export async function copyProgramDayAction(formData: FormData) {
     copyProgramDay(fromDayId, toDayId);
     if (laterWeeks) copyProgramDayToLaterWeeks(fromDayId, toDayId);
   }
-  if (clientSeesProgramDay(fromDayId)) noteChange(owner, "Updated your training", { tab: "training", label: "See your training", key: "training" });
+  if (clientSeesProgramDay(fromDayId)) trainingChange(owner, to === "new" ? fromDayId : Number(to), `Copied ${dayWords(fromDayId)} to ${to === "new" ? "a new session" : dayWords(Number(to))}`);
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -2810,8 +2822,8 @@ export async function addSessionAction(formData: FormData) {
   const clientId = Number(formData.get("clientId"));
   const week = Number(formData.get("week"));
   if (!clientId || !week || !(await coachForClient(clientId))) return;
-  addSession(clientId, week);
-  if (clientSeesTrainingWeek(clientId, week)) noteChange(clientId, "Updated your training", { tab: "training", label: "See your training", key: "training" });
+  const made = addSession(clientId, week);
+  if (clientSeesTrainingWeek(clientId, week)) trainingChange(clientId, made?.id, `Added a session to week ${week}`);
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -2822,8 +2834,9 @@ export async function removeSessionAction(formData: FormData) {
   const clientId = clientIdForProgramDay(programDayId);
   if (!programDayId || !(await coachForClient(clientId))) return;
   const seen = clientSeesProgramDay(programDayId);
+  const was = dayWords(programDayId);
   removeSession(programDayId);
-  if (seen) noteChange(clientId, "Updated your training", { tab: "training", label: "See your training", key: "training" });
+  if (seen) trainingChange(clientId, null, `Removed ${was}`);
   revalidatePath("/client");
   revalidatePath("/admin");
 }
@@ -2851,6 +2864,8 @@ export async function applyDayChangesAction(
   // A finished session takes no new exercises (the builder hides the row; this is the backstop).
   if ((payload.added ?? []).length > 0 && isSessionComplete(payload.programDayId)) return { ok: false, error: "This session is completed" };
   try {
+    // What changed, in words, before the rows go (for the client's note).
+    const removedNames = (payload.removed ?? []).map((id) => assignmentWords(id).name);
     const { skipped } = applyDayChanges({
       programDayId: payload.programDayId,
       alsoRemaining: !!payload.alsoRemaining,
@@ -2869,7 +2884,20 @@ export async function applyDayChangesAction(
       added: (payload.added ?? []).filter((a) => Number.isInteger(a.exerciseId)),
       order: Array.isArray(payload.order) ? payload.order.filter((id) => Number.isInteger(id)) : null,
     });
-    if (clientSeesProgramDay(payload.programDayId)) noteChange(clientIdForProgramDay(payload.programDayId), "Updated your training", { tab: "training", label: "See your training", key: "training" });
+    if (clientSeesProgramDay(payload.programDayId)) {
+      const addedNames = (payload.added ?? []).map((a) => exerciseWords(a.exerciseId));
+      const changed = new Set([...Object.keys(payload.fields ?? {}), ...Object.keys(payload.custom ?? {}), ...Object.keys(payload.gyms ?? {})]).size;
+      const cardioTouched = Object.keys(payload.cardio?.fields ?? {}).length + (payload.cardio?.removed ?? []).length + (payload.cardio?.added ?? []).length;
+      const parts = [
+        addedNames.length ? `Added ${addedNames.join(", ")}` : null,
+        removedNames.length ? `Removed ${removedNames.join(", ")}` : null,
+        changed ? `Changed ${changed === 1 ? "an exercise" : `${changed} exercises`}` : null,
+        cardioTouched ? "Changed the cardio" : null,
+        typeof payload.label === "string" ? "Renamed it" : null,
+        payload.order ? "Reordered it" : null,
+      ].filter(Boolean);
+      trainingChange(clientIdForProgramDay(payload.programDayId), payload.programDayId, `${parts.length ? parts.join(", ") : "Changed"} in ${dayWords(payload.programDayId)}${payload.alsoRemaining ? " and the weeks after" : ""}`);
+    }
     revalidatePath("/client");
     revalidatePath("/admin");
     return { ok: true, skipped };
@@ -2945,9 +2973,29 @@ export async function saveWarmupSetsAction(assignmentId: number, sets: { weight_
 // Everything the coach changes reaches the client as a notification: one per
 // kind per day, so an afternoon of edits reads as one line, not thirty.
 // In the app only, unless push says it is a real moment (see logCoachActivity).
-function noteChange(clientId: number | null | undefined, message: string, opts: { tab?: "home" | "training" | "nutrition" | "settings" | "invoices"; label?: string; ref?: number; key: string; push?: boolean }) {
+function noteChange(clientId: number | null | undefined, message: string, opts: { tab?: "home" | "training" | "nutrition" | "settings" | "invoices"; label?: string; ref?: number; key: string; push?: boolean; detail?: string }) {
   if (clientId == null) return;
-  logCoachActivity(clientId, message, { kind: "general", actionTab: opts.tab, actionLabel: opts.label, actionRef: opts.ref, dedupeKey: `${opts.key}:${localDateStr()}`, push: opts.push });
+  logCoachActivity(clientId, message, { kind: "general", actionTab: opts.tab, actionLabel: opts.label, actionRef: opts.ref, dedupeKey: `${opts.key}:${localDateStr()}`, push: opts.push, mergeDetail: opts.detail });
+}
+
+// ---- A training change, in words, for Home's "Latest from" card and the
+// notifications: "Updated your training: Added Squat to Lower (week 5)".
+// The same day's changes join one note (logCoachActivity's mergeDetail), and
+// View opens the session the latest one was in (the note's ref).
+function dayWords(programDayId: number): string {
+  const d = getData().program_days.find((pd) => pd.id === programDayId);
+  if (!d) return "a session";
+  return `${d.label?.trim() || `Session ${d.day_of_week}`} (week ${d.week_number})`;
+}
+function exerciseWords(exerciseId: number): string {
+  return getData().exercises.find((e) => e.id === exerciseId)?.name ?? "an exercise";
+}
+function assignmentWords(assignmentId: number): { name: string; dayId: number | null } {
+  const a = getData().workout_assignments.find((wa) => wa.id === assignmentId);
+  return { name: a ? exerciseWords(a.exercise_id) : "an exercise", dayId: a?.program_day_id ?? null };
+}
+function trainingChange(clientId: number | null | undefined, programDayId: number | null | undefined, detail: string) {
+  noteChange(clientId, `Updated your training: ${detail}`, { tab: "training", label: "See your training", key: "training", ref: programDayId ?? undefined, detail });
 }
 
 // The session clock: a valid ISO timestamp from the phone, else now.

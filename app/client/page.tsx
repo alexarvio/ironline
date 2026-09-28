@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "../lib/auth";
+import { getData } from "../lib/db";
 import { logoutAction } from "../lib/auth-actions";
 import {
   getAssignmentsForDay,
@@ -451,8 +452,15 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
       return { kind: "video", title: "Replied to your video", body: reply?.replyNote || null, cta: "Watch", videoReply: reply, ...base };
     }
     // The button says where it goes, after what changed: View training,
-    // View nutrition, View check-in (a lifestyle phase), and so on.
+    // View nutrition, View check-in (a lifestyle phase), and so on. A
+    // training change carries its words after the colon ("Added Squat to
+    // Lower (week 5)"): they go under the title, and View opens that
+    // session (the note's ref is the day; its week picks the week strip).
     const title = actionOnly(latestNote.message);
+    const colon = latestNote.message.indexOf(": ");
+    const detail = colon > 0 ? latestNote.message.slice(colon + 2).replace(/ · /g, ". ") : null;
+    const day = latestNote.action_tab === "training" && latestNote.action_ref != null ? getData().program_days.find((pd) => pd.id === latestNote.action_ref) : null;
+    const focusWeek = day?.week_number ?? null;
     if (latestNote.kind === "programme") {
       if (latestNote.action_tab === "nutrition") return { kind: "deploy", track: "nutrition", title, body: null, cta: "View nutrition", ...base };
       if (latestNote.action_tab === "home") return { kind: "comment", context: "checkin", title, body: null, cta: "View check-in", ...base };
@@ -464,7 +472,7 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
     // A change the coach made: read what it was from its tab and its words.
     if (latestNote.kind === "general") {
       const lower = latestNote.message.toLowerCase();
-      if (latestNote.action_tab === "training") return { kind: "deploy", track: "training", title, body: null, cta: lower.includes("video") ? "View exercise" : "View training", ...base };
+      if (latestNote.action_tab === "training") return { kind: "deploy", track: "training", title, body: detail, cta: lower.includes("video") ? "View exercise" : "View training", ...base, focusWeek };
       if (lower.includes("goal")) return { kind: "goal", title, body: null, cta: "Open chat", ...base };
       if (lower.includes("call") || lower.includes("meeting")) return { kind: "meeting", title, body: null, cta: "View meeting", ...base };
       if (lower.includes("progress pictures")) return { kind: "comment", context: "photos", title, body: null, cta: "View pictures", ...base, actionTab: latestNote.action_tab ?? "home" };

@@ -6321,10 +6321,30 @@ export function logCoachActivity(
     // A small edit (a weight, a supplement) stays in the app: a buzz for every
     // tweak would get the app muted.
     push?: boolean;
+    /**
+     * A change's words ("Added Squat to Lower (week 5)"). With a dedupe key
+     * that already has a row today, the words join that row's instead of
+     * being dropped: "Updated your training: Added Squat to Lower (week 5) ·
+     * Removed Lunge from Push (week 5)", unread again, and pointing at the
+     * latest change.
+     */
+    mergeDetail?: string;
   }
 ) {
   const data = getData();
-  if (opts.dedupeKey && data.coach_activity.some((a) => a.client_id === clientId && a.dedupe_key === opts.dedupeKey)) {
+  const dup = opts.dedupeKey ? data.coach_activity.find((a) => a.client_id === clientId && a.dedupe_key === opts.dedupeKey) : null;
+  if (dup) {
+    if (opts.mergeDetail) {
+      const colon = dup.message.indexOf(": ");
+      const base = colon > 0 ? dup.message.slice(0, colon) : dup.message;
+      const details = colon > 0 ? dup.message.slice(colon + 2).split(" · ") : [];
+      if (!details.includes(opts.mergeDetail)) details.push(opts.mergeDetail);
+      dup.message = `${base}: ${details.slice(-4).join(" · ")}`;
+      dup.created_at = new Date().toISOString();
+      dup.read = false;
+      if (opts.actionRef != null) dup.action_ref = opts.actionRef;
+      persist();
+    }
     return;
   }
   data.coach_activity.push({

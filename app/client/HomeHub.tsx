@@ -77,6 +77,8 @@ export type LatestActivity = {
   videoReply?: VideoReplyView | null;
   actionTab?: string | null;
   actionRef?: number | null;
+  /** A training change: the week of the session it was in, so View opens it. */
+  focusWeek?: number | null;
   /** The notification behind it, marked read when the CTA is followed. */
   notificationId?: number | null;
   /** Coach messages not read yet. */
@@ -254,7 +256,7 @@ function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstNam
         openCoach?.();
         return;
       default:
-        goToTab?.(a.actionTab ?? "training", a.actionRef ?? undefined);
+        goToTab?.(a.actionTab ?? "training", a.actionRef ?? undefined, a.focusWeek != null ? { week: a.focusWeek, exercise: null } : undefined);
     }
   };
   const initial = (coach.firstName || "C").trim().charAt(0).toUpperCase();
