@@ -11,6 +11,7 @@ import { AccountIcon, ChatIcon } from "../../../components/icons";
 import type { ClientEngagement, HomeAction, OverviewPanel } from "../../../lib/queries";
 import { MessageDialog } from "../training/TrainingDraft";
 import AppAccessButton from "./AppAccessButton";
+import type { ClientAccess } from "../../../lib/access-actions";
 
 // The calmer Home tab, as a draft on real data, in the Training draft's
 // sheet. Where the coach lands for a client: who this is and where they are,
@@ -40,6 +41,8 @@ export type DraftHome = {
   events: DraftEvent[];
   eventTotal: number;
   engagement: ClientEngagement;
+  /** The client's login, for the App access button (read with the page: no second call). */
+  access: ClientAccess;
 };
 
 const draftOnly = (what: string) => toast(what, { description: "Not in the redesign yet: the old tab still does this." });
@@ -122,7 +125,7 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
           </h1>
         </div>
         <div className="rd-head-actions">
-          <AppAccessButton key={clientId} clientId={clientId} firstName={firstName} />
+          <AppAccessButton key={clientId} clientId={clientId} firstName={firstName} initial={home.access} />
           <button type="button" className="rd-btn" onClick={() => setDetails(true)}>
             <AccountIcon /> Details
           </button>

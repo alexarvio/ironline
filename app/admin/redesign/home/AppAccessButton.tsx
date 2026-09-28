@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { LockIcon } from "../../../components/icons";
@@ -13,8 +13,8 @@ import { clientAccessAction, setClientTempPasswordAction, type ClientAccess } fr
 // they chose their own password, and sets a new temporary one when they
 // can't get in. Passwords are stored scrambled, so the one given can't be
 // read back; a new one is shown here once, to copy or email.
-export default function AppAccessButton({ clientId, firstName }: { clientId: number; firstName: string }) {
-  const [access, setAccess] = useState<ClientAccess | null>(null);
+export default function AppAccessButton({ clientId, firstName, initial }: { clientId: number; firstName: string; /** Read with the page, so the button shows at once with no round trip. */ initial: ClientAccess | null }) {
+  const [access, setAccess] = useState<ClientAccess | null>(initial);
   const [shown, setShown] = useState(false);
   const [editing, setEditing] = useState(false);
   const [password, setPasswordText] = useState("");
@@ -24,13 +24,7 @@ export default function AppAccessButton({ clientId, firstName }: { clientId: num
   const [error, setError] = useState("");
   const [busy, start] = useTransition();
 
-  useEffect(() => {
-    let live = true;
-    clientAccessAction(clientId).then((a) => live && setAccess(a));
-    return () => {
-      live = false;
-    };
-  }, [clientId]);
+  // Keyed on the client by its parent, so a new client is a fresh mount with its own initial.
 
   if (!access) return null;
   const hasLogin = !!access.email;

@@ -38,6 +38,13 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
   const q = query.trim().toLowerCase();
   const shown = rail.clients.filter((c) => (filter === "all" || c.attention) && (!q || c.name.toLowerCase().includes(q)));
   const [adding, setAdding] = useState(false);
+  // The client just clicked is marked at once, before the page arrives (a
+  // switch is a round trip to the server), then the real one takes over.
+  const [pending, setPending] = useState<{ id: number; from: string } | null>(null);
+  const here = `${clientId}:${path}`;
+  const pendingId = pending && pending.from === here ? pending.id : null;
+  const markedId = pendingId ?? clientId;
+  const setPendingId = (id: number) => setPending({ id, from: here });
 
   return (
     <aside className="rr" aria-label="Coach rail">
@@ -96,9 +103,9 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
             <p className="rr-empty">{rail.clients.length === 0 ? "No clients yet." : "No client matches that."}</p>
           ) : (
             shown.map((c) => {
-              const active = c.id === clientId;
+              const active = c.id === markedId;
               return (
-                <Link key={c.id} href={`/admin/redesign/home?client=${c.id}`} className={`rr-row${active ? " active" : ""}`} aria-current={active ? "page" : undefined}>
+                <Link key={c.id} href={`/admin/redesign/home?client=${c.id}`} className={`rr-row${active ? " active" : ""}${pendingId === c.id ? " loading" : ""}`} aria-current={active ? "page" : undefined} onClick={() => setPendingId(c.id)}>
                   <span className={`rr-avatar${c.notSignedIn ? " pending" : ""}`} title={c.notSignedIn ? "Hasn't signed in to the app yet" : undefined}>
                     {c.avatarPath ? (
                       // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file

@@ -595,7 +595,19 @@ export function feedHref(e: Pick<FeedEvent, "clientId" | "tab" | "category" | "t
 export function loadHome(clientId: number): DraftHome {
   const panel = getOverviewPanel(clientId);
   const home = getClientHome(clientId);
+  // The client's login, the same shape clientAccessAction gives, read here
+  // so the App access button has it with the page (it used to fetch it
+  // after every client switch: one more round trip).
+  const user = getUserForClient(clientId);
+  const access = {
+    email: user?.email ?? null,
+    signedUp: !!user && !user.must_change_password,
+    mailReady: mailConfigured(),
+    codes: process.env.AUTH_PROVIDER === "clerk",
+    cardEmail: getClientProfile(clientId)?.email ?? null,
+  };
   return {
+    access,
     name: panel.name,
     initial: panel.initial,
     avatarPath: panel.avatarPath,

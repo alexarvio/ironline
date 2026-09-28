@@ -57,6 +57,10 @@
 .rr-row { display: flex; align-items: center; gap: 9px; padding: 7px 8px; border-radius: 10px; text-decoration: none; color: inherit; }
 .rr-row:hover { background: #f4f6fa; }
 .rr-row.active { background: #e6ecf3; }
+/* Clicked, page on its way: the row is marked at once and its avatar pulses until it lands. */
+.rr-row.loading .rr-avatar { animation: rr-pulse 0.9s ease-in-out infinite; }
+@keyframes rr-pulse { 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .rr-row.loading .rr-avatar { animation: none; } }
 .rr-avatar { flex: none; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; overflow: hidden; border-radius: 999px; background: #eef0f3; color: #1e3a6e; font-size: 12px; font-weight: 800; }
 .rr-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .rr-row.active .rr-avatar { background: #1e3a6e; color: #fff; }
