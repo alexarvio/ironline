@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "../components/icons";
+import type { CheckInSection } from "./CheckInScreen";
+import AreaChart, { type ChartPoint } from "./charts/AreaChart";
 
-// The check-in's Progress view: one chart at a time, for a metric the coach
-// has the client tracking. Its name sits centred on the banner's foot with a
-// chevron either side to step through them, and the chart slides the way
-// you went. The chart has no frame: the readings up the side on round steps,
-// time running left to right (the last 7 days, month, or all of it) without
-// labels; press and hold anywhere on it and a label follows your finger with
-// the reading under it and its date.
+// The check-in's Progress view (28 Sep, option 9a): a row of metric chips,
+// one chart card for the chosen metric in its category's colour (the
+// eyebrow, the line, the fade, the target and the marker; all else neutral)
+// with a 7D / 1M / 3M / All toggle, and under it the plain history, newest
+// first, twenty a page. No averages, no deltas, no week grouping.
 //
 // The types mirror CheckInHistory in lib/queries.ts, which a client file
 // can't import.
@@ -19,213 +19,272 @@ export type CheckInSeries = {
   unit: string;
   scaleMax: number | null;
   cadence: "daily" | "weekly" | "measurement";
+  /** The admin group the metric belongs to (its label), and that group's colour for the chart. */
+  category: string;
+  colour: string;
+  colourRgb: string;
+  /** The coach's target for it, if any: the dashed line. */
+  target: number | null;
+  /** Decimals to show: 0, 1 or 2. */
+  precision: number;
   points: { date: string; value: number; at: string | null }[];
 };
-export type CheckInFeedDay = { date: string; items: { name: string; value: string }[]; note: string | null; dailyTotal: number; dailyDone: number };
+export type CheckInFeedDay = {
+  date: string;
+  items: { name: string; value: string }[];
+  note: string | null;
+  dailyTotal: number;
+  dailyDone: number;
+  /** The day as the form's sections, to change it from the feed. */
+  edit: CheckInSection[];
+};
 export type CheckInHistory = { series: CheckInSeries[]; days: CheckInFeedDay[] };
 
-type Range = "7D" | "1M" | "All";
-const RANGES: Range[] = ["7D", "1M", "All"];
+type Range = "7D" | "1M" | "3M" | "All";
+const RANGE_DAYS: Record<Range, number | null> = { "7D": 7, "1M": 30, "3M": 90, All: null };
+const RANGE_WORD: Record<Range, string> = { "7D": "7 days", "1M": "month", "3M": "3 months", All: "" };
+const RANGES: Range[] = ["7D", "1M", "3M", "All"];
+const METRIC_KEY = "ironline:progress-metric";
+const RANGE_KEY = "ironline:progress-range";
+const PAGE = 20;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAY = 86400000;
 const dayNum = (s: string) => Date.UTC(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10))) / DAY;
 const dm = (s: string) => `${Number(s.slice(8, 10))} ${MONTHS[Number(s.slice(5, 7)) - 1]}`;
-const fmt = (v: number) => (Math.abs(v - Math.round(v)) < 0.05 ? String(Math.round(v)) : v.toFixed(1));
-const valueText = (s: CheckInSeries, v: number) => (s.scaleMax ? `${fmt(v)}/${s.scaleMax}` : `${fmt(v)}${s.unit ? ` ${s.unit}` : ""}`);
-const dateText = (s: CheckInSeries, date: string) => (s.cadence === "weekly" ? `Week of ${dm(date)}` : dm(date));
+const fmt = (v: number, p: number) => v.toLocaleString("en-GB", { minimumFractionDigits: p, maximumFractionDigits: p });
+const unitOf = (s: CheckInSeries) => (s.scaleMax ? `/ ${s.scaleMax}` : s.unit);
+const reducedMotion = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-// Round steps for the side: 1, 2, 2.5 or 5 times a power of ten, about four of them.
-function niceTicks(lo: number, hi: number): number[] {
-  if (hi - lo < 1e-9) {
-    const pad = Math.max(1, Math.abs(hi) * 0.05);
-    lo -= pad;
-    hi += pad;
+function readStore(store: "local" | "session", key: string): string | null {
+  try {
+    return (store === "local" ? localStorage : sessionStorage).getItem(key);
+  } catch {
+    return null;
   }
-  const raw = (hi - lo) / 4;
-  const pow = Math.pow(10, Math.floor(Math.log10(raw)));
-  const step = [1, 2, 2.5, 5, 10].map((m) => m * pow).find((s) => s >= raw) ?? 10 * pow;
-  const start = Math.floor(lo / step) * step;
-  const end = Math.ceil(hi / step) * step;
-  const ticks: number[] = [];
-  for (let t = start; t <= end + step / 2; t += step) ticks.push(Math.round(t * 1000) / 1000);
-  return ticks;
+}
+function writeStore(store: "local" | "session", key: string, value: string) {
+  try {
+    (store === "local" ? localStorage : sessionStorage).setItem(key, value);
+  } catch {}
 }
 
 export default function CheckInProgress({ history, today }: { history: CheckInHistory; today: string }) {
-  const tracked = history.series;
-  const [index, setIndex] = useState(() => Math.max(0, tracked.findIndex((s) => s.points.length > 0)));
-  // Which way the last step went, so the chart slides in from that side.
-  const [dir, setDir] = useState<"next" | "prev" | null>(null);
-  const [range, setRange] = useState<Range>("1M");
-  const series = tracked[index] ?? tracked[0];
+  // Only metrics with something logged get a chip, in the Today tab's order.
+  // A legacy measurement field with a tracked metric's name (Weight twice) is
+  // the same thing: the metric's chip stands for both.
+  const tracked = useMemo(() => {
+    const seen = new Set<string>();
+    return history.series.filter((s) => {
+      if (s.points.length === 0) return false;
+      const name = s.name.trim().toLowerCase();
+      if (s.cadence === "measurement" && seen.has(name)) return false;
+      seen.add(name);
+      return true;
+    });
+  }, [history.series]);
+  const [index, setIndex] = useState(() => {
+    const last = readStore("local", METRIC_KEY);
+    const i = last ? tracked.findIndex((s) => s.key === last) : -1;
+    return i >= 0 ? i : 0;
+  });
+  const [range, setRange] = useState<Range>(() => {
+    const r = readStore("session", RANGE_KEY) as Range | null;
+    return r && RANGES.includes(r) ? r : "1M";
+  });
+  const [page, setPage] = useState(0);
+  const series = tracked[Math.min(index, tracked.length - 1)];
 
-  const step = (by: 1 | -1) => {
-    setDir(by === 1 ? "next" : "prev");
-    setIndex((i) => (i + by + tracked.length) % tracked.length);
+  const pick = (i: number) => {
+    const n = tracked.length;
+    if (n < 2) return;
+    const next = (i + n) % n;
+    setIndex(next);
+    setPage(0);
+    writeStore("local", METRIC_KEY, tracked[next].key);
+  };
+  const chooseRange = (r: Range) => {
+    setRange(r);
+    writeStore("session", RANGE_KEY, r);
   };
 
-  // A sideways swipe anywhere under the banner steps too: the page follows
-  // the finger, and past a quarter of the width (or a quick flick) it moves
-  // on, the next metric sliding in from that side; short of that it springs
-  // back. Up and down stays the page's scroll, and a reading held on the
-  // chart is never taken for a swipe.
-  const wrap = useRef<HTMLDivElement>(null);
-  const swipe = useRef<{ x: number; y: number; t: number; axis: "x" | "y" | null; dx: number } | null>(null);
-  const setShift = (dx: number, animate: boolean) => {
-    const el = wrap.current;
-    if (!el) return;
-    el.style.transition = animate ? "transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease" : "none";
-    el.style.transform = dx ? `translateX(${dx}px)` : "";
-    el.style.opacity = dx ? String(Math.max(0.4, 1 - Math.abs(dx) / 600)) : "";
-  };
+  // A sideways swipe anywhere under the chips (the chips scroll themselves)
+  // steps to the next metric: over 40px across with under 30px up or down.
+  // A finger held on the chart is scrubbing it, never a swipe.
+  const swipe = useRef<{ x: number; y: number } | null>(null);
   const onTouchStart = (e: React.TouchEvent) => {
-    if (tracked.length < 2 || e.touches.length !== 1) return;
-    swipe.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now(), axis: null, dx: 0 };
+    if (e.touches.length !== 1 || (e.target as HTMLElement).closest(".pg-chips")) return;
+    swipe.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   };
-  const onTouchMove = (e: React.TouchEvent) => {
-    const sw = swipe.current;
-    if (!sw) return;
-    if (wrap.current?.querySelector(".cg-chart.scrubbing")) {
-      swipe.current = null;
-      setShift(0, true);
-      return;
-    }
-    const dx = e.touches[0].clientX - sw.x;
-    const dy = e.touches[0].clientY - sw.y;
-    if (!sw.axis) {
-      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
-      sw.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
-    }
-    if (sw.axis !== "x") return;
-    sw.dx = dx;
-    setShift(dx, false);
-  };
-  const onTouchEnd = () => {
-    const sw = swipe.current;
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const s = swipe.current;
     swipe.current = null;
-    if (!sw || sw.axis !== "x") return;
-    const width = wrap.current?.clientWidth ?? 320;
-    const flick = Math.abs(sw.dx) > 40 && Date.now() - sw.t < 300;
-    if (Math.abs(sw.dx) > width / 4 || flick) {
-      setShift(0, false);
-      step(sw.dx < 0 ? 1 : -1);
-    } else setShift(0, true);
+    if (!s || (e.currentTarget as HTMLElement).querySelector(".pg-chart.scrubbing")) return;
+    const dx = e.changedTouches[0].clientX - s.x;
+    const dy = e.changedTouches[0].clientY - s.y;
+    if (Math.abs(dx) > 40 && Math.abs(dy) < 30) pick(index + (dx < 0 ? 1 : -1));
   };
 
-  if (!series) return <p className="ci-empty">Your coach hasn&rsquo;t set up anything to track yet.</p>;
-
-  // The range back from today; with less history than that (21 days of
-  // readings on 1M), the chart spans what there is, first reading to today,
-  // so it never opens on an empty stretch. All: from the first reading.
-  const end = dayNum(today);
-  const firstDay = series.points.length ? dayNum(series.points[0].date) : end - 29;
-  const rangeStart = range === "7D" ? end - 6 : range === "1M" ? end - 29 : firstDay;
-  const start = series.points.length ? Math.min(Math.max(rangeStart, firstDay), end - 1) : rangeStart;
-  const points = series.points.filter((p) => dayNum(p.date) >= start && dayNum(p.date) <= end);
+  if (!series) return <p className="ci-empty">Nothing logged yet. Your first check-in shows up here.</p>;
 
   return (
-    <div ref={wrap} className="cg" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
-      {/* The metric: its name centred, a chevron either end to step through. */}
-      <div className="cg-switch">
-        <button type="button" className="cg-switch-btn" onClick={() => step(-1)} disabled={tracked.length < 2} aria-label="Previous metric">
-          <ChevronLeftIcon />
-        </button>
-        <span key={series.key} className={`cg-switch-name${dir ? ` ${dir}` : ""}`} aria-live="polite">
-          {series.name}
-        </span>
-        <button type="button" className="cg-switch-btn" onClick={() => step(1)} disabled={tracked.length < 2} aria-label="Next metric">
-          <ChevronRightIcon />
-        </button>
-      </div>
-
-      {/* Keyed on the metric so it slides in the way the chevron went. */}
-      <div key={series.key} className={`cg-slide${dir ? ` ${dir}` : ""}`}>
-        <section className="cg-plot">
-          <div className="cg-head">
-            <div className="cg-range" role="radiogroup" aria-label="Time range">
-              {RANGES.map((r) => (
-                <button key={r} type="button" role="radio" aria-checked={r === range} className={r === range ? "on" : ""} onClick={() => setRange(r)}>
-                  {r}
-                </button>
-              ))}
-            </div>
-          </div>
-          <Chart key={range} series={series} points={points} start={start} end={end} />
-        </section>
-        <ReadingsLog series={series} />
-
-      </div>
+    <div className="pg-view" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={() => (swipe.current = null)}>
+      <MetricChips tracked={tracked} active={index} onPick={pick} />
+      <MetricChartCard key={series.key} series={series} today={today} range={range} onRange={chooseRange} />
+      <MetricHistory series={series} today={today} page={page} onPage={setPage} />
     </div>
   );
 }
 
-// Every reading of the metric, newest first, twenty to a page: the date on
-// the left, the reading on the right. Older pages behind the arrows.
-const PAGE = 20;
-function ReadingsLog({ series }: { series: CheckInSeries }) {
-  const [page, setPage] = useState(0);
-  const rows = [...series.points].reverse();
-  if (rows.length === 0) return null;
-  const pages = Math.ceil(rows.length / PAGE);
-  const shown = rows.slice(page * PAGE, page * PAGE + PAGE);
-  const weekday = (d: string) => new Date(Date.UTC(Number(d.slice(0, 4)), Number(d.slice(5, 7)) - 1, Number(d.slice(8, 10)))).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" });
+// ---- The chips: one neutral style, the chosen one dark. ----
+function MetricChips({ tracked, active, onPick }: { tracked: CheckInSeries[]; active: number; onPick: (i: number) => void }) {
+  const scroller = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = scroller.current;
+    const chip = el?.children[active] as HTMLElement | undefined;
+    if (!el || !chip) return;
+    // Fully into view, with the 16px gutter kept either side.
+    const left = chip.offsetLeft - 16;
+    const right = chip.offsetLeft + chip.offsetWidth + 16;
+    let to = el.scrollLeft;
+    if (left < el.scrollLeft) to = left;
+    else if (right > el.scrollLeft + el.clientWidth) to = right - el.clientWidth;
+    if (to !== el.scrollLeft) el.scrollTo({ left: Math.max(0, to), behavior: reducedMotion() ? "auto" : "smooth" });
+  }, [active]);
   return (
-    <section className="cg-log" aria-label={`${series.name}: every reading`}>
-      <div className="cg-log-head">
-        <span>Log</span>
-        <span>
-          {rows.length} reading{rows.length === 1 ? "" : "s"}
-        </span>
+    <div ref={scroller} className="pg-chips" role="tablist" aria-label="Metric">
+      {tracked.map((s, i) => (
+        <button key={s.key} type="button" role="tab" aria-selected={i === active} className={`pg-chip${i === active ? " on" : ""}`} onClick={() => onPick(i)}>
+          {s.name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ---- The chart card. ----
+const H = 164;
+const TOP = 22;
+const BOTTOM = 8;
+const LEFT = 34;
+
+function MetricChartCard({
+  series,
+  today,
+  range,
+  onRange,
+}: {
+  series: CheckInSeries;
+  today: string;
+  range: Range;
+  onRange: (r: Range) => void;
+}) {
+  const cat = { hex: series.colour, rgb: series.colourRgb };
+  const end = dayNum(today);
+  const firstDay = dayNum(series.points[0].date);
+  // Days of history, first reading to today: a range longer than that is hidden.
+  const span = end - firstDay + 1;
+  const ranges = RANGES.filter((r) => RANGE_DAYS[r] == null || span > RANGE_DAYS[r]!);
+  const shown: Range = ranges.includes(range) ? range : "All";
+  const days = RANGE_DAYS[shown];
+  const start = days ? end - (days - 1) : firstDay;
+  const points = useMemo(() => series.points.filter((p) => dayNum(p.date) >= start), [series.points, start]);
+
+  const rangeWord = RANGE_WORD[shown];
+  return (
+    <section className="pg-card" role="tabpanel" aria-label={series.name} style={{ "--cat": cat.hex, "--cat-rgb": cat.rgb } as React.CSSProperties}>
+      <div className="pg-head">
+        <div className="pg-head-text">
+          <span className="pg-eyebrow">{series.category}</span>
+          <span className="pg-name">{series.name}</span>
+        </div>
+        <div className="pg-range" role="radiogroup" aria-label="Time range">
+          {ranges.map((r) => (
+            <button key={r} type="button" role="radio" aria-checked={r === shown} className={r === shown ? "on" : ""} onClick={() => onRange(r)}>
+              {r}
+            </button>
+          ))}
+        </div>
       </div>
-      <ul className="cg-log-list">
-        {shown.map((p) => (
-          <li key={p.date} className="cg-log-row">
-            <span className="cg-log-date">{series.cadence === "weekly" ? dateText(series, p.date) : `${weekday(p.date)} ${dm(p.date)}`}</span>
-            <span className="cg-log-value">{valueText(series, p.value)}</span>
-          </li>
-        ))}
-      </ul>
-      {pages > 1 && (
-        <div className="cg-log-pager">
-          <button type="button" onClick={() => setPage((n) => Math.max(0, n - 1))} disabled={page === 0} aria-label="Newer readings">
-            <ChevronLeftIcon />
-          </button>
-          <span>
-            {page + 1} of {pages}
-          </span>
-          <button type="button" onClick={() => setPage((n) => Math.min(pages - 1, n + 1))} disabled={page >= pages - 1} aria-label="Older readings">
-            <ChevronRightIcon />
+      {points.length === 0 ? (
+        <div className="pg-chart-empty">
+          <span>Nothing logged in the last {rangeWord}</span>
+          <button type="button" onClick={() => onRange("All")}>
+            Show all
           </button>
         </div>
+      ) : (
+        <Chart key={shown} series={series} points={points} start={start} end={end} today={today} range={shown} cat={cat} />
       )}
     </section>
   );
 }
 
-const HOLD_MS = 250;
-
-function Chart({ series, points, start, end }: { series: CheckInSeries; points: CheckInSeries["points"]; start: number; end: number }) {
+function Chart({
+  series,
+  points,
+  start,
+  end,
+  today,
+  range,
+  cat,
+}: {
+  series: CheckInSeries;
+  points: CheckInSeries["points"];
+  start: number;
+  end: number;
+  today: string;
+  range: Range;
+  cat: { hex: string; rgb: string };
+}) {
   const box = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(320);
+  const [width, setWidth] = useState(311);
   useLayoutEffect(() => {
     const el = box.current;
     if (!el) return;
-    const measure = () => setWidth(Math.max(240, Math.round(el.clientWidth)));
+    const measure = () => setWidth(Math.max(200, Math.round(el.clientWidth)));
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
-  // Nothing is picked until a finger (or the mouse) is held on the chart;
-  // then the label follows it, and it goes when it lets go.
-  const [picked, setPicked] = useState<number | null>(null);
-  const hold = useRef<{ timer: ReturnType<typeof setTimeout> | null; x: number; sx: number; sy: number; on: boolean }>({ timer: null, x: 0, sx: 0, sy: 0, on: false });
+  const p = series.precision;
+  const unit = unitOf(series);
+  const vals = points.map((q) => q.value);
+  let lo: number;
+  let hi: number;
+  if (series.scaleMax) {
+    lo = 0.5;
+    hi = series.scaleMax + 0.5;
+  } else {
+    const all = series.target != null ? [...vals, series.target] : vals;
+    lo = Math.min(...all);
+    hi = Math.max(...all);
+    const pad = (hi - lo || 1) * 0.15;
+    lo -= pad;
+    hi += pad;
+  }
+  const plotW = width - LEFT;
+  const plotH = H - TOP - BOTTOM;
+  const x = (date: string) => LEFT + ((dayNum(date) - start) / Math.max(1, end - start)) * plotW;
+  const y = (v: number) => TOP + (1 - (v - lo) / (hi - lo)) * plotH;
+  const xy: ChartPoint[] = points.map((q) => ({ x: x(q.date), y: y(q.value) }));
+  const dense = (range === "3M" || range === "All") && points.length > 60;
+
+  // The marker: the latest point until the mouse is over the chart or a
+  // finger has been held on it a moment (a quick sideways touch is a swipe
+  // to the next metric, not a scrub), then the logged point nearest it;
+  // back to the latest on release.
+  const latest = points.length - 1;
+  const [sel, setSel] = useState(latest);
+  const [scrubbing, setScrubbing] = useState(false);
+  const dragging = useRef(false);
+  const hold = useRef<{ timer: ReturnType<typeof setTimeout> | null; x: number; sx: number; sy: number }>({ timer: null, x: 0, sx: 0, sy: 0 });
   useEffect(() => {
     const el = box.current;
     // While a reading is held the page doesn't scroll under the finger.
     const stop = (e: TouchEvent) => {
-      if (hold.current.on) e.preventDefault();
+      if (dragging.current) e.preventDefault();
     };
     el?.addEventListener("touchmove", stop, { passive: false });
     const h = hold.current;
@@ -234,117 +293,210 @@ function Chart({ series, points, start, end }: { series: CheckInSeries; points: 
       if (h.timer) clearTimeout(h.timer);
     };
   }, []);
-
-  const H = 212;
-  // Room at the top for the label: it rides along the top edge, a dashed
-  // guide running down from it to the reading.
-  const pad = { l: 38, r: 10, t: 52, b: 12 };
-  const w = width - pad.l - pad.r;
-  const h = H - pad.t - pad.b;
-
-  // The side: a short rating (up to 1–6) every number; a longer one even
-  // steps from 0 (0, 2, 4 … 10); anything else round steps around the readings.
-  const vals = points.map((p) => p.value);
-  const sm = series.scaleMax;
-  const ticks = sm
-    ? sm <= 6
-      ? Array.from({ length: sm }, (_, i) => i + 1)
-      : Array.from({ length: Math.ceil(sm / Math.ceil(sm / 5)) + 1 }, (_, i) => i * Math.ceil(sm / 5))
-    : niceTicks(vals.length ? Math.min(...vals) : 0, vals.length ? Math.max(...vals) : 10);
-  const yLo = ticks[0];
-  const yHi = ticks[ticks.length - 1];
-  const x = (date: string) => pad.l + ((dayNum(date) - start) / Math.max(1, end - start)) * w;
-  const y = (v: number) => pad.t + (1 - (v - yLo) / Math.max(1e-9, yHi - yLo)) * h;
-
-  const xy = points.map((p) => ({ x: x(p.date), y: y(p.value) }));
-  const line = xy.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-  const area = xy.length > 1 ? `${line} L${xy[xy.length - 1].x.toFixed(1)},${pad.t + h} L${xy[0].x.toFixed(1)},${pad.t + h} Z` : "";
-
+  const startDrag = (el: HTMLElement, pointerId: number, clientX: number) => {
+    dragging.current = true;
+    setScrubbing(true);
+    try {
+      el.setPointerCapture(pointerId);
+    } catch {}
+    select(nearest(clientX));
+  };
   const nearest = (clientX: number) => {
     const el = box.current;
-    if (!el || xy.length === 0) return null;
+    if (!el) return latest;
     const px = clientX - el.getBoundingClientRect().left;
-    let best = 0;
-    xy.forEach((p, i) => {
-      if (Math.abs(p.x - px) < Math.abs(xy[best].x - px)) best = i;
-    });
+    // Start from where a point would sit at that x, then look either way.
+    let best = Math.round(((px - LEFT) / Math.max(1, plotW)) * latest);
+    best = Math.max(0, Math.min(latest, best));
+    for (;;) {
+      const l = best > 0 && Math.abs(xy[best - 1].x - px) < Math.abs(xy[best].x - px);
+      const r = best < latest && Math.abs(xy[best + 1].x - px) < Math.abs(xy[best].x - px);
+      if (l) best--;
+      else if (r) best++;
+      else break;
+    }
     return best;
+  };
+  const select = (i: number) => {
+    setSel((cur) => {
+      if (cur !== i && dragging.current) navigator.vibrate?.(5);
+      return i;
+    });
   };
   const release = () => {
     if (hold.current.timer) clearTimeout(hold.current.timer);
-    hold.current = { timer: null, x: 0, sx: 0, sy: 0, on: false };
-    setPicked(null);
+    hold.current.timer = null;
+    dragging.current = false;
+    setScrubbing(false);
+    setSel(latest);
   };
 
-  const sel = picked != null && picked < points.length ? picked : null;
-  const selP = sel != null ? points[sel] : null;
-  const selXY = sel != null ? xy[sel] : null;
-  const tipW = 92;
-  const tipX = selXY ? Math.min(width - pad.r - tipW, Math.max(0, selXY.x - tipW / 2)) : 0;
+  const selP = points[sel] ?? points[latest];
+  const selXY = xy[sel] ?? xy[latest];
+  const dateWord = (d: string) => (d === today ? "Today" : dm(d));
+  const tipText = `${fmt(selP.value, p)} ${unit}`.trim();
+  const tipX = Math.min(width - 60, Math.max(48, selXY.x));
+  const gridAt = [0.2, 0.5, 0.8].map((f) => lo + (hi - lo) * f);
+  const first = points[0];
+  const last = points[latest];
+  const label = `${series.name}, ${range === "All" ? "all time" : `last ${RANGE_WORD[range]}`}: from ${fmt(first.value, p)} to ${fmt(last.value, p)} ${unit}. Latest ${fmt(last.value, p)} on ${dateWord(last.date)}.`;
 
   return (
-    <div
-      ref={box}
-      className={`cg-chart${sel != null ? " scrubbing" : ""}`}
-      onPointerDown={(e) => {
-        const el = e.currentTarget;
-        const id = e.pointerId;
-        hold.current.x = e.clientX;
-        hold.current.sx = e.clientX;
-        hold.current.sy = e.clientY;
-        hold.current.timer = setTimeout(() => {
-          hold.current.on = true;
-          try {
-            el.setPointerCapture(id);
-          } catch {}
-          setPicked(nearest(hold.current.x));
-        }, HOLD_MS);
-      }}
-      onPointerMove={(e) => {
-        hold.current.x = e.clientX;
-        // Moving before the hold lands: a swipe or a scroll, so no reading.
-        if (!hold.current.on && hold.current.timer && (Math.abs(e.clientX - hold.current.sx) > 8 || Math.abs(e.clientY - hold.current.sy) > 8)) {
-          clearTimeout(hold.current.timer);
-          hold.current.timer = null;
-        }
-        if (hold.current.on) setPicked(nearest(e.clientX));
-      }}
-      onPointerUp={release}
-      onPointerCancel={release}
-      onContextMenu={(e) => e.preventDefault()}
-    >
-      <svg width={width} height={H} viewBox={`0 0 ${width} ${H}`} role="img" aria-label={`${series.name} over time`}>
-        <defs>
-          <linearGradient id={`cg-fill-${series.key}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#1e3a6e" stopOpacity="0.16" />
-            <stop offset="100%" stopColor="#1e3a6e" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        {/* The side: gridlines on round steps, their values on the left. Time
-            runs left to right unlabelled: holding a reading says its date. */}
-        {ticks.map((t) => (
-          <g key={t}>
-            <line x1={pad.l} x2={width - pad.r} y1={y(t)} y2={y(t)} className="cg-grid" />
-            <text x={pad.l - 8} y={y(t)} className="cg-ylabel" textAnchor="end" dominantBaseline="middle">
-              {fmt(t)}
-            </text>
-          </g>
+    <>
+      <div
+        ref={box}
+        className={`pg-chart${scrubbing ? " scrubbing" : ""}`}
+        role="img"
+        aria-label={label}
+        tabIndex={0}
+        onPointerDown={(e) => {
+          if (e.pointerType !== "touch") {
+            startDrag(e.currentTarget, e.pointerId, e.clientX);
+            return;
+          }
+          const el = e.currentTarget;
+          const id = e.pointerId;
+          hold.current = { timer: setTimeout(() => startDrag(el, id, hold.current.x), 250), x: e.clientX, sx: e.clientX, sy: e.clientY };
+        }}
+        onPointerMove={(e) => {
+          if (dragging.current) {
+            hold.current.x = e.clientX;
+            select(nearest(e.clientX));
+            return;
+          }
+          if (e.pointerType !== "touch") {
+            select(nearest(e.clientX));
+            return;
+          }
+          // Moving before the hold lands: a swipe or a scroll, not a scrub.
+          hold.current.x = e.clientX;
+          if (hold.current.timer && (Math.abs(e.clientX - hold.current.sx) > 8 || Math.abs(e.clientY - hold.current.sy) > 8)) {
+            clearTimeout(hold.current.timer);
+            hold.current.timer = null;
+          }
+        }}
+        onPointerUp={release}
+        onPointerCancel={release}
+        onPointerLeave={release}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowLeft") setSel((s) => Math.max(0, s - 1));
+          else if (e.key === "ArrowRight") setSel((s) => Math.min(latest, s + 1));
+          else if (e.key === "Home") setSel(0);
+          else if (e.key === "End") setSel(latest);
+          else return;
+          e.preventDefault();
+        }}
+        onBlur={release}
+      >
+        {gridAt.map((v) => (
+          <div key={v} className="pg-grid" style={{ top: y(v) }}>
+            <span>{fmt(v, p)}</span>
+          </div>
         ))}
-        {area && <path d={area} fill={`url(#cg-fill-${series.key})`} />}
-        {xy.length > 1 && <path d={line} className="cg-line" />}
-        {selXY && <line x1={selXY.x} x2={selXY.x} y1={44} y2={pad.t + h} className="cg-guide" />}
-        {/* A dot a reading while there are few enough to tell apart; the held one always. */}
-        {xy.map((p, i) =>
-          i === sel || xy.length <= 31 ? <circle key={points[i].date} cx={p.x} cy={p.y} r={i === sel ? 5.5 : 2.75} className={i === sel ? "cg-dot on" : "cg-dot"} /> : null
+        {series.target != null && (
+          <div className="pg-target" style={{ top: y(series.target) }}>
+            <span>
+              Target {fmt(series.target, p)} {unit}
+            </span>
+          </div>
         )}
-      </svg>
-      {selP && selXY && (
-        <div className="cg-tip" style={{ left: tipX, top: 0 }}>
-          <b>{valueText(series, selP.value)}</b>
-          <small>{dateText(series, selP.date)}</small>
+        <div className="pg-chart-fade">
+          <AreaChart points={xy} color={cat.hex} colorRgb={cat.rgb} width={width} height={H} bottom={H - BOTTOM} thin={dense} />
         </div>
+        <div className="pg-guide" style={{ left: selXY.x }} />
+        <div className="pg-knob" style={{ left: selXY.x, top: selXY.y }} />
+        <div className="pg-tip" style={{ left: tipX }}>
+          {tipText}
+          <span>{dateWord(selP.date)}</span>
+        </div>
+        <span className="pg-live" aria-live="polite">
+          {tipText} · {dateWord(selP.date)}
+        </span>
+      </div>
+      <div className="pg-axis">
+        <span>{dm(dayStr(start))}</span>
+        <span>Today</span>
+      </div>
+    </>
+  );
+}
+
+function dayStr(n: number): string {
+  return new Date(n * DAY).toISOString().slice(0, 10);
+}
+
+// ---- History: every value, newest first, twenty a page. ----
+function MetricHistory({ series, today, page, onPage }: { series: CheckInSeries; today: string; page: number; onPage: (n: number) => void }) {
+  const head = useRef<HTMLDivElement>(null);
+  const rows = useMemo(() => [...series.points].reverse(), [series.points]);
+  const n = rows.length;
+  const pages = Math.max(1, Math.ceil(n / PAGE));
+  const cur = Math.min(page, pages - 1);
+  const from = cur * PAGE;
+  const shown = rows.slice(from, from + PAGE);
+  const p = series.precision;
+  const unit = unitOf(series);
+  const year = today.slice(0, 4);
+  const dateText = (d: string) => {
+    const wd = new Date(Date.UTC(Number(d.slice(0, 4)), Number(d.slice(5, 7)) - 1, Number(d.slice(8, 10)))).toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" });
+    return `${wd} ${dm(d)}${d.slice(0, 4) === year ? "" : ` ${d.slice(0, 4)}`}`;
+  };
+
+  const go = (to: number) => {
+    const next = Math.max(0, Math.min(pages - 1, to));
+    if (next === cur) return;
+    onPage(next);
+    const h = head.current;
+    const sc = h?.closest(".ci-scroll") as HTMLElement | null;
+    if (h && sc) {
+      const top = sc.scrollTop + h.getBoundingClientRect().top - sc.getBoundingClientRect().top - 12;
+      sc.scrollTo({ top: Math.max(0, top), behavior: reducedMotion() ? "auto" : "smooth" });
+    }
+  };
+
+  // Up to five page numbers, windowed around the current one.
+  const winFrom = Math.max(0, Math.min(cur - 2, pages - 5));
+  const nums = Array.from({ length: Math.min(5, pages) }, (_, i) => winFrom + i);
+
+  return (
+    <section className="pg-hist" aria-label={`${series.name}: history`}>
+      <div ref={head} className="pg-hist-head">
+        <span className="pg-hist-title">History</span>
+        <span className="pg-hist-count">
+          {n} {n === 1 ? "entry" : "entries"}
+        </span>
+      </div>
+      <ul className="pg-hist-list">
+        {shown.map((r) => (
+          <li key={r.date} className="pg-hist-row">
+            <span className="pg-hist-date">{dateText(r.date)}</span>
+            <span className="pg-hist-value">
+              {fmt(r.value, p)}
+              {unit && <small> {unit}</small>}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {n > PAGE && (
+        <nav className="pg-pager" aria-label="History pages">
+          <div className="pg-pager-row">
+            <button type="button" className="pg-pager-arrow" onClick={() => go(cur - 1)} disabled={cur === 0} aria-label="Newer">
+              <ChevronLeftIcon />
+            </button>
+            {nums.map((i) => (
+              <button key={i} type="button" className={`pg-pager-num${i === cur ? " on" : ""}`} onClick={() => go(i)} aria-label={`Page ${i + 1}`} aria-current={i === cur ? "page" : undefined}>
+                {i + 1}
+              </button>
+            ))}
+            <button type="button" className="pg-pager-arrow" onClick={() => go(cur + 1)} disabled={cur >= pages - 1} aria-label="Older">
+              <ChevronRightIcon />
+            </button>
+          </div>
+          <div className="pg-pager-caption">
+            {from + 1}–{Math.min(n, from + PAGE)} of {n} · newest first
+          </div>
+        </nav>
       )}
-      {points.length === 0 && <div className="cg-empty">No readings in this range</div>}
-    </div>
+    </section>
   );
 }

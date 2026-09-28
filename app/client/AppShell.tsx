@@ -305,6 +305,8 @@ export default function AppShell({
           weeklyOpen={checkIn.weeklyOpen}
           objectives={checkIn.objectives}
           history={checkIn.history}
+          stats={checkIn.stats}
+          calendar={checkIn.calendar}
           onBack={backFrom("checkin")}
         />
       </div>

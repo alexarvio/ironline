@@ -15099,15 +15099,16 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 /* The metric library: a category is a block in its own colour, and its title
    is what picks the whole block. */
 .ml-group { --ml: #5b6474; --ml-tint: #eef0f3; margin-top: 14px; }
-.ml-group.g-body { --ml: #b3471d; --ml-tint: #f7e6df; }
-.ml-group.g-sleep { --ml: #4c42a8; --ml-tint: #e7e5f7; }
-.ml-group.g-activity { --ml: #2f7a3f; --ml-tint: #dcf0e5; }
-.ml-group.g-fatigue { --ml: #a8761f; --ml-tint: #f6ecd9; }
-.ml-group.g-lifestyle { --ml: #1d7b86; --ml-tint: #dcf0f2; }
-.ml-group.g-stress { --ml: #a8501f; --ml-tint: #f8e7dd; }
-.ml-group.g-nutrition { --ml: #5f7a18; --ml-tint: #eef3d9; }
-.ml-group.g-training { --ml: #2f5d8f; --ml-tint: #e2ecf7; }
-.ml-group.g-wellbeing { --ml: #6b4aa8; --ml-tint: #ece6f7; }
+/* The same hues as the group pills' tints and the client's Progress charts (lib/categoryColors.ts). */
+.ml-group.g-body { --ml: #2f5d8f; --ml-tint: #cfe0f2; }
+.ml-group.g-sleep { --ml: #4c42a8; --ml-tint: #d8d3f0; }
+.ml-group.g-activity { --ml: #1f7a4d; --ml-tint: #c9e7d5; }
+.ml-group.g-fatigue { --ml: #b0691f; --ml-tint: #f4dcc0; }
+.ml-group.g-lifestyle { --ml: #1d7b86; --ml-tint: #c9e6ea; }
+.ml-group.g-stress { --ml: #b5393d; --ml-tint: #f3cfcf; }
+.ml-group.g-nutrition { --ml: #5f7a18; --ml-tint: #e6ebb8; }
+.ml-group.g-training { --ml: #5a4fb8; --ml-tint: #d5d2f3; }
+.ml-group.g-wellbeing { --ml: #6b4aa8; --ml-tint: #e2d7ee; }
 .ml-group-head { display: flex; align-items: center; gap: 9px; width: 100%; box-sizing: border-box; padding: 6px 10px; border: 0; border-radius: 8px; background: var(--ml-tint); font: inherit; text-align: left; cursor: pointer; }
 .ml-group-head:disabled { opacity: 0.55; cursor: default; }
 .ml-group-head:hover:not(:disabled) { filter: brightness(0.97); }
@@ -16829,53 +16830,10 @@ button.pp-row { cursor: zoom-in; }
 .hm-banner { padding-bottom: 12px; }
 
 /* ---- Check-in: Today / Progress and the charts (25 Sep) ---- */
-/* Progress: the metric switcher on the banner's foot and its chart on the
-   page (no frame). */
-.cg { display: flex; flex-direction: column; gap: 12px; }
-.cg-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.cg-range { flex: none; display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: #eef1f6; }
-.cg-range button { height: 28px; padding: 0 10px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 12px; font-weight: 700; color: #5b6474; cursor: pointer; }
-.cg-range button.on { background: #1e3a6e; color: #fff; }
-.cg-chart { position: relative; margin: 6px -4px 0; touch-action: pan-y; -webkit-user-select: none; user-select: none; }
-.cg-chart svg { display: block; overflow: visible; }
-.cg-grid { stroke: #e9edf2; stroke-width: 1; }
-.cg-ylabel, .cg-xlabel { font-size: 11px; font-weight: 500; fill: #8b93a1; font-variant-numeric: tabular-nums; }
-.cg-line { fill: none; stroke: #1e3a6e; stroke-width: 2.25; stroke-linejoin: round; stroke-linecap: round; }
-.cg-dot { fill: #1e3a6e; stroke: #fff; stroke-width: 1.5; }
-.cg-dot.on { fill: #fff; stroke: #1e3a6e; stroke-width: 3; }
-.cg-guide { stroke: #1e3a6e; stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.45; }
-.cg-tip { position: absolute; width: 76px; box-sizing: border-box; padding: 6px 6px 5px; border-radius: 10px; background: #1e3a6e; color: #fff; text-align: center; pointer-events: none; box-shadow: 0 8px 18px -10px rgba(8, 31, 92, 0.6); transition: left 0.15s ease, top 0.15s ease; }
-.cg-tip b { display: block; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.cg-tip small { display: block; font-size: 10.5px; opacity: 0.8; }
-.cg-empty { position: absolute; inset: 56px 0 28px 38px; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #8b93a1; }
-@media (prefers-reduced-motion: reduce) { .cg-tip { transition: none; } }
 /* The foot of the check-in scroll: room for the Save bar only while it shows. */
 .ci-one .ci-scroll { padding-bottom: 32px; }
 .ci-one .ci-scroll.docked { padding-bottom: 140px; }
 
-/* Progress, one metric at a time (25 Sep): its name centred in white on the
-   banner's foot, a chevron either end; the chart and list slide in the way
-   the chevron went. The chart has no frame, it sits on the page; no dates
-   along the bottom (holding a reading says its date), the values up the side. */
-.cg-switch { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 36px; margin: 0 -6px; overflow: hidden; }
-.cg-switch-btn { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 0; border-radius: 999px; background: none; color: #fff; cursor: pointer; }
-.cg-switch-btn svg { width: 22px; height: 22px; }
-.cg-switch-btn:disabled { opacity: 0.35; cursor: default; }
-.cg-switch-name { flex: 1; min-width: 0; text-align: center; font-size: 17px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-@keyframes cg-from-right { from { transform: translateX(28px); opacity: 0; } }
-@keyframes cg-from-left { from { transform: translateX(-28px); opacity: 0; } }
-.cg-switch-name.next, .cg-slide.next { animation: cg-from-right 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
-.cg-switch-name.prev, .cg-slide.prev { animation: cg-from-left 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
-.cg-slide { display: flex; flex-direction: column; gap: 12px; }
-.cg-plot { padding: 16px 0 0; background: transparent; }
-.cg-head { align-items: center; }
-.cg-chart.scrubbing { cursor: grabbing; }
-.cg-tip { width: 92px; }
-.cg-empty { inset: 52px 0 12px 38px; }
-@media (prefers-reduced-motion: reduce) { .cg-switch-name.next, .cg-switch-name.prev, .cg-slide.next, .cg-slide.prev { animation: none; } }
-/* The metric name centred in the photo's strip under the pills: that strip is
-   58px (the banner's foot) and the row 36px, so it rises 11px off the edge. */
-.cg-switch { margin-top: -11px; margin-bottom: 11px; }
 /* Trial (25 Sep): the metric groups with no card, straight on the page, rows
    on the page gutter with hairlines between. Off the photo, since a clear
    card can't sit over it: the list starts 16px under the banner (the body is
@@ -16927,10 +16885,6 @@ button.pp-row { cursor: zoom-in; }
 .ci-banner .tr-name { height: 30px; font-size: 24px; line-height: 30px; }
 .ci-banner .ci-views { margin-top: 14px; }
 .ci-banner .tr-wk.on { color: #141a24; }
-.cg-head { justify-content: flex-end; }
-.cg-range button.on { background: #141a24; }
-/* The held reading's label in black, like the range toggle. */
-.cg-tip { background: #141a24; box-shadow: 0 8px 18px -10px rgba(10, 14, 30, 0.6); }
 /* Home on one edge (25 Sep): the phase card sits 28px in (12px gap + 16px
    peek of the next), so the greeting, the section labels and every card
    below line up on that same 28px. Scoped to Home: Settings shares the banner. */
@@ -17078,6 +17032,13 @@ button.ci-hint { cursor: pointer; }
 .ci-day-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 0 0; font-size: 14px; color: #313851; }
 .ci-day-row b { font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; }
 .ci-day-note { margin: 10px 0 0; font-size: 13px; line-height: 1.45; font-style: italic; color: #5b6474; }
+/* Edit under a day's lines: opens them in the ledger (for as long as the day is in the feed). */
+.ci-day-edit { align-self: flex-start; margin: 12px 0 0; padding: 8px 18px; border: 1px solid #D5EBDC; border-radius: 12px; background: #fff; font: inherit; font-size: 13px; font-weight: 700; color: #141a24; cursor: pointer; }
+.ci-day.unfinished .ci-day-edit { border-color: #F3E0BF; }
+/* A day with nothing logged: Fill in on the right opens its lines. */
+.ci-day-fill { flex: none; padding: 6px 14px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; font-size: 13px; font-weight: 700; color: #141a24; }
+/* Under today's lines while they are not sent yet. */
+.ci-ledger + .ci-feed { margin-top: 32px; }
 @media (prefers-reduced-motion: reduce) { .po-chev, .po-body, .ci-day-chev, .ci-day-body { transition: none; } .ci-ledger.folding, .ci-done-row-card, .ci-feed { animation: none; } }
 /* "Latest from" in the faintest frost (25 Sep): not quite white, the page's
    grey just showing through, a white edge and a soft shadow. */
@@ -17220,31 +17181,8 @@ button.ci-hint { cursor: pointer; }
 .hm-recap-text { margin: 0; padding-top: 8px; font-size: 14.5px; line-height: 1.5; color: #313851; white-space: pre-wrap; transform: translateY(-4px); transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1); }
 .hm-recap-body.open .hm-recap-text { transform: none; }
 @media (prefers-reduced-motion: reduce) { .hm-recap-chev, .hm-recap-body, .hm-recap-text { transition: none; } }
-/* Progress (25 Sep): the metric's name and its chevrons off the photo, on the
-   page in black. The body starts 36px up into the banner, so the row drops
-   past that and sits 12px under the photo's edge. */
-.cg-switch { margin-top: 48px; margin-bottom: 0; }
-.cg-switch-btn { color: #141a24; }
-.cg-switch-name { font-size: 20px; color: #141a24; letter-spacing: -0.01em; }
-.cg-switch + .cg-slide .cg-plot { padding-top: 4px; }
 /* The last meeting inside the next call's card: no outline (25 Sep). */
 .hm-mt-recap { border-color: transparent; }
-/* Progress (25 Sep): every reading of the metric under the chart, newest
-   first, twenty to a page. No card: rows on the page with hairlines. */
-.cg-log { display: flex; flex-direction: column; margin-top: 18px; padding-bottom: 32px; }
-.cg-log-head { display: flex; align-items: baseline; justify-content: space-between; padding: 0 2px 8px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
-.cg-log-head span + span { letter-spacing: 0.04em; text-transform: none; font-size: 12px; font-weight: 600; color: #8b93a1; }
-.cg-log-list { margin: 0; padding: 0; list-style: none; }
-.cg-log-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 2px; border-top: 1px solid rgba(20, 26, 36, 0.07); }
-.cg-log-row:last-child { border-bottom: 1px solid rgba(20, 26, 36, 0.07); }
-.cg-log-date { font-size: 14px; font-weight: 500; color: #5b6474; }
-.cg-log-value { font-size: 15px; font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; }
-.cg-log-pager { display: flex; align-items: center; justify-content: center; gap: 18px; padding-top: 14px; font-size: 13px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
-.cg-log-pager button { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid #dfe3e8; border-radius: 999px; background: #fff; color: #141a24; cursor: pointer; }
-.cg-log-pager button svg { width: 18px; height: 18px; }
-.cg-log-pager button:disabled { opacity: 0.35; cursor: default; }
-/* Swiping between metrics: the browser keeps the up-and-down scroll, the page handles sideways. */
-.cg { touch-action: pan-y; will-change: transform; }
 /* Chat bubbles (25 Sep): three quarters of the row at most, either side. */
 .cm-msg-row .cm-msg-wrap, .cm-item.mine .cm-msg-row .cm-msg-wrap { flex: 0 1 auto; max-width: 75%; }
 .cm-item:not(.mine) .cm-msg-row .cm-msg-wrap { align-items: flex-start; }
@@ -17436,6 +17374,265 @@ button.ci-hint { cursor: pointer; }
 .app-chat-return { position: absolute; bottom: calc(100% + 12px); left: 50%; z-index: 5; display: inline-flex; align-items: center; gap: 4px; height: 40px; padding: 0 16px 0 10px; border: 0; border-radius: 999px; background: #141a24; box-shadow: 0 10px 24px -12px rgba(8, 20, 50, 0.6); font: inherit; font-size: 14px; font-weight: 700; color: #fff; white-space: nowrap; transform: translateX(-50%); cursor: pointer; }
 .app-chat-return svg { width: 18px; height: 18px; }
 
+/* ==== Sign-in without passwords (SignInScreens.tsx, 26 Sep): Apple,
+   Google or an email code, for coaches and clients. Prefix au-. ==== */
+.au-card .auth-title { margin-bottom: 14px; }
+.au-providers { display: flex; flex-direction: column; gap: 10px; }
+.au-provider { display: flex; align-items: center; justify-content: center; gap: 10px; height: 44px; border: 1px solid var(--border); border-radius: 10px; background: #fff; font: inherit; font-size: 0.92rem; font-weight: 700; color: #141a24; cursor: pointer; }
+.au-provider:hover { background: #f7f9fc; }
+.au-provider.apple { border-color: #000; background: #000; color: #fff; }
+.au-provider.apple:hover { background: #1b1b1b; }
+.au-or { display: flex; align-items: center; gap: 12px; margin: 16px 0; font-size: 0.78rem; font-weight: 600; color: var(--steel); }
+.au-or::before, .au-or::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.au-lead { margin: -6px 0 18px; font-size: 0.92rem; line-height: 1.5; color: #313851; }
+.au-code { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.au-code input { width: 100%; height: 52px; border: 1px solid var(--border); border-radius: 10px; font: inherit; font-size: 1.35rem; font-weight: 700; text-align: center; color: #141a24; font-variant-numeric: tabular-nums; }
+.au-code input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.au-invite { display: flex; flex-direction: column; align-items: center; text-align: center; margin-top: 16px; }
+.au-coach { display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; overflow: hidden; border-radius: 999px; background: #1e3a6e; color: #fff; font-size: 24px; font-weight: 800; }
+.au-coach img { width: 100%; height: 100%; object-fit: cover; }
+.au-invite-title { margin: 14px 0 8px; }
+.au-invite .au-lead { margin: 0 0 20px; }
+.au-invite + .au-providers { margin-top: 0; }
+.auth-field input[readonly] { background: #f4f7fc; color: #5b6474; }
+.au-approvals { max-width: 760px; margin: 40px auto; padding: 0 24px; }
+.au-approvals-title { margin: 0 0 12px; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
+.au-approvals-list { border: 1px solid #e3e7ed; border-radius: 14px; background: #fff; }
+.au-approval { display: flex; align-items: center; gap: 8px; padding: 14px 18px; border-top: 1px solid #eef1f5; }
+.au-approval:first-child { border-top: 0; }
+.au-approval-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 14px; color: #141a24; }
+.au-approval-main small { font-size: 12.5px; color: #8b93a1; }
+.au-btn { height: 34px; padding: 0 14px; border: 1px solid #dfe3e8; border-radius: 9px; background: #fff; font: inherit; font-size: 13px; font-weight: 700; color: #313851; cursor: pointer; }
+.au-btn.primary { border-color: #1e3a6e; background: #1e3a6e; color: #fff; }
+.au-mail-btn { display: inline-block; margin: 6px 0; padding: 12px 22px; border-radius: 10px; background: #1e3a6e; color: #fff !important; font-weight: 700; text-decoration: none; }
+.au-mail-small { font-size: 13px; color: #5b6474; }
+.au-link { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: var(--accent); cursor: pointer; }
+.au-link:disabled { opacity: 0.5; cursor: default; }
+.au-card .au-error { margin-bottom: 14px; }
+.au-card .auth-form .au-providers { margin-top: 4px; }
+.au-card .auth-form .au-or { margin: 4px 0; }
+.au-provider:disabled { opacity: 0.45; cursor: default; }
+/* The email button as tall as Apple and Google above it; Clerk's empty bot-check spot takes no room (26 Sep). */
+.au-card .auth-submit { height: 44px; border-radius: 10px; font-size: 0.92rem; font-weight: 700; }
+.au-card #clerk-captcha:empty { margin-top: -14px; }
+
+/* ==== Home's check-in card (CheckInCard.tsx, 28 Sep): the Quick actions
+   card's look, a question answered right in it. Prefix cic-. ==== */
+.cic .cic-head { width: 100%; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.cic .qa-count { display: inline-flex; align-items: center; gap: 4px; }
+.cic-open svg { width: 14px; height: 14px; transform: rotate(-90deg); opacity: 0.8; }
+.cic-q { display: flex; flex-direction: column; gap: 6px; padding: 10px 0 10px; animation: cic-in 0.28s ease; }
+@keyframes cic-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .cic-q { animation: none; } }
+.cic-q-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.cic-q-name { font-size: 15px; font-weight: 700; }
+.cic-q-hint { font-size: 12px; color: rgba(255, 255, 255, 0.72); }
+.cic-later { padding: 0; border: 0; background: none; font: inherit; font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.72); cursor: pointer; }
+.cic-scale { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 4px; margin-top: 2px; }
+.cic-n { aspect-ratio: 1; min-width: 0; padding: 0; border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 999px; background: rgba(255, 255, 255, 0.1); font: inherit; font-size: 12.5px; font-weight: 700; color: #fff; cursor: pointer; }
+.cic-n:active, .cic-n:hover { background: #fff; color: #141a24; }
+.cic-n:disabled { opacity: 0.5; }
+.cic-num { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+.cic-num-box { flex: 1; display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 999px; background: rgba(255, 255, 255, 0.1); }
+.cic-num-box input { flex: 1; min-width: 0; border: 0; background: none; font: inherit; font-size: 16px; font-weight: 700; color: #fff; outline: none; }
+.cic-num-box input::placeholder { color: rgba(255, 255, 255, 0.45); }
+.cic-unit { font-size: 12.5px; font-weight: 600; color: rgba(255, 255, 255, 0.72); }
+.cic .qa-btn:disabled { opacity: 0.55; cursor: default; }
+
+/* The hub's strip (CheckInScreen, 28 Sep): streak, workouts this month, overall. */
+.ci-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 14px; }
+.ci-stat { display: flex; flex-direction: column; gap: 2px; padding: 12px 12px 10px; border-radius: 16px; background: #fff; border: 1px solid #e6eaf0; }
+.ci-stat b { font-size: 22px; font-weight: 800; color: #141a24; font-variant-numeric: tabular-nums; }
+.ci-stat span { font-size: 11.5px; line-height: 1.3; color: #5b6474; }
+
+/* The hub's Calendar (WorkoutCalendar.tsx, 28 Sep). Prefix wc-. */
+.wc { display: flex; flex-direction: column; gap: 10px; padding: 14px 12px 12px; border-radius: 20px; background: #fff; border: 1px solid #e6eaf0; }
+.wc-head { display: flex; align-items: center; gap: 8px; }
+.wc-title { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.wc-title b { font-size: 15px; color: #141a24; }
+.wc-title small { font-size: 12px; color: #5b6474; }
+.wc-nav { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 999px; background: #f4f7fc; color: #141a24; cursor: pointer; }
+.wc-nav.next svg { transform: rotate(180deg); }
+.wc-nav:disabled { opacity: 0.3; cursor: default; }
+.wc-nav svg { width: 16px; height: 16px; }
+.wc-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px 2px; }
+.wc-dow { text-align: center; font-size: 11px; font-weight: 700; color: #8b93a1; padding-bottom: 2px; }
+.wc-day { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 2px 0 4px; border: 0; background: none; font: inherit; color: #313851; cursor: default; }
+.wc-mins { height: 13px; font-size: 10px; font-weight: 700; color: #1e3a6e; font-variant-numeric: tabular-nums; }
+.wc-num { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px; font-size: 13.5px; font-weight: 600; }
+.wc-day.today .wc-num { box-shadow: inset 0 0 0 1.5px #1e3a6e; }
+.wc-day.trained { cursor: pointer; }
+.wc-day.trained .wc-num { background: #1e3a6e; color: #fff; font-weight: 700; }
+.wc-day.trained.unfinished .wc-num { background: #d98a1c; }
+.wc-day.trained.unfinished .wc-mins { color: #b06d0c; }
+.wc-day.on .wc-num { box-shadow: 0 0 0 3px rgba(30, 58, 110, 0.25); }
+.wc-list { display: flex; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px solid #eef1f5; }
+.wc-list-date { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #5b6474; }
+.wc-row { display: flex; align-items: baseline; gap: 8px; font-size: 14px; color: #141a24; }
+.wc-row span { flex: 1; min-width: 0; }
+.wc-row b { font-variant-numeric: tabular-nums; }
+.wc-row em { font-style: normal; font-size: 12px; font-weight: 700; color: #b06d0c; }
+.wc-empty { margin: 0; font-size: 13px; color: #8b93a1; text-align: center; }
+
 /* Cardio swap (28 Sep): the client's button under Mark as done. */
 .ts-cardio-swap { display: block; width: 100%; margin-top: 8px; padding: 8px 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 700; color: #2f5d8f; cursor: pointer; }
 .ts-cardio-swap:disabled { opacity: 0.5; }
+
+/* ---- Home's lifestyle card (28 Sep, LifestyleCard) ----
+   Between the check-in card and a phase card in size: the photo shows at
+   the top under the chips, then the frosted panel with the phase, its bar,
+   today's metrics as one bar each, and the question open now. */
+.lc { padding: 10px 8px 8px; }
+.lc .lc-bg { inset: -12px; width: calc(100% + 24px); height: calc(100% + 24px); filter: blur(3px) saturate(120%); transform: none; }
+.lc .qa-scrim { background: linear-gradient(180deg, rgba(8, 12, 20, 0.2) 0%, rgba(8, 12, 20, 0.15) 30%, rgba(12, 24, 52, 0.7) 100%); }
+.lc-top { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 2px 4px 44px; border: 0; background: none; font: inherit; cursor: pointer; }
+.lc-chip { zoom: 0.88; }
+.lc-panel { padding: 12px 14px 4px; }
+.lc-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; width: 100%; padding: 0 0 8px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.lc-name { min-width: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lc-left { display: inline-flex; align-items: center; gap: 4px; flex: none; font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.8); white-space: nowrap; }
+.lc .pc-bar { height: 4px; background: rgba(255, 255, 255, 0.22); }
+.lc .pc-bar-fill { top: -1px; bottom: -1px; background: linear-gradient(90deg, #fff 0%, #fff 35%, #c9d6ea 50%, #fff 65%, #fff 100%); background-size: 200% 100%; box-shadow: none; }
+.lc .pc-bar-knob { width: 10px; height: 10px; margin: -5px 0 0 -5px; border: 0; background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.22); animation-name: pc-knob-in, pc-pulse-light; }
+.lc-today { display: flex; align-items: center; gap: 10px; padding-top: 12px; }
+.lc-segs { flex: 1; display: flex; gap: 4px; }
+.lc-segs i { flex: 1; height: 6px; border-radius: 99px; background: rgba(255, 255, 255, 0.22); transition: background 0.3s ease; }
+.lc-segs i.on { background: #6fd39b; }
+.lc-count { font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.8); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.lc-q { margin-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.2); }
+.lc-when { display: block; margin-bottom: 2px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #ffd48a; }
+.lc-row { margin-top: 10px; }
+/* The number box shrinks to leave Save room inside the panel, and Save is the box's height. */
+.cic-num-box { min-width: 0; }
+.cic-num .qa-btn { height: 36px; padding: 0 16px; }
+/* The card's question swipes sideways between today's open ones; the dots say where. */
+.lc-q { touch-action: pan-y; -webkit-user-select: none; user-select: none; }
+.lc-q input { -webkit-user-select: text; user-select: text; }
+.lc-q.next { animation: lc-from-right 0.26s cubic-bezier(0.22, 1, 0.36, 1); }
+.lc-q.prev { animation: lc-from-left 0.26s cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes lc-from-right { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes lc-from-left { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .lc-q.next, .lc-q.prev { animation: none; } }
+.lc-dots { display: inline-flex; align-items: center; gap: 5px; flex: none; }
+.lc-dots button { width: 6px; height: 6px; padding: 0; border: 0; border-radius: 99px; background: rgba(255, 255, 255, 0.4); cursor: pointer; transition: width 0.2s ease, background 0.2s ease; }
+.lc-dots button.on { width: 16px; background: #fff; }
+
+/* ---- The hub's activity calendar (28 Sep, ActivityCalendar) ----
+   A ring around each day's number, in up to three equal parts (training,
+   food, check-ins); a tapped day opens under its week. */
+.ac-legend { display: flex; justify-content: center; gap: 14px; font-size: 11.5px; font-weight: 600; color: #5b6474; }
+.ac-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.ac-legend i { width: 8px; height: 8px; border-radius: 99px; }
+.ac-day { position: relative; display: flex; align-items: center; justify-content: center; height: 42px; padding: 0; border: 0; background: none; font: inherit; color: #313851; cursor: default; }
+.ac-day.did { cursor: pointer; }
+.ac-ring { position: absolute; left: 50%; top: 50%; width: 38px; height: 38px; margin: -19px 0 0 -19px; pointer-events: none; }
+.ac-num { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; font-size: 13.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ac-day.did .ac-num { font-weight: 800; color: #141a24; }
+.ac-day.today .ac-num { background: #eef2f8; color: #1e3a6e; font-weight: 800; }
+.ac-day.on .ac-num { background: #1e3a6e; color: #fff; }
+.ac-day:disabled { opacity: 1; }
+.ac-panel { display: grid; grid-template-rows: 1fr; animation: ac-open 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+.ac-panel.closing { grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.22s ease, opacity 0.18s ease; }
+@keyframes ac-open { from { grid-template-rows: 0fr; opacity: 0; } to { grid-template-rows: 1fr; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .ac-panel { animation: none; } .ac-panel.closing { transition: none; } }
+.ac-panel-clip { min-height: 0; overflow: hidden; }
+.ac-panel-body { display: flex; flex-direction: column; gap: 10px; margin: 6px 0 8px; padding: 12px 14px; border-radius: 16px; background: #f4f7fc; }
+.ac-item { display: flex; flex-direction: column; gap: 2px; padding-left: 10px; border-left: 3px solid var(--ac); border-radius: 0; }
+.ac-item-label { font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ac); }
+.ac-item b { font-size: 14.5px; color: #141a24; }
+.ac-item small { font-size: 12.5px; color: #5b6474; }
+.ac-item em { font-style: normal; font-weight: 700; color: #b06d0c; }
+.ac-macros { display: flex; gap: 16px; margin-top: 2px; font-size: 13px; font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; }
+.ac-macros span { display: flex; flex-direction: column; }
+.ac-macros small { font-size: 11px; font-weight: 600; color: #8b93a1; }
+/* The hub's strip (28 Sep, second go): one card, three columns between
+   hairlines; each a coloured icon and label, the figure with its unit, and
+   what it counts. The colours are the calendar's. */
+.ci-stats { gap: 0; padding: 14px 4px 12px; border-radius: 20px; background: #fff; border: 1px solid #e6eaf0; }
+.ci-stat { gap: 6px; padding: 0 12px; border: 0; border-radius: 0; background: none; }
+.ci-stat + .ci-stat { border-left: 1px solid #eef1f5; }
+.ci-stat-label { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #5b6474; white-space: nowrap; }
+.ci-stat-icon { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; background: var(--st-soft); color: var(--st); }
+.ci-stat-icon svg { width: 13px; height: 13px; }
+.ci-stat.streak { --st: #b06d0c; --st-soft: #fbf0de; }
+.ci-stat.workouts { --st: #1e3a6e; --st-soft: #e8eef8; }
+.ci-stat.active { --st: #1f7a4d; --st-soft: #e3f3ea; }
+.ci-stat b { display: flex; align-items: baseline; gap: 3px; font-size: 26px; line-height: 1; letter-spacing: -0.02em; }
+.ci-stat b small { font-size: 13px; font-weight: 700; letter-spacing: 0; color: #8b93a1; }
+.ci-stat .ci-stat-sub { font-size: 11.5px; color: #8b93a1; }
+/* The icon bare, in its colour, no chip; each column as wide as it needs,
+   so "Active days" stays inside the card. */
+.ci-stats { grid-template-columns: repeat(3, auto); justify-content: space-between; }
+.ci-stat { padding: 0 10px; min-width: 0; }
+.ci-stat-label { gap: 5px; letter-spacing: 0.06em; }
+.ci-stat-icon { width: auto; height: auto; background: none; border-radius: 0; }
+.ci-stat-icon svg { width: 14px; height: 14px; }
+/* Two rows on one grid (third go): the titles over a hairline, the figures
+   under it, every cell centred in its column, dividers only between the
+   figures. */
+.ci-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); justify-content: stretch; row-gap: 0; padding: 0; overflow: hidden; }
+.ci-stats .ci-stat-label { justify-content: center; gap: 5px; padding: 11px 4px 10px; border-bottom: 1px solid #eef1f5; font-size: 10.5px; letter-spacing: 0.07em; }
+.ci-stat-label.streak { --st: #b06d0c; }
+.ci-stat-label.workouts { --st: #1e3a6e; }
+.ci-stat-label.active { --st: #1f7a4d; }
+.ci-stat-icon svg { width: 14px; height: 14px; }
+.ci-stats .ci-stat { align-items: center; gap: 4px; padding: 12px 6px 13px; text-align: center; }
+.ci-stats .ci-stat b { justify-content: center; }
+.ci-stats .ci-stat + .ci-stat { border-left: 1px solid #eef1f5; }
+/* ---- Check-in Progress (28 Sep, option 9a): chips, a chart card in the
+   metric's category colour, and the plain history under it. The body sits
+   36px up into the banner with 16px side padding; the block undoes both so
+   the chips start 16px under the photo on the page's own gutter. ---- */
+.pg-view { display: flex; flex-direction: column; margin: 36px -16px 0; padding-bottom: 8px; }
+.pg-chips { display: flex; gap: 8px; overflow-x: auto; padding: 16px 16px 4px; scroll-snap-type: x proximity; scrollbar-width: none; }
+.pg-chips::-webkit-scrollbar { display: none; }
+.pg-chip { flex: none; scroll-snap-align: start; height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: #fff; color: #5b6474; font: inherit; font-size: 13.5px; font-weight: 700; white-space: nowrap; cursor: pointer; box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04), 0 4px 10px -6px rgba(16, 24, 40, 0.2); transition: background 0.2s, color 0.2s; }
+.pg-chip.on { background: #141a24; color: #fff; box-shadow: 0 8px 16px -8px rgba(20, 26, 36, 0.6); }
+
+.pg-card { --cat: #5b6472; --cat-rgb: 91, 100, 114; margin: 12px 16px 0; border-radius: 26px; background: #fff; padding: 18px 16px 14px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04), 0 22px 36px -24px rgba(var(--cat-rgb), 0.45), inset 0 0 0 1px rgba(var(--cat-rgb), 0.1); }
+.pg-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.pg-head-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pg-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--cat); }
+.pg-name { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pg-range { flex: none; display: flex; background: #f2f4f7; border-radius: 999px; padding: 3px; }
+.pg-range button { height: 28px; padding: 0 10px; border: 0; border-radius: 999px; background: transparent; color: #667085; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; transition: background 0.2s, color 0.2s; }
+.pg-range button.on { background: #fff; color: #141a24; box-shadow: 0 2px 6px -2px rgba(16, 24, 40, 0.25); }
+
+.pg-chart { position: relative; height: 164px; touch-action: pan-y; -webkit-user-select: none; user-select: none; outline: none; cursor: crosshair; }
+.pg-chart.scrubbing { touch-action: none; cursor: grabbing; }
+.pg-chart:focus-visible { box-shadow: 0 0 0 2px rgba(var(--cat-rgb), 0.35); border-radius: 8px; }
+.pg-chart-svg { position: absolute; left: 0; top: 0; display: block; overflow: visible; }
+.pg-chart-fade { position: absolute; inset: 0; animation: pg-fade 0.3s ease; }
+@keyframes pg-fade { from { opacity: 0; } }
+.pg-grid { position: absolute; left: 0; right: 0; border-top: 1px solid #f0f2f6; pointer-events: none; }
+.pg-grid span { position: absolute; left: 0; bottom: 2px; font-size: 10.5px; font-weight: 600; color: #b0b7c3; font-variant-numeric: tabular-nums; }
+.pg-target { position: absolute; left: 34px; right: 0; border-top: 1.5px dashed var(--cat); opacity: 0.55; pointer-events: none; }
+.pg-target span { position: absolute; right: 0; bottom: 2px; padding-left: 4px; background: #fff; font-size: 10.5px; font-weight: 800; color: var(--cat); white-space: nowrap; }
+.pg-guide { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(20, 26, 36, 0.14); pointer-events: none; }
+.pg-knob { position: absolute; width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; background: #fff; border: 3px solid var(--cat); box-shadow: 0 0 0 5px rgba(var(--cat-rgb), 0.18); transform: translate(-50%, -50%); pointer-events: none; }
+.pg-tip { position: absolute; top: -6px; height: 26px; padding: 0 9px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; border-radius: 9px; background: #141a24; color: #fff; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; transform: translateX(-50%); pointer-events: none; }
+.pg-tip span { color: rgba(255, 255, 255, 0.6); font-weight: 600; }
+.pg-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.pg-axis { display: flex; justify-content: space-between; margin-top: -6px; padding-left: 34px; font-size: 11px; font-weight: 600; color: #98a2b3; }
+.pg-chart-empty { height: 164px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font-size: 13px; font-weight: 600; color: #98a2b3; }
+.pg-chart-empty button { border: 0; background: none; padding: 4px 8px; font: inherit; font-size: 13px; font-weight: 700; color: var(--cat); cursor: pointer; }
+
+.pg-hist-head { display: flex; justify-content: space-between; align-items: baseline; padding: 28px 22px 4px; }
+.pg-hist-title { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; color: #141a24; }
+.pg-hist-count { font-size: 12.5px; font-weight: 600; color: #8b93a1; }
+.pg-hist-list { margin: 6px 16px 0; padding: 0 16px; list-style: none; background: #fff; border-radius: 20px; box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04), 0 10px 24px -20px rgba(16, 24, 40, 0.3); }
+.pg-hist-row { height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid #eef1f5; }
+.pg-hist-row:first-child { border-top: 0; }
+.pg-hist-date { font-size: 14.5px; font-weight: 600; color: #141a24; }
+.pg-hist-value { font-size: 16px; font-weight: 800; color: #141a24; font-variant-numeric: tabular-nums; }
+.pg-hist-value small { font-size: 12.5px; font-weight: 700; color: #98a2b3; }
+
+.pg-pager { padding: 20px 16px 0; }
+.pg-pager-row { display: flex; justify-content: center; align-items: center; gap: 6px; }
+.pg-pager-arrow { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 0; border-radius: 999px; background: #fff; color: #141a24; cursor: pointer; box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04), 0 4px 10px -6px rgba(16, 24, 40, 0.2); }
+.pg-pager-arrow:disabled { opacity: 0.4; cursor: default; }
+.pg-pager-arrow svg { width: 18px; height: 18px; }
+.pg-pager-num { min-width: 40px; height: 40px; padding: 0 6px; border: 0; border-radius: 999px; background: transparent; color: #5b6474; font: inherit; font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; cursor: pointer; }
+.pg-pager-num.on { background: #141a24; color: #fff; }
+.pg-pager-caption { padding-top: 10px; text-align: center; font-size: 12px; font-weight: 600; color: #98a2b3; }
+@media (prefers-reduced-motion: reduce) { .pg-chart-fade { animation: none; } .pg-chip, .pg-range button { transition: none; } }

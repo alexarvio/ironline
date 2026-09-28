@@ -32,6 +32,11 @@ import {
   getCurrentWeekNumber,
   getCheckInSections,
   getCheckInHistory,
+  getCheckInStreak,
+  yesterdaysOpenMetrics,
+  type CheckInMetric,
+  getWorkoutCalendar,
+  getActivityCalendar,
   getCheckInStatus,
   ensureDefaultMetrics,
   getClientPreferences,
@@ -88,6 +93,7 @@ import ReportArchiveList, { ArchiveReport } from "./ReportArchiveList";
 import NotificationRow from "./NotificationRow";
 import CoachNotesRow from "./CoachNotesRow";
 import DeleteAccountRow from "./DeleteAccountRow";
+import { clerkOn } from "../lib/clerk";
 import MyDetailsCard from "./MyDetailsCard";
 import ClientWeekSwitcher from "./ClientWeekSwitcher";
 import ProgramNote from "./ProgramNote";
@@ -359,8 +365,32 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
       trainedToday={trainedToday}
       today={today}
       food={food}
+      checkInCard={
+        onScreen.length
+          ? {
+              clientId: CLIENT_ID,
+              streak: getCheckInStreak(CLIENT_ID),
+              // The phone's hour picks the question: the morning's, any time's, the evening's.
+              hour: phoneTz ? hourIn(phoneTz) : new Date().getHours(),
+              // Today's questions first, then the week's while its window is open.
+              metrics: sections.sections
+                .filter((s) => s.id === "daily" || (s.id === "weekly" && weeklyOpen))
+                .flatMap((s) => s.metrics.map((m) => cardMetric(m, s.id as "daily" | "weekly"))),
+              // Yesterday's evening questions left open: asked once more, first.
+              yesterday: (() => {
+                const y = yesterdaysOpenMetrics(CLIENT_ID);
+                return y ? y.metrics.map((m) => ({ ...cardMetric(m, "daily"), date: y.date })) : [];
+              })(),
+            }
+          : null
+      }
     />
   );
+}
+
+// A check-in line as Home's lifestyle card asks it.
+function cardMetric(m: CheckInMetric, source: "daily" | "weekly") {
+  return { id: m.id, name: m.name, unit: m.unit, hint: m.hint, scaleMax: m.scaleMax, step: m.step, value: m.value, source, askAt: m.askAt ?? ("anytime" as const) };
 }
 
 // The date the coach did it, as "21 Sep".
@@ -1039,7 +1069,7 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
             <div className="home-dark-row-title">Privacy policy</div>
             <span className="st-link-go" aria-hidden="true">›</span>
           </a>
-          <DeleteAccountRow coachName={getCoachFirstName(CLIENT_ID)} />
+          <DeleteAccountRow coachName={getCoachFirstName(CLIENT_ID)} passwordless={clerkOn()} />
         </div>
       </section>
 
@@ -1288,6 +1318,16 @@ export default async function ClientPage({
     weeklyOpen: weeklyCheckInOpen(CLIENT_ID),
     objectives: getCurrentPhase(CLIENT_ID, "lifestyle")?.objectives ?? [],
     history: getCheckInHistory(CLIENT_ID),
+    // The hub's streak and month, and everything done, day by day, for its calendar (28 Sep).
+    stats: (() => {
+      const month = localDateStr().slice(0, 7);
+      const calendar = getWorkoutCalendar(CLIENT_ID);
+      return {
+        streak: getCheckInStreak(CLIENT_ID),
+        workoutsThisMonth: calendar.filter((d) => d.date.startsWith(month)).reduce((n, d) => n + d.sessions.length, 0),
+      };
+    })(),
+    calendar: getActivityCalendar(CLIENT_ID),
   };
   const progressPictures = progressPicturesData(CLIENT_ID);
   const hasUnreadNotifications = getNotifications(CLIENT_ID).some((n) => !n.read);

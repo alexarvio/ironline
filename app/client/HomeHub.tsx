@@ -5,7 +5,7 @@ import { markNotificationReadAction } from "../lib/actions";
 import VideoReplySheet, { type VideoReplyView } from "./VideoReplySheet";
 import PhaseCards, { type HomePhase, type PhaseFoodToday } from "./PhaseCards";
 import ProgressPicsCard, { type ProgressPics } from "./ProgressPicsCard";
-import QuickActions from "./QuickActions";
+import LifestyleCard, { type CardMetric } from "./LifestyleCard";
 import { ChevronDownIcon } from "../components/icons";
 import { tzShort } from "../lib/timezones";
 import type { LinkView } from "../lib/messageLinks";
@@ -98,9 +98,9 @@ export default function HomeHub({
   hello = "Hello",
   checkInCount,
   weekDone,
-  trainedToday,
   today,
   food,
+  checkInCard,
 }: {
   dateLabel: string;
   firstName: string;
@@ -117,6 +117,8 @@ export default function HomeHub({
   hello?: string;
   /** The check-in as the screen shows it, for the lifestyle card. */
   checkInCount: { done: number; total: number } | null;
+  /** Home's lifestyle card: today's questions, answered in place (LifestyleCard). */
+  checkInCard: { clientId: number; metrics: CardMetric[]; yesterday: CardMetric[]; streak: number; hour: number } | null;
   /** No session left this week: when the next one starts. */
   weekDone: { nextWeekLabel: string } | null;
   /** A session was ended today. */
@@ -124,21 +126,27 @@ export default function HomeHub({
   today: string;
   food: PhaseFoodToday;
 }) {
+  const lifestyle = phases.find((p) => p.track === "lifestyle") ?? null;
+  const plan = phases.filter((p) => p.track !== "lifestyle");
   return (
     <div className="hm">
       <HomeBanner dateLabel={dateLabel} firstName={firstName} initialHello={hello} />
       <div className="hm-body">
-        {/* "Your plan" first: a card a live phase, each with its one thing to do. */}
-        {phases.length > 0 && <PhaseCards phases={phases} coachName={coach.firstName} today={today} nextSession={session ? { dayId: session.dayId, name: session.name, live: !!session.live } : null} food={food} weekDone={weekDone} checkInCount={checkInCount} />}
-        {/* What is still to do today, one tap each; "All completed" once it is all done. */}
-        <QuickActions
-          today={today}
-          checkInCount={checkInCount}
-          nextSession={session ? { dayId: session.dayId, name: session.name, live: !!session.live } : null}
-          trainedToday={trainedToday}
-          food={food}
-          picsDue={progressPics?.status === "due"}
-        />
+        {/* Lifestyle first (28 Sep): the phase, today's metrics, and the question open now, answered right here. */}
+        {(checkInCard || lifestyle) && (
+          <LifestyleCard
+            clientId={checkInCard?.clientId ?? 0}
+            today={today}
+            hour={checkInCard?.hour ?? 12}
+            phase={lifestyle}
+            coachName={coach.firstName}
+            metrics={checkInCard?.metrics ?? []}
+            yesterday={checkInCard?.yesterday ?? []}
+            streak={checkInCard?.streak ?? 0}
+          />
+        )}
+        {/* "Your plan": training and nutrition, a card a live phase, each with its one thing to do. */}
+        {plan.length > 0 && <PhaseCards phases={plan} coachName={coach.firstName} today={today} nextSession={session ? { dayId: session.dayId, name: session.name, live: !!session.live } : null} food={food} weekDone={weekDone} checkInCount={checkInCount} />}
         {progressPics && <TodaysTasks pics={progressPics} />}
         <LatestActivityCard a={latestActivity} coach={coach} />
         {upcoming ? (

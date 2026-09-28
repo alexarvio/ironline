@@ -36,13 +36,13 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 
 const DAY = 86400000;
 const dayNum = (s: string) => Date.UTC(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10))) / DAY;
-const short = (s: string) => `${Number(s.slice(8, 10))} ${MONTHS[Number(s.slice(5, 7)) - 1]}`;
+export const short = (s: string) => `${Number(s.slice(8, 10))} ${MONTHS[Number(s.slice(5, 7)) - 1]}`;
 const localToday = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
-type Progress = {
+export type Progress = {
   /** 0–100; the fill and the knob. */
   p: number;
   /** "Wk 4 of 12", or "Week 4" with no end. */
@@ -57,7 +57,7 @@ type Progress = {
 };
 
 // Compares yyyy-mm-dd days only, so the time of day never moves anything.
-function progressOf(ph: HomePhase, today: string, coachName: string): Progress {
+export function progressOf(ph: HomePhase, today: string, coachName: string): Progress {
   const t = dayNum(today);
   const s = dayNum(ph.start);
   if (!ph.end) {
@@ -141,7 +141,7 @@ function cardLabel(ph: HomePhase, pr: Progress) {
   return `${TRACK_LABEL[ph.track]} phase: ${ph.name}, ${pr.openEnded ? pr.weekLabel : pr.throughLabel}${pr.leftLabel ? `, ${pr.leftLabel}` : ""}`;
 }
 
-function Bar({ pr, small }: { pr: Progress; small?: boolean }) {
+export function Bar({ pr, small }: { pr: Progress; small?: boolean }) {
   if (pr.openEnded) return <div className={`pc-bar open${small ? " sm" : ""}`} aria-hidden="true" />;
   return (
     <div className={`pc-bar${small ? " sm" : ""}`} role="progressbar" aria-valuenow={pr.p} aria-valuemin={0} aria-valuemax={100} aria-label={pr.throughLabel}>

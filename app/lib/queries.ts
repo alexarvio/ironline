@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, CardioEntry } from "./db";
-import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientEvent, ClientGym, ClientPhase, CoachProfile, CoachBusiness, CoachInvoicing, CoachPayments, CoachSettings, Data, EventCategory, InvoiceLine, InvoiceParty, PhaseTrack, VideoRequest } from "./db";
+import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientEvent, ClientGym, ClientPhase, CoachProfile, CoachBusiness, CoachInvoicing, CoachPayments, CoachSettings, Data, EventCategory, InvoiceLine, InvoiceParty, KeptActivity, MetricAskAt, PhaseTrack, VideoRequest } from "./db";
 import type { CoachProfileFields, CoachProfileView } from "./coachProfileView";
 import { getCatalogFood, searchCatalog, type CatalogFood } from "./foods/catalog";
 import type { OffProduct } from "./foods/openfoodfacts";
@@ -10,6 +10,8 @@ import { coachIdOfClient } from "./tenancy";
 import { countryOf, invoicingFor } from "./countries";
 import { LOCK_MS, type LockScope } from "./loginLockout";
 import { endWeekFor, phaseCovers, phaseDays, phaseLastDay, phaseWeekIndex, phaseWeeks } from "./phases";
+import { metricAskAt } from "./metricAskAt";
+import { colourOfGroup, groupColour } from "./categoryColors";
 import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "./phaseCovers";
 
 // "Today" (or any Date) as a local YYYY-MM-DD calendar-date string. This is
@@ -452,6 +454,7 @@ export function removeSession(programDayId: number) {
   if (!day) return;
   const assignmentIds = new Set(data.workout_assignments.filter((wa) => wa.program_day_id === day.id).map((wa) => wa.id));
   const cardioIds = new Set((data.cardio_entries ?? []).filter((c) => c.program_day_id === day.id).map((c) => c.id));
+  keepSessions([day.id]);
   data.set_logs = data.set_logs.filter((sl) => !assignmentIds.has(sl.workout_assignment_id));
   data.assignment_custom_values = data.assignment_custom_values.filter((v) => !assignmentIds.has(v.workout_assignment_id));
   data.workout_assignments = data.workout_assignments.filter((wa) => !assignmentIds.has(wa.id));
@@ -892,6 +895,7 @@ export function removeProgramWeek(programId: number, weekIndex: number) {
   const assignmentIds = new Set(
     data.workout_assignments.filter((wa) => dayIds.has(wa.program_day_id)).map((wa) => wa.id)
   );
+  keepSessions(dayIds);
   data.set_logs = data.set_logs.filter((sl) => !assignmentIds.has(sl.workout_assignment_id));
   data.assignment_custom_values = data.assignment_custom_values.filter((v) => !assignmentIds.has(v.workout_assignment_id));
   data.workout_assignments = data.workout_assignments.filter((wa) => !assignmentIds.has(wa.id));
@@ -1091,6 +1095,7 @@ export function removeWeek(clientId: number, week: number) {
   const assignmentIds = new Set(
     data.workout_assignments.filter((wa) => dayIds.has(wa.program_day_id)).map((wa) => wa.id)
   );
+  keepSessions(dayIds);
   data.set_logs = data.set_logs.filter((sl) => !assignmentIds.has(sl.workout_assignment_id));
   data.workout_assignments = data.workout_assignments.filter((wa) => !assignmentIds.has(wa.id));
   data.program_days = data.program_days.filter((pd) => !dayIds.has(pd.id));
@@ -1249,6 +1254,8 @@ export function addExerciseToDay(
 
 export function removeAssignment(assignmentId: number) {
   const data = getData();
+  const was = data.workout_assignments.find((wa) => wa.id === assignmentId);
+  if (was) keepSessions([was.program_day_id]);
   data.set_logs = data.set_logs.filter((sl) => sl.workout_assignment_id !== assignmentId);
   data.workout_assignments = data.workout_assignments.filter((wa) => wa.id !== assignmentId);
   persist();
@@ -2927,6 +2934,7 @@ export function updateMeasurementField(id: number, name: string, unit: string) {
 
 export function removeMeasurementField(id: number) {
   const data = getData();
+  keepMeasurements(data.measurement_values.filter((v) => v.field_id === id));
   data.measurement_fields = data.measurement_fields.filter((f) => f.id !== id);
   data.measurement_values = data.measurement_values.filter((v) => v.field_id !== id);
   persist();
@@ -2983,6 +2991,7 @@ export function listMeasurementDates(clientId: number): string[] {
 
 export function removeMeasurementCheckIn(clientId: number, date: string) {
   const data = getData();
+  keepMeasurements(data.measurement_values.filter((v) => v.client_id === clientId && v.date === date));
   data.measurement_values = data.measurement_values.filter(
     (v) => !(v.client_id === clientId && v.date === date)
   );
@@ -3124,6 +3133,8 @@ export type MetricDefinition = {
   frequency: MetricCadence;
   // Which way this metric is meant to move, for the Change row.
   good_direction?: "up" | "down" | "none";
+  /** The coach's target for it, if set: the dashed line on the client's Progress chart. */
+  target?: number | null;
   /** The lifestyle phase that asks for it; absent means the standing set. */
   phase_id?: number | null;
   order_index: number;
@@ -3149,19 +3160,20 @@ export type MetricCadence = "daily" | "weekly" | "monthly";
 // The tints carry the category on a pill and a key, so they have to be seen
 // at a glance: pale enough for the label to read on, strong enough to tell
 // two categories apart across a list.
+// The tints (and the strong colours the charts use) live in lib/categoryColors.ts.
 export const METRIC_GROUPS = [
-  { key: "body", label: "Body", tint: "#cfe0f2" },
-  { key: "sleep", label: "Sleep", tint: "#d8d3f0" },
-  { key: "activity", label: "Activity", tint: "#c9e7d5" },
-  { key: "fatigue", label: "Fatigue", tint: "#f4dcc0" },
-  { key: "lifestyle", label: "Lifestyle", tint: "#c9e6ea" },
-  { key: "stress", label: "Stress", tint: "#f3cfcf" },
-  { key: "nutrition", label: "Nutrition", tint: "#e6ebb8" },
-  { key: "training", label: "Training", tint: "#d5d2f3" },
-  { key: "wellbeing", label: "General wellbeing", tint: "#e2d7ee" },
-  { key: "measurements", label: "Measurements", tint: "#dde3e9" },
-  { key: "optional", label: "Optional", tint: "#e8e3d8" },
-  { key: "other", label: "Other", tint: "#dfe6ef" },
+  { key: "body", label: "Body", tint: groupColour("body").tint },
+  { key: "sleep", label: "Sleep", tint: groupColour("sleep").tint },
+  { key: "activity", label: "Activity", tint: groupColour("activity").tint },
+  { key: "fatigue", label: "Fatigue", tint: groupColour("fatigue").tint },
+  { key: "lifestyle", label: "Lifestyle", tint: groupColour("lifestyle").tint },
+  { key: "stress", label: "Stress", tint: groupColour("stress").tint },
+  { key: "nutrition", label: "Nutrition", tint: groupColour("nutrition").tint },
+  { key: "training", label: "Training", tint: groupColour("training").tint },
+  { key: "wellbeing", label: "General wellbeing", tint: groupColour("wellbeing").tint },
+  { key: "measurements", label: "Measurements", tint: groupColour("measurements").tint },
+  { key: "optional", label: "Optional", tint: groupColour("optional").tint },
+  { key: "other", label: "Other", tint: groupColour("other").tint },
 ] as const;
 
 export function metricGroup(key: string): { key: string; label: string; tint: string } {
@@ -3471,6 +3483,7 @@ export function setMetricCadence(id: number, frequency: MetricCadence) {
 
 export function removeMetricDefinition(id: number) {
   const data = getData();
+  keepMetricReadings(id);
   data.metric_definitions = data.metric_definitions.filter((m) => m.id !== id);
   data.metric_entries = data.metric_entries.filter((e) => e.metric_definition_id !== id);
   persist();
@@ -5925,6 +5938,8 @@ export type CheckInMetric = {
   last: { value: number; period: string } | null;
   // When this period's reading was saved (ISO), if it was.
   loggedAt: string | null;
+  // When in the day it is asked for (metricAskAt); measurements: the morning.
+  askAt?: MetricAskAt;
 };
 
 export type CheckInSection = {
@@ -5966,9 +5981,28 @@ export type CheckInSeries = {
   unit: string;
   scaleMax: number | null;
   cadence: "daily" | "weekly" | "measurement";
+  /** The admin group it belongs to (its label), and that group's colour for the chart. */
+  category: string;
+  colour: string;
+  colourRgb: string;
+  /** The coach's target, if any: the dashed line. */
+  target: number | null;
+  /** Decimals to show: 0, 1 or 2 (the most any reading has). */
+  precision: number;
   /** Oldest first: the day it is for (a weekly one's Monday), and when it was saved. */
   points: { date: string; value: number; at: string | null }[];
 };
+
+function readingPrecision(values: number[]): number {
+  let p = 0;
+  for (const v of values) {
+    const s = String(v);
+    const dot = s.indexOf(".");
+    if (dot >= 0) p = Math.max(p, Math.min(2, s.length - dot - 1));
+    if (p === 2) break;
+  }
+  return p;
+}
 export type CheckInFeedDay = {
   date: string;
   items: { name: string; value: string }[];
@@ -5976,8 +6010,27 @@ export type CheckInFeedDay = {
   /** The day's own (daily) lines: how many there were and how many were logged. */
   dailyTotal: number;
   dailyDone: number;
+  /**
+   * The day's check-in as the form's sections, for changing it from the feed:
+   * the daily lines, the weekly readings sent that day, and the measurements
+   * when some were taken that day. A day with nothing logged gets its daily
+   * lines, empty, to fill in; empty only without daily metrics.
+   */
+  edit: CheckInSection[];
 };
 export type CheckInHistory = { series: CheckInSeries[]; days: CheckInFeedDay[] };
+
+// A client can change a check-in for today and for each of the seven days
+// before it, the days the Check-in screen's feed lists. From the eighth day
+// back it is locked (checkInLocked in actions.ts refuses it). Server-local
+// days, like the rest of the check-in.
+export const CHECK_IN_EDIT_DAYS = 7;
+export function checkInEditable(date: string, today: string = localDateStr()): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+  const first = new Date(`${today}T00:00:00`);
+  first.setDate(first.getDate() - CHECK_IN_EDIT_DAYS);
+  return date >= localDateStr(first) && date <= today;
+}
 
 export function getCheckInHistory(clientId: number): CheckInHistory {
   const today = localDateStr();
@@ -5988,37 +6041,52 @@ export function getCheckInHistory(clientId: number): CheckInHistory {
     for (const def of defs) {
       const scaleMax = ratingScaleMax(def.unit);
       const mine = entries.filter((e) => e.metric_definition_id === def.id && e.value != null && e.period <= today);
+      const points = mine.map((e) => ({ date: e.period, value: e.value!, at: e.logged_at ?? null })).sort((a, b) => (a.date < b.date ? -1 : 1));
+      const group = metricGroup(def.category);
+      const gc = groupColour(group.key);
       series.push({
         key: `${cadence}${def.id}`,
         name: def.name,
         unit: scaleMax ? "" : def.unit,
         scaleMax,
         cadence,
-        points: mine.map((e) => ({ date: e.period, value: e.value!, at: e.logged_at ?? null })).sort((a, b) => (a.date < b.date ? -1 : 1)),
+        category: group.label,
+        colour: gc.hex,
+        colourRgb: gc.rgb,
+        target: def.target ?? null,
+        precision: scaleMax ? 0 : readingPrecision(points.map((p) => p.value)),
+        points,
       });
     }
   }
   const fields = listMeasurementFields(clientId).filter(deployedToClient);
   const values = getMeasurementValues(fields.map((f) => f.id));
   for (const f of fields) {
+    const points = values
+      .filter((v) => v.field_id === f.id && v.value != null && v.date <= today)
+      .map((v) => ({ date: v.date, value: v.value!, at: v.logged_at ?? null }))
+      .sort((a, b) => (a.date < b.date ? -1 : 1));
     series.push({
       key: `measurement${f.id}`,
       name: f.name,
       unit: f.unit,
       scaleMax: null,
       cadence: "measurement",
-      points: values
-        .filter((v) => v.field_id === f.id && v.value != null && v.date <= today)
-        .map((v) => ({ date: v.date, value: v.value!, at: v.logged_at ?? null }))
-        .sort((a, b) => (a.date < b.date ? -1 : 1)),
+      category: "Measurements",
+      colour: groupColour("measurements").hex,
+      colourRgb: groupColour("measurements").rgb,
+      target: null,
+      precision: readingPrecision(points.map((p) => p.value)),
+      points,
     });
   }
 
   // The seven days before today, newest first: what was logged on each (a
-  // weekly reading on the day it was saved).
+  // weekly reading on the day it was saved), and the day as the form, to
+  // change it while it is still in the feed (checkInEditable).
   const shown = (s: CheckInSeries, v: number) => (s.scaleMax ? `${v}/${s.scaleMax}` : `${v}${s.unit ? ` ${s.unit}` : ""}`);
   const days: CheckInFeedDay[] = [];
-  for (let i = 1; i <= 7; i++) {
+  for (let i = 1; i <= CHECK_IN_EDIT_DAYS; i++) {
     const d = new Date(`${today}T00:00:00`);
     d.setDate(d.getDate() - i);
     const date = localDateStr(d);
@@ -6029,59 +6097,104 @@ export function getCheckInHistory(clientId: number): CheckInHistory {
     }
     const note = [getCheckInNote(clientId, "daily", date), getCheckInNote(clientId, "measurements", date)].filter((n): n is string => !!n?.trim()).join("\n") || null;
     const daily = series.filter((s) => s.cadence === "daily");
-    days.push({ date, items, note, dailyTotal: daily.length, dailyDone: daily.filter((s) => s.points.some((x) => x.date === date)).length });
+    const edit = [
+      checkInTrackerSection(clientId, "daily", date, "Daily", ""),
+      checkInTrackerSection(clientId, "weekly", weekStart(date), "Weekly", "", (e) => e?.value != null && !!e.logged_at && localDateStr(new Date(e.logged_at)) === date),
+      checkInMeasureSection(clientId, date, true),
+    ].filter((s): s is CheckInSection => s !== null);
+    days.push({ date, items, note, dailyTotal: daily.length, dailyDone: daily.filter((s) => s.points.some((x) => x.date === date)).length, edit });
   }
   return { series, days };
+}
+
+const checkInFmtDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+// A tracker metric's row: what's logged for the period, plus the most recent
+// entry from any earlier period as the hint. `only` narrows it to some of the
+// metrics (a past day's weekly readings: the ones sent on that day).
+function checkInTrackerSection(
+  clientId: number,
+  frequency: "daily" | "weekly",
+  period: string,
+  label: string,
+  intro: string,
+  only?: (current: MetricEntry | undefined) => boolean
+): CheckInSection | null {
+  const all = listMetricDefinitions(clientId, frequency).filter(deployedToClient);
+  const entries = getMetricEntries(all.map((d) => d.id));
+  const currentOf = (id: number) => entries.find((e) => e.metric_definition_id === id && e.period === period);
+  const defs = only ? all.filter((d) => only(currentOf(d.id))) : all;
+  if (defs.length === 0) return null;
+  return {
+    id: frequency,
+    label,
+    intro,
+    note: getCheckInNote(clientId, frequency, period),
+    metrics: defs.map((def) => {
+      const current = currentOf(def.id);
+      const previous = entries
+        .filter((e) => e.metric_definition_id === def.id && e.period < period && e.value != null)
+        .sort((a, b) => (a.period < b.period ? 1 : -1))[0];
+      const scaleMax = ratingScaleMax(def.unit);
+      return {
+        id: String(def.id),
+        name: def.name,
+        unit: def.unit,
+        step: scaleMax ? "1" : "0.1",
+        value: current?.value != null ? String(current.value) : "",
+        hint: previous
+          ? `${previous.value}${def.unit && !scaleMax ? ` ${def.unit}` : scaleMax ? `/${scaleMax}` : ""} on ${checkInFmtDate(previous.period)}`
+          : null,
+        scaleMax,
+        last: previous?.value != null ? { value: previous.value, period: previous.period } : null,
+        loggedAt: current?.logged_at ?? null,
+        askAt: metricAskAt(def),
+      };
+    }),
+  };
+}
+
+// The coach's measurements for one date, the last date before it as the
+// hint. Null without fields, or (onlyIfLogged, a past day's) with nothing
+// measured that date.
+function checkInMeasureSection(clientId: number, date: string, onlyIfLogged = false): CheckInSection | null {
+  const fields = listMeasurementFields(clientId).filter(deployedToClient);
+  if (fields.length === 0) return null;
+  const values = getMeasurementValues(fields.map((f) => f.id));
+  const valueAt = (fieldId: number, d: string) => values.find((v) => v.field_id === fieldId && v.date === d)?.value ?? null;
+  if (onlyIfLogged && !fields.some((f) => valueAt(f.id, date) != null)) return null;
+  const previousDate = listMeasurementDates(clientId).filter((d) => d < date).sort((a, b) => (a < b ? 1 : -1))[0] ?? null;
+  return {
+    id: "measurements",
+    note: getCheckInNote(clientId, "measurements", date),
+    label: "Measure",
+    intro: "Same spots, same time of day: first thing, before food.",
+    metrics: fields.map((f) => {
+      const current = valueAt(f.id, date);
+      const previous = previousDate ? valueAt(f.id, previousDate) : null;
+      return {
+        id: String(f.id),
+        name: f.name,
+        unit: f.unit,
+        step: "0.1",
+        value: current != null ? String(current) : "",
+        hint: previous != null ? `${previous}${f.unit ? ` ${f.unit}` : ""} on ${checkInFmtDate(previousDate!)}` : null,
+        scaleMax: null,
+        last: previous != null ? { value: previous, period: previousDate! } : null,
+        loggedAt: values.find((v) => v.field_id === f.id && v.date === date)?.logged_at ?? null,
+      };
+    }),
+  };
 }
 
 export function getCheckInSections(clientId: number): CheckInData {
   const today = localDateStr();
   const thisWeek = weekStart(today);
-
-  const fmtDate = (iso: string) =>
-    new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-
-  // A tracker metric's row: what's logged for the current period, plus the
-  // most recent entry from any earlier period as the hint.
-  const trackerSection = (
-    frequency: "daily" | "weekly",
-    period: string,
-    label: string,
-    intro: string
-  ): CheckInSection | null => {
-    const defs = listMetricDefinitions(clientId, frequency).filter(deployedToClient);
-    if (defs.length === 0) return null;
-    const entries = getMetricEntries(defs.map((d) => d.id));
-    return {
-      id: frequency,
-      label,
-      intro,
-      note: getCheckInNote(clientId, frequency, period),
-      metrics: defs.map((def) => {
-        const current = entries.find((e) => e.metric_definition_id === def.id && e.period === period);
-        const previous = entries
-          .filter((e) => e.metric_definition_id === def.id && e.period < period && e.value != null)
-          .sort((a, b) => (a.period < b.period ? 1 : -1))[0];
-        const scaleMax = ratingScaleMax(def.unit);
-        return {
-          id: String(def.id),
-          name: def.name,
-          unit: def.unit,
-          step: scaleMax ? "1" : "0.1",
-          value: current?.value != null ? String(current.value) : "",
-          hint: previous
-            ? `${previous.value}${def.unit && !scaleMax ? ` ${def.unit}` : scaleMax ? `/${scaleMax}` : ""} on ${fmtDate(previous.period)}`
-            : null,
-          scaleMax,
-          last: previous?.value != null ? { value: previous.value, period: previous.period } : null,
-          loggedAt: current?.logged_at ?? null,
-        };
-      }),
-    };
-  };
+  const fmtDate = checkInFmtDate;
 
   const sections: CheckInSection[] = [];
-  const daily = trackerSection(
+  const daily = checkInTrackerSection(
+    clientId,
     "daily",
     today,
     "Daily",
@@ -6089,41 +6202,19 @@ export function getCheckInSections(clientId: number): CheckInData {
   );
   if (daily) sections.push(daily);
 
-  const weekly = trackerSection("weekly", thisWeek, "Weekly", "One entry covers the whole week.");
+  const weekly = checkInTrackerSection(clientId, "weekly", thisWeek, "Weekly", "One entry covers the whole week.");
   if (weekly) sections.push(weekly);
 
   // ---- Measurements ----
+  const measure = checkInMeasureSection(clientId, today);
+  if (measure) sections.push(measure);
+
+  // For the deltas below.
   const fields = listMeasurementFields(clientId).filter(deployedToClient);
   const measurementValues = getMeasurementValues(fields.map((f) => f.id));
   const dates = listMeasurementDates(clientId);
-  const previousDate = dates.filter((d) => d < today).sort((a, b) => (a < b ? 1 : -1))[0] ?? null;
-
   const valueAt = (fieldId: number, date: string) =>
     measurementValues.find((v) => v.field_id === fieldId && v.date === date)?.value ?? null;
-
-  if (fields.length > 0) {
-    sections.push({
-      id: "measurements",
-      note: getCheckInNote(clientId, "measurements", today),
-      label: "Measure",
-      intro: "Same spots, same time of day: first thing, before food.",
-      metrics: fields.map((f) => {
-        const current = valueAt(f.id, today);
-        const previous = previousDate ? valueAt(f.id, previousDate) : null;
-        return {
-          id: String(f.id),
-          name: f.name,
-          unit: f.unit,
-          step: "0.1",
-          value: current != null ? String(current) : "",
-          hint: previous != null ? `${previous}${f.unit ? ` ${f.unit}` : ""} on ${fmtDate(previousDate!)}` : null,
-          scaleMax: null,
-          last: previous != null ? { value: previous, period: previousDate! } : null,
-          loggedAt: measurementValues.find((v) => v.field_id === f.id && v.date === today)?.logged_at ?? null,
-        };
-      }),
-    });
-  }
 
   // How far each measurement has moved since the current phase began.
   // Phase-to-date, not since the last check-in: a week apart, most of these
@@ -8059,6 +8150,7 @@ export function clearProgramDay(programDayId: number) {
   const data = getData();
   const ids = data.workout_assignments.filter((wa) => wa.program_day_id === programDayId).map((wa) => wa.id);
   if (ids.length === 0) return;
+  keepSessions([programDayId]);
   data.set_logs = data.set_logs.filter((sl) => !ids.includes(sl.workout_assignment_id));
   data.assignment_custom_values = data.assignment_custom_values.filter((v) => !ids.includes(v.workout_assignment_id));
   data.workout_assignments = data.workout_assignments.filter((wa) => !ids.includes(wa.id));
@@ -8220,6 +8312,7 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
       ? rows().filter((wa) => removedExerciseIds.includes(wa.exercise_id)).map((wa) => wa.id)
       : removed;
     if (dropIds.length) {
+      keepSessions([day.id]);
       data.set_logs = data.set_logs.filter((sl) => !dropIds.includes(sl.workout_assignment_id));
       data.assignment_custom_values = data.assignment_custom_values.filter((v) => !dropIds.includes(v.workout_assignment_id));
       data.workout_assignments = data.workout_assignments.filter((wa) => !dropIds.includes(wa.id));
@@ -8339,6 +8432,7 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
       return mirror ? cardioRows().find((c) => c.name.trim().toLowerCase() === srcRow.name.trim().toLowerCase()) : srcRow;
     };
     const dropCardio = changes.cardio.removed.map((id) => cardioTarget(id)?.id).filter((x): x is number => typeof x === "number");
+    if (dropCardio.length) keepSessions([day.id]);
     if (dropCardio.length) data.cardio_entries = data.cardio_entries.filter((c) => !dropCardio.includes(c.id));
     for (const [idStr, raw] of Object.entries(changes.cardio.fields)) {
       const target = cardioTarget(Number(idStr));
@@ -10200,18 +10294,8 @@ export type LoggedValues = {
   notes: Record<string, string>;
 };
 
-const CATEGORY_COLOUR: Record<string, string> = {
-  sleep: "#4c42a8",
-  activity: "#1f7a4d",
-  lifestyle: "#a8761f",
-  wellbeing: "#2f5d8f",
-  body: "#b8471f",
-  measurements: "#b8471f",
-  stress: "#b8471f",
-  fatigue: "#a8761f",
-  nutrition: "#1f7a4d",
-  training: "#4c42a8",
-};
+// The category colours live in lib/categoryColors.ts, shared with the
+// client's Progress charts so the two never drift.
 
 /**
  * Everything the Logged data block reads, for one cadence. With a phase's
@@ -10234,7 +10318,7 @@ export function getLoggedValues(
       unit: m.unit,
       category: g.key,
       categoryLabel: g.label,
-      colour: CATEGORY_COLOUR[g.key] ?? "#5b6472",
+      colour: colourOfGroup(g.key),
       goodDirection: m.good_direction ?? "none",
     };
   });
@@ -10301,6 +10385,28 @@ export function setMetricDirection(id: number, direction: "up" | "down" | "none"
   if (!m) return;
   m.good_direction = direction;
   persist();
+}
+
+/** When in the day a metric is asked for. */
+export function setMetricAskAt(id: number, askAt: MetricAskAt) {
+  const m = getData().metric_definitions.find((x) => x.id === id);
+  if (!m) return;
+  m.ask_at = askAt;
+  persist();
+}
+
+/**
+ * Yesterday's evening and all-day questions still unanswered (an energy
+ * level or a step count is only known at night, when it gets forgotten):
+ * asked once more on Home's card the next day, once today's are all in.
+ */
+export function yesterdaysOpenMetrics(clientId: number): { date: string; metrics: CheckInMetric[] } | null {
+  const d = new Date(`${localDateStr()}T00:00:00`);
+  d.setDate(d.getDate() - 1);
+  const date = localDateStr(d);
+  const section = checkInTrackerSection(clientId, "daily", date, "Daily", "");
+  const metrics = (section?.metrics ?? []).filter((m) => m.value === "" && (m.askAt === "evening" || m.askAt === "anytime"));
+  return metrics.length ? { date, metrics } : null;
 }
 
 export function getFoodDiary(clientId: number, date: string): FoodDiaryView {
@@ -10636,6 +10742,215 @@ export function markInvoicePaidOnline(invoiceId: number, sessionId: string, acco
   inv.stripe_session_id = sessionId;
   persist();
   return inv;
+}
+
+/**
+ * A coach who signed up themselves, once the owner lets them in: the name
+ * and business they gave become their display name and business name, so
+ * their first screens already say who they are (lib/clerk.ts, 26 Sep).
+ */
+export function applySignUpDetails(coachId: number, name: string, business: string | null) {
+  const profile = ensureCoachProfile(coachId);
+  if (!profile.display_name?.trim() && name.trim()) profile.display_name = name.trim().slice(0, 80);
+  const biz = business?.trim().slice(0, 120);
+  if (biz) {
+    const user = getData().users.find((u) => u.id === coachId && u.role === "coach");
+    if (user && !user.coach_settings?.business?.business_name) user.coach_settings = { ...(user.coach_settings ?? {}), business: { ...(user.coach_settings?.business ?? {}), business_name: biz } };
+  }
+  persist();
+}
+
+// ---- The client's check-in hub (28 Sep): streak and workout calendar -------
+
+/**
+ * Days in a row with a daily check-in (any daily metric answered), counting
+ * back from today, or from yesterday while today is still open, so a streak
+ * doesn't read 0 every morning before the first answer.
+ */
+export function getCheckInStreak(clientId: number): number {
+  const data = getData();
+  const defs = new Set(data.metric_definitions.filter((d) => d.client_id === clientId && d.frequency === "daily").map((d) => d.id));
+  const days = new Set(data.metric_entries.filter((e) => defs.has(e.metric_definition_id) && e.value != null).map((e) => e.period));
+  let day = localDateStr();
+  if (!days.has(day)) day = localDateStr(new Date(new Date(`${day}T12:00:00`).getTime() - 86400000));
+  let n = 0;
+  while (days.has(day)) {
+    n++;
+    day = localDateStr(new Date(new Date(`${day}T12:00:00`).getTime() - 86400000));
+  }
+  return n;
+}
+
+export type WorkoutDay = { date: string; sessions: { title: string; minutes: number | null; finished: boolean }[] };
+
+/**
+ * Every day the client trained, for the hub's calendar: a session ended on
+ * the app (its day, how many minutes it ran, whether every set was in), or
+ * one logged in full without being begun on the app (no minutes then).
+ */
+export function getWorkoutCalendar(clientId: number): WorkoutDay[] {
+  const byDate = new Map<string, WorkoutDay["sessions"]>();
+  for (const { date, title, minutes, finished } of trainedSessions(clientId)) byDate.set(date, [...(byDate.get(date) ?? []), { title, minutes, finished }]);
+  return [...byDate.entries()].map(([date, sessions]) => ({ date, sessions })).sort((a, b) => (a.date < b.date ? 1 : -1));
+}
+
+/** getWorkoutCalendar's sessions one by one, with the session they are. */
+function trainedSessions(clientId: number): { date: string; dayId: number; title: string; minutes: number | null; finished: boolean }[] {
+  const data = getData();
+  const out: { date: string; dayId: number; title: string; minutes: number | null; finished: boolean }[] = [];
+  const title = (d: { label: string | null; day_of_week: number }) => d.label?.trim() || `Session ${d.day_of_week}`;
+  for (const d of data.program_days) {
+    if (d.client_id !== clientId) continue;
+    if (d.session_ended_at) {
+      const start = d.session_started_at ? new Date(d.session_started_at).getTime() : NaN;
+      const end = new Date(d.session_ended_at).getTime();
+      const minutes = Number.isFinite(start) && end > start ? Math.max(1, Math.round((end - start) / 60000)) : null;
+      out.push({ date: localDateStr(new Date(d.session_ended_at)), dayId: d.id, title: title(d), minutes, finished: isSessionComplete(d.id) });
+    } else if (isSessionComplete(d.id)) {
+      const last = data.set_logs
+        .filter((l) => data.workout_assignments.some((wa) => wa.id === l.workout_assignment_id && wa.program_day_id === d.id))
+        .map((l) => l.logged_at)
+        .sort()
+        .at(-1);
+      if (last) out.push({ date: localDateStr(new Date(last)), dayId: d.id, title: title(d), minutes: null, finished: true });
+    }
+  }
+  return out;
+}
+
+export type ActivityDay = {
+  date: string;
+  /** The sessions done that day, as getWorkoutCalendar has them, with how many exercises and where. */
+  sessions: { title: string; minutes: number | null; finished: boolean; exercises: number; gym: string | null }[];
+  /** The food diary's totals, or a typed day's calories alone. */
+  food: { kcal: number; protein: number | null; carbs: number | null; fat: number | null } | null;
+  /** What was checked in for that day, by name. */
+  checkIns: string[];
+};
+
+/**
+ * Every day the client did something, for the hub's calendar (28 Sep): the
+ * training, the food and the check-ins, each a third of the day's ring. A
+ * record of what was done, not a score.
+ */
+export function getActivityCalendar(clientId: number): ActivityDay[] {
+  const data = getData();
+  const days = new Map<string, ActivityDay>();
+  const day = (date: string) => {
+    let d = days.get(date);
+    if (!d) days.set(date, (d = { date, sessions: [], food: null, checkIns: [] }));
+    return d;
+  };
+
+  // Training: the sessions as they are, and those a coach edit has since
+  // changed or removed as they were when done (the kept one wins).
+  const kept = getClient(clientId)?.kept_activity ?? [];
+  const keptDays = new Set(kept.flatMap((k) => (k.kind === "training" ? [k.day_id] : [])));
+  for (const s of [...sessionRecords(clientId).filter((s) => !keptDays.has(s.day_id)), ...kept.filter((k) => k.kind === "training")]) {
+    day(s.date).sessions.push({ title: s.title, minutes: s.minutes, finished: s.finished, exercises: s.exercises, gym: s.gym });
+  }
+
+  // Food: the diary's totals where there is a diary, else the typed calories.
+  const totals = new Map<string, { kcal: number; protein: number; carbs: number; fat: number }>();
+  for (const e of data.food_entries) {
+    if (e.client_id !== clientId) continue;
+    const t = totals.get(e.date) ?? { kcal: 0, protein: 0, carbs: 0, fat: 0 };
+    t.kcal += e.kcal;
+    t.protein += e.protein;
+    t.carbs += e.carbs;
+    t.fat += e.fat;
+    totals.set(e.date, t);
+  }
+  for (const [date, t] of totals) day(date).food = { kcal: Math.round(t.kcal), protein: Math.round(t.protein), carbs: Math.round(t.carbs), fat: Math.round(t.fat) };
+  for (const c of data.calorie_logs) {
+    if (c.client_id !== clientId || totals.has(c.date) || !(c.kcal > 0)) continue;
+    day(c.date).food = { kcal: Math.round(c.kcal), protein: null, carbs: null, fat: null };
+  }
+
+  // Check-ins: a daily reading on its day, a weekly one on the day it was sent, a measurement on its date.
+  const defs = new Map(data.metric_definitions.filter((m) => m.client_id === clientId).map((m) => [m.id, m] as const));
+  for (const e of data.metric_entries) {
+    const def = defs.get(e.metric_definition_id);
+    if (!def || e.value == null) continue;
+    const date = def.frequency === "daily" ? e.period : e.logged_at ? localDateStr(new Date(e.logged_at)) : null;
+    if (date && !day(date).checkIns.includes(def.name)) day(date).checkIns.push(def.name);
+  }
+  const fields = new Map(listMeasurementFields(clientId).map((f) => [f.id, f] as const));
+  for (const v of getMeasurementValues([...fields.keys()])) {
+    const f = fields.get(v.field_id);
+    if (f && v.value != null && !day(v.date).checkIns.includes(f.name)) day(v.date).checkIns.push(f.name);
+  }
+  for (const k of kept) if (k.kind === "checkin" && !day(k.date).checkIns.includes(k.name)) day(k.date).checkIns.push(k.name);
+
+  return [...days.values()].filter((d) => d.sessions.length || d.food || d.checkIns.length).sort((a, b) => (a.date < b.date ? 1 : -1));
+}
+
+// ---- Kept activity (28 Sep) -------------------------------------------------
+// What a client did is never lost to a coach's edit: removing a session, an
+// exercise, a week, a programme, a metric or a measurement first keeps a
+// record of what was done (the session as it was; which check-ins, when)
+// on the client, and the calendar reads it for good. Deleting the client,
+// or the client discarding their own workout, still removes it.
+
+type SessionRecord = Extract<KeptActivity, { kind: "training" }>;
+
+/** Each trained session (trainedSessions) as the calendar shows it: its exercises, and its gym when there are several. */
+function sessionRecords(clientId: number, only?: Set<number>): SessionRecord[] {
+  const data = getData();
+  const gyms = listClientGyms(clientId, true);
+  const gymName = gyms.filter((g) => !g.archived).length > 1 ? (id: number | null | undefined) => (id != null ? gyms.find((g) => g.id === id) : gyms.find((g) => g.is_home) ?? gyms[0])?.name ?? null : () => null;
+  return trainedSessions(clientId)
+    .filter((s) => !only || only.has(s.dayId))
+    .map(({ date, dayId, title, minutes, finished }) => {
+      const was = data.workout_assignments.filter((a) => a.program_day_id === dayId);
+      const log = was.length ? data.set_logs.find((l) => was.some((a) => a.id === l.workout_assignment_id)) : undefined;
+      return { kind: "training", date, day_id: dayId, title, minutes, finished, exercises: was.length, gym: log ? gymName(log.gym_id) : null };
+    });
+}
+
+function keep(clientId: number, rows: KeptActivity[]) {
+  const client = getClient(clientId);
+  if (!client || rows.length === 0) return;
+  const list = (client.kept_activity ??= []);
+  for (const r of rows) {
+    // A session is kept once, as it was first done; a check-in once a day.
+    if (r.kind === "training" ? list.some((k) => k.kind === "training" && k.day_id === r.day_id) : list.some((k) => k.kind === "checkin" && k.date === r.date && k.name === r.name)) continue;
+    list.push(r);
+  }
+}
+
+/** Before sessions are removed or emptied: those the client did, as they were. */
+export function keepSessions(dayIds: Iterable<number>) {
+  const ids = new Set(dayIds);
+  const byClient = new Map<number, number[]>();
+  for (const d of getData().program_days) if (ids.has(d.id)) byClient.set(d.client_id, [...(byClient.get(d.client_id) ?? []), d.id]);
+  for (const [clientId, days] of byClient) keep(clientId, sessionRecords(clientId, new Set(days)));
+}
+
+/** Before a metric goes: the days it was checked in. */
+function keepMetricReadings(metricId: number) {
+  const data = getData();
+  const def = data.metric_definitions.find((m) => m.id === metricId);
+  if (!def) return;
+  const rows: KeptActivity[] = [];
+  for (const e of data.metric_entries) {
+    if (e.metric_definition_id !== metricId || e.value == null) continue;
+    const date = def.frequency === "daily" ? e.period : e.logged_at ? localDateStr(new Date(e.logged_at)) : null;
+    if (date) rows.push({ kind: "checkin", date, name: def.name });
+  }
+  keep(def.client_id, rows);
+}
+
+/** Before measurements go: the days they were taken. */
+function keepMeasurements(values: MeasurementValue[]) {
+  const data = getData();
+  const byClient = new Map<number, KeptActivity[]>();
+  for (const v of values) {
+    if (v.value == null) continue;
+    const name = data.measurement_fields.find((f) => f.id === v.field_id)?.name;
+    if (name) byClient.set(v.client_id, [...(byClient.get(v.client_id) ?? []), { kind: "checkin", date: v.date, name }]);
+  }
+  for (const [clientId, rows] of byClient) keep(clientId, rows);
 }
 
 // ---- Cardio swaps and alternatives (28 Sep) --------------------------------
