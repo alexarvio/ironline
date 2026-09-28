@@ -44,7 +44,6 @@ type Range = "7D" | "1M" | "3M" | "All";
 const RANGE_DAYS: Record<Range, number | null> = { "7D": 7, "1M": 30, "3M": 90, All: null };
 const RANGE_WORD: Record<Range, string> = { "7D": "7 days", "1M": "month", "3M": "3 months", All: "" };
 const RANGES: Range[] = ["7D", "1M", "3M", "All"];
-const METRIC_KEY = "ironline:progress-metric";
 const RANGE_KEY = "ironline:progress-range";
 const PAGE = 20;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -82,11 +81,9 @@ export default function CheckInProgress({ history, today }: { history: CheckInHi
       return true;
     });
   }, [history.series]);
-  const [index, setIndex] = useState(() => {
-    const last = readStore("local", METRIC_KEY);
-    const i = last ? tracked.findIndex((s) => s.key === last) : -1;
-    return i >= 0 ? i : 0;
-  });
+  // Always the first metric on arrival (28 Sep: it used to remember the
+  // last one, which left it on the far chip after any trip away).
+  const [index, setIndex] = useState(0);
   const [range, setRange] = useState<Range>(() => {
     const r = readStore("session", RANGE_KEY) as Range | null;
     return r && RANGES.includes(r) ? r : "1M";
@@ -100,7 +97,6 @@ export default function CheckInProgress({ history, today }: { history: CheckInHi
     const next = (i + n) % n;
     setIndex(next);
     setPage(0);
-    writeStore("local", METRIC_KEY, tracked[next].key);
   };
   const chooseRange = (r: Range) => {
     setRange(r);
