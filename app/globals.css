@@ -17030,8 +17030,8 @@ button.ci-hint { cursor: pointer; }
 .ci-day-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 0 0; font-size: 14px; color: #313851; }
 .ci-day-row b { font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; }
 .ci-day-note { margin: 10px 0 0; font-size: 13px; line-height: 1.45; font-style: italic; color: #5b6474; }
-/* Edit under a day's lines: opens them in the ledger (for as long as the day is in the feed). */
-.ci-day-edit { align-self: flex-start; margin: 12px 0 0; padding: 8px 18px; border: 1px solid #D5EBDC; border-radius: 12px; background: #fff; font: inherit; font-size: 13px; font-weight: 700; color: #141a24; cursor: pointer; }
+/* Edit under a day's lines, on the right (28 Sep): opens them in the ledger (for as long as the day is in the feed). */
+.ci-day-edit { align-self: flex-end; margin: 12px 0 0; padding: 8px 18px; border: 1px solid #D5EBDC; border-radius: 12px; background: #fff; font: inherit; font-size: 13px; font-weight: 700; color: #141a24; cursor: pointer; }
 .ci-day.unfinished .ci-day-edit { border-color: #F3E0BF; }
 /* A day with nothing logged: Fill in on the right opens its lines. */
 .ci-day-fill { flex: none; padding: 6px 14px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; font-size: 13px; font-weight: 700; color: #141a24; }
