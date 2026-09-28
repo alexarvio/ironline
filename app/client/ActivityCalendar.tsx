@@ -154,33 +154,38 @@ function DayPanel({ day, closing }: { day: ActivityDay; closing: boolean }) {
           {day.sessions.map((s, i) => (
             <div key={i} className="ac-item" style={{ ["--ac" as string]: PARTS[0].colour }}>
               <span className="ac-item-label">Training</span>
-              <b>{s.title}</b>
-              <small>
-                {[s.exercises ? `${s.exercises} ${s.exercises === 1 ? "exercise" : "exercises"}` : null, s.gym, s.minutes != null ? `${s.minutes} min` : null].filter(Boolean).join(" · ")}
-                {!s.finished && <em> · Unfinished</em>}
-              </small>
+              {/* One row: the session on the left, its exercises, gym and time on the right (wrapping under when the name is long). */}
+              <span className="ac-item-row">
+                <b>{s.title}</b>
+                <small>
+                  {[s.exercises ? `${s.exercises} ${s.exercises === 1 ? "exercise" : "exercises"}` : null, s.gym, s.minutes != null ? `${s.minutes} min` : null].filter(Boolean).join(" · ")}
+                  {!s.finished && <em> · Unfinished</em>}
+                </small>
+              </span>
             </div>
           ))}
           {day.food && (
             <div className="ac-item" style={{ ["--ac" as string]: PARTS[1].colour }}>
               <span className="ac-item-label">Nutrition</span>
-              <b>{kcal(day.food.kcal)} kcal</b>
-              {day.food.protein != null && (
-                <span className="ac-macros">
-                  <span>
-                    <small>Protein</small>
-                    {day.food.protein} g
+              <span className="ac-item-row">
+                <b>{kcal(day.food.kcal)} kcal</b>
+                {day.food.protein != null && (
+                  <span className="ac-macros">
+                    <span>
+                      <small>Protein</small>
+                      {day.food.protein} g
+                    </span>
+                    <span>
+                      <small>Carbs</small>
+                      {day.food.carbs} g
+                    </span>
+                    <span>
+                      <small>Fats</small>
+                      {day.food.fat} g
+                    </span>
                   </span>
-                  <span>
-                    <small>Carbs</small>
-                    {day.food.carbs} g
-                  </span>
-                  <span>
-                    <small>Fats</small>
-                    {day.food.fat} g
-                  </span>
-                </span>
-              )}
+                )}
+              </span>
             </div>
           )}
           {day.checkIns.length > 0 && (
