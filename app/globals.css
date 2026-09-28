@@ -17480,7 +17480,8 @@ button.ci-hint { cursor: pointer; }
    Between the check-in card and a phase card in size: the photo shows at
    the top under the chips, then the frosted panel with the phase, its bar,
    today's metrics as one bar each, and the question open now. */
-.lc { padding: 10px 8px 8px; }
+/* Its own layer: iOS Safari stops clipping the rounded corners when a child is blurred (the photo), so the corners came out square. */
+.lc { padding: 10px 8px 8px; transform: translateZ(0); -webkit-backface-visibility: hidden; backface-visibility: hidden; }
 .lc .lc-bg { inset: -12px; width: calc(100% + 24px); height: calc(100% + 24px); filter: blur(3px) saturate(120%); transform: none; }
 .lc .qa-scrim { background: linear-gradient(180deg, rgba(8, 12, 20, 0.2) 0%, rgba(8, 12, 20, 0.15) 30%, rgba(12, 24, 52, 0.7) 100%); }
 .lc-top { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 2px 4px 44px; border: 0; background: none; font: inherit; cursor: pointer; }
