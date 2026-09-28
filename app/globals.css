@@ -17489,7 +17489,10 @@ button.ci-hint { cursor: pointer; }
    today's metrics as one bar each, and the question open now. */
 /* Its own layer: iOS Safari stops clipping the rounded corners when a child is blurred (the photo), so the corners came out square. */
 .lc { padding: 10px 8px 8px; transform: translateZ(0); -webkit-backface-visibility: hidden; backface-visibility: hidden; }
-.lc .lc-bg { inset: -12px; width: calc(100% + 24px); height: calc(100% + 24px); filter: blur(3px) saturate(120%); transform: none; }
+/* The photo is 12px bigger each side (so the blur has no soft edge) and is
+   clipped to the card's own box and radius itself: iOS Safari doesn't clip a
+   blurred child with the container's rounded overflow. */
+.lc .lc-bg { inset: -12px; width: calc(100% + 24px); height: calc(100% + 24px); filter: blur(3px) saturate(120%); transform: none; clip-path: inset(12px round 24px); -webkit-clip-path: inset(12px round 24px); }
 .lc .qa-scrim { background: linear-gradient(180deg, rgba(8, 12, 20, 0.2) 0%, rgba(8, 12, 20, 0.15) 30%, rgba(12, 24, 52, 0.7) 100%); }
 .lc-top { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 2px 4px 44px; border: 0; background: none; font: inherit; cursor: pointer; }
 .lc-chip { zoom: 0.88; }
