@@ -84,7 +84,8 @@ export type DraftProgram = {
   endDate: string | null;
   weekIdx: number;
   liveIdx: number;
-  weeks: { index: number; label: string; trained: boolean[]; state: "past" | "live" | "ahead" }[];
+  /** trained: each session completed; missed: not completed (its week is over, or it was skipped, ended early or partly logged). */
+  weeks: { index: number; label: string; trained: boolean[]; missed: boolean[]; state: "past" | "live" | "ahead" }[];
   sessions: DraftSession[];
   gyms: Gym[];
   /** The client's note to the coach on this programme. */
@@ -108,7 +109,7 @@ const restOf = (s: number | null) => (s == null ? null : s >= 60 && s % 60 === 0
 const MAX_SESSIONS = 7;
 const MAX_COLS = 6;
 
-type AddedExercise = { kind: "exercise"; exerciseId: number | null; name: string; sets: number | string; reps: string; kg: number | null; rpe?: string; tempo?: string; rest?: string };
+type AddedExercise = { kind: "exercise"; exerciseId: number | null; name: string; sets: number | string; reps: string; kg: number | null; rpe?: string; tempo?: string; rest?: string; note?: string };
 type AddedCardio = { kind: "cardio"; name: string; time: string; pace: string; incline: string; distance: string; note: string };
 type Added = { key: number } & (AddedExercise | AddedCardio);
 type Edits = { name?: string; note?: string; sets?: string; reps?: string; kg?: number | null; gymKg?: Record<string, number | null>; rpe?: string; tempo?: string; rest?: string };
@@ -279,7 +280,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
       removed: p.removed,
       added: p.added
         .filter((a): a is Added & AddedExercise => a.kind === "exercise" && a.exerciseId != null)
-        .map((a) => ({ exerciseId: a.exerciseId!, fields: { sets: String(a.sets), reps: a.reps, targetWeight: str(a.kg), rpe: a.rpe ?? "", tempo: a.tempo ?? "", rest: a.rest ?? "" } })),
+        .map((a) => ({ exerciseId: a.exerciseId!, fields: { sets: String(a.sets), reps: a.reps, targetWeight: str(a.kg), rpe: a.rpe ?? "", tempo: a.tempo ?? "", rest: a.rest ?? "", notes: a.note ?? "" } })),
       order: p.order,
     };
   };
@@ -306,7 +307,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
         });
         const addedRows: DraftRow[] = p.added
           .filter((a): a is Added & AddedExercise => a.kind === "exercise")
-          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: Math.max(1, parseInt(String(a.sets), 10) || 3), reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: null, tempo: null, rest: null, note: null, logged: [], video: null, demo: null, history: [], swap: null, swapInfo: null, exerciseChat: [], alternatives: [], d7: null, d30: null }));
+          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: Math.max(1, parseInt(String(a.sets), 10) || 3), reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: Number(a.rpe) || null, tempo: a.tempo?.trim() || null, rest: restSeconds(a.rest ?? ""), note: a.note?.trim() || null, logged: [], video: null, demo: null, history: [], swap: null, swapInfo: null, exerciseChat: [], alternatives: [], d7: null, d30: null }));
         const addedCardio: DraftCardio[] = p.added
           .filter((a): a is Added & AddedCardio => a.kind === "cardio")
           .map((a, i) => ({ id: -(Date.now() + 500 + i), name: a.name, time: a.time, pace: a.pace, incline: a.incline, distance: a.distance, notes: a.note, done: false }));
@@ -581,7 +582,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                   scroll={false}
                   href={`/admin/redesign/training?client=${clientId}&program=${program.id}&week=${w.index}`}
                   className={`rd-week ${w.state}`}
-                  title={`${w.label}: ${w.trained.filter(Boolean).length} of ${w.trained.length} sessions done`}
+                  title={`${w.label}: ${w.trained.filter(Boolean).length} of ${w.trained.length} sessions done${w.missed.some(Boolean) ? `, ${w.missed.filter(Boolean).length} not completed` : ""}`}
                   onClick={(e) => {
                     // A week held on this screen switches in place; the rest load from the server.
                     if (isLocal(w.index)) {
@@ -594,9 +595,9 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                     {w.label}
                     {w.state === "live" && <i className="rd-live-dot" title="This week" aria-label="This week" />}
                   </span>
-                  {/* One bar a session, green once the client did it; the count says the same in words. */}
+                  {/* One bar a session, green once the client did it, amber when they did not; the title says the same in words. */}
                   <span className="rd-pills" aria-hidden="true">
-                    {w.trained.length === 0 ? <em>no sessions</em> : w.trained.map((t, i) => <i key={i} className={t ? "on" : ""} />)}
+                    {w.trained.length === 0 ? <em>no sessions</em> : w.trained.map((t, i) => <i key={i} className={t ? "on" : w.missed[i] ? "missed" : ""} />)}
                   </span>
                   {/* The Monday the week starts on; the bars above already say how many sessions and how many are done. */}
                   <small>{weekDate(w.index) ?? (w.trained.length === 0 ? "no sessions" : w.state === "ahead" ? `${w.trained.length} planned` : `${w.trained.filter(Boolean).length} of ${w.trained.length} sessions`)}</small>
@@ -967,7 +968,9 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                         {cols.rpe && <Cell value={r.rpe ?? ""} onChange={(v) => editAdded({ rpe: v })} label="RPE" width="sm" />}
                         {cols.tempo && <Cell value={r.tempo ?? ""} onChange={(v) => editAdded({ tempo: v })} label="Tempo" />}
                         {cols.rest && <Cell value={r.rest ?? ""} onChange={(v) => editAdded({ rest: v })} label="Rest" />}
-                        <span />
+                        <span className="rd-cell rd-notecol">
+                          <input className="rd-cell-box" value={r.note ?? ""} onChange={(ev) => editAdded({ note: ev.target.value })} placeholder="Add a note" aria-label={`Note on ${r.name}`} maxLength={300} />
+                        </span>
                         <span className="rd-did">
                           <em />
                         </span>

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import RailTour from "./RailTour";
 import { AccountIcon, BusinessIcon, CalendarIcon, ChevronDownIcon, FeedIcon, PhasesIcon, PlusIcon, SearchIcon } from "../../components/icons";
 import { SETTINGS, type SettingsKey } from "./settingsNav";
 import { logoutAction } from "../../lib/auth-actions";
@@ -29,6 +30,8 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
   const [settingsOpen, setSettingsOpen] = useState(!!settings);
   // The view you are on (Feed, Calendar…) is marked, as the client you are on is.
   const path = usePathname();
+  // "Take a tour" from the welcome steps.
+  const touring = useSearchParams().get("tour") === "1";
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "needs">("all");
   const needsYou = rail.clients.filter((c) => c.attention).length;
@@ -149,7 +152,8 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
           <ChevronDownIcon />
         </span>
       </button>
-      {adding && <NewClientDialog inviteReady={rail.inviteReady} onClose={() => setAdding(false)} />}
+      {touring && <RailTour />}
+      {adding && <NewClientDialog inviteReady={rail.inviteReady} clerk={rail.clerk} onClose={() => setAdding(false)} />}
     </aside>
   );
 }

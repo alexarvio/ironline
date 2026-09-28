@@ -81,3 +81,20 @@
 .rr-coach-text b { font-size: 12.5px; font-weight: 800; color: #141a24; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rr-coach-text small { font-size: 10.5px; font-weight: 600; color: #8b93a1; }
 .pb-menu a { display: flex; align-items: center; gap: 9px; color: inherit; text-decoration: none; }
+
+/* No clients yet (NoClients.tsx, 26 Sep): a welcome and one button. */
+.rnc { max-width: 520px; margin: 12vh auto 0; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.rnc-title { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.01em; color: #141a24; }
+.rnc-lead { margin: 0 0 8px; font-size: 15px; line-height: 1.5; color: #5b6474; }
+.rnc-btn { height: 40px; padding: 0 18px; }
+
+/* The tour of the rail (RailTour.tsx, 26 Sep): the part lit, the rest dimmed, a card beside it. */
+.rtour { position: fixed; inset: 0; z-index: 200; }
+.rtour-lit { position: fixed; border-radius: 12px; box-shadow: 0 0 0 9999px rgba(20, 26, 36, 0.45); outline: 2px solid #fff; transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease; pointer-events: none; }
+.rtour-card { position: fixed; display: flex; flex-direction: column; gap: 6px; width: 300px; padding: 16px 16px 12px; border-radius: 14px; background: #fff; box-shadow: 0 18px 44px -18px rgba(8, 20, 50, 0.55); transition: top 0.25s ease; }
+.rtour-count { font-size: 11.5px; font-weight: 700; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.rtour-title { font-size: 15px; color: #141a24; }
+.rtour-text { margin: 0 0 6px; font-size: 13.5px; line-height: 1.5; color: #5b6474; }
+.rtour-actions { display: flex; align-items: center; justify-content: space-between; }
+.rtour-go { display: flex; gap: 6px; }
+@media (prefers-reduced-motion: reduce) { .rtour-lit, .rtour-card { transition: none; } }

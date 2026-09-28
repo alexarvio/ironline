@@ -23,11 +23,13 @@ export default function ClientRoster({
   clients,
   selectedId,
   inviteReady = false,
+  clerk = false,
 }: {
   clients: RosterClient[];
   selectedId: number | null;
   /** Whether the app can send the new client's invite email (see lib/mail.ts). */
   inviteReady?: boolean;
+  clerk?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [adding, setAdding] = useState(false);
@@ -107,7 +109,7 @@ export default function ClientRoster({
           New client
         </button>
       </div>
-      {adding && <NewClientDialog inviteReady={inviteReady} onClose={() => setAdding(false)} />}
+      {adding && <NewClientDialog inviteReady={inviteReady} clerk={clerk} onClose={() => setAdding(false)} />}
     </div>
   );
 }

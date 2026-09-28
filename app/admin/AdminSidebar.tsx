@@ -5,6 +5,7 @@ import { clientAttention, getActivityFeed, getCoachProfile, listClients } from "
 import { AccountIcon, BusinessIcon, CalendarIcon, FeedIcon, PhasesIcon } from "../components/icons";
 import ClientRoster, { type RosterClient } from "./ClientRoster";
 import { mailConfigured } from "../lib/mail";
+import { clerkOn } from "../lib/clerk";
 import CoachFooter from "./CoachFooter";
 
 // The left rail: brand, the coach's cross-client views, the client roster
@@ -95,7 +96,7 @@ export default function AdminSidebar({
         )}
       </nav>
 
-      <ClientRoster clients={clients} selectedId={selectedId} inviteReady={mailConfigured()} />
+      <ClientRoster clients={clients} selectedId={selectedId} inviteReady={mailConfigured()} clerk={clerkOn()} />
 
       <CoachFooter name={getCoachProfile(coachId)?.display_name?.trim() || nameFromEmail(coachEmail)} photoPath={getCoachProfile(coachId)?.avatar_path ?? null}>
         <Link href="/admin/profile" role="menuitem" className="ad-rail-menu-link">

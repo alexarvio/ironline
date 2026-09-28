@@ -1,0 +1,26 @@
+/* The onboarding board (26 Sep). Prefix ob-. */
+.ob { display: flex; flex-direction: column; gap: 34px; }
+.ob-title { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; color: #141a24; }
+.ob-flow { display: flex; flex-direction: column; gap: 12px; }
+.ob-flow-title { margin: 0; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
+.ob-steps { display: flex; gap: 22px; margin: 0; padding: 0 0 12px; list-style: none; overflow-x: auto; scrollbar-width: thin; scrollbar-color: #dfe3e8 transparent; }
+.ob-step { flex: none; display: flex; flex-direction: column; gap: 8px; }
+.ob-cap { display: flex; align-items: center; gap: 8px; }
+.ob-n { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; background: #1e3a6e; color: #fff; font-size: 11.5px; font-weight: 800; }
+.ob-name { flex: 1; font-size: 13.5px; font-weight: 700; color: #141a24; }
+.ob-open { font-size: 12px; font-weight: 700; color: #2f5d8f; text-decoration: none; }
+.ob-open:hover { text-decoration: underline; text-underline-offset: 3px; }
+.ob-screen { position: relative; overflow: hidden; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; box-shadow: 0 12px 30px -18px rgba(20, 30, 60, 0.35); }
+.ob-screen.phone { border-radius: 22px; }
+.ob-screen iframe { display: block; border: 0; transform-origin: 0 0; }
+.ob-note { font-size: 12px; color: #8b93a1; }
+
+/* A screen drawn for the board, full size inside its frame. */
+.ob-demo { min-height: 100vh; }
+.ob-mail { min-height: 100vh; padding: 56px 20px 24px; background: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #141a24; }
+.ob-mail-head { display: flex; flex-direction: column; gap: 4px; padding-bottom: 14px; border-bottom: 1px solid #eceff3; }
+.ob-mail-subject { font-size: 20px; font-weight: 700; }
+.ob-mail-from { font-size: 13px; color: #5b6474; }
+.ob-mail-body { padding-top: 12px; font-size: 15px; line-height: 1.55; }
+.ob-mail-body a { color: #2f5d8f; }
+.ob-mail-off { margin-top: 24px; padding: 10px 12px; border-radius: 10px; background: #fff3dc; font-size: 13px; color: #8a5a12; }

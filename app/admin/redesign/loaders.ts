@@ -1,6 +1,8 @@
+import { redirect } from "next/navigation";
 import { getData } from "../../lib/db";
 import { getUserForClient, isOwner } from "../../lib/auth";
 import { mailConfigured } from "../../lib/mail";
+import { clerkOn } from "../../lib/clerk";
 import { getCoachSettings, getInvoiceView, listInvoices, type FeedEvent, type InvoiceView } from "../../lib/queries";
 import { hasBankDetails, invoicingFor } from "../../lib/countries";
 import {
@@ -70,6 +72,7 @@ import type { DraftPlan } from "./plan/PlanDraft";
 import type { DraftHome } from "./home/HomeDraft";
 import type { DraftMessages } from "./messages/MessagesDraft";
 import type { MessageLink } from "../../lib/messageLinks";
+import { metricAskAt } from "../../lib/metricAskAt";
 
 // What the redesign drafts read, gathered on the server for the shell that
 // shows them side by side. Read-only: the drafts save nothing.
@@ -118,19 +121,26 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   const weeks = Array.from({ length: program.total_weeks }, (_, i) => {
     const n = program.start_week + i;
     const days = getWeek(clientId, n);
+    // Sessions have no set weekday (any order, any day), so a session counts
+    // as not done once its week is over, or sooner once the client skipped it,
+    // ended it early or logged part of it.
+    const over = i + 1 < liveIdx || stateOf(program) === "past";
     // One dot a session, every session: green once the client completed it
     // (every set logged, every cardio ticked), so the dots always count the
-    // sessions listed under the week.
-    const trained = days.map((d) => {
+    // sessions listed under the week; amber when it was not completed.
+    const dots = days.map((d) => {
       const as = getAssignmentsForDay(d.id);
       const cs = listCardioForDay(d.id);
-      if (as.length === 0 && cs.length === 0) return false;
-      return as.every((a) => getLogsForAssignment(a.id).length >= a.sets) && cs.every((c) => isCardioDone(c.id));
+      if (as.length === 0 && cs.length === 0) return { done: false, missed: false };
+      const done = as.every((a) => getLogsForAssignment(a.id).length >= a.sets) && cs.every((c) => isCardioDone(c.id));
+      const touched = !!d.skip_reason || !!d.session_ended_at || as.some((a) => getLogsForAssignment(a.id).length > 0) || cs.some((c) => isCardioDone(c.id));
+      return { done, missed: !done && (over || touched) };
     });
     return {
       index: i + 1,
       label: programWeekLabel(program, n),
-      trained,
+      trained: dots.map((x) => x.done),
+      missed: dots.map((x) => x.missed),
       state: (i + 1 < liveIdx ? "past" : i + 1 === liveIdx ? "live" : "ahead") as "past" | "live" | "ahead",
     };
   });
@@ -324,17 +334,19 @@ export function loadNutrition(clientId: number, params: { phase?: string }): Dra
 // ---- The rail ------------------------------------------------------------------
 
 export type RailClient = { id: number; name: string; avatarPath: string | null; attention: string | null; notSignedIn: boolean };
-export type RailData = { clients: RailClient[]; coach: { name: string; photoPath: string | null }; isOwner: boolean; inviteReady: boolean };
+export type RailData = { clients: RailClient[]; coach: { name: string; photoPath: string | null }; isOwner: boolean; inviteReady: boolean; /** Sign-in through Clerk: New client sends an invite link, no password. */ clerk: boolean };
 
 /** The left rail's data: every client with whether they need the coach, and the coach at the foot. */
 export function loadRail(coach: { id: number; email: string; role: "coach" | "client" }): RailData {
+  // A new coach sees the welcome steps first; every redesign page reads the rail, so this is the one gate.
+  if (getData().users.find((u) => u.id === coach.id)?.onboarding) redirect("/welcome");
   const feed = getActivityFeed(coach.id);
   const clients = listClients(coach.id).map((c) => {
     const user = getUserForClient(c.id);
     return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, attention: clientAttention(c.id, feed), notSignedIn: !user || user.must_change_password };
   });
   const profile = getCoachProfile(coach.id);
-  return { clients, coach: { name: profile?.display_name?.trim() || nameFromEmail(coach.email), photoPath: profile?.avatar_path ?? null }, isOwner: isOwner(coach), inviteReady: mailConfigured() };
+  return { clients, coach: { name: profile?.display_name?.trim() || nameFromEmail(coach.email), photoPath: profile?.avatar_path ?? null }, isOwner: isOwner(coach), inviteReady: mailConfigured(), clerk: clerkOn() };
 }
 
 // A coach account has an email but no name; "finlay.smith@…" reads as "Finlay Smith".
@@ -407,7 +419,7 @@ export function loadMeasurements(clientId: number, params: { phase?: string }): 
       const g = metricGroup(m.category);
       const entries = getMetricEntries([m.id]).filter((e): e is typeof e & { value: number } => e.value != null).sort((a, b) => a.period.localeCompare(b.period));
       const last = entries[entries.length - 1];
-      return { id: m.id, name: m.name, unit: m.unit, frequency: (m.frequency === "weekly" ? "weekly" : "daily") as "daily" | "weekly", groupKey: g.key, groupLabel: g.label, tint: g.tint, last: last ? { value: last.value, when: fmtWhen(last.period) } : null };
+      return { id: m.id, name: m.name, unit: m.unit, frequency: (m.frequency === "weekly" ? "weekly" : "daily") as "daily" | "weekly", groupKey: g.key, groupLabel: g.label, tint: g.tint, askAt: metricAskAt(m), last: last ? { value: last.value, when: fmtWhen(last.period) } : null };
     }),
     library,
     daily: getLoggedValues(clientId, "daily", started ? 8 : 0, scope),
@@ -520,6 +532,7 @@ export function loadMeetings(clientId: number): DraftMeetings {
     dots: data.dots,
     others: data.others,
     lastLink: data.lastLink,
+    coachTz: getCoachSettings(getData().clients.find((c) => c.id === clientId)?.coach_id ?? 0).timezone ?? null,
   };
 }
 

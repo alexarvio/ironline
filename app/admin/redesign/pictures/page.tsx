@@ -1,6 +1,7 @@
 import { requireCoach } from "../../../lib/auth";
 import { loadHome, loadMeasurements, loadMeetings, loadMessages, loadNutrition, loadPictures, loadPlan, loadRail, loadTraining, pickClient, loadInvoices } from "../loaders";
 import RedesignShell from "../RedesignShell";
+import NoClients from "../NoClients";
 import "../../../components/ui/ui.css";
 import "../training/draft.css";
 import "../nutrition/nutrition.css";
@@ -23,7 +24,7 @@ export default async function PicturesRedesignPage({ searchParams }: { searchPar
   const coach = await requireCoach();
   const params = await searchParams;
   const { client, firstName } = pickClient(coach.id, params.client);
-  if (!client) return <p style={{ padding: 32 }}>No clients yet.</p>;
+  if (!client) return <NoClients rail={loadRail(coach)} />;
   return (
     <RedesignShell
       clientId={client.id}

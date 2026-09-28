@@ -17,6 +17,9 @@ import PhaseGoalsCard from "../PhaseGoalsCard";
 import { SortableItem, SortableList } from "../Sortable";
 import Picker from "../Picker";
 import DatePick from "../DatePick";
+import { ASK_AT, defaultAskAt } from "../../../lib/metricAskAt";
+import type { MetricAskAt } from "../../../lib/db";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/form";
 
 // The calmer Measurements tab, as a draft on real data, in the Training
 // draft's sheet. Two things: what the client is asked to log, and what they
@@ -33,7 +36,7 @@ import DatePick from "../DatePick";
 
 type State = "live" | "past" | "scheduled" | "draft";
 type Cadence = "daily" | "weekly";
-export type DraftMetric = { id: number; name: string; unit: string; frequency: Cadence; groupKey: string; groupLabel: string; tint: string; last: { value: number; when: string } | null };
+export type DraftMetric = { id: number; name: string; unit: string; frequency: Cadence; groupKey: string; groupLabel: string; tint: string; askAt: MetricAskAt; last: { value: number; when: string } | null };
 export type DraftMeasurements = {
   id: number;
   /** The coach's goals for the phase, up to three. */
@@ -131,7 +134,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
     for (const r of rows) {
       const b = before.get(r.id);
       if (!b) c += 1;
-      else if (b.frequency !== r.frequency) c += 1;
+      else if (b.frequency !== r.frequency || b.askAt !== r.askAt) c += 1;
     }
     if (reordered) c += 1;
     return c;
@@ -140,7 +143,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   const addMetric = (name: string, unit: string, groupKey: string) => {
     if (rows.some((r) => r.name.toLowerCase() === name.toLowerCase())) return;
     const g = plan.groups.find((x) => x.key === groupKey) ?? plan.groups.find((x) => x.key === "other") ?? { key: groupKey, label: "Other", tint: "#dfe6ef" };
-    setRows((prev) => [...prev, { id: -(Date.now() + prev.length), name, unit, frequency: "daily", groupKey: g.key, groupLabel: g.label, tint: g.tint, last: null }]);
+    setRows((prev) => [...prev, { id: -(Date.now() + prev.length), name, unit, frequency: "daily", groupKey: g.key, groupLabel: g.label, tint: g.tint, askAt: defaultAskAt(name), last: null }]);
   };
   const dailyCount = rows.filter((r) => r.frequency === "daily").length;
 
@@ -162,7 +165,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   const close = () => setDlg(null);
   const today = new Date().toISOString().slice(0, 10);
   const startHasCome = !!plan.startDate && plan.startDate <= today;
-  const mGrid = { gridTemplateColumns: "20px minmax(200px, 1.4fr) 150px 150px minmax(160px, 1fr) 32px", columnGap: 24 } as const;
+  const mGrid = { gridTemplateColumns: "20px minmax(200px, 1.4fr) 150px 150px 130px minmax(160px, 1fr) 32px", columnGap: 24 } as const;
   // No grip column here: the date starts where the title does.
   const nGrid = { gridTemplateColumns: "130px 150px minmax(240px, 1fr) 32px", columnGap: 24 } as const;
 
@@ -286,6 +289,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
               <span>Metric</span>
               <span>Group</span>
               <span>Logged</span>
+              <span>Asked</span>
               <span>Last</span>
               <span />
             </div>
@@ -319,6 +323,19 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                       </button>
                     ))}
                   </span>
+                  {/* When in the day the client's Home asks for it. */}
+                  <Select value={m.askAt} onValueChange={(v) => setRows((prev) => prev.map((r) => (r.id === m.id ? { ...r, askAt: v as MetricAskAt } : r)))}>
+                    <SelectTrigger className={`rm-askat${was && was.askAt !== m.askAt ? " changed" : ""}`} aria-label={`When ${m.name} is asked for`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ASK_AT.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {m.last ? (
                     <span className="rm-last">
                       {withUnit(m.last.value, m.unit)}
@@ -382,9 +399,10 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                   const input = {
                     clientId,
                     phaseId,
-                    adds: rows.filter((r) => isNew(r.id)).map((r) => ({ name: r.name, unit: r.unit, group: r.groupKey, cadence: r.frequency, source: (inLibrary(r.name) ? "library" : "custom") as "library" | "custom" })),
+                    adds: rows.filter((r) => isNew(r.id)).map((r) => ({ name: r.name, unit: r.unit, group: r.groupKey, cadence: r.frequency, source: (inLibrary(r.name) ? "library" : "custom") as "library" | "custom", askAt: r.askAt })),
                     removes: saved.filter((m) => !rows.some((r) => r.id === m.id)).map((m) => m.id),
                     cadence: rows.filter((r) => !isNew(r.id) && before.get(r.id)?.frequency !== r.frequency).map((r) => ({ id: r.id, value: r.frequency })),
+                    askAt: rows.filter((r) => !isNew(r.id) && before.get(r.id)?.askAt !== r.askAt).map((r) => ({ id: r.id, value: r.askAt })),
                     order: reordered ? kept : null,
                   };
                   setSaved(rows);

@@ -96,3 +96,6 @@
 .rm-note-text { font-size: 13.5px; font-weight: 500; line-height: 1.5; color: #313851; white-space: pre-wrap; min-width: 0; }
 /* No lifestyle phase yet: set one up before adding metrics (25 Sep). */
 .rm-needphase { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 8px; padding: 14px 16px; border: 1px dashed #d5dce6; border-radius: 12px; font-size: 13.5px; color: #5b6474; }
+/* When in the day it is asked for: a quiet select, navy once changed. */
+.rm-askat { height: 28px; width: 124px; border-radius: 999px; background: #eef0f3; border-color: transparent; font-size: 11.5px; font-weight: 700; color: #1e3a6e; }
+.rm-askat.changed { background: #1e3a6e; color: #fff; }

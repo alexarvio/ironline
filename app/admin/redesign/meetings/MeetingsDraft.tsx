@@ -58,6 +58,8 @@ export type DraftMeetings = {
   dots: DraftDot[];
   others: { date: string; time: string; durationMinutes: number; name: string }[];
   lastLink: string | null;
+  /** The coach's own time zone (Settings, set at onboarding): a new meeting starts in it. */
+  coachTz?: string | null;
 };
 
 const savedToast = (what: string) => toast.success("Saved", { description: what });
@@ -391,6 +393,7 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
             date={dlg.date}
             reschedule={dlg.reschedule}
             lastLink={plan.lastLink}
+            coachTz={plan.coachTz ?? null}
             dots={dots}
             today={today}
             onSave={(v) => {
@@ -603,12 +606,12 @@ function MiniCalendar({ today, selected, dots, onPick }: { today: string; select
 }
 
 /** Booking a call, or moving one: the day, a 24-hour time, how long, what about, the way in. */
-function ScheduleDialog({ date: initialDate, reschedule, lastLink, dots, today, onSave }: { date: string; reschedule: DraftMeeting | null; lastLink: string | null; dots: DraftDot[]; today: string; onSave: (v: { date: string; time: string; tz: string; durationMinutes: number; topic: string; link: string | null }) => void }) {
+function ScheduleDialog({ date: initialDate, reschedule, lastLink, coachTz, dots, today, onSave }: { date: string; reschedule: DraftMeeting | null; lastLink: string | null; coachTz: string | null; dots: DraftDot[]; today: string; onSave: (v: { date: string; time: string; tz: string; durationMinutes: number; topic: string; link: string | null }) => void }) {
   const [date, setDate] = useState(reschedule?.date ?? initialDate);
   const [time, setTime] = useState(reschedule?.time ?? "");
   // The time is in the coach's own timezone unless they pick another; a
   // reschedule keeps the meeting's. The client sees it in theirs.
-  const [tz, setTz] = useState(() => reschedule ? reschedule.tz || SERVER_TZ : Intl.DateTimeFormat().resolvedOptions().timeZone || SERVER_TZ);
+  const [tz, setTz] = useState(() => reschedule ? reschedule.tz || SERVER_TZ : coachTz || Intl.DateTimeFormat().resolvedOptions().timeZone || SERVER_TZ);
   const [zones] = useState(() => {
     const list = allTimezones();
     return list.includes(tz) ? list : [tz, ...list];

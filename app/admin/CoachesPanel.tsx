@@ -1,4 +1,5 @@
-import { createCoachAction, removeCoachAction, resetCoachPasswordAction } from "../lib/auth-actions";
+import { approveCoachAction, createCoachAction, declineCoachAction, removeCoachAction, resetCoachPasswordAction } from "../lib/auth-actions";
+import { getData } from "../lib/db";
 import { listCoachAccounts } from "../lib/queries";
 import ConfirmDeleteButton from "../components/ConfirmDeleteButton";
 
@@ -10,6 +11,8 @@ const OK: Record<string, string> = {
   added: "Coach added. Send them their email and the temporary password; they choose their own at first sign-in.",
   reset: "Temporary password set. They choose a new one at their next sign-in.",
   removed: "Coach removed.",
+  approved: "Coach approved. They can sign in and start now.",
+  declined: "Sign-up declined and removed.",
 };
 const ERROR: Record<string, string> = {
   invalid: "Enter a valid email and a password of at least 8 characters.",
@@ -20,6 +23,8 @@ const ERROR: Record<string, string> = {
 
 export default function CoachesPanel({ ownerId, ok, error }: { ownerId: number; ok?: string; error?: string }) {
   const coaches = listCoachAccounts();
+  // Coaches who signed up themselves and wait for the owner (sign-in through Clerk).
+  const waiting = getData().users.filter((u) => u.role === "coach" && u.pending);
 
   return (
     <div className="pl cp">
@@ -33,6 +38,38 @@ export default function CoachesPanel({ ownerId, ok, error }: { ownerId: number; 
         <p className="cp-note error" role="alert">
           {ERROR[error]}
         </p>
+      )}
+
+      {waiting.length > 0 && (
+        <section className="pl-card au-waiting">
+          <div className="pl-band">
+            <div className="pl-band-left">
+              <div className="pl-eyebrow">Waiting for approval</div>
+            </div>
+          </div>
+          {waiting.map((u) => (
+            <div key={u.id} className="au-approval">
+              <span className="au-approval-main">
+                <b>{u.pending!.name}</b>
+                <small>
+                  {[u.pending!.business, u.email, `signed up ${new Date(u.pending!.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`].filter(Boolean).join(" · ")}
+                </small>
+              </span>
+              <form action={declineCoachAction}>
+                <input type="hidden" name="coachId" value={u.id} />
+                <button type="submit" className="au-btn">
+                  Decline
+                </button>
+              </form>
+              <form action={approveCoachAction}>
+                <input type="hidden" name="coachId" value={u.id} />
+                <button type="submit" className="au-btn primary">
+                  Approve
+                </button>
+              </form>
+            </div>
+          ))}
+        </section>
       )}
 
       <section className="pl-card">

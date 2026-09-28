@@ -6,10 +6,10 @@ import { useRouter } from "next/navigation";
 import { checkLoginEmailAction, createClientWithLoginAction } from "../lib/actions";
 import { ageFrom, DEFAULT_DIAL, GenderPills, InfoRow, PhoneInput, Suffixed } from "./InfoRow";
 
-// New client, in two steps: who they are, then how they get into the app.
-// The first step is the Member info card, the same rows (InfoRow) the coach
-// edits later; the second makes the client's login at the same time, so a
-// coach no longer has to come back to create it.
+// New client: the Member info card, the same rows (InfoRow) the coach edits
+// later. No login yet: the coach builds the client's plan first, then gives
+// them access from their Home (App access) when it is ready for them.
+// With Clerk sign-in a second step still sends the invite link straight away.
 //
 // Nothing is written until the last button. Cancel, Escape or the × drop
 // the lot. On success the dialog closes onto the new client's Home.
@@ -23,7 +23,7 @@ export function newTempPassword(): string {
   return `Iron-${Array.from(bytes, (b) => ALPHABET[b % ALPHABET.length]).join("")}`;
 }
 
-type Draft = {
+export type Draft = {
   firstName: string;
   lastName: string;
   birthdate: string;
@@ -39,9 +39,8 @@ type Draft = {
 const EMPTY: Draft = { firstName: "", lastName: "", birthdate: "", gender: "", heightCm: "", startingWeightKg: "", email: "", phoneCode: DEFAULT_DIAL, phone: "", address: "" };
 
 /** The draft, what is still missing, the age and the email check, in one place. */
-function useNewClientForm() {
-  const [draft, setDraft] = useState<Draft>(EMPTY);
-  const [password, setPassword] = useState(newTempPassword);
+function useNewClientForm(start: Partial<Draft> | undefined, requireEmail: boolean) {
+  const [draft, setDraft] = useState<Draft>({ ...EMPTY, ...start });
   // The address the uniqueness check last answered for, and its answer.
   const [checked, setChecked] = useState<{ email: string; taken: boolean } | null>(null);
 
@@ -57,23 +56,25 @@ function useNewClientForm() {
   const missing = [
     !draft.firstName.trim() && "first name",
     !draft.lastName.trim() && "last name",
-    !email && "email",
+    // With Clerk the email is where the invite goes now; otherwise it can wait for App access.
+    requireEmail && !email && "email",
   ].filter(Boolean) as string[];
   const emailBad = !!email && !EMAIL_RE.test(email);
   const step1Ok = missing.length === 0 && !emailBad && !emailTaken;
   const name = `${draft.firstName.trim()} ${draft.lastName.trim()}`.trim();
-  return { draft, set, password, setPassword, missing, emailBad, emailTaken, checkEmail, step1Ok, name, age: ageFrom(draft.birthdate) };
+  return { draft, set, missing, emailBad, emailTaken, checkEmail, step1Ok, name, age: ageFrom(draft.birthdate) };
 }
 
-export default function NewClientDialog({ onClose, inviteReady }: { onClose: () => void; inviteReady: boolean }) {
+/** The onboarding board's copy: opens on a step with a draft filled in, and never creates anyone. */
+export type NewClientPreview = { step: 1 | 2; draft?: Partial<Draft> };
+
+export default function NewClientDialog({ onClose, preview = null, clerk = false }: { onClose: () => void; inviteReady?: boolean; preview?: NewClientPreview | null; /** Sign-in through Clerk: no password, the invite link goes straight away. */ clerk?: boolean }) {
   const router = useRouter();
-  const form = useNewClientForm();
+  const form = useNewClientForm(preview?.draft, clerk);
   const { draft, set } = form;
-  const [step, setStep] = useState<1 | 2>(1);
-  const [invite, setInvite] = useState(inviteReady);
-  const [copiedFor, setCopiedFor] = useState<string | null>(null);
+  const [step, setStep] = useState<1 | 2>(clerk ? (preview?.step ?? 1) : 1);
   const [error, setError] = useState<string | null>(null);
-  // Made, but the invite did not go: the dialog stays so the coach can copy the login.
+  // Made, but the invite did not go.
   const [made, setMade] = useState<number | null>(null);
   const [saving, start] = useTransition();
 
@@ -85,12 +86,13 @@ export default function NewClientDialog({ onClose, inviteReady }: { onClose: () 
 
   const open = (id: number) => {
     onClose();
-    router.push(`/admin?client=${id}&tab=home`);
+    router.push(`/admin/redesign/home?client=${id}`);
   };
   const create = () =>
+    !preview &&
     start(async () => {
       setError(null);
-      const res = await createClientWithLoginAction({ ...draft, password: form.password, invite: invite && inviteReady });
+      const res = await createClientWithLoginAction({ ...draft, password: "", invite: false });
       if (!res.ok) {
         setError(res.error);
         return;
@@ -99,33 +101,19 @@ export default function NewClientDialog({ onClose, inviteReady }: { onClose: () 
       else open(res.clientId);
     });
 
-  const passwordOk = form.password.trim().length >= 8;
-  const ready = form.step1Ok && passwordOk;
-  const willInvite = invite && inviteReady;
-
   const status = (() => {
-    if (made != null) return { text: "Created, but the invite email didn't go out. Copy the login and send it yourself.", bad: true };
+    if (made != null) return { text: "Created, but the invite email didn't go out.", bad: true };
     if (error) return { text: error, bad: true };
     if (step === 1) {
       if (form.missing.length) return { text: `Still needed: ${form.missing.join(", ")}`, bad: true };
       if (form.emailBad) return { text: "That email doesn't look right", bad: true };
       if (form.emailTaken) return { text: "That email already has an account", bad: true };
-      return { text: "Ready for step 2", bad: false };
+      if (clerk) return { text: "Ready for step 2", bad: false };
     }
     if (!form.step1Ok) return { text: "Step 1 still needs a name and an email", bad: true };
-    if (!passwordOk) return { text: "The password needs at least 8 characters", bad: true };
     if (saving) return { text: "Creating…", bad: false };
-    return { text: `${form.name} will appear in your client list straight away`, bad: false };
+    return { text: clerk ? `${form.name} will appear in your client list straight away` : `${form.name} can't sign in yet: give them access from their Home when you're ready`, bad: false };
   })();
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(form.password);
-      setCopiedFor(form.password);
-    } catch {
-      /* the password is on screen to select by hand */
-    }
-  };
 
   return createPortal(
     <div className="nc-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
@@ -133,7 +121,7 @@ export default function NewClientDialog({ onClose, inviteReady }: { onClose: () 
         <header className="nc-head">
           <div>
             <div className="nc-title">New client</div>
-            <div className="nc-sub">{step === 1 ? "Step 1 of 2 · who they are" : "Step 2 of 2 · how they get into the app"}</div>
+            {clerk && <div className="nc-sub">{step === 1 ? "Step 1 of 2 · who they are" : "Step 2 of 2 · how they get into the app"}</div>}
           </div>
           <button type="button" className="cc-dialog-x" onClick={onClose} aria-label="Close">
             ×
@@ -143,28 +131,30 @@ export default function NewClientDialog({ onClose, inviteReady }: { onClose: () 
         {/* Both steps can be clicked, so a coach can go back and correct
             something without losing what is typed. Step 2 once step 1 has
             what it needs. */}
-        <div className="nc-steps" role="tablist">
-          {[
-            { n: 1 as const, name: "Member info", hint: "Name, birthdate, contact" },
-            { n: 2 as const, name: "App access", hint: "Email and first password" },
-          ].map((t) => (
-            <button
-              key={t.n}
-              type="button"
-              role="tab"
-              aria-selected={step === t.n}
-              className={`nc-step${step === t.n ? " on" : ""}`}
-              onClick={() => setStep(t.n)}
-              disabled={t.n === 2 && !form.step1Ok}
-            >
-              <span className={`nc-step-n${step >= t.n ? " reached" : ""}`}>{t.n}</span>
-              <span>
-                <b>{t.name}</b>
-                <small>{t.hint}</small>
-              </span>
-            </button>
-          ))}
-        </div>
+        {clerk && (
+          <div className="nc-steps" role="tablist">
+            {[
+              { n: 1 as const, name: "Member info", hint: "Name, birthdate, contact" },
+              { n: 2 as const, name: "App access", hint: "Their invite link" },
+            ].map((t) => (
+              <button
+                key={t.n}
+                type="button"
+                role="tab"
+                aria-selected={step === t.n}
+                className={`nc-step${step === t.n ? " on" : ""}`}
+                onClick={() => setStep(t.n)}
+                disabled={t.n === 2 && !form.step1Ok}
+              >
+                <span className={`nc-step-n${step >= t.n ? " reached" : ""}`}>{t.n}</span>
+                <span>
+                  <b>{t.name}</b>
+                  <small>{t.hint}</small>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="nc-body">
           {step === 1 ? (
@@ -212,47 +202,17 @@ export default function NewClientDialog({ onClose, inviteReady }: { onClose: () 
           ) : (
             <div className="nc-access">
               <p className="nc-explain">
-                <b>{form.name || "They"}</b> sign{form.name ? "s" : ""} in with the email above. The password below is temporary — the app asks them to set their own the first time they log in.
+                <b>{form.name || "They"}</b> get{form.name ? "s" : ""} an email with a link to join. They sign in with Apple, Google or a code sent to their email: no password to hand over.
               </p>
-
               <div className="nc-card">
                 <span className="nc-icon" aria-hidden="true">
                   <MailIcon />
                 </span>
                 <span className="nc-card-main">
-                  <span className="nc-label">Login email</span>
+                  <span className="nc-label">Invite goes to</span>
                   {draft.email.trim() ? <b className="nc-card-value">{draft.email.trim().toLowerCase()}</b> : <span className="nc-card-empty">Add an email on step 1</span>}
                 </span>
-                {draft.email.trim() && <span className="nc-same">Same as above</span>}
               </div>
-
-              <div className="nc-card">
-                <span className="nc-icon" aria-hidden="true">
-                  <KeyIcon />
-                </span>
-                <label className="nc-card-main">
-                  <span className="nc-label">Temporary password</span>
-                  <input className="nc-input nc-password" value={form.password} onChange={(e) => form.setPassword(e.target.value)} spellCheck={false} autoComplete="off" />
-                </label>
-                <button type="button" className="nc-mini" onClick={() => form.setPassword(newTempPassword())}>
-                  New
-                </button>
-                <button type="button" className={`nc-mini${copiedFor === form.password ? " copied" : ""}`} onClick={copy}>
-                  {copiedFor === form.password ? "Copied" : "Copy"}
-                </button>
-              </div>
-
-              <label className={`nc-check${inviteReady ? "" : " off"}`}>
-                <input type="checkbox" checked={willInvite} disabled={!inviteReady || made != null} onChange={(e) => setInvite(e.target.checked)} />
-                <span>
-                  <b>Email the invite now</b>
-                  <small>
-                    {inviteReady
-                      ? "Sends the login and password to the client. They set their own password first time in."
-                      : "Email isn't set up on this app yet, so give them the login yourself."}
-                  </small>
-                </span>
-              </label>
             </div>
           )}
         </div>
@@ -263,7 +223,7 @@ export default function NewClientDialog({ onClose, inviteReady }: { onClose: () 
             <button type="button" className="pl-primary nc-btn" onClick={() => open(made)}>
               Open client
             </button>
-          ) : step === 1 ? (
+          ) : step === 1 && clerk ? (
             <>
               <button type="button" className="pl-text-btn nc-btn nc-secondary" onClick={onClose}>
                 Cancel
@@ -274,11 +234,11 @@ export default function NewClientDialog({ onClose, inviteReady }: { onClose: () 
             </>
           ) : (
             <>
-              <button type="button" className="pl-text-btn nc-btn nc-secondary" onClick={() => setStep(1)} disabled={saving}>
-                Back
+              <button type="button" className="pl-text-btn nc-btn nc-secondary" onClick={clerk ? () => setStep(1) : onClose} disabled={saving}>
+                {clerk ? "Back" : "Cancel"}
               </button>
-              <button type="button" className="pl-primary nc-btn" onClick={create} disabled={!ready || saving}>
-                {willInvite ? "Create and invite" : "Create client"}
+              <button type="button" className="pl-primary nc-btn" onClick={create} disabled={!form.step1Ok || saving}>
+                {clerk ? "Create and invite" : "Create client"}
               </button>
             </>
           )}
@@ -294,15 +254,6 @@ function MailIcon() {
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="5" width="18" height="14" rx="2" />
       <path d="m3.5 6.5 8.5 6.5 8.5-6.5" />
-    </svg>
-  );
-}
-
-function KeyIcon() {
-  return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="8" cy="15" r="4" />
-      <path d="m10.8 12.2 8.7-8.7M16 7l2.5 2.5M13.5 9.5 15.5 11.5" />
     </svg>
   );
 }
