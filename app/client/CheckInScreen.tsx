@@ -222,6 +222,13 @@ export default function CheckInScreen({
   const typedKeys = rows.filter((r) => !r.metric.scaleMax).map((r) => r.key);
   const scroller = useRef<HTMLDivElement>(null);
   const dock = useRef<HTMLDivElement>(null);
+  // The top row (back, Check-in, the count) stays put as the page scrolls:
+  // over the photo at rest, on a frosted bar once the banner has gone by.
+  const [stuck, setStuck] = useState(false);
+  const onScroll = () => {
+    const y = scroller.current?.scrollTop ?? 0;
+    setStuck((s) => (s ? y > 48 : y > 72));
+  };
   // The keyboard's height, from the visual viewport: the dock rides on it,
   // and the line being typed in is scrolled clear of the dock.
   const [kb, setKb] = useState(0);
@@ -306,22 +313,23 @@ export default function CheckInScreen({
   return (
     <div className="ci-screen ci-one">
       {/* Room at the foot for the Save bar only while it shows. */}
-      <div ref={scroller} className={`ci-scroll${docked ? " docked" : ""}`}>
+      <div ref={scroller} className={`ci-scroll${docked ? " docked" : ""}`} onScroll={onScroll}>
+        {/* The top row, sticky: over the photo at first, then a frosted bar. */}
+        <div className={`ci-bar${stuck ? " stuck" : ""}`}>
+          <button type="button" className="ci-back" onClick={editDay ? closeDay : onBack} aria-label={editDay ? "Back to the last 7 days" : "Back to home"}>
+            <ChevronLeftIcon />
+          </button>
+          <h1 className="ci-title">Check-in</h1>
+          <div className="ci-count" aria-label={`${filled.length} of ${rows.length} filled in`}>
+            <span className={`ci-count-dot${complete ? " done" : ""}`} aria-hidden="true" />
+            {filled.length}
+            <span className="ci-count-total">/ {rows.length}</span>
+          </div>
+        </div>
         {/* The photo banner, the Training and Nutrition banners' size: the
             date, and two pills that switch the screen between Today and
             Progress. */}
         <header className="tr-banner ci-banner">
-          <div className="ci-bar">
-            <button type="button" className="ci-back" onClick={editDay ? closeDay : onBack} aria-label={editDay ? "Back to the last 7 days" : "Back to home"}>
-              <ChevronLeftIcon />
-            </button>
-            <h1 className="ci-title">Check-in</h1>
-            <div className="ci-count" aria-label={`${filled.length} of ${rows.length} filled in`}>
-              <span className={`ci-count-dot${complete ? " done" : ""}`} aria-hidden="true" />
-              {filled.length}
-              <span className="ci-count-total">/ {rows.length}</span>
-            </div>
-          </div>
           <div className="tr-kicker">{editDay ? "Editing" : weeklyOpen ? "Daily · weekly" : "Daily"}</div>
           <FitTitle className="tr-name">{editDay ? dayLabel(editDay.date, true) : dateLabel}</FitTitle>
           <div className="tr-weeks ci-views" role="tablist" aria-label="Check-in">
