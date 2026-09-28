@@ -10637,3 +10637,51 @@ export function markInvoicePaidOnline(invoiceId: number, sessionId: string, acco
   persist();
   return inv;
 }
+
+// ---- Cardio swaps and alternatives (28 Sep) --------------------------------
+
+/**
+ * The client did another cardio instead (the bike was taken). Saving what
+ * they did also ticks the entry off: they did their cardio, so the session
+ * can still come out complete. Null takes the swap back (the tick stays).
+ */
+export function setCardioSwap(entryId: number, name: string | null) {
+  const data = getData();
+  const entry = (data.cardio_entries ?? []).find((c) => c.id === entryId);
+  if (!entry) return;
+  const clean = name?.trim().slice(0, 80) || null;
+  if (clean) entry.swap = { name: clean, at: new Date().toISOString() };
+  else delete entry.swap;
+  persist();
+  if (clean) setCardioDone(entryId, true);
+}
+
+/**
+ * The coach's alternatives for a cardio, set on this entry and on the same
+ * cardio (same name, same session) in the programme's later weeks, so they
+ * hold week after week, as exercise alternatives do. Returns how many took them.
+ */
+export function setCardioAlternatives(entryId: number, list: { name: string; note: string | null }[]): number {
+  const data = getData();
+  const entries = data.cardio_entries ?? [];
+  const entry = entries.find((c) => c.id === entryId);
+  const day = entry ? data.program_days.find((d) => d.id === entry.program_day_id) : undefined;
+  if (!entry || !day) return 0;
+  const own = entry.name.trim().toLowerCase();
+  const clean = list
+    .map((x) => ({ name: String(x.name ?? "").trim().slice(0, 60), note: x.note?.trim().slice(0, 200) || null }))
+    .filter((x, i, all) => x.name && x.name.toLowerCase() !== own && all.findIndex((y) => y.name.toLowerCase() === x.name.toLowerCase()) === i)
+    .slice(0, 8);
+  const program = data.training_programs.find((p) => p.client_id === day.client_id && day.week_number >= p.start_week && day.week_number < p.start_week + p.total_weeks);
+  const lastWeek = program ? program.start_week + program.total_weeks - 1 : day.week_number;
+  const days = new Set(data.program_days.filter((d) => d.client_id === day.client_id && d.day_of_week === day.day_of_week && d.week_number >= day.week_number && d.week_number <= lastWeek).map((d) => d.id));
+  let n = 0;
+  for (const c of entries) {
+    if (c.id !== entry.id && (c.name.trim().toLowerCase() !== own || !days.has(c.program_day_id))) continue;
+    if (clean.length) c.alternatives = clean.map((x) => ({ ...x }));
+    else delete c.alternatives;
+    n++;
+  }
+  persist();
+  return n;
+}

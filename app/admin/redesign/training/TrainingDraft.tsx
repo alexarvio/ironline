@@ -5,7 +5,7 @@ import type React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { addExerciseToLibraryAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, createProgramWithAction, deployProgramAction, removeGymAction, removeProgramWeekAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, saveTrainingNoteAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
+import { addExerciseToLibraryAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, createProgramWithAction, deployProgramAction, removeGymAction, removeProgramWeekAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, saveTrainingNoteAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger, ToggleGroup, ToggleGroupItem } from "../../../components/ui/basics";
@@ -63,7 +63,8 @@ export type DraftRow = {
   d7: number | null;
   d30: number | null;
 };
-export type DraftCardio = { id: number; name: string; time: string; pace: string; incline: string; distance: string; notes: string; done: boolean };
+/** swap: what the client did instead; alternatives: what the coach offers (names, with a note). */
+export type DraftCardio = { id: number; name: string; time: string; pace: string; incline: string; distance: string; notes: string; done: boolean; swap?: string | null; alternatives?: { name: string; note: string }[] };
 export type DraftSession = { id: number; number: number; name: string; setsPlanned: number; setsLogged: number; gym: string | null; skip: string | null; duration: number | null; ended: string | null; note: string | null; rows: DraftRow[]; cardio: DraftCardio[] };
 export type DraftProgram = {
   id: number;
@@ -120,6 +121,7 @@ type Dlg =
   | { kind: "progress"; rowId: number }
   | { kind: "editExercise"; sessionId: number; rowId: number }
   | { kind: "editCardio"; sessionId: number; cardioId: number }
+  | { kind: "cardioAlternatives"; sessionId: number; cardioId: number }
   | { kind: "video"; rowId: number }
   | { kind: "demo"; rowId: number }
   | { kind: "alternatives"; rowId: number }
@@ -1023,6 +1025,8 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                                     {c.name}
                                   </button>
                                 </span>
+                                {/* The client did something else instead (the bike was taken). */}
+                                {c.swap && <span className="rd-cardio-swap">Did {c.swap} instead</span>}
                               </span>
                               <span className="rd-cband" style={cs.band}>
                                 {show.time && <span className="rd-num">{unitOf(c.time, " min")}</span>}
@@ -1036,6 +1040,11 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                               <span />
                               <span />
                               <span className="rd-row-more">
+                                {/* What the client can do instead when the machine is taken. */}
+                                <button type="button" className="rd-btn ghost sm rd-cardio-alt" onClick={() => setDlg({ kind: "cardioAlternatives", sessionId: s.id, cardioId: c.id })} title={c.alternatives?.length ? `Alternatives · ${c.alternatives.length}` : "Add alternative"} aria-label={`Alternatives for ${c.name}`}>
+                                  <DumbbellIcon />
+                                  {c.alternatives?.length ? <b>{c.alternatives.length}</b> : null}
+                                </button>
                                 <button type="button" className="rd-btn ghost sm" onClick={() => patch(s.id, (q) => ({ ...q, cardioRemoved: [...q.cardioRemoved, c.id] }))} aria-label={`Remove ${c.name}`} title="Remove from session">
                                   <TrashIcon />
                                 </button>
@@ -1169,6 +1178,18 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
               const { sessionId, cardioId } = dlg;
               patch(sessionId, (q) => ({ ...q, cardioEdits: { ...q.cardioEdits, [cardioId]: { ...(q.cardioEdits[cardioId] ?? {}), ...v } } }));
               close();
+            }}
+          />
+        )}
+
+        {dlg?.kind === "cardioAlternatives" && sessionById(dlg.sessionId)?.cardio.find((c) => c.id === dlg.cardioId) && (
+          <CardioAlternativesDialog
+            cardio={sessionById(dlg.sessionId)!.cardio.find((c) => c.id === dlg.cardioId)!}
+            firstName={firstName}
+            onSave={(list) => {
+              const c = sessionById(dlg.sessionId)!.cardio.find((x) => x.id === dlg.cardioId)!;
+              close();
+              act(() => setCardioAlternativesAction(c.id, list), list.length ? `${list.length} alternative${list.length === 1 ? "" : "s"} for ${c.name}` : `Alternatives taken off ${c.name}`);
             }}
           />
         )}
@@ -1896,6 +1917,67 @@ function AlternativesDialog({ row, firstName, library, onSave }: { row: DraftRow
             <PlusIcon /> Add alternative
           </button>
         )
+      )}
+      <p className="rd-addrow-hint">Saved on this session for the rest of the programme.</p>
+      <DialogFooter>
+        <DialogClose className="rd-btn">Cancel</DialogClose>
+        <button type="button" className="rd-btn primary" onClick={() => onSave(list)}>
+          Save
+        </button>
+      </DialogFooter>
+    </DialogContent>
+  );
+}
+
+/** Alternatives for a cardio: names (cardio is typed, not picked from the library), each with an optional note. */
+function CardioAlternativesDialog({ cardio, firstName, onSave }: { cardio: DraftCardio; firstName: string; onSave: (list: { name: string; note: string }[]) => void }) {
+  const [list, setList] = useState(cardio.alternatives ?? []);
+  const [draft, setDraft] = useState("");
+  const add = () => {
+    const name = draft.trim();
+    if (name && name.toLowerCase() !== cardio.name.trim().toLowerCase() && !list.some((x) => x.name.toLowerCase() === name.toLowerCase())) setList((l) => [...l, { name, note: "" }]);
+    setDraft("");
+  };
+  return (
+    <DialogContent className="rd-dlg">
+      <DialogHeader>
+        <DialogTitle>Alternatives for {cardio.name}</DialogTitle>
+        <DialogDescription>What {firstName} can do instead when the machine is taken. They pick one from the swap in their workout, and it counts as done.</DialogDescription>
+      </DialogHeader>
+      {list.length > 0 && (
+        <ul className="rd-alt-list">
+          {list.map((x, i) => (
+            <li key={x.name} className="rd-alt-row">
+              <span className="rd-alt-name">{x.name}</span>
+              <input className="rd-input" value={x.note} onChange={(e) => setList((l) => l.map((y, j) => (j === i ? { ...y, note: e.target.value } : y)))} placeholder="Note · optional, e.g. same time, keep it easy" maxLength={200} />
+              <button type="button" className="rd-btn ghost sm" onClick={() => setList((l) => l.filter((_, j) => j !== i))} aria-label={`Remove ${x.name}`}>
+                <TrashIcon />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {list.length < 8 && (
+        <div className="rd-alt-type">
+          <input
+            className="rd-input"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                add();
+              }
+            }}
+            placeholder="Rower, stair climber, incline walk…"
+            maxLength={60}
+            autoFocus
+            aria-label="An alternative"
+          />
+          <button type="button" className="rd-btn" onClick={add} disabled={!draft.trim()}>
+            <PlusIcon /> Add
+          </button>
+        </div>
       )}
       <p className="rd-addrow-hint">Saved on this session for the rest of the programme.</p>
       <DialogFooter>

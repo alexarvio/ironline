@@ -40,6 +40,8 @@ import {
 import {
   getClientIdForCardio,
   setCardioDone,
+  setCardioSwap,
+  setCardioAlternatives,
   addClientGoal,
   listClientGoals,
   updateClientGoal,
@@ -2308,6 +2310,33 @@ export async function setBuiltinColumnVisibleAction(formData: FormData) {
 
 // The client ticks a cardio entry off (or back on). Same ownership rule as
 // logging a set: the entry says whose it is, the session says who may write.
+/** The client did another cardio instead: what they did. It ticks the entry off too (setCardioSwap). */
+export async function swapCardioAction(entryId: number, name: string) {
+  const owner = getClientIdForCardio(Number(entryId));
+  if (owner == null || !(await canAccessClient(owner))) return;
+  setCardioSwap(Number(entryId), String(name ?? ""));
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+/** Takes a cardio swap back; the tick stays until the client undoes it. */
+export async function clearCardioSwapAction(entryId: number) {
+  const owner = getClientIdForCardio(Number(entryId));
+  if (owner == null || !(await canAccessClient(owner))) return;
+  setCardioSwap(Number(entryId), null);
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
+/** The coach's alternatives for a cardio (its row on Training): names, each with an optional note. */
+export async function setCardioAlternativesAction(entryId: number, list: { name: string; note: string }[]) {
+  const owner = getClientIdForCardio(Number(entryId));
+  if (owner == null || !(await coachForClient(owner))) return;
+  setCardioAlternatives(Number(entryId), Array.isArray(list) ? list.map((x) => ({ name: String(x?.name ?? ""), note: typeof x?.note === "string" ? x.note : null })) : []);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
 export async function setCardioDoneAction(entryId: number, done: boolean) {
   if (!entryId) return;
   const owner = getClientIdForCardio(entryId);

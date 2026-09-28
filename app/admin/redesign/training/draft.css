@@ -614,3 +614,12 @@
 .rd-nophase-title { font-size: 16px; font-weight: 700; color: #141a24; }
 .rd-nophase-btn { height: 40px; padding: 0 18px; }
 .rd-nophase-btn svg { width: 14px; height: 14px; }
+
+/* Cardio alternatives and swaps on the coach's rows (28 Sep). */
+.rd-cardio-swap { display: block; font-size: 11.5px; font-weight: 600; color: #b3471d; }
+.rd-cardio-alt { gap: 3px; }
+.rd-cardio-alt svg { width: 14px; height: 14px; }
+.rd-cardio-alt b { font-size: 11px; }
+.rd-alt-type { display: flex; gap: 8px; }
+.rd-alt-type .rd-input { flex: 1; min-width: 0; height: 36px; }
+.rd-alt-type .rd-btn svg { width: 13px; height: 13px; }

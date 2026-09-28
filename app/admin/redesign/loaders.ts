@@ -221,7 +221,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
         d30: pct(monthBack),
       };
     });
-    const cardio = listCardioForDay(d.id).map((c) => ({ id: c.id, name: c.name, time: c.time, pace: c.pace, incline: c.incline, distance: c.distance ?? "", notes: c.notes, done: isCardioDone(c.id) }));
+    const cardio = listCardioForDay(d.id).map((c) => ({ id: c.id, name: c.name, time: c.time, pace: c.pace, incline: c.incline, distance: c.distance ?? "", notes: c.notes, done: isCardioDone(c.id), swap: c.swap?.name ?? null, alternatives: (c.alternatives ?? []).map((a) => ({ name: a.name, note: a.note ?? "" })) }));
     const setsPlanned = rows.reduce((t, r) => t + r.sets, 0);
     // A swapped exercise's sets still count as done for the session.
     const setsLogged = rows.reduce((t, r) => t + r.logged.length + (r.swapInfo?.sets.length ?? 0), 0);
