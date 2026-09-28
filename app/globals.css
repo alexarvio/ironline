@@ -17596,10 +17596,13 @@ button.ci-hint { cursor: pointer; }
    36px up into the banner with 16px side padding; the block undoes both so
    the chips start 16px under the photo on the page's own gutter. ---- */
 .pg-view { display: flex; flex-direction: column; margin: 36px -16px 0; padding-bottom: 8px; }
-.pg-chips { display: flex; gap: 8px; overflow-x: auto; padding: 16px 16px 4px; scroll-snap-type: x proximity; scroll-padding: 0 16px; scrollbar-width: none; }
+/* Room under the chips for their shadow (the scroller clips it otherwise). */
+.pg-chips { display: flex; gap: 8px; overflow-x: auto; padding: 14px 16px 12px; margin-bottom: -8px; scroll-snap-type: x proximity; scroll-padding: 0 16px; scrollbar-width: none; }
 .pg-chips::-webkit-scrollbar { display: none; }
 .pg-chip { flex: none; scroll-snap-align: start; height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: #fff; color: #5b6474; font: inherit; font-size: 13.5px; font-weight: 700; white-space: nowrap; cursor: pointer; box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04), 0 4px 10px -6px rgba(16, 24, 40, 0.2); transition: background 0.2s, color 0.2s; }
-.pg-chip.on { background: #141a24; color: #fff; box-shadow: 0 8px 16px -8px rgba(20, 26, 36, 0.6); }
+.pg-chip.on { background: #141a24; color: #fff; box-shadow: 0 3px 8px -4px rgba(20, 26, 36, 0.35); }
+/* Progress: nothing sits over the banner's foot, so it ends sooner under the tabs. */
+.tr-banner.ci-banner.progress { padding-bottom: 30px; }
 
 .pg-card { --cat: #5b6472; --cat-rgb: 91, 100, 114; margin: 12px 16px 0; border-radius: 26px; background: #fff; padding: 18px 16px 14px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04), 0 22px 36px -24px rgba(var(--cat-rgb), 0.45), inset 0 0 0 1px rgba(var(--cat-rgb), 0.1); }
 .pg-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }

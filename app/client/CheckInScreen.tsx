@@ -329,7 +329,7 @@ export default function CheckInScreen({
         {/* The photo banner, the Training and Nutrition banners' size: the
             date, and two pills that switch the screen between Today and
             Progress. */}
-        <header className="tr-banner ci-banner">
+        <header className={`tr-banner ci-banner${view === "progress" ? " progress" : ""}`}>
           <div className="tr-kicker">{editDay ? "Editing" : weeklyOpen ? "Daily · weekly" : "Daily"}</div>
           <FitTitle className="tr-name">{editDay ? dayLabel(editDay.date, true) : dateLabel}</FitTitle>
           <div className="tr-weeks ci-views" role="tablist" aria-label="Check-in">
