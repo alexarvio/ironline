@@ -23,6 +23,11 @@ import { getData } from "./db";
 import { deleteUserForClient } from "./auth";
 import { eraseClient } from "./erase";
 import { completePasswordReset, requestPasswordReset } from "./passwordReset";
+import { approveCoach, createPasswordlessUser } from "./auth";
+import { sendCoachApprovedEmail } from "./mail";
+import { cookies } from "next/headers";
+import { clerkIdentity, clerkOn } from "./clerk";
+import { applySignUpDetails } from "./queries";
 
 // Server actions for logging in and out, and for the coach handing a client
 // their credentials. Kept separate from actions.ts so the auth surface is
@@ -58,6 +63,8 @@ export async function loginAction(formData: FormData) {
 }
 
 export async function logoutAction() {
+  // Clerk holds the session in the browser: it signs out there.
+  if (clerkOn()) redirect("/auth/signout");
   await endSession();
   redirect("/login");
 }
@@ -105,6 +112,11 @@ export async function deleteOwnAccountAction(_prev: { error: string } | null, fo
   const session = await requireClient();
   const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   if (String(formData.get("confirm") ?? "").trim().toUpperCase() !== "DELETE") return { error: "Type DELETE to confirm." };
+  // With Clerk there is no password to ask for: being signed in, and DELETE, is the proof.
+  if (clerkOn()) {
+    await eraseClient(session.clientId, { selfDeleted: true });
+    redirect("/auth/signout?deleted=1");
+  }
   if (isLoginLocked(session.email, ip)) return { error: "Too many wrong passwords. Try again in 15 minutes." };
   const user = getData().users.find((u) => u.id === session.id);
   if (!user || !verifyPassword(String(formData.get("password") ?? ""), user.password_hash)) {
@@ -214,4 +226,53 @@ export async function changeOwnPasswordAction(current: string, next: string): Pr
   if (pw.length < 8) return { ok: false, error: "At least 8 characters." };
   setPassword(user.id, pw, false);
   return { ok: true };
+}
+
+// ---- Coaches who signed up themselves (sign-in through Clerk) -------------
+// They wait until the owner lets them in. Approving gives them their own
+// copy of the presets and puts the name and business they gave on their
+// profile; declining removes the account (and its Clerk sign-in) entirely.
+
+export async function approveCoachAction(formData: FormData) {
+  await requireOwner();
+  const coachId = Number(formData.get("coachId"));
+  const pending = getData().users.find((u) => u.id === coachId && u.role === "coach")?.pending;
+  if (!pending || !approveCoach(coachId)) redirect(`${COACHES}&coachError=invalid`);
+  applySignUpDetails(coachId, pending.name, pending.business);
+  // They were told they would hear: "You’re in", when email is set up.
+  const email = getData().users.find((u) => u.id === coachId)?.email;
+  if (email) {
+    const h = await headers();
+    const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
+    const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+    await sendCoachApprovedEmail({ to: email, name: pending.name, signInUrl: `${proto}://${host}/login` });
+  }
+  redirect(`${COACHES}&coachOk=approved`);
+}
+
+export async function declineCoachAction(formData: FormData) {
+  await requireOwner();
+  const coachId = Number(formData.get("coachId"));
+  const row = getData().users.find((u) => u.id === coachId && u.role === "coach" && u.pending);
+  if (!row || !deleteCoachAccount(coachId)) redirect(`${COACHES}&coachError=invalid`);
+  redirect(`${COACHES}&coachOk=declined`);
+}
+
+/**
+ * The "About you" step after a coach signs up through Clerk: makes their
+ * account, which waits for the owner (their name and business ride on it
+ * until then). Only for someone signed in to Clerk with no account here.
+ */
+export async function finishCoachSignUpAction(formData: FormData) {
+  if (!clerkOn()) redirect("/login");
+  if (await getSessionUser()) redirect("/auth/continue");
+  const who = await clerkIdentity();
+  const email = who?.emails[0];
+  if (!email) redirect("/login");
+  const name = String(formData.get("name") ?? "").trim().slice(0, 80);
+  const business = String(formData.get("business") ?? "").trim().slice(0, 120) || null;
+  if (!name) redirect("/auth/coach-details?error=name");
+  if (!findUserByEmail(email)) createPasswordlessUser(email, "coach", null, { name, business });
+  (await cookies()).delete("ironline_intent");
+  redirect("/auth/waiting");
 }

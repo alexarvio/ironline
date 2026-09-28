@@ -16,6 +16,9 @@ const DB_PATH = path.join(DATA_DIR, "ironline.json");
 type Client = {
   id: number;
   name: string;
+  // What the client did, kept when a coach edit removes it (a session, an
+  // exercise, a metric): the calendar shows it for good (28 Sep).
+  kept_activity?: KeptActivity[];
   // Set once the coach drags the Tracked metrics into an order of their own:
   // from then on that order (order_index) is the order, instead of grouped
   // by category (listAllMetrics).
@@ -601,6 +604,10 @@ type SkinfoldEntry = {
 };
 
 type MetricCadence = "daily" | "weekly" | "monthly";
+export type MetricAskAt = "morning" | "anytime" | "evening";
+export type KeptActivity =
+  | { kind: "training"; date: string; day_id: number; title: string; minutes: number | null; exercises: number; gym: string | null; finished: boolean }
+  | { kind: "checkin"; date: string; name: string };
 
 type MetricDefinition = {
   id: number;
@@ -617,6 +624,10 @@ type MetricDefinition = {
   // Absent on rows written before it existed, and on those the change is
   // shown without a colour rather than guessed at.
   good_direction?: "up" | "down" | "none";
+  // When in the day the client is asked for it: the morning (weight), all
+  // day (steps), or the evening (energy). Absent: guessed from the name
+  // (metricAskAt), 28 Sep.
+  ask_at?: MetricAskAt;
   // The lifestyle phase that asks for this metric. Absent on everything
   // written before phases owned metrics: those are the client's standing
   // set, asked for whatever phase is running, so nothing was lost when this
@@ -971,6 +982,12 @@ type User = {
   created_at: string;
   /** A coach's settings (Settings in the rail): who bills, and how. Kept in the row's extra jsonb. */
   coach_settings?: CoachSettings;
+  /** The Clerk account this row is linked to, once they have signed in through Clerk (lib/clerk.ts). */
+  clerk_user_id?: string;
+  /** A coach who signed up themselves and waits for the owner: their name and business, until approved. */
+  pending?: { name: string; business: string | null; at: string };
+  /** A coach let in by the owner who has not been through the welcome steps yet (/welcome). */
+  onboarding?: boolean;
 };
 
 /** What a coach's invoices say about who sends them. Every field optional: filled in over time.
@@ -1019,7 +1036,7 @@ export type CoachInvoicing = {
 };
 /** The coach's own Stripe account (lib/stripe.ts), once they start connecting it. */
 export type CoachPayments = { stripe_account_id?: string; stripe_status?: "pending" | "active"; stripe_checked_at?: string };
-export type CoachSettings = { business?: CoachBusiness; invoicing?: CoachInvoicing; payments?: CoachPayments; /** The coach's own contact details (Your profile, Your details): not the business on invoices. */ contact?: CoachContact };
+export type CoachSettings = { business?: CoachBusiness; invoicing?: CoachInvoicing; payments?: CoachPayments; /** The coach's own time zone (IANA): new meetings start in it. Set at onboarding. */ timezone?: string; /** The coach's own contact details (Your profile, Your details): not the business on invoices. */ contact?: CoachContact };
 /** A coach's phone and address, as on any account profile. Every field optional. */
 export type CoachContact = { phone_code?: string; phone?: string; address?: string; postcode?: string; city?: string; country_code?: string };
 

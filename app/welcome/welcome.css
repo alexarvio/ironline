@@ -1,0 +1,36 @@
+/* The welcome steps for a new coach (CoachWelcome.tsx, 26 Sep): shadcn
+   parts (ui/) on the sign-in page's ground. Prefix wl-. */
+.wl-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; background: #f4f7fc; font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; }
+.wl-card { width: 100%; max-width: 440px; padding: 26px 26px 22px; }
+.wl-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.wl-count { font-size: 12.5px; font-weight: 700; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.wl-form { display: flex; flex-direction: column; gap: 14px; }
+.wl-title { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; }
+.wl-lead { margin: -8px 0 2px; font-size: 14px; line-height: 1.5; color: #5b6474; }
+.wl-error { margin: 0; padding: 9px 12px; border: 1px solid #f0c2c2; border-radius: 8px; background: #fdecec; font-size: 13px; font-weight: 600; color: #a32d2d; }
+.wl-field { display: flex; flex-direction: column; gap: 6px; }
+.wl-field [data-slot="input"], .wl-select { height: 40px; }
+.wl-hint { font-size: 12px; color: #8b93a1; }
+.wl-photo { display: flex; align-items: center; gap: 14px; }
+.wl-avatar { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 60px; height: 60px; overflow: hidden; padding: 0; border: 1px dashed #c3c9d2; border-radius: 999px; background: #f4f7fc; font: inherit; font-size: 22px; font-weight: 800; color: #1e3a6e; cursor: pointer; }
+.wl-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.wl-photo-text { display: flex; flex-direction: column; align-items: flex-start; gap: 0; font-size: 14px; }
+.wl-link { height: auto; padding: 2px 0; color: #2f5d8f; }
+.wl-link:hover { background: none; text-decoration: underline; text-underline-offset: 3px; }
+/* The specialties field: a dropdown with ticks, shaped like the Select. */
+.wl-multi { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; height: 40px; padding: 0 12px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; font: inherit; font-size: 13.5px; font-weight: 500; color: #141a24; text-align: left; cursor: pointer; }
+.wl-multi span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wl-multi svg { flex: none; opacity: 0.6; }
+.wl-multi[data-state="open"] { border-color: #2f5d8f; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.12); }
+.wl-placeholder { color: #8b93a1; }
+.wl-multi-menu { min-width: var(--radix-dropdown-menu-trigger-width); max-height: 300px; overflow-y: auto; }
+.wl-select-menu { max-height: 300px; }
+.wl-tz { display: flex; align-items: center; justify-content: space-between; gap: 10px; height: 44px; padding: 0 12px; border: 1px solid #dfe3e8; border-radius: 8px; background: #f7f9fc; }
+.wl-tz span { display: flex; flex-direction: column; gap: 1px; font-size: 13.5px; }
+.wl-tz small { font-size: 11.5px; color: #8b93a1; }
+.wl-field .rt-tzp-btn { height: 40px; }
+.wl-primary { height: 42px; margin-top: 4px; font-size: 14px; }
+.wl-secondary { height: 42px; font-size: 14px; }
+.wl-tertiary { height: 36px; font-size: 13.5px; color: #5b6474; }
+.wl-row { display: flex; justify-content: space-between; }
+.wl-row [data-slot="button"] { color: #5b6474; }

@@ -3,11 +3,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requestPasswordResetAction } from "../../lib/auth-actions";
 import { resetsAvailable } from "../../lib/passwordReset";
+import { clerkOn } from "../../lib/clerk";
 
 // "Forgot password": ask for the email, send a link (lib/passwordReset.ts).
 // The page after sending says the same thing whatever the email was.
 export default async function ForgotPasswordPage({ searchParams }: { searchParams: Promise<{ sent?: string }> }) {
-  if (!resetsAvailable()) redirect("/login");
+  // No passwords to forget with Clerk; nor without email set up.
+  if (clerkOn() || !resetsAvailable()) redirect("/login");
   const { sent } = await searchParams;
 
   return (

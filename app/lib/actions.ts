@@ -1,7 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { getData, persist, type CoachBusiness, type CoachInvoicing } from "./db";
+import { getData, persist, type CoachBusiness, type CoachInvoicing, type MetricAskAt } from "./db";
+import { ASK_AT } from "./metricAskAt";
 import { createCoachAccount, invoiceCheckout, onboardingLink, stripeConfigured } from "./stripe";
 import { canPayOnline } from "./payments";
 import { appUrl } from "./passwordReset";
@@ -20,6 +21,9 @@ import {
 import { eraseClient } from "./erase";
 import { endWeekFor } from "./phases";
 import { sendInviteEmail } from "./mail";
+import { clerkOn, sendClerkInvite } from "./clerk";
+import { inviteToken } from "./inviteToken";
+import { createPasswordlessUser } from "./auth";
 import { parseMessageLink, type MessageLink } from "./messageLinks";
 import { headers } from "next/headers";
 import {
@@ -201,6 +205,8 @@ import {
   updateTrainingColumn,
   VITAMIN_ITEMS,
   weekStart,
+  checkInEditable,
+  getMetricEntries,
   getClientIdForAssignment,
   setMetricOrder,
   clientSeesAssignment,
@@ -258,6 +264,7 @@ import {
   markClientEventsSeen,
   setCoachNote,
   setMetricDirection,
+  setMetricAskAt,
   setWarmupSets,
   setClientProgramNote,
   searchFoods,
@@ -706,16 +713,19 @@ export async function createClientWithLoginAction(
   const email = s(p?.email).toLowerCase();
   const password = String(p?.password ?? "");
   if (!first || !last) return { ok: false, error: "A first and a last name are needed." };
-  if (!EMAIL_RE.test(email)) return { ok: false, error: "That email doesn't look right." };
-  if (password.length < 8) return { ok: false, error: "The password needs at least 8 characters." };
-  if (findUserByEmail(email)) return { ok: false, error: "That email already has an account." };
+  // Without Clerk the email can wait: the login is made later, from App access.
+  if ((clerkOn() || email) && !EMAIL_RE.test(email)) return { ok: false, error: "That email doesn't look right." };
+  // With Clerk there is no password: the client gets an invite link instead.
+  if (!clerkOn() && password && password.length < 8) return { ok: false, error: "The password needs at least 8 characters." };
+  if (email && findUserByEmail(email)) return { ok: false, error: "That email already has an account." };
 
   // The record, then the login. If the login cannot be made, the record goes
   // too: a client with no way in, that the coach did not ask for, is worse
   // than trying again.
   const client = createClient(`${first} ${last}`, coach.id);
   try {
-    createUser(email, password, "client", client.id, true);
+    if (clerkOn()) createPasswordlessUser(email, "client", client.id);
+    else if (password) createUser(email, password, "client", client.id, true);
   } catch (error) {
     removeClient(client.id);
     return { ok: false, error: error instanceof Error ? error.message : "The login could not be made." };
@@ -727,7 +737,7 @@ export async function createClientWithLoginAction(
     gender: GENDERS.has(s(p.gender)) ? s(p.gender) : null,
     height_cm: num(p.heightCm),
     starting_weight_kg: num(p.startingWeightKg),
-    email,
+    email: email || null,
     // The dial code and the national number are kept apart, and joined only
     // for show, so a country is never guessed back out of a typed string.
     phone_code: /^\+[0-9]{1,4}$/.test(phoneCode) ? phoneCode : null,
@@ -736,10 +746,16 @@ export async function createClientWithLoginAction(
   });
   revalidatePath("/admin");
 
-  if (!p.invite) return { ok: true, clientId: client.id, invited: false, inviteFailed: false };
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
   const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  // With Clerk the invite always goes: it is the only way in. Clerk sends it,
+  // and the link lands on /invite, which greets them by name.
+  if (clerkOn()) {
+    const invited = await sendClerkInvite(email, `${proto}://${host}/invite?c=${inviteToken(client.id)}`);
+    return { ok: true, clientId: client.id, invited, inviteFailed: !invited };
+  }
+  if (!p.invite || !password) return { ok: true, clientId: client.id, invited: false, inviteFailed: false };
   const invited = await sendInviteEmail({
     to: email,
     firstName: first,
@@ -889,9 +905,11 @@ export async function addMetricsFromLibraryAction(formData: FormData) {
 export async function applyMetricChangesAction(input: {
   clientId: number;
   phaseId: number | null;
-  adds: { name: string; unit: string; group: string; cadence: "daily" | "weekly"; source: "library" | "custom" }[];
+  adds: { name: string; unit: string; group: string; cadence: "daily" | "weekly"; source: "library" | "custom"; askAt?: MetricAskAt }[];
   removes: number[];
   cadence: { id: number; value: "daily" | "weekly" }[];
+  /** When in the day each changed metric is asked for. */
+  askAt?: { id: number; value: MetricAskAt }[];
   /** The metrics on screen in the order the coach dragged them into, when they did. */
   order?: number[] | null;
 }): Promise<boolean> {
@@ -904,6 +922,10 @@ export async function applyMetricChangesAction(input: {
   for (const c of Array.isArray(input.cadence) ? input.cadence : []) {
     if (mine(c.id) && (c.value === "daily" || c.value === "weekly")) setMetricCadence(c.id, c.value);
   }
+  const askAtOk = (v: unknown): v is MetricAskAt => ASK_AT.some((a) => a.id === v);
+  for (const a of Array.isArray(input.askAt) ? input.askAt : []) {
+    if (mine(a.id) && askAtOk(a.value)) setMetricAskAt(a.id, a.value);
+  }
   if (Array.isArray(input.order) && input.order.length && input.order.every(mine)) setMetricOrder(clientId, input.order);
   const adds = (Array.isArray(input.adds) ? input.adds : [])
     .map((a) => ({ name: String(a.name ?? "").trim().slice(0, 60), unit: String(a.unit ?? "").trim().slice(0, 20), group: String(a.group ?? "other"), cadence: a.cadence === "weekly" ? ("weekly" as const) : ("daily" as const), source: a.source }))
@@ -911,6 +933,13 @@ export async function applyMetricChangesAction(input: {
   const library = adds.filter((a) => a.source === "library");
   if (library.length) addMetricsFromLibraryPhased(clientId, library.map(({ name, unit, group, cadence }) => ({ name, unit, group, cadence })), phaseId);
   for (const a of adds.filter((x) => x.source !== "library")) addMetricDefinition(clientId, a.group, a.name, a.unit, a.cadence, phaseId);
+  // A time set on a new metric: on the one just made under that name.
+  for (const a of Array.isArray(input.adds) ? input.adds : []) {
+    if (!askAtOk(a.askAt)) continue;
+    const name = String(a.name ?? "").trim().toLowerCase();
+    const made = getData().metric_definitions.filter((m) => m.client_id === clientId && m.name.trim().toLowerCase() === name).sort((x, y) => y.id - x.id)[0];
+    if (made) setMetricAskAt(made.id, a.askAt);
+  }
   noteChange(clientId, "Changed what you check in", { tab: "home", label: "See your tasks", key: "checkin" });
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -1029,13 +1058,17 @@ export async function applyMetricTemplateAction(formData: FormData) {
 // Logs every metric field present on the form for one period at once — the
 // "log today" / "log this week" form submits all currently-defined metrics
 // in a single action rather than one action per field.
-// A client's check-in is theirs to change only while its period is open:
-// today's, this week's. Once the next one rolls out the old one is locked,
-// finished or not. The coach can still correct any day.
+// A client's check-in is theirs to change (or fill in, if the day was
+// missed) for a week: today's, and any of the
+// seven days before it, the days the Check-in screen's feed lists (a weekly
+// reading by the day it was sent from, and this week's as before). From the
+// eighth day back it is locked, finished or not (checkInEditable). The coach
+// can still correct any day.
 async function checkInLocked(date: string, frequency: string) {
   if ((await getSessionUser())?.role !== "client") return false;
   const today = localDateStr();
-  return frequency === "weekly" ? weekStart(date) !== weekStart(today) : date !== today;
+  if (frequency === "weekly" && /^\d{4}-\d{2}-\d{2}$/.test(date) && weekStart(date) === weekStart(today)) return false;
+  return !checkInEditable(date, today);
 }
 
 export async function logMetricPeriodAction(formData: FormData) {
@@ -1049,12 +1082,17 @@ export async function logMetricPeriodAction(formData: FormData) {
 
   const definitions = listMetricDefinitions(clientId, frequency);
   const loggedAt = new Date().toISOString();
+  // A weekly reading changed from a past day in the feed keeps its stamp:
+  // the feed files it under the day it was sent.
+  const pastWeekly = frequency === "weekly" && dateRaw < localDateStr();
+  const entries = pastWeekly ? getMetricEntries(definitions.map((d) => d.id)) : [];
   definitions.forEach((def) => {
     const raw = formData.get(`metric_${def.id}`);
     if (raw === null || raw === "") return;
     // Phones on European locales type the decimal comma.
     const value = Number(String(raw).replace(",", "."));
-    setMetricEntry(def.id, period, Number.isFinite(value) ? value : null, loggedAt);
+    const stamp = entries.find((e) => e.metric_definition_id === def.id && e.period === period)?.logged_at ?? loggedAt;
+    setMetricEntry(def.id, period, Number.isFinite(value) ? value : null, stamp);
   });
   if (formData.has("note") && (frequency === "daily" || frequency === "weekly")) {
     setCheckInNote(clientId, frequency, period, String(formData.get("note") ?? "").slice(0, 500));

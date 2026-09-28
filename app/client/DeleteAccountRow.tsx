@@ -8,7 +8,7 @@ import { ArrowRightIcon } from "../components/icons";
 // asks for the password and the word DELETE before anything happens. The
 // deletion itself is lib/erase.ts; afterwards the client lands on the login
 // page, signed out.
-export default function DeleteAccountRow({ coachName }: { coachName: string }) {
+export default function DeleteAccountRow({ coachName, passwordless = false }: { coachName: string; /** Sign-in through Clerk: no password to ask for, DELETE is enough. */ passwordless?: boolean }) {
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState(deleteOwnAccountAction, null);
   return (
@@ -25,10 +25,12 @@ export default function DeleteAccountRow({ coachName }: { coachName: string }) {
           <p className="st-delete-text">
             {coachName} is told you left. Invoices are kept, with only your name on them, because the law requires it.
           </p>
-          <label className="st-delete-field">
-            <span>Your password</span>
-            <input type="password" name="password" autoComplete="current-password" required />
-          </label>
+          {!passwordless && (
+            <label className="st-delete-field">
+              <span>Your password</span>
+              <input type="password" name="password" autoComplete="current-password" required />
+            </label>
+          )}
           <label className="st-delete-field">
             <span>Type DELETE to confirm</span>
             <input type="text" name="confirm" autoComplete="off" autoCapitalize="characters" spellCheck={false} required />

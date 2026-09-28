@@ -3,6 +3,7 @@ import { deleteBackupUploads } from "./backup";
 import { removeAllSubscriptions } from "./push";
 import { removeClient } from "./queries";
 import { deleteUploadFolder } from "./storage";
+import { deleteClerkUser } from "./clerk";
 
 // Erasing a client: everything of theirs, wherever it lives. Their rows in the
 // store (removeClient), their files on the disk, in the uploads bucket and in
@@ -19,6 +20,8 @@ export async function eraseClient(clientId: number, opts: { selfDeleted: boolean
   const client = data.clients.find((c) => c.id === clientId);
   if (!client) return;
   const userIds = data.users.filter((u) => u.role === "client" && u.client_id === clientId).map((u) => u.id);
+  // Their Clerk account goes too, so the email can be invited afresh (lib/clerk.ts).
+  const clerkIds = data.users.filter((u) => u.role === "client" && u.client_id === clientId).map((u) => u.clerk_user_id);
 
   if (opts.selfDeleted) {
     data.account_deletions = [
@@ -30,6 +33,7 @@ export async function eraseClient(clientId: number, opts: { selfDeleted: boolean
   // The rows first: from here the client is gone from the app, whatever
   // happens to the file clean-up below.
   removeClient(clientId, { keepInvoices: opts.selfDeleted });
+  for (const id of clerkIds) await deleteClerkUser(id);
 
   const failures: unknown[] = [];
   const attempt = async (work: () => Promise<unknown>) => {

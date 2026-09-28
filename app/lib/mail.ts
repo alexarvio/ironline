@@ -88,3 +88,14 @@ export async function sendInviteEmail({ coachEmail, ...details }: { to: string; 
   const { subject, text, html } = inviteEmail(details);
   return send(details.to, subject, text, html, "invite", { fromName: details.coachName, replyTo: coachEmail });
 }
+
+/** A coach who signed up is let in by the owner. Resolves false rather than throwing: they are in either way. */
+export async function sendCoachApprovedEmail({ to, name, signInUrl }: { to: string; name: string; signInUrl: string }): Promise<boolean> {
+  if (!mailConfigured()) return false;
+  const first = name.split(" ")[0] || name;
+  const text = [`Hi ${first},`, "", "Your Ironline coach account is ready.", "", `Sign in: ${signInUrl}`].join("\n");
+  const html = `<p>Hi ${escape(first)},</p>
+<p>Your Ironline coach account is ready.</p>
+<p><a href="${escape(signInUrl)}">Sign in to Ironline</a></p>`;
+  return send(to, "You're in: your Ironline coach account", text, html, "coach approved", { fromName: "Ironline" });
+}

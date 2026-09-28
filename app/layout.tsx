@@ -3,6 +3,8 @@ import { Archivo, Bricolage_Grotesque, Libre_Baskerville } from "next/font/googl
 import localFont from "next/font/local";
 import "./globals.css";
 import { applyDueClientReminders, applyDueProgramDeployments } from "./lib/queries";
+import { ClerkProvider } from "@clerk/nextjs";
+import { clerkOn } from "./lib/clerk";
 
 export const metadata: Metadata = {
   title: "Ironline",
@@ -72,7 +74,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   // apps drift away from the files they were drawn from.
   return (
     <html lang="en" className={`${libreBaskerville.variable} ${archivo.variable} ${kirana.variable} ${bricolage.variable}`}>
-      <body>{children}</body>
+      {/* Sign-in through Clerk, when it is switched on (lib/clerk.ts). */}
+      <body>{clerkOn() ? <ClerkProvider signInUrl="/login" signUpUrl="/signup" signInFallbackRedirectUrl="/auth/continue" signUpFallbackRedirectUrl="/auth/continue" afterSignOutUrl="/login">{children}</ClerkProvider> : children}</body>
     </html>
   );
 }

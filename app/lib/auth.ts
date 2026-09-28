@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { allocId, claimUnownedRows, getData, persist } from "./db";
 import { clearLockoutsFor } from "./loginLockout";
 import { coachOwnsClient, seedCoachLibrary } from "./tenancy";
+import { clerkOn, clerkUserRow, deleteClerkUser } from "./clerk";
 
 // Authentication and authorization for Ironline.
 //
@@ -35,6 +36,8 @@ export type SessionUser = {
   role: Role;
   client_id: number | null;
   must_change_password: boolean;
+  /** A coach who signed up and waits for the owner's approval (Clerk sign-in only). */
+  pending?: boolean;
 };
 
 const COOKIE_NAME = "ironline_session";
@@ -125,6 +128,11 @@ export async function endSession() {
 // calls requireClient() and then five queries doesn't re-read and re-verify
 // the cookie six times.
 export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
+  // Signed in through Clerk: the same row, found by the Clerk account.
+  if (clerkOn()) {
+    const row = await clerkUserRow();
+    return row ? { id: row.id, email: row.email, role: row.role, client_id: row.client_id, must_change_password: false, pending: !!row.pending } : null;
+  }
   const jar = await cookies();
   const token = jar.get(COOKIE_NAME)?.value;
   if (!token) return null;
@@ -157,6 +165,8 @@ export async function requireCoach(): Promise<SessionUser> {
   // rather than bouncing them to the client app (see /login/switch).
   if (user.role !== "coach") redirect("/login/switch?to=coach");
   if (user.must_change_password) redirect("/login/change-password");
+  // Signed up, not yet let in by the owner.
+  if (user.pending) redirect("/auth/waiting");
   return user;
 }
 
@@ -232,6 +242,7 @@ export function deleteCoachAccount(coachId: number): boolean {
   data.meetings = data.meetings.filter((m) => !blockIds.has(m.id));
   data.users = data.users.filter((u) => u.id !== coachId);
   persist();
+  void deleteClerkUser(coach.clerk_user_id);
   return true;
 }
 
@@ -257,6 +268,7 @@ export async function requireClientAccess(requestedClientId: number): Promise<nu
   if (!user) redirect("/login");
   if (user.must_change_password) redirect("/login/change-password");
   if (user.role === "coach") {
+    if (user.pending) redirect("/auth/waiting");
     if (!coachOwnsClient(user.id, requestedClientId)) redirect("/admin");
     return requestedClientId;
   }
@@ -272,7 +284,7 @@ export async function requireClientAccess(requestedClientId: number): Promise<nu
  */
 export async function canAccessClient(clientId: number): Promise<boolean> {
   const user = await getSessionUser();
-  if (!user || user.must_change_password) return false;
+  if (!user || user.must_change_password || user.pending) return false;
   if (user.role === "coach") return coachOwnsClient(user.id, clientId);
   return user.client_id === clientId;
 }
@@ -439,6 +451,43 @@ export function createUser(
     seedCoachLibrary(user.id);
   }
   return user;
+}
+
+/**
+ * An account with no password, for sign-in through Clerk: an invited client,
+ * or a coach who signed up and waits for approval (pending). The hash is left
+ * empty, which verifyPassword never accepts, so the old sign-in can't open it.
+ */
+export function createPasswordlessUser(email: string, role: Role, clientId: number | null, pending?: { name: string; business: string | null }) {
+  const data = getData();
+  const normalized = email.trim().toLowerCase();
+  if (data.users.some((u) => u.email === normalized)) throw new Error("That email already has an account");
+  const user = {
+    id: allocId("users"),
+    email: normalized,
+    password_hash: "",
+    role,
+    client_id: clientId,
+    must_change_password: false,
+    created_at: new Date().toISOString(),
+    ...(pending ? { pending: { ...pending, at: new Date().toISOString() } } : {}),
+  };
+  data.users.push(user);
+  persist();
+  // A coach gets their library when the owner lets them in (approveCoach).
+  return user;
+}
+
+/** The owner lets a signed-up coach in: their own copy of the presets, and no longer pending. */
+export function approveCoach(coachId: number): boolean {
+  const user = getData().users.find((u) => u.id === coachId && u.role === "coach" && u.pending);
+  if (!user) return false;
+  delete user.pending;
+  // Their first sign-in opens the welcome steps (/welcome) before anything else.
+  user.onboarding = true;
+  persist();
+  seedCoachLibrary(user.id);
+  return true;
 }
 
 export function setPassword(userId: number, password: string, mustChange: boolean) {

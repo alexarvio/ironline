@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { clerkOn } from "../../lib/clerk";
 import { completePasswordResetAction } from "../../lib/auth-actions";
 import { resetTokenValid } from "../../lib/passwordReset";
 import PasswordInput from "../PasswordInput";
@@ -7,6 +9,7 @@ import PasswordInput from "../PasswordInput";
 // Where the emailed link lands: choose a new password (lib/passwordReset.ts).
 // A used, expired or made-up link gets a way to ask for a new one instead.
 export default async function ResetPasswordPage({ searchParams }: { searchParams: Promise<{ token?: string; error?: string }> }) {
+  if (clerkOn()) redirect("/login");
   const { token = "", error } = await searchParams;
   const valid = error !== "expired" && (await resetTokenValid(token));
 

@@ -1,10 +1,9 @@
-import Image from "next/image";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { resetsAvailable } from "../lib/passwordReset";
-import { loginAction } from "../lib/auth-actions";
-import PasswordInput from "./PasswordInput";
 import { ensureCoachFromEnv, ensureOwnerFromEnv, getSessionUser, resetCoachFromEnv, resetWorkspaceFromEnv } from "../lib/auth";
+import { LoginCard } from "./AuthCards";
+import { clerkOn } from "../lib/clerk";
+import { SignInFlow } from "./ClerkFlows";
 
 export default async function LoginPage({
   searchParams,
@@ -30,50 +29,7 @@ export default async function LoginPage({
   }
 
   const { error, deleted, reset } = await searchParams;
-
-  return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-brand">
-          <Image src="/brand/logo.png" alt="" width={19} height={32} priority />
-          Ironline
-        </div>
-        <h1 className="auth-title">Sign in</h1>
-
-        {deleted && <p className="auth-ok">Your account and everything in it has been deleted.</p>}
-        {reset && <p className="auth-ok">Password saved. Sign in with your new one.</p>}
-        {error === "locked" ? (
-          <p className="auth-error">Too many attempts. Try again in 15 minutes.</p>
-        ) : (
-          error && <p className="auth-error">Wrong email or password.</p>
-        )}
-
-        <form action={loginAction} className="auth-form">
-          <label className="auth-field">
-            <span>Email</span>
-            <input name="email" type="email" autoComplete="username" required autoFocus />
-          </label>
-          <label className="auth-field">
-            <span>Password</span>
-            <PasswordInput name="password" autoComplete="current-password" />
-          </label>
-          <button className="btn auth-submit" type="submit">
-            Sign in
-          </button>
-        </form>
-
-        {resetsAvailable() && (
-          <p className="auth-note">
-            <Link href="/login/forgot">Forgot your password?</Link>
-          </p>
-        )}
-        <p className="auth-note">
-          Don&rsquo;t have an account? Your coach creates it for you.
-        </p>
-        <p className="auth-note auth-legal">
-          <Link href="/privacy">Privacy policy</Link> · <Link href="/support">Support</Link>
-        </p>
-      </div>
-    </div>
-  );
+  // Sign-in through Clerk: no passwords (lib/clerk.ts).
+  if (clerkOn()) return <SignInFlow notice={deleted ? "Your account and everything in it has been deleted." : null} />;
+  return <LoginCard error={error} deleted={deleted} reset={reset} canReset={resetsAvailable()} />;
 }

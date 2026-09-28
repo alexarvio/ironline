@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import type { NextFetchEvent, NextRequest } from "next/server";
+import { clerkMiddleware } from "@clerk/nextjs/server";
 
 // Next 16 renamed `middleware.ts` to `proxy.ts` — same mechanism, new name.
 //
@@ -15,13 +16,33 @@ import type { NextRequest } from "next/server";
 // up here.
 
 // The privacy policy and support page are public: the App Store links to them.
-const PUBLIC_PATHS = ["/login", "/privacy", "/support"];
+// /signup, /invite, /sso-callback and /auth/* are Clerk's way in (26 Sep).
+// /api/dev: local-only tools that refuse to run on a server (and are never deployed).
+const PUBLIC_PATHS = ["/login", "/privacy", "/support", "/signup", "/invite", "/sso-callback", "/auth", "/api/dev"];
 
-export function proxy(request: NextRequest) {
+// With sign-in through Clerk (lib/clerk.ts: AUTH_PROVIDER=clerk), Clerk's
+// middleware runs instead: it reads the session so auth() works on the
+// server, and sends a signed-out visitor to /login. Our guards still decide
+// everything else, as before.
+const clerkOn = process.env.AUTH_PROVIDER === "clerk" && !!process.env.CLERK_SECRET_KEY && !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+const isPublic = (pathname: string) => PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+// Built only when on, so the live app without Clerk keys never loads it.
+// Our own sign-in and sign-up pages, never Clerk's hosted ones.
+const withClerk = !clerkOn ? null : clerkMiddleware(async (auth, request) => {
+  if (isPublic(request.nextUrl.pathname)) return;
+  const { userId } = await auth();
+  if (userId) return;
+  const url = request.nextUrl.clone();
+  url.pathname = "/login";
+  url.search = "";
+  return NextResponse.redirect(url);
+}, { signInUrl: "/login", signUpUrl: "/signup" });
+
+export function proxy(request: NextRequest, event: NextFetchEvent) {
+  if (withClerk) return withClerk(request, event);
   const { pathname } = request.nextUrl;
 
-  const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-  if (isPublic) return NextResponse.next();
+  if (isPublic(pathname)) return NextResponse.next();
 
   const hasSession = request.cookies.has("ironline_session");
   if (hasSession) return NextResponse.next();

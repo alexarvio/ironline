@@ -1,8 +1,7 @@
-import Image from "next/image";
 import { redirect } from "next/navigation";
-import { changePasswordAction } from "../../lib/auth-actions";
-import PasswordInput from "../PasswordInput";
 import { getSessionUser } from "../../lib/auth";
+import { ChangePasswordCard } from "../AuthCards";
+import { clerkOn } from "../../lib/clerk";
 
 // Shown once, after a coach hands out a temporary password. Every guard
 // redirects here while must_change_password is set, so there's no way to
@@ -12,6 +11,8 @@ export default async function ChangePasswordPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
+  // No passwords with Clerk.
+  if (clerkOn()) redirect("/auth/continue");
   const user = await getSessionUser();
   if (!user) redirect("/login");
   if (!user.must_change_password) {
@@ -19,36 +20,5 @@ export default async function ChangePasswordPage({
   }
 
   const { error } = await searchParams;
-
-  return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-brand">
-          <Image src="/brand/logo.png" alt="" width={19} height={32} priority />
-          Ironline
-        </div>
-        <h1 className="auth-title">Choose a password</h1>
-        <p className="auth-note auth-note-top">
-          You&rsquo;re signed in with a temporary password. Pick your own to continue.
-        </p>
-
-        {error === "short" && <p className="auth-error">Use at least 8 characters.</p>}
-        {error === "match" && <p className="auth-error">Those two didn&rsquo;t match.</p>}
-
-        <form action={changePasswordAction} className="auth-form">
-          <label className="auth-field">
-            <span>New password</span>
-            <PasswordInput name="password" autoComplete="new-password" minLength={8} autoFocus />
-          </label>
-          <label className="auth-field">
-            <span>Confirm password</span>
-            <PasswordInput name="confirm" autoComplete="new-password" minLength={8} />
-          </label>
-          <button className="btn auth-submit" type="submit">
-            Save and continue
-          </button>
-        </form>
-      </div>
-    </div>
-  );
+  return <ChangePasswordCard error={error} />;
 }
