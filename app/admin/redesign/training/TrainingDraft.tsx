@@ -691,6 +691,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                     {s.note && (
                       <span className="rd-tag note" title={`${firstName}'s note: ${s.note}`} aria-label={`${firstName} left a note: ${s.note}`}>
                         <ChatIcon />
+                        <span className="rd-tag-note-text">&ldquo;{s.note}&rdquo;</span>
                       </span>
                     )}
                     {(() => {
