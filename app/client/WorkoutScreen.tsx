@@ -302,7 +302,7 @@ export default function WorkoutScreen({
                 <div className="wo-kicker">
                   Cardio {p.index + 1} of {day.cardio.length}
                 </div>
-                <CardioCard cardio={day.cardio[p.index]} index={day.exercises.length + p.index + 1} />
+                <CardioCard cardio={day.cardio[p.index]} index={day.exercises.length + p.index + 1} coachName={coachName} />
               </div>
             ) : (
               <div className="wo-page-inner wo-wrap">

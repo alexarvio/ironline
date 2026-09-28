@@ -17435,3 +17435,7 @@ button.ci-hint { cursor: pointer; }
 .app-bottom-nav { position: relative; }
 .app-chat-return { position: absolute; bottom: calc(100% + 12px); left: 50%; z-index: 5; display: inline-flex; align-items: center; gap: 4px; height: 40px; padding: 0 16px 0 10px; border: 0; border-radius: 999px; background: #141a24; box-shadow: 0 10px 24px -12px rgba(8, 20, 50, 0.6); font: inherit; font-size: 14px; font-weight: 700; color: #fff; white-space: nowrap; transform: translateX(-50%); cursor: pointer; }
 .app-chat-return svg { width: 18px; height: 18px; }
+
+/* Cardio swap (28 Sep): the client's button under Mark as done. */
+.ts-cardio-swap { display: block; width: 100%; margin-top: 8px; padding: 8px 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 700; color: #2f5d8f; cursor: pointer; }
+.ts-cardio-swap:disabled { opacity: 0.5; }

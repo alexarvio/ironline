@@ -404,7 +404,8 @@ function CardioFold({ cardio, index, done }: { cardio: SessionCardio; index: num
       <button type="button" className="so-card-row so-card-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <span className={`so-num${cardio.done ? " done" : ""}`}>{index}</span>
         <span className="so-card-main">
-          <span className="so-card-name">{cardio.name}</span>
+          <span className="so-card-name">{cardio.swap ?? cardio.name}</span>
+          {cardio.swap && <span className="so-card-summary">Swapped for {cardio.swap}</span>}
         </span>
         <span className={`so-card-chev${open ? " up" : ""}`} aria-hidden="true" />
       </button>

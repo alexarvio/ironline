@@ -330,6 +330,10 @@ export type CardioEntry = {
   distance?: string;
   notes: string;
   order_index: number;
+  /** The client did something else instead (the bike was taken): what, in their words or one of the coach's alternatives. The prescription stays, so the coach sees asked against done. */
+  swap?: { name: string; at: string };
+  /** What the coach offers instead, each with an optional note. Names, as cardio is typed, not picked from the library. */
+  alternatives?: { name: string; note: string | null }[];
 };
 
 /** The client ticked a cardio entry off. One row per entry; removing the

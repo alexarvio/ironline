@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { saveSkipReasonAction, setCardioDoneAction } from "../lib/actions";
+import { clearCardioSwapAction, saveSkipReasonAction, setCardioDoneAction, swapCardioAction } from "../lib/actions";
+import AlternativesSheet from "./AlternativesSheet";
 import ExerciseCoachNote from "./ExerciseCoachNote";
 import type { VideoAsk } from "./VideoAskSheet";
 import type { GymOption } from "./GymPicker";
@@ -13,7 +14,8 @@ import type { GymOption } from "./GymPicker";
 // shape except what the session itself adds (begun, ended, note, swap).
 
 export type SessionSet = { id: number; setNumber: number; weight: number | null; reps: number | null; rpe: number | null };
-export type SessionCardio = { id: number; name: string; time: string; pace: string; incline: string; distance: string; notes: string; done: boolean };
+/** swap: what the client did instead (the bike was taken); alternatives: what the coach offers. */
+export type SessionCardio = { id: number; name: string; time: string; pace: string; incline: string; distance: string; notes: string; done: boolean; swap: string | null; alternatives: { name: string; note: string | null }[] };
 export type LastSet = { setNumber: number; weight: number | null; reps: number | null; rpe: number | null };
 export type HistoryEntry = { date: string; gym: string | null; sets: LastSet[] };
 
@@ -222,9 +224,11 @@ export function CoachNote({ assignmentId, note }: { assignmentId: number | null;
 }
 
 // Cardio: the targets as tiles, the coach's note, one button to tick it
-// off, a second tap to undo.
-export function CardioCard({ cardio, index, readOnly = false }: { cardio: SessionCardio; index: number; readOnly?: boolean }) {
+// off, a second tap to undo. Bike taken: Swap says what was done instead
+// (the coach's alternatives, or typed), which ticks it off too (28 Sep).
+export function CardioCard({ cardio, index, readOnly = false, coachName = "Your coach" }: { cardio: SessionCardio; index: number; readOnly?: boolean; coachName?: string }) {
   const [pending, startTransition] = useTransition();
+  const [swapOpen, setSwapOpen] = useState(false);
   const done = cardio.done;
   const cells = (
     [
@@ -238,8 +242,20 @@ export function CardioCard({ cardio, index, readOnly = false }: { cardio: Sessio
     <div className={`ts-card ts-cardio${done ? " done" : ""}`}>
       <div className="ts-card-head">
         <span className={`ts-circle ${done ? "done" : "active"}`}>{done ? "✓" : index}</span>
-        <span className="ts-card-name">{cardio.name}</span>
+        <span className="ts-card-name">{cardio.swap ?? cardio.name}</span>
       </div>
+      {cardio.swap && (
+        <div className="wo-swap-banner">
+          <span>
+            Swapped from <b>{cardio.name}</b>. {coachName} will see this.
+          </span>
+          {!readOnly && (
+            <button type="button" onClick={() => startTransition(() => clearCardioSwapAction(cardio.id))}>
+              Undo
+            </button>
+          )}
+        </div>
+      )}
       {cells.length > 0 && (
         <div className="ts-cardio-grid" style={{ gridTemplateColumns: `repeat(${cells.length}, minmax(0, 1fr))` }}>
           {cells.map(([label, v]) => (
@@ -260,6 +276,29 @@ export function CardioCard({ cardio, index, readOnly = false }: { cardio: Sessio
         >
           {done ? "Done ✓ · tap to undo" : "Mark as done"}
         </button>
+      )}
+      {!readOnly && (
+        <button type="button" className="ts-cardio-swap" onClick={() => setSwapOpen(true)} disabled={pending}>
+          {cardio.swap ? "Change the swap" : "Swap for something else"}
+        </button>
+      )}
+      {swapOpen && (
+        <AlternativesSheet
+          exerciseName={cardio.name}
+          coachName={coachName}
+          suggested={cardio.alternatives.map((a, i) => ({ id: i, name: a.name, note: a.note }))}
+          swapped={cardio.swap ? { libraryExerciseId: null, name: cardio.swap } : null}
+          onPick={(choice) => {
+            setSwapOpen(false);
+            const name = choice.libraryExerciseId != null ? cardio.alternatives[choice.libraryExerciseId]?.name : choice.customName;
+            if (name) startTransition(() => swapCardioAction(cardio.id, name));
+          }}
+          onClear={() => {
+            setSwapOpen(false);
+            startTransition(() => clearCardioSwapAction(cardio.id));
+          }}
+          onClose={() => setSwapOpen(false)}
+        />
       )}
     </div>
   );
