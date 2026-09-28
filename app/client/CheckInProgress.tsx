@@ -103,27 +103,12 @@ export default function CheckInProgress({ history, today }: { history: CheckInHi
     writeStore("session", RANGE_KEY, r);
   };
 
-  // A sideways swipe anywhere under the chips (the chips scroll themselves)
-  // steps to the next metric: over 40px across with under 30px up or down.
-  // A finger held on the chart is scrubbing it, never a swipe.
-  const swipe = useRef<{ x: number; y: number } | null>(null);
-  const onTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length !== 1 || (e.target as HTMLElement).closest(".pg-chips")) return;
-    swipe.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  };
-  const onTouchEnd = (e: React.TouchEvent) => {
-    const s = swipe.current;
-    swipe.current = null;
-    if (!s || (e.currentTarget as HTMLElement).querySelector(".pg-chart.scrubbing")) return;
-    const dx = e.changedTouches[0].clientX - s.x;
-    const dy = e.changedTouches[0].clientY - s.y;
-    if (Math.abs(dx) > 40 && Math.abs(dy) < 30) pick(index + (dx < 0 ? 1 : -1));
-  };
-
+  // The metric changes from the chips only (28 Sep): the chart is for
+  // reading values with a finger, not for swiping between metrics.
   if (!series) return <p className="ci-empty">Nothing logged yet. Your first check-in shows up here.</p>;
 
   return (
-    <div className="pg-view" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={() => (swipe.current = null)}>
+    <div className="pg-view">
       <MetricChips tracked={tracked} active={index} onPick={pick} />
       <MetricChartCard key={series.key} series={series} today={today} range={range} onRange={chooseRange} />
       <MetricHistory series={series} today={today} page={page} onPage={setPage} />
@@ -268,26 +253,23 @@ function Chart({
   const dense = (range === "3M" || range === "All") && points.length > 60;
 
   // The marker: the latest point until the mouse is over the chart or a
-  // finger has been held on it a moment (a quick sideways touch is a swipe
-  // to the next metric, not a scrub), then the logged point nearest it;
-  // back to the latest on release.
+  // finger is on it, then the logged point nearest it as it moves; back to
+  // the latest on release. A finger shows the value the moment it lands;
+  // once it moves, a sideways move scrubs (the page stays still) and an up
+  // or down move is the page scrolling (the marker lets go).
   const latest = points.length - 1;
   const [sel, setSel] = useState(latest);
   const [scrubbing, setScrubbing] = useState(false);
   const dragging = useRef(false);
-  const hold = useRef<{ timer: ReturnType<typeof setTimeout> | null; x: number; sx: number; sy: number }>({ timer: null, x: 0, sx: 0, sy: 0 });
+  const touch = useRef<{ sx: number; sy: number; axis: "x" | "y" | null } | null>(null);
   useEffect(() => {
     const el = box.current;
-    // While a reading is held the page doesn't scroll under the finger.
+    // While scrubbing the page doesn't scroll under the finger.
     const stop = (e: TouchEvent) => {
       if (dragging.current) e.preventDefault();
     };
     el?.addEventListener("touchmove", stop, { passive: false });
-    const h = hold.current;
-    return () => {
-      el?.removeEventListener("touchmove", stop);
-      if (h.timer) clearTimeout(h.timer);
-    };
+    return () => el?.removeEventListener("touchmove", stop);
   }, []);
   const startDrag = (el: HTMLElement, pointerId: number, clientX: number) => {
     dragging.current = true;
@@ -320,8 +302,7 @@ function Chart({
     });
   };
   const release = () => {
-    if (hold.current.timer) clearTimeout(hold.current.timer);
-    hold.current.timer = null;
+    touch.current = null;
     dragging.current = false;
     setScrubbing(false);
     setSel(latest);
@@ -350,13 +331,13 @@ function Chart({
             startDrag(e.currentTarget, e.pointerId, e.clientX);
             return;
           }
-          const el = e.currentTarget;
-          const id = e.pointerId;
-          hold.current = { timer: setTimeout(() => startDrag(el, id, hold.current.x), 250), x: e.clientX, sx: e.clientX, sy: e.clientY };
+          // The value under the finger straight away; which way it moves decides the rest.
+          touch.current = { sx: e.clientX, sy: e.clientY, axis: null };
+          setScrubbing(true);
+          select(nearest(e.clientX));
         }}
         onPointerMove={(e) => {
           if (dragging.current) {
-            hold.current.x = e.clientX;
             select(nearest(e.clientX));
             return;
           }
@@ -364,12 +345,14 @@ function Chart({
             select(nearest(e.clientX));
             return;
           }
-          // Moving before the hold lands: a swipe or a scroll, not a scrub.
-          hold.current.x = e.clientX;
-          if (hold.current.timer && (Math.abs(e.clientX - hold.current.sx) > 8 || Math.abs(e.clientY - hold.current.sy) > 8)) {
-            clearTimeout(hold.current.timer);
-            hold.current.timer = null;
-          }
+          const t = touch.current;
+          if (!t || t.axis) return;
+          const dx = Math.abs(e.clientX - t.sx);
+          const dy = Math.abs(e.clientY - t.sy);
+          if (dx < 6 && dy < 6) return;
+          t.axis = dx >= dy ? "x" : "y";
+          if (t.axis === "x") startDrag(e.currentTarget, e.pointerId, e.clientX);
+          else release();
         }}
         onPointerUp={release}
         onPointerCancel={release}
