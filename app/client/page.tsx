@@ -467,7 +467,7 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
       return { kind: "deploy", track: "training", title, body: null, cta: "View training", ...base, actionTab: latestNote.action_tab ?? "training" };
     }
     if (latestNote.kind === "report") return { kind: "report", title: "Sent you a progress report", body: null, cta: "View report", ...base, actionTab: latestNote.action_tab ?? "settings" };
-    if (latestNote.action_tab === "nutrition") return { kind: "deploy", track: "nutrition", title, body: null, cta: "View nutrition", ...base };
+    if (latestNote.action_tab === "nutrition") return { kind: "deploy", track: "nutrition", title, body: detail, cta: "View nutrition", ...base };
     if (latestNote.action_tab === "invoices") return { kind: "invoice", title, body: null, cta: "View invoices", ...base };
     // A change the coach made: read what it was from its tab and its words.
     if (latestNote.kind === "general") {

@@ -1339,16 +1339,36 @@ export async function saveNutritionTargetsAction(formData: FormData) {
   };
   const phaseRaw = Number(formData.get("phaseId"));
   const phaseId = Number.isInteger(phaseRaw) && phaseRaw > 0 ? phaseRaw : null;
-  setNutritionDayTargets(
-    clientId,
-    { protein: num("t_protein"), carbs: num("t_carbs"), fats: num("t_fats") },
-    { protein: num("r_protein"), carbs: num("r_carbs"), fats: num("r_fats") },
-    phaseId
-  );
+  // What the targets were, so the client's note can say what moved
+  // ("Protein on training days 180 → 190 g"). A phase without its own
+  // targets yet shows the client-level ones, so those are its "before".
+  const data = getData();
+  const plan = data.nutrition_plans.find((p) => p.client_id === clientId);
+  const phase = phaseId ? data.client_phases.find((p) => p.id === phaseId && p.client_id === clientId) : null;
+  const before = (phase?.nutrition?.day_targets ?? plan?.day_targets) ?? null;
+  const waterBefore = plan?.water_l ?? null;
+  const training = { protein: num("t_protein"), carbs: num("t_carbs"), fats: num("t_fats") };
+  const rest = { protein: num("r_protein"), carbs: num("r_carbs"), fats: num("r_fats") };
+  setNutritionDayTargets(clientId, training, rest, phaseId);
   // Water rides along on the same form — it's one row inside the same card,
   // and a second Save button for a single number would be silly.
   if (formData.has("water")) setNutritionWater(clientId, num("water"));
-  if (phaseId == null || clientSeesPhase(phaseId)) logCoachActivity(clientId, "Updated your nutrition targets", { kind: "general", actionTab: "nutrition", actionLabel: "See your targets" });
+  if (phaseId == null || clientSeesPhase(phaseId)) {
+    const moved: string[] = [];
+    const say = (v: number | null) => (v == null ? "none" : String(v));
+    for (const [dayKey, dayWord, now] of [
+      ["training", "training days", training],
+      ["rest", "rest days", rest],
+    ] as const) {
+      for (const macro of ["protein", "carbs", "fats"] as const) {
+        const was = before?.[dayKey]?.[macro] ?? null;
+        if (was !== now[macro]) moved.push(`${macro.charAt(0).toUpperCase() + macro.slice(1)} on ${dayWord} ${say(was)} → ${say(now[macro])} g`);
+      }
+    }
+    if (formData.has("water") && waterBefore !== num("water")) moved.push(`Water ${say(waterBefore)} → ${say(num("water"))} L`);
+    // Saved with nothing changed: nothing to tell the client.
+    if (moved.length > 0) logCoachActivity(clientId, `Updated your nutrition targets: ${moved.join(" · ")}`, { kind: "general", actionTab: "nutrition", actionLabel: "See your targets" });
+  }
   revalidatePath("/admin");
   revalidatePath("/client");
 }
