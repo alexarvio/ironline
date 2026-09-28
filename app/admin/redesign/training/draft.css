@@ -268,8 +268,9 @@
 .rd-week.live .rd-pills i { background: #e3e8ef; }
 .rd-week[data-state="active"] .rd-pills i { background: #d3dce8; }
 .rd-week[data-state="active"] .rd-pills i.on { background: #1f7a3f; }
-/* A session not completed (week over, or skipped / ended early / partly logged): the amber of an unfinished session. */
+/* A session begun and left: the amber of an unfinished session. One the client couldn't do: red. Not started stays grey, week over or not. */
 .rd-pills i.missed, .rd-week.live .rd-pills i.missed, .rd-week[data-state="active"] .rd-pills i.missed { background: #d98a1c; }
+.rd-pills i.skipped, .rd-week.live .rd-pills i.skipped, .rd-week[data-state="active"] .rd-pills i.skipped { background: #c9403c; }
 .rd-note { display: inline-flex; align-items: center; gap: 8px; height: 34px; margin-right: 4px; padding: 0 12px 0 10px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; text-align: left; color: #141a24; cursor: pointer; position: relative; white-space: nowrap; }
 .rd-note svg { width: 16px; height: 16px; color: #5b6474; }
 .rd-note span { display: flex; align-items: baseline; gap: 6px; font-size: 12.5px; font-weight: 700; }

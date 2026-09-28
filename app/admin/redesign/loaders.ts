@@ -125,22 +125,27 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     // as not done once its week is over, or sooner once the client skipped it,
     // ended it early or logged part of it.
     const over = i + 1 < liveIdx || stateOf(program) === "past";
-    // One dot a session, every session: green once the client completed it
-    // (every set logged, every cardio ticked), so the dots always count the
-    // sessions listed under the week; amber when it was not completed.
+    // One dot a session, every session, so the dots always count the
+    // sessions listed under the week: green once the client completed it
+    // (every set logged, every cardio ticked); red when they said they
+    // couldn't do it; amber when it was begun and left; grey untouched,
+    // whether or not its week is over.
     const dots = days.map((d) => {
       const as = getAssignmentsForDay(d.id);
       const cs = listCardioForDay(d.id);
-      if (as.length === 0 && cs.length === 0) return { done: false, missed: false };
+      if (as.length === 0 && cs.length === 0) return { done: false, missed: false, skipped: false };
       const done = as.every((a) => getLogsForAssignment(a.id).length >= a.sets) && cs.every((c) => isCardioDone(c.id));
-      const touched = !!d.skip_reason || !!d.session_ended_at || as.some((a) => getLogsForAssignment(a.id).length > 0) || cs.some((c) => isCardioDone(c.id));
-      return { done, missed: !done && (over || touched) };
+      const skipped = !done && !!d.skip_reason;
+      const begun = !!d.session_ended_at || as.some((a) => getLogsForAssignment(a.id).length > 0) || cs.some((c) => isCardioDone(c.id));
+      return { done, missed: !done && !skipped && begun, skipped };
     });
+    void over;
     return {
       index: i + 1,
       label: programWeekLabel(program, n),
       trained: dots.map((x) => x.done),
       missed: dots.map((x) => x.missed),
+      skipped: dots.map((x) => x.skipped),
       state: (i + 1 < liveIdx ? "past" : i + 1 === liveIdx ? "live" : "ahead") as "past" | "live" | "ahead",
     };
   });

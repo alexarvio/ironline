@@ -84,8 +84,8 @@ export type DraftProgram = {
   endDate: string | null;
   weekIdx: number;
   liveIdx: number;
-  /** trained: each session completed; missed: not completed (its week is over, or it was skipped, ended early or partly logged). */
-  weeks: { index: number; label: string; trained: boolean[]; missed: boolean[]; state: "past" | "live" | "ahead" }[];
+  /** trained: each session completed; missed: begun and left unfinished; skipped: the client said they couldn't do it. Neither: not started. */
+  weeks: { index: number; label: string; trained: boolean[]; missed: boolean[]; skipped: boolean[]; state: "past" | "live" | "ahead" }[];
   sessions: DraftSession[];
   gyms: Gym[];
   /** The client's note to the coach on this programme. */
@@ -582,7 +582,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                   scroll={false}
                   href={`/admin/redesign/training?client=${clientId}&program=${program.id}&week=${w.index}`}
                   className={`rd-week ${w.state}`}
-                  title={`${w.label}: ${w.trained.filter(Boolean).length} of ${w.trained.length} sessions done${w.missed.some(Boolean) ? `, ${w.missed.filter(Boolean).length} not completed` : ""}`}
+                  title={`${w.label}: ${w.trained.filter(Boolean).length} of ${w.trained.length} sessions done${w.missed.some(Boolean) ? `, ${w.missed.filter(Boolean).length} unfinished` : ""}${w.skipped.some(Boolean) ? `, ${w.skipped.filter(Boolean).length} couldn't be done` : ""}`}
                   onClick={(e) => {
                     // A week held on this screen switches in place; the rest load from the server.
                     if (isLocal(w.index)) {
@@ -595,9 +595,9 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                     {w.label}
                     {w.state === "live" && <i className="rd-live-dot" title="This week" aria-label="This week" />}
                   </span>
-                  {/* One bar a session, green once the client did it, amber when they did not; the title says the same in words. */}
+                  {/* One bar a session: green done, red couldn't do it, amber begun and left, grey not started; the title says the same in words. */}
                   <span className="rd-pills" aria-hidden="true">
-                    {w.trained.length === 0 ? <em>no sessions</em> : w.trained.map((t, i) => <i key={i} className={t ? "on" : w.missed[i] ? "missed" : ""} />)}
+                    {w.trained.length === 0 ? <em>no sessions</em> : w.trained.map((t, i) => <i key={i} className={t ? "on" : w.skipped[i] ? "skipped" : w.missed[i] ? "missed" : ""} />)}
                   </span>
                   {/* The Monday the week starts on; the bars above already say how many sessions and how many are done. */}
                   <small>{weekDate(w.index) ?? (w.trained.length === 0 ? "no sessions" : w.state === "ahead" ? `${w.trained.length} planned` : `${w.trained.filter(Boolean).length} of ${w.trained.length} sessions`)}</small>
