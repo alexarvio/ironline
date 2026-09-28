@@ -116,35 +116,35 @@ export default function AppAccessButton({ clientId, firstName }: { clientId: num
 
                 {editing && (
                   <div className="rh-note-edit rh-access-edit">
+                    {/* The redesign's fields (rd-field). No Cancel: a click
+                        outside the dialog closes it. The dice inside the
+                        password box rolls another; the button sits on its row. */}
                     {!hasLogin && (
-                      <label className="rh-access-field">
-                        <span>Email</span>
-                        <input className="rh-access-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Their email" autoFocus={!email} />
+                      <label className="rd-field">
+                        Email
+                        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Their email" autoFocus={!email} />
                       </label>
                     )}
-                    <label className="rh-access-field">
-                      <span>Temporary password</span>
-                      <span className="rh-access-pw">
-                        <input className="rh-access-input mono" value={password} onChange={(e) => setPasswordText(e.target.value)} minLength={8} spellCheck={false} autoComplete="off" />
-                        <button type="button" className="rd-btn" onClick={() => setPasswordText(newTempPassword())}>
-                          Another
-                        </button>
-                      </span>
-                    </label>
+                    <div className="rh-access-row">
+                      <label className="rd-field rh-access-pw">
+                        Temporary password
+                        <span className="rh-access-pw-box">
+                          <input value={password} onChange={(e) => setPasswordText(e.target.value)} minLength={8} spellCheck={false} autoComplete="off" />
+                          <button type="button" className="rh-access-roll" onClick={() => setPasswordText(newTempPassword())} aria-label="Another password" title="Another">
+                            <DiceIcon />
+                          </button>
+                        </span>
+                      </label>
+                      <button type="button" className="rd-btn primary rh-access-go" onClick={save} disabled={busy || password.length < 8 || (!hasLogin && !email.trim())}>
+                        {busy ? "Saving…" : hasLogin ? "Set password" : "Give access"}
+                      </button>
+                    </div>
                     {access.mailReady && (
                       <label className="rh-access-check">
                         <input type="checkbox" checked={send} onChange={(e) => setSend(e.target.checked)} /> Email it to {firstName}
                       </label>
                     )}
                     {error && <p className="rh-access-error">{error}</p>}
-                    <div className="rh-note-actions">
-                      <button type="button" className="rd-btn" onClick={() => (hasLogin ? setEditing(false) : setShown(false))} disabled={busy}>
-                        Cancel
-                      </button>
-                      <button type="button" className="rd-btn primary" onClick={save} disabled={busy || password.length < 8 || (!hasLogin && !email.trim())}>
-                        {busy ? "Saving…" : hasLogin ? "Set password" : "Give access"}
-                      </button>
-                    </div>
                   </div>
                 )}
               </section>
@@ -153,5 +153,18 @@ export default function AppAccessButton({ clientId, firstName }: { clientId: num
         )}
       </Dialog>
     </>
+  );
+}
+
+function DiceIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
+      <circle cx="8.5" cy="8.5" r="1.1" fill="currentColor" stroke="none" />
+      <circle cx="15.5" cy="8.5" r="1.1" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none" />
+      <circle cx="8.5" cy="15.5" r="1.1" fill="currentColor" stroke="none" />
+      <circle cx="15.5" cy="15.5" r="1.1" fill="currentColor" stroke="none" />
+    </svg>
   );
 }
