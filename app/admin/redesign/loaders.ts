@@ -118,19 +118,26 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   const weeks = Array.from({ length: program.total_weeks }, (_, i) => {
     const n = program.start_week + i;
     const days = getWeek(clientId, n);
+    // Sessions have no set weekday (any order, any day), so a session counts
+    // as not done once its week is over, or sooner once the client skipped it,
+    // ended it early or logged part of it.
+    const over = i + 1 < liveIdx || stateOf(program) === "past";
     // One dot a session, every session: green once the client completed it
     // (every set logged, every cardio ticked), so the dots always count the
-    // sessions listed under the week.
-    const trained = days.map((d) => {
+    // sessions listed under the week; amber when it was not completed.
+    const dots = days.map((d) => {
       const as = getAssignmentsForDay(d.id);
       const cs = listCardioForDay(d.id);
-      if (as.length === 0 && cs.length === 0) return false;
-      return as.every((a) => getLogsForAssignment(a.id).length >= a.sets) && cs.every((c) => isCardioDone(c.id));
+      if (as.length === 0 && cs.length === 0) return { done: false, missed: false };
+      const done = as.every((a) => getLogsForAssignment(a.id).length >= a.sets) && cs.every((c) => isCardioDone(c.id));
+      const touched = !!d.skip_reason || !!d.session_ended_at || as.some((a) => getLogsForAssignment(a.id).length > 0) || cs.some((c) => isCardioDone(c.id));
+      return { done, missed: !done && (over || touched) };
     });
     return {
       index: i + 1,
       label: programWeekLabel(program, n),
-      trained,
+      trained: dots.map((x) => x.done),
+      missed: dots.map((x) => x.missed),
       state: (i + 1 < liveIdx ? "past" : i + 1 === liveIdx ? "live" : "ahead") as "past" | "live" | "ahead",
     };
   });
