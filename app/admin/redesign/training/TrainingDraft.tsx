@@ -715,7 +715,8 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                     })()}
                   </span>
                   <span className="rd-tagslot time">{s.duration != null && <span className="rd-tag time">{s.duration} min</span>}</span>
-                  <span className="rd-tagslot gym">{s.gym && <span className="rd-tag gym" title={s.gym}>{s.gym}</span>}</span>
+                  {/* The gym only matters with more than one: one gym, no slot, so nothing sits empty. */}
+                  {multiGym && <span className="rd-tagslot gym">{s.gym && <span className="rd-tag gym" title={s.gym}>{s.gym}</span>}</span>}
                   <span className="rd-tagslot state">{status ? <span className={`rd-pill ${status.cls}`}>{status.text}</span> : rows.length + s.cardio.length > 0 ? <span className="rd-pill idle">Not started</span> : null}</span>
                 </span>
                 <DropdownMenu modal={false}>

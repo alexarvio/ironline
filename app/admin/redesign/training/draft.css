@@ -514,6 +514,8 @@
 .rd-tagslot.gym { width: 132px; }
 .rd-tagslot.state { width: 92px; }
 .rd-tagslot .rd-tag, .rd-tagslot .rd-pill { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+/* The state pill the tags' height (22px) and centred like them, so a time next to it lines up. */
+.rd-tagslot .rd-pill { display: inline-flex; align-items: center; box-sizing: border-box; height: 22px; padding: 0 10px; line-height: 1; }
 .rd-tag.time { background: #f1f3f7; color: #8b93a1; }
 .rd-pill.idle { background: #e4e8ee; color: #5b6474; }
 
