@@ -473,12 +473,12 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
     if (latestNote.kind === "general") {
       const lower = latestNote.message.toLowerCase();
       if (latestNote.action_tab === "training") return { kind: "deploy", track: "training", title, body: detail, cta: lower.includes("video") ? "View exercise" : "View training", ...base, focusWeek };
-      if (lower.includes("goal")) return { kind: "goal", title, body: null, cta: "Open chat", ...base };
-      if (lower.includes("call") || lower.includes("meeting")) return { kind: "meeting", title, body: null, cta: "View meeting", ...base };
-      if (lower.includes("progress pictures")) return { kind: "comment", context: "photos", title, body: null, cta: "View pictures", ...base, actionTab: latestNote.action_tab ?? "home" };
-      if (lower.includes("check in") || lower.includes("check-in")) return { kind: "comment", context: "checkin", title, body: null, cta: "View check-in", ...base, actionTab: latestNote.action_tab ?? "home" };
-      if (lower.includes("calendar")) return { kind: "message", title, body: null, cta: "Open chat", ...base };
-      return { kind: "message", title, body: null, cta: latestNote.action_label ?? "Open", ...base };
+      if (lower.includes("goal")) return { kind: "goal", title, body: detail, cta: "Open chat", ...base };
+      if (lower.includes("call") || lower.includes("meeting")) return { kind: "meeting", title, body: detail, cta: "View meeting", ...base };
+      if (lower.includes("progress pictures")) return { kind: "comment", context: "photos", title, body: detail, cta: "View pictures", ...base, actionTab: latestNote.action_tab ?? "home" };
+      if (lower.includes("check in") || lower.includes("check-in")) return { kind: "comment", context: "checkin", title, body: detail, cta: "View check-in", ...base, actionTab: latestNote.action_tab ?? "home" };
+      if (lower.includes("calendar")) return { kind: "message", title, body: detail, cta: "Open chat", ...base };
+      return { kind: "message", title, body: detail, cta: latestNote.action_label ?? "Open", ...base };
     }
     if (latestNote.action_tab === "chat") return { kind: "message", title: "Sent you a message", body: latestNote.message, cta: "Reply", ...base };
     return { kind: "message", title: latestNote.action_label ?? "Sent you a note", body: latestNote.message, cta: latestNote.action_tab ? "Open" : "Open chat", ...base };

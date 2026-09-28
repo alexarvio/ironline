@@ -535,7 +535,7 @@ export async function addProgramWeekAction(formData: FormData) {
   // published days only, so without this the new week arrived empty.
   if (program.status === "deployed") publishWeek(clientId, newWeekNumber);
 
-  if (clientSeesTrainingWeek(clientId, newWeekNumber)) noteChange(clientId, "Added a week to your programme", { tab: "training", label: "See your training", key: "training-week" });
+  if (clientSeesTrainingWeek(clientId, newWeekNumber)) noteChange(clientId, `Added a week to your programme: Week ${newWeekNumber}${copyFrom ? `, a copy of week ${copyFrom}` : ""}`, { tab: "training", label: "See your training", key: "training-week", detail: `Week ${newWeekNumber}${copyFrom ? `, a copy of week ${copyFrom}` : ""}` });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -844,7 +844,7 @@ export async function addMeasurementFieldAction(formData: FormData) {
   const unit = String(formData.get("unit") || "").trim();
   if (!name) return;
   addMeasurementField(clientId, name, unit);
-  noteChange(clientId, "Changed what you check in", { tab: "home", label: "See your tasks", key: "checkin" });
+  checkInChange(clientId, `Added ${name}`);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -855,8 +855,9 @@ export async function updateMeasurementFieldAction(formData: FormData) {
   const name = String(formData.get("name") || "").trim();
   const unit = String(formData.get("unit") || "").trim();
   if (!name) return;
+  const was = getData().measurement_fields.find((f) => f.id === id);
   updateMeasurementField(id, name, unit);
-  noteChange(clientIdForMeasurementField(id), "Changed what you check in", { tab: "home", label: "See your tasks", key: "checkin" });
+  checkInChange(clientIdForMeasurementField(id), was && was.name !== name ? `${was.name} is now ${name}` : `${name} now in ${unit || "no unit"}`);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -864,8 +865,10 @@ export async function updateMeasurementFieldAction(formData: FormData) {
 export async function removeMeasurementFieldAction(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!(await coachForClient(clientIdForMeasurementField(id)))) return;
+  const owner = clientIdForMeasurementField(id);
+  const was = getData().measurement_fields.find((f) => f.id === id)?.name ?? "a measurement";
   removeMeasurementField(id);
-  noteChange(clientIdForMeasurementField(id), "Changed what you check in", { tab: "home", label: "See your tasks", key: "checkin" });
+  checkInChange(owner, `Removed ${was}`);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -905,7 +908,7 @@ export async function addMetricsFromLibraryAction(formData: FormData) {
   if (!Array.isArray(picks) || picks.length === 0) return;
   const rawPhase = String(formData.get("phaseId") ?? "");
   addMetricsFromLibraryPhased(clientId, picks, /^\d+$/.test(rawPhase) ? Number(rawPhase) : null);
-  noteChange(clientId, "Changed what you check in", { tab: "home", label: "See your tasks", key: "checkin" });
+  checkInChange(clientId, `Added ${picks.map((p) => p.name).join(", ")}${phaseWords(/^\d+$/.test(rawPhase) ? Number(rawPhase) : null)}`);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -930,13 +933,23 @@ export async function applyMetricChangesAction(input: {
   const phaseId = input.phaseId == null ? null : Number(input.phaseId);
   // Only this client's metrics: the ids come from the page.
   const mine = (id: number) => Number.isInteger(id) && clientIdForMetricDefinition(id) === clientId;
+  // The changes in words for the client's note, names read before the rows go.
+  const metricName = (id: number) => getData().metric_definitions.find((m) => m.id === id)?.name ?? "a metric";
+  const said: string[] = [];
+  const removedNames = (Array.isArray(input.removes) ? input.removes : []).filter(mine).map(metricName);
   for (const id of Array.isArray(input.removes) ? input.removes : []) if (mine(id)) removeMetricDefinition(id);
   for (const c of Array.isArray(input.cadence) ? input.cadence : []) {
-    if (mine(c.id) && (c.value === "daily" || c.value === "weekly")) setMetricCadence(c.id, c.value);
+    if (mine(c.id) && (c.value === "daily" || c.value === "weekly")) {
+      setMetricCadence(c.id, c.value);
+      said.push(`${metricName(c.id)} now ${c.value}`);
+    }
   }
   const askAtOk = (v: unknown): v is MetricAskAt => ASK_AT.some((a) => a.id === v);
   for (const a of Array.isArray(input.askAt) ? input.askAt : []) {
-    if (mine(a.id) && askAtOk(a.value)) setMetricAskAt(a.id, a.value);
+    if (mine(a.id) && askAtOk(a.value)) {
+      setMetricAskAt(a.id, a.value);
+      said.push(`${metricName(a.id)} asked ${a.value === "morning" ? "in the morning" : a.value === "evening" ? "in the evening" : "any time"}`);
+    }
   }
   if (Array.isArray(input.order) && input.order.length && input.order.every(mine)) setMetricOrder(clientId, input.order);
   const adds = (Array.isArray(input.adds) ? input.adds : [])
@@ -952,7 +965,8 @@ export async function applyMetricChangesAction(input: {
     const made = getData().metric_definitions.filter((m) => m.client_id === clientId && m.name.trim().toLowerCase() === name).sort((x, y) => y.id - x.id)[0];
     if (made) setMetricAskAt(made.id, a.askAt);
   }
-  noteChange(clientId, "Changed what you check in", { tab: "home", label: "See your tasks", key: "checkin" });
+  const parts = [adds.length ? `Added ${adds.map((a) => a.name).join(", ")}` : null, removedNames.length ? `Removed ${removedNames.join(", ")}` : null, ...said, Array.isArray(input.order) && input.order.length ? "Reordered them" : null].filter(Boolean);
+  if (parts.length) checkInChange(clientId, `${parts.join(", ")}${phaseWords(phaseId)}`);
   revalidatePath("/admin");
   revalidatePath("/client");
   return true;
@@ -969,7 +983,7 @@ export async function addMetricDefinitionAction(formData: FormData) {
   // Set up inside a phase: that phase is what asks for it.
   const rawPhase = String(formData.get("phaseId") ?? "");
   addMetricDefinition(clientId, category, name, unit, frequency, /^\d+$/.test(rawPhase) ? Number(rawPhase) : null);
-  noteChange(clientId, "Changed what you check in", { tab: "home", label: "See your tasks", key: "checkin" });
+  checkInChange(clientId, `Added ${name}${phaseWords(/^\d+$/.test(rawPhase) ? Number(rawPhase) : null)}`);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -989,8 +1003,9 @@ export async function updateMetricDefinitionAction(formData: FormData) {
   const name = String(formData.get("name") || "").trim();
   const unit = String(formData.get("unit") || "").trim();
   if (!name) return;
+  const was = getData().metric_definitions.find((m) => m.id === id);
   updateMetricDefinition(id, category, name, unit);
-  noteChange(clientIdForMetricDefinition(id), "Changed what you check in", { tab: "home", label: "See your tasks", key: "checkin" });
+  checkInChange(clientIdForMetricDefinition(id), was && was.name !== name ? `${was.name} is now ${name}` : `${name} now in ${unit || "no unit"}`);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -998,8 +1013,10 @@ export async function updateMetricDefinitionAction(formData: FormData) {
 export async function removeMetricDefinitionAction(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!(await coachForClient(clientIdForMetricDefinition(id)))) return;
+  const owner = clientIdForMetricDefinition(id);
+  const was = getData().metric_definitions.find((m) => m.id === id)?.name ?? "a metric";
   removeMetricDefinition(id);
-  noteChange(clientIdForMetricDefinition(id), "Changed what you check in", { tab: "home", label: "See your tasks", key: "checkin" });
+  checkInChange(owner, `Removed ${was}`);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1120,7 +1137,7 @@ export async function addPhotoSlotAction(formData: FormData) {
   const label = String(formData.get("label") || "").trim();
   if (!label) return;
   addPhotoSlot(clientId, label);
-  noteChange(clientId, "Changed your progress pictures", { tab: "home", label: "See your tasks", key: "photos" });
+  noteChange(clientId, `Changed your progress pictures: Added a ${label} picture`, { tab: "home", label: "See your tasks", key: "photos", detail: `Added a ${label} picture` });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1150,7 +1167,7 @@ export async function setPhotoCadenceAction(formData: FormData) {
   const cadence = (["weekly", "biweekly", "monthly", "sixweekly"] as const).find((c) => c === raw);
   if (!cadence) return;
   setPhotoCadence(clientId, cadence);
-  noteChange(clientId, "Changed your progress pictures", { tab: "home", label: "See your tasks", key: "photos" });
+  noteChange(clientId, `Changed your progress pictures: Now every ${CADENCE_WORDS[cadence]}`, { tab: "home", label: "See your tasks", key: "photos", detail: `Now every ${CADENCE_WORDS[cadence]}` });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1183,7 +1200,8 @@ export async function savePhotoScheduleAction(
   setPhotoCadence(clientId, cadence);
   setPhotoStartDate(clientId, startDate);
   setPhotoInstructions(clientId, String(schedule.instructions ?? "").slice(0, 600));
-  noteChange(clientId, "Changed your progress pictures", { tab: "home", label: "See your tasks", key: "photos" });
+  const words = `Every ${CADENCE_WORDS[cadence]}${startDate ? ` from ${new Date(`${startDate}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : ""}${String(schedule.instructions ?? "").trim() ? ", with instructions" : ""}`;
+  noteChange(clientId, `Changed your progress pictures: ${words}`, { tab: "home", label: "See your tasks", key: "photos", detail: words });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1250,7 +1268,10 @@ export async function requestExerciseVideoAction(assignmentId: number, note: str
   const id = Number(assignmentId);
   if (!Number.isInteger(id) || !(await coachForClient(getClientIdForAssignment(id)))) return;
   requestExerciseVideo(id, String(note ?? ""));
-  if (clientSeesAssignment(id)) noteChange(getClientIdForAssignment(id), "Asked you for a video of an exercise", { tab: "training", label: "See which", key: `video-ask:${id}` });
+  if (clientSeesAssignment(id)) {
+    const w = assignmentWords(id);
+    noteChange(getClientIdForAssignment(id), `Asked you for a video of ${w.name} in ${w.dayId != null ? dayWords(w.dayId) : "a session"}`, { tab: "training", label: "See which", key: `video-ask:${id}`, ref: w.dayId ?? undefined });
+  }
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1377,16 +1398,26 @@ export async function saveWaterGoalAction(formData: FormData) {
   const clientId = Number(formData.get("clientId"));
   if (!(await coachForClient(clientId))) return;
   const raw = String(formData.get("water") ?? "").trim();
-  setNutritionWater(clientId, raw === "" ? null : Number(raw));
-  noteChange(clientId, "Updated your water goal", { tab: "nutrition", label: "See your targets", key: "water" });
+  const before = getData().nutrition_plans.find((p) => p.client_id === clientId)?.water_l ?? null;
+  const now = raw === "" ? null : Number(raw);
+  setNutritionWater(clientId, now);
+  if (before !== now) noteChange(clientId, `Updated your water goal: ${before ?? "none"} → ${now ?? "none"} L`, { tab: "nutrition", label: "See your targets", key: "water", detail: `${before ?? "none"} → ${now ?? "none"} L` });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
 
 export async function applySupplementChangesAction(clientId: number, changes: SupplementChanges) {
   if (!(await coachForClient(clientId))) return;
+  const rowsBefore = getData().nutrition_plans.find((p) => p.client_id === clientId)?.supplement_rows ?? [];
+  const removedNames = (changes.removedIds ?? []).map((id) => rowsBefore.find((r) => r.id === id)?.name.trim() || "a row");
   applySupplementChanges(clientId, changes);
-  noteChange(clientId, "Updated your supplements", { tab: "nutrition", label: "See your supplements", key: "supplements" });
+  const parts = [
+    changes.added?.length ? `Added ${changes.added.map((a) => a.name.trim() || "a row").join(", ")}` : null,
+    removedNames.length ? `Removed ${removedNames.join(", ")}` : null,
+    changes.updated?.length ? `Changed ${changes.updated.map((u) => u.name.trim() || "a row").join(", ")}` : null,
+    changes.order?.length ? "Reordered them" : null,
+  ].filter(Boolean);
+  if (parts.length) supplementChange(clientId, parts.join(", "));
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1396,7 +1427,7 @@ export async function addSupplementRowAction(formData: FormData) {
   // The name typed in the footer box starts the row off; an empty box still
   // adds a blank row, which is how "+ Add item" in the band works.
   addSupplementRow(Number(formData.get("clientId")), String(formData.get("name") ?? ""));
-  noteChange(Number(formData.get("clientId")), "Updated your supplements", { tab: "nutrition", label: "See your supplements", key: "supplements" });
+  supplementChange(Number(formData.get("clientId")), `Added ${String(formData.get("name") ?? "").trim() || "a row"}`);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1407,16 +1438,19 @@ export async function updateSupplementRowAction(formData: FormData) {
   const rowId = Number(formData.get("rowId"));
   const field = String(formData.get("field") || "");
   if (field !== "name" && field !== "quantity" && field !== "timing" && field !== "notes") return;
+  const rowName = getData().nutrition_plans.find((p) => p.client_id === clientId)?.supplement_rows?.find((r) => r.id === rowId)?.name.trim() || "a row";
+  const value = String(formData.get("value") ?? "").trim();
   updateSupplementRow(clientId, rowId, field, String(formData.get("value") ?? ""));
-  noteChange(clientId, "Updated your supplements", { tab: "nutrition", label: "See your supplements", key: "supplements" });
+  supplementChange(clientId, field === "name" ? `${rowName} is now ${value || "unnamed"}` : `${rowName} ${field} now ${value || "blank"}`);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
 
 export async function removeSupplementRowAction(formData: FormData) {
   if (!(await coachForClient(Number(formData.get("clientId"))))) return;
+  const gone = getData().nutrition_plans.find((p) => p.client_id === Number(formData.get("clientId")))?.supplement_rows?.find((r) => r.id === Number(formData.get("rowId")))?.name.trim() || "a row";
   removeSupplementRow(Number(formData.get("clientId")), Number(formData.get("rowId")));
-  noteChange(Number(formData.get("clientId")), "Updated your supplements", { tab: "nutrition", label: "See your supplements", key: "supplements" });
+  supplementChange(Number(formData.get("clientId")), `Removed ${gone}`);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1498,7 +1532,7 @@ export async function setCheckInDayAction(formData: FormData) {
   const day = String(formData.get("check_in_day") ?? "").trim();
   if (!(await coachForClient(clientId))) return;
   saveClientProfile({ ...getClientProfile(clientId), check_in_day: day || null });
-  noteChange(clientId, "Moved your weekly check-in day", { tab: "home", label: "See your tasks", key: "checkin-day" });
+  noteChange(clientId, `Moved your weekly check-in day: ${day ? `Now ${day}` : "No set day now"}`, { tab: "home", label: "See your tasks", key: "checkin-day", detail: day ? `Now ${day}` : "No set day now" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1687,7 +1721,7 @@ export async function updateClientGoalAction(formData: FormData) {
   updateClientGoal(id, text, trackingFor(clientId, coach.id, parseGoalTracking(formData.get("tracking"))));
   const startRaw = String(formData.get("start") ?? "");
   if (/^\d{4}-\d{2}-\d{2}$/.test(startRaw)) setClientGoalStart(id, startRaw);
-  noteChange(clientId, "Updated one of your goals", { tab: "home", label: "See your goals", key: "goal-update" });
+  noteChange(clientId, `Updated one of your goals: ${text}`, { tab: "home", label: "See your goals", key: "goal-update", detail: text });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -3017,6 +3051,21 @@ function assignmentWords(assignmentId: number): { name: string; dayId: number | 
 function trainingChange(clientId: number | null | undefined, programDayId: number | null | undefined, detail: string) {
   noteChange(clientId, `Updated your training: ${detail}`, { tab: "training", label: "See your training", key: "training", ref: programDayId ?? undefined, detail });
 }
+// The same for the check-in's metrics ("Changed what you check in: Added
+// Screen time, Removed Mood for hyper") and the supplements.
+function checkInChange(clientId: number | null | undefined, detail: string) {
+  noteChange(clientId, `Changed what you check in: ${detail}`, { tab: "home", label: "See your tasks", key: "checkin", detail });
+}
+function supplementChange(clientId: number | null | undefined, detail: string) {
+  noteChange(clientId, `Updated your supplements: ${detail}`, { tab: "nutrition", label: "See your supplements", key: "supplements", detail });
+}
+/** " for hyper": the lifestyle phase a metric change belongs to, when it has one. */
+function phaseWords(phaseId: number | null): string {
+  if (phaseId == null) return "";
+  const name = getData().client_phases.find((p) => p.id === phaseId)?.name?.trim();
+  return name ? ` for ${name}` : "";
+}
+const CADENCE_WORDS: Record<"weekly" | "biweekly" | "monthly" | "sixweekly", string> = { weekly: "week", biweekly: "two weeks", monthly: "month", sixweekly: "six weeks" };
 
 // The session clock: a valid ISO timestamp from the phone, else now.
 function stampOrNow(at: unknown) {
