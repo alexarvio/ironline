@@ -16810,6 +16810,8 @@ button.pp-row { cursor: zoom-in; }
    rides over the photo (pulled back up by its own height), and once the
    banner has scrolled by it turns into a frosted bar in the page's colours. */
 .ci-one .ci-bar { position: sticky; top: 0; z-index: 5; height: var(--topbar-h); box-sizing: border-box; display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 12px; padding: 0 16px 10px; margin-bottom: calc(-1 * var(--topbar-h)); transition: background 0.2s ease, box-shadow 0.2s ease; }
+/* A top row still inside its banner (the progress pictures screen): pinned over the photo as before, no sticky. */
+.tr-banner.ci-banner > .ci-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 2; margin: 0; height: var(--topbar-h); box-sizing: border-box; display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 12px; padding: 0 16px 10px; }
 .ci-one .ci-bar.stuck { background: rgba(244, 247, 252, 0.9); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 1px 0 rgba(20, 26, 36, 0.06); }
 .ci-one .ci-bar.stuck .ci-back, .ci-one .ci-bar.stuck .ci-title { color: #141a24; }
 .ci-one .ci-bar.stuck .ci-count { background: #fff; border-color: #dfe3e8; color: #141a24; }
