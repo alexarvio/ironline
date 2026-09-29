@@ -5,7 +5,7 @@ import type { CheckInMetric } from "./CheckInScreen";
 
 // One line of the check-in "ledger": no box, just the metric on the page.
 // The coach's name for it in small capitals (green once filled), the last
-// reading under it ("Yesterday 2.5 L · tap to copy", which copies it in), a
+// reading under it ("Yesterday 2.5 L"; a tap on it copies it in), a
 // big number on the right with its unit, and a hairline under the lot. A
 // 1–N scale has round buttons under the line instead of a number; tapping
 // the chosen one again clears it.
@@ -78,7 +78,7 @@ const CheckInLine = forwardRef<HTMLInputElement, Props>(function CheckInLine({ m
               </span>
             ) : (
               <button type="button" id={hintId} className="ci-hint" onClick={copy} aria-label={`Copy ${when.toLowerCase() === "yesterday" ? "yesterday's" : "the last"} value, ${lastText(m)}`}>
-                {when} {lastText(m)} · tap to copy
+                {when} {lastText(m)}
               </button>
             ))}
         </div>

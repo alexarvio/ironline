@@ -1117,7 +1117,14 @@ export async function logMetricPeriodAction(formData: FormData) {
   const entries = pastWeekly ? getMetricEntries(definitions.map((d) => d.id)) : [];
   definitions.forEach((def) => {
     const raw = formData.get(`metric_${def.id}`);
-    if (raw === null || raw === "") return;
+    // A field not on the form is untouched. One sent empty is a reading the
+    // client cleared: it goes (a day sent as all done, one value deleted,
+    // used to come back done when the screen was opened again).
+    if (raw === null) return;
+    if (raw === "") {
+      if (getMetricEntries([def.id]).some((e) => e.period === period && e.value != null)) setMetricEntry(def.id, period, null);
+      return;
+    }
     // Phones on European locales type the decimal comma.
     const value = Number(String(raw).replace(",", "."));
     const stamp = entries.find((e) => e.metric_definition_id === def.id && e.period === period)?.logged_at ?? loggedAt;
