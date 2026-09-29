@@ -209,14 +209,14 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
         <span className="hl-text">
           <span className="hl-eyebrow">Lifestyle · {phase.name}</span>
           <span className="hl-title">{allIn ? "All logged today" : `${total - n} left to log today`}</span>
-          <span className="hl-sub">{weekWords(phase, today)}</span>
         </span>
         <span className="hl-chev" aria-hidden="true">
           <ChevronRightIcon />
         </span>
       </button>
-      {/* The phase's timeline, the phase cards' bar in sand: where in the phase today is. */}
+      {/* The phase's timeline, the phase cards' bar in sand, with the week and what is left over its right end. */}
       <div className="hl-bar">
+        <span className="hl-week">{weekWords(phase, today)}</span>
         <Bar pr={progressOf(phase, today, coachName)} small />
       </div>
 

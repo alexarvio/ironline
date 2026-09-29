@@ -17510,6 +17510,7 @@ button.ci-hint { cursor: pointer; }
 .hl-chev svg { width: 14px; height: 14px; }
 /* The timeline under the head: the phase cards' bar in sand, no sheen or pulse on a light card. */
 .hl-bar { position: relative; padding: 0 14px 14px; }
+.hl-week { display: block; margin: -4px 0 8px; text-align: right; font-size: 12.5px; font-weight: 600; color: #8b93a1; }
 .hl-bar .pc-bar { height: 6px; background: rgba(168, 118, 31, 0.16); }
 .hl-bar .pc-bar-fill { top: 0; bottom: 0; background: #a8761f; box-shadow: none; animation: none; }
 .hl-bar .pc-bar-knob { width: 14px; height: 14px; margin: -7px 0 0 -7px; border: 3px solid #a8761f; background: #fff; box-shadow: 0 0 0 4px rgba(168, 118, 31, 0.18); animation: none; }
