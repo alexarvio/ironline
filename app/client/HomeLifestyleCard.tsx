@@ -385,21 +385,7 @@ function MetricPage({
         </span>
       </div>
 
-      {logged && !editing ? (
-        <span className="hl-last static">{m.date ? "Logged" : "Logged today"}</span>
-      ) : m.last ? (
-        <button
-          type="button"
-          className="hl-last"
-          id={`hl-last-${keyOf(m)}`}
-          onClick={() => {
-            if (m.kind === "scale") setPick(m.last!.value);
-            else setDraft(fmt(m.last!.value, m.precision).replace(/,/g, ""));
-          }}
-        >
-          {valueWords(m, m.last.value)} on {mdy(m.last.date)}
-        </button>
-      ) : null}
+      {/* No line for what it was the day before (29 Sep): the page is the name, the field and Save. */}
 
       {showField ? (
         <form
@@ -439,7 +425,6 @@ function MetricPage({
                 enterKeyHint="done"
                 placeholder="0"
                 aria-label={`${m.name}${m.unit ? ` in ${m.unit}` : ""}`}
-                aria-describedby={m.last ? `hl-last-${keyOf(m)}` : undefined}
                 aria-invalid={outOfRange || undefined}
               />
               {m.unit && <span className="hl-unit">{m.unit}</span>}

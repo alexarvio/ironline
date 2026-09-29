@@ -17553,11 +17553,11 @@ button.ci-hint { cursor: pointer; }
 .hl-last { align-self: flex-start; min-height: 20px; margin: -7px 0 -6px; padding: 6px 0; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #8b93a1; text-align: left; cursor: pointer; }
 .hl-last.static { cursor: default; }
 .hl-row3 { display: flex; align-items: center; gap: 8px; margin: 0; }
-.hl-field { flex: 1; min-width: 0; height: 40px; box-sizing: border-box; border-radius: 999px; background: #F7F4EE; box-shadow: inset 0 0 0 1px rgba(168, 118, 31, 0.18); padding: 0 16px; display: flex; align-items: center; gap: 8px; }
+.hl-field { flex: 1; min-width: 0; height: 40px; box-sizing: border-box; border-radius: 999px; background: #F7F4EE; box-shadow: inset 0 0 0 1px rgba(168, 118, 31, 0.18); padding: 0 16px; display: flex; align-items: baseline; gap: 6px; }
 .hl-field:focus-within { box-shadow: inset 0 0 0 1.5px #a8761f; }
-.hl-field input { flex: 1; min-width: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; background: none; outline: none; font: inherit; font-size: 17px; font-weight: 800; line-height: 1; text-align: right; color: #141a24; }
+.hl-field input { flex: 1; min-width: 0; width: 100%; height: 40px; margin: 0; padding: 0; border: 0; background: none; outline: none; font: inherit; font-size: 17px; font-weight: 800; line-height: 40px; text-align: right; color: #141a24; }
 .hl-field input::placeholder { color: #8b93a1; }
-.hl-unit { flex: none; font-size: 13px; font-weight: 800; color: #8b93a1; }
+.hl-unit { flex: none; font-size: 13px; font-weight: 800; line-height: 40px; color: #8b93a1; }
 .hl-scale { padding: 0 4px; gap: 2px; }
 .hl-scale button { flex: 1; height: 32px; border: 0; border-radius: 999px; background: transparent; font: inherit; font-size: 15px; font-weight: 800; color: #5e4a2c; cursor: pointer; }
 .hl-scale button.on { background: #141a24; color: #fff; }
