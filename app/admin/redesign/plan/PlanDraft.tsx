@@ -173,7 +173,8 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
     else months.push({ label, start: i, span: 1 });
   });
   const cols: React.CSSProperties = { gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))`, width: `${(count / win) * 100}%`, transform: `translateX(${-((0.5 + intoWeek) / count) * 100}%)` };
-  const nowLeft = `calc(108px + (100% - 108px) * ${1.5 / win})`;
+  // The "now" line at today's spot: its week's column, plus how far into the week we are.
+  const nowLeft = `calc(108px + (100% - 108px) * ${(nowIdx + intoWeek) / count})`;
 
   const weekAt = (clientX: number) => {
     const el = areaRef.current;
@@ -329,7 +330,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
           </div>
         </div>
         <div className="rq-tl-scroll">
-          <div className="rq-tl" style={{ minWidth: Math.round(win * 63) }}>
+          <div className="rq-tl" style={{ minWidth: Math.round(count * 63) }}>
             <div className="rq-tl-row">
               <span />
               <div className="rq-tl-clip">
