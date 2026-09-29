@@ -116,7 +116,6 @@
 .rh-access-roll { position: absolute; top: 0; right: 4px; bottom: 0; width: 36px; display: inline-flex; align-items: center; justify-content: center; border: 0; background: none; color: #8b93a1; cursor: pointer; border-radius: 8px; }
 .rh-access-roll:hover { color: #141a24; }
 .rh-access-go { flex: none; height: 42px; }
-.rh-access-use { align-self: flex-start; margin-top: -6px; }
 .rh-access-check { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #313851; }
 .rh-access-error { margin: 0; font-size: 12.5px; font-weight: 600; color: #a32d2d; }
 .rh-access-given { display: flex; align-items: center; gap: 12px; }

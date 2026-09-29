@@ -31,8 +31,8 @@ export default function AppAccessButton({ clientId, firstName, initial }: { clie
 
   const edit = () => {
     setPasswordText(newTempPassword());
-    // The login's own address, or the card's when there is no login yet.
-    setEmail(access.email ?? access.cardEmail ?? "");
+    // The card's address: the one email a client has (a login follows it).
+    setEmail(access.cardEmail ?? access.email ?? "");
     setSend(access.mailReady);
     setError("");
     setEditing(true);
@@ -114,16 +114,13 @@ export default function AppAccessButton({ clientId, firstName, initial }: { clie
                     {/* The redesign's fields (rd-field). No Cancel: a click
                         outside the dialog closes it. The dice inside the
                         password box rolls another; the button sits on its row. */}
-                    {/* The sign-in email, new or changed; when the card says
-                        something else, one tap takes the card's. */}
-                    <label className="rd-field">
-                      {hasLogin ? "Signs in as" : "Email"}
-                      <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Their email" autoFocus={!email} />
-                    </label>
-                    {access.cardEmail && access.cardEmail.trim().toLowerCase() !== email.trim().toLowerCase() && (
-                      <button type="button" className="rd-ex-btn rh-edit rh-access-use" onClick={() => setEmail(access.cardEmail!)}>
-                        Use the card&rsquo;s email: {access.cardEmail}
-                      </button>
+                    {/* No login yet and no email on the card: ask for it here
+                        (it goes on the card too, as the login's address). */}
+                    {!hasLogin && (
+                      <label className="rd-field">
+                        Email
+                        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Their email" autoFocus={!email} />
+                      </label>
                     )}
                     <div className="rh-access-row">
                       <label className="rd-field rh-access-pw">

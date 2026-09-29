@@ -10,6 +10,7 @@ import {
   getActivityFeed,
   getAssignmentsForDay,
   getClientProfile,
+  syncClientLoginEmail,
   getMetricEntries,
   getCoachProfile,
   getClientProgramNoteMeta,
@@ -598,6 +599,7 @@ export function loadHome(clientId: number): DraftHome {
   // The client's login, the same shape clientAccessAction gives, read here
   // so the App access button has it with the page (it used to fetch it
   // after every client switch: one more round trip).
+  syncClientLoginEmail(clientId);
   const user = getUserForClient(clientId);
   const access = {
     email: user?.email ?? null,

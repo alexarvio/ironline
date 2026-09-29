@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { coachForClient, createUser, findUserByEmail, getUserForClient, setPassword, setUserEmail } from "./auth";
+import { coachForClient, createUser, findUserByEmail, getUserForClient, setPassword } from "./auth";
 import { mailConfigured, sendInviteEmail } from "./mail";
 import { appUrl } from "./passwordReset";
-import { getClient, getClientProfile, getCoachProfile } from "./queries";
+import { getClient, getClientProfile, getCoachProfile, saveClientProfile, syncClientLoginEmail } from "./queries";
 
 // A client's way into the app, from the coach's side in the redesign
 // (Home → App access). New clients start with no login: the coach builds
@@ -30,6 +30,7 @@ export type ClientAccess = {
 
 export async function clientAccessAction(clientId: number): Promise<ClientAccess | null> {
   if (!(await coachForClient(clientId))) return null;
+  syncClientLoginEmail(clientId);
   const user = getUserForClient(clientId);
   return {
     email: user?.email ?? null,
@@ -57,17 +58,10 @@ export async function setClientTempPasswordAction(
   password = String(password ?? "");
   if (password.length < 8) return { ok: false, error: "The password needs at least 8 characters." };
 
+  // The login's address is the card's (syncClientLoginEmail).
+  syncClientLoginEmail(clientId);
   let user = getUserForClient(clientId);
   if (user) {
-    // A different address typed with the new password: the login moves to
-    // it (the client's card and their login were made apart, and can differ).
-    const email = String(opts.email ?? "").trim().toLowerCase();
-    if (email && email !== user.email) {
-      if (!EMAIL_RE.test(email)) return { ok: false, error: "That email doesn't look right." };
-      if (findUserByEmail(email)) return { ok: false, error: "That email already has an account." };
-      setUserEmail(user.id, email);
-      user = getUserForClient(clientId)!;
-    }
     setPassword(user.id, password, true);
   } else {
     const email = String(opts.email ?? "").trim().toLowerCase();
@@ -79,6 +73,9 @@ export async function setClientTempPasswordAction(
       return { ok: false, error: error instanceof Error ? error.message : "The login could not be made." };
     }
     user = getUserForClient(clientId)!;
+    // The card had no email: this one is it now, so there is still just one.
+    const profile = getClientProfile(clientId);
+    if (!profile.email?.trim()) saveClientProfile({ ...profile, email });
   }
   revalidatePath("/admin");
 

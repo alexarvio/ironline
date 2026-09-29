@@ -4490,6 +4490,23 @@ export function saveClientProfile(profile: ClientProfile) {
   if (idx >= 0) data.client_profiles[idx] = next;
   else data.client_profiles.push(next);
   persist();
+  syncClientLoginEmail(profile.client_id);
+}
+
+/**
+ * One email a client: the one on their card. Their login follows it, here
+ * whenever the card is saved and whenever App access is read (logins made
+ * before this could carry another address). A card address another
+ * account already uses is left alone.
+ */
+export function syncClientLoginEmail(clientId: number): void {
+  const data = getData();
+  const email = (getClientProfile(clientId).email ?? "").trim().toLowerCase();
+  const user = data.users.find((u) => u.role === "client" && u.client_id === clientId);
+  if (!email || !user || user.email === email) return;
+  if (data.users.some((u) => u.email === email)) return;
+  user.email = email;
+  persist();
 }
 
 /** The coach's headline goal for the client; empty clears it. */
