@@ -13,7 +13,24 @@ import VoiceRecordButton from "./VoiceRecordButton";
 // spot: the mic while the box is empty, Send as soon as anything is typed.
 const ACCEPT = "image/*,video/*,audio/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.zip";
 
-export default function ChatComposeForm({ clientId, sender, about = null, onClearAbout }: { clientId: number; sender: "client" | "coach"; /** What the next message is about: a chip over the box, sent as its link. */ about?: MessageAbout | null; onClearAbout?: () => void }) {
+export default function ChatComposeForm({
+  clientId,
+  sender,
+  about = null,
+  onClearAbout,
+  onSending,
+  onSent,
+}: {
+  clientId: number;
+  sender: "client" | "coach";
+  /** What the next message is about: a chip over the box, sent as its link. */
+  about?: MessageAbout | null;
+  onClearAbout?: () => void;
+  /** The words just sent, before the server has them: the thread can show them at once. */
+  onSending?: (text: string) => void;
+  /** The server has it: the thread can ask for the real thing. */
+  onSent?: () => void;
+}) {
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pending, start] = useTransition();
@@ -34,6 +51,7 @@ export default function ChatComposeForm({ clientId, sender, about = null, onClea
     start(async () => {
       await sendChatMessageAction(fd);
       onClearAbout?.();
+      onSent?.();
     });
   };
 
@@ -57,14 +75,19 @@ export default function ChatComposeForm({ clientId, sender, about = null, onClea
         e.preventDefault();
         if (!text.trim() || pending) return;
         const fd = new FormData();
+        const words = text.trim();
         fd.set("clientId", String(clientId));
-        fd.set("text", text.trim());
+        fd.set("text", words);
         if (about) fd.set("link", JSON.stringify(about.link));
+        // The box clears and the thread shows the words straight away; the
+        // server's copy replaces them when it answers.
+        setText("");
+        if (boxRef.current) boxRef.current.style.height = "auto";
+        onSending?.(words);
         start(async () => {
           await sendChatMessageAction(fd);
-          setText("");
-          if (boxRef.current) boxRef.current.style.height = "auto";
           onClearAbout?.();
+          onSent?.();
         });
       }}
     >

@@ -319,7 +319,7 @@ import {
 import { writeReportNarrative } from "./reportAi";
 import { COACH_PROFILE_LIMITS } from "./coachProfileView";
 import { deleteUpload, keyOf, putUpload } from "./storage";
-import { setPhaseObjectives, savePhaseCover, setPhaseCoverPath, editClientChatMessage, deleteClientChatMessage, setPhaseClientNote } from "./queries";
+import { setPhaseObjectives, savePhaseCover, setPhaseCoverPath, editClientChatMessage, deleteClientChatMessage, setPhaseClientNote, chatThreadViews, type ChatThreadView } from "./queries";
 import { isStockCover } from "./phaseCovers";
 import { isTimezone, SERVER_TZ, tzShort, zonedToUtc } from "./timezones";
 import type { ReportSectionType } from "./reportSectionTypes";
@@ -1917,6 +1917,16 @@ export async function sendChatMessageAction(formData: FormData) {
   sendChatMessage(clientId, sender, text, media, link);
   revalidatePath("/admin");
   revalidatePath("/client");
+}
+
+/**
+ * The conversation as it stands, for the Messages screen to ask for while it
+ * is open (every 15 s, and after a send, an edit or a reaction): a few
+ * kilobytes, instead of drawing the whole client page again each time.
+ */
+export async function chatThreadAction(clientId: number): Promise<ChatThreadView[]> {
+  const id = await requireClientAccess(Number(clientId));
+  return id ? chatThreadViews(id) : [];
 }
 
 // A thumbs up on a message, from either side. Which side is decided by the

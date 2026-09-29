@@ -8,8 +8,7 @@ import {
   getClientProfile,
   getClientProgramNoteMeta,
   listCardioForDay,
-  describeMessageLink,
-  listChatMessages,
+  chatThreadViews,
   isCardioDone,
   getLastMeetingRecap,
   getUpNextSession,
@@ -497,26 +496,8 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
 
 // The conversation with the coach, oldest first, with the labels the thread
 // and Home's card show. Both sides: the client answers from the same screen.
-function coachMessagesFor(clientId: number) {
-  return listChatMessages(clientId)
-    .filter((m) => m.text.trim() || m.media_path)
-    .map((m) => {
-      const d = new Date(m.created_at);
-      return {
-        id: m.id,
-        mine: m.sender === "client",
-        text: m.text,
-        media: m.media_path ? { path: m.media_path, type: m.media_type ?? ("image" as const), name: m.media_name ?? null } : null,
-        reactions: { coach: m.reactions?.coach ?? null, client: m.reactions?.client ?? null },
-        pinned: !!m.pinned,
-        edited: !!m.edited_at,
-        dateIso: m.created_at.slice(0, 10),
-        dayLabel: d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),
-        timeLabel: d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
-        link: m.link ? describeMessageLink(clientId, m.link) : null,
-      };
-    });
-}
+// The thread as the Messages screen shows it: chatThreadViews in lib/queries.ts.
+const coachMessagesFor = chatThreadViews;
 
 function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID: number; week: number; currentWeek: number; showMyNotes: boolean }) {
   const days = getWeekDays(CLIENT_ID, week);

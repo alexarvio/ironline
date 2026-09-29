@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { ChevronDownIcon, ChevronLeftIcon, PinIcon } from "../components/icons";
 import ChatComposeForm from "../components/ChatComposeForm";
 import { REACTIONS } from "../components/MessageReactions";
-import { deleteMyChatMessageAction, editMyChatMessageAction, reactToMessageAction, unpinMessageAction } from "../lib/actions";
+import { chatThreadAction, deleteMyChatMessageAction, editMyChatMessageAction, reactToMessageAction, unpinMessageAction } from "../lib/actions";
 import CoachMark from "./CoachMark";
 import { useOpenLink } from "./CheckInContext";
 import type { LinkView, MessageAbout } from "../lib/messageLinks";
@@ -49,10 +48,26 @@ const POLL_MS = 15000;
 const mediaWord = (m: CoachMessageView) =>
   !m.media ? "" : m.media.type === "image" ? "Photo" : m.media.type === "video" ? "Video" : m.media.type === "audio" ? "Voice message" : (m.media.name ?? "File");
 
-export default function CoachMessagesScreen({ coachName, messages, viewerIsClient, clientId, onBack, about = null, onClearAbout }: CoachMessagesProps & { clientId: number; onBack: () => void; about?: MessageAbout | null; onClearAbout?: () => void }) {
-  const router = useRouter();
+export default function CoachMessagesScreen({ coachName, messages: fromPage, viewerIsClient, clientId, onBack, about = null, onClearAbout }: CoachMessagesProps & { clientId: number; onBack: () => void; about?: MessageAbout | null; onClearAbout?: () => void }) {
   const [, startTransition] = useTransition();
   const [editing, setEditing] = useState<{ id: number; text: string } | null>(null);
+  // The thread the screen shows: the page's copy to begin with, then what
+  // chatThreadAction answers (a few kilobytes, every 15 s and after every
+  // send), so nothing here draws the whole page again. A message just sent
+  // sits at the foot as "sending" until the server's copy arrives.
+  const [thread, setThread] = useState<CoachMessageView[]>(fromPage);
+  const [seenFromPage, setSeenFromPage] = useState(fromPage);
+  if (seenFromPage !== fromPage) {
+    setSeenFromPage(fromPage);
+    setThread(fromPage);
+  }
+  const [sending, setSending] = useState<CoachMessageView[]>([]);
+  const refresh = () =>
+    chatThreadAction(clientId).then((t) => {
+      setThread(t);
+      setSending([]);
+    }).catch(() => {});
+  const messages = sending.length ? [...thread, ...sending] : thread;
   const days: { label: string; items: CoachMessageView[] }[] = [];
   for (const m of messages) {
     const last = days[days.length - 1];
@@ -69,9 +84,14 @@ export default function CoachMessagesScreen({ coachName, messages, viewerIsClien
 
   // Keep it fresh while it is open, and stay at the newest message.
   useEffect(() => {
-    const t = setInterval(() => router.refresh(), POLL_MS);
+    const t = setInterval(() => {
+      chatThreadAction(clientId).then((list) => {
+        setThread(list);
+        setSending([]);
+      }).catch(() => {});
+    }, POLL_MS);
     return () => clearInterval(t);
-  }, [router]);
+  }, [clientId]);
   // Open at the newest message, and stay there while pictures and videos
   // load in above it (they grow the thread after the first jump, which used
   // to leave it somewhere in the middle). Once the client scrolls up to read
@@ -109,7 +129,7 @@ export default function CoachMessagesScreen({ coachName, messages, viewerIsClien
   const act = (fn: () => Promise<void>) =>
     startTransition(async () => {
       await fn();
-      router.refresh();
+      await refresh();
     });
   const saveEdit = () => {
     if (!editing) return;
@@ -274,7 +294,31 @@ export default function CoachMessagesScreen({ coachName, messages, viewerIsClien
       <footer className="cm-compose">
         {/* A coach previewing the app writes as the coach, not as the client. */}
         {!viewerIsClient && <p className="cm-preview-note">You&rsquo;re previewing as {coachName}: what you send here comes from {coachName}.</p>}
-        <ChatComposeForm clientId={clientId} sender={viewerIsClient ? "client" : "coach"} about={about} onClearAbout={onClearAbout} />
+        <ChatComposeForm
+          clientId={clientId}
+          sender={viewerIsClient ? "client" : "coach"}
+          about={about}
+          onClearAbout={onClearAbout}
+          onSending={(text) => {
+            const now = new Date();
+            setSending((s) => [
+              ...s,
+              {
+                id: -Date.now() - s.length,
+                mine: viewerIsClient,
+                text,
+                dayLabel: now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),
+                timeLabel: now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+                media: null,
+                link: null,
+                reactions: { coach: null, client: null },
+                pinned: false,
+                edited: false,
+              },
+            ]);
+          }}
+          onSent={() => void refresh()}
+        />
       </footer>
     </>
   );

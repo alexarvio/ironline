@@ -5057,6 +5057,47 @@ export type ChatMedia = { path: string; type: ChatMediaType; name?: string | nul
 /** The reactions a message can take: a short row, the same on both sides. */
 export const MESSAGE_REACTIONS = ["👍", "❤️", "💪", "🔥", "👏", "😂"] as const;
 
+/**
+ * The conversation with the coach as the client's Messages screen shows it,
+ * oldest first with its day and time labels. The page draws it, and the
+ * screen asks chatThreadAction for it again while it is open, so a new
+ * message never needs the whole page drawn again.
+ */
+export type ChatThreadView = {
+  id: number;
+  /** The client's own message. */
+  mine: boolean;
+  text: string;
+  media: { path: string; type: "image" | "video" | "audio" | "file"; name: string | null } | null;
+  reactions: { coach: string | null; client: string | null };
+  pinned: boolean;
+  edited: boolean;
+  dateIso: string;
+  dayLabel: string;
+  timeLabel: string;
+  link: LinkView | null;
+};
+export function chatThreadViews(clientId: number): ChatThreadView[] {
+  return listChatMessages(clientId)
+    .filter((m) => m.text.trim() || m.media_path)
+    .map((m) => {
+      const d = new Date(m.created_at);
+      return {
+        id: m.id,
+        mine: m.sender === "client",
+        text: m.text,
+        media: m.media_path ? { path: m.media_path, type: m.media_type ?? ("image" as const), name: m.media_name ?? null } : null,
+        reactions: { coach: m.reactions?.coach ?? null, client: m.reactions?.client ?? null },
+        pinned: !!m.pinned,
+        edited: !!m.edited_at,
+        dateIso: m.created_at.slice(0, 10),
+        dayLabel: d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),
+        timeLabel: d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+        link: m.link ? describeMessageLink(clientId, m.link) : null,
+      };
+    });
+}
+
 export function listChatMessages(clientId: number): ChatMessage[] {
   return getData()
     .chat_messages.filter((m) => m.client_id === clientId)
