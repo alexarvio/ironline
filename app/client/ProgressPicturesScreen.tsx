@@ -64,20 +64,27 @@ export default function ProgressPicturesScreen({
   const sent = open ? open.slots.filter((s) => s.src).length : 0;
   // The sheet (and the ones before it), or two sheets side by side.
   const [view, setView] = useState<"sheet" | "compare">("sheet");
+  // The top row (back, the title) stays put as the page scrolls: over the
+  // photo at rest, on a frosted bar once the banner has gone by (the check-in's).
+  const [stuck, setStuck] = useState(false);
+  const onScroll = (e: React.UIEvent<HTMLElement>) => {
+    const y = e.currentTarget.scrollTop;
+    setStuck((s) => (s ? y > 48 : y > 72));
+  };
   return (
     <>
-      <main className="pp-app-body pp-one ci-one">
-        {/* The photo banner, the check-in's: the same size and the same bar
-            over the photo, the sheet open now as its title, and two pills
-            that switch the screen between the sheet and Compare. */}
+      <main className="pp-app-body pp-one ci-one" onScroll={onScroll}>
+        <div className={`ci-bar pp-bar${stuck ? " stuck" : ""}`}>
+          <button type="button" className="ci-back" onClick={back} aria-label="Back">
+            <ChevronLeftIcon />
+          </button>
+          <h1 className="ci-title">Progress pictures</h1>
+          <span aria-hidden="true" />
+        </div>
+        {/* The photo banner, the check-in's: the same size, the sheet open
+            now as its title, and two pills that switch the screen between
+            the sheet and Compare. */}
         <header className="tr-banner ci-banner pp-banner">
-          <div className="ci-bar">
-            <button type="button" className="ci-back" onClick={back} aria-label="Back">
-              <ChevronLeftIcon />
-            </button>
-            <h1 className="ci-title">Progress pictures</h1>
-            <span aria-hidden="true" />
-          </div>
           <div className="tr-kicker">{open ? "Open now" : "Progress pictures"}</div>
           <FitTitle className="tr-name">{open ? open.title : "No sheet open"}</FitTitle>
           <div className="tr-weeks ci-views" role="tablist" aria-label="Progress pictures">

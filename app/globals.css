@@ -16888,6 +16888,8 @@ button.pp-row { cursor: zoom-in; }
 .pp-one { --topbar-h: 105px; }
 @media (max-width: 480px), (max-height: 760px) { .pp-one { --topbar-h: 67px; } }
 .pp-one .pp-banner { flex-shrink: 0; margin: 0 -16px; }
+/* The sticky top row before the banner: full width, pulled back over the photo by its own height (and the column's gap). */
+.pp-one > .ci-bar { margin: 0 -16px calc(-1 * var(--topbar-h) - 18px); }
 .tr-banner.ci-banner.pp-banner { background: #0b0f16 url("/home/progress-pics.jpg") center 35% / cover no-repeat; }
 .pp-one .pp-banner + * { position: relative; z-index: 2; margin-top: -54px; }
 /* Check-in, tighter (25 Sep): the date smaller and straight above the pills
