@@ -33,7 +33,6 @@ import {
   getCheckInSections,
   getCheckInHistory,
   getCheckInStreak,
-  yesterdaysOpenMetrics,
   type CheckInMetric,
   getWorkoutCalendar,
   getActivityCalendar,
@@ -77,6 +76,7 @@ import {
   VITAMIN_ITEMS,
 } from "../lib/queries";
 import TrainingDayList from "./TrainingDayList";
+import type { HomeLifestyleMetric } from "./HomeLifestyleCard";
 
 import { ProgressPicturesRow, type ProgressPicturesProps } from "./ProgressPicturesScreen";
 import HomeHub, { type LatestActivity, type UpcomingMeeting } from "./HomeHub";
@@ -365,32 +365,30 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
       trainedToday={trainedToday}
       today={today}
       food={food}
-      checkInCard={
-        onScreen.length
-          ? {
-              clientId: CLIENT_ID,
-              streak: getCheckInStreak(CLIENT_ID),
-              // The phone's hour picks the question: the morning's, any time's, the evening's.
-              hour: phoneTz ? hourIn(phoneTz) : new Date().getHours(),
-              // Today's questions first, then the week's while its window is open.
-              metrics: sections.sections
-                .filter((s) => s.id === "daily" || (s.id === "weekly" && weeklyOpen))
-                .flatMap((s) => s.metrics.map((m) => cardMetric(m, s.id as "daily" | "weekly"))),
-              // Yesterday's evening questions left open: asked once more, first.
-              yesterday: (() => {
-                const y = yesterdaysOpenMetrics(CLIENT_ID);
-                return y ? y.metrics.map((m) => ({ ...cardMetric(m, "daily"), date: y.date })) : [];
-              })(),
-            }
-          : null
-      }
+      checkInCard={{
+        clientId: CLIENT_ID,
+        // Today's daily metrics only, in the coach's order; the week's stay in the check-in.
+        metrics: (sections.sections.find((s) => s.id === "daily")?.metrics ?? []).map(homeMetric),
+      }}
     />
   );
 }
 
-// A check-in line as Home's lifestyle card asks it.
-function cardMetric(m: CheckInMetric, source: "daily" | "weekly") {
-  return { id: m.id, name: m.name, unit: m.unit, hint: m.hint, scaleMax: m.scaleMax, step: m.step, value: m.value, source, askAt: m.askAt ?? ("anytime" as const) };
+// A daily check-in line as Home's lifestyle card logs it.
+function homeMetric(m: CheckInMetric): HomeLifestyleMetric {
+  const dec = m.step.includes(".") ? m.step.split(".")[1].length : 0;
+  return {
+    id: m.id,
+    name: m.name,
+    unit: m.scaleMax ? `/ ${m.scaleMax}` : m.unit,
+    precision: Math.min(2, dec),
+    kind: m.scaleMax ? "scale" : "number",
+    scale: m.scaleMax ? { min: 1, max: m.scaleMax } : undefined,
+    today: m.value === "" ? null : Number(m.value),
+    last: m.last ? { value: m.last.value, date: m.last.period } : null,
+    // Today's own lines are never locked: the feed's older days are.
+    locked: false,
+  };
 }
 
 // The date the coach did it, as "21 Sep".

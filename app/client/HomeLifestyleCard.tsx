@@ -1,0 +1,448 @@
+"use client";
+
+import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { ChevronRightIcon } from "../components/icons";
+import { logMetricPeriodAction } from "../lib/actions";
+import { useOpenCheckIn } from "./CheckInContext";
+import { tidyDecimal } from "./workoutShared";
+import type { HomePhase } from "./PhaseCards";
+
+// Home's lifestyle card (29 Sep, "ring + one at a time"): a white card
+// under the greeting, above the Training / Nutrition carousel. A ring with
+// one segment a metric and "{n} of {total}" in the middle, the phase and
+// its week, then one page a metric to log right here: the name with page
+// dots, the last value (a tap copies it in), the field and Save on one
+// row. Swiping is how you skip; Save slides on to the next one still to
+// log. Logged pages show a green pill and Edit. All in: a green ring and a
+// one-line foot with Open.
+
+export type HomeLifestyleMetric = {
+  id: string;
+  name: string;
+  /** "L", "kg", "h", "" (steps), "/ 5" */
+  unit: string;
+  precision: number;
+  kind: "number" | "scale";
+  scale?: { min: number; max: number };
+  min?: number;
+  max?: number;
+  /** Logged today. */
+  today: number | null;
+  /** The most recent value before today. */
+  last: { value: number; date: string } | null;
+  locked: boolean;
+};
+
+const SAND = "#a8761f";
+const SAND_OFF = "rgba(168,118,31,.16)";
+const GREEN = "#2f7a3f";
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const DAY = 86400000;
+const dayNum = (s: string) => Date.UTC(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10))) / DAY;
+const localToday = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+const mdy = (s: string) => `${MONTHS[Number(s.slice(5, 7)) - 1]} ${Number(s.slice(8, 10))}`;
+const fmt = (v: number, p: number) => v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: p });
+const reducedMotion = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+/** Drives scrollLeft to `to` over 280ms (ease-out cubic) with the snap off, then puts it back. */
+function animateScroll(el: HTMLElement, to: number, done: () => void) {
+  const from = el.scrollLeft;
+  const t0 = performance.now();
+  el.style.scrollSnapType = "none";
+  const step = (now: number) => {
+    const k = Math.min(1, (now - t0) / 280);
+    el.scrollLeft = from + (to - from) * (1 - Math.pow(1 - k, 3));
+    if (k < 1) requestAnimationFrame(step);
+    else {
+      el.style.scrollSnapType = "";
+      done();
+    }
+  };
+  requestAnimationFrame(step);
+}
+
+/** "2.5 L", "9,120", "4/5". */
+function valueWords(m: HomeLifestyleMetric, v: number): string {
+  if (m.kind === "scale") return `${fmt(v, 0)}/${m.scale?.max ?? 5}`;
+  return `${fmt(v, m.precision)}${m.unit ? ` ${m.unit}` : ""}`;
+}
+
+/** "Week 3 · 4 weeks left", the phase cards' maths; "Last week" when none are left. */
+function weekWords(ph: HomePhase, today: string): string {
+  const t = dayNum(today);
+  const s = dayNum(ph.start);
+  if (!ph.end) return `Week ${Math.max(1, Math.ceil((t - s + 1) / 7))}`;
+  const e = dayNum(ph.end);
+  const totalDays = e - s + 1;
+  const elapsed = Math.min(totalDays, Math.max(0, t - s + 1));
+  const weeks = Math.ceil(totalDays / 7);
+  const week = Math.min(weeks, Math.max(1, Math.ceil(elapsed / 7)));
+  const left = Math.max(0, Math.floor((e - t) / 7));
+  return `Week ${week} · ${left === 0 ? "Last week" : `${left} week${left === 1 ? "" : "s"} left`}`;
+}
+
+export default function HomeLifestyleCard({ clientId, today, phase, coachName, metrics }: { clientId: number; today: string; phase: HomePhase; coachName: string; metrics: HomeLifestyleMetric[] }) {
+  const router = useRouter();
+  const openCheckIn = useOpenCheckIn();
+  const [, start] = useTransition();
+  // Values saved from here before the page has caught up, by metric id.
+  const [saved, setSaved] = useState<Record<string, number>>({});
+  const todayOf = (m: HomeLifestyleMetric) => saved[m.id] ?? m.today;
+  const isIn = (m: HomeLifestyleMetric) => todayOf(m) != null;
+  const total = metrics.length;
+  const n = metrics.filter(isIn).length;
+  const allIn = n === total;
+  const [live, setLive] = useState("");
+
+  // The page on show: the first metric not logged today, or where the
+  // session left it; the position is what the scroller says once it moves.
+  const storeKey = `ironline:home-lifestyle-idx:${today}`;
+  const [idx, setIdx] = useState(() => {
+    let i = -1;
+    try {
+      const s = sessionStorage.getItem(storeKey);
+      if (s != null) i = Number(s);
+    } catch {}
+    if (!(i >= 0 && i < total)) i = metrics.findIndex((m) => !isIn(m));
+    return i < 0 ? 0 : i;
+  });
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(storeKey, String(idx));
+    } catch {}
+  }, [idx, storeKey]);
+
+  const scroller = useRef<HTMLDivElement>(null);
+  const animating = useRef(false);
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    if (el) el.scrollLeft = idx * el.clientWidth;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on mount
+  }, []);
+  // A page move from Save or a dot: no snapping while the scroll is driven,
+  // an ease-out over 280ms, then the snap comes back. (scrollTo with
+  // behavior: smooth is unreliable inside a snap container.)
+  const goTo = (i: number, after?: () => void) => {
+    const el = scroller.current;
+    if (!el) return;
+    setIdx(i);
+    const to = i * el.clientWidth;
+    if (reducedMotion()) {
+      el.scrollLeft = to;
+      after?.();
+      return;
+    }
+    animating.current = true;
+    animateScroll(el, to, () => {
+      animating.current = false;
+      after?.();
+    });
+  };
+  const onScroll = () => {
+    const el = scroller.current;
+    if (!el || animating.current || el.clientWidth === 0) return;
+    const i = Math.round(el.scrollLeft / el.clientWidth);
+    if (i !== idx && i >= 0 && i < total) setIdx(i);
+  };
+
+  // The next one still to log, forward from here and round again.
+  const nextOpen = (from: number, logged: Record<string, number>) => {
+    for (let k = 1; k <= total; k++) {
+      const j = (from + k) % total;
+      const m = metrics[j];
+      if ((logged[m.id] ?? m.today) == null) return j;
+    }
+    return -1;
+  };
+
+  const inputs = useRef<Record<string, HTMLInputElement | null>>({});
+  const [error, setError] = useState<Record<string, string>>({});
+  const save = (m: HomeLifestyleMetric, value: number, i: number) => {
+    const keyboardOpen = document.activeElement instanceof HTMLInputElement;
+    const before = saved;
+    const logged = { ...saved, [m.id]: value };
+    setSaved(logged);
+    setError((e) => ({ ...e, [m.id]: "" }));
+    setLive(`${m.name} saved`);
+    const j = nextOpen(i, logged);
+    if (j >= 0) goTo(j, () => keyboardOpen && inputs.current[metrics[j].id]?.focus());
+    start(async () => {
+      try {
+        const fd = new FormData();
+        fd.set("clientId", String(clientId));
+        fd.set("date", today);
+        fd.set("frequency", "daily");
+        fd.set(`metric_${m.id}`, String(value));
+        await logMetricPeriodAction(fd);
+      } catch {
+        setSaved(before);
+        setError((e) => ({ ...e, [m.id]: "Couldn't save. Try again." }));
+        goTo(i);
+      }
+    });
+  };
+
+  // Past midnight with the app still open: today's page is a new day.
+  useEffect(() => {
+    const on = () => {
+      if (document.visibilityState === "visible" && localToday() !== today) router.refresh();
+    };
+    document.addEventListener("visibilitychange", on);
+    return () => document.removeEventListener("visibilitychange", on);
+  }, [today, router]);
+
+  if (total === 0) return null;
+  const open = () => openCheckIn?.("daily");
+
+  return (
+    <section className="hl" aria-label="Lifestyle">
+      <button type="button" className="hl-head" onClick={open} aria-label={`Open Lifestyle: ${n} of ${total} logged today`}>
+        <Ring metrics={metrics} isIn={isIn} n={n} total={total} />
+        <span className="hl-text">
+          <span className="hl-eyebrow">Lifestyle · {phase.name}</span>
+          <span className="hl-title">{allIn ? "All logged today" : `${total - n} left to log today`}</span>
+          <span className="hl-sub">{weekWords(phase, today)}</span>
+        </span>
+        <span className="hl-chev" aria-hidden="true">
+          <ChevronRightIcon />
+        </span>
+      </button>
+
+      {/* The pager folds away when everything is in; the foot takes its place. */}
+      <div className={`hl-fold${allIn ? " closed" : ""}`} aria-hidden={allIn}>
+        <div className="hl-fold-clip">
+          <div ref={scroller} className="hl-pager" role="region" aria-roledescription="carousel" aria-label="Today's lifestyle metrics" onScroll={onScroll}>
+            {metrics.map((m, i) => (
+              <MetricPage
+                key={m.id}
+                m={m}
+                i={i}
+                idx={idx}
+                metrics={metrics}
+                isIn={isIn}
+                value={todayOf(m)}
+                error={error[m.id] ?? ""}
+                onGoTo={(j) => goTo(j)}
+                onSave={(v) => save(m, v, i)}
+                inputRef={(el) => (inputs.current[m.id] = el)}
+                onError={(msg) => setError((e) => ({ ...e, [m.id]: msg }))}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+      {allIn && (
+        <div className="hl-foot">
+          <span>Everything&rsquo;s in for today. {coachName} can see it.</span>
+          <button type="button" className="hl-open" onClick={open}>
+            Open
+          </button>
+        </div>
+      )}
+      <span className="hl-live" aria-live="polite">
+        {live}
+      </span>
+    </section>
+  );
+}
+
+// ---- The ring: one segment a metric, clockwise from the top; green when all are in. ----
+function Ring({ metrics, isIn, n, total }: { metrics: HomeLifestyleMetric[]; isIn: (m: HomeLifestyleMetric) => boolean; n: number; total: number }) {
+  let bg: string;
+  if (n === total) bg = `conic-gradient(${GREEN} 0 360deg)`;
+  else {
+    const seg = 360 / total;
+    const gap = total === 1 ? 0 : total > 6 ? 4 : 6;
+    const stops: string[] = [];
+    metrics.forEach((m, i) => {
+      const a = i * seg;
+      const b = (i + 1) * seg - gap;
+      stops.push(`${isIn(m) ? SAND : SAND_OFF} ${a}deg ${b}deg`);
+      if (gap) stops.push(`transparent ${b}deg ${(i + 1) * seg}deg`);
+    });
+    bg = `conic-gradient(${stops.join(", ")})`;
+  }
+  return (
+    <span className="hl-ring" style={{ background: bg }} aria-hidden="true">
+      <span className="hl-ring-in">
+        <b>{n}</b>
+        <small>of {total}</small>
+      </span>
+    </span>
+  );
+}
+
+// ---- One page: the name with the dots, the last value, the field and Save. ----
+function MetricPage({
+  m,
+  i,
+  idx,
+  metrics,
+  isIn,
+  value,
+  error,
+  onGoTo,
+  onSave,
+  onError,
+  inputRef,
+}: {
+  m: HomeLifestyleMetric;
+  i: number;
+  idx: number;
+  metrics: HomeLifestyleMetric[];
+  isIn: (m: HomeLifestyleMetric) => boolean;
+  value: number | null;
+  error: string;
+  onGoTo: (j: number) => void;
+  onSave: (v: number) => void;
+  onError: (msg: string) => void;
+  inputRef: (el: HTMLInputElement | null) => void;
+}) {
+  const total = metrics.length;
+  const logged = value != null;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [pick, setPick] = useState<number | null>(null);
+  const showField = !logged || editing;
+
+  const lo = m.kind === "scale" ? m.scale?.min : m.min;
+  const hi = m.kind === "scale" ? m.scale?.max : m.max;
+  const parsed = m.kind === "scale" ? pick : draft.trim() === "" ? null : Number(draft.replace(",", "."));
+  const outOfRange = parsed != null && Number.isFinite(parsed) && ((lo != null && parsed < lo) || (hi != null && parsed > hi));
+  const rangeMsg = outOfRange ? `Between ${lo ?? "0"} and ${hi}${m.unit && m.kind === "number" ? ` ${m.unit}` : ""}` : "";
+  const ready = parsed != null && Number.isFinite(parsed) && !outOfRange;
+
+  const submit = () => {
+    if (!ready || parsed == null) return;
+    setEditing(false);
+    setDraft("");
+    setPick(null);
+    onSave(parsed);
+  };
+
+  // The dots: every metric, or a window of seven around this page past eight.
+  const win = total > 8 ? 7 : total;
+  const from = total > 8 ? Math.max(0, Math.min(idx - 3, total - win)) : 0;
+  const dots = metrics.slice(from, from + win);
+
+  return (
+    <div className="hl-page" role="group" aria-roledescription="slide" aria-label={`${i + 1} of ${total}: ${m.name}`}>
+      <div className="hl-row1">
+        <span className="hl-name">{m.name}</span>
+        <span className="hl-dots">
+          {dots.map((d, k) => {
+            const j = from + k;
+            const edge = total > 8 && ((k === 0 && from > 0) || (k === win - 1 && from + win < total));
+            return (
+              <button key={d.id} type="button" className={`hl-dot${j === idx ? " on" : isIn(d) ? " in" : ""}${edge ? " edge" : ""}`} aria-label={d.name} aria-current={j === idx ? "true" : undefined} onClick={() => j !== idx && onGoTo(j)}>
+                <i />
+              </button>
+            );
+          })}
+        </span>
+      </div>
+
+      {logged && !editing ? (
+        <span className="hl-last static">Logged today</span>
+      ) : m.last ? (
+        <button
+          type="button"
+          className="hl-last"
+          id={`hl-last-${m.id}`}
+          onClick={() => {
+            if (m.kind === "scale") setPick(m.last!.value);
+            else setDraft(fmt(m.last!.value, m.precision).replace(/,/g, ""));
+          }}
+        >
+          {valueWords(m, m.last.value)} on {mdy(m.last.date)}
+        </button>
+      ) : null}
+
+      {showField ? (
+        <form
+          className="hl-row3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit();
+          }}
+        >
+          {m.kind === "scale" ? (
+            <span className={`hl-field hl-scale${(m.scale?.max ?? 5) - (m.scale?.min ?? 1) + 1 > 5 ? " wide" : ""}`} role="radiogroup" aria-label={m.name}>
+              {Array.from({ length: (m.scale?.max ?? 5) - (m.scale?.min ?? 1) + 1 }, (_, k) => (m.scale?.min ?? 1) + k).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  role="radio"
+                  aria-checked={pick === v}
+                  className={pick === v ? "on" : ""}
+                  onClick={(e) => {
+                    setPick(v);
+                    e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" });
+                  }}
+                >
+                  {v}
+                </button>
+              ))}
+            </span>
+          ) : (
+            <label className="hl-field">
+              <input
+                ref={inputRef}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onInput={tidyDecimal}
+                onFocus={(e) => e.currentTarget.select()}
+                inputMode={m.precision === 0 ? "numeric" : "decimal"}
+                enterKeyHint="done"
+                placeholder="0"
+                aria-label={`${m.name}${m.unit ? ` in ${m.unit}` : ""}`}
+                aria-describedby={m.last ? `hl-last-${m.id}` : undefined}
+                aria-invalid={outOfRange || undefined}
+              />
+              {m.unit && <span className="hl-unit">{m.unit}</span>}
+            </label>
+          )}
+          <button type="submit" className={`hl-save${ready ? " ready" : ""}`} disabled={!ready} aria-disabled={!ready}>
+            Save
+          </button>
+        </form>
+      ) : (
+        <div className="hl-row3">
+          <span className="hl-done">
+            <i aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m5 12 5 5L20 7" />
+              </svg>
+            </i>
+            <b>{m.kind === "scale" ? fmt(value!, 0) : fmt(value!, m.precision)}</b>
+            <small>{m.kind === "scale" ? `/${m.scale?.max ?? 5}` : m.unit}</small>
+          </span>
+          {!m.locked && (
+            <button
+              type="button"
+              className="hl-edit"
+              onClick={() => {
+                if (m.kind === "scale") setPick(value);
+                else setDraft(fmt(value!, m.precision).replace(/,/g, ""));
+                setEditing(true);
+              }}
+            >
+              Edit
+            </button>
+          )}
+        </div>
+      )}
+      {(rangeMsg || error) && (
+        <span className="hl-error" role="alert">
+          {rangeMsg || error}
+        </span>
+      )}
+      {/* onError is here for the parent's inline errors; the range line is the page's own. */}
+      {void onError}
+    </div>
+  );
+}

@@ -17483,48 +17483,63 @@ button.ci-hint { cursor: pointer; }
 .ts-cardio-swap { display: block; width: 100%; margin-top: 8px; padding: 8px 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 700; color: #2f5d8f; cursor: pointer; }
 .ts-cardio-swap:disabled { opacity: 0.5; }
 
-/* ---- Home's lifestyle card (28 Sep, LifestyleCard) ----
-   Between the check-in card and a phase card in size: the photo shows at
-   the top under the chips, then the frosted panel with the phase, its bar,
-   today's metrics as one bar each, and the question open now. */
-/* Its own layer: iOS Safari stops clipping the rounded corners when a child is blurred (the photo), so the corners came out square. */
-.lc { padding: 10px 8px 8px; transform: translateZ(0); -webkit-backface-visibility: hidden; backface-visibility: hidden; }
-/* The photo is 12px bigger each side (so the blur has no soft edge) and is
-   clipped to the card's own box and radius itself: iOS Safari doesn't clip a
-   blurred child with the container's rounded overflow. */
-.lc .lc-bg { inset: -12px; width: calc(100% + 24px); height: calc(100% + 24px); filter: blur(3px) saturate(120%); transform: none; clip-path: inset(12px round 24px); -webkit-clip-path: inset(12px round 24px); }
-.lc .qa-scrim { background: linear-gradient(180deg, rgba(8, 12, 20, 0.2) 0%, rgba(8, 12, 20, 0.15) 30%, rgba(12, 24, 52, 0.7) 100%); }
-.lc-top { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 2px 4px 44px; border: 0; background: none; font: inherit; cursor: pointer; }
-.lc-chip { zoom: 0.88; }
-.lc-panel { padding: 12px 14px 4px; }
-.lc-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; width: 100%; padding: 0 0 8px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
-.lc-name { min-width: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lc-left { display: inline-flex; align-items: center; gap: 4px; flex: none; font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.8); white-space: nowrap; }
-.lc .pc-bar { height: 4px; background: rgba(255, 255, 255, 0.22); }
-.lc .pc-bar-fill { top: -1px; bottom: -1px; background: linear-gradient(90deg, #fff 0%, #fff 35%, #c9d6ea 50%, #fff 65%, #fff 100%); background-size: 200% 100%; box-shadow: none; }
-.lc .pc-bar-knob { width: 10px; height: 10px; margin: -5px 0 0 -5px; border: 0; background: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.22); animation-name: pc-knob-in, pc-pulse-light; }
-.lc-today { display: flex; align-items: center; gap: 10px; padding-top: 12px; }
-.lc-segs { flex: 1; display: flex; gap: 4px; }
-.lc-segs i { flex: 1; height: 6px; border-radius: 99px; background: rgba(255, 255, 255, 0.22); transition: background 0.3s ease; }
-.lc-segs i.on { background: #6fd39b; }
-.lc-count { font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.8); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.lc-q { margin-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.2); }
-.lc-when { display: block; margin-bottom: 2px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #ffd48a; }
-.lc-row { margin-top: 10px; }
-/* The number box shrinks to leave Save room inside the panel, and Save is the box's height. */
-.cic-num-box { min-width: 0; }
-.cic-num .qa-btn { height: 36px; padding: 0 16px; }
-/* The card's question swipes sideways between today's open ones; the dots say where. */
-.lc-q { touch-action: pan-y; -webkit-user-select: none; user-select: none; }
-.lc-q input { -webkit-user-select: text; user-select: text; }
-.lc-q.next { animation: lc-from-right 0.26s cubic-bezier(0.22, 1, 0.36, 1); }
-.lc-q.prev { animation: lc-from-left 0.26s cubic-bezier(0.22, 1, 0.36, 1); }
-@keyframes lc-from-right { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
-@keyframes lc-from-left { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .lc-q.next, .lc-q.prev { animation: none; } }
-.lc-dots { display: inline-flex; align-items: center; gap: 5px; flex: none; }
-.lc-dots button { width: 6px; height: 6px; padding: 0; border: 0; border-radius: 99px; background: rgba(255, 255, 255, 0.4); cursor: pointer; transition: width 0.2s ease, background 0.2s ease; }
-.lc-dots button.on { width: 16px; background: #fff; }
+/* ---- Home's lifestyle card (29 Sep, HomeLifestyleCard: "ring + one at a time") ----
+   A white card with a sand edge under the greeting: the ring (one segment
+   a metric), the phase and week, then one page a metric to log here. */
+.hl { background: #fff; border-radius: 24px; overflow: hidden; box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04), 0 20px 34px -24px rgba(168, 118, 31, 0.55), inset 0 0 0 1px rgba(168, 118, 31, 0.14); font-variant-numeric: tabular-nums; }
+.hl-head { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 14px 12px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.hl-ring { position: relative; flex: none; width: 62px; height: 62px; border-radius: 50%; transition: background 0.3s ease; }
+.hl-ring-in { position: absolute; inset: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 50%; background: #fff; line-height: 1; }
+.hl-ring-in b { font-size: 18px; font-weight: 800; color: #141a24; }
+.hl-ring-in small { font-size: 9.5px; font-weight: 800; color: #8b93a1; }
+.hl-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.hl-eyebrow { font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #8a5f16; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hl-title { font-size: 17px; font-weight: 800; color: #141a24; }
+.hl-sub { font-size: 12.5px; font-weight: 600; color: #8b93a1; }
+.hl-chev { flex: none; display: inline-flex; color: #8b93a1; }
+.hl-chev svg { width: 14px; height: 14px; }
+/* The pager folds shut once everything is in. */
+.hl-fold { display: grid; grid-template-rows: 1fr; border-top: 1px solid #F1ECE2; transition: grid-template-rows 0.25s ease; }
+.hl-fold.closed { grid-template-rows: 0fr; border-top-color: transparent; }
+.hl-fold-clip { min-height: 0; overflow: hidden; }
+.hl-pager { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.hl-pager::-webkit-scrollbar { display: none; }
+.hl-page { flex: 0 0 100%; min-width: 0; box-sizing: border-box; scroll-snap-align: start; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+.hl-row1 { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.hl-name { min-width: 0; font-size: 16px; font-weight: 800; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hl-dots { flex: none; display: flex; gap: 4px; }
+.hl-dot { display: inline-flex; align-items: center; height: 14px; padding: 0 1px; border: 0; background: none; cursor: pointer; }
+.hl-dot i { display: block; width: 5px; height: 5px; border-radius: 99px; background: rgba(168, 118, 31, 0.22); transition: width 0.25s ease, background 0.25s ease; }
+.hl-dot.in i { background: #a8761f; }
+.hl-dot.on i { width: 16px; background: #141a24; }
+.hl-dot.edge i { width: 3px; height: 3px; }
+.hl-last { align-self: flex-start; min-height: 20px; margin: -7px 0 -6px; padding: 6px 0; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #8b93a1; text-align: left; cursor: pointer; }
+.hl-last.static { cursor: default; }
+.hl-row3 { display: flex; gap: 8px; margin: 0; }
+.hl-field { flex: 1; min-width: 0; height: 44px; box-sizing: border-box; border-radius: 999px; background: #F7F4EE; box-shadow: inset 0 0 0 1px rgba(168, 118, 31, 0.18); padding: 0 16px; display: flex; align-items: center; gap: 8px; }
+.hl-field:focus-within { box-shadow: inset 0 0 0 1.5px #a8761f; }
+.hl-field input { flex: 1; min-width: 0; width: 100%; border: 0; background: none; outline: none; font: inherit; font-size: 17px; font-weight: 800; color: #141a24; }
+.hl-field input::placeholder { color: #8b93a1; }
+.hl-unit { flex: none; font-size: 13px; font-weight: 800; color: #8b93a1; }
+.hl-scale { padding: 0 4px; gap: 2px; }
+.hl-scale button { flex: 1; height: 36px; border: 0; border-radius: 999px; background: transparent; font: inherit; font-size: 15px; font-weight: 800; color: #5e4a2c; cursor: pointer; }
+.hl-scale button.on { background: #141a24; color: #fff; }
+.hl-scale.wide { overflow-x: auto; scrollbar-width: none; }
+.hl-scale.wide::-webkit-scrollbar { display: none; }
+.hl-scale.wide button { flex: 0 0 36px; }
+.hl-save { flex: none; height: 44px; padding: 0 20px; border: 0; border-radius: 999px; background: #fff; color: #B0B7C3; box-shadow: inset 0 0 0 1px #DCE3EE; font: inherit; font-size: 14px; font-weight: 800; cursor: default; transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease; }
+.hl-save.ready { background: #141a24; color: #fff; box-shadow: 0 8px 16px -8px rgba(20, 26, 36, 0.6); cursor: pointer; }
+.hl-done { flex: 1; min-width: 0; height: 44px; box-sizing: border-box; border-radius: 999px; background: #F2F8F4; box-shadow: inset 0 0 0 1px #CFE5D6; padding: 0 16px 0 8px; display: flex; align-items: center; gap: 8px; }
+.hl-done i { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: #2f7a3f; }
+.hl-done b { font-size: 17px; font-weight: 800; color: #1f5a33; }
+.hl-done small { font-size: 13px; font-weight: 700; color: #5b8a6a; }
+.hl-edit { flex: none; height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #DCE3EE; font: inherit; font-size: 14px; font-weight: 800; color: #141a24; cursor: pointer; }
+.hl-error { font-size: 12.5px; font-weight: 600; color: #B42318; }
+.hl-foot { display: flex; align-items: center; gap: 10px; padding: 12px 14px 14px; border-top: 1px solid #F1ECE2; font-size: 13px; font-weight: 600; color: #5b6474; }
+.hl-foot > span { flex: 1; min-width: 0; }
+.hl-open { flex: none; height: 38px; padding: 0 16px; border: 0; border-radius: 12px; background: #FBF7EF; color: #8a5f16; box-shadow: inset 0 0 0 1px rgba(168, 118, 31, 0.25); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.hl-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .hl-fold, .hl-ring, .hl-dot i, .hl-save { transition: none; } }
 
 /* ---- The hub's activity calendar (28 Sep, ActivityCalendar) ----
    A ring around each day's number, in up to three equal parts (training,

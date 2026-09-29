@@ -5,7 +5,7 @@ import { markNotificationReadAction } from "../lib/actions";
 import VideoReplySheet, { type VideoReplyView } from "./VideoReplySheet";
 import PhaseCards, { type HomePhase, type PhaseFoodToday } from "./PhaseCards";
 import ProgressPicsCard, { type ProgressPics } from "./ProgressPicsCard";
-import LifestyleCard, { type CardMetric } from "./LifestyleCard";
+import HomeLifestyleCard, { type HomeLifestyleMetric } from "./HomeLifestyleCard";
 import { ChevronDownIcon } from "../components/icons";
 import { tzShort } from "../lib/timezones";
 import type { LinkView } from "../lib/messageLinks";
@@ -119,8 +119,8 @@ export default function HomeHub({
   hello?: string;
   /** The check-in as the screen shows it, for the lifestyle card. */
   checkInCount: { done: number; total: number } | null;
-  /** Home's lifestyle card: today's questions, answered in place (LifestyleCard). */
-  checkInCard: { clientId: number; metrics: CardMetric[]; yesterday: CardMetric[]; streak: number; hour: number } | null;
+  /** Home's lifestyle card: today's daily metrics, logged in place (HomeLifestyleCard). */
+  checkInCard: { clientId: number; metrics: HomeLifestyleMetric[] } | null;
   /** No session left this week: when the next one starts. */
   weekDone: { nextWeekLabel: string } | null;
   /** A session was ended today. */
@@ -134,19 +134,8 @@ export default function HomeHub({
     <div className="hm">
       <HomeBanner dateLabel={dateLabel} firstName={firstName} initialHello={hello} />
       <div className="hm-body">
-        {/* Lifestyle first (28 Sep): the phase, today's metrics, and the question open now, answered right here. */}
-        {(checkInCard || lifestyle) && (
-          <LifestyleCard
-            clientId={checkInCard?.clientId ?? 0}
-            today={today}
-            hour={checkInCard?.hour ?? 12}
-            phase={lifestyle}
-            coachName={coach.firstName}
-            metrics={checkInCard?.metrics ?? []}
-            yesterday={checkInCard?.yesterday ?? []}
-            streak={checkInCard?.streak ?? 0}
-          />
-        )}
+        {/* Lifestyle first (29 Sep): a white card with the ring and one metric at a time, only with a live phase and daily metrics. */}
+        {checkInCard && lifestyle && checkInCard.metrics.length > 0 && <HomeLifestyleCard clientId={checkInCard.clientId} today={today} phase={lifestyle} coachName={coach.firstName} metrics={checkInCard.metrics} />}
         {/* "Your plan": training and nutrition, a card a live phase, each with its one thing to do. */}
         {plan.length > 0 && <PhaseCards phases={plan} coachName={coach.firstName} today={today} nextSession={session ? { dayId: session.dayId, name: session.name, live: !!session.live } : null} food={food} weekDone={weekDone} checkInCount={checkInCount} />}
         {progressPics && <TodaysTasks pics={progressPics} />}
