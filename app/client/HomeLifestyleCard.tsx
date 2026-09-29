@@ -37,9 +37,9 @@ export type HomeLifestyleMetric = {
 };
 const keyOf = (m: HomeLifestyleMetric) => (m.date ? `${m.date}:${m.id}` : m.id);
 
-const SAND = "#a8761f";
-const SAND_OFF = "rgba(168,118,31,.16)";
-const GREEN = "#2f7a3f";
+const SAND = "#9fe3dc";
+const SAND_OFF = "rgba(255,255,255,.28)";
+const GREEN = "#6fd39b";
 const DAY = 86400000;
 const dayNum = (s: string) => Date.UTC(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10))) / DAY;
 const localToday = () => {

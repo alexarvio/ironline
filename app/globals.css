@@ -17499,19 +17499,17 @@ button.ci-hint { cursor: pointer; }
    the card's own radius (iOS doesn't clip a blurred child by the parent's
    overflow), under a warm white wash that keeps the ink readable. */
 .hl-bg { position: absolute; z-index: -2; inset: -14px; width: calc(100% + 28px); height: calc(100% + 28px); object-fit: cover; filter: blur(5px) saturate(115%); clip-path: inset(14px round 24px); -webkit-clip-path: inset(14px round 24px); pointer-events: none; }
-.hl-scrim { position: absolute; z-index: -1; inset: 0; background: linear-gradient(180deg, rgba(6, 40, 44, 0.18) 0%, rgba(6, 40, 44, 0.3) 60%, rgba(6, 40, 44, 0.42) 100%); pointer-events: none; }
+.hl-scrim { position: absolute; z-index: -1; inset: 0; background: linear-gradient(180deg, rgba(6, 40, 44, 0.08) 0%, rgba(6, 40, 44, 0.3) 55%, rgba(3, 26, 30, 0.62) 100%); pointer-events: none; }
 .hl-head, .hl-fold, .hl-foot { position: relative; }
 .hl-fold { border-top-color: rgba(168, 118, 31, 0.16); }
-.hl-field { background: rgba(255, 255, 255, 0.9); }
 .hl-save { background: rgba(255, 255, 255, 0.85); }
-.hl-ring-in { background: rgba(255, 255, 255, 0.92); }
 .hl-head { display: flex; align-items: center; gap: 14px; width: 100%; padding: 8px 12px 12px 14px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
 .hl-ring { position: relative; display: block; flex: none; width: 56px; height: 56px; }
 .hl-ring svg { display: block; }
 .hl-ring path, .hl-ring circle { transition: stroke 0.3s ease; }
 .hl-ring-in { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; line-height: 1; }
-.hl-ring-in b { font-size: 17px; font-weight: 800; color: #141a24; }
-.hl-ring-in small { font-size: 9.5px; font-weight: 800; color: #8b93a1; }
+.hl-ring-in b { font-size: 17px; font-weight: 800; color: #fff; }
+.hl-ring-in small { font-size: 9.5px; font-weight: 800; color: rgba(255, 255, 255, 0.75); }
 .hl-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .hl-eyebrow { font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #8a5f16; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hl-title { font-size: 17px; font-weight: 800; color: #141a24; }
@@ -17542,8 +17540,9 @@ button.ci-hint { cursor: pointer; }
 .hl-bar .pc-bar.open { border-top-color: rgba(255, 255, 255, 0.4); }
 /* The pager folds shut once everything is in. */
 /* The logging block sits on its own frosted panel inside the card, the phase cards' panel in light. */
-.hl-log { display: flex; align-items: center; gap: 12px; margin: 4px 10px 10px; padding: 12px 12px 12px 10px; border-radius: 18px; background: rgba(255, 255, 255, 0.86); -webkit-backdrop-filter: blur(16px) saturate(160%); backdrop-filter: blur(16px) saturate(160%); border: 1px solid rgba(255, 255, 255, 0.9); box-shadow: inset 0 1px 0 #fff; }
-.hl-ring-btn { flex: none; display: block; padding: 0; border: 0; background: none; cursor: pointer; }
+.hl-log { display: flex; align-items: center; gap: 12px; margin: 4px 10px 10px; padding: 12px 12px 12px 10px; border-radius: 18px; background: rgba(255, 255, 255, 0.16); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.35); color: #fff; }
+.hl-ring-btn { flex: none; display: block; width: 56px; height: 56px; padding: 0; border: 0; border-radius: 50%; background: none; box-shadow: none; -webkit-appearance: none; appearance: none; cursor: pointer; }
+.hl-ring svg { width: 56px !important; height: 56px !important; }
 .hl-log-main { flex: 1; min-width: 0; }
 .hl-fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.25s ease; }
 .hl-fold.closed { grid-template-rows: 0fr; }
@@ -17552,40 +17551,40 @@ button.ci-hint { cursor: pointer; }
 .hl-pager::-webkit-scrollbar { display: none; }
 .hl-page { flex: 0 0 100%; min-width: 0; box-sizing: border-box; scroll-snap-align: start; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .hl-row1 { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.hl-name { min-width: 0; font-size: 16px; font-weight: 800; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hl-when { display: block; margin-bottom: 2px; font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #8a5f16; }
+.hl-name { min-width: 0; font-size: 16px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hl-when { display: block; margin-bottom: 2px; font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.8); }
 .hl-dots { flex: none; display: flex; gap: 4px; }
 .hl-dot { display: inline-flex; align-items: center; height: 14px; padding: 0 1px; border: 0; background: none; cursor: pointer; }
-.hl-dot i { display: block; width: 5px; height: 5px; border-radius: 99px; background: rgba(168, 118, 31, 0.22); transition: width 0.25s ease, background 0.25s ease; }
-.hl-dot.in i { background: #a8761f; }
-.hl-dot.on i { width: 16px; background: #141a24; }
+.hl-dot i { display: block; width: 5px; height: 5px; border-radius: 99px; background: rgba(255, 255, 255, 0.35); transition: width 0.25s ease, background 0.25s ease; }
+.hl-dot.in i { background: #9fe3dc; }
+.hl-dot.on i { width: 16px; background: #fff; }
 .hl-dot.edge i { width: 3px; height: 3px; }
 .hl-last { align-self: flex-start; min-height: 20px; margin: -7px 0 -6px; padding: 6px 0; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #8b93a1; text-align: left; cursor: pointer; }
 .hl-last.static { cursor: default; }
 .hl-row3 { display: flex; align-items: center; gap: 8px; margin: 0; }
-.hl-field { flex: 1; min-width: 0; height: 40px; box-sizing: border-box; border-radius: 999px; background: #F7F4EE; box-shadow: inset 0 0 0 1px rgba(168, 118, 31, 0.18); padding: 0 16px; display: flex; align-items: baseline; gap: 6px; }
-.hl-field:focus-within { box-shadow: inset 0 0 0 1.5px #a8761f; }
-.hl-field input { flex: 1; min-width: 0; width: 100%; height: 40px; margin: 0; padding: 0; border: 0; background: none; outline: none; font: inherit; font-size: 17px; font-weight: 800; line-height: 40px; text-align: right; color: #141a24; }
-.hl-field input::placeholder { color: #8b93a1; }
-.hl-unit { flex: none; font-size: 13px; font-weight: 800; line-height: 40px; color: #8b93a1; }
+.hl-field { flex: 1; min-width: 0; height: 40px; box-sizing: border-box; border-radius: 999px; background: rgba(255, 255, 255, 0.18); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35); padding: 0 16px; display: flex; align-items: baseline; gap: 6px; }
+.hl-field:focus-within { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.85); }
+.hl-field input { flex: 1; min-width: 0; width: 100%; height: 40px; margin: 0; padding: 0; border: 0; background: none; outline: none; font: inherit; font-size: 17px; font-weight: 800; line-height: 40px; text-align: right; color: #fff; }
+.hl-field input::placeholder { color: rgba(255, 255, 255, 0.55); }
+.hl-unit { flex: none; font-size: 13px; font-weight: 800; line-height: 40px; color: rgba(255, 255, 255, 0.75); }
 .hl-scale { padding: 0 4px; gap: 2px; }
-.hl-scale button { flex: 1; height: 32px; border: 0; border-radius: 999px; background: transparent; font: inherit; font-size: 15px; font-weight: 800; color: #5e4a2c; cursor: pointer; }
-.hl-scale button.on { background: #141a24; color: #fff; }
+.hl-scale button { flex: 1; height: 32px; border: 0; border-radius: 999px; background: transparent; font: inherit; font-size: 15px; font-weight: 800; color: rgba(255, 255, 255, 0.85); cursor: pointer; }
+.hl-scale button.on { background: #fff; color: #141a24; }
 .hl-scale.wide { overflow-x: auto; scrollbar-width: none; }
 .hl-scale.wide::-webkit-scrollbar { display: none; }
 .hl-scale.wide button { flex: 0 0 32px; }
-.hl-save { flex: none; height: 40px; padding: 0 18px; line-height: 1; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.85); color: #B0B7C3; box-shadow: inset 0 0 0 1px #DCE3EE; font: inherit; font-size: 14px; font-weight: 800; cursor: default; transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease; }
-.hl-save.ready { background: #141a24; color: #fff; box-shadow: 0 8px 16px -8px rgba(20, 26, 36, 0.6); cursor: pointer; }
-.hl-done { flex: 1; min-width: 0; height: 40px; box-sizing: border-box; border-radius: 999px; background: #F2F8F4; box-shadow: inset 0 0 0 1px #CFE5D6; padding: 0 16px 0 8px; display: flex; align-items: center; gap: 8px; }
+.hl-save { flex: none; height: 40px; padding: 0 18px; line-height: 1; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.12); color: rgba(255, 255, 255, 0.5); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28); font: inherit; font-size: 14px; font-weight: 800; cursor: default; transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease; }
+.hl-save.ready { background: rgba(255, 255, 255, 0.3); color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55); cursor: pointer; }
+.hl-done { flex: 1; min-width: 0; height: 40px; box-sizing: border-box; border-radius: 999px; background: rgba(47, 122, 63, 0.35); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35); padding: 0 16px 0 8px; display: flex; align-items: center; gap: 8px; }
 .hl-done i { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #2f7a3f; }
-.hl-done b { font-size: 17px; font-weight: 800; color: #1f5a33; }
-.hl-done small { font-size: 13px; font-weight: 700; color: #5b8a6a; }
-.hl-edit { flex: none; height: 40px; padding: 0 16px; line-height: 1; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #DCE3EE; font: inherit; font-size: 14px; font-weight: 800; color: #141a24; cursor: pointer; }
-.hl-error { font-size: 12.5px; font-weight: 600; color: #B42318; }
-.hl-foot { display: flex; align-items: center; gap: 10px; padding: 0; font-size: 13px; font-weight: 600; color: #5b6474; }
+.hl-done b { font-size: 17px; font-weight: 800; color: #fff; }
+.hl-done small { font-size: 13px; font-weight: 700; color: rgba(255, 255, 255, 0.8); }
+.hl-edit { flex: none; height: 40px; padding: 0 16px; line-height: 1; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.2); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4); font: inherit; font-size: 14px; font-weight: 800; color: #fff; cursor: pointer; }
+.hl-error { font-size: 12.5px; font-weight: 600; color: #ffb4ad; }
+.hl-foot { display: flex; align-items: center; gap: 10px; padding: 0; font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.85); }
 .hl-foot > span { flex: 1; min-width: 0; }
-.hl-foot b { display: block; font-size: 15px; font-weight: 800; color: #141a24; }
-.hl-open { flex: none; height: 38px; padding: 0 16px; border: 0; border-radius: 12px; background: #FBF7EF; color: #8a5f16; box-shadow: inset 0 0 0 1px rgba(168, 118, 31, 0.25); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.hl-foot b { display: block; font-size: 15px; font-weight: 800; color: #fff; }
+.hl-open { flex: none; height: 38px; padding: 0 16px; border: 0; border-radius: 12px; background: rgba(255, 255, 255, 0.22); color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
 .hl-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .hl-fold, .hl-ring, .hl-dot i, .hl-save { transition: none; } }
 
