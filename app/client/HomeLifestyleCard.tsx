@@ -47,7 +47,6 @@ const localToday = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
-const mdy = (s: string) => `${MONTHS[Number(s.slice(5, 7)) - 1]} ${Number(s.slice(8, 10))}`;
 const fmt = (v: number, p: number) => v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: p });
 const reducedMotion = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
@@ -68,11 +67,6 @@ function animateScroll(el: HTMLElement, to: number, done: () => void) {
   requestAnimationFrame(step);
 }
 
-/** "2.5 L", "9,120", "4/5". */
-function valueWords(m: HomeLifestyleMetric, v: number): string {
-  if (m.kind === "scale") return `${fmt(v, 0)}/${m.scale?.max ?? 5}`;
-  return `${fmt(v, m.precision)}${m.unit ? ` ${m.unit}` : ""}`;
-}
 
 /** "Week 3 · 4 weeks left", the phase cards' maths; "Last week" when none are left. */
 function weekParts(ph: HomePhase, today: string): { week: string; left: string | null } {
