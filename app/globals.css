@@ -17502,7 +17502,7 @@ button.ci-hint { cursor: pointer; }
 .hl-scrim { position: absolute; z-index: -1; inset: 0; background: linear-gradient(180deg, rgba(255, 252, 246, 0.78) 0%, rgba(255, 253, 249, 0.9) 45%, rgba(255, 255, 255, 0.95) 100%); pointer-events: none; }
 .hl-head, .hl-fold, .hl-foot { position: relative; }
 .hl-fold { border-top-color: rgba(168, 118, 31, 0.16); }
-.hl-field { background: rgba(255, 255, 255, 0.72); }
+.hl-field { background: rgba(255, 255, 255, 0.9); }
 .hl-save { background: rgba(255, 255, 255, 0.85); }
 .hl-ring-in { background: rgba(255, 255, 255, 0.92); }
 .hl-head { display: flex; align-items: center; gap: 14px; width: 100%; padding: 8px 12px 12px 14px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
@@ -17539,7 +17539,8 @@ button.ci-hint { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .hl.open .hl-bar .pc-bar-knob { animation: none; } }
 .hl-bar .pc-bar.open { border-top-color: rgba(168, 118, 31, 0.3); }
 /* The pager folds shut once everything is in. */
-.hl-log { display: flex; align-items: center; gap: 12px; padding: 10px 14px 14px; border-top: 1px solid rgba(168, 118, 31, 0.16); }
+/* The logging block sits on its own frosted panel inside the card, the phase cards' panel in light. */
+.hl-log { display: flex; align-items: center; gap: 12px; margin: 4px 10px 10px; padding: 12px 12px 12px 10px; border-radius: 18px; background: rgba(255, 255, 255, 0.72); -webkit-backdrop-filter: blur(16px) saturate(160%); backdrop-filter: blur(16px) saturate(160%); border: 1px solid rgba(255, 255, 255, 0.9); box-shadow: inset 0 1px 0 #fff, 0 6px 18px -14px rgba(168, 118, 31, 0.5); }
 .hl-ring-btn { flex: none; display: block; padding: 0; border: 0; background: none; cursor: pointer; }
 .hl-log-main { flex: 1; min-width: 0; }
 .hl-fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.25s ease; }
