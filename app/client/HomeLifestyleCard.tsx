@@ -2,11 +2,11 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRightIcon } from "../components/icons";
+import { ChevronRightIcon, HeartIcon } from "../components/icons";
 import { logMetricPeriodAction } from "../lib/actions";
 import { useOpenCheckIn } from "./CheckInContext";
 import { tidyDecimal } from "./workoutShared";
-import { Bar, progressOf, type HomePhase } from "./PhaseCards";
+import { Bar, progressOf, short, type HomePhase } from "./PhaseCards";
 
 // Home's lifestyle card (29 Sep, "ring + one at a time"): a white card
 // under the greeting, above the Training / Nutrition carousel. A ring with
@@ -213,22 +213,40 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
       {/* eslint-disable-next-line @next/next/no-img-element -- an upload or a public file, blurred by CSS */}
       <img className="hl-bg" src={phase.coverUrl ?? "/img/lifestyle-head.jpg"} alt="" aria-hidden="true" draggable={false} />
       <span className="hl-scrim" aria-hidden="true" />
+      {/* Built like the training card: the track chip and the week on the
+          first row, the phase's name with what is left of it, the timeline
+          with its first and last day, then today's ring and count. */}
+      <button type="button" className="hl-top" onClick={open} aria-label={`Open Lifestyle: ${phase.name}, ${weekParts(phase, today).week}`}>
+        <span className="pc-track-chip hl-chip">
+          <span className="pc-icon">
+            <HeartIcon />
+          </span>
+          Lifestyle
+        </span>
+        <span className="hl-week-chip">{weekParts(phase, today).week}</span>
+      </button>
+      <div className="hl-phase">
+        <h3 className="hl-phase-name">{phase.name}</h3>
+        {weekParts(phase, today).left && <span className="hl-week">{weekParts(phase, today).left}</span>}
+      </div>
+      <div className="hl-bar">
+        <Bar pr={progressOf(phase, today, coachName)} small />
+        {phase.end && (
+          <div className="hl-ends">
+            <span>{short(phase.start)}</span>
+            <span>{short(phase.end)}</span>
+          </div>
+        )}
+      </div>
       <button type="button" className="hl-head" onClick={open} aria-label={`Open Lifestyle: ${n} of ${total} logged today`}>
         <Ring metrics={metrics} isIn={isIn} n={n} total={total} />
         <span className="hl-text">
-          <span className="hl-eyebrow">Lifestyle · {phase.name}</span>
           <span className="hl-title">{allIn ? "All logged today" : todayDone ? `${yesterdayLeft} from yesterday to log` : `${total - n} left to log today`}</span>
         </span>
-        <span className="hl-side" aria-hidden="true">
-          <span className="hl-week-chip">{weekParts(phase, today).week}</span>
+        <span className="hl-chev" aria-hidden="true">
           <ChevronRightIcon />
         </span>
       </button>
-      {/* The phase's timeline, the phase cards' bar in sand, with the week and what is left over its right end. */}
-      <div className="hl-bar">
-        {weekParts(phase, today).left && <span className="hl-week">{weekParts(phase, today).left}</span>}
-        <Bar pr={progressOf(phase, today, coachName)} small />
-      </div>
 
       {/* The pager folds away when everything is in; the foot takes its place. */}
       <div className={`hl-fold${allIn ? " closed" : ""}`} aria-hidden={allIn}>

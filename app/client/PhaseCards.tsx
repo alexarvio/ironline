@@ -255,16 +255,16 @@ function PhaseCardCarousel({ phases, coachName, today, nextSession, food, weekDo
                 <span className="pc-week-chip">{pr.weekLabel}</span>
               </div>
               <div className="pc-panel">
-                <h3 className="pc-name-h">
-                  <FitTitle className="pc-name" min={16}>
-                    {ph.name}
-                  </FitTitle>
-                </h3>
-                {/* How long is left, the bar, and the first and last day under it. */}
+                {/* The name with how long is left on its right (one row, 29 Sep), the bar, and the first and last day under it. */}
+                <div className="pc-name-row">
+                  <h3 className="pc-name-h">
+                    <FitTitle className="pc-name" min={16}>
+                      {ph.name}
+                    </FitTitle>
+                  </h3>
+                  <span className={`pc-left${pr.overdue ? " overdue" : ""}`}>{pr.leftLabel ?? pr.throughLabel}</span>
+                </div>
                 <div className="pc-progress">
-                  <div className="pc-progress-row">
-                    <span className={`pc-left${pr.overdue ? " overdue" : ""}`}>{pr.leftLabel ?? pr.throughLabel}</span>
-                  </div>
                   <Bar pr={pr} />
                   {ph.end && (
                     <div className="pc-ends">
