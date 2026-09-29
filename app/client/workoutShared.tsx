@@ -71,6 +71,9 @@ export type SessionDay = {
   startedAt: string | null;
   endedAt: string | null;
   sessionNote: string;
+  /** How the session was, 1 to 10 each; null when not answered. */
+  enjoyment: number | null;
+  adherence: number | null;
   gyms: GymOption[];
   gymId: number | null;
 };

@@ -661,6 +661,8 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                 startedAt: day.session_started_at ?? null,
                 endedAt: day.session_ended_at ?? null,
                 sessionNote: day.session_note ?? "",
+                enjoyment: day.session_enjoyment ?? null,
+                adherence: day.session_adherence ?? null,
                 cardio: listCardioForDay(day.id).map((c) => ({ id: c.id, name: c.name, time: c.time, pace: c.pace, incline: c.incline, distance: c.distance ?? "", notes: c.notes, done: isCardioDone(c.id), swap: c.swap?.name ?? null, alternatives: c.alternatives ?? [] })),
                 exercises: assignments.map((a) => ({
                   id: a.id,

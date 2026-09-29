@@ -16009,6 +16009,19 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .wo-check-status.done { color: #2f7a3f; }
 .wo-check-status.part { color: #9a5b0c; }
 .wo-coach-note { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 16px; background: #fff; }
+/* The wrap-up's two questions (29 Sep): 1 to 10 each, optional. */
+.wo-ask { display: flex; flex-direction: column; gap: 14px; padding: 12px 14px 14px; border-radius: 16px; background: #fff; }
+.wo-ask-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.wo-ask-head small { font-size: 12px; color: #8b93a1; }
+.wo-scale { display: flex; flex-direction: column; gap: 6px; }
+.wo-scale-head { display: flex; align-items: baseline; justify-content: space-between; }
+.wo-scale-head b { font-size: 15px; font-weight: 700; color: #141a24; }
+.wo-scale-head span { font-size: 12.5px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
+.wo-scale-row { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
+.wo-scale-dot { height: 38px; padding: 0; border: 0; border-radius: 10px; background: #eef1f5; font: inherit; font-size: 13.5px; font-weight: 700; color: #5b6474; font-variant-numeric: tabular-nums; cursor: pointer; }
+.wo-scale-dot.in { background: #dbe4f1; color: #1e3a6e; }
+.wo-scale-dot.on { background: #1e3a6e; color: #fff; }
+.wo-scale-dot:disabled { cursor: default; }
 .wo-wrap-missing { margin: -4px 0 0; text-align: center; font-size: 13px; font-weight: 600; color: #5b6474; }
 /* Swipe to end. */
 .wo-swipe { position: relative; height: 60px; border-radius: 999px; background: #1e3a6e; overflow: hidden; user-select: none; -webkit-user-select: none; transition: background 0.3s ease; }

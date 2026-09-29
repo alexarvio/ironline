@@ -3142,10 +3142,10 @@ export async function startSessionAction(programDayId: number, at?: string): Pro
   return { ok: false, other: r.other };
 }
 
-export async function endSessionAction(programDayId: number, opts?: { note?: string; at?: string }) {
+export async function endSessionAction(programDayId: number, opts?: { note?: string; at?: string; enjoyment?: number | null; adherence?: number | null }) {
   const owner = clientIdForProgramDay(Number(programDayId));
   if (owner == null || !(await canAccessClient(owner))) return;
-  endSession(Number(programDayId), stampOrNow(opts?.at), String(opts?.note ?? ""));
+  endSession(Number(programDayId), stampOrNow(opts?.at), String(opts?.note ?? ""), { enjoyment: opts?.enjoyment, adherence: opts?.adherence });
   revalidatePath("/client");
   revalidatePath("/admin");
 }

@@ -65,7 +65,7 @@ export type DraftRow = {
 };
 /** swap: what the client did instead; alternatives: what the coach offers (names, with a note). */
 export type DraftCardio = { id: number; name: string; time: string; pace: string; incline: string; distance: string; notes: string; done: boolean; swap?: string | null; alternatives?: { name: string; note: string }[] };
-export type DraftSession = { id: number; number: number; name: string; setsPlanned: number; setsLogged: number; gym: string | null; skip: string | null; duration: number | null; ended: string | null; note: string | null; rows: DraftRow[]; cardio: DraftCardio[] };
+export type DraftSession = { id: number; number: number; name: string; setsPlanned: number; setsLogged: number; gym: string | null; skip: string | null; duration: number | null; ended: string | null; note: string | null; /** What the client answered on ending the session, 1 to 10 each. */ enjoyment?: number | null; adherence?: number | null; rows: DraftRow[]; cardio: DraftCardio[] };
 export type DraftProgram = {
   id: number;
   programs: { id: number; name: string; weeks: number; state: "live" | "past" | "scheduled" | "draft" }[];
@@ -641,7 +641,19 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
 
       {/* The name column is as wide as the week's longest name, so the counts
           sit right after the names and still line up down the week. */}
-      <div className="rd-sessions" style={{ "--rd-name-ch": Math.min(28, Math.max(4, ...sessions.map((s) => (pend(s.id).renamed ?? s.name).length))) } as React.CSSProperties}>
+      <div
+        className="rd-sessions"
+        style={
+          {
+            "--rd-name-ch": Math.min(28, Math.max(4, ...sessions.map((s) => (pend(s.id).renamed ?? s.name).length))),
+            // The pills on the right the same: each column as wide as the
+            // week's widest pill of its kind, and not there when the week has none.
+            "--rd-time-ch": Math.max(0, ...sessions.map((s) => (s.duration != null ? `${s.duration} min`.length : 0))),
+            "--rd-gym-ch": Math.min(18, Math.max(0, ...sessions.map((s) => s.gym?.length ?? 0))),
+            "--rd-state-ch": Math.max(0, ...sessions.map((s) => stateWord(s).length)),
+          } as React.CSSProperties
+        }
+      >
         <SortableList
           ids={sessions.map((s) => s.id)}
           label="session"
@@ -688,8 +700,8 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                     a swap, the client's note. */}
                 {/* Unlabelled columns on the right, each a set width with its
                     pill centred, so they line up down the week whatever the
-                    gym: (left to right) a swap, the client's note, the time,
-                    the gym, the state. */}
+                    gym: (left to right) the client's note, a video, a swap, the
+                    two answers, the time, the gym, the state. */}
                 <span className="rd-session-tags">
                   {/* The swap and the client's note come and go, so they pack
                       against the time with no empty slot; the time, gym and
@@ -700,6 +712,17 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                         <ChatIcon />
                         <span className="rd-tag-note-text">&ldquo;{s.note}&rdquo;</span>
                       </span>
+                    {/* What the client answered on ending the session, 1 to 10 each. */}
+                    {s.enjoyment != null && (
+                      <span className="rd-tag score" title={`${firstName} enjoyed it ${s.enjoyment} of 10`}>
+                        Enjoyment <b>{s.enjoyment}</b>
+                      </span>
+                    )}
+                    {s.adherence != null && (
+                      <span className="rd-tag score" title={`${firstName} kept to it ${s.adherence} of 10`}>
+                        Adherence <b>{s.adherence}</b>
+                      </span>
+                    )}
                     )}
                     {(() => {
                       // A video from the client in this session: waiting for a reply, or answered.
@@ -722,14 +745,19 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                       ) : null;
                     })()}
                   </span>
-                  <span className="rd-tagslot time">{s.duration != null && <span className="rd-tag time">{s.duration} min</span>}</span>
+                  {sessions.some((x) => x.duration != null) && <span className="rd-tagslot time">{s.duration != null && <span className="rd-tag time">{s.duration} min</span>}</span>}
                   {/* The gym only matters with more than one: one gym, no slot, so nothing sits empty. */}
-                  {multiGym && <span className="rd-tagslot gym">{s.gym && <span className="rd-tag gym" title={s.gym}>{s.gym}</span>}</span>}
-                  <span className="rd-tagslot state">{status ? <span className={`rd-pill ${status.cls}`}>{status.text}</span> : rows.length + s.cardio.length > 0 ? <span className="rd-pill idle">Not started</span> : null}</span>
+                  {multiGym && sessions.some((x) => x.gym) && <span className="rd-tagslot gym">{s.gym && <span className="rd-tag gym" title={s.gym}>{s.gym}</span>}</span>}
+                  {sessions.some((x) => stateWord(x)) && <span className="rd-tagslot state">{status ? <span className={`rd-pill ${status.cls}`}>{status.text}</span> : rows.length + s.cardio.length > 0 ? <span className="rd-pill idle">Not started</span> : null}</span>}
                 </span>
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger className="rd-btn ghost" aria-label={`More for ${name}`}>
                     <MoreIcon />
+                  {(s.enjoyment != null || s.adherence != null) && (
+                    <p className="rd-session-note">
+                      {firstName} answered: {[s.enjoyment != null ? `enjoyment ${s.enjoyment} of 10` : null, s.adherence != null ? `adherence ${s.adherence} of 10` : null].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="pb-menu">
                     <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: `${name}, ${week.label}`, link: { kind: "session", dayId: s.id } })}>
@@ -1480,6 +1508,10 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                 else router.refresh();
               });
             }}
+/** The word on a session's state pill, for sizing its column: "" when it has none. */
+const stateWord = (s: DraftSession) =>
+  s.skip ? "Skipped" : s.setsPlanned > 0 && s.setsLogged >= s.setsPlanned && s.cardio.every((c) => c.done) ? "Completed" : s.ended || s.setsLogged > 0 ? "Unfinished" : s.rows.length + s.cardio.length > 0 ? "Not started" : "";
+
           />
         )}
 

@@ -160,12 +160,15 @@ export default function WorkoutScreen({
 
   // Ending and discarding.
   const [note, setNote] = useState(day.sessionNote);
+  // Two optional questions before ending: 1 to 10 each, a second tap takes the answer back.
+  const [enjoyment, setEnjoyment] = useState<number | null>(day.enjoyment);
+  const [adherence, setAdherence] = useState<number | null>(day.adherence);
   const [ending, setEnding] = useState(false);
   const end = () => {
     if (ending) return;
     setEnding(true);
     startTransition(async () => {
-      await endSessionAction(day.key, { note });
+      await endSessionAction(day.key, { note, enjoyment, adherence });
       setTimeout(onEnded, 900);
     });
   };
@@ -335,8 +338,15 @@ export default function WorkoutScreen({
                     );
                   })}
                 </div>
+                <div className="wo-ask">
+                  <div className="wo-ask-head">
+                    <span className="wo-note-label">How was it?</span>
+                  </div>
+                  <Scale label="Enjoyment" value={enjoyment} onChange={setEnjoyment} disabled={ended} />
+                  <Scale label="Adherence" value={adherence} onChange={setAdherence} disabled={ended} />
+                </div>
                 <div className="wo-coach-note">
-                  <span className="wo-note-label">Note to {coachName}</span>
+                  <span className="wo-note-label">Anything to mention to {coachName}?</span>
                   <textarea className="wo-note-input" rows={2} value={note} placeholder="How did it feel? Anything to flag?" onChange={(e) => setNote(e.target.value)} disabled={ended} />
                 </div>
                 <SwipeToEnd onEnd={end} done={ended} />
@@ -390,5 +400,24 @@ function MenuIcon({ kind }: { kind: keyof typeof MENU_ICONS }) {
         <path key={d} d={d} />
       ))}
     </svg>
+  );
+}
+
+// One question of the wrap-up: 1 to 10, a tap picks, a tap on the pick takes it back.
+function Scale({ label, value, onChange, disabled }: { label: string; value: number | null; onChange: (v: number | null) => void; disabled?: boolean }) {
+  return (
+    <div className="wo-scale">
+      <div className="wo-scale-head">
+        <b>{label}</b>
+        <span>{value != null ? `${value} of 10` : "1 to 10"}</span>
+      </div>
+      <div className="wo-scale-row" role="group" aria-label={`${label}, 1 to 10`}>
+        {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+          <button key={n} type="button" className={`wo-scale-dot${value != null && n <= value ? " in" : ""}${n === value ? " on" : ""}`} aria-pressed={n === value} disabled={disabled} onClick={() => onChange(n === value ? null : n)}>
+            {n}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }

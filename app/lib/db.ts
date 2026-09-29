@@ -72,6 +72,10 @@ type ProgramDay = {
   session_ended_at?: string;
   // What the client wrote to the coach on ending the session.
   session_note?: string;
+  // How the session was, asked before ending it, each 1 to 10 and each
+  // optional: how much they enjoyed it, how closely they kept to it.
+  session_enjoyment?: number;
+  session_adherence?: number;
 };
 // A multi-week training program — the coach picks a name and a length
 // (total_weeks) up front; program_days for weeks [start_week, start_week +
