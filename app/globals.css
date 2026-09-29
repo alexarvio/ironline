@@ -17524,6 +17524,7 @@ button.ci-hint { cursor: pointer; }
 .hl-page { flex: 0 0 100%; min-width: 0; box-sizing: border-box; scroll-snap-align: start; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
 .hl-row1 { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .hl-name { min-width: 0; font-size: 16px; font-weight: 800; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hl-when { display: block; margin-bottom: 2px; font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #8a5f16; }
 .hl-dots { flex: none; display: flex; gap: 4px; }
 .hl-dot { display: inline-flex; align-items: center; height: 14px; padding: 0 1px; border: 0; background: none; cursor: pointer; }
 .hl-dot i { display: block; width: 5px; height: 5px; border-radius: 99px; background: rgba(168, 118, 31, 0.22); transition: width 0.25s ease, background 0.25s ease; }

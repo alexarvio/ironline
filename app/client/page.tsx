@@ -33,6 +33,7 @@ import {
   getCheckInSections,
   getCheckInHistory,
   getCheckInStreak,
+  yesterdaysOpenMetrics,
   type CheckInMetric,
   getWorkoutCalendar,
   getActivityCalendar,
@@ -369,6 +370,11 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
         clientId: CLIENT_ID,
         // Today's daily metrics only, in the coach's order; the week's stay in the check-in.
         metrics: (sections.sections.find((s) => s.id === "daily")?.metrics ?? []).map(homeMetric),
+        // Yesterday's questions left open: asked once today's are in.
+        yesterday: (() => {
+          const y = yesterdaysOpenMetrics(CLIENT_ID);
+          return y ? y.metrics.map((m) => ({ ...homeMetric(m), date: y.date })) : [];
+        })(),
       }}
     />
   );

@@ -32,7 +32,10 @@ export type HomeLifestyleMetric = {
   /** The most recent value before today. */
   last: { value: number; date: string } | null;
   locked: boolean;
+  /** A day other than today: yesterday's question left open, asked once today's are in. */
+  date?: string;
 };
+const keyOf = (m: HomeLifestyleMetric) => (m.date ? `${m.date}:${m.id}` : m.id);
 
 const SAND = "#a8761f";
 const SAND_OFF = "rgba(168,118,31,.16)";
@@ -85,17 +88,23 @@ function weekWords(ph: HomePhase, today: string): string {
   return `Week ${week} · ${left === 0 ? "Last week" : `${left} week${left === 1 ? "" : "s"} left`}`;
 }
 
-export default function HomeLifestyleCard({ clientId, today, phase, coachName, metrics }: { clientId: number; today: string; phase: HomePhase; coachName: string; metrics: HomeLifestyleMetric[] }) {
+export default function HomeLifestyleCard({ clientId, today, phase, coachName, metrics: todays, yesterday = [] }: { clientId: number; today: string; phase: HomePhase; coachName: string; metrics: HomeLifestyleMetric[]; yesterday?: HomeLifestyleMetric[] }) {
   const router = useRouter();
   const openCheckIn = useOpenCheckIn();
   const [, start] = useTransition();
   // Values saved from here before the page has caught up, by metric id.
   const [saved, setSaved] = useState<Record<string, number>>({});
-  const todayOf = (m: HomeLifestyleMetric) => saved[m.id] ?? m.today;
+  const todayOf = (m: HomeLifestyleMetric) => saved[keyOf(m)] ?? m.today;
   const isIn = (m: HomeLifestyleMetric) => todayOf(m) != null;
-  const total = metrics.length;
-  const n = metrics.filter(isIn).length;
-  const allIn = n === total;
+  // The ring and the count are today's; yesterday's open questions queue
+  // after them as pages of their own, and go once they are answered.
+  const total = todays.length;
+  const n = todays.filter(isIn).length;
+  const todayDone = n === total;
+  const metrics = [...todays, ...yesterday.filter((m) => saved[keyOf(m)] == null)];
+  const pages = metrics.length;
+  const yesterdayLeft = metrics.length - todays.length;
+  const allIn = todayDone && yesterdayLeft === 0;
   const [live, setLive] = useState("");
 
   // The page on show: the first metric not logged today, or where the
@@ -107,7 +116,7 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
       const s = sessionStorage.getItem(storeKey);
       if (s != null) i = Number(s);
     } catch {}
-    if (!(i >= 0 && i < total)) i = metrics.findIndex((m) => !isIn(m));
+    if (!(i >= 0 && i < pages)) i = metrics.findIndex((m) => !isIn(m));
     return i < 0 ? 0 : i;
   });
   useEffect(() => {
@@ -146,15 +155,15 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
     const el = scroller.current;
     if (!el || animating.current || el.clientWidth === 0) return;
     const i = Math.round(el.scrollLeft / el.clientWidth);
-    if (i !== idx && i >= 0 && i < total) setIdx(i);
+    if (i !== idx && i >= 0 && i < pages) setIdx(i);
   };
 
   // The next one still to log, forward from here and round again.
   const nextOpen = (from: number, logged: Record<string, number>) => {
-    for (let k = 1; k <= total; k++) {
-      const j = (from + k) % total;
+    for (let k = 1; k <= pages; k++) {
+      const j = (from + k) % pages;
       const m = metrics[j];
-      if ((logged[m.id] ?? m.today) == null) return j;
+      if ((logged[keyOf(m)] ?? m.today) == null) return j;
     }
     return -1;
   };
@@ -164,23 +173,23 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
   const save = (m: HomeLifestyleMetric, value: number, i: number) => {
     const keyboardOpen = document.activeElement instanceof HTMLInputElement;
     const before = saved;
-    const logged = { ...saved, [m.id]: value };
+    const logged = { ...saved, [keyOf(m)]: value };
     setSaved(logged);
-    setError((e) => ({ ...e, [m.id]: "" }));
+    setError((e) => ({ ...e, [keyOf(m)]: "" }));
     setLive(`${m.name} saved`);
     const j = nextOpen(i, logged);
-    if (j >= 0) goTo(j, () => keyboardOpen && inputs.current[metrics[j].id]?.focus());
+    if (j >= 0) goTo(j, () => keyboardOpen && inputs.current[keyOf(metrics[j])]?.focus());
     start(async () => {
       try {
         const fd = new FormData();
         fd.set("clientId", String(clientId));
-        fd.set("date", today);
+        fd.set("date", m.date ?? today);
         fd.set("frequency", "daily");
         fd.set(`metric_${m.id}`, String(value));
         await logMetricPeriodAction(fd);
       } catch {
         setSaved(before);
-        setError((e) => ({ ...e, [m.id]: "Couldn't save. Try again." }));
+        setError((e) => ({ ...e, [keyOf(m)]: "Couldn't save. Try again." }));
         goTo(i);
       }
     });
@@ -195,7 +204,7 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
     return () => document.removeEventListener("visibilitychange", on);
   }, [today, router]);
 
-  if (total === 0) return null;
+  if (pages === 0) return null;
   const open = () => openCheckIn?.("daily");
 
   return (
@@ -208,7 +217,7 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
         <Ring metrics={metrics} isIn={isIn} n={n} total={total} />
         <span className="hl-text">
           <span className="hl-eyebrow">Lifestyle · {phase.name}</span>
-          <span className="hl-title">{allIn ? "All logged today" : `${total - n} left to log today`}</span>
+          <span className="hl-title">{allIn ? "All logged today" : todayDone ? `${yesterdayLeft} from yesterday to log` : `${total - n} left to log today`}</span>
         </span>
         <span className="hl-chev" aria-hidden="true">
           <ChevronRightIcon />
@@ -226,18 +235,18 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
           <div ref={scroller} className="hl-pager" role="region" aria-roledescription="carousel" aria-label="Today's lifestyle metrics" onScroll={onScroll}>
             {metrics.map((m, i) => (
               <MetricPage
-                key={m.id}
+                key={keyOf(m)}
                 m={m}
                 i={i}
                 idx={idx}
                 metrics={metrics}
                 isIn={isIn}
                 value={todayOf(m)}
-                error={error[m.id] ?? ""}
+                error={error[keyOf(m)] ?? ""}
                 onGoTo={(j) => goTo(j)}
                 onSave={(v) => save(m, v, i)}
-                inputRef={(el) => (inputs.current[m.id] = el)}
-                onError={(msg) => setError((e) => ({ ...e, [m.id]: msg }))}
+                inputRef={(el) => (inputs.current[keyOf(m)] = el)}
+                onError={(msg) => setError((e) => ({ ...e, [keyOf(m)]: msg }))}
               />
             ))}
           </div>
@@ -340,13 +349,16 @@ function MetricPage({
   return (
     <div className="hl-page" role="group" aria-roledescription="slide" aria-label={`${i + 1} of ${total}: ${m.name}`}>
       <div className="hl-row1">
-        <span className="hl-name">{m.name}</span>
+        <span className="hl-name">
+          {m.date && <small className="hl-when">Yesterday</small>}
+          {m.name}
+        </span>
         <span className="hl-dots">
           {dots.map((d, k) => {
             const j = from + k;
             const edge = total > 8 && ((k === 0 && from > 0) || (k === win - 1 && from + win < total));
             return (
-              <button key={d.id} type="button" className={`hl-dot${j === idx ? " on" : isIn(d) ? " in" : ""}${edge ? " edge" : ""}`} aria-label={d.name} aria-current={j === idx ? "true" : undefined} onClick={() => j !== idx && onGoTo(j)}>
+              <button key={keyOf(d)} type="button" className={`hl-dot${j === idx ? " on" : isIn(d) ? " in" : ""}${edge ? " edge" : ""}`} aria-label={d.name} aria-current={j === idx ? "true" : undefined} onClick={() => j !== idx && onGoTo(j)}>
                 <i />
               </button>
             );
@@ -355,12 +367,12 @@ function MetricPage({
       </div>
 
       {logged && !editing ? (
-        <span className="hl-last static">Logged today</span>
+        <span className="hl-last static">{m.date ? "Logged" : "Logged today"}</span>
       ) : m.last ? (
         <button
           type="button"
           className="hl-last"
-          id={`hl-last-${m.id}`}
+          id={`hl-last-${keyOf(m)}`}
           onClick={() => {
             if (m.kind === "scale") setPick(m.last!.value);
             else setDraft(fmt(m.last!.value, m.precision).replace(/,/g, ""));
@@ -408,7 +420,7 @@ function MetricPage({
                 enterKeyHint="done"
                 placeholder="0"
                 aria-label={`${m.name}${m.unit ? ` in ${m.unit}` : ""}`}
-                aria-describedby={m.last ? `hl-last-${m.id}` : undefined}
+                aria-describedby={m.last ? `hl-last-${keyOf(m)}` : undefined}
                 aria-invalid={outOfRange || undefined}
               />
               {m.unit && <span className="hl-unit">{m.unit}</span>}
