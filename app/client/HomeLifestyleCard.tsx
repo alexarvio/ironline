@@ -81,7 +81,7 @@ function weekParts(ph: HomePhase, today: string): { week: string; left: string |
   return { week: `Week ${week}`, left: left === 0 ? "Last week" : `${left} week${left === 1 ? "" : "s"} left` };
 }
 
-export default function HomeLifestyleCard({ clientId, today, phase, coachName, metrics: todays, yesterday = [] }: { clientId: number; today: string; phase: HomePhase; coachName: string; metrics: HomeLifestyleMetric[]; yesterday?: HomeLifestyleMetric[] }) {
+export default function HomeLifestyleCard({ clientId, today, phase, coachName, metrics: todays, yesterday = [] }: { clientId: number; today: string; phase: HomePhase | null; coachName: string; metrics: HomeLifestyleMetric[]; yesterday?: HomeLifestyleMetric[] }) {
   const router = useRouter();
   const openCheckIn = useOpenCheckIn();
   const [, start] = useTransition();
@@ -212,19 +212,21 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
       {/* Built like the training card: the track chip and the week on the
           first row, the phase's name with what is left of it, the timeline
           with its first and last day, then today's ring and count. */}
-      <button type="button" className="hl-top" onClick={open} aria-label={`Open Lifestyle: ${phase.name}, ${weekParts(phase, today).week}`}>
+      <button type="button" className="hl-top" onClick={open} aria-label={phase ? `Open Lifestyle: ${phase.name}, ${weekParts(phase, today).week}` : "Open your check-in"}>
         <span className="pc-track-chip hl-chip">
           <span className="pc-icon">
             <HeartIcon />
           </span>
           Lifestyle
         </span>
-        <span className="hl-week-chip">{weekParts(phase, today).week}</span>
+        {phase && <span className="hl-week-chip">{weekParts(phase, today).week}</span>}
       </button>
-      <div className="hl-phase" role="button" tabIndex={0} onClick={openCalendar} onKeyDown={(e) => e.key === "Enter" && openCalendar()} aria-label={`Open the calendar: ${phase.name}`}>
-        <h3 className="hl-phase-name">{phase.name}</h3>
-        {weekParts(phase, today).left && <span className="hl-week">{weekParts(phase, today).left}</span>}
+      <div className="hl-phase" role="button" tabIndex={0} onClick={openCalendar} onKeyDown={(e) => e.key === "Enter" && openCalendar()} aria-label={`Open the calendar: ${phase?.name ?? "check-in"}`}>
+        {/* No lifestyle phase set: the metrics still ask, under "Check-in", with no timeline. */}
+        <h3 className="hl-phase-name">{phase?.name ?? "Check-in"}</h3>
+        {phase && weekParts(phase, today).left && <span className="hl-week">{weekParts(phase, today).left}</span>}
       </div>
+      {phase && (
       <div className="hl-bar" onClick={openCalendar}>
         <Bar pr={progressOf(phase, today, coachName)} small />
         {phase.end && (
@@ -234,6 +236,7 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
           </div>
         )}
       </div>
+      )}
       {/* One block: the ring on the left (a tap opens the check-in), and
           beside it the metric to log, one page at a time; the pager folds
           away when everything is in and the foot takes its place. */}
