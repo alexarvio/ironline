@@ -414,7 +414,12 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
   const laterLabel = later.length === 0 ? "" : later.length === 1 ? `W${later[0].index}` : `W${later[0].index}–W${later[later.length - 1].index}`;
 
   return (
-    <div className="rd">
+    <div className={`rd${program.status === "past" ? " rd-past" : ""}`}>
+      {program.status === "past" && (
+        <div className="rd-past-note" role="note">
+          <b>Ended.</b> This programme is here to look back on; nothing in it can be changed.
+        </div>
+      )}
       {/* ---- Header: the programme, where it is, its actions. */}
       <header className="rd-head">
         <div className="rd-head-main">
@@ -422,7 +427,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
           <h1 className="rd-title">
             {program.programs.length > 1 ? (
               <DropdownMenu modal={false}>
-                <DropdownMenuTrigger className="rd-switch" aria-label="Switch programme">
+                <DropdownMenuTrigger className="rd-switch rd-keep" aria-label="Switch programme">
                   {program.name}
                   <ChevronDownIcon />
                 </DropdownMenuTrigger>

@@ -113,6 +113,13 @@
 .rd-switch-menu small { color: #8b93a1; font-weight: 500; }
 .rd-switch-menu .rd-status { font-size: 10px; padding: 2px 8px; }
 .rd-status.past { background: #eceff3; color: #5b6474; }
+/* A past phase or programme on screen (29 Sep): there to look back on, nothing
+   to change. Every control sleeps except the pickers that move between
+   phases, weeks and programmes (.rd-keep), and links. */
+.rd-past-note { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; background: #eceff3; font-size: 13px; font-weight: 600; color: #5b6474; }
+.rd-past-note b { font-weight: 800; color: #141a24; }
+.rd-past :is(button, input, textarea, select, [contenteditable="true"]):not(.rd-keep):not(.rd-keep *):not(a) { pointer-events: none; opacity: 0.55; }
+.rd-past .rd-past-note, .rd-past .rd-past-note * { opacity: 1; }
 .rd-ex-name { display: flex; align-items: baseline; gap: 8px; }
 .rd-trend { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rd-trend.up { color: #1b7a4b; }

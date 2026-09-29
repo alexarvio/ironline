@@ -152,13 +152,15 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
   // The window: last week for context, this week in the second column, and
   // most of the grid what is coming. "Now" is one fixed line a week and a
   // half in; the weeks slide under it as the week goes by.
-  // "Show past" reaches back to the earliest phase, so what ended before is
-  // there to see (and to copy); otherwise two weeks of context.
+  // Six weeks of context behind now, so a phase that just ended stays on the
+  // timeline and drifts off as the weeks go by; "Show past" reaches back to
+  // the earliest phase, so what ended long ago is there to see (and to copy).
+  const CONTEXT_WEEKS = 6;
   const [showPast, setShowPast] = useState(false);
   const earliest = phases.reduce<string | null>((m, p) => (m == null || p.start_week < m ? p.start_week : m), null);
   const pastWeeks = earliest ? Math.max(0, weeksBetween(mondayOf(earliest), thisWeek)) : 0;
-  const hasPast = pastWeeks > 2;
-  const back = showPast && hasPast ? pastWeeks + 1 : 2;
+  const hasPast = pastWeeks > CONTEXT_WEEKS;
+  const back = showPast && hasPast ? pastWeeks + 1 : CONTEXT_WEEKS;
   const first = addWeeks(thisWeek, -back);
   const count = win + back;
   const weeks = Array.from({ length: count }, (_, i) => addWeeks(first, i));
@@ -878,6 +880,12 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
           <button type="button" className="rd-btn" onClick={onDuplicate} title="A copy as a new draft, from next Monday, as long as this one">
             Duplicate
           </button>
+        )}
+        {/* Where the phase lives: its tab, on this phase (a past one opens to look back on, nothing to change). */}
+        {phase && (phase.track !== "training" || phase.program) && (
+          <a className="rd-btn" href={phase.track === "training" ? `/admin/redesign/training?client=${clientId}&program=${phase.program!.id}` : `/admin/redesign/${phase.track === "nutrition" ? "nutrition" : "measurements"}?client=${clientId}&phase=${phase.id}`}>
+            Open
+          </a>
         )}
         <DialogClose className="rd-btn">Cancel</DialogClose>
         {editing && isDraft && (

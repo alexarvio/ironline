@@ -258,7 +258,12 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
   } as const;
 
   return (
-    <div className="rd">
+    <div className={`rd${plan.status === "past" ? " rd-past" : ""}`}>
+      {plan.status === "past" && (
+        <div className="rd-past-note" role="note">
+          <b>Ended.</b> This phase is here to look back on; nothing in it can be changed.
+        </div>
+      )}
       {/* ---- Header: the phase, where it is, its actions. */}
       <header className="rd-head">
         <div className="rd-head-main">
@@ -266,7 +271,7 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
           <h1 className="rd-title">
             {plan.phases.length > 1 ? (
               <DropdownMenu modal={false}>
-                <DropdownMenuTrigger className="rd-switch" aria-label="Switch phase">
+                <DropdownMenuTrigger className="rd-switch rd-keep" aria-label="Switch phase">
                   {plan.name}
                   <ChevronDownIcon />
                 </DropdownMenuTrigger>
