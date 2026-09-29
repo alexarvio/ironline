@@ -58,10 +58,10 @@ export type ProgramDay = {
   session_started_at?: string;
   session_ended_at?: string;
   session_note?: string;
-};
-export type WorkoutAssignment = {
   session_enjoyment?: number;
   session_adherence?: number;
+};
+export type WorkoutAssignment = {
   id: number;
   program_day_id: number;
   exercise_id: number;
@@ -4909,7 +4909,7 @@ export function listAllMeetings(coachId: number): MeetingWithClient[] {
         ...m,
         duration_minutes: m.duration_minutes || DEFAULT_MEETING_DURATION,
         clientName: m.client_id == null ? "Just you" : client?.name ?? "Unknown client",
-      });
+      };
     })
     .sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1));
 }
@@ -7887,10 +7887,6 @@ export function endSession(programDayId: number, at: string, note: string, ratin
   const text = note.trim().slice(0, 1000);
   if (text) day.session_note = text;
   else delete day.session_note;
-  persist();
-}
-
-/** The client threw the session away: its sets, warm-ups and swaps go, and
   // 1 to 10, or not answered.
   const score = (v: unknown) => (typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= 10 ? v : null);
   const enjoyment = score(ratings.enjoyment);
@@ -7899,6 +7895,10 @@ export function endSession(programDayId: number, at: string, note: string, ratin
   else delete day.session_enjoyment;
   if (adherence != null) day.session_adherence = adherence;
   else delete day.session_adherence;
+  persist();
+}
+
+/** The client threw the session away: its sets, warm-ups and swaps go, and
     it reads as never begun. */
 export function discardSession(programDayId: number) {
   const data = getData();
@@ -7916,12 +7916,12 @@ export function discardSession(programDayId: number) {
   delete day.session_started_at;
   delete day.session_ended_at;
   delete day.session_note;
+  delete day.session_enjoyment;
+  delete day.session_adherence;
   persist();
 }
 
 /** The client did another exercise instead of the prescribed one. Null clears it. */
-  delete day.session_enjoyment;
-  delete day.session_adherence;
 export function setExerciseSwap(assignmentId: number, swap: { library_exercise_id: number | null; custom_name: string | null } | null) {
   const wa = getData().workout_assignments.find((x) => x.id === assignmentId);
   if (!wa) return;

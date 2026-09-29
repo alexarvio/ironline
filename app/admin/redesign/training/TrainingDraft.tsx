@@ -712,17 +712,6 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                         <ChatIcon />
                         <span className="rd-tag-note-text">&ldquo;{s.note}&rdquo;</span>
                       </span>
-                    {/* What the client answered on ending the session, 1 to 10 each. */}
-                    {s.enjoyment != null && (
-                      <span className="rd-tag score" title={`${firstName} enjoyed it ${s.enjoyment} of 10`}>
-                        Enjoyment <b>{s.enjoyment}</b>
-                      </span>
-                    )}
-                    {s.adherence != null && (
-                      <span className="rd-tag score" title={`${firstName} kept to it ${s.adherence} of 10`}>
-                        Adherence <b>{s.adherence}</b>
-                      </span>
-                    )}
                     )}
                     {(() => {
                       // A video from the client in this session: waiting for a reply, or answered.
@@ -744,6 +733,17 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                         </span>
                       ) : null;
                     })()}
+                    {/* What the client answered on ending the session, 1 to 10 each. */}
+                    {s.enjoyment != null && (
+                      <span className="rd-tag score" title={`${firstName} enjoyed it ${s.enjoyment} of 10`}>
+                        Enjoyment <b>{s.enjoyment}</b>
+                      </span>
+                    )}
+                    {s.adherence != null && (
+                      <span className="rd-tag score" title={`${firstName} kept to it ${s.adherence} of 10`}>
+                        Adherence <b>{s.adherence}</b>
+                      </span>
+                    )}
                   </span>
                   {sessions.some((x) => x.duration != null) && <span className="rd-tagslot time">{s.duration != null && <span className="rd-tag time">{s.duration} min</span>}</span>}
                   {/* The gym only matters with more than one: one gym, no slot, so nothing sits empty. */}
@@ -753,11 +753,6 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger className="rd-btn ghost" aria-label={`More for ${name}`}>
                     <MoreIcon />
-                  {(s.enjoyment != null || s.adherence != null) && (
-                    <p className="rd-session-note">
-                      {firstName} answered: {[s.enjoyment != null ? `enjoyment ${s.enjoyment} of 10` : null, s.adherence != null ? `adherence ${s.adherence} of 10` : null].filter(Boolean).join(" · ")}
-                    </p>
-                  )}
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="pb-menu">
                     <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: `${name}, ${week.label}`, link: { kind: "session", dayId: s.id } })}>
@@ -779,6 +774,11 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
               {isOpen && (
                 <div className="rd-rows">
                   {s.skip && <p className="rd-skip">{firstName} couldn&rsquo;t train: &ldquo;{s.skip}&rdquo;</p>}
+                  {(s.enjoyment != null || s.adherence != null) && (
+                    <p className="rd-session-note">
+                      {firstName} answered: {[s.enjoyment != null ? `enjoyment ${s.enjoyment} of 10` : null, s.adherence != null ? `adherence ${s.adherence} of 10` : null].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
                   {s.note && <p className="rd-session-note">{firstName} wrote: &ldquo;{s.note}&rdquo;</p>}
                   <div className="rd-cols" aria-hidden="true" style={colStyle}>
                     <span />
@@ -1508,10 +1508,6 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                 else router.refresh();
               });
             }}
-/** The word on a session's state pill, for sizing its column: "" when it has none. */
-const stateWord = (s: DraftSession) =>
-  s.skip ? "Skipped" : s.setsPlanned > 0 && s.setsLogged >= s.setsPlanned && s.cardio.every((c) => c.done) ? "Completed" : s.ended || s.setsLogged > 0 ? "Unfinished" : s.rows.length + s.cardio.length > 0 ? "Not started" : "";
-
           />
         )}
 
@@ -1532,6 +1528,10 @@ const stateWord = (s: DraftSession) =>
 }
 
 // ---- Small parts -------------------------------------------------------------
+
+/** The word on a session's state pill, for sizing its column: "" when it has none. */
+const stateWord = (s: DraftSession) =>
+  s.skip ? "Skipped" : s.setsPlanned > 0 && s.setsLogged >= s.setsPlanned && s.cardio.every((c) => c.done) ? "Completed" : s.ended || s.setsLogged > 0 ? "Unfinished" : s.rows.length + s.cardio.length > 0 ? "Not started" : "";
 
 export const stateLabel = (s: string) => (s === "live" ? "Live" : s === "past" ? "Past" : s === "scheduled" ? "Scheduled" : "Draft");
 export const fmtDate = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });

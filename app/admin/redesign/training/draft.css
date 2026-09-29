@@ -485,13 +485,13 @@
 .rd-tag.note { max-width: 220px; padding: 0 9px 0 7px; background: #FBE7C6; color: #9a5b0c; cursor: help; }
 .rd-tag-note-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-style: italic; }
 .rd-tag.note svg { width: 13px; height: 13px; }
+.rd-tag.score { gap: 4px; font-weight: 600; }
+.rd-tag.score b { font-weight: 700; color: #1e3a6e; font-variant-numeric: tabular-nums; }
 
 /* An exercise row's signals (25 Sep): in front of its ⋯, three fixed slots
    (a swap, the client's messages about it, a video they sent) so each kind
    lines up down the table; a demo's play button at the right end of the name. */
 .rd-row-more { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
-.rd-tag.score { gap: 4px; font-weight: 600; }
-.rd-tag.score b { font-weight: 700; color: #1e3a6e; font-variant-numeric: tabular-nums; }
 .rd-flags { display: flex; align-items: center; gap: 2px; }
 .rd-flag-slot { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; }
 .rd-flag-slot .rd-swapdot { margin: 0; padding: 0; min-width: 22px; width: 22px; }
