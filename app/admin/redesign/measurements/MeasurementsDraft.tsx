@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
-import Link from "next/link";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { addClientPhaseAction, applyMetricChangesAction, deployPhaseNowAction, saveAndSchedulePhaseAction, sendChatMessageAction, setCheckInDayAction, unschedulePhaseAction, updateClientPhaseAction } from "../../../lib/actions";
@@ -13,6 +12,7 @@ import { CalendarIcon, ChatIcon, ChevronDownIcon, MoreIcon, PlusIcon, TrashIcon 
 import type { LoggedMetric, LoggedValues } from "../../../lib/queries";
 import { ConfirmDialog, MessageDialog, fmtDate, stateLabel, useClickAway } from "../training/TrainingDraft";
 import PhaseDatesDialog from "../PhaseDatesDialog";
+import PhaseSwitcher from "../PhaseSwitcher";
 import PhaseGoalsCard from "../PhaseGoalsCard";
 import { SortableItem, SortableList } from "../Sortable";
 import Picker from "../Picker";
@@ -182,29 +182,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
           <span className="rd-eyebrow">Measurements</span>
           <h1 className="rd-title">
             {plan.phases.length > 1 ? (
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger className="rd-switch rd-keep" aria-label="Switch phase">
-                  {plan.name}
-                  <ChevronDownIcon />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="pb-menu rd-switch-menu">
-                  {plan.phases.map((p) => (
-                    <DropdownMenuItem key={p.id} asChild>
-                      <Link href={`/admin/redesign/measurements?client=${clientId}&phase=${p.id}`} scroll={false} className={p.id === plan.id ? "on" : ""}>
-                        <span className="rd-switch-name">{p.name}</span>
-                        <span className={`rd-status ${p.state}`}>{stateLabel(p.state)}</span>
-                        <small>
-                          {p.weeks} {p.weeks === 1 ? "week" : "weeks"}
-                        </small>
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={() => setDlg({ kind: "newPhase" })}>
-                    <PlusIcon /> New phase
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <PhaseSwitcher name={plan.name} currentId={plan.id} items={plan.phases} hrefFor={(id) => `/admin/redesign/measurements?client=${clientId}&phase=${id}`} label="Switch phase" newLabel="New phase" onNew={() => setDlg({ kind: "newPhase" })} />
             ) : (
               plan.name
             )}

@@ -112,6 +112,11 @@
 .rd-switch-name { flex: 1; }
 .rd-switch-menu small { color: #8b93a1; font-weight: 500; }
 .rd-switch-menu .rd-status { font-size: 10px; padding: 2px 8px; }
+/* Live, Scheduled, Draft, Past on top of the switcher: the list under it is that kind only. */
+.rd-switch-menu .rd-switch-states { display: flex; width: auto; margin: 4px 4px 8px; padding: 0; border: 0; background: none; }
+.rd-switch-states > button { flex: 1; gap: 5px; padding: 0 8px; cursor: pointer; }
+.rd-switch-states > button:disabled { opacity: 0.4; cursor: default; }
+.rd-switch-count { font-weight: 600; opacity: 0.7; }
 .rd-status.past { background: #eceff3; color: #5b6474; }
 /* A past phase or programme on screen (29 Sep): there to look back on, nothing
    to change. Every control sleeps except the pickers that move between

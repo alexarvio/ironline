@@ -13,6 +13,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { CalendarIcon, ChatIcon, ChevronDownIcon, ColumnsIcon, CopyIcon, DumbbellIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { VideoIcon } from "../../VideoRequestButton";
 import PhaseDatesDialog from "../PhaseDatesDialog";
+import PhaseSwitcher from "../PhaseSwitcher";
 import PhaseGoalsCard from "../PhaseGoalsCard";
 import CoachNoteCard from "../CoachNoteCard";
 import { SortableItem, SortableList } from "../Sortable";
@@ -426,29 +427,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
           <span className="rd-eyebrow">Programme</span>
           <h1 className="rd-title">
             {program.programs.length > 1 ? (
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger className="rd-switch rd-keep" aria-label="Switch programme">
-                  {program.name}
-                  <ChevronDownIcon />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="pb-menu rd-switch-menu">
-                  {program.programs.map((p) => (
-                    <DropdownMenuItem key={p.id} asChild>
-                      <Link href={`/admin/redesign/training?client=${clientId}&program=${p.id}`} scroll={false} className={p.id === program.id ? "on" : ""}>
-                        <span className="rd-switch-name">{p.name}</span>
-                        <span className={`rd-status ${p.state}`}>{stateLabel(p.state)}</span>
-                        <small>
-                          {p.weeks} {p.weeks === 1 ? "week" : "weeks"}
-                        </small>
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={() => setDlg({ kind: "newProgram" })}>
-                    <PlusIcon /> New programme
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <PhaseSwitcher name={program.name} currentId={program.id} items={program.programs} hrefFor={(id) => `/admin/redesign/training?client=${clientId}&program=${id}`} label="Switch programme" newLabel="New programme" onNew={() => setDlg({ kind: "newProgram" })} />
             ) : (
               program.name
             )}
