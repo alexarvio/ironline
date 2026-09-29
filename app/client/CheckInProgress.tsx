@@ -261,7 +261,6 @@ function Chart({
   const [sel, setSel] = useState(latest);
   const [scrubbing, setScrubbing] = useState(false);
   const dragging = useRef(false);
-  const touch = useRef<{ sx: number; sy: number; axis: "x" | "y" | null } | null>(null);
   useEffect(() => {
     const el = box.current;
     // While scrubbing the page doesn't scroll under the finger.
@@ -302,7 +301,6 @@ function Chart({
     });
   };
   const release = () => {
-    touch.current = null;
     dragging.current = false;
     setScrubbing(false);
     setSel(latest);
@@ -326,33 +324,13 @@ function Chart({
         role="img"
         aria-label={label}
         tabIndex={0}
-        onPointerDown={(e) => {
-          if (e.pointerType !== "touch") {
-            startDrag(e.currentTarget, e.pointerId, e.clientX);
-            return;
-          }
-          // The value under the finger straight away; which way it moves decides the rest.
-          touch.current = { sx: e.clientX, sy: e.clientY, axis: null };
-          setScrubbing(true);
-          select(nearest(e.clientX));
-        }}
+        // A finger (or the mouse button) on the chart scrubs from the moment
+        // it lands and follows every move; the chart owns its touches
+        // (touch-action: none), since letting the page pan meant iOS took
+        // the finger for scrolling and the drag stopped.
+        onPointerDown={(e) => startDrag(e.currentTarget, e.pointerId, e.clientX)}
         onPointerMove={(e) => {
-          if (dragging.current) {
-            select(nearest(e.clientX));
-            return;
-          }
-          if (e.pointerType !== "touch") {
-            select(nearest(e.clientX));
-            return;
-          }
-          const t = touch.current;
-          if (!t || t.axis) return;
-          const dx = Math.abs(e.clientX - t.sx);
-          const dy = Math.abs(e.clientY - t.sy);
-          if (dx < 6 && dy < 6) return;
-          t.axis = dx >= dy ? "x" : "y";
-          if (t.axis === "x") startDrag(e.currentTarget, e.pointerId, e.clientX);
-          else release();
+          if (dragging.current || e.pointerType !== "touch") select(nearest(e.clientX));
         }}
         onPointerUp={release}
         onPointerCancel={release}
