@@ -152,10 +152,10 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
   // The window: last week for context, this week in the second column, and
   // most of the grid what is coming. "Now" is one fixed line a week and a
   // half in; the weeks slide under it as the week goes by.
-  // Six weeks of context behind now, so a phase that just ended stays on the
+  // Two weeks of context behind now (last week and this), so a phase that just ended stays on the
   // timeline and drifts off as the weeks go by; "Show past" reaches back to
   // the earliest phase, so what ended long ago is there to see (and to copy).
-  const CONTEXT_WEEKS = 6;
+  const CONTEXT_WEEKS = 2;
   const [showPast, setShowPast] = useState(false);
   const earliest = phases.reduce<string | null>((m, p) => (m == null || p.start_week < m ? p.start_week : m), null);
   const pastWeeks = earliest ? Math.max(0, weeksBetween(mondayOf(earliest), thisWeek)) : 0;
