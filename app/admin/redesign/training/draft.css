@@ -473,9 +473,10 @@
    the cardio count at set widths so they line up down the week; on the
    right, right to left: Complete, the time, the gym, a swap, the client's
    note. */
-.rd-session-namecol { flex: 0 0 170px; min-width: 0; overflow: hidden; }
+.rd-session-namecol { flex: 0 0 calc(var(--rd-name-ch, 16) * 1.08ch + 20px); min-width: 0; overflow: hidden; font-size: 15px; font-weight: 700; }
 .rd-session-namecol .rd-session-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rd-session-count { flex: 0 0 96px; font-size: 12.5px; color: #8b93a1; white-space: nowrap; }
+.rd-session-count { flex: 0 0 84px; font-size: 12.5px; color: #8b93a1; white-space: nowrap; }
+.rd-session-count.cardio { flex-basis: 64px; }
 .rd-session-tags { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
 .rd-session-tags .rd-swapdot { margin-left: 0; }
 .rd-tag { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px; border-radius: 999px; background: #eef2f8; font-size: 11.5px; font-weight: 700; color: #5b6474; white-space: nowrap; }

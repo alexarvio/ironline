@@ -639,7 +639,9 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
         </div>
       </div>
 
-      <div className="rd-sessions">
+      {/* The name column is as wide as the week's longest name, so the counts
+          sit right after the names and still line up down the week. */}
+      <div className="rd-sessions" style={{ "--rd-name-ch": Math.min(28, Math.max(4, ...sessions.map((s) => (pend(s.id).renamed ?? s.name).length))) } as React.CSSProperties}>
         <SortableList
           ids={sessions.map((s) => s.id)}
           label="session"
@@ -681,7 +683,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                 <span className="rd-session-count">
                   {rows.length} {rows.length === 1 ? "exercise" : "exercises"}
                 </span>
-                <span className="rd-session-count">{s.cardio.length ? `${s.cardio.length} cardio` : ""}</span>
+                {sessions.some((x) => x.cardio.length > 0) && <span className="rd-session-count cardio">{s.cardio.length ? `${s.cardio.length} cardio` : ""}</span>}
                 {/* On the right, right to left: the state, the time, the gym,
                     a swap, the client's note. */}
                 {/* Unlabelled columns on the right, each a set width with its
