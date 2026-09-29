@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { coachForClient, createUser, findUserByEmail, getUserForClient, setPassword } from "./auth";
+import { coachForClient, createUser, findUserByEmail, getUserForClient, setPassword, setUserEmail } from "./auth";
 import { mailConfigured, sendInviteEmail } from "./mail";
 import { appUrl } from "./passwordReset";
 import { getClient, getClientProfile, getCoachProfile } from "./queries";
@@ -59,6 +59,15 @@ export async function setClientTempPasswordAction(
 
   let user = getUserForClient(clientId);
   if (user) {
+    // A different address typed with the new password: the login moves to
+    // it (the client's card and their login were made apart, and can differ).
+    const email = String(opts.email ?? "").trim().toLowerCase();
+    if (email && email !== user.email) {
+      if (!EMAIL_RE.test(email)) return { ok: false, error: "That email doesn't look right." };
+      if (findUserByEmail(email)) return { ok: false, error: "That email already has an account." };
+      setUserEmail(user.id, email);
+      user = getUserForClient(clientId)!;
+    }
     setPassword(user.id, password, true);
   } else {
     const email = String(opts.email ?? "").trim().toLowerCase();

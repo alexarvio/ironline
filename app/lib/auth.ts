@@ -490,6 +490,18 @@ export function approveCoach(coachId: number): boolean {
   return true;
 }
 
+/** Changes the address a user signs in with; the new one must be free. */
+export function setUserEmail(userId: number, email: string) {
+  const data = getData();
+  const user = data.users.find((u) => u.id === userId);
+  if (!user) throw new Error("No such user");
+  const normalized = email.trim().toLowerCase();
+  if (normalized === user.email) return;
+  if (data.users.some((u) => u.email === normalized)) throw new Error("That email already has an account");
+  user.email = normalized;
+  persist();
+}
+
 export function setPassword(userId: number, password: string, mustChange: boolean) {
   const data = getData();
   const user = data.users.find((u) => u.id === userId);
