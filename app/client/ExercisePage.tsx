@@ -59,12 +59,15 @@ export default function ExercisePage({
   };
   const flipUnit = () => setUnit(unit === "kg" ? "lb" : "kg");
 
+  // The weight for the gym trained at: a machine there is its own machine,
+  // so each gym carries its own weight forward.
+  const gymWeight = (gymId != null ? exercise.gymTargets?.[gymId] : null) ?? exercise.targetWeight;
   const askWeight = exercise.targetWeight != null;
   const askRpe = exercise.targetRpe != null;
   // Swapped for something else: the weight, RPE and tempo were set for the
   // prescribed exercise, so only the reps carry over; the boxes stay, empty.
   const swapped = exercise.swap != null;
-  const targetWeight = swapped ? null : exercise.targetWeight;
+  const targetWeight = swapped ? null : gymWeight;
   const targetRpe = swapped ? null : exercise.targetRpe;
   const tempo = swapped ? null : exercise.tempo;
 

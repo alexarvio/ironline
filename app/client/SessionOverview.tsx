@@ -212,7 +212,7 @@ export default function SessionOverview({
         </div>
         <div className="so-list">
           {day.exercises.map((ex, i) => (
-            <ExerciseCard key={ex.id} exercise={ex} index={i + 1} done={done} coachName={coachName} />
+            <ExerciseCard key={ex.id} exercise={ex} index={i + 1} done={done} coachName={coachName} gymId={day.gymId} />
           ))}
           {day.cardio.map((c, i) => (
             <CardioFold key={`c${c.id}`} cardio={c} index={day.exercises.length + i + 1} done={done} />
@@ -300,13 +300,15 @@ function TargetTable({ cells }: { cells: { unit: string; value: string }[] }) {
   );
 }
 
-function ExerciseCard({ exercise, index, done, coachName }: { exercise: SessionExercise; index: number; done: boolean; coachName: string }) {
+function ExerciseCard({ exercise, index, done, coachName, gymId }: { exercise: SessionExercise; index: number; done: boolean; coachName: string; gymId: number | null }) {
   const exDone = isDone(exercise);
+  // The weight at the session's gym, as the workout shows it.
+  const targetWeight = (gymId != null ? exercise.gymTargets?.[gymId] : null) ?? exercise.targetWeight;
   // The prescription as figure-and-unit pairs, like the workout's target line.
   const targets = [
     { value: String(exercise.sets), unit: "sets" },
     exercise.reps ? { value: exercise.reps, unit: "reps" } : null,
-    exercise.targetWeight != null ? { value: String(roundTo(exercise.targetWeight, 2)), unit: "kg" } : null,
+    targetWeight != null ? { value: String(roundTo(targetWeight, 2)), unit: "kg" } : null,
     exercise.targetRpe != null ? { value: String(exercise.targetRpe), unit: "rpe" } : null,
     exercise.tempo ? { value: exercise.tempo, unit: "tempo" } : null,
   ].filter((t): t is { value: string; unit: string } => !!t);
