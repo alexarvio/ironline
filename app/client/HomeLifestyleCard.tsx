@@ -202,9 +202,9 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
 
   return (
     <section className={`hl${allIn ? "" : " open"}`} aria-label="Lifestyle">
-      {/* The phase's photo behind it all, blurred under a warm white wash: a frosted card, not a plain one. */}
+      {/* A brushed teal wall behind it all, a little blurred and darkened; the logging panel sits light on it. */}
       {/* eslint-disable-next-line @next/next/no-img-element -- an upload or a public file, blurred by CSS */}
-      <img className="hl-bg" src={phase.coverUrl ?? "/img/lifestyle-head.jpg"} alt="" aria-hidden="true" draggable={false} />
+      <img className="hl-bg" src="/img/lifestyle-teal.svg" alt="" aria-hidden="true" draggable={false} />
       <span className="hl-scrim" aria-hidden="true" />
       {/* Built like the training card: the track chip and the week on the
           first row, the phase's name with what is left of it, the timeline
@@ -282,31 +282,43 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
 
 // ---- The ring: one segment a metric, clockwise from the top; green when all are in. ----
 function Ring({ metrics, isIn, n, total }: { metrics: HomeLifestyleMetric[]; isIn: (m: HomeLifestyleMetric) => boolean; n: number; total: number }) {
-  let bg: string;
-  if (n === total) bg = `conic-gradient(${GREEN} 0 360deg)`;
-  else {
-    const seg = 360 / total;
-    const gap = total === 1 ? 0 : total > 6 ? 4 : 6;
-    const stops: string[] = [];
-    metrics.forEach((m, i) => {
-      const a = i * seg;
-      const b = (i + 1) * seg - gap;
-      stops.push(`${isIn(m) ? SAND : SAND_OFF} ${a}deg ${b}deg`);
-      if (gap) stops.push(`transparent ${b}deg ${(i + 1) * seg}deg`);
-    });
-    bg = `conic-gradient(${stops.join(", ")})`;
-  }
+  // Drawn as strokes on a circle, one arc a metric, so it is only ever a ring.
+  const size = 56;
+  const r = 24;
+  const c = size / 2;
+  const seg = 360 / total;
+  const gap = total === 1 ? 0 : total > 6 ? 4 : 6;
+  const pt = (deg: number) => {
+    const rad = ((deg - 90) * Math.PI) / 180;
+    return [c + r * Math.cos(rad), c + r * Math.sin(rad)] as const;
+  };
+  const arc = (a0: number, a1: number) => {
+    const [x0, y0] = pt(a0);
+    const [x1, y1] = pt(a1);
+    return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+  };
   return (
-    <span className="hl-ring" style={{ background: bg }} aria-hidden="true">
+    <span className="hl-ring" aria-hidden="true">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        {n === total ? (
+          <circle cx={c} cy={c} r={r} fill="none" stroke={GREEN} strokeWidth="6" />
+        ) : (
+          metrics.map((m, i) =>
+            gap === 0 ? (
+              <circle key={keyOf(m)} cx={c} cy={c} r={r} fill="none" stroke={isIn(m) ? SAND : SAND_OFF} strokeWidth="6" />
+            ) : (
+              <path key={keyOf(m)} d={arc(i * seg + gap / 2, (i + 1) * seg - gap / 2)} fill="none" stroke={isIn(m) ? SAND : SAND_OFF} strokeWidth="6" />
+            )
+          )
+        )}
+      </svg>
       <span className="hl-ring-in">
         <b>{n}</b>
         <small>of {total}</small>
       </span>
     </span>
   );
-}
-
-// ---- One page: the name with the dots, the last value, the field and Save. ----
+}// ---- One page: the name with the dots, the last value, the field and Save. ----
 function MetricPage({
   m,
   i,
