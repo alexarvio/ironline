@@ -30,6 +30,8 @@ export type SessionExercise = {
   sets: number;
   reps: string;
   targetWeight: number | null;
+  /** Kg or lbs, as this exercise was last logged; null when no set says. */
+  unit?: WeightUnit | null;
   targetRpe: number | null;
   tempo: string | null;
   /** Prescribed rest between sets, in seconds. */
@@ -77,7 +79,9 @@ export type SessionDay = {
 export const shownName = (ex: SessionExercise) => ex.swap?.name ?? ex.name;
 
 // ---- Units. Weights are stored in kg; a machine marked in lbs is one tap
-// away, remembered per exercise on this phone.
+// away. An exercise opens in what it was last logged in (kept with the
+// sets, so it holds week to week and on any phone); until a set says, in
+// what this phone remembers for it.
 export type WeightUnit = "kg" | "lb";
 const KG_PER_LB = 0.45359237;
 export const roundTo = (n: number, dp: number) => Math.round(n * 10 ** dp) / 10 ** dp;
@@ -90,9 +94,10 @@ export const kgToUnit = (kg: number, unit: WeightUnit) => (unit === "kg" ? ceilT
 export const unitToKg = (value: number, unit: WeightUnit) => (unit === "kg" ? value : roundTo(value * KG_PER_LB, 4));
 const unitStorageKey = (exerciseName: string) => `ironline:weight-unit:${exerciseName.trim().toLowerCase()}`;
 
-export function useWeightUnit(exerciseName: string): [WeightUnit, (unit: WeightUnit) => void] {
-  const [unit, setUnit] = useState<WeightUnit>("kg");
+export function useWeightUnit(exerciseName: string, logged: WeightUnit | null = null): [WeightUnit, (unit: WeightUnit) => void] {
+  const [unit, setUnit] = useState<WeightUnit>(logged ?? "kg");
   useEffect(() => {
+    if (logged) return;
     // Read after mount: the server render has no storage, and kg is the default.
     const t = setTimeout(() => {
       try {
@@ -100,7 +105,7 @@ export function useWeightUnit(exerciseName: string): [WeightUnit, (unit: WeightU
       } catch {}
     }, 0);
     return () => clearTimeout(t);
-  }, [exerciseName]);
+  }, [exerciseName, logged]);
   const choose = (next: WeightUnit) => {
     setUnit(next);
     try {

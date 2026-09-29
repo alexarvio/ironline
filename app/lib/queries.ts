@@ -107,6 +107,7 @@ export type SetLog = {
   rpe_actual: number | null;
   logged_at: string;
   gym_id?: number | null;
+  unit?: "kg" | "lb";
 };
 
 export type MealMacros = { protein: number | null; fats: number | null; carbs: number | null };
@@ -1398,7 +1399,8 @@ export function logSet(
   weightKg: number | null,
   reps: number | null,
   rpeActual: number | null,
-  gymId: number | null = null
+  gymId: number | null = null,
+  unit: "kg" | "lb" | null = null
 ) {
   const data = getData();
   // Logging a set number that already has a row corrects that row rather
@@ -1408,6 +1410,7 @@ export function logSet(
     existing.weight_kg = weightKg;
     existing.reps = reps;
     existing.rpe_actual = rpeActual;
+    if (unit) existing.unit = unit;
     persist();
     progressTargetFromLogs(workoutAssignmentId);
     return;
@@ -1423,6 +1426,7 @@ export function logSet(
     // put a 6am session on the previous day for anyone east of Greenwich.
     logged_at: localStamp(),
     gym_id: gymId,
+    ...(unit ? { unit } : {}),
   });
   persist();
   progressTargetFromLogs(workoutAssignmentId);
@@ -7996,6 +8000,20 @@ export function getLastSets(assignmentId: number, gymId: number | null): { date:
   const pick = sameSlot.find(sameGym) || sameSlot[0] || earlier.find(sameGym) || earlier[0];
   if (!pick) return null;
   return { date: dayDate(pick.day, pick.logs), sets: pick.logs.map(setView) };
+}
+
+/** Kg or lbs for this exercise: what the client last logged it in. This
+    session's own sets first, then the last time at the same gym (a machine
+    is marked one way or the other), then the last time anywhere. Null when
+    no set of it says (none logged, or all from before units were kept). */
+export function getExerciseUnit(assignmentId: number, gymId: number | null): "kg" | "lb" | null {
+  const own = getData()
+    .set_logs.filter((sl) => sl.workout_assignment_id === assignmentId && sl.unit)
+    .sort((a, b) => (a.logged_at < b.logged_at ? 1 : -1))[0];
+  if (own?.unit) return own.unit;
+  const told = exerciseHistoryFor(assignmentId).filter((h) => h.logs.some((l) => l.unit));
+  const pick = told.find((h) => gymId != null && (h.logs[0]?.gym_id ?? null) === gymId) || told[0];
+  return pick ? [...pick.logs].reverse().find((l) => l.unit)?.unit ?? null : null;
 }
 
 /** The last few sessions of this exercise, most recent first. */

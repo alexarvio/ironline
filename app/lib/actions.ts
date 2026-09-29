@@ -657,7 +657,11 @@ export async function logSetAction(formData: FormData) {
   // The gym the session is at; one that is not this client's counts as none.
   const gymId = Number(formData.get("gymId")) || null;
 
-  logSet(assignmentId, setNumber, weight, reps, rpe, gymId != null && getClientIdForGym(gymId) === owner ? gymId : null);
+  // Kg or lbs, as the switch stood: the exercise opens in it next time.
+  const unitRaw = formData.get("unit");
+  const unit = unitRaw === "lb" || unitRaw === "kg" ? unitRaw : null;
+
+  logSet(assignmentId, setNumber, weight, reps, rpe, gymId != null && getClientIdForGym(gymId) === owner ? gymId : null, unit);
   revalidatePath("/client");
   revalidatePath("/admin");
 }

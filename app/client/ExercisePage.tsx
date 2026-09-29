@@ -50,7 +50,7 @@ export default function ExercisePage({
   /** A working set was ticked: the dock's rest timer may want to know. */
   onSetLogged?: () => void;
 }) {
-  const [unit, setUnit] = useWeightUnit(exercise.name);
+  const [unit, setUnit] = useWeightUnit(exercise.name, exercise.unit ?? null);
   const unitLabel = unit === "kg" ? "kg" : "lbs";
   const show = (kg: number | null) => (kg == null ? "" : String(kgToUnit(kg, unit)));
   const toKg = (box: string) => {
@@ -107,6 +107,7 @@ export default function ExercisePage({
     fd.set("weight", kg == null ? "" : String(kg));
     fd.set("reps", draft.reps.trim());
     fd.set("rpe", draft.rpe.trim());
+    fd.set("unit", unit);
     setPending(true);
     try {
       await logSetAction(fd);
@@ -120,7 +121,7 @@ export default function ExercisePage({
   // ---- Warm-ups: the client's own rows above the working sets. Kept here
   // as they are typed, saved whole whenever a row is ticked or removed.
   const [warm, setWarm] = useState<{ weight: string; reps: string; saved: boolean }[]>(() =>
-    exercise.warmups.map((w) => ({ weight: w.weight != null ? String(kgToUnit(w.weight, "kg")) : "", reps: w.reps != null ? String(w.reps) : "", saved: true }))
+    exercise.warmups.map((w) => ({ weight: w.weight != null ? String(kgToUnit(w.weight, unit)) : "", reps: w.reps != null ? String(w.reps) : "", saved: true }))
   );
   // By content: every refresh of the page (the chat's, any save) hands in a
   // new array with the same sets, and resetting on that wiped rows typed but

@@ -495,6 +495,10 @@ type SetLog = {
   logged_at: string;
   // Where the set was done. Missing or null is the home gym.
   gym_id?: number | null;
+  // What the client had the Kg | Lbs switch on when they logged it (the
+  // weight itself is always kg). The exercise opens in it the next time.
+  // Missing on sets from before 29 Sep: not known.
+  unit?: "kg" | "lb";
 };
 type Invoice = {
   id: number;
