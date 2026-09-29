@@ -5,7 +5,7 @@ import type React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
-import { addClientGoalAction, addClientPhaseAction, applyGoalDoneChangesAction, removeClientGoalAction, removeClientPhaseAction, reorderClientGoalsAction, saveAndDeployPhaseNowAction, saveAndSchedulePhaseAction, setClientMainGoalAction, updateClientGoalAction, updateClientPhaseAction } from "../../../lib/actions";
+import { addClientGoalAction, addClientPhaseAction, applyGoalDoneChangesAction, duplicateClientPhaseAction, removeClientGoalAction, removeClientPhaseAction, reorderClientGoalsAction, saveAndDeployPhaseNowAction, saveAndSchedulePhaseAction, setClientMainGoalAction, updateClientGoalAction, updateClientPhaseAction } from "../../../lib/actions";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { ChevronLeftIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
@@ -152,8 +152,15 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
   // The window: last week for context, this week in the second column, and
   // most of the grid what is coming. "Now" is one fixed line a week and a
   // half in; the weeks slide under it as the week goes by.
-  const first = addWeeks(thisWeek, -2);
-  const count = win + 2;
+  // "Show past" reaches back to the earliest phase, so what ended before is
+  // there to see (and to copy); otherwise two weeks of context.
+  const [showPast, setShowPast] = useState(false);
+  const earliest = phases.reduce<string | null>((m, p) => (m == null || p.start_week < m ? p.start_week : m), null);
+  const pastWeeks = earliest ? Math.max(0, weeksBetween(mondayOf(earliest), thisWeek)) : 0;
+  const hasPast = pastWeeks > 2;
+  const back = showPast && hasPast ? pastWeeks + 1 : 2;
+  const first = addWeeks(thisWeek, -back);
+  const count = win + back;
   const weeks = Array.from({ length: count }, (_, i) => addWeeks(first, i));
   const nowIdx = weeksBetween(first, thisWeek);
   const months: { label: string; start: number; span: number }[] = [];
@@ -309,6 +316,11 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                 </button>
               ))}
             </div>
+            {hasPast && (
+              <button type="button" className={`rd-btn${showPast ? " on" : ""}`} aria-pressed={showPast} onClick={() => setShowPast((v) => !v)}>
+                {showPast ? "Hide past" : "Show past"}
+              </button>
+            )}
             <button type="button" className="rd-btn" onClick={() => setDlg({ kind: "phase", phase: null })}>
               <PlusIcon /> Add phase
             </button>
@@ -582,6 +594,15 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
             others={phases}
             programs={plan.programs}
             onDelete={dlg.phase ? () => setDlg({ kind: "deletePhase", id: dlg.phase!.id }) : undefined}
+            onDuplicate={
+              dlg.phase
+                ? () => {
+                    const p = dlg.phase!;
+                    close();
+                    act(() => duplicateClientPhaseAction(p.id), `${p.name} copied as a new draft, from next Monday${p.track === "training" ? " (pick or build its programme)" : ""}`);
+                  }
+                : undefined
+            }
             onSave={(v) => {
               const was = dlg.phase;
               close();
@@ -715,7 +736,7 @@ export function MonthRange({ from, to, onPick, chrome, planned, cursor, setCurso
   );
 }
 
-export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track: initialTrack, others, programs, onSave, onDelete, onSend }: { clientId: number; firstName: string; today: string; thisWeek: string; phase: PlanPhaseRow | null; track?: PhaseTrack; others: PlanPhaseRow[]; programs: PlanProgramOption[]; onSave: (v: { name: string; track: PhaseTrack; start: string; end: string; programId: number | null }) => void; onDelete?: () => void; onSend: (v: { name: string; track: PhaseTrack; start: string; end: string; now: boolean }) => void }) {
+export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track: initialTrack, others, programs, onSave, onDelete, onDuplicate, onSend }: { clientId: number; firstName: string; today: string; thisWeek: string; phase: PlanPhaseRow | null; track?: PhaseTrack; others: PlanPhaseRow[]; programs: PlanProgramOption[]; onSave: (v: { name: string; track: PhaseTrack; start: string; end: string; programId: number | null }) => void; onDelete?: () => void; /** A copy of this phase as a new draft (a past one, to run again). */ onDuplicate?: () => void; onSend: (v: { name: string; track: PhaseTrack; start: string; end: string; now: boolean }) => void }) {
   const editing = !!phase;
   const [track, setTrack] = useState<PhaseTrack>(phase?.track ?? initialTrack ?? "nutrition");
   const [name, setName] = useState(phase?.name ?? "");
@@ -851,6 +872,11 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
         {onDelete && (
           <button type="button" className="rd-btn danger" onClick={onDelete}>
             Delete
+          </button>
+        )}
+        {onDuplicate && (
+          <button type="button" className="rd-btn" onClick={onDuplicate} title="A copy as a new draft, from next Monday, as long as this one">
+            Duplicate
           </button>
         )}
         <DialogClose className="rd-btn">Cancel</DialogClose>

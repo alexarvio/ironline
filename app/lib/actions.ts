@@ -19,7 +19,7 @@ import {
   requireCoach,
 } from "./auth";
 import { eraseClient } from "./erase";
-import { endWeekFor } from "./phases";
+import { endWeekFor, phaseDays } from "./phases";
 import { sendInviteEmail } from "./mail";
 import { clerkOn, sendClerkInvite } from "./clerk";
 import { inviteToken } from "./inviteToken";
@@ -2653,6 +2653,36 @@ export async function addClientPhaseAction(formData: FormData) {
   saveObjectivesFrom(added.id, formData);
   revalidatePath("/admin");
   revalidatePath("/client");
+}
+
+/**
+ * A copy of a phase as a new draft, starting next Monday and as long as the
+ * original: its objectives, cover, note and nutrition targets come along,
+ * and a lifestyle phase's metrics. A training phase's programme does not
+ * (the coach picks or builds one for the copy).
+ */
+export async function duplicateClientPhaseAction(phaseId: number): Promise<number | null> {
+  const src = getPhaseById(Number(phaseId));
+  if (!src || !(await coachForClient(src.client_id))) return null;
+  const days = phaseDays(src.start_week, src.end_week);
+  const nextMonday = new Date(`${weekStart(localDateStr())}T00:00:00`);
+  nextMonday.setDate(nextMonday.getDate() + 7);
+  const start = localDateStr(nextMonday);
+  const lastMinus6 = new Date(nextMonday);
+  lastMinus6.setDate(lastMinus6.getDate() + Math.max(0, days - 7));
+  const made = addClientPhase(src.client_id, src.track, `${src.name} (copy)`, start, localDateStr(lastMinus6), null, src.track !== "training");
+  setPhaseObjectives(made.id, src.objectives ?? []);
+  const row = getData().client_phases.find((p) => p.id === made.id);
+  if (row) {
+    if (src.nutrition) row.nutrition = JSON.parse(JSON.stringify(src.nutrition));
+    if (src.cover_path) row.cover_path = src.cover_path;
+    if (src.client_note) row.client_note = src.client_note;
+    persist();
+  }
+  if (src.track === "lifestyle") copyPhaseMetrics(src.id, made.id, src.client_id, false);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  return made.id;
 }
 
 /** The draft is named, dated and sent: the last step of the same flow on every track. */
