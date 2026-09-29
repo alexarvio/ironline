@@ -198,7 +198,10 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
   }, [today, router]);
 
   if (pages === 0) return null;
+  // The ring opens Progress (the charts); the phase and its timeline open the Calendar; the rest, Today.
   const open = () => openCheckIn?.("daily");
+  const openProgress = () => openCheckIn?.("progress");
+  const openCalendar = () => openCheckIn?.("calendar");
 
   return (
     <section className={`hl${allIn ? "" : " open"}`} aria-label="Lifestyle">
@@ -218,11 +221,11 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
         </span>
         <span className="hl-week-chip">{weekParts(phase, today).week}</span>
       </button>
-      <div className="hl-phase">
+      <div className="hl-phase" role="button" tabIndex={0} onClick={openCalendar} onKeyDown={(e) => e.key === "Enter" && openCalendar()} aria-label={`Open the calendar: ${phase.name}`}>
         <h3 className="hl-phase-name">{phase.name}</h3>
         {weekParts(phase, today).left && <span className="hl-week">{weekParts(phase, today).left}</span>}
       </div>
-      <div className="hl-bar">
+      <div className="hl-bar" onClick={openCalendar}>
         <Bar pr={progressOf(phase, today, coachName)} small />
         {phase.end && (
           <div className="hl-ends">
@@ -235,7 +238,7 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
           beside it the metric to log, one page at a time; the pager folds
           away when everything is in and the foot takes its place. */}
       <div className="hl-log">
-        <button type="button" className="hl-ring-btn" onClick={open} aria-label={`Open Lifestyle: ${n} of ${total} logged today`}>
+        <button type="button" className="hl-ring-btn" onClick={openProgress} aria-label={`Open your progress: ${n} of ${total} logged today`}>
           <Ring metrics={metrics} isIn={isIn} n={n} total={total} />
         </button>
         <div className="hl-log-main">

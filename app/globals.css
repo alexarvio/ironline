@@ -17521,7 +17521,8 @@ button.ci-hint { cursor: pointer; }
 .hl .pc-track-chip { background: rgba(10, 14, 36, 0.35); border-color: rgba(255, 255, 255, 0.35); color: #fff; }
 .hl .pc-icon { background: none; color: #fff; }
 .hl-week-chip { display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border-radius: 999px; background: rgba(10, 14, 36, 0.4); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); font-size: 12.5px; font-weight: 700; color: #fff; white-space: nowrap; }
-.hl-phase { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 12px 14px 8px; }
+.hl-phase { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 12px 14px 8px; cursor: pointer; }
+.hl-bar { cursor: pointer; }
 .hl-phase-name { min-width: 0; margin: 0; font-size: 22px; font-weight: 600; line-height: 1.15; letter-spacing: -0.01em; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hl-ends { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11.5px; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
 .hl-chev { flex: none; display: inline-flex; color: #8b93a1; }

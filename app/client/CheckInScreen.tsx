@@ -153,8 +153,9 @@ export default function CheckInScreen({
   const [values, setValues] = useState<Record<string, string>>(() => seedOf(rows));
   const [note, setNote] = useState(savedNote);
   const [pending, setPending] = useState(false);
-  // Today (log it, and the week behind it) or Progress (a chart a metric).
-  const [view, setView] = useState<"today" | "progress" | "calendar">("today");
+  // Today (log it, and the week behind it), Progress (a chart a metric) or
+  // Calendar; Home's lifestyle card opens straight onto the last two.
+  const [view, setView] = useState<"today" | "progress" | "calendar">(initialSection === "progress" || initialSection === "calendar" ? initialSection : "today");
 
   const noteDirty = note.trim() !== savedNote.trim();
   const filled = rows.filter((r) => (values[r.key] ?? "").length > 0);
