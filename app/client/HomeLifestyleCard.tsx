@@ -40,7 +40,6 @@ const keyOf = (m: HomeLifestyleMetric) => (m.date ? `${m.date}:${m.id}` : m.id);
 const SAND = "#a8761f";
 const SAND_OFF = "rgba(168,118,31,.16)";
 const GREEN = "#2f7a3f";
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAY = 86400000;
 const dayNum = (s: string) => Date.UTC(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10))) / DAY;
 const localToday = () => {
@@ -202,7 +201,7 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
   const open = () => openCheckIn?.("daily");
 
   return (
-    <section className="hl" aria-label="Lifestyle">
+    <section className={`hl${allIn ? "" : " open"}`} aria-label="Lifestyle">
       {/* The phase's photo behind it all, blurred under a warm white wash: a frosted card, not a plain one. */}
       {/* eslint-disable-next-line @next/next/no-img-element -- an upload or a public file, blurred by CSS */}
       <img className="hl-bg" src={phase.coverUrl ?? "/img/lifestyle-head.jpg"} alt="" aria-hidden="true" draggable={false} />
