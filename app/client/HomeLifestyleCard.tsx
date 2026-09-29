@@ -75,17 +75,17 @@ function valueWords(m: HomeLifestyleMetric, v: number): string {
 }
 
 /** "Week 3 · 4 weeks left", the phase cards' maths; "Last week" when none are left. */
-function weekWords(ph: HomePhase, today: string): string {
+function weekParts(ph: HomePhase, today: string): { week: string; left: string | null } {
   const t = dayNum(today);
   const s = dayNum(ph.start);
-  if (!ph.end) return `Week ${Math.max(1, Math.ceil((t - s + 1) / 7))}`;
+  if (!ph.end) return { week: `Week ${Math.max(1, Math.ceil((t - s + 1) / 7))}`, left: null };
   const e = dayNum(ph.end);
   const totalDays = e - s + 1;
   const elapsed = Math.min(totalDays, Math.max(0, t - s + 1));
   const weeks = Math.ceil(totalDays / 7);
   const week = Math.min(weeks, Math.max(1, Math.ceil(elapsed / 7)));
   const left = Math.max(0, Math.floor((e - t) / 7));
-  return `Week ${week} · ${left === 0 ? "Last week" : `${left} week${left === 1 ? "" : "s"} left`}`;
+  return { week: `Week ${week}`, left: left === 0 ? "Last week" : `${left} week${left === 1 ? "" : "s"} left` };
 }
 
 export default function HomeLifestyleCard({ clientId, today, phase, coachName, metrics: todays, yesterday = [] }: { clientId: number; today: string; phase: HomePhase; coachName: string; metrics: HomeLifestyleMetric[]; yesterday?: HomeLifestyleMetric[] }) {
@@ -219,13 +219,14 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
           <span className="hl-eyebrow">Lifestyle · {phase.name}</span>
           <span className="hl-title">{allIn ? "All logged today" : todayDone ? `${yesterdayLeft} from yesterday to log` : `${total - n} left to log today`}</span>
         </span>
-        <span className="hl-chev" aria-hidden="true">
+        <span className="hl-side" aria-hidden="true">
+          <span className="hl-week-chip">{weekParts(phase, today).week}</span>
           <ChevronRightIcon />
         </span>
       </button>
       {/* The phase's timeline, the phase cards' bar in sand, with the week and what is left over its right end. */}
       <div className="hl-bar">
-        <span className="hl-week">{weekWords(phase, today)}</span>
+        {weekParts(phase, today).left && <span className="hl-week">{weekParts(phase, today).left}</span>}
         <Bar pr={progressOf(phase, today, coachName)} small />
       </div>
 
