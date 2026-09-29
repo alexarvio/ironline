@@ -200,6 +200,10 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
 
   return (
     <section className="hl" aria-label="Lifestyle">
+      {/* The phase's photo behind it all, blurred under a warm white wash: a frosted card, not a plain one. */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- an upload or a public file, blurred by CSS */}
+      <img className="hl-bg" src={phase.coverUrl ?? "/img/lifestyle-head.jpg"} alt="" aria-hidden="true" draggable={false} />
+      <span className="hl-scrim" aria-hidden="true" />
       <button type="button" className="hl-head" onClick={open} aria-label={`Open Lifestyle: ${n} of ${total} logged today`}>
         <Ring metrics={metrics} isIn={isIn} n={n} total={total} />
         <span className="hl-text">
