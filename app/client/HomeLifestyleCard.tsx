@@ -251,7 +251,6 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
                     metrics={metrics}
                     isIn={isIn}
                     value={todayOf(m)}
-                    note={todayDone ? `${yesterdayLeft} from yesterday to log` : `${total - n} left to log today`}
                     error={error[keyOf(m)] ?? ""}
                     onGoTo={(j) => goTo(j)}
                     onSave={(v) => save(m, v, i)}
@@ -315,7 +314,6 @@ function MetricPage({
   metrics,
   isIn,
   value,
-  note,
   error,
   onGoTo,
   onSave,
@@ -328,8 +326,6 @@ function MetricPage({
   metrics: HomeLifestyleMetric[];
   isIn: (m: HomeLifestyleMetric) => boolean;
   value: number | null;
-  /** "3 left to log today": the count, over the name. */
-  note: string;
   error: string;
   onGoTo: (j: number) => void;
   onSave: (v: number) => void;
@@ -365,7 +361,6 @@ function MetricPage({
 
   return (
     <div className="hl-page" role="group" aria-roledescription="slide" aria-label={`${i + 1} of ${total}: ${m.name}`}>
-      <span className="hl-note">{note}</span>
       <div className="hl-row1">
         <span className="hl-name">
           {m.date && <small className="hl-when">Yesterday</small>}

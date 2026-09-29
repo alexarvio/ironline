@@ -17542,7 +17542,6 @@ button.ci-hint { cursor: pointer; }
 .hl-log { display: flex; align-items: center; gap: 12px; padding: 10px 14px 14px; border-top: 1px solid rgba(168, 118, 31, 0.16); }
 .hl-ring-btn { flex: none; display: block; padding: 0; border: 0; background: none; cursor: pointer; }
 .hl-log-main { flex: 1; min-width: 0; }
-.hl-note { font-size: 12px; font-weight: 600; color: #8b93a1; }
 .hl-fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.25s ease; }
 .hl-fold.closed { grid-template-rows: 0fr; }
 .hl-fold-clip { min-height: 0; overflow: hidden; }
