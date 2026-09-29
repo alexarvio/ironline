@@ -6,6 +6,8 @@ import { allocId, claimUnownedRows, getData, persist } from "./db";
 import { clearLockoutsFor } from "./loginLockout";
 import { coachOwnsClient, seedCoachLibrary } from "./tenancy";
 import { clerkOn, clerkUserRow, deleteClerkUser } from "./clerk";
+import { isTimezone } from "./timezones";
+import { setViewZone } from "./viewZone";
 
 // Authentication and authorization for Ironline.
 //
@@ -167,6 +169,11 @@ export async function requireCoach(): Promise<SessionUser> {
   if (user.must_change_password) redirect("/login/change-password");
   // Signed up, not yet let in by the owner.
   if (user.pending) redirect("/auth/waiting");
+  // Where the coach is looking from: meetings read in that timezone (viewZone.ts).
+  try {
+    const zone = decodeURIComponent((await cookies()).get("ironline_tz")?.value ?? "");
+    setViewZone(zone && isTimezone(zone) ? zone : null);
+  } catch {}
   return user;
 }
 

@@ -7,6 +7,8 @@ import { getCatalogFood, searchCatalog, type CatalogFood } from "./foods/catalog
 import type { OffProduct } from "./foods/openfoodfacts";
 import type { LinkView, MessageLink } from "./messageLinks";
 import { coachIdOfClient } from "./tenancy";
+import { inViewZone } from "./viewZone";
+import { isTimezone } from "./timezones";
 import { countryOf, invoicingFor } from "./countries";
 import { LOCK_MS, type LockScope } from "./loginLockout";
 import { endWeekFor, phaseCovers, phaseDays, phaseLastDay, phaseWeekIndex, phaseWeeks } from "./phases";
@@ -4774,7 +4776,8 @@ export const DEFAULT_MEETING_DURATION = 60;
 export function listMeetings(clientId: number): Meeting[] {
   return getData()
     .meetings.filter((m) => m.client_id === clientId)
-    .map((m) => ({ ...m, duration_minutes: m.duration_minutes || DEFAULT_MEETING_DURATION }))
+    // On the coach's screens: in the timezone of whoever is looking (viewZone.ts).
+    .map((m) => inViewZone({ ...m, duration_minutes: m.duration_minutes || DEFAULT_MEETING_DURATION }))
     .sort((a, b) => (a.date === b.date ? (a.time < b.time ? 1 : -1) : a.date < b.date ? 1 : -1));
 }
 
@@ -4828,13 +4831,14 @@ export function removeMeeting(id: number) {
 }
 
 /** One entry as the Calendar's dialog writes it. note is the coach-only prep_notes. */
-export type CalendarEntryInput = { date: string; time: string; durationMinutes: number; allDay: boolean; topic: string; clientId: number | null; category: string | null; note: string };
+export type CalendarEntryInput = { date: string; time: string; /** The timezone the time was typed in; absent: the server's. */ tz?: string | null; durationMinutes: number; allDay: boolean; topic: string; clientId: number | null; category: string | null; note: string };
 
 const cleanEntry = (v: CalendarEntryInput) => {
   const allDay = !!v.allDay;
   return {
     date: String(v.date).slice(0, 10),
     time: allDay ? "" : /^\d{2}:\d{2}$/.test(String(v.time)) ? String(v.time) : "",
+    tz: !allDay && v.tz && isTimezone(String(v.tz)) ? String(v.tz) : null,
     duration_minutes: allDay ? DEFAULT_MEETING_DURATION : Math.max(5, Math.min(24 * 60, Math.round(Number(v.durationMinutes) || DEFAULT_MEETING_DURATION))),
     all_day: allDay,
     topic: String(v.topic ?? "").trim().slice(0, 120),
@@ -4905,11 +4909,11 @@ export function listAllMeetings(coachId: number): MeetingWithClient[] {
     .filter((m) => (m.client_id != null ? mine.has(m.client_id) : m.coach_id === coachId))
     .map((m) => {
       const client = m.client_id == null ? null : data.clients.find((c) => c.id === m.client_id);
-      return {
+      return inViewZone({
         ...m,
         duration_minutes: m.duration_minutes || DEFAULT_MEETING_DURATION,
         clientName: m.client_id == null ? "Just you" : client?.name ?? "Unknown client",
-      };
+      });
     })
     .sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1));
 }

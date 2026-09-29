@@ -230,7 +230,8 @@ function EntryDialog({ open, cats, clients, onDone }: { open: Open; cats: Catego
 
   const save = () => {
     if (!ok) return;
-    const v = { date, time: allDay ? "" : time, durationMinutes: Number(length) || 60, allDay, topic: topic.trim(), clientId: client ? Number(client) : null, category: cat, note: note.trim() };
+    // The time is in this browser's timezone, as every time on the Calendar reads.
+    const v = { date, time: allDay ? "" : time, tz: allDay ? null : browserZone(), durationMinutes: Number(length) || 60, allDay, topic: topic.trim(), clientId: client ? Number(client) : null, category: cat, note: note.trim() };
     onDone();
     const label = topic.trim() || clientName || "Entry";
     act(() => (e ? updateCalendarEntryAction(e.id, v) : addCalendarEntryAction(v)), e ? `${label} · saved` : `${label} · added`);
@@ -424,4 +425,12 @@ function EntryDialog({ open, cats, clients, onDone }: { open: Open; cats: Catego
       </footer>
     </DialogContent>
   );
+}
+
+function browserZone(): string | null {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+  } catch {
+    return null;
+  }
 }

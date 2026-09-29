@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import RailTour from "./RailTour";
 import { AccountIcon, BusinessIcon, CalendarIcon, ChevronDownIcon, FeedIcon, PhasesIcon, PlusIcon, SearchIcon } from "../../components/icons";
 import { SETTINGS, type SettingsKey } from "./settingsNav";
@@ -27,6 +27,19 @@ const REDRAWN: Partial<Record<string, string>> = { feed: "/admin/redesign/feed",
 
 
 export default function RedesignRail({ rail, clientId, settings }: { rail: RailData; clientId: number; /** The settings page open, if any: the rail opens on Settings. */ settings?: SettingsKey }) {
+  // This browser's timezone, for the server: meetings read in it (lib/viewZone.ts).
+  // New or changed (a trip): the page is drawn again in it.
+  const router = useRouter();
+  useEffect(() => {
+    try {
+      const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (!zone) return;
+      const had = document.cookie.split("; ").find((c) => c.startsWith("ironline_tz="))?.slice("ironline_tz=".length);
+      if (had === encodeURIComponent(zone)) return;
+      document.cookie = `ironline_tz=${encodeURIComponent(zone)}; path=/; max-age=31536000; samesite=lax`;
+      router.refresh();
+    } catch {}
+  }, [router]);
   const [settingsOpen, setSettingsOpen] = useState(!!settings);
   // The view you are on (Feed, Calendar…) is marked, as the client you are on is.
   const path = usePathname();

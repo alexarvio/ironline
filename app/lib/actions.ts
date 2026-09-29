@@ -322,6 +322,7 @@ import { deleteUpload, keyOf, putUpload } from "./storage";
 import { setPhaseObjectives, savePhaseCover, setPhaseCoverPath, editClientChatMessage, deleteClientChatMessage, setPhaseClientNote, chatThreadViews, type ChatThreadView } from "./queries";
 import { isStockCover } from "./phaseCovers";
 import { isTimezone, SERVER_TZ, tzShort, zonedToUtc } from "./timezones";
+import { inZone } from "./viewZone";
 import type { ReportSectionType } from "./reportSectionTypes";
 
 // OWNERSHIP RULE for every coach action below: a coach may only touch their
@@ -2592,7 +2593,10 @@ export async function updateCalendarEntryAction(id: number, v: CalendarEntryInpu
   const clientId = v.clientId == null ? null : Number(v.clientId);
   if (!coachOwnsMeeting(coach.id, Number(id))) return;
   if (clientId != null && !(await coachForClient(clientId))) return;
-  const before = getCalendarEntry(Number(id));
+  // The entry as it stood, in the timezone the new time was typed in, so an
+  // unchanged call seen from another timezone doesn't count as moved.
+  const stored = getCalendarEntry(Number(id));
+  const before = stored && stored.time && !stored.all_day && v.tz && isTimezone(String(v.tz)) ? { ...stored, ...inZone(stored.date, stored.time, stored.tz || SERVER_TZ, String(v.tz)) } : stored;
   updateCalendarEntry(coach.id, Number(id), { ...v, clientId });
   // The client hears when their call moves, not when the coach's note or colour changes.
   if (clientId != null && before && (before.client_id !== clientId || before.date !== v.date || before.time !== (v.allDay ? "" : v.time))) {

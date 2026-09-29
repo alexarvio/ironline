@@ -10,7 +10,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { CalendarIcon, ChatIcon, ChevronDownIcon, ChevronLeftIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import DateText from "../DateText";
 import { ConfirmDialog, MessageDialog } from "../training/TrainingDraft";
-import { allTimezones, SERVER_TZ } from "../../../lib/timezones";
+import { allTimezones, SERVER_TZ, tzShort, zonedToUtc } from "../../../lib/timezones";
 import TimezonePicker from "./TimezonePicker";
 
 // The calmer Meetings tab, as a draft on real data, in the Training draft's
@@ -218,7 +218,7 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                     />
                     <span className="rt-when">
                       {longDay(upcoming.date)}
-                      {upcoming.time ? ` · ${upcoming.time} – ${endTime(upcoming.time, upcoming.durationMinutes)}` : ""} · {upcoming.durationMinutes} min
+                      {upcoming.time ? ` · ${upcoming.time} – ${endTime(upcoming.time, upcoming.durationMinutes)} ${zoneOf(upcoming)}` : ""} · {upcoming.durationMinutes} min
                     </span>
                   </div>
                   <div className="rt-band-right">
@@ -276,7 +276,7 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                         <span className="rd-ex-name">{m.topic || "Check-in call"}</span>
                         <small>
                           {longDay(m.date)}
-                          {m.time ? ` · ${m.time} – ${endTime(m.time, m.durationMinutes)}` : ""} · {m.durationMinutes} min · {m.provider}
+                          {m.time ? ` · ${m.time} – ${endTime(m.time, m.durationMinutes)} ${zoneOf(m)}` : ""} · {m.durationMinutes} min · {m.provider}
                         </small>
                       </span>
                       <span className="rd-num quiet">{inDaysLabel(today, m.date)}</span>
@@ -739,4 +739,10 @@ function CompleteDialog({ firstName, value, title: initialTitle, onComplete }: {
       </DialogFooter>
     </DialogContent>
   );
+}
+
+/** "GMT+7": the timezone a meeting's time reads in, at that moment. */
+function zoneOf(m: { date: string; time: string; tz: string | null }): string {
+  const tz = m.tz || SERVER_TZ;
+  return tzShort(tz, zonedToUtc(m.date, m.time, tz));
 }
