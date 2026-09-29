@@ -17539,12 +17539,16 @@ button.ci-hint { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .hl.open .hl-bar .pc-bar-knob { animation: none; } }
 .hl-bar .pc-bar.open { border-top-color: rgba(168, 118, 31, 0.3); }
 /* The pager folds shut once everything is in. */
-.hl-fold { display: grid; grid-template-rows: 1fr; border-top: 1px solid rgba(168, 118, 31, 0.16); transition: grid-template-rows 0.25s ease; }
-.hl-fold.closed { grid-template-rows: 0fr; border-top-color: transparent; }
+.hl-log { display: flex; align-items: center; gap: 12px; padding: 10px 14px 14px; border-top: 1px solid rgba(168, 118, 31, 0.16); }
+.hl-ring-btn { flex: none; padding: 0; border: 0; background: none; cursor: pointer; }
+.hl-log-main { flex: 1; min-width: 0; }
+.hl-note { font-size: 12px; font-weight: 600; color: #8b93a1; }
+.hl-fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.25s ease; }
+.hl-fold.closed { grid-template-rows: 0fr; }
 .hl-fold-clip { min-height: 0; overflow: hidden; }
 .hl-pager { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .hl-pager::-webkit-scrollbar { display: none; }
-.hl-page { flex: 0 0 100%; min-width: 0; box-sizing: border-box; scroll-snap-align: start; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+.hl-page { flex: 0 0 100%; min-width: 0; box-sizing: border-box; scroll-snap-align: start; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .hl-row1 { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .hl-name { min-width: 0; font-size: 16px; font-weight: 800; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hl-when { display: block; margin-bottom: 2px; font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #8a5f16; }
@@ -17576,8 +17580,9 @@ button.ci-hint { cursor: pointer; }
 .hl-done small { font-size: 13px; font-weight: 700; color: #5b8a6a; }
 .hl-edit { flex: none; height: 40px; padding: 0 16px; line-height: 1; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #DCE3EE; font: inherit; font-size: 14px; font-weight: 800; color: #141a24; cursor: pointer; }
 .hl-error { font-size: 12.5px; font-weight: 600; color: #B42318; }
-.hl-foot { display: flex; align-items: center; gap: 10px; padding: 12px 14px 14px; border-top: 1px solid rgba(168, 118, 31, 0.16); font-size: 13px; font-weight: 600; color: #5b6474; }
+.hl-foot { display: flex; align-items: center; gap: 10px; padding: 0; font-size: 13px; font-weight: 600; color: #5b6474; }
 .hl-foot > span { flex: 1; min-width: 0; }
+.hl-foot b { display: block; font-size: 15px; font-weight: 800; color: #141a24; }
 .hl-open { flex: none; height: 38px; padding: 0 16px; border: 0; border-radius: 12px; background: #FBF7EF; color: #8a5f16; box-shadow: inset 0 0 0 1px rgba(168, 118, 31, 0.25); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
 .hl-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .hl-fold, .hl-ring, .hl-dot i, .hl-save { transition: none; } }

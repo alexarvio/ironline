@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRightIcon, HeartIcon } from "../components/icons";
+import { HeartIcon } from "../components/icons";
 import { logMetricPeriodAction } from "../lib/actions";
 import { useOpenCheckIn } from "./CheckInContext";
 import { tidyDecimal } from "./workoutShared";
@@ -231,47 +231,49 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
           </div>
         )}
       </div>
-      <button type="button" className="hl-head" onClick={open} aria-label={`Open Lifestyle: ${n} of ${total} logged today`}>
-        <Ring metrics={metrics} isIn={isIn} n={n} total={total} />
-        <span className="hl-text">
-          <span className="hl-title">{allIn ? "All logged today" : todayDone ? `${yesterdayLeft} from yesterday to log` : `${total - n} left to log today`}</span>
-        </span>
-        <span className="hl-chev" aria-hidden="true">
-          <ChevronRightIcon />
-        </span>
-      </button>
-
-      {/* The pager folds away when everything is in; the foot takes its place. */}
-      <div className={`hl-fold${allIn ? " closed" : ""}`} aria-hidden={allIn}>
-        <div className="hl-fold-clip">
-          <div ref={scroller} className="hl-pager" role="region" aria-roledescription="carousel" aria-label="Today's lifestyle metrics" onScroll={onScroll}>
-            {metrics.map((m, i) => (
-              <MetricPage
-                key={keyOf(m)}
-                m={m}
-                i={i}
-                idx={idx}
-                metrics={metrics}
-                isIn={isIn}
-                value={todayOf(m)}
-                error={error[keyOf(m)] ?? ""}
-                onGoTo={(j) => goTo(j)}
-                onSave={(v) => save(m, v, i)}
-                inputRef={(el) => (inputs.current[keyOf(m)] = el)}
-                onError={(msg) => setError((e) => ({ ...e, [keyOf(m)]: msg }))}
-              />
-            ))}
+      {/* One block: the ring on the left (a tap opens the check-in), and
+          beside it the metric to log, one page at a time; the pager folds
+          away when everything is in and the foot takes its place. */}
+      <div className="hl-log">
+        <button type="button" className="hl-ring-btn" onClick={open} aria-label={`Open Lifestyle: ${n} of ${total} logged today`}>
+          <Ring metrics={metrics} isIn={isIn} n={n} total={total} />
+        </button>
+        <div className="hl-log-main">
+          <div className={`hl-fold${allIn ? " closed" : ""}`} aria-hidden={allIn}>
+            <div className="hl-fold-clip">
+              <div ref={scroller} className="hl-pager" role="region" aria-roledescription="carousel" aria-label="Today's lifestyle metrics" onScroll={onScroll}>
+                {metrics.map((m, i) => (
+                  <MetricPage
+                    key={keyOf(m)}
+                    m={m}
+                    i={i}
+                    idx={idx}
+                    metrics={metrics}
+                    isIn={isIn}
+                    value={todayOf(m)}
+                    note={todayDone ? `${yesterdayLeft} from yesterday to log` : `${total - n} left to log today`}
+                    error={error[keyOf(m)] ?? ""}
+                    onGoTo={(j) => goTo(j)}
+                    onSave={(v) => save(m, v, i)}
+                    inputRef={(el) => (inputs.current[keyOf(m)] = el)}
+                    onError={(msg) => setError((e) => ({ ...e, [keyOf(m)]: msg }))}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
+          {allIn && (
+            <div className="hl-foot">
+              <span>
+                <b>All logged today.</b> {coachName} can see it.
+              </span>
+              <button type="button" className="hl-open" onClick={open}>
+                Open
+              </button>
+            </div>
+          )}
         </div>
       </div>
-      {allIn && (
-        <div className="hl-foot">
-          <span>Everything&rsquo;s in for today. {coachName} can see it.</span>
-          <button type="button" className="hl-open" onClick={open}>
-            Open
-          </button>
-        </div>
-      )}
       <span className="hl-live" aria-live="polite">
         {live}
       </span>
@@ -313,6 +315,7 @@ function MetricPage({
   metrics,
   isIn,
   value,
+  note,
   error,
   onGoTo,
   onSave,
@@ -325,6 +328,8 @@ function MetricPage({
   metrics: HomeLifestyleMetric[];
   isIn: (m: HomeLifestyleMetric) => boolean;
   value: number | null;
+  /** "3 left to log today": the count, over the name. */
+  note: string;
   error: string;
   onGoTo: (j: number) => void;
   onSave: (v: number) => void;
@@ -360,6 +365,7 @@ function MetricPage({
 
   return (
     <div className="hl-page" role="group" aria-roledescription="slide" aria-label={`${i + 1} of ${total}: ${m.name}`}>
+      <span className="hl-note">{note}</span>
       <div className="hl-row1">
         <span className="hl-name">
           {m.date && <small className="hl-when">Yesterday</small>}
