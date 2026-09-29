@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, CardioEntry } from "./db";
+import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, mergeDuplicateMetricDefinitions, CardioEntry } from "./db";
 import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientEvent, ClientGym, ClientPhase, CoachProfile, CoachBusiness, CoachInvoicing, CoachPayments, CoachSettings, Data, EventCategory, InvoiceLine, InvoiceParty, KeptActivity, MetricAskAt, PhaseTrack, VideoRequest } from "./db";
 import type { CoachProfileFields, CoachProfileView } from "./coachProfileView";
 import { getCatalogFood, searchCatalog, type CatalogFood } from "./foods/catalog";
@@ -3395,7 +3395,11 @@ function adoptStandingMetrics(clientId: number) {
     m.phase_id = running;
     moved = true;
   }
-  if (moved) persist();
+  // A standing metric the phase already copied is now in there twice: one.
+  if (moved) {
+    mergeDuplicateMetricDefinitions(getData());
+    persist();
+  }
 }
 
 export function addMetricDefinition(
@@ -3441,7 +3445,12 @@ export function listMetricsForPhase(clientId: number, phaseId: number | null, is
   });
 }
 
-/** Everything one phase asks for, copied onto another. Nothing is moved. */
+/**
+ * Everything one phase asks for, copied onto another; the source keeps its
+ * own. From the standing set (no phase) the metrics move instead, history
+ * and all: the phase takes them over when it goes live anyway, and copying
+ * them first left every one in there twice.
+ */
 export function copyPhaseMetrics(fromPhaseId: number | null, toPhaseId: number, clientId: number, fromIsLive: boolean) {
   const data = getData();
   const source = listMetricsForPhase(clientId, fromPhaseId, fromIsLive);
@@ -3450,12 +3459,17 @@ export function copyPhaseMetrics(fromPhaseId: number | null, toPhaseId: number, 
   );
   for (const m of source) {
     if (already.has(m.name.toLowerCase())) continue;
+    if (m.phase_id == null) {
+      m.phase_id = toPhaseId;
+      continue;
+    }
     data.metric_definitions.push({
       ...m,
       id: allocId("metric_definitions"),
       phase_id: toPhaseId,
     });
   }
+  mergeDuplicateMetricDefinitions(data);
   persist();
 }
 

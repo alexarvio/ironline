@@ -1266,8 +1266,46 @@ export function prepareStore(parsed: Partial<Data>): { data: Data; changed: bool
       changed = true;
     }
     if (claimUnownedRows(data) > 0) changed = true;
+    if (mergeDuplicateMetricDefinitions(data) > 0) changed = true;
     return { data, changed };
   }
+}
+
+/**
+ * Two metrics with one name in the same place (a client's standing set, or
+ * one lifestyle phase) are one metric: the client was asked twice. This
+ * happened when a phase copied the standing set and then, going live, took
+ * the originals in too. Keeps the one with the most readings (the older on
+ * a tie), moves the other's readings onto it where it has none for that
+ * day, and drops the twin. Returns how many were dropped.
+ */
+export function mergeDuplicateMetricDefinitions(data: Data): number {
+  const groups = new Map<string, MetricDefinition[]>();
+  for (const m of data.metric_definitions) {
+    const key = `${m.client_id}:${m.phase_id ?? "standing"}:${m.frequency}:${m.name.trim().toLowerCase()}`;
+    const list = groups.get(key) ?? [];
+    list.push(m);
+    groups.set(key, list);
+  }
+  const entriesOf = (id: number) => data.metric_entries.filter((e) => e.metric_definition_id === id);
+  const gone = new Set<number>();
+  for (const list of groups.values()) {
+    if (list.length < 2) continue;
+    const keeper = [...list].sort((a, b) => entriesOf(b.id).length - entriesOf(a.id).length || a.id - b.id)[0];
+    for (const dup of list) {
+      if (dup.id === keeper.id) continue;
+      const have = new Set(entriesOf(keeper.id).map((e) => e.period));
+      for (const e of entriesOf(dup.id)) {
+        if (have.has(e.period)) continue;
+        e.metric_definition_id = keeper.id;
+        have.add(e.period);
+      }
+      data.metric_entries = data.metric_entries.filter((e) => e.metric_definition_id !== dup.id);
+      gone.add(dup.id);
+    }
+  }
+  if (gone.size) data.metric_definitions = data.metric_definitions.filter((m) => !gone.has(m.id));
+  return gone.size;
 }
 
 function save(data: Data) {
