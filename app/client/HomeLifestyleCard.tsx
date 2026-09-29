@@ -6,7 +6,7 @@ import { ChevronRightIcon } from "../components/icons";
 import { logMetricPeriodAction } from "../lib/actions";
 import { useOpenCheckIn } from "./CheckInContext";
 import { tidyDecimal } from "./workoutShared";
-import type { HomePhase } from "./PhaseCards";
+import { Bar, progressOf, type HomePhase } from "./PhaseCards";
 
 // Home's lifestyle card (29 Sep, "ring + one at a time"): a white card
 // under the greeting, above the Training / Nutrition carousel. A ring with
@@ -215,6 +215,10 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
           <ChevronRightIcon />
         </span>
       </button>
+      {/* The phase's timeline, the phase cards' bar in sand: where in the phase today is. */}
+      <div className="hl-bar">
+        <Bar pr={progressOf(phase, today, coachName)} small />
+      </div>
 
       {/* The pager folds away when everything is in; the foot takes its place. */}
       <div className={`hl-fold${allIn ? " closed" : ""}`} aria-hidden={allIn}>
