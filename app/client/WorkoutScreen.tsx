@@ -249,30 +249,35 @@ export default function WorkoutScreen({
                 <button
                   type="button"
                   role="menuitem"
-                  className="wo-menu-row"
+                  className="wo-menu-row ico"
                   onClick={() => {
                     setMenuOpen(false);
                     setGymOpen(true);
                   }}
                 >
+                  <MenuIcon kind="gym" />
                   Change gym
                 </button>
               )}
               {currentEx && (
                 <>
-                  <button type="button" role="menuitem" className="wo-menu-row" onClick={() => ask("note")}>
+                  <button type="button" role="menuitem" className="wo-menu-row ico" onClick={() => ask("note")}>
+                    <MenuIcon kind="note" />
                     {currentNote ? "Edit your note" : "Add a note for yourself"}
                   </button>
-                  <button type="button" role="menuitem" className="wo-menu-row" disabled={currentEx.warmups.length >= MAX_WARMUPS} onClick={() => ask("warmup")}>
+                  <button type="button" role="menuitem" className="wo-menu-row ico" disabled={currentEx.warmups.length >= MAX_WARMUPS} onClick={() => ask("warmup")}>
+                    <MenuIcon kind="warmup" />
                     Add a warm-up set
                   </button>
-                  <button type="button" role="menuitem" className="wo-menu-row" onClick={() => ask("swap")}>
+                  <button type="button" role="menuitem" className="wo-menu-row ico" onClick={() => ask("swap")}>
+                    <MenuIcon kind="swap" />
                     {currentEx.swap ? "Change the swap" : "Swap exercise"}
                   </button>
                 </>
               )}
               <div className="wo-menu-divider" />
-              <button type="button" role="menuitem" className="wo-menu-row danger" onClick={discard}>
+              <button type="button" role="menuitem" className="wo-menu-row ico danger" onClick={discard}>
+                <MenuIcon kind="discard" />
                 Discard session
               </button>
             </div>
@@ -366,5 +371,24 @@ export default function WorkoutScreen({
         />
       )}
     </div>
+  );
+}
+
+// The ⋯ menu's icons, one per row.
+const MENU_ICONS = {
+  gym: ["M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z", "M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"],
+  note: ["M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z", "m15 5 4 4"],
+  warmup: ["M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"],
+  swap: ["M8 3 4 7l4 4", "M4 7h16", "m16 21 4-4-4-4", "M20 17H4"],
+  discard: ["M3 6h18", "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6", "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2", "M10 11v6", "M14 11v6"],
+} as const;
+
+function MenuIcon({ kind }: { kind: keyof typeof MENU_ICONS }) {
+  return (
+    <svg className="wo-menu-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {MENU_ICONS[kind].map((d) => (
+        <path key={d} d={d} />
+      ))}
+    </svg>
   );
 }
