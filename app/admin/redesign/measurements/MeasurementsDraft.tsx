@@ -14,7 +14,6 @@ import { ConfirmDialog, MessageDialog, fmtDate, stateLabel, useClickAway } from 
 import PhaseDatesDialog from "../PhaseDatesDialog";
 import PhaseSwitcher from "../PhaseSwitcher";
 import PhaseGoalsCard from "../PhaseGoalsCard";
-import WorkoutQuestionsCard from "./WorkoutQuestionsCard";
 import { SortableItem, SortableList } from "../Sortable";
 import Picker from "../Picker";
 import DatePick from "../DatePick";
@@ -42,8 +41,6 @@ export type DraftMeasurements = {
   id: number;
   /** The coach's goals for the phase, up to three. */
   goals: string[];
-  /** What the client is asked before ending a workout, 1 to 10 each (the client's, whatever the phase). */
-  workoutQuestions: { id: string; label: string }[];
   phases: { id: number; name: string; weeks: number; state: State }[];
   name: string;
   status: State;
@@ -401,9 +398,6 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
           )}
         </div>
       </section>
-
-      {/* ---- What the client is asked as they end a workout (the client's, whatever the phase). */}
-      <WorkoutQuestionsCard clientId={clientId} firstName={firstName} questions={plan.workoutQuestions} metricNames={saved.map((m) => m.name)} />
 
       {/* ---- Check-ins: what the client logged, three ways. */}
       <section className="rd-session open rn-card">

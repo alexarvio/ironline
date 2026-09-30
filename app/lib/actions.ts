@@ -256,7 +256,7 @@ import {
   setSessionSkipReason,
   startSession,
   endSession,
-  saveWorkoutQuestions,
+  saveProgramWorkoutQuestions,
   discardSession,
   setExerciseAlternatives,
   setExerciseSwap,
@@ -3163,10 +3163,11 @@ export async function endSessionAction(programDayId: number, opts?: { note?: str
   revalidatePath("/admin");
 }
 
-/** The coach's workout questionnaire for a client, in order (Measurements). */
-export async function saveWorkoutQuestionsAction(clientId: number, questions: { id: string; label: string; kind?: "scale" | "number" | "text"; unit?: string }[]) {
-  if (!(await coachForClient(Number(clientId)))) return;
-  saveWorkoutQuestions(Number(clientId), Array.isArray(questions) ? questions : []);
+/** A training phase's workout questionnaire, in order (the Training tab). */
+export async function saveProgramWorkoutQuestionsAction(programId: number, questions: { id: string; label: string; kind?: "scale" | "number" | "text"; unit?: string }[]) {
+  const program = getData().training_programs.find((p) => p.id === Number(programId));
+  if (!program || !(await coachForClient(program.client_id))) return;
+  saveProgramWorkoutQuestions(program.id, Array.isArray(questions) ? questions : []);
   revalidatePath("/admin");
   revalidatePath("/client");
 }

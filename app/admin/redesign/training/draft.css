@@ -64,6 +64,11 @@
 .rd-session-more { position: absolute; top: 12px; right: 12px; }
 
 .rd-rows { padding: 0 14px 12px; }
+/* An opened session's table (30 Sep): wider than the card on a narrower
+   window, it scrolls sideways inside it rather than spilling the icons and
+   ⋯ out past the card's edge. */
+.rd-rows-scroll { overflow-x: auto; scrollbar-width: thin; scrollbar-color: #dfe3e8 transparent; }
+.rd-rows-scroll > * { min-width: var(--rd-minw); box-sizing: border-box; }
 .rd-skip { margin: 0 0 8px; padding: 8px 12px; border-radius: 10px; background: #fdf3ee; font-size: 12.5px; color: #b3471d; }
 .rd-cols, .rd-row-main { display: grid; grid-template-columns: minmax(200px, 1.5fr) 84px 64px 44px minmax(200px, 1.3fr) 66px 66px 32px; gap: 12px; align-items: center; }
 .rd-cols { padding: 6px 4px 8px 10px;font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; }

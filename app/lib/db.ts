@@ -107,6 +107,9 @@ type TrainingProgram = {
   scheduled_at: string | null;
   // The coach deleted this programme's Plan-tab phase: don't draw it again.
   phase_removed?: boolean;
+  // What the client is asked as they end a workout in this programme (the
+  // Training tab, 30 Sep). Absent: the client's own list, else the default two.
+  workout_questions?: WorkoutQuestion[];
 };
 // One block on the coach's phase timeline: "Bulk" on the nutrition track
 // from one week to another. Weeks are Monday dates (YYYY-MM-DD); end_week

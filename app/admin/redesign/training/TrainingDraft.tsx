@@ -15,6 +15,7 @@ import { VideoIcon } from "../../VideoRequestButton";
 import PhaseDatesDialog from "../PhaseDatesDialog";
 import PhaseSwitcher from "../PhaseSwitcher";
 import PhaseGoalsCard from "../PhaseGoalsCard";
+import WorkoutQuestionsCard from "./WorkoutQuestionsCard";
 import CoachNoteCard from "../CoachNoteCard";
 import { SortableItem, SortableList } from "../Sortable";
 import Picker from "../Picker";
@@ -77,6 +78,8 @@ export type DraftProgram = {
   startWeek: number;
   /** The training phase on the plan that carries its dates, if one does. */
   phaseId: number | null;
+  /** What the client is asked as they end a workout in it: 1 to 10, a value, or words. */
+  workoutQuestions: { id: string; label: string; kind?: "scale" | "number" | "text"; unit?: string }[];
   /** The coach's goals for the phase, up to three. */
   goals: string[];
   /** The coach's note to the client on this phase, top of their Training tab. */
@@ -194,6 +197,10 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
   const exWidths = [cols.sets && 72, cols.reps && 88, cols.weight && 92, cols.rpe && 68, cols.tempo && 88, cols.rest && 84].filter((w): w is number => typeof w === "number");
   const gridCols = `20px minmax(220px, 1.5fr)${exWidths.map((w) => ` ${w}px`).join("")} minmax(180px, 1fr) minmax(260px, 1.3fr) 80px 80px 112px`;
   const colStyle = { gridTemplateColumns: gridCols, columnGap: GAP } as const;
+  // The narrowest the table can be (every column at its minimum, the gaps and
+  // the row's padding): every row takes at least this, so on a narrow window
+  // they scroll sideways together inside the card and stay lined up.
+  const tableMinW = 20 + 220 + exWidths.reduce((t, w) => t + w, 0) + 180 + 260 + 80 + 80 + 112 + (exWidths.length + 7) * GAP + 14;
   // The band the exercise figures take up, gaps included: cardio's figures
   // share it, so the name, "did" and ⋯ columns line up across both tables.
   const bandW = exWidths.reduce((t, w) => t + w, 0) + Math.max(0, exWidths.length - 1) * GAP;
@@ -555,6 +562,8 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
       {/* ---- The coach's goals for this phase, shown on the client's Home. */}
       <PhaseGoalsCard phaseId={program.phaseId} phaseName={program.name} firstName={firstName} goals={program.goals} />
       {program.phaseId != null && <CoachNoteCard firstName={firstName} note={program.coachNote} what="training" save={(text) => saveTrainingNoteAction(program.phaseId!, text)} />}
+      {/* ---- What the client is asked as they end a workout in this phase (30 Sep: its own list, here only). */}
+      <WorkoutQuestionsCard programId={program.id} firstName={firstName} questions={program.workoutQuestions} />
 
       {/* ---- The weeks: plain chips, one pill a session. */}
       <div className="rd-weekrow">
@@ -759,7 +768,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
               </div>
 
               {isOpen && (
-                <div className="rd-rows">
+                <div className="rd-rows rd-rows-scroll" style={{ "--rd-minw": `${tableMinW}px` } as React.CSSProperties}>
                   {s.skip && <p className="rd-skip">{firstName} couldn&rsquo;t train: &ldquo;{s.skip}&rdquo;</p>}
                   {!!s.answers?.length && (
                     <p className="rd-session-note">

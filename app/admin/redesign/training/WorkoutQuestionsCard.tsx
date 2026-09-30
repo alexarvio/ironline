@@ -3,19 +3,18 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { saveWorkoutQuestionsAction } from "../../../lib/actions";
+import { saveProgramWorkoutQuestionsAction } from "../../../lib/actions";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { ChevronDownIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { SortableItem, SortableList } from "../Sortable";
-import { useClickAway } from "../training/TrainingDraft";
-import { metricFromWorkout } from "../../../lib/metricAskAt";
+import { useClickAway } from "./TrainingDraft";
 import { MAX_QUESTION_LENGTH, MAX_WORKOUT_QUESTIONS, WORKOUT_QUESTION_PRESETS } from "../../../lib/workoutQuestions";
 
 // The workout questionnaire (30 Sep): what the client is asked, 1 to 10
-// each, before ending a workout. The client's own list, whatever the phase,
+// each, before ending a workout. Each training phase (programme) has its own,
 // so it sits under the phase's tracked metrics but is not part of them.
 // Like the metrics card: adds, removals, renames and a new order queue on
-// the bar until Apply. A question that answers a tracked metric says so.
+// the bar until Apply. It lives on the Training tab only (moved from Measurements).
 
 type Kind = "scale" | "number" | "text";
 type Q = { id: string; label: string; kind?: Kind; unit?: string };
@@ -27,7 +26,7 @@ const KINDS: { id: Kind; label: string }[] = [
 ];
 const rowOf = (q: Q): Row => ({ id: q.id, label: q.label, kind: q.kind ?? "scale", unit: q.unit ?? "" });
 
-export default function WorkoutQuestionsCard({ clientId, firstName, questions: given, metricNames }: { clientId: number; firstName: string; questions: Q[]; metricNames: string[] }) {
+export default function WorkoutQuestionsCard({ programId, firstName, questions: given }: { programId: number; firstName: string; questions: Q[] }) {
   const questions = given.map(rowOf);
   const [saved, setSaved] = useState(questions);
   const [rows, setRows] = useState(questions);
@@ -61,15 +60,13 @@ export default function WorkoutQuestionsCard({ clientId, firstName, questions: g
   })();
   const isNew = (id: string) => !saved.some((q) => q.id === id);
   const full = rows.length >= MAX_WORKOUT_QUESTIONS;
-  // The tracked metric a question fills, by the same name match the check-in uses.
-  const fills = (id: string) => metricNames.filter((n) => metricFromWorkout(n) === id);
   const grid = { gridTemplateColumns: "20px minmax(220px, 1.2fr) 200px minmax(220px, 1fr) 32px", columnGap: 24 } as const;
 
   const apply = () => {
     setSaved(clean);
     setRows(clean);
     startTransition(async () => {
-      await saveWorkoutQuestionsAction(clientId, clean);
+      await saveProgramWorkoutQuestionsAction(programId, clean);
       router.refresh();
       toast.success("Saved", { description: clean.length ? `Workout questionnaire: ${clean.length} ${clean.length === 1 ? "question" : "questions"}` : "No questions at the end of a workout" });
     });
@@ -80,7 +77,7 @@ export default function WorkoutQuestionsCard({ clientId, firstName, questions: g
       <div className="rn-card-head">
         <h2>Workout questionnaire</h2>
         <span className="rm-q-sub">
-          Asked as {firstName} ends every workout · {firstName}&rsquo;s, whatever the phase
+          Asked as {firstName} ends every workout in this phase
         </span>
       </div>
       <div className="rd-rows">
@@ -96,7 +93,6 @@ export default function WorkoutQuestionsCard({ clientId, firstName, questions: g
         <SortableList ids={rows.map((r) => r.id)} label="question" onMove={(ids) => setRows((prev) => ids.map((id) => prev.find((r) => r.id === id)!).filter(Boolean))}>
           {rows.map((r) => {
             const was = saved.find((q) => q.id === r.id);
-            const metric = fills(r.id);
             return (
               <SortableItem key={r.id} id={r.id} className={`rd-row${isNew(r.id) ? " new" : ""}`}>
                 {(grip) => (
@@ -138,7 +134,6 @@ export default function WorkoutQuestionsCard({ clientId, firstName, questions: g
                         </span>
                       )}
                       {r.kind === "text" && <span className="rm-q-text" aria-hidden="true">A box to write in</span>}
-                      {metric.length > 0 && r.kind !== "text" && <small>Fills {metric.join(", ")}</small>}
                     </span>
                     <span className="rd-row-more">
                       <DropdownMenu modal={false}>

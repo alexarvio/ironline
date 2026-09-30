@@ -572,6 +572,7 @@ export type TrainingProgram = {
   deployed_at: string | null;
   scheduled_at: string | null;
   phase_removed?: boolean;
+  workout_questions?: WorkoutQuestion[];
 };
 
 export function listPrograms(clientId: number): TrainingProgram[] {
@@ -7887,14 +7888,36 @@ export function startSession(programDayId: number, at: string): { ok: true } | {
   return { ok: true };
 }
 
-/** What this client is asked before ending a workout (the coach's list, or the default two). */
-export function getWorkoutQuestions(clientId: number): WorkoutQuestion[] {
-  return getClientProfile(clientId).workout_questions ?? DEFAULT_WORKOUT_QUESTIONS;
+/** What a client is asked before ending a workout: the programme's own list
+    (each training phase has its own, set on the Training tab), else the
+    client's (from when it lived on Measurements), else the default two. With
+    no programme given, the one running this week. */
+export function getWorkoutQuestions(clientId: number, programId?: number | null): WorkoutQuestion[] {
+  const data = getData();
+  const program =
+    programId != null
+      ? data.training_programs.find((p) => p.id === programId && p.client_id === clientId) ?? null
+      : getProgramForWeek(clientId, getCurrentWeekNumber(clientId));
+  return program?.workout_questions ?? getClientProfile(clientId).workout_questions ?? DEFAULT_WORKOUT_QUESTIONS;
 }
 
-export function saveWorkoutQuestions(clientId: number, questions: WorkoutQuestion[]) {
+/** The questions a session is asked: those of the programme its week belongs to. */
+function questionsForDay(day: ProgramDay): WorkoutQuestion[] {
+  return getWorkoutQuestions(day.client_id, getProgramForWeek(day.client_id, day.week_number)?.id ?? null);
+}
+export { questionsForDay };
+
+/** A programme's workout questionnaire, in order (the Training tab). */
+export function saveProgramWorkoutQuestions(programId: number, questions: WorkoutQuestion[]) {
+  const program = getData().training_programs.find((p) => p.id === programId);
+  if (!program) return;
+  program.workout_questions = cleanQuestions(questions);
+  persist();
+}
+
+function cleanQuestions(questions: WorkoutQuestion[]): WorkoutQuestion[] {
   const seen = new Set<string>();
-  const clean = questions
+  return questions
     .map((q): WorkoutQuestion => {
       const kind = q.kind === "number" || q.kind === "text" ? q.kind : "scale";
       const unit = kind === "number" ? String(q.unit ?? "").trim().slice(0, 12) : "";
@@ -7902,7 +7925,6 @@ export function saveWorkoutQuestions(clientId: number, questions: WorkoutQuestio
     })
     .filter((q) => q.id && q.label && !seen.has(q.id) && seen.add(q.id))
     .slice(0, MAX_WORKOUT_QUESTIONS);
-  saveClientProfile({ ...getClientProfile(clientId), workout_questions: clean });
 }
 
 /** A session's answers: the questionnaire's, or the two asked before it existed. */
@@ -7934,7 +7956,7 @@ export function endSession(programDayId: number, at: string, note: string, answe
   // 10, a number, words) or left unanswered, saved with its wording as asked.
   const given = new Map(answers.map((a) => [String(a.id), a.value]));
   const kept: SessionAnswer[] = [];
-  for (const q of getWorkoutQuestions(day.client_id)) {
+  for (const q of questionsForDay(day)) {
     const v = given.get(q.id);
     const base = { id: q.id, label: q.label, ...(q.kind && q.kind !== "scale" ? { kind: q.kind } : {}), ...(q.unit ? { unit: q.unit } : {}) };
     if (q.kind === "text") {

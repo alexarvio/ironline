@@ -259,6 +259,8 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     startWeek: program.start_week,
     phaseId: phase?.id ?? null,
     goals: phase?.objectives ?? [],
+    // What the client is asked as they end a workout in this programme.
+    workoutQuestions: getWorkoutQuestions(clientId, program.id),
     coachNote: phase?.client_note ?? "",
     startDate: phase?.start_week ?? null,
     endDate: phase?.end_week ?? null,
@@ -414,8 +416,6 @@ export function loadMeasurements(clientId: number, params: { phase?: string }): 
   return {
     id: selected?.id ?? 0,
     goals: goalsOf(selected?.id),
-    // The client's, not the phase's: asked at the end of every workout.
-    workoutQuestions: getWorkoutQuestions(clientId),
     phases,
     name: selected?.name ?? "Check-ins",
     status: selected ? STATE[selected.status] : "live",
