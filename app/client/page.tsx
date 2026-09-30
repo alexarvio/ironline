@@ -6,6 +6,8 @@ import {
   getAssignmentsForDay,
   getClient,
   getClientProfile,
+  getWorkoutQuestions,
+  sessionAnswers,
   getClientProgramNoteMeta,
   listCardioForDay,
   chatThreadViews,
@@ -369,8 +371,12 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
       food={food}
       checkInCard={{
         clientId: CLIENT_ID,
-        // Today's daily metrics only, in the coach's order; the week's stay in the check-in.
-        metrics: (sections.sections.find((s) => s.id === "daily")?.metrics ?? []).map(homeMetric),
+        // Today's daily metrics in the coach's order, then this week's (30 Sep): the
+        // same questions the check-in lists, so the ring counts what it does.
+        metrics: [
+          ...(sections.sections.find((s) => s.id === "daily")?.metrics ?? []).map(homeMetric),
+          ...(sections.sections.find((s) => s.id === "weekly")?.metrics ?? []).map((m) => ({ ...homeMetric(m), weekly: true })),
+        ],
         // Yesterday's questions left open: asked once today's are in.
         yesterday: (() => {
           const y = yesterdaysOpenMetrics(CLIENT_ID);
@@ -627,6 +633,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
           const coachId = getClient(CLIENT_ID)?.coach_id ?? null;
           const libraryName = new Map(coachId != null ? listExercises(coachId).map((e) => [e.id, e.name] as const) : []);
           const videoReplies = listVideoReplies(CLIENT_ID);
+          const workoutQuestions = getWorkoutQuestions(CLIENT_ID);
           return (
             <>
             <div className="tr-sessions-head">
@@ -661,8 +668,8 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                 startedAt: day.session_started_at ?? null,
                 endedAt: day.session_ended_at ?? null,
                 sessionNote: day.session_note ?? "",
-                enjoyment: day.session_enjoyment ?? null,
-                adherence: day.session_adherence ?? null,
+                questions: workoutQuestions,
+                answers: Object.fromEntries(sessionAnswers(day).flatMap((a): [string, number | string][] => (a.text != null ? [[a.id, a.text]] : a.value != null ? [[a.id, a.value]] : []))),
                 cardio: listCardioForDay(day.id).map((c) => ({ id: c.id, name: c.name, time: c.time, pace: c.pace, incline: c.incline, distance: c.distance ?? "", notes: c.notes, done: isCardioDone(c.id), swap: c.swap?.name ?? null, alternatives: c.alternatives ?? [] })),
                 exercises: assignments.map((a) => ({
                   id: a.id,

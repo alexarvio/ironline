@@ -18,7 +18,10 @@ import { clerkMiddleware } from "@clerk/nextjs/server";
 // The privacy policy and support page are public: the App Store links to them.
 // /signup, /invite, /sso-callback and /auth/* are Clerk's way in (26 Sep).
 // /api/dev: local-only tools that refuse to run on a server (and are never deployed).
-const PUBLIC_PATHS = ["/login", "/privacy", "/support", "/signup", "/invite", "/sso-callback", "/auth", "/api/dev"];
+// /uploads authorizes every file itself (canAccessClient); it passes through
+// here so Clerk's middleware has run and auth() works in it (30 Sep: photos
+// and videos failed to load for a Clerk sign-in while it was left out).
+const PUBLIC_PATHS = ["/login", "/privacy", "/support", "/signup", "/invite", "/sso-callback", "/auth", "/api/dev", "/uploads"];
 
 // With sign-in through Clerk (lib/clerk.ts: AUTH_PROVIDER=clerk), Clerk's
 // middleware runs instead: it reads the session so auth() works on the
@@ -54,7 +57,7 @@ export function proxy(request: NextRequest, event: NextFetchEvent) {
 }
 
 export const config = {
-  // Everything except Next's own assets, the uploads route, Stripe's webhook
+  // Everything except Next's own assets, Stripe's webhook
   // (signed, no cookie) and the coach's
   // video-reply upload (which do their own per-request authorization; the
   // proxy would also buffer and cut off a big upload body), and common static files. The app icons
@@ -64,5 +67,5 @@ export const config = {
   // shows the logo before anyone has a session. sw.js too: the browser
   // re-checks the service worker on its own, cookie or not, and a redirect
   // to /login there would break push notifications once a session expired.
-  matcher: ["/((?!_next/static|_next/image|uploads|api/video-reply|api/stripe/webhook|favicon.ico|manifest.webmanifest|icon.png|apple-icon.png|sw.js|icons/|brand/).*)"],
+  matcher: ["/((?!_next/static|_next/image|api/video-reply|api/stripe/webhook|favicon.ico|manifest.webmanifest|icon.png|apple-icon.png|sw.js|icons/|brand/).*)"],
 };

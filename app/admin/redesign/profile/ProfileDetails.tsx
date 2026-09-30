@@ -25,6 +25,8 @@ export default function ProfileDetails({ coachId, data, countries }: { coachId: 
   const [saved, setSaved] = useState(JSON.stringify({ ...data, phoneCode: data.phoneCode || DEFAULT_DIAL }));
   const [pending, start] = useTransition();
   const dirty = JSON.stringify(d) !== saved;
+  const was = JSON.parse(saved) as typeof d;
+  const changed = (Object.keys(d) as (keyof typeof d)[]).filter((k) => d[k] !== was[k]).length;
   const set = <K extends keyof ProfileDetailsData>(k: K) => (v: ProfileDetailsData[K]) => setD((x) => ({ ...x, [k]: v }));
   const save = () =>
     start(async () => {
@@ -97,12 +99,19 @@ export default function ProfileDetails({ coachId, data, countries }: { coachId: 
         </CardContent>
       </Card>
 
-      <div className="rpf-bar">
-        <Button onClick={save} disabled={pending || !dirty}>
-          {pending ? "Saving…" : "Save"}
-        </Button>
-        <span className={`rpf-saved${dirty ? " dirty" : ""}`}>{dirty ? "Unsaved changes" : "Saved"}</span>
-      </div>
+      {/* Changes: the app's one blue bar (30 Sep); nothing when all is saved. */}
+      {dirty && (
+        <div className="rd-pending rd-pending-sticky" role="region" aria-label="Unsaved changes">
+          <span className="rd-pending-count">{changed || 1}</span>
+          <span className="rd-pending-text">{changed === 1 ? "change" : "changes"} to your details · only you and the app see them</span>
+          <button type="button" className="rd-pending-ghost" onClick={() => setD(JSON.parse(saved))} disabled={pending}>
+            Discard
+          </button>
+          <button type="button" className="rd-pending-apply" onClick={save} disabled={pending}>
+            {pending ? "Saving…" : "Save"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

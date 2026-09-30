@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, mergeDuplicateMetricDefinitions, CardioEntry } from "./db";
-import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientEvent, ClientGym, ClientPhase, CoachProfile, CoachBusiness, CoachInvoicing, CoachPayments, CoachSettings, Data, EventCategory, InvoiceLine, InvoiceParty, KeptActivity, MetricAskAt, PhaseTrack, VideoRequest } from "./db";
+import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientEvent, ClientGym, ClientPhase, CoachProfile, CoachBusiness, CoachInvoicing, CoachPayments, CoachSettings, Data, EventCategory, InvoiceLine, InvoiceParty, KeptActivity, MetricAskAt, PhaseTrack, SessionAnswer, VideoRequest, WorkoutQuestion } from "./db";
 import type { CoachProfileFields, CoachProfileView } from "./coachProfileView";
 import { getCatalogFood, searchCatalog, type CatalogFood } from "./foods/catalog";
 import type { OffProduct } from "./foods/openfoodfacts";
@@ -13,6 +13,7 @@ import { countryOf, invoicingFor } from "./countries";
 import { LOCK_MS, type LockScope } from "./loginLockout";
 import { endWeekFor, phaseCovers, phaseDays, phaseLastDay, phaseWeekIndex, phaseWeeks } from "./phases";
 import { metricAskAt, metricFromWorkout } from "./metricAskAt";
+import { DEFAULT_WORKOUT_QUESTIONS, MAX_QUESTION_LENGTH, MAX_WORKOUT_QUESTIONS } from "./workoutQuestions";
 import { colourOfGroup, groupColour } from "./categoryColors";
 import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "./phaseCovers";
 
@@ -62,6 +63,7 @@ export type ProgramDay = {
   session_note?: string;
   session_enjoyment?: number;
   session_adherence?: number;
+  session_answers?: SessionAnswer[];
 };
 export type WorkoutAssignment = {
   id: number;
@@ -4462,6 +4464,7 @@ export type ClientProfile = {
   cardio_goal: string;
   training_goal: string;
   water_goal: string;
+  workout_questions?: WorkoutQuestion[];
 };
 
 export const CHECK_IN_DAYS = [
@@ -4508,7 +4511,9 @@ export function saveClientProfile(profile: ClientProfile) {
       : idx >= 0
       ? (data.client_profiles[idx].main_goal_saved_at ?? null)
       : null;
-  const next = { ...profile, main_goal, main_goal_saved_at };
+  // Nor the workout questions (set on Measurements): kept unless given.
+  const workout_questions = profile.workout_questions !== undefined ? profile.workout_questions : idx >= 0 ? data.client_profiles[idx].workout_questions : undefined;
+  const next = { ...profile, main_goal, main_goal_saved_at, ...(workout_questions ? { workout_questions } : {}) };
   if (idx >= 0) data.client_profiles[idx] = next;
   else data.client_profiles.push(next);
   persist();
@@ -6178,7 +6183,7 @@ export function getCheckInHistory(clientId: number): CheckInHistory {
       if (p) items.push({ name: s.name, value: shown(s, p.value) });
     }
     const note = [getCheckInNote(clientId, "daily", date), getCheckInNote(clientId, "measurements", date)].filter((n): n is string => !!n?.trim()).join("\n") || null;
-    const daily = series.filter((s) => s.cadence === "daily" && !metricFromWorkout(s.name));
+    const daily = series.filter((s) => s.cadence === "daily" && !workoutFed(clientId, s.name));
     const edit = [
       checkInTrackerSection(clientId, "daily", date, "Daily", ""),
       checkInTrackerSection(clientId, "weekly", weekStart(date), "Weekly", "", (e) => e?.value != null && !!e.logged_at && localDateStr(new Date(e.logged_at)) === date),
@@ -6203,7 +6208,7 @@ function checkInTrackerSection(
   only?: (current: MetricEntry | undefined) => boolean
 ): CheckInSection | null {
   // What a workout's wrap-up answers is not asked here (metricFromWorkout).
-  const all = listMetricDefinitions(clientId, frequency).filter((d) => deployedToClient(d) && !metricFromWorkout(d.name));
+  const all = listMetricDefinitions(clientId, frequency).filter((d) => deployedToClient(d) && !workoutFed(clientId, d.name));
   const entries = getMetricEntries(all.map((d) => d.id));
   const currentOf = (id: number) => entries.find((e) => e.metric_definition_id === id && e.period === period);
   const defs = only ? all.filter((d) => only(currentOf(d.id))) : all;
@@ -7882,8 +7887,41 @@ export function startSession(programDayId: number, at: string): { ok: true } | {
   return { ok: true };
 }
 
-/** The client ended the session, with a word to the coach or not. */
-export function endSession(programDayId: number, at: string, note: string, ratings: { enjoyment?: number | null; adherence?: number | null } = {}) {
+/** What this client is asked before ending a workout (the coach's list, or the default two). */
+export function getWorkoutQuestions(clientId: number): WorkoutQuestion[] {
+  return getClientProfile(clientId).workout_questions ?? DEFAULT_WORKOUT_QUESTIONS;
+}
+
+export function saveWorkoutQuestions(clientId: number, questions: WorkoutQuestion[]) {
+  const seen = new Set<string>();
+  const clean = questions
+    .map((q): WorkoutQuestion => {
+      const kind = q.kind === "number" || q.kind === "text" ? q.kind : "scale";
+      const unit = kind === "number" ? String(q.unit ?? "").trim().slice(0, 12) : "";
+      return { id: String(q.id).trim().slice(0, 40), label: String(q.label).trim().slice(0, MAX_QUESTION_LENGTH), kind, ...(unit ? { unit } : {}) };
+    })
+    .filter((q) => q.id && q.label && !seen.has(q.id) && seen.add(q.id))
+    .slice(0, MAX_WORKOUT_QUESTIONS);
+  saveClientProfile({ ...getClientProfile(clientId), workout_questions: clean });
+}
+
+/** A session's answers: the questionnaire's, or the two asked before it existed. */
+export function sessionAnswers(day: ProgramDay): SessionAnswer[] {
+  if (day.session_answers) return day.session_answers;
+  const old: SessionAnswer[] = [];
+  if (day.session_enjoyment != null) old.push({ id: "enjoyment", label: "Enjoyment", value: day.session_enjoyment });
+  if (day.session_adherence != null) old.push({ id: "adherence", label: "Adherence", value: day.session_adherence });
+  return old;
+}
+
+/** Answered by the workout, so not asked in the check-in: named for a question this client is asked with a number. */
+function workoutFed(clientId: number, name: string): boolean {
+  const kind = metricFromWorkout(name);
+  return !!kind && getWorkoutQuestions(clientId).some((q) => q.id === kind && q.kind !== "text");
+}
+
+/** The client ended the session, with a word to the coach or not, and the questionnaire's answers. */
+export function endSession(programDayId: number, at: string, note: string, answers: { id: string; value: number | string | null }[] = []) {
   const data = getData();
   const day = data.program_days.find((pd) => pd.id === programDayId);
   if (!day) return;
@@ -7892,10 +7930,29 @@ export function endSession(programDayId: number, at: string, note: string, ratin
   const text = note.trim().slice(0, 1000);
   if (text) day.session_note = text;
   else delete day.session_note;
-  // 1 to 10, or not answered.
-  const score = (v: unknown) => (typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= 10 ? v : null);
-  const enjoyment = score(ratings.enjoyment);
-  const adherence = score(ratings.adherence);
+  // Only the questions this client is asked, each checked for its kind (1 to
+  // 10, a number, words) or left unanswered, saved with its wording as asked.
+  const given = new Map(answers.map((a) => [String(a.id), a.value]));
+  const kept: SessionAnswer[] = [];
+  for (const q of getWorkoutQuestions(day.client_id)) {
+    const v = given.get(q.id);
+    const base = { id: q.id, label: q.label, ...(q.kind && q.kind !== "scale" ? { kind: q.kind } : {}), ...(q.unit ? { unit: q.unit } : {}) };
+    if (q.kind === "text") {
+      const t = typeof v === "string" ? v.trim().slice(0, 500) : "";
+      if (t) kept.push({ ...base, text: t });
+    } else if (q.kind === "number") {
+      const n = typeof v === "number" ? v : typeof v === "string" && v.trim() ? Number(v.replace(",", ".")) : NaN;
+      if (Number.isFinite(n) && Math.abs(n) < 1e6) kept.push({ ...base, value: Math.round(n * 100) / 100 });
+    } else if (typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= 10) {
+      kept.push({ ...base, value: v });
+    }
+  }
+  if (kept.length) day.session_answers = kept;
+  else delete day.session_answers;
+  // The two old fields follow (their 1 to 10s only), for anything still reading them.
+  const of = (id: string) => kept.find((a) => a.id === id && !a.kind)?.value;
+  const enjoyment = of("enjoyment");
+  const adherence = of("adherence");
   if (enjoyment != null) day.session_enjoyment = enjoyment;
   else delete day.session_enjoyment;
   if (adherence != null) day.session_adherence = adherence;
@@ -7914,14 +7971,14 @@ function syncWorkoutMetrics(clientId: number, at: string) {
     const period = frequency === "daily" ? date : weekStart(date);
     for (const def of listMetricDefinitions(clientId, frequency)) {
       const kind = metricFromWorkout(def.name);
-      if (!kind) continue;
+      if (!kind || !workoutFed(clientId, def.name)) continue;
       const scores = data.program_days
         .filter((pd) => pd.client_id === clientId && pd.session_ended_at)
         .filter((pd) => {
           const d = localDateStr(new Date(pd.session_ended_at!));
           return frequency === "daily" ? d === date : weekStart(d) === period;
         })
-        .map((pd) => (kind === "enjoyment" ? pd.session_enjoyment : pd.session_adherence))
+        .map((pd) => sessionAnswers(pd).find((a) => a.id === kind)?.value)
         .filter((v): v is number => v != null);
       const value = scores.length ? Math.round((scores.reduce((s, v) => s + v, 0) / scores.length) * 10) / 10 : null;
       if (value != null) setMetricEntry(def.id, period, value, new Date().toISOString());
@@ -7951,6 +8008,7 @@ export function discardSession(programDayId: number) {
   delete day.session_note;
   delete day.session_enjoyment;
   delete day.session_adherence;
+  delete day.session_answers;
   if (endedAt) syncWorkoutMetrics(day.client_id, endedAt);
   persist();
 }

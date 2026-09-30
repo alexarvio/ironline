@@ -28,17 +28,19 @@ function Field({ label, hint, wide = false, children }: { label: string; hint?: 
   );
 }
 
-function SaveBar({ dirty, busy, onSave, onDiscard, error }: { dirty: boolean; busy: boolean; onSave: () => void; onDiscard: () => void; error?: string }) {
+// The app's one changes bar (rd-pending, 30 Sep), kept in view at the foot of the form.
+function SaveBar({ dirty, count, busy, onSave, onDiscard, error }: { dirty: boolean; count: number; busy: boolean; onSave: () => void; onDiscard: () => void; error?: string }) {
   if (!dirty) return null;
   return (
-    <div className="rst-bar" role="region" aria-label="Unsaved changes">
-      <span className={error ? "bad" : ""}>{error || "Unsaved changes"}</span>
-      <Button variant="ghost" onClick={onDiscard} disabled={busy}>
+    <div className="rd-pending rd-pending-sticky" role="region" aria-label="Unsaved changes">
+      <span className="rd-pending-count">{count}</span>
+      <span className="rd-pending-text">{error || `${count === 1 ? "change" : "changes"} not saved yet`}</span>
+      <button type="button" className="rd-pending-ghost" onClick={onDiscard} disabled={busy}>
         Discard
-      </Button>
-      <Button onClick={onSave} disabled={busy || !!error}>
+      </button>
+      <button type="button" className="rd-pending-apply" onClick={onSave} disabled={busy || !!error}>
         {busy ? "Saving…" : "Save"}
-      </Button>
+      </button>
     </div>
   );
 }
@@ -60,7 +62,9 @@ function useDraft<T extends Record<string, unknown>>(initial: T, save: (v: T) =>
         toast.error("Couldn't save", { description: "Check your connection and try again." });
       }
     });
-  return { v, set, dirty, busy, commit, discard: () => setV(initial) };
+  // How many fields differ from what is saved, for the bar's count.
+  const count = Object.keys(v).filter((k) => JSON.stringify(v[k]) !== JSON.stringify(initial[k])).length;
+  return { v, set, dirty, count, busy, commit, discard: () => setV(initial) };
 }
 
 // ---- Account & security
@@ -202,7 +206,7 @@ export function BusinessSettings({ initial }: { initial: CoachBusiness }) {
           {text("website", "Website", { wide: true, placeholder: "https://" })}
         </CardContent>
       </Card>
-      <SaveBar dirty={d.dirty} busy={d.busy} onSave={d.commit} onDiscard={d.discard} />
+      <SaveBar dirty={d.dirty} count={d.count} busy={d.busy} onSave={d.commit} onDiscard={d.discard} />
     </div>
   );
 }
@@ -394,7 +398,7 @@ export function InvoicingSettings({ initial, business, payments }: { initial: Co
         </CardContent>
       </Card>
 
-      <SaveBar dirty={d.dirty} busy={d.busy} onSave={d.commit} onDiscard={d.discard} error={ibanBad ? "Check the IBAN before saving." : undefined} />
+      <SaveBar dirty={d.dirty} count={d.count} busy={d.busy} onSave={d.commit} onDiscard={d.discard} error={ibanBad ? "Check the IBAN before saving." : undefined} />
     </div>
   );
 }

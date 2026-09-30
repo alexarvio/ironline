@@ -71,9 +71,10 @@ export type SessionDay = {
   startedAt: string | null;
   endedAt: string | null;
   sessionNote: string;
-  /** How the session was, 1 to 10 each; null when not answered. */
-  enjoyment: number | null;
-  adherence: number | null;
+  /** What the coach asks before ending (the workout questionnaire): 1 to 10, a number, or words. */
+  questions: { id: string; label: string; kind?: "scale" | "number" | "text"; unit?: string }[];
+  /** What was answered, by question id: a number, or the words. */
+  answers: Record<string, number | string>;
   gyms: GymOption[];
   gymId: number | null;
 };

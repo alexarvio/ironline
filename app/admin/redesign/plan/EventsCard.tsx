@@ -76,7 +76,7 @@ export type EventsCardProps = {
   cols: React.CSSProperties;
   months: { label: string; start: number; span: number }[];
   nowIdx: number;
-  nowLeft: string;
+  nowLeft: string | null;
   win: number;
   /** The 3 / 6 / 9 / 12 month switch, shared with the phases so both grids move together. */
   windows: readonly { months: number; weeks: number }[];
@@ -184,7 +184,7 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
             </div>
           </div>
           <div className="rq-tl-body">
-            <span className="rq-now" style={{ left: nowLeft }} title="Now" />
+            {nowLeft && <span className="rq-now" style={{ left: nowLeft }} title="Now" />}
             <div className="rq-tl-row">
               <span />
               <div className="rq-tl-clip">

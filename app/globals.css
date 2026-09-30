@@ -17733,3 +17733,9 @@ button.ci-hint { cursor: pointer; }
 .pg-pager-num.on { background: #141a24; color: #fff; }
 .pg-pager-caption { padding-top: 10px; text-align: center; font-size: 12px; font-weight: 600; color: #98a2b3; }
 @media (prefers-reduced-motion: reduce) { .pg-chart-fade { animation: none; } .pg-chip, .pg-range button { transition: none; } }
+/* The workout questionnaire's other two kinds (30 Sep): a number with its unit, and words, in the wrap-up's grey. */
+.wo-ask-field { display: flex; flex-direction: column; gap: 6px; }
+.wo-ask-num { display: flex; align-items: baseline; gap: 6px; height: 40px; padding: 0 12px; border-radius: 10px; background: #eef1f5; }
+.wo-ask-num input { flex: 1; min-width: 0; height: 40px; border: 0; padding: 0; background: none; outline: none; font: inherit; font-size: 16px; font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; }
+.wo-ask-num small { font-size: 13px; font-weight: 700; color: #5b6474; }
+.wo-ask-field .wo-note-input { padding: 10px 12px; border-radius: 10px; background: #eef1f5; }

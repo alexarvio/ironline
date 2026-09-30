@@ -66,7 +66,7 @@ export type DraftRow = {
 };
 /** swap: what the client did instead; alternatives: what the coach offers (names, with a note). */
 export type DraftCardio = { id: number; name: string; time: string; pace: string; incline: string; distance: string; notes: string; done: boolean; swap?: string | null; alternatives?: { name: string; note: string }[] };
-export type DraftSession = { id: number; number: number; name: string; setsPlanned: number; setsLogged: number; gym: string | null; skip: string | null; duration: number | null; ended: string | null; note: string | null; /** What the client answered on ending the session, 1 to 10 each. */ enjoyment?: number | null; adherence?: number | null; rows: DraftRow[]; cardio: DraftCardio[] };
+export type DraftSession = { id: number; number: number; name: string; setsPlanned: number; setsLogged: number; gym: string | null; skip: string | null; duration: number | null; ended: string | null; note: string | null; /** What the client answered on ending the session (the workout questionnaire): 1 to 10, a number, or words. */ answers?: { label: string; kind: "scale" | "number" | "text"; value: number | null; text: string | null; unit: string }[]; rows: DraftRow[]; cardio: DraftCardio[] };
 export type DraftProgram = {
   id: number;
   programs: { id: number; name: string; weeks: number; state: "live" | "past" | "scheduled" | "draft" }[];
@@ -724,17 +724,13 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                         </span>
                       ) : null;
                     })()}
-                    {/* What the client answered on ending the session, 1 to 10 each. */}
-                    {s.enjoyment != null && (
-                      <span className="rd-tag score" title={`${firstName} enjoyed it ${s.enjoyment} of 10`}>
-                        Enjoyment <b>{s.enjoyment}</b>
+                    {/* What the client answered on ending the session (the workout questionnaire), 1 to 10 each. */}
+                    {/* The numbers as pills; words are read in the opened session. */}
+                    {s.answers?.filter((a) => a.value != null).map((a) => (
+                      <span key={a.label} className="rd-tag score" title={`${firstName}: ${a.label} ${a.value}${a.kind === "scale" ? " of 10" : a.unit ? ` ${a.unit}` : ""}`}>
+                        {a.label} <b>{a.value}{a.kind === "number" && a.unit ? ` ${a.unit}` : ""}</b>
                       </span>
-                    )}
-                    {s.adherence != null && (
-                      <span className="rd-tag score" title={`${firstName} kept to it ${s.adherence} of 10`}>
-                        Adherence <b>{s.adherence}</b>
-                      </span>
-                    )}
+                    ))}
                   </span>
                   {sessions.some((x) => x.duration != null) && <span className="rd-tagslot time">{s.duration != null && <span className="rd-tag time">{s.duration} min</span>}</span>}
                   {/* The gym only matters with more than one: one gym, no slot, so nothing sits empty. */}
@@ -765,9 +761,9 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
               {isOpen && (
                 <div className="rd-rows">
                   {s.skip && <p className="rd-skip">{firstName} couldn&rsquo;t train: &ldquo;{s.skip}&rdquo;</p>}
-                  {(s.enjoyment != null || s.adherence != null) && (
+                  {!!s.answers?.length && (
                     <p className="rd-session-note">
-                      {firstName} answered: {[s.enjoyment != null ? `enjoyment ${s.enjoyment} of 10` : null, s.adherence != null ? `adherence ${s.adherence} of 10` : null].filter(Boolean).join(" · ")}
+                      {firstName} answered: {s.answers.map((a) => (a.text != null ? `${a.label}: “${a.text}”` : `${a.label} ${a.value}${a.kind === "scale" ? " of 10" : a.unit ? ` ${a.unit}` : ""}`)).join(" · ")}
                     </p>
                   )}
                   {s.note && <p className="rd-session-note">{firstName} wrote: &ldquo;{s.note}&rdquo;</p>}

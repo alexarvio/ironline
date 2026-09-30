@@ -172,9 +172,16 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
     if (prev && prev.label === label) prev.span += 1;
     else months.push({ label, start: i, span: 1 });
   });
-  const cols: React.CSSProperties = { gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))`, width: `${(count / win) * 100}%`, transform: `translateX(${-((0.5 + intoWeek) / count) * 100}%)` };
-  // The "now" line at today's spot: its week's column, plus how far into the week we are.
-  const nowLeft = `calc(108px + (100% - 108px) * ${(nowIdx + intoWeek) / count})`;
+  // How many weeks the grid slides left, and where today then sits on screen
+  // (in columns). The line stays where it has always been drawn and the
+  // weeks slide so today's day is under it (30 Sep: the weeks sat a week
+  // off the line, so the bars' "behind us" shade stopped short of it).
+  // Showing the past starts at the earliest phase instead.
+  const shift = back > CONTEXT_WEEKS ? 0.5 + intoWeek : (nowIdx + intoWeek) * (1 - win / count);
+  const nowCol = nowIdx + intoWeek - shift;
+  const cols: React.CSSProperties = { gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))`, width: `${(count / win) * 100}%`, transform: `translateX(${-(shift / count) * 100}%)` };
+  // The "now" line at today's spot; none when today is past the window's right edge.
+  const nowLeft = nowCol >= 0 && nowCol <= win ? `calc(108px + (100% - 108px) * ${nowCol / win})` : null;
 
   const weekAt = (clientX: number) => {
     const el = areaRef.current;
@@ -223,12 +230,15 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
     const e = live ? live.end : p.end_week;
     // The columns its first and last day fall in: a phase that starts or
     // ends mid-week fills the weeks it touches.
+    // The end is a day of the last week (its Monday, or the exact last day):
+    // its own column, never the week after (30 Sep: "+ 6 days" pushed a
+    // mid-week end into the next phase's first week, drawn under it).
     const col = (day: string) => Math.floor(Math.round((parse(day).getTime() - parse(first).getTime()) / DAY) / 7);
     const sc = col(s);
-    const ec = col(addDays(e, 6));
+    const ec = col(e);
     const a = Math.max(0, sc);
     const b = Math.min(count - 1, ec);
-    return { a, b, s, e, visible: b >= 0 && a <= count - 1, clippedStart: sc < 0, clippedEnd: ec > count - 1 };
+    return { a, b, sc, ec, s, e, visible: b >= 0 && a <= count - 1, clippedStart: sc < 0, clippedEnd: ec > count - 1 };
   };
   const stateOf = (p: PlanPhaseRow, s = p.start_week, e = p.end_week): PhaseState => phaseStateOf({ draft: p.draft || p.program?.status === "draft", startWeek: s, endWeek: e, today });
 
@@ -312,6 +322,19 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
         <div className="rn-card-head">
           <h2>Phases</h2>
           <div className="rq-ev-tools">
+            {/* What the bars' looks mean, up here by the time switch (30 Sep):
+                the rest of the old legend at the foot read as misleading. */}
+            <div className="rq-legend inline" aria-label="Legend">
+              <span>
+                <i className="live" /> live
+              </span>
+              <span>
+                <i className="scheduled" /> scheduled
+              </span>
+              <span>
+                <i className="draft" /> draft, not sent
+              </span>
+            </div>
             <div className="rd-btn-group" role="group" aria-label="Time shown">
               {WINDOWS.map((w) => (
                 <button key={w.weeks} type="button" className={win === w.weeks ? "on" : ""} aria-pressed={win === w.weeks} onClick={() => setWin(w.weeks)}>
@@ -344,7 +367,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
               </div>
             </div>
             <div className="rq-tl-body">
-              <span className="rq-now" style={{ left: nowLeft }} title="Now" />
+              {nowLeft && <span className="rq-now" style={{ left: nowLeft }} title="Now" />}
               <div className="rq-tl-row">
                 <span />
                 <div className="rq-tl-clip">
@@ -360,11 +383,21 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
               </div>
               {TRACKS.map((t) => {
                 const mine = phases.filter((p) => p.track === t.id).sort((a, b) => (a.start_week < b.start_week ? -1 : 1));
-                // Overlapping phases on one track stack into lanes.
+                // Phases that share a week column on one track stack into
+                // lanes, judged by the columns they are drawn in so two bars
+                // never sit on top of each other.
                 const lanes: PlanPhaseRow[][] = [];
                 const laneOf = new Map<number, number>();
+                const cells = (p: PlanPhaseRow) => {
+                  const sp = span(p);
+                  return { from: sp.sc, to: sp.ec };
+                };
                 mine.forEach((p) => {
-                  let li = lanes.findIndex((l) => l.every((q) => addDays(q.end_week, 6) < p.start_week || q.start_week > addDays(p.end_week, 6)));
+                  const cp = cells(p);
+                  let li = lanes.findIndex((l) => l.every((q) => {
+                    const cq = cells(q);
+                    return cq.to < cp.from || cq.from > cp.to;
+                  }));
                   if (li < 0) {
                     lanes.push([]);
                     li = lanes.length - 1;
@@ -404,7 +437,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                             <div
                               key={p.id}
                               className={`rq-bar${trained ? " fixed" : ""}${sp.clippedStart ? " clip-start" : ""}${sp.clippedEnd ? " clip-end" : ""}${drag?.id === p.id ? " dragging" : ""}`}
-                              style={{ gridColumn: `${sp.a + 1} / span ${shownW}`, gridRow: (laneOf.get(p.id) ?? 0) + 1, paddingLeft: `calc(14px + ${(Math.max(0, 0.5 + intoWeek - sp.a) / shownW) * 100}%)`, background: chrome.band, color: chrome.edge, borderColor: chrome.line, borderStyle: chrome.dashed ? "dashed" : "solid" }}
+                              style={{ gridColumn: `${sp.a + 1} / span ${shownW}`, gridRow: (laneOf.get(p.id) ?? 0) + 1, paddingLeft: `calc(14px + ${(Math.max(0, shift - sp.a) / shownW) * 100}%)`, background: chrome.band, color: chrome.edge, borderColor: chrome.line, borderStyle: chrome.dashed ? "dashed" : "solid" }}
                               onPointerDown={(e) => {
                                 if ((e.target as HTMLElement).closest(".rq-bar-edge")) return;
                                 if (trained) return;
@@ -436,24 +469,6 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
               })}
             </div>
           </div>
-        </div>
-        <div className="rq-legend">
-          <span>
-            <i className="live" /> live
-          </span>
-          <span>
-            <i className="scheduled" /> scheduled
-          </span>
-          <span>
-            <i className="draft" /> draft, not sent
-          </span>
-          <span>
-            <i className="done" /> weeks behind us
-          </span>
-          <span>
-            <i className="now" /> now
-          </span>
-          <span>drag a bar to move it, its edge to change its length, click it to edit</span>
         </div>
       </section>
 
@@ -807,14 +822,14 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
             {/* Straight to the tab where the phase's contents live. */}
             {editing && (
               <Link
-                className="rq-open"
+                className="rd-btn rq-open"
                 href={
                   track === "training"
                     ? `/admin/redesign/training?client=${clientId}${phase.program ? `&program=${phase.program.id}` : ""}`
                     : `/admin/redesign/${track === "nutrition" ? "nutrition" : "measurements"}?client=${clientId}&phase=${phase.id}`
                 }
               >
-                Open in {TRACK_LABEL[track] === "Lifestyle" ? "Measurements" : TRACK_LABEL[track]} ↗
+                Open in {TRACK_LABEL[track] === "Lifestyle" ? "Measurements" : TRACK_LABEL[track]}
               </Link>
             )}
           </span>
@@ -881,12 +896,6 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
           <button type="button" className="rd-btn" onClick={onDuplicate} title="A copy as a new draft, from next Monday, as long as this one">
             Duplicate
           </button>
-        )}
-        {/* Where the phase lives: its tab, on this phase (a past one opens to look back on, nothing to change). */}
-        {phase && (phase.track !== "training" || phase.program) && (
-          <a className="rd-btn" href={phase.track === "training" ? `/admin/redesign/training?client=${clientId}&program=${phase.program!.id}` : `/admin/redesign/${phase.track === "nutrition" ? "nutrition" : "measurements"}?client=${clientId}&phase=${phase.id}`}>
-            Open
-          </a>
         )}
         <DialogClose className="rd-btn">Cancel</DialogClose>
         {editing && isDraft && (

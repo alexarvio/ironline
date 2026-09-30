@@ -19,6 +19,7 @@ import {
 
 
   shownName,
+  tidyDecimal,
   useTicker,
 
 
@@ -160,15 +161,14 @@ export default function WorkoutScreen({
 
   // Ending and discarding.
   const [note, setNote] = useState(day.sessionNote);
-  // Two optional questions before ending: 1 to 10 each, a second tap takes the answer back.
-  const [enjoyment, setEnjoyment] = useState<number | null>(day.enjoyment);
-  const [adherence, setAdherence] = useState<number | null>(day.adherence);
+  // The coach's questions before ending, each optional: 1 to 10, a second tap takes the answer back.
+  const [answers, setAnswers] = useState<Record<string, number | string | null>>(day.answers);
   const [ending, setEnding] = useState(false);
   const end = () => {
     if (ending) return;
     setEnding(true);
     startTransition(async () => {
-      await endSessionAction(day.key, { note, enjoyment, adherence });
+      await endSessionAction(day.key, { note, answers: day.questions.map((q) => ({ id: q.id, value: answers[q.id] ?? null })) });
       setTimeout(onEnded, 900);
     });
   };
@@ -338,13 +338,40 @@ export default function WorkoutScreen({
                     );
                   })}
                 </div>
-                <div className="wo-ask">
-                  <div className="wo-ask-head">
-                    <span className="wo-note-label">How was it?</span>
+                {day.questions.length > 0 && (
+                  <div className="wo-ask">
+                    <div className="wo-ask-head">
+                      <span className="wo-note-label">How was it?</span>
+                    </div>
+                    {day.questions.map((q) => {
+                      const v = answers[q.id] ?? null;
+                      const set = (x: number | string | null) => setAnswers((a) => ({ ...a, [q.id]: x }));
+                      // A number with its unit, words in a box, or the ten pills.
+                      if (q.kind === "number")
+                        return (
+                          <label key={q.id} className="wo-scale wo-ask-field">
+                            <span className="wo-scale-head">
+                              <b>{q.label}</b>
+                            </span>
+                            <span className="wo-ask-num">
+                              <input value={v == null ? "" : String(v)} onChange={(e) => set(e.target.value)} onInput={tidyDecimal} inputMode="decimal" placeholder="0" disabled={ended} aria-label={q.label} />
+                              {q.unit && <small>{q.unit}</small>}
+                            </span>
+                          </label>
+                        );
+                      if (q.kind === "text")
+                        return (
+                          <label key={q.id} className="wo-scale wo-ask-field">
+                            <span className="wo-scale-head">
+                              <b>{q.label}</b>
+                            </span>
+                            <textarea className="wo-note-input" rows={2} maxLength={500} value={typeof v === "string" ? v : ""} onChange={(e) => set(e.target.value)} disabled={ended} aria-label={q.label} />
+                          </label>
+                        );
+                      return <Scale key={q.id} label={q.label} value={typeof v === "number" ? v : null} onChange={set} disabled={ended} />;
+                    })}
                   </div>
-                  <Scale label="Enjoyment" value={enjoyment} onChange={setEnjoyment} disabled={ended} />
-                  <Scale label="Adherence" value={adherence} onChange={setAdherence} disabled={ended} />
-                </div>
+                )}
                 <div className="wo-coach-note">
                   <span className="wo-note-label">Anything to mention to {coachName}?</span>
                   <textarea className="wo-note-input" rows={2} value={note} placeholder="How did it feel? Anything to flag?" onChange={(e) => setNote(e.target.value)} disabled={ended} />

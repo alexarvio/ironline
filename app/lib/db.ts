@@ -76,6 +76,10 @@ type ProgramDay = {
   // optional: how much they enjoyed it, how closely they kept to it.
   session_enjoyment?: number;
   session_adherence?: number;
+  // The workout questionnaire's answers (30 Sep), 1 to 10 each, with the
+  // question as it was asked so a later rename leaves history alone. Absent
+  // on sessions ended before it: those read the two fields above.
+  session_answers?: SessionAnswer[];
 };
 // A multi-week training program — the coach picks a name and a length
 // (total_weeks) up front; program_days for weeks [start_week, start_week +
@@ -778,7 +782,15 @@ type ClientProfile = {
   cardio_goal: string;
   training_goal: string;
   water_goal: string;
+  // What the client is asked, 1 to 10 each, before ending a workout; set on
+  // Measurements (30 Sep). Absent: Enjoyment and Adherence, as before.
+  workout_questions?: WorkoutQuestion[];
 };
+// kind: how it is answered, 1 to 10 (absent too), a number with an optional
+// unit, or words (30 Sep).
+export type WorkoutQuestion = { id: string; label: string; kind?: "scale" | "number" | "text"; unit?: string };
+// value for a 1 to 10 or a number; text for words.
+export type SessionAnswer = { id: string; label: string; kind?: "scale" | "number" | "text"; unit?: string; value?: number; text?: string };
 type ClientGoal = {
   id: number;
   client_id: number;

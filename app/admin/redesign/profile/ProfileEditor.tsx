@@ -86,6 +86,21 @@ export default function ProfileEditor({ profile, coaches, currentCoachId, detail
 
   const snapshot = snapshotOf(fields, specialties, studies, experience);
   const dirty = snapshot !== savedSnapshot;
+  // What was last saved, for Discard and the changes bar's count.
+  const savedState = useRef({ fields: initialFields, specialties: profile.specialties, studies, experience });
+  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+  const changeCount =
+    (Object.keys(fields) as (keyof Fields)[]).filter((k) => fields[k] !== savedState.current.fields[k]).length +
+    (same(specialties, savedState.current.specialties) ? 0 : 1) +
+    (same(studies, savedState.current.studies) ? 0 : 1) +
+    (same(experience, savedState.current.experience) ? 0 : 1);
+  const discard = () => {
+    setFields(savedState.current.fields);
+    setSpecialties(savedState.current.specialties);
+    setStudies(savedState.current.studies);
+    setExperience(savedState.current.experience);
+    setError(null);
+  };
   const set = (key: keyof Fields) => (value: string) => setFields((f) => ({ ...f, [key]: value }));
   const parsedYears = fields.years.trim() === "" ? null : Number(fields.years);
 
@@ -101,6 +116,7 @@ export default function ProfileEditor({ profile, coaches, currentCoachId, detail
     fd.set("experience", JSON.stringify(experience.map(({ years, role, place }) => ({ years, role, place }))));
     await saveCoachProfileAction(fd);
     setSavedSnapshot(snapshot);
+    savedState.current = { fields, specialties, studies, experience };
     setSavedAt(new Date().toISOString());
     // A cleared name takes the profile back to unpublished on the server.
     if (!fields.displayName.trim()) setPublished(false);
@@ -341,12 +357,22 @@ export default function ProfileEditor({ profile, coaches, currentCoachId, detail
             </CardContent>
           </Card>
 
-          {/* Save and publish, following the page as it scrolls. */}
+          {/* Changes: the app's one blue bar (30 Sep), following the page as
+              it scrolls. Saved: when, and the Published switch. */}
+          {dirty ? (
+            <div className="rd-pending rd-pending-sticky" role="region" aria-label="Unsaved changes">
+              <span className="rd-pending-count">{changeCount || 1}</span>
+              <span className="rd-pending-text">{error || `${changeCount === 1 ? "change" : "changes"} to your profile · clients see them once saved`}</span>
+              <button type="button" className="rd-pending-ghost" onClick={discard} disabled={saving}>
+                Discard
+              </button>
+              <button type="button" className="rd-pending-apply" onClick={save} disabled={saving}>
+                {saving ? "Saving…" : "Save"}
+              </button>
+            </div>
+          ) : (
           <div className="rpf-bar">
-            <Button onClick={save} disabled={saving || !dirty}>
-              {saving ? "Saving…" : "Save"}
-            </Button>
-            <span className={`rpf-saved${dirty ? " dirty" : ""}`}>{dirty ? "Unsaved changes" : savedAt ? `Saved · ${ago(savedAt, now)}` : "Not saved yet"}</span>
+            <span className="rpf-saved">{savedAt ? `Saved · ${ago(savedAt, now)}` : "Not saved yet"}</span>
             {error && <span className="rpf-error">{error}</span>}
             <div className="rpf-publish">
               <Label htmlFor="rpf-published" className="rpf-publish-label">
@@ -355,6 +381,7 @@ export default function ProfileEditor({ profile, coaches, currentCoachId, detail
               <Switch id="rpf-published" checked={published} onCheckedChange={togglePublished} disabled={saving} aria-label="Published" />
             </div>
           </div>
+          )}
         </div>
 
         <aside className="rpf-preview" aria-label="What your clients see">

@@ -62,6 +62,8 @@ import {
   MUSCLE_GROUPS,
   programWeekLabel,
   videoRequestsFor,
+  sessionAnswers,
+  getWorkoutQuestions,
 } from "../../lib/queries";
 import { phaseCovers, phaseWeekIndex, phaseWeeks } from "../../lib/phases";
 import type { DraftProgram, Library } from "./training/TrainingDraft";
@@ -243,7 +245,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     const setsLogged = rows.reduce((t, r) => t + r.logged.length + (r.swapInfo?.sets.length ?? 0), 0);
     const gym = rows.flatMap((r) => [...r.logged, ...(r.swapInfo?.sets ?? [])]).find((l) => l.gym)?.gym ?? null;
     const duration = d.session_started_at && d.session_ended_at ? Math.max(0, Math.round((Date.parse(d.session_ended_at) - Date.parse(d.session_started_at)) / 60000)) : null;
-    return { id: d.id, number: si + 1, name: d.label || `Session ${si + 1}`, rows, cardio, setsPlanned, setsLogged, gym, skip: d.skip_reason ?? null, duration, ended: d.session_ended_at ?? null, note: d.session_note ?? null, enjoyment: d.session_enjoyment ?? null, adherence: d.session_adherence ?? null };
+    return { id: d.id, number: si + 1, name: d.label || `Session ${si + 1}`, rows, cardio, setsPlanned, setsLogged, gym, skip: d.skip_reason ?? null, duration, ended: d.session_ended_at ?? null, note: d.session_note ?? null, answers: sessionAnswers(d).map((a) => ({ label: a.label, kind: a.kind ?? "scale", value: a.value ?? null, text: a.text ?? null, unit: a.unit ?? "" })) };
   });
 
   const phase = getData().client_phases.find((p) => p.program_id === program.id) ?? null;
@@ -412,6 +414,8 @@ export function loadMeasurements(clientId: number, params: { phase?: string }): 
   return {
     id: selected?.id ?? 0,
     goals: goalsOf(selected?.id),
+    // The client's, not the phase's: asked at the end of every workout.
+    workoutQuestions: getWorkoutQuestions(clientId),
     phases,
     name: selected?.name ?? "Check-ins",
     status: selected ? STATE[selected.status] : "live",

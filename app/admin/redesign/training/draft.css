@@ -168,6 +168,9 @@
 .rd-pending-also { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: rgba(255, 255, 255, 0.85); }
 .rd-pending-ghost { height: 34px; padding: 0 14px; border: 1px solid rgba(255, 255, 255, 0.45); border-radius: 10px; background: none; font: inherit; font-size: 12.5px; font-weight: 700; color: #fff; cursor: pointer; }
 .rd-pending-apply { height: 34px; padding: 0 16px; border: 0; border-radius: 10px; background: #fff; font: inherit; font-size: 12.5px; font-weight: 800; color: #1e3a6e; cursor: pointer; }
+/* The same bar kept in view at the foot of a long form (Settings, Profile), 30 Sep. */
+.rd-pending.rd-pending-sticky { position: sticky; bottom: 16px; z-index: 5; margin: 16px 0 0; border-radius: 16px; }
+.rd-pending-ghost:disabled, .rd-pending-apply:disabled { opacity: 0.55; cursor: default; }
 
 .rd-col-trend { text-align: left; }
 .rd-trendcell { display: inline-flex; align-items: center; justify-content: center; height: 28px; padding: 0 9px; border-radius: 8px; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; transition: box-shadow 0.12s; }

@@ -256,6 +256,7 @@ import {
   setSessionSkipReason,
   startSession,
   endSession,
+  saveWorkoutQuestions,
   discardSession,
   setExerciseAlternatives,
   setExerciseSwap,
@@ -3146,12 +3147,28 @@ export async function startSessionAction(programDayId: number, at?: string): Pro
   return { ok: false, other: r.other };
 }
 
-export async function endSessionAction(programDayId: number, opts?: { note?: string; at?: string; enjoyment?: number | null; adherence?: number | null }) {
+// answers: the workout questionnaire's. enjoyment / adherence: what an app
+// opened before the questionnaire (30 Sep) still sends.
+export async function endSessionAction(programDayId: number, opts?: { note?: string; at?: string; answers?: { id: string; value: number | string | null }[]; enjoyment?: number | null; adherence?: number | null }) {
   const owner = clientIdForProgramDay(Number(programDayId));
   if (owner == null || !(await canAccessClient(owner))) return;
-  endSession(Number(programDayId), stampOrNow(opts?.at), String(opts?.note ?? ""), { enjoyment: opts?.enjoyment, adherence: opts?.adherence });
+  const answers = Array.isArray(opts?.answers)
+    ? opts.answers
+    : [
+        { id: "enjoyment", value: opts?.enjoyment ?? null },
+        { id: "adherence", value: opts?.adherence ?? null },
+      ];
+  endSession(Number(programDayId), stampOrNow(opts?.at), String(opts?.note ?? ""), answers);
   revalidatePath("/client");
   revalidatePath("/admin");
+}
+
+/** The coach's workout questionnaire for a client, in order (Measurements). */
+export async function saveWorkoutQuestionsAction(clientId: number, questions: { id: string; label: string; kind?: "scale" | "number" | "text"; unit?: string }[]) {
+  if (!(await coachForClient(Number(clientId)))) return;
+  saveWorkoutQuestions(Number(clientId), Array.isArray(questions) ? questions : []);
+  revalidatePath("/admin");
+  revalidatePath("/client");
 }
 
 /** The client threw the session away: its sets, warm-ups and swaps with it. */
