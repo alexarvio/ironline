@@ -8199,13 +8199,23 @@ export function getLastVisitAtGym(
   return null;
 }
 
+// The client's note on a programme is a weekly one (30 Sep): it counts for
+// the week it was written in, so each Monday it starts empty again. Last
+// week's words stay in the coach's feed; the record is simply overwritten
+// when they write this week's.
+function thisWeeksProgramNote(clientId: number, programId: number) {
+  const n = (getData().client_program_notes ?? []).find((x) => x.client_id === clientId && x.program_id === programId);
+  if (!n || !n.text.trim()) return null;
+  return weekStart(localDateStr(new Date(n.updated_at))) === weekStart(localDateStr()) ? n : null;
+}
+
 export function getClientProgramNote(clientId: number, programId: number): string {
-  return (getData().client_program_notes ?? []).find((n) => n.client_id === clientId && n.program_id === programId)?.text ?? "";
+  return thisWeeksProgramNote(clientId, programId)?.text ?? "";
 }
 
 export function getClientProgramNoteMeta(clientId: number, programId: number): { text: string; updatedAt: string; seen: boolean } | null {
-  const n = (getData().client_program_notes ?? []).find((x) => x.client_id === clientId && x.program_id === programId);
-  return n && n.text.trim() ? { text: n.text, updatedAt: n.updated_at, seen: !!n.coach_seen_at && n.coach_seen_at >= n.updated_at } : null;
+  const n = thisWeeksProgramNote(clientId, programId);
+  return n ? { text: n.text, updatedAt: n.updated_at, seen: !!n.coach_seen_at && n.coach_seen_at >= n.updated_at } : null;
 }
 
 /** The coach opened the client's note on a programme: it is not new again until the client writes. */
