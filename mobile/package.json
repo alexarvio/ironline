@@ -1,0 +1,22 @@
+{
+  "name": "ironline-mobile",
+  "private": true,
+  "description": "Native iPhone and Android shell for Ironline (Capacitor). Loads the live site; see README.md.",
+  "scripts": {
+    "sync": "cap sync",
+    "android": "cap open android",
+    "ios": "cap open ios",
+    "icons": "capacitor-assets generate --iconBackgroundColor '#f8f9fb' --splashBackgroundColor '#f8f9fb'"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
+    "@capacitor/status-bar": "^8.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.2"
+  }
+}

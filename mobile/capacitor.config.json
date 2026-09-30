@@ -1,0 +1,20 @@
+{
+  "appId": "com.arvio.ironline",
+  "appName": "Ironline",
+  "webDir": "www",
+  "backgroundColor": "#f8f9fb",
+  "server": {
+    "url": "https://ironline-production-e741.up.railway.app/client",
+    "errorPath": "index.html"
+  },
+  "ios": {
+    "contentInset": "never"
+  },
+  "plugins": {
+    "StatusBar": {
+      "overlaysWebView": false,
+      "style": "LIGHT",
+      "backgroundColor": "#f8f9fb"
+    }
+  }
+}
