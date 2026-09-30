@@ -78,5 +78,5 @@
 .rp-dots i { width: 10px; height: 10px; }
 /* Compare: the angles on the left, the size at the far right. */
 .rp-compare-picks .rd-btn-group:last-child:not(:first-child) { margin-left: auto; }
-.rp-bar { margin: 4px -14px -12px; border-radius: 0 0 12px 12px; }
+.rp-bar { margin: 12px 0 0; }
 .pb-menu [data-slot="dropdown-menu-item"].on { background: #e6ecf3; color: #1e3a6e; }

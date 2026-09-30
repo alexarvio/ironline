@@ -17,7 +17,7 @@
 .rd-goals-list input:hover { border-color: #c3c9d2; }
 .rd-goals-list input:focus { border-color: #2f5d8f; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.14); }
 /* The pending bar runs to the card's edges and foot. */
-.rd-goals .rd-pending { margin: 0; }
+.rd-goals .rd-pending { margin: 0 14px 14px; }
 @media (prefers-reduced-motion: reduce) { .rd-goals-chev { transition: none; } }
 /* CoachNoteCard: the note box inside the folded card. */
 .rd-note-body { padding: 0 24px 16px; }
