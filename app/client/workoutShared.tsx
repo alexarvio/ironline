@@ -375,3 +375,22 @@ export function SkipReason({ dayId, text, onSaved }: { dayId: number; text: stri
     </button>
   );
 }
+
+// The prescription as a small table: labels across, figures under them. The
+// session overview and the workout's own page show the same one (30 Sep).
+export function TargetTable({ cells }: { cells: { unit: string; value: string }[] }) {
+  if (!cells.length) return null;
+  return (
+    <div className="so-tbl-wrap">
+      <div className="so-tbl-label">Target</div>
+      <div className="so-tbl" style={{ gridTemplateColumns: `repeat(${cells.length}, minmax(max-content, 1fr))` }}>
+        {cells.map((c) => (
+          <small key={`h-${c.unit}`}>{c.unit}</small>
+        ))}
+        {cells.map((c) => (
+          <b key={`v-${c.unit}`}>{c.value}</b>
+        ))}
+      </div>
+    </div>
+  );
+}

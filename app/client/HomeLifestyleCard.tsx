@@ -89,15 +89,16 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
   const [saved, setSaved] = useState<Record<string, number>>({});
   const todayOf = (m: HomeLifestyleMetric) => saved[keyOf(m)] ?? m.today;
   const isIn = (m: HomeLifestyleMetric) => todayOf(m) != null;
-  // The ring and the count are today's; yesterday's open questions queue
-  // after them as pages of their own, and go once they are answered.
-  const total = todays.length;
-  const n = todays.filter(isIn).length;
-  const todayDone = n === total;
-  const metrics = [...todays, ...yesterday.filter((m) => saved[keyOf(m)] == null)];
+  // Today's questions first, and only today's (30 Sep): yesterday's open ones
+  // are asked once today's are all in, as a round of their own. The ring and
+  // the dots always count the same pages.
+  const todayDone = todays.every(isIn);
+  const showingYesterday = todayDone && yesterday.some((m) => !isIn(m));
+  const metrics = showingYesterday ? yesterday : todays;
+  const total = metrics.length;
+  const n = metrics.filter(isIn).length;
   const pages = metrics.length;
-  const yesterdayLeft = metrics.length - todays.length;
-  const allIn = todayDone && yesterdayLeft === 0;
+  const allIn = todayDone && !showingYesterday;
   const [live, setLive] = useState("");
 
   // The page on show: the first metric not logged today, or where the
@@ -144,6 +145,14 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
       after?.();
     });
   };
+  // Today's all in and yesterday's round begins: back to its first page.
+  const round = useRef(showingYesterday);
+  useEffect(() => {
+    if (round.current === showingYesterday) return;
+    round.current = showingYesterday;
+    setIdx(0);
+    if (scroller.current) scroller.current.scrollLeft = 0;
+  }, [showingYesterday]);
   const onScroll = () => {
     const el = scroller.current;
     if (!el || animating.current || el.clientWidth === 0) return;
@@ -205,9 +214,9 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
 
   return (
     <section className={`hl${allIn ? "" : " open"}`} aria-label="Lifestyle">
-      {/* A brushed teal wall behind it all, a little blurred and darkened; the logging panel sits light on it. */}
-      {/* eslint-disable-next-line @next/next/no-img-element -- an upload or a public file, blurred by CSS */}
-      <img className="hl-bg" src="/img/lifestyle-teal.svg" alt="" aria-hidden="true" draggable={false} />
+      {/* A water bottle on a mat at sunset behind it all (30 Sep), darkened toward the foot; the logging panel sits light on it. */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- a public file, framed by CSS */}
+      <img className="hl-bg" src="/img/lifestyle-bottle.jpg" alt="" aria-hidden="true" draggable={false} />
       <span className="hl-scrim" aria-hidden="true" />
       {/* Built like the training card: the track chip and the week on the
           first row, the phase's name with what is left of it, the timeline
@@ -240,8 +249,14 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
       {/* One block: the ring on the left (a tap opens the check-in), and
           beside it the metric to log, one page at a time; the pager folds
           away when everything is in and the foot takes its place. */}
-      <div className="hl-log">
-        <button type="button" className="hl-ring-btn" onClick={openProgress} aria-label={`Open your progress: ${n} of ${total} logged today`}>
+      {/* A tap on the panel anywhere but its controls opens the check-in on Today (30 Sep). */}
+      <div
+        className="hl-log"
+        onClick={(e) => {
+          if (!(e.target as Element).closest("button, input, label, a, [role=radiogroup]")) open();
+        }}
+      >
+        <button type="button" className="hl-ring-btn" onClick={openProgress} aria-label={`Open your progress: ${n} of ${total} logged ${showingYesterday ? "for yesterday" : "today"}`}>
           <Ring metrics={metrics} isIn={isIn} n={n} total={total} />
         </button>
         <div className="hl-log-main">
@@ -356,6 +371,12 @@ function MetricPage({
   const [draft, setDraft] = useState("");
   const [pick, setPick] = useState<number | null>(null);
   const showField = !logged || editing;
+  // More than five steps (1 to 10) don't fit beside Save: the numbers take the
+  // whole row and a tap saves, after a beat that shows the pick (30 Sep).
+  const steps = m.kind === "scale" ? (m.scale?.max ?? 5) - (m.scale?.min ?? 1) + 1 : 0;
+  const wide = steps > 5;
+  const tapTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(tapTimer.current), []);
 
   const lo = m.kind === "scale" ? m.scale?.min : m.min;
   const hi = m.kind === "scale" ? m.scale?.max : m.max;
@@ -408,17 +429,24 @@ function MetricPage({
           }}
         >
           {m.kind === "scale" ? (
-            <span className={`hl-field hl-scale${(m.scale?.max ?? 5) - (m.scale?.min ?? 1) + 1 > 5 ? " wide" : ""}`} role="radiogroup" aria-label={m.name}>
-              {Array.from({ length: (m.scale?.max ?? 5) - (m.scale?.min ?? 1) + 1 }, (_, k) => (m.scale?.min ?? 1) + k).map((v) => (
+            // One pill a number, as the workout's wrap-up asks it (30 Sep).
+            <span className="hl-scale" style={{ gridTemplateColumns: `repeat(${steps}, minmax(0, 1fr))` }} role="radiogroup" aria-label={m.name}>
+              {Array.from({ length: steps }, (_, k) => (m.scale?.min ?? 1) + k).map((v) => (
                 <button
                   key={v}
                   type="button"
                   role="radio"
                   aria-checked={pick === v}
-                  className={pick === v ? "on" : ""}
-                  onClick={(e) => {
+                  className={pick === v ? "on" : pick != null && v < pick ? "in" : ""}
+                  onClick={() => {
                     setPick(v);
-                    e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" });
+                    if (!wide) return;
+                    window.clearTimeout(tapTimer.current);
+                    tapTimer.current = window.setTimeout(() => {
+                      setEditing(false);
+                      setPick(null);
+                      onSave(v);
+                    }, 300);
                   }}
                 >
                   {v}
@@ -442,9 +470,11 @@ function MetricPage({
               {m.unit && <span className="hl-unit">{m.unit}</span>}
             </label>
           )}
-          <button type="submit" className={`hl-save${ready ? " ready" : ""}`} disabled={!ready} aria-disabled={!ready}>
-            Save
-          </button>
+          {!wide && (
+            <button type="submit" className={`hl-save${ready ? " ready" : ""}`} disabled={!ready} aria-disabled={!ready}>
+              Save
+            </button>
+          )}
         </form>
       ) : (
         <div className="hl-row3">

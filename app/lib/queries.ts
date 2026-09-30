@@ -12,7 +12,7 @@ import { isTimezone } from "./timezones";
 import { countryOf, invoicingFor } from "./countries";
 import { LOCK_MS, type LockScope } from "./loginLockout";
 import { endWeekFor, phaseCovers, phaseDays, phaseLastDay, phaseWeekIndex, phaseWeeks } from "./phases";
-import { metricAskAt } from "./metricAskAt";
+import { metricAskAt, metricFromWorkout } from "./metricAskAt";
 import { colourOfGroup, groupColour } from "./categoryColors";
 import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "./phaseCovers";
 
@@ -6178,7 +6178,7 @@ export function getCheckInHistory(clientId: number): CheckInHistory {
       if (p) items.push({ name: s.name, value: shown(s, p.value) });
     }
     const note = [getCheckInNote(clientId, "daily", date), getCheckInNote(clientId, "measurements", date)].filter((n): n is string => !!n?.trim()).join("\n") || null;
-    const daily = series.filter((s) => s.cadence === "daily");
+    const daily = series.filter((s) => s.cadence === "daily" && !metricFromWorkout(s.name));
     const edit = [
       checkInTrackerSection(clientId, "daily", date, "Daily", ""),
       checkInTrackerSection(clientId, "weekly", weekStart(date), "Weekly", "", (e) => e?.value != null && !!e.logged_at && localDateStr(new Date(e.logged_at)) === date),
@@ -6202,7 +6202,8 @@ function checkInTrackerSection(
   intro: string,
   only?: (current: MetricEntry | undefined) => boolean
 ): CheckInSection | null {
-  const all = listMetricDefinitions(clientId, frequency).filter(deployedToClient);
+  // What a workout's wrap-up answers is not asked here (metricFromWorkout).
+  const all = listMetricDefinitions(clientId, frequency).filter((d) => deployedToClient(d) && !metricFromWorkout(d.name));
   const entries = getMetricEntries(all.map((d) => d.id));
   const currentOf = (id: number) => entries.find((e) => e.metric_definition_id === id && e.period === period);
   const defs = only ? all.filter((d) => only(currentOf(d.id))) : all;
@@ -7899,7 +7900,34 @@ export function endSession(programDayId: number, at: string, note: string, ratin
   else delete day.session_enjoyment;
   if (adherence != null) day.session_adherence = adherence;
   else delete day.session_adherence;
+  syncWorkoutMetrics(day.client_id, at);
   persist();
+}
+
+// The lifestyle metrics a workout answers (metricFromWorkout) take the
+// wrap-up's value: a daily one the day's sessions, a weekly one the week's,
+// averaged when there were two. Run when a session ends or is thrown away.
+function syncWorkoutMetrics(clientId: number, at: string) {
+  const date = localDateStr(new Date(at));
+  const data = getData();
+  for (const frequency of ["daily", "weekly"] as const) {
+    const period = frequency === "daily" ? date : weekStart(date);
+    for (const def of listMetricDefinitions(clientId, frequency)) {
+      const kind = metricFromWorkout(def.name);
+      if (!kind) continue;
+      const scores = data.program_days
+        .filter((pd) => pd.client_id === clientId && pd.session_ended_at)
+        .filter((pd) => {
+          const d = localDateStr(new Date(pd.session_ended_at!));
+          return frequency === "daily" ? d === date : weekStart(d) === period;
+        })
+        .map((pd) => (kind === "enjoyment" ? pd.session_enjoyment : pd.session_adherence))
+        .filter((v): v is number => v != null);
+      const value = scores.length ? Math.round((scores.reduce((s, v) => s + v, 0) / scores.length) * 10) / 10 : null;
+      if (value != null) setMetricEntry(def.id, period, value, new Date().toISOString());
+      else if (getMetricEntries([def.id]).some((e) => e.period === period && e.value != null)) setMetricEntry(def.id, period, null);
+    }
+  }
 }
 
 /** The client threw the session away: its sets, warm-ups and swaps go, and
@@ -7917,11 +7945,13 @@ export function discardSession(programDayId: number) {
   }
   const cardioIds = new Set(listCardioForDay(day.id).map((c) => c.id));
   data.cardio_logs = (data.cardio_logs ?? []).filter((c) => !cardioIds.has(c.cardio_entry_id));
+  const endedAt = day.session_ended_at;
   delete day.session_started_at;
   delete day.session_ended_at;
   delete day.session_note;
   delete day.session_enjoyment;
   delete day.session_adherence;
+  if (endedAt) syncWorkoutMetrics(day.client_id, endedAt);
   persist();
 }
 

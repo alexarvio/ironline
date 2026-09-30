@@ -408,8 +408,8 @@ function Scale({ label, value, onChange, disabled }: { label: string; value: num
   return (
     <div className="wo-scale">
       <div className="wo-scale-head">
+        {/* No "1 to 10" beside it (30 Sep): the pills say it. */}
         <b>{label}</b>
-        <span>{value != null ? `${value} of 10` : "1 to 10"}</span>
       </div>
       <div className="wo-scale-row" role="group" aria-label={`${label}, 1 to 10`}>
         {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (

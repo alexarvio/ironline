@@ -8,6 +8,7 @@ import {
   CoachNote,
   kgToUnit,
   shownName,
+  TargetTable,
   tidyDecimal,
   unitToKg,
   useWeightUnit,
@@ -183,12 +184,14 @@ export default function ExercisePage({
     } else if (request.kind === "warmup") addWarm();
     else setSwapOpen(true);
   }
-  // The prescription, the way the old card read it: figure and unit, one
-  // line, tempo under it.
+  // The prescription as the session overview's table (30 Sep): sets, reps,
+  // weight, RPE, tempo, then what cardio and rest add.
   const targets = [
-    targetWeight != null ? { value: show(targetWeight), unit: unitLabel } : null,
+    { value: String(exercise.sets), unit: "sets" },
     exercise.reps ? { value: exercise.reps, unit: "reps" } : null,
+    targetWeight != null ? { value: show(targetWeight), unit: unitLabel } : null,
     targetRpe != null ? { value: String(targetRpe), unit: "rpe" } : null,
+    tempo ? { value: tempo, unit: "tempo" } : null,
     !swapped && exercise.distance ? { value: exercise.distance, unit: "distance" } : null,
     !swapped && exercise.time ? { value: exercise.time, unit: "time" } : null,
     !swapped && exercise.rest != null ? { value: exercise.rest < 60 ? `${exercise.rest}s` : `${Math.floor(exercise.rest / 60)}:${String(exercise.rest % 60).padStart(2, "0")}`, unit: "rest" } : null,
@@ -255,25 +258,9 @@ export default function ExercisePage({
         </div>
       )}
 
-      {(targets.length > 0 || tempo) && (
-        <div className="ts-target wo-target-card">
-          <div className="ts-target-label">Target</div>
-          {targets.length > 0 && (
-            <div className="ts-target-line">
-              {targets.map((t) => (
-                <span key={t.unit}>
-                  <b>{t.value}</b> <small>{t.unit}</small>
-                </span>
-              ))}
-            </div>
-          )}
-          {tempo && (
-            <div className="ts-target-tempo">
-              <b>{tempo}</b> <small>tempo</small>
-            </div>
-          )}
-        </div>
-      )}
+      <div className="wo-target-card">
+        <TargetTable cells={targets} />
+      </div>
 
       <CoachNote assignmentId={exercise.id} note={exercise.note} />
 

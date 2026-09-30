@@ -28,3 +28,14 @@ export function metricAskAt(def: { name: string; ask_at?: MetricAskAt | null }):
 
 /** The evening's questions open at 17:00; before that the card asks the rest. */
 export const EVENING_FROM = 17;
+
+// Asked when a workout ends instead (30 Sep): a metric named for training
+// enjoyment or programme adherence takes its value from the sessions and is
+// never asked on Home or in Today. The name decides, as for the time of day;
+// "Enjoyment of eating" or a diet adherence stays the client's to answer.
+export function metricFromWorkout(name: string): "enjoyment" | "adherence" | null {
+  if (/nutrition|diet|meal|food|eat|calori|macro|water|sleep|step/i.test(name)) return null;
+  if (/adheren/i.test(name)) return "adherence";
+  if (/enjoy/i.test(name) && /train|workout|session|gym|exercis/i.test(name)) return "enjoyment";
+  return null;
+}

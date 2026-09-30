@@ -16114,9 +16114,8 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .wo-gym-chip { padding: 7px 2px; background: transparent; color: rgba(255, 255, 255, 0.85); }
 /* The note text starts under the words of the label, past the coach mark (18px + 7px gap). */
 .wo-page .ts-coachnote-text { padding-left: 25px; }
-.wo-page .ts-target.wo-target-card { margin-top: 0; padding: 12px 8px 13px; border-radius: 16px; }
-.wo-page .ts-target.wo-target-card b { font-size: 15px; }
-.wo-page .ts-target.wo-target-card small { font-size: 10px; }
+/* The target: the session overview's table on a white card, like the coach note (30 Sep). */
+.wo-target-card { padding: 14px 16px 12px; border-radius: 16px; background: #fff; }
 /* The gym sits centred right under the clock, and the segments follow close behind. */
 .wo-head { gap: 8px; }
 .wo-head-row2.right { justify-content: center; margin-top: -6px; }
@@ -17512,12 +17511,12 @@ button.ci-hint { cursor: pointer; }
 /* ---- Home's lifestyle card (29 Sep, HomeLifestyleCard: "ring + one at a time") ----
    A white card with a sand edge under the greeting: the ring (one segment
    a metric), the phase and week, then one page a metric to log here. */
-.hl { position: relative; isolation: isolate; background: #137c82; border-radius: 24px; overflow: hidden; box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04), 0 20px 34px -24px rgba(19, 124, 130, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.18); font-variant-numeric: tabular-nums; transform: translateZ(0); }
+.hl { position: relative; isolation: isolate; background: #3b342c; border-radius: 24px; overflow: hidden; box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04), 0 20px 34px -24px rgba(60, 44, 24, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.18); font-variant-numeric: tabular-nums; transform: translateZ(0); }
 /* The photo, 14px bigger each side so the blur has no soft edge, clipped to
    the card's own radius (iOS doesn't clip a blurred child by the parent's
    overflow), under a warm white wash that keeps the ink readable. */
-.hl-bg { position: absolute; z-index: -2; inset: -14px; width: calc(100% + 28px); height: calc(100% + 28px); object-fit: cover; filter: blur(5px) saturate(115%); clip-path: inset(14px round 24px); -webkit-clip-path: inset(14px round 24px); pointer-events: none; }
-.hl-scrim { position: absolute; z-index: -1; inset: 0; background: linear-gradient(180deg, rgba(6, 40, 44, 0.08) 0%, rgba(6, 40, 44, 0.3) 55%, rgba(3, 26, 30, 0.62) 100%); pointer-events: none; }
+.hl-bg { position: absolute; z-index: -2; inset: -14px; width: calc(100% + 28px); height: calc(100% + 28px); object-fit: cover; object-position: 50% 60%; clip-path: inset(14px round 24px); -webkit-clip-path: inset(14px round 24px); pointer-events: none; }
+.hl-scrim { position: absolute; z-index: -1; inset: 0; background: linear-gradient(180deg, rgba(20, 14, 8, 0.3) 0%, rgba(20, 14, 8, 0.08) 38%, rgba(16, 14, 12, 0.22) 65%, rgba(10, 10, 12, 0.5) 100%); pointer-events: none; }
 .hl-head, .hl-fold, .hl-foot { position: relative; }
 .hl-fold { border-top-color: rgba(168, 118, 31, 0.16); }
 .hl-save { background: rgba(255, 255, 255, 0.85); }
@@ -17559,18 +17558,21 @@ button.ci-hint { cursor: pointer; }
 .hl-bar .pc-bar.open { border-top-color: rgba(255, 255, 255, 0.4); }
 /* The pager folds shut once everything is in. */
 /* The logging block sits on its own frosted panel inside the card, the phase cards' panel in light. */
-.hl-log { display: flex; align-items: center; gap: 12px; margin: 4px 10px 10px; padding: 12px 12px 12px 10px; border-radius: 18px; background: rgba(255, 255, 255, 0.16); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.35); color: #fff; }
-.hl-ring-btn { flex: none; display: block; width: 56px; height: 56px; padding: 0; border: 0; border-radius: 50%; background: none; box-shadow: none; -webkit-appearance: none; appearance: none; cursor: pointer; }
+/* 30 Sep: the ring sits top left over the pager, the name beside it may wrap
+   to two lines, and the answer row runs the panel's full width under both,
+   so ten pills are as big as the workout wrap-up's. Dark glass for the photo. */
+.hl-log { position: relative; margin: 4px 10px 10px; padding: 12px; border-radius: 18px; background: rgba(16, 12, 8, 0.42); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.22); color: #fff; }
+.hl-ring-btn { position: absolute; z-index: 1; top: 12px; left: 12px; display: block; width: 56px; height: 56px; padding: 0; border: 0; border-radius: 50%; background: none; box-shadow: none; -webkit-appearance: none; appearance: none; cursor: pointer; }
 .hl-ring svg { width: 56px !important; height: 56px !important; }
-.hl-log-main { flex: 1; min-width: 0; }
+.hl-log-main { min-width: 0; }
 .hl-fold { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.25s ease; }
 .hl-fold.closed { grid-template-rows: 0fr; }
 .hl-fold-clip { min-height: 0; overflow: hidden; }
 .hl-pager { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .hl-pager::-webkit-scrollbar { display: none; }
-.hl-page { flex: 0 0 100%; min-width: 0; box-sizing: border-box; scroll-snap-align: start; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.hl-row1 { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.hl-name { min-width: 0; font-size: 16px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hl-page { flex: 0 0 100%; min-width: 0; box-sizing: border-box; scroll-snap-align: start; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.hl-row1 { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 56px; padding-left: 68px; box-sizing: border-box; }
+.hl-name { min-width: 0; font-size: 16px; font-weight: 800; line-height: 1.2; color: #fff; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 .hl-when { display: block; margin-bottom: 2px; font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255, 255, 255, 0.8); }
 .hl-dots { flex: none; display: flex; gap: 4px; }
 .hl-dot { display: inline-flex; align-items: center; height: 14px; padding: 0 1px; border: 0; background: none; cursor: pointer; }
@@ -17586,12 +17588,11 @@ button.ci-hint { cursor: pointer; }
 .hl-field input { flex: 1; min-width: 0; width: 100%; height: 40px; margin: 0; padding: 0; border: 0; background: none; outline: none; font: inherit; font-size: 17px; font-weight: 800; line-height: 40px; text-align: right; color: #fff; }
 .hl-field input::placeholder { color: rgba(255, 255, 255, 0.55); }
 .hl-unit { flex: none; font-size: 13px; font-weight: 800; line-height: 40px; color: rgba(255, 255, 255, 0.75); }
-.hl-scale { padding: 0 4px; gap: 2px; }
-.hl-scale button { flex: 1; height: 32px; border: 0; border-radius: 999px; background: transparent; font: inherit; font-size: 15px; font-weight: 800; color: rgba(255, 255, 255, 0.85); cursor: pointer; }
-.hl-scale button.on { background: #fff; color: #141a24; }
-.hl-scale.wide { overflow-x: auto; scrollbar-width: none; }
-.hl-scale.wide::-webkit-scrollbar { display: none; }
-.hl-scale.wide button { flex: 0 0 32px; }
+.hl-scale { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.hl-scale button { min-width: 0; height: 42px; padding: 0; border: 0; border-radius: 10px; background: rgba(255, 255, 255, 0.2); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3); font: inherit; font-size: 16px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; cursor: pointer; }
+.hl-scale button.in { background: rgba(255, 255, 255, 0.4); }
+.hl-scale button.on { background: #fff; color: #141a24; box-shadow: none; }
+.hl-log { cursor: pointer; }
 .hl-save { flex: none; height: 40px; padding: 0 18px; line-height: 1; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.12); color: rgba(255, 255, 255, 0.5); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28); font: inherit; font-size: 14px; font-weight: 800; cursor: default; transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease; }
 .hl-save.ready { background: rgba(255, 255, 255, 0.3); color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55); cursor: pointer; }
 .hl-done { flex: 1; min-width: 0; height: 40px; box-sizing: border-box; border-radius: 999px; background: rgba(47, 122, 63, 0.35); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35); padding: 0 16px 0 8px; display: flex; align-items: center; gap: 8px; }
@@ -17600,7 +17601,7 @@ button.ci-hint { cursor: pointer; }
 .hl-done small { font-size: 13px; font-weight: 700; color: rgba(255, 255, 255, 0.8); }
 .hl-edit { flex: none; height: 40px; padding: 0 16px; line-height: 1; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.2); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4); font: inherit; font-size: 14px; font-weight: 800; color: #fff; cursor: pointer; }
 .hl-error { font-size: 12.5px; font-weight: 600; color: #ffb4ad; }
-.hl-foot { display: flex; align-items: center; gap: 10px; padding: 0; font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.85); }
+.hl-foot { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 0 0 68px; font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.85); }
 .hl-foot > span { flex: 1; min-width: 0; }
 .hl-foot b { display: block; font-size: 15px; font-weight: 800; color: #fff; }
 .hl-open { flex: none; height: 38px; padding: 0 16px; border: 0; border-radius: 12px; background: rgba(255, 255, 255, 0.22); color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }

@@ -20,6 +20,7 @@ import {
   sessionStatus,
   shortDate,
   shownName,
+  TargetTable,
   useTicker,
   type SessionCardio,
   type SessionDay,
@@ -278,24 +279,6 @@ export default function SessionOverview({
           onClose={() => setGymOpen(false)}
         />
       )}
-    </div>
-  );
-}
-
-// The prescription as a small table: labels across, figures under them.
-function TargetTable({ cells }: { cells: { unit: string; value: string }[] }) {
-  if (!cells.length) return null;
-  return (
-    <div className="so-tbl-wrap">
-      <div className="so-tbl-label">Target</div>
-      <div className="so-tbl" style={{ gridTemplateColumns: `repeat(${cells.length}, minmax(0, 1fr))` }}>
-        {cells.map((c) => (
-          <small key={`h-${c.unit}`}>{c.unit}</small>
-        ))}
-        {cells.map((c) => (
-          <b key={`v-${c.unit}`}>{c.value}</b>
-        ))}
-      </div>
     </div>
   );
 }
