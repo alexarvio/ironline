@@ -800,6 +800,8 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
     }
   };
   const ok = name.trim().length > 0 && from <= to;
+  // An existing phase's name or dates edited here, so Save is worth showing.
+  const changed = !!phase && (name.trim() !== phase.name || startWeek !== phase.start_week || endWeek !== phase.end_week);
   const startsNow = startWeek <= today;
   const loose = programs.filter((p) => !p.linked);
   const linkedProgram = programChoice !== "new" ? programs.find((p) => p.id === Number(programChoice)) ?? null : null;
@@ -885,27 +887,22 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
           <p className="rq-overlap">{overlap ? `Overlaps ${overlap.name} on the same track.` : " "}</p>
         </div>
       </div>
+      {/* A phase that exists: Delete on the far left, Cancel, and Open in its
+          tab up top; everything else (sending, copying) is done in that tab
+          (30 Sep). Save shows only once the name or dates here are changed. */}
       <DialogFooter>
-        <span className="rd-dlg-hint grow">{state === "draft" ? `Only you see a draft until it is sent.` : startsNow ? `${firstName} sees it now.` : `${firstName} sees it from ${fmtDay(startWeek)}.`}</span>
-        {onDelete && (
+        {editing && onDelete && (
           <button type="button" className="rd-btn danger" onClick={onDelete}>
             Delete
           </button>
         )}
-        {onDuplicate && (
-          <button type="button" className="rd-btn" onClick={onDuplicate} title="A copy as a new draft, from next Monday, as long as this one">
-            Duplicate
-          </button>
-        )}
+        <span className="rd-dlg-hint grow">{state === "draft" ? `Only you see a draft until it is sent.` : startsNow ? `${firstName} sees it now.` : `${firstName} sees it from ${fmtDay(startWeek)}.`}</span>
         <DialogClose className="rd-btn">Cancel</DialogClose>
-        {editing && isDraft && (
-          <button type="button" className="rd-btn" disabled={!ok} onClick={() => onSend({ name: name.trim(), track, start: startWeek, end: endWeek, now: startsNow })}>
-            {startsNow ? "Make it live" : "Schedule it"}
+        {(!editing || changed) && (
+          <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onSave({ name: name.trim(), track, start: startWeek, end: endWeek, programId: linkedProgram?.id ?? null })}>
+            {editing ? "Save" : "Create draft"}
           </button>
         )}
-        <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onSave({ name: name.trim(), track, start: startWeek, end: endWeek, programId: linkedProgram?.id ?? null })}>
-          {editing ? "Save" : "Create draft"}
-        </button>
       </DialogFooter>
     </DialogContent>
   );
