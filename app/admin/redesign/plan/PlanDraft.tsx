@@ -153,14 +153,9 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
   // most of the grid what is coming. "Now" is one fixed line a week and a
   // half in; the weeks slide under it as the week goes by.
   // Last week behind now (a week and a half with where today sits), so a phase that just ended stays on the
-  // timeline and drifts off as the weeks go by; "Show past" reaches back to
-  // the earliest phase, so what ended long ago is there to see (and to copy).
-  const CONTEXT_WEEKS = 1;
-  const [showPast, setShowPast] = useState(false);
-  const earliest = phases.reduce<string | null>((m, p) => (m == null || p.start_week < m ? p.start_week : m), null);
-  const pastWeeks = earliest ? Math.max(0, weeksBetween(mondayOf(earliest), thisWeek)) : 0;
-  const hasPast = pastWeeks > CONTEXT_WEEKS;
-  const back = showPast && hasPast ? pastWeeks + 1 : CONTEXT_WEEKS;
+  // timeline and drifts off as the weeks go by. No "Show past" (30 Sep, the
+  // user's call): a past phase is looked back on from its own tab's switcher.
+  const back = 1;
   const first = addWeeks(thisWeek, -back);
   const count = win + back;
   const weeks = Array.from({ length: count }, (_, i) => addWeeks(first, i));
@@ -176,8 +171,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
   // (in columns). The line stays where it has always been drawn and the
   // weeks slide so today's day is under it (30 Sep: the weeks sat a week
   // off the line, so the bars' "behind us" shade stopped short of it).
-  // Showing the past starts at the earliest phase instead.
-  const shift = back > CONTEXT_WEEKS ? 0.5 + intoWeek : (nowIdx + intoWeek) * (1 - win / count);
+  const shift = (nowIdx + intoWeek) * (1 - win / count);
   const nowCol = nowIdx + intoWeek - shift;
   const cols: React.CSSProperties = { gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))`, width: `${(count / win) * 100}%`, transform: `translateX(${-(shift / count) * 100}%)` };
   // The "now" line at today's spot; none when today is past the window's right edge.
@@ -329,11 +323,6 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                 </button>
               ))}
             </div>
-            {hasPast && (
-              <button type="button" className={`rd-btn${showPast ? " on" : ""}`} aria-pressed={showPast} onClick={() => setShowPast((v) => !v)}>
-                {showPast ? "Hide past" : "Show past"}
-              </button>
-            )}
             <button type="button" className="rd-btn" onClick={() => setDlg({ kind: "phase", phase: null })}>
               <PlusIcon /> Add phase
             </button>
