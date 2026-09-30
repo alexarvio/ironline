@@ -8,6 +8,7 @@ import CheckInScreen, { CheckInProps } from "./CheckInScreen";
 import ProgressPicturesScreen, { type ProgressPicturesProps } from "./ProgressPicturesScreen";
 import CoachProfileScreen from "./CoachProfileScreen";
 import { HealthAutoSync } from "./HealthSync";
+import { NativePush } from "./NativePush";
 import CoachMessagesScreen, { type CoachMessagesProps } from "./CoachMessagesScreen";
 import FoodDiaryScreen, { type FoodDiaryProps } from "./FoodDiaryScreen";
 import MeetingsScreen, { type MeetingsProps } from "./MeetingsScreen";
@@ -360,6 +361,7 @@ export default function AppShell({
     <CoachIdentityProvider value={{ name: coachMessages.coachName, photoPath: coachAvatarPath }}>
       <LinkProvider value={openLink}>
       <HealthAutoSync />
+      <NativePush />
       <div className="phone-frame">
         <div className="app-screen app-stack">
           {/* The tab stays mounted under a pushed view, so closing the view

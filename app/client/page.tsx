@@ -93,6 +93,7 @@ import PhaseObjectives from "./PhaseObjectives";
 import PushToggle from "./PushToggle";
 import { ConnectedApps } from "./HealthSync";
 import { pushPublicKey } from "../lib/push";
+import { fcmConfigured } from "../lib/fcm";
 import SupplementsCard, { type SupplementRow } from "./SupplementsCard";
 import ReportArchiveList, { ArchiveReport } from "./ReportArchiveList";
 import NotificationRow from "./NotificationRow";
@@ -1016,7 +1017,7 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
       <section className="home-dark-section">
         <span className="home-dark-section-title">Preferences</span>
         <div className="home-dark-rows">
-          {pushKey && <PushToggle publicKey={pushKey} />}
+          <PushToggle publicKey={pushKey} nativeReady={fcmConfigured()} />
           {toggleDefs.map((t) => {
             const on = prefs[t.key];
             return (

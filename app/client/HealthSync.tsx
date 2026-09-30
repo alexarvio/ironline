@@ -3,33 +3,13 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { syncHealthStepsAction } from "../lib/actions";
+import { callNative, nativeApp as cap, nativePlatform as platformOf } from "../lib/native";
 
 // Steps from Apple Health (iPhone) or Health Connect (Android), read by the
 // native app (mobile/, the @capgo/capacitor-health plugin) and saved into the
 // client's daily "Steps" metric by syncHealthStepsAction. In a browser none of
 // this exists: Settings shows the rows as "Soon", as before.
-//
-// The site is loaded by the app from its server, so there is no Capacitor
-// package here: the app injects window.Capacitor, and nativePromise is the
-// call its registerPlugin makes underneath.
 
-type Cap = {
-  isNativePlatform?: () => boolean;
-  getPlatform?: () => string;
-  nativePromise?: (plugin: string, method: string, options?: object) => Promise<unknown>;
-};
-
-function cap(): Cap | null {
-  if (typeof window === "undefined") return null;
-  const c = (window as { Capacitor?: Cap }).Capacitor;
-  return c?.isNativePlatform?.() && c.nativePromise ? c : null;
-}
-
-type Platform = "ios" | "android";
-const platformOf = (): Platform | null => {
-  const p = cap()?.getPlatform?.();
-  return p === "ios" || p === "android" ? p : null;
-};
 const noSubscribe = () => () => {};
 
 // Whether this phone syncs, kept on the phone: iPhone never tells an app
@@ -57,18 +37,17 @@ const localDay = (d: Date) =>
 // The last eight days (today and the seven a check-in can still change),
 // one total per day in the phone's time.
 async function syncSteps(): Promise<{ tracked: boolean; saved: number } | null> {
-  const c = cap();
-  if (!c?.nativePromise) return null;
+  if (!cap()) return null;
   const start = new Date();
   start.setHours(0, 0, 0, 0);
   start.setDate(start.getDate() - 7);
-  const res = (await c.nativePromise("Health", "queryAggregated", {
+  const res = await callNative<{ samples?: { startDate: string; value: number }[] }>("Health", "queryAggregated", {
     dataType: "steps",
     startDate: start.toISOString(),
     endDate: new Date().toISOString(),
     bucket: "day",
     aggregation: "sum",
-  })) as { samples?: { startDate: string; value: number }[] };
+  });
   const days = (res.samples ?? []).map((s) => ({ date: localDay(new Date(s.startDate)), steps: s.value }));
   return syncHealthStepsAction(days);
 }
@@ -143,19 +122,15 @@ export function ConnectedApps() {
       setNote(null);
       return;
     }
-    const c = cap();
-    if (!c?.nativePromise) return;
     setBusy(true);
     setNote(null);
     try {
-      const avail = (await c.nativePromise("Health", "isAvailable")) as { available?: boolean };
+      const avail = await callNative<{ available?: boolean }>("Health", "isAvailable");
       if (!avail.available) {
         setNote(platform === "android" ? "Install Health Connect from the Play Store, then try again." : "Apple Health isn't available on this device.");
         return;
       }
-      const auth = (await c.nativePromise("Health", "requestAuthorization", { read: ["steps"], write: [] })) as {
-        readAuthorized?: string[];
-      };
+      const auth = await callNative<{ readAuthorized?: string[] }>("Health", "requestAuthorization", { read: ["steps"], write: [] });
       // Android says whether steps were allowed; iPhone never does.
       if (platform === "android" && !auth.readAuthorized?.includes("steps")) {
         setNote("Steps weren't allowed. You can allow them in Health Connect.");

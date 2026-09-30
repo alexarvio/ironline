@@ -544,7 +544,7 @@ export const push_subscriptions = pgTable(
   {
     id: serial("id").primaryKey(),
     user_id: integer("user_id").notNull(),
-    kind: text("kind").notNull().$type<"web" | "apns">(),
+    kind: text("kind").notNull().$type<"web" | "apns" | "fcm">(),
     endpoint: text("endpoint").notNull().unique(),
     // Web push only: the device's encryption keys.
     p256dh: text("p256dh"),

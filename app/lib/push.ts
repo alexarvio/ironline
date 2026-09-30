@@ -2,11 +2,13 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import webpush from "web-push";
 import { pg } from "./pg/direct";
 import { push_subscriptions } from "./pg/schema";
+import { fcmConfigured, sendFcm } from "./fcm";
 
 // Push notifications: the lock-screen kind, delivered while the app is shut.
 //
 // A device that says yes gets an address from its delivery service (the
-// browser's push service today; Apple's for the native app later). The app
+// browser's push service, or Firebase for the Android app (lib/fcm.ts);
+// Apple's for the iPhone app later). The app
 // posts that address to /api/push, it is kept in push_subscriptions, and
 // sendPush() hands a short message to the delivery service for every device
 // the user has. An address the service reports as gone (the app was removed,
@@ -56,6 +58,16 @@ export async function saveWebSubscription(userId: number, sub: WebSubscription, 
     .onConflictDoUpdate({ target: push_subscriptions.endpoint, set: { user_id: row.user_id, p256dh: row.p256dh, auth: row.auth, user_agent: row.user_agent } });
 }
 
+/** Saves the Android app's Firebase token for this user, the same way. */
+export async function saveFcmToken(userId: number, token: string, userAgent: string | null) {
+  const db = await pg();
+  if (!db) return;
+  await db
+    .insert(push_subscriptions)
+    .values({ user_id: userId, kind: "fcm", endpoint: token, user_agent: userAgent })
+    .onConflictDoUpdate({ target: push_subscriptions.endpoint, set: { user_id: userId, user_agent: userAgent } });
+}
+
 /** Forgets a device (the user turned notifications off on it). Only their own. */
 export async function removeSubscription(userId: number, endpoint: string) {
   const db = await pg();
@@ -85,10 +97,11 @@ export async function hasSubscription(userId: number, endpoint: string): Promise
 export async function sendPush(userId: number, message: PushMessage): Promise<number> {
   const keys = vapid();
   const db = await pg();
-  if (!keys || !db) return 0;
+  if (!db || (!keys && !fcmConfigured())) return 0;
   const devices = await db.select().from(push_subscriptions).where(eq(push_subscriptions.user_id, userId));
-  const web = devices.filter((d) => d.kind === "web" && d.p256dh && d.auth);
-  if (web.length === 0) return 0;
+  const web = keys ? devices.filter((d) => d.kind === "web" && d.p256dh && d.auth) : [];
+  const fcm = fcmConfigured() ? devices.filter((d) => d.kind === "fcm") : [];
+  if (web.length === 0 && fcm.length === 0) return 0;
 
   const payload = JSON.stringify(message);
   const gone: number[] = [];
@@ -97,7 +110,7 @@ export async function sendPush(userId: number, message: PushMessage): Promise<nu
     web.map(async (d) => {
       try {
         await webpush.sendNotification({ endpoint: d.endpoint, keys: { p256dh: d.p256dh!, auth: d.auth! } }, payload, {
-          vapidDetails: keys,
+          vapidDetails: keys!,
           // Hold it for a day if the phone is off; after that it's stale news.
           TTL: 24 * 60 * 60,
           urgency: "normal",
@@ -110,6 +123,16 @@ export async function sendPush(userId: number, message: PushMessage): Promise<nu
         if (status === 404 || status === 410) gone.push(d.id);
         else console.error(`[push] sending to device ${d.id} failed (${status ?? "no status"}):`, error instanceof Error ? error.message : error);
       }
+    })
+  );
+  await Promise.all(
+    fcm.map(async (d) => {
+      const r = await sendFcm(d.endpoint, message).catch((error) => {
+        console.error(`[push] sending to device ${d.id} failed:`, error instanceof Error ? error.message : error);
+        return "failed" as const;
+      });
+      if (r === "sent") sent.push(d.id);
+      else if (r === "gone") gone.push(d.id);
     })
   );
   if (gone.length) await db.delete(push_subscriptions).where(inArray(push_subscriptions.id, gone));
