@@ -653,6 +653,18 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
           const rows = orderOf(s)
             .map((id) => s.rows.find((r) => r.id === id)!)
             .filter((r) => r && !p.removed.includes(r.id));
+          // The icon columns on the rows (30 Sep): one for each kind some row
+          // in this session has, so a lone swap sits beside the chat with no
+          // empty video slot between, and each kind still lines up down the rows.
+          const videoIn = (id: number) => {
+            const v = videos[id];
+            return !!v && (v.state === "in" || v.state === "replied");
+          };
+          const flagCols = {
+            chat: rows.some((r) => r.exerciseChat.some((m) => !m.mine)),
+            video: rows.some((r) => videoIn(r.id)),
+            swap: rows.some((r) => r.swap),
+          };
           return (
             <SortableItem key={s.id} id={s.id} as="section" anchor={`session-${s.id}`} className={`rd-session${isOpen ? " open" : ""}`}>
               {(sessionGrip) => (
@@ -853,10 +865,11 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                             </button>
                           ))}
                           <span className="rd-row-more">
-                            {/* Three fixed slots, so each kind lines up down the table:
-                                their messages about it, a video they sent, a swap
-                                (opens what they did). */}
+                            {/* A slot for each kind the session has (flagCols), so
+                                each lines up down the table: their messages about
+                                it, a video they sent, a swap (opens what they did). */}
                             <span className="rd-flags">
+                              {flagCols.chat && (
                               <span className="rd-flag-slot">
                                 {r.exerciseChat.some((m) => !m.mine) && (
                                   <button
@@ -870,8 +883,10 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                                   </button>
                                 )}
                               </span>
+                              )}
+                              {flagCols.video && (
                               <span className="rd-flag-slot">
-                                {video && (video.state === "in" || video.state === "replied") && (
+                                {video && videoIn(r.id) && (
                                   <button
                                     type="button"
                                     className={`rd-flag video ${video.state}`}
@@ -883,6 +898,8 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                                   </button>
                                 )}
                               </span>
+                              )}
+                              {flagCols.swap && (
                               <span className="rd-flag-slot">
                                 {r.swap && (
                                   <button
@@ -897,6 +914,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                                   </button>
                                 )}
                               </span>
+                              )}
                             </span>
                             <DropdownMenu modal={false}>
                               <DropdownMenuTrigger className="rd-btn ghost sm" aria-label={`More for ${r.name}`}>
