@@ -831,7 +831,7 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
                     : `/admin/redesign/${track === "nutrition" ? "nutrition" : "measurements"}?client=${clientId}&phase=${phase.id}`
                 }
               >
-                Open in {TRACK_LABEL[track] === "Lifestyle" ? "Measurements" : TRACK_LABEL[track]}
+                Open
               </Link>
             )}
           </span>
@@ -881,8 +881,6 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
               <Picker value={programChoice} onChange={setProgramChoice} label="Programme" className="rq-wide" options={[{ value: "new", label: "A new programme", hint: `${weeks} weeks` }, ...loose.map((p) => ({ value: String(p.id), label: p.name, hint: `${p.weeks} weeks · ${p.status}` }))]} />
             </div>
           )}
-          {track === "training" && editing && phase.program && <p className="rd-dlg-hint">The programme behind it has {phase.program.totalWeeks} weeks; its dates follow this phase.</p>}
-          <p className="rdd-picking">{startLocked ? "The client already trained in it, so the start stays. Click a day for the end." : picking === "start" ? "Click a day for the start." : "Now click a day for the end."}</p>
           {/* Always a line, so the dialog keeps its height whether or not there is an overlap to say. */}
           <p className="rq-overlap">{overlap ? `Overlaps ${overlap.name} on the same track.` : " "}</p>
         </div>
