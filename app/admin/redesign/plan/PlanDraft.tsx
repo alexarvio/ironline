@@ -800,8 +800,6 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
     }
   };
   const ok = name.trim().length > 0 && from <= to;
-  // An existing phase's name or dates edited here, so Save is worth showing.
-  const changed = !!phase && (name.trim() !== phase.name || startWeek !== phase.start_week || endWeek !== phase.end_week);
   const startsNow = startWeek <= today;
   const loose = programs.filter((p) => !p.linked);
   const linkedProgram = programChoice !== "new" ? programs.find((p) => p.id === Number(programChoice)) ?? null : null;
@@ -887,7 +885,7 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
       </div>
       {/* A phase that exists: Delete on the far left, Cancel, and Open in its
           tab up top; everything else (sending, copying) is done in that tab
-          (30 Sep). Save shows only once the name or dates here are changed. */}
+          (30 Sep). Save always shows. */}
       <DialogFooter>
         {editing && onDelete && (
           <button type="button" className="rd-btn danger" onClick={onDelete}>
@@ -896,11 +894,9 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
         )}
         <span className="rd-dlg-hint grow">{state === "draft" ? `Only you see a draft until it is sent.` : startsNow ? `${firstName} sees it now.` : `${firstName} sees it from ${fmtDay(startWeek)}.`}</span>
         <DialogClose className="rd-btn">Cancel</DialogClose>
-        {(!editing || changed) && (
-          <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onSave({ name: name.trim(), track, start: startWeek, end: endWeek, programId: linkedProgram?.id ?? null })}>
-            {editing ? "Save" : "Create draft"}
-          </button>
-        )}
+        <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onSave({ name: name.trim(), track, start: startWeek, end: endWeek, programId: linkedProgram?.id ?? null })}>
+          {editing ? "Save" : "Create draft"}
+        </button>
       </DialogFooter>
     </DialogContent>
   );
