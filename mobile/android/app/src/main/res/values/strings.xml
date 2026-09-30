@@ -4,4 +4,6 @@
     <string name="title_activity_main">Ironline</string>
     <string name="package_name">com.arvio.ironline</string>
     <string name="custom_url_scheme">com.arvio.ironline</string>
+    <!-- Shown from the Health Connect permission screen. -->
+    <string name="health_connect_privacy_policy_url">https://ironline-production-e741.up.railway.app/privacy</string>
 </resources>

@@ -15,6 +15,7 @@ import {
   isOwner,
   findUserByEmail,
   createUser,
+  requireClient,
   requireClientAccess,
   requireCoach,
 } from "./auth";
@@ -1143,6 +1144,32 @@ export async function logMetricPeriodAction(formData: FormData) {
 
   revalidatePath("/admin");
   revalidatePath("/client");
+}
+
+// Steps from the phone's Apple Health / Health Connect (the native app,
+// HealthSync.tsx), as { date, steps } per day. They fill the client's daily
+// metric named like "Steps" for the days a check-in can still be changed,
+// the phone's count replacing a typed one. Says whether the coach tracks
+// steps at all, so Settings can say so.
+export async function syncHealthStepsAction(days: { date: string; steps: number }[]): Promise<{ tracked: boolean; saved: number }> {
+  const { clientId } = await requireClient();
+  const metric = listMetricDefinitions(clientId, "daily").find((d) => /\bsteps?\b/i.test(d.name));
+  if (!metric) return { tracked: false, saved: 0 };
+  const today = localDateStr();
+  const current = new Map(getMetricEntries([metric.id]).map((e) => [e.period, e.value]));
+  let saved = 0;
+  for (const day of Array.isArray(days) ? days.slice(0, 14) : []) {
+    const steps = Math.round(Number(day?.steps));
+    if (!checkInEditable(String(day?.date), today) || !Number.isFinite(steps) || steps <= 0 || steps > 200000) continue;
+    if (current.get(day.date) === steps) continue;
+    setMetricEntry(metric.id, day.date, steps, new Date().toISOString());
+    saved++;
+  }
+  if (saved) {
+    revalidatePath("/admin");
+    revalidatePath("/client");
+  }
+  return { tracked: true, saved };
 }
 
 export async function addPhotoSlotAction(formData: FormData) {

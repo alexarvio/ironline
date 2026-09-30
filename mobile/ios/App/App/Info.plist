@@ -4,6 +4,10 @@
 <dict>
   <key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Ironline reads your daily step count so your steps log themselves for your coach.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Ironline does not write to Apple Health.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>

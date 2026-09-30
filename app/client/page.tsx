@@ -91,6 +91,7 @@ import CoachCard from "./CoachCard";
 import FitTitle from "./FitTitle";
 import PhaseObjectives from "./PhaseObjectives";
 import PushToggle from "./PushToggle";
+import { ConnectedApps } from "./HealthSync";
 import { pushPublicKey } from "../lib/push";
 import SupplementsCard, { type SupplementRow } from "./SupplementsCard";
 import ReportArchiveList, { ArchiveReport } from "./ReportArchiveList";
@@ -1038,26 +1039,7 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
         </div>
       </section>
 
-      <section className="home-dark-section">
-        <span className="home-dark-section-title">Connected apps</span>
-        <div className="home-dark-rows">
-          <div className="settings-app-row">
-            <div className="home-dark-row-body">
-              <div className="home-dark-row-title">Apple Health</div>
-              <div className="home-dark-row-detail">Auto-log steps, weight & workouts</div>
-            </div>
-            <span className="st-soon">Soon</span>
-          </div>
-          <div className="settings-app-row">
-            <div className="home-dark-row-body">
-              <div className="home-dark-row-title">Health Connect</div>
-              <div className="home-dark-row-detail">Auto-log steps, weight & workouts</div>
-            </div>
-            <span className="st-soon">Soon</span>
-          </div>
-        </div>
-        <div className="home-dark-empty st-note">Health syncing needs the Ironline mobile app (not available on web).</div>
-      </section>
+      <ConnectedApps />
 
       <section className="home-dark-section">
         <span className="home-dark-section-title">Data</span>
