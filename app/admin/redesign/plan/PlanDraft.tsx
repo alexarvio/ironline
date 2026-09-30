@@ -322,19 +322,6 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
         <div className="rn-card-head">
           <h2>Phases</h2>
           <div className="rq-ev-tools">
-            {/* What the bars' looks mean, up here by the time switch (30 Sep):
-                the rest of the old legend at the foot read as misleading. */}
-            <div className="rq-legend inline" aria-label="Legend">
-              <span>
-                <i className="live" /> live
-              </span>
-              <span>
-                <i className="scheduled" /> scheduled
-              </span>
-              <span>
-                <i className="draft" /> draft, not sent
-              </span>
-            </div>
             <div className="rd-btn-group" role="group" aria-label="Time shown">
               {WINDOWS.map((w) => (
                 <button key={w.weeks} type="button" className={win === w.weeks ? "on" : ""} aria-pressed={win === w.weeks} onClick={() => setWin(w.weeks)}>
@@ -458,7 +445,8 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                                   {total} {total === 1 ? "week" : "weeks"}
                                 </span>
                               </span>
-                              {state === "draft" ? <span className="rq-bar-pill">Draft</span> : state === "live" ? <span className="rq-bar-pill">week {weeksBetween(sp.s, thisWeek) + 1} of {total}</span> : state === "scheduled" ? <span className="rq-bar-pill">starts {shortDate(sp.s)}</span> : null}
+                              {/* Its state in words on the bar (30 Sep): the colours are the track's, so a legend of them read wrong. */}
+                              {state === "draft" ? <span className="rq-bar-pill">Draft</span> : state === "live" ? <span className="rq-bar-pill"><b>Live</b> · week {weeksBetween(sp.s, thisWeek) + 1} of {total}</span> : state === "scheduled" ? <span className="rq-bar-pill"><b>Scheduled</b> · starts {shortDate(sp.s)}</span> : null}
                             </div>
                           );
                         })}
