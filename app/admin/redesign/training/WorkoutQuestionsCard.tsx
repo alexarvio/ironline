@@ -60,7 +60,7 @@ export default function WorkoutQuestionsCard({ programId, firstName, questions: 
   })();
   const isNew = (id: string) => !saved.some((q) => q.id === id);
   const full = rows.length >= MAX_WORKOUT_QUESTIONS;
-  const grid = { gridTemplateColumns: "20px minmax(220px, 1.2fr) 200px minmax(220px, 1fr) 32px", columnGap: 24 } as const;
+  const grid = { gridTemplateColumns: "20px minmax(220px, 1fr) minmax(340px, auto) 32px", columnGap: 24 } as const;
 
   const apply = () => {
     setSaved(clean);
@@ -86,7 +86,6 @@ export default function WorkoutQuestionsCard({ programId, firstName, questions: 
             <span />
             <span>Question</span>
             <span>Answered as</span>
-            <span>What {firstName} sees</span>
             <span />
           </div>
         )}
@@ -111,29 +110,16 @@ export default function WorkoutQuestionsCard({ programId, firstName, questions: 
                       />
                       {isNew(r.id) && <small>New · not applied yet</small>}
                     </span>
-                    {/* How it is answered: the ten pills, a number (with its unit), or words. */}
-                    <span className="rm-cadence rm-q-kind" role="group" aria-label={`How ${r.label || "this"} is answered`}>
-                      {KINDS.map((k) => (
-                        <button key={k.id} type="button" className={`${r.kind === k.id ? "on" : ""}${r.kind === k.id && was && was.kind !== k.id ? " changed" : ""}`} aria-pressed={r.kind === k.id} onClick={() => setRow(r.id, { kind: k.id })}>
-                          {k.label}
-                        </button>
-                      ))}
-                    </span>
-                    <span className="rm-q-answers">
-                      {r.kind === "scale" && (
-                        <span className="rm-q-scale" aria-hidden="true">
-                          {Array.from({ length: 10 }, (_, i) => (
-                            <i key={i}>{i + 1}</i>
-                          ))}
-                        </span>
-                      )}
-                      {r.kind === "number" && (
-                        <span className="rm-q-num">
-                          <i aria-hidden="true">0</i>
-                          <input className={`rm-q-unit${was && was.unit !== r.unit.trim() ? " changed" : ""}`} value={r.unit} maxLength={12} onChange={(e) => setRow(r.id, { unit: e.target.value })} placeholder="Unit · kg, min, h" aria-label={`Unit for ${r.label}`} />
-                        </span>
-                      )}
-                      {r.kind === "text" && <span className="rm-q-text" aria-hidden="true">A box to write in</span>}
+                    {/* How it is answered: the ten pills, a number (with its unit box beside the switch), or words. */}
+                    <span className="rm-q-how">
+                      <span className="rm-cadence rm-q-kind" role="group" aria-label={`How ${r.label || "this"} is answered`}>
+                        {KINDS.map((k) => (
+                          <button key={k.id} type="button" className={`${r.kind === k.id ? "on" : ""}${r.kind === k.id && was && was.kind !== k.id ? " changed" : ""}`} aria-pressed={r.kind === k.id} onClick={() => setRow(r.id, { kind: k.id })}>
+                            {k.label}
+                          </button>
+                        ))}
+                      </span>
+                      {r.kind === "number" && <input className={`rm-q-unit${was && was.unit !== r.unit.trim() ? " changed" : ""}`} value={r.unit} maxLength={12} onChange={(e) => setRow(r.id, { unit: e.target.value })} placeholder="Unit · kg, min, h" aria-label={`Unit for ${r.label}`} />}
                     </span>
                     <span className="rd-row-more">
                       <DropdownMenu modal={false}>
@@ -142,7 +128,7 @@ export default function WorkoutQuestionsCard({ programId, firstName, questions: 
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="pb-menu">
                           <DropdownMenuItem variant="destructive" onSelect={() => setRows((prev) => prev.filter((x) => x.id !== r.id))}>
-                            <TrashIcon /> {isNew(r.id) ? "Don't add it" : "Stop asking it"}
+                            <TrashIcon /> Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -269,13 +255,6 @@ function AddQuestionRow({ have, full, onAdd, onClose }: { have: Q[]; full: boole
           ×
         </button>
       </div>
-      {!browse && !needle && (
-        <div className="rd-addrow-list">
-          <button type="button" className="rd-addrow-item create" onClick={() => box.current?.focus()}>
-            <PlusIcon /> Create your own question: type it above
-          </button>
-        </div>
-      )}
       {(browse || needle) && (
         <div className="rd-addrow-list" role="listbox" aria-label="Questions">
           {list.map((x, i) => (
@@ -291,7 +270,7 @@ function AddQuestionRow({ have, full, onAdd, onClose }: { have: Q[]; full: boole
           )}
         </div>
       )}
-      <p className="rd-addrow-hint">{full ? `${MAX_WORKOUT_QUESTIONS} questions at most, so the end of a workout stays quick.` : "Added as 1–10; switch it to Value or Text on its row. Nothing reaches their workout until Apply."}</p>
+      {full && <p className="rd-addrow-hint">{MAX_WORKOUT_QUESTIONS} questions at most, so the end of a workout stays quick.</p>}
     </div>
   );
 }

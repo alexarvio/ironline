@@ -8203,9 +8203,18 @@ export function getClientProgramNote(clientId: number, programId: number): strin
   return (getData().client_program_notes ?? []).find((n) => n.client_id === clientId && n.program_id === programId)?.text ?? "";
 }
 
-export function getClientProgramNoteMeta(clientId: number, programId: number): { text: string; updatedAt: string } | null {
+export function getClientProgramNoteMeta(clientId: number, programId: number): { text: string; updatedAt: string; seen: boolean } | null {
   const n = (getData().client_program_notes ?? []).find((x) => x.client_id === clientId && x.program_id === programId);
-  return n && n.text.trim() ? { text: n.text, updatedAt: n.updated_at } : null;
+  return n && n.text.trim() ? { text: n.text, updatedAt: n.updated_at, seen: !!n.coach_seen_at && n.coach_seen_at >= n.updated_at } : null;
+}
+
+/** The coach opened the client's note on a programme: it is not new again until the client writes. */
+export function markProgramNoteSeen(programId: number) {
+  const n = (getData().client_program_notes ?? []).find((x) => x.program_id === programId);
+  if (!n || n.coach_seen_at === n.updated_at) return;
+  n.coach_seen_at = n.updated_at;
+  persist();
+  markClientEventsSeen(n.client_id, { ids: [`program-note-${n.id}`] });
 }
 
 export function getClientIdForProgram(programId: number): number | null {

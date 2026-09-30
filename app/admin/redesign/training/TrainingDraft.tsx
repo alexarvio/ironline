@@ -5,7 +5,7 @@ import type React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { addExerciseToLibraryAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, createProgramWithAction, deployProgramAction, removeGymAction, removeProgramWeekAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, saveTrainingNoteAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
+import { addExerciseToLibraryAction, markProgramNoteSeenAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, createProgramWithAction, deployProgramAction, removeGymAction, removeProgramWeekAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, saveTrainingNoteAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger, ToggleGroup, ToggleGroupItem } from "../../../components/ui/basics";
@@ -93,7 +93,8 @@ export type DraftProgram = {
   sessions: DraftSession[];
   gyms: Gym[];
   /** The client's note to the coach on this programme. */
-  note: { text: string; when: string } | null;
+  /** The client's note on it; seen: the coach has opened this version. */
+  note: { text: string; when: string; seen: boolean } | null;
 };
 
 // ---- Draft-only bits ---------------------------------------------------------
@@ -386,7 +387,10 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
     setVideos(Object.fromEntries(program.sessions.flatMap((s) => s.rows.map((r) => [r.id, r.video]))));
     setDemos({});
   }
-  const [noteSeen, setNoteSeen] = useState(false);
+  // New until opened; opening it is saved, so it stays read until the client writes again (30 Sep).
+  const noteKey = program.note ? `${program.id}:${program.note.when}:${program.note.text}` : "";
+  const [openedNote, setOpenedNote] = useState<string | null>(null);
+  const noteSeen = !program.note || program.note.seen || openedNote === noteKey;
   const [dlg, setDlg] = useState<Dlg>(null);
   const close = () => setDlg(null);
   const rowById = (id: number) => sessions.flatMap((s) => s.rows).find((r) => r.id === id) ?? null;
@@ -451,7 +455,14 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
         <div className="rd-head-actions">
           {/* The client's note on the programme sits with the header's actions, so the week strip has the whole row. */}
           {program.note && (
-            <button type="button" className={`rd-note${noteSeen ? "" : " unseen"}`} onClick={() => setDlg({ kind: "note" })} title={`${firstName}'s note on this programme`}>
+            <button type="button" className={`rd-note${noteSeen ? "" : " unseen"}`} onClick={() => {
+              setDlg({ kind: "note" });
+              // Opened is read: the dot goes, and stays gone until the client writes again.
+              if (!noteSeen) {
+                setOpenedNote(noteKey);
+                void markProgramNoteSeenAction(program.id);
+              }
+            }} title={`${firstName}'s note on this programme`}>
               <ChatIcon />
               <span>
                 Note from {firstName}
@@ -1518,7 +1529,6 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
             firstName={firstName}
             note={program.note}
             onSeen={() => {
-              setNoteSeen(true);
               close();
             }}
           />

@@ -144,6 +144,7 @@ import {
   getClientIdForVideoRequest,
   saveRequestedVideo,
   markVideoSeen,
+  markProgramNoteSeen,
   sendVideoReply,
   removeVideoReply,
   markVideoReplySeen,
@@ -1322,6 +1323,13 @@ export async function markVideoReplySeenAction(id: number) {
   await requireClientAccess(owner);
   markVideoReplySeen(Number(id));
   revalidatePath("/client");
+}
+
+/** The coach opened the client's note on a programme (the Training tab). */
+export async function markProgramNoteSeenAction(programId: number) {
+  if (!Number.isInteger(programId) || !(await coachForClient(getClientIdForProgram(programId)))) return;
+  markProgramNoteSeen(programId);
+  revalidatePath("/admin");
 }
 
 export async function markVideoSeenAction(id: number) {

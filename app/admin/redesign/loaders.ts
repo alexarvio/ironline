@@ -269,7 +269,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     weeks,
     sessions,
     gyms,
-    note: noteMeta ? { text: noteMeta.text, when: new Date(noteMeta.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) } : null,
+    note: noteMeta ? { seen: noteMeta.seen, text: noteMeta.text, when: new Date(noteMeta.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) } : null,
   };
   return { draft, library };
 }

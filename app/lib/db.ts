@@ -366,6 +366,9 @@ export type ClientProgramNote = {
   program_id: number;
   text: string;
   updated_at: string;
+  // The version the coach last opened (its updated_at): the note is new to
+  // them only once the client writes after that (30 Sep).
+  coach_seen_at?: string;
 };
 
 export type CheckInNote = {
