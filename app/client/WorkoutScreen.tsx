@@ -264,10 +264,6 @@ export default function WorkoutScreen({
               )}
               {currentEx && (
                 <>
-                  <button type="button" role="menuitem" className="wo-menu-row ico" onClick={() => ask("note")}>
-                    <MenuIcon kind="note" />
-                    {currentNote ? "Edit your note" : "Add a note for yourself"}
-                  </button>
                   <button type="button" role="menuitem" className="wo-menu-row ico" disabled={currentEx.warmups.length >= MAX_WARMUPS} onClick={() => ask("warmup")}>
                     <MenuIcon kind="warmup" />
                     Add a warm-up set
@@ -275,6 +271,11 @@ export default function WorkoutScreen({
                   <button type="button" role="menuitem" className="wo-menu-row ico" onClick={() => ask("swap")}>
                     <MenuIcon kind="swap" />
                     {currentEx.swap ? "Change the swap" : "Swap exercise"}
+                  </button>
+                  {/* The note for yourself fourth, after the swap (30 Sep). */}
+                  <button type="button" role="menuitem" className="wo-menu-row ico" onClick={() => ask("note")}>
+                    <MenuIcon kind="note" />
+                    {currentNote ? "Edit your note" : "Add a note for yourself"}
                   </button>
                 </>
               )}
