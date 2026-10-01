@@ -17831,3 +17831,8 @@ button.ci-hint { cursor: pointer; }
    column, and the columns sharing the width evenly, 2 of them or 7. */
 .so-tbl { grid-auto-columns: 1fr; }
 .so-tbl small, .so-tbl b { text-align: center; }
+/* Home's lifestyle card swipes sideways only (1 Oct): overflow-x alone left
+   the strip scrollable up and down too, so a diagonal drag moved the cell
+   off its place. A sideways swipe stays in the card, not the row behind it. */
+.hl-pager { overflow-y: hidden; overscroll-behavior-x: contain; touch-action: pan-x pan-y; }
+.pc-scroller { overflow-y: hidden; }
