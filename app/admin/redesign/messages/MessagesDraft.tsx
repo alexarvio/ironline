@@ -33,12 +33,26 @@ const POLL_MS = 15000;
 const dayOf = (when: string) => when.split(", ")[0] ?? when;
 const timeOf = (when: string) => when.split(", ")[1] ?? "";
 
-export default function MessagesDraft({ clientId, firstName, plan, active }: { clientId: number; firstName: string; plan: DraftMessages; /** The tab is the one showing. */ active: boolean }) {
+/** The chat as the panel that slides in from the right (ChatPanel), opened to
+ *  reply to something the client said: what the reply is about, set as its
+ *  link each time it opens (`opened` counts the openings), and how to close. */
+export type ChatPanelMode = { about: DraftLink | null; opened: number; onClose: () => void };
+
+export default function MessagesDraft({ clientId, firstName, plan, active, panel = null }: { clientId: number; firstName: string; plan: DraftMessages; /** The tab is the one showing. */ active: boolean; panel?: ChatPanelMode | null }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const messages = plan.messages;
   const [text, setText] = useState("");
   const [link, setLink] = useState<DraftLink | null>(null);
+  // Opened from a reply: the reply points at what was said, and the box is ready.
+  const [seenOpen, setSeenOpen] = useState(0);
+  if (panel && panel.opened !== seenOpen) {
+    setSeenOpen(panel.opened);
+    setLink(panel.about);
+  }
+  useEffect(() => {
+    if (panel?.opened) setTimeout(() => box.current?.focus(), 320);
+  }, [panel?.opened]);
   const [linking, setLinking] = useState(false);
   // After sending: one message being reworded, one getting a link, one about to go.
   const [editing, setEditing] = useState<{ id: number; text: string } | null>(null);
@@ -72,9 +86,11 @@ export default function MessagesDraft({ clientId, firstName, plan, active }: { c
   // the window, and never so much that the page itself scrolls. Measured
   // when the tab is shown (it mounts hidden behind the other tabs) and when
   // the window changes size.
+  // In the panel the box is the panel's height already (CSS).
+  const inPanel = !!panel;
   useLayoutEffect(() => {
     const el = chat.current;
-    if (!el) return;
+    if (!el || inPanel) return;
     const fit = () => {
       if (!el.offsetParent) return;
       const top = el.getBoundingClientRect().top + window.scrollY;
@@ -91,7 +107,7 @@ export default function MessagesDraft({ clientId, firstName, plan, active }: { c
       shown.disconnect();
       window.removeEventListener("resize", fit);
     };
-  }, []);
+  }, [inPanel]);
   // To the latest message on opening, and whenever the thread grows (a new
   // message, a picture that finished loading) while the coach is there.
   useLayoutEffect(() => {
@@ -298,10 +314,15 @@ export default function MessagesDraft({ clientId, firstName, plan, active }: { c
   }
 
   return (
-    <div className="rd rm">
+    <div className={`rd rm${panel ? " rm-panel" : ""}`}>
       <header className="rd-head">
+        {panel && (
+          <button type="button" className="rm-panel-x" onClick={panel.onClose} aria-label="Close the chat" title="Close (Esc)">
+            ×
+          </button>
+        )}
         <div className="rd-head-main">
-          <span className="rd-eyebrow">Messages</span>
+          <span className="rd-eyebrow">{panel ? "Chat" : "Messages"}</span>
           <h1 className="rd-title">
             <span className="rm-avatar" aria-hidden="true">
               {plan.avatarPath ? (

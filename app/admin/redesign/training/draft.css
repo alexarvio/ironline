@@ -677,3 +677,11 @@
 .rd-exchat-inline { position: sticky; left: 0; display: flex; flex-direction: column; gap: 10px; max-width: 640px; margin: 0 10px 12px 34px; padding: 12px; border-radius: 12px; background: #f1f6fd; }
 .rd-exchat-inline .rd-exchat-list { max-height: 260px; }
 .rd-row-main.has-chat { cursor: pointer; }
+/* Reply to what the client wrote (1 Oct): opens the chat panel, the reply pointing at it. */
+.rd-session-note-reply { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.rd-note-reply { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: #1e3a6e; font: inherit; font-size: 12.5px; font-weight: 700; color: #fff; cursor: pointer; }
+.rd-note-reply svg { width: 14px; height: 14px; }
+.rd-note-reply:hover { background: #2f5d8f; }
+.rd-exchat-reply { align-self: flex-start; }
+/* The whole session head opens and folds it (1 Oct), not only the chevron. */
+.rd-session-head { cursor: pointer; }

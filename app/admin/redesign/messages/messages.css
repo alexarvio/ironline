@@ -147,3 +147,16 @@ a.rm-link.open:hover { background: #d9e2ee; }
 
 /* Pictures hold a shape while they load, so the thread doesn't shift (25 Sep). */
 .rm-media-img { aspect-ratio: auto 4 / 3; object-fit: cover; }
+
+/* ---- The chat sliding in from the right (1 Oct, ChatPanel.tsx): opened to
+   reply to what the client said, over whichever tab is open; × or Esc
+   slides it away. The same chat as the Messages tab, at the panel's height. */
+.rd-chatpanel { position: fixed; top: 0; right: 0; bottom: 0; z-index: 60; width: min(460px, 100vw); display: flex; flex-direction: column; background: #f4f6f9; box-shadow: -18px 0 40px -18px rgba(8, 31, 92, 0.35); transform: translateX(105%); transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.28s; visibility: hidden; }
+.rd-chatpanel.open { transform: none; visibility: visible; transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+.rd-chatpanel .rm-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 16px 16px 12px; max-width: none; margin: 0; }
+.rd-chatpanel .rm-panel > .rd-head { flex: none; display: flex; align-items: center; margin-bottom: 10px; }
+.rd-chatpanel .rm-panel .rd-title { font-size: 20px; }
+.rd-chatpanel .rm-panel .rm-chat { flex: 1; min-height: 0; height: auto !important; }
+.rm-panel-x { order: 2; margin-left: auto; width: 34px; height: 34px; border: 0; border-radius: 999px; background: #e6ecf3; font: inherit; font-size: 20px; line-height: 1; color: #1e3a6e; cursor: pointer; }
+.rm-panel-x:hover { background: #d8e1ec; }
+@media (prefers-reduced-motion: reduce) { .rd-chatpanel, .rd-chatpanel.open { transition: none; } }

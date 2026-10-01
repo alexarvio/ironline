@@ -3221,7 +3221,13 @@ export async function endSessionAction(programDayId: number, opts?: { note?: str
         { id: "enjoyment", value: opts?.enjoyment ?? null },
         { id: "adherence", value: opts?.adherence ?? null },
       ];
+  const before = getData().program_days.find((pd) => pd.id === Number(programDayId))?.session_note ?? "";
   endSession(Number(programDayId), stampOrNow(opts?.at), String(opts?.note ?? ""), answers);
+  // The client's note on the workout lands in the chat too, as theirs and
+  // pointing at the session (1 Oct): it used to stay on the Training tab,
+  // easy to miss. Once per wording, and never from a coach's preview.
+  const after = getData().program_days.find((pd) => pd.id === Number(programDayId))?.session_note ?? "";
+  if (after && after !== before && (await getSessionUser())?.role === "client") sendChatMessage(owner, "client", after, undefined, { kind: "session", dayId: Number(programDayId) });
   revalidatePath("/client");
   revalidatePath("/admin");
 }
