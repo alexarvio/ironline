@@ -131,7 +131,6 @@ type Dlg =
   | { kind: "video"; rowId: number }
   | { kind: "demo"; rowId: number }
   | { kind: "alternatives"; rowId: number }
-  | { kind: "exerciseChat"; sessionId: number; rowId: number }
   | { kind: "message"; label: string; link: MessageLink }
   | { kind: "copySession"; sessionId: number }
   | { kind: "copyWeek" }
@@ -358,6 +357,9 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
   // Rows whose swap is opened underneath them.
   const [openSwaps, setOpenSwaps] = useState<number[]>([]);
   const toggleSwap = (id: number) => setOpenSwaps((o) => (o.includes(id) ? o.filter((x) => x !== id) : [...o, id]));
+  // Rows whose messages are opened underneath them.
+  const [openChats, setOpenChats] = useState<number[]>([]);
+  const toggleChat = (id: number) => setOpenChats((o) => (o.includes(id) ? o.filter((x) => x !== id) : [...o, id]));
   useEffect(() => {
     const m = /^#session-(\d+)(?:-ex-(\d+))?$/.exec(window.location.hash);
     if (!m) return;
@@ -781,9 +783,10 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
               {isOpen && (
                 <div className="rd-rows rd-rows-scroll" style={{ "--rd-minw": `${tableMinW}px` } as React.CSSProperties}>
                   {s.skip && <p className="rd-skip">{firstName} couldn&rsquo;t train: &ldquo;{s.skip}&rdquo;</p>}
-                  {!!s.answers?.length && (
+                  {/* Answers in words only: the numbers are the head row's pills already. */}
+                  {!!s.answers?.some((a) => a.text != null) && (
                     <p className="rd-session-note">
-                      {firstName} answered: {s.answers.map((a) => (a.text != null ? `${a.label}: “${a.text}”` : `${a.label} ${a.value}${a.kind === "scale" ? " of 10" : a.unit ? ` ${a.unit}` : ""}`)).join(" · ")}
+                      {firstName} answered: {s.answers.filter((a) => a.text != null).map((a) => `${a.label}: “${a.text}”`).join(" · ")}
                     </p>
                   )}
                   {s.note && <p className="rd-session-note">{firstName} wrote: &ldquo;{s.note}&rdquo;</p>}
@@ -823,7 +826,17 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                       <SortableItem key={r.id} id={r.id} anchor={`row-${r.id}`} className={`rd-row${Object.keys(e).length ? " edited" : ""}${flashRow === r.id ? " flash" : ""}`}>
                         {(rowGrip) => (
                         <>
-                        <div className="rd-row-main" style={colStyle}>
+                        <div
+                          className={`rd-row-main${r.exerciseChat.length ? " has-chat" : ""}`}
+                          style={colStyle}
+                          // A row with messages about it opens them underneath on a
+                          // click anywhere that isn't a value or a button (1 Oct).
+                          onClick={(ev) => {
+                            if (!r.exerciseChat.length) return;
+                            if ((ev.target as HTMLElement).closest("input, textarea, select, button, a, [role=button], [role=menuitem], .rd-grip")) return;
+                            toggleChat(r.id);
+                          }}
+                        >
                           <span className="rd-grip" {...rowGrip}>
                             ⋮⋮
                           </span>
@@ -891,7 +904,8 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                                   <button
                                     type="button"
                                     className="rd-flag chat"
-                                    onClick={() => setDlg({ kind: "exerciseChat", sessionId: s.id, rowId: r.id })}
+                                    onClick={() => toggleChat(r.id)}
+                                    aria-expanded={openChats.includes(r.id)}
                                     title={`${firstName} wrote about ${r.name} · read and reply`}
                                     aria-label={`Read what ${firstName} wrote about ${r.name}, and reply`}
                                   >
@@ -991,6 +1005,18 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                               </div>
                             </div>
                           </div>
+                        )}
+                        {/* The messages about this exercise, opened under it. */}
+                        {openChats.includes(r.id) && r.exerciseChat.length > 0 && (
+                          <ExerciseChatThread
+                            row={r}
+                            firstName={firstName}
+                            onSend={(text) => {
+                              const f = fd({ clientId, text });
+                              f.set("link", JSON.stringify({ kind: "exercise", dayId: s.id, assignmentId: r.id }));
+                              act(() => sendChatMessageAction(f));
+                            }}
+                          />
                         )}
                         </>
                         )}
@@ -1309,18 +1335,6 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
               const v = videos[dlg.rowId];
               close();
               if (v) act(() => sendVideoReplyAction(v.requestId, reply), `Reply sent. ${firstName} gets a notification.`);
-            }}
-          />
-        )}
-
-        {dlg?.kind === "exerciseChat" && rowById(dlg.rowId) && (
-          <ExerciseChatDialog
-            row={rowById(dlg.rowId)!}
-            firstName={firstName}
-            onSend={(text) => {
-              const f = fd({ clientId, text });
-              f.set("link", JSON.stringify({ kind: "exercise", dayId: dlg.sessionId, assignmentId: dlg.rowId }));
-              act(() => sendChatMessageAction(f));
             }}
           />
         )}
@@ -2519,10 +2533,11 @@ function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }:
   );
 }
 
-/** The chat about one exercise, over the Training screen: both sides' messages
- *  about it, oldest first, and a reply linked to it. The reply is an ordinary
- *  chat message, so it is in the full chat and on the client's side too. */
-function ExerciseChatDialog({ row, firstName, onSend }: { row: DraftRow; firstName: string; onSend: (text: string) => void }) {
+/** The chat about one exercise, opened under its row (1 Oct; it was a
+ *  dialog): both sides' messages about it, oldest first, and a reply linked
+ *  to it. The reply is an ordinary chat message, so it is in the full chat
+ *  and on the client's side too. */
+function ExerciseChatThread({ row, firstName, onSend }: { row: DraftRow; firstName: string; onSend: (text: string) => void }) {
   const [text, setText] = useState("");
   const list = useRef<HTMLDivElement>(null);
   // Always at the newest, on opening and when a reply lands.
@@ -2537,11 +2552,7 @@ function ExerciseChatDialog({ row, firstName, onSend }: { row: DraftRow; firstNa
     setText("");
   };
   return (
-    <DialogContent className="rd-dlg rd-exchat">
-      <DialogHeader>
-        <DialogTitle>{row.name}</DialogTitle>
-        <DialogDescription>What you and {firstName} said about it.</DialogDescription>
-      </DialogHeader>
+    <div className="rd-exchat rd-exchat-inline" role="region" aria-label={`What you and ${firstName} said about ${row.name}`}>
       <div ref={list} className="rd-exchat-list">
         {row.exerciseChat.map((m, i) => (
           <div key={i} className={`rd-exchat-msg${m.mine ? " mine" : ""}`}>
@@ -2556,7 +2567,6 @@ function ExerciseChatDialog({ row, firstName, onSend }: { row: DraftRow; firstNa
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={`Reply to ${firstName}…`}
-          autoFocus
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
@@ -2568,7 +2578,7 @@ function ExerciseChatDialog({ row, firstName, onSend }: { row: DraftRow; firstNa
           Send
         </button>
       </div>
-    </DialogContent>
+    </div>
   );
 }
 
