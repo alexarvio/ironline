@@ -112,9 +112,13 @@ export default function ExercisePage({
     fd.set("reps", draft.reps.trim());
     fd.set("rpe", draft.rpe.trim());
     fd.set("unit", unit);
+    // The last set to do, logged now (not one changed afterwards): once it
+    // shows as done, the workout slides on to what comes next (1 Oct).
+    const finishing = editingN == null && exercise.logs.filter((l) => l.setNumber !== activeN && l.setNumber <= exercise.sets).length + 1 >= exercise.sets;
     setPending(true);
     try {
       await logSetAction(fd);
+      if (finishing && onNext) setTimeout(onNext, 700);
     } finally {
       setPending(false);
       setEditingN(null);
@@ -124,8 +128,12 @@ export default function ExercisePage({
 
   // ---- Warm-ups: the client's own rows above the working sets. Kept here
   // as they are typed, saved whole whenever a row is ticked or removed.
+  // None yet this week: last time's are there already, not ticked, so a
+  // warm-up done once comes back the next week (1 Oct) without re-adding it.
   const [warm, setWarm] = useState<{ weight: string; reps: string; saved: boolean }[]>(() =>
-    exercise.warmups.map((w) => ({ weight: w.weight != null ? String(kgToUnit(w.weight, unit)) : "", reps: w.reps != null ? String(w.reps) : "", saved: true }))
+    exercise.warmups.length
+      ? exercise.warmups.map((w) => ({ weight: w.weight != null ? String(kgToUnit(w.weight, unit)) : "", reps: w.reps != null ? String(w.reps) : "", saved: true }))
+      : exercise.lastWarmups.slice(0, MAX_WARMUPS).map((w) => ({ weight: w.weight != null ? String(kgToUnit(w.weight, unit)) : "", reps: w.reps != null ? String(w.reps) : "", saved: false }))
   );
   // By content: every refresh of the page (the chat's, any save) hands in a
   // new array with the same sets, and resetting on that wiped rows typed but
@@ -311,17 +319,38 @@ export default function ExercisePage({
           )}
         </div>
 
-        {warm.map((w, i) => (
-          <div key={`w${i}`} className={`ts-grid ts-set warm${w.saved ? " logged" : " active"}`}>
-            <span className="ts-circle warm">W</span>
-            {askWeight && numberInput({ value: w.weight, placeholder: unitLabel, label: `Warm-up ${i + 1} weight`, decimal: true, onChange: (v) => setWarm(warm.map((r, j) => (j === i ? { ...r, weight: v, saved: false } : r))) })}
-            {numberInput({ value: w.reps, placeholder: "reps", label: `Warm-up ${i + 1} reps`, onChange: (v) => setWarm(warm.map((r, j) => (j === i ? { ...r, reps: v, saved: false } : r))) })}
-            {askRpe && <span />}
-            <button type="button" className={`ts-edit${w.saved ? " muted" : ""}`} onClick={() => tickWarm(i)} aria-label={w.saved ? "Remove this warm-up set" : "Save this warm-up set"}>
-              {w.saved ? "✕" : "✓"}
-            </button>
-          </div>
-        ))}
+        {/* A warm-up set reads like a working one (1 Oct): logged, its numbers
+            in green with Edit; being typed, the boxes and ✓ (✕ once both are
+            emptied, which takes the set away). */}
+        {warm.map((w, i) =>
+          w.saved ? (
+            <div key={`w${i}`} className="ts-grid ts-set warm logged">
+              <span className="ts-circle warm done">W</span>
+              {askWeight && <span>{w.weight === "" ? "–" : w.weight}</span>}
+              <span>{w.reps === "" ? "–" : w.reps}</span>
+              {askRpe && <span />}
+              <button type="button" className="ts-edit" onClick={() => setWarm(warm.map((r, j) => (j === i ? { ...r, saved: false } : r)))} aria-label={`Edit warm-up set ${i + 1}`}>
+                Edit
+              </button>
+            </div>
+          ) : (
+            <div key={`w${i}`} className="ts-grid ts-set warm active">
+              <span className="ts-circle warm">W</span>
+              {askWeight && numberInput({ value: w.weight, placeholder: unitLabel, label: `Warm-up ${i + 1} weight`, decimal: true, onChange: (v) => setWarm(warm.map((r, j) => (j === i ? { ...r, weight: v } : r))) })}
+              {numberInput({ value: w.reps, placeholder: "reps", label: `Warm-up ${i + 1} reps`, onChange: (v) => setWarm(warm.map((r, j) => (j === i ? { ...r, reps: v } : r))) })}
+              {askRpe && <span />}
+              {w.weight.trim() === "" && w.reps.trim() === "" ? (
+                <button type="button" className="ts-edit muted" onClick={() => tickWarm(i)} aria-label="Remove this warm-up set">
+                  ✕
+                </button>
+              ) : (
+                <button type="button" className="ts-edit" onClick={() => tickWarm(i)} aria-label="Save this warm-up set">
+                  ✓
+                </button>
+              )}
+            </div>
+          )
+        )}
 
         {Array.from({ length: exercise.sets }, (_, i) => i + 1).map((n) => {
           const log = exercise.logs.find((l) => l.setNumber === n) ?? null;

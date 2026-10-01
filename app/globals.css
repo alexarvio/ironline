@@ -17819,3 +17819,15 @@ button.ci-hint { cursor: pointer; }
 .wo-ask-num input { flex: 1; min-width: 0; height: 40px; border: 0; padding: 0; background: none; outline: none; font: inherit; font-size: 16px; font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; }
 .wo-ask-num small { font-size: 13px; font-weight: 700; color: #5b6474; }
 .wo-ask-field .wo-note-input { padding: 10px 12px; border-radius: 10px; background: #eef1f5; }
+/* Next up in full (1 Oct): on its own line under the exercise's name, which
+   keeps the bigger type, so "Flat Chest Press Machine" is never cut short. */
+.wo-ex-title-row { flex-direction: column; align-items: stretch; gap: 6px; }
+.wo-ex-title-row .wo-ex-name { flex: none; font-size: 22px; }
+.wo-ex-title-row .wo-nextup { max-width: none; justify-content: flex-start; text-align: left; }
+.wo-ex-title-row .wo-nextup-name { flex: 1; white-space: normal; overflow: visible; text-overflow: clip; font-size: 14px; font-weight: 600; line-height: 1.3; }
+/* A logged warm-up set (1 Oct): green like a logged working set, its W kept. */
+.wo-sets .ts-set.warm .ts-circle.warm.done { background: #2f7a3f; border-color: #2f7a3f; color: #fff; }
+/* The target table centred (1 Oct): each figure under the middle of its
+   column, and the columns sharing the width evenly, 2 of them or 7. */
+.so-tbl { grid-auto-columns: 1fr; }
+.so-tbl small, .so-tbl b { text-align: center; }

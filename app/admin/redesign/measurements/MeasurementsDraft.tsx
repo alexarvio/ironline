@@ -173,12 +173,12 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
       return prev.map((r) => (r.frequency === cadence ? queue.shift() ?? r : r));
     });
   const countOf = (c: Cadence) => rows.filter((r) => r.frequency === c).length;
-  // Daily / Weekly / Monthly, on both the metrics card and the check-ins
-  // card: one choice, so the two always show the same rhythm.
-  const rhythmToggle = (
+  // Daily / Weekly / Monthly, on the metrics card and on the check-ins card,
+  // each switching only its own card.
+  const rhythmToggle = (value: Cadence, set: (c: Cadence) => void) => (
     <div className="rd-btn-group" role="group" aria-label="Rhythm">
       {CADENCES.map((c) => (
-        <button key={c} type="button" className={cadence === c ? "on" : ""} aria-pressed={cadence === c} onClick={() => setCadence(c)}>
+        <button key={c} type="button" className={value === c ? "on" : ""} aria-pressed={value === c} onClick={() => set(c)}>
           {CAD[c].label}
           {countOf(c) > 0 && <small className="rm-cad-count">{countOf(c)}</small>}
         </button>
@@ -188,15 +188,17 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
 
   // ---- Check-ins: which way; the rhythm is the header's.
   const [show, setShow] = useState<"table" | "graph" | "feed">("table");
-  const view = plan[cadence];
-  const long = cadence === "daily" ? plan.dailyLong : cadence === "weekly" ? plan.weeklyLong : plan.monthlyLong;
+  // The check-ins card's own rhythm: switching the metrics card leaves it be.
+  const [logCadence, setLogCadence] = useState<Cadence>("daily");
+  const view = plan[logCadence];
+  const long = logCadence === "daily" ? plan.dailyLong : logCadence === "weekly" ? plan.weeklyLong : plan.monthlyLong;
   const done = (v: LoggedValues) => (v.metrics.length === 0 ? 0 : v.periods.filter((p) => v.metrics.some((m) => v.values[`${m.id}:${p.key}`] != null)).length);
   const asked = (v: LoggedValues) => (v.metrics.length === 0 ? 0 : v.periods.length);
   // The client's notes on this rhythm's check-ins (measurements' with the daily ones).
-  const notes = plan.notes.filter((n) => n.kind === cadence || (cadence === "daily" && n.kind === "measurements"));
+  const notes = plan.notes.filter((n) => n.kind === logCadence || (logCadence === "daily" && n.kind === "measurements"));
   const stats = [
-    { label: `${CAD[cadence].label} check-ins`, value: asked(view) ? `${done(view)} of ${asked(view)}` : "–", unit: CAD[cadence].recent, warn: asked(view) > 0 && done(view) < asked(view) * 0.6 },
-    { label: "Metrics tracked", value: String(shown.length), unit: `${cadence} · ${rows.length} in all` },
+    { label: `${CAD[logCadence].label} check-ins`, value: asked(view) ? `${done(view)} of ${asked(view)}` : "–", unit: CAD[logCadence].recent, warn: asked(view) > 0 && done(view) < asked(view) * 0.6 },
+    { label: "Metrics tracked", value: String(countOf(logCadence)), unit: `${logCadence} · ${rows.length} in all` },
     { label: "Notes", value: String(notes.length), unit: notes.length === 1 ? "from the client" : "from the client, newest first" },
   ];
 
@@ -258,7 +260,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
               <MoreIcon />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="pb-menu">
-              <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: "Check-ins", link: { kind: "checkin", section: cadence } })}>
+              <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: "Check-ins", link: { kind: "checkin", section: logCadence } })}>
                 <ChatIcon /> Message about check-ins
               </DropdownMenuItem>
               {plan.id !== 0 && (
@@ -332,7 +334,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
               </DropdownMenuContent>
             </DropdownMenu>
           )}
-          {rhythmToggle}
+          {rhythmToggle(cadence, setCadence)}
           </div>
         </div>
         <div className="rd-rows">
@@ -473,9 +475,9 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
       <section className="rd-session open rn-card">
         <div className="rn-card-head">
           <h2>
-            {firstName}&rsquo;s {cadence} check-ins
+            {firstName}&rsquo;s {logCadence} check-ins
           </h2>
-          <div className="rm-card-tools">{rhythmToggle}</div>
+          <div className="rm-card-tools">{rhythmToggle(logCadence, setLogCadence)}</div>
         </div>
         <div className="rn-stats">
           {stats.map((s) => (
@@ -500,13 +502,13 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
         {plan.notStarted ? (
           <p className="rd-full">{plan.notStarted}</p>
         ) : view.metrics.length === 0 ? (
-          <p className="rd-full">No {cadence} metrics in this phase. Add one above.</p>
+          <p className="rd-full">No {logCadence} metrics in this phase. Add one above.</p>
         ) : show === "table" ? (
           <CheckinTable view={view} />
         ) : show === "graph" ? (
-          <Graphs key={cadence} view={long.periods.length ? long : view} cadence={cadence} shortCount={cadence === "daily" ? 7 : cadence === "weekly" ? 5 : 6} />
+          <Graphs key={logCadence} view={long.periods.length ? long : view} cadence={logCadence} shortCount={logCadence === "daily" ? 7 : logCadence === "weekly" ? 5 : 6} />
         ) : (
-          <CheckinFeed view={view} cadence={cadence} onMessage={(label) => setDlg({ kind: "message", label, link: { kind: "checkin", section: cadence } })} />
+          <CheckinFeed view={view} cadence={logCadence} onMessage={(label) => setDlg({ kind: "message", label, link: { kind: "checkin", section: logCadence } })} />
         )}
       </section>
 
