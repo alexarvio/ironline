@@ -1861,70 +1861,35 @@ function CreateExercise({ library, initial, onCreate, onCancel }: { library: Lib
   );
 }
 
-/** Editing an exercise row: replace the exercise (or create your own), and its note.
+/** Editing an exercise row: replace the exercise from the library (search, or
+ *  the chevron to browse group by group, or create your own).
  *  "Replace", not "swap": a swap is the client doing something else for a session. */
-function EditExerciseDialog({ row, current, library, onSave }: { row: DraftRow; current: Edits; library: Library; onSave: (v: { name?: string; note?: string }) => void }) {
+function EditExerciseDialog({ row, current, library, onSave }: { row: DraftRow; current: Edits; library: Library; onSave: (v: { name?: string }) => void }) {
   const [name, setName] = useState(current.name ?? row.name);
-  const [note, setNote] = useState(current.note ?? row.note ?? "");
-  const [q, setQ] = useState("");
-  const [creating, setCreating] = useState(false);
-  const needle = q.trim().toLowerCase();
-  const matches = needle ? library.flatMap((g) => g.exercises.filter((e) => e.name.toLowerCase().includes(needle)).map((e) => ({ id: e.id, name: e.name, group: g.label }))).slice(0, 6) : [];
+  const [replacing, setReplacing] = useState(true);
   return (
     <DialogContent className="rd-dlg">
       <DialogHeader>
         <DialogTitle>Edit {row.name}</DialogTitle>
-        <DialogDescription>Replace the exercise in the programme, or change the note {row.logged.length ? "· what the client logged stays" : ""}.</DialogDescription>
+        <DialogDescription>Replace the exercise in the programme{row.logged.length ? " · what the client logged stays" : ""}.</DialogDescription>
       </DialogHeader>
       <div className="rd-field">
         <span>Exercise</span>
         <span className="rd-about">{name}</span>
       </div>
-      {creating ? (
-        <CreateExercise
-          library={library}
-          initial={q.trim()}
-          onCreate={(n) => {
-            setName(n);
-            setQ("");
-            setCreating(false);
-          }}
-          onCancel={() => setCreating(false)}
-        />
-      ) : (
+      {replacing ? (
         <div className="rd-field">
           <span>Replace with</span>
-          <input className="rd-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search the library" />
-          {needle && (
-            <div className="rd-addrow-list">
-              {matches.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  className="rd-addrow-item"
-                  onClick={() => {
-                    setName(m.name);
-                    setQ("");
-                  }}
-                >
-                  {m.name}
-                  <small>{m.group}</small>
-                </button>
-              ))}
-              <button type="button" className="rd-addrow-item create" onClick={() => setCreating(true)}>
-                <PlusIcon /> Create &ldquo;{q.trim()}&rdquo; as your own exercise
-              </button>
-            </div>
-          )}
+          <AddExerciseRow library={library} onPick={(n) => setName(n)} onClose={() => setReplacing(false)} />
         </div>
+      ) : (
+        <button type="button" className="rd-btn rd-alt-add" onClick={() => setReplacing(true)}>
+          Replace exercise
+        </button>
       )}
-      <label className="rd-field">
-        <span>Note for the client</span>
-        <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="What to watch for" />
-      </label>
       <DialogFooter>
         <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" onClick={() => onSave({ ...(name !== row.name ? { name } : {}), ...(note !== (row.note ?? "") ? { note } : {}) })}>
+        <button type="button" className="rd-btn primary" onClick={() => onSave(name !== row.name ? { name } : {})}>
           Save
         </button>
       </DialogFooter>

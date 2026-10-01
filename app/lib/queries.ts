@@ -726,19 +726,19 @@ export function listMessageLinkTargets(clientId: number): LinkTargets {
  */
 export function describeMessageLink(clientId: number, link: MessageLink): LinkView {
   const data = getData();
-  const view = (area: LinkView["area"], label: string, week: number | null = null, gone = false): LinkView => ({ link, area, label, week, gone });
+  const view = (area: LinkView["area"], label: string, week: number | null = null, gone = false, removed = false): LinkView => ({ link, area, label, week, gone, removed });
   switch (link.kind) {
     case "session":
     case "exercise": {
       const day = data.program_days.find((d) => d.id === link.dayId && d.client_id === clientId);
-      if (!day) return view("Training", link.kind === "exercise" ? "An exercise that has since been removed" : "A session that has since been removed", null, true);
+      if (!day) return view("Training", link.kind === "exercise" ? "An exercise that has since been removed" : "A session that has since been removed", null, true, true);
       const span = linkableWeeks(clientId);
       const open = !!span && span.weeks.includes(day.week_number);
       const weekLabel = span && span.program.start_week <= day.week_number ? programWeekLabel(span.program, day.week_number) : `Week ${day.week_number}`;
       const where = `${sessionTitle(day)}, ${weekLabel}`;
       if (link.kind === "session") return view("Training", where, day.week_number, !open);
       const a = data.workout_assignments.find((w) => w.id === link.assignmentId && w.program_day_id === day.id);
-      if (!a) return view("Training", `An exercise in ${where}, since removed`, day.week_number, true);
+      if (!a) return view("Training", `An exercise in ${where}, since removed`, day.week_number, true, true);
       const name = data.exercises.find((e) => e.id === a.exercise_id)?.name ?? "Exercise";
       return view("Training", `${name} · ${where}`, day.week_number, !open);
     }

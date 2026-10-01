@@ -509,6 +509,12 @@
    (a swap, the client's messages about it, a video they sent) so each kind
    lines up down the table; a demo's play button at the right end of the name. */
 .rd-row-more { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+/* On a narrower screen (a 13" MacBook, 1 Oct) the table scrolls sideways and
+   the ⋯ went out of sight: it stays pinned to the card's right edge, on the
+   row's own colour, with a soft fade where the scrolled columns pass under it. */
+.rd-rows-scroll .rd-row-more { position: sticky; right: 0; z-index: 1; align-self: stretch; padding-left: 6px; background: #fff; box-shadow: -10px 0 8px -6px rgba(255, 255, 255, 0.9); }
+.rd-rows-scroll .rd-row.edited .rd-row-more { background: #f8fafe; box-shadow: -10px 0 8px -6px rgba(248, 250, 254, 0.9); }
+.rd-rows-scroll .rd-row-main:hover:not(.static) .rd-row-more { background: #fafbfd; }
 .rd-flags { display: flex; align-items: center; gap: 2px; }
 .rd-flag-slot { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; }
 .rd-flag-slot .rd-swapdot { margin: 0; padding: 0; min-width: 22px; width: 22px; }

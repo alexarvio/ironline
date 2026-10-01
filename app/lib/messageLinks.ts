@@ -31,6 +31,8 @@ export type LinkView = {
   week: number | null;
   /** It can't be opened any more: the session or exercise was deleted, or the programme it was in has ended. */
   gone: boolean;
+  /** Deleted, so the coach can't open it either (an ended programme the coach still can). */
+  removed?: boolean;
 };
 
 const int = (v: unknown) => (typeof v === "number" && Number.isInteger(v) && v > 0 ? v : null);
