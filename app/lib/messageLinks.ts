@@ -13,7 +13,7 @@ export type MessageLink =
   // A day of the food diary, or one meal on it (FoodEntry.meal's key) when
   // the coach commented on that meal or its picture.
   | { kind: "food"; date: string; meal?: string }
-  | { kind: "checkin"; section: "daily" | "weekly"; period?: string }
+  | { kind: "checkin"; section: "daily" | "weekly" | "monthly"; period?: string }
   | { kind: "photos"; period?: string };
 
 /** What a message the client is about to write is about: the link it will carry, and its name for the chip over the box. */
@@ -61,7 +61,7 @@ export function parseMessageLink(raw: unknown): MessageLink | null {
       return meal ? { kind: "food", date, meal } : { kind: "food", date };
     }
     case "checkin": {
-      if (r.section !== "daily" && r.section !== "weekly") return null;
+      if (r.section !== "daily" && r.section !== "weekly" && r.section !== "monthly") return null;
       const period = day(r.period);
       return period ? { kind: "checkin", section: r.section, period } : { kind: "checkin", section: r.section };
     }

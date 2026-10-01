@@ -14,6 +14,13 @@
 .rm-additem { display: block; width: 100%; margin: 8px 0 10px; padding: 12px; border-radius: 12px; }
 .rm-checkinday { display: inline-flex; align-items: center; gap: 6px; }
 .rm-checkinday b { color: #1e3a6e; }
+/* The metrics card's right side: the check-in day, then Daily / Weekly / Monthly. */
+.rm-card-tools { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin-left: auto; }
+/* How many metrics each rhythm asks for. */
+.rm-cad-count { margin-left: 6px; font-size: 11px; font-weight: 700; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.rd-btn-group .on .rm-cad-count { color: inherit; opacity: 0.7; }
+/* The 1st to the 28th: a short scroll rather than a menu the height of the page. */
+.rm-monthdays { max-height: 280px; overflow-y: auto; }
 
 /* The add row: a taken metric stays in the list, greyed, so the coach sees it is already asked for. */
 .rd-addrow-item.taken { color: #b0b6c0; cursor: default; }

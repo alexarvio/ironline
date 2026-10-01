@@ -34,6 +34,8 @@ export type HomeLifestyleMetric = {
   locked: boolean;
   /** Asked once a week: logged for this week, not today. */
   weekly?: boolean;
+  /** Asked once a month (1 Oct): logged for this month. */
+  monthly?: boolean;
   /** A day other than today: yesterday's question left open, asked once today's are in. */
   date?: string;
 };
@@ -188,7 +190,7 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
         const fd = new FormData();
         fd.set("clientId", String(clientId));
         fd.set("date", m.date ?? today);
-        fd.set("frequency", m.weekly ? "weekly" : "daily");
+        fd.set("frequency", m.monthly ? "monthly" : m.weekly ? "weekly" : "daily");
         fd.set(`metric_${m.id}`, String(value));
         await logMetricPeriodAction(fd);
       } catch {
@@ -404,7 +406,7 @@ function MetricPage({
     <div className="hl-page" role="group" aria-roledescription="slide" aria-label={`${i + 1} of ${total}: ${m.name}`}>
       <div className="hl-row1">
         <span className="hl-name">
-          {m.date ? <small className="hl-when">Yesterday</small> : m.weekly && <small className="hl-when">This week</small>}
+          {m.date ? <small className="hl-when">Yesterday</small> : m.monthly ? <small className="hl-when">This month</small> : m.weekly && <small className="hl-when">This week</small>}
           {m.name}
         </span>
         <span className="hl-dots">

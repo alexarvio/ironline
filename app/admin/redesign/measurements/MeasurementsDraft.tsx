@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { addClientPhaseAction, applyMetricChangesAction, deployPhaseNowAction, saveAndSchedulePhaseAction, sendChatMessageAction, setCheckInDayAction, unschedulePhaseAction, updateClientPhaseAction } from "../../../lib/actions";
+import { addClientPhaseAction, applyMetricChangesAction, deployPhaseNowAction, saveAndSchedulePhaseAction, sendChatMessageAction, setCheckInDayAction, setMonthlyCheckInDayAction, unschedulePhaseAction, updateClientPhaseAction } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
@@ -25,8 +25,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 // draft's sheet. Two things: what the client is asked to log, and what they
 // logged.
 //
-// - Tracked metrics: one row a metric, its group, Daily / Weekly, and the
-//   last figure. Adding, removing and switching cadence queue on the card's
+// - Daily / Weekly / Monthly on the metrics card (1 Oct): each rhythm is its
+//   own screen, with its metrics, its check-ins and its notes. Weekly and
+//   monthly each say (and set) the day their check-in opens.
+// - Tracked metrics: one row a metric, its group, and the last figure.
+//   Adding, removing and moving one to another rhythm queue on the card's
 //   bar until Apply. "+ Add metric" opens the library in place.
 // - Check-ins: the same lookups three ways. A table (one column a metric, a
 //   Change line at the foot), a graph (one metric at a time, 7 or 30 days),
@@ -35,7 +38,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 // Nothing here saves: every action ends in a toast.
 
 type State = "live" | "past" | "scheduled" | "draft";
-type Cadence = "daily" | "weekly";
+type Cadence = "daily" | "weekly" | "monthly";
 export type DraftMetric = { id: number; name: string; unit: string; frequency: Cadence; groupKey: string; groupLabel: string; tint: string; askAt: MetricAskAt; last: { value: number; when: string } | null };
 export type DraftMeasurements = {
   id: number;
@@ -49,6 +52,8 @@ export type DraftMeasurements = {
   startDate: string | null;
   endDate: string | null;
   checkInDay: string | null;
+  /** The day of the month the monthly check-in opens; null: none set up yet. */
+  monthDay: number | null;
   groups: { key: string; label: string; tint: string }[];
   metrics: DraftMetric[];
   library: { id: string; label: string; group: string; items: { name: string; unit: string; already: boolean }[] }[];
@@ -56,8 +61,10 @@ export type DraftMeasurements = {
   weekly: LoggedValues;
   dailyLong: LoggedValues;
   weeklyLong: LoggedValues;
+  monthly: LoggedValues;
+  monthlyLong: LoggedValues;
   notStarted: string | null;
-  notes: { id: number; period: string; kind: "daily" | "weekly" | "measurements"; text: string }[];
+  notes: { id: number; period: string; kind: "daily" | "weekly" | "monthly" | "measurements"; text: string }[];
 };
 
 const savedToast = (what: string) => toast.success("Saved", { description: what });
@@ -92,8 +99,17 @@ const tailOf = (unit: string) => {
 };
 const withUnit = (v: number, unit: string) => `${n(v)}${tailOf(unit)}`;
 const fmtDay = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+const fmtMonth = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-const KIND_LABEL = { daily: "Daily check-in", weekly: "Weekly check-in", measurements: "Measurements" } as const;
+const KIND_LABEL = { daily: "Daily check-in", weekly: "Weekly check-in", monthly: "Monthly check-in", measurements: "Measurements" } as const;
+// Each rhythm in words: the toggle, the card, the stats.
+const CAD = {
+  daily: { label: "Daily", unit: "days", recent: "in the last 8 days" },
+  weekly: { label: "Weekly", unit: "weeks", recent: "in the last 5 weeks" },
+  monthly: { label: "Monthly", unit: "months", recent: "in the last 6 months" },
+} as const;
+const CADENCES = ["daily", "weekly", "monthly"] as const;
+const ordinal = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? "st" : n % 10 === 2 && n !== 12 ? "nd" : n % 10 === 3 && n !== 13 ? "rd" : "th"}`;
 
 type Dlg = { kind: "message"; label: string; link: MessageLink } | { kind: "dates" } | { kind: "newPhase" } | { kind: "deploy" } | { kind: "backToDraft" } | null;
 
@@ -103,6 +119,9 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   const [rows, setRows] = useState(plan.metrics);
   const [adding, setAdding] = useState(false);
   const [checkInDay, setCheckInDay] = useState(plan.checkInDay ?? "Monday");
+  const [monthDay, setMonthDay] = useState(plan.monthDay);
+  // The rhythm on screen: the header's Daily / Weekly / Monthly.
+  const [cadence, setCadence] = useState<Cadence>("daily");
   const router = useRouter();
   const [, startTransition] = useTransition();
   // Every save goes to the server, then the page re-reads; what is on screen follows.
@@ -115,13 +134,14 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   // Reset only when what is saved actually changed: every re-read of the
   // page (a save on another card) hands in new objects with the same values,
   // and resetting on those wiped edits not yet applied.
-  const planKey = JSON.stringify([plan.id, plan.metrics, plan.checkInDay]);
+  const planKey = JSON.stringify([plan.id, plan.metrics, plan.checkInDay, plan.monthDay]);
   const [seenPlan, setSeenPlan] = useState(planKey);
   if (seenPlan !== planKey) {
     setSeenPlan(planKey);
     setSaved(plan.metrics);
     setRows(plan.metrics);
     setCheckInDay(plan.checkInDay ?? "Monday");
+    setMonthDay(plan.monthDay);
   }
   const phaseId = plan.id > 0 ? plan.id : null;
   const inLibrary = (name: string) => plan.library.some((p) => p.items.some((i) => i.name.toLowerCase() === name.toLowerCase()));
@@ -143,29 +163,49 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   const addMetric = (name: string, unit: string, groupKey: string) => {
     if (rows.some((r) => r.name.toLowerCase() === name.toLowerCase())) return;
     const g = plan.groups.find((x) => x.key === groupKey) ?? plan.groups.find((x) => x.key === "other") ?? { key: groupKey, label: "Other", tint: "#dfe6ef" };
-    setRows((prev) => [...prev, { id: -(Date.now() + prev.length), name, unit, frequency: "daily", groupKey: g.key, groupLabel: g.label, tint: g.tint, askAt: defaultAskAt(name), last: null }]);
+    setRows((prev) => [...prev, { id: -(Date.now() + prev.length), name, unit, frequency: cadence, groupKey: g.key, groupLabel: g.label, tint: g.tint, askAt: defaultAskAt(name), last: null }]);
   };
-  const dailyCount = rows.filter((r) => r.frequency === "daily").length;
+  // The rows of the rhythm on screen; a drag reorders them among themselves.
+  const shown = rows.filter((r) => r.frequency === cadence);
+  const moveShown = (ids: (number | string)[]) =>
+    setRows((prev) => {
+      const queue = ids.map((id) => prev.find((r) => r.id === id)!).filter(Boolean);
+      return prev.map((r) => (r.frequency === cadence ? queue.shift() ?? r : r));
+    });
+  const countOf = (c: Cadence) => rows.filter((r) => r.frequency === c).length;
+  // Daily / Weekly / Monthly, on both the metrics card and the check-ins
+  // card: one choice, so the two always show the same rhythm.
+  const rhythmToggle = (
+    <div className="rd-btn-group" role="group" aria-label="Rhythm">
+      {CADENCES.map((c) => (
+        <button key={c} type="button" className={cadence === c ? "on" : ""} aria-pressed={cadence === c} onClick={() => setCadence(c)}>
+          {CAD[c].label}
+          {countOf(c) > 0 && <small className="rm-cad-count">{countOf(c)}</small>}
+        </button>
+      ))}
+    </div>
+  );
 
-  // ---- Check-ins: which way, and which rhythm.
+  // ---- Check-ins: which way; the rhythm is the header's.
   const [show, setShow] = useState<"table" | "graph" | "feed">("table");
-  const [cadence, setCadence] = useState<Cadence>("daily");
-  const view = cadence === "daily" ? plan.daily : plan.weekly;
-  const long = cadence === "daily" ? plan.dailyLong : plan.weeklyLong;
+  const view = plan[cadence];
+  const long = cadence === "daily" ? plan.dailyLong : cadence === "weekly" ? plan.weeklyLong : plan.monthlyLong;
   const done = (v: LoggedValues) => (v.metrics.length === 0 ? 0 : v.periods.filter((p) => v.metrics.some((m) => v.values[`${m.id}:${p.key}`] != null)).length);
   const asked = (v: LoggedValues) => (v.metrics.length === 0 ? 0 : v.periods.length);
+  // The client's notes on this rhythm's check-ins (measurements' with the daily ones).
+  const notes = plan.notes.filter((n) => n.kind === cadence || (cadence === "daily" && n.kind === "measurements"));
   const stats = [
-    { label: "Daily check-ins", value: asked(plan.daily) ? `${done(plan.daily)} of ${asked(plan.daily)}` : "–", unit: "in the last 8 days", warn: asked(plan.daily) > 0 && done(plan.daily) < asked(plan.daily) * 0.6 },
-    { label: "Weekly check-ins", value: asked(plan.weekly) ? `${done(plan.weekly)} of ${asked(plan.weekly)}` : "–", unit: "in the last 5 weeks", warn: asked(plan.weekly) > 0 && done(plan.weekly) < asked(plan.weekly) * 0.6 },
-    { label: "Metrics tracked", value: String(rows.length), unit: `${dailyCount} daily · ${rows.length - dailyCount} weekly` },
-    { label: "Notes", value: String(plan.notes.length), unit: plan.notes.length === 1 ? "from the client" : "from the client, newest first" },
+    { label: `${CAD[cadence].label} check-ins`, value: asked(view) ? `${done(view)} of ${asked(view)}` : "–", unit: CAD[cadence].recent, warn: asked(view) > 0 && done(view) < asked(view) * 0.6 },
+    { label: "Metrics tracked", value: String(shown.length), unit: `${cadence} · ${rows.length} in all` },
+    { label: "Notes", value: String(notes.length), unit: notes.length === 1 ? "from the client" : "from the client, newest first" },
   ];
 
   const [dlg, setDlg] = useState<Dlg>(null);
   const close = () => setDlg(null);
   const today = new Date().toISOString().slice(0, 10);
   const startHasCome = !!plan.startDate && plan.startDate <= today;
-  const mGrid = { gridTemplateColumns: "20px minmax(200px, 1.4fr) 150px 150px 130px minmax(160px, 1fr) 32px", columnGap: 24 } as const;
+  // "Asked" (when in the day) only means something for a daily metric.
+  const mGrid = { gridTemplateColumns: cadence === "daily" ? "20px minmax(200px, 1.4fr) 150px 130px minmax(160px, 1fr) 32px" : "20px minmax(200px, 1.4fr) 150px minmax(160px, 1fr) 32px", columnGap: 24 } as const;
   // No grip column here: the date starts where the title does.
   const nGrid = { gridTemplateColumns: "130px 150px minmax(240px, 1fr) 32px", columnGap: 24 } as const;
 
@@ -242,43 +282,72 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
       <section className="rd-session open rn-card">
         <div className="rn-card-head">
           <h2>Tracked metrics</h2>
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger className="rd-btn rm-checkinday" aria-label="Which day the weekly check-in opens">
-              <CalendarIcon /> Weekly check-in opens <b>{checkInDay}</b>
-              <ChevronDownIcon />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="pb-menu">
-              {DAYS.map((d) => (
-                <DropdownMenuItem
-                  key={d}
-                  onSelect={() => {
-                    setCheckInDay(d);
-                    const f = new FormData();
-                    f.set("clientId", String(clientId));
-                    f.set("check_in_day", d);
-                    act(() => setCheckInDayAction(f), `Weekly check-in opens on ${d}`);
-                  }}
-                >
-                  {d}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* On the right: the day this phase's weekly or monthly check-in
+              opens, then which rhythm is on screen (its metrics here, its
+              check-ins and notes below). */}
+          <div className="rm-card-tools">
+          {cadence === "weekly" && (
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger className="rd-btn rm-checkinday" aria-label="Which day the weekly check-in opens">
+                <CalendarIcon /> Weekly check-in opens <b>{checkInDay}</b>
+                <ChevronDownIcon />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="pb-menu">
+                {DAYS.map((d) => (
+                  <DropdownMenuItem
+                    key={d}
+                    onSelect={() => {
+                      setCheckInDay(d);
+                      const f = new FormData();
+                      f.set("clientId", String(clientId));
+                      f.set("check_in_day", d);
+                      if (phaseId) f.set("phaseId", String(phaseId));
+                      act(() => setCheckInDayAction(f), `Weekly check-in opens on ${d}`);
+                    }}
+                  >
+                    {d}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {cadence === "monthly" && (
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger className="rd-btn rm-checkinday" aria-label="Which day of the month the monthly check-in opens">
+                <CalendarIcon /> {monthDay ? <>Monthly check-in opens on the <b>{ordinal(monthDay)}</b></> : <>Monthly check-in opens on the <b>1st</b> once you add one</>}
+                <ChevronDownIcon />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="pb-menu rm-monthdays">
+                {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                  <DropdownMenuItem
+                    key={d}
+                    onSelect={() => {
+                      setMonthDay(d);
+                      act(() => setMonthlyCheckInDayAction(clientId, phaseId, d), `Monthly check-in opens on the ${ordinal(d)}`);
+                    }}
+                  >
+                    {ordinal(d)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {rhythmToggle}
+          </div>
         </div>
         <div className="rd-rows">
-          {rows.length > 0 && (
+          {shown.length > 0 && (
             <div className="rd-cols" aria-hidden="true" style={mGrid}>
               <span />
               <span>Metric</span>
               <span>Group</span>
-              <span>Logged</span>
-              <span>Asked</span>
+              {cadence === "daily" && <span>Asked</span>}
               <span>Last</span>
               <span />
             </div>
           )}
-          <SortableList ids={rows.map((m) => m.id)} label="metric" onMove={(ids) => setRows((prev) => ids.map((id) => prev.find((r) => r.id === id)!).filter(Boolean))}>
-          {rows.map((m) => {
+          <SortableList ids={shown.map((m) => m.id)} label="metric" onMove={moveShown}>
+          {shown.map((m) => {
             const was = saved.find((s) => s.id === m.id);
             return (
               <SortableItem key={m.id} id={m.id} className={`rd-row${isNew(m.id) ? " new" : ""}`}>
@@ -292,33 +361,28 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                       {m.name}
                       {m.unit && <small style={{ marginLeft: 6 }}>{m.unit}</small>}
                     </span>
-                    {isNew(m.id) && <small>New · not applied yet</small>}
+                    {isNew(m.id) ? <small>New · not applied yet</small> : was && was.frequency !== m.frequency && <small>Moved from {was.frequency} · not applied yet</small>}
                   </span>
                   <span>
                     <span className="rm-group" style={{ background: m.tint }}>
                       {m.groupLabel}
                     </span>
                   </span>
-                  <span className="rm-cadence" role="group" aria-label={`How often ${m.name} is logged`}>
-                    {(["daily", "weekly"] as const).map((o) => (
-                      <button key={o} type="button" className={`${m.frequency === o ? "on" : ""}${m.frequency === o && was && was.frequency !== o ? " changed" : ""}`} aria-pressed={m.frequency === o} onClick={() => setRows((prev) => prev.map((r) => (r.id === m.id ? { ...r, frequency: o } : r)))}>
-                        {o === "daily" ? "Daily" : "Weekly"}
-                      </button>
-                    ))}
-                  </span>
                   {/* When in the day the client's Home asks for it. */}
-                  <Select value={m.askAt} onValueChange={(v) => setRows((prev) => prev.map((r) => (r.id === m.id ? { ...r, askAt: v as MetricAskAt } : r)))}>
-                    <SelectTrigger className={`rm-askat${was && was.askAt !== m.askAt ? " changed" : ""}`} aria-label={`When ${m.name} is asked for`}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ASK_AT.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>
-                          {a.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {cadence === "daily" && (
+                    <Select value={m.askAt} onValueChange={(v) => setRows((prev) => prev.map((r) => (r.id === m.id ? { ...r, askAt: v as MetricAskAt } : r)))}>
+                      <SelectTrigger className={`rm-askat${was && was.askAt !== m.askAt ? " changed" : ""}`} aria-label={`When ${m.name} is asked for`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ASK_AT.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                   {m.last ? (
                     <span className="rm-last">
                       {withUnit(m.last.value, m.unit)}
@@ -336,6 +400,12 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                         <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: m.name, link: { kind: "checkin", section: m.frequency } })}>
                           <ChatIcon /> Message about {m.name}
                         </DropdownMenuItem>
+                        {/* To another rhythm: it leaves this screen for that one, applied with the rest. */}
+                        {CADENCES.filter((c) => c !== m.frequency).map((c) => (
+                          <DropdownMenuItem key={c} onSelect={() => setRows((prev) => prev.map((r) => (r.id === m.id ? { ...r, frequency: c } : r)))}>
+                            <CalendarIcon /> Ask for it {c === "daily" ? "daily" : c === "weekly" ? "weekly" : "monthly"} instead
+                          </DropdownMenuItem>
+                        ))}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem variant="destructive" onSelect={() => setRows((prev) => prev.filter((r) => r.id !== m.id))}>
                           <TrashIcon /> {isNew(m.id) ? "Don't add it" : "Stop asking for it"}
@@ -402,7 +472,10 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
       {/* ---- Check-ins: what the client logged, three ways. */}
       <section className="rd-session open rn-card">
         <div className="rn-card-head">
-          <h2>{firstName}&rsquo;s check-ins</h2>
+          <h2>
+            {firstName}&rsquo;s {cadence} check-ins
+          </h2>
+          <div className="rm-card-tools">{rhythmToggle}</div>
         </div>
         <div className="rn-stats">
           {stats.map((s) => (
@@ -423,15 +496,6 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
               ))}
             </div>
           </div>
-          <div className="rm-controls-right">
-            <div className="rd-btn-group" role="group" aria-label="Rhythm">
-              {(["daily", "weekly"] as const).map((c) => (
-                <button key={c} type="button" className={cadence === c ? "on" : ""} aria-pressed={cadence === c} onClick={() => setCadence(c)}>
-                  {c === "daily" ? "Daily" : "Weekly"}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
         {plan.notStarted ? (
           <p className="rd-full">{plan.notStarted}</p>
@@ -440,14 +504,14 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
         ) : show === "table" ? (
           <CheckinTable view={view} />
         ) : show === "graph" ? (
-          <Graphs key={cadence} view={long.periods.length ? long : view} cadence={cadence} shortCount={cadence === "daily" ? 7 : 5} />
+          <Graphs key={cadence} view={long.periods.length ? long : view} cadence={cadence} shortCount={cadence === "daily" ? 7 : cadence === "weekly" ? 5 : 6} />
         ) : (
           <CheckinFeed view={view} cadence={cadence} onMessage={(label) => setDlg({ kind: "message", label, link: { kind: "checkin", section: cadence } })} />
         )}
       </section>
 
       {/* ---- Notes from the client, newest first. */}
-      {plan.notes.length > 0 && (
+      {notes.length > 0 && (
         <section className="rd-session open rn-card">
           <div className="rn-card-head">
             <h2>Notes from {firstName}</h2>
@@ -459,18 +523,18 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
               <span>Note</span>
               <span />
             </div>
-            {plan.notes.map((note) => (
+            {notes.map((note) => (
               <div key={note.id} className="rd-row">
                 <div className="rd-row-main static" style={nGrid}>
                   <span className="rd-ex">
-                    <span className="rd-ex-name">{fmtDay(note.period)}</span>
+                    <span className="rd-ex-name">{note.kind === "monthly" ? fmtMonth(note.period) : fmtDay(note.period)}</span>
                   </span>
                   <span>
                     <span className={`rd-pill${note.kind === "daily" ? " quiet" : ""}`}>{KIND_LABEL[note.kind]}</span>
                   </span>
                   <span className="rm-note-text">{note.text}</span>
                   <span className="rd-row-more">
-                    <button type="button" className="rd-btn ghost sm" title="Reply" aria-label={`Reply to ${firstName}'s note of ${fmtDay(note.period)}`} onClick={() => setDlg({ kind: "message", label: `${KIND_LABEL[note.kind]} · ${fmtDay(note.period)}`, link: { kind: "checkin", section: note.kind === "weekly" ? "weekly" : "daily" } })}>
+                    <button type="button" className="rd-btn ghost sm" title="Reply" aria-label={`Reply to ${firstName}'s note of ${fmtDay(note.period)}`} onClick={() => setDlg({ kind: "message", label: `${KIND_LABEL[note.kind]} · ${note.kind === "monthly" ? fmtMonth(note.period) : fmtDay(note.period)}`, link: { kind: "checkin", section: note.kind === "measurements" ? "daily" : note.kind } })}>
                       <ChatIcon />
                     </button>
                   </span>
@@ -719,7 +783,7 @@ function AddMetricRow({ library, groups, have, onAdd, onClose }: { library: Draf
           )}
         </div>
       )}
-      <p className="rd-addrow-hint">Everything is added daily; switch it to weekly on its row. Nothing reaches the check-in until Apply.</p>
+      <p className="rd-addrow-hint">Added on the rhythm on screen; its ⋯ moves it to another. Nothing reaches the check-in until Apply.</p>
     </div>
   );
 }
@@ -830,7 +894,7 @@ function CheckinFeed({ view, cadence, onMessage }: { view: LoggedValues; cadence
         const isOpen = open === p.key;
         const state = filled.length === 0 ? { text: "Missed", cls: "down" } : missing === 0 ? { text: "Complete", cls: "up" } : { text: `${missing} missing`, cls: "" };
         const note = view.notes[p.key];
-        const label = `${cadence === "daily" ? "Daily" : "Weekly"} check-in · ${p.label}`;
+        const label = `${CAD[cadence].label} check-in · ${p.label}`;
         return (
           <div key={p.key} className={`rd-row rn-day${isOpen ? " open" : ""}`}>
             <div className="rd-row-main" style={grid} onClick={() => setOpen((x) => (x === p.key ? null : p.key))} role="button" tabIndex={0} aria-expanded={isOpen} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setOpen((x) => (x === p.key ? null : p.key)))}>
@@ -841,7 +905,7 @@ function CheckinFeed({ view, cadence, onMessage }: { view: LoggedValues; cadence
                 <span className="rd-ex-name">{p.label}</span>
               </span>
               <span>
-                <span className={`rd-pill${cadence === "daily" ? " quiet" : ""}`}>{cadence === "daily" ? "Daily" : "Weekly"}</span>
+                <span className={`rd-pill${cadence === "daily" ? " quiet" : ""}`}>{CAD[cadence].label}</span>
               </span>
               <span className="rm-summary">
                 {filled
@@ -945,7 +1009,7 @@ function Graphs({ view, cadence, shortCount }: { view: LoggedValues; cadence: Ca
             <div className="rd-btn-group" role="group" aria-label="Range">
               {(["short", "long"] as const).map((r) => (
                 <button key={r} type="button" className={range === r ? "on" : ""} onClick={() => setRange(r)} aria-pressed={range === r}>
-                  {r === "short" ? shortCount : view.periods.length} {cadence === "daily" ? "days" : "weeks"}
+                  {r === "short" ? shortCount : view.periods.length} {CAD[cadence].unit}
                 </button>
               ))}
             </div>

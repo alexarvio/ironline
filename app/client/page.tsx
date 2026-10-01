@@ -60,6 +60,7 @@ import {
   listClientPhases,
   weekStart,
   weeklyCheckInOpen,
+  monthlyCheckInOpen,
   getPhotoCadence,
   getPhotoInstructions,
   getPhotoPeriodNote,
@@ -150,6 +151,9 @@ const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 // could read another client's entire app by editing the URL. A coach can
 // still preview a specific client via ?client=, because requireClientAccess
 // grants coaches access to anyone; for a client the parameter is ignored.
+// PreviewBar's cookie (a client module's constant reads as a reference here, not the string).
+const PREVIEW_COOKIE = "ironline_preview";
+
 async function resolveClientId(raw: string | undefined): Promise<number | null> {
   const user = await getSessionUser();
   if (!user) redirect("/login");
@@ -157,9 +161,14 @@ async function resolveClientId(raw: string | undefined): Promise<number | null> 
 
   // A coach may preview their own clients' apps, so ?client= still works for
   // them, but only for a client of theirs.
+  // Without one, the client they last switched to (PreviewBar's cookie),
+  // else their first by name.
   if (user.role === "coach") {
+    const mine = (id: number | null) => id != null && getClient(id)?.coach_id === user.id;
     const asked = raw ? Number(raw) : null;
-    return asked && getClient(asked)?.coach_id === user.id ? asked : listClients(user.id)[0]?.id ?? null;
+    if (mine(asked)) return asked;
+    const last = Number((await cookies()).get(PREVIEW_COOKIE)?.value) || null;
+    return mine(last) ? last : listClients(user.id)[0]?.id ?? null;
   }
 
   // A client gets their own id and nothing else — the parameter is ignored.
@@ -295,7 +304,8 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
   ensureDefaultMetrics(CLIENT_ID);
   const sections = getCheckInSections(CLIENT_ID);
   const weeklyOpen = weeklyCheckInOpen(CLIENT_ID);
-  const onScreen = sections.sections.filter((s) => s.id === "daily" || weeklyOpen).flatMap((s) => s.metrics);
+  const monthlyOpen = monthlyCheckInOpen(CLIENT_ID);
+  const onScreen = sections.sections.filter((s) => s.id === "daily" || (s.id === "monthly" ? monthlyOpen : weeklyOpen)).flatMap((s) => s.metrics);
   const checkInCount = { done: onScreen.filter((m) => m.value !== "").length, total: onScreen.length };
 
   const dateLabel = new Date(`${today}T00:00:00`).toLocaleDateString("en-US", {
@@ -378,6 +388,8 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
         metrics: [
           ...(sections.sections.find((s) => s.id === "daily")?.metrics ?? []).map(homeMetric),
           ...(sections.sections.find((s) => s.id === "weekly")?.metrics ?? []).map((m) => ({ ...homeMetric(m), weekly: true })),
+          // And this month's, once its day has come.
+          ...(monthlyOpen ? sections.sections.find((s) => s.id === "monthly")?.metrics ?? [] : []).map((m) => ({ ...homeMetric(m), monthly: true })),
         ],
         // Yesterday's questions left open: asked once today's are in.
         yesterday: (() => {
@@ -1253,7 +1265,13 @@ export default async function ClientPage({
   const initialTab = jar.get("ironline_tab")?.value ?? null;
   // Only the client themselves sees their private "My notes", never a coach
   // previewing the app.
-  const viewerIsClient = (await getSessionUser())?.role === "client";
+  const viewer = await getSessionUser();
+  const viewerIsClient = viewer?.role === "client";
+  // A coach sees whose app this is, and can switch to another of theirs.
+  const preview =
+    viewer?.role === "coach" && CLIENT_ID != null
+      ? { current: { id: CLIENT_ID, name: getClient(CLIENT_ID)?.name ?? "" }, clients: listClients(viewer.id).map((c) => ({ id: c.id, name: c.name })) }
+      : null;
   if (CLIENT_ID == null) {
     return (
       <div className="phone-frame">
@@ -1302,6 +1320,7 @@ export default async function ClientPage({
     sections: checkInData.sections,
     dueSections: checkInStatusForScreen.dueTypes as string[],
     weeklyOpen: weeklyCheckInOpen(CLIENT_ID),
+    monthlyOpen: monthlyCheckInOpen(CLIENT_ID),
     objectives: getCurrentPhase(CLIENT_ID, "lifestyle")?.objectives ?? [],
     history: getCheckInHistory(CLIENT_ID),
     // The hub's streak and month, and everything done, day by day, for its calendar (28 Sep).
@@ -1467,6 +1486,7 @@ export default async function ClientPage({
       notificationsContent={<NotificationsPanel CLIENT_ID={CLIENT_ID} />}
       hasUnreadNotifications={hasUnreadNotifications}
       clientId={CLIENT_ID}
+      preview={preview}
       checkIn={checkIn}
       photos={progressPictures}
       coachMessages={{ coachName: getCoachDisplayName(CLIENT_ID), messages: coachMessagesFor(CLIENT_ID), viewerIsClient }}

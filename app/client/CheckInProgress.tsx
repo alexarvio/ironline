@@ -18,7 +18,7 @@ export type CheckInSeries = {
   name: string;
   unit: string;
   scaleMax: number | null;
-  cadence: "daily" | "weekly" | "measurement";
+  cadence: "daily" | "weekly" | "monthly" | "measurement";
   /** The admin group the metric belongs to (its label), and that group's colour for the chart. */
   category: string;
   colour: string;

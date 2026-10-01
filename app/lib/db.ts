@@ -374,7 +374,7 @@ export type ClientProgramNote = {
 export type CheckInNote = {
   id: number;
   client_id: number;
-  kind: "daily" | "weekly" | "measurements";
+  kind: "daily" | "weekly" | "monthly" | "measurements";
   period: string;
   text: string;
   created_at: string;
@@ -444,6 +444,12 @@ export type ClientPhase = {
   // (Training; a nutrition phase keeps its note in nutrition.coach_notes).
   client_note?: string;
   client_note_at?: string;
+  // A lifestyle phase's own check-in days (1 Oct), so one phase's never
+  // carries into the next: the weekday the weekly check-in opens, and the
+  // day of the month (1 to 28) the monthly one does. null: none set for
+  // this phase. Absent (phases from before): the client's profile days.
+  check_in_day?: string | null;
+  monthly_check_in_day?: number | null;
 };
 type WorkoutAssignment = {
   id: number;
@@ -784,6 +790,9 @@ type ClientProfile = {
   // When the coach last saved main_goal on the Plan tab.
   main_goal_saved_at?: string | null;
   check_in_day: string | null;
+  // The day of the month (1 to 28) the monthly check-in opens. Absent: no
+  // monthly check-in, whatever monthly metrics exist (1 Oct).
+  monthly_check_in_day?: number | null;
   steps_goal: string;
   cardio_goal: string;
   training_goal: string;

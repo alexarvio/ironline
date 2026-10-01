@@ -4399,6 +4399,86 @@ a.cd-entry:hover { border-color: var(--accent); }
   }
 }
 
+/* ---- A coach previewing a client's app (1 Oct): whose app it is, and a
+   switch to another client. Above the phone on a wide screen; a thin strip
+   over the full-screen app on a small one. ---- */
+.phone-frame.previewing {
+  flex-direction: column;
+  gap: 14px;
+}
+.phone-frame.previewing .app-screen {
+  height: min(852px, calc((100vw - 24px) * 852 / 393), calc(100vh - 136px));
+}
+.preview-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 6px 6px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #e9ebf0;
+  font-size: 13px;
+  line-height: 1;
+}
+.preview-bar-text b {
+  font-weight: 700;
+  color: #fff;
+}
+.preview-bar-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #f0a35b;
+  flex: none;
+}
+.preview-bar-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.preview-bar-switch > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+.preview-bar-switch select {
+  height: 30px;
+  padding: 0 30px 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23313851' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 11px center;
+  appearance: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #141a24;
+  cursor: pointer;
+}
+@media (max-width: 480px), (max-height: 760px) {
+  .phone-frame.previewing {
+    gap: 0;
+  }
+  .phone-frame.previewing .app-screen {
+    height: calc(100dvh - 40px);
+  }
+  .preview-bar {
+    width: 100%;
+    height: 40px;
+    flex: none;
+    justify-content: center;
+    border-radius: 0;
+    padding: 0 8px;
+    background: #2b2d24;
+    font-size: 12.5px;
+  }
+  .preview-bar-switch select {
+    height: 28px;
+    font-size: 12.5px;
+  }
+}
+
 /* ---- Exercise picker: category-first "Add exercise" popover ---- */
 
 .exercise-picker {

@@ -207,6 +207,10 @@ import {
   updateTrainingColumn,
   VITAMIN_ITEMS,
   weekStart,
+  monthStart,
+  phaseCheckInDays,
+  setPhaseCheckInDays,
+  isRunningLifestylePhase,
   checkInEditable,
   getMetricEntries,
   getClientIdForAssignment,
@@ -928,9 +932,9 @@ export async function addMetricsFromLibraryAction(formData: FormData) {
 export async function applyMetricChangesAction(input: {
   clientId: number;
   phaseId: number | null;
-  adds: { name: string; unit: string; group: string; cadence: "daily" | "weekly"; source: "library" | "custom"; askAt?: MetricAskAt }[];
+  adds: { name: string; unit: string; group: string; cadence: "daily" | "weekly" | "monthly"; source: "library" | "custom"; askAt?: MetricAskAt }[];
   removes: number[];
-  cadence: { id: number; value: "daily" | "weekly" }[];
+  cadence: { id: number; value: "daily" | "weekly" | "monthly" }[];
   /** When in the day each changed metric is asked for. */
   askAt?: { id: number; value: MetricAskAt }[];
   /** The metrics on screen in the order the coach dragged them into, when they did. */
@@ -947,7 +951,7 @@ export async function applyMetricChangesAction(input: {
   const removedNames = (Array.isArray(input.removes) ? input.removes : []).filter(mine).map(metricName);
   for (const id of Array.isArray(input.removes) ? input.removes : []) if (mine(id)) removeMetricDefinition(id);
   for (const c of Array.isArray(input.cadence) ? input.cadence : []) {
-    if (mine(c.id) && (c.value === "daily" || c.value === "weekly")) {
+    if (mine(c.id) && (c.value === "daily" || c.value === "weekly" || c.value === "monthly")) {
       setMetricCadence(c.id, c.value);
       said.push(`${metricName(c.id)} now ${c.value}`);
     }
@@ -961,8 +965,11 @@ export async function applyMetricChangesAction(input: {
   }
   if (Array.isArray(input.order) && input.order.length && input.order.every(mine)) setMetricOrder(clientId, input.order);
   const adds = (Array.isArray(input.adds) ? input.adds : [])
-    .map((a) => ({ name: String(a.name ?? "").trim().slice(0, 60), unit: String(a.unit ?? "").trim().slice(0, 20), group: String(a.group ?? "other"), cadence: a.cadence === "weekly" ? ("weekly" as const) : ("daily" as const), source: a.source }))
+    .map((a) => ({ name: String(a.name ?? "").trim().slice(0, 60), unit: String(a.unit ?? "").trim().slice(0, 20), group: String(a.group ?? "other"), cadence: a.cadence === "weekly" ? ("weekly" as const) : a.cadence === "monthly" ? ("monthly" as const) : ("daily" as const), source: a.source }))
     .filter((a) => a.name);
+  // A monthly metric added or moved in, and no monthly check-in yet: it opens on the 1st.
+  const toMonthly = adds.some((a) => a.cadence === "monthly") || (Array.isArray(input.cadence) ? input.cadence : []).some((c) => mine(c.id) && c.value === "monthly");
+  if (toMonthly && phaseCheckInDays(clientId, phaseId).monthly == null) setPhaseCheckInDays(clientId, phaseId, { monthly: 1 });
   const library = adds.filter((a) => a.source === "library");
   if (library.length) addMetricsFromLibraryPhased(clientId, library.map(({ name, unit, group, cadence }) => ({ name, unit, group, cadence })), phaseId);
   for (const a of adds.filter((x) => x.source !== "library")) addMetricDefinition(clientId, a.group, a.name, a.unit, a.cadence, phaseId);
@@ -1105,6 +1112,7 @@ async function checkInLocked(date: string, frequency: string) {
   if ((await getSessionUser())?.role !== "client") return false;
   const today = localDateStr();
   if (frequency === "weekly" && /^\d{4}-\d{2}-\d{2}$/.test(date) && weekStart(date) === weekStart(today)) return false;
+  if (frequency === "monthly" && /^\d{4}-\d{2}-\d{2}$/.test(date) && monthStart(date) === monthStart(today)) return false;
   return !checkInEditable(date, today);
 }
 
@@ -1115,13 +1123,13 @@ export async function logMetricPeriodAction(formData: FormData) {
   const dateRaw = String(formData.get("date") || "");
   if (!dateRaw) return;
   if (await checkInLocked(dateRaw, frequency)) return;
-  const period = frequency === "weekly" ? weekStart(dateRaw) : dateRaw;
+  const period = frequency === "weekly" ? weekStart(dateRaw) : frequency === "monthly" ? monthStart(dateRaw) : dateRaw;
 
   const definitions = listMetricDefinitions(clientId, frequency);
   const loggedAt = new Date().toISOString();
-  // A weekly reading changed from a past day in the feed keeps its stamp:
-  // the feed files it under the day it was sent.
-  const pastWeekly = frequency === "weekly" && dateRaw < localDateStr();
+  // A weekly (or monthly) reading changed from a past day in the feed keeps
+  // its stamp: the feed files it under the day it was sent.
+  const pastWeekly = frequency !== "daily" && dateRaw < localDateStr();
   const entries = pastWeekly ? getMetricEntries(definitions.map((d) => d.id)) : [];
   definitions.forEach((def) => {
     const raw = formData.get(`metric_${def.id}`);
@@ -1138,7 +1146,7 @@ export async function logMetricPeriodAction(formData: FormData) {
     const stamp = entries.find((e) => e.metric_definition_id === def.id && e.period === period)?.logged_at ?? loggedAt;
     setMetricEntry(def.id, period, Number.isFinite(value) ? value : null, stamp);
   });
-  if (formData.has("note") && (frequency === "daily" || frequency === "weekly")) {
+  if (formData.has("note") && (frequency === "daily" || frequency === "weekly" || frequency === "monthly")) {
     setCheckInNote(clientId, frequency, period, String(formData.get("note") ?? "").slice(0, 500));
   }
 
@@ -1577,16 +1585,33 @@ export async function saveNutritionPlanAction(formData: FormData) {
 }
 
 // One-field save from the Measurements tab: the weekday the weekly check-in
-// opens. Same profile column the full card edit writes, so no second source.
+// opens, for the lifestyle phase on screen (its own since 1 Oct; with no
+// phase, the profile column the full card edit writes). The client hears of
+// it only when it is the phase they are in.
 export async function setCheckInDayAction(formData: FormData) {
   const clientId = Number(formData.get("clientId"));
   const day = String(formData.get("check_in_day") ?? "").trim();
+  const phaseId = formData.get("phaseId") ? Number(formData.get("phaseId")) : null;
   if (!(await coachForClient(clientId))) return;
-  saveClientProfile({ ...getClientProfile(clientId), check_in_day: day || null });
-  noteChange(clientId, `Moved your weekly check-in day: ${day ? `Now ${day}` : "No set day now"}`, { tab: "home", label: "See your tasks", key: "checkin-day", detail: day ? `Now ${day}` : "No set day now" });
+  setPhaseCheckInDays(clientId, phaseId, { weekly: day || null });
+  if (isRunningLifestylePhase(clientId, phaseId)) noteChange(clientId, `Moved your weekly check-in day: ${day ? `Now ${day}` : "No set day now"}`, { tab: "home", label: "See your tasks", key: "checkin-day", detail: day ? `Now ${day}` : "No set day now" });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
+
+// The day of the month the monthly check-in opens (1 to 28), from the
+// Measurements tab's Monthly view (1 Oct), for the phase on screen.
+export async function setMonthlyCheckInDayAction(clientId: number, phaseId: number | null, day: number) {
+  if (!(await coachForClient(clientId))) return;
+  if (!Number.isInteger(day) || day < 1 || day > 28) return;
+  setPhaseCheckInDays(clientId, phaseId, { monthly: day });
+  const said = `Now on the ${ordinal(day)} of each month`;
+  if (isRunningLifestylePhase(clientId, phaseId)) noteChange(clientId, `Moved your monthly check-in day: ${said}`, { tab: "home", label: "See your tasks", key: "checkin-month-day", detail: said });
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+const ordinal = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? "st" : n % 10 === 2 && n !== 12 ? "nd" : n % 10 === 3 && n !== 13 ? "rd" : "th"}`;
 
 export async function saveClientProfileAction(formData: FormData) {
   const clientId = Number(formData.get("clientId"));
@@ -2721,6 +2746,9 @@ export async function duplicateClientPhaseAction(phaseId: number): Promise<numbe
     if (src.nutrition) row.nutrition = JSON.parse(JSON.stringify(src.nutrition));
     if (src.cover_path) row.cover_path = src.cover_path;
     if (src.client_note) row.client_note = src.client_note;
+    // A copy is a copy: its check-in days come with its metrics.
+    if (src.check_in_day !== undefined) row.check_in_day = src.check_in_day;
+    if (src.monthly_check_in_day !== undefined) row.monthly_check_in_day = src.monthly_check_in_day;
     persist();
   }
   if (src.track === "lifestyle") copyPhaseMetrics(src.id, made.id, src.client_id, false);

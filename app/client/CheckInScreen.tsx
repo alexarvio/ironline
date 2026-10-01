@@ -29,7 +29,7 @@ export type CheckInMetric = {
   askAt?: "morning" | "anytime" | "evening";
 };
 export type CheckInSection = {
-  id: "daily" | "weekly" | "measurements";
+  id: "daily" | "weekly" | "monthly" | "measurements";
   label: string;
   intro: string;
   /** The client's note for this period, if they wrote one. */
@@ -46,6 +46,8 @@ export type CheckInProps = {
   dueSections: string[];
   /** The weekly check-in's window is open (from the coach's weekday to the week's end). */
   weeklyOpen: boolean;
+  /** The monthly one's: from the coach's day of the month to the month's end. */
+  monthlyOpen: boolean;
   /** Every metric's readings, for Progress. */
   history: CheckInHistory;
   /** The coach's objectives for the lifestyle phase, as on its Home card. */
@@ -64,9 +66,9 @@ export type CheckInProps = {
 // not, to the same server actions as before: the daily and weekly metrics
 // to logMetricPeriodAction, the measurements to saveMeasurementCheckInAction.
 
-type RowSource = "daily" | "weekly" | "measurements";
+type RowSource = "daily" | "weekly" | "monthly" | "measurements";
 type Row = { key: string; source: RowSource; metric: CheckInMetric };
-type Group = { id: "morning" | "day" | "evening" | "week"; label: string; rows: Row[] };
+type Group = { id: "morning" | "day" | "evening" | "week" | "month"; label: string; rows: Row[] };
 
 // Today's lines by when in the day they're asked for (the coach's "Asked":
 // metricAskAt): the morning, all day, the evening; then the week's.
@@ -76,9 +78,10 @@ const DAY_PARTS = [
   { id: "evening", label: "Evening", holds: ["evening"] },
 ] as const;
 
-function buildGroups(sections: CheckInSection[], weeklyOpen: boolean, weekLabel = "This week"): Group[] {
+function buildGroups(sections: CheckInSection[], weeklyOpen: boolean, monthlyOpen: boolean, weekLabel = "This week", monthLabel = "This month"): Group[] {
   const daily = sections.find((s) => s.id === "daily");
   const weekly = sections.find((s) => s.id === "weekly");
+  const monthly = sections.find((s) => s.id === "monthly");
   const measure = sections.find((s) => s.id === "measurements");
   const rowsOf = (s: CheckInSection | undefined, source: RowSource): Row[] => (s?.metrics ?? []).map((m) => ({ key: `${source}${m.id}`, source, metric: m }));
   const groups: Group[] = [];
@@ -89,6 +92,8 @@ function buildGroups(sections: CheckInSection[], weeklyOpen: boolean, weekLabel 
   }
   const week = weeklyOpen ? [...rowsOf(weekly, "weekly"), ...rowsOf(measure, "measurements")] : [];
   if (week.length) groups.push({ id: "week", label: weekLabel, rows: week });
+  const month = monthlyOpen ? rowsOf(monthly, "monthly") : [];
+  if (month.length) groups.push({ id: "month", label: monthLabel, rows: month });
   return groups;
 }
 
@@ -115,6 +120,7 @@ export default function CheckInScreen({
   today,
   sections,
   weeklyOpen,
+  monthlyOpen,
   history,
   objectives,
   stats,
@@ -127,6 +133,7 @@ export default function CheckInScreen({
   today: string;
   sections: CheckInSection[];
   weeklyOpen: boolean;
+  monthlyOpen: boolean;
   history: CheckInHistory;
   objectives: string[];
   stats: CheckInProps["stats"];
@@ -142,9 +149,9 @@ export default function CheckInScreen({
   const [editing, setEditing] = useState<string | null>(null);
   const editDay = editing ? history.days.find((d) => d.date === editing && d.edit.length > 0) ?? null : null;
   const date = editDay?.date ?? today;
-  const todayGroups = buildGroups(sections, weeklyOpen);
+  const todayGroups = buildGroups(sections, weeklyOpen, monthlyOpen);
   const todayRows = todayGroups.flatMap((g) => g.rows);
-  const groups = editDay ? buildGroups(editDay.edit, true, "That week") : todayGroups;
+  const groups = editDay ? buildGroups(editDay.edit, true, true, "That week", "That month") : todayGroups;
   const rows = groups.flatMap((g) => g.rows);
   const { source: noteSource, saved: savedNote } = noteOf(editDay?.edit ?? sections, rows);
 
@@ -204,7 +211,7 @@ export default function CheckInScreen({
   };
   // A day in the feed opened to change or fill in: its lines as they were sent.
   const openDay = (d: CheckInFeedDay) => {
-    const dayRows = buildGroups(d.edit, true).flatMap((g) => g.rows);
+    const dayRows = buildGroups(d.edit, true, true).flatMap((g) => g.rows);
     if (!editDay) todayDraft.current = { values, note, folded };
     setEditing(d.date);
     setValues(seedOf(dayRows));
@@ -265,8 +272,8 @@ export default function CheckInScreen({
   // Opened for the week (a coach's message about the weekly check-in): the
   // week's group, scrolled to once the screen is up.
   useEffect(() => {
-    if (initialSection !== "weekly") return;
-    const t = setTimeout(() => document.getElementById("ci-group-week")?.scrollIntoView({ behavior: "smooth", block: "start" }), 250);
+    if (initialSection !== "weekly" && initialSection !== "monthly") return;
+    const t = setTimeout(() => document.getElementById(initialSection === "monthly" ? "ci-group-month" : "ci-group-week")?.scrollIntoView({ behavior: "smooth", block: "start" }), 250);
     return () => clearTimeout(t);
   }, [initialSection]);
 
@@ -281,7 +288,7 @@ export default function CheckInScreen({
     try {
       // Each period is posted only when something in it changed, or when it
       // carries the note and the note changed.
-      for (const source of ["daily", "weekly"] as const) {
+      for (const source of ["daily", "weekly", "monthly"] as const) {
         const mine = rows.filter((r) => r.source === source);
         const withNote = noteSource === source;
         if (mine.length === 0 || !(mine.some(changedRow) || (withNote && noteDirty))) continue;
@@ -331,7 +338,7 @@ export default function CheckInScreen({
             date, and two pills that switch the screen between Today and
             Progress. */}
         <header className={`tr-banner ci-banner${view === "progress" ? " progress" : ""}`}>
-          <div className="tr-kicker">{editDay ? "Editing" : weeklyOpen ? "Daily · weekly" : "Daily"}</div>
+          <div className="tr-kicker">{editDay ? "Editing" : ["Daily", weeklyOpen ? "weekly" : null, monthlyOpen && sections.some((s) => s.id === "monthly") ? "monthly" : null].filter(Boolean).join(" · ")}</div>
           <FitTitle className="tr-name">{editDay ? dayLabel(editDay.date, true) : dateLabel}</FitTitle>
           <div className="tr-weeks ci-views" role="tablist" aria-label="Check-in">
             {(["today", "progress", "calendar"] as const).map((v) => (
@@ -426,7 +433,7 @@ export default function CheckInScreen({
                           metric={r.metric}
                           value={values[r.key] ?? ""}
                           today={date}
-                          weekly={r.source === "weekly"}
+                          weekly={r.source !== "daily"}
                           lastTyped={t === typedKeys.length - 1}
                           onChange={(v) => setValue(r.key, v)}
                           onNext={() => inputs.current[t + 1]?.focus()}

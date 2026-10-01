@@ -10,6 +10,7 @@ import {
   getActivityFeed,
   getAssignmentsForDay,
   getClientProfile,
+  phaseCheckInDays,
   syncClientLoginEmail,
   getMetricEntries,
   getCoachProfile,
@@ -378,7 +379,7 @@ export function loadMeasurements(clientId: number, params: { phase?: string }): 
   const phases = real.length
     ? real.map((p) => ({ id: p.id, name: p.name, weeks: phaseWeeks(p.start_week, p.end_week), state: STATE[p.status] }))
     : [{ id: 0, name: "Check-ins", weeks: 0, state: "live" as const }];
-  const metrics = listMetricsForPhase(clientId, selected?.id ?? null, real.length === 0 || isLive).filter((m) => m.frequency !== "monthly");
+  const metrics = listMetricsForPhase(clientId, selected?.id ?? null, real.length === 0 || isLive);
   const existing = new Set(metrics.map((m) => m.name.toLowerCase()));
 
   // The library's packs, merged by label so the coach sees one group a theme.
@@ -423,19 +424,23 @@ export function loadMeasurements(clientId: number, params: { phase?: string }): 
     weekIdx: selected && selected.status === "now" ? phaseWeekIndex(selected.start_week, selected.end_week, today) : null,
     startDate: selected?.start_week ?? null,
     endDate: selected?.end_week ?? null,
-    checkInDay: getClientProfile(clientId).check_in_day || null,
+    // This phase's own days: one phase's never carry into the next.
+    checkInDay: phaseCheckInDays(clientId, selected?.id ?? null).weekly,
+    monthDay: phaseCheckInDays(clientId, selected?.id ?? null).monthly,
     groups: METRIC_GROUPS.map((g) => ({ key: g.key, label: g.label, tint: g.tint })),
     metrics: metrics.map((m) => {
       const g = metricGroup(m.category);
       const entries = getMetricEntries([m.id]).filter((e): e is typeof e & { value: number } => e.value != null).sort((a, b) => a.period.localeCompare(b.period));
       const last = entries[entries.length - 1];
-      return { id: m.id, name: m.name, unit: m.unit, frequency: (m.frequency === "weekly" ? "weekly" : "daily") as "daily" | "weekly", groupKey: g.key, groupLabel: g.label, tint: g.tint, askAt: metricAskAt(m), last: last ? { value: last.value, when: fmtWhen(last.period) } : null };
+      return { id: m.id, name: m.name, unit: m.unit, frequency: m.frequency, groupKey: g.key, groupLabel: g.label, tint: g.tint, askAt: metricAskAt(m), last: last ? { value: last.value, when: fmtWhen(last.period) } : null };
     }),
     library,
     daily: getLoggedValues(clientId, "daily", started ? 8 : 0, scope),
     weekly: getLoggedValues(clientId, "weekly", started ? 5 : 0, scope),
     dailyLong: getLoggedValues(clientId, "daily", started ? 30 : 0, scope),
     weeklyLong: getLoggedValues(clientId, "weekly", started ? 12 : 0, scope),
+    monthly: getLoggedValues(clientId, "monthly", started ? 6 : 0, scope),
+    monthlyLong: getLoggedValues(clientId, "monthly", started ? 12 : 0, scope),
     notStarted: !started ? (selected?.status === "draft" ? "Nothing logged yet: this phase is a draft." : `Nothing logged yet: this phase starts ${startsOn}.`) : null,
     notes: (started ? listCheckInNotes(clientId, 12).filter((n) => !until || n.period <= until) : []).map((n) => ({ id: n.id, period: n.period, kind: n.kind, text: n.text })),
   };

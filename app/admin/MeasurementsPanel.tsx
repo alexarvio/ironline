@@ -22,7 +22,7 @@ import CopyPhaseMetrics from "./CopyPhaseMetrics";
 import LoggedDataBlock from "./LoggedDataBlock";
 import MessageAboutButton from "./MessageAbout";
 
-const KIND_LABEL = { daily: "Daily check-in", weekly: "Weekly check-in", measurements: "Measurements" } as const;
+const KIND_LABEL = { daily: "Daily check-in", weekly: "Weekly check-in", monthly: "Monthly check-in", measurements: "Measurements" } as const;
 
 // Check-in configuration and history.
 //

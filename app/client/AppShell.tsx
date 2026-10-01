@@ -5,6 +5,7 @@ import { markCoachNotesReadAction } from "../lib/actions";
 import { logoutAction } from "../lib/auth-actions";
 import { BellIcon, ChevronLeftIcon, MenuIcon } from "../components/icons";
 import CheckInScreen, { CheckInProps } from "./CheckInScreen";
+import PreviewBar from "./PreviewBar";
 import ProgressPicturesScreen, { type ProgressPicturesProps } from "./ProgressPicturesScreen";
 import CoachProfileScreen from "./CoachProfileScreen";
 import { HealthAutoSync } from "./HealthSync";
@@ -119,7 +120,10 @@ export default function AppShell({
   invoices = null,
   initialPush = null,
   initialTab = null,
+  preview = null,
 }: {
+  /** A coach looking at this client's app: whose it is, and the others to switch to. */
+  preview?: { current: { id: number; name: string }; clients: { id: number; name: string }[] } | null;
   clientName: string;
   tabs: AppTab[];
   notificationsContent: ReactNode;
@@ -305,6 +309,7 @@ export default function AppShell({
           initialSection={checkInSection}
           dueSections={checkIn.dueSections}
           weeklyOpen={checkIn.weeklyOpen}
+          monthlyOpen={checkIn.monthlyOpen}
           objectives={checkIn.objectives}
           history={checkIn.history}
           stats={checkIn.stats}
@@ -362,7 +367,8 @@ export default function AppShell({
       <LinkProvider value={openLink}>
       <HealthAutoSync />
       <NativePush />
-      <div className="phone-frame">
+      <div className={`phone-frame${preview ? " previewing" : ""}`}>
+        {preview && <PreviewBar current={preview.current} clients={preview.clients} />}
         <div className="app-screen app-stack">
           {/* The tab stays mounted under a pushed view, so closing the view
               comes back to the same scroll and the same open day. inert keeps

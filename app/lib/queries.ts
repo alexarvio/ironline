@@ -676,7 +676,7 @@ export type LinkTargets = {
   /** The days with food logged in the last two weeks, newest first. */
   foodDays: { date: string; label: string }[];
   nutrition: boolean;
-  checkins: ("daily" | "weekly")[];
+  checkins: ("daily" | "weekly" | "monthly")[];
   photos: boolean;
 };
 
@@ -707,9 +707,10 @@ export function listMessageLinkTargets(clientId: number): LinkTargets {
     .sort()
     .reverse()
     .map((date) => ({ date, label: shortDay(date) }));
-  const checkins: ("daily" | "weekly")[] = [];
+  const checkins: ("daily" | "weekly" | "monthly")[] = [];
   if (listMetricDefinitions(clientId, "daily").filter(deployedToClient).length) checkins.push("daily");
   if (listMetricDefinitions(clientId, "weekly").filter(deployedToClient).length) checkins.push("weekly");
+  if (listMonthlyMetricsAsked(clientId).length) checkins.push("monthly");
   return {
     training,
     foodDays,
@@ -750,8 +751,9 @@ export function describeMessageLink(clientId: number, link: MessageLink): LinkVi
       return view("Nutrition", `${meal?.label ?? "A meal"} · ${shortDay(link.date)}`);
     }
     case "checkin": {
-      const what = link.section === "daily" ? "Daily check-in" : "Weekly check-in";
+      const what = link.section === "daily" ? "Daily check-in" : link.section === "monthly" ? "Monthly check-in" : "Weekly check-in";
       if (!link.period) return view("Measurements", what);
+      if (link.section === "monthly") return view("Measurements", `${what} · ${new Date(`${link.period}T00:00:00`).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}`);
       return view("Measurements", link.section === "daily" ? `${what} · ${shortDay(link.period)}` : `${what} · week of ${shortDay(link.period)}`);
     }
     case "photos":
@@ -1073,6 +1075,8 @@ export function applyDueClientReminders() {
       const periodKey =
         item.id === "weekly"
           ? weekKey
+          : item.id === "monthly"
+          ? monthStart(today)
           : item.id === "photos"
           ? photoSheetFor(clientId, today) ?? today
           : today;
@@ -2106,7 +2110,7 @@ export function getOverviewPanel(clientId: number): OverviewPanel {
   const unpaid = invoices.filter((i) => i.status !== "paid").length;
   const dailyMetrics = listMetricDefinitions(clientId, "daily").length;
   const weeklyMetrics = listMetricDefinitions(clientId, "weekly").length;
-  const metricCount = dailyMetrics + weeklyMetrics;
+  const metricCount = dailyMetrics + weeklyMetrics + listMonthlyMetricsAsked(clientId).length;
 
   // Weight now against where it was when the block began, not against a
   // figure from six months ago: inside a cut, "−0.8 kg this phase" is the
@@ -3709,7 +3713,7 @@ export function getMetricHistory(clientId: number, cadence: MetricCadence): Metr
     new Set(data.metric_entries.filter((e) => ids.has(e.metric_definition_id)).map((e) => e.period))
   ).sort((a, b) => b.localeCompare(a));
 
-  const noteKind: CheckInNote["kind"] | null = cadence === "daily" ? "daily" : cadence === "weekly" ? "weekly" : null;
+  const noteKind: CheckInNote["kind"] = cadence;
   const rows: HistoryRow[] = periods.map((period) => ({
     period,
     note: noteKind ? getCheckInNote(clientId, noteKind, period) : null,
@@ -4461,6 +4465,7 @@ export type ClientProfile = {
   main_goal?: string | null;
   main_goal_saved_at?: string | null;
   check_in_day: string | null;
+  monthly_check_in_day?: number | null;
   steps_goal: string;
   cardio_goal: string;
   training_goal: string;
@@ -4514,7 +4519,9 @@ export function saveClientProfile(profile: ClientProfile) {
       : null;
   // Nor the workout questions (set on Measurements): kept unless given.
   const workout_questions = profile.workout_questions !== undefined ? profile.workout_questions : idx >= 0 ? data.client_profiles[idx].workout_questions : undefined;
-  const next = { ...profile, main_goal, main_goal_saved_at, ...(workout_questions ? { workout_questions } : {}) };
+  // Nor the monthly check-in's day (also Measurements).
+  const monthly_check_in_day = profile.monthly_check_in_day !== undefined ? profile.monthly_check_in_day : idx >= 0 ? data.client_profiles[idx].monthly_check_in_day : undefined;
+  const next = { ...profile, main_goal, main_goal_saved_at, ...(workout_questions ? { workout_questions } : {}), ...(monthly_check_in_day != null ? { monthly_check_in_day } : {}) };
   if (idx >= 0) data.client_profiles[idx] = next;
   else data.client_profiles.push(next);
   persist();
@@ -5395,7 +5402,7 @@ export type DueItem = { id: string; label: string; detail: string; targetTab: st
 // unset or unrecognised, which means "open from Monday" — the behaviour
 // before the day was honoured. Monday = 0 … Sunday = 6 to match weekStart.
 export function weeklyCheckInWeekday(clientId: number): number | null {
-  const raw = getClientProfile(clientId).check_in_day?.trim().toLowerCase();
+  const raw = phaseCheckInDays(clientId, runningLifestylePhaseId(clientId)).weekly?.trim().toLowerCase();
   if (!raw) return null;
   const idx = DAY_NAMES_FULL.findIndex((d) => d.toLowerCase().startsWith(raw.slice(0, 3)));
   return idx >= 0 ? idx : null;
@@ -5413,14 +5420,75 @@ export function weeklyCheckInOpen(clientId: number, dateStr = localDateStr()): b
   return monBased >= weekday;
 }
 
+/** The 1st of the month containing this date: a monthly entry's period. */
+export function monthStart(dateStr: string): string {
+  return `${dateStr.slice(0, 7)}-01`;
+}
+
+// A lifestyle phase's check-in days: its own, or, for a phase from before
+// they were (and with no phase at all), the client's profile days. phaseId
+// null: no phase, the profile's.
+export function phaseCheckInDays(clientId: number, phaseId: number | null): { weekly: string | null; monthly: number | null } {
+  const phase = phaseId == null ? null : getData().client_phases.find((p) => p.id === phaseId && p.client_id === clientId) ?? null;
+  const profile = getClientProfile(clientId);
+  const weekly = phase && phase.check_in_day !== undefined ? phase.check_in_day : profile.check_in_day;
+  const monthly = phase && phase.monthly_check_in_day !== undefined ? phase.monthly_check_in_day : profile.monthly_check_in_day;
+  return { weekly: weekly?.trim() || null, monthly: typeof monthly === "number" && monthly >= 1 && monthly <= 28 ? monthly : null };
+}
+
+/** Sets a lifestyle phase's own check-in days; with no phase, the client's profile. */
+export function setPhaseCheckInDays(clientId: number, phaseId: number | null, patch: { weekly?: string | null; monthly?: number | null }) {
+  const phase = phaseId == null ? null : getData().client_phases.find((p) => p.id === phaseId && p.client_id === clientId && p.track === "lifestyle") ?? null;
+  if (phase) {
+    if (patch.weekly !== undefined) phase.check_in_day = patch.weekly;
+    if (patch.monthly !== undefined) phase.monthly_check_in_day = patch.monthly;
+    persist();
+    return;
+  }
+  if (phaseId != null) return;
+  const profile = getClientProfile(clientId);
+  saveClientProfile({ ...profile, ...(patch.weekly !== undefined ? { check_in_day: patch.weekly } : {}), ...(patch.monthly !== undefined ? { monthly_check_in_day: patch.monthly } : {}) });
+}
+
+/** Whether a phase is the one the client is in now (or there are no phases): a change to it reaches them today. */
+export function isRunningLifestylePhase(clientId: number, phaseId: number | null): boolean {
+  return phaseId == null || runningLifestylePhaseId(clientId) === phaseId;
+}
+
+// The day of the month the monthly check-in opens (1 to 28), picked on the
+// coach's Measurements tab (1 Oct), the running phase's. null: no monthly
+// check-in now, so monthly metrics from before (the old measurements sheet)
+// stay off their app until the coach sets one up.
+export function monthlyCheckInDay(clientId: number): number | null {
+  return phaseCheckInDays(clientId, runningLifestylePhaseId(clientId)).monthly;
+}
+
+/** Open from its day to the end of the month, like the weekly one within its week. */
+export function monthlyCheckInOpen(clientId: number, dateStr = localDateStr()): boolean {
+  const day = monthlyCheckInDay(clientId);
+  return day != null && Number(dateStr.slice(8, 10)) >= day;
+}
+
+/** The monthly metrics the client is asked for: none until the coach has picked the day. */
+export function listMonthlyMetricsAsked(clientId: number): MetricDefinition[] {
+  return monthlyCheckInDay(clientId) == null ? [] : listMetricDefinitions(clientId, "monthly").filter(deployedToClient);
+}
+
+/** The metrics a client is asked for on one rhythm. */
+function metricsAsked(clientId: number, cadence: MetricCadence): MetricDefinition[] {
+  return cadence === "monthly" ? listMonthlyMetricsAsked(clientId) : listMetricDefinitions(clientId, cadence).filter(deployedToClient);
+}
+
 export function getDueItems(clientId: number): DueItem[] {
   const today = localDateStr();
   const currentWeekStart = weekStart(today);
 
   const dailyDefs = listMetricDefinitions(clientId, "daily").filter(deployedToClient);
   const weeklyDefs = listMetricDefinitions(clientId, "weekly").filter(deployedToClient);
+  const monthlyDefs = listMonthlyMetricsAsked(clientId);
   const dailyLoggedToday = listMetricPeriods(dailyDefs.map((d) => d.id), 1)[0] === today;
   const weeklyLoggedThisWeek = listMetricPeriods(weeklyDefs.map((d) => d.id), 1)[0] === currentWeekStart;
+  const monthlyLoggedThisMonth = listMetricPeriods(monthlyDefs.map((d) => d.id), 1)[0] === monthStart(today);
 
   const measurementFields = listMeasurementFields(clientId).filter(deployedToClient);
   const measurementLoggedToday = listMeasurementDates(clientId).includes(today);
@@ -5446,6 +5514,14 @@ export function getDueItems(clientId: number): DueItem[] {
       label: "Weekly check-in",
       detail: `${weeklyDefs.length} metric${weeklyDefs.length === 1 ? "" : "s"} to log for this week`,
       targetTab: "weekly",
+    });
+  }
+  if (monthlyDefs.length > 0 && !monthlyLoggedThisMonth && monthlyCheckInOpen(clientId, today)) {
+    items.push({
+      id: "monthly",
+      label: "Monthly check-in",
+      detail: `${monthlyDefs.length} metric${monthlyDefs.length === 1 ? "" : "s"} to log for this month`,
+      targetTab: "monthly",
     });
   }
   if (measurementFields.length > 0 && !measurementLoggedToday) {
@@ -5503,11 +5579,11 @@ export function setMeasurementFieldVisibleToClient(id: number, visible: boolean)
 // as part of the measurements check-in, so they don't get their own row.
 export type CheckInStatus = {
   /** Which check-in types the client has at all. */
-  configured: ("daily" | "weekly" | "measurements")[];
+  configured: ("daily" | "weekly" | "monthly" | "measurements")[];
   // Zero when the coach hasn't configured any check-ins at all, which is
   // the signal to hide the section rather than claim everything's done.
   configuredCount: number;
-  dueTypes: ("daily" | "weekly" | "measurements")[];
+  dueTypes: ("daily" | "weekly" | "monthly" | "measurements")[];
   // "Daily and weekly", "Measurements", ... — names what's outstanding.
   dueNames: string;
   // What opens next once nothing is due; depends on which types exist, so
@@ -5636,7 +5712,7 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
     }
   }
   const due = getCheckInStatus(clientId);
-  const DUE = { daily: "Today's daily check-in", weekly: "This week's weekly check-in", measurements: "Today's measurements" };
+  const DUE = { daily: "Today's daily check-in", weekly: "This week's weekly check-in", monthly: "This month's monthly check-in", measurements: "Today's measurements" };
   for (const t of due.dueTypes) {
     actions.push({ id: `checkin-${t}`, tone: "due", title: `${DUE[t]} not logged`, detail: "They have not filled it in yet.", tab: "measurements" });
   }
@@ -5964,14 +6040,17 @@ export function getCheckInStatus(clientId: number): CheckInStatus {
     weeklyDefs.length > 0 &&
     listMetricPeriods(weeklyDefs.map((d) => d.id), 1)[0] !== thisWeek &&
     weeklyCheckInOpen(clientId);
+  const monthlyDefs = listMonthlyMetricsAsked(clientId);
+  const monthlyDue = monthlyDefs.length > 0 && listMetricPeriods(monthlyDefs.map((d) => d.id), 1)[0] !== monthStart(today) && monthlyCheckInOpen(clientId);
   const measurementsDue = fields.length > 0 && !listMeasurementDates(clientId).includes(today);
 
-  const dueTypes: ("daily" | "weekly" | "measurements")[] = [];
+  const dueTypes: ("daily" | "weekly" | "monthly" | "measurements")[] = [];
   if (dailyDue) dueTypes.push("daily");
   if (weeklyDue) dueTypes.push("weekly");
+  if (monthlyDue) dueTypes.push("monthly");
   if (measurementsDue) dueTypes.push("measurements");
 
-  const NAME = { daily: "Daily", weekly: "weekly", measurements: "measurements" };
+  const NAME = { daily: "Daily", weekly: "weekly", monthly: "monthly", measurements: "measurements" };
   const parts = dueTypes.map((t) => NAME[t]);
   const dueNames =
     parts.length === 0
@@ -5981,8 +6060,8 @@ export function getCheckInStatus(clientId: number): CheckInStatus {
       : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
 
   return {
-    configuredCount: [dailyDefs.length, weeklyDefs.length, fields.length].filter((n) => n > 0).length,
-    configured: [dailyDefs.length > 0 ? "daily" : null, weeklyDefs.length > 0 ? "weekly" : null, fields.length > 0 ? "measurements" : null].filter((t): t is "daily" | "weekly" | "measurements" => t != null),
+    configuredCount: [dailyDefs.length, weeklyDefs.length, monthlyDefs.length, fields.length].filter((n) => n > 0).length,
+    configured: [dailyDefs.length > 0 ? "daily" : null, weeklyDefs.length > 0 ? "weekly" : null, monthlyDefs.length > 0 ? "monthly" : null, fields.length > 0 ? "measurements" : null].filter((t): t is "daily" | "weekly" | "monthly" | "measurements" => t != null),
     dueTypes,
     dueNames,
     nextLabel: dailyDefs.length
@@ -6031,7 +6110,7 @@ export type CheckInMetric = {
 };
 
 export type CheckInSection = {
-  id: "daily" | "weekly" | "measurements";
+  id: "daily" | "weekly" | "monthly" | "measurements";
   label: string;
   intro: string;
   note: string | null;
@@ -6068,7 +6147,7 @@ export type CheckInSeries = {
   name: string;
   unit: string;
   scaleMax: number | null;
-  cadence: "daily" | "weekly" | "measurement";
+  cadence: "daily" | "weekly" | "monthly" | "measurement";
   /** The admin group it belongs to (its label), and that group's colour for the chart. */
   category: string;
   colour: string;
@@ -6123,8 +6202,8 @@ export function checkInEditable(date: string, today: string = localDateStr()): b
 export function getCheckInHistory(clientId: number): CheckInHistory {
   const today = localDateStr();
   const series: CheckInSeries[] = [];
-  for (const cadence of ["daily", "weekly"] as const) {
-    const defs = listMetricDefinitions(clientId, cadence).filter(deployedToClient);
+  for (const cadence of ["daily", "weekly", "monthly"] as const) {
+    const defs = metricsAsked(clientId, cadence);
     const entries = getMetricEntries(defs.map((d) => d.id));
     for (const def of defs) {
       const scaleMax = ratingScaleMax(def.unit);
@@ -6180,7 +6259,7 @@ export function getCheckInHistory(clientId: number): CheckInHistory {
     const date = localDateStr(d);
     const items: { name: string; value: string }[] = [];
     for (const s of series) {
-      const p = s.cadence === "weekly" ? s.points.find((x) => x.at && localDateStr(new Date(x.at)) === date) : s.points.find((x) => x.date === date);
+      const p = s.cadence === "weekly" || s.cadence === "monthly" ? s.points.find((x) => x.at && localDateStr(new Date(x.at)) === date) : s.points.find((x) => x.date === date);
       if (p) items.push({ name: s.name, value: shown(s, p.value) });
     }
     const note = [getCheckInNote(clientId, "daily", date), getCheckInNote(clientId, "measurements", date)].filter((n): n is string => !!n?.trim()).join("\n") || null;
@@ -6188,6 +6267,7 @@ export function getCheckInHistory(clientId: number): CheckInHistory {
     const edit = [
       checkInTrackerSection(clientId, "daily", date, "Daily", ""),
       checkInTrackerSection(clientId, "weekly", weekStart(date), "Weekly", "", (e) => e?.value != null && !!e.logged_at && localDateStr(new Date(e.logged_at)) === date),
+      checkInTrackerSection(clientId, "monthly", monthStart(date), "Monthly", "", (e) => e?.value != null && !!e.logged_at && localDateStr(new Date(e.logged_at)) === date),
       checkInMeasureSection(clientId, date, true),
     ].filter((s): s is CheckInSection => s !== null);
     days.push({ date, items, note, dailyTotal: daily.length, dailyDone: daily.filter((s) => s.points.some((x) => x.date === date)).length, edit });
@@ -6202,14 +6282,14 @@ const checkInFmtDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDate
 // metrics (a past day's weekly readings: the ones sent on that day).
 function checkInTrackerSection(
   clientId: number,
-  frequency: "daily" | "weekly",
+  frequency: "daily" | "weekly" | "monthly",
   period: string,
   label: string,
   intro: string,
   only?: (current: MetricEntry | undefined) => boolean
 ): CheckInSection | null {
   // What a workout's wrap-up answers is not asked here (metricFromWorkout).
-  const all = listMetricDefinitions(clientId, frequency).filter((d) => deployedToClient(d) && !workoutFed(clientId, d.name));
+  const all = metricsAsked(clientId, frequency).filter((d) => !workoutFed(clientId, d.name));
   const entries = getMetricEntries(all.map((d) => d.id));
   const currentOf = (id: number) => entries.find((e) => e.metric_definition_id === id && e.period === period);
   const defs = only ? all.filter((d) => only(currentOf(d.id))) : all;
@@ -6293,6 +6373,9 @@ export function getCheckInSections(clientId: number): CheckInData {
 
   const weekly = checkInTrackerSection(clientId, "weekly", thisWeek, "Weekly", "One entry covers the whole week.");
   if (weekly) sections.push(weekly);
+
+  const monthly = checkInTrackerSection(clientId, "monthly", monthStart(today), "Monthly", "One entry covers the whole month.");
+  if (monthly) sections.push(monthly);
 
   // ---- Measurements ----
   const measure = checkInMeasureSection(clientId, today);
@@ -7019,6 +7102,9 @@ export function addClientPhase(clientId: number, track: PhaseTrack, name: string
     // reached the client the moment it was named was the old way, and it
     // meant a half-built plan was already live.
     draft: true,
+    // A lifestyle phase starts with check-in days of its own, unset: the
+    // last phase's are not carried in.
+    ...(track === "lifestyle" ? { check_in_day: null, monthly_check_in_day: null } : {}),
   };
   // A training phase is a programme: adding one on the Plan tab makes a
   // draft, named and sized to match, ready to build in the Training tab.
@@ -10559,7 +10645,7 @@ export type LoggedValues = {
  */
 export function getLoggedValues(
   clientId: number,
-  cadence: "daily" | "weekly",
+  cadence: MetricCadence,
   count: number,
   scope?: { metrics: MetricDefinition[]; until?: string }
 ): LoggedValues {
@@ -10589,6 +10675,11 @@ export function getLoggedValues(
       d.setDate(d.getDate() - i);
       const key = localDateStr(d);
       periods.push({ key, label: d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) });
+    } else if (cadence === "monthly") {
+      const d = new Date(`${monthStart(today)}T00:00:00`);
+      d.setMonth(d.getMonth() - i);
+      const key = localDateStr(d);
+      periods.push({ key, label: d.toLocaleDateString("en-US", { month: "short", year: "numeric" }) });
     } else {
       const d = new Date(`${weekStart(today)}T00:00:00`);
       d.setDate(d.getDate() - i * 7);
