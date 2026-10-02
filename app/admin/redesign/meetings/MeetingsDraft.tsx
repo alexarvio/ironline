@@ -12,6 +12,7 @@ import DateText from "../DateText";
 import { ConfirmDialog, MessageDialog } from "../training/TrainingDraft";
 import { allTimezones, SERVER_TZ, tzShort, zonedToUtc } from "../../../lib/timezones";
 import TimezonePicker from "./TimezonePicker";
+import { useOpenChat } from "../ChatPanel";
 
 // The calmer Meetings tab, as a draft on real data, in the Training draft's
 // sheet. The next call with everything to prepare it, the calls after it,
@@ -131,6 +132,8 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
     setMeetings([...(plan.upcoming ? [plan.upcoming] : []), ...plan.alsoScheduled, ...plan.past]);
   }
   const [dlg, setDlg] = useState<Dlg>(null);
+  // Messaging slides the chat in from the right (ChatPanel, 2 Oct).
+  const openChat = useOpenChat();
   const close = () => setDlg(null);
   const patchMeeting = (id: number, f: Partial<DraftMeeting>) => setMeetings((prev) => prev.map((m) => (m.id === id ? { ...m, ...f } : m)));
   const byId = (id: number) => meetings.find((m) => m.id === id) ?? null;
@@ -163,7 +166,7 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
               <MoreIcon />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="pb-menu">
-              <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: "Meetings" })}>
+              <DropdownMenuItem onSelect={() => (openChat ? openChat() : setDlg({ kind: "message", label: "Meetings" }))}>
                 <ChatIcon /> Message about meetings
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -343,7 +346,7 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                               <MoreIcon />
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="pb-menu">
-                              <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: `${m.topic || "Check-in call"} · ${shortDay(m.date)}` })}>
+                              <DropdownMenuItem onSelect={() => (openChat ? openChat() : setDlg({ kind: "message", label: `${m.topic || "Check-in call"} · ${shortDay(m.date)}` }))}>
                                 <ChatIcon /> Message about this call
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />

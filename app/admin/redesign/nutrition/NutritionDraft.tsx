@@ -19,6 +19,7 @@ import PhaseSwitcher from "../PhaseSwitcher";
 import PhaseGoalsCard from "../PhaseGoalsCard";
 import CoachNoteCard from "../CoachNoteCard";
 import { SortableItem, SortableList } from "../Sortable";
+import { useOpenChat } from "../ChatPanel";
 
 // The calmer Nutrition tab, as a draft on real data, cut like the Training
 // draft: the same header, the same white cards, the same grid rows with the
@@ -209,6 +210,8 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
   const commentsOn = (d: string, m: LoggedMeal) => [...m.comments, ...(said[`${d}|${m.id}`] ?? [])];
 
   const [dlg, setDlg] = useState<Dlg>(null);
+  // Messaging slides the chat in from the right (ChatPanel, 2 Oct).
+  const openChat = useOpenChat();
   const close = () => setDlg(null);
   const photoOf = dlg?.kind === "photo" ? (view.days.find((d) => d.date === dlg.date)?.meals.find((m) => m.id === dlg.meal) ?? null) : null;
 
@@ -306,7 +309,7 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
               <MoreIcon />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="pb-menu">
-              <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: plan.name, link: { kind: "nutrition" } })}>
+              <DropdownMenuItem onSelect={() => (openChat ? openChat({ area: "Nutrition", label: plan.name, link: { kind: "nutrition" } }) : setDlg({ kind: "message", label: plan.name, link: { kind: "nutrition" } }))}>
                 <ChatIcon /> Message about nutrition
               </DropdownMenuItem>
               {plan.id !== 0 && (

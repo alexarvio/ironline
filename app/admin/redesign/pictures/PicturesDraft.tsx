@@ -12,6 +12,7 @@ import { ConfirmDialog, MessageDialog, useClickAway } from "../training/Training
 import Picker from "../Picker";
 import DatePick from "../DatePick";
 import { SortableItem, SortableList } from "../Sortable";
+import { useOpenChat } from "../ChatPanel";
 
 // The calmer Progress pictures tab, as a draft on real data, in the Training
 // draft's sheet. Two cards: what is asked for, and what came in.
@@ -129,6 +130,8 @@ export default function PicturesDraft({ clientId, firstName, plan }: { clientId:
   const [mode, setMode] = useState<"sheets" | "compare">("sheets");
   const [notes, setNotes] = useState<Record<string, { note: Note; saved: string | null }>>(() => Object.fromEntries(sheets.map((x) => [x.period, { note: x.note, saved: x.savedLabel }])));
   const [dlg, setDlg] = useState<Dlg>(null);
+  // Messaging slides the chat in from the right (ChatPanel, 2 Oct).
+  const openChat = useOpenChat();
   const close = () => setDlg(null);
   const photoSheet = dlg?.kind === "photo" ? (sheets.find((x) => x.period === dlg.period) ?? null) : null;
 
@@ -157,7 +160,7 @@ export default function PicturesDraft({ clientId, firstName, plan }: { clientId:
               <MoreIcon />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="pb-menu">
-              <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: "Progress pictures" })}>
+              <DropdownMenuItem onSelect={() => (openChat ? openChat({ area: "Measurements", label: "Progress pictures", link: { kind: "photos" } }) : setDlg({ kind: "message", label: "Progress pictures" }))}>
                 <ChatIcon /> Message about pictures
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -349,7 +352,7 @@ export default function PicturesDraft({ clientId, firstName, plan }: { clientId:
                           <MoreIcon />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="pb-menu">
-                          <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: `Progress pictures · ${sh.title}, ${sh.dateLabel}`, period: sh.period })}>
+                          <DropdownMenuItem onSelect={() => (openChat ? openChat({ area: "Measurements", label: `Progress pictures · ${sh.title}, ${sh.dateLabel}`, link: { kind: "photos", period: sh.period } }) : setDlg({ kind: "message", label: `Progress pictures · ${sh.title}, ${sh.dateLabel}`, period: sh.period }))}>
                             <ChatIcon /> Message about this sheet
                           </DropdownMenuItem>
                         </DropdownMenuContent>

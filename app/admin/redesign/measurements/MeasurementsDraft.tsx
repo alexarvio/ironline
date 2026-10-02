@@ -14,6 +14,7 @@ import { ConfirmDialog, MessageDialog, fmtDate, stateLabel, useClickAway } from 
 import PhaseDatesDialog from "../PhaseDatesDialog";
 import PhaseSwitcher from "../PhaseSwitcher";
 import PhaseGoalsCard from "../PhaseGoalsCard";
+import { useOpenChat } from "../ChatPanel";
 import { SortableItem, SortableList } from "../Sortable";
 import Picker from "../Picker";
 import DatePick from "../DatePick";
@@ -203,6 +204,11 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   ];
 
   const [dlg, setDlg] = useState<Dlg>(null);
+  // Messaging about a check-in, a metric or a note slides the chat in from
+  // the right (ChatPanel, 2 Oct), the message pointing at it; outside the
+  // shell, the message dialog as before.
+  const openChat = useOpenChat();
+  const message = (v: { label: string; link: MessageLink }) => (openChat ? openChat({ area: "Measurements", label: v.label, link: v.link }) : setDlg({ kind: "message", ...v }));
   const close = () => setDlg(null);
   const today = new Date().toISOString().slice(0, 10);
   const startHasCome = !!plan.startDate && plan.startDate <= today;
@@ -260,7 +266,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
               <MoreIcon />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="pb-menu">
-              <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: "Check-ins", link: { kind: "checkin", section: logCadence } })}>
+              <DropdownMenuItem onSelect={() => message({ label: "Check-ins", link: { kind: "checkin", section: logCadence } })}>
                 <ChatIcon /> Message about check-ins
               </DropdownMenuItem>
               {plan.id !== 0 && (
@@ -399,7 +405,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                         <MoreIcon />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="pb-menu">
-                        <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: m.name, link: { kind: "checkin", section: m.frequency } })}>
+                        <DropdownMenuItem onSelect={() => message({ label: m.name, link: { kind: "checkin", section: m.frequency } })}>
                           <ChatIcon /> Message about {m.name}
                         </DropdownMenuItem>
                         {/* To another rhythm: it leaves this screen for that one, applied with the rest. */}
@@ -508,7 +514,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
         ) : show === "graph" ? (
           <Graphs key={logCadence} view={long.periods.length ? long : view} cadence={logCadence} shortCount={logCadence === "daily" ? 7 : logCadence === "weekly" ? 5 : 6} />
         ) : (
-          <CheckinFeed view={view} cadence={logCadence} onMessage={(label) => setDlg({ kind: "message", label, link: { kind: "checkin", section: logCadence } })} />
+          <CheckinFeed view={view} cadence={logCadence} onMessage={(label) => message({ label, link: { kind: "checkin", section: logCadence } })} />
         )}
       </section>
 
@@ -536,7 +542,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
                   </span>
                   <span className="rm-note-text">{note.text}</span>
                   <span className="rd-row-more">
-                    <button type="button" className="rd-btn ghost sm" title="Reply" aria-label={`Reply to ${firstName}'s note of ${fmtDay(note.period)}`} onClick={() => setDlg({ kind: "message", label: `${KIND_LABEL[note.kind]} · ${note.kind === "monthly" ? fmtMonth(note.period) : fmtDay(note.period)}`, link: { kind: "checkin", section: note.kind === "measurements" ? "daily" : note.kind } })}>
+                    <button type="button" className="rd-btn ghost sm" title="Reply" aria-label={`Reply to ${firstName}'s note of ${fmtDay(note.period)}`} onClick={() => message({ label: `${KIND_LABEL[note.kind]} · ${note.kind === "monthly" ? fmtMonth(note.period) : fmtDay(note.period)}`, link: { kind: "checkin", section: note.kind === "measurements" ? "daily" : note.kind, period: note.period } })}>
                       <ChatIcon />
                     </button>
                   </span>

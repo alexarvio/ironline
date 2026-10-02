@@ -778,7 +778,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                     <MoreIcon />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="pb-menu">
-                    <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: `${name}, ${week.label}`, link: { kind: "session", dayId: s.id } })}>
+                    <DropdownMenuItem onSelect={() => replyTo(`${name}, ${week.label}`, { kind: "session", dayId: s.id })}>
                       <ChatIcon /> Message about this session
                     </DropdownMenuItem>
                     {(rows.length > 0 || s.cardio.length > 0) && (
@@ -984,7 +984,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                                 <DropdownMenuItem onSelect={() => setDlg({ kind: "alternatives", rowId: r.id })}>
                                   <DumbbellIcon /> {r.alternatives.length ? `Alternatives · ${r.alternatives.length}` : "Add alternative"}
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => setDlg({ kind: "message", label: `${r.name} · ${name}, ${week.label}`, link: { kind: "exercise", dayId: s.id, assignmentId: r.id } })}>
+                                <DropdownMenuItem onSelect={() => replyTo(`${r.name} · ${name}, ${week.label}`, { kind: "exercise", dayId: s.id, assignmentId: r.id })}>
                                   <ChatIcon /> Message {firstName} about it
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
