@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { useSearchParams } from "next/navigation";
+import { ChatIcon } from "../../components/icons";
 import { OpenChatContext, type OpenChat } from "./ChatPanel";
 import { Toaster } from "../../components/ui/toast";
 import TrainingDraft, { type DraftProgram, type Library } from "./training/TrainingDraft";
@@ -31,10 +33,11 @@ const TABS = [
   { key: "pictures", label: "Progress pictures" },
   { key: "meetings", label: "Meetings" },
   { key: "invoices", label: "Invoices" },
-  // Messages is always the last tab.
-  { key: "messages", label: "Messages" },
 ] as const;
-export type RedesignTab = (typeof TABS)[number]["key"];
+// Messages stopped being a tab (2 Oct): the chat is the panel from the right,
+// over any tab. Its address (/admin/redesign/messages) still opens it, on Home.
+type PageTab = (typeof TABS)[number]["key"];
+export type RedesignTab = PageTab | "messages";
 
 export type RedesignShellProps = {
   clientId: number;
@@ -54,15 +57,15 @@ export type RedesignShellProps = {
 };
 
 export default function RedesignShell({ clientId, clientName, firstName, rail, initialTab, home, training, nutrition, measurements, pictures, meetings, plan, messages, invoices }: RedesignShellProps) {
-  const [tab, setTab] = useState<RedesignTab>(initialTab);
+  const pageTab = (t: RedesignTab): PageTab => (t === "messages" ? "home" : t);
+  const [tab, setTab] = useState<PageTab>(pageTab(initialTab));
   // The chat sliding in from the right (ChatPanel.tsx): mounted on first
   // use, then kept, so it slides both ways; `opened` counts the openings,
-  // so each one sets what the reply is about.
-  const [chat, setChat] = useState<{ mounted: boolean; open: boolean; about: DraftLink | null; opened: number }>({ mounted: false, open: false, about: null, opened: 0 });
+  // so each one sets what the reply is about (and the message to land on).
+  const [chat, setChat] = useState<{ mounted: boolean; open: boolean; about: DraftLink | null; opened: number; focus: number | null }>({ mounted: false, open: false, about: null, opened: 0, focus: null });
   const closeChat = () => setChat((c) => ({ ...c, open: false }));
-  const openChat: OpenChat = (about) => {
-    if (tab === "messages") return;
-    const next = (c: typeof chat) => ({ mounted: true, open: true, about: about ? { ...about, gone: false } : null, opened: c.opened + 1 });
+  const openChat = (about?: Parameters<OpenChat>[0], focus: number | null = null) => {
+    const next = (c: typeof chat) => ({ mounted: true, open: true, about: about ? { ...about, gone: false } : null, opened: c.opened + 1, focus });
     if (chat.mounted) setChat(next);
     else {
       // In closed first, then open a frame later, so even the first one slides.
@@ -101,15 +104,38 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
   const [seenClient, setSeenClient] = useState(clientId);
   if (seenClient !== clientId) {
     setSeenClient(clientId);
-    setTab(initialTab);
-    setChat({ mounted: false, open: false, about: null, opened: 0 });
+    setTab(pageTab(initialTab));
+    setChat({ mounted: false, open: false, about: null, opened: 0, focus: null });
   }
+  // The address asks for the chat: /messages, or ?chat=<message> from the
+  // feed or Home (the page under it is what the message is about). It opens
+  // once, on that message, and the ask leaves the address.
+  const params = useSearchParams();
+  const askedChat = params.get("chat");
+  const wantChat = askedChat != null || initialTab === "messages";
+  const handledAsk = useRef<string | null>(null);
+  const askKey = wantChat ? `${clientId}:${askedChat ?? "tab"}` : null;
+  useEffect(() => {
+    if (!askKey || askKey === handledAsk.current) return;
+    handledAsk.current = askKey;
+    openChat(null, Number(askedChat) || null);
+    if (askedChat != null) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("chat");
+      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once an ask
+  }, [askKey]);
   // Each tab keeps its own place on the page: leaving one remembers how far
   // down it was, coming back puts it there (a new one opens at the top).
-  const scrolls = useRef<Partial<Record<RedesignTab, number>>>({});
-  const show = (t: RedesignTab) => {
-    // The Messages tab is the same chat: the panel makes way for it.
-    if (t === "messages") closeChat();
+  const scrolls = useRef<Partial<Record<PageTab, number>>>({});
+  const show = (asked: RedesignTab) => {
+    // "Messages" (Home's events) is the chat, over the tab that is open.
+    if (asked === "messages") {
+      openChat();
+      return;
+    }
+    const t = asked;
     scrolls.current[tab] = window.scrollY;
     setTab(t);
     requestAnimationFrame(() => window.scrollTo(0, scrolls.current[t] ?? 0));
@@ -165,13 +191,17 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
         <div hidden={tab !== "invoices"}>
           <InvoicesDraft clientId={clientId} firstName={firstName} clientName={clientName} plan={invoices} />
         </div>
-        <div hidden={tab !== "messages"}>
-          <MessagesDraft clientId={clientId} firstName={firstName} plan={messages} active={tab === "messages"} />
-        </div>
       </div>
+      {/* The chat's tab on the window's right edge, on every screen of a
+          client: it slides the chat out. A dot while there is something from
+          them not opened yet. */}
+      <button type="button" className={`rd-chattab${chat.open ? " hidden" : ""}`} onClick={() => openChat()} aria-label={`Chat with ${firstName}${messages.unread ? ", new message" : ""}`} title={`Chat with ${firstName}`} tabIndex={chat.open ? -1 : 0}>
+        <ChatIcon />
+        {messages.unread && <i className="rd-chattab-dot" aria-hidden="true" />}
+      </button>
       {chat.mounted && (
         <aside ref={panelRef} className={`rd-chatpanel${chat.open ? " open" : ""}`} aria-label={`Chat with ${firstName}`} aria-hidden={!chat.open} inert={chat.open ? undefined : true}>
-          <MessagesDraft clientId={clientId} firstName={firstName} plan={messages} active={chat.open} panel={{ about: chat.about, opened: chat.opened, onClose: closeChat }} />
+          <MessagesDraft clientId={clientId} firstName={firstName} plan={messages} active={chat.open} panel={{ about: chat.about, opened: chat.opened, onClose: closeChat, focus: chat.focus }} />
         </aside>
       )}
       <Toaster />

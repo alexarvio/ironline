@@ -196,3 +196,19 @@ a.rm-link.open:hover { background: #d9e2ee; }
 .rm-bubble-row:hover .rm-replybtn, .rm-replybtn:focus-visible { opacity: 1; }
 .rm-replybtn:hover { background: #d8e1ec; }
 @media (hover: none) { .rm-replybtn { opacity: 0.7; } }
+
+/* ---- The chat's tab on the right edge (2 Oct): Messages is no longer a tab
+   of its own; this sticks out from behind the window on every client screen
+   and slides the chat out. A dot: something from the client not opened. */
+.rd-chattab { position: fixed; right: 0; top: 50%; z-index: 55; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 9px 14px 11px; border: 0; border-radius: 14px 0 0 14px; background: #1e3a6e; color: #fff; font: inherit; font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; cursor: pointer; box-shadow: -6px 0 18px -6px rgba(8, 31, 92, 0.45); transform: translate(4px, -50%); transition: transform 0.18s ease, opacity 0.18s ease, background 0.18s; }
+.rd-chattab:hover, .rd-chattab:focus-visible { transform: translate(0, -50%); background: #2f5d8f; }
+.rd-chattab svg { width: 18px; height: 18px; }
+.rd-chattab span { writing-mode: vertical-rl; transform: rotate(180deg); text-transform: uppercase; }
+.rd-chattab-dot { position: absolute; top: 8px; left: 7px; width: 9px; height: 9px; border-radius: 999px; background: #f0a35b; box-shadow: 0 0 0 2px #1e3a6e; }
+.rd-chattab.hidden { opacity: 0; pointer-events: none; transform: translate(100%, -50%); }
+/* Up on the tabs' row, the icon alone (2 Oct): level with Home … Invoices,
+   and there on every scroll. */
+.rd-chattab { top: 28px; padding: 9px 14px 9px 13px; gap: 0; transform: translateX(4px); }
+.rd-chattab:hover, .rd-chattab:focus-visible { transform: none; }
+.rd-chattab.hidden { transform: translateX(100%); }
+.rd-chattab-dot { top: 6px; left: 6px; }

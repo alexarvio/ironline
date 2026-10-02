@@ -25,7 +25,7 @@ export type DraftLink = { area: string; label: string; gone: boolean; link?: Mes
 export type DraftMedia = { path: string; type: "image" | "video" | "audio" | "file"; name?: string | null };
 export type DraftMessage = { id: number; mine: boolean; text: string; when: string; media?: DraftMedia | null; link: DraftLink | null; reactions?: { coach?: string | null; client?: string | null }; pinned?: boolean; edited?: boolean; /** The message it answers, quoted (mine: the coach's own). */ replyTo?: { id: number; mine: boolean; text: string } | null };
 /** Newest first, as the loader hands them over. */
-export type DraftMessages = { messages: DraftMessage[]; targets: LinkTargets; avatarPath?: string | null };
+export type DraftMessages = { messages: DraftMessage[]; targets: LinkTargets; avatarPath?: string | null; /** Something from the client not opened yet: the chat tab's dot. */ unread?: boolean };
 const REACTIONS = ["👍", "❤️", "💪", "🔥", "👏", "😂"] as const;
 const POLL_MS = 15000;
 
@@ -36,7 +36,7 @@ const timeOf = (when: string) => when.split(", ")[1] ?? "";
 /** The chat as the panel that slides in from the right (ChatPanel), opened to
  *  reply to something the client said: what the reply is about, set as its
  *  link each time it opens (`opened` counts the openings), and how to close. */
-export type ChatPanelMode = { about: DraftLink | null; opened: number; onClose: () => void };
+export type ChatPanelMode = { about: DraftLink | null; opened: number; onClose: () => void; /** A message to land on (from the feed), lit for a moment. */ focus?: number | null };
 
 export default function MessagesDraft({ clientId, firstName, plan, active, panel = null }: { clientId: number; firstName: string; plan: DraftMessages; /** The tab is the one showing. */ active: boolean; panel?: ChatPanelMode | null }) {
   const router = useRouter();
@@ -51,7 +51,9 @@ export default function MessagesDraft({ clientId, firstName, plan, active, panel
     setLink(panel.about);
   }
   useEffect(() => {
-    if (panel?.opened) setTimeout(() => box.current?.focus(), 320);
+    if (!panel?.opened) return;
+    const t = setTimeout(() => box.current?.focus(), 320);
+    return () => clearTimeout(t);
   }, [panel?.opened]);
   const [linking, setLinking] = useState(false);
   // After sending: one message being reworded, one getting a link, one about to go.
@@ -197,11 +199,21 @@ export default function MessagesDraft({ clientId, firstName, plan, active, panel
     const row = thread.current?.querySelector<HTMLElement>(`[data-mid="${id}"]`);
     const el = thread.current;
     if (row && el) {
+      atEnd.current = false;
       el.scrollTo({ top: el.scrollTop + row.getBoundingClientRect().top - el.getBoundingClientRect().top - el.clientHeight / 3, behavior: "smooth" });
       setFlash(id);
       setTimeout(() => setFlash((f) => (f === id ? null : f)), 1600);
     }
   };
+  // Opened from the feed on one message: there, lit, not at the newest.
+  const focusOn = panel?.focus ?? null;
+  const opening = panel?.opened ?? 0;
+  useEffect(() => {
+    if (focusOn == null || !opening) return;
+    const t = setTimeout(() => goToMessage(focusOn), 340);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once an opening
+  }, [opening]);
   const goToPin = () => {
     if (!pinShown) return;
     goToMessage(pinShown.id);

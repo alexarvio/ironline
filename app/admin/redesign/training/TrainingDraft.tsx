@@ -1478,7 +1478,8 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
               close();
               act(async () => {
                 if (v.name && v.name !== program.name) await renameProgramAction(fd({ programId: program.id, name: v.name }));
-                if (program.phaseId) await updateClientPhaseAction(fd({ id: program.phaseId, track: "training", name: v.name || program.name, start: v.start, end: v.end }));
+                // A new end (typed, or + 1 week) is a new length: the programme gains or loses weeks.
+                if (program.phaseId) await updateClientPhaseAction(fd({ id: program.phaseId, track: "training", name: v.name || program.name, start: v.start, end: v.end, adjustProgram: v.weeks !== weeks.length ? "1" : null }));
                 await scheduleProgramDeployAction(fd({ programId: program.id, date: v.start, time: "09:00" }));
               }, `${v.name || program.name} scheduled: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
             }}
@@ -1529,7 +1530,8 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
               close();
               act(async () => {
                 if (v.name && v.name !== program.name) await renameProgramAction(fd({ programId: program.id, name: v.name }));
-                if (program.phaseId) await updateClientPhaseAction(fd({ id: program.phaseId, track: "training", name: v.name || program.name, start: v.start, end: v.end }));
+                // A new end (typed, or + 1 week) is a new length: the programme gains or loses weeks.
+                if (program.phaseId) await updateClientPhaseAction(fd({ id: program.phaseId, track: "training", name: v.name || program.name, start: v.start, end: v.end, adjustProgram: v.weeks !== weeks.length ? "1" : null }));
               }, `${v.name || program.name}: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
             }}
           />

@@ -12,6 +12,7 @@ import {
   getClientProfile,
   phaseCheckInDays,
   chatQuote,
+  chatUnread,
   syncClientLoginEmail,
   getMetricEntries,
   getCoachProfile,
@@ -591,6 +592,15 @@ export function feedHref(e: Pick<FeedEvent, "clientId" | "tab" | "category" | "t
   const tab = (name: string, rest = "") => `/admin/redesign/${name}?client=${e.clientId}${rest}`;
   const t = e.target;
   if (t?.kind === "gone") return null;
+  // A message from the client (2 Oct): what it is about opens (its tab, its
+  // day or exercise; Home when it is about nothing), with the chat over it
+  // at that message (RedesignShell reads ?chat=).
+  if (t?.kind === "chat") {
+    const view = t.link ? describeMessageLink(e.clientId, t.link) : null;
+    const base = t.link && view && !view.removed ? messageLinkHref(e.clientId, t.link, view.week) : tab("home");
+    const [path, hash = ""] = base.split("#");
+    return `${path}&chat=${t.messageId}${hash ? `#${hash}` : ""}`;
+  }
   if (t?.kind === "invoice") return `/admin/redesign/invoices/${t.invoiceId}`;
   if (t?.kind === "food") return tab("nutrition", `#day-${t.date}`);
   if (t?.kind === "program") return tab("training", `&program=${t.programId}`);
@@ -637,31 +647,34 @@ export function loadHome(clientId: number): DraftHome {
 
 // ---- Messages --------------------------------------------------------------------
 
+/**
+ * Where a link in a message opens on the coach's side: the tab, and the
+ * programme and week, or the day, it points at (the #part unfolds it there;
+ * for an exercise, #session-DAY-ex-ROW scrolls to and marks the row).
+ */
+export function messageLinkHref(clientId: number, link: MessageLink, week: number | null): string {
+  const tab = (name: string, rest = "") => `/admin/redesign/${name}?client=${clientId}${rest}`;
+  switch (link.kind) {
+    case "session":
+    case "exercise": {
+      const p = week == null ? null : listPrograms(clientId).find((x) => week >= x.start_week && week < x.start_week + x.total_weeks);
+      const part = link.kind === "exercise" ? `#session-${link.dayId}-ex-${link.assignmentId}` : `#session-${link.dayId}`;
+      return p ? tab("training", `&program=${p.id}&week=${week! - p.start_week + 1}${part}`) : tab("training");
+    }
+    case "food":
+      return tab("nutrition", `#day-${link.date}`);
+    case "nutrition":
+      return tab("nutrition");
+    case "checkin":
+      return tab("measurements");
+    case "photos":
+      return tab("pictures");
+  }
+}
+
 export function loadMessages(clientId: number): DraftMessages {
   const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-  // Where a link in a message opens on the coach's side: the tab, and the
-  // programme and week, or the day, it points at (the #part unfolds it there;
-  // for an exercise, #session-DAY-ex-ROW scrolls to and marks the row).
-  const programs = listPrograms(clientId);
-  const hrefFor = (link: MessageLink, week: number | null): string => {
-    const tab = (name: string, rest = "") => `/admin/redesign/${name}?client=${clientId}${rest}`;
-    switch (link.kind) {
-      case "session":
-      case "exercise": {
-        const p = week == null ? null : programs.find((x) => week >= x.start_week && week < x.start_week + x.total_weeks);
-        const part = link.kind === "exercise" ? `#session-${link.dayId}-ex-${link.assignmentId}` : `#session-${link.dayId}`;
-        return p ? tab("training", `&program=${p.id}&week=${week! - p.start_week + 1}${part}`) : tab("training");
-      }
-      case "food":
-        return tab("nutrition", `#day-${link.date}`);
-      case "nutrition":
-        return tab("nutrition");
-      case "checkin":
-        return tab("measurements");
-      case "photos":
-        return tab("pictures");
-    }
-  };
+  const hrefFor = (link: MessageLink, week: number | null) => messageLinkHref(clientId, link, week);
   // Both sides, newest first: the client answers from their app.
   const messages = listChatMessages(clientId)
     .filter((m) => m.text.trim() || m.media_path)
@@ -684,7 +697,7 @@ export function loadMessages(clientId: number): DraftMessages {
         })(),
       };
     });
-  return { messages, targets: listMessageLinkTargets(clientId), avatarPath: getClient(clientId)?.avatar_path ?? null };
+  return { messages, targets: listMessageLinkTargets(clientId), avatarPath: getClient(clientId)?.avatar_path ?? null, unread: chatUnread(clientId) };
 }
 
 // ---- Invoices tab: the client's invoices as they print, and what Settings

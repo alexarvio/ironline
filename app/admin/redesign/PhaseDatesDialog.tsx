@@ -32,8 +32,6 @@ export default function PhaseDatesDialog({
   weeks,
   start,
   end,
-  firstName,
-  what,
   confirm,
   onConfirm,
   byDay = false,
@@ -45,12 +43,12 @@ export default function PhaseDatesDialog({
   weeks?: number | null;
   start: string | null;
   end: string | null;
-  firstName: string;
-  /** "the programme", "these targets", "these metrics": what reaches the client. */
-  what: string;
+  /** Who and what it reaches: no longer said in the dialog (2 Oct); still passed. */
+  firstName?: string;
+  what?: string;
   confirm: string;
-  /** `end` is the last day. */
-  onConfirm: (v: { name: string; start: string; end: string }) => void;
+  /** `end` is the last day; `weeks`, how many weeks that makes (a programme's new length). */
+  onConfirm: (v: { name: string; start: string; end: string; weeks: number }) => void;
   /** Any day, not whole weeks: a nutrition or lifestyle phase. `end` (given) is still its stored end_week. */
   byDay?: boolean;
 }) {
@@ -67,17 +65,20 @@ export default function PhaseDatesDialog({
   // With both ends open, the first click sets the start and the next the end.
   const [picking, setPicking] = useState<"start" | "end">("start");
 
+  // A programme keeps its length when its start moves (the length as it
+  // stands, the rail's or changed here); its end can be typed too (2 Oct),
+  // which changes how many weeks it has.
   const setStart = (d: string) => {
     const s = snap(d);
     setFrom(s);
-    if (fixed) setTo(shift(s, weeks * 7 - 1));
+    if (fixed) setTo(shift(s, weeksBetween(from, to) * 7 - 1));
     else if (to < s) setTo(byDay ? s : sundayOf(s));
     setCursor(s.slice(0, 7));
   };
   const setEnd = (d: string) => {
     const e = byDay ? d : sundayOf(d);
     if (e < from) {
-      setStart(d);
+      if (!fixed) setStart(d);
       return;
     }
     setTo(e);
@@ -107,15 +108,13 @@ export default function PhaseDatesDialog({
     : `${length} ${length === 1 ? "week" : "weeks"}`;
   const ok = (!name || nm.trim().length > 0) && from <= to;
   const now = today();
-  const startsNow = from <= now;
 
   return (
     <DialogContent className="rd-dlg rdd">
       <DialogHeader>
         <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>
-          {fixed ? `Its length is the ${weeks} weeks on the rail; pick the week it starts. Weeks run Monday to Sunday.` : byDay ? "Pick the day it starts and the day it ends." : "Pick the week it starts and the week it ends. Weeks run Monday to Sunday."}
-        </DialogDescription>
+        {/* For screen readers only: on screen the dialog explains itself (2 Oct). */}
+        <DialogDescription hidden>{byDay ? "Pick the day it starts and the day it ends." : "Pick the week it starts and the week it ends."}</DialogDescription>
       </DialogHeader>
       {name !== undefined && (
         <label className="rd-field">
@@ -168,7 +167,7 @@ export default function PhaseDatesDialog({
           </label>
           <label className="rd-field">
             <span>Ends</span>
-            <DateText value={to} disabled={fixed} onChange={setEnd} label="Ends" onFocus={() => setPicking("end")} />
+            <DateText value={to} onChange={setEnd} label="Ends" onFocus={() => setPicking("end")} />
           </label>
           <div className="rd-field">
             <span>Length</span>
@@ -181,24 +180,18 @@ export default function PhaseDatesDialog({
           </div>
           <div className="rd-field">
             <span>Quick</span>
+            {/* One quick move (2 Oct): a week longer, on the end. */}
             <div className="rdd-quick">
-              <button type="button" className={`rd-chip${from === snap(now) ? " on" : ""}`} onClick={() => setStart(now)}>
-                {byDay ? "Today" : "This week"}
-              </button>
-              <button type="button" className={`rd-chip${from === nextMonday ? " on" : ""}`} onClick={() => setStart(nextMonday)}>
-                Next Monday
-              </button>
-              <button type="button" className={`rd-chip${from === snap(shift(now, 14)) ? " on" : ""}`} onClick={() => setStart(shift(now, 14))}>
-                In two weeks
+              <button type="button" className="rd-chip" onClick={() => setTo(shift(to, 7))}>
+                + 1 week
               </button>
             </div>
           </div>
         </div>
       </div>
       <DialogFooter>
-        <span className="rd-dlg-hint grow">{startsNow ? `${firstName} sees ${what} straight away.` : `${firstName} sees ${what} from ${fmt(from)}; until then only you see it.`}</span>
         <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onConfirm({ name: nm.trim(), start: from, end: to })}>
+        <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onConfirm({ name: nm.trim(), start: from, end: to, weeks: length })}>
           {confirm}
         </button>
       </DialogFooter>

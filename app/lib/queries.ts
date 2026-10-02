@@ -2326,7 +2326,7 @@ export type FeedEvent = {
   dayId?: number;
   /** Exactly what the row is about, for a link that lands on it (the redesign's
       feedHref): a session in its week, a food day, a programme, an invoice. */
-  target?: { kind: "session"; dayId: number; week: number } | { kind: "food"; date: string } | { kind: "program"; programId: number } | { kind: "invoice"; invoiceId: number } | { kind: "gone" };
+  target?: { kind: "session"; dayId: number; week: number } | { kind: "food"; date: string } | { kind: "program"; programId: number } | { kind: "invoice"; invoiceId: number } | { kind: "gone" } | { kind: "chat"; messageId: number; link: MessageLink | null };
   /** What happened, written to follow the client's name. */
   text: string;
   /** The client's own words, when the event carries them. */
@@ -2600,6 +2600,8 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       category: "messages",
       at: stampMs(m.created_at),
       tab: "messages",
+      // Opens the chat on this message, over what it is about (2 Oct).
+      target: { kind: "chat", messageId: m.id, link: m.link ?? null },
       text: words ? "sent you a message" : `sent you ${mediaWords(m.media_type)}`,
       note: words || null,
     });
@@ -6006,6 +6008,14 @@ export function setCoachNote(clientId: number, text: string) {
 }
 
 /** The coach has looked: these events (all of them, one session's, or by id) stop being new. */
+/** Something the client wrote in the chat lately that the coach hasn't opened the chat on. */
+export function chatUnread(clientId: number): boolean {
+  const data = getData();
+  const seen = data.clients.find((c) => c.id === clientId)?.coach_seen ?? {};
+  const since = Date.now() - HOME_NEW_DAYS * 86400000;
+  return data.chat_messages.some((m) => m.client_id === clientId && m.sender === "client" && (m.text.trim() || m.media_path) && stampMs(m.created_at) >= since && !(`chat-${m.id}` in seen));
+}
+
 export function markClientEventsSeen(clientId: number, which: { all: true } | { dayId: number } | { ids: string[] } | { tab: string }) {
   const data = getData();
   const client = data.clients.find((c) => c.id === clientId);
