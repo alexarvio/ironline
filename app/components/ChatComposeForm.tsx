@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { sendChatMessageAction } from "../lib/actions";
 import type { MessageAbout } from "../lib/messageLinks";
 import VoiceRecordButton from "./VoiceRecordButton";
@@ -20,6 +20,8 @@ export default function ChatComposeForm({
   onClearAbout,
   onSending,
   onSent,
+  replyTo = null,
+  onClearReply,
 }: {
   clientId: number;
   sender: "client" | "coach";
@@ -30,6 +32,9 @@ export default function ChatComposeForm({
   onSending?: (text: string) => void;
   /** The server has it: the thread can ask for the real thing. */
   onSent?: () => void;
+  /** The one message this answers (2 Oct, as WhatsApp): quoted over the box, sent with it. */
+  replyTo?: { id: number; who: string; text: string; own: boolean } | null;
+  onClearReply?: () => void;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -42,21 +47,40 @@ export default function ChatComposeForm({
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   };
 
+  // Choosing Reply on a message puts the cursor in the box.
+  const replyId = replyTo?.id ?? null;
+  useEffect(() => {
+    if (replyId != null) boxRef.current?.focus();
+  }, [replyId]);
+
   const sendFile = (file: File) => {
     const fd = new FormData();
     fd.set("clientId", String(clientId));
     fd.set("text", "");
     fd.set("file", file);
     if (about) fd.set("link", JSON.stringify(about.link));
+    if (replyTo) fd.set("replyTo", String(replyTo.id));
     start(async () => {
       await sendChatMessageAction(fd);
       onClearAbout?.();
+      onClearReply?.();
       onSent?.();
     });
   };
 
   return (
     <>
+    {replyTo && (
+      <div className="chat-about chat-replying">
+        <span className={`cm-quote static${replyTo.own ? " own" : ""}`}>
+          <b>Replying to {replyTo.who}</b>
+          <span>{replyTo.text}</span>
+        </span>
+        <button type="button" className="chat-about-x" onClick={onClearReply} aria-label="Don't reply to it">
+          ×
+        </button>
+      </div>
+    )}
     {about && (
       <div className="chat-about">
         <span className="chat-about-text">
@@ -79,6 +103,7 @@ export default function ChatComposeForm({
         fd.set("clientId", String(clientId));
         fd.set("text", words);
         if (about) fd.set("link", JSON.stringify(about.link));
+        if (replyTo) fd.set("replyTo", String(replyTo.id));
         // The box clears and the thread shows the words straight away; the
         // server's copy replaces them when it answers.
         setText("");
@@ -87,6 +112,7 @@ export default function ChatComposeForm({
         start(async () => {
           await sendChatMessageAction(fd);
           onClearAbout?.();
+          onClearReply?.();
           onSent?.();
         });
       }}

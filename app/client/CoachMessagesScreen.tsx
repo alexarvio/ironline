@@ -53,6 +53,9 @@ const mediaWord = (m: CoachMessageView) =>
 export default function CoachMessagesScreen({ coachName, messages: fromPage, viewerIsClient, clientId, onBack, about = null, onClearAbout }: CoachMessagesProps & { clientId: number; onBack: () => void; about?: MessageAbout | null; onClearAbout?: () => void }) {
   const [, startTransition] = useTransition();
   const [editing, setEditing] = useState<{ id: number; text: string } | null>(null);
+  // The one message being answered (2 Oct, as WhatsApp): quoted over the box until sent or dropped.
+  const [replying, setReplying] = useState<CoachMessageView | null>(null);
+  const quoteOf = (m: CoachMessageView) => m.text.trim() || (m.media?.type === "image" ? "📷 Photo" : m.media?.type === "video" ? "🎥 Video" : m.media?.type === "audio" ? "🎤 Voice message" : m.media ? `📄 ${m.media.name ?? "File"}` : "");
   // The thread the screen shows: the page's copy to begin with, then what
   // chatThreadAction answers (a few kilobytes, every 15 s and after every
   // send), so nothing here draws the whole page again. A message just sent
@@ -229,6 +232,7 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
                     canEdit={own(m) && !!m.text}
                     onCopy={m.text ? () => navigator.clipboard?.writeText(m.text).catch(() => {}) : null}
                     onEdit={() => setEditing({ id: m.id, text: m.text })}
+                    onReply={m.id > 0 ? () => setReplying(m) : null}
                     onDelete={() => remove(m)}
                     onUnpin={m.pinned ? () => unpin(m) : null}
                   />
@@ -311,6 +315,8 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
           sender={viewerIsClient ? "client" : "coach"}
           about={about}
           onClearAbout={onClearAbout}
+          replyTo={replying ? { id: replying.id, who: own(replying) ? "yourself" : viewerIsClient ? coachName : "them", text: quoteOf(replying), own: replying.mine } : null}
+          onClearReply={() => setReplying(null)}
           onSending={(text) => {
             const now = new Date();
             setSending((s) => [
@@ -326,6 +332,7 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
                 reactions: { coach: null, client: null },
                 pinned: false,
                 edited: false,
+                replyTo: replying ? { id: replying.id, fromMe: replying.mine, text: quoteOf(replying) } : null,
               },
             ]);
           }}
@@ -348,6 +355,7 @@ function MessageMenu({
   canEdit,
   onCopy,
   onEdit,
+  onReply = null,
   onDelete,
   onUnpin = null,
 }: {
@@ -358,6 +366,8 @@ function MessageMenu({
   canEdit: boolean;
   onCopy: (() => void) | null;
   onEdit: () => void;
+  /** Answer this one message, quoted (as WhatsApp). */
+  onReply?: (() => void) | null;
   onDelete: () => void;
   onUnpin?: (() => void) | null;
 }) {
@@ -417,6 +427,11 @@ function MessageMenu({
                   </button>
                 ))}
               </span>
+              {onReply && (
+                <button type="button" role="menuitem" onClick={pick(onReply)}>
+                  Reply
+                </button>
+              )}
               {onCopy && (
                 <button type="button" role="menuitem" onClick={pick(onCopy)}>
                   Copy
