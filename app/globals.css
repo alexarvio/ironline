@@ -17898,3 +17898,7 @@ button.ci-hint { cursor: pointer; }
    as the active one moved down, or as last time's numbers swapped in. */
 .wo-sets .ts-set { min-height: 53px; padding-top: 6px; padding-bottom: 6px; box-sizing: border-box; align-items: center; }
 .wo-sets .ts-set .ts-input { height: 40px; padding-top: 0; padding-bottom: 0; }
+/* Last time on or off, nothing moves (2 Oct): its line under the rows takes
+   exactly the Log button's place (48 high, same gap above), and so does
+   "All sets logged" when there is no button. */
+.wo-sets .ts-last-note, .wo-sets .ts-all-logged { height: 48px; margin-top: 12px; padding: 0 6px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; overflow: hidden; text-align: center; }
