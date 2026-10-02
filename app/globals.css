@@ -17888,3 +17888,13 @@ button.ci-hint { cursor: pointer; }
 /* The client's chat: Media on the header's right; the gallery covers the screen it is pushed on. */
 .cm-header .cm-media-btn { margin-left: auto; }
 .app-layer-push { position: relative; }
+/* The workout's chat and ⋯ on the exercise's own row (2 Oct), beside the
+   demo, in the page's navy: what is said there is about the exercise. */
+.wo-ex-tools .wo-ex-btn { width: 34px; height: 34px; border: 0; background: transparent; color: #1e3a6e; cursor: pointer; padding: 0; }
+.wo-ex-tools .wo-ex-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.wo-ex-tools .wo-ex-btn svg circle { fill: currentColor; stroke: none; }
+/* Every set row the same height (2 Oct), the one being typed in or not:
+   the active row's boxes made it taller than the rest, so the rows jumped
+   as the active one moved down, or as last time's numbers swapped in. */
+.wo-sets .ts-set { min-height: 53px; padding-top: 6px; padding-bottom: 6px; box-sizing: border-box; align-items: center; }
+.wo-sets .ts-set .ts-input { height: 40px; padding-top: 0; padding-bottom: 0; }

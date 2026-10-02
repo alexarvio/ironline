@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import type React from "react";
 import { clearSwapAction, logSetAction, saveExerciseNoteAction, saveWarmupSetsAction, swapExerciseAction } from "../lib/actions";
 import AlternativesSheet from "./AlternativesSheet";
 import { VideoAskSheet, VideoGlyph } from "./VideoAskSheet";
@@ -37,7 +38,10 @@ export default function ExercisePage({
   onNext,
   request = null,
   onSetLogged,
+  tools = null,
 }: {
+  /** The workout's chat and ⋯, on this exercise's own row (2 Oct): what is said there is about the exercise. */
+  tools?: React.ReactNode;
   exercise: SessionExercise;
   index: number;
   total: number;
@@ -240,6 +244,7 @@ export default function ExercisePage({
                 </svg>
               </a>
             )}
+            {tools}
           </div>
         </div>
         {/* The name, and on its right what comes next, so the machine can be

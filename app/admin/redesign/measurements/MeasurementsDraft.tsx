@@ -266,8 +266,8 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
               <MoreIcon />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="pb-menu">
-              <DropdownMenuItem onSelect={() => message({ label: "Check-ins", link: { kind: "checkin", section: logCadence } })}>
-                <ChatIcon /> Message about check-ins
+              <DropdownMenuItem onSelect={() => message({ label: "Measurements", link: { kind: "checkin", section: logCadence } })}>
+                <ChatIcon /> Message about measurements
               </DropdownMenuItem>
               {plan.id !== 0 && (
                 <DropdownMenuItem onSelect={() => setDlg({ kind: "dates" })}>

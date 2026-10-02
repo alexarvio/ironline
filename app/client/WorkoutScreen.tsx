@@ -24,6 +24,7 @@ import {
 
 
   type SessionDay,
+  type SessionExercise,
 } from "./workoutShared";
 
 // The workout: a navy header with the session's clock, a horizontal pager
@@ -146,6 +147,16 @@ export default function WorkoutScreen({
   // The ⋯ menu and the sheets.
   const [menuOpen, setMenuOpen] = useState(false);
   useDismiss(menuOpen, () => setMenuOpen(false));
+  // Where the menu drops from: under the ⋯ that opened it (on an exercise's
+  // row since 2 Oct, or the head on a cardio or the wrap up).
+  const screenRef = useRef<HTMLDivElement>(null);
+  const [menuAt, setMenuAt] = useState<{ top: number; right: number } | null>(null);
+  const toggleMenu = (e: React.MouseEvent<HTMLElement>) => {
+    const box = screenRef.current?.getBoundingClientRect();
+    const btn = e.currentTarget.getBoundingClientRect();
+    setMenuAt(box ? { top: btn.bottom - box.top + 6, right: box.right - btn.right } : null);
+    setMenuOpen((o) => !o);
+  };
   const [gymOpen, setGymOpen] = useState(false);
   // The exercise on screen, for the menu's note / warm-up / swap and the chat.
   const currentEx = current.kind === "exercise" ? day.exercises[current.index] : null;
@@ -181,11 +192,34 @@ export default function WorkoutScreen({
     });
   };
 
+  // The chat (about the exercise on screen, when there is one) and the ⋯.
+  const headTools = (cls: string, ex: SessionExercise | null = null) => (
+    <>
+      {openMessages && (
+        <button
+          type="button"
+          className={cls}
+          onClick={() => (ex ? openMessages({ link: { kind: "exercise", dayId: day.key, assignmentId: ex.id }, label: `${shownName(ex)} · ${day.title}` }) : openMessages())}
+          aria-label={ex ? `Message ${coachName} about ${shownName(ex)}` : `Message ${coachName}`}
+        >
+          <ChatIcon />
+        </button>
+      )}
+      <button type="button" className={cls} onClick={toggleMenu} aria-label="More" aria-expanded={menuOpen}>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="5" cy="12" r="1.8" fill="currentColor" stroke="none" />
+          <circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none" />
+          <circle cx="19" cy="12" r="1.8" fill="currentColor" stroke="none" />
+        </svg>
+      </button>
+    </>
+  );
+
   const pageDone = (p: Page) => (p.kind === "exercise" ? isDone(day.exercises[p.index]) : p.kind === "cardio" ? day.cardio[p.index].done : ended);
   const pageStarted = (p: Page) => p.kind === "exercise" && loggedCount(day.exercises[p.index]) > 0;
 
   return (
-    <div className="app-layer app-layer-push wo-screen" role="dialog" aria-label={`${day.title} workout`}>
+    <div ref={screenRef} className="app-layer app-layer-push wo-screen" role="dialog" aria-label={`${day.title} workout`}>
       <header className="wo-head">
         <div className="wo-head-row">
           <button type="button" className="wo-head-btn" onClick={onBack} aria-label="Back to the session overview">
@@ -195,28 +229,9 @@ export default function WorkoutScreen({
             <div className="wo-head-kicker">{day.title}</div>
             <div className={`wo-head-clock${ended ? " ended" : ""}`}>{clock(ms)}</div>
           </div>
-          <div className="wo-head-right">
-            {/* The chat, about the exercise on screen when there is one. */}
-            {openMessages && (
-              <button
-                type="button"
-                className="wo-head-btn"
-                onClick={() =>
-                  currentEx ? openMessages({ link: { kind: "exercise", dayId: day.key, assignmentId: currentEx.id }, label: `${shownName(currentEx)} · ${day.title}` }) : openMessages()
-                }
-                aria-label={currentEx ? `Message ${coachName} about ${shownName(currentEx)}` : `Message ${coachName}`}
-              >
-                <ChatIcon />
-              </button>
-            )}
-            <button type="button" className="wo-head-btn" onClick={() => setMenuOpen((o) => !o)} aria-label="More" aria-expanded={menuOpen}>
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="5" cy="12" r="1.8" fill="currentColor" stroke="none" />
-                <circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none" />
-                <circle cx="19" cy="12" r="1.8" fill="currentColor" stroke="none" />
-              </svg>
-            </button>
-          </div>
+          {/* On an exercise the chat and ⋯ sit on its own row (ExercisePage's
+              tools); on a cardio or the wrap up, here. */}
+          <div className="wo-head-right">{!currentEx && headTools("wo-head-btn")}</div>
         </div>
         <div className="wo-head-row2 right">
           {day.gyms.length > 0 && (
@@ -247,7 +262,7 @@ export default function WorkoutScreen({
         {menuOpen && (
           <>
             <button type="button" className="wo-menu-scrim" aria-label="Close menu" onClick={() => setMenuOpen(false)} />
-            <div className="wo-menu" role="menu">
+            <div className="wo-menu" role="menu" style={menuAt ? { top: menuAt.top, right: menuAt.right } : undefined}>
               {day.gyms.length > 0 && (
                 <button
                   type="button"
@@ -305,6 +320,7 @@ export default function WorkoutScreen({
                 })()}
                 onNext={() => jumpTo(i + 1)}
                 request={request?.page === i ? request : null}
+                tools={headTools("wo-round-btn wo-ex-btn", day.exercises[p.index])}
               />
             ) : p.kind === "cardio" ? (
               <div className="wo-page-inner">
