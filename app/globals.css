@@ -17836,3 +17836,12 @@ button.ci-hint { cursor: pointer; }
    off its place. A sideways swipe stays in the card, not the row behind it. */
 .hl-pager { overflow-y: hidden; overscroll-behavior-x: contain; touch-action: pan-x pan-y; }
 .pc-scroller { overflow-y: hidden; }
+/* A reply's quote at its top (2 Oct): what it answers, a tap away from it. */
+.cm-quote { display: flex; flex-direction: column; gap: 1px; width: 100%; margin: 0 0 8px; padding: 6px 10px; border: 0; border-left: 3px solid #2f5d8f; border-radius: 8px; background: rgba(30, 58, 110, 0.07); font: inherit; text-align: left; cursor: pointer; }
+.cm-quote b { font-size: 12px; font-weight: 700; color: #2f5d8f; }
+.cm-quote span { font-size: 13px; font-weight: 500; line-height: 1.35; color: #5b6474; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: pre-wrap; }
+.cm-quote.own { border-left-color: #1b7a4b; }
+.cm-quote.own b { color: #1b7a4b; }
+.cm-msg.mine .cm-quote { background: rgba(255, 255, 255, 0.14); border-left-color: rgba(255, 255, 255, 0.7); }
+.cm-msg.mine .cm-quote b { color: #fff; }
+.cm-msg.mine .cm-quote span { color: rgba(255, 255, 255, 0.82); }

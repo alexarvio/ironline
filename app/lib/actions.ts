@@ -1987,7 +1987,9 @@ export async function sendChatMessageAction(formData: FormData) {
     if (link?.kind === "food" && link.meal && hasMealComment(clientId, link.date, link.meal)) return;
   }
 
-  sendChatMessage(clientId, sender, text, media, link);
+  // A reply to one message (WhatsApp-style): sendChatMessage keeps it only if that message is in this chat.
+  const replyTo = Number(formData.get("replyTo")) || null;
+  sendChatMessage(clientId, sender, text, media, link, replyTo);
   revalidatePath("/admin");
   revalidatePath("/client");
 }

@@ -32,6 +32,8 @@ export type CoachMessageView = {
   reactions?: { coach: string | null; client: string | null };
   pinned?: boolean;
   edited?: boolean;
+  /** The message it answers, quoted (fromMe: the client's own), 2 Oct. */
+  replyTo?: { id: number; fromMe: boolean; text: string } | null;
 };
 
 export type CoachMessagesProps = {
@@ -147,17 +149,20 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
   const [pinAt, setPinAt] = useState(0);
   const pinShown = pinned.length ? pinned[pinAt % pinned.length] : null;
   const [flash, setFlash] = useState<number | null>(null);
-  const goToPin = () => {
-    if (!pinShown) return;
+  // To one message, lit for a moment: a pin, or what a reply quotes.
+  const goToMessage = (id: number) => {
     const el = body.current;
-    const row = el?.querySelector<HTMLElement>(`[data-mid="${pinShown.id}"]`);
+    const row = el?.querySelector<HTMLElement>(`[data-mid="${id}"]`);
     if (row && el) {
       atEnd.current = false;
       el.scrollTo({ top: el.scrollTop + row.getBoundingClientRect().top - el.getBoundingClientRect().top - el.clientHeight / 3, behavior: "smooth" });
-      const id = pinShown.id;
       setFlash(id);
       setTimeout(() => setFlash((f) => (f === id ? null : f)), 1600);
     }
+  };
+  const goToPin = () => {
+    if (!pinShown) return;
+    goToMessage(pinShown.id);
     setPinAt((i) => (i + 1) % Math.max(1, pinned.length));
   };
 
@@ -172,6 +177,13 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
             <div className={`cm-msg${m.mine ? " mine" : ""}${m.media ? " media" : ""}${m.link ? " linked" : ""}`}>
               {/* What it is about: a small bubble on the corner that goes there. */}
               {m.link && <LinkBubble view={m.link} />}
+              {/* What it answers (the coach replying to one message), a tap away from it. */}
+              {m.replyTo && (
+                <button type="button" className={`cm-quote${m.replyTo.fromMe ? " own" : ""}`} onClick={() => goToMessage(m.replyTo!.id)} aria-label="Go to the message it answers">
+                  <b>{m.replyTo.fromMe ? "You" : coachName}</b>
+                  <span>{m.replyTo.text}</span>
+                </button>
+              )}
               {m.media && <Media media={m.media} />}
               {isEditing ? (
                 <div className="cm-edit">

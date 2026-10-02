@@ -5103,6 +5103,8 @@ export type ChatMessage = {
   pinned?: boolean;
   /** When the coach last reworded it. */
   edited_at?: string | null;
+  /** The message this one answers (a WhatsApp-style reply): its id. */
+  reply_to?: number | null;
 };
 
 export type ChatMediaType = "image" | "video" | "audio" | "file";
@@ -5130,6 +5132,8 @@ export type ChatThreadView = {
   dayLabel: string;
   timeLabel: string;
   link: LinkView | null;
+  /** The message this one answers, quoted: fromMe, the client's own. */
+  replyTo: { id: number; fromMe: boolean; text: string } | null;
 };
 export function chatThreadViews(clientId: number): ChatThreadView[] {
   return listChatMessages(clientId)
@@ -5148,8 +5152,25 @@ export function chatThreadViews(clientId: number): ChatThreadView[] {
         dayLabel: d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),
         timeLabel: d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
         link: m.link ? describeMessageLink(clientId, m.link) : null,
+        replyTo: (() => {
+          const q = chatQuote(clientId, m.reply_to);
+          return q ? { id: q.id, fromMe: q.sender === "client", text: q.text } : null;
+        })(),
       };
     });
+}
+
+/**
+ * What a reply quotes: who wrote the message it answers, and its words (or
+ * what was sent, for a picture or a voice message). Null when it answers
+ * nothing, or the message has since been deleted.
+ */
+export function chatQuote(clientId: number, replyTo: number | null | undefined): { id: number; sender: "client" | "coach"; text: string } | null {
+  if (replyTo == null) return null;
+  const m = getData().chat_messages.find((x) => x.id === replyTo && x.client_id === clientId);
+  if (!m) return null;
+  const words = m.text.trim() || (m.media_type === "image" ? "📷 Photo" : m.media_type === "video" ? "🎥 Video" : m.media_type === "audio" ? "🎤 Voice message" : m.media_path ? `📄 ${m.media_name ?? "File"}` : "");
+  return { id: m.id, sender: m.sender, text: words.slice(0, 160) };
 }
 
 export function listChatMessages(clientId: number): ChatMessage[] {
@@ -5163,9 +5184,12 @@ export function sendChatMessage(
   sender: "client" | "coach",
   text: string,
   media?: ChatMedia,
-  link?: MessageLink | null
+  link?: MessageLink | null,
+  /** The message it answers, one in this chat. */
+  replyTo?: number | null
 ) {
   const data = getData();
+  const answers = replyTo != null && data.chat_messages.some((m) => m.id === replyTo && m.client_id === clientId) ? replyTo : null;
   data.chat_messages.push({
     id: allocId("chat_messages"),
     client_id: clientId,
@@ -5176,6 +5200,7 @@ export function sendChatMessage(
     ...(media?.name ? { media_name: media.name } : {}),
     created_at: new Date().toISOString(),
     ...(link ? { link } : {}),
+    ...(answers != null ? { reply_to: answers } : {}),
   });
   persist();
   if (sender === "coach" && getClientPreferences(clientId).coach_notes) {

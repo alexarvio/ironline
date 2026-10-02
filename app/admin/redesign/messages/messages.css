@@ -160,3 +160,28 @@ a.rm-link.open:hover { background: #d9e2ee; }
 .rm-panel-x { order: 2; margin-left: auto; width: 34px; height: 34px; border: 0; border-radius: 999px; background: #e6ecf3; font: inherit; font-size: 20px; line-height: 1; color: #1e3a6e; cursor: pointer; }
 .rm-panel-x:hover { background: #d8e1ec; }
 @media (prefers-reduced-motion: reduce) { .rd-chatpanel, .rd-chatpanel.open { transition: none; } }
+
+/* ---- The text bar, roomier (2 Oct): one + on the left (photo, file, link),
+   the box, and on the right the mic while it is empty, Send once there are
+   words. The box is exactly one line tall, so no scroll arrows show in it. */
+.rm-box { line-height: 20px; overflow-y: hidden; scrollbar-width: thin; }
+.rm-plus svg { width: 20px; height: 20px; }
+.rm-plus[data-state="open"] { background: #e6ecf3; color: #1e3a6e; }
+.rm-plus-menu [role="menuitem"] svg { width: 17px; height: 17px; }
+.rm-send { width: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; }
+.rm-send svg { width: 18px; height: 18px; }
+
+/* ---- Replying to one message (2 Oct, as WhatsApp): it, quoted, over the
+   box while writing; and at the top of the reply once sent, a tap away
+   from the message it answers. */
+.rm-quote { display: flex; flex-direction: column; gap: 1px; width: 100%; min-width: 0; margin: 0 0 6px; padding: 6px 10px; border: 0; border-left: 3px solid #2f5d8f; border-radius: 8px; background: rgba(30, 58, 110, 0.07); font: inherit; text-align: left; cursor: pointer; }
+.rm-quote b { font-size: 12px; font-weight: 700; color: #2f5d8f; }
+.rm-quote span { font-size: 13px; font-weight: 500; line-height: 1.35; color: #5b6474; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: pre-wrap; }
+.rm-quote.mine { border-left-color: #1b7a4b; }
+.rm-quote.mine b { color: #1b7a4b; }
+.rm-bubble-row.mine .rm-quote { background: rgba(255, 255, 255, 0.14); border-left-color: rgba(255, 255, 255, 0.7); }
+.rm-bubble-row.mine .rm-quote b { color: #fff; }
+.rm-bubble-row.mine .rm-quote span { color: rgba(255, 255, 255, 0.82); }
+.rm-quote.static { cursor: default; margin: 0; }
+.rm-replying { display: flex; align-items: center; gap: 8px; }
+.rm-replying .rm-quote { flex: 1; }

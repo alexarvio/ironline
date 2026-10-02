@@ -11,6 +11,7 @@ import {
   getAssignmentsForDay,
   getClientProfile,
   phaseCheckInDays,
+  chatQuote,
   syncClientLoginEmail,
   getMetricEntries,
   getCoachProfile,
@@ -677,6 +678,10 @@ export function loadMessages(clientId: number): DraftMessages {
         reactions: { coach: m.reactions?.coach ?? null, client: m.reactions?.client ?? null },
         pinned: !!m.pinned,
         edited: !!m.edited_at,
+        replyTo: (() => {
+          const q = chatQuote(clientId, m.reply_to);
+          return q ? { id: q.id, mine: q.sender === "coach", text: q.text } : null;
+        })(),
       };
     });
   return { messages, targets: listMessageLinkTargets(clientId), avatarPath: getClient(clientId)?.avatar_path ?? null };

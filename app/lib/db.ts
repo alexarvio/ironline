@@ -906,6 +906,8 @@ type ChatMessage = {
   pinned?: boolean;
   /** When the coach last reworded it; the client sees "edited". */
   edited_at?: string | null;
+  /** The message this one answers (a WhatsApp-style reply, 2 Oct): its id. */
+  reply_to?: number | null;
 };
 
 // A log of coach-side changes worth surfacing to the client — "your coach

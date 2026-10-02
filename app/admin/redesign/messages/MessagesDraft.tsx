@@ -23,7 +23,7 @@ import { ConfirmDialog } from "../training/TrainingDraft";
 /** href: where it opens on the coach's side (sent links that still open). */
 export type DraftLink = { area: string; label: string; gone: boolean; link?: MessageLink; href?: string };
 export type DraftMedia = { path: string; type: "image" | "video" | "audio" | "file"; name?: string | null };
-export type DraftMessage = { id: number; mine: boolean; text: string; when: string; media?: DraftMedia | null; link: DraftLink | null; reactions?: { coach?: string | null; client?: string | null }; pinned?: boolean; edited?: boolean };
+export type DraftMessage = { id: number; mine: boolean; text: string; when: string; media?: DraftMedia | null; link: DraftLink | null; reactions?: { coach?: string | null; client?: string | null }; pinned?: boolean; edited?: boolean; /** The message it answers, quoted (mine: the coach's own). */ replyTo?: { id: number; mine: boolean; text: string } | null };
 /** Newest first, as the loader hands them over. */
 export type DraftMessages = { messages: DraftMessage[]; targets: LinkTargets; avatarPath?: string | null };
 const REACTIONS = ["👍", "❤️", "💪", "🔥", "👏", "😂"] as const;
@@ -139,12 +139,17 @@ export default function MessagesDraft({ clientId, firstName, plan, active, panel
     fd.set("clientId", String(clientId));
     fd.set("text", text.trim());
     if (link?.link) fd.set("link", JSON.stringify(link.link));
+    if (replying) fd.set("replyTo", String(replying.id));
     act(
       () => sendChatMessageAction(fd),
       () => {
         setText("");
         setLink(null);
-        if (box.current) box.current.style.height = "auto";
+        setReplying(null);
+        if (box.current) {
+          box.current.style.height = "auto";
+          box.current.style.overflowY = "hidden";
+        }
         box.current?.focus();
       }
     );
@@ -154,8 +159,17 @@ export default function MessagesDraft({ clientId, firstName, plan, active, panel
     fd.set("clientId", String(clientId));
     fd.set("text", "");
     fd.set("file", file);
-    act(() => sendChatMessageAction(fd));
+    if (replying) fd.set("replyTo", String(replying.id));
+    act(() => sendChatMessageAction(fd), () => setReplying(null));
   };
+  // Replying to one message (2 Oct, as WhatsApp): it shows over the box until sent or dropped.
+  const [replying, setReplying] = useState<DraftMessage | null>(null);
+  const startReply = (m: DraftMessage) => {
+    setReplying(m);
+    setTimeout(() => box.current?.focus(), 0);
+  };
+  const quoteOf = (m: DraftMessage) => m.text.trim() || (m.media?.type === "image" ? "📷 Photo" : m.media?.type === "video" ? "🎥 Video" : m.media?.type === "audio" ? "🎤 Voice message" : m.media ? `📄 ${m.media.name ?? "File"}` : "");
+  const photoInput = useRef<HTMLInputElement>(null);
   const react = (m: DraftMessage, emoji: string | null) => act(() => reactToMessageAction(clientId, m.id, emoji));
   function saveEdit() {
     if (!editing || !editing.text.trim()) return;
@@ -178,15 +192,19 @@ export default function MessagesDraft({ clientId, firstName, plan, active, panel
   const [pinAt, setPinAt] = useState(0);
   const pinShown = pinned.length ? pinned[pinAt % pinned.length] : null;
   const [flash, setFlash] = useState<number | null>(null);
-  const goToPin = () => {
-    if (!pinShown) return;
-    const row = thread.current?.querySelector<HTMLElement>(`[data-mid="${pinShown.id}"]`);
+  // To one message in the thread, marked for a moment: a pin, or what a reply quotes.
+  const goToMessage = (id: number) => {
+    const row = thread.current?.querySelector<HTMLElement>(`[data-mid="${id}"]`);
     const el = thread.current;
     if (row && el) {
       el.scrollTo({ top: el.scrollTop + row.getBoundingClientRect().top - el.getBoundingClientRect().top - el.clientHeight / 3, behavior: "smooth" });
-      setFlash(pinShown.id);
-      setTimeout(() => setFlash((f) => (f === pinShown.id ? null : f)), 1600);
+      setFlash(id);
+      setTimeout(() => setFlash((f) => (f === id ? null : f)), 1600);
     }
+  };
+  const goToPin = () => {
+    if (!pinShown) return;
+    goToMessage(pinShown.id);
     setPinAt((i) => (i + 1) % Math.max(1, pinned.length));
   };
 
@@ -194,6 +212,13 @@ export default function MessagesDraft({ clientId, firstName, plan, active, panel
     <div key={`${inPins ? "pin-" : ""}${m.id}`} data-mid={inPins ? undefined : m.id} className={`rm-bubble-row${m.mine ? " mine" : " theirs"}${flash === m.id ? " flash" : ""}`}>
       <div className="rm-bubble-wrap">
         <div className={`rm-bubble${m.media ? " media" : ""}${m.link ? " linked" : ""}`}>
+          {/* What it answers, quoted at its top; a tap goes to that message. */}
+          {m.replyTo && (
+            <button type="button" className={`rm-quote${m.replyTo.mine ? " mine" : ""}`} onClick={() => goToMessage(m.replyTo!.id)} aria-label="Go to the message it answers">
+              <b>{m.replyTo.mine ? "You" : firstName}</b>
+              <span>{m.replyTo.text}</span>
+            </button>
+          )}
           {m.media && <Media media={m.media} />}
           {editing?.id === m.id && !inPins ? (
             <span className="rm-edit">
@@ -266,6 +291,7 @@ export default function MessagesDraft({ clientId, firstName, plan, active, panel
                   ))}
                 </div>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => startReply(m)}>Reply</DropdownMenuItem>
                 {m.mine && <DropdownMenuItem onSelect={() => setEditing({ id: m.id, text: m.text })}>Edit</DropdownMenuItem>}
                 {m.mine && <DropdownMenuItem onSelect={() => setRelink(m.id)}>{m.link ? "Change the link" : "Link to…"}</DropdownMenuItem>}
                 {m.mine && m.link && <DropdownMenuItem onSelect={() => act(() => setMessageLinkAction(clientId, m.id, null))}>Remove the link</DropdownMenuItem>}
@@ -397,27 +423,66 @@ export default function MessagesDraft({ clientId, firstName, plan, active, panel
               </button>
             </span>
           )}
+          {/* Replying to one message: it, quoted, over the box. */}
+          {replying && (
+            <span className="rm-replying">
+              <span className={`rm-quote static${replying.mine ? " mine" : ""}`}>
+                <b>Replying to {replying.mine ? "yourself" : firstName}</b>
+                <span>{quoteOf(replying)}</span>
+              </span>
+              <button type="button" className="rm-link-x" onClick={() => setReplying(null)} aria-label="Don't reply to it">
+                ×
+              </button>
+            </span>
+          )}
+          {/* The box with all the room (2 Oct): the link and the attachments
+              behind the + on its left; on its right the mic while it is
+              empty, Send once there are words, as WhatsApp does. */}
           <div className="rm-bar-row">
-            <button type="button" className="rd-btn ghost rm-linkbtn" disabled={nothingToLink || pending} aria-label="Link to something in the app" title={nothingToLink ? `Nothing in ${firstName}'s app to point at yet` : "Link to…"} onClick={() => setLinking(true)}>
-              <LinkGlyph />
-            </button>
-            <button type="button" className="rd-btn ghost rm-linkbtn" disabled={pending} onClick={() => fileInput.current?.click()} aria-label="Send a photo, video or file" title="Photo, video or file">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M17.5 8.5l-8 8a3.5 3.5 0 0 1-5-5l8.3-8.3a2.4 2.4 0 0 1 3.4 3.4l-8.1 8.1a1.3 1.3 0 0 1-1.9-1.9l7-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-            <input
-              ref={fileInput}
-              type="file"
-              accept="image/*,video/*,audio/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.zip"
-              hidden
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                e.target.value = "";
-                if (f) sendFile(f);
-              }}
-            />
-            <VoiceRecordButton className="rd-btn ghost rm-linkbtn rm-mic" onRecorded={sendFile} disabled={pending} />
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger className="rd-btn ghost rm-linkbtn rm-plus" disabled={pending} aria-label="Link or attach" title="Link or attach">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" className="pb-menu rm-plus-menu">
+                <DropdownMenuItem onSelect={() => photoInput.current?.click()}>
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <rect x="3.5" y="5" width="17" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
+                    <circle cx="9" cy="10" r="1.6" fill="currentColor" />
+                    <path d="M4 17l5-4.5 3.5 3 3-2.5L20 17" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                  </svg>
+                  Photo or video
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => fileInput.current?.click()}>
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M17.5 8.5l-8 8a3.5 3.5 0 0 1-5-5l8.3-8.3a2.4 2.4 0 0 1 3.4 3.4l-8.1 8.1a1.3 1.3 0 0 1-1.9-1.9l7-7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  File
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled={nothingToLink} onSelect={() => setLinking(true)}>
+                  <LinkGlyph />
+                  {nothingToLink ? `Nothing in ${firstName}'s app to link yet` : `Link to something in ${firstName}'s app`}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {[
+              { ref: photoInput, accept: "image/*,video/*" },
+              { ref: fileInput, accept: "image/*,video/*,audio/*,.pdf,.txt,.csv,.doc,.docx,.xls,.xlsx,.zip" },
+            ].map((i) => (
+              <input
+                key={i.accept}
+                ref={i.ref}
+                type="file"
+                accept={i.accept}
+                hidden
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (f) sendFile(f);
+                }}
+              />
+            ))}
             <textarea
               ref={box}
               className="rm-box"
@@ -425,22 +490,33 @@ export default function MessagesDraft({ clientId, firstName, plan, active, panel
               value={text}
               onChange={(e) => {
                 setText(e.target.value);
-                e.currentTarget.style.height = "auto";
-                e.currentTarget.style.height = `${Math.min(e.currentTarget.scrollHeight, 140)}px`;
+                const el = e.currentTarget;
+                el.style.height = "auto";
+                el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+                // A scrollbar only once it is at its tallest.
+                el.style.overflowY = el.scrollHeight > 140 ? "auto" : "hidden";
               }}
               onKeyDown={(e) => {
+                if (e.key === "Escape" && replying) setReplying(null);
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   send();
                 }
               }}
-              placeholder={`Message ${firstName}… (Shift+Enter for a new line)`}
+              placeholder={`Message ${firstName}…`}
+              title="Enter sends · Shift+Enter for a new line"
               aria-label={`Message ${firstName}`}
               disabled={pending}
             />
-            <button type="button" className="rd-btn primary rm-send" disabled={!ready} onClick={send} title="Send (Enter)">
-              {pending ? "…" : "Send"}
-            </button>
+            {text.trim() ? (
+              <button type="button" className="rd-btn primary rm-send" disabled={!ready} onClick={send} title="Send (Enter)" aria-label="Send">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4.5 12h14M13 6.5l5.5 5.5-5.5 5.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            ) : (
+              <VoiceRecordButton className="rd-btn ghost rm-linkbtn rm-mic" onRecorded={sendFile} disabled={pending} />
+            )}
           </div>
         </div>
       </section>
