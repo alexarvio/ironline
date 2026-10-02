@@ -212,3 +212,7 @@ a.rm-link.open:hover { background: #d9e2ee; }
 .rd-chattab:hover, .rd-chattab:focus-visible { transform: none; }
 .rd-chattab.hidden { transform: translateX(100%); }
 .rd-chattab-dot { top: 6px; left: 6px; }
+/* The Media button sits with the × on the header's right; the gallery covers the chat box. */
+.rm-chat { position: relative; }
+.rm .rd-head .rm-media-btn { order: 1; margin-left: auto; }
+.rm-panel .rd-head .rm-panel-x { margin-left: 8px; }

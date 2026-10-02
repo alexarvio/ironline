@@ -7,6 +7,7 @@ import { REACTIONS } from "../components/MessageReactions";
 import { chatThreadAction, deleteMyChatMessageAction, editMyChatMessageAction, reactToMessageAction, unpinMessageAction } from "../lib/actions";
 import CoachMark from "./CoachMark";
 import { useOpenLink } from "./CheckInContext";
+import ChatMediaGallery from "../components/ChatMediaGallery";
 import type { LinkView, MessageAbout } from "../lib/messageLinks";
 
 // The conversation with the coach, laid out as WhatsApp does: the coach's
@@ -73,6 +74,8 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
       setSending([]);
     }).catch(() => {});
   const messages = sending.length ? [...thread, ...sending] : thread;
+  // Media and files sent in the chat, newest first, over it (ChatMediaGallery).
+  const [gallery, setGallery] = useState(false);
   const days: { label: string; items: CoachMessageView[] }[] = [];
   for (const m of messages) {
     const last = days[days.length - 1];
@@ -83,6 +86,10 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
   // Your own messages are the ones you can change: the client's, or the
   // coach's when a coach is previewing the app (they send as the coach).
   const own = (m: CoachMessageView) => (viewerIsClient ? m.mine : !m.mine);
+  const galleryItems = messages
+    .filter((m) => m.media && m.id > 0)
+    .reverse()
+    .map((m) => ({ id: m.id, who: own(m) ? "You" : viewerIsClient ? coachName : "Your client", when: `${m.dayLabel.split(", ").slice(1).join(", ") || m.dayLabel}, ${m.timeLabel}`, media: m.media! }));
   // Which side's reaction is yours, and which is theirs.
   const mySide = viewerIsClient ? "client" : "coach";
   const theirSide = viewerIsClient ? "coach" : "client";
@@ -268,7 +275,17 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
         </button>
         <CoachMark size="lg" />
         <h1 className="cm-header-name">{coachName}</h1>
+        {/* Everything sent in this chat, gathered (2 Oct). */}
+        <button type="button" className="cmg-btn cm-media-btn" onClick={() => setGallery(true)} aria-label="Photos, videos and files sent in this chat">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="3.5" y="5" width="17" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.7" />
+            <circle cx="9" cy="10" r="1.6" fill="currentColor" />
+            <path d="M4 17l5-4.5 3.5 3 3-2.5L20 17" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+          </svg>
+          Media
+        </button>
       </header>
+      {gallery && <ChatMediaGallery items={galleryItems} onShow={goToMessage} onClose={() => setGallery(false)} />}
       {pinShown && (
         <div className="cm-pinbar-wrap">
           <button type="button" className="cm-pinbar" onClick={goToPin} aria-label={pinned.length > 1 ? "Go to this pinned message; the next pin shows" : "Go to the pinned message"}>

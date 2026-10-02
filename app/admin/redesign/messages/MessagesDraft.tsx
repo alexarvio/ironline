@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { ChevronDownIcon, PinIcon } from "../../../components/icons";
 import Picker from "../Picker";
 import VoiceRecordButton from "../../../components/VoiceRecordButton";
+import ChatMediaGallery from "../../../components/ChatMediaGallery";
 import { deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction, setMessageLinkAction } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import type { LinkTargets } from "../../../lib/queries";
@@ -172,6 +173,8 @@ export default function MessagesDraft({ clientId, firstName, plan, active, panel
   };
   const quoteOf = (m: DraftMessage) => m.text.trim() || (m.media?.type === "image" ? "📷 Photo" : m.media?.type === "video" ? "🎥 Video" : m.media?.type === "audio" ? "🎤 Voice message" : m.media ? `📄 ${m.media.name ?? "File"}` : "");
   const photoInput = useRef<HTMLInputElement>(null);
+  // Media and files sent in the chat, over it (ChatMediaGallery).
+  const [gallery, setGallery] = useState(false);
   const react = (m: DraftMessage, emoji: string | null) => act(() => reactToMessageAction(clientId, m.id, emoji));
   function saveEdit() {
     if (!editing || !editing.text.trim()) return;
@@ -381,9 +384,25 @@ export default function MessagesDraft({ clientId, firstName, plan, active, panel
             {firstName}
           </h1>
         </div>
+        {/* Everything sent in this chat, gathered (2 Oct). */}
+        <button type="button" className="cmg-btn rm-media-btn" onClick={() => setGallery(true)} title="Photos, videos and files sent in this chat">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="3.5" y="5" width="17" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.7" />
+            <circle cx="9" cy="10" r="1.6" fill="currentColor" />
+            <path d="M4 17l5-4.5 3.5 3 3-2.5L20 17" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+          </svg>
+          Media
+        </button>
       </header>
 
       <section ref={chat} className="rd-session open rm-chat" aria-label={`Conversation with ${firstName}`}>
+        {gallery && (
+          <ChatMediaGallery
+            items={messages.filter((m) => m.media).map((m) => ({ id: m.id, who: m.mine ? "You" : firstName, when: m.when, media: m.media! }))}
+            onShow={goToMessage}
+            onClose={() => setGallery(false)}
+          />
+        )}
         {pinShown && (
           <div className="rm-pinbar-wrap">
           <button type="button" className="rm-pinbar" onClick={goToPin} title={pinned.length > 1 ? "Go to this pinned message; the next pin shows" : "Go to the pinned message"}>
