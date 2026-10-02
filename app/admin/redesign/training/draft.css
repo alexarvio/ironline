@@ -685,3 +685,11 @@
 .rd-exchat-reply { align-self: flex-start; }
 /* The whole session head opens and folds it (1 Oct), not only the chevron. */
 .rd-session-head { cursor: pointer; }
+/* The pinned ⋯ sits in from the card's edge by the table's padding, and the
+   scrolled columns showed through that strip (2 Oct): a solid band of the
+   row's colour fills it, and the heading row's last column is pinned the
+   same way so its "30 days" doesn't peek out either. */
+.rd-rows-scroll .rd-row-more { box-shadow: -10px 0 8px -6px rgba(255, 255, 255, 0.9), 20px 0 0 0 #fff; }
+.rd-rows-scroll .rd-row.edited .rd-row-more { box-shadow: -10px 0 8px -6px rgba(248, 250, 254, 0.9), 20px 0 0 0 #f8fafe; }
+.rd-rows-scroll .rd-row-main:hover:not(.static) .rd-row-more { box-shadow: -10px 0 8px -6px rgba(250, 251, 253, 0.9), 20px 0 0 0 #fafbfd; }
+.rd-rows-scroll .rd-cols > :last-child { position: sticky; right: 0; z-index: 1; align-self: stretch; background: #fff; box-shadow: -10px 0 8px -6px rgba(255, 255, 255, 0.9), 20px 0 0 0 #fff; }
