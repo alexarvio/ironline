@@ -17848,3 +17848,7 @@ button.ci-hint { cursor: pointer; }
 /* The message being answered, over the client's box (2 Oct). */
 .chat-replying { align-items: center; gap: 8px; }
 .chat-replying .cm-quote { flex: 1; min-width: 0; margin: 0; cursor: default; }
+/* Home's lifestyle card while swiping (2 Oct): a gap between two metrics
+   (PAGE_GAP in HomeLifestyleCard.tsx), and nothing slides under the ring:
+   the strip is cut away in the ring's corner (68 by 56, its row's inset). */
+.hl-pager { gap: 20px; -webkit-mask: linear-gradient(#000 0 0), linear-gradient(#000 0 0) top left / 68px 56px no-repeat; -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) exclude, linear-gradient(#000 0 0) top left / 68px 56px no-repeat; }

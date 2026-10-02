@@ -53,6 +53,11 @@ const localToday = () => {
 const fmt = (v: number, p: number) => v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: p });
 const reducedMotion = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
+/** The space between two metrics in the swipe (2 Oct): .hl-pager's gap in globals.css. */
+const PAGE_GAP = 20;
+/** How far one metric is from the next: its width and the gap. */
+const stepOf = (el: HTMLElement) => el.clientWidth + PAGE_GAP;
+
 /** Drives scrollLeft to `to` over 280ms (ease-out cubic) with the snap off, then puts it back. */
 function animateScroll(el: HTMLElement, to: number, done: () => void) {
   const from = el.scrollLeft;
@@ -127,7 +132,7 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
   const animating = useRef(false);
   useLayoutEffect(() => {
     const el = scroller.current;
-    if (el) el.scrollLeft = idx * el.clientWidth;
+    if (el) el.scrollLeft = idx * stepOf(el);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on mount
   }, []);
   // A page move from Save or a dot: no snapping while the scroll is driven,
@@ -137,7 +142,7 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
     const el = scroller.current;
     if (!el) return;
     setIdx(i);
-    const to = i * el.clientWidth;
+    const to = i * stepOf(el);
     if (reducedMotion()) {
       el.scrollLeft = to;
       after?.();
@@ -160,7 +165,7 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
   const onScroll = () => {
     const el = scroller.current;
     if (!el || animating.current || el.clientWidth === 0) return;
-    const i = Math.round(el.scrollLeft / el.clientWidth);
+    const i = Math.round(el.scrollLeft / stepOf(el));
     if (i !== idx && i >= 0 && i < pages) setIdx(i);
   };
 
