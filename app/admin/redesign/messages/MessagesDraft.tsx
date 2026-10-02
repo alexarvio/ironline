@@ -211,8 +211,7 @@ export default function MessagesDraft({ clientId, firstName, plan, active, panel
   const bubble = (m: DraftMessage, inPins = false) => (
     <div key={`${inPins ? "pin-" : ""}${m.id}`} data-mid={inPins ? undefined : m.id} className={`rm-bubble-row${m.mine ? " mine" : " theirs"}${flash === m.id ? " flash" : ""}`}>
       <div className="rm-bubble-wrap">
-        {/* Reply, beside the bubble while the row is hovered (as WhatsApp Web);
-            a double click on the bubble does the same. */}
+        {/* Reply, beside the bubble while the row is hovered (as WhatsApp Web). */}
         {!inPins && editing?.id !== m.id && (
           <button type="button" className="rm-replybtn" onClick={() => startReply(m)} aria-label="Reply to this message" title="Reply">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -220,14 +219,7 @@ export default function MessagesDraft({ clientId, firstName, plan, active, panel
             </svg>
           </button>
         )}
-        <div
-          className={`rm-bubble${m.media ? " media" : ""}${m.link ? " linked" : ""}`}
-          onDoubleClick={(e) => {
-            if (inPins || editing?.id === m.id || (e.target as HTMLElement).closest("a, button, audio, video, textarea")) return;
-            window.getSelection()?.removeAllRanges();
-            startReply(m);
-          }}
-        >
+        <div className={`rm-bubble${m.media ? " media" : ""}${m.link ? " linked" : ""}`}>
           {/* What it answers, quoted at its top; a tap goes to that message. */}
           {m.replyTo && (
             <button type="button" className={`rm-quote${m.replyTo.mine ? " mine" : ""}`} onClick={() => goToMessage(m.replyTo!.id)} aria-label="Go to the message it answers">

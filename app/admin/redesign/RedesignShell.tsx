@@ -81,6 +81,14 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
       if (!t || panelRef.current?.contains(t)) return;
       if (t.closest("[data-radix-popper-content-wrapper], [role=dialog], [role=menu], [data-sonner-toaster]")) return;
       closeChat();
+      // That click only closes the chat (2 Oct): it used to go on to what was
+      // under it too, folding a session or switching tab in the same breath.
+      const swallow = (c: MouseEvent) => {
+        c.preventDefault();
+        c.stopPropagation();
+      };
+      document.addEventListener("click", swallow, { capture: true, once: true });
+      setTimeout(() => document.removeEventListener("click", swallow, { capture: true }), 600);
     };
     window.addEventListener("keydown", onKey);
     document.addEventListener("pointerdown", onDown);
