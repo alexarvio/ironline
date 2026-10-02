@@ -266,7 +266,7 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
         }}
       >
         <button type="button" className="hl-ring-btn" onClick={openProgress} aria-label={`Open your progress: ${n} of ${total} logged ${showingYesterday ? "for yesterday" : "today"}`}>
-          <Ring metrics={metrics} isIn={isIn} n={n} total={total} />
+          <Ring metrics={metrics} n={n} total={total} />
         </button>
         <div className="hl-log-main">
           <div className={`hl-fold${allIn ? " closed" : ""}`} aria-hidden={allIn}>
@@ -310,8 +310,10 @@ export default function HomeLifestyleCard({ clientId, today, phase, coachName, m
   );
 }
 
-// ---- The ring: one segment a metric, clockwise from the top; green when all are in. ----
-function Ring({ metrics, isIn, n, total }: { metrics: HomeLifestyleMetric[]; isIn: (m: HomeLifestyleMetric) => boolean; n: number; total: number }) {
+// ---- The ring: one segment a metric, clockwise from the top, filling in
+// order however the metrics were logged (2 Oct): n logged, the first n
+// segments; green when all are in. ----
+function Ring({ metrics, n, total }: { metrics: HomeLifestyleMetric[]; n: number; total: number }) {
   // Drawn as strokes on a circle, one arc a metric, so it is only ever a ring.
   const size = 56;
   const r = 24;
@@ -335,9 +337,9 @@ function Ring({ metrics, isIn, n, total }: { metrics: HomeLifestyleMetric[]; isI
         ) : (
           metrics.map((m, i) =>
             gap === 0 ? (
-              <circle key={keyOf(m)} cx={c} cy={c} r={r} fill="none" stroke={isIn(m) ? SAND : SAND_OFF} strokeWidth="6" />
+              <circle key={keyOf(m)} cx={c} cy={c} r={r} fill="none" stroke={i < n ? SAND : SAND_OFF} strokeWidth="6" />
             ) : (
-              <path key={keyOf(m)} d={arc(i * seg + gap / 2, (i + 1) * seg - gap / 2)} fill="none" stroke={isIn(m) ? SAND : SAND_OFF} strokeWidth="6" />
+              <path key={keyOf(m)} d={arc(i * seg + gap / 2, (i + 1) * seg - gap / 2)} fill="none" stroke={i < n ? SAND : SAND_OFF} strokeWidth="6" />
             )
           )
         )}
