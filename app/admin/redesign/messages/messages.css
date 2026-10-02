@@ -185,3 +185,14 @@ a.rm-link.open:hover { background: #d9e2ee; }
 .rm-quote.static { cursor: default; margin: 0; }
 .rm-replying { display: flex; align-items: center; gap: 8px; }
 .rm-replying .rm-quote { flex: 1; }
+
+/* Reply, easy to find (2 Oct): an arrow beside each bubble while its row is
+   hovered, on the open side (right of theirs, left of yours). */
+.rm-bubble-wrap { position: relative; }
+.rm-replybtn { position: absolute; top: 50%; width: 30px; height: 30px; margin-top: -15px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 999px; background: #e6ecf3; color: #1e3a6e; cursor: pointer; opacity: 0; transition: opacity 0.12s; }
+.rm-replybtn svg { width: 16px; height: 16px; }
+.rm-bubble-row.theirs .rm-replybtn { right: -38px; }
+.rm-bubble-row.mine .rm-replybtn { left: -38px; }
+.rm-bubble-row:hover .rm-replybtn, .rm-replybtn:focus-visible { opacity: 1; }
+.rm-replybtn:hover { background: #d8e1ec; }
+@media (hover: none) { .rm-replybtn { opacity: 0.7; } }
