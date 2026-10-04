@@ -293,6 +293,8 @@ function pastMeetingView(m: ReturnType<typeof listMeetings>[number]): PastMeetin
 function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; photos: ProgressPics; food: PhaseFoodToday; phoneTz: string | null }) {
   const client = getClient(CLIENT_ID);
   const today = localDateStr();
+  // A weekly or monthly line belongs on Home until it is in, and on the day it went in; not after.
+  const stillAskedToday = (m: CheckInMetric) => !m.value || !m.loggedAt || localDateStr(new Date(m.loggedAt)) >= today;
 
   const upcomingMeeting = listMeetings(CLIENT_ID)
     .filter((m) => m.status === "scheduled" && m.date >= today)
@@ -385,11 +387,14 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
         clientId: CLIENT_ID,
         // Today's daily metrics in the coach's order, then this week's (30 Sep): the
         // same questions the check-in lists, so the ring counts what it does.
+        // A weekly or monthly one done on an earlier day of its week or month
+        // has left the card (4 Oct): it started every morning as "1 of 4"
+        // with nothing logged that day.
         metrics: [
           ...(sections.sections.find((s) => s.id === "daily")?.metrics ?? []).map(homeMetric),
-          ...(sections.sections.find((s) => s.id === "weekly")?.metrics ?? []).map((m) => ({ ...homeMetric(m), weekly: true })),
+          ...(sections.sections.find((s) => s.id === "weekly")?.metrics ?? []).filter(stillAskedToday).map((m) => ({ ...homeMetric(m), weekly: true })),
           // And this month's, once its day has come.
-          ...(monthlyOpen ? sections.sections.find((s) => s.id === "monthly")?.metrics ?? [] : []).map((m) => ({ ...homeMetric(m), monthly: true })),
+          ...(monthlyOpen ? sections.sections.find((s) => s.id === "monthly")?.metrics ?? [] : []).filter(stillAskedToday).map((m) => ({ ...homeMetric(m), monthly: true })),
         ],
         // Yesterday's questions left open: asked once today's are in.
         yesterday: (() => {

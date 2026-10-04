@@ -17902,3 +17902,11 @@ button.ci-hint { cursor: pointer; }
    exactly the Log button's place (48 high, same gap above), and so does
    "All sets logged" when there is no button. */
 .wo-sets .ts-last-note, .wo-sets .ts-all-logged { height: 48px; margin-top: 12px; padding: 0 6px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; overflow: hidden; text-align: center; }
+/* Home's phase cards show the phase's whole name (4 Oct): it wraps onto a
+   second line rather than ending in "…", and the card grows to hold it. */
+.hl-phase { align-items: flex-start; }
+.hl-phase-name { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+.hl-phase .hl-week { flex: none; white-space: nowrap; margin-top: 4px; }
+.pc-name-row { align-items: flex-start; }
+.pc-name { height: auto; line-height: 1.15; white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+.pc-name-row .pc-left { margin-top: 6px; white-space: nowrap; }

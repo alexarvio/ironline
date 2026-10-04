@@ -67,6 +67,11 @@ export const phaseForm = (v: { id?: number; clientId?: number; name: string; tra
   if (v.track !== "training") {
     fd.set("firstDay", v.start);
     fd.set("lastDay", addDays(v.end, 6));
+  } else {
+    // A training phase is its programme (4 Oct): a new length here gives the
+    // programme as many weeks (empty ones added, unlogged ones taken off the
+    // end), so Plan and Training never disagree about when it ends.
+    fd.set("adjustProgram", "1");
   }
   if (v.programId != null) fd.set("programId", String(v.programId));
   return fd;
