@@ -14574,7 +14574,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .fdi-dots { margin: 10px 0 0; }
 /* Attached under the rings: push the day's kcal into the calorie log. */
 .fdi-push { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 16px; padding: 12px 18px; border-radius: 0 0 18px 18px; background: #e6ecf3; transition: border-radius 0.2s; }
-.fdi-push:has(+ .fdi-push-fold:not(.folding)) { border-radius: 0; }
+.fdi-push:has(~ .fdi-push-fold:not(.folding)) { border-radius: 0; }
 .fdi-targets { border-radius: 18px 18px 0 0; }
 .fdi-push.done { background: #dff3ea; }
 .fdi-push-text { flex: 1; min-width: 0; font-size: 13px; color: #5b6474; font-variant-numeric: tabular-nums; }
@@ -14592,6 +14592,15 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .fdi-push-name input { flex: 1; min-width: 0; box-sizing: border-box; height: 48px; padding: 0 14px; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; font: inherit; font-size: 16px; color: #313851; outline: none; }
 .fdi-push-name input:focus { border-color: #2f5d8f; }
 .fdi-push-name .fdi-push-btn { height: 48px; padding: 0 18px; border-radius: 12px; font-size: 14px; }
+/* The day's calories typed as one figure, in the strip itself: the box with kcal at its end, Log beside it, and Edit once logged. */
+.fdi-push-kcal { padding: 10px 12px 10px 14px; }
+.fdi-push-kcal input { flex: 1; min-width: 0; box-sizing: border-box; height: 40px; padding: 0 52px 0 12px; border: 1px solid #d3dbe6; border-radius: 10px; background: #fff; font: inherit; font-size: 16px; color: #141a24; outline: none; font-variant-numeric: tabular-nums; }
+.fdi-push-kcal input::placeholder { font-size: 14px; color: #8b93a1; }
+.fdi-push-kcal input:focus { border-color: #2f5d8f; }
+.fdi-push-kcal .fdi-push-btn { height: 40px; padding: 0 18px; }
+.fdi-quick-kcal { flex: 1; min-width: 0; position: relative; display: flex; }
+.fdi-quick-kcal small { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 13px; font-weight: 600; color: #8b93a1; pointer-events: none; }
+.fdi-push-edit { flex: none; height: 36px; padding: 0 4px; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 700; color: #0f5c46; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 /* The meals, one card. */
 .fdi-list { margin-top: 16px; }
 /* An empty day: one folded card of days that can be copied onto it, with a navy band for a head. */
@@ -14615,6 +14624,8 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .fdi-copy-use { flex: none; height: 34px; padding: 0 14px; border: 1px solid #dfe3e8; border-radius: 999px; background: #fff; font: inherit; font-size: 13px; font-weight: 700; color: #1e3a6e; cursor: pointer; }
 .fdi-copy-use:disabled { opacity: 0.6; cursor: default; }
 .fdi-copy-foot { margin: 0; padding: 10px 18px 12px; border-top: 1px solid #eceff3; font-size: 12px; color: #8b93a1; text-align: center; }
+.fdi-copy-empty { margin: 0; padding: 14px 18px; font-size: 13px; color: #8b93a1; text-align: center; }
+.fdi-copy-row + .fdi-copy-empty { border-top: 1px solid #eceff3; }
 .fdi-meals { border: 1px solid #dfe3e8; border-radius: 18px; background: #fff; overflow: hidden; }
 .fdi-meal { display: flex; flex-direction: column; border-top: 1px solid #eceff3; }
 .fdi-meal:first-child { border-top: 0; }
@@ -16113,6 +16124,9 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .wo-swipe:not(.dragging) .wo-swipe-handle { transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
 .wo-swipe.locked .wo-swipe-handle { color: #2f7a3f; cursor: default; }
 .wo-swipe-handle svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+/* Editing a finished workout: Save changes where the swipe was, the same pill. */
+.wo-save-edit { height: 60px; border: 0; border-radius: 999px; background: #1e3a6e; color: #fff; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
+.wo-save-edit:disabled { opacity: 0.7; cursor: default; }
 /* The dock: previous, the rest timer, next. */
 .wo-dock { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; align-items: center; gap: 12px; padding: 12px 16px 28px; background: rgba(255, 255, 255, 0.94); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border-top: 1px solid #eceff3; }
 .wo-dock-btn { flex: none; display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 1px solid #dfe3e8; border-radius: 999px; background: #fff; color: #1e3a6e; cursor: pointer; }
@@ -16234,8 +16248,10 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .so-card-chev.up { transform: translateY(2px) rotate(225deg); }
 .so-card-body { display: flex; flex-direction: column; gap: 10px; padding: 0 16px 14px 58px; }
 .so-sets { display: flex; flex-direction: column; }
-.so-set { display: grid; grid-template-columns: 52px 1fr 1fr 1fr; gap: 8px; padding: 7px 0; border-top: 1px solid #eceff3; font-size: 14px; font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; }
+.so-set { display: grid; grid-template-columns: 1fr 80px 64px; align-items: baseline; gap: 8px; padding: 7px 0; border-top: 1px solid #eceff3; font-size: 14px; font-weight: 700; color: #141a24; font-variant-numeric: tabular-nums; }
 .so-set-n { font-weight: 600; color: #5b6474; }
+.so-set > span:not(.so-set-n) { text-align: right; }
+.so-sets.rpe .so-set { grid-template-columns: 1fr 76px 60px 56px; }
 .so-card-fold .so-notlogged { padding-left: 0; }
 /* The session number as a bare figure: green once done, navy otherwise. */
 .tr-row-tile, .tr-row-tile.live, .tr-row-tile.next, .tr-row-tile.skipped, .tr-row-tile.missed { width: 28px; height: 36px; border-radius: 0; background: transparent; color: #1e3a6e; font-size: 17px; }
@@ -16266,7 +16282,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .so-card-name { font-size: 14.5px; }
 .so-card-summary { font-size: 12.5px; }
 .so-card-body { padding: 0 14px 12px 46px; gap: 8px; }
-.so-set { font-size: 13px; padding: 6px 0; grid-template-columns: 44px 1fr 1fr 1fr; }
+.so-set { font-size: 13px; padding: 6px 0; grid-template-columns: 1fr 76px 60px; }
 .so-card-chev { width: 7px; height: 7px; }
 .so-delta { padding: 4px 8px; font-size: 11.5px; }
 .so-chip { padding: 4px 8px; font-size: 12.5px; }
@@ -16297,6 +16313,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .so-menu { top: calc(max(54px, calc(env(safe-area-inset-top, 0px) + 18px)) + 40px); right: 20px; width: auto; padding: 4px; border-radius: 14px; }
 .so-menu .wo-menu-row { min-height: 40px; padding: 0 12px 0 10px; font-size: 14px; white-space: nowrap; justify-content: flex-start; gap: 8px; }
 .so-menu-ico { width: 16px; height: 16px; fill: none; stroke: #b3302b; stroke-width: 2; stroke-linecap: round; }
+.so-menu-ico.edit { stroke: #1e3a6e; stroke-linejoin: round; }
 .so-cardio-done { font-size: 13px; font-weight: 700; color: #2f7a3f; }
 /* Overview exercise card: a bare number, the prescription as figure and unit, the coach's note as everywhere else. */
 .so-num { flex: none; width: 22px; font-size: 14px; font-weight: 700; color: #1e3a6e; text-align: center; font-variant-numeric: tabular-nums; }

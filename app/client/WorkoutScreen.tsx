@@ -31,17 +31,19 @@ import {
 // with one exercise per page (then the cardio, then the wrap-up), and a dock
 // with the rest timer. The clock is the server's started_at against now, so
 // it survives a reload, the app going to the background and a trip back to
-// the overview.
+// the overview. Opened again from a finished session (editing), the sets
+// change as they would live and the wrap up has Save changes in place of
+// the swipe; the session keeps its date and time.
 
 const PAGE_KEY = "ironline.client.workout-page";
 type Page = { kind: "exercise"; index: number } | { kind: "cardio"; index: number } | { kind: "wrap" };
 
-function readPage(dayId: number): number | null {
+function readPage(dayId: number, editing: boolean): number | null {
   try {
     const raw = window.sessionStorage.getItem(PAGE_KEY);
     if (!raw) return null;
-    const v = JSON.parse(raw) as { dayId: number; index: number };
-    return v.dayId === dayId ? v.index : null;
+    const v = JSON.parse(raw) as { dayId: number; index: number; editing?: boolean };
+    return v.dayId === dayId && !!v.editing === editing ? v.index : null;
   } catch {
     return null;
   }
@@ -49,6 +51,7 @@ function readPage(dayId: number): number | null {
 
 export default function WorkoutScreen({
   day,
+  editing = false,
   gymId,
   onPickGym,
   coachName,
@@ -57,8 +60,11 @@ export default function WorkoutScreen({
   onBack,
   onEnded,
   onDiscarded,
+  onEdited,
 }: {
   day: SessionDay;
+  /** A finished session opened again to correct it. */
+  editing?: boolean;
   gymId: number | null;
   onPickGym: (gym: GymOption) => void;
   coachName: string;
@@ -70,6 +76,8 @@ export default function WorkoutScreen({
   /** The session was ended: back to the tab with the saved toast. */
   onEnded: () => void;
   onDiscarded: () => void;
+  /** Editing: the changes were saved. */
+  onEdited?: () => void;
 }) {
   const pages: Page[] = [
     ...day.exercises.map((_, index) => ({ kind: "exercise", index }) as Page),
@@ -118,7 +126,7 @@ export default function WorkoutScreen({
     requestAnimationFrame(step);
   };
   useEffect(() => {
-    const t = setTimeout(() => jumpTo(readPage(day.key) ?? firstPage(), true), 0);
+    const t = setTimeout(() => jumpTo(readPage(day.key, editing) ?? (editing ? 0 : firstPage()), true), 0);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on opening
   }, []);
@@ -130,12 +138,14 @@ export default function WorkoutScreen({
   };
   useEffect(() => {
     try {
-      window.sessionStorage.setItem(PAGE_KEY, JSON.stringify({ dayId: day.key, index: page }));
+      window.sessionStorage.setItem(PAGE_KEY, JSON.stringify({ dayId: day.key, index: page, editing }));
     } catch {}
-  }, [day.key, page]);
+  }, [day.key, page, editing]);
 
   // The clock.
   const ended = day.endedAt != null;
+  // The wrap up's answers and note lock once it is ended, unless editing.
+  const locked = ended && !editing;
   const now = useTicker(!ended);
   const ms = elapsedMs(day.startedAt, day.endedAt, now);
 
@@ -183,6 +193,15 @@ export default function WorkoutScreen({
       setTimeout(onEnded, 900);
     });
   };
+  // Editing: the note and answers saved, ended_at given back as it was.
+  const saveEdit = () => {
+    if (ending) return;
+    setEnding(true);
+    startTransition(async () => {
+      await endSessionAction(day.key, { note, at: day.endedAt ?? undefined, answers: day.questions.map((q) => ({ id: q.id, value: answers[q.id] ?? null })) });
+      onEdited?.();
+    });
+  };
   const discard = () => {
     setMenuOpen(false);
     if (!window.confirm(`Discard ${day.title}? Logged sets will be deleted.`)) return;
@@ -205,6 +224,8 @@ export default function WorkoutScreen({
           <ChatIcon />
         </button>
       )}
+      {/* Editing, nothing to put in it on a cardio or the wrap up without gyms. */}
+      {!(editing && !ex && day.gyms.length === 0) && (
       <button type="button" className={cls} onClick={toggleMenu} aria-label="More" aria-expanded={menuOpen}>
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="5" cy="12" r="1.8" fill="currentColor" stroke="none" />
@@ -212,6 +233,7 @@ export default function WorkoutScreen({
           <circle cx="19" cy="12" r="1.8" fill="currentColor" stroke="none" />
         </svg>
       </button>
+      )}
     </>
   );
 
@@ -226,7 +248,7 @@ export default function WorkoutScreen({
             <ChevronLeftIcon />
           </button>
           <div className="wo-head-mid">
-            <div className="wo-head-kicker">{day.title}</div>
+            <div className="wo-head-kicker">{editing ? `Editing · ${day.title}` : day.title}</div>
             <div className={`wo-head-clock${ended ? " ended" : ""}`}>{clock(ms)}</div>
           </div>
           {/* On an exercise the chat and ⋯ sit on its own row (ExercisePage's
@@ -294,11 +316,16 @@ export default function WorkoutScreen({
                   </button>
                 </>
               )}
-              <div className="wo-menu-divider" />
-              <button type="button" role="menuitem" className="wo-menu-row ico danger" onClick={discard}>
-                <MenuIcon kind="discard" />
-                Discard session
-              </button>
+              {/* Editing a finished session: no Discard, it is kept. */}
+              {!editing && (
+                <>
+                  <div className="wo-menu-divider" />
+                  <button type="button" role="menuitem" className="wo-menu-row ico danger" onClick={discard}>
+                    <MenuIcon kind="discard" />
+                    Discard session
+                  </button>
+                </>
+              )}
             </div>
           </>
         )}
@@ -371,7 +398,7 @@ export default function WorkoutScreen({
                               <b>{q.label}</b>
                             </span>
                             <span className="wo-ask-num">
-                              <input value={v == null ? "" : String(v)} onChange={(e) => set(e.target.value)} onInput={tidyDecimal} inputMode="decimal" placeholder="0" disabled={ended} aria-label={q.label} />
+                              <input value={v == null ? "" : String(v)} onChange={(e) => set(e.target.value)} onInput={tidyDecimal} inputMode="decimal" placeholder="0" disabled={locked} aria-label={q.label} />
                               {q.unit && <small>{q.unit}</small>}
                             </span>
                           </label>
@@ -382,18 +409,24 @@ export default function WorkoutScreen({
                             <span className="wo-scale-head">
                               <b>{q.label}</b>
                             </span>
-                            <textarea className="wo-note-input" rows={2} maxLength={500} value={typeof v === "string" ? v : ""} onChange={(e) => set(e.target.value)} disabled={ended} aria-label={q.label} />
+                            <textarea className="wo-note-input" rows={2} maxLength={500} value={typeof v === "string" ? v : ""} onChange={(e) => set(e.target.value)} disabled={locked} aria-label={q.label} />
                           </label>
                         );
-                      return <Scale key={q.id} label={q.label} value={typeof v === "number" ? v : null} onChange={set} disabled={ended} />;
+                      return <Scale key={q.id} label={q.label} value={typeof v === "number" ? v : null} onChange={set} disabled={locked} />;
                     })}
                   </div>
                 )}
                 <div className="wo-coach-note">
                   <span className="wo-note-label">Anything to mention to {coachName}?</span>
-                  <textarea className="wo-note-input" rows={2} value={note} placeholder="How did it feel? Anything to flag?" onChange={(e) => setNote(e.target.value)} disabled={ended} />
+                  <textarea className="wo-note-input" rows={2} value={note} placeholder="How did it feel? Anything to flag?" onChange={(e) => setNote(e.target.value)} disabled={locked} />
                 </div>
-                <SwipeToEnd onEnd={end} done={ended} />
+                {editing ? (
+                  <button type="button" className="wo-save-edit" onClick={saveEdit} disabled={ending}>
+                    {ending ? "Saving…" : "Save changes"}
+                  </button>
+                ) : (
+                  <SwipeToEnd onEnd={end} done={ended} />
+                )}
               </div>
             )}
           </section>

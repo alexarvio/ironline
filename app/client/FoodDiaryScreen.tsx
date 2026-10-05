@@ -15,6 +15,7 @@ import {
   deleteSavedMealAction,
   saveMealAction,
   getFoodDiaryAction,
+  logCaloriesAction,
   lookupBarcodeAction,
   searchPackagedAction,
   removeFoodEntryAction,
@@ -271,6 +272,8 @@ export default function FoodDiaryScreen({
   };
   // Naming the day to save it.
   const [namingDay, setNamingDay] = useState(false);
+  // A typed figure's Edit: the strip becomes the box again.
+  const [quickKcal, setQuickKcal] = useState(false);
   // The row whose bin was tapped: it becomes the question until answered.
   const [askRemove, setAskRemove] = useState<number | null>(null);
   // The saved day whose × was tapped, likewise.
@@ -603,13 +606,34 @@ export default function FoodDiaryScreen({
           </header>
 
           </div>
-          <Targets target={diary.target} eaten={diary.eaten} dayType={diary.dayType} onDayType={chooseDay} />
+          {/* A figure typed in with no food behind it counts as eaten on the rings. */}
+          <Targets
+            target={diary.target}
+            eaten={diary.eaten.kcal === 0 && diary.loggedKcal != null ? { ...diary.eaten, kcal: diary.loggedKcal } : diary.eaten}
+            dayType={diary.dayType}
+            onDayType={chooseDay}
+          />
           {/* Pushing the day's calories into the log the coach reads: the
               client decides when the day is done, today or later. */}
           {(() => {
             const total = Math.round(diary.eaten.kcal);
             const logged = diary.loggedKcal;
-            const same = logged != null && logged === total;
+            // No food on the day, the calories typed in as one figure (5 Oct).
+            const typed = total === 0 && logged != null;
+            const same = logged != null && (logged === total || typed);
+            const logTyped = (raw: string) => {
+              const fd = new FormData();
+              fd.set("clientId", String(clientId));
+              fd.set("date", date);
+              fd.set("kcal", raw);
+              fd.set("dayType", diary.dayType);
+              setQuickKcal(false);
+              startLoad(async () => {
+                await logCaloriesAction(fd);
+                const next = await getFoodDiaryAction(clientId, date);
+                if (next) setDiary(next);
+              });
+            };
             const push = () => {
               const fd = new FormData();
               fd.set("clientId", String(clientId));
@@ -622,10 +646,49 @@ export default function FoodDiaryScreen({
             };
             return (
               <>
+              {/* Nothing added for the day: the strip is the box to type the
+                  day's calories as one figure (5 Oct); food added shows its
+                  total here instead. Edit opens a typed figure again. */}
+              {total === 0 && (!typed || quickKcal) ? (
+                <form
+                  className="fdi-push fdi-push-kcal"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const raw = String(new FormData(e.currentTarget).get("kcal") ?? "").replace(/[\s.,]/g, "");
+                    if (raw && !/^\d{1,5}$/.test(raw)) return;
+                    if (!raw && logged == null) return;
+                    logTyped(raw);
+                  }}
+                >
+                  <span className="fdi-quick-kcal">
+                    <input
+                      key={date}
+                      name="kcal"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder={`Kcal eaten ${relative ? dayWord : `on ${weekday}`}`}
+                      defaultValue={logged != null ? String(logged) : ""}
+                      maxLength={6}
+                      autoComplete="off"
+                      autoFocus={quickKcal}
+                      aria-label={`Calories eaten ${relative ? dayWord : `on ${weekday}`}`}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") setQuickKcal(false);
+                      }}
+                    />
+                    <small>kcal</small>
+                  </span>
+                  <button type="submit" className="fdi-push-btn" disabled={loading}>
+                    Log
+                  </button>
+                </form>
+              ) : (
               <div className={`fdi-push${same ? " done" : ""}`}>
                 <span className="fdi-push-text">
-                  {total === 0 ? (
-                    "Nothing logged yet"
+                  {typed ? (
+                    <>
+                      <b>{n(logged)} kcal</b> logged for {dayWord}
+                    </>
                   ) : same ? (
                     <>
                       <b>{n(total)} kcal</b> logged for {dayWord}
@@ -643,6 +706,11 @@ export default function FoodDiaryScreen({
                 {total > 0 && !same && (
                   <button type="button" className="fdi-push-btn" onClick={push} disabled={loading}>
                     {logged != null ? "Update log" : "Log calories"}
+                  </button>
+                )}
+                {typed && (
+                  <button type="button" className="fdi-push-edit" onClick={() => setQuickKcal(true)} disabled={loading}>
+                    Edit
                   </button>
                 )}
                 {same && <span className="fdi-push-tick" aria-hidden="true">✓</span>}
@@ -674,6 +742,7 @@ export default function FoodDiaryScreen({
                     </button>
                   ))}
               </div>
+              )}
               {/* Naming the day to save it: a row that folds out under the strip. */}
               <div className={`fdi-fold fdi-push-fold${namingDay ? "" : " folding"}`} aria-hidden={!namingDay}>
                 <div className="fdi-fold-inner">
@@ -726,14 +795,14 @@ export default function FoodDiaryScreen({
           })()}
 
           <div className="nd-body fdi-list">
-            {/* An empty day: one card, folded, holding the days that can be copied
-                onto it: the last day with food, and the days the client saved. */}
+            {/* One card, folded, holding the days that can be copied onto this
+                one: the last day with food, and the days the client saved.
+                There on every day since 5 Oct, empty or not (a day used adds
+                its food to what is there), and with nothing saved it says so. */}
             {(() => {
-              if (diary.eaten.kcal > 0 || diary.meals.some((m) => m.entries.length > 0)) return null;
               const last = diary.previous.reduce<string | null>((best, p) => (p.date < date && (!best || p.date > best) ? p.date : best), null);
               const label = last ? (diary.previous.find((p) => p.date === last)?.dateLabel ?? last) : null;
               const kcal = last ? diary.previous.filter((p) => p.date === last).reduce((sum, p) => sum + p.kcal, 0) : 0;
-              if (!last && diary.savedDays.length === 0) return null;
               const after = async () => {
                 const next = await getFoodDiaryAction(clientId, date);
                 if (next) {
@@ -848,7 +917,7 @@ export default function FoodDiaryScreen({
                           )}
                         </div>
                       ))}
-                      {diary.savedDays.length > 0 && <p className="fdi-copy-foot">Hold a saved day to forget it</p>}
+                      {diary.savedDays.length > 0 ? <p className="fdi-copy-foot">Hold a saved day to forget it</p> : <p className="fdi-copy-empty">No saved days</p>}
                     </div>
                   </div>
                 </section>

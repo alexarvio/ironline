@@ -13,10 +13,12 @@ import { clock, durationMinutes, elapsedMs, loggedSets, plannedSets, sessionStat
 // session's overview as its own screen; "Start session" there opens the
 // workout. Both screens are laid over the app (a layer in the phone's
 // stack), so the tab keeps its week and its scroll underneath. Which screen
-// is open is remembered on this phone, so a reload lands back in it.
+// is open is remembered on this phone, so a reload lands back in it. A
+// finished session's "Edit workout" opens the workout again ("edit"), its
+// date kept, for numbers put in wrong.
 
 const VIEW_KEY = "ironline.client.session-view";
-type View = { dayId: number; screen: "overview" | "workout" } | null;
+type View = { dayId: number; screen: "overview" | "workout" | "edit" } | null;
 
 function readView(): View {
   try {
@@ -229,15 +231,17 @@ export default function TrainingDayList({
           }}
           onStart={(g) => start(openDay, g)}
           onResume={() => setView({ dayId: openDay.key, screen: "workout" })}
+          onEdit={() => setView({ dayId: openDay.key, screen: "edit" })}
           autoStart={openDay.key === focus && focusStart && !openDay.startedAt && !openDay.endedAt}
         />,
         host
       )}
 
-      {openDay && host && view?.screen === "workout" && createPortal(
+      {openDay && host && (view?.screen === "workout" || (view?.screen === "edit" && openDay.endedAt)) && createPortal(
         <WorkoutScreen
-          key={openDay.key}
+          key={`${openDay.key}:${view.screen}`}
           day={openDay}
+          editing={view.screen === "edit"}
           gymId={gymIdFor(openDay)}
           onPickGym={(g) => pickGym(openDay, g)}
           coachName={coachName}
@@ -251,6 +255,10 @@ export default function TrainingDayList({
             setToast({ title: `${openDay.title} saved`, sub: `${minutes != null ? `${minutes} min · ` : ""}${sets} set${sets === 1 ? "" : "s"} · ${coachName} can see it now` });
           }}
           onDiscarded={() => setView({ dayId: openDay.key, screen: "overview" })}
+          onEdited={() => {
+            setView({ dayId: openDay.key, screen: "overview" });
+            setToast({ title: "Changes saved", sub: `${coachName} sees the workout as it is now` });
+          }}
         />,
         host
       )}

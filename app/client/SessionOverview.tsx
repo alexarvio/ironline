@@ -30,7 +30,8 @@ import {
 // A session on its own screen, before, during and after: what the coach set
 // (nothing starts until "Start session"), where the client is in it, or what
 // they did with the change against last week. Read only; the workout is the
-// only place that logs.
+// only place that logs (a finished one's ⋯ has Edit workout, which opens it
+// again).
 
 export const STATUS_LABEL = { done: "Completed", unfinished: "Unfinished", live: "Live", skipped: "Skipped", missed: "Missed", upcoming: "Upcoming" } as const;
 
@@ -45,6 +46,7 @@ export default function SessionOverview({
   onBack,
   onStart,
   onResume,
+  onEdit,
   autoStart = false,
 }: {
   /** Put back after a reload: no slide in. */
@@ -59,6 +61,8 @@ export default function SessionOverview({
   /** The client picked a gym (or there was nothing to pick) and pressed Start. */
   onStart: (gym: GymOption | null) => void;
   onResume: () => void;
+  /** A finished session opened again to change what was logged. */
+  onEdit: () => void;
   /** Arrived from Home's Start: open the gym question (or start) at once. */
   autoStart?: boolean;
 }) {
@@ -112,7 +116,7 @@ export default function SessionOverview({
         <button type="button" className="so-back" onClick={onBack} aria-label="Back to training">
           <ChevronLeftIcon />
         </button>
-        {currentWeek && !done && !live && (
+        {((currentWeek && !done && !live) || done) && (
           <button type="button" className="so-back so-more" onClick={() => setMenuOpen((o) => !o)} aria-label="More" aria-expanded={menuOpen}>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="5" cy="12" r="1.8" fill="currentColor" />
@@ -125,6 +129,23 @@ export default function SessionOverview({
           <>
             <button type="button" className="wo-menu-scrim" aria-label="Close menu" onClick={() => setMenuOpen(false)} />
             <div className="wo-menu so-menu" role="menu">
+              {done ? (
+              <button
+                type="button"
+                role="menuitem"
+                className="wo-menu-row"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onEdit();
+                }}
+              >
+                <svg className="so-menu-ico edit" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z" />
+                  <path d="m15 5 4 4" />
+                </svg>
+                Edit workout
+              </button>
+              ) : (
               <button
                 type="button"
                 role="menuitem"
@@ -141,6 +162,7 @@ export default function SessionOverview({
                 </svg>
                 Couldn&rsquo;t do this session
               </button>
+              )}
             </div>
           </>
         )}
@@ -321,7 +343,9 @@ function ExerciseCard({ exercise, index, done, coachName, gymId }: { exercise: S
         {open && (
           <div className="so-card-body">
             {exercise.logs.length > 0 ? (
-              <div className="so-sets">
+              // The set on the left, its numbers to the right; an RPE column
+              // only when some set has one.
+              <div className={`so-sets${exercise.logs.some((l) => l.rpe != null) ? " rpe" : ""}`}>
                 {exercise.logs
                   .slice()
                   .sort((a, b) => a.setNumber - b.setNumber)
@@ -330,7 +354,7 @@ function ExerciseCard({ exercise, index, done, coachName, gymId }: { exercise: S
                       <span className="so-set-n">Set {l.setNumber}</span>
                       <span>{l.weight != null ? `${kgToUnit(l.weight, "kg")} kg` : "–"}</span>
                       <span>{l.reps != null ? `${l.reps} reps` : "–"}</span>
-                      <span>{l.rpe != null ? `RPE ${l.rpe}` : ""}</span>
+                      {exercise.logs.some((x) => x.rpe != null) && <span>{l.rpe != null ? `RPE ${l.rpe}` : "–"}</span>}
                     </div>
                   ))}
               </div>
