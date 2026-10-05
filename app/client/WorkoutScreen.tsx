@@ -238,6 +238,19 @@ export default function WorkoutScreen({
   );
 
   const pageDone = (p: Page) => (p.kind === "exercise" ? isDone(day.exercises[p.index]) : p.kind === "cardio" ? day.cardio[p.index].done : ended);
+  // Where "next" goes from page i (5 Oct): the next exercise or cardio not
+  // done yet, after this one, then round from the start (one skipped while
+  // its machine was taken); with everything done, the wrap up. So finishing
+  // the one you went back to never lands on one already done.
+  const nextOpen = (i: number) => {
+    const wrap = pages.length - 1;
+    for (let k = 1; k < pages.length; k++) {
+      const j = (i + k) % pages.length;
+      if (j === i || j === wrap) continue;
+      if (!pageDone(pages[j])) return j;
+    }
+    return wrap;
+  };
   const pageStarted = (p: Page) => p.kind === "exercise" && loggedCount(day.exercises[p.index]) > 0;
 
   return (
@@ -342,10 +355,10 @@ export default function WorkoutScreen({
                 gymId={gymId}
                 coachName={coachName}
                 nextName={(() => {
-                  const n = pages[i + 1];
+                  const n = pages[nextOpen(i)];
                   return n?.kind === "exercise" ? shownName(day.exercises[n.index]) : n?.kind === "cardio" ? day.cardio[n.index].name : null;
                 })()}
-                onNext={() => jumpTo(i + 1)}
+                onNext={() => jumpTo(nextOpen(i))}
                 request={request?.page === i ? request : null}
                 tools={headTools("wo-round-btn wo-ex-btn", day.exercises[p.index])}
               />
