@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { addClientPhaseAction, removeClientPhaseAction, saveAndDeployPhaseNowAction, saveAndSchedulePhaseAction, schedulePhaseAction, setPhaseCoverAction, updateClientPhaseAction, uploadPhaseCoverAction } from "../lib/actions";
+import { addClientPhaseAction, removeClientPhaseAction, saveAndDeployPhaseNowFormAction, saveAndSchedulePhaseAction, schedulePhaseAction, setPhaseCoverAction, updateClientPhaseAction, uploadPhaseCoverAction } from "../lib/actions";
 import { defaultPhaseCover, PHASE_COVERS, PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "../lib/phaseCovers";
 import type { ClientPhase, PhaseTrack } from "../lib/db";
 import PhaseCalendar, { isoWeek, mondayOf, monthOf, type CalMonth, type PlannedRange } from "./PhaseCalendar";
@@ -583,7 +583,7 @@ export function PhaseDialog({
                           e.preventDefault();
                           setNudge((n) => n + 1);
                         }}
-                        formAction={startWeek && startWeek <= mondayOf(today) ? saveAndDeployPhaseNowAction : saveAndSchedulePhaseAction}
+                        formAction={startWeek && startWeek <= mondayOf(today) ? saveAndDeployPhaseNowFormAction : saveAndSchedulePhaseAction}
                       >
                         {startWeek && startWeek <= mondayOf(today) ? "Make it live" : "Schedule it"}
                       </button>
@@ -594,7 +594,7 @@ export function PhaseDialog({
                   ) : editing && savedState === "scheduled" ? (
                     // Scheduled: it can start early, from this week.
                     <>
-                      <button type="submit" className="pl-dlg-cancel" disabled={!ready} formAction={saveAndDeployPhaseNowAction}>
+                      <button type="submit" className="pl-dlg-cancel" disabled={!ready} formAction={saveAndDeployPhaseNowFormAction}>
                         Make it live now
                       </button>
                       <button type="submit" className="pl-dlg-save" disabled={!ready}>

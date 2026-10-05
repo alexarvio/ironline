@@ -618,7 +618,15 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
               close();
               if (!was) return;
               const fd = phaseForm({ id: was.id, ...v });
-              act(() => (v.now ? saveAndDeployPhaseNowAction(fd) : saveAndSchedulePhaseAction(fd)), v.now ? `${v.name} is live` : `${v.name} scheduled for ${fmtDay(v.start)}`);
+              if (v.now)
+                // Live, or why not (5 Oct: a blocked one used to say "is live" anyway).
+                start(async () => {
+                  const why = await saveAndDeployPhaseNowAction(fd);
+                  router.refresh();
+                  if (why) toast.error(`${v.name} isn't live yet`, { description: why });
+                  else savedToast(`${v.name} is live`);
+                });
+              else act(() => saveAndSchedulePhaseAction(fd), `${v.name} scheduled for ${fmtDay(v.start)}`);
             }}
           />
         )}

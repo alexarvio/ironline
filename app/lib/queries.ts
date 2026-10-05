@@ -7781,9 +7781,14 @@ export function phaseEmptyReason(phaseId: number): string | null {
   if (!isDraft) return null;
   if (phase.track === "training") return program ? programEmptyReason(program.id) : "Nothing in it yet: add its sessions on the Training tab first.";
   if (phase.track === "nutrition") {
-    const t = phase.nutrition?.day_targets.training;
-    const kcal = t ? (t.protein ?? 0) * 4 + (t.carbs ?? 0) * 4 + (t.fats ?? 0) * 9 : 0;
-    return kcal > 0 ? null : "Nothing in it yet: set its targets on the Nutrition tab first.";
+    // Its own targets, training or rest day; or none of its own and the
+    // client's plan to fall back on, which is what the client then sees (5
+    // Oct: only the training day counted, so a phase on the client's plan,
+    // or with rest-day targets only, could never go live).
+    const kcalOf = (t?: { protein?: number | null; carbs?: number | null; fats?: number | null } | null) => (t ? (t.protein ?? 0) * 4 + (t.carbs ?? 0) * 4 + (t.fats ?? 0) * 9 : 0);
+    const own = kcalOf(phase.nutrition?.day_targets.training) > 0 || kcalOf(phase.nutrition?.day_targets.rest) > 0;
+    const plan = getNutritionGoalsSummary(phase.client_id);
+    return own || (plan.trainingKcal ?? 0) > 0 || (plan.restKcal ?? 0) > 0 ? null : "Nothing in it yet: set its targets on the Nutrition tab first.";
   }
   const asks = data.metric_definitions.some((m) => m.client_id === phase.client_id && m.phase_id === phase.id);
   return asks ? null : "Nothing in it yet: add the metrics it asks for on the Measurements tab first.";

@@ -2787,13 +2787,16 @@ export async function schedulePhaseOnItsDatesAction(id: number) {
 }
 
 // Straight out, no dates to pick: the phase goes live this week.
-export async function deployPhaseNowAction(id: number) {
-  if (!Number.isInteger(id) || !(await coachForClient(getClientIdForPhase(id)))) return;
-  // Nothing in it yet: nothing to send.
-  if (phaseEmptyReason(id)) return;
+export async function deployPhaseNowAction(id: number): Promise<string | null> {
+  if (!Number.isInteger(id) || !(await coachForClient(getClientIdForPhase(id)))) return "That phase no longer exists.";
+  // Nothing in it yet: nothing to send, and the coach is told why (5 Oct:
+  // it used to return quietly, under a "… is live" toast).
+  const empty = phaseEmptyReason(id);
+  if (empty) return empty;
   deployPhaseNow(id);
   revalidatePath("/admin");
   revalidatePath("/client");
+  return null;
 }
 
 // The phase dialog's buttons for a draft: what was changed in the dialog is
@@ -2811,15 +2814,18 @@ export async function saveAndSchedulePhaseAction(formData: FormData) {
   revalidatePath("/client");
 }
 
-export async function saveAndDeployPhaseNowAction(formData: FormData) {
+export async function saveAndDeployPhaseNowAction(formData: FormData): Promise<string | null> {
   const id = Number(formData.get("id"));
   const fields = readPhaseForm(formData);
-  if (!id || !fields || !(await coachForClient(getClientIdForPhase(id)))) return;
+  if (!id || !fields || !(await coachForClient(getClientIdForPhase(id)))) return "That phase no longer exists.";
   updateClientPhase(id, fields.track, fields.name, fields.start, fields.end, formData.get("adjustProgram") === "1", fields.exact);
   saveObjectivesFrom(id, formData);
-  if (!phaseEmptyReason(id)) deployPhaseNow(id);
+  // Saved either way; live only with something in it, and if not, why not (5 Oct).
+  const empty = phaseEmptyReason(id);
+  if (!empty) deployPhaseNow(id);
   revalidatePath("/admin");
   revalidatePath("/client");
+  return empty;
 }
 
 export async function unschedulePhaseAction(id: number) {
@@ -3819,4 +3825,9 @@ export async function saveCoachContactAction(formData: FormData): Promise<{ ok: 
   persist();
   revalidatePath("/admin/redesign/profile");
   return { ok: true };
+}
+
+/** saveAndDeployPhaseNowAction for a plain form (the old phase dialog), which can't read a reason back. */
+export async function saveAndDeployPhaseNowFormAction(formData: FormData): Promise<void> {
+  await saveAndDeployPhaseNowAction(formData);
 }

@@ -683,7 +683,14 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
             confirm="Make it live"
             onConfirm={() => {
               close();
-              if (phaseId) act(() => deployPhaseNowAction(phaseId), `${plan.name} is live`);
+              if (phaseId)
+                // Live, or why not (5 Oct: a blocked one used to say "is live" anyway).
+                startTransition(async () => {
+                  const why = await deployPhaseNowAction(phaseId);
+                  router.refresh();
+                  if (why) toast.error(`${plan.name} isn't live yet`, { description: why });
+                  else savedToast(`${plan.name} is live`);
+                });
             }}
           />
         )}
