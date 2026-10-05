@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo, Bricolage_Grotesque, Libre_Baskerville } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import { applyDueClientReminders, applyDueProgramDeployments } from "./lib/queries";
@@ -23,25 +22,30 @@ export const metadata: Metadata = {
 // The client Nutrition tab's serif is Baskerville, built into iPhones. This
 // self-hosted Libre Baskerville stands in wherever it is missing; the tab's
 // CSS names it through this variable.
-const libreBaskerville = Libre_Baskerville({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  style: ["normal", "italic"],
+// The three Google fonts live in app/fonts (5 Oct): the build used to fetch
+// them from Google, and when Railway's builder could not reach Google the
+// whole build failed. Latin only, as before; Archivo and Libre Baskerville
+// are variable files that hold every weight.
+const libreBaskerville = localFont({
+  src: [
+    { path: "./fonts/LibreBaskerville-Latin.woff2", weight: "400 700", style: "normal" },
+    { path: "./fonts/LibreBaskerville-Italic-Latin.woff2", weight: "400 700", style: "italic" },
+  ],
   variable: "--font-libre-baskerville",
   display: "swap",
 });
 // Archivo: the client Nutrition tab's type. Regular text, Medium figures,
 // SemiBold headings and names.
-const archivo = Archivo({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+const archivo = localFont({
+  src: "./fonts/Archivo-Latin.woff2",
+  weight: "400 800",
   variable: "--font-archivo",
   display: "swap",
 });
 // Bricolage Grotesque: only the date number on Home's meeting card.
-const bricolage = Bricolage_Grotesque({
-  subsets: ["latin"],
-  weight: ["800"],
+const bricolage = localFont({
+  src: "./fonts/BricolageGrotesque-800-Latin.woff2",
+  weight: "800",
   variable: "--font-bricolage",
   display: "swap",
 });
