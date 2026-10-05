@@ -17927,3 +17927,9 @@ button.ci-hint { cursor: pointer; }
 .pc-name-row { align-items: flex-start; }
 .pc-name { height: auto; line-height: 1.15; white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
 .pc-name-row .pc-left { margin-top: 6px; white-space: nowrap; }
+/* "… in progress · Resume" is a way back into the workout, so it never sits
+   on top of one (5 Oct). The Training tab drew it whenever its own list had
+   nothing open, even with the workout opened another way (Home's Resume),
+   and it covered "Swipe to end session". Gone whenever a workout or a
+   session's overview is on screen, whoever opened it. */
+.app-screen:has(.wo-screen, .so-screen) .tr-resume { display: none; }
