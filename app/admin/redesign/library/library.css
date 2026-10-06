@@ -79,8 +79,10 @@
    520px cap whichever stylesheet loads last. */
 .rd-dlg.lb-dlg { max-width: 1280px; width: calc(100vw - 48px); scrollbar-gutter: stable; }
 .lb-xrows { display: flex; flex-direction: column; gap: 8px; }
-.lb-xhead, .lb-xrow.main { display: grid; grid-template-columns: 128px minmax(0, 1.1fr) 180px minmax(0, 1.6fr) minmax(0, 1.3fr) 40px; gap: 14px; align-items: center; }
-.lb-xhead { padding: 0 10px; }
+.lb-xhead, .lb-xrow.main { display: grid; grid-template-columns: 128px minmax(0, 1.1fr) 180px minmax(0, 1.6fr) minmax(0, 1.3fr); gap: 14px; align-items: center; }
+.lb-xhead { position: relative; min-height: 32px; padding: 0 10px; }
+/* "+ Variation" on the header's right, clear of the columns. */
+.lb-addvar { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); }
 .lb-xrow.main { padding: 10px; border: 1px solid #eceff3; border-radius: 14px; background: #fff; }
 /* A variation: tucked under the exercise, smaller, with a mark that hangs off its row. */
 .lb-xrow.sub { display: grid; grid-template-columns: 24px 104px minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1.2fr) 40px; gap: 14px; align-items: center; margin-left: 56px; padding: 8px 10px 8px 6px; border-radius: 12px; background: #f7f8fb; }

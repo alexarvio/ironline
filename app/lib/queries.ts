@@ -1257,7 +1257,7 @@ export function getAssignmentsForDay(programDayId: number): WorkoutAssignment[] 
         note_at: wa.note_at ?? null,
         note_read: wa.note_read ?? false,
         exercise_name: exercise ? (variation ? `${exercise.name} · ${variation.name}` : exercise.name) : "Unknown exercise",
-        exercise_video_url: variation?.video_url ?? exercise?.video_url ?? null,
+        exercise_video_url: variation ? variation.video_url ?? null : exercise?.video_url ?? null,
       };
     });
 }
@@ -8332,6 +8332,16 @@ export function setExerciseSwap(assignmentId: number, swap: { library_exercise_i
   if (swap && (lib != null || name)) wa.swap = { library_exercise_id: lib, custom_name: lib != null ? null : name, at: new Date().toISOString() };
   else delete wa.swap;
   persist();
+}
+
+/** One variation's own demo (a coach video, a link, or none), set from a session row's demo dialog. */
+export function setExerciseVariationVideo(exerciseId: number, variationId: number, url: string | null) {
+  const e = getData().exercises.find((x) => x.id === exerciseId);
+  const v = e?.variations?.find((x) => x.id === variationId);
+  if (!v) return false;
+  v.video_url = url && url.trim() ? url.trim() : null;
+  persist();
+  return true;
 }
 
 /** An exercise's variations, as the Library's dialog sends them: kept ids stay, new ones get the next. */

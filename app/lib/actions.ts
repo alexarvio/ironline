@@ -67,6 +67,7 @@ import {
   addMeetingSeries,
   setAssignmentVariation,
   setAssignmentDemoHidden,
+  setExerciseVariationVideo,
   addExerciseVariation,
   laterInSeries,
   updateMeeting,
@@ -2436,7 +2437,9 @@ export async function setExerciseDemoLinkAction(formData: FormData): Promise<str
   const url = String(formData.get("demoUrl") || "").trim();
   if (!url) return "Paste a link first.";
   if (!/^https?:\/\//i.test(url)) return "That needs to start with http:// or https://";
-  setExerciseVideoUrl(exerciseId, url);
+  const variationId = Number(formData.get("variationId"));
+  if (variationId > 0) setExerciseVariationVideo(exerciseId, variationId, url);
+  else setExerciseVideoUrl(exerciseId, url);
   revalidatePath("/admin");
   revalidatePath("/client");
   return null;
@@ -2446,7 +2449,9 @@ export async function clearExerciseDemoAction(formData: FormData) {
   const coach = await requireCoach();
   const exerciseId = Number(formData.get("exerciseId"));
   if (!exerciseId || !coachOwnsExercise(coach.id, exerciseId)) return;
-  setExerciseVideoUrl(exerciseId, null);
+  const variationId = Number(formData.get("variationId"));
+  if (variationId > 0) setExerciseVariationVideo(exerciseId, variationId, null);
+  else setExerciseVideoUrl(exerciseId, null);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -3002,7 +3007,9 @@ export async function uploadExerciseVideoAction(formData: FormData): Promise<str
   const buffer = Buffer.from(await file.arrayBuffer());
   const videoPath = saveLibraryVideoUpload(exerciseId, buffer, file.type);
   await putUpload(videoPath, buffer, file.type);
-  setExerciseVideoUrl(exerciseId, videoPath);
+  const variationId = Number(formData.get("variationId"));
+  if (variationId > 0) setExerciseVariationVideo(exerciseId, variationId, videoPath);
+  else setExerciseVideoUrl(exerciseId, videoPath);
   revalidatePath("/admin");
   revalidatePath("/client");
   return null;

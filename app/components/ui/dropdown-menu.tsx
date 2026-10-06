@@ -11,16 +11,39 @@ function DropdownMenu(props: React.ComponentProps<typeof DropdownMenuPrimitive.R
   return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
 }
 
-function DropdownMenuTrigger(props: React.ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
-  return <DropdownMenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />;
+// The trigger last pressed: closing hands focus back to it without the page
+// scrolling to it (that scroll read as a jump, 6 Oct). One menu is open at a time.
+let lastOpener: HTMLElement | null = null;
+
+function DropdownMenuTrigger({ onPointerDown, onKeyDown, ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
+  return (
+    <DropdownMenuPrimitive.Trigger
+      data-slot="dropdown-menu-trigger"
+      onPointerDown={(e) => {
+        lastOpener = e.currentTarget;
+        onPointerDown?.(e);
+      }}
+      onKeyDown={(e) => {
+        lastOpener = e.currentTarget;
+        onKeyDown?.(e);
+      }}
+      {...props}
+    />
+  );
 }
 
-function DropdownMenuContent({ className, sideOffset = 6, ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+function DropdownMenuContent({ className, sideOffset = 6, onCloseAutoFocus, ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
+        onCloseAutoFocus={(e) => {
+          onCloseAutoFocus?.(e);
+          if (e.defaultPrevented) return;
+          e.preventDefault();
+          lastOpener?.focus?.({ preventScroll: true });
+        }}
         className={cn(
           "z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-[14rem] overflow-x-hidden overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg",
           className

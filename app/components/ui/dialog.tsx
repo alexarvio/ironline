@@ -19,7 +19,10 @@ function DialogClose(props: React.ComponentProps<typeof DialogPrimitive.Close>) 
   return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
 }
 
-function DialogContent({ className, children, ...props }: React.ComponentProps<typeof DialogPrimitive.Content>) {
+function DialogContent({ className, children, onOpenAutoFocus, onCloseAutoFocus, ...props }: React.ComponentProps<typeof DialogPrimitive.Content>) {
+  // Closing hands focus back to what opened the dialog, but without the
+  // browser scrolling the page to it (that scroll read as a jump, 6 Oct).
+  const opener = React.useRef<HTMLElement | null>(null);
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay data-slot="dialog-overlay" className="fixed inset-0 z-50 bg-[rgba(20,26,36,0.45)]" />
@@ -29,6 +32,16 @@ function DialogContent({ className, children, ...props }: React.ComponentProps<t
           "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border bg-background p-6 text-foreground shadow-lg outline-none sm:max-w-lg",
           className
         )}
+        onOpenAutoFocus={(e) => {
+          opener.current = document.activeElement as HTMLElement | null;
+          onOpenAutoFocus?.(e);
+        }}
+        onCloseAutoFocus={(e) => {
+          onCloseAutoFocus?.(e);
+          if (e.defaultPrevented) return;
+          e.preventDefault();
+          opener.current?.focus?.({ preventScroll: true });
+        }}
         {...props}
       >
         {children}

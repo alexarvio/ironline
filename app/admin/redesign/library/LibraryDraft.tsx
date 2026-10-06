@@ -210,12 +210,11 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
       {openVar === i.id &&
         i.variations.map((v) => (
           <div key={v.id} className="rd-row-main lb-row-main lb-var-row" role="button" tabIndex={0} onClick={() => openItem(i.id)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), openItem(i.id))}>
-            <Thumb url={v.video ?? i.video} label={`${i.name} · ${v.name}`} />
+            <Thumb url={v.video} label={`${i.name} · ${v.name}`} />
             <span className="rd-ex">
               <span className="rd-ex-name">
                 <i className="lb-sub-mark" aria-hidden="true" />
                 {v.name}
-                {!v.video && i.video && <small>uses the exercise&rsquo;s demo</small>}
               </span>
             </span>
             <span className={`lb-cue${v.cue || i.cue ? "" : " none"}`}>{v.cue || i.cue || "No cue"}</span>
@@ -787,15 +786,28 @@ function ItemDialog({
   // A variation being named, in the row that appears for it; null: none.
   const [adding, setAdding] = useState<string | null>(null);
   const changed = name.trim() !== item.name || group !== item.group || cue.trim() !== item.cue;
-  const vars = item.variations;
+  // What the rows show straight away (6 Oct): the page's copy takes over when
+  // it changes, so nothing vanishes and reappears while a save is read back.
+  const [vars, setVars] = useState(item.variations);
+  const varsKey = JSON.stringify(item.variations);
+  const [seenVars, setSeenVars] = useState(varsKey);
+  if (seenVars !== varsKey) {
+    setSeenVars(varsKey);
+    setVars(item.variations);
+  }
+  const saveVars = (next: LibraryItem["variations"], said: string) => {
+    setVars(next);
+    onVariations(next.map((x) => (x.id < 0 ? { ...x, id: null } : x)), said);
+  };
   const videoOf = (id: number) => videos.find((v) => v.id === id) ?? null;
   // An upload is not a link: the link field shows only a pasted one.
   const linkOf = (url: string | null) => (url && !isVideoFile(url) ? url : "");
-  const patchVar = (id: number, patch: { name?: string; video?: string | null; cue?: string }, said: string) => onVariations(vars.map((x) => (x.id === id ? { ...x, ...patch } : x)), said);
+  const patchVar = (id: number, patch: { name?: string; video?: string | null; cue?: string }, said: string) => saveVars(vars.map((x) => (x.id === id ? { ...x, ...patch } : x)), said);
   const addVariation = () => {
     const n = (adding ?? "").trim();
     setAdding(null);
-    if (n) onVariations([...vars, { id: null, name: n, video: null, cue: "" }], `${item.name} · ${n} added`);
+    // A temporary id until the save is read back; the server gives it the real one.
+    if (n) saveVars([...vars, { id: -Date.now(), name: n, video: null, cue: "" }], `${item.name} · ${n} added`);
   };
   return (
     <DialogContent className="rd-dlg lb-dlg">
@@ -804,13 +816,16 @@ function ItemDialog({
         <DialogDescription>Changes show in every programme that uses it.</DialogDescription>
       </DialogHeader>
       <div className="lb-xrows">
-        <div className="lb-xhead" aria-hidden="true">
-          <Label>Demo</Label>
-          <Label>Name</Label>
-          <Label>Group</Label>
-          <Label>Default cue</Label>
-          <Label>Link</Label>
-          <span />
+        <div className="lb-xhead">
+          <Label aria-hidden="true">Demo</Label>
+          <Label aria-hidden="true">Name</Label>
+          <Label aria-hidden="true">Group</Label>
+          <Label aria-hidden="true">Default cue</Label>
+          <Label aria-hidden="true">Link</Label>
+          {/* On the header's right, like Upload on the videos band: a new variation row under the exercise. */}
+          <Button variant="outline" size="sm" className="lb-addvar" disabled={pending || adding != null} onClick={() => setAdding("")} title="Add a variation (close grip, wide grip…)">
+            <PlusIcon /> Variation
+          </Button>
         </div>
         <div className="lb-xrow main">
           <DropSlot url={item.video} label={item.name} pending={pending} onDrop={onPickVideo} onClear={onDemoRemove} />
@@ -829,9 +844,6 @@ function ItemDialog({
           </Select>
           <Input className="h-[42px]" value={cue} onChange={(e) => setCue(e.target.value)} maxLength={300} placeholder="Pull elbow to hip" aria-label="Default cue" />
           <LinkField key={item.video ?? ""} className="h-[42px]" value={linkOf(item.video)} label={item.name} pending={pending} onUse={onDemoLink} onClear={onDemoRemove} />
-          <Button variant="outline" size="icon" disabled={pending || adding != null} onClick={() => setAdding("")} aria-label="Add a variation" title="Add a variation (close grip, wide grip…)">
-            <PlusIcon />
-          </Button>
         </div>
         {vars.map((v) => (
           <div key={v.id} className="lb-xrow sub">
@@ -877,7 +889,7 @@ function ItemDialog({
               onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
             />
             <LinkField key={`l${v.video ?? ""}`} className="h-[38px]" value={linkOf(v.video)} label={`${item.name} · ${v.name}`} pending={pending} onUse={(url) => patchVar(v.id, { video: url }, `Link set on ${item.name} · ${v.name}`)} onClear={() => patchVar(v.id, { video: null }, `Demo taken off ${v.name}`)} />
-            <Button variant="ghost" size="icon" className="lb-bin" disabled={pending} onClick={() => onVariations(vars.filter((x) => x.id !== v.id), `${v.name} deleted`)} aria-label={`Delete ${v.name}`} title="Delete this variation">
+            <Button variant="ghost" size="icon" className="lb-bin" disabled={pending} onClick={() => saveVars(vars.filter((x) => x.id !== v.id), `${v.name} deleted`)} aria-label={`Delete ${v.name}`} title="Delete this variation">
               <TrashIcon />
             </Button>
           </div>

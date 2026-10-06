@@ -1399,10 +1399,11 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               close();
               if (v.url) {
                 setDemos((d) => ({ ...d, [row.id]: { url: v.url!, source: "library" } }));
-                act(() => setExerciseDemoLinkAction(fd({ exerciseId: row.exerciseId, demoUrl: v.url })), `Demo on ${row.name} · every client's sheet with it`);
+                act(() => setExerciseDemoLinkAction(fd({ exerciseId: row.exerciseId, variationId: row.variationId ?? null, demoUrl: v.url })), `Demo on ${row.name} · every client's sheet with it`);
               } else if (v.file) {
                 const f = new FormData();
                 f.set("exerciseId", String(row.exerciseId));
+                if (row.variationId != null) f.set("variationId", String(row.variationId));
                 f.set("file", v.file);
                 act(() => uploadExerciseVideoAction(f), `Demo on ${row.name} · every client's sheet with it`);
               }
@@ -1411,7 +1412,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               const row = rowById(dlg.rowId)!;
               close();
               setDemos((d) => ({ ...d, [row.id]: null }));
-              act(() => clearExerciseDemoAction(fd({ exerciseId: row.exerciseId })), `Demo taken off ${row.name}`);
+              act(() => clearExerciseDemoAction(fd({ exerciseId: row.exerciseId, variationId: row.variationId ?? null })), `Demo taken off ${row.name}`);
             }}
           />
         )}
