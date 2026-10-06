@@ -43,7 +43,9 @@ type Client = {
 };
 // Each coach has their own library (seeded from presets.ts), so coach_id is
 // the owner. Optional only for rows from before multi-coach.
-type Exercise = { id: number; name: string; muscle_tags: string | null; video_url: string | null; coach_id?: number };
+type Exercise = { id: number; name: string; muscle_tags: string | null; video_url: string | null; coach_id?: number; /** The coach's default cue, pre-filled as the note when the exercise is added to a session (5 Oct). */ cue?: string | null; /** Taken out of the library (5 Oct): gone from the pickers, kept wherever it is already prescribed. */ archived?: boolean; /** Versions of it (close grip, wide grip…), each with its own demo (6 Oct). */ variations?: ExerciseVariation[] };
+/** A version of an exercise: its name and its own demo (a coach video or a link); null falls back to the exercise's. */
+type ExerciseVariation = { id: number; name: string; video_url: string | null; /** Its own default cue; absent: the exercise's. */ cue?: string | null };
 // One training session in a programme week. Sessions are not tied to a
 // weekday: the coach sets N sessions a week and the client does them when
 // they can. `day_of_week` is the session's place in its week (1 = Session 1),
@@ -504,6 +506,13 @@ type WorkoutAssignment = {
   // their library, each with an optional note. The client picks one from the
   // swap sheet. Absent or empty: the sheet offers only "write it down".
   alternatives?: { exercise_id: number; note: string | null }[];
+  // Which of the exercise's variations is asked for (close grip…): its name
+  // goes after the exercise's, its demo before the exercise's. Absent: the
+  // exercise as it is. Sets still count for the exercise.
+  variation_id?: number | null;
+  // The coach keeping the demo off this prescription (the client needs no
+  // guidance on it) although the exercise has one. Absent: shown.
+  demo_hidden?: boolean;
 };
 type SetLog = {
   id: number;
@@ -855,6 +864,8 @@ type Meeting = {
   category?: string | null;
   /** The whole day, no time (time is ""); the Calendar lists it above the hours. */
   all_day?: boolean;
+  /** A repeating call: every meeting scheduled together shares the first one's id. */
+  series_id?: number | null;
 };
 type MeetingNote = {
   id: number;
@@ -1025,6 +1036,8 @@ type User = {
   pending?: { name: string; business: string | null; at: string };
   /** A coach let in by the owner who has not been through the welcome steps yet (/welcome). */
   onboarding?: boolean;
+  /** A coach's own video library (Library page, 5 Oct): clips uploaded in bulk, handed to exercises as demos. */
+  video_library?: { id: number; path: string; name: string; at: string; /** File size in bytes (from 6 Oct; absent before). */ bytes?: number }[];
 };
 
 /** What a coach's invoices say about who sends them. Every field optional: filled in over time.

@@ -52,6 +52,7 @@ import {
   listLifestylePhases,
   listMetricsForPhase,
   listExercisesByGroup,
+  listExercises,
   listNutritionPhases,
   listPrograms,
   listPhotoPeriods,
@@ -69,7 +70,7 @@ import {
   getWorkoutQuestions,
 } from "../../lib/queries";
 import { phaseCovers, phaseWeekIndex, phaseWeeks } from "../../lib/phases";
-import type { DraftProgram, Library } from "./training/TrainingDraft";
+import type { CardioMove, DraftProgram, Library } from "./training/TrainingDraft";
 import type { DraftNutrition } from "./nutrition/NutritionDraft";
 import type { DraftMeasurements } from "./measurements/MeasurementsDraft";
 import type { DraftPictures } from "./pictures/PicturesDraft";
@@ -93,7 +94,7 @@ export function pickClient(coachId: number, asked: string | undefined) {
 
 // ---- Training -----------------------------------------------------------------
 
-export function loadTraining(coachId: number, clientId: number, params: { week?: string; program?: string }): { draft: DraftProgram | null; library: Library } {
+export function loadTraining(coachId: number, clientId: number, params: { week?: string; program?: string }): { draft: DraftProgram | null; library: Library; cardioMoves: CardioMove[] } {
   // Every programme the client has had, is on, or has waiting: the switch in
   // the header. The one shown is the one asked for, else the live one.
   const live = getDeployedProgram(clientId);
@@ -110,14 +111,20 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
 
   // The coach's library, for the add-exercise row; cardio has its own form.
   const byGroup = listExercisesByGroup(coachId);
-  const libName = new Map(Object.values(byGroup).flat().map((e) => [e.id, e.name] as const));
+  // Names of every exercise, those taken out of the library too: an
+  // alternative or a swap may still point at one.
+  const libName = new Map(listExercises(coachId).map((e) => [e.id, e.name] as const));
+  // Each with its default cue (the Library page, 5 Oct): the note an exercise
+  // starts with when it is added to a session.
   const library: Library = MUSCLE_GROUPS.filter((g) => g.slug !== "cardio" && (byGroup[g.slug]?.length ?? 0) > 0).map((g) => ({
     slug: g.slug,
     label: g.label,
-    exercises: (byGroup[g.slug] ?? []).map((e) => ({ id: e.id, name: e.name })),
+    exercises: (byGroup[g.slug] ?? []).map((e) => ({ id: e.id, name: e.name, ...(e.cue ? { cue: e.cue } : {}), ...(e.variations?.length ? { variations: e.variations.map((v) => ({ id: v.id, name: v.name, ...(v.cue ? { cue: v.cue } : {}) })) } : {}) })),
   }));
+  // The coach's cardio movements, offered when a cardio is added, each with its cue.
+  const cardioMoves = (byGroup.cardio ?? []).map((e) => ({ name: e.name, cue: e.cue ?? "" }));
 
-  if (!program) return { draft: null, library };
+  if (!program) return { draft: null, library, cardioMoves };
 
   const liveIdx = program.status === "deployed" ? getProgramCurrentWeekIndex(program) : 0;
   const askedWeek = Number(params.week);
@@ -213,6 +220,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
       return {
         id: a.id,
         exerciseId: a.exercise_id,
+        variationId: a.variation_id ?? null,
         name: a.exercise_name ?? "Exercise",
         sets: a.sets,
         reps: a.reps ?? "",
@@ -235,6 +243,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
           : null,
         video: v ? { requestId: v.id, state: (v.replied_at ? "replied" : v.file_path ? "in" : "asked") as "asked" | "in" | "replied", note: v.note, reply: v.reply_note ?? null } : null,
         demo: a.exercise_video_url ? { url: a.exercise_video_url, source: "library" as const } : a.demo_url ? { url: a.demo_url, source: "row" as const } : null,
+        demoHidden: !!a.demo_hidden,
         history,
         swap: a.swap ? (a.swap.library_exercise_id != null ? libName.get(a.swap.library_exercise_id) ?? null : null) ?? a.swap.custom_name ?? null : null,
         alternatives: (a.alternatives ?? []).filter((x) => libName.has(x.exercise_id)).map((x) => ({ exerciseId: x.exercise_id, name: libName.get(x.exercise_id)!, note: x.note ?? "" })),
@@ -274,7 +283,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     gyms,
     note: noteMeta ? { seen: noteMeta.seen, text: noteMeta.text, when: new Date(noteMeta.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) } : null,
   };
-  return { draft, library };
+  return { draft, library, cardioMoves };
 }
 
 // ---- Nutrition ----------------------------------------------------------------

@@ -81,8 +81,17 @@ export default async function AdminPage({
     params.view === "feed" || params.view === "calendar" || params.view === "phases" || params.view === "business" || params.view === "style" || (params.view === "coaches" && owner)
       ? params.view
       : null;
-  // A client opens in the redesign, the default since 24 Sep; the cross-client
-  // views above are not redrawn yet and stay here. ?old=1 keeps the old tabs.
+  // A client opens in the redesign, the default since 24 Sep, and so do the
+  // cross-client views that have been redrawn (feed, calendar, phases,
+  // business — 6 Oct), so the old pages cannot be landed on by accident and
+  // mistaken for the app. ?old=1 keeps the old ones, for comparing. Style and
+  // Coaches have no redrawn page and stay here.
+  if (view && (view === "feed" || view === "calendar" || view === "phases" || view === "business") && params.old !== "1") {
+    const carry = new URLSearchParams(
+      Object.entries({ cat: params.cat, page: params.page, month: params.month, day: params.day, win: params.win }).filter((e): e is [string, string] => !!e[1])
+    ).toString();
+    redirect(`/admin/redesign/${view}${carry ? `?${carry}` : ""}`);
+  }
   if (!view && params.old !== "1") {
     const tab = params.tab === "photos" ? "pictures" : REDESIGN_TABS.includes(params.tab ?? "") ? params.tab! : "home";
     const carry = new URLSearchParams(

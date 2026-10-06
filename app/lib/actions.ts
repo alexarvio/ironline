@@ -64,6 +64,11 @@ import {
   addInvoice,
   addMeasurementField,
   addMeeting,
+  addMeetingSeries,
+  setAssignmentVariation,
+  setAssignmentDemoHidden,
+  addExerciseVariation,
+  laterInSeries,
   updateMeeting,
   completeMeeting,
   getClientIdForMeeting,
@@ -1840,8 +1845,14 @@ export async function addMeetingAction(formData: FormData) {
   const link = String(formData.get("link") || "").trim();
   const tzRaw = String(formData.get("tz") || "").trim();
   if (!date) return;
-  addMeeting(clientId, date, time, topic, duration, link || null, null, tzRaw && isTimezone(tzRaw) ? tzRaw : null);
-  logCoachActivity(clientId, topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", {
+  const tz = tzRaw && isTimezone(tzRaw) ? tzRaw : null;
+  // Repeating: every 1, 2 or 4 weeks, 2 to 26 calls, all made now as one series.
+  const repeatWeeks = [1, 2, 4].includes(Number(formData.get("repeatWeeks"))) ? Number(formData.get("repeatWeeks")) : 0;
+  const count = Math.min(26, Math.max(2, Math.round(Number(formData.get("count")) || 0)));
+  if (repeatWeeks) addMeetingSeries(clientId, date, repeatWeeks, count, time, topic, duration, link || null, tz);
+  else addMeeting(clientId, date, time, topic, duration, link || null, null, tz);
+  const every = repeatWeeks === 1 ? "weekly" : `every-${repeatWeeks}-weeks`;
+  logCoachActivity(clientId, repeatWeeks ? `Scheduled ${count} ${every} meetings${topic ? `: "${topic}"` : ""}` : topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", {
     kind: "general",
     push: true,
     actionTab: "home",
@@ -1924,8 +1935,11 @@ export async function removeMeetingAction(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!coachOwnsMeeting(coach.id, id)) return;
   const meetingClient = getClientIdForMeeting(id);
+  // A repeating call can take the rest of its series with it.
+  const later = formData.get("following") === "1" ? laterInSeries(id) : [];
   removeMeeting(id);
-  noteChange(meetingClient, "Cancelled your call", { tab: "home", label: "See your meetings", key: `meeting-cancel:${id}`, push: true });
+  later.forEach(removeMeeting);
+  noteChange(meetingClient, later.length ? `Cancelled ${later.length + 1} calls` : "Cancelled your call", { tab: "home", label: "See your meetings", key: `meeting-cancel:${id}`, push: true });
   revalidatePath("/admin");
   // The Calendar's day panel removes from here too.
   revalidatePath("/admin/redesign/calendar");
@@ -2447,10 +2461,10 @@ export async function clearDemoAction(formData: FormData) {
   revalidatePath("/client");
 }
 
-// 64MB, matching serverActions.bodySizeLimit in next.config.ts. Checked here
+// 128MB, under serverActions.bodySizeLimit in next.config.ts. Checked here
 // as well because the config only rejects the request — this is what turns
 // that into a sentence the coach can read.
-const MAX_DEMO_BYTES = 64 * 1024 * 1024;
+const MAX_DEMO_BYTES = 128 * 1024 * 1024;
 
 export async function uploadDemoVideoAction(formData: FormData): Promise<string | null> {
   const assignmentId = Number(formData.get("assignmentId"));
@@ -2463,7 +2477,7 @@ export async function uploadDemoVideoAction(formData: FormData): Promise<string 
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return "Choose a file first.";
   if (file.size > MAX_DEMO_BYTES) {
-    return `That file is ${(file.size / 1024 / 1024).toFixed(0)}MB. The limit is 64MB. Trim the clip and try again.`;
+    return `That file is ${(file.size / 1024 / 1024).toFixed(0)}MB. The limit is 128MB. Trim the clip and try again.`;
   }
   if (!file.type.startsWith("video/")) return "That doesn't look like a video file.";
 
@@ -2981,7 +2995,7 @@ export async function uploadExerciseVideoAction(formData: FormData): Promise<str
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return "Choose a file first.";
   if (file.size > MAX_DEMO_BYTES) {
-    return `That file is ${(file.size / 1024 / 1024).toFixed(0)}MB. The limit is 64MB. Trim the clip and try again.`;
+    return `That file is ${(file.size / 1024 / 1024).toFixed(0)}MB. The limit is 128MB. Trim the clip and try again.`;
   }
   if (!file.type.startsWith("video/")) return "That doesn't look like a video file.";
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -3065,7 +3079,7 @@ export async function applyDayChangesAction(
         order: Array.isArray(payload.cardio?.order) ? payload.cardio.order.filter((id) => Number.isInteger(id)) : null,
       },
       removed: (payload.removed ?? []).filter((id) => Number.isInteger(id)),
-      added: (payload.added ?? []).filter((a) => Number.isInteger(a.exerciseId)),
+      added: (payload.added ?? []).filter((a) => Number.isInteger(a.exerciseId)).map((a) => ({ exerciseId: a.exerciseId, fields: a.fields, variationId: Number.isInteger(a.variationId) ? a.variationId : null })),
       order: Array.isArray(payload.order) ? payload.order.filter((id) => Number.isInteger(id)) : null,
     });
     if (clientSeesProgramDay(payload.programDayId)) {
@@ -3283,6 +3297,36 @@ export async function setExerciseAlternativesAction(assignmentId: number, list: 
     .map((x) => ({ exercise_id: Number(x?.exerciseId), note: typeof x?.note === "string" ? x.note : null }))
     .filter((x) => Number.isInteger(x.exercise_id) && mine.has(x.exercise_id));
   setExerciseAlternatives(id, clean);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+/** A new variation on an exercise, typed while adding it to a session; its id and name, or null. */
+export async function addExerciseVariationAction(exerciseId: number, name: string): Promise<{ id: number; name: string } | null> {
+  const coach = await requireCoach();
+  if (!coachOwnsExercise(coach.id, Number(exerciseId))) return null;
+  const v = addExerciseVariation(Number(exerciseId), String(name ?? ""));
+  if (!v) return null;
+  revalidatePath("/admin");
+  return { id: v.id, name: v.name };
+}
+
+// The demo kept off a row (the row's ⋯ menu): the exercise has one, this client needs no guidance on it.
+export async function setRowDemoHiddenAction(assignmentId: number, hidden: boolean) {
+  const id = Number(assignmentId);
+  const owner = Number.isInteger(id) ? getClientIdForAssignment(id) : null;
+  if (owner == null || !(await coachForClient(owner))) return;
+  setAssignmentDemoHidden(id, !!hidden);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// Which of the exercise's variations a row asks for (the row's ⋯ menu); null: the exercise as it is.
+export async function setRowVariationAction(assignmentId: number, variationId: number | null) {
+  const id = Number(assignmentId);
+  const owner = Number.isInteger(id) ? getClientIdForAssignment(id) : null;
+  if (owner == null || !(await coachForClient(owner))) return;
+  setAssignmentVariation(id, variationId == null ? null : Number(variationId));
   revalidatePath("/admin");
   revalidatePath("/client");
 }

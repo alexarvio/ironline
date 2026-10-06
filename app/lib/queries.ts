@@ -47,7 +47,8 @@ export function localDayOf(stamp: string): string {
   return Number.isNaN(d.getTime()) ? stamp.slice(0, 10) : localDateStr(d);
 }
 
-export type Exercise = { id: number; name: string; muscle_tags: string | null; video_url: string | null; coach_id?: number };
+export type ExerciseVariation = { id: number; name: string; video_url: string | null; cue?: string | null };
+export type Exercise = { id: number; name: string; muscle_tags: string | null; video_url: string | null; coach_id?: number; cue?: string | null; archived?: boolean; variations?: ExerciseVariation[] };
 export type ProgramDay = {
   id: number;
   client_id: number;
@@ -89,6 +90,10 @@ export type WorkoutAssignment = {
   swap?: { library_exercise_id: number | null; custom_name: string | null; at: string };
   /** The coach's alternatives (see db.ts). */
   alternatives?: { exercise_id: number; note: string | null }[];
+  /** The exercise's variation asked for (see db.ts). */
+  variation_id?: number | null;
+  /** The demo kept off this prescription (see db.ts). */
+  demo_hidden?: boolean;
   exercise_name?: string;
   exercise_video_url?: string | null;
 };
@@ -381,9 +386,12 @@ function primaryGroup(exercise: Exercise): string {
   const first = (exercise.muscle_tags ?? "").split(",")[0]?.trim().toLowerCase() ?? "";
   return TAG_TO_GROUP[first] ?? (MUSCLE_GROUPS.some((g) => g.slug === first) ? first : "other");
 }
+/** The group an exercise is filed under (back, chest, … cardio, other). */
+export const exerciseGroup = primaryGroup;
 
+/** The pickers' library: an exercise taken out of it (archived) is not offered any more. */
 export function listExercisesByGroup(coachId: number): Record<string, Exercise[]> {
-  const all = listExercises(coachId);
+  const all = listExercises(coachId).filter((e) => !e.archived);
   const byGroup: Record<string, Exercise[]> = {};
   MUSCLE_GROUPS.forEach((g) => (byGroup[g.slug] = []));
   all.forEach((e) => byGroup[primaryGroup(e)].push(e));
@@ -403,6 +411,122 @@ export function addExercise(coachId: number, name: string, muscleGroup: string, 
   data.exercises.push(exercise);
   persist();
   return exercise;
+}
+
+// ---- The coach's Library page (5 Oct) ----
+
+/** Renames, refiles, or sets the default cue on one of the coach's exercises. */
+export function updateExercise(exerciseId: number, patch: { name?: string; group?: string; cue?: string | null }) {
+  const e = getData().exercises.find((x) => x.id === exerciseId);
+  if (!e) return;
+  if (patch.name !== undefined && patch.name.trim()) e.name = patch.name.trim().slice(0, 60);
+  if (patch.group !== undefined) e.muscle_tags = MUSCLE_GROUPS.some((g) => g.slug === patch.group) ? patch.group : "other";
+  if (patch.cue !== undefined) {
+    const cue = (patch.cue ?? "").trim().slice(0, 300);
+    if (cue) e.cue = cue;
+    else delete e.cue;
+  }
+  persist();
+}
+
+/**
+ * Takes an exercise out of the library, or puts it back. Not a delete:
+ * programmes, swaps and alternatives that use it keep working; it just
+ * stops being offered in the pickers.
+ */
+export function setExerciseArchived(exerciseId: number, archived: boolean) {
+  const e = getData().exercises.find((x) => x.id === exerciseId);
+  if (!e) return;
+  if (archived) e.archived = true;
+  else delete e.archived;
+  persist();
+}
+
+// ---- The coach's own video library (Library page, 5 Oct) ----
+// Videos uploaded in bulk (a session's worth from the gym), kept whether or
+// not an exercise uses them yet, and handed to exercises as their demo. The
+// list lives on the coach's own row; the files under
+// uploads/coaches/<coachId>/videos/, which the coach and their clients may
+// watch (the uploads route's "coaches" rule).
+export type CoachVideo = { id: number; path: string; name: string; at: string; bytes?: number };
+
+export function listCoachVideos(coachId: number): CoachVideo[] {
+  const u = getData().users.find((x) => x.id === coachId);
+  const list = u?.video_library ?? [];
+  // Clips from before the size was kept (6 Oct): read it off the file once,
+  // where the file is still on this disk, and keep it.
+  let filled = false;
+  for (const v of list) {
+    if (v.bytes != null) continue;
+    try {
+      v.bytes = fs.statSync(path.join(DATA_DIR, v.path)).size;
+      filled = true;
+    } catch {
+      // Not on this disk (only in the bucket): nothing to show for it.
+    }
+  }
+  if (filled) persist();
+  return [...list].sort((a, b) => (a.at < b.at ? 1 : -1));
+}
+
+/** Writes an uploaded clip to disk and lists it; returns it (the caller copies it to the bucket). */
+export function addCoachVideo(coachId: number, buffer: Buffer, mimeType: string, name: string): CoachVideo | null {
+  const data = getData();
+  const u = data.users.find((x) => x.id === coachId);
+  if (!u) return null;
+  const ext = (mimeType.split("/")[1] || "mp4").replace(/[^a-z0-9]/gi, "").slice(0, 5) || "mp4";
+  const list = u.video_library ?? [];
+  const id = Math.max(Date.now(), ...list.map((v) => v.id + 1));
+  const dir = path.join(DATA_DIR, "uploads", "coaches", String(coachId), "videos");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, `${id}.${ext}`), buffer);
+  const video: CoachVideo = { id, path: `/uploads/coaches/${coachId}/videos/${id}.${ext}`, name: name.trim().slice(0, 120) || `Video ${list.length + 1}`, at: new Date().toISOString(), bytes: buffer.length };
+  u.video_library = [...list, video];
+  persist();
+  return video;
+}
+
+/**
+ * Takes a video out of the coach's library, and off any exercise that had it
+ * as its demo. Returns its path (for the bucket), or null.
+ */
+/** A clip's name in the coach's video library. */
+export function renameCoachVideo(coachId: number, videoId: number, name: string): boolean {
+  const u = getData().users.find((x) => x.id === coachId);
+  const video = u?.video_library?.find((v) => v.id === videoId);
+  const clean = name.trim().slice(0, 120);
+  if (!video || !clean) return false;
+  video.name = clean;
+  persist();
+  return true;
+}
+
+export function removeCoachVideo(coachId: number, videoId: number): string | null {
+  const data = getData();
+  const u = data.users.find((x) => x.id === coachId);
+  const video = u?.video_library?.find((v) => v.id === videoId);
+  if (!u || !video) return null;
+  u.video_library = (u.video_library ?? []).filter((v) => v.id !== videoId);
+  for (const e of data.exercises) if (e.coach_id === coachId && e.video_url === video.path) e.video_url = null;
+  fs.rmSync(path.join(DATA_DIR, video.path.replace(/^\/+/, "")), { force: true });
+  persist();
+  return video.path;
+}
+
+/** For each of the coach's exercises, how many of their clients have it in a programme. */
+export function exerciseClientCounts(coachId: number): Map<number, number> {
+  const data = getData();
+  const mine = new Set(data.clients.filter((c) => c.coach_id === coachId).map((c) => c.id));
+  const dayClient = new Map(data.program_days.filter((d) => mine.has(d.client_id)).map((d) => [d.id, d.client_id] as const));
+  const seen = new Map<number, Set<number>>();
+  for (const a of data.workout_assignments) {
+    const client = dayClient.get(a.program_day_id);
+    if (client == null) continue;
+    let set = seen.get(a.exercise_id);
+    if (!set) seen.set(a.exercise_id, (set = new Set()));
+    set.add(client);
+  }
+  return new Map([...seen].map(([id, s]) => [id, s.size] as const));
 }
 
 // ---- Sessions -----------------------------------------------------------
@@ -1121,6 +1245,8 @@ export function getAssignmentsForDay(programDayId: number): WorkoutAssignment[] 
     .sort((a, b) => a.order_index - b.order_index)
     .map((wa) => {
       const exercise = data.exercises.find((e) => e.id === wa.exercise_id);
+      // A variation asked for: its name after the exercise's, its demo first.
+      const variation = wa.variation_id != null ? exercise?.variations?.find((v) => v.id === wa.variation_id) ?? null : null;
       return {
         ...wa,
         // Rows written before the note fields existed have them undefined —
@@ -1130,8 +1256,8 @@ export function getAssignmentsForDay(programDayId: number): WorkoutAssignment[] 
         note_kind: wa.note_kind ?? null,
         note_at: wa.note_at ?? null,
         note_read: wa.note_read ?? false,
-        exercise_name: exercise?.name ?? "Unknown exercise",
-        exercise_video_url: exercise?.video_url ?? null,
+        exercise_name: exercise ? (variation ? `${exercise.name} · ${variation.name}` : exercise.name) : "Unknown exercise",
+        exercise_video_url: variation?.video_url ?? exercise?.video_url ?? null,
       };
     });
 }
@@ -4778,6 +4904,8 @@ export type Meeting = {
   category?: string | null;
   /** The whole day, no time. */
   all_day?: boolean;
+  /** A repeating call: every meeting scheduled together shares the first one's id. */
+  series_id?: number | null;
 };
 export type MeetingNote = {
   id: number;
@@ -4823,6 +4951,38 @@ export function addMeeting(
     prep_notes: null,
   });
   persist();
+}
+
+/** A repeating call: count meetings, every repeatWeeks weeks from date, as one series. */
+export function addMeetingSeries(clientId: number, date: string, repeatWeeks: number, count: number, time: string, topic: string, durationMinutes: number = DEFAULT_MEETING_DURATION, link: string | null = null, tz: string | null = null) {
+  const data = getData();
+  let seriesId = 0;
+  for (let i = 0; i < count; i++) {
+    const id = allocId("meetings");
+    if (i === 0) seriesId = id;
+    data.meetings.push({
+      id,
+      client_id: clientId,
+      coach_id: null,
+      date: addDaysIso(date, i * repeatWeeks * 7),
+      time,
+      ...(tz ? { tz } : {}),
+      duration_minutes: durationMinutes || DEFAULT_MEETING_DURATION,
+      topic,
+      status: "scheduled",
+      link: link || null,
+      prep_notes: null,
+      series_id: seriesId,
+    });
+  }
+  persist();
+}
+
+/** The calls still to come after this one in its series. */
+export function laterInSeries(id: number): number[] {
+  const m = getData().meetings.find((x) => x.id === id);
+  if (!m?.series_id) return [];
+  return getData().meetings.filter((x) => x.series_id === m.series_id && x.id !== id && x.status === "scheduled" && (x.date > m.date || (x.date === m.date && x.time > m.time))).map((x) => x.id);
 }
 
 export function setMeetingStatus(id: number, status: Meeting["status"]) {
@@ -8172,6 +8332,100 @@ export function setExerciseSwap(assignmentId: number, swap: { library_exercise_i
   persist();
 }
 
+/** An exercise's variations, as the Library's dialog sends them: kept ids stay, new ones get the next. */
+export function setExerciseVariations(exerciseId: number, list: { id?: number | null; name: string; video_url: string | null; cue?: string | null }[]) {
+  const e = getData().exercises.find((x) => x.id === exerciseId);
+  if (!e) return;
+  let next = Math.max(0, ...(e.variations ?? []).map((v) => v.id)) + 1;
+  const clean = list
+    .map((v) => ({ id: v.id && (e.variations ?? []).some((x) => x.id === v.id) ? v.id : next++, name: v.name.trim().slice(0, 40), video_url: v.video_url?.trim() || null, ...(v.cue?.trim() ? { cue: v.cue.trim().slice(0, 300) } : {}) }))
+    .filter((v) => v.name)
+    .slice(0, 12);
+  if (clean.length) e.variations = clean;
+  else delete e.variations;
+  persist();
+}
+
+/** One more variation on an exercise (typed in the session builder); the variation, an existing one of that name, or null. */
+export function addExerciseVariation(exerciseId: number, name: string): ExerciseVariation | null {
+  const e = getData().exercises.find((x) => x.id === exerciseId);
+  const clean = name.trim().slice(0, 40);
+  if (!e || !clean) return null;
+  const had = (e.variations ?? []).find((v) => v.name.toLowerCase() === clean.toLowerCase());
+  if (had) return had;
+  const v: ExerciseVariation = { id: Math.max(0, ...(e.variations ?? []).map((x) => x.id)) + 1, name: clean, video_url: null };
+  e.variations = [...(e.variations ?? []), v];
+  persist();
+  return v;
+}
+
+/**
+ * The row itself, then the row that is "the same row" in the same session of
+ * every later week of its programme: the same exercise and the same variation
+ * as this row had, at the same place when there are two of them (two rows of
+ * one exercise in a session are usually two variations: following every row
+ * of the exercise would make them one, 6 Oct). Nothing in a week where that
+ * row cannot be told apart.
+ */
+function sameRowForward(wa: WorkoutAssignment): WorkoutAssignment[] {
+  const data = getData();
+  const day = data.program_days.find((d) => d.id === wa.program_day_id);
+  if (!day) return [wa];
+  const program = data.training_programs.find((p) => p.client_id === day.client_id && day.week_number >= p.start_week && day.week_number < p.start_week + p.total_weeks);
+  const lastWeek = program ? program.start_week + program.total_weeks - 1 : day.week_number;
+  const laterDays = data.program_days.filter((d) => d.client_id === day.client_id && d.day_of_week === day.day_of_week && d.week_number > day.week_number && d.week_number <= lastWeek);
+  const variation = wa.variation_id ?? null;
+  const out = [wa];
+  for (const d of laterDays) {
+    const same = data.workout_assignments.filter((x) => x.program_day_id === d.id && x.exercise_id === wa.exercise_id && (x.variation_id ?? null) === variation);
+    const one = same.find((x) => x.order_index === wa.order_index) ?? (same.length === 1 ? same[0] : null);
+    if (one) out.push(one);
+  }
+  return out;
+}
+
+/** The demo kept off (or back on) a row, on this row and on the same
+ *  exercise in the same session for the rest of its programme. */
+export function setAssignmentDemoHidden(assignmentId: number, hidden: boolean): number {
+  const data = getData();
+  const wa = data.workout_assignments.find((x) => x.id === assignmentId);
+  const day = wa ? data.program_days.find((d) => d.id === wa.program_day_id) : undefined;
+  if (!wa || !day) return 0;
+  const rows = sameRowForward(wa);
+  for (const x of rows) {
+    if (hidden) x.demo_hidden = true;
+    else delete x.demo_hidden;
+  }
+  persist();
+  return rows.length;
+}
+
+/** The variation a row asks for, set on this row and on the same row in the
+ *  same session for the rest of its programme (sameRowForward). */
+export function setAssignmentVariation(assignmentId: number, variationId: number | null): number {
+  const data = getData();
+  const wa = data.workout_assignments.find((x) => x.id === assignmentId);
+  const day = wa ? data.program_days.find((d) => d.id === wa.program_day_id) : undefined;
+  if (!wa || !day) return 0;
+  const exercise = data.exercises.find((e) => e.id === wa.exercise_id);
+  const id = variationId != null && exercise?.variations?.some((v) => v.id === variationId) ? variationId : null;
+  const rows = sameRowForward(wa);
+  // The note a row starts with: the variation's own cue, else the exercise's.
+  // Only where the note is still one of those defaults (or empty): a note the
+  // coach wrote themselves stays.
+  const defaults = new Set([exercise?.cue ?? "", ...(exercise?.variations ?? []).map((v) => v.cue ?? "")].map((s) => s.trim()).filter(Boolean));
+  const variation = id != null ? exercise?.variations?.find((v) => v.id === id) ?? null : null;
+  const startNote = (variation?.cue ?? exercise?.cue ?? "").trim() || null;
+  for (const x of rows) {
+    if (id != null) x.variation_id = id;
+    else delete x.variation_id;
+    const was = (x.notes ?? "").trim();
+    if (!was || defaults.has(was)) x.notes = startNote;
+  }
+  persist();
+  return rows.length;
+}
+
 /** The coach's alternatives for an exercise, set on this row and on the
  *  same exercise in the same session for the rest of its programme, so they
  *  hold week after week. Returns how many rows took them. */
@@ -8638,7 +8892,7 @@ export type DayChanges = {
   /** assignment id -> gym id -> weight, for the client's gyms after the home one. */
   gyms?: Record<string, Record<string, string>>;
   removed: number[];
-  added: { exerciseId: number; fields: DayFieldValues }[];
+  added: { exerciseId: number; fields: DayFieldValues; /** The exercise's variation asked for (close grip…). */ variationId?: number | null }[];
   /** Full order of the surviving assignment ids, or null if untouched. */
   order: number[] | null;
 };
@@ -8761,6 +9015,7 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
         id: allocId("workout_assignments"),
         program_day_id: day.id,
         exercise_id: add.exerciseId,
+        ...(add.variationId != null && data.exercises.find((e) => e.id === add.exerciseId)?.variations?.some((v) => v.id === add.variationId) ? { variation_id: add.variationId } : {}),
         order_index: rows().length,
         sets: typed.sets ?? 3,
         reps: typed.reps ?? "",
@@ -9338,6 +9593,8 @@ export type WorkspaceMeeting = {
   summary: string;
   summaryTitle: string;
   notes: { id: number; text: string; createdAt: string }[];
+  /** Set on a repeating call: the series it belongs to. */
+  seriesId: number | null;
 };
 
 export function getMeetingsWorkspaceData(clientId: number) {
@@ -9358,6 +9615,7 @@ export function getMeetingsWorkspaceData(clientId: number) {
     summary: m.summary ?? "",
     summaryTitle: m.summary_title ?? "",
     notes: listMeetingNotes(m.id).map((n) => ({ id: n.id, text: n.text, createdAt: n.created_at })),
+    seriesId: m.series_id ?? null,
   });
   const mine = listMeetings(clientId);
   const scheduled = mine.filter((m) => m.status === "scheduled" && m.date >= today).sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1));

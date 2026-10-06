@@ -932,17 +932,11 @@ function CheckinFeed({ view, cadence, onMessage }: { view: LoggedValues; cadence
               <span>
                 <span className={`rd-set rn-vs ${state.cls}`}>{state.text}</span>
               </span>
+              {/* The row's one action: a message about this check-in (on hover), not a menu. */}
               <span className="rd-row-more" onClick={(e) => e.stopPropagation()}>
-                <DropdownMenu modal={false}>
-                  <DropdownMenuTrigger className="rd-btn ghost sm" aria-label={`More for ${p.label}`}>
-                    <MoreIcon />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="pb-menu">
-                    <DropdownMenuItem onSelect={() => onMessage(label)}>
-                      <ChatIcon /> Message about this check-in
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <button type="button" className="rd-btn ghost sm" onClick={() => onMessage(label)} aria-label={`Message about ${p.label}`} title="Message about this check-in">
+                  <ChatIcon />
+                </button>
               </span>
             </div>
             {isOpen && (

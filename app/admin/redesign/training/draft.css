@@ -258,8 +258,12 @@
 .rd-session-head { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 10px; }
 .rd-session-toggle { display: inline-flex; border: 0; background: none; padding: 4px; cursor: pointer; }
 .rd-session-name { border: 0; background: none; padding: 2px 6px; margin-left: -6px; border-radius: 6px; font: inherit; font-size: 15px; font-weight: 700; color: #141a24; cursor: text; }
-.rd-session-name:hover { background: #f4f6fa; }
-.rd-session-name-box { height: 30px; padding: 0 8px; border: 1px solid #2f5d8f; border-radius: 8px; font: inherit; font-size: 15px; font-weight: 700; color: #141a24; outline: none; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.12); }
+.rd-session-name:hover { background: transparent; }
+/* No focus ring on the name (a closed menu or dialog hands focus back to it and the browser boxed it); keyboard focus reads as the hover tint. */
+.rd-session-name:focus { outline: none; box-shadow: none; }
+.rd-session-name:focus-visible { background: transparent; }
+/* Renaming: the name stays as it reads, no box or ring around it (6 Oct); the caret and the hover tint are the only tell. */
+.rd-session-name-box { height: 30px; padding: 0 6px; margin-left: -6px; border: 0; border-radius: 6px; background: transparent; font: inherit; font-size: 15px; font-weight: 700; color: #141a24; outline: none; box-shadow: none; }
 .rd-session-more { position: static; }
 .rd-row-main { padding-right: 4px; align-items: center; }
 .rd-row-main > * { align-self: center; }
@@ -693,3 +697,17 @@
 .rd-rows-scroll .rd-row.edited .rd-row-more { box-shadow: -10px 0 8px -6px rgba(248, 250, 254, 0.9), 20px 0 0 0 #f8fafe; }
 .rd-rows-scroll .rd-row-main:hover:not(.static) .rd-row-more { box-shadow: -10px 0 8px -6px rgba(250, 251, 253, 0.9), 20px 0 0 0 #fafbfd; }
 .rd-rows-scroll .rd-cols > :last-child { position: sticky; right: 0; z-index: 1; align-self: stretch; background: #fff; box-shadow: -10px 0 8px -6px rgba(255, 255, 255, 0.9), 20px 0 0 0 #fff; }
+
+
+/* Row-end actions (6 Oct): a row's ⋯, bin or reply shows only while the
+   pointer is on the row, the row has keyboard focus, or its menu is open —
+   as the Library's bins and the chat's bubble menu do. The flags beside an
+   exercise's ⋯ (chat, video, swap) stay; so does a cardio alternatives
+   button carrying a count. On touch there is no hover: they sit at 70%. */
+.rd-row-more > [data-slot="dropdown-menu-trigger"], .rd-row-more > .rd-btn, .rd-session-head [data-slot="dropdown-menu-trigger"], .rd-alt-row .rd-btn.ghost.sm, .rd-gymrow .rd-btn.ghost.sm { opacity: 0; transition: opacity 0.12s; }
+.rd-row-main:hover .rd-row-more > [data-slot="dropdown-menu-trigger"], .rd-row-main:hover .rd-row-more > .rd-btn,
+.rd-row-main:focus-within .rd-row-more > [data-slot="dropdown-menu-trigger"], .rd-row-main:focus-within .rd-row-more > .rd-btn,
+.rd-session-head:hover [data-slot="dropdown-menu-trigger"], .rd-session-head:focus-within [data-slot="dropdown-menu-trigger"],
+.rd-alt-row:hover .rd-btn.ghost.sm, .rd-alt-row:focus-within .rd-btn.ghost.sm, .rd-gymrow:hover .rd-btn.ghost.sm, .rd-gymrow:focus-within .rd-btn.ghost.sm,
+.rd-row-more > [data-state="open"], .rd-session-head [data-state="open"], .rd-row-more > .rd-btn:focus-visible, .rd-row-more > .rd-cardio-alt:has(b) { opacity: 1; }
+@media (hover: none) { .rd-row-more > [data-slot="dropdown-menu-trigger"], .rd-row-more > .rd-btn, .rd-session-head [data-slot="dropdown-menu-trigger"], .rd-alt-row .rd-btn.ghost.sm, .rd-gymrow .rd-btn.ghost.sm { opacity: 0.7; } }

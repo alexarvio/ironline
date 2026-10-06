@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { ToggleGroup, ToggleGroupItem } from "../../../components/ui/basics";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
-import { CameraIcon, ChatIcon, ChevronDownIcon, ChevronLeftIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { CameraIcon, ChatIcon, ChevronDownIcon, ChevronLeftIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { ConfirmDialog, MessageDialog, useClickAway } from "../training/TrainingDraft";
 import Picker from "../Picker";
 import DatePick from "../DatePick";
@@ -154,18 +154,6 @@ export default function PicturesDraft({ clientId, firstName, plan }: { clientId:
             {sheets.some((x) => x.live) && <span className="rd-status live">Sheet open</span>}
           </h1>
         </div>
-        <div className="rd-head-actions">
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger className="rd-btn ghost" aria-label="More for progress pictures">
-              <MoreIcon />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="pb-menu">
-              <DropdownMenuItem onSelect={() => (openChat ? openChat({ area: "Measurements", label: "Progress pictures", link: { kind: "photos" } }) : setDlg({ kind: "message", label: "Progress pictures" }))}>
-                <ChatIcon /> Message about pictures
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
       </header>
 
       {/* ---- Sheet setup: when, how, and which angles. */}
@@ -226,17 +214,17 @@ export default function PicturesDraft({ clientId, firstName, plan }: { clientId:
                       <span className="rm-last none">—</span>
                     )}
                   </span>
+                  {/* The row's one action is removing it, so a bin (on hover), not a menu. */}
                   <span className="rd-row-more">
-                    <DropdownMenu modal={false}>
-                      <DropdownMenuTrigger className="rd-btn ghost sm" aria-label={`More for ${a.label}`}>
-                        <MoreIcon />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="pb-menu">
-                        <DropdownMenuItem variant="destructive" onSelect={() => (isNew(a.id) || a.count === 0 ? setS((x) => ({ ...x, slots: x.slots.filter((y) => y.id !== a.id) })) : setDlg({ kind: "removeAngle", slotId: a.id }))}>
-                          <TrashIcon /> {isNew(a.id) ? "Don't add it" : "Remove angle"}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <button
+                      type="button"
+                      className="rd-btn ghost sm"
+                      onClick={() => (isNew(a.id) || a.count === 0 ? setS((x) => ({ ...x, slots: x.slots.filter((y) => y.id !== a.id) })) : setDlg({ kind: "removeAngle", slotId: a.id }))}
+                      aria-label={isNew(a.id) ? `Don't add ${a.label}` : `Remove ${a.label}`}
+                      title={isNew(a.id) ? "Don't add it" : "Remove angle"}
+                    >
+                      <TrashIcon />
+                    </button>
                   </span>
                 </div>
                 )}
@@ -346,17 +334,17 @@ export default function PicturesDraft({ clientId, firstName, plan }: { clientId:
                     <span>
                       <span className={`rd-set rn-vs ${state.cls}`}>{state.text}</span>
                     </span>
+                    {/* The row's one action: a message about this sheet (on hover), not a menu. */}
                     <span className="rd-row-more" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu modal={false}>
-                        <DropdownMenuTrigger className="rd-btn ghost sm" aria-label={`More for ${sh.title}`}>
-                          <MoreIcon />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="pb-menu">
-                          <DropdownMenuItem onSelect={() => (openChat ? openChat({ area: "Measurements", label: `Progress pictures · ${sh.title}, ${sh.dateLabel}`, link: { kind: "photos", period: sh.period } }) : setDlg({ kind: "message", label: `Progress pictures · ${sh.title}, ${sh.dateLabel}`, period: sh.period }))}>
-                            <ChatIcon /> Message about this sheet
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <button
+                        type="button"
+                        className="rd-btn ghost sm"
+                        onClick={() => (openChat ? openChat({ area: "Measurements", label: `Progress pictures · ${sh.title}, ${sh.dateLabel}`, link: { kind: "photos", period: sh.period } }) : setDlg({ kind: "message", label: `Progress pictures · ${sh.title}, ${sh.dateLabel}`, period: sh.period }))}
+                        aria-label={`Message about ${sh.title}`}
+                        title="Message about this sheet"
+                      >
+                        <ChatIcon />
+                      </button>
                     </span>
                   </div>
                   {isOpen && (

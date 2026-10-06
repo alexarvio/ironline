@@ -831,17 +831,11 @@ function DayRow({ day, open, grid, mealGrid, commentsOn, onToggle, onShot, onMes
         <span className="rn-macros" title={`${day.protein} g protein · ${day.carbs} g carbs · ${day.fat} g fat`}>
           <Split p={day.protein * 4} c={day.carbs * 4} f={day.fat * 9} />
         </span>
+        {/* The row's one action: a message about this day (on hover), not a menu. */}
         <span className="rd-row-more" onClick={(e) => e.stopPropagation()}>
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger className="rd-btn ghost sm" aria-label={`More for ${fmtDay(day.date)}`}>
-              <MoreIcon />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="pb-menu">
-              <DropdownMenuItem onSelect={onMessage}>
-                <ChatIcon /> Message about this day
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <button type="button" className="rd-btn ghost sm" onClick={onMessage} aria-label={`Message about ${fmtDay(day.date)}`} title="Message about this day">
+            <ChatIcon />
+          </button>
         </span>
       </div>
 

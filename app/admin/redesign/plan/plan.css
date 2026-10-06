@@ -152,7 +152,7 @@
 .rq-evlog { padding: 4px 10px 8px; border-top: 1px solid #eceff3; }
 .rq-evlog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 4px 10px 14px; }
 .rq-evlog-empty { margin: 0; padding: 8px 14px 12px; font-size: 13px; color: #8b93a1; }
-.rq-evrow { display: grid; grid-template-columns: 150px 110px minmax(0, 1fr) 110px; column-gap: 16px; align-items: center; cursor: pointer; }
+.rd-row-main.rq-evrow, .rq-evrow { display: grid; grid-template-columns: 150px 110px minmax(0, 1fr) 110px; column-gap: 16px; align-items: center; cursor: pointer; }
 .rq-evrow:hover { background: #fafbfd; }
 .rq-evrow-when { display: flex; flex-direction: column; gap: 1px; font-variant-numeric: tabular-nums; }
 .rq-evrow-when b { font-size: 13px; font-weight: 700; color: #141a24; }

@@ -53,7 +53,8 @@
 .rh-score-detail em { font-style: normal; margin-left: 8px; color: #5b6474; }
 
 /* Needs you and Activity: rows that lead somewhere. */
-.rh-row { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; column-gap: 14px; align-items: center; }
+/* Doubled up: draft.css puts the Training grid on .rd-row-main too, and the dev server does not always emit the stylesheets in page order. */
+.rd-row-main.rh-row, .rh-row { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; column-gap: 14px; align-items: center; }
 .rh-row.static { cursor: default; }
 .rh-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .rh-row-main b { font-size: 14px; font-weight: 600; color: #141a24; }

@@ -42,3 +42,9 @@
 .riv-totals dd { margin: 0; font-size: 13px; font-weight: 700; color: #313851; text-align: right; font-variant-numeric: tabular-nums; }
 .riv-totals .grand { padding-top: 4px; font-size: 15px; font-weight: 800; color: #141a24; }
 .riv-online { display: block; font-size: 11px; font-weight: 600; color: #1b7a4b; }
+
+/* Row-end actions show on hover only (6 Oct, as across the admin): the table row's ⋯ and a new invoice's line ×. */
+.riv-actions [data-slot="dropdown-menu-trigger"], .riv-line .rd-btn.ghost.sm { opacity: 0; transition: opacity 0.12s; }
+[data-slot="table-row"]:hover .riv-actions [data-slot="dropdown-menu-trigger"], [data-slot="table-row"]:focus-within .riv-actions [data-slot="dropdown-menu-trigger"], .riv-actions [data-state="open"],
+.riv-line:hover .rd-btn.ghost.sm, .riv-line:focus-within .rd-btn.ghost.sm { opacity: 1; }
+@media (hover: none) { .riv-actions [data-slot="dropdown-menu-trigger"], .riv-line .rd-btn.ghost.sm { opacity: 0.7; } }

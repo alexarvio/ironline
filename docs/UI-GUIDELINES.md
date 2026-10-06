@@ -135,6 +135,17 @@ Shadows, one per job: client card `0 12px 30px -20px rgba(8,31,92,.4)`, popover
 
 ## 6 · Controls
 
+**In the coach app, every control is a shadcn/ui part** (since 6 Oct 2026): `app/components/ui/`
+holds Button, Input, Textarea, Label, Select, Switch, Badge, Card, Tabs, Accordion, Toggle Group,
+Table, Dialog, Dropdown Menu and the toasts, trimmed to new-york v4 and mapped onto the colours in
+§3 by `ui.css`. A new admin screen uses them for every button, field, menu, dialog and pill; its own
+stylesheet keeps only layout and the odd visual (a thumbnail, a slide-in). No new hand-built
+`<select>`, `<input>` or button class in admin; a part that is missing is added to `ui/` once, not
+hand-rolled on the page. The shape of a list still follows the Training tab's rows (`rd-session`,
+`rd-row`, `rd-cols`): low folded rows, chevron, name, count, badge on the right, ⋯, a dashed
+"+ Add" foot. The Library is the reference. The client app keeps its own CSS. The roles below
+decide which variant a part gets.
+
 **The one question to ask: does this button COMMIT something?**
 
 | It does | It does not |

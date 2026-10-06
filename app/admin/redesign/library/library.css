@@ -1,0 +1,140 @@
+/* The coach's Library (6 Oct): the shadcn parts for every control, the
+   Training tab's session and row classes (draft.css) for the shape, and only
+   the layout and the few visuals of its own here. */
+.lb .rd-head-actions { display: flex; align-items: center; gap: 10px; }
+
+/* Find: the search and the "Taken out" toggle. */
+.lb-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 4px 0 14px; }
+.lb-search { position: relative; display: block; flex: 0 1 360px; min-width: 200px; }
+.lb-search > svg { position: absolute; left: 12px; top: 50%; width: 15px; height: 15px; transform: translateY(-50%); color: #8b93a1; pointer-events: none; }
+.lb-search [data-slot="input"] { padding-left: 36px; border-radius: 999px; }
+.lb-empty { margin: 28px 0; text-align: center; font-size: 13.5px; color: #8b93a1; }
+
+/* Badges in the app's tints. */
+.lb-badge-warn { background: #fdf3ee; color: #b3471d; }
+.lb-badge-muted { background: #eceff3; color: #5b6474; }
+.lb-badge-ok { background: #dff3ea; color: #1b7a4b; }
+
+/* A group, as a session: its name is as wide as it is, no fixed column. */
+/* The same row as a session on the Training tab: its padding, its 10px gap (rd-sessions), its height. */
+.lb .rd-session-head { padding: 10px 12px 10px 10px; }
+.lb .rd-session-head [data-slot="button"] { height: 28px; width: 28px; }
+.lb .rd-session-namecol.lb-groupname { flex: 0 0 auto; width: auto; min-width: 140px; }
+.lb .rd-session-head [data-slot="button"] { margin-left: 4px; }
+/* An exercise row inside: the demo, the name (and its variations), the cue, ⋯. */
+/* Doubled up: draft.css gives .rd-row-main the Training tab's eight columns, and whichever file loads last would win. */
+.lb .rd-cols.lb-cols, .lb .rd-row-main.lb-row-main { display: grid; grid-template-columns: 88px minmax(0, 1fr) minmax(0, 1.4fr) 40px; gap: 14px; align-items: center; }
+.lb .rd-row-main.lb-row-main { padding: 8px 6px 8px 10px; border-radius: 10px; }
+.lb-row-main.archived > :not(.rd-row-more) { opacity: 0.5; }
+.lb-row-main .rd-ex-name { flex-wrap: wrap; align-items: center; gap: 8px; }
+.lb-row-main .rd-ex-name small { font-size: 11.5px; font-weight: 500; color: #8b93a1; }
+.lb-cue { min-width: 0; font-size: 12.5px; color: #5b6474; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-cue.none { color: #b0b6c0; }
+.lb-add { width: 100%; margin: 8px 0 2px; border-radius: 12px; }
+
+/* A demo's picture: YouTube's thumbnail or the clip's first frame, 16:9. */
+.lb-thumb { position: relative; display: block; width: 88px; aspect-ratio: 16 / 9; border-radius: 8px; overflow: hidden; background: #eef1f5; }
+.lb-thumb img, .lb-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lb-thumb.none, .lb-thumb.link { display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #a0a7b3; }
+.lb-thumb.none { background: repeating-linear-gradient(135deg, #f4f6f9, #f4f6f9 6px, #eef1f5 6px, #eef1f5 12px); }
+.lb-thumb.link { color: #2f5d8f; background: #e6ecf3; }
+.lb-play { position: absolute; inset: 0; margin: auto; width: 26px; height: 26px; border-radius: 999px; background: rgba(8, 15, 35, 0.55) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 7v10l8-5z' fill='white'/%3E%3C/svg%3E") center / 16px no-repeat; }
+
+/* The Videos shelf: a drop zone, then a wall of clips. */
+.lb-drop { margin: 4px 0 16px; border: 2px dashed #c3c9d2; background: #fff; }
+.lb-drop.over { border-color: #2f5d8f; background: #f1f6fd; }
+.lb-drop-body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 150px; padding: 22px; text-align: center; color: #5b6474; font-size: 13.5px; }
+.lb-drop-body small { font-size: 12px; color: #8b93a1; }
+.lb-drop-progress { position: relative; display: block; width: min(420px, 100%); padding-bottom: 14px; font-size: 13.5px; }
+.lb-drop-progress i { position: absolute; left: 0; bottom: 0; height: 6px; border-radius: 999px; background: #1e3a6e; transition: width 0.3s ease; }
+.lb-drop-progress::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 6px; border-radius: 999px; background: #e6ecf3; z-index: -1; }
+.lb-wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.lb-vid { gap: 8px; padding: 10px; }
+.lb-vid-player { width: 100%; aspect-ratio: 16 / 9; border-radius: 10px; background: #0b1020; }
+.lb-vid-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.lb-vid-head b { min-width: 0; font-size: 13.5px; font-weight: 600; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-vid [data-slot="badge"] { max-width: 100%; white-space: normal; text-align: left; }
+.lb-vid-hint { align-self: flex-start; }
+.lb-select-group { font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #8b93a1; opacity: 1; }
+
+/* Video cards (the dialog's band). */
+.lb-drawer-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin; }
+/* A video card: the clip up top, then its name, length · size · date, and where it is used. */
+.lb-drawer-item { display: flex; flex-direction: column; gap: 8px; padding: 8px; border: 1px solid #eceff3; border-radius: 12px; background: #fff; cursor: grab; user-select: none; }
+.lb-drawer-item:active { cursor: grabbing; }
+.lb-drawer-item:hover { border-color: #c9d5e6; }
+.lb-drawer-item .lb-thumb { width: 100%; border-radius: 8px; }
+.lb-drawer-item video { pointer-events: none; }
+.lb-drawer-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 0 2px 2px; }
+/* The name runs to two lines; longer still is cut, with the whole of it on hover (title). */
+.lb-drawer-text b { font-size: 13px; font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+.lb-drawer-text b { cursor: pointer; }
+.lb-drawer-text b.full { display: block; -webkit-line-clamp: unset; }
+.lb-drawer-meta { font-size: 11.5px; color: #5b6474; font-variant-numeric: tabular-nums; }
+.lb-drawer-text small { font-size: 11.5px; color: #1b7a4b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-drawer-text small.none { color: #8b93a1; }
+
+/* One exercise, as rows: the exercise, then each variation as a lesser row
+   under it, then the videos to drag up. Doubled up so it beats .rd-dlg's
+   520px cap whichever stylesheet loads last. */
+.rd-dlg.lb-dlg { max-width: 1280px; width: calc(100vw - 48px); scrollbar-gutter: stable; }
+.lb-xrows { display: flex; flex-direction: column; gap: 8px; }
+.lb-xhead, .lb-xrow.main { display: grid; grid-template-columns: 128px minmax(0, 1.1fr) 180px minmax(0, 1.6fr) minmax(0, 1.3fr) 40px; gap: 14px; align-items: center; }
+.lb-xhead { padding: 0 10px; }
+.lb-xrow.main { padding: 10px; border: 1px solid #eceff3; border-radius: 14px; background: #fff; }
+/* A variation: tucked under the exercise, smaller, with a mark that hangs off its row. */
+.lb-xrow.sub { display: grid; grid-template-columns: 24px 104px minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1.2fr) 40px; gap: 14px; align-items: center; margin-left: 56px; padding: 8px 10px 8px 6px; border-radius: 12px; background: #f7f8fb; }
+.lb-xrow.sub.adding { grid-template-columns: 22px minmax(0, 1fr) auto auto; }
+.lb-sub-mark { width: 14px; height: 14px; margin-left: 2px; border-left: 2px solid #c3c9d2; border-bottom: 2px solid #c3c9d2; border-radius: 0 0 0 6px; }
+/* A demo slot: the video it has, or a dashed box the panel's videos drop on. */
+.lb-slot { position: relative; display: block; }
+.lb-slot a { display: block; }
+.lb-slot .lb-thumb { width: 128px; font-size: 12px; }
+.lb-slot.small .lb-thumb { width: 104px; font-size: 11px; }
+.lb-slot .lb-thumb.none { border: 1px dashed #c3c9d2; background: #fff; text-align: center; }
+.lb-slot.over .lb-thumb { box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.35); }
+.lb-slot.over .lb-thumb.none { border-color: #2f5d8f; background: #e6ecf3; color: #1e3a6e; }
+.lb-slot-x { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border: 0; border-radius: 999px; background: #141a24; color: #fff; font: inherit; font-size: 14px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity 0.12s; }
+.lb-slot:hover .lb-slot-x, .lb-slot-x:focus-visible { opacity: 1; }
+/* The coach's videos, a band under the rows, to drag up onto a demo slot; files from the computer drop here too. */
+.lb-dlg-videos { display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 300px; margin-top: 18px; padding: 16px; border: 2px dashed transparent; border-radius: 16px; background: #f4f6f9; transition: background 0.12s, border-color 0.12s; }
+.lb-dlg-videos.over { border-color: #2f5d8f; background: #e6ecf3; }
+.lb-dlg-videos-head { display: flex; align-items: center; gap: 10px; }
+.lb-dlg-videos-head [data-slot="label"] { margin-right: auto; }
+.lb-dlg-videos-head .lb-search { flex: 0 1 260px; min-width: 160px; }
+/* Two rows of cards showing: the list is two cards tall and scrolls past that. A row grows with its tallest card (a name unfolded), and the rows under it move down with it. */
+.lb-dlg-videos .lb-drawer-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); grid-auto-rows: minmax(222px, auto); gap: 12px; height: calc(2 * 222px + 12px); align-content: start; overflow-y: auto; scrollbar-gutter: stable; overscroll-behavior: contain; }
+.lb-dlg-videos .lb-drawer-item .lb-thumb { flex: none; height: 118px; aspect-ratio: auto; }
+.lb-dlg-videos .lb-drawer-text b { font-size: 13.5px; }
+.lb-dlg-videos .lb-empty { grid-column: 1 / -1; margin: 72px 0; font-size: 14px; }
+.lb-hint { font-size: 11.5px; color: #8b93a1; line-height: 1.4; }
+.lb-field { display: flex; flex-direction: column; gap: 6px; }
+@media (max-width: 760px) {
+  .lb-xhead { display: none; }
+  .lb-xrow.main, .lb-xrow.sub { display: flex; flex-wrap: wrap; }
+  .lb-xrow.main > [data-slot="input"], .lb-xrow.sub > [data-slot="input"] { flex: 1 1 160px; }
+  .lb-cols { display: none; }
+  .lb .rd-row-main.lb-row-main { grid-template-columns: 72px minmax(0, 1fr) 40px; }
+  .lb-cue { display: none; }
+}
+
+/* Variations unfolded under an exercise in the list (6 Oct): the chevron by the name opens them; each a lesser row, indented, on the grey band. */
+.lb-varchev { display: inline-flex; align-items: center; padding: 2px; margin-left: 2px; border: 0; background: none; font: inherit; color: #8b93a1; cursor: pointer; }
+.lb-varchev svg { width: 15px; height: 15px; transition: transform 0.15s; }
+.lb-varchev.open svg { transform: rotate(180deg); }
+.lb-varchev:hover, .lb-varchev.open { color: #1e3a6e; }
+.lb .rd-row-main.lb-row-main.lb-var-row { width: auto; margin: 0 0 4px 36px; padding: 6px 6px 6px 8px; background: #f7f8fb; }
+.lb .rd-row-main.lb-row-main.lb-var-row:hover { background: #eef2f7; }
+.lb-var-row .lb-thumb { width: 72px; font-size: 10px; }
+.lb-var-row .rd-ex-name { font-weight: 600; }
+.lb-var-row .lb-sub-mark { flex: none; }
+
+/* The row's bin: there on hover or keyboard focus only. */
+.lb-bin { opacity: 0; color: #8b93a1; transition: opacity 0.12s; }
+.lb-row-main:hover .lb-bin, .lb-xrow:hover .lb-bin, .lb-drawer-item:hover .lb-bin, .lb-bin:focus-visible, .lb-row-main:focus-within .lb-bin, .lb-xrow:focus-within .lb-bin { opacity: 1; }
+.lb-bin:hover { color: #b3261e; }
+
+/* A video card's bin, over the clip's corner; asked once, it reads Delete? */
+.lb-drawer-item { position: relative; }
+.lb-vid-del { position: absolute; top: 12px; right: 12px; z-index: 1; background: rgba(255, 255, 255, 0.92); }
+.lb-vid-del.confirm { color: #b3261e; border-color: #e3b9b6; }

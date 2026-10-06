@@ -41,13 +41,15 @@
 .rt-goal-add .rd-input { flex: 1; }
 
 /* Past calls: the recap, the notes, the goals set. */
-.rt-past { display: grid; grid-template-columns: 1fr; gap: 14px; padding: 4px 10px 14px 42px; }
-@media (max-width: 900px) { .rt-past { grid-template-columns: 1fr; } }
-.rt-recap { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 12px; background: #f4f7fc; }
-.rt-recap-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.rt-recap-head .rd-cols { padding: 0; }
-.rt-recap textarea { width: 100%; min-height: 60px; padding: 8px 10px; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; font: inherit; font-size: 13.5px; font-weight: 500; line-height: 1.5; color: #141a24; resize: vertical; box-sizing: border-box; }
-.rt-recap textarea:focus { outline: none; border-color: #2f5d8f; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.12); }
+/* An open past call: the label, then the recap as one note (title over body), capped so it never stretches across a wide screen. */
+.rt-past { display: flex; flex-direction: column; gap: 8px; max-width: 680px; padding: 4px 10px 16px 42px; }
+.rt-past-label { padding: 0; }
+.rt-recap { display: flex; flex-direction: column; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; overflow: hidden; }
+.rt-recap:focus-within { border-color: #2f5d8f; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.12); }
+.rt-recap-title { width: 100%; box-sizing: border-box; padding: 10px 12px 8px; border: 0; border-bottom: 1px solid #eceff3; background: none; font: inherit; font-size: 14.5px; font-weight: 700; color: #141a24; }
+.rt-recap textarea { width: 100%; min-height: 110px; padding: 10px 12px; border: 0; background: none; font: inherit; font-size: 13.5px; font-weight: 500; line-height: 1.55; color: #141a24; resize: vertical; box-sizing: border-box; }
+.rt-recap-title:focus, .rt-recap textarea:focus { outline: none; }
+.rt-recap-title::placeholder, .rt-recap textarea::placeholder { color: #a0a7b3; font-weight: 500; }
 .rt-note { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-top: 1px solid #eceff3; }
 .rt-note p { margin: 0; font-size: 13.5px; font-weight: 500; line-height: 1.5; color: #313851; white-space: pre-wrap; }
 .rt-note small { font-size: 11px; color: #8b93a1; }
@@ -87,7 +89,13 @@
 .rt-legend span { display: inline-flex; align-items: center; gap: 5px; }
 
 /* The schedule dialog: the duration as chips. */
-.rt-durations { display: flex; gap: 6px; }
+/* The four lengths fill the field's width, like the timezone above them, each centred. */
+.rt-durations { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.rt-durations .rd-chip { justify-content: center; text-align: center; padding-left: 4px; padding-right: 4px; }
+.rt-wide { width: 100%; flex: none; }
+/* How many times a repeating call happens, and the day of the last one. */
+.rt-repeat { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12.5px; color: #59627a; }
+.rt-repeat input { width: 48px; text-align: center; }
 .rt-busy { color: #b3471d; }
 .rt-free { color: #1b7a4b; }
 
@@ -107,7 +115,6 @@
 /* The timezone under the time: the coach's own unless another is picked. */
 .rt-tz { width: 100%; margin-top: 6px; padding: 5px 8px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; font: inherit; font-size: 12.5px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #5b6474; }
 /* A past call's recap: the one-line title over what was agreed. */
-.rt-recap-title { width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 9px 12px; border: 1px solid #dfe3e8; border-radius: 10px; font: inherit; font-size: 14px; font-weight: 700; color: #141a24; }
 /* Date and time as two equal fields, the timezone a full row under them (25 Sep). */
 .rt-when-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: end; }
 .rt-when-row .rd-field { min-width: 0; }

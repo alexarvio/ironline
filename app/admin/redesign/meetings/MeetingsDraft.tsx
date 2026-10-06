@@ -12,6 +12,7 @@ import DateText from "../DateText";
 import { ConfirmDialog, MessageDialog } from "../training/TrainingDraft";
 import { allTimezones, SERVER_TZ, tzShort, zonedToUtc } from "../../../lib/timezones";
 import TimezonePicker from "./TimezonePicker";
+import Picker from "../Picker";
 import { useOpenChat } from "../ChatPanel";
 
 // The calmer Meetings tab, as a draft on real data, in the Training draft's
@@ -48,6 +49,8 @@ export type DraftMeeting = {
   summaryTitle: string;
   notes: DraftNote[];
   goals: DraftGoal[];
+  /** Set on a repeating call: the series it belongs to. */
+  seriesId: number | null;
 };
 export type DraftDot = { date: string; time: string; durationMinutes: number; name: string; topic: string; mine: boolean; completed: boolean };
 export type DraftMeetings = {
@@ -67,6 +70,11 @@ const savedToast = (what: string) => toast.success("Saved", { description: what 
 const DAY = 86400000;
 const parse = (iso: string) => new Date(`${iso}T00:00:00`);
 const isoOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const addDaysIso = (iso: string, n: number) => {
+  const d = parse(iso);
+  d.setDate(d.getDate() + n);
+  return isoOf(d);
+};
 const daysBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / DAY);
 const monthCap = (d: string) => parse(d).toLocaleDateString("en-GB", { month: "short" });
 const dayNum = (d: string) => String(parse(d).getDate());
@@ -137,6 +145,12 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
   const close = () => setDlg(null);
   const patchMeeting = (id: number, f: Partial<DraftMeeting>) => setMeetings((prev) => prev.map((m) => (m.id === id ? { ...m, ...f } : m)));
   const byId = (id: number) => meetings.find((m) => m.id === id) ?? null;
+  // The calls still to come after this one in its series.
+  const laterOf = (id: number) => {
+    const m = byId(id);
+    if (!m?.seriesId) return [];
+    return meetings.filter((x) => x.seriesId === m.seriesId && x.id !== id && x.status === "scheduled" && (x.date > m.date || (x.date === m.date && x.time > m.time))).map((x) => x.id);
+  };
 
   const scheduled = meetings.filter((m) => m.status === "scheduled" && m.date >= today).sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1));
   const upcoming = scheduled[0] ?? null;
@@ -176,7 +190,8 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
 
       <div className="rt-cols">
         <div className="rt-main">
-          {/* ---- The next call. */}
+          {/* ---- The next call. Nothing booked: no card (the calendar is where one gets booked). */}
+          {upcoming && (
           <section className="rd-session open rn-card">
             <div className="rn-card-head">
               <h2>Next call</h2>
@@ -255,10 +270,9 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                   />
                 </div>
               </>
-            ) : (
-              <p className="rd-full">Nothing booked. Schedule the next call from the calendar; it shows in {firstName}&rsquo;s app the moment you do.</p>
-            )}
+            ) : null}
           </section>
+          )}
 
           {/* ---- Also scheduled. */}
           {also.length > 0 && (
@@ -360,6 +374,7 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                       {isOpen && (
                         <PastBody
                           m={m}
+                          firstName={firstName}
                           onPatch={(f) => {
                             patchMeeting(m.id, f);
                             if (f.summary !== undefined || f.summaryTitle !== undefined) act(() => updateMeetingAction(fd({ id: m.id, summary: f.summary ?? m.summary, summaryTitle: f.summaryTitle ?? m.summaryTitle })));
@@ -404,7 +419,12 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                 patchMeeting(dlg.reschedule.id, { ...v, provider: v.link ? (providerOf(v.link) ?? "Join call") : "", host: v.link ? new URL(v.link).hostname : "" });
                 act(() => updateMeetingAction(fd({ id: dlg.reschedule!.id, date: v.date, time: v.time, tz: v.tz, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "" })), `Moved to ${longDay(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees the new time`);
               } else {
-                act(() => addMeetingAction(fd({ clientId, date: v.date, time: v.time, tz: v.tz, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "" })), `${v.topic || "Check-in call"} on ${longDay(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees it on Home`);
+                act(
+                  () => addMeetingAction(fd({ clientId, date: v.date, time: v.time, tz: v.tz, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "", repeatWeeks: v.repeatWeeks, count: v.count })),
+                  v.repeatWeeks
+                    ? `${v.count} calls, ${v.repeatWeeks === 1 ? "weekly" : `every ${v.repeatWeeks} weeks`} from ${longDay(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees them on Home`
+                    : `${v.topic || "Check-in call"} on ${longDay(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees it on Home`
+                );
               }
               setSelectedDay(v.date);
               close();
@@ -442,11 +462,13 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
             description="The call goes, with its notes and recap. Goals set in it stay."
             confirm="Delete"
             danger
-            onConfirm={() => {
-              setMeetings((prev) => prev.filter((m) => m.id !== dlg.meetingId));
+            tick={laterOf(dlg.meetingId).length ? `Also delete the ${laterOf(dlg.meetingId).length} later ${laterOf(dlg.meetingId).length === 1 ? "call" : "calls"} in this series` : null}
+            onConfirm={(also) => {
+              const gone = new Set([dlg.meetingId, ...(also ? laterOf(dlg.meetingId) : [])]);
+              setMeetings((prev) => prev.filter((m) => !gone.has(m.id)));
               const id = dlg.meetingId;
               close();
-              act(() => removeMeetingAction(fd({ id })), "Call deleted");
+              act(() => removeMeetingAction(fd({ id, following: also ? "1" : "" })), gone.size > 1 ? `${gone.size} calls deleted` : "Call deleted");
             }}
           />
         )}
@@ -483,7 +505,7 @@ function PrepNotes({ value, onSave }: { value: string; onSave: (v: string) => vo
 }
 
 /** An open past call: what was agreed, written for the client. */
-function PastBody({ m, onPatch }: { m: DraftMeeting; onPatch: (f: Partial<DraftMeeting>) => void }) {
+function PastBody({ m, firstName, onPatch }: { m: DraftMeeting; firstName: string; onPatch: (f: Partial<DraftMeeting>) => void }) {
   const [recap, setRecap] = useState(m.summary);
   const [title, setTitle] = useState(m.summaryTitle);
   // The title and the body, each a change of its own.
@@ -494,18 +516,16 @@ function PastBody({ m, onPatch }: { m: DraftMeeting; onPatch: (f: Partial<DraftM
   };
   return (
     <div className="rt-past">
+      {/* The recap as one note: its title over its body. */}
+      <span className="rd-cols rt-past-label">What was agreed</span>
       <div className="rt-recap">
-        <div className="rt-recap-head">
-          <span className="rd-cols">What was agreed</span>
-        </div>
-        {/* The title is the one line the client sees on Home; the body opens under it. */}
-        <input className="rt-recap-title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} placeholder="Title: the one line on the client's Home" aria-label="Recap title" />
-        <textarea value={recap} onChange={(e) => setRecap(e.target.value)} rows={3} placeholder="What you covered and what you agreed…" aria-label="What was agreed" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && changes > 0 && save()} />
+        <input className="rt-recap-title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} placeholder="A one-line title" aria-label="Recap title" />
+        <textarea value={recap} onChange={(e) => setRecap(e.target.value)} rows={4} placeholder={`What you covered and what ${firstName} agreed to…`} aria-label="What was agreed" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && changes > 0 && save()} />
       </div>
       {changes > 0 && (
         <div className="rd-pending rt-bar">
           <span className="rd-pending-count">{changes}</span>
-          <span className="rd-pending-text">What was agreed changed · lands on {"the client's"} Home</span>
+          <span className="rd-pending-text">What was agreed changed · lands on {firstName}&rsquo;s Home</span>
           <button
             type="button"
             className="rd-pending-ghost"
@@ -609,7 +629,7 @@ function MiniCalendar({ today, selected, dots, onPick }: { today: string; select
 }
 
 /** Booking a call, or moving one: the day, a 24-hour time, how long, what about, the way in. */
-function ScheduleDialog({ date: initialDate, reschedule, lastLink, coachTz, dots, today, onSave }: { date: string; reschedule: DraftMeeting | null; lastLink: string | null; coachTz: string | null; dots: DraftDot[]; today: string; onSave: (v: { date: string; time: string; tz: string; durationMinutes: number; topic: string; link: string | null }) => void }) {
+function ScheduleDialog({ date: initialDate, reschedule, lastLink, coachTz, dots, today, onSave }: { date: string; reschedule: DraftMeeting | null; lastLink: string | null; coachTz: string | null; dots: DraftDot[]; today: string; onSave: (v: { date: string; time: string; tz: string; durationMinutes: number; topic: string; link: string | null; repeatWeeks: number; count: number }) => void }) {
   const [date, setDate] = useState(reschedule?.date ?? initialDate);
   const [time, setTime] = useState(reschedule?.time ?? "");
   // The time is in the coach's own timezone unless they pick another; a
@@ -622,6 +642,11 @@ function ScheduleDialog({ date: initialDate, reschedule, lastLink, coachTz, dots
   const [duration, setDuration] = useState(reschedule?.durationMinutes ?? 30);
   const [topic, setTopic] = useState(reschedule?.topic ?? "");
   const [link, setLink] = useState(reschedule?.link ?? "");
+  // A new call can repeat: every 1, 2 or 4 weeks, this many times (0: once).
+  const [repeatWeeks, setRepeatWeeks] = useState(0);
+  const [count, setCount] = useState("6");
+  const calls = Math.min(26, Math.max(2, Number(count) || 2));
+  const lastDate = date ? addDaysIso(date, (calls - 1) * repeatWeeks * 7) : "";
   // Overlap with another client at the chosen slot, as the coach types.
   const linkOk = link.trim() === "" || providerOf(link) != null;
   return (
@@ -660,6 +685,29 @@ function ScheduleDialog({ date: initialDate, reschedule, lastLink, coachTz, dots
               ))}
             </div>
           </div>
+          {!reschedule && (
+            <div className="rd-field">
+              <span>Repeat</span>
+              <Picker
+                value={String(repeatWeeks)}
+                onChange={(v) => setRepeatWeeks(Number(v))}
+                label="Repeat"
+                className="rt-wide"
+                options={[
+                  { value: "0", label: "Once" },
+                  { value: "1", label: "Weekly" },
+                  { value: "2", label: "Every 2 weeks" },
+                  { value: "4", label: "Every 4 weeks" },
+                ]}
+              />
+              {repeatWeeks > 0 && (
+                <span className="rt-repeat">
+                  <input type="text" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value.replace(/\D/g, "").slice(0, 2))} onBlur={() => setCount(String(calls))} aria-label="How many calls" />
+                  calls{date ? `, the last on ${longDay(lastDate)}` : ""}
+                </span>
+              )}
+            </div>
+          )}
           <label className="rd-field">
             <span>Topic</span>
             <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Week 6 check-in" maxLength={80} autoFocus={!reschedule} />
@@ -680,8 +728,8 @@ function ScheduleDialog({ date: initialDate, reschedule, lastLink, coachTz, dots
       <DialogFooter>
         <span className="rd-dlg-hint grow">{link.trim() && !linkOk ? "That does not look like a link yet." : ""}</span>
         <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!date || !linkOk} onClick={() => onSave({ date, time: tidyTime(time), tz, durationMinutes: duration, topic: topic.trim(), link: link.trim() || null })}>
-          {reschedule ? "Move the call" : "Schedule"}
+        <button type="button" className="rd-btn primary" disabled={!date || !linkOk} onClick={() => onSave({ date, time: tidyTime(time), tz, durationMinutes: duration, topic: topic.trim(), link: link.trim() || null, repeatWeeks, count: repeatWeeks ? calls : 1 })}>
+          {reschedule ? "Move the call" : repeatWeeks ? `Schedule ${calls} calls` : "Schedule"}
         </button>
       </DialogFooter>
     </DialogContent>

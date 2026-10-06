@@ -707,7 +707,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                   time: a.time ?? null,
                   // The coach's demo for this prescription wins; the exercise
                   // library's own video is the fallback.
-                  videoUrl: a.exercise_video_url ?? a.demo_url ?? null,
+                  videoUrl: a.demo_hidden ? null : a.exercise_video_url ?? a.demo_url ?? null,
                   myNote: myNotes.get(a.exercise_id) || latestNotes.get(a.exercise_id) || "",
                   warmups: (a.warmup_sets ?? []).map((w) => ({ weight: w.weight_kg, reps: w.reps })),
                   lastWarmups: getLastWarmupSets(a.id).map((w) => ({ weight: w.weight_kg, reps: w.reps })),

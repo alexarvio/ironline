@@ -5,12 +5,12 @@ import type React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { addExerciseToLibraryAction, markProgramNoteSeenAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, createProgramWithAction, deployProgramAction, removeGymAction, removeProgramWeekAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, saveTrainingNoteAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
+import { addExerciseToLibraryAction, addExerciseVariationAction, markProgramNoteSeenAction, setRowDemoHiddenAction, setRowVariationAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, createProgramWithAction, deployProgramAction, removeGymAction, removeProgramWeekAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, saveTrainingNoteAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger, ToggleGroup, ToggleGroupItem } from "../../../components/ui/basics";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
-import { CalendarIcon, ChatIcon, ChevronDownIcon, ColumnsIcon, CopyIcon, DumbbellIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { CalendarIcon, ChatIcon, ChevronDownIcon, ColumnsIcon, CopyIcon, DumbbellIcon, EyeIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { VideoIcon } from "../../VideoRequestButton";
 import PhaseDatesDialog from "../PhaseDatesDialog";
 import PhaseSwitcher from "../PhaseSwitcher";
@@ -36,11 +36,17 @@ import DatePick from "../DatePick";
 //   added, removed or dragged into a new order, the name. Apply lands them.
 
 export type Gym = { id: number; name: string; home: boolean };
-export type Library = { slug: string; label: string; exercises: { id: number; name: string }[] }[];
+export type Library = { slug: string; label: string; exercises: { id: number; name: string; /** The coach's default cue (Library page): the note it starts with when added. */ cue?: string; /** Close grip, wide grip… (Library page): one can be picked per row; its own cue, if any, is the note the row starts with. */ variations?: PickedVariation[] }[] }[];
+/** A variation as the picker hands it over with the exercise. */
+export type PickedVariation = { id: number; name: string; cue?: string };
+/** A cardio movement from the coach's library, offered when a cardio is added, with its default cue. */
+export type CardioMove = { name: string; cue: string };
 export type DraftRow = {
   id: number;
   /** The library exercise behind the row: demos are set per exercise. */
   exerciseId: number;
+  /** The exercise's variation asked for (close grip…); its name is already in `name`. */
+  variationId?: number | null;
   name: string;
   sets: number;
   reps: string;
@@ -54,6 +60,8 @@ export type DraftRow = {
   video: { requestId: number; state: "asked" | "in" | "replied"; note: string | null; reply: string | null } | null;
   /** The demo the client sees on this exercise: the library's, else one set on this row long ago. */
   demo: { url: string; source: "library" | "row" } | null;
+  /** The coach keeping that demo off this prescription for this client. */
+  demoHidden: boolean;
   history: { week: number; label: string; target: number | null; targetReps: string; setsPlanned: number; sets: { n: number; kg: number | null; reps: number | null; rpe: number | null }[]; best: number | null; e1rm: number | null; gym: string | null; current: boolean }[];
   /** What the client did instead, when they swapped the exercise. */
   swap: string | null;
@@ -115,7 +123,7 @@ const restOf = (s: number | null) => (s == null ? null : s >= 60 && s % 60 === 0
 const MAX_SESSIONS = 7;
 const MAX_COLS = 6;
 
-type AddedExercise = { kind: "exercise"; exerciseId: number | null; name: string; sets: number | string; reps: string; kg: number | null; rpe?: string; tempo?: string; rest?: string; note?: string };
+type AddedExercise = { kind: "exercise"; exerciseId: number | null; /** The exercise's variation picked with it; its name is already in `name`. */ variationId?: number | null; name: string; sets: number | string; reps: string; kg: number | null; rpe?: string; tempo?: string; rest?: string; note?: string };
 type AddedCardio = { kind: "cardio"; name: string; time: string; pace: string; incline: string; distance: string; note: string };
 type Added = { key: number } & (AddedExercise | AddedCardio);
 type Edits = { name?: string; note?: string; sets?: string; reps?: string; kg?: number | null; gymKg?: Record<string, number | null>; rpe?: string; tempo?: string; rest?: string };
@@ -132,6 +140,7 @@ type Dlg =
   | { kind: "video"; rowId: number }
   | { kind: "demo"; rowId: number }
   | { kind: "alternatives"; rowId: number }
+  | { kind: "newVariation"; rowId: number }
   | { kind: "message"; label: string; link: MessageLink }
   | { kind: "copySession"; sessionId: number }
   | { kind: "copyWeek" }
@@ -146,7 +155,9 @@ type Dlg =
   | { kind: "addWeek" }
   | null;
 
-export default function TrainingDraft({ clientId, firstName, program, library }: { clientId: number; firstName: string; program: DraftProgram; library: Library }) {
+export default function TrainingDraft({ clientId, firstName, program, library, cardioMoves = [] }: { clientId: number; firstName: string; program: DraftProgram; library: Library; cardioMoves?: CardioMove[] }) {
+  // An exercise added from the library starts with its default cue as the note (5 Oct).
+  const cueOf = (exerciseId: number | null) => (exerciseId == null ? "" : library.flatMap((g) => g.exercises).find((e) => e.id === exerciseId)?.cue ?? "");
   const router = useRouter();
   const [lbs, setLbs] = useState(false);
   const unit = lbs ? "lbs" : "kg";
@@ -289,7 +300,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
       removed: p.removed,
       added: p.added
         .filter((a): a is Added & AddedExercise => a.kind === "exercise" && a.exerciseId != null)
-        .map((a) => ({ exerciseId: a.exerciseId!, fields: { sets: String(a.sets), reps: a.reps, targetWeight: str(a.kg), rpe: a.rpe ?? "", tempo: a.tempo ?? "", rest: a.rest ?? "", notes: a.note ?? "" } })),
+        .map((a) => ({ exerciseId: a.exerciseId!, variationId: a.variationId ?? null, fields: { sets: String(a.sets), reps: a.reps, targetWeight: str(a.kg), rpe: a.rpe ?? "", tempo: a.tempo ?? "", rest: a.rest ?? "", notes: a.note ?? "" } })),
       order: p.order,
     };
   };
@@ -316,7 +327,7 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
         });
         const addedRows: DraftRow[] = p.added
           .filter((a): a is Added & AddedExercise => a.kind === "exercise")
-          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: Math.max(1, parseInt(String(a.sets), 10) || 3), reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: Number(a.rpe) || null, tempo: a.tempo?.trim() || null, rest: restSeconds(a.rest ?? ""), note: a.note?.trim() || null, logged: [], video: null, demo: null, history: [], swap: null, swapInfo: null, exerciseChat: [], alternatives: [], d7: null, d30: null }));
+          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: Math.max(1, parseInt(String(a.sets), 10) || 3), reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: Number(a.rpe) || null, tempo: a.tempo?.trim() || null, rest: restSeconds(a.rest ?? ""), note: a.note?.trim() || null, logged: [], video: null, demo: null, demoHidden: false, history: [], swap: null, swapInfo: null, exerciseChat: [], alternatives: [], d7: null, d30: null }));
         const addedCardio: DraftCardio[] = p.added
           .filter((a): a is Added & AddedCardio => a.kind === "cardio")
           .map((a, i) => ({ id: -(Date.now() + 500 + i), name: a.name, time: a.time, pace: a.pace, incline: a.incline, distance: a.distance, notes: a.note, done: false }));
@@ -778,9 +789,12 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                     <MoreIcon />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="pb-menu">
-                    <DropdownMenuItem onSelect={() => replyTo(`${name}, ${week.label}`, { kind: "session", dayId: s.id })}>
-                      <ChatIcon /> Message about this session
-                    </DropdownMenuItem>
+                    {/* Only once the programme is live, as on an exercise's menu. */}
+                    {program.status === "live" && (
+                      <DropdownMenuItem onSelect={() => replyTo(`${name}, ${week.label}`, { kind: "session", dayId: s.id })}>
+                        <ChatIcon /> Message about this session
+                      </DropdownMenuItem>
+                    )}
                     {(rows.length > 0 || s.cardio.length > 0) && (
                       <DropdownMenuItem onSelect={() => setDlg({ kind: "copySession", sessionId: s.id })}>
                         <CopyIcon /> Duplicate session
@@ -981,12 +995,50 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                                 <DropdownMenuItem onSelect={() => setDlg({ kind: "demo", rowId: r.id })}>
                                   <PlayIcon /> {(demos[r.id] === undefined ? r.demo : demos[r.id]) ? "Demo video · change" : "Add demo"}
                                 </DropdownMenuItem>
+                                {/* The exercise has a demo, but this client needs no guidance on it: keep it off this row (and the weeks after). */}
+                                {r.id > 0 && (demos[r.id] === undefined ? r.demo : demos[r.id]) && (
+                                  <DropdownMenuItem onSelect={() => act(() => setRowDemoHiddenAction(r.id, !r.demoHidden), r.demoHidden ? `Demo back on for ${firstName}` : `Demo hidden from ${firstName} on ${r.name}`)}>
+                                    <EyeIcon /> {r.demoHidden ? "Show the demo again" : `Hide the demo from ${firstName}`}
+                                  </DropdownMenuItem>
+                                )}
+                                {/* Which of the exercise's variations (close grip…) this row asks for, from the Library; a new one can be made here too. */}
+                                {r.id > 0 &&
+                                  (() => {
+                                    const variations = library.flatMap((g) => g.exercises).find((e) => e.id === r.exerciseId)?.variations ?? [];
+                                    const current = variations.find((v) => v.id === r.variationId) ?? null;
+                                    const base = current ? r.name.slice(0, -(current.name.length + 3)) : r.name;
+                                    const pickVariation = (id: number | null) => act(() => setRowVariationAction(r.id, id), `${base}${id != null ? ` · ${variations.find((v) => v.id === id)?.name}` : ""} · ${firstName} sees it from this week`);
+                                    return (
+                                      <DropdownMenuSub>
+                                        <DropdownMenuSubTrigger>
+                                          <ColumnsIcon /> Variation · {current ? current.name : "standard"}
+                                        </DropdownMenuSubTrigger>
+                                        <DropdownMenuSubContent className="pb-menu">
+                                          <DropdownMenuCheckboxItem checked={!current} onSelect={() => pickVariation(null)}>
+                                            Standard
+                                          </DropdownMenuCheckboxItem>
+                                          {variations.map((v) => (
+                                            <DropdownMenuCheckboxItem key={v.id} checked={current?.id === v.id} onSelect={() => pickVariation(v.id)}>
+                                              {v.name}
+                                            </DropdownMenuCheckboxItem>
+                                          ))}
+                                          <DropdownMenuSeparator />
+                                          <DropdownMenuItem onSelect={() => setDlg({ kind: "newVariation", rowId: r.id })}>
+                                            <PlusIcon /> New variation…
+                                          </DropdownMenuItem>
+                                        </DropdownMenuSubContent>
+                                      </DropdownMenuSub>
+                                    );
+                                  })()}
                                 <DropdownMenuItem onSelect={() => setDlg({ kind: "alternatives", rowId: r.id })}>
                                   <DumbbellIcon /> {r.alternatives.length ? `Alternatives · ${r.alternatives.length}` : "Add alternative"}
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => replyTo(`${r.name} · ${name}, ${week.label}`, { kind: "exercise", dayId: s.id, assignmentId: r.id })}>
-                                  <ChatIcon /> Message {firstName} about it
-                                </DropdownMenuItem>
+                                {/* Only once the programme is live: before that the client has nothing of it to talk about. */}
+                                {program.status === "live" && (
+                                  <DropdownMenuItem onSelect={() => replyTo(`${r.name} · ${name}, ${week.label}`, { kind: "exercise", dayId: s.id, assignmentId: r.id })}>
+                                    <ChatIcon /> Message {firstName} about it
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem variant="destructive" onSelect={() => patch(s.id, (q) => ({ ...q, removed: [...q.removed, r.id] }))}>
                                   <TrashIcon /> Remove from session
@@ -1076,11 +1128,8 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                         </span>
                         <span />
                         <span />
-                        <span className="rd-row-more">
-                          <button type="button" className="rd-btn ghost sm" onClick={() => patch(s.id, (q) => ({ ...q, added: q.added.filter((x) => x.key !== r.key) }))} aria-label={`Don't add ${r.name}`} title="Don't add it">
-                            <TrashIcon />
-                          </button>
-                        </span>
+                        {/* No bin on a new row: Discard on the bar takes it off (6 Oct). */}
+                        <span />
                       </div>
                     </div>
                     );
@@ -1179,11 +1228,8 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
                               </span>
                               <span />
                               <span />
-                              <span className="rd-row-more">
-                                <button type="button" className="rd-btn ghost sm" onClick={() => patch(s.id, (q) => ({ ...q, added: q.added.filter((x) => x.key !== r.key) }))} aria-label={`Don't add ${r.name}`} title="Don't add it">
-                                  <TrashIcon />
-                                </button>
-                              </span>
+                              {/* No bin on a new row: Discard on the bar takes it off (6 Oct). */}
+                        <span />
                             </div>
                           </div>
                         ))}
@@ -1193,9 +1239,10 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
 
                   {adding?.session === s.id ? (
                     adding.kind === "exercise" ? (
-                      <AddExerciseRow library={library} onPick={(nm, exerciseId) => patch(s.id, (q) => ({ ...q, added: [...q.added, { key: Date.now() + Math.random(), kind: "exercise", exerciseId, name: nm, sets: "", reps: "", kg: null }] }))} onClose={() => setAdding(null)} />
+                      <AddExerciseRow library={library} onPick={(nm, exerciseId) => patch(s.id, (q) => ({ ...q, added: [...q.added, { key: Date.now() + Math.random(), kind: "exercise", exerciseId, name: nm, sets: "", reps: "", kg: null, ...(cueOf(exerciseId) ? { note: cueOf(exerciseId) } : {}) }] }))} onClose={() => setAdding(null)} />
                     ) : (
                       <AddCardioRow
+                        moves={cardioMoves}
                         onChange={(c) => {
                           // The first keystroke queues it (the bar appears); every one after updates it; cleared or dropped, it comes off.
                           const key = adding.key ?? Date.now() + Math.random();
@@ -1297,6 +1344,21 @@ export default function TrainingDraft({ clientId, firstName, program, library }:
           />
         )}
 
+        {dlg?.kind === "newVariation" && rowById(dlg.rowId) && (
+          <NewVariationDialog
+            row={rowById(dlg.rowId)!}
+            firstName={firstName}
+            onCreate={(name) => {
+              const row = rowById(dlg.rowId)!;
+              close();
+              // Made in the library, then picked on this row (and the weeks after).
+              act(async () => {
+                const made = await addExerciseVariationAction(row.exerciseId, name);
+                if (made) await setRowVariationAction(row.id, made.id);
+              }, `${row.name} · ${name} · ${firstName} sees it from this week`);
+            }}
+          />
+        )}
         {dlg?.kind === "alternatives" && rowById(dlg.rowId) && (
           <AlternativesDialog
             row={rowById(dlg.rowId)!}
@@ -1940,6 +2002,30 @@ function EditExerciseDialog({ row, current, library, onSave }: { row: DraftRow; 
 /** What the client can do instead when the machine is taken: exercises from
  *  the library (the add-exercise search), each with an optional note. Saved
  *  on this session for the rest of the programme. */
+/** A new variation of the row's exercise (close grip, wide grip…): it goes to the Library and onto this row. */
+function NewVariationDialog({ row, firstName, onCreate }: { row: DraftRow; firstName: string; onCreate: (name: string) => void }) {
+  const [name, setName] = useState("");
+  const ok = name.trim().length > 0;
+  return (
+    <DialogContent className="rd-dlg">
+      <DialogHeader>
+        <DialogTitle>New variation of {row.name}</DialogTitle>
+        <DialogDescription>It lands in your Library under the exercise (its own demo and cue go on there), and {firstName} gets it on this row from this week.</DialogDescription>
+      </DialogHeader>
+      <label className="rd-field">
+        <span>Name</span>
+        <input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} placeholder="Close grip, wide grip…" autoFocus onKeyDown={(e) => e.key === "Enter" && ok && onCreate(name.trim())} />
+      </label>
+      <DialogFooter>
+        <DialogClose className="rd-btn">Cancel</DialogClose>
+        <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onCreate(name.trim())}>
+          Add
+        </button>
+      </DialogFooter>
+    </DialogContent>
+  );
+}
+
 function AlternativesDialog({ row, firstName, library, onSave }: { row: DraftRow; firstName: string; library: Library; onSave: (list: DraftRow["alternatives"]) => void }) {
   const [list, setList] = useState(row.alternatives);
   const [adding, setAdding] = useState(row.alternatives.length === 0);
@@ -2100,7 +2186,7 @@ function EditCardioDialog({ cardio, onSave }: { cardio: DraftCardio; onSave: (v:
 // A cardio typed in place, no Add button: the first keystroke puts it on the
 // session's bar (onChange), every keystroke after updates it there. Enter,
 // clicking away or × closes the form and leaves it queued; Esc drops it.
-function AddCardioRow({ onChange, onClose }: { onChange: (c: Omit<AddedCardio, "kind"> | null) => void; onClose: () => void }) {
+function AddCardioRow({ moves = [], onChange, onClose }: { /** The coach's cardio movements (Library), offered as the activity is typed. */ moves?: CardioMove[]; onChange: (c: Omit<AddedCardio, "kind"> | null) => void; onClose: () => void }) {
   const blank = { name: "", time: "", pace: "", incline: "", distance: "", note: "" };
   const [c, setC] = useState(blank);
   const first = useRef<HTMLInputElement>(null);
@@ -2113,6 +2199,11 @@ function AddCardioRow({ onChange, onClose }: { onChange: (c: Omit<AddedCardio, "
   }, []);
   const set = (k: keyof typeof c) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const next = { ...c, [k]: e.target.value };
+    // A movement from the library brings its default cue as the note, when none is typed yet.
+    if (k === "name" && !c.note.trim()) {
+      const move = moves.find((m) => m.name.toLowerCase() === next.name.trim().toLowerCase());
+      if (move?.cue) next.note = move.cue;
+    }
     setC(next);
     const any = Object.values(next).some((v) => v.trim());
     onChange(any ? { ...next, name: next.name.trim(), time: withUnit(next.time, " min"), pace: withUnit(next.pace, " km/h"), incline: withUnit(next.incline, "%"), distance: withUnit(next.distance, " km"), note: next.note.trim() } : null);
@@ -2131,7 +2222,12 @@ function AddCardioRow({ onChange, onClose }: { onChange: (c: Omit<AddedCardio, "
       <div className="rd-cardio-form">
         <label className="wide">
           <span>Activity</span>
-          <input ref={first} value={c.name} onChange={set("name")} placeholder="Incline walk" />
+          <input ref={first} value={c.name} onChange={set("name")} placeholder="Incline walk" list="rd-cardio-moves" autoComplete="off" />
+          <datalist id="rd-cardio-moves">
+            {moves.map((m) => (
+              <option key={m.name} value={m.name} />
+            ))}
+          </datalist>
         </label>
         <label>
           <span>Time (min)</span>

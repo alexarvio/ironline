@@ -87,3 +87,8 @@
 .rpf-photo-state { font-size: 12.5px; font-weight: 600; color: #8b93a1; }
 .rpf-photo-state.on { color: #1b7a4b; }
 .rpf-photo-actions { display: flex; gap: 6px; }
+
+/* The × on a study or experience row shows on hover only (6 Oct, as across the admin). */
+.rpf-row > [data-slot="button"] { opacity: 0; transition: opacity 0.12s; }
+.rpf-row:hover > [data-slot="button"], .rpf-row:focus-within > [data-slot="button"] { opacity: 1; }
+@media (hover: none) { .rpf-row > [data-slot="button"] { opacity: 0.7; } }

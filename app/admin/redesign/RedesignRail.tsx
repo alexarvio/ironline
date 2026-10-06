@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import RailTour from "./RailTour";
-import { AccountIcon, BusinessIcon, CalendarIcon, ChevronDownIcon, FeedIcon, PhasesIcon, PlusIcon, SearchIcon } from "../../components/icons";
+import { AccountIcon, BusinessIcon, CalendarIcon, ChevronDownIcon, DumbbellIcon, FeedIcon, PhasesIcon, PlusIcon, SearchIcon } from "../../components/icons";
 import { SETTINGS, type SettingsKey } from "./settingsNav";
 import { logoutAction } from "../../lib/auth-actions";
 import NewClientDialog from "../NewClientDialog";
@@ -21,9 +21,11 @@ const VIEWS = [
   { key: "calendar", label: "Calendar", Icon: CalendarIcon },
   { key: "phases", label: "Phases", Icon: PhasesIcon },
   { key: "business", label: "Business", Icon: BusinessIcon },
+  // Exercises, their demos and default cues, and cardio movements (5 Oct).
+  { key: "library", label: "Library", Icon: DumbbellIcon },
 ] as const;
 // Views already redrawn here open in the redesign; the rest where they always were.
-const REDRAWN: Partial<Record<string, string>> = { feed: "/admin/redesign/feed", calendar: "/admin/redesign/calendar", phases: "/admin/redesign/phases", business: "/admin/redesign/business" };
+const REDRAWN: Partial<Record<string, string>> = { feed: "/admin/redesign/feed", calendar: "/admin/redesign/calendar", phases: "/admin/redesign/phases", business: "/admin/redesign/business", library: "/admin/redesign/library" };
 
 
 export default function RedesignRail({ rail, clientId, settings }: { rail: RailData; clientId: number; /** The settings page open, if any: the rail opens on Settings. */ settings?: SettingsKey }) {
