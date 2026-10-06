@@ -766,11 +766,29 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
   const chrome = phaseChrome(track, state);
   const weeks = phaseWeeks(startWeek, endWeek);
   const planned = others.filter((o) => o.track === track && o.id !== phase?.id).map((o) => ({ name: o.name, from: o.start_week, to: addDays(o.end_week, 6) }));
-  const overlap = planned.find((p) => p.from <= to && p.to >= from) ?? null;
+  // Against the days that will be saved, so a training phase is checked by its whole weeks.
+  const savedTo = addDays(endWeek, 6);
+  const overlap = planned.find((p) => p.from <= savedTo && p.to >= startWeek) ?? null;
+  // The day the coach picked when training's weeks moved it, to say so.
+  const [moved, setMoved] = useState<{ side: "start" | "end"; picked: string; to: string } | null>(null);
+  // Training can't overlap: say the weeks rule and the nearest week that fits, and hold Save.
+  const weekClash = !byDay && overlap ? (overlap.from > startWeek ? { side: "end" as const, day: addDays(overlap.from, -1) } : { side: "start" as const, day: addDays(overlap.to, 1) }) : null;
+  const WEEK_RULE = "Training goes week by week: a phase always starts on a Monday and ends on a Sunday.";
+  const note = weekClash
+    ? `${WEEK_RULE} ${weekClash.side === "end" ? `${overlap!.name} starts ${fmtDay(overlap!.from)}, so this one has to end on ${fmtDay(weekClash.day)}.` : `${overlap!.name} runs until ${fmtDay(overlap!.to)}, so this one can start on ${fmtDay(weekClash.day)} at the earliest.`}`
+    : overlap
+      ? `Overlaps ${overlap.name} on the same track.`
+      : !byDay && moved
+        ? `${WEEK_RULE} ${fmtDay(moved.picked)} became ${fmtDay(moved.to)}.`
+        : " ";
+  // One click to the other side: the clash's nearest week, or the week after (or before) the one a picked day moved to.
+  const movedAlt = !byDay && moved && !overlap ? { side: moved.side, day: addDays(moved.to, moved.side === "start" ? 7 : -7), instead: true } : null;
+  const fix = weekClash ? { ...weekClash, instead: false } : movedAlt && (movedAlt.side === "start" ? movedAlt.day <= to : movedAlt.day > from) ? movedAlt : null;
 
   const setStart = (d: string) => {
     if (startLocked) return;
     const s = byDay ? d : mondayOf(d);
+    setMoved(s !== d ? { side: "start", picked: d, to: s } : null);
     setFrom(s);
     if (to < s) setTo(byDay ? s : addDays(s, 6));
     setCursor(s.slice(0, 7));
@@ -778,6 +796,7 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
   const setEnd = (d: string) => {
     const e = byDay ? d : addDays(mondayOf(d), 6);
     if (e < from) return setStart(d);
+    setMoved(e !== d ? { side: "end", picked: d, to: e } : null);
     setTo(e);
   };
   const pick = (d: string) => {
@@ -789,7 +808,7 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
       setPicking("start");
     }
   };
-  const ok = name.trim().length > 0 && from <= to;
+  const ok = name.trim().length > 0 && from <= to && !weekClash;
   const startsNow = startWeek <= today;
   const loose = programs.filter((p) => !p.linked);
   const linkedProgram = programChoice !== "new" ? programs.find((p) => p.id === Number(programChoice)) ?? null : null;
@@ -869,8 +888,15 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
               <Picker value={programChoice} onChange={setProgramChoice} label="Programme" className="rq-wide" options={[{ value: "new", label: "A new programme", hint: `${weeks} weeks` }, ...loose.map((p) => ({ value: String(p.id), label: p.name, hint: `${p.weeks} weeks · ${p.status}` }))]} />
             </div>
           )}
-          {/* Always a line, so the dialog keeps its height whether or not there is an overlap to say. */}
-          <p className="rq-overlap">{overlap ? `Overlaps ${overlap.name} on the same track.` : " "}</p>
+          {/* Always a line, so the dialog keeps its height whether or not there is something to say. */}
+          <p className="rq-overlap" role={weekClash ? "alert" : undefined}>
+            {note}
+            {fix && !(startLocked && fix.side === "start") && (
+              <button type="button" className="rq-fix" onClick={() => (fix.side === "start" ? setStart(fix.day) : setEnd(fix.day))}>
+                {fix.side === "start" ? "Start" : "End"} {fmtDay(fix.day)}{fix.instead ? " instead" : ""}
+              </button>
+            )}
+          </p>
         </div>
       </div>
       {/* A phase that exists: Delete on the far left, Cancel, and Open in its
