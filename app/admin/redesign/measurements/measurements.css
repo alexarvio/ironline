@@ -39,7 +39,8 @@
 .rm-th { display: flex; flex-direction: column; gap: 1px; }
 .rm-th em { font-size: 10px; font-style: normal; font-weight: 700; letter-spacing: 0.06em; }
 .rm-td { padding: 10px 0; border-top: 1px solid #eceff3; font-size: 14px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.rm-td.date { font-weight: 600; color: #313851; padding-left: 10px; }
+/* The date, then the note bubble when there is one, both on the line's centre, flush left. */
+.rm-td.date { display: flex; align-items: center; gap: 8px; font-weight: 600; color: #313851; padding-left: 10px; }
 .rm-td.now { color: #1e3a6e; }
 .rm-td.none { color: #c3c9d2; font-weight: 500; }
 .rm-td.change { border-top: 1px solid #dfe3e8; font-size: 13px; color: #5b6474; }
@@ -129,9 +130,11 @@
 .rm-q-how { display: flex; align-items: center; gap: 10px; }
 
 /* The client's note on a check-in (6 Oct): a bubble by the date, the note in a popover, Reply under it. */
-.rm-notebtn { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; margin-left: 8px; border: 0; border-radius: 999px; background: #e6ecf3; color: #1e3a6e; vertical-align: middle; cursor: pointer; }
-.rm-notebtn:hover, .rm-notebtn[data-state="open"] { background: #1e3a6e; color: #fff; }
-.rm-notebtn svg { width: 13px; height: 13px; }
+.rm-notebtn { display: inline-flex; align-items: center; justify-content: center; flex: none; padding: 2px; border: 0; background: none; color: #5b6474; vertical-align: middle; cursor: pointer; }
+.rm-notebtn:hover, .rm-notebtn[data-state="open"] { color: #1e3a6e; }
+.rm-notebtn svg { width: 15px; height: 15px; }
 .rm-notepop p { margin: 0; font-size: 13.5px; font-weight: 500; line-height: 1.5; color: #141a24; white-space: pre-wrap; }
 .rm-notepop-foot { display: flex; justify-content: flex-end; margin-top: 10px; }
-.rm-pager { padding: 10px 14px 6px; }
+.rm-pager { justify-content: center; padding: 10px 14px 6px; }
+
+.rn-day .rd-ex-name { align-items: center; gap: 8px; }
