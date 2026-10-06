@@ -1883,6 +1883,7 @@ export async function updateMeetingAction(formData: FormData) {
   if (formData.has("topic")) patch.topic = String(formData.get("topic") ?? "").trim();
   if (formData.has("link")) patch.link = String(formData.get("link") ?? "").trim() || null;
   if (formData.has("prepNotes")) patch.prep_notes = String(formData.get("prepNotes") ?? "");
+  if (formData.has("meetingNotes")) patch.meeting_notes = String(formData.get("meetingNotes") ?? "");
   if (formData.has("summary")) patch.summary = String(formData.get("summary") ?? "").trim() || null;
   if (formData.has("summaryTitle")) patch.summary_title = String(formData.get("summaryTitle") ?? "").trim().slice(0, 80) || null;
   if (formData.has("date")) {

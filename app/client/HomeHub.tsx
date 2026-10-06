@@ -410,10 +410,8 @@ function LastMeetingCard({ recap, coachFirstName }: { recap: NonNullable<Meeting
       </div>
       <div className={`hm-mt hm-mt-last${openMeetings ? " link" : ""}`} onClick={openMeetings ? (e) => openFromCard(e, openMeetings) : undefined}>
         <span className="hm-mt-glow" aria-hidden="true" />
-        <div className="hm-mt-top">
-          <span className="hm-mt-pill">{recap.dateLabel}</span>
-        </div>
-        <RecapFold recap={recap} />
+        {/* The date sits on the title's line, by the chevron, not on a line of its own (6 Oct). */}
+        <RecapFold recap={recap} date={recap.dateLabel} />
       </div>
     </section>
   );
@@ -421,18 +419,21 @@ function LastMeetingCard({ recap, coachFirstName }: { recap: NonNullable<Meeting
 
 // What was agreed, folded to its title: a chevron opens the coach's full
 // recap under it, eased open.
-function RecapFold({ recap }: { recap: NonNullable<MeetingRecap> }) {
+function RecapFold({ recap, date }: { recap: NonNullable<MeetingRecap>; /** Shown as a pill on the title's line, before the chevron. */ date?: string }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="hm-recap">
+      {/* "Meeting notes" is the head; the call's name (or the coach's title) is the subheading over the notes (6 Oct). */}
       <button type="button" className="hm-recap-head" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-        <span className="hm-recap-title">{recap.title}</span>
+        <span className="hm-recap-title">Meeting summary</span>
+        {date && <span className="hm-mt-pill">{date}</span>}
         <span className={`hm-recap-chev${open ? " open" : ""}`} aria-hidden="true">
           <ChevronDownIcon />
         </span>
       </button>
       <div className={`hm-recap-body${open ? " open" : ""}`} aria-hidden={!open}>
         <div className="hm-recap-clip">
+          <b className="hm-recap-sub">{recap.title}</b>
           <p className="hm-recap-text">{recap.text}</p>
         </div>
       </div>

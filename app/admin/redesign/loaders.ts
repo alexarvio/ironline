@@ -163,6 +163,33 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     };
   });
 
+  // Every workout the client has ended in this programme, any week, with
+  // what they answered on ending it (the workout questionnaire), newest
+  // first: the Training tab's answers feed under the questionnaire (6 Oct).
+  const answersFeed = Array.from({ length: program.total_weeks }, (_, i) => {
+    const n = program.start_week + i;
+    return getWeek(clientId, n)
+      .map((d, si) => ({ d, si }))
+      .filter(({ d }) => d.session_ended_at)
+      .map(({ d, si }) => {
+        const logs = getAssignmentsForDay(d.id).flatMap((a) => getLogsForAssignment(a.id));
+        const gymId = logs.find((l) => l.gym_id != null)?.gym_id ?? null;
+        return {
+          dayId: d.id,
+          weekIdx: i + 1,
+          weekLabel: programWeekLabel(program, n),
+          name: d.label || `Session ${si + 1}`,
+          ended: d.session_ended_at!,
+          duration: d.session_started_at && d.session_ended_at ? Math.max(0, Math.round((Date.parse(d.session_ended_at) - Date.parse(d.session_started_at)) / 60000)) : null,
+          gym: gymId != null ? gymName.get(gymId) ?? null : null,
+          note: d.session_note ?? null,
+          answers: sessionAnswers(d).map((a) => ({ label: a.label, kind: a.kind ?? "scale", value: a.value ?? null, text: a.text ?? null, unit: a.unit ?? "" })),
+        };
+      });
+  })
+    .flat()
+    .sort((a, b) => (a.ended < b.ended ? 1 : -1));
+
   const days = getWeek(clientId, weekNumber);
   // The chat about an exercise, both sides (the workout's chat button and the
   // coach's replies link a message to it), by assignment, oldest first.
@@ -265,6 +292,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   const draft: DraftProgram = {
     id: program.id,
     programs,
+    answersFeed,
     name: program.name ?? "Programme",
     status: stateOf(program),
     totalWeeks: program.total_weeks,
@@ -417,6 +445,18 @@ export function loadMeasurements(clientId: number, params: { phase?: string }): 
   // without phases: every definition the client ever had made repeated and
   // removed columns (three Weights, an old Resting HR).
   const scope = { metrics, until };
+  // The log is the phase's own (6 Oct): from its first day to its last, or
+  // to today while it runs. A past phase shows its own rows under itself.
+  // Without a phase, back to the client's first entry.
+  const logSpan = (cadence: "daily" | "weekly" | "monthly") => {
+    if (!selected) return periodsSinceFirstEntry(metrics, cadence);
+    const from = new Date(`${selected.start_week}T00:00:00`);
+    const to = new Date(`${until ?? localDateStr()}T00:00:00`);
+    const days = Math.max(0, Math.round((to.getTime() - from.getTime()) / 86400000)) + 1;
+    if (cadence === "daily") return days;
+    if (cadence === "weekly") return Math.ceil(days / 7);
+    return (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth()) + 1;
+  };
   const fmtWhen = (period: string) => {
     const days = Math.round((new Date(`${period}T00:00:00`).getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000);
     if (days === 0) return "today";
@@ -446,14 +486,15 @@ export function loadMeasurements(clientId: number, params: { phase?: string }): 
       return { id: m.id, name: m.name, unit: m.unit, frequency: m.frequency, groupKey: g.key, groupLabel: g.label, tint: g.tint, askAt: metricAskAt(m), last: last ? { value: last.value, when: fmtWhen(last.period) } : null };
     }),
     library,
-    daily: getLoggedValues(clientId, "daily", started ? 8 : 0, scope),
-    weekly: getLoggedValues(clientId, "weekly", started ? 5 : 0, scope),
-    dailyLong: getLoggedValues(clientId, "daily", started ? 30 : 0, scope),
-    weeklyLong: getLoggedValues(clientId, "weekly", started ? 12 : 0, scope),
-    monthly: getLoggedValues(clientId, "monthly", started ? 6 : 0, scope),
-    monthlyLong: getLoggedValues(clientId, "monthly", started ? 12 : 0, scope),
+    daily: getLoggedValues(clientId, "daily", started ? Math.min(8, logSpan("daily")) : 0, scope),
+    weekly: getLoggedValues(clientId, "weekly", started ? Math.min(5, logSpan("weekly")) : 0, scope),
+    // The long sets are the whole phase.
+    dailyLong: getLoggedValues(clientId, "daily", started ? logSpan("daily") : 0, scope),
+    weeklyLong: getLoggedValues(clientId, "weekly", started ? logSpan("weekly") : 0, scope),
+    monthly: getLoggedValues(clientId, "monthly", started ? Math.min(6, logSpan("monthly")) : 0, scope),
+    monthlyLong: getLoggedValues(clientId, "monthly", started ? logSpan("monthly") : 0, scope),
     notStarted: !started ? (selected?.status === "draft" ? "Nothing logged yet: this phase is a draft." : `Nothing logged yet: this phase starts ${startsOn}.`) : null,
-    notes: (started ? listCheckInNotes(clientId, 12).filter((n) => !until || n.period <= until) : []).map((n) => ({ id: n.id, period: n.period, kind: n.kind, text: n.text })),
+    notes: (started ? listCheckInNotes(clientId, 500).filter((n) => !until || n.period <= until) : []).map((n) => ({ id: n.id, period: n.period, kind: n.kind, text: n.text })),
   };
 }
 
@@ -530,6 +571,21 @@ export function loadPictures(clientId: number): DraftPictures {
     slots: slots.map((s) => ({ id: s.id, label: s.label, paused: !!s.paused, count: uploads.filter((u) => u.slot_id === s.id).length })),
     sheets,
   };
+}
+
+/**
+ * How many periods of a cadence reach back from today to the client's first
+ * logged entry on these metrics (6 Oct: the coach sees the whole history,
+ * not a window). Capped so a years-old client still loads in one go.
+ */
+function periodsSinceFirstEntry(metrics: { id: number }[], cadence: "daily" | "weekly" | "monthly"): number {
+  const first = getMetricEntries(metrics.map((m) => m.id))
+    .map((e) => (/^\d{4}-\d{2}-\d{2}/.test(e.period) ? e.period.slice(0, 10) : /^\d{4}-\d{2}$/.test(e.period) ? `${e.period}-01` : null))
+    .filter((p): p is string => !!p)
+    .sort()[0];
+  if (!first) return 0;
+  const days = Math.max(0, Math.round((Date.parse(`${localDateStr()}T00:00:00`) - Date.parse(`${first}T00:00:00`)) / 86400000));
+  return cadence === "daily" ? Math.min(730, days + 1) : cadence === "weekly" ? Math.min(104, Math.ceil(days / 7) + 1) : Math.min(24, Math.ceil(days / 30) + 1);
 }
 
 // ---- Meetings ---------------------------------------------------------------------

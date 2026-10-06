@@ -42,12 +42,13 @@
 
 /* Past calls: the recap, the notes, the goals set. */
 /* An open past call: the label, then the recap as one note (title over body), capped so it never stretches across a wide screen. */
-.rt-past { display: flex; flex-direction: column; gap: 8px; max-width: 680px; padding: 4px 10px 16px 42px; }
+.rt-past { display: flex; flex-direction: column; gap: 8px; padding: 4px 14px 16px; }
 .rt-past-label { padding: 0; }
 .rt-recap { display: flex; flex-direction: column; border: 1px solid #dfe3e8; border-radius: 12px; background: #fff; overflow: hidden; }
 .rt-recap:focus-within { border-color: #2f5d8f; box-shadow: 0 0 0 3px rgba(47, 93, 143, 0.12); }
-.rt-recap-title { width: 100%; box-sizing: border-box; padding: 10px 12px 8px; border: 0; border-bottom: 1px solid #eceff3; background: none; font: inherit; font-size: 14.5px; font-weight: 700; color: #141a24; }
-.rt-recap textarea { width: 100%; min-height: 110px; padding: 10px 12px; border: 0; background: none; font: inherit; font-size: 13.5px; font-weight: 500; line-height: 1.55; color: #141a24; resize: vertical; box-sizing: border-box; }
+/* Title line plus body add up to the 150px the next call's box has, so the two read as the same thing. */
+.rt-recap-title { width: 100%; height: 38px; box-sizing: border-box; padding: 0 12px; border: 0; border-bottom: 1px solid #eceff3; background: none; font: inherit; font-size: 14.5px; font-weight: 700; color: #141a24; }
+.rt-recap textarea { width: 100%; height: 112px; min-height: 112px; padding: 10px 12px; border: 0; background: none; font: inherit; font-size: 13.5px; font-weight: 500; line-height: 1.55; color: #141a24; resize: vertical; box-sizing: border-box; }
 .rt-recap-title:focus, .rt-recap textarea:focus { outline: none; }
 .rt-recap-title::placeholder, .rt-recap textarea::placeholder { color: #a0a7b3; font-weight: 500; }
 .rt-note { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-top: 1px solid #eceff3; }
@@ -132,3 +133,10 @@
 .rt-tzp-item small { font-size: 11.5px; color: #8b93a1; font-weight: 500; }
 .rt-tzp-item em { flex: none; font-style: normal; font-size: 12.5px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
 .rt-tzp-none { margin: 6px 8px; font-size: 13px; font-weight: 500; color: #8b93a1; }
+
+/* Under the next call (6 Oct): Prep notes | Meeting notes, one at a time, with a word on who sees which. */
+.rt-notes-tabs { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 0 0 10px 10px; }
+.rt-notes-tabs small { font-size: 12px; color: #8b93a1; }
+.rt-past.bare { max-width: none; padding: 0; gap: 0; }
+/* Prep notes and meeting notes are one box of one height, so the toggle swaps the words and nothing else moves. */
+.rt-notes-box { height: 152px; min-height: 152px; }

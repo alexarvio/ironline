@@ -70,7 +70,9 @@
 .rh-cat.notes { background: #fff3dc; color: #8a5a12; }
 .rh-when { font-size: 12px; font-weight: 500; color: #8b93a1; white-space: nowrap; }
 .rh-empty { margin: 0; padding: 4px 24px 18px; font-size: 13.5px; color: #8b93a1; }
-.rh-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 24px 14px; }
+/* The pager under Activity: pages together on the left, the count on the right (6 Oct: space-between had spread every button across the card). */
+.rh-foot { display: flex; align-items: center; justify-content: flex-start; gap: 4px; padding: 8px 24px 14px; }
+.rh-foot .rpg-count { margin-left: auto; }
 .rh-pager { display: inline-flex; align-items: center; gap: 4px; }
 .rh-pager-at { font-size: 12px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
 .rh-pager .next svg { transform: rotate(180deg); }

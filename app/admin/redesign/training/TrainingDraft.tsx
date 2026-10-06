@@ -77,8 +77,12 @@ export type DraftRow = {
 /** swap: what the client did instead; alternatives: what the coach offers (names, with a note). */
 export type DraftCardio = { id: number; name: string; time: string; pace: string; incline: string; distance: string; notes: string; done: boolean; swap?: string | null; alternatives?: { name: string; note: string }[] };
 export type DraftSession = { id: number; number: number; name: string; setsPlanned: number; setsLogged: number; gym: string | null; skip: string | null; duration: number | null; ended: string | null; note: string | null; /** What the client answered on ending the session (the workout questionnaire): 1 to 10, a number, or words. */ answers?: { label: string; kind: "scale" | "number" | "text"; value: number | null; text: string | null; unit: string }[]; rows: DraftRow[]; cardio: DraftCardio[] };
+/** A workout the client ended, with what they answered on ending it (the answers feed). */
+export type DraftAnswered = { dayId: number; weekIdx: number; weekLabel: string; name: string; ended: string; duration: number | null; gym: string | null; note: string | null; answers: { label: string; kind: "scale" | "number" | "text"; value: number | null; text: string | null; unit: string }[] };
 export type DraftProgram = {
   id: number;
+  /** Every workout ended in this programme, newest first, with its answers. */
+  answersFeed: DraftAnswered[];
   programs: { id: number; name: string; weeks: number; state: "live" | "past" | "scheduled" | "draft" }[];
   name: string;
   status: "live" | "past" | "scheduled" | "draft";
@@ -592,9 +596,6 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
       {/* ---- The coach's goals for this phase, shown on the client's Home. */}
       <PhaseGoalsCard phaseId={program.phaseId} phaseName={program.name} firstName={firstName} goals={program.goals} />
       {program.phaseId != null && <CoachNoteCard firstName={firstName} note={program.coachNote} what="training" save={(text) => saveTrainingNoteAction(program.phaseId!, text)} />}
-      {/* ---- What the client is asked as they end a workout in this phase (30 Sep: its own list, here only). */}
-      <WorkoutQuestionsCard programId={program.id} firstName={firstName} questions={program.workoutQuestions} />
-
       {/* ---- The weeks: plain chips, one pill a session. */}
       <div className="rd-weekrow">
         <Tabs value={String(viewIdx)} className="rd-weeks">
@@ -1304,6 +1305,10 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         )}
       </div>
 
+      {/* ---- What the client is asked as they end a workout in this phase, and what they answered, newest first (6 Oct: both at the foot, under the weeks). */}
+      <WorkoutQuestionsCard programId={program.id} firstName={firstName} questions={program.workoutQuestions} />
+      <AnswersFeed firstName={firstName} items={program.answersFeed} href={(it) => `/admin/redesign/training?client=${clientId}&program=${program.id}&week=${it.weekIdx}#session-${it.dayId}`} />
+
       {/* ---- Dialogs. One open at a time. */}
       <Dialog open={dlg != null} onOpenChange={(o) => !o && close()}>
         {dlg?.kind === "progress" && rowById(dlg.rowId) && <ProgressDialog row={rowById(dlg.rowId)!} lbs={lbs} unit={unit} multiGym={multiGym} />}
@@ -2002,6 +2007,100 @@ function EditExerciseDialog({ row, current, library, onSave }: { row: DraftRow; 
 /** What the client can do instead when the machine is taken: exercises from
  *  the library (the add-exercise search), each with an optional note. Saved
  *  on this session for the rest of the programme. */
+/**
+ * What the client answered on ending each workout, one row a workout, newest
+ * first, laid out like the Measurements check-in log: the day, the session,
+ * the answers in a line, the time it took; open a row for the answers as
+ * tiles and the client's note, and a link to that session in its week.
+ */
+function AnswersFeed({ firstName, items, href }: { firstName: string; items: DraftAnswered[]; href: (it: DraftAnswered) => string }) {
+  const [open, setOpen] = useState<number | null>(null);
+  const grid = { gridTemplateColumns: "20px 150px minmax(160px, 0.8fr) minmax(240px, 1.4fr) 90px 32px", columnGap: 24 } as const;
+  const when = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  const at = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const said = (a: DraftAnswered["answers"][number]) => (a.kind === "text" ? (a.text ?? "").trim() : a.value != null ? `${a.value}${a.kind === "scale" ? "/10" : a.unit ? ` ${a.unit}` : ""}` : "");
+  return (
+    <section className="rd-session open rn-card">
+      <div className="rn-card-head">
+        <h2>Workout questionnaire answers</h2>
+      </div>
+      {items.length === 0 ? (
+        <p className="rd-full">Nothing yet.</p>
+      ) : (
+        <div className="rd-rows">
+          <div className="rd-cols" aria-hidden="true" style={grid}>
+            <span />
+            <span>Ended</span>
+            <span>Session</span>
+            <span>Answers</span>
+            <span>Took</span>
+            <span />
+          </div>
+          {items.map((it) => {
+            const isOpen = open === it.dayId;
+            const line = it.answers.map((a) => (said(a) ? `${a.label} ${said(a)}` : null)).filter(Boolean);
+            return (
+              <div key={it.dayId} className={`rd-row rn-day${isOpen ? " open" : ""}`}>
+                <div className="rd-row-main" style={grid} onClick={() => setOpen((x) => (x === it.dayId ? null : it.dayId))} role="button" tabIndex={0} aria-expanded={isOpen} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setOpen((x) => (x === it.dayId ? null : it.dayId)))}>
+                  <span className={`rd-chev${isOpen ? " open" : ""}`} aria-hidden="true">
+                    <ChevronDownIcon />
+                  </span>
+                  <span className="rd-ex">
+                    <span className="rd-ex-name">{when(it.ended)}</span>
+                    <small>{at(it.ended)}{it.gym ? ` · ${it.gym}` : ""}</small>
+                  </span>
+                  <span className="rd-ex">
+                    <span className="rd-ex-name">{it.name}</span>
+                    <small>{it.weekLabel}</small>
+                  </span>
+                  <span className="rm-summary">
+                    {line.slice(0, 4).join(" · ") || "No answers"}
+                    {line.length > 4 ? ` · +${line.length - 4}` : ""}
+                  </span>
+                  <span>{it.duration != null && <span className="rd-set">{it.duration} min</span>}</span>
+                  <span className="rd-row-more" onClick={(e) => e.stopPropagation()}>
+                    <Link className="rd-btn ghost sm" href={href(it)} aria-label={`Open ${it.name}, ${it.weekLabel}`} title="Open this session">
+                      <CalendarIcon />
+                    </Link>
+                  </span>
+                </div>
+                {isOpen && (
+                  <div className="rm-tiles">
+                    {it.answers.map((a, i) =>
+                      a.kind === "text" ? (
+                        (a.text ?? "").trim() ? (
+                          <div key={i} className="rm-tile note">
+                            <small>{a.label}</small>
+                            <p>{a.text}</p>
+                          </div>
+                        ) : null
+                      ) : (
+                        <div key={i} className="rm-tile">
+                          <small>{a.label}</small>
+                          <b>
+                            {a.value ?? "—"}
+                            {a.value != null && (a.kind === "scale" ? <em>/10</em> : a.unit ? <em>{a.unit}</em> : null)}
+                          </b>
+                        </div>
+                      )
+                    )}
+                    {it.note && (
+                      <div className="rm-tile note">
+                        <small>{firstName}&rsquo;s note</small>
+                        <p>{it.note}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
 /** A new variation of the row's exercise (close grip, wide grip…): it goes to the Library and onto this row. */
 function NewVariationDialog({ row, firstName, onCreate }: { row: DraftRow; firstName: string; onCreate: (name: string) => void }) {
   const [name, setName] = useState("");

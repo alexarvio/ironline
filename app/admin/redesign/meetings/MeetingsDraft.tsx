@@ -13,6 +13,7 @@ import { ConfirmDialog, MessageDialog } from "../training/TrainingDraft";
 import { allTimezones, SERVER_TZ, tzShort, zonedToUtc } from "../../../lib/timezones";
 import TimezonePicker from "./TimezonePicker";
 import Picker from "../Picker";
+import HelpTip from "../HelpTip";
 import { useOpenChat } from "../ChatPanel";
 
 // The calmer Meetings tab, as a draft on real data, in the Training draft's
@@ -44,6 +45,8 @@ export type DraftMeeting = {
   provider: string;
   host: string;
   prepNotes: string;
+  /** Coach-only notes typed during the call. */
+  meetingNotes: string;
   summary: string;
   /** The recap's one-line title, over the body on the client's Home. */
   summaryTitle: string;
@@ -140,6 +143,8 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
     setMeetings([...(plan.upcoming ? [plan.upcoming] : []), ...plan.alsoScheduled, ...plan.past]);
   }
   const [dlg, setDlg] = useState<Dlg>(null);
+  // Under the next call, one box at a time (6 Oct): prep notes and meeting notes are the coach's own; the summary is what the client gets on Home.
+  const [notesTab, setNotesTab] = useState<"prep" | "meeting" | "summary">("prep");
   // Messaging slides the chat in from the right (ChatPanel, 2 Oct).
   const openChat = useOpenChat();
   const close = () => setDlg(null);
@@ -197,9 +202,7 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
               <h2>Next call</h2>
               {upcoming && (
                 <div className="rt-actions">
-                  <button type="button" className="rd-btn" onClick={() => setDlg({ kind: "schedule", date: upcoming.date, reschedule: upcoming })}>
-                    <CalendarIcon /> Reschedule
-                  </button>
+                  {/* The one button that commits, then the rest under ⋯ (6 Oct: Reschedule moved in beside Delete, so the menu has two things in it). */}
                   <button type="button" className="rd-btn primary" onClick={() => setDlg({ kind: "complete", meetingId: upcoming.id })}>
                     Mark completed
                   </button>
@@ -208,6 +211,10 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                       <MoreIcon />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="pb-menu">
+                      <DropdownMenuItem onSelect={() => setDlg({ kind: "schedule", date: upcoming.date, reschedule: upcoming })}>
+                        <CalendarIcon /> Reschedule
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "delete", meetingId: upcoming.id })}>
                         <TrashIcon /> Delete
                       </DropdownMenuItem>
@@ -260,14 +267,59 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                   </div>
                 </div>
                 <div className="rt-body">
-                  <PrepNotes
-                    key={upcoming.id}
-                    value={upcoming.prepNotes}
-                    onSave={(v) => {
-                      patchMeeting(upcoming.id, { prepNotes: v });
-                      act(() => updateMeetingAction(fd({ id: upcoming.id, prepNotes: v })), "Prep notes");
-                    }}
-                  />
+                  <div className="rt-col">
+                    {/* Prep notes are the coach's own; meeting notes are the recap the client gets on Home once the call is completed. */}
+                    <div className="rt-notes-tabs">
+                      <div className="rd-btn-group" role="group" aria-label="Notes">
+                        {(["prep", "meeting", "summary"] as const).map((t) => (
+                          <button key={t} type="button" className={notesTab === t ? "on" : ""} aria-pressed={notesTab === t} onClick={() => setNotesTab(t)}>
+                            {t === "prep" ? "Prep notes" : t === "meeting" ? "Meeting notes" : `Summary for ${firstName}`}
+                          </button>
+                        ))}
+                      </div>
+                      <HelpTip title="Which notes go where">
+                        <p>
+                          <b>Prep notes</b> and <b>Meeting notes</b> are for you: before the call, and during it. {firstName} never sees them.
+                        </p>
+                        <p>
+                          <b>Summary for {firstName}</b> is the only one {firstName} gets, on Home, once you mark the call completed.
+                        </p>
+                      </HelpTip>
+                    </div>
+                    {notesTab === "prep" ? (
+                      <PrepNotes
+                        key={upcoming.id}
+                        bare
+                        value={upcoming.prepNotes}
+                        onSave={(v) => {
+                          patchMeeting(upcoming.id, { prepNotes: v });
+                          act(() => updateMeetingAction(fd({ id: upcoming.id, prepNotes: v })), "Prep notes");
+                        }}
+                      />
+                    ) : notesTab === "meeting" ? (
+                      <PrepNotes
+                        key={`m${upcoming.id}`}
+                        bare
+                        label="Meeting notes"
+                        value={upcoming.meetingNotes}
+                        onSave={(v) => {
+                          patchMeeting(upcoming.id, { meetingNotes: v });
+                          act(() => updateMeetingAction(fd({ id: upcoming.id, meetingNotes: v })), "Meeting notes");
+                        }}
+                      />
+                    ) : (
+                      <PastBody
+                        key={upcoming.id}
+                        bare
+                        m={upcoming}
+                        firstName={firstName}
+                        onPatch={(f) => {
+                          patchMeeting(upcoming.id, f);
+                          if (f.summary !== undefined || f.summaryTitle !== undefined) act(() => updateMeetingAction(fd({ id: upcoming.id, summary: f.summary ?? upcoming.summary, summaryTitle: f.summaryTitle ?? upcoming.summaryTitle })));
+                        }}
+                      />
+                    )}
+                  </div>
                 </div>
               </>
             ) : null}
@@ -478,20 +530,22 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
 }
 
 /** The coach's prep notes on the next call: typed, then saved on purpose. */
-function PrepNotes({ value, onSave }: { value: string; onSave: (v: string) => void }) {
+function PrepNotes({ value, onSave, bare, label = "Prep notes" }: { value: string; onSave: (v: string) => void; /** No label of its own: the toggle above names it. */ bare?: boolean; /** "Prep notes" or "Meeting notes": both the coach's own. */ label?: string }) {
   const [text, setText] = useState(value);
   const changed = text.trim() !== value.trim();
   return (
     <div className="rt-col">
-      <div className="rd-cols" aria-hidden="true">
-        <span>Prep notes</span>
-      </div>
-      <textarea className="rt-prep" value={text} onChange={(e) => setText(e.target.value)} placeholder="What to cover, what to ask, what changed since last time…" aria-label="Prep notes" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && changed && onSave(text.trim())} />
+      {!bare && (
+        <div className="rd-cols" aria-hidden="true">
+          <span>{label}</span>
+        </div>
+      )}
+      <textarea className="rt-prep rt-notes-box" value={text} onChange={(e) => setText(e.target.value)} placeholder="What to cover, what to ask, what changed since last time…" aria-label="Prep notes" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && changed && onSave(text.trim())} />
       {/* The moment the notes differ from what is saved, the bar comes up under the card, as on a session. */}
       {changed && (
         <div className="rd-pending rt-bar">
           <span className="rd-pending-count">1</span>
-          <span className="rd-pending-text">Prep notes changed · yours only, never sent</span>
+          <span className="rd-pending-text">{label} changed · yours only, never sent</span>
           <button type="button" className="rd-pending-ghost" onClick={() => setText(value)}>
             Discard
           </button>
@@ -505,27 +559,33 @@ function PrepNotes({ value, onSave }: { value: string; onSave: (v: string) => vo
 }
 
 /** An open past call: what was agreed, written for the client. */
-function PastBody({ m, firstName, onPatch }: { m: DraftMeeting; firstName: string; onPatch: (f: Partial<DraftMeeting>) => void }) {
+function PastBody({ m, firstName, onPatch, bare }: { m: DraftMeeting; firstName: string; onPatch: (f: Partial<DraftMeeting>) => void; /** Under the next call: no label or indent of its own. */ bare?: boolean }) {
   const [recap, setRecap] = useState(m.summary);
-  const [title, setTitle] = useState(m.summaryTitle);
+  // The title starts as the call's name (the Meetings screen's subheading), unless the coach wrote one.
+  const [title, setTitle] = useState(m.summaryTitle || m.topic || "Check-in call");
   // The title and the body, each a change of its own.
-  const changes = (recap.trim() !== m.summary.trim() ? 1 : 0) + (title.trim() !== m.summaryTitle.trim() ? 1 : 0);
+  const changes = (recap.trim() !== m.summary.trim() ? 1 : 0) + (title.trim() !== (m.summaryTitle || m.topic || "Check-in call").trim() ? 1 : 0);
   const save = () => {
     onPatch({ summary: recap.trim(), summaryTitle: title.trim() });
-    savedToast(`Agreed on ${shortDay(m.date)}`);
+    savedToast(`Summary · ${shortDay(m.date)}`);
   };
   return (
-    <div className="rt-past">
+    <div className={`rt-past${bare ? " bare" : ""}`}>
       {/* The recap as one note: its title over its body. */}
-      <span className="rd-cols rt-past-label">What was agreed</span>
-      <div className="rt-recap">
-        <input className="rt-recap-title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} placeholder="A one-line title" aria-label="Recap title" />
-        <textarea value={recap} onChange={(e) => setRecap(e.target.value)} rows={4} placeholder={`What you covered and what ${firstName} agreed to…`} aria-label="What was agreed" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && changes > 0 && save()} />
-      </div>
+      {!bare && <span className="rd-cols rt-past-label">Summary for {firstName}</span>}
+      {/* Under the next call it is the one box prep notes are, same size; the title stays the call's name. On a past call, the title sits over the body. */}
+      {bare ? (
+        <textarea className="rt-prep rt-notes-box" value={recap} onChange={(e) => setRecap(e.target.value)} rows={4} placeholder={`What you covered and what ${firstName} agreed to…`} aria-label="Meeting notes" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && changes > 0 && save()} />
+      ) : (
+        <div className="rt-recap">
+          <input className="rt-recap-title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} placeholder="A one-line title" aria-label="Recap title" />
+          <textarea value={recap} onChange={(e) => setRecap(e.target.value)} rows={4} placeholder={`What you covered and what ${firstName} agreed to…`} aria-label="Meeting notes" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && changes > 0 && save()} />
+        </div>
+        )}
       {changes > 0 && (
         <div className="rd-pending rt-bar">
           <span className="rd-pending-count">{changes}</span>
-          <span className="rd-pending-text">What was agreed changed · lands on {firstName}&rsquo;s Home</span>
+          <span className="rd-pending-text">Summary changed · lands on {firstName}&rsquo;s Home</span>
           <button
             type="button"
             className="rd-pending-ghost"
@@ -777,7 +837,7 @@ function CompleteDialog({ firstName, value, title: initialTitle, onComplete }: {
         <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} placeholder="Calories held, bench to 100 kg" autoFocus />
       </label>
       <label className="rd-field">
-        <span>What was agreed</span>
+        <span>Summary for {firstName}</span>
         <textarea rows={4} value={recap} onChange={(e) => setRecap(e.target.value)} placeholder="What you covered and what you agreed…" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && recap.trim() && onComplete(recap.trim(), title.trim())} />
       </label>
       <DialogFooter>

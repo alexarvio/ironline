@@ -852,6 +852,8 @@ type Meeting = {
   summary_title?: string | null;
   /** Coach-only notes written before the call. Never sent to the client. */
   prep_notes?: string | null;
+  /** Coach-only notes typed while the call happens (6 Oct). Never sent; the summary is what the client gets. */
+  meeting_notes?: string | null;
   /** The coach's recap of what was covered and agreed, written FOR the
       client and shown on their Home under the next meeting. Distinct from
       prep_notes and from the meeting_notes log, both of which are the

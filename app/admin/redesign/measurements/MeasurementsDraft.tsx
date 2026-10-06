@@ -17,6 +17,9 @@ import PhaseGoalsCard from "../PhaseGoalsCard";
 import { useOpenChat } from "../ChatPanel";
 import { SortableItem, SortableList } from "../Sortable";
 import Picker from "../Picker";
+import Pager from "../Pager";
+import { Popover, PopoverContent, PopoverTrigger } from "../../../components/ui/popover";
+import { Button } from "../../../components/ui/basics";
 import DatePick from "../DatePick";
 import { ASK_AT, defaultAskAt } from "../../../lib/metricAskAt";
 import type { MetricAskAt } from "../../../lib/db";
@@ -99,10 +102,7 @@ const tailOf = (unit: string) => {
   return u.startsWith("/") ? u : ` ${u}`;
 };
 const withUnit = (v: number, unit: string) => `${n(v)}${tailOf(unit)}`;
-const fmtDay = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
-const fmtMonth = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-const KIND_LABEL = { daily: "Daily check-in", weekly: "Weekly check-in", monthly: "Monthly check-in", measurements: "Measurements" } as const;
 // Each rhythm in words: the toggle, the card, the stats.
 const CAD = {
   daily: { label: "Daily", unit: "days", recent: "in the last 8 days" },
@@ -193,14 +193,24 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   const [logCadence, setLogCadence] = useState<Cadence>("daily");
   const view = plan[logCadence];
   const long = logCadence === "daily" ? plan.dailyLong : logCadence === "weekly" ? plan.weeklyLong : plan.monthlyLong;
+  // The Table and the Feed show the recent window or everything since the client's first entry (6 Oct); the Graph has its own switch.
+  const [range, setRange] = useState<"recent" | "all">("recent");
+  const hasAll = long.periods.length > view.periods.length;
+  const logShown = range === "all" && hasAll ? long : view;
+  // Twenty rows a page; the pager under the Table and the Feed turns them (6 Oct).
+  const PAGE = 20;
+  const [logPage, setLogPage] = useState(1);
+  const logPages = Math.max(1, Math.ceil(logShown.periods.length / PAGE));
+  const logPageNow = Math.min(logPage, logPages);
+  const logPaged = { ...logShown, periods: logShown.periods.slice((logPageNow - 1) * PAGE, logPageNow * PAGE) };
+  // The client's note on a check-in sits by its date (a bubble); Reply there is a message linked to that check-in.
+  const replyTo = (period: string) => message({ label: `${CAD[logCadence].label} check-in · ${logShown.periods.find((p) => p.key === period)?.label ?? period}`, link: { kind: "checkin", section: logCadence, period } });
   const done = (v: LoggedValues) => (v.metrics.length === 0 ? 0 : v.periods.filter((p) => v.metrics.some((m) => v.values[`${m.id}:${p.key}`] != null)).length);
   const asked = (v: LoggedValues) => (v.metrics.length === 0 ? 0 : v.periods.length);
   // The client's notes on this rhythm's check-ins (measurements' with the daily ones).
-  const notes = plan.notes.filter((n) => n.kind === logCadence || (logCadence === "daily" && n.kind === "measurements"));
   const stats = [
     { label: `${CAD[logCadence].label} check-ins`, value: asked(view) ? `${done(view)} of ${asked(view)}` : "–", unit: CAD[logCadence].recent, warn: asked(view) > 0 && done(view) < asked(view) * 0.6 },
     { label: "Metrics tracked", value: String(countOf(logCadence)), unit: `${logCadence} · ${rows.length} in all` },
-    { label: "Notes", value: String(notes.length), unit: notes.length === 1 ? "from the client" : "from the client, newest first" },
   ];
 
   const [dlg, setDlg] = useState<Dlg>(null);
@@ -215,7 +225,6 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   // "Asked" (when in the day) only means something for a daily metric.
   const mGrid = { gridTemplateColumns: cadence === "daily" ? "20px minmax(200px, 1.4fr) 150px 130px minmax(160px, 1fr) 32px" : "20px minmax(200px, 1.4fr) 150px minmax(160px, 1fr) 32px", columnGap: 24 } as const;
   // No grip column here: the date starts where the title does.
-  const nGrid = { gridTemplateColumns: "130px 150px minmax(240px, 1fr) 32px", columnGap: 24 } as const;
 
   return (
     <div className={`rd${plan.status === "past" ? " rd-past" : ""}`}>
@@ -504,54 +513,33 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
               ))}
             </div>
           </div>
+          {show !== "graph" && hasAll && (
+            <div className="rm-controls-right">
+              <div className="rd-btn-group" role="group" aria-label="Range">
+                {(["recent", "all"] as const).map((r) => (
+                  <button key={r} type="button" className={range === r ? "on" : ""} aria-pressed={range === r} onClick={() => setRange(r)}>
+                    {r === "recent" ? `Last ${view.periods.length} ${CAD[logCadence].unit}` : `All · ${long.periods.length} ${CAD[logCadence].unit}`}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         {plan.notStarted ? (
           <p className="rd-full">{plan.notStarted}</p>
         ) : view.metrics.length === 0 ? (
           <p className="rd-full">No {logCadence} metrics in this phase. Add one above.</p>
         ) : show === "table" ? (
-          <CheckinTable view={view} />
+          <CheckinTable view={logPaged} onReply={replyTo} />
         ) : show === "graph" ? (
           <Graphs key={logCadence} view={long.periods.length ? long : view} cadence={logCadence} shortCount={logCadence === "daily" ? 7 : logCadence === "weekly" ? 5 : 6} />
         ) : (
-          <CheckinFeed view={view} cadence={logCadence} onMessage={(label) => message({ label, link: { kind: "checkin", section: logCadence } })} />
+          <CheckinFeed view={logPaged} cadence={logCadence} onReply={replyTo} onMessage={(label) => message({ label, link: { kind: "checkin", section: logCadence } })} />
+        )}
+        {!plan.notStarted && view.metrics.length > 0 && show !== "graph" && (
+          <Pager className="rm-pager" page={logPageNow} pages={logPages} from={(logPageNow - 1) * PAGE} shown={logPaged.periods.length} total={logShown.periods.length} noun={CAD[logCadence].unit} label="Check-in pages" onPage={setLogPage} />
         )}
       </section>
-
-      {/* ---- Notes from the client, newest first. */}
-      {notes.length > 0 && (
-        <section className="rd-session open rn-card">
-          <div className="rn-card-head">
-            <h2>Notes from {firstName}</h2>
-          </div>
-          <div className="rd-rows">
-            <div className="rd-cols" aria-hidden="true" style={nGrid}>
-              <span>Date</span>
-              <span>Check-in</span>
-              <span>Note</span>
-              <span />
-            </div>
-            {notes.map((note) => (
-              <div key={note.id} className="rd-row">
-                <div className="rd-row-main static" style={nGrid}>
-                  <span className="rd-ex">
-                    <span className="rd-ex-name">{note.kind === "monthly" ? fmtMonth(note.period) : fmtDay(note.period)}</span>
-                  </span>
-                  <span>
-                    <span className={`rd-pill${note.kind === "daily" ? " quiet" : ""}`}>{KIND_LABEL[note.kind]}</span>
-                  </span>
-                  <span className="rm-note-text">{note.text}</span>
-                  <span className="rd-row-more">
-                    <button type="button" className="rd-btn ghost sm" title="Reply" aria-label={`Reply to ${firstName}'s note of ${fmtDay(note.period)}`} onClick={() => message({ label: `${KIND_LABEL[note.kind]} · ${note.kind === "monthly" ? fmtMonth(note.period) : fmtDay(note.period)}`, link: { kind: "checkin", section: note.kind === "measurements" ? "daily" : note.kind, period: note.period } })}>
-                      <ChatIcon />
-                    </button>
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
 
       {/* ---- Dialogs. One open at a time. */}
       <Dialog open={dlg != null} onOpenChange={(o) => !o && close()}>
@@ -834,7 +822,28 @@ function CreateMetric({ groups, initial, taken, onCreate, onCancel }: { groups: 
 
 // One grid for the whole table: the head, every row and the Change line are
 // cells of the same container, so a column cannot drift off its heading.
-function CheckinTable({ view }: { view: LoggedValues }) {
+/** The note the client left on a check-in: a bubble by the date; a click opens it, with Reply (a message linked to that check-in). */
+function NoteBubble({ text, onReply }: { text: string; onReply: () => void }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button type="button" className="rm-notebtn" onClick={(e) => e.stopPropagation()} aria-label="Note from the client" title="Note from the client">
+          <ChatIcon />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side="bottom" align="start" className="rm-notepop w-80" onClick={(e) => e.stopPropagation()}>
+        <p>{text}</p>
+        <div className="rm-notepop-foot">
+          <Button size="sm" onClick={onReply}>
+            Reply
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function CheckinTable({ view, onReply }: { view: LoggedValues; onReply: (period: string) => void }) {
   const valueFor = (m: number, p: string) => view.values[`${m}:${p}`] ?? null;
   const change = (m: LoggedMetric) => {
     const seen = view.periods.map((p) => valueFor(m.id, p.key)).filter((v): v is number => v != null);
@@ -862,7 +871,10 @@ function CheckinTable({ view }: { view: LoggedValues }) {
         ))}
         {view.periods.map((p, i) => (
           <div key={p.key} className="contents">
-            <span className={`rm-td date${i === 0 ? " now" : ""}`}>{p.label}</span>
+            <span className={`rm-td date${i === 0 ? " now" : ""}`}>
+              {p.label}
+              {view.notes[p.key] && <NoteBubble text={view.notes[p.key]} onReply={() => onReply(p.key)} />}
+            </span>
             {view.metrics.map((m) => {
               const v = valueFor(m.id, p.key);
               return (
@@ -889,7 +901,7 @@ function CheckinTable({ view }: { view: LoggedValues }) {
 
 // One row a period the client was asked for, whether or not anything came:
 // a gap is data, and it says Missed rather than being left out.
-function CheckinFeed({ view, cadence, onMessage }: { view: LoggedValues; cadence: Cadence; onMessage: (label: string) => void }) {
+function CheckinFeed({ view, cadence, onMessage, onReply }: { view: LoggedValues; cadence: Cadence; onMessage: (label: string) => void; onReply: (period: string) => void }) {
   const [open, setOpen] = useState<string | null>(null);
   const valueFor = (m: number, p: string) => view.values[`${m}:${p}`] ?? null;
   const grid = { gridTemplateColumns: "20px 150px 100px minmax(240px, 1fr) 120px 32px", columnGap: 24 } as const;
@@ -917,7 +929,10 @@ function CheckinFeed({ view, cadence, onMessage }: { view: LoggedValues; cadence
                 <ChevronDownIcon />
               </span>
               <span className="rd-ex">
-                <span className="rd-ex-name">{p.label}</span>
+                <span className="rd-ex-name">
+                  {p.label}
+                  {note && <NoteBubble text={note} onReply={() => onReply(p.key)} />}
+                </span>
               </span>
               <span>
                 <span className={`rd-pill${cadence === "daily" ? " quiet" : ""}`}>{CAD[cadence].label}</span>

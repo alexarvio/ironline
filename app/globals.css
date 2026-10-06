@@ -17219,7 +17219,7 @@ button.ci-hint { cursor: pointer; }
 .cm-compose .chat-mic-btn { order: 3; }
 .cm-compose .chat-send-btn { height: 38px; }
 /* The last meeting's notes under their own heading, like "Latest from": the date pill alone on the card's top row, on the right. */
-.hm-mt-last .hm-mt-top { justify-content: flex-end; }
+.hm-recap-head .hm-mt-pill { flex: none; }
 /* A message on one row (25 Sep): the text, then the time and the chevron at
    the end of the row; a long text wraps and they drop to the right under it.
    The link bubble sits mostly outside the top-right corner, ringed in the
@@ -17933,3 +17933,6 @@ button.ci-hint { cursor: pointer; }
    and it covered "Swipe to end session". Gone whenever a workout or a
    session's overview is on screen, whoever opened it. */
 .app-screen:has(.wo-screen, .so-screen) .tr-resume { display: none; }
+/* The recap's subheading (6 Oct): the call's name, or the title the coach gave it, over the notes. */
+.hm-recap-sub { display: block; padding-top: 8px; font-size: 14px; font-weight: 700; color: #141a24; }
+.hm-recap-sub + .hm-recap-text { padding-top: 4px; }

@@ -4896,6 +4896,8 @@ export type Meeting = {
   link?: string | null;
   /** Coach-only. Never sent to the client. */
   prep_notes?: string | null;
+  /** Coach-only, typed during the call. Never sent to the client. */
+  meeting_notes?: string | null;
   /** The coach's recap of the call, written for the client. */
   summary?: string | null;
   /** Its one-line title, over the body on the client's Home. */
@@ -9467,12 +9469,13 @@ export function getLastMeetingRecap(clientId: number): MeetingRecap | null {
   // calls get closed early, and the recap is written at that moment. A
   // past-dated call with a recap counts too, even if never formally closed.
   const m = listMeetings(clientId)
-    .filter((x) => (x.summary ?? "").trim() && x.status !== "cancelled" && (x.status === "completed" || x.date <= today))
+    // Today's call shows once it is marked completed, so notes typed during it stay the coach's until then (6 Oct).
+    .filter((x) => (x.summary ?? "").trim() && x.status !== "cancelled" && (x.status === "completed" || x.date < today))
     .sort((a, b) => (a.date === b.date ? (a.time < b.time ? 1 : -1) : a.date < b.date ? 1 : -1))[0];
   if (!m) return null;
   const d = new Date(`${m.date}T12:00:00`);
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  return { dateLabel: `${d.getDate()} ${MONTHS[d.getMonth()]}`, title: (m.summary_title ?? "").trim() || "What we agreed", text: (m.summary ?? "").trim() };
+  return { dateLabel: `${d.getDate()} ${MONTHS[d.getMonth()]}`, title: (m.summary_title ?? "").trim() || m.topic || "Check-in call", text: (m.summary ?? "").trim() };
 }
 
 export type UpNextSession = {
@@ -9551,7 +9554,7 @@ function linkHost(link: string): string {
 
 export function updateMeeting(
   id: number,
-  patch: Partial<Pick<Meeting, "topic" | "link" | "prep_notes" | "summary" | "summary_title" | "date" | "time" | "tz" | "duration_minutes">>
+  patch: Partial<Pick<Meeting, "topic" | "link" | "prep_notes" | "meeting_notes" | "summary" | "summary_title" | "date" | "time" | "tz" | "duration_minutes">>
 ) {
   const data = getData();
   const m = data.meetings.find((x) => x.id === id);
@@ -9590,6 +9593,7 @@ export type WorkspaceMeeting = {
   provider: string;
   host: string;
   prepNotes: string;
+  meetingNotes: string;
   summary: string;
   summaryTitle: string;
   notes: { id: number; text: string; createdAt: string }[];
@@ -9612,6 +9616,7 @@ export function getMeetingsWorkspaceData(clientId: number) {
     provider: meetingProvider(m.link),
     host: m.link ? linkHost(m.link) : "",
     prepNotes: m.prep_notes ?? "",
+    meetingNotes: m.meeting_notes ?? "",
     summary: m.summary ?? "",
     summaryTitle: m.summary_title ?? "",
     notes: listMeetingNotes(m.id).map((n) => ({ id: n.id, text: n.text, createdAt: n.created_at })),
