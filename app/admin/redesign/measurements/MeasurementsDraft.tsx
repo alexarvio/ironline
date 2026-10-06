@@ -985,11 +985,14 @@ function CheckinFeed({ view, cadence, onMessage, onReply }: { view: LoggedValues
 // Oldest on the left; a skipped period is a gap in the line.
 function Graphs({ view, cadence, shortCount }: { view: LoggedValues; cadence: Cadence; shortCount: number }) {
   const [picked, setPicked] = useState<number | null>(null);
-  const [range, setRange] = useState<"short" | "long">("short");
+  // 7 days, 30 days, or the whole phase (12 weeks / 6 months in the middle for the other cadences).
+  const [range, setRange] = useState<"short" | "mid" | "long">("short");
+  const midCount = cadence === "daily" ? 30 : cadence === "weekly" ? 12 : 6;
   const valueFor = (m: number, p: string) => view.values[`${m}:${p}`] ?? null;
   const metric = view.metrics.find((m) => m.id === picked) ?? view.metrics[0];
   const hasLong = view.periods.length > shortCount;
-  const periods = [...(range === "short" ? view.periods.slice(0, shortCount) : view.periods)].reverse();
+  const hasMid = view.periods.length > midCount;
+  const periods = [...(range === "short" ? view.periods.slice(0, shortCount) : range === "mid" && hasMid ? view.periods.slice(0, midCount) : view.periods)].reverse();
   const latest = (m: LoggedMetric) => {
     for (const p of view.periods) {
       const v = valueFor(m.id, p.key);
@@ -1031,9 +1034,9 @@ function Graphs({ view, cadence, shortCount }: { view: LoggedValues; cadence: Ca
         rangeSwitch={
           hasLong ? (
             <div className="rd-btn-group" role="group" aria-label="Range">
-              {(["short", "long"] as const).map((r) => (
+              {(hasMid ? (["short", "mid", "long"] as const) : (["short", "long"] as const)).map((r) => (
                 <button key={r} type="button" className={range === r ? "on" : ""} onClick={() => setRange(r)} aria-pressed={range === r}>
-                  {r === "short" ? shortCount : view.periods.length} {CAD[cadence].unit}
+                  {r === "short" ? `${shortCount} ${CAD[cadence].unit}` : r === "mid" ? `${midCount} ${CAD[cadence].unit}` : "This phase"}
                 </button>
               ))}
             </div>

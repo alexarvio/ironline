@@ -356,8 +356,12 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   const [seenWeekIdx, setSeenWeekIdx] = useState(program.weekIdx);
   if (seenWeekIdx !== program.weekIdx) {
     setSeenWeekIdx(program.weekIdx);
-    setViewIdx(program.weekIdx);
-    setOpen(null);
+    // The week on screen already (showWeek put it in the URL, and a page read
+    // brought its fresh rows): nothing folds. Another week: start folded.
+    if (program.weekIdx !== viewIdx) {
+      setViewIdx(program.weekIdx);
+      setOpen(null);
+    }
     setStash((prev) => {
       const next = { ...prev };
       delete next[program.weekIdx];
@@ -443,6 +447,11 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
     setSessions(back);
     setViewIdx(index);
     setOpen(back.find((s) => s.setsLogged < s.setsPlanned)?.id ?? back[0]?.id ?? null);
+    // The URL follows (6 Oct): a page read after any save used to hand back
+    // the URL's week and snap the screen to it, folded.
+    const u = new URL(window.location.href);
+    u.searchParams.set("week", String(index));
+    router.replace(u.pathname + u.search, { scroll: false });
   };
   // Weeks are added and removed on the server (the dialogs below); the page then lands on the right one.
   const later = weeks.filter((w) => w.index > viewIdx);
@@ -888,8 +897,9 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                             <span className="rd-demo-slot">
                               {(() => {
                                 const demo = demos[r.id] === undefined ? r.demo : demos[r.id];
+                                // Hidden from this client: the dot stays, greyed, so a demo is known to exist.
                                 return demo ? (
-                                  <a className="rd-demo" href={demo.url} target="_blank" rel="noopener noreferrer" title="Demo set · play it" aria-label={`Play the demo for ${r.name}`}>
+                                  <a className={`rd-demo${r.demoHidden ? " off" : ""}`} href={demo.url} target="_blank" rel="noopener noreferrer" title={r.demoHidden ? `Demo hidden from ${firstName} · play it` : "Demo set · play it"} aria-label={`Play the demo for ${r.name}${r.demoHidden ? ` (hidden from ${firstName})` : ""}`}>
                                     <svg viewBox="0 0 24 24" aria-hidden="true">
                                       <path d="M8 5.5v13l11-6.5z" fill="currentColor" />
                                     </svg>

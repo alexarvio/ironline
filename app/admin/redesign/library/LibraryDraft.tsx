@@ -295,7 +295,7 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
           {/* The groups, spaced as the sessions are on the Training tab. */}
           <div className="rd-sessions">
           {shelf === "cardio" ? (
-            <section className="rd-session open">
+            <section className="rd-session open lb-cardio">
               <div className="rd-rows">
                 {cols}
                 {shown.map(row)}
@@ -739,11 +739,12 @@ function DropSlot({ url, label, small, pending, onDrop, onClear }: { url: string
 }
 
 /** A link as a demo (YouTube, Vimeo…): used on Enter or when the field is left. Keyed on its value by the row, so a saved link reads back. */
-function LinkField({ value, label, pending, onUse, className }: { value: string; label: string; pending: boolean; onUse: (url: string) => void; className?: string }) {
+function LinkField({ value, label, pending, onUse, onClear, className }: { value: string; label: string; pending: boolean; onUse: (url: string) => void; /** The field emptied while a link was the demo: the demo comes off. */ onClear?: () => void; className?: string }) {
   const [v, setV] = useState(value);
   const use = () => {
     const u = v.trim();
     if (u && u !== value) onUse(u);
+    else if (!u && value && onClear) onClear();
   };
   return <Input className={className} value={v} onChange={(e) => setV(e.target.value)} onBlur={use} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} placeholder="Paste a link (YouTube, Vimeo…)" aria-label={`${label} link`} disabled={pending} />;
 }
@@ -827,7 +828,7 @@ function ItemDialog({
             </SelectContent>
           </Select>
           <Input className="h-[42px]" value={cue} onChange={(e) => setCue(e.target.value)} maxLength={300} placeholder="Pull elbow to hip" aria-label="Default cue" />
-          <LinkField key={item.video ?? ""} className="h-[42px]" value={linkOf(item.video)} label={item.name} pending={pending} onUse={onDemoLink} />
+          <LinkField key={item.video ?? ""} className="h-[42px]" value={linkOf(item.video)} label={item.name} pending={pending} onUse={onDemoLink} onClear={onDemoRemove} />
           <Button variant="outline" size="icon" disabled={pending || adding != null} onClick={() => setAdding("")} aria-label="Add a variation" title="Add a variation (close grip, wide grip…)">
             <PlusIcon />
           </Button>
@@ -875,7 +876,7 @@ function ItemDialog({
               }}
               onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
             />
-            <LinkField key={`l${v.video ?? ""}`} className="h-[38px]" value={linkOf(v.video)} label={`${item.name} · ${v.name}`} pending={pending} onUse={(url) => patchVar(v.id, { video: url }, `Link set on ${item.name} · ${v.name}`)} />
+            <LinkField key={`l${v.video ?? ""}`} className="h-[38px]" value={linkOf(v.video)} label={`${item.name} · ${v.name}`} pending={pending} onUse={(url) => patchVar(v.id, { video: url }, `Link set on ${item.name} · ${v.name}`)} onClear={() => patchVar(v.id, { video: null }, `Demo taken off ${v.name}`)} />
             <Button variant="ghost" size="icon" className="lb-bin" disabled={pending} onClick={() => onVariations(vars.filter((x) => x.id !== v.id), `${v.name} deleted`)} aria-label={`Delete ${v.name}`} title="Delete this variation">
               <TrashIcon />
             </Button>

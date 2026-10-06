@@ -711,3 +711,7 @@
 .rd-alt-row:hover .rd-btn.ghost.sm, .rd-alt-row:focus-within .rd-btn.ghost.sm, .rd-gymrow:hover .rd-btn.ghost.sm, .rd-gymrow:focus-within .rd-btn.ghost.sm,
 .rd-row-more > [data-state="open"], .rd-session-head [data-state="open"], .rd-row-more > .rd-btn:focus-visible, .rd-row-more > .rd-cardio-alt:has(b) { opacity: 1; }
 @media (hover: none) { .rd-row-more > [data-slot="dropdown-menu-trigger"], .rd-row-more > .rd-btn, .rd-session-head [data-slot="dropdown-menu-trigger"], .rd-alt-row .rd-btn.ghost.sm, .rd-gymrow .rd-btn.ghost.sm { opacity: 0.7; } }
+
+/* A demo hidden from this client (6 Oct): the dot stays, greyed, so the demo is known to be there. */
+.rd-demo.off { background: #eceff3; color: #8b93a1; box-shadow: none; }
+.rd-demo.off:hover { background: #c3c9d2; color: #fff; }
