@@ -61,7 +61,8 @@ export default function PhaseDatesDialog({
   const [to, setTo] = useState(
     fixed ? shift(mondayOf(initialStart), weeks * 7 - 1) : byDay ? (end ? shift(end, 6) : shift(initialStart, 27)) : sundayOf(end && end >= initialStart ? end : shift(initialStart, 27))
   );
-  const [cursor, setCursor] = useState(from.slice(0, 7));
+  // Opens on this month; a phase still to come opens on the month it starts.
+  const [cursor, setCursor] = useState(() => (from > today() ? from : today()).slice(0, 7));
   // With both ends open, the first click sets the start and the next the end.
   const [picking, setPicking] = useState<"start" | "end">("start");
 
