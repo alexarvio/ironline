@@ -750,7 +750,8 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
   const [name, setName] = useState(phase?.name ?? "");
   const [from, setFrom] = useState(phase?.start_week ?? thisWeek);
   const [to, setTo] = useState(phase ? addDays(phase.end_week, 6) : addDays(addWeeks(thisWeek, 3), 6));
-  const [cursor, setCursor] = useState(from.slice(0, 7));
+  // Opens on this month; a phase still to come opens on the month it starts.
+  const [cursor, setCursor] = useState((from > today ? from : today).slice(0, 7));
   const [picking, setPicking] = useState<"start" | "end">("start");
   const [programChoice, setProgramChoice] = useState<string>(phase?.program ? String(phase.program.id) : "new");
   // A live programme starts on the week it went out, where the client began it: only the end moves.
