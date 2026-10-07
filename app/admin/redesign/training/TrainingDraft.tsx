@@ -210,7 +210,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   // Room for the figures: the name and the log stretch with the screen, the
   // figure columns keep a set width, so on a wide screen they get more air.
   const GAP = 24;
-  const exWidths = [cols.sets && 72, cols.reps && 88, cols.weight && 92, cols.rpe && 68, cols.tempo && 88, cols.rest && 84].filter((w): w is number => typeof w === "number");
+  const exWidths = [cols.sets && 72, cols.weight && 92, cols.reps && 88, cols.rpe && 68, cols.tempo && 88, cols.rest && 84].filter((w): w is number => typeof w === "number");
   const gridCols = `20px minmax(220px, 1.5fr)${exWidths.map((w) => ` ${w}px`).join("")} minmax(180px, 1fr) minmax(260px, 1.3fr) 80px 80px 112px`;
   const colStyle = { gridTemplateColumns: gridCols, columnGap: GAP } as const;
   // The narrowest the table can be (every column at its minimum, the gaps and
@@ -547,8 +547,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                       {(
                         [
                           ["sets", "Sets"],
-                          ["reps", "Reps"],
                           ["weight", "Weight"],
+                          ["reps", "Reps"],
                           ["rpe", "RPE"],
                           ["tempo", "Tempo"],
                           ["rest", "Rest"],
@@ -841,8 +841,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                     <span />
                     <span>Exercise</span>
                     {cols.sets && <span>Sets</span>}
-                    {cols.reps && <span>Reps</span>}
                     {cols.weight && <span>{unit}</span>}
+                    {cols.reps && <span>Reps</span>}
                     {cols.rpe && <span>RPE</span>}
                     {cols.tempo && <span>Tempo</span>}
                     {cols.rest && <span>Rest</span>}
@@ -909,12 +909,12 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                             </span>
                           </span>
                           {cols.sets && <Cell value={e.sets ?? String(r.sets)} onChange={(v) => edit({ sets: v })} label="Sets" width="sm" />}
-                          {cols.reps && <Cell value={e.reps ?? r.reps} onChange={(v) => edit({ reps: v })} label="Reps" placeholder="8-10" />}
                           {cols.weight && (
                             <span title={multiGym ? r.gymKg.map((g) => `${g.gym}: ${kgOf(g.kg, lbs)} ${unit}`).join("\n") : undefined}>
                               <WeightCell key={unit} kg={e.kg !== undefined ? e.kg : r.kg} lbs={lbs} onChange={(v) => edit({ kg: v })} />
                             </span>
                           )}
+                          {cols.reps && <Cell value={e.reps ?? r.reps} onChange={(v) => edit({ reps: v })} label="Reps" placeholder="8-10" />}
                           {cols.rpe && <Cell value={e.rpe ?? (r.rpe == null ? "" : String(r.rpe))} onChange={(v) => edit({ rpe: v })} label="RPE" width="sm" />}
                           {cols.tempo && <Cell value={e.tempo ?? (r.tempo ?? "")} onChange={(v) => edit({ tempo: v })} label="Tempo" />}
                           {cols.rest && <Cell value={e.rest ?? (restOf(r.rest) ?? "")} onChange={(v) => edit({ rest: v })} label="Rest" />}
@@ -1126,8 +1126,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                           <small>New · not applied yet</small>
                         </span>
                         {cols.sets && <Cell value={String(r.sets)} onChange={(v) => editAdded({ sets: v })} label="Sets" width="sm" />}
-                        {cols.reps && <Cell value={r.reps} onChange={(v) => editAdded({ reps: v })} label="Reps" />}
                         {cols.weight && <WeightCell key={unit} kg={r.kg} lbs={lbs} onChange={(v) => editAdded({ kg: v })} />}
+                        {cols.reps && <Cell value={r.reps} onChange={(v) => editAdded({ reps: v })} label="Reps" />}
                         {cols.rpe && <Cell value={r.rpe ?? ""} onChange={(v) => editAdded({ rpe: v })} label="RPE" width="sm" />}
                         {cols.tempo && <Cell value={r.tempo ?? ""} onChange={(v) => editAdded({ tempo: v })} label="Tempo" />}
                         {cols.rest && <Cell value={r.rest ?? ""} onChange={(v) => editAdded({ rest: v })} label="Rest" />}

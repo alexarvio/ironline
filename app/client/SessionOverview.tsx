@@ -312,8 +312,8 @@ function ExerciseCard({ exercise, index, done, coachName, gymId }: { exercise: S
   // The prescription as figure-and-unit pairs, like the workout's target line.
   const targets = [
     { value: String(exercise.sets), unit: "sets" },
-    exercise.reps ? { value: exercise.reps, unit: "reps" } : null,
     targetWeight != null ? { value: String(roundTo(targetWeight, 2)), unit: "kg" } : null,
+    exercise.reps ? { value: exercise.reps, unit: "reps" } : null,
     exercise.targetRpe != null ? { value: String(exercise.targetRpe), unit: "rpe" } : null,
     exercise.tempo ? { value: exercise.tempo, unit: "tempo" } : null,
   ].filter((t): t is { value: string; unit: string } => !!t);

@@ -196,12 +196,13 @@ export default function ExercisePage({
     } else if (request.kind === "warmup") addWarm();
     else setSwapOpen(true);
   }
-  // The prescription as the session overview's table (30 Sep): sets, reps,
-  // weight, RPE, tempo, then what cardio and rest add.
+  // The prescription as the session overview's table (30 Sep): sets, weight,
+  // reps (kg first everywhere, as in the set rows; 7 Oct), RPE, tempo, then
+  // what cardio and rest add.
   const targets = [
     { value: String(exercise.sets), unit: "sets" },
-    exercise.reps ? { value: exercise.reps, unit: "reps" } : null,
     targetWeight != null ? { value: show(targetWeight), unit: unitLabel } : null,
+    exercise.reps ? { value: exercise.reps, unit: "reps" } : null,
     targetRpe != null ? { value: String(targetRpe), unit: "rpe" } : null,
     tempo ? { value: tempo, unit: "tempo" } : null,
     !swapped && exercise.distance ? { value: exercise.distance, unit: "distance" } : null,
