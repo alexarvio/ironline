@@ -903,21 +903,15 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
             <span>Starts{startLocked ? " · fixed" : ""}</span>
             <DateText value={from} disabled={startLocked} onChange={setStart} label="Starts" onFocus={() => setPicking("start")} />
           </label>
-          {/* Type the weeks and the end follows; or pick the end and the weeks follow. */}
-          <label className="rd-field">
-            <span>Length</span>
-            <span className="rd-weeks-field rq-weeks">
-              <input type="number" inputMode="numeric" min={1} max={104} step={1} value={weeksShown} onChange={(e) => setWeeks(e.target.value)} onBlur={() => setWeeksText(null)} onFocus={() => setPicking("end")} aria-label="Length in weeks" />
-              <small>{weeksShown === "1" ? "week" : "weeks"}</small>
-              <small className="rq-weeks-exact">
-                {days % 7 ? `${phaseLengthLabel(startWeek, endWeek)} · ` : ""}
-                {shortDate(startWeek)} – {shortDate(addDays(endWeek, 6))}
-              </small>
-            </span>
-          </label>
           <label className="rd-field">
             <span>Ends</span>
             <DateText value={to} onChange={setEnd} label="Ends" onFocus={() => setPicking("end")} />
+          </label>
+          {/* Type the weeks and the end follows; pick the end and the weeks follow. A span the calendar left uneven says so under it. */}
+          <label className="rd-field">
+            <span>Weeks</span>
+            <input className="rq-weeks" type="number" inputMode="numeric" min={1} max={104} step={1} value={weeksShown} onChange={(e) => setWeeks(e.target.value)} onBlur={() => setWeeksText(null)} onFocus={() => setPicking("end")} aria-label="Length in weeks" />
+            {days % 7 ? <small className="rd-dlg-hint">{phaseLengthLabel(startWeek, endWeek)}</small> : null}
           </label>
           {/* The same days as a phase on another track, so the two run in tandem. */}
           {matchable.length > 0 && (

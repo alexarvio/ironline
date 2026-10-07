@@ -198,7 +198,5 @@
 /* Open in its tab: a proper button at the top right (30 Sep), the footer's Open gone. */
 .rd-dlg .rq-title-row .rq-open { display: inline-flex; align-items: center; margin-left: auto; margin-right: 0; letter-spacing: 0; text-transform: none; text-decoration: none; white-space: nowrap; }
 .rq-bar-pill b { font-weight: 800; }
-/* The phase's length typed as weeks; the exact span (and "3 weeks 2 days" when uneven) in small beside it. */
-.rq-weeks { flex-wrap: wrap; }
-.rq-weeks input { width: 72px; }
-.rd-weeks-field small.rq-weeks-exact { color: #8b93a1; font-weight: 500; }
+/* The phase's length typed as weeks: the same box as the dates above it. */
+.rq-phase-dlg input.rq-weeks { font-variant-numeric: tabular-nums; }
