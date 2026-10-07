@@ -242,13 +242,12 @@ export default function WorkoutScreen({
   // done yet, after this one, then round from the start (one skipped while
   // its machine was taken); with everything done, the wrap up. So finishing
   // the one you went back to never lands on one already done.
+  // The next page still to do, forward only: the last exercise has no
+  // "Next up" (it used to circle back to the first, 7 Oct); it goes on to
+  // the wrap-up, where the checklist shows anything skipped.
   const nextOpen = (i: number) => {
     const wrap = pages.length - 1;
-    for (let k = 1; k < pages.length; k++) {
-      const j = (i + k) % pages.length;
-      if (j === i || j === wrap) continue;
-      if (!pageDone(pages[j])) return j;
-    }
+    for (let j = i + 1; j < wrap; j++) if (!pageDone(pages[j])) return j;
     return wrap;
   };
   const pageStarted = (p: Page) => p.kind === "exercise" && loggedCount(day.exercises[p.index]) > 0;
