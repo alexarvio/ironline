@@ -17972,8 +17972,13 @@ button.ci-hint { cursor: pointer; }
 .app-tab-btn { position: relative; }
 .app-tab-badge { position: absolute; top: 9px; right: calc(50% - 15px); width: 8px; height: 8px; border-radius: 999px; background: var(--accent); border: 1.5px solid var(--paper); }
 .app-bottom-nav.dark .app-tab-badge { border-color: #12132B; }
-/* Settings, pushed from the burger: its own banner, so no gap under the bar. */
-.cn-screen .cn-body.cn-body-settings { padding: 0; }
+/* Settings, pushed from the burger (7 Oct). The tab's layout assumed the
+   floating top bar (--topbar-h) and the tab body's 16px padding, which it
+   pulled back with negative margins: under a plain header neither holds. */
+.cn-screen .cn-body.cn-body-settings { padding: 0; overflow-y: auto; scrollbar-width: none; }
+.cn-body-settings::-webkit-scrollbar { display: none; }
+.cn-body-settings .settings-dark { margin: 0; min-height: 100%; }
+.cn-body-settings .hm-banner.st-banner { padding: 22px 22px 58px; }
 
 /* The chat's plus (7 Oct), left of the box: a menu above it with the camera, the camera roll, a file, and the client's event. */
 .chat-plus { position: relative; flex-shrink: 0; display: flex; align-items: center; }
