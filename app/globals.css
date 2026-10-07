@@ -17974,3 +17974,15 @@ button.ci-hint { cursor: pointer; }
 .app-bottom-nav.dark .app-tab-badge { border-color: #12132B; }
 /* Settings, pushed from the burger: its own banner, so no gap under the bar. */
 .cn-screen .cn-body.cn-body-settings { padding: 0; }
+
+/* The chat's plus (7 Oct), left of the box: a menu above it with the camera, the camera roll, a file, and the client's event. */
+.chat-plus { position: relative; flex-shrink: 0; display: flex; align-items: center; }
+.chat-plus-btn svg { transition: transform 0.15s ease; }
+.chat-plus-btn.open svg { transform: rotate(45deg); }
+.chat-plus-menu { position: absolute; left: 0; bottom: calc(100% + 8px); z-index: 9; width: 268px; padding: 6px; border-radius: 16px; background: #fff; color: #313851; box-shadow: 0 20px 50px -14px rgba(8, 31, 92, 0.45); }
+.chat-plus-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: none; font: inherit; font-size: 14.5px; font-weight: 600; color: #313851; text-align: left; cursor: pointer; }
+.chat-plus-row svg { flex: none; width: 20px; height: 20px; color: #5b6474; }
+.chat-plus-row:hover { background: #F4F7FC; }
+.chat-plus-row:disabled { color: #8b93a1; cursor: default; }
+.chat-plus-row:disabled svg { color: #b4bac4; }
+.chat-plus-row small { margin-left: auto; font-size: 11px; font-weight: 600; color: #8b93a1; }

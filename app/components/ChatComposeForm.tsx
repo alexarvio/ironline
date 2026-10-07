@@ -24,8 +24,9 @@ export default function ChatComposeForm({
   onClearReply,
   onAddEvent = null,
 }: {
-  /** The client's "Add an event" beside the paperclip (7 Oct); null, no button. */
-  onAddEvent?: (() => void) | null;
+  /** The plus menu's "Add an event" (7 Oct): what it does; "preview" lists it greyed (a coach previewing the
+      client's app can't add one as them); null leaves it out (the coach's own chat panel). */
+  onAddEvent?: (() => void) | "preview" | null;
   clientId: number;
   sender: "client" | "coach";
   /** What the next message is about: a chip over the box, sent as its link. */
@@ -40,7 +41,32 @@ export default function ChatComposeForm({
   onClearReply?: () => void;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  // The plus on the left (7 Oct): take a photo or video, one from the camera
+  // roll, a file, and for the client an event. Each pick is its own hidden
+  // input, since the camera needs "capture" and the roll must not have it.
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const rollRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [plusOpen, setPlusOpen] = useState(false);
+  const plusRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!plusOpen) return;
+    const away = (e: PointerEvent) => {
+      if (!plusRef.current?.contains(e.target as Node)) setPlusOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setPlusOpen(false);
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("pointerdown", away);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [plusOpen]);
+  const pickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (f) sendFile(f);
+  };
   const [pending, start] = useTransition();
   const [text, setText] = useState("");
   const boxRef = useRef<HTMLTextAreaElement>(null);
@@ -122,37 +148,49 @@ export default function ChatComposeForm({
     >
       <input type="hidden" name="clientId" value={clientId} />
       <input type="hidden" name="sender" value={sender} />
-      {onAddEvent && (
-        <button type="button" className="chat-attach-btn chat-event-btn" aria-label="Add an event: a trip, an injury, something you started" title="Add an event" onClick={onAddEvent} disabled={pending}>
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <rect x="3.5" y="5" width="17" height="15" rx="2.5" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M3.5 9.5h17M8 3.5v3M16 3.5v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M12 12v5M9.5 14.5h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <div className="chat-plus" ref={plusRef}>
+        <button type="button" className={`chat-attach-btn chat-plus-btn${plusOpen ? " open" : ""}`} aria-label="Add a photo, a video, a file or an event" aria-expanded={plusOpen} onClick={() => setPlusOpen((o) => !o)} disabled={pending}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
         </button>
-      )}
-      <button type="button" className="chat-attach-btn" aria-label="Attach a photo, video or file" onClick={() => fileInputRef.current?.click()} disabled={pending}>
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M17.5 8.5l-8 8a3.5 3.5 0 0 1-5-5l8.3-8.3a2.4 2.4 0 0 1 3.4 3.4l-8.1 8.1a1.3 1.3 0 0 1-1.9-1.9l7-7"
-            stroke="currentColor"
-            strokeWidth="1.4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </button>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={ACCEPT}
-        className="chat-attach-input"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          e.target.value = "";
-          if (f) sendFile(f);
-        }}
-      />
+        {plusOpen && (
+          <div className="chat-plus-menu" role="menu">
+            <button type="button" role="menuitem" className="chat-plus-row" onClick={() => { setPlusOpen(false); cameraRef.current?.click(); }}>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.2-2h5.4l1.2 2h1.6A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-8z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /><circle cx="12" cy="12.5" r="3.2" stroke="currentColor" strokeWidth="1.6" /></svg>
+              Take a photo or video
+            </button>
+            <button type="button" role="menuitem" className="chat-plus-row" onClick={() => { setPlusOpen(false); rollRef.current?.click(); }}>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.6" /><circle cx="9" cy="10" r="1.6" fill="currentColor" /><path d="M4 17l5-4.5 3.5 3 3-2.5L20 17" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /></svg>
+              Photo or video from your camera roll
+            </button>
+            <button type="button" role="menuitem" className="chat-plus-row" onClick={() => { setPlusOpen(false); fileInputRef.current?.click(); }}>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M17.5 8.5l-8 8a3.5 3.5 0 0 1-5-5l8.3-8.3a2.4 2.4 0 0 1 3.4 3.4l-8.1 8.1a1.3 1.3 0 0 1-1.9-1.9l7-7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              A file
+            </button>
+            {onAddEvent && (
+              <button
+                type="button"
+                role="menuitem"
+                className="chat-plus-row"
+                disabled={onAddEvent === "preview"}
+                title={onAddEvent === "preview" ? "Only the client can add one, in their own app" : undefined}
+                onClick={() => {
+                  setPlusOpen(false);
+                  if (typeof onAddEvent === "function") onAddEvent();
+                }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5" stroke="currentColor" strokeWidth="1.6" /><path d="M3.5 9.5h17M8 3.5v3M16 3.5v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
+                Add an event
+                {onAddEvent === "preview" && <small>client only</small>}
+              </button>
+            )}
+          </div>
+        )}
+        <input ref={cameraRef} type="file" accept="image/*,video/*" capture="environment" className="chat-attach-input" onChange={pickFile} />
+        <input ref={rollRef} type="file" accept="image/*,video/*" className="chat-attach-input" onChange={pickFile} />
+        <input ref={fileInputRef} type="file" accept={ACCEPT} className="chat-attach-input" onChange={pickFile} />
+      </div>
       {/* Grows with what is typed, up to a few lines, then scrolls. Enter
           sends at a keyboard; on a phone it is a new line and Send sends. */}
       <textarea

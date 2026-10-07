@@ -345,7 +345,7 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
         <ChatComposeForm
           clientId={clientId}
           sender={viewerIsClient ? "client" : "coach"}
-          onAddEvent={events && viewerIsClient ? () => setEventOpen(true) : null}
+          onAddEvent={!events ? null : viewerIsClient ? () => setEventOpen(true) : "preview"}
           about={about}
           onClearAbout={onClearAbout}
           replyTo={replying ? { id: replying.id, who: own(replying) ? "yourself" : viewerIsClient ? coachName : "them", text: quoteOf(replying), own: replying.mine } : null}
