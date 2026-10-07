@@ -715,3 +715,5 @@
 /* A demo hidden from this client (6 Oct): the dot stays, greyed, so the demo is known to be there. */
 .rd-demo.off { background: #eceff3; color: #8b93a1; box-shadow: none; }
 .rd-demo.off:hover { background: #c3c9d2; color: #fff; }
+/* A past programme is read-only, but its 7-day / 30-day cells still open the exercise's progress (8 Oct): looking back is what it is for. */
+.rd-past .rd-trendcell.rd-keep { pointer-events: auto; opacity: 1; }
