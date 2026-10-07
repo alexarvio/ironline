@@ -100,7 +100,6 @@ import { fcmConfigured } from "../lib/fcm";
 import SupplementsCard, { type SupplementRow } from "./SupplementsCard";
 import ReportArchiveList, { ArchiveReport } from "./ReportArchiveList";
 import NotificationRow from "./NotificationRow";
-import CoachNotesRow from "./CoachNotesRow";
 import DeleteAccountRow from "./DeleteAccountRow";
 import { clerkOn } from "../lib/clerk";
 import MyDetailsCard from "./MyDetailsCard";
@@ -1127,13 +1126,11 @@ function notificationTimeLabel(iso: string) {
 // app, e.g. PhotoUploadBox) rather than client-side state.
 function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
   const all = getNotifications(CLIENT_ID);
-  // The coach's messages sit apart, as one row at the top that opens their
-  // own feed; the list under it is everything else.
-  const coachNotes = all.filter((n) => n.kind === "coach_note");
+  // Pure notifications (7 Oct): the chat has its own tab on the bottom nav
+  // now, so its messages are not listed here and no row leads to it.
   const notifications = all.filter((n) => n.kind !== "coach_note");
   // Replies to the client's videos, opened straight from their notification.
   const videoReplies = listVideoReplies(CLIENT_ID);
-  const coachName = getCoachDisplayName(CLIENT_ID);
   const unreadCount = notifications.filter((n) => !n.read).length;
   const todayStr = localDateStr();
   const groups = [
@@ -1143,16 +1140,8 @@ function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
 
   return (
     <div className="cn-notifications">
-      <CoachNotesRow
-        coachName={coachName}
-        initial={coachName.charAt(0).toUpperCase() || "C"}
-        photoPath={getCoachAvatarPath(CLIENT_ID)}
-        unread={coachNotes.filter((n) => !n.read).length}
-        total={coachNotes.length}
-      />
-
       {groups.length === 0 ? (
-        <p className="cn-empty">{coachNotes.length > 0 ? "No other notifications." : "No notifications yet."}</p>
+        <p className="cn-empty">No notifications yet.</p>
       ) : (
         groups.map((g, i) => (
           <section key={g.label} className="cn-notif-group">
@@ -1162,7 +1151,7 @@ function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
               {i === 0 && (
                 <form action={markAllNotificationsReadAction}>
                   <input type="hidden" name="clientId" value={CLIENT_ID} />
-                  <button type="submit" className="cn-markall" disabled={unreadCount === 0 && coachNotes.every((n) => n.read)}>
+                  <button type="submit" className="cn-markall" disabled={unreadCount === 0}>
                     Mark all as read
                   </button>
                 </form>
@@ -1345,7 +1334,8 @@ export default async function ClientPage({
     calendar: getActivityCalendar(CLIENT_ID),
   };
   const progressPictures = progressPicturesData(CLIENT_ID);
-  const hasUnreadNotifications = getNotifications(CLIENT_ID).some((n) => !n.read);
+  // The bell: anything unread but the chat, which has its own dot on the Messages tab (7 Oct).
+  const hasUnreadNotifications = getNotifications(CLIENT_ID).some((n) => n.kind !== "coach_note" && !n.read);
 
   const currentWeekNum = getCurrentWeekNumber(CLIENT_ID);
   // Only the currently deployed program's own weeks — not every published
