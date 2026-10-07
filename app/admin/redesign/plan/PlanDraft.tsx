@@ -17,7 +17,7 @@ import { ConfirmDialog } from "../training/TrainingDraft";
 import Picker from "../Picker";
 import DatePick from "../DatePick";
 import DateText from "../DateText";
-import { phaseLengthLabel, phaseWeeks } from "../../../lib/phases";
+import { phaseDays, phaseLengthLabel, phaseWeeks } from "../../../lib/phases";
 import { SortableItem, SortableList } from "../Sortable";
 import EventsCard, { type Category, type PlanEvent } from "./EventsCard";
 
@@ -754,6 +754,8 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
   // Opens on this month; a phase still to come opens on the month it starts.
   const [cursor, setCursor] = useState((from > today ? from : today).slice(0, 7));
   const [picking, setPicking] = useState<"start" | "end">("start");
+  // What is being typed into the weeks field; null shows the span the dates make.
+  const [weeksText, setWeeksText] = useState<string | null>(null);
   const [programChoice, setProgramChoice] = useState<string>(phase?.program ? String(phase.program.id) : "new");
   // A live programme starts on the week it went out, where the client began it: only the end moves.
   const startLocked = !!phase?.program && phase.program.status === "live";
@@ -790,6 +792,7 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
   const setStart = (d: string) => {
     if (startLocked) return;
     const s = byDay ? d : mondayOf(d);
+    setWeeksText(null);
     setMoved(s !== d ? { side: "start", picked: d, to: s } : null);
     setFrom(s);
     if (to < s) setTo(byDay ? s : addDays(s, 6));
@@ -798,6 +801,7 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
   const setEnd = (d: string) => {
     const e = byDay ? d : addDays(mondayOf(d), 6);
     if (e < from) return setStart(d);
+    setWeeksText(null);
     setMoved(e !== d ? { side: "end", picked: d, to: e } : null);
     setTo(e);
   };
@@ -809,6 +813,35 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
       setEnd(d);
       setPicking("start");
     }
+  };
+  // The length typed as weeks (Finlay, 7 Oct): the end follows the start.
+  // Shown as whole weeks; a span the calendar left uneven says so in the caption.
+  const days = phaseDays(startWeek, endWeek);
+  const weeksShown = weeksText ?? String(Math.max(1, Math.floor(days / 7)));
+  const setWeeks = (text: string) => {
+    setWeeksText(text);
+    const n = Math.round(Number(text));
+    if (!Number.isFinite(n) || n < 1 || n > 104) return;
+    setMoved(null);
+    setTo(addDays(from, n * 7 - 1));
+  };
+  // Phases on the other tracks still to run: one click copies its days, so a
+  // training block and its nutrition phase line up (Finlay, 7 Oct). For
+  // training the days are widened to whole weeks. Which one is "matched" is
+  // read off the dates, so it unticks itself once either date is moved.
+  const matchable = others
+    .filter((o) => o.track !== track && o.id !== phase?.id && addDays(o.end_week, 6) >= today)
+    .sort((a, b) => a.start_week.localeCompare(b.start_week))
+    .map((o) => ({ id: String(o.id), name: o.name, track: o.track, from: byDay ? o.start_week : mondayOf(o.start_week), to: byDay ? addDays(o.end_week, 6) : addDays(mondayOf(addDays(o.end_week, 6)), 6) }));
+  const matched = matchable.find((m) => m.from === from && m.to === to)?.id ?? "none";
+  const matchPhase = (id: string) => {
+    const m = matchable.find((x) => x.id === id);
+    if (!m || (startLocked && m.from !== from)) return;
+    setMoved(null);
+    setWeeksText(null);
+    setFrom(m.from);
+    setTo(m.to);
+    setCursor(m.from.slice(0, 7));
   };
   const ok = name.trim().length > 0 && from <= to && !weekClash;
   const startsNow = startWeek <= today;
@@ -870,19 +903,35 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
             <span>Starts{startLocked ? " · fixed" : ""}</span>
             <DateText value={from} disabled={startLocked} onChange={setStart} label="Starts" onFocus={() => setPicking("start")} />
           </label>
+          {/* Type the weeks and the end follows; or pick the end and the weeks follow. */}
+          <label className="rd-field">
+            <span>Length</span>
+            <span className="rd-weeks-field rq-weeks">
+              <input type="number" inputMode="numeric" min={1} max={104} step={1} value={weeksShown} onChange={(e) => setWeeks(e.target.value)} onBlur={() => setWeeksText(null)} onFocus={() => setPicking("end")} aria-label="Length in weeks" />
+              <small>{weeksShown === "1" ? "week" : "weeks"}</small>
+              <small className="rq-weeks-exact">
+                {days % 7 ? `${phaseLengthLabel(startWeek, endWeek)} · ` : ""}
+                {shortDate(startWeek)} – {shortDate(addDays(endWeek, 6))}
+              </small>
+            </span>
+          </label>
           <label className="rd-field">
             <span>Ends</span>
             <DateText value={to} onChange={setEnd} label="Ends" onFocus={() => setPicking("end")} />
           </label>
-          <div className="rd-field">
-            <span>Length</span>
-            <span className="rdd-length">
-              {phaseLengthLabel(startWeek, endWeek)}
-              <small>
-                {shortDate(startWeek)} – {shortDate(addDays(endWeek, 6))}
-              </small>
-            </span>
-          </div>
+          {/* The same days as a phase on another track, so the two run in tandem. */}
+          {matchable.length > 0 && (
+            <div className="rd-field">
+              <span>Same dates as</span>
+              <Picker
+                value={matched}
+                onChange={matchPhase}
+                label="Same dates as"
+                className="rq-wide"
+                options={[{ value: "none", label: "Not matched" }, ...matchable.map((m) => ({ value: m.id, label: m.name, hint: `${TRACK_LABEL[m.track]} · ${shortDate(m.from)} – ${shortDate(m.to)}` }))]}
+              />
+            </div>
+          )}
           {/* Only when a draft programme is waiting on the Training tab with no phase of its own: then this phase can be it rather than a second one. */}
           {!editing && loose.length > 0 && (
             <div className="rd-field" style={{ visibility: track === "training" ? "visible" : "hidden" }} aria-hidden={track !== "training"}>
