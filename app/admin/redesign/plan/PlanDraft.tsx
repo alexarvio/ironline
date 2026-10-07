@@ -373,7 +373,8 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
                   const sp = span(p);
                   return { from: sp.sc, to: sp.ec };
                 };
-                mine.forEach((p) => {
+                // Only the bars drawn take a lane: a phase outside the window used to hold an empty lane nobody could see (7 Oct).
+                mine.filter((p) => span(p).visible).forEach((p) => {
                   const cp = cells(p);
                   let li = lanes.findIndex((l) => l.every((q) => {
                     const cq = cells(q);
@@ -778,7 +779,7 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
   const note = weekClash
     ? `${WEEK_RULE} ${weekClash.side === "end" ? `${overlap!.name} starts ${fmtDay(overlap!.from)}, so this one has to end on ${fmtDay(weekClash.day)}.` : `${overlap!.name} runs until ${fmtDay(overlap!.to)}, so this one can start on ${fmtDay(weekClash.day)} at the earliest.`}`
     : overlap
-      ? `Overlaps ${overlap.name} on the same track.`
+      ? `Overlaps ${overlap.name} (${fmtDay(overlap.from)} – ${fmtDay(overlap.to)}) on the same track.`
       : !byDay && moved
         ? `${WEEK_RULE} ${fmtDay(moved.picked)} became ${fmtDay(moved.to)}.`
         : " ";
