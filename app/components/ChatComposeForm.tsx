@@ -158,15 +158,15 @@ export default function ChatComposeForm({
           <div className="chat-plus-menu" role="menu">
             <button type="button" role="menuitem" className="chat-plus-row" onClick={() => { setPlusOpen(false); cameraRef.current?.click(); }}>
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.2-2h5.4l1.2 2h1.6A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-8z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /><circle cx="12" cy="12.5" r="3.2" stroke="currentColor" strokeWidth="1.6" /></svg>
-              Take a photo or video
+              Camera
             </button>
             <button type="button" role="menuitem" className="chat-plus-row" onClick={() => { setPlusOpen(false); rollRef.current?.click(); }}>
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.6" /><circle cx="9" cy="10" r="1.6" fill="currentColor" /><path d="M4 17l5-4.5 3.5 3 3-2.5L20 17" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /></svg>
-              Photo or video from your camera roll
+              Camera roll
             </button>
             <button type="button" role="menuitem" className="chat-plus-row" onClick={() => { setPlusOpen(false); fileInputRef.current?.click(); }}>
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M17.5 8.5l-8 8a3.5 3.5 0 0 1-5-5l8.3-8.3a2.4 2.4 0 0 1 3.4 3.4l-8.1 8.1a1.3 1.3 0 0 1-1.9-1.9l7-7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              A file
+              File
             </button>
             {onAddEvent && (
               <button
@@ -181,7 +181,7 @@ export default function ChatComposeForm({
                 }}
               >
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5" stroke="currentColor" strokeWidth="1.6" /><path d="M3.5 9.5h17M8 3.5v3M16 3.5v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
-                Add an event
+                Event
                 {onAddEvent === "preview" && <small>client only</small>}
               </button>
             )}
