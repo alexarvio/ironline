@@ -5,6 +5,8 @@ import { logoutAction } from "../lib/auth-actions";
 import {
   getAssignmentsForDay,
   getClient,
+  listClientEvents,
+  listEventCategories,
   getClientProfile,
   questionsForDay,
   sessionAnswers,
@@ -383,6 +385,10 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
       trainedToday={trainedToday}
       today={today}
       food={food}
+      events={{
+        list: listClientEvents(CLIENT_ID).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, mine: e.added_by === "client" })),
+        categories: listEventCategories(client?.coach_id ?? 0).map(({ id, label, color }) => ({ id, label, color })),
+      }}
       checkInCard={{
         clientId: CLIENT_ID,
         // Today's daily metrics in the coach's order, then this week's (30 Sep): the

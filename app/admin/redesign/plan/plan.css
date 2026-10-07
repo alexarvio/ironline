@@ -200,3 +200,5 @@
 .rq-bar-pill b { font-weight: 800; }
 /* The phase's length typed as weeks: the same box as the dates above it. */
 .rq-phase-dlg input.rq-weeks { font-variant-numeric: tabular-nums; }
+/* An event the client added from their Home (7 Oct): said on its log row. */
+.rq-ev-by { margin-left: 8px; padding: 1px 7px; border-radius: 999px; background: #e6ecf3; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #1e3a6e; vertical-align: 1px; }

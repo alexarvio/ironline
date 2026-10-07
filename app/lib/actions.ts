@@ -180,6 +180,7 @@ import {
   addClientEvent,
   updateClientEvent,
   deleteClientEvent,
+  clientOwnsEvent,
   addEventCategory,
   updateEventCategory,
   deleteEventCategory,
@@ -2075,6 +2076,30 @@ export async function deleteClientEventAction(clientId: number, eventId: number)
 }
 
 /** A category of the coach's own; answers with its id as the events store it ("c12"). */
+// The client's own events, from their Home (7 Oct): added as theirs, and only
+// theirs can be changed or taken away; the coach's stay the coach's.
+export async function clientAddEventAction(v: EventInput) {
+  const { clientId } = await requireClient();
+  const row = addClientEvent(clientId, v, "client");
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  return row?.id ?? null;
+}
+export async function clientUpdateEventAction(eventId: number, v: EventInput) {
+  const { clientId } = await requireClient();
+  if (!clientOwnsEvent(clientId, Number(eventId))) return;
+  updateClientEvent(clientId, Number(eventId), v);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+export async function clientDeleteEventAction(eventId: number) {
+  const { clientId } = await requireClient();
+  if (!clientOwnsEvent(clientId, Number(eventId))) return;
+  deleteClientEvent(clientId, Number(eventId));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
 export async function addEventCategoryAction(label: string, color: string) {
   const coach = await requireCoach();
   const row = addEventCategory(coach.id, String(label ?? ""), String(color ?? ""));

@@ -22,7 +22,7 @@ import { PALETTE, paletteOf } from "../palette";
 // the actions in lib/actions.ts and come back from the loader.
 
 /** kind is the category's id, and optional: an event can just be an event. */
-export type PlanEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string };
+export type PlanEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string; /** The client added it from their Home. */ byClient?: boolean };
 
 export type Category = { id: string; label: string; color: string; custom: boolean };
 const NONE = { tint: "#eceff3", ink: "#5b6474", line: "#c3c9d2" };
@@ -301,7 +301,10 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
                       {k.label}
                     </span>
                     <span className="rq-evrow-main">
-                      <b>{e.title}</b>
+                      <b>
+                        {e.title}
+                        {e.byClient && <span className="rq-ev-by">from the client</span>}
+                      </b>
                       {e.note && <small>{e.note}</small>}
                     </span>
                     <span className={`rq-evrow-rel${past ? "" : " coming"}`}>{standing(today, e)}</span>
@@ -412,6 +415,7 @@ function EventDialog({ today, event, cats, onAddCat, onRenameCat, onRemoveCat, o
           </span>
         </DialogTitle>
         <DialogDescription hidden={!!event}>What happened, which kind, and when. A timestamp is one day; a period runs from one day to another.</DialogDescription>
+        {event?.byClient && <p className="rq-helper">Added by the client from their Home. What you change here they see too.</p>}
       </DialogHeader>
 
       <div className="rd-field">

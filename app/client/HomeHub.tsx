@@ -6,6 +6,7 @@ import VideoReplySheet, { type VideoReplyView } from "./VideoReplySheet";
 import PhaseCards, { type HomePhase, type PhaseFoodToday } from "./PhaseCards";
 import ProgressPicsCard, { type ProgressPics } from "./ProgressPicsCard";
 import HomeLifestyleCard, { type HomeLifestyleMetric } from "./HomeLifestyleCard";
+import EventsCard, { type HomeEvents } from "./EventsCard";
 import { ChevronDownIcon } from "../components/icons";
 import { tzShort } from "../lib/timezones";
 import type { LinkView } from "../lib/messageLinks";
@@ -103,6 +104,7 @@ export default function HomeHub({
   today,
   food,
   checkInCard,
+  events,
 }: {
   dateLabel: string;
   firstName: string;
@@ -127,6 +129,8 @@ export default function HomeHub({
   trainedToday: boolean;
   today: string;
   food: PhaseFoodToday;
+  /** The client's events (theirs and the coach's), for the Events card. */
+  events: HomeEvents;
 }) {
   const lifestyle = phases.find((p) => p.track === "lifestyle") ?? null;
   const plan = phases.filter((p) => p.track !== "lifestyle");
@@ -140,6 +144,8 @@ export default function HomeHub({
         {plan.length > 0 && <PhaseCards phases={plan} coachName={coach.firstName} today={today} nextSession={session ? { dayId: session.dayId, name: session.name, live: !!session.live } : null} food={food} weekDone={weekDone} checkInCount={checkInCount} />}
         {progressPics && <TodaysTasks pics={progressPics} />}
         <LatestActivityCard a={latestActivity} coach={coach} />
+        {/* What is coming up in their life (7 Oct): a trip, an injury, something started. Theirs to add; the coach's listed too. */}
+        <EventsCard events={events} coachName={coach.firstName} today={today} />
         {upcoming ? (
           <MeetingCard m={upcoming} recap={recap} coachFirstName={coach.firstName} />
         ) : (

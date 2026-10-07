@@ -2733,6 +2733,22 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
     });
   }
 
+  // ---- Events the client added from their Home (7 Oct) ----
+  // A trip, an injury, the day they started something: on the Plan tab's
+  // Events grid at once, and here so the coach hears of it.
+  for (const e of data.client_events) {
+    if (e.added_by !== "client") continue;
+    const when = e.start_date === e.end_date ? feedDay(e.start_date) : `${feedDay(e.start_date)} – ${feedDay(e.end_date)}`;
+    add(e.client_id, {
+      id: `event-${e.id}`,
+      category: "notes",
+      at: stampMs(e.created_at),
+      tab: "plan",
+      text: `added an event: “${e.title}” · ${when}`,
+      note: e.note || null,
+    });
+  }
+
   // ---- Billing ----
   for (const inv of data.invoices) {
     add(inv.client_id, {
@@ -5485,11 +5501,11 @@ const cleanEvent = (v: { kind?: string | null; title: string; start: string; end
   return { kind: v.kind?.trim() || null, title: v.title.trim().slice(0, 80), start, end: endRaw < start ? start : endRaw, note: (v.note ?? "").trim().slice(0, 500) };
 };
 
-export function addClientEvent(clientId: number, v: { kind?: string | null; title: string; start: string; end?: string | null; note?: string | null }): ClientEvent | null {
+export function addClientEvent(clientId: number, v: { kind?: string | null; title: string; start: string; end?: string | null; note?: string | null }, by: "client" | null = null): ClientEvent | null {
   const c = cleanEvent(v);
   if (!c.title || !/^\d{4}-\d{2}-\d{2}$/.test(c.start)) return null;
   const data = getData();
-  const row: ClientEvent = { id: allocId("client_events"), client_id: clientId, kind: c.kind, title: c.title, start_date: c.start, end_date: c.end, note: c.note, created_at: new Date().toISOString() };
+  const row: ClientEvent = { id: allocId("client_events"), client_id: clientId, kind: c.kind, title: c.title, start_date: c.start, end_date: c.end, note: c.note, created_at: new Date().toISOString(), ...(by ? { added_by: by } : {}) };
   data.client_events.push(row);
   persist();
   return row;
@@ -5505,6 +5521,11 @@ export function updateClientEvent(clientId: number, eventId: number, v: { kind?:
   row.end_date = c.end;
   row.note = c.note;
   persist();
+}
+
+/** Whether the client added this event themselves: only those they can change or remove. */
+export function clientOwnsEvent(clientId: number, eventId: number): boolean {
+  return getData().client_events.some((e) => e.id === eventId && e.client_id === clientId && e.added_by === "client");
 }
 
 export function deleteClientEvent(clientId: number, eventId: number) {

@@ -394,6 +394,8 @@ export type ClientEvent = {
   end_date: string;
   note: string;
   created_at: string;
+  /** "client": the client added it from their Home (7 Oct); otherwise the coach. */
+  added_by?: "client" | null;
 };
 
 // A coach's own event category beside the built-in ones: a name and one of

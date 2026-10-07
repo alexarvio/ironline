@@ -17936,3 +17936,35 @@ button.ci-hint { cursor: pointer; }
 /* The recap's subheading (6 Oct): the call's name, or the title the coach gave it, over the notes. */
 .hm-recap-sub { display: block; padding-top: 8px; font-size: 14px; font-weight: 700; color: #141a24; }
 .hm-recap-sub + .hm-recap-text { padding-top: 4px; }
+
+/* ---- Home: the Events card (7 Oct). What is coming up in the client's life; theirs to add, the coach's listed too. */
+.hm-ev { border: 1px solid #dfe3e8; border-radius: 20px; background: #fff; overflow: hidden; }
+.hm-ev .hm-tasks-head { padding: 14px 16px 6px; }
+.hm-ev-add { border: 0; border-radius: 999px; padding: 5px 11px; background: #e6ecf3; font: inherit; font-size: 12.5px; font-weight: 700; color: #1e3a6e; cursor: pointer; }
+.hm-ev-empty { display: block; width: 100%; margin: 0; padding: 4px 16px 16px; border: 0; background: none; font: inherit; font-size: 13.5px; line-height: 1.45; text-align: left; color: #5b6474; cursor: pointer; }
+.hm-ev-list { display: flex; flex-direction: column; padding: 0 8px 8px; }
+.hm-ev-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 8px; border: 0; border-radius: 12px; background: none; font: inherit; text-align: left; color: inherit; }
+.hm-ev-row.mine { cursor: pointer; }
+.hm-ev-row.mine:active { background: #f4f7fc; }
+.hm-ev-dot { flex: none; width: 10px; height: 10px; border-radius: 999px; }
+.hm-ev-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hm-ev-text b { font-size: 14.5px; font-weight: 600; color: #141a24; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-ev-text small { font-size: 12px; font-weight: 500; color: #5b6474; }
+.hm-ev-more { align-self: flex-start; margin: 2px 8px 4px; padding: 0; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 700; color: #1e3a6e; cursor: pointer; }
+/* The sheet. */
+.hm-ev-sheet { gap: 12px; max-height: calc(100dvh - 40px); overflow-y: auto; }
+.hm-ev-kinds { display: flex; flex-wrap: wrap; gap: 6px; }
+.hm-ev-kind { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid #dfe3e8; border-radius: 999px; background: #fff; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.hm-ev-kind i { width: 8px; height: 8px; border-radius: 999px; }
+.hm-ev-field { display: flex; flex-direction: column; gap: 5px; }
+.hm-ev-field > span { font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #5b6474; }
+.hm-ev-field textarea.st-details-input { resize: none; line-height: 1.45; }
+.hm-ev-shape { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; border-radius: 10px; background: #e6ecf3; }
+.hm-ev-shape button { min-height: 32px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 13px; font-weight: 700; color: #5b6474; cursor: pointer; }
+.hm-ev-shape button.on { background: #fff; color: #1e3a6e; box-shadow: 0 1px 2px rgba(20, 26, 36, 0.08); }
+.hm-ev-dates { display: flex; gap: 10px; }
+.hm-ev-dates .hm-ev-field { flex: 1; min-width: 0; }
+.hm-ev-save { min-height: 48px; border: 0; border-radius: 12px; background: #1e3a6e; font: inherit; font-size: 14px; font-weight: 700; color: #fff; cursor: pointer; }
+.hm-ev-save:disabled { opacity: 0.45; cursor: default; }
+.hm-ev-remove { min-height: 44px; border: 0; border-radius: 12px; background: #fff; font: inherit; font-size: 14px; font-weight: 700; color: #b3471d; cursor: pointer; }
+.hm-ev-remove.sure { background: #fdf3ee; }
