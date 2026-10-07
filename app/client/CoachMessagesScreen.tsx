@@ -1,5 +1,7 @@
 "use client";
 
+import { EventSheet, type HomeEventCategory } from "./EventsCard";
+import { sendChatMessageAction } from "../lib/actions";
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { ChevronDownIcon, ChevronLeftIcon, PinIcon } from "../components/icons";
 import ChatComposeForm from "../components/ChatComposeForm";
@@ -40,6 +42,8 @@ export type CoachMessageView = {
 export type CoachMessagesProps = {
   coachName: string;
   messages: CoachMessageView[];
+  /** The client's "Add an event" in the composer (7 Oct): the coach's categories and today; null, no button. */
+  events?: { categories: HomeEventCategory[]; today: string } | null;
   /** The client themselves is signed in; false when a coach previews the app. */
   viewerIsClient: boolean;
 };
@@ -51,7 +55,18 @@ const POLL_MS = 15000;
 const mediaWord = (m: CoachMessageView) =>
   !m.media ? "" : m.media.type === "image" ? "Photo" : m.media.type === "video" ? "Video" : m.media.type === "audio" ? "Voice message" : (m.media.name ?? "File");
 
-export default function CoachMessagesScreen({ coachName, messages: fromPage, viewerIsClient, clientId, onBack, about = null, onClearAbout }: CoachMessagesProps & { clientId: number; onBack: () => void; about?: MessageAbout | null; onClearAbout?: () => void }) {
+export default function CoachMessagesScreen({ coachName, messages: fromPage, viewerIsClient, events = null, clientId, onBack, about = null, onClearAbout }: CoachMessagesProps & { clientId: number; onBack: () => void; about?: MessageAbout | null; onClearAbout?: () => void }) {
+  // The event sheet from the composer's calendar button (7 Oct). Saved, it
+  // goes on the Plan tab's grid like one from Home, and a line in the chat
+  // says so, so the conversation keeps its context.
+  const [eventOpen, setEventOpen] = useState(false);
+  const sayEvent = (v: { title: string; start: string; end: string }) => {
+    const day = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("text", `📅 Added an event: ${v.title} · ${v.start === v.end ? day(v.start) : `${day(v.start)} – ${day(v.end)}`}`);
+    void sendChatMessageAction(fd).then(() => refresh());
+  };
   const [, startTransition] = useTransition();
   const [editing, setEditing] = useState<{ id: number; text: string } | null>(null);
   // The one message being answered (2 Oct, as WhatsApp): quoted over the box until sent or dropped.
@@ -330,6 +345,7 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
         <ChatComposeForm
           clientId={clientId}
           sender={viewerIsClient ? "client" : "coach"}
+          onAddEvent={events && viewerIsClient ? () => setEventOpen(true) : null}
           about={about}
           onClearAbout={onClearAbout}
           replyTo={replying ? { id: replying.id, who: own(replying) ? "yourself" : viewerIsClient ? coachName : "them", text: quoteOf(replying), own: replying.mine } : null}
@@ -356,6 +372,7 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
           onSent={() => void refresh()}
         />
       </footer>
+      {eventOpen && events && <EventSheet event={null} categories={events.categories} coachName={coachName} today={events.today} onClose={() => setEventOpen(false)} onSaved={sayEvent} />}
     </>
   );
 }

@@ -17968,3 +17968,9 @@ button.ci-hint { cursor: pointer; }
 .hm-ev-save:disabled { opacity: 0.45; cursor: default; }
 .hm-ev-remove { min-height: 44px; border: 0; border-radius: 12px; background: #fff; font: inherit; font-size: 14px; font-weight: 700; color: #b3471d; cursor: pointer; }
 .hm-ev-remove.sure { background: #fdf3ee; }
+/* The bottom nav's Messages tab (7 Oct): the chat opens over the tab underneath; a dot while something is unread. */
+.app-tab-btn { position: relative; }
+.app-tab-badge { position: absolute; top: 9px; right: calc(50% - 15px); width: 8px; height: 8px; border-radius: 999px; background: var(--accent); border: 1.5px solid var(--paper); }
+.app-bottom-nav.dark .app-tab-badge { border-color: #12132B; }
+/* Settings, pushed from the burger: its own banner, so no gap under the bar. */
+.cn-screen .cn-body.cn-body-settings { padding: 0; }

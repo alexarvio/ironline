@@ -3,7 +3,7 @@
 import { ReactNode, useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { markCoachNotesReadAction } from "../lib/actions";
 import { logoutAction } from "../lib/auth-actions";
-import { BellIcon, ChevronLeftIcon, MenuIcon } from "../components/icons";
+import { BellIcon, ChevronLeftIcon, MenuIcon, ChatIcon } from "../components/icons";
 import CheckInScreen, { CheckInProps } from "./CheckInScreen";
 import PreviewBar from "./PreviewBar";
 import ProgressPicturesScreen, { type ProgressPicturesProps } from "./ProgressPicturesScreen";
@@ -45,7 +45,7 @@ export type AppTab = {
   darkBanner?: boolean;
 };
 
-type PushView = "notifications" | "checkin" | "photos" | "coach" | "messages" | "food" | "meetings" | "invoices" | null;
+type PushView = "notifications" | "checkin" | "photos" | "coach" | "messages" | "food" | "meetings" | "invoices" | "settings" | null;
 
 // The active bottom tab lives in sessionStorage, not just React state. A full
 // page load — a form that posts before hydration finishes on a slow phone, a
@@ -121,7 +121,13 @@ export default function AppShell({
   initialPush = null,
   initialTab = null,
   preview = null,
+  settingsContent = null,
+  chatUnread = false,
 }: {
+  /** Settings, opened from the burger (7 Oct: the chat took its place on the bottom nav). */
+  settingsContent?: ReactNode;
+  /** Something from the coach in the chat not yet read: the dot on the Messages tab. */
+  chatUnread?: boolean;
   /** A coach looking at this client's app: whose it is, and the others to switch to. */
   preview?: { current: { id: number; name: string }; clients: { id: number; name: string }[] } | null;
   clientName: string;
@@ -236,6 +242,11 @@ export default function AppShell({
       if (invoices) setPushView("invoices");
       return;
     }
+    // Settings left the bottom nav for the burger (7 Oct): a report notification still gets there.
+    if (tab === "settings") {
+      if (settingsContent) setPushView("settings");
+      return;
+    }
     if (!tabs.some((t) => t.id === tab)) return;
     setScrolled(false);
     setPushView(null);
@@ -341,6 +352,25 @@ export default function AppShell({
     ) : pushView === "messages" ? (
       <div className="app-layer app-layer-push cn-screen">
         <CoachMessagesScreen {...coachMessages} clientId={clientId} onBack={() => setPushView(null)} about={messageAbout} onClearAbout={() => setMessageAbout(null)} />
+      </div>
+    ) : pushView === "settings" && settingsContent ? (
+      <div className="app-layer app-layer-push cn-screen">
+        <header className="cn-header">
+          <button type="button" className="cn-icon-btn" onClick={() => setPushView(null)} aria-label="Back">
+            <ChevronLeftIcon />
+          </button>
+          <div className="cn-header-titles">
+            <h1 className="cn-title">Settings</h1>
+          </div>
+          <span className="cn-icon-spacer" aria-hidden="true" />
+        </header>
+        <main className="cn-body cn-body-settings">
+          <MessagesProvider value={openMessages}>
+            <CoachProvider value={coachProfile ? () => setPushView("coach") : null}>
+              <NavigateProvider value={goToTab}>{settingsContent}</NavigateProvider>
+            </CoachProvider>
+          </MessagesProvider>
+        </main>
       </div>
     ) : pushView ? (
       <div className="app-layer app-layer-push cn-screen">
@@ -470,6 +500,14 @@ export default function AppShell({
                 </span>
               </button>
             ))}
+            {/* The chat, fourth (7 Oct): it opens over the tab underneath and
+                keeps its own Back, so the tab is found as it was left. */}
+            <button type="button" className={`app-tab-btn${pushView === "messages" ? " active" : ""}`} onClick={() => pushView !== "messages" && openMessages()}>
+              <span className="app-tab-icon" aria-label={`Messages with ${coachMessages.coachName}`}>
+                <ChatIcon />
+              </span>
+              {chatUnread && pushView !== "messages" && <span className="app-tab-badge" aria-hidden="true" />}
+            </button>
           </nav>
           </div>
           {pushedLayer}
@@ -487,9 +525,6 @@ export default function AppShell({
                   <span className="app-menu-name">Full Potential Coaching</span>
                 </div>
                 <div className="app-menu-list">
-                  <button type="button" className="app-menu-item" onClick={() => go(() => openMessages())}>
-                    Messages with {coachMessages.coachName}
-                  </button>
                   {meetings && (
                     <button type="button" className="app-menu-item" onClick={() => go(() => setPushView("meetings"))}>
                       Meetings
@@ -498,6 +533,11 @@ export default function AppShell({
                   {invoices && (
                     <button type="button" className="app-menu-item" onClick={() => go(() => setPushView("invoices"))}>
                       Invoices
+                    </button>
+                  )}
+                  {settingsContent && (
+                    <button type="button" className="app-menu-item" onClick={() => go(() => setPushView("settings"))}>
+                      Settings
                     </button>
                   )}
                   {/* Help writes to the coach: the person who can actually do something. */}

@@ -97,7 +97,7 @@ export default function EventsCard({ events, coachName, today }: { events: HomeE
 
 // ---- The sheet: which kind, what, when (one day or a stretch), and a note for the coach.
 
-function EventSheet({ event, categories, coachName, today, onClose }: { event: HomeEvent | null; categories: HomeEventCategory[]; coachName: string; today: string; onClose: () => void }) {
+export function EventSheet({ event, categories, coachName, today, onClose, onSaved }: { event: HomeEvent | null; categories: HomeEventCategory[]; coachName: string; today: string; onClose: () => void; /** What was just saved, for the chat to say so (7 Oct). */ onSaved?: (v: { kind: string | null; title: string; start: string; end: string; note: string }) => void }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [kind, setKind] = useState<string | null>(event?.kind ?? null);
@@ -115,6 +115,7 @@ function EventSheet({ event, categories, coachName, today, onClose }: { event: H
       const v = { kind, title: title.trim(), start: from, end, note: note.trim() };
       if (event) await clientUpdateEventAction(event.id, v);
       else await clientAddEventAction(v);
+      onSaved?.(v);
       router.refresh();
       onClose();
     });

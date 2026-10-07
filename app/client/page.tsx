@@ -114,7 +114,6 @@ import { SERVER_TZ, hourIn, isTimezone, meetingLabelsIn, zonedToUtc } from "../l
 import { cookies } from "next/headers";
 import type { HomePhase, PhaseFoodToday } from "./PhaseCards";
 import {
-  AccountIcon,
   AppleIcon,
   CalendarIcon,
   ChatIcon,
@@ -1486,8 +1485,6 @@ export default async function ClientPage({
       darkBanner: true,
       content: <NutritionTab CLIENT_ID={CLIENT_ID} />,
     },
-    // Draws its own light banner (name, since when, the photo); the top bar floats over it.
-    { id: "settings", label: "Settings", icon: <AccountIcon />, bare: true, content: <SettingsTab CLIENT_ID={CLIENT_ID} /> },
   ];
 
   return (
@@ -1500,7 +1497,15 @@ export default async function ClientPage({
       preview={preview}
       checkIn={checkIn}
       photos={progressPictures}
-      coachMessages={{ coachName: getCoachDisplayName(CLIENT_ID), messages: coachMessagesFor(CLIENT_ID), viewerIsClient }}
+      coachMessages={{
+        coachName: getCoachDisplayName(CLIENT_ID),
+        messages: coachMessagesFor(CLIENT_ID),
+        viewerIsClient,
+        events: { categories: listEventCategories(client?.coach_id ?? 0).map(({ id, label, color }) => ({ id, label, color })), today: localDateStr() },
+      }}
+      chatUnread={getNotifications(CLIENT_ID).some((n) => n.kind === "coach_note" && !n.read)}
+      // Settings left the bottom nav for the burger (7 Oct): the chat has its tab.
+      settingsContent={<SettingsTab CLIENT_ID={CLIENT_ID} />}
       helpEmail={getCoachEmail(CLIENT_ID)}
       coachProfile={getCoachProfileForClient(CLIENT_ID)}
       coachAvatarPath={getCoachAvatarPath(CLIENT_ID)}
