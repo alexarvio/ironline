@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -110,6 +110,7 @@ const WINDOWS = [
   { months: 12, weeks: 52 },
 ] as const;
 type Win = (typeof WINDOWS)[number]["weeks"];
+const WIN_KEY = "rq-plan-window";
 const KIND_LABEL: Record<PlanGoalRow["kind"], string> = { metric: "Metric", exercise: "Exercise", habit: "Habit", none: "Text" };
 
 type Dlg = { kind: "phase"; phase: PlanPhaseRow | null; track?: PhaseTrack } | { kind: "move"; id: number; start: string; end: string } | { kind: "deletePhase"; id: number } | { kind: "goal"; goal: PlanGoalRow | null } | { kind: "removeGoal"; id: number } | null;
@@ -147,7 +148,22 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
     setSeenPhases(phasesKey);
     setPhases(plan.phases);
   }
-  const [win, setWin] = useState<Win>(13);
+  // How far ahead the grids show. Remembered in the browser (a view
+  // preference, like Training's columns), so a save, a refresh or a reload
+  // leaves the coach on the 6 or 12 months they chose rather than back on 3.
+  const [win, setWinState] = useState<Win>(13);
+  useEffect(() => {
+    try {
+      const saved = Number(window.localStorage.getItem(WIN_KEY));
+      if (WINDOWS.some((w) => w.weeks === saved)) setWinState(saved as Win);
+    } catch {}
+  }, []);
+  const setWin = (w: Win) => {
+    setWinState(w);
+    try {
+      window.localStorage.setItem(WIN_KEY, String(w));
+    } catch {}
+  };
   const [dlg, setDlg] = useState<Dlg>(null);
   const close = () => setDlg(null);
   const [drag, setDrag] = useState<{ id: number; edge: "start" | "end" | "move"; start: string; end: string; moved: boolean; origStart: string; origEnd: string; anchor: string | null } | null>(null);
