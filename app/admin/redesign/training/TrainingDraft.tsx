@@ -937,7 +937,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                             )}
                           </span>
                           {[r.d7, r.d30].map((dv, i) => (
-                            <button key={i} type="button" className={`rd-trendcell${dv == null ? " none" : dv > 0 ? " up" : dv < 0 ? " down" : " same"}`} title={`${r.name}: every set ${firstName} logged`} onClick={() => setDlg({ kind: "progress", rowId: r.id })}>
+                            <button key={i} type="button" className={`rd-trendcell rd-keep${dv == null ? " none" : dv > 0 ? " up" : dv < 0 ? " down" : " same"}`} title={`${r.name}: every set ${firstName} logged`} onClick={() => setDlg({ kind: "progress", rowId: r.id })}>
                               {dv == null ? "—" : dv === 0 ? "=" : `${dv > 0 ? "+" : "−"}${Math.abs(dv).toFixed(1)}%`}
                             </button>
                           ))}
