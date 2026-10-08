@@ -143,14 +143,19 @@ export default function HomeHub({
   const plan = phases.filter((p) => p.track !== "lifestyle");
   // What is still to do today, counted the way the cards under it show it.
   const foodDone = !!food && ((!!food.mealsTotal && (food.mealsLogged ?? 0) >= food.mealsTotal) || (!!food.target && food.eaten >= food.target * 0.9));
-  const todo = (checkInCount && checkInCount.done < checkInCount.total ? 1 : 0) + (progressPics?.status === "due" ? 1 : 0) + (session && (session.live || !trainedToday) ? 1 : 0) + (food && !foodDone ? 1 : 0);
+  const todoItems = [
+    checkInCount && checkInCount.done < checkInCount.total ? "check-in" : null,
+    progressPics?.status === "due" ? "pictures" : null,
+    session && (session.live || !trainedToday) ? "training" : null,
+    food && !foodDone ? "food" : null,
+  ].filter((x): x is string => !!x);
   return (
     <div className="hm">
       <HomeBanner dateLabel={dateLabel} firstName={firstName} initialHello={hello} />
       <div className="hm-body">
         {/* The spine (8 Oct): Today, Your plan, then the coach. Each is always
             there, so Home is never empty: with nothing to show, each says so. */}
-        <TodayCard todo={todo} next={todayNext} coachName={coach.firstName} hasPlan={plan.length > 0} />
+        <TodayCard items={todoItems} next={todayNext} coachName={coach.firstName} hasPlan={plan.length > 0} />
         {/* Lifestyle first (29 Sep): a white card with the ring and one metric at a time, only with a live phase and daily metrics. */}
         {checkInCard && checkInCard.metrics.length > 0 && <HomeLifestyleCard clientId={checkInCard.clientId} today={today} phase={lifestyle} coachName={coach.firstName} metrics={checkInCard.metrics} yesterday={checkInCard.yesterday} />}
         {/* "Your plan": training and nutrition, a card a live phase, each with its one thing to do. */}
@@ -175,12 +180,15 @@ export default function HomeHub({
 
 // ---- 0 · Today: one line, always. What is left, or that nothing is --------
 
-function TodayCard({ todo, next, coachName, hasPlan }: { todo: number; next: string | null; coachName: string; hasPlan: boolean }) {
+function TodayCard({ items, next, coachName, hasPlan }: { items: string[]; next: string | null; coachName: string; hasPlan: boolean }) {
+  const todo = items.length;
+  // "Check-in, pictures and training": what the count is made of.
+  const named = items.map((x, i) => (i === 0 ? x.charAt(0).toUpperCase() + x.slice(1) : x)).reduce((acc, x, i) => (i === 0 ? x : i === items.length - 1 ? `${acc} and ${x}` : `${acc}, ${x}`), "");
   return (
     <section className="hm-today" aria-label="Today">
       <span className="hm-eyebrow">Today</span>
       <b className="hm-today-main">{todo > 0 ? `${todo} thing${todo === 1 ? "" : "s"} to do` : "Nothing to do today"}</b>
-      {todo === 0 && <small className="hm-today-next">{next ?? (hasPlan ? "Rest up." : `What to do each day shows here once ${coachName} sets up your plan.`)}</small>}
+      <small className="hm-today-next">{todo > 0 ? named : (next ?? (hasPlan ? "Rest up." : `What to do each day shows here once ${coachName} sets up your plan.`))}</small>
     </section>
   );
 }
