@@ -105,7 +105,14 @@ export default function HomeHub({
   food,
   checkInCard,
   events,
+  trainedToday,
+  todayNext = null,
+  planGap = null,
 }: {
+  /** With nothing to do: the next thing, "Next week starts Mon 13 Oct"; null, nothing to say. */
+  todayNext?: string | null;
+  /** No phase live on training or nutrition: what is next, if anything is scheduled. */
+  planGap?: PlanGap | null;
   dateLabel: string;
   firstName: string;
   coach: { firstName: string; photoPath: string | null };
@@ -134,14 +141,24 @@ export default function HomeHub({
 }) {
   const lifestyle = phases.find((p) => p.track === "lifestyle") ?? null;
   const plan = phases.filter((p) => p.track !== "lifestyle");
+  // What is still to do today, counted the way the cards under it show it.
+  const foodDone = !!food && ((!!food.mealsTotal && (food.mealsLogged ?? 0) >= food.mealsTotal) || (!!food.target && food.eaten >= food.target * 0.9));
+  const todo = (checkInCount && checkInCount.done < checkInCount.total ? 1 : 0) + (progressPics?.status === "due" ? 1 : 0) + (session && (session.live || !trainedToday) ? 1 : 0) + (food && !foodDone ? 1 : 0);
   return (
     <div className="hm">
       <HomeBanner dateLabel={dateLabel} firstName={firstName} initialHello={hello} />
       <div className="hm-body">
+        {/* The spine (8 Oct): Today, Your plan, then the coach. Each is always
+            there, so Home is never empty: with nothing to show, each says so. */}
+        <TodayCard todo={todo} next={todayNext} coachName={coach.firstName} hasPlan={plan.length > 0} />
         {/* Lifestyle first (29 Sep): a white card with the ring and one metric at a time, only with a live phase and daily metrics. */}
         {checkInCard && checkInCard.metrics.length > 0 && <HomeLifestyleCard clientId={checkInCard.clientId} today={today} phase={lifestyle} coachName={coach.firstName} metrics={checkInCard.metrics} yesterday={checkInCard.yesterday} />}
         {/* "Your plan": training and nutrition, a card a live phase, each with its one thing to do. */}
-        {plan.length > 0 && <PhaseCards phases={plan} coachName={coach.firstName} today={today} nextSession={session ? { dayId: session.dayId, name: session.name, live: !!session.live } : null} food={food} weekDone={weekDone} checkInCount={checkInCount} />}
+        {plan.length > 0 ? (
+          <PhaseCards phases={plan} coachName={coach.firstName} today={today} nextSession={session ? { dayId: session.dayId, name: session.name, live: !!session.live } : null} food={food} weekDone={weekDone} checkInCount={checkInCount} />
+        ) : (
+          <PlanGapCard gap={planGap ?? { next: null }} coachName={coach.firstName} />
+        )}
         {progressPics && <TodaysTasks pics={progressPics} />}
         <LatestActivityCard a={latestActivity} coach={coach} />
         {/* What is coming up in their life (7 Oct): a trip, an injury, something started. Theirs to add; the coach's listed too. */}
@@ -153,6 +170,38 @@ export default function HomeHub({
         )}
       </div>
     </div>
+  );
+}
+
+// ---- 0 · Today: one line, always. What is left, or that nothing is --------
+
+function TodayCard({ todo, next, coachName, hasPlan }: { todo: number; next: string | null; coachName: string; hasPlan: boolean }) {
+  return (
+    <section className="hm-today" aria-label="Today">
+      <span className="hm-eyebrow">Today</span>
+      <b className="hm-today-main">{todo > 0 ? `${todo} thing${todo === 1 ? "" : "s"} to do` : "Nothing to do today"}</b>
+      {todo === 0 && <small className="hm-today-next">{next ?? (hasPlan ? "Rest up." : `What to do each day shows here once ${coachName} sets up your plan.`)}</small>}
+    </section>
+  );
+}
+
+// ---- 1b · Your plan, with no phase live: what is next, and a way to ask ----
+
+export type PlanGap = { next: { track: "training" | "nutrition" | "lifestyle"; name: string; start: string } | null };
+const GAP_TRACK: Record<PlanGap["next"] extends infer N ? (N extends { track: infer T } ? T : never) : never, string> = { training: "Training", nutrition: "Nutrition", lifestyle: "Lifestyle" };
+
+function PlanGapCard({ gap, coachName }: { gap: PlanGap; coachName: string }) {
+  const openMessages = useOpenMessages();
+  const starts = gap.next ? new Date(`${gap.next.start}T00:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" }) : null;
+  return (
+    <section className="hm-gap" aria-label="Your plan">
+      <span className="hm-eyebrow">Your plan</span>
+      <b className="hm-gap-title">{gap.next ? `${gap.next.name} starts ${starts}` : "No phase running"}</b>
+      <small className="hm-gap-sub">{gap.next ? `${GAP_TRACK[gap.next.track]} · ${coachName} is getting it ready.` : `${coachName} is building your next phase.`}</small>
+      <button type="button" className="hm-gap-btn" onClick={() => openMessages?.()}>
+        Message {coachName}
+      </button>
+    </section>
   );
 }
 

@@ -383,6 +383,15 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
       trainedToday={trainedToday}
       today={today}
       food={food}
+      // The spine (8 Oct): with nothing to do, the next thing; with no phase live, what is next.
+      todayNext={session ? null : weekDone ? `Next week starts ${weekDone.nextWeekLabel}` : null}
+      planGap={(() => {
+        if (phases.some((p) => p.track !== "lifestyle")) return null;
+        const next = listClientPhases(CLIENT_ID)
+          .filter((p) => !p.draft && p.track !== "lifestyle" && p.start_week > today)
+          .sort((a, b) => a.start_week.localeCompare(b.start_week))[0];
+        return { next: next ? { track: next.track, name: next.name, start: next.start_week } : null };
+      })()}
       events={{
         list: listClientEvents(CLIENT_ID).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, mine: e.added_by === "client" })),
         categories: listEventCategories(client?.coach_id ?? 0).map(({ id, label, color }) => ({ id, label, color })),
@@ -515,6 +524,10 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
     }
     if (latestNote.action_tab === "chat") return { kind: "message", title: "Sent you a message", body: latestNote.message, cta: "Reply", ...base };
     return { kind: "message", title: latestNote.action_label ?? "Sent you a note", body: latestNote.message, cta: latestNote.action_tab ? "Open" : "Open chat", ...base };
+  }
+  // Nothing from the coach and no phase ever (8 Oct): say so, and offer the chat.
+  if (listClientPhases(clientId).length === 0) {
+    return { kind: "message", title: `No news from ${coachFirst} yet`, body: `Your plan shows up here once ${coachFirst} sets it up. You can message them any time.`, whenLabel: "", cta: `Message ${coachFirst}`, unread: 0, unseen: false, moreThisWeek: 0 };
   }
   return {
     kind: "welcome",

@@ -1,0 +1,6 @@
+/* The Home states board (8 Oct). Prefix hs-. */
+.hs-intro { margin: -22px 0 0; max-width: 640px; font-size: 13.5px; line-height: 1.5; color: #5b6474; }
+/* A state full size in its frame: the phone fills the iframe, no bezel. */
+.hs-full { min-height: 100vh; background: #fff; }
+.hs-full .hs-frame .app-screen { width: 100vw; height: 100vh; border: 0; border-radius: 0; box-shadow: none; }
+.hs-full .hs-frame .app-screen::before { display: none; }

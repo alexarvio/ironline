@@ -17992,3 +17992,13 @@ button.ci-hint { cursor: pointer; }
 .chat-plus-row:disabled { color: #8b93a1; cursor: default; }
 .chat-plus-row:disabled svg { color: #b4bac4; }
 .chat-plus-row small { grid-column: 3; font-size: 11px; font-weight: 600; color: #8b93a1; }
+
+/* ---- Home's spine (8 Oct): Today and the plan gap, so Home is never empty. */
+.hm-today { display: flex; flex-direction: column; gap: 3px; padding: 14px 16px; border: 1px solid #dfe3e8; border-radius: 20px; background: #fff; }
+.hm-today-main { font-size: 16px; font-weight: 700; color: #141a24; }
+.hm-today-next { font-size: 13px; color: #5b6474; }
+.hm-gap { display: flex; flex-direction: column; gap: 4px; padding: 16px; border-radius: 20px; background: linear-gradient(135deg, #1e3a6e, #2f5d8f); color: #fff; }
+.hm-gap .hm-eyebrow { color: rgba(255, 255, 255, 0.7); }
+.hm-gap-title { font-size: 19px; font-weight: 700; line-height: 1.2; }
+.hm-gap-sub { font-size: 13px; color: rgba(255, 255, 255, 0.8); }
+.hm-gap-btn { align-self: flex-start; margin-top: 10px; padding: 9px 14px; border: 0; border-radius: 999px; background: #fff; font: inherit; font-size: 13px; font-weight: 700; color: #1e3a6e; cursor: pointer; }

@@ -5901,6 +5901,11 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
   if (clientLockedOut(clientId)) {
     actions.push({ id: "locked", tone: "urgent", title: "Locked out of signing in", detail: "Too many wrong passwords. Clear the lock from their card, or it lifts by itself.", tab: null });
   }
+  // No phase live on training or nutrition (8 Oct): the client's Home says
+  // "no phase running" until there is one; this is the nudge from this side.
+  if (!getCurrentPhase(clientId, "training") && !getCurrentPhase(clientId, "nutrition")) {
+    actions.push({ id: "no-phase", tone: "due", title: "No phase running", detail: "Their Home says so until a training or nutrition phase is live. Create or schedule one on Plan.", tab: "plan" });
+  }
   const program = getDeployedProgram(clientId);
   if (program) {
     const index = getProgramCurrentWeekIndex(program);
