@@ -17943,11 +17943,15 @@ button.ci-hint { cursor: pointer; }
 .hm-ev-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px 2px; }
 .hm-ev-empty { display: block; width: 100%; margin: 0; padding: 6px 16px 16px; border: 0; background: none; font: inherit; font-size: 13.5px; line-height: 1.45; text-align: left; color: #5b6474; cursor: pointer; }
 .hm-ev-list { display: flex; flex-direction: column; padding: 0 0 6px; }
-.hm-ev-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; margin: 0; padding: 8px 16px; box-sizing: border-box; border: 0; border-radius: 0; background: none; font: inherit; text-align: left; color: inherit; }
+.hm-ev-row { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 56px; margin: 0; padding: 8px 16px; box-sizing: border-box; border: 0; border-radius: 0; background: none; font: inherit; text-align: left; color: inherit; }
 .hm-ev-row.mine { cursor: pointer; }
 .hm-ev-row.mine:active { background: #f4f7fc; }
-.hm-ev-dot { flex: none; width: 10px; height: 10px; border-radius: 999px; }
+/* The leaf: the start day big, its month under it, in the category's colour. */
+.hm-ev-leaf { flex: none; display: flex; flex-direction: column; align-items: center; width: 40px; }
+.hm-ev-leaf b { font-family: var(--font-bricolage), var(--font-archivo), "Archivo", sans-serif; font-size: 24px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.hm-ev-leaf small { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.75; }
 .hm-ev-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hm-ev-text em { font-style: normal; font-weight: 700; }
 .hm-ev-text b { font-size: 14.5px; font-weight: 600; color: #141a24; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hm-ev-text small { font-size: 12px; font-weight: 500; color: #5b6474; }
 .hm-ev-more { align-self: flex-start; margin: 2px 16px 6px; padding: 0; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 700; color: #1e3a6e; cursor: pointer; }

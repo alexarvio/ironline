@@ -62,13 +62,20 @@ export default function EventsCard({ events, coachName, today }: { events: HomeE
         <div className="hm-ev-list">
           {shown.map((e) => {
             const k = chromeOf(events.categories, e.kind);
+            // A calendar leaf on the left, as the meeting card has: the day it
+            // starts, in the category's colour; the title and the span beside it.
+            const d = parse(e.start);
             const row = (
               <>
-                <i className="hm-ev-dot" style={{ background: k.ink }} />
+                <span className="hm-ev-leaf" style={{ color: k.ink }} aria-hidden="true">
+                  <b>{d.getDate()}</b>
+                  <small>{d.toLocaleDateString("en-US", { month: "short" })}</small>
+                </span>
                 <span className="hm-ev-text">
                   <b>{e.title}</b>
                   <small>
-                    {e.start === e.end ? shortDate(e.start) : `${shortDate(e.start)} – ${shortDate(e.end)}`} · {standing(today, e)}
+                    {k.label !== "Event" && <em style={{ color: k.ink }}>{k.label} · </em>}
+                    {e.start === e.end ? standing(today, e) : `until ${shortDate(e.end)} · ${standing(today, e)}`}
                     {!e.mine && ` · from ${coachName}`}
                   </small>
                 </span>
