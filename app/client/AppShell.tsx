@@ -11,6 +11,8 @@ import CoachProfileScreen from "./CoachProfileScreen";
 import { HealthAutoSync } from "./HealthSync";
 import { NativePush } from "./NativePush";
 import CoachMessagesScreen, { type CoachMessagesProps } from "./CoachMessagesScreen";
+import EventsScreen from "./EventsScreen";
+import type { HomeEvents } from "./EventsCard";
 import FoodDiaryScreen, { type FoodDiaryProps } from "./FoodDiaryScreen";
 import MeetingsScreen, { type MeetingsProps } from "./MeetingsScreen";
 import InvoicesScreen, { type InvoicesProps } from "./InvoicesScreen";
@@ -27,6 +29,7 @@ import {
   NotificationsProvider,
   PhotosProvider,
   MeetingsProvider,
+  EventsProvider,
   TrainingFocusProvider,
   type TrainingFocus,
 } from "./CheckInContext";
@@ -45,7 +48,7 @@ export type AppTab = {
   darkBanner?: boolean;
 };
 
-type PushView = "notifications" | "checkin" | "photos" | "coach" | "messages" | "food" | "meetings" | "invoices" | "settings" | null;
+type PushView = "notifications" | "checkin" | "photos" | "coach" | "messages" | "food" | "meetings" | "invoices" | "settings" | "events" | null;
 
 // The active bottom tab lives in sessionStorage, not just React state. A full
 // page load — a form that posts before hydration finishes on a slow phone, a
@@ -123,7 +126,10 @@ export default function AppShell({
   preview = null,
   settingsContent = null,
   chatUnread = false,
+  events = null,
 }: {
+  /** The client's events, for the Events screen (8 Oct); null, no screen. */
+  events?: HomeEvents | null;
   /** Settings, opened from the burger (7 Oct: the chat took its place on the bottom nav). */
   settingsContent?: ReactNode;
   /** Something from the coach in the chat not yet read: the dot on the Messages tab. */
@@ -353,6 +359,10 @@ export default function AppShell({
       <div className="app-layer app-layer-push cn-screen">
         <CoachMessagesScreen {...coachMessages} clientId={clientId} onBack={() => setPushView(null)} about={messageAbout} onClearAbout={() => setMessageAbout(null)} />
       </div>
+    ) : pushView === "events" && events ? (
+      <div className="app-layer app-layer-push cn-screen">
+        <EventsScreen events={events} coachName={coachMessages.coachName.trim().split(/\s+/)[0] || "your coach"} today={checkIn.today} onBack={() => setPushView(null)} />
+      </div>
     ) : pushView === "settings" && settingsContent ? (
       <div className="app-layer app-layer-push cn-screen">
         <header className="cn-header">
@@ -439,6 +449,7 @@ export default function AppShell({
                     }
                   >
                 <MeetingsProvider value={meetings ? () => setPushView("meetings") : null}>
+                <EventsProvider value={events ? () => setPushView("events") : null}>
                 <CoachProvider value={coachProfile ? () => setPushView("coach") : null}>
                     <NotificationsProvider value={() => setPushView("notifications")}>
                       <NavigateProvider value={goToTab}>
@@ -464,6 +475,7 @@ export default function AppShell({
                       </NavigateProvider>
                     </NotificationsProvider>
                   </CoachProvider>
+                </EventsProvider>
                 </MeetingsProvider>
                 </FoodProvider>
                 </MessagesProvider>

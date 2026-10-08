@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { clientAddEventAction, clientDeleteEventAction, clientUpdateEventAction } from "../lib/actions";
 import { NO_CATEGORY, paletteOf } from "../admin/redesign/palette";
+import { useOpenEvents } from "./CheckInContext";
 
 // Home's "Events" card (7 Oct): what is coming up in the client's life that
 // the plan should know about: a trip, an injury, the day they started a
@@ -20,7 +21,7 @@ export type HomeEvents = { list: HomeEvent[]; categories: HomeEventCategory[] };
 const DAY = 86400000;
 const parse = (iso: string) => new Date(`${iso}T00:00:00`);
 const daysBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / DAY);
-const shortDate = (d: string) => parse(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+export const shortDate = (d: string) => parse(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 const relative = (today: string, d: string) => {
   const n = daysBetween(today, d);
   if (n === 0) return "today";
@@ -28,77 +29,48 @@ const relative = (today: string, d: string) => {
   if (n === -1) return "yesterday";
   return n > 0 ? `in ${n} days` : `${-n} days ago`;
 };
-const standing = (today: string, e: HomeEvent) => {
+export const standing = (today: string, e: HomeEvent) => {
   if (e.start === e.end || today < e.start) return relative(today, e.start);
   if (today > e.end) return `ended ${relative(today, e.end)}`;
   const left = daysBetween(today, e.end);
   return left === 0 ? "last day" : `${left} day${left === 1 ? "" : "s"} left`;
 };
-const chromeOf = (cats: HomeEventCategory[], kind: string | null) => {
+export const chromeOf = (cats: HomeEventCategory[], kind: string | null) => {
   const c = kind ? cats.find((x) => x.id === kind) : null;
   return c ? { ...paletteOf(c.color), label: c.label } : { ...NO_CATEGORY, label: "Event" };
 };
 
 export default function EventsCard({ events, coachName, today }: { events: HomeEvents; coachName: string; today: string }) {
-  const [open, setOpen] = useState<{ event: HomeEvent | null } | null>(null);
-  // What is still to come or running, soonest first; the past stays on the coach's log.
+  const openEvents = useOpenEvents();
+  // The next three to come or running, soonest first: a glance. The whole
+  // list, with Add, Change and Remove, is the Events screen (8 Oct).
   const coming = events.list.filter((e) => e.end >= today).sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.id - b.id));
-  const [showAll, setShowAll] = useState(false);
-  const shown = showAll ? coming : coming.slice(0, 4);
+  const shown = coming.slice(0, 3);
   return (
-    <section className="hm-ev" aria-label="Events">
-      <div className="hm-ev-head">
-        <span className="hm-eyebrow">Events</span>
-        {/* The app's small button (pp-btn), as on Progress pictures. */}
-        <button type="button" className="pp-btn sm tint" onClick={() => setOpen({ event: null })}>
-          + Add
-        </button>
-      </div>
-      {coming.length === 0 ? (
-        <button type="button" className="hm-ev-empty" onClick={() => setOpen({ event: null })}>
-          Tell {coachName} what&rsquo;s coming up, so the plan can plan around it.
-        </button>
-      ) : (
-        <div className="hm-ev-list">
-          {shown.map((e) => {
-            const k = chromeOf(events.categories, e.kind);
-            // A calendar leaf on the left, as the meeting card has: the day it
-            // starts, in the category's colour; the title and the span beside it.
-            const d = parse(e.start);
-            const row = (
-              <>
-                <span className="hm-ev-leaf" style={{ color: k.ink }} aria-hidden="true">
-                  <b>{d.getDate()}</b>
-                  <small>{d.toLocaleDateString("en-US", { month: "short" })}</small>
+    <section className="hm-ev" aria-label="Coming up">
+      <button type="button" className="hm-ev-open" onClick={() => openEvents?.()} aria-label="Coming up: open your events">
+        <span className="hm-ev-head">
+          <span className="hm-eyebrow">Coming up</span>
+          <span className="hm-ev-chev" aria-hidden="true">›</span>
+        </span>
+        {coming.length === 0 ? (
+          <span className="hm-ev-empty">Tell {coachName} what&rsquo;s coming up, so the plan can plan around it.</span>
+        ) : (
+          <span className="hm-ev-list">
+            {shown.map((e) => {
+              const k = chromeOf(events.categories, e.kind);
+              return (
+                <span key={e.id} className="hm-ev-row">
+                  <i className="hm-ev-dot" style={{ background: k.ink }} />
+                  <span className="hm-ev-when">{e.start === e.end ? shortDate(e.start) : `${shortDate(e.start)} – ${shortDate(e.end)}`}</span>
+                  <span className="hm-ev-title">{e.title}</span>
                 </span>
-                <span className="hm-ev-text">
-                  <b>{e.title}</b>
-                  <small>
-                    {k.label !== "Event" && <em style={{ color: k.ink }}>{k.label} · </em>}
-                    {e.start === e.end ? standing(today, e) : `until ${shortDate(e.end)} · ${standing(today, e)}`}
-                    {!e.mine && ` · from ${coachName}`}
-                  </small>
-                </span>
-              </>
-            );
-            return e.mine ? (
-              <button key={e.id} type="button" className="hm-ev-row mine" onClick={() => setOpen({ event: e })} aria-label={`${e.title}, change`}>
-                {row}
-              </button>
-            ) : (
-              <div key={e.id} className="hm-ev-row">
-                {row}
-              </div>
-            );
-          })}
-          {coming.length > 4 && !showAll && (
-            <button type="button" className="hm-ev-more" onClick={() => setShowAll(true)}>
-              {coming.length - 4} more
-            </button>
-          )}
-        </div>
-      )}
-      {open && <EventSheet event={open.event} categories={events.categories} coachName={coachName} today={today} onClose={() => setOpen(null)} />}
+              );
+            })}
+            {coming.length > 3 && <span className="hm-ev-more">{coming.length - 3} more</span>}
+          </span>
+        )}
+      </button>
     </section>
   );
 }

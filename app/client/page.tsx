@@ -87,6 +87,7 @@ import type { HomeLifestyleMetric } from "./HomeLifestyleCard";
 
 import { ProgressPicturesRow, type ProgressPicturesProps } from "./ProgressPicturesScreen";
 import HomeHub, { type LatestActivity, type UpcomingMeeting } from "./HomeHub";
+import type { HomeEvents } from "./EventsCard";
 import type { PastMeetingView } from "./MeetingsScreen";
 import type { ProgressPics } from "./ProgressPicsCard";
 import NutritionTargetsCard, { type NutritionTargetSet } from "./NutritionTargetsCard";
@@ -290,6 +291,14 @@ function pastMeetingView(m: ReturnType<typeof listMeetings>[number]): PastMeetin
   };
 }
 
+/** The client's events (theirs and the coach's) with the coach's categories: Home's "Coming up" card and the Events screen. */
+function homeEvents(clientId: number): HomeEvents {
+  return {
+    list: listClientEvents(clientId).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, mine: e.added_by === "client" })),
+    categories: listEventCategories(getClient(clientId)?.coach_id ?? 0).map(({ id, label, color }) => ({ id, label, color })),
+  };
+}
+
 function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; photos: ProgressPics; food: PhaseFoodToday; phoneTz: string | null }) {
   const client = getClient(CLIENT_ID);
   const today = localDateStr();
@@ -392,10 +401,7 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
           .sort((a, b) => a.start_week.localeCompare(b.start_week))[0];
         return { next: next ? { track: next.track, name: next.name, start: next.start_week } : null };
       })()}
-      events={{
-        list: listClientEvents(CLIENT_ID).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, mine: e.added_by === "client" })),
-        categories: listEventCategories(client?.coach_id ?? 0).map(({ id, label, color }) => ({ id, label, color })),
-      }}
+      events={homeEvents(CLIENT_ID)}
       checkInCard={{
         clientId: CLIENT_ID,
         // Today's daily metrics in the coach's order, then this week's (30 Sep): the
@@ -1509,6 +1515,7 @@ export default async function ClientPage({
       chatUnread={getNotifications(CLIENT_ID).some((n) => n.kind === "coach_note" && !n.read)}
       // Settings left the bottom nav for the burger (7 Oct): the chat has its tab.
       settingsContent={<SettingsTab CLIENT_ID={CLIENT_ID} />}
+      events={homeEvents(CLIENT_ID)}
       helpEmail={getCoachEmail(CLIENT_ID)}
       coachProfile={getCoachProfileForClient(CLIENT_ID)}
       coachAvatarPath={getCoachAvatarPath(CLIENT_ID)}

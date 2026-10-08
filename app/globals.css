@@ -17937,24 +17937,30 @@ button.ci-hint { cursor: pointer; }
 .hm-recap-sub { display: block; padding-top: 8px; font-size: 14px; font-weight: 700; color: #141a24; }
 .hm-recap-sub + .hm-recap-text { padding-top: 4px; }
 
-/* ---- Home: the Events card (7 Oct). What is coming up in the client's life; theirs to add, the coach's listed too. */
+/* ---- Home: "Coming up" (8 Oct), a glance at the next events; a tap opens the Events screen. */
 .hm-ev { border: 1px solid #dfe3e8; border-radius: 20px; background: #fff; overflow: hidden; }
-/* One 16px gutter for everything in it: the heading, the dots, the button's right edge. */
-.hm-ev-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px 2px; }
-.hm-ev-empty { display: block; width: 100%; margin: 0; padding: 6px 16px 16px; border: 0; background: none; font: inherit; font-size: 13.5px; line-height: 1.45; text-align: left; color: #5b6474; cursor: pointer; }
-.hm-ev-list { display: flex; flex-direction: column; padding: 0 0 6px; }
-.hm-ev-row { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 56px; margin: 0; padding: 8px 16px; box-sizing: border-box; border: 0; border-radius: 0; background: none; font: inherit; text-align: left; color: inherit; }
-.hm-ev-row.mine { cursor: pointer; }
-.hm-ev-row.mine:active { background: #f4f7fc; }
-/* The leaf: the start day big, its month under it, in the category's colour. */
-.hm-ev-leaf { flex: none; display: flex; flex-direction: column; align-items: center; width: 40px; }
-.hm-ev-leaf b { font-family: var(--font-bricolage), var(--font-archivo), "Archivo", sans-serif; font-size: 24px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
-.hm-ev-leaf small { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.75; }
-.hm-ev-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.hm-ev-text em { font-style: normal; font-weight: 700; }
-.hm-ev-text b { font-size: 14.5px; font-weight: 600; color: #141a24; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hm-ev-text small { font-size: 12px; font-weight: 500; color: #5b6474; }
-.hm-ev-more { align-self: flex-start; margin: 2px 16px 6px; padding: 0; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 700; color: #1e3a6e; cursor: pointer; }
+.hm-ev-open { display: block; width: 100%; margin: 0; padding: 12px 16px 14px; border: 0; background: none; font: inherit; text-align: left; color: inherit; cursor: pointer; }
+.hm-ev-open:active { background: #f4f7fc; }
+.hm-ev-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.hm-ev-chev { font-size: 20px; line-height: 1; color: #8b93a1; }
+.hm-ev-empty { display: block; margin-top: 4px; font-size: 13.5px; line-height: 1.45; color: #5b6474; }
+.hm-ev-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.hm-ev-row { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 14px; }
+.hm-ev-dot { flex: none; width: 8px; height: 8px; border-radius: 999px; }
+.hm-ev-when { flex: none; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
+.hm-ev-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: #141a24; }
+.hm-ev-more { font-size: 12.5px; font-weight: 700; color: #1e3a6e; }
+/* The Events screen. */
+.ev-add { display: flex; flex-direction: column; gap: 3px; width: 100%; margin: 0; padding: 14px 16px; border: 0; border-radius: 16px; background: #1e3a6e; font: inherit; font-size: 15px; font-weight: 700; text-align: left; color: #fff; cursor: pointer; }
+.ev-add small { font-size: 12.5px; font-weight: 500; color: rgba(255, 255, 255, 0.78); }
+.ev-row-btn { display: flex; align-items: center; gap: 12px; width: 100%; padding: 13px 16px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.ev-row.past .ev-row-btn { opacity: 0.6; }
+.ev-dot { flex: none; width: 10px; height: 10px; border-radius: 999px; }
+.ev-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ev-title { font-size: 15px; font-weight: 700; color: #141a24; }
+.ev-sub { font-size: 12.5px; font-weight: 500; color: #5b6474; }
+.ev-note { margin-top: 4px; font-size: 13px; line-height: 1.45; color: #313851; }
+.ev-chev { flex: none; font-size: 20px; line-height: 1; color: #8b93a1; }
 /* The sheet. */
 .hm-ev-sheet { gap: 12px; max-height: calc(100dvh - 40px); overflow-y: auto; }
 .hm-ev-kinds { display: flex; flex-wrap: wrap; gap: 6px; }
