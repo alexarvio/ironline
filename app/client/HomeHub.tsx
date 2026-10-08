@@ -153,9 +153,10 @@ export default function HomeHub({
     <div className="hm">
       <HomeBanner dateLabel={dateLabel} firstName={firstName} initialHello={hello} />
       <div className="hm-body">
-        {/* The spine (8 Oct): Today, Your plan, then the coach. Each is always
-            there, so Home is never empty: with nothing to show, each says so. */}
-        <TodayCard items={todoItems} next={todayNext} coachName={coach.firstName} hasPlan={plan.length > 0} />
+        {/* The spine (8 Oct): Today, Your plan, then the coach, so Home is never
+            empty. The cards below say what is due; Today speaks only when
+            nothing is, so the top of the page still says something true. */}
+        {todoItems.length === 0 && <TodayCard next={todayNext} coachName={coach.firstName} hasPlan={plan.length > 0} />}
         {/* Lifestyle first (29 Sep): a white card with the ring and one metric at a time, only with a live phase and daily metrics. */}
         {checkInCard && checkInCard.metrics.length > 0 && <HomeLifestyleCard clientId={checkInCard.clientId} today={today} phase={lifestyle} coachName={coach.firstName} metrics={checkInCard.metrics} yesterday={checkInCard.yesterday} />}
         {/* "Your plan": training and nutrition, a card a live phase, each with its one thing to do. */}
@@ -180,15 +181,12 @@ export default function HomeHub({
 
 // ---- 0 · Today: one line, always. What is left, or that nothing is --------
 
-function TodayCard({ items, next, coachName, hasPlan }: { items: string[]; next: string | null; coachName: string; hasPlan: boolean }) {
-  const todo = items.length;
-  // "Check-in, pictures and training": what the count is made of.
-  const named = items.map((x, i) => (i === 0 ? x.charAt(0).toUpperCase() + x.slice(1) : x)).reduce((acc, x, i) => (i === 0 ? x : i === items.length - 1 ? `${acc} and ${x}` : `${acc}, ${x}`), "");
+function TodayCard({ next, coachName, hasPlan }: { next: string | null; coachName: string; hasPlan: boolean }) {
   return (
     <section className="hm-today" aria-label="Today">
       <span className="hm-eyebrow">Today</span>
-      <b className="hm-today-main">{todo > 0 ? `${todo} thing${todo === 1 ? "" : "s"} to do` : "Nothing to do today"}</b>
-      <small className="hm-today-next">{todo > 0 ? named : (next ?? (hasPlan ? "Rest up." : `What to do each day shows here once ${coachName} sets up your plan.`))}</small>
+      <b className="hm-today-main">Nothing to do today</b>
+      <small className="hm-today-next">{next ?? (hasPlan ? "Rest up." : `What to do each day shows here once ${coachName} sets up your plan.`)}</small>
     </section>
   );
 }
