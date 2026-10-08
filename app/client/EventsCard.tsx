@@ -56,7 +56,7 @@ export default function EventsCard({ events, coachName, today }: { events: HomeE
       </div>
       {coming.length === 0 ? (
         <button type="button" className="hm-ev-empty" onClick={() => setOpen({ event: null })}>
-          Going away, starting something, injured? Tell {coachName} here so your plan can follow.
+          Tell {coachName} what&rsquo;s coming up, so the plan can plan around it.
         </button>
       ) : (
         <div className="hm-ev-list">
