@@ -527,7 +527,7 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
   }
   // Nothing from the coach and no phase ever (8 Oct): say so, and offer the chat.
   if (listClientPhases(clientId).length === 0) {
-    return { kind: "message", title: `No news from ${coachFirst} yet`, body: `Your plan shows up here once ${coachFirst} sets it up. You can message them any time.`, whenLabel: "", cta: `Message ${coachFirst}`, unread: 0, unseen: false, moreThisWeek: 0 };
+    return { kind: "message", title: `Nothing from ${coachFirst} yet`, body: `Messages, notes and changes to your plan from ${coachFirst} land here.`, whenLabel: "", cta: "", unread: 0, unseen: false, moreThisWeek: 0 };
   }
   return {
     kind: "welcome",

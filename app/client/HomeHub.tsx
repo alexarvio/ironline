@@ -347,9 +347,12 @@ function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstNam
             Open chat
             {a.unread > 0 && <span className="hm-lt-unread">{a.unread}</span>}
           </button>
-          <button type="button" className="hm-lt-cta" onClick={follow} aria-label={a.cta}>
-            View
-          </button>
+          {/* Nothing to view yet (an empty cta): the chat alone. */}
+          {a.cta && (
+            <button type="button" className="hm-lt-cta" onClick={follow} aria-label={a.cta}>
+              View
+            </button>
+          )}
         </div>
       </article>
       {watching && a.videoReply && <VideoReplySheet reply={a.videoReply} onClose={() => setWatching(false)} />}

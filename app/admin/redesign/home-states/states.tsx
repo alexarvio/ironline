@@ -33,7 +33,7 @@ export function homeProps(state: StateId): HomeProps {
       ...base,
       session: null,
       progressPics: null,
-      latestActivity: { kind: "message", title: "No news from Finlay yet", body: "Your plan shows up here once Finlay sets it up. You can message them any time.", whenLabel: "", cta: "Message Finlay", unread: 0, unseen: false, moreThisWeek: 0 },
+      latestActivity: { kind: "message", title: "Nothing from Finlay yet", body: "Messages, notes and changes to your plan from Finlay land here.", whenLabel: "", cta: "", unread: 0, unseen: false, moreThisWeek: 0 },
       upcoming: null,
       phases: [],
       checkInCount: null,
