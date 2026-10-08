@@ -156,7 +156,7 @@ export default function HomeHub({
         {/* The spine (8 Oct): Today, Your plan, then the coach, so Home is never
             empty. The cards below say what is due; Today speaks only when
             nothing is, so the top of the page still says something true. */}
-        {todoItems.length === 0 && <TodayCard next={todayNext} coachName={coach.firstName} hasPlan={plan.length > 0} />}
+        {todoItems.length === 0 && <TodayCard next={todayNext} coachName={coach.firstName} hasPlan={plan.length > 0} nextPhaseStart={planGap?.next?.start ?? null} />}
         {/* Lifestyle first (29 Sep): a white card with the ring and one metric at a time, only with a live phase and daily metrics. */}
         {checkInCard && checkInCard.metrics.length > 0 && <HomeLifestyleCard clientId={checkInCard.clientId} today={today} phase={lifestyle} coachName={coach.firstName} metrics={checkInCard.metrics} yesterday={checkInCard.yesterday} />}
         {/* "Your plan": training and nutrition, a card a live phase, each with its one thing to do. */}
@@ -181,12 +181,13 @@ export default function HomeHub({
 
 // ---- 0 · Today: one line, always. What is left, or that nothing is --------
 
-function TodayCard({ next, coachName, hasPlan }: { next: string | null; coachName: string; hasPlan: boolean }) {
+function TodayCard({ next, coachName, hasPlan, nextPhaseStart }: { next: string | null; coachName: string; hasPlan: boolean; /** Between phases: when the next one starts. */ nextPhaseStart: string | null }) {
+  const until = nextPhaseStart ? new Date(`${nextPhaseStart}T00:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" }) : null;
   return (
     <section className="hm-today" aria-label="Today">
       <span className="hm-eyebrow">Today</span>
       <b className="hm-today-main">Nothing to do today</b>
-      <small className="hm-today-next">{next ?? (hasPlan ? "Rest up." : `What to do each day shows here once ${coachName} sets up your plan.`)}</small>
+      <small className="hm-today-next">{next ?? (hasPlan ? "Rest up." : until ? `Rest up until ${until}.` : `What to do each day shows here once ${coachName} sets up your plan.`)}</small>
     </section>
   );
 }
