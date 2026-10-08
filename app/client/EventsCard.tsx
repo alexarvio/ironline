@@ -47,9 +47,10 @@ export default function EventsCard({ events, coachName, today }: { events: HomeE
   const shown = showAll ? coming : coming.slice(0, 4);
   return (
     <section className="hm-ev" aria-label="Events">
-      <div className="hm-tasks-head">
+      <div className="hm-ev-head">
         <span className="hm-eyebrow">Events</span>
-        <button type="button" className="hm-ev-add" onClick={() => setOpen({ event: null })}>
+        {/* The app's small button (pp-btn), as on Progress pictures. */}
+        <button type="button" className="pp-btn sm tint" onClick={() => setOpen({ event: null })}>
           + Add
         </button>
       </div>
