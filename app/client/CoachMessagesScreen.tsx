@@ -372,7 +372,7 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
           onSent={() => void refresh()}
         />
       </footer>
-      {eventOpen && events && <EventSheet event={null} categories={events.categories} coachName={coachName} today={events.today} onClose={() => setEventOpen(false)} onSaved={sayEvent} />}
+      {eventOpen && events && <EventSheet clientId={clientId} event={null} categories={events.categories} coachName={coachName} today={events.today} onClose={() => setEventOpen(false)} onSaved={sayEvent} />}
     </>
   );
 }

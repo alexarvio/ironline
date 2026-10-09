@@ -22,7 +22,7 @@ import { CoachAvatar } from "./CoachAvatar";
 type Sheet = { event: HomeEvent | null; type: EventTypeId; initial?: EventValues | null; error?: string | null } | null;
 const LAST_TYPE_KEY = "ironline:last-event-type";
 
-export default function EventsScreen({ events, coachName, today, onBack }: { events: HomeEvents; coachName: string; today: string; onBack: () => void }) {
+export default function EventsScreen({ clientId, events, coachName, today, onBack }: { clientId: number; events: HomeEvents; coachName: string; today: string; onBack: () => void }) {
   const router = useRouter();
   const coach = useCoachIdentity();
   const coachPhoto = coach?.photoPath ?? null;
@@ -86,7 +86,7 @@ export default function EventsScreen({ events, coachName, today, onBack }: { eve
     if (s.event) {
       setPending(true);
       try {
-        await clientUpdateEventAction(s.event.id, input);
+        await clientUpdateEventAction(clientId, s.event.id, input);
         router.refresh();
         setHighlight(s.event.id);
       } catch {
@@ -101,7 +101,7 @@ export default function EventsScreen({ events, coachName, today, onBack }: { eve
     setAdded((a) => [...a, temp]);
     setHighlight(temp.id);
     try {
-      const id = await clientAddEventAction(input);
+      const id = await clientAddEventAction(clientId, input);
       if (id == null) throw new Error("not saved");
       router.refresh();
     } catch {
@@ -113,7 +113,7 @@ export default function EventsScreen({ events, coachName, today, onBack }: { eve
   const remove = async (e: HomeEvent) => {
     setPending(true);
     try {
-      await clientDeleteEventAction(e.id);
+      await clientDeleteEventAction(clientId, e.id);
       setOpen(null);
       setSheet(null);
       router.refresh();

@@ -10,7 +10,7 @@ export default function EventsStateScreen({ events, coachName, today }: { events
     <div className="phone-frame es-frame">
       <div className="app-screen app-stack">
         <div className="app-layer app-layer-push cn-screen">
-          <EventsScreen events={events} coachName={coachName} today={today} onBack={() => {}} />
+          <EventsScreen clientId={0} events={events} coachName={coachName} today={today} onBack={() => {}} />
         </div>
       </div>
     </div>

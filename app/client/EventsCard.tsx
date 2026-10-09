@@ -112,7 +112,7 @@ export default function EventsCard({ events, today }: { events: HomeEvents; coac
 
 // ---- The sheet: which kind, what, when (one day or a stretch), and a note for the coach.
 
-export function EventSheet({ event, categories, coachName, today, onClose, onSaved }: { event: HomeEvent | null; categories: HomeEventCategory[]; coachName: string; today: string; onClose: () => void; /** What was just saved, for the chat to say so (7 Oct). */ onSaved?: (v: { kind: string | null; title: string; start: string; end: string; note: string }) => void }) {
+export function EventSheet({ clientId, event, categories, coachName, today, onClose, onSaved }: { clientId: number; event: HomeEvent | null; categories: HomeEventCategory[]; coachName: string; today: string; onClose: () => void; /** What was just saved, for the chat to say so (7 Oct). */ onSaved?: (v: { kind: string | null; title: string; start: string; end: string; note: string }) => void }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [kind, setKind] = useState<string | null>(event?.kind ?? null);
@@ -128,15 +128,15 @@ export function EventSheet({ event, categories, coachName, today, onClose, onSav
   const save = () =>
     start(async () => {
       const v = { kind, title: title.trim(), start: from, end, note: note.trim() };
-      if (event) await clientUpdateEventAction(event.id, v);
-      else await clientAddEventAction(v);
+      if (event) await clientUpdateEventAction(clientId, event.id, v);
+      else await clientAddEventAction(clientId, v);
       onSaved?.(v);
       router.refresh();
       onClose();
     });
   const remove = () =>
     start(async () => {
-      await clientDeleteEventAction(event!.id);
+      await clientDeleteEventAction(clientId, event!.id);
       router.refresh();
       onClose();
     });

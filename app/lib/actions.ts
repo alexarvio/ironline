@@ -2078,24 +2078,27 @@ export async function deleteClientEventAction(clientId: number, eventId: number)
 /** A category of the coach's own; answers with its id as the events store it ("c12"). */
 // The client's own events, from their Home (7 Oct): added as theirs, and only
 // theirs can be changed or taken away; the coach's stay the coach's.
-export async function clientAddEventAction(v: EventInput) {
-  const { clientId } = await requireClient();
-  const row = addClientEvent(clientId, v, "client");
+// Access, not requireClient (9 Oct): a coach previewing the client's app acts
+// as the client here, and requireClient's redirect was throwing them to the
+// login page from inside the sheet.
+export async function clientAddEventAction(clientId: number, v: EventInput) {
+  if (!(await canAccessClient(Number(clientId)))) return null;
+  const row = addClientEvent(Number(clientId), v, "client");
   revalidatePath("/admin");
   revalidatePath("/client");
   return row?.id ?? null;
 }
-export async function clientUpdateEventAction(eventId: number, v: EventInput) {
-  const { clientId } = await requireClient();
-  if (!clientOwnsEvent(clientId, Number(eventId))) return;
-  updateClientEvent(clientId, Number(eventId), v);
+export async function clientUpdateEventAction(clientId: number, eventId: number, v: EventInput) {
+  if (!(await canAccessClient(Number(clientId)))) return;
+  if (!clientOwnsEvent(Number(clientId), Number(eventId))) return;
+  updateClientEvent(Number(clientId), Number(eventId), v);
   revalidatePath("/admin");
   revalidatePath("/client");
 }
-export async function clientDeleteEventAction(eventId: number) {
-  const { clientId } = await requireClient();
-  if (!clientOwnsEvent(clientId, Number(eventId))) return;
-  deleteClientEvent(clientId, Number(eventId));
+export async function clientDeleteEventAction(clientId: number, eventId: number) {
+  if (!(await canAccessClient(Number(clientId)))) return;
+  if (!clientOwnsEvent(Number(clientId), Number(eventId))) return;
+  deleteClientEvent(Number(clientId), Number(eventId));
   revalidatePath("/admin");
   revalidatePath("/client");
 }

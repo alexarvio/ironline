@@ -361,7 +361,7 @@ export default function AppShell({
       </div>
     ) : pushView === "events" && events ? (
       <div className="app-layer app-layer-push cn-screen">
-        <EventsScreen events={events} coachName={coachMessages.coachName.trim().split(/\s+/)[0] || "your coach"} today={checkIn.today} onBack={() => setPushView(null)} />
+        <EventsScreen clientId={clientId} events={events} coachName={coachMessages.coachName.trim().split(/\s+/)[0] || "your coach"} today={checkIn.today} onBack={() => setPushView(null)} />
       </div>
     ) : pushView === "settings" && settingsContent ? (
       <div className="app-layer app-layer-push cn-screen">
