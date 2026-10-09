@@ -284,7 +284,7 @@ function TypePicker({ value, onPick }: { value: EventTypeId; onPick: (id: EventT
         return (
           <button key={x.id} type="button" role="radio" aria-checked={on} className={`evs-type${on ? " on" : ""}`} style={{ "--tc": x.color, "--trgb": x.rgb } as React.CSSProperties} onClick={() => onPick(x.id)}>
             <span className="evs-type-disc">
-              <TypeIcon path={x.icon} fill={x.fill} size={15} stroke={2.2} />
+              <TypeIcon path={x.icon} fill={x.fill} size={20} stroke={2} />
             </span>
             {x.label}
           </button>
