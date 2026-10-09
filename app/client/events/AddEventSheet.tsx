@@ -5,9 +5,7 @@ import type React from "react";
 import { createPortal } from "react-dom";
 import { EVENT_TYPES, eventTypeOf, type EventTypeId } from "../../lib/eventTypes";
 import { addDays, longDay } from "../../lib/eventDates";
-import { useCoachIdentity } from "../CheckInContext";
 import type { HomeEvent } from "../EventsCard";
-import { CoachAvatar } from "./CoachAvatar";
 
 // The "New event" sheet (9 Oct), colour-coded: the type picked colours the
 // top of the sheet (wash, glow, grabber, the pill by the title), the picker
@@ -61,7 +59,6 @@ export default function AddEventSheet({
   /** Editing: removes the event, after the sheet's own confirm. */
   onDelete?: () => void;
 }) {
-  const coach = useCoachIdentity();
   const seed: EventValues | null = initial ?? (event ? { type: eventTypeOf(event.kind).id, title: event.title, start: event.start, end: event.end, note: event.note } : null);
   const [type, setType] = useState<EventTypeId>(seed?.type ?? initialType);
   const [title, setTitle] = useState(seed?.title ?? "");
@@ -250,7 +247,7 @@ export default function AddEventSheet({
             {note.length > 240 && <small>{note.length}/280</small>}
           </span>
 
-          <SaveBar type={t} editing={!!event} ok={ok} pending={pending} error={error} coachName={coachName} coachPhoto={coach?.photoPath ?? null} onSave={submit} />
+          <SaveBar type={t} editing={!!event} ok={ok} pending={pending} error={error} onSave={submit} />
 
           {event && onDelete && (
             <button type="button" className={`evs-delete${sure ? " sure" : ""}`} onClick={() => (sure ? onDelete() : setSure(true))} disabled={pending}>
@@ -343,7 +340,7 @@ function WhenSection({ oneDay, start, end, today, onMode, onStart, onEnd }: { on
 
 // ---- Save: navy, whatever the type; the type's icon is the one cue.
 
-function SaveBar({ type, editing, ok, pending, error, coachName, coachPhoto, onSave }: { type: ReturnType<typeof eventTypeOf>; editing: boolean; ok: boolean; pending: boolean; error: string | null; coachName: string; coachPhoto: string | null; onSave: () => void }) {
+function SaveBar({ type, editing, ok, pending, error, onSave }: { type: ReturnType<typeof eventTypeOf>; editing: boolean; ok: boolean; pending: boolean; error: string | null; onSave: () => void }) {
   return (
     <div className="evs-savebar">
       <button type="button" className="evs-save" onClick={onSave} aria-disabled={!ok || pending} disabled={!ok || pending}>
@@ -351,10 +348,6 @@ function SaveBar({ type, editing, ok, pending, error, coachName, coachPhoto, onS
         {pending ? (editing ? "Saving…" : "Adding…") : editing ? "Save changes" : `Add ${type.label.toLowerCase()} to your plan`}
       </button>
       {error && <p className="evs-error" role="alert">{error}</p>}
-      <span className="evs-sub">
-        <CoachAvatar name={coachName} photoPath={coachPhoto} size={18} ring="row" />
-        {coachName} sees it on your plan straight away.
-      </span>
     </div>
   );
 }
