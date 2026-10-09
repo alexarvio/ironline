@@ -2697,156 +2697,41 @@ a.cd-entry:hover { border-color: var(--accent); }
   background: #ffffff;
 }
 
-/* ---- Notifications sub-view ---- */
-
-.cn-notifications {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 0 18px 24px;
-  scrollbar-width: none;
-}
-
-.cn-notifications::-webkit-scrollbar {
-  display: none;
-}
-
-.cn-notif-group-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 32px; }
-
-
-.cn-markall {
-  min-height: 32px;
-  padding: 0 12px;
-  border: 1px solid #dfe3e8;
-  border-radius: 10px;
-  background: #fff;
-  color: #1e3a6e;
-  font-size: 12.5px;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
-  white-space: nowrap;
-}
-
-.cn-markall:hover { background: #f8f9fb; }
-
-.cn-markall:disabled {
-  background: #fff;
-  border-color: #eceff3;
-  color: #5b6474;
-  cursor: default;
-}
-
-.cn-notif-group {
-  padding-top: 16px;
-}
-
-.cn-notif-group-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #5b6474;
-}
-
-.cn-notif-list {
-  display: flex;
-  flex-direction: column;
-  margin-top: 4px;
-}
-
-.cn-notif-row {
-  width: 100%;
-  display: flex;
-  gap: 12px;
-  text-align: left;
-  border: none;
-  border-top: 1px solid #eceff3;
-  background: none;
-  padding: 14px 0;
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
-  min-height: 44px;
-}
-
-/* The kind's icon on its own, no bubble (28 Sep); blue while unread. */
-.cn-notif-icon {
-  flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  color: #5b6474;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.cn-notif-icon.unread {
-  color: #2f5d8f;
-}
-
-.cn-notif-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-.cn-notif-body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.cn-notif-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.cn-notif-kind {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #5b6474;
-}
-
-.cn-notif-time {
-  flex-shrink: 0;
-  font-size: 12px;
-  color: #8b93a1;
-}
-
-.cn-notif-text {
-  font-size: 14px;
-  color: #5b6474;
-  font-weight: 500;
-  margin-top: 2px;
-  line-height: 1.4;
-}
-
-.cn-notif-text.unread {
-  color: #141a24;
-  font-weight: 700;
-}
-
-.cn-notif-action {
-  display: inline-block;
-  font-size: 12px;
-  font-weight: 700;
-  color: #2f5d8f;
-  margin-top: 6px;
-}
-
-.cn-notif-dot {
-  flex-shrink: 0;
-  width: 8px;
-  height: 8px;
-  margin-top: 6px;
-  border-radius: 999px;
-  background: #2f5d8f;
-}
+/* ---- Notifications, "Clean feed" (9 Oct). Prefix nt-. The coach's face
+   with a badge, the category's colour as --c / --rgb on each row. */
+.nt-nav { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+.nt-markall { justify-self: end; height: 32px; padding: 0 11px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce3ee; font: inherit; font-size: 12px; font-weight: 800; white-space: nowrap; color: #1d3466; cursor: pointer; }
+.nt-markall.off { color: #98a2b3; cursor: default; }
+.nt-scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding: 10px 16px 60px; background: linear-gradient(180deg, #e3e9f5 0%, #f4f7fc 28%); }
+.nt-day { display: flex; flex-direction: column; gap: 6px; }
+.nt-day-head { display: flex; align-items: center; justify-content: space-between; margin: 0; padding: 6px 4px 2px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #5b6474; }
+.nt-day-new { color: #2f6fd6; }
+.nt-item { display: flex; align-items: flex-start; gap: 12px; width: 100%; margin: 0; padding: 12px; border: 0; border-radius: 18px; background: #fff; font: inherit; color: inherit; text-align: left; cursor: pointer; box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04), 0 14px 24px -20px rgba(var(--rgb), 0.7), inset 0 0 0 1px rgba(var(--rgb), 0.14); transition: background 0.25s ease, box-shadow 0.25s ease; }
+.nt-item.read { background: transparent; box-shadow: none; }
+.nt-item.read:active { background: rgba(255, 255, 255, 0.6); }
+.nt-avatar { position: relative; flex: none; width: 42px; height: 42px; }
+.nt-avatar img, .nt-avatar-initial { display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 999px; object-fit: cover; }
+.nt-avatar-initial { background: linear-gradient(135deg, #2a3a5c, #141a24); color: #fff; font-size: 16px; font-weight: 800; }
+.nt-avatar-sys { display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 14px; background: rgba(91, 100, 114, 0.12); color: #5b6472; }
+.nt-badge { position: absolute; right: -3px; bottom: -3px; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 999px; background: var(--c); color: #fff; box-shadow: 0 0 0 2px #fff; }
+.nt-item.read .nt-badge { box-shadow: 0 0 0 2px #f4f7fc; }
+.nt-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.nt-top { display: flex; align-items: center; gap: 6px; }
+.nt-cat { font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--c); }
+.nt-time { margin-left: auto; font-size: 11.5px; font-weight: 600; color: #98a2b3; font-variant-numeric: tabular-nums; }
+.nt-dot { flex: none; width: 8px; height: 8px; border-radius: 999px; background: #2f6fd6; }
+.nt-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: 14.5px; font-weight: 800; line-height: 1.3; color: #141a24; }
+.nt-item.read .nt-title { font-weight: 600; }
+.nt-bottom { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.nt-body { flex: 1; min-width: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: 12.5px; font-weight: 600; line-height: 1.4; color: #5b6474; }
+.nt-action { flex: none; margin: -12px 0 -12px; padding: 12px 0; font-size: 12.5px; font-weight: 800; white-space: nowrap; color: var(--c); }
+.nt-action.gone { color: #98a2b3; }
+.nt-loading { display: flex; align-items: center; justify-content: center; height: 44px; font-size: 12.5px; font-weight: 600; color: #98a2b3; }
+.nt-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 80px; text-align: center; }
+.nt-empty-bell { display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 999px; background: rgba(29, 52, 102, 0.08); color: #1d3466; }
+.nt-empty b { font-size: 17px; font-weight: 800; color: #141a24; }
+.nt-empty small { max-width: 270px; font-size: 13.5px; font-weight: 600; line-height: 1.45; color: #5b6474; text-wrap: pretty; }
+@media (prefers-reduced-motion: reduce) { .nt-item { transition: none; } }
 
 .cn-footnote {
   border-top: 1px solid #eceff3;

@@ -139,6 +139,13 @@ export function useTrainingFocus() {
 
 // Same bridge for the Meetings screen, opened from Home's meeting card and
 // the menu. Null outside AppShell's tab content (the screen itself).
+// Back, for a pushed screen the page renders itself (Notifications, 9 Oct).
+const BackContext = createContext<(() => void) | null>(null);
+export const BackProvider = BackContext.Provider;
+export function useBack() {
+  return useContext(BackContext);
+}
+
 const MeetingsContext = createContext<(() => void) | null>(null);
 
 export const MeetingsProvider = MeetingsContext.Provider;

@@ -101,7 +101,8 @@ import { pushPublicKey } from "../lib/push";
 import { fcmConfigured } from "../lib/fcm";
 import SupplementsCard, { type SupplementRow } from "./SupplementsCard";
 import ReportArchiveList, { ArchiveReport } from "./ReportArchiveList";
-import NotificationRow from "./NotificationRow";
+import NotificationsScreen, { type NotifView } from "./notifications/NotificationsScreen";
+import { categorize, isListed, titleAndBody } from "../lib/notificationTypes";
 import DeleteAccountRow from "./DeleteAccountRow";
 import { clerkOn } from "../lib/clerk";
 import MyDetailsCard from "./MyDetailsCard";
@@ -1119,102 +1120,30 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
 }
 
 
-const NOTIFICATION_KIND_LABEL: Record<string, string> = {
-  coach_note: "Coach note",
-  report: "Progress report",
-  programme: "Programme",
-  reminder: "Reminder",
-  general: "Update",
-};
-
-function notificationIcon(kind: string) {
-  switch (kind) {
-    case "report":
-      return <ReportIcon />;
-    case "programme":
-      return <CalendarIcon />;
-    case "reminder":
-      return <ClockIcon />;
-    default:
-      return <ChatIcon />;
-  }
-}
-
-function notificationTimeLabel(iso: string) {
-  const d = new Date(iso);
-  const sameDay = d.toDateString() === new Date().toDateString();
-  return sameDay
-    ? d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
-    : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-// Notifications sub-view — grouped Today/Earlier, each row a self-submitting
-// form (mark-read on tap, same auto-submit pattern used elsewhere in this
-// app, e.g. PhotoUploadBox) rather than client-side state.
+// The Notifications screen (9 Oct): every row the coach caused, as a
+// category with a title and a body, newest first; reminders and chat
+// messages stay out (Home and the chat tab have them).
 function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
-  const all = getNotifications(CLIENT_ID);
-  // Pure notifications (7 Oct): the chat has its own tab on the bottom nav
-  // now, so its messages are not listed here and no row leads to it.
-  const notifications = all.filter((n) => n.kind !== "coach_note");
-  // Replies to the client's videos, opened straight from their notification.
+  const coachFirst = getCoachFirstName(CLIENT_ID);
   const videoReplies = listVideoReplies(CLIENT_ID);
-  const unreadCount = notifications.filter((n) => !n.read).length;
-  const todayStr = localDateStr();
-  const groups = [
-    { label: "Today", items: notifications.filter((n) => n.created_at.slice(0, 10) === todayStr) },
-    { label: "Earlier", items: notifications.filter((n) => n.created_at.slice(0, 10) !== todayStr) },
-  ].filter((g) => g.items.length > 0);
-
-  return (
-    <div className="cn-notifications">
-      {groups.length === 0 ? (
-        <p className="cn-empty">No notifications yet.</p>
-      ) : (
-        groups.map((g, i) => (
-          <section key={g.label} className="cn-notif-group">
-            {/* Mark all as read shares the first group's label line. */}
-            <div className="cn-notif-group-head">
-              <span className="cn-notif-group-label">{g.label}</span>
-              {i === 0 && (
-                <form action={markAllNotificationsReadAction}>
-                  <input type="hidden" name="clientId" value={CLIENT_ID} />
-                  <button type="submit" className="cn-markall" disabled={unreadCount === 0}>
-                    Mark all as read
-                  </button>
-                </form>
-              )}
-            </div>
-            <div className="cn-notif-list">
-              {g.items.map((n) => (
-                <NotificationRow
-                  key={n.id}
-                  id={n.id}
-                  actionTab={n.action_tab}
-                  actionRef={n.action_ref}
-                  videoReply={n.action_tab === "video" ? videoReplies.find((r) => r.id === n.action_ref) ?? null : null}
-                >
-                  <span className={`cn-notif-icon${n.read ? "" : " unread"}`} aria-hidden="true">
-                    {notificationIcon(n.kind)}
-                  </span>
-                  <span className="cn-notif-body">
-                    <span className="cn-notif-top">
-                      <span className="cn-notif-kind">{NOTIFICATION_KIND_LABEL[n.kind] ?? "Update"}</span>
-                      <span className="cn-notif-time">{notificationTimeLabel(n.created_at)}</span>
-                    </span>
-                    <span className={`cn-notif-text${n.read ? "" : " unread"}`}>{n.message}</span>
-                    {n.action_label && <span className="cn-notif-action">{n.action_label}</span>}
-                  </span>
-                  {!n.read && <span className="cn-notif-dot" aria-hidden="true" />}
-                </NotificationRow>
-              ))}
-            </div>
-          </section>
-        ))
-      )}
-
-      <div className="cn-footnote">Turn individual alerts on or off in Settings → Preferences.</div>
-    </div>
-  );
+  const items: NotifView[] = getNotifications(CLIENT_ID, 300)
+    .filter(isListed)
+    .map((n) => {
+      const { title, body } = titleAndBody(n.message, coachFirst);
+      return {
+        id: n.id,
+        category: categorize(n),
+        eventType: null,
+        title,
+        body,
+        createdAt: n.created_at,
+        read: n.read,
+        actionTab: n.action_tab,
+        actionRef: n.action_ref,
+        videoReply: n.action_tab === "video" ? videoReplies.find((r) => r.id === n.action_ref) ?? null : null,
+      };
+    });
+  return <NotificationsScreen items={items} clientId={CLIENT_ID} coachName={coachFirst} />;
 }
 
 // ---- Progress pictures screen --------------------------------------------
@@ -1362,7 +1291,8 @@ export default async function ClientPage({
   };
   const progressPictures = progressPicturesData(CLIENT_ID);
   // The bell: anything unread but the chat, which has its own dot on the Messages tab (7 Oct).
-  const hasUnreadNotifications = getNotifications(CLIENT_ID).some((n) => n.kind !== "coach_note" && !n.read);
+  // Reminders and chat messages are not notifications (9 Oct): neither counts for the bell.
+  const hasUnreadNotifications = getNotifications(CLIENT_ID).some((n) => isListed(n) && !n.read);
 
   const currentWeekNum = getCurrentWeekNumber(CLIENT_ID);
   // Only the currently deployed program's own weeks — not every published
