@@ -53,9 +53,7 @@ export default function EventsCard({ events, coachName, today }: { events: HomeE
           <span className="hm-eyebrow">Coming up</span>
           <span className="hm-ev-chev" aria-hidden="true">›</span>
         </span>
-        {coming.length === 0 ? (
-          <span className="hm-ev-empty">Tell {coachName} what&rsquo;s coming up, so the plan can plan around it.</span>
-        ) : (
+        {coming.length > 0 && (
           <span className="hm-ev-list">
             {shown.map((e) => {
               const k = chromeOf(events.categories, e.kind);
@@ -70,8 +68,13 @@ export default function EventsCard({ events, coachName, today }: { events: HomeE
             {coming.length > 3 && <span className="hm-ev-more">{coming.length - 3} more</span>}
           </span>
         )}
-        {/* What the card is for, said every time (9 Oct): the client tells the coach what is going on, so the plan can plan around it. */}
-        {coming.length > 0 && <span className="hm-ev-foot">+ Add a trip, an injury, a busy week: anything {coachName} should plan around.</span>}
+        {/* What the card is for, said every time, rows or none (9 Oct): the client
+            tells the coach what is going on, so the plan can plan around it. The
+            reason on the left, Add on the right. */}
+        <span className={`hm-ev-foot${coming.length ? " under" : ""}`}>
+          <span className="hm-ev-why">A trip, an injury, a busy week: anything {coachName} should plan around.</span>
+          <span className="hm-ev-add">+ Add</span>
+        </span>
       </button>
     </section>
   );

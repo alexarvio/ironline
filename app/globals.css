@@ -11921,6 +11921,11 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .ts-actions { display: flex; flex-direction: column; gap: 6px; }
 .ts-cancel { border: 0; background: none; font: inherit; font-size: 12px; font-weight: 700; color: #5b6474; padding: 6px; cursor: pointer; }
 .ts-all-logged { margin-top: 12px; text-align: center; font-size: 12px; font-weight: 700; color: #2f7a3f; }
+/* The rows carry last session's numbers (9 Oct): said under them, above the button. */
+.ts-prev-note { display: flex; align-items: flex-start; gap: 8px; margin-top: 10px; font-size: 12.5px; line-height: 1.4; font-weight: 600; color: #5b6474; }
+.ts-prev-mark { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-top: 1px; border-radius: 999px; background: #1e3a6e; color: #fff; font-size: 11px; font-weight: 800; line-height: 1; }
+/* The target stepped up on last session's numbers (9 Oct). */
+.wo-target-up { margin-top: 8px; font-size: 12.5px; font-weight: 700; color: #2f7a3f; }
 
 /* Kg / lbs switch in the weight column's label: the lit half is the unit
    every figure on the exercise is shown in. */
@@ -17956,14 +17961,16 @@ button.ci-hint { cursor: pointer; }
 .hm-ev-open:active { background: #f4f7fc; }
 .hm-ev-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .hm-ev-chev { font-size: 20px; line-height: 1; color: #8b93a1; }
-.hm-ev-empty { display: block; margin-top: 4px; font-size: 13.5px; line-height: 1.45; color: #5b6474; }
 .hm-ev-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
 .hm-ev-row { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 14px; }
 .hm-ev-dot { flex: none; width: 8px; height: 8px; border-radius: 999px; }
 .hm-ev-when { flex: none; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
 .hm-ev-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: #141a24; }
 .hm-ev-more { font-size: 12.5px; font-weight: 700; color: #1e3a6e; }
-.hm-ev-foot { display: block; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eef1f5; font-size: 12.5px; line-height: 1.4; font-weight: 600; color: #1e3a6e; }
+.hm-ev-foot { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+.hm-ev-foot.under { margin-top: 10px; padding-top: 10px; border-top: 1px solid #eef1f5; }
+.hm-ev-why { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.4; font-weight: 500; color: #5b6474; }
+.hm-ev-add { flex: none; font-size: 13px; font-weight: 700; color: #1e3a6e; }
 /* The Events screen. */
 .ev-add { display: flex; flex-direction: column; gap: 3px; width: 100%; margin: 0; padding: 14px 16px; border: 0; border-radius: 16px; background: #1e3a6e; font: inherit; font-size: 15px; font-weight: 700; text-align: left; color: #fff; cursor: pointer; }
 .ev-add small { font-size: 12.5px; font-weight: 500; color: rgba(255, 255, 255, 0.78); }
