@@ -91,19 +91,20 @@ export default function EventsCard({ events, coachName, today }: { events: HomeE
                     <i className="hm-ev-ico">
                       <TypeIcon path={t.icon} fill={t.fill} size={13} stroke={2.2} />
                     </i>
-                    <span className="hm-ev-tag">Next up</span>
-                    <span className="hm-ev-title">{next.title}</span>
-                    <span className="hm-ev-when">{next.start === next.end ? shortDate(next.start) : `${shortDate(next.start)} – ${shortDate(next.end)}`}</span>
+                    <span className="hm-ev-next-text">
+                      <span className="hm-ev-tag">Next up</span>
+                      <span className="hm-ev-next-line">
+                        <span className="hm-ev-title">{next.title}</span>
+                        <span className="hm-ev-when">{next.start === next.end ? shortDate(next.start) : `${shortDate(next.start)} – ${shortDate(next.end)}`}</span>
+                      </span>
+                    </span>
                     {next.note && <span className="hm-ev-more" aria-hidden="true">›</span>}
                   </span>
                 );
               })()}
           </span>
         )}
-        {/* What the card is for (9 Oct): the client tells the coach what is going on, so the plan can plan around it. A tap opens the Events screen. */}
-        <span className={`hm-ev-foot${coming.length ? " under" : ""}`}>
-          <span className="hm-ev-why">A trip, an injury, a busy week: anything {coachName} should plan around.</span>
-        </span>
+        {!running && !next && <span className="hm-ev-empty">Nothing logged yet.</span>}
       </button>
     </section>
   );

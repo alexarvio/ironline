@@ -17965,7 +17965,12 @@ button.ci-hint { cursor: pointer; }
 .hm-ev-row { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 14px; }
 .hm-ev-ico { flex: none; display: inline-flex; color: var(--c); }
 .hm-ev-tag { flex: none; font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--c); }
-.hm-ev-row.next .hm-ev-when { flex: 1; min-width: 0; margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; font-weight: 500; }
+.hm-ev-row.next { align-items: flex-start; }
+.hm-ev-row.next .hm-ev-ico { margin-top: 2px; }
+.hm-ev-next-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hm-ev-next-line { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.hm-ev-row.next .hm-ev-when { flex: none; font-weight: 500; }
+.hm-ev-empty { display: block; margin-top: 6px; font-size: 13px; font-weight: 600; color: #5b6474; }
 .hm-ev-more { flex: none; font-size: 18px; line-height: 1; color: #8b93a1; }
 .hm-ev-when { flex: none; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
 .hm-ev-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: #141a24; }
@@ -17978,9 +17983,6 @@ button.ci-hint { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .hm-ev-row.on::before, .hm-ev-row.on::after { animation: none; opacity: 0.6; } }
 .hm-ev-row.on .hm-ev-when { flex: 1; min-width: 0; margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; font-weight: 500; }
 .hm-ev-now { flex: none; display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px 0 6px; border-radius: 999px; background: var(--c); color: #fff; font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
-.hm-ev-foot { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
-.hm-ev-foot.under { margin-top: 10px; padding-top: 10px; border-top: 1px solid #eef1f5; }
-.hm-ev-why { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.4; font-weight: 500; color: #5b6474; }
 /* The Events screen, the "Today line" (9 Oct). Prefix ev-. Tokens: navy
    #1d3466 is the events accent; each row carries its type as --c / --rgb. */
 .ev-scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding: 10px 16px 120px; background: linear-gradient(180deg, #e3e9f5 0%, #f4f7fc 28%); }
