@@ -11,7 +11,7 @@ import CoachProfileScreen from "./CoachProfileScreen";
 import { HealthAutoSync } from "./HealthSync";
 import { NativePush } from "./NativePush";
 import CoachMessagesScreen, { type CoachMessagesProps } from "./CoachMessagesScreen";
-import EventsScreen from "./EventsScreen";
+import EventsScreen from "./events/EventsScreen";
 import type { HomeEvents } from "./EventsCard";
 import FoodDiaryScreen, { type FoodDiaryProps } from "./FoodDiaryScreen";
 import MeetingsScreen, { type MeetingsProps } from "./MeetingsScreen";

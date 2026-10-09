@@ -1,6 +1,6 @@
 "use client";
 
-import EventsScreen from "../../../client/EventsScreen";
+import EventsScreen from "../../../client/events/EventsScreen";
 import type { HomeEvents } from "../../../client/EventsCard";
 
 // The client's Events screen inside a phone, from the board's made-up data,

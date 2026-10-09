@@ -30,7 +30,7 @@ export function eventsProps(state: StateId): HomeEvents {
       list: [
         { id: 1, kind: "trip", title: "Japan with friends", start: "2026-10-20", end: "2026-11-20", note: "", mine: true },
         { id: 2, kind: "family", title: "Wedding in Groningen", start: "2026-10-17", end: "2026-10-17", note: "", mine: true },
-        { id: 3, kind: null, title: "Deload week", start: "2026-10-12", end: "2026-10-18", note: "Lighter week before the trip: same sessions, two sets fewer each.", mine: false },
+        { id: 3, kind: "training", title: "Deload week", start: "2026-10-12", end: "2026-10-18", note: "Lighter week before the trip: same sessions, two sets fewer each.", mine: false },
       ],
     };
   }
@@ -50,8 +50,8 @@ export function eventsProps(state: StateId): HomeEvents {
       { id: 1, kind: "trip", title: "Japan with friends", start: "2026-10-20", end: "2026-11-20", note: "", mine: true },
       { id: 2, kind: "health", title: "Sprained my ankle", start: "2026-09-22", end: "2026-10-03", note: "", mine: true },
       { id: 3, kind: "work", title: "Night shifts", start: "2026-09-08", end: "2026-09-12", note: "", mine: true },
-      { id: 4, kind: null, title: "Started creatine, 5 g a day", start: "2026-08-25", end: "2026-08-25", note: "", mine: true },
-      { id: 5, kind: null, title: "Deload week", start: "2026-08-11", end: "2026-08-17", note: "Lighter week after the holiday.", mine: false },
+      { id: 4, kind: "supplement", title: "Started creatine, 5 g a day", start: "2026-08-25", end: "2026-08-25", note: "", mine: true },
+      { id: 5, kind: "training", title: "Deload week", start: "2026-08-11", end: "2026-08-17", note: "Lighter week after the holiday.", mine: false },
       { id: 6, kind: "trip", title: "Two weeks in Portugal", start: "2026-07-20", end: "2026-08-03", note: "", mine: true },
     ],
   };
