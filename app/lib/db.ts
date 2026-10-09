@@ -194,6 +194,14 @@ export type VideoRequest = {
   replied_at?: string | null;
   /** When the client first opened the reply. */
   reply_seen_at?: string | null;
+  /** The client sent it without being asked (9 Oct). */
+  from_client?: boolean;
+  /** What the file is; absent on rows from before photos: a video. */
+  media?: "video" | "photo" | null;
+  /** "swap": a picture of what they used instead. */
+  about?: "swap" | null;
+  /** What the client wrote with it. */
+  client_note?: string | null;
 };
 // A whole day a client saved to log again ("Training day"): every meal's
 // foods and amounts as they were. Only they can use it.

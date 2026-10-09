@@ -744,7 +744,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                   lastWarmups: getLastWarmupSets(a.id).map((w) => ({ weight: w.weight_kg, reps: w.reps })),
                   videoRequest: (() => {
                     const r = videoAsks.get(a.id);
-                    return r ? { id: r.id, note: r.note, src: r.file_path, sentAt: r.submitted_at, reply: videoReplies.find((x) => x.id === r.id) ?? null } : null;
+                    return r ? { id: r.id, note: r.note, src: r.file_path, sentAt: r.submitted_at, reply: videoReplies.find((x) => x.id === r.id) ?? null, fromClient: !!r.from_client, media: r.media ?? "video", about: r.about ?? null, clientNote: r.client_note ?? null } : null;
                   })(),
                   gymTargets: allGyms.length ? Object.fromEntries(allGyms.map((g) => [g.id, targetAtGym(a, g.id, home)])) : undefined,
                   gymNotes: allGyms.length ? Object.fromEntries(allGyms.map((g) => [g.id, notesByGym.get(g.id)?.get(a.exercise_id) ?? ""])) : undefined,

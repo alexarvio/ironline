@@ -2693,7 +2693,7 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       tab: "training",
       dayId: day.id,
       target: { kind: "session", dayId: day.id, week: day.week_number },
-      text: `sent the video you asked for: ${name}, ${day.label || `Session ${day.day_of_week}`}`,
+      text: v.from_client ? `sent a ${v.media === "photo" ? "photo" : "video"}${v.about === "swap" ? " of what they used instead of" : " of"} ${name}, ${day.label || `Session ${day.day_of_week}`}` : `sent the video you asked for: ${name}, ${day.label || `Session ${day.day_of_week}`}`,
     });
   }
 
@@ -10516,6 +10516,24 @@ export function videoRequestFor(assignmentId: number): VideoRequest | null {
 export function videoRequestsFor(assignmentIds: number[]): Map<number, VideoRequest> {
   const ids = new Set(assignmentIds);
   return new Map(getData().video_requests.filter((r) => ids.has(r.assignment_id)).map((r) => [r.assignment_id, r] as const));
+}
+
+/** The client sends a photo or video of one exercise unasked (9 Oct): the row for it, made if there is none. */
+export function fileClientMedia(assignmentId: number, v: { about: "swap" | null; note: string; media: "video" | "photo" }): VideoRequest | null {
+  const clientId = getClientIdForAssignment(assignmentId);
+  if (clientId == null) return null;
+  const data = getData();
+  const note = v.note.trim().slice(0, 300) || null;
+  let row = data.video_requests.find((r) => r.assignment_id === assignmentId);
+  if (!row) {
+    row = { id: allocId("video_requests"), client_id: clientId, assignment_id: assignmentId, note: null, requested_at: new Date().toISOString(), file_path: null, submitted_at: null, seen_at: null, from_client: true };
+    data.video_requests.push(row);
+  }
+  row.media = v.media;
+  row.about = v.about;
+  row.client_note = note;
+  persist();
+  return row;
 }
 
 /** Asks for a video of one exercise in one session; asking again only updates the note. */
