@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "../lib/auth";
+import { touchPresence } from "../lib/presence";
 import { getData } from "../lib/db";
 import { logoutAction } from "../lib/auth-actions";
 import {
@@ -1218,6 +1219,8 @@ export default async function ClientPage({
 }) {
   const params = await searchParams;
   const CLIENT_ID = await resolveClientId(params.client);
+  // Who is in the app (9 Oct): this one, on the client app (a coach previewing counts as the coach).
+  touchPresence(await getSessionUser(), "Client app");
   // The phone's timezone and the tab it was on, from cookies AppShell sets:
   // the page is drawn as the phone will show it, so nothing jumps on load.
   const jar = await cookies();

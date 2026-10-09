@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { touchPresence } from "./presence";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -163,6 +164,7 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
 export async function requireCoach(): Promise<SessionUser> {
   const user = await getSessionUser();
   if (!user) redirect("/login");
+  touchPresence(user);
   // A client account at the coach door: say so, with a way to sign out,
   // rather than bouncing them to the client app (see /login/switch).
   if (user.role !== "coach") redirect("/login/switch?to=coach");
@@ -185,6 +187,7 @@ export async function requireCoach(): Promise<SessionUser> {
 export async function requireClient(): Promise<SessionUser & { clientId: number }> {
   const user = await getSessionUser();
   if (!user) redirect("/login");
+  touchPresence(user);
   if (user.role !== "client" || user.client_id == null) redirect("/login/switch?to=client");
   if (user.must_change_password) redirect("/login/change-password");
   return { ...user, clientId: user.client_id };
@@ -273,6 +276,7 @@ export async function coachForClient(clientId: number | null | undefined): Promi
 export async function requireClientAccess(requestedClientId: number): Promise<number> {
   const user = await getSessionUser();
   if (!user) redirect("/login");
+  touchPresence(user);
   if (user.must_change_password) redirect("/login/change-password");
   if (user.role === "coach") {
     if (user.pending) redirect("/auth/waiting");

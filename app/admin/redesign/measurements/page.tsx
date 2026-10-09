@@ -1,4 +1,5 @@
 import { requireCoach } from "../../../lib/auth";
+import { touchPresence } from "../../../lib/presence";
 import { loadHome, loadMeasurements, loadMeetings, loadMessages, loadNutrition, loadPictures, loadPlan, loadRail, loadTraining, pickClient, loadInvoices } from "../loaders";
 import RedesignShell from "../RedesignShell";
 import { tabFromParams } from "../tabs";
@@ -25,6 +26,7 @@ export default async function MeasurementsRedesignPage({ searchParams }: { searc
   const coach = await requireCoach();
   const params = await searchParams;
   const { client, firstName } = pickClient(coach.id, params.client);
+  touchPresence(coach, client ? `${firstName} · Measurements` : "Clients");
   if (!client) return <NoClients rail={loadRail(coach)} />;
   return (
     <RedesignShell
