@@ -166,9 +166,9 @@ export default function HomeHub({
           <PlanGapCard gap={planGap ?? { next: null }} coachName={coach.firstName} />
         )}
         {progressPics && <TodaysTasks pics={progressPics} />}
-        <LatestActivityCard a={latestActivity} coach={coach} />
-        {/* What is coming up in their life (7 Oct): a trip, an injury, something started. Theirs to add; the coach's listed too. */}
+        {/* What is coming up in their life (7 Oct): a trip, an injury, something started. Theirs to add; the coach's listed too. Above the coach's latest (9 Oct). */}
         <EventsCard events={events} coachName={coach.firstName} today={today} />
+        <LatestActivityCard a={latestActivity} coach={coach} />
         {upcoming ? (
           <MeetingCard m={upcoming} recap={recap} coachFirstName={coach.firstName} />
         ) : (
