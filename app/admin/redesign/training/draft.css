@@ -745,3 +745,6 @@
 .rd-demo.off:hover { background: #c3c9d2; color: #fff; }
 /* A past programme is read-only, but its 7-day / 30-day cells still open the exercise's progress (8 Oct): looking back is what it is for. */
 .rd-past .rd-trendcell.rd-keep { pointer-events: auto; opacity: 1; }
+/* The whiteboard on its own page (9 Oct). */
+.wb-board { display: flex; flex-direction: column; margin: 0 auto; padding: 20px; border-radius: 18px; background: #fff; box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04), 0 20px 34px -24px rgba(29, 52, 102, 0.4); }
+.wb-board-title { margin: 0; font-size: 18px; font-weight: 800; color: #141a24; }
