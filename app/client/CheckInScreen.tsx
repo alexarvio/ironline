@@ -335,7 +335,7 @@ export default function CheckInScreen({
           </div>
         </div>
         {/* The photo banner, the Training and Nutrition banners' size: the
-            date, and two pills that switch the screen between Today and
+            date, and two pills that switch the screen between Entries and
             Progress. */}
         <header className={`tr-banner ci-banner${view === "progress" ? " progress" : ""}`}>
           <div className="tr-kicker">{editDay ? "Editing" : ["Daily", weeklyOpen ? "weekly" : null, monthlyOpen && sections.some((s) => s.id === "monthly") ? "monthly" : null].filter(Boolean).join(" · ")}</div>
@@ -343,7 +343,7 @@ export default function CheckInScreen({
           <div className="tr-weeks ci-views" role="tablist" aria-label="Check-in">
             {(["today", "progress", "calendar"] as const).map((v) => (
               <button key={v} type="button" role="tab" aria-selected={view === v} className={`tr-wk${view === v ? " on" : ""}`} onClick={() => setView(v)}>
-                {v === "today" ? "Today" : v === "progress" ? "Progress" : "Calendar"}
+                {v === "today" ? "Entries" : v === "progress" ? "Progress" : "Calendar"}
               </button>
             ))}
           </div>
