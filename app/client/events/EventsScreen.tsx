@@ -215,7 +215,14 @@ function AddEventCard({ coachName, onOpen }: { coachName: string; onOpen: () => 
 type RowProps = { e: HomeEvent; today: string; coachName: string; coachPhoto: string | null; lit: boolean; open: boolean; pending: boolean; refFn: (el: HTMLElement | null) => void; onToggle: () => void; onEdit: () => void; onDelete: () => void };
 
 const hasMore = (e: HomeEvent) => !!e.note || e.mine;
-const rowLabel = (e: HomeEvent, today: string, coachName: string) => `${e.title}, ${eventTypeOf(e.kind).label}, ${rangeLabel(e, today)}, ${relativeLabel(e, today)}${e.mine ? "" : `, set by ${coachName}`}`;
+// A phase on the timeline (9 Oct): the track's colour, as the plan draws it, and its own icon and label.
+const PHASES = {
+  training: { label: "Training phase", color: "#4c42a8", rgb: "76,66,168", icon: "M6.5 8v8M17.5 8v8M4 10v4M20 10v4M6.5 12h11", fill: undefined as string | undefined },
+  nutrition: { label: "Nutrition phase", color: "#1f7a4d", rgb: "31,122,77", icon: "M5 19c0-8 6-14 14-14 0 8-6 14-14 14zM5 19l7-7", fill: undefined as string | undefined },
+  lifestyle: { label: "Lifestyle phase", color: "#a8761f", rgb: "168,118,31", icon: "M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z", fill: undefined as string | undefined },
+};
+const chromeOf = (e: HomeEvent) => (e.phase ? PHASES[e.phase] : eventTypeOf(e.kind));
+const rowLabel = (e: HomeEvent, today: string, coachName: string) => `${e.title}, ${chromeOf(e).label}, ${rangeLabel(e, today)}, ${relativeLabel(e, today)}${e.mine ? "" : `, set by ${coachName}`}`;
 
 function RowMore({ e, open, coachName, pending, onEdit, onDelete }: Pick<RowProps, "e" | "open" | "coachName" | "pending" | "onEdit" | "onDelete">) {
   const [sure, setSure] = useState(false);
@@ -253,7 +260,7 @@ function Chevron({ e, open }: { e: HomeEvent; open: boolean }) {
 
 function UpcomingRow(p: RowProps) {
   const { e, today, coachName, coachPhoto, lit, open, refFn, onToggle } = p;
-  const t = eventTypeOf(e.kind);
+  const t = chromeOf(e);
   return (
     <div ref={refFn} className={`ev-r ev-r-up${lit ? " lit" : ""}`} style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}>
       <span className="ev-td" aria-hidden="true">
@@ -290,7 +297,7 @@ function UpcomingRow(p: RowProps) {
 
 function NowCard(p: RowProps) {
   const { e, today, coachName, coachPhoto, lit, open, refFn, onToggle } = p;
-  const t = eventTypeOf(e.kind);
+  const t = chromeOf(e);
   const { day, total } = dayOf(e, today);
   return (
     <div ref={refFn} className={`ev-r ev-r-now${lit ? " lit" : ""}`} style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}>
@@ -327,7 +334,7 @@ function NowCard(p: RowProps) {
 
 function PastRow(p: RowProps) {
   const { e, today, coachName, coachPhoto, lit, open, refFn, onToggle } = p;
-  const t = eventTypeOf(e.kind);
+  const t = chromeOf(e);
   return (
     <div ref={refFn} className={`ev-r ev-r-past${lit ? " lit" : ""}`} style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}>
       <span className="ev-td" aria-hidden="true">
