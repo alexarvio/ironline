@@ -107,31 +107,14 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
   if (chat.open && seenNewest !== newestFromClient) setSeenNewest(newestFromClient);
   const chatDot = !!messages.unread && seenNewest !== newestFromClient;
   const panelRef = useRef<HTMLElement>(null);
+  // Open, it stays open (9 Oct): across tabs, through clicks on the page.
+  // Only Escape and its own X close it. The page makes room beside it (the
+  // rd-frame attribute below), so nothing sits behind it.
   useEffect(() => {
     if (!chat.open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && !document.querySelector("[role=dialog]") && closeChat();
-    // A click anywhere outside it slides it away too, except in what the chat
-    // itself opened over the page (its menus, the link picker, a toast).
-    const onDown = (e: PointerEvent) => {
-      const t = e.target as Element | null;
-      if (!t || panelRef.current?.contains(t)) return;
-      if (t.closest("[data-radix-popper-content-wrapper], [role=dialog], [role=menu], [data-sonner-toaster]")) return;
-      closeChat();
-      // That click only closes the chat (2 Oct): it used to go on to what was
-      // under it too, folding a session or switching tab in the same breath.
-      const swallow = (c: MouseEvent) => {
-        c.preventDefault();
-        c.stopPropagation();
-      };
-      document.addEventListener("click", swallow, { capture: true, once: true });
-      setTimeout(() => document.removeEventListener("click", swallow, { capture: true }), 600);
-    };
     window.addEventListener("keydown", onKey);
-    document.addEventListener("pointerdown", onDown);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.removeEventListener("pointerdown", onDown);
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, [chat.open]);
   // Another client: land where the address says (Home from the rail), never on the last client's tab.
   const [seenClient, setSeenClient] = useState(clientId);
@@ -195,7 +178,7 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
   const measurementsBlank = !hasPhase("lifestyle") && measurements.metrics.length === 0 && measurements.daily.periods.length === 0 && measurements.weekly.periods.length === 0 && measurements.notes.length === 0;
   return (
     <OpenChatContext.Provider value={openChat}>
-    <div className="rd-frame">
+    <div className="rd-frame" data-chat={chat.open ? "open" : undefined}>
       <RedesignRail rail={rail} clientId={clientId} />
       <div className="rd-page">
         <nav className="rd-nav" aria-label="Redesign drafts">
