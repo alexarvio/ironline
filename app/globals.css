@@ -18011,4 +18011,13 @@ button.ci-hint { cursor: pointer; }
 .hm-gap .hm-eyebrow { color: rgba(255, 255, 255, 0.7); }
 .hm-gap-title { font-size: 19px; font-weight: 700; line-height: 1.2; }
 .hm-gap-sub { font-size: 13px; color: rgba(255, 255, 255, 0.8); }
-.hm-gap-btn { align-self: flex-start; margin-top: 10px; padding: 9px 14px; border: 0; border-radius: 999px; background: #fff; font: inherit; font-size: 13px; font-weight: 700; color: #1e3a6e; cursor: pointer; }
+/* Charging (9 Oct): with a phase on the way, soft light rises through the
+   card like an aura, so it reads as something powering up. Two blurred blobs
+   drift up and fade, on transform and opacity only; still under reduced motion. */
+.hm-gap.charging { position: relative; overflow: hidden; isolation: isolate; transform: translateZ(0); }
+.hm-gap.charging::before, .hm-gap.charging::after { content: ""; position: absolute; inset: -30% -20%; z-index: -1; pointer-events: none; filter: blur(18px); will-change: transform, opacity; }
+.hm-gap.charging::before { background: radial-gradient(closest-side at 28% 75%, rgba(120, 196, 255, 0.95), transparent), radial-gradient(closest-side at 78% 85%, rgba(255, 255, 255, 0.55), transparent); animation: hm-aura-a 4.5s ease-in-out infinite; }
+.hm-gap.charging::after { background: radial-gradient(closest-side at 62% 80%, rgba(90, 170, 255, 0.85), transparent), radial-gradient(closest-side at 15% 90%, rgba(255, 255, 255, 0.45), transparent); animation: hm-aura-b 6s ease-in-out infinite; animation-delay: -2.5s; }
+@keyframes hm-aura-a { 0%, 100% { transform: translate3d(0, 18%, 0) scale(1); opacity: 0.6; } 50% { transform: translate3d(-6%, -18%, 0) scale(1.2); opacity: 1; } }
+@keyframes hm-aura-b { 0%, 100% { transform: translate3d(0, 20%, 0) scale(1.05); opacity: 0.5; } 50% { transform: translate3d(7%, -20%, 0) scale(1.25); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .hm-gap.charging::before, .hm-gap.charging::after { animation: none; opacity: 0.7; } }

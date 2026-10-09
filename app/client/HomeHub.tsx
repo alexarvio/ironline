@@ -198,16 +198,13 @@ export type PlanGap = { next: { track: "training" | "nutrition" | "lifestyle"; n
 const GAP_TRACK: Record<PlanGap["next"] extends infer N ? (N extends { track: infer T } ? T : never) : never, string> = { training: "Training", nutrition: "Nutrition", lifestyle: "Lifestyle" };
 
 function PlanGapCard({ gap, coachName }: { gap: PlanGap; coachName: string }) {
-  const openMessages = useOpenMessages();
   const starts = gap.next ? new Date(`${gap.next.start}T00:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" }) : null;
   return (
-    <section className="hm-gap" aria-label="Your plan">
+    <section className={`hm-gap${gap.next ? " charging" : ""}`} aria-label="Your plan">
       <span className="hm-eyebrow">Your plan</span>
       <b className="hm-gap-title">{gap.next ? `${gap.next.name} starts ${starts}` : "No phase running"}</b>
       <small className="hm-gap-sub">{gap.next ? `${GAP_TRACK[gap.next.track]} · ${coachName} is getting it ready.` : `${coachName} is building your next phase.`}</small>
-      <button type="button" className="hm-gap-btn" onClick={() => openMessages?.()}>
-        Message {coachName}
-      </button>
+      {/* No button (9 Oct): the chat sits right under this card. */}
     </section>
   );
 }
