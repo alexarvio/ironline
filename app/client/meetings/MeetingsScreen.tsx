@@ -111,8 +111,8 @@ export default function MeetingsScreen({ upcoming, past, coachName, onBack }: Me
             <>
               <div className="mt-sec">Past meetings</div>
               <div className="mt-tl">
-                {pastSorted.slice(0, shown).map((m) => (
-                  <PastCall key={m.id} m={m} now={now} open={open === m.id} coachFirst={coachFirst} onToggle={() => setOpen((o) => (o === m.id ? null : m.id))} />
+                {pastSorted.slice(0, shown).map((m, i) => (
+                  <PastCall key={m.id} m={m} now={now} open={open === m.id} latest={i === 0} onToggle={() => setOpen((o) => (o === m.id ? null : m.id))} />
                 ))}
               </div>
               {pastSorted.length > shown && (
@@ -212,7 +212,7 @@ export function EventChip({ e, onOpen }: { e: { id: number; title: string; kind:
 // ---- One past call: the date on the left, the icon on the rail, the box.
 // Open, it shows what was agreed and the events made from it.
 
-function PastCall({ m, now, open, coachFirst, onToggle }: { m: ClientMeetingView; now: number | null; open: boolean; coachFirst: string; onToggle: () => void }) {
+function PastCall({ m, now, open, latest, onToggle }: { m: ClientMeetingView; now: number | null; open: boolean; /** The most recent call: the one box in its colour (9 Oct). */ latest: boolean; onToggle: () => void }) {
   const t = meetingTypeOf(m.type);
   const ms = startMsOf(m);
   const d = new Date(ms);
@@ -231,7 +231,7 @@ function PastCall({ m, now, open, coachFirst, onToggle }: { m: ClientMeetingView
         </i>
       </span>
       <div className="mt-cell">
-        <div className={`mt-card${has ? "" : " quiet"}`}>
+        <div className={`mt-card${latest ? " latest" : ""}`}>
           <button type="button" className="mt-head" onClick={onToggle} disabled={!has} aria-expanded={has ? open : undefined} aria-label={`${t.label} call: ${m.title}${now != null ? `, ${agoLabel(ms, now)}` : ""}${has ? `, ${points.length} agreed point${points.length === 1 ? "" : "s"}` : m.missed ? ", missed" : ", no notes"}`}>
             <span className="mt-head-text">
               <span className="mt-title">{m.title}</span>
@@ -261,7 +261,6 @@ function PastCall({ m, now, open, coachFirst, onToggle }: { m: ClientMeetingView
                       ))}
                     </span>
                   )}
-                  <span className="mt-with-line">with {coachFirst}</span>
                 </div>
               </div>
             </div>
