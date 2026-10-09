@@ -269,7 +269,7 @@ function UpcomingRow(p: RowProps) {
       </span>
       <span className="ev-rail" aria-hidden="true">
         <i className="ev-dot-ring">
-          <TypeIcon path={t.icon} fill={t.fill} size={15} stroke={2.2} />
+          <TypeIcon path={t.icon} fill={t.fill} size={20} stroke={2.1} />
         </i>
       </span>
       <span className="ev-cell">
@@ -343,7 +343,7 @@ function PastRow(p: RowProps) {
       </span>
       <span className="ev-rail" aria-hidden="true">
         <i className="ev-dot-past">
-          <TypeIcon path={t.icon} fill={t.fill} size={13} stroke={2.2} />
+          <TypeIcon path={t.icon} fill={t.fill} size={18} stroke={2.1} />
         </i>
       </span>
       <span className="ev-cell">

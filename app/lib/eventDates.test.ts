@@ -39,8 +39,8 @@ test("relative: past stretches say ended, single days do not", () => {
   assert.equal(relativeLabel({ start: "2026-09-22", end: "2026-10-03" }, today), "ended 5 days ago");
   assert.equal(relativeLabel({ start: "2026-10-07", end: "2026-10-07" }, today), "yesterday");
   assert.equal(relativeLabel({ start: "2026-09-08", end: "2026-09-12" }, today), "ended 4 weeks ago");
-  assert.equal(relativeLabel({ start: "2026-06-20", end: "2026-06-25" }, today), "ended in June");
-  assert.equal(relativeLabel({ start: "2025-12-20", end: "2025-12-25" }, today), "ended in December 2025");
+  assert.equal(relativeLabel({ start: "2026-06-20", end: "2026-06-25" }, today), "ended back in June");
+  assert.equal(relativeLabel({ start: "2025-12-20", end: "2025-12-25" }, today), "ended back in December 2025");
 });
 
 test("range: en dash, From for a future single day, year across the boundary", () => {

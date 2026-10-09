@@ -42,7 +42,7 @@ function ago(n: number, today: string, iso: string): string {
   if (n < 21) return `${n} days ago`;
   if (n <= 90) return `${Math.round(n / 7)} weeks ago`;
   const m = MONTHS_LONG[Number(iso.slice(5, 7)) - 1];
-  return iso.slice(0, 4) === today.slice(0, 4) ? `in ${m}` : `in ${m} ${iso.slice(0, 4)}`;
+  return iso.slice(0, 4) === today.slice(0, 4) ? `back in ${m}` : `back in ${m} ${iso.slice(0, 4)}`;
 }
 
 /** Where it stands: "in 12 days", "Day 8 of 22", "ended 5 days ago", "3 weeks ago". */
