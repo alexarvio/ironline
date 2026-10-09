@@ -5,7 +5,7 @@ import type React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { addExerciseToLibraryAction, addExerciseVariationAction, markProgramNoteSeenAction, setRowDemoHiddenAction, setRowVariationAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, createProgramWithAction, deployProgramAction, removeGymAction, removeProgramWeekAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, saveTrainingNoteAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
+import { addExerciseToLibraryAction, addExerciseVariationAction, markProgramNoteSeenAction, markVideoSeenAction, setRowDemoHiddenAction, setRowVariationAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, createProgramWithAction, deployProgramAction, removeGymAction, removeProgramWeekAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, saveTrainingNoteAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger, ToggleGroup, ToggleGroupItem } from "../../../components/ui/basics";
@@ -57,7 +57,7 @@ export type DraftRow = {
   rest: number | null;
   note: string | null;
   logged: { set: number; kg: number | null; reps: number | null; rpe: number | null; gym: string | null }[];
-  video: { requestId: number; state: "asked" | "in" | "replied"; note: string | null; reply: string | null } | null;
+  video: { requestId: number; state: "asked" | "in" | "replied"; note: string | null; reply: string | null; /** The file the client sent, and the one the coach sent back (9 Oct). */ src: string | null; replySrc: string | null } | null;
   /** The demo the client sees on this exercise: the library's, else one set on this row long ago. */
   demo: { url: string; source: "library" | "row" } | null;
   /** The coach keeping that demo off this prescription for this client. */
@@ -2696,6 +2696,11 @@ function DemoDialog({ row, demo, onSave, onRemove }: { row: DraftRow; demo: Draf
 function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }: { row: DraftRow; video: DraftRow["video"]; firstName: string; where: string; onAsk: (note: string) => void; onCancel: () => void; onReply: (reply: string) => void }) {
   const [note, setNote] = useState("");
   const [reply, setReply] = useState("");
+  // Opened with the client's video in it: seen, so it stops being news (9 Oct).
+  const seenId = video?.state === "in" && video.src ? video.requestId : null;
+  useEffect(() => {
+    if (seenId != null) void markVideoSeenAction(seenId);
+  }, [seenId]);
   return (
     <DialogContent className="rd-dlg">
       <DialogHeader>
@@ -2734,10 +2739,16 @@ function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }:
       )}
       {(video?.state === "in" || video?.state === "replied") && (
         <>
-          <div className="rd-video-stub" role="img" aria-label={`${firstName}'s video`}>
-            <PlayIcon />
-            <span>{firstName}&rsquo;s video · 0:42</span>
-          </div>
+          {/* The video itself (9 Oct): the stub with a fixed "0:42" stood here, and the coach could not watch what the client sent. */}
+          {video.src ? (
+            <video className="rd-video" src={video.src} controls playsInline preload="metadata" aria-label={`${firstName}'s video`} />
+          ) : (
+            <div className="rd-video-stub" role="img" aria-label={`${firstName}'s video`}>
+              <PlayIcon />
+              <span>{firstName}&rsquo;s video is not here yet</span>
+            </div>
+          )}
+          {video.state === "replied" && video.replySrc && <video className="rd-video" src={video.replySrc} controls playsInline preload="metadata" aria-label="Your reply video" />}
           {video.state === "replied" ? (
             <p className="rd-dlg-para">
               <b>Your reply</b> {video.reply}
