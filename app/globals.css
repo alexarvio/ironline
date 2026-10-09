@@ -14514,6 +14514,9 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .app-menu-list { display: flex; flex-direction: column; padding-top: 8px; }
 .app-menu-item { display: flex; align-items: center; width: 100%; min-height: 48px; padding: 0 4px; border: 0; border-bottom: 1px solid #eceff3; background: none; font: inherit; font-size: 15px; font-weight: 600; color: #141a24; text-align: left; cursor: pointer; }
 .app-menu-item:last-child { border-bottom: 0; }
+/* An icon on each row (9 Oct), one column, in the quiet grey. */
+.app-menu-ico { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 22px; margin-right: 12px; color: #5b6474; }
+.app-menu-ico svg { width: 18px; height: 18px; }
 .app-menu-foot { display: flex; flex-direction: column; gap: 14px; margin-top: auto; }
 .app-menu-item-link { text-decoration: none; }
 .app-menu-footnote { text-align: center; font-size: 12px; color: #8b93a1; }

@@ -3,7 +3,7 @@
 import { ReactNode, useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { markCoachNotesReadAction } from "../lib/actions";
 import { logoutAction } from "../lib/auth-actions";
-import { BellIcon, ChevronLeftIcon, MenuIcon, ChatIcon } from "../components/icons";
+import { BellIcon, CalendarIcon, ChevronLeftIcon, GearIcon, MenuIcon, ChatIcon, ReceiptIcon } from "../components/icons";
 import CheckInScreen, { CheckInProps } from "./CheckInScreen";
 import PreviewBar from "./PreviewBar";
 import ProgressPicturesScreen, { type ProgressPicturesProps } from "./ProgressPicturesScreen";
@@ -539,22 +539,30 @@ export default function AppShell({
                 <div className="app-menu-list">
                   {meetings && (
                     <button type="button" className="app-menu-item" onClick={() => go(() => setPushView("meetings"))}>
+                      <span className="app-menu-ico"><CalendarIcon /></span>
                       Meetings
                     </button>
                   )}
                   {/* Events (9 Oct): the deliberate way in; the Home card is the quick one. */}
                   {events && (
                     <button type="button" className="app-menu-item" onClick={() => go(() => setPushView("events"))}>
+                      <span className="app-menu-ico">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M5 21V4M5 4h12l-2 4 2 4H5" />
+                        </svg>
+                      </span>
                       Events
                     </button>
                   )}
                   {invoices && (
                     <button type="button" className="app-menu-item" onClick={() => go(() => setPushView("invoices"))}>
+                      <span className="app-menu-ico"><ReceiptIcon /></span>
                       Invoices
                     </button>
                   )}
                   {settingsContent && (
                     <button type="button" className="app-menu-item" onClick={() => go(() => setPushView("settings"))}>
+                      <span className="app-menu-ico"><GearIcon /></span>
                       Settings
                     </button>
                   )}
@@ -565,6 +573,12 @@ export default function AppShell({
                       href={`mailto:${helpEmail}?subject=${encodeURIComponent("Ironline app")}`}
                       onClick={() => setMenuOpen(false)}
                     >
+                      <span className="app-menu-ico">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <circle cx="12" cy="12" r="9" />
+                          <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17h.01" />
+                        </svg>
+                      </span>
                       Help
                     </a>
                   )}
