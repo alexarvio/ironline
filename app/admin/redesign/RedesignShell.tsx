@@ -38,6 +38,10 @@ const TABS = [
 // over any tab. Its address (/admin/redesign/messages) still opens it, on Home.
 type PageTab = (typeof TABS)[number]["key"];
 export type RedesignTab = PageTab | "messages";
+/** The tab a page should open on: ?tab= when it names one, else the page's own. */
+export function tabFromParams(tab: string | undefined, fallback: RedesignTab): RedesignTab {
+  return tab === "messages" || TABS.some((t) => t.key === tab) ? (tab as RedesignTab) : fallback;
+}
 type ChatState = { mounted: boolean; open: boolean; about: DraftLink | null; opened: number; focus: number | null };
 
 // Every tab stays mounted (what was typed on one survives a switch), so a
@@ -163,8 +167,13 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
       tabRef.current = t;
       setTab(t);
       requestAnimationFrame(() => window.scrollTo(0, scrolls.current[t] ?? 0));
-      // Keep the other tab's query (week, programme, phase) out of this one's address.
-      window.history.replaceState(null, "", `/admin/redesign/${t}?client=${clientId}`);
+      // The address follows as ?tab= on the route that is mounted (9 Oct). It
+      // used to rewrite the path to the tab's own route while this page stayed
+      // mounted; the next refresh (any save revalidates) then fetched that
+      // other route, and the whole shell remounted: the chat closed and the
+      // tab snapped back to the route's own. Other tabs' query (week,
+      // programme, phase) stays out of the address.
+      window.history.replaceState(null, "", `${window.location.pathname}?client=${clientId}&tab=${t}`);
     },
     [clientId, openChat]
   );

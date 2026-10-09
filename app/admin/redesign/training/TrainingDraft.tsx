@@ -1516,7 +1516,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               startTransition(async () => {
                 await removeProgramWeekAction(fd({ clientId, programId: program.id, week: idx }));
                 savedToast(`${label} removed`);
-                router.push(`/admin/redesign/training?client=${clientId}&program=${program.id}&week=${Math.max(1, idx - 1)}`, { scroll: false });
+                router.push(`${window.location.pathname}?client=${clientId}&tab=training&program=${program.id}&week=${Math.max(1, idx - 1)}`, { scroll: false });
               });
             }}
           />
@@ -1536,7 +1536,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               startTransition(async () => {
                 await addProgramWeekAction(fd({ clientId, programId: program.id, copyFrom: copy ? from : null }));
                 savedToast(`Week ${n} added${copy ? `, a copy of ${label}` : ""}`);
-                router.push(`/admin/redesign/training?client=${clientId}&program=${program.id}&week=${n}`, { scroll: false });
+                router.push(`${window.location.pathname}?client=${clientId}&tab=training&program=${program.id}&week=${n}`, { scroll: false });
               });
             }}
           />
@@ -1635,7 +1635,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               startTransition(async () => {
                 const id = await createProgramWithAction(clientId, v.name, v.weeks, v.start || null);
                 savedToast(`${v.name || "New programme"} · ${v.weeks} weeks, a draft`);
-                if (id) router.push(`/admin/redesign/training?client=${clientId}&program=${id}&week=1`, { scroll: false });
+                if (id) router.push(`${window.location.pathname}?client=${clientId}&tab=training&program=${id}&week=1`, { scroll: false });
                 else router.refresh();
               });
             }}

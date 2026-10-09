@@ -1,6 +1,6 @@
 import { requireCoach } from "../../../lib/auth";
 import { loadHome, loadMeasurements, loadMeetings, loadMessages, loadNutrition, loadPictures, loadPlan, loadRail, loadTraining, pickClient, loadInvoices } from "../loaders";
-import RedesignShell from "../RedesignShell";
+import RedesignShell, { tabFromParams } from "../RedesignShell";
 import NoClients from "../NoClients";
 import "../../../components/ui/ui.css";
 import "../training/draft.css";
@@ -20,7 +20,7 @@ import "../rail.css";
 //   /admin/redesign/plan?client=ID
 export const dynamic = "force-dynamic";
 
-export default async function PlanRedesignPage({ searchParams }: { searchParams: Promise<{ client?: string; week?: string; program?: string; phase?: string }> }) {
+export default async function PlanRedesignPage({ searchParams }: { searchParams: Promise<{ client?: string; week?: string; program?: string; phase?: string; tab?: string }> }) {
   const coach = await requireCoach();
   const params = await searchParams;
   const { client, firstName } = pickClient(coach.id, params.client);
@@ -31,7 +31,7 @@ export default async function PlanRedesignPage({ searchParams }: { searchParams:
       clientName={client.name ?? "Client"}
       firstName={firstName}
       rail={loadRail(coach)}
-      initialTab="plan"
+      initialTab={tabFromParams(params.tab, "plan")}
       home={loadHome(client.id)}
       training={loadTraining(coach.id, client.id, params)}
       nutrition={loadNutrition(client.id, params)}
