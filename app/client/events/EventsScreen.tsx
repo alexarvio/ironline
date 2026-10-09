@@ -282,11 +282,8 @@ function UpcomingRow(p: RowProps) {
               </span>
               {!e.mine && <CoachAvatar name={coachName} photoPath={coachPhoto} size={24} ring="card" />}
             </span>
-            {/* A single day is already on the rail, so only how far off it is (9 Oct). */}
-            <span className="ev-card-meta">
-              <span>{e.start === e.end ? "" : rangeLabel(e, today)}</span>
-              <b>{relativeLabel(e, today)}</b>
-            </span>
+            {/* The dates only, and only for a stretch: a single day is on the rail, and "in 6 days" went (9 Oct), the rail says when. */}
+            {e.start !== e.end && <span className="ev-card-meta">{rangeLabel(e, today)}</span>}
           </button>
           <RowMore {...p} />
         </div>
@@ -354,10 +351,7 @@ function PastRow(p: RowProps) {
                 <span className="ev-past-title">{e.title}</span>
                 <Chevron e={e} open={open} />
               </span>
-              <span className="ev-past-meta">
-                <span>{e.start === e.end ? "" : rangeLabel(e, today)}</span>
-                <span>{relativeLabel(e, today)}</span>
-              </span>
+              {e.start !== e.end && <span className="ev-past-meta">{rangeLabel(e, today)}</span>}
             </span>
             {!e.mine && <CoachAvatar name={coachName} photoPath={coachPhoto} size={22} ring="row" />}
           </button>
