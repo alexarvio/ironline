@@ -55,6 +55,11 @@
 .rd-chev { display: inline-flex; color: #8b93a1; transition: transform 0.15s; }
 .rd-chev svg { width: 16px; height: 16px; }
 .rd-chev.open { transform: rotate(180deg); }
+/* The answers feed folded under the workout questionnaire (9 Oct). */
+.rm-answers { margin-top: 10px; padding-top: 6px; border-top: 1px solid #eef1f5; }
+.rm-answers-head { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 40px; padding: 4px 8px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 13px; font-weight: 700; color: #1e3a6e; text-align: left; cursor: pointer; }
+.rm-answers-head:hover { background: #f4f7fc; }
+.rm-answers-head small { font-size: 12px; font-weight: 600; color: #8b93a1; }
 .rd-session-name { font-size: 15px; font-weight: 700; }
 .rd-session-meta { flex: 1; font-size: 12.5px; color: #8b93a1; }
 .rd-pill { padding: 3px 10px; border-radius: 999px; background: #e6ecf3; font-size: 11.5px; font-weight: 700; color: #1e3a6e; white-space: nowrap; }

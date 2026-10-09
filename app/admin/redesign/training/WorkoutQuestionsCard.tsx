@@ -1,5 +1,7 @@
 "use client";
 
+import type React from "react";
+
 import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -26,7 +28,7 @@ const KINDS: { id: Kind; label: string }[] = [
 ];
 const rowOf = (q: Q): Row => ({ id: q.id, label: q.label, kind: q.kind ?? "scale", unit: q.unit ?? "" });
 
-export default function WorkoutQuestionsCard({ programId, firstName, questions: given }: { programId: number; firstName: string; questions: Q[] }) {
+export default function WorkoutQuestionsCard({ programId, firstName, questions: given , answers = null }: { programId: number; firstName: string; questions: Q[] ; /** The answers feed, folded under the questions (9 Oct). */ answers?: React.ReactNode }) {
   const questions = given.map(rowOf);
   const [saved, setSaved] = useState(questions);
   const [rows, setRows] = useState(questions);
@@ -169,6 +171,8 @@ export default function WorkoutQuestionsCard({ programId, firstName, questions: 
           </div>
         )}
       </div>
+      {/* What the client answered, folded under the questions (9 Oct): one card, the feed opens on a tap. */}
+      {answers}
     </section>
   );
 }

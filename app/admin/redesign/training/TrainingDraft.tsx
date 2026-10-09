@@ -1316,8 +1316,12 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
       </div>
 
       {/* ---- What the client is asked as they end a workout in this phase, and what they answered, newest first (6 Oct: both at the foot, under the weeks). */}
-      <WorkoutQuestionsCard programId={program.id} firstName={firstName} questions={program.workoutQuestions} />
-      <AnswersFeed firstName={firstName} items={program.answersFeed} href={(it) => `/admin/redesign/training?client=${clientId}&program=${program.id}&week=${it.weekIdx}#session-${it.dayId}`} />
+      <WorkoutQuestionsCard
+        programId={program.id}
+        firstName={firstName}
+        questions={program.workoutQuestions}
+        answers={<AnswersFeed firstName={firstName} items={program.answersFeed} href={(it) => `/admin/redesign/training?client=${clientId}&tab=training&program=${program.id}&week=${it.weekIdx}#session-${it.dayId}`} />}
+      />
 
       {/* ---- Dialogs. One open at a time. */}
       <Dialog open={dlg != null} onOpenChange={(o) => !o && close()}>
@@ -2026,17 +2030,23 @@ function EditExerciseDialog({ row, current, library, onSave }: { row: DraftRow; 
  */
 function AnswersFeed({ firstName, items, href }: { firstName: string; items: DraftAnswered[]; href: (it: DraftAnswered) => string }) {
   const [open, setOpen] = useState<number | null>(null);
+  // The feed stays folded under the questions until asked for (9 Oct).
+  const [shown, setShown] = useState(false);
   const grid = { gridTemplateColumns: "20px 150px minmax(160px, 0.8fr) minmax(240px, 1.4fr) 90px 32px", columnGap: 24 } as const;
   const when = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
   const at = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   const said = (a: DraftAnswered["answers"][number]) => (a.kind === "text" ? (a.text ?? "").trim() : a.value != null ? `${a.value}${a.kind === "scale" ? "/10" : a.unit ? ` ${a.unit}` : ""}` : "");
   return (
-    <section className="rd-session open rn-card">
-      <div className="rn-card-head">
-        <h2>Workout questionnaire answers</h2>
-      </div>
-      {items.length === 0 ? (
-        <p className="rd-full">Nothing yet.</p>
+    <div className="rm-answers">
+      <button type="button" className="rm-answers-head" onClick={() => setShown((v) => !v)} aria-expanded={shown}>
+        <span className={`rd-chev${shown ? " open" : ""}`} aria-hidden="true">
+          <ChevronDownIcon />
+        </span>
+        Answers
+        <small>{items.length === 0 ? "none yet" : `${items.length} ${items.length === 1 ? "workout" : "workouts"}`}</small>
+      </button>
+      {!shown ? null : items.length === 0 ? (
+        <p className="rd-full">Nothing yet: the answers land here as {firstName} ends workouts.</p>
       ) : (
         <div className="rd-rows">
           <div className="rd-cols" aria-hidden="true" style={grid}>
@@ -2108,7 +2118,7 @@ function AnswersFeed({ firstName, items, href }: { firstName: string; items: Dra
           })}
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
