@@ -91,10 +91,13 @@ export default function ExercisePage({
   const last = exercise.lastSets;
   const lastOf = (n: number) => last?.sets.find((s) => s.setNumber === n) ?? null;
   const activeN = editingN ?? (nextSet <= exercise.sets ? nextSet : null);
+  // A set still to do starts from what this set was last session (9 Oct),
+  // weight and reps; with no last session in this phase, the coach's target.
   const freshDraft = (n: number | null): Draft => {
     const log = n != null ? exercise.logs.find((l) => l.setNumber === n) ?? null : null;
     if (log) return { weight: show(log.weight), reps: log.reps != null ? String(log.reps) : "", rpe: log.rpe != null ? String(log.rpe) : "" };
-    return { weight: show(targetWeight), reps: "", rpe: targetRpe != null ? String(targetRpe) : "" };
+    const prev = n != null ? lastOf(n) : null;
+    return { weight: show(prev?.weight ?? targetWeight), reps: prev?.reps != null ? String(prev.reps) : "", rpe: targetRpe != null ? String(targetRpe) : "" };
   };
   const [draft, setDraft] = useState<Draft>(() => freshDraft(activeN));
   // A new active row (a set landed, an edit opened, the unit flipped) starts
@@ -196,12 +199,29 @@ export default function ExercisePage({
     } else if (request.kind === "warmup") addWarm();
     else setSwapOpen(true);
   }
+  // Progression (9 Oct): last session every working set reached the top of
+  // the rep range at this week's target weight or more, and the coach has not
+  // already raised the target above that: the target shows 2.5 kg up, labelled.
+  const repTop = (() => {
+    const range = exercise.reps.match(/(\d+)\s*(?:-|–|to)\s*(\d+)/);
+    if (range) return Number(range[2]);
+    const one = exercise.reps.match(/^\s*(\d+)\s*$/);
+    return one ? Number(one[1]) : null;
+  })();
+  const progressed = (() => {
+    if (!last || repTop == null || targetWeight == null || swapped) return null;
+    const rows = Array.from({ length: exercise.sets }, (_, i) => lastOf(i + 1));
+    if (rows.some((s) => !s || s.reps == null || s.weight == null || s.reps < repTop || s.weight < targetWeight)) return null;
+    return targetWeight + 2.5;
+  })();
+  const shownTarget = progressed ?? targetWeight;
+  const lastDate = last ? `${Number(last.date.slice(8, 10))} ${MONTHS_SHORT[Number(last.date.slice(5, 7)) - 1]}` : "";
   // The prescription as the session overview's table (30 Sep): sets, weight,
   // reps (kg first everywhere, as in the set rows; 7 Oct), RPE, tempo, then
   // what cardio and rest add.
   const targets = [
     { value: String(exercise.sets), unit: "sets" },
-    targetWeight != null ? { value: show(targetWeight), unit: unitLabel } : null,
+    shownTarget != null ? { value: show(shownTarget), unit: unitLabel } : null,
     exercise.reps ? { value: exercise.reps, unit: "reps" } : null,
     targetRpe != null ? { value: String(targetRpe), unit: "rpe" } : null,
     tempo ? { value: tempo, unit: "tempo" } : null,
@@ -274,6 +294,11 @@ export default function ExercisePage({
 
       <div className="wo-target-card">
         <TargetTable cells={targets} />
+        {progressed != null && (
+          <div className="wo-target-up">
+            ↑ Up from {show(targetWeight)} {unitLabel}: last session you made {repTop} reps on every set.
+          </div>
+        )}
       </div>
 
       <CoachNote assignmentId={exercise.id} note={exercise.note} />
@@ -397,17 +422,25 @@ export default function ExercisePage({
               </div>
             );
           }
+          const prev = lastOf(n);
           return (
             <div key={n} className="ts-grid ts-set upcoming">
               <span className="ts-circle">{n}</span>
-              {askWeight && <span>{targetWeight == null ? "" : show(targetWeight)}</span>}
-              <span>{exercise.reps}</span>
+              {askWeight && <span>{prev?.weight != null ? show(prev.weight) : targetWeight == null ? "" : show(targetWeight)}</span>}
+              <span>{prev?.reps ?? exercise.reps}</span>
               {askRpe && <span>{targetRpe}</span>}
               <span />
             </div>
           );
         })}
 
+        {/* Said plainly (9 Oct): the rows carry last session's numbers, the target sits above. Not on the first week, with no last session. */}
+        {last && !showLast && activeN != null && (
+          <div className="ts-prev-note" role="note">
+            <span className="ts-prev-mark" aria-hidden="true">!</span>
+            <span>The numbers in the rows are what you did last session, {lastDate}. Your target is above.</span>
+          </div>
+        )}
         {showLast && last ? (
           <button type="button" className="ts-last-note" onClick={() => setShowLast(false)}>
             Your numbers from the last time you did {shownName(exercise)}, {Number(last.date.slice(8, 10))} {MONTHS_SHORT[Number(last.date.slice(5, 7)) - 1]}

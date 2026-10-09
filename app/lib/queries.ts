@@ -8508,13 +8508,17 @@ function exerciseHistoryFor(assignmentId: number): { day: ProgramDay; logs: SetL
   if (exerciseId == null) return [];
   const days = new Map(data.program_days.filter((pd) => pd.client_id === day.client_id).map((pd) => [pd.id, pd]));
   const at = (pd: { week_number: number; day_of_week: number }) => pd.week_number * 100 + pd.day_of_week;
+  // This phase only (9 Oct): the programme whose weeks hold this day. An
+  // earlier phase's sets are not "last time", even of the same exercise.
+  const program = data.training_programs.find((p) => p.client_id === day.client_id && day.week_number >= p.start_week && day.week_number < p.start_week + p.total_weeks);
+  const inPhase = (pd: { week_number: number }) => !program || (pd.week_number >= program.start_week && pd.week_number < program.start_week + program.total_weeks);
   const out: { day: ProgramDay; logs: SetLog[] }[] = [];
   for (const other of data.workout_assignments) {
     if (other.id === wa.id) continue;
     const otherExercise = other.swap ? other.swap.library_exercise_id : other.exercise_id;
     if (otherExercise !== exerciseId) continue;
     const pd = days.get(other.program_day_id);
-    if (!pd || at(pd) >= at(day)) continue;
+    if (!pd || !inPhase(pd) || at(pd) >= at(day)) continue;
     const logs = data.set_logs.filter((sl) => sl.workout_assignment_id === other.id).sort((a, b) => a.set_number - b.set_number);
     if (!logs.length) continue;
     out.push({ day: pd, logs });
