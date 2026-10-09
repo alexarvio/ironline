@@ -199,20 +199,22 @@ export default function ExercisePage({
     } else if (request.kind === "warmup") addWarm();
     else setSwapOpen(true);
   }
-  // Progression (9 Oct): last session every working set reached the top of
-  // the rep range at this week's target weight or more, and the coach has not
-  // already raised the target above that: the target shows 2.5 kg up, labelled.
-  const repTop = (() => {
-    const range = exercise.reps.match(/(\d+)\s*(?:-|–|to)\s*(\d+)/);
-    if (range) return Number(range[2]);
-    const one = exercise.reps.match(/^\s*(\d+)\s*$/);
+  // Progression (9 Oct): last session every working set made the reps (the
+  // low end of the range, or the number itself) at a weight above this week's
+  // target: the target rises to that weight, the lowest held across the sets.
+  // What the coach set already above it stays.
+  const repLow = (() => {
+    const range = exercise.reps.match(/(d+)s*(?:-|–|to)s*(d+)/);
+    if (range) return Number(range[1]);
+    const one = exercise.reps.match(/^s*(d+)s*$/);
     return one ? Number(one[1]) : null;
   })();
   const progressed = (() => {
-    if (!last || repTop == null || targetWeight == null || swapped) return null;
+    if (!last || repLow == null || targetWeight == null || swapped) return null;
     const rows = Array.from({ length: exercise.sets }, (_, i) => lastOf(i + 1));
-    if (rows.some((s) => !s || s.reps == null || s.weight == null || s.reps < repTop || s.weight < targetWeight)) return null;
-    return targetWeight + 2.5;
+    if (rows.some((r) => !r || r.reps == null || r.weight == null || r.reps < repLow)) return null;
+    const held = Math.min(...rows.map((r) => r!.weight!));
+    return held > targetWeight ? held : null;
   })();
   const shownTarget = progressed ?? targetWeight;
   const lastDate = last ? `${Number(last.date.slice(8, 10))} ${MONTHS_SHORT[Number(last.date.slice(5, 7)) - 1]}` : "";
@@ -296,7 +298,7 @@ export default function ExercisePage({
         <TargetTable cells={targets} />
         {progressed != null && (
           <div className="wo-target-up">
-            ↑ Up from {show(targetWeight)} {unitLabel}: last session you made {repTop} reps on every set.
+            ↑ Up from {show(targetWeight)} {unitLabel}: last session you lifted {show(progressed)} {unitLabel} for the reps on every set.
           </div>
         )}
       </div>
