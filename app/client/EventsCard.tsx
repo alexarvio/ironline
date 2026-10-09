@@ -43,7 +43,7 @@ export const chromeOf = (cats: HomeEventCategory[], kind: string | null) => {
   return c ? { ...paletteOf(c.color), label: c.label } : { ...NO_CATEGORY, label: "Event" };
 };
 
-export default function EventsCard({ events, coachName, today }: { events: HomeEvents; coachName: string; today: string }) {
+export default function EventsCard({ events, today }: { events: HomeEvents; coachName?: string; today: string }) {
   const openEvents = useOpenEvents();
   // A glance (9 Oct): the event running now, if any, with the next one to
   // come under it; else just the next one to come. The whole list, with Add,
