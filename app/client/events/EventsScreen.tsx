@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
 import { clientAddEventAction, clientDeleteEventAction, clientUpdateEventAction } from "../../lib/actions";
-import { EVENT_TYPES, eventTypeOf, isEventTypeId, type EventTypeId } from "../../lib/eventTypes";
+import { eventTypeOf, isEventTypeId, type EventTypeId } from "../../lib/eventTypes";
 import { dayOf, rangeLabel, relativeLabel, shortDay, statusOf, todayLabel } from "../../lib/eventDates";
 import { ChevronLeftIcon } from "../../components/icons";
 import { useCoachIdentity } from "../CheckInContext";
@@ -20,7 +20,7 @@ import { CoachAvatar } from "./CoachAvatar";
 // carry the coach's face and can only be read.
 
 type Sheet = { event: HomeEvent | null; type: EventTypeId; initial?: EventValues | null; error?: string | null } | null;
-const LAST_TYPE_KEY = "ev-last-type";
+const LAST_TYPE_KEY = "ironline:last-event-type";
 
 export default function EventsScreen({ events, coachName, today, onBack }: { events: HomeEvents; coachName: string; today: string; onBack: () => void }) {
   const router = useRouter();
@@ -115,6 +115,7 @@ export default function EventsScreen({ events, coachName, today, onBack }: { eve
     try {
       await clientDeleteEventAction(e.id);
       setDetail(null);
+      setSheet(null);
       router.refresh();
     } finally {
       setPending(false);
@@ -168,7 +169,7 @@ export default function EventsScreen({ events, coachName, today, onBack }: { eve
         </div>
       </main>
 
-      {sheet && <AddEventSheet event={sheet.event} initialType={sheet.type} initial={sheet.initial ?? null} error={sheet.error ?? null} coachName={coachName} today={today} pending={pending} onClose={() => setSheet(null)} onSubmit={save} />}
+      {sheet && <AddEventSheet event={sheet.event} initialType={sheet.type} initial={sheet.initial ?? null} error={sheet.error ?? null} coachName={coachName} today={today} pending={pending} onClose={() => setSheet(null)} onSubmit={save} onDelete={sheet.event ? () => remove(sheet.event!) : undefined} />}
       {detail && !sheet && (
         <EventDetail
           event={detail}
@@ -190,7 +191,7 @@ export default function EventsScreen({ events, coachName, today, onBack }: { eve
 
 // ---- The add card: the ask, a round +, and a chip per type.
 
-function AddEventCard({ coachName, onOpen }: { coachName: string; onOpen: (type?: EventTypeId) => void }) {
+function AddEventCard({ coachName, onOpen }: { coachName: string; onOpen: () => void }) {
   return (
     <section className="ev-addcard" aria-label="Add an event">
       <span className="ev-addcard-glow" aria-hidden="true" />
@@ -205,14 +206,6 @@ function AddEventCard({ coachName, onOpen }: { coachName: string; onOpen: (type?
           </svg>
         </span>
       </button>
-      <div className="ev-chips" role="list">
-        {EVENT_TYPES.map((t) => (
-          <button key={t.id} type="button" role="listitem" className="ev-chip" onClick={() => onOpen(t.id)}>
-            <TypeIcon path={t.icon} size={14} />
-            {t.label}
-          </button>
-        ))}
-      </div>
     </section>
   );
 }

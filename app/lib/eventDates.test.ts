@@ -53,3 +53,14 @@ test("range: en dash, From for a future single day, year across the boundary", (
 test("today line", () => {
   assert.deepEqual(todayLabel(today), { short: "THU 8 OCT", long: "Today, Thursday 8 October" });
 });
+
+test("duration chip", async () => {
+  const { durationLabel, addDays } = await import("./eventDates");
+  assert.equal(durationLabel("2026-10-08", "2026-10-08", today), "Today");
+  assert.equal(durationLabel("2026-10-10", "2026-10-10", today), "In 2 days");
+  assert.equal(durationLabel("2026-10-05", "2026-10-05", today), "3 days ago");
+  assert.equal(durationLabel("2026-10-08", "2026-10-14", today), "7 days · starts today");
+  assert.equal(durationLabel("2026-10-20", "2026-11-20", today), "32 days · starts in 12 days");
+  assert.equal(durationLabel("2026-10-06", "2026-10-10", today), "5 days · started 2 days ago");
+  assert.equal(addDays("2026-12-30", 6), "2027-01-05");
+});

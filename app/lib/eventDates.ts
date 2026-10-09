@@ -77,3 +77,24 @@ export function todayLabel(today: string): { short: string; long: string } {
   const m = Number(today.slice(5, 7)) - 1;
   return { short: `${wd.slice(0, 3)} ${day} ${MONTHS[m]}`.toUpperCase(), long: `Today, ${wd} ${day} ${MONTHS_LONG[m]}` };
 }
+
+/** yyyy-mm-dd plus n days. */
+export function addDays(iso: string, n: number): string {
+  return new Date((dayNum(iso) + n) * DAY).toISOString().slice(0, 10);
+}
+
+/** The sheet's duration chip: "12 days · starts in 12 days", "Today", "3 days ago". */
+export function durationLabel(start: string, end: string, today: string): string {
+  const k = daysBetween(today, start);
+  if (start === end) return k === 0 ? "Today" : k > 0 ? `In ${k} day${k === 1 ? "" : "s"}` : `${-k} day${k === -1 ? "" : "s"} ago`;
+  const n = daysBetween(start, end) + 1;
+  const days = `${n} day${n === 1 ? "" : "s"}`;
+  if (k === 0) return `${days} · starts today`;
+  return k > 0 ? `${days} · starts in ${k} day${k === 1 ? "" : "s"}` : `${days} · started ${-k} day${k === -1 ? "" : "s"} ago`;
+}
+
+/** "Thursday 8 October", for a date field's spoken label. */
+export function longDay(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  return `${["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][d.getUTCDay()]} ${Number(iso.slice(8, 10))} ${MONTHS_LONG[Number(iso.slice(5, 7)) - 1]}`;
+}
