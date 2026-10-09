@@ -8,6 +8,7 @@ import { clientAddEventAction, clientDeleteEventAction, clientUpdateEventAction 
 import { NO_CATEGORY, paletteOf } from "../admin/redesign/palette";
 import { useOpenEvents } from "./CheckInContext";
 import { eventTypeOf } from "../lib/eventTypes";
+import { dayOf } from "../lib/eventDates";
 import { TypeIcon } from "./events/AddEventSheet";
 
 // Home's "Events" card (7 Oct): what is coming up in the client's life that
@@ -68,17 +69,26 @@ export default function EventsCard({ events, today }: { events: HomeEvents; coac
           <span className="hm-ev-list">
             {running &&
               (() => {
-                // In it now: the row on the type's tint with its aura, a "Now" chip, the title, and until when.
+                // In it now (9 Oct): the Events screen's "happening now" card, as it is there: the eyebrow, the title, the bar, the day count and until when, on the type's tint with its aura.
                 const { t, style } = vars(running);
+                const { day, total } = dayOf(running, today);
                 return (
-                  <span className="hm-ev-row on" style={style}>
-                    <i className="hm-ev-now">
-                      <TypeIcon path={t.icon} fill={t.fill} size={11} stroke={2.4} />
-                      Now
-                    </i>
-                    <span className="hm-ev-title">{running.title}</span>
-                    <span className="hm-ev-when">{running.start === running.end ? "today" : `until ${shortDate(running.end)}`}</span>
-                    {running.note && <span className="hm-ev-more" aria-hidden="true">›</span>}
+                  <span className="ev-now hm-ev-nowcard" style={style}>
+                    <span className="ev-aura" aria-hidden="true" />
+                    <span className="ev-now-eyebrow">Happening now · {t.label}</span>
+                    <span className="ev-card-row">
+                      <span className="ev-card-title">{running.title}</span>
+                      {running.note && <span className="ev-chev" aria-hidden="true">›</span>}
+                    </span>
+                    <span className="ev-bar" aria-hidden="true">
+                      <i style={{ width: `${(day / total) * 100}%` }} />
+                    </span>
+                    <span className="ev-now-meta">
+                      <span>
+                        Day {day} of {total}
+                      </span>
+                      <span>until {shortDate(running.end)}</span>
+                    </span>
                   </span>
                 );
               })()}
