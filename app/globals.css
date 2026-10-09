@@ -17981,7 +17981,6 @@ button.ci-hint { cursor: pointer; }
 .hm-ev-add { flex: none; font-size: 13px; font-weight: 700; color: #1e3a6e; }
 /* The Events screen, the "Today line" (9 Oct). Prefix ev-. Tokens: navy
    #1d3466 is the events accent; each row carries its type as --c / --rgb. */
-.ev-nav { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; height: 44px; }
 .ev-scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding: 10px 16px 120px; background: linear-gradient(180deg, #e3e9f5 0%, #f4f7fc 28%); }
 
 /* ---- The add card. */
