@@ -48,7 +48,7 @@ export default function VideoWhiteboard({ src, requestId, firstName, onSent }: {
   const overlay = useRef<HTMLCanvasElement>(null);
   const out = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState<{ w: number; h: number }>({ w: 960, h: 540 });
-  const [tool, setTool] = useState<"pen" | "arrow">("pen");
+  const [tool, setTool] = useState<"pen" | "arrow" | "erase">("pen");
   const [color, setColor] = useState(COLORS[0]);
   const [shapes, setShapes] = useState<Shape[]>([]);
   const shapesRef = useRef<Shape[]>([]);
@@ -127,13 +127,37 @@ export default function VideoWhiteboard({ src, requestId, firstName, onSent }: {
     const r = e.currentTarget.getBoundingClientRect();
     return { x: ((e.clientX - r.left) / r.width) * size.w, y: ((e.clientY - r.top) / r.height) * size.h };
   };
+  // The eraser (9 Oct): a tap or a drag over a stroke takes that stroke away.
+  const near = (s: Shape, p: Pt) => {
+    const tol = Math.max(14, size.w / 60);
+    const segs: [Pt, Pt][] = s.kind === "arrow" ? [[s.from, s.to]] : s.points.slice(1).map((q, i) => [s.points[i], q] as [Pt, Pt]);
+    return segs.some(([a, b]) => {
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const len2 = dx * dx + dy * dy || 1;
+      const u = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2));
+      return Math.hypot(p.x - (a.x + u * dx), p.y - (a.y + u * dy)) <= tol;
+    });
+  };
+  const eraseAt = (p: Pt) => {
+    const hit = shapesRef.current.filter((s) => near(s, p));
+    if (hit.length) setShapes((list) => list.filter((s) => !hit.includes(s)));
+  };
   const down = (e: React.PointerEvent<HTMLCanvasElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     const p = at(e);
+    if (tool === "erase") {
+      eraseAt(p);
+      return;
+    }
     live.current = tool === "pen" ? { kind: "pen", points: [p], color } : { kind: "arrow", from: p, to: p, color };
     paint();
   };
   const move = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (tool === "erase") {
+      if (e.buttons) eraseAt(at(e));
+      return;
+    }
     const s = live.current;
     if (!s) return;
     const p = at(e);
@@ -276,7 +300,7 @@ export default function VideoWhiteboard({ src, requestId, firstName, onSent }: {
               onPause={() => setPlaying(false)}
               onTimeUpdate={(e) => setT(e.currentTarget.currentTime)}
             />
-            <canvas ref={overlay} className="wb-overlay" width={size.w} height={size.h} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} aria-label="Draw on the video" />
+            <canvas ref={overlay} className={`wb-overlay${tool === "erase" ? " erase" : ""}`} width={size.w} height={size.h} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} aria-label="Draw on the video" />
             {rec === "recording" && (
               <span className="wb-live" aria-live="polite">
                 <i /> REC {fmt(secs)}
@@ -299,6 +323,9 @@ export default function VideoWhiteboard({ src, requestId, firstName, onSent }: {
               </button>
               <button type="button" className={tool === "arrow" ? "on" : ""} aria-pressed={tool === "arrow"} onClick={() => setTool("arrow")}>
                 Arrow
+              </button>
+              <button type="button" className={tool === "erase" ? "on" : ""} aria-pressed={tool === "erase"} onClick={() => setTool("erase")}>
+                Eraser
               </button>
             </span>
             <span className="wb-colors" role="group" aria-label="Colour">
