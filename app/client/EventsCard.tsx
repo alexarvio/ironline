@@ -42,10 +42,13 @@ export const chromeOf = (cats: HomeEventCategory[], kind: string | null) => {
 
 export default function EventsCard({ events, coachName, today }: { events: HomeEvents; coachName: string; today: string }) {
   const openEvents = useOpenEvents();
-  // The next three to come or running, soonest first: a glance. The whole
-  // list, with Add, Change and Remove, is the Events screen (8 Oct).
+  // One event, a glance (9 Oct): the one running now if there is one, else
+  // the soonest to come. The whole list, with Add, Change and Remove, is the
+  // Events screen (8 Oct).
   const coming = events.list.filter((e) => e.end >= today).sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.id - b.id));
-  const shown = coming.slice(0, 3);
+  const running = coming.find((e) => e.start <= today) ?? null;
+  const one = running ?? coming[0] ?? null;
+  const rest = coming.length - (one ? 1 : 0);
   return (
     <section className="hm-ev" aria-label="Coming up">
       <button type="button" className="hm-ev-open" onClick={() => openEvents?.()} aria-label="Coming up: open your events">
@@ -53,21 +56,36 @@ export default function EventsCard({ events, coachName, today }: { events: HomeE
           <span className="hm-eyebrow">Coming up</span>
           <span className="hm-ev-chev" aria-hidden="true">›</span>
         </span>
-        {coming.length > 0 && (
-          <span className="hm-ev-list">
-            {shown.map((e) => {
-              const k = chromeOf(events.categories, e.kind);
+        {one &&
+          (() => {
+            const k = chromeOf(events.categories, one.kind);
+            if (running) {
+              // In it now: a "Now" chip in the category's colour, the title, and how long it runs.
+              const total = daysBetween(one.start, one.end) + 1;
+              const day = daysBetween(one.start, today) + 1;
+              const when = one.start === one.end ? "today" : total <= 2 ? `until ${shortDate(one.end)}` : `day ${day} of ${total} · until ${shortDate(one.end)}`;
               return (
-                <span key={e.id} className="hm-ev-row">
-                  <i className="hm-ev-dot" style={{ background: k.ink }} />
-                  <span className="hm-ev-when">{e.start === e.end ? shortDate(e.start) : `${shortDate(e.start)} – ${shortDate(e.end)}`}</span>
-                  <span className="hm-ev-title">{e.title}</span>
+                <span className="hm-ev-list">
+                  <span className="hm-ev-row on" style={{ background: k.tint }}>
+                    <i className="hm-ev-now" style={{ background: k.ink }}>Now</i>
+                    <span className="hm-ev-title">{one.title}</span>
+                    <span className="hm-ev-when">{when}</span>
+                  </span>
+                  {rest > 0 && <span className="hm-ev-more">{rest} more coming up</span>}
                 </span>
               );
-            })}
-            {coming.length > 3 && <span className="hm-ev-more">{coming.length - 3} more</span>}
-          </span>
-        )}
+            }
+            return (
+              <span className="hm-ev-list">
+                <span className="hm-ev-row">
+                  <i className="hm-ev-dot" style={{ background: k.ink }} />
+                  <span className="hm-ev-when">{one.start === one.end ? shortDate(one.start) : `${shortDate(one.start)} – ${shortDate(one.end)}`}</span>
+                  <span className="hm-ev-title">{one.title}</span>
+                </span>
+                {rest > 0 && <span className="hm-ev-more">{rest} more after this</span>}
+              </span>
+            );
+          })()}
         {/* What the card is for, said every time, rows or none (9 Oct): the client
             tells the coach what is going on, so the plan can plan around it. The
             reason on the left, Add on the right. */}

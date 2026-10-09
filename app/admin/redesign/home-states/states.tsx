@@ -89,7 +89,8 @@ export function homeProps(state: StateId): HomeProps {
     weekDone: null,
     trainedToday: false,
     food: { eaten: 1240, target: 2800, mealsLogged: 2, mealsTotal: 4 },
-    events: { list: [{ id: 1, kind: "work", title: "Night shifts", start: "2026-10-13", end: "2026-10-17", note: "", mine: false }], categories: [{ id: "work", label: "Work", color: "navy" }] },
+    // In an event now, with another behind it (9 Oct): the card shows the running one as "Now".
+    events: { list: [{ id: 1, kind: "work", title: "Night shifts", start: "2026-10-06", end: "2026-10-10", note: "", mine: false }, { id: 2, kind: "trip", title: "Weekend in Antwerp", start: "2026-10-24", end: "2026-10-25", note: "", mine: true }], categories: [{ id: "work", label: "Work", color: "navy" }, { id: "trip", label: "Trip", color: "blue" }] },
     todayNext: null,
     planGap: null,
   };

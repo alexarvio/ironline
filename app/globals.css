@@ -17966,7 +17966,11 @@ button.ci-hint { cursor: pointer; }
 .hm-ev-dot { flex: none; width: 8px; height: 8px; border-radius: 999px; }
 .hm-ev-when { flex: none; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
 .hm-ev-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: #141a24; }
-.hm-ev-more { font-size: 12.5px; font-weight: 700; color: #1e3a6e; }
+.hm-ev-more { font-size: 12.5px; font-weight: 600; color: #5b6474; }
+/* In an event now (9 Oct): the row sits on the category's tint with a "Now" chip. */
+.hm-ev-row.on { margin: 0 -6px; padding: 8px 10px; border-radius: 12px; }
+.hm-ev-row.on .hm-ev-when { flex: 1; min-width: 0; margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; font-weight: 500; }
+.hm-ev-now { flex: none; display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; color: #fff; font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
 .hm-ev-foot { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
 .hm-ev-foot.under { margin-top: 10px; padding-top: 10px; border-top: 1px solid #eef1f5; }
 .hm-ev-why { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.4; font-weight: 500; color: #5b6474; }
