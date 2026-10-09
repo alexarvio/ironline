@@ -269,14 +269,15 @@ function UpcomingRow(p: RowProps) {
         <div className={`ev-card${open ? " open" : ""}`}>
           <button type="button" className="ev-head" onClick={onToggle} disabled={!hasMore(e)} aria-expanded={hasMore(e) ? open : undefined} aria-label={rowLabel(e, today, coachName)}>
             <span className="ev-card-row">
-              <span className="ev-card-title">{e.title}</span>
+              <span className="ev-card-lead">
+                <span className="ev-card-title">{e.title}</span>
+                <Chevron e={e} open={open} />
+              </span>
               {!e.mine && <CoachAvatar name={coachName} photoPath={coachPhoto} size={24} ring="card" />}
-              <Chevron e={e} open={open} />
             </span>
             <span className="ev-card-meta">
-              <span>
-                {rangeLabel(e, today)} · <b>{relativeLabel(e, today)}</b>
-              </span>
+              <span>{rangeLabel(e, today)}</span>
+              <b>{relativeLabel(e, today)}</b>
             </span>
           </button>
           <RowMore {...p} />
@@ -300,9 +301,11 @@ function NowCard(p: RowProps) {
           <button type="button" className="ev-head" onClick={onToggle} disabled={!hasMore(e)} aria-expanded={hasMore(e) ? open : undefined} aria-label={rowLabel(e, today, coachName)}>
             <span className="ev-now-eyebrow">Happening now · {t.label}</span>
             <span className="ev-card-row">
-              <span className="ev-card-title">{e.title}</span>
+              <span className="ev-card-lead">
+                <span className="ev-card-title">{e.title}</span>
+                <Chevron e={e} open={open} />
+              </span>
               {!e.mine && <CoachAvatar name={coachName} photoPath={coachPhoto} size={24} ring="card" />}
-              <Chevron e={e} open={open} />
             </span>
             <span className="ev-bar" role="progressbar" aria-valuenow={day} aria-valuemin={1} aria-valuemax={total} aria-label={`Day ${day} of ${total}`}>
               <i style={{ width: `${(day / total) * 100}%` }} />
@@ -339,13 +342,16 @@ function PastRow(p: RowProps) {
         <div className={`ev-past${open ? " open" : ""}`}>
           <button type="button" className="ev-head ev-past-head" onClick={onToggle} disabled={!hasMore(e)} aria-expanded={hasMore(e) ? open : undefined} aria-label={rowLabel(e, today, coachName)}>
             <span className="ev-past-text">
-              <span className="ev-past-title">{e.title}</span>
+              <span className="ev-card-lead">
+                <span className="ev-past-title">{e.title}</span>
+                <Chevron e={e} open={open} />
+              </span>
               <span className="ev-past-meta">
-                {rangeLabel(e, today)} · {relativeLabel(e, today)}
+                <span>{rangeLabel(e, today)}</span>
+                <span>{relativeLabel(e, today)}</span>
               </span>
             </span>
             {!e.mine && <CoachAvatar name={coachName} photoPath={coachPhoto} size={22} ring="row" />}
-            <Chevron e={e} open={open} />
           </button>
           <RowMore {...p} />
         </div>

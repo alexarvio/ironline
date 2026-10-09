@@ -18009,7 +18009,7 @@ button.ci-hint { cursor: pointer; }
 .ev-rail::before { content: ""; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: #dce3ee; }
 .ev-cell { flex: 1; min-width: 0; padding-left: 8px; }
 .ev-dot-ring { position: absolute; left: -4px; top: 11px; display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 999px; background: #f4f7fc; color: var(--c); }
-.ev-chev { flex: none; font-size: 20px; line-height: 1; color: #8b93a1; transition: transform 0.25s ease; }
+.ev-chev { flex: none; font-size: 18px; line-height: 1; color: #8b93a1; transition: transform 0.25s ease; }
 .ev-chev.open { transform: rotate(90deg); }
 /* The body that opens in place: the note, who set it, Edit and Delete. */
 .ev-x { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease; }
@@ -18030,9 +18030,10 @@ button.ci-hint { cursor: pointer; }
 .ev-head:disabled { cursor: default; }
 .ev-card { display: flex; flex-direction: column; width: 100%; padding: 12px 12px 12px 14px; border-radius: 18px; background: #fff; box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04), 0 14px 24px -20px rgba(var(--rgb), 0.7), inset 0 0 0 1px rgba(var(--rgb), 0.12); }
 .ev-card-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.ev-card-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 800; color: #141a24; }
-.ev-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #5b6474; }
-.ev-card-meta b { font-weight: 800; color: #141a24; }
+.ev-card-lead { flex: 1; min-width: 0; display: flex; align-items: center; gap: 4px; }
+.ev-card-title { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 800; color: #141a24; }
+.ev-card-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 600; color: #5b6474; }
+.ev-card-meta b { flex: none; font-weight: 800; color: #141a24; }
 
 /* The TODAY line. */
 .ev-today { display: flex; align-items: center; height: 40px; }
@@ -18068,8 +18069,8 @@ button.ci-hint { cursor: pointer; }
 .ev-past.open, .ev-past:active { background: rgba(255, 255, 255, 0.7); }
 .ev-past-head { flex-direction: row; align-items: center; gap: 8px; }
 .ev-past-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.ev-past-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14.5px; font-weight: 700; color: #3a4250; }
-.ev-past-meta { font-size: 12px; font-weight: 600; color: #8b93a1; }
+.ev-past-title { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14.5px; font-weight: 700; color: #3a4250; }
+.ev-past-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 600; color: #8b93a1; }
 .ev-none { margin: 10px auto 0; max-width: 260px; font-size: 13.5px; line-height: 1.45; font-weight: 600; text-align: center; color: #5b6474; }
 
 /* Just added: a soft wash that fades out. */
