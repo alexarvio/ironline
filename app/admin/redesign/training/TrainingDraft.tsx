@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger, ToggleGroup, ToggleGroupItem } from "../..
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { CalendarIcon, ChatIcon, ChevronDownIcon, ColumnsIcon, CopyIcon, DumbbellIcon, EyeIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { VideoIcon } from "../../VideoRequestButton";
+import VideoWhiteboard from "./VideoWhiteboard";
 import PhaseDatesDialog from "../PhaseDatesDialog";
 import PhaseSwitcher from "../PhaseSwitcher";
 import PhaseGoalsCard from "../PhaseGoalsCard";
@@ -2697,8 +2698,10 @@ function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }:
   useEffect(() => {
     if (seenId != null) void markVideoSeenAction(seenId);
   }, [seenId]);
+  // The whiteboard (9 Oct): the client's video with a drawing layer and the mic, recorded as the reply.
+  const board = video?.state === "in" && video.media === "video" && !!video.src;
   return (
-    <DialogContent className="rd-dlg">
+    <DialogContent className={`rd-dlg${board ? " wide" : ""}`}>
       <DialogHeader>
         <DialogTitle>{!video ? "Ask for a video" : video.state === "asked" ? "Video asked for" : `${firstName}'s ${video.media}${video.about === "swap" ? " of the swap" : ""}`}</DialogTitle>
         <DialogDescription>
@@ -2737,7 +2740,9 @@ function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }:
       {(video?.state === "in" || video?.state === "replied") && (
         <>
           {/* The video itself (9 Oct): the stub with a fixed "0:42" stood here, and the coach could not watch what the client sent. */}
-          {video.src && video.media === "photo" ? (
+          {board ? (
+            <VideoWhiteboard src={video.src!} requestId={video.requestId} firstName={firstName} onSent={(note) => onReply(note)} />
+          ) : video.src && video.media === "photo" ? (
             <img className="rd-video" src={video.src} alt={`${firstName}'s photo`} />
           ) : video.src ? (
             <video className="rd-video" src={video.src} controls playsInline preload="metadata" aria-label={`${firstName}'s video`} />
@@ -2757,7 +2762,7 @@ function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }:
             <p className="rd-dlg-para">
               <b>Your reply</b> {video.reply}
             </p>
-          ) : (
+          ) : board ? null : (
             <>
               <label className="rd-field">
                 <span>Your reply</span>
@@ -2768,7 +2773,7 @@ function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }:
           )}
           <DialogFooter>
             <DialogClose className="rd-btn">Close</DialogClose>
-            {video.state === "in" && (
+            {video.state === "in" && !board && (
               <button type="button" className="rd-btn primary" disabled={!reply.trim()} onClick={() => onReply(reply.trim())}>
                 Send reply
               </button>

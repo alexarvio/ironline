@@ -8571,6 +8571,37 @@ export function getExerciseUnit(assignmentId: number, gymId: number | null): "kg
   return pick ? [...pick.logs].reverse().find((l) => l.unit)?.unit ?? null : null;
 }
 
+/** The coach's latest reply on this exercise from an earlier session of the
+ *  phase (9 Oct), so it lands on the next time the client does it; null
+ *  when this session has its own request, or there is none. */
+export function carriedVideoReply(assignmentId: number): VideoRequest | null {
+  const data = getData();
+  if (data.video_requests.some((r) => r.assignment_id === assignmentId)) return null;
+  const earlier = exerciseHistoryFor(assignmentId).map((h) => h.logs[0]?.workout_assignment_id).filter((x): x is number => x != null);
+  const wa = data.workout_assignments.find((x) => x.id === assignmentId);
+  const day = wa && data.program_days.find((pd) => pd.id === wa.program_day_id);
+  if (!wa || !day) return null;
+  // Every earlier row of the same exercise in this phase, logged or not.
+  const exerciseId = wa.swap ? wa.swap.library_exercise_id : wa.exercise_id;
+  const at = (pd: { week_number: number; day_of_week: number }) => pd.week_number * 100 + pd.day_of_week;
+  const program = data.training_programs.find((p) => p.client_id === day.client_id && day.week_number >= p.start_week && day.week_number < p.start_week + p.total_weeks);
+  const rows = data.workout_assignments.filter((o) => {
+    if (o.id === assignmentId) return false;
+    const oid = o.swap ? o.swap.library_exercise_id : o.exercise_id;
+    if (oid !== exerciseId) return false;
+    const pd = data.program_days.find((d) => d.id === o.program_day_id);
+    if (!pd || pd.client_id !== day.client_id || at(pd) >= at(day)) return false;
+    return !program || (pd.week_number >= program.start_week && pd.week_number < program.start_week + program.total_weeks);
+  });
+  void earlier;
+  const ids = new Set(rows.map((r) => r.id));
+  return (
+    data.video_requests
+      .filter((r) => ids.has(r.assignment_id) && r.replied_at)
+      .sort((a, b) => (b.replied_at ?? "").localeCompare(a.replied_at ?? ""))[0] ?? null
+  );
+}
+
 /** The last few sessions of this exercise, most recent first. */
 export function getExerciseHistory(assignmentId: number, limit = 3): ExerciseHistoryEntry[] {
   const data = getData();

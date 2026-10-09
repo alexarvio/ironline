@@ -23,6 +23,8 @@ export type VideoAsk = {
   media?: "video" | "photo" | null;
   about?: "swap" | null;
   clientNote?: string | null;
+  /** The coach's reply on this exercise from an earlier session (9 Oct), shown again here. */
+  carried?: boolean;
 };
 
 const MAX_BYTES = 128 * 1024 * 1024;

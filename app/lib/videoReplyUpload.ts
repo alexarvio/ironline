@@ -4,6 +4,7 @@ import { once } from "events";
 import { DATA_DIR } from "./db";
 import { setVideoReplyFile, videoReplyTarget } from "./queries";
 import { deleteUpload, putUploadFromDisk } from "./storage";
+import { toMp4 } from "./transcode";
 
 // Receiving a coach's reply video (see app/api/video-reply/[id]/route.ts):
 // the raw file, written to the disk as it arrives rather than held in
@@ -48,12 +49,24 @@ export async function receiveReplyVideo(request: Request, id: number): Promise<R
     return fail("Nothing came through. Try again.", 400);
   }
 
-  await putUploadFromDisk(target.publicPath, target.filePath, type);
-  const previous = setVideoReplyFile(id, target.publicPath);
+  // A browser recording (WebM) becomes an MP4 the phone plays (9 Oct); the
+  // coach waits a little longer on Send, the client gets a file that opens.
+  let filed = target;
+  let filedType = type;
+  if (ext === "webm") {
+    const mp4 = videoReplyTarget(id, "mp4");
+    if (mp4 && (await toMp4(target.filePath, mp4.filePath))) {
+      fs.rmSync(target.filePath, { force: true });
+      filed = mp4;
+      filedType = "video/mp4";
+    }
+  }
+  await putUploadFromDisk(filed.publicPath, filed.filePath, filedType);
+  const previous = setVideoReplyFile(id, filed.publicPath);
   if (previous) {
     await deleteUpload(previous);
     const old = path.join(DATA_DIR, previous.replace(/^\//, ""));
     if (old.startsWith(path.join(DATA_DIR, "uploads"))) fs.rmSync(old, { force: true });
   }
-  return Response.json({ path: target.publicPath, bytes: total });
+  return Response.json({ path: filed.publicPath, bytes: total, converted: filed !== target });
 }

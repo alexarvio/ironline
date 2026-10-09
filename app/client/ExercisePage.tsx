@@ -330,8 +330,8 @@ export default function ExercisePage({
             <VideoGlyph />
           </span>
           <span className="wo-video-main">
-            <b>{ask.reply ? `${coachName} replied to your ${ask.media === "photo" ? "photo" : "video"}` : ask.src ? (ask.media === "photo" ? (ask.about === "swap" ? "Photo of the swap sent" : "Photo sent") : "Video sent") : `${coachName} wants a video`}</b>
-            <small>{ask.reply ? "Tap to see the reply" : ask.src ? `Only ${coachName} sees it` : ask.note || "Of this exercise, this session"}</small>
+            <b>{ask.reply ? (ask.carried ? `${coachName}'s reply on this exercise` : `${coachName} replied to your ${ask.media === "photo" ? "photo" : "video"}`) : ask.src ? (ask.media === "photo" ? (ask.about === "swap" ? "Photo of the swap sent" : "Photo sent") : "Video sent") : `${coachName} wants a video`}</b>
+            <small>{ask.reply ? (ask.carried ? "From last time · tap to watch again" : "Tap to see the reply") : ask.src ? `Only ${coachName} sees it` : ask.note || "Of this exercise, this session"}</small>
           </span>
           <span className="wo-video-action">{ask.reply ? "Open" : ask.src ? "View" : "Record"}</span>
         </button>

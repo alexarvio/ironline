@@ -6,6 +6,7 @@ import {
   getAssignmentsForDay,
   getClient,
   listClientEvents,
+  carriedVideoReply,
   listEventCategories,
   getClientProfile,
   questionsForDay,
@@ -117,15 +118,10 @@ import { cookies } from "next/headers";
 import type { HomePhase, PhaseFoodToday } from "./PhaseCards";
 import {
   AppleIcon,
-  CalendarIcon,
-  ChatIcon,
-  ClockIcon,
   DumbbellIcon,
   HomeIcon,
-  ReportIcon,
 } from "../components/icons";
 import {
-  markAllNotificationsReadAction,
   setClientPreferenceAction,
 } from "../lib/actions";
 
@@ -751,7 +747,11 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                   lastWarmups: getLastWarmupSets(a.id).map((w) => ({ weight: w.weight_kg, reps: w.reps })),
                   videoRequest: (() => {
                     const r = videoAsks.get(a.id);
-                    return r ? { id: r.id, note: r.note, src: r.file_path, sentAt: r.submitted_at, reply: videoReplies.find((x) => x.id === r.id) ?? null, fromClient: !!r.from_client, media: r.media ?? "video", about: r.about ?? null, clientNote: r.client_note ?? null } : null;
+                    if (r) return { id: r.id, note: r.note, src: r.file_path, sentAt: r.submitted_at, reply: videoReplies.find((x) => x.id === r.id) ?? null, fromClient: !!r.from_client, media: r.media ?? "video", about: r.about ?? null, clientNote: r.client_note ?? null };
+                    // The coach's reply from an earlier session of this exercise lands here too (9 Oct).
+                    const c = carriedVideoReply(a.id);
+                    const reply = c ? videoReplies.find((x) => x.id === c.id) ?? null : null;
+                    return c && reply ? { id: c.id, note: null, src: null, sentAt: null, reply, carried: true } : null;
                   })(),
                   gymTargets: allGyms.length ? Object.fromEntries(allGyms.map((g) => [g.id, targetAtGym(a, g.id, home)])) : undefined,
                   gymNotes: allGyms.length ? Object.fromEntries(allGyms.map((g) => [g.id, notesByGym.get(g.id)?.get(a.exercise_id) ?? ""])) : undefined,

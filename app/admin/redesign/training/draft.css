@@ -314,6 +314,28 @@
 .rd-note-text { white-space: pre-wrap; }
 
 .rd-dlg { max-width: 520px; gap: 14px; font-family: var(--font-archivo), system-ui, sans-serif; }
+.rd-dlg.wide { max-width: 900px; }
+/* The whiteboard reply (9 Oct). */
+.wb { display: flex; flex-direction: column; gap: 10px; }
+.wb-stage { position: relative; width: 100%; border-radius: 12px; overflow: hidden; background: #000; }
+.wb-stage video { display: block; width: 100%; height: 100%; object-fit: contain; }
+.wb-overlay { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+.wb-live { position: absolute; top: 10px; left: 10px; display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 999px; background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 11.5px; font-weight: 800; letter-spacing: 0.08em; }
+.wb-live i { width: 8px; height: 8px; border-radius: 999px; background: #ff3b30; animation: wb-blink 1s steps(2) infinite; }
+@keyframes wb-blink { to { opacity: 0.2; } }
+.wb-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wb-scrub { flex: 1; min-width: 120px; accent-color: #1e3a6e; }
+.wb-time { font-size: 12px; font-weight: 700; color: #5b6474; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wb-colors { display: inline-flex; gap: 5px; }
+.wb-color { width: 20px; height: 20px; padding: 0; border: 2px solid #fff; border-radius: 999px; box-shadow: 0 0 0 1px #c3c9d2; cursor: pointer; }
+.wb-color.on { box-shadow: 0 0 0 2px #1e3a6e; }
+.wb-rec { background: #b3471d; border-color: #b3471d; }
+.wb-stop { background: #141a24; border-color: #141a24; }
+.wb-preview { display: block; width: 100%; max-height: 420px; border-radius: 12px; background: #000; }
+.wb-progress { height: 6px; border-radius: 999px; background: #e6ecf3; overflow: hidden; }
+.wb-progress i { display: block; height: 100%; background: #1e3a6e; transition: width 0.2s ease; }
+.wb-problem { color: #b3471d; }
+.wb-send { display: flex; justify-content: flex-end; gap: 8px; }
 .rd-dlg [data-slot="dialog-footer"] { align-items: center; margin-top: 4px; }
 .rd-dlg-hint { margin: 0; font-size: 12px; line-height: 1.5; color: #8b93a1; }
 .rd-dlg-hint.grow { flex: 1; }
