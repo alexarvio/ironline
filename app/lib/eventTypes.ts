@@ -25,7 +25,7 @@ export const EVENT_TYPES: EventType[] = [
   { id: "work", label: "Work", color: "#5b6472", rgb: "91,100,114", icon: "M4 8h16v11H4zM9 8V5h6v3M4 13h16", placeholder: "e.g. Business trip to Berlin" },
   { id: "supplement", label: "Supplement", color: "#1f7a4d", rgb: "31,122,77", icon: "M10.5 3.5a5 5 0 0 1 7 7l-7 7a5 5 0 0 1-7-7zM7 7l7 7", placeholder: "e.g. Creatine, 5 g a day", oneDay: true },
   { id: "training", label: "Training", color: "#4c42a8", rgb: "76,66,168", icon: "M6.5 8v8M17.5 8v8M4 10v4M20 10v4M6.5 12h11", placeholder: "e.g. Home workouts only" },
-  { id: "other", label: "Other", color: "#a8761f", rgb: "168,118,31", icon: "M4 6h16v14H4zM4 10h16M9 3v4M15 3v4", placeholder: "e.g. Wedding" },
+  { id: "other", label: "Other", color: "#7a8290", rgb: "122,130,144", icon: "M4 6h16v14H4zM4 10h16M9 3v4M15 3v4", placeholder: "e.g. Wedding" },
 ];
 
 const OTHER = EVENT_TYPES[EVENT_TYPES.length - 1];

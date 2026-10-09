@@ -21,7 +21,6 @@ import { CoachAvatar } from "./CoachAvatar";
 
 type Sheet = { event: HomeEvent | null; type: EventTypeId; initial?: EventValues | null; error?: string | null } | null;
 const LAST_TYPE_KEY = "ev-last-type";
-const PAGE = 15;
 
 export default function EventsScreen({ events, coachName, today, onBack }: { events: HomeEvents; coachName: string; today: string; onBack: () => void }) {
   const router = useRouter();
@@ -41,7 +40,6 @@ export default function EventsScreen({ events, coachName, today, onBack }: { eve
   const upcoming = list.filter((e) => statusOf(e, today) === "next").sort(byStart).reverse();
   const now = list.filter((e) => statusOf(e, today) === "now").sort((a, b) => (a.end < b.end ? -1 : a.end > b.end ? 1 : a.id - b.id));
   const past = list.filter((e) => statusOf(e, today) === "past").sort(byStart).reverse();
-  const [pastShown, setPastShown] = useState(PAGE);
 
   // ---- The sheet, the detail, and a save on its way.
   const [sheet, setSheet] = useState<Sheet>(null);
@@ -58,6 +56,16 @@ export default function EventsScreen({ events, coachName, today, onBack }: { eve
     }
   };
   const openAdd = (type?: EventTypeId) => setSheet({ event: null, type: type ?? lastType() });
+
+  const todayRef = useRef<HTMLDivElement>(null);
+  const centred = useRef(false);
+  useEffect(() => {
+    if (centred.current) return;
+    centred.current = true;
+    const el = (now[0] && rows.current.get(now[0].id)) || todayRef.current;
+    el?.scrollIntoView({ block: "center" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (highlight == null) return;
@@ -137,7 +145,7 @@ export default function EventsScreen({ events, coachName, today, onBack }: { eve
               <UpcomingRow key={e.id} e={e} today={today} coachName={coachName} coachPhoto={coachPhoto} lit={highlight === e.id} refFn={(el) => el && rows.current.set(e.id, el)} onOpen={() => setDetail(e)} />
             ))}
 
-            <div className="ev-today" role="separator" aria-label={tl.long}>
+            <div ref={todayRef} className="ev-today" role="separator" aria-label={tl.long}>
               <span className="ev-td" aria-hidden="true" />
               <span className="ev-rail ev-rail-today" aria-hidden="true">
                 <i />
@@ -150,17 +158,12 @@ export default function EventsScreen({ events, coachName, today, onBack }: { eve
               <NowCard key={e.id} e={e} today={today} coachName={coachName} coachPhoto={coachPhoto} lit={highlight === e.id} refFn={(el) => el && rows.current.set(e.id, el)} onOpen={() => setDetail(e)} />
             ))}
 
-            {total === 0 && <p className="ev-none">Nothing yet. Add a trip, an injury or anything that changes your week.</p>}
+            {total === 0 && <p className="ev-none">Nothing logged yet.</p>}
 
             {past.length > 0 && <div className="ev-sec ev-sec-past">Earlier</div>}
-            {past.slice(0, pastShown).map((e) => (
+            {past.map((e) => (
               <PastRow key={e.id} e={e} today={today} coachName={coachName} coachPhoto={coachPhoto} lit={highlight === e.id} refFn={(el) => el && rows.current.set(e.id, el)} onOpen={() => setDetail(e)} />
             ))}
-            {past.length > pastShown && (
-              <button type="button" className="ev-more" onClick={() => setPastShown((n) => n + PAGE)}>
-                Show earlier
-              </button>
-            )}
           </div>
         </div>
       </main>
@@ -227,13 +230,16 @@ function UpcomingRow({ e, today, coachName, coachPhoto, lit, refFn, onOpen }: Ro
         <small>{shortDay(e.start, today).split(" ")[1]}</small>
       </span>
       <span className="ev-rail" aria-hidden="true">
-        <i className="ev-dot-ring" />
+        <i className="ev-dot-ring">
+          <TypeIcon path={t.icon} size={12} stroke={2.4} />
+        </i>
       </span>
       <span className="ev-cell">
         <button type="button" className="ev-card" onClick={onOpen} aria-label={rowLabel(e, today, coachName)}>
           <span className="ev-card-row">
             <span className="ev-card-title">{e.title}</span>
             {!e.mine && <CoachAvatar name={coachName} photoPath={coachPhoto} size={24} ring="card" />}
+            {e.note && <span className="ev-chev" aria-hidden="true">›</span>}
           </span>
           <span className="ev-card-meta">
             <span className="ev-pill">
@@ -259,10 +265,12 @@ function NowCard({ e, today, coachName, coachPhoto, lit, refFn, onOpen }: RowPro
       <span className="ev-rail ev-rail-now" aria-hidden="true" />
       <span className="ev-cell">
         <button type="button" className="ev-now" onClick={onOpen} aria-label={rowLabel(e, today, coachName)}>
+          <span className="ev-aura" aria-hidden="true" />
           <span className="ev-now-eyebrow">Happening now · {t.label}</span>
           <span className="ev-card-row">
             <span className="ev-card-title">{e.title}</span>
             {!e.mine && <CoachAvatar name={coachName} photoPath={coachPhoto} size={24} ring="card" />}
+            {e.note && <span className="ev-chev" aria-hidden="true">›</span>}
           </span>
           <span className="ev-bar" role="progressbar" aria-valuenow={day} aria-valuemin={1} aria-valuemax={total} aria-label={`Day ${day} of ${total}`}>
             <i style={{ width: `${(day / total) * 100}%` }} />
@@ -288,7 +296,9 @@ function PastRow({ e, today, coachName, coachPhoto, lit, refFn, onOpen }: RowPro
         <small>{shortDay(e.start, today).split(" ")[1]}</small>
       </span>
       <span className="ev-rail" aria-hidden="true">
-        <i className="ev-dot-past" />
+        <i className="ev-dot-past">
+          <TypeIcon path={t.icon} size={10} stroke={2.4} />
+        </i>
       </span>
       <span className="ev-cell">
         <button type="button" className="ev-past" onClick={onOpen} aria-label={rowLabel(e, today, coachName)}>
@@ -299,6 +309,7 @@ function PastRow({ e, today, coachName, coachPhoto, lit, refFn, onOpen }: RowPro
             </span>
           </span>
           {!e.mine && <CoachAvatar name={coachName} photoPath={coachPhoto} size={22} ring="row" />}
+          {e.note && <span className="ev-chev" aria-hidden="true">›</span>}
         </button>
       </span>
     </div>
