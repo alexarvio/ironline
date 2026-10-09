@@ -88,7 +88,8 @@ import type { HomeLifestyleMetric } from "./HomeLifestyleCard";
 import { ProgressPicturesRow, type ProgressPicturesProps } from "./ProgressPicturesScreen";
 import HomeHub, { type LatestActivity, type UpcomingMeeting } from "./HomeHub";
 import type { HomeEvents } from "./EventsCard";
-import type { PastMeetingView } from "./MeetingsScreen";
+import type { ClientMeetingView } from "./meetings/MeetingsScreen";
+import { isMeetingTypeId } from "../lib/meetingTypes";
 import type { ProgressPics } from "./ProgressPicsCard";
 import NutritionTargetsCard, { type NutritionTargetSet } from "./NutritionTargetsCard";
 import CoachCard from "./CoachCard";
@@ -274,19 +275,21 @@ function meetingCardView(m: ReturnType<typeof listMeetings>[number], today: stri
   };
 }
 
-// A call that has happened, for the Meetings screen's log: what it was
-// about and the recap the coach wrote for the client (never the coach's
-// own prep notes or running notes).
-function pastMeetingView(m: ReturnType<typeof listMeetings>[number]): PastMeetingView {
-  const when = new Date(`${m.date}T12:00:00`);
+// A call for the Meetings screen (9 Oct): its kind, its start as a moment
+// the phone reads in its own time, the recap the coach wrote for the client
+// (never the coach's own prep or running notes), and the events made from it.
+function clientMeetingView(m: ReturnType<typeof listMeetings>[number], events: ReturnType<typeof listClientEvents>): ClientMeetingView {
+  const startAt = m.time ? zonedToUtc(m.date, m.time, m.tz || SERVER_TZ) : null;
   return {
     id: m.id,
-    dayNumber: String(when.getDate()),
-    monthCap: MONTH_CAP[when.getMonth()],
-    dateLabel: when.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),
-    topic: m.topic || "Check-in call",
-    title: (m.summary_title ?? "").trim() || null,
-    text: (m.summary ?? "").trim() || null,
+    title: m.topic || "Check-in call",
+    type: isMeetingTypeId(m.meeting_type) ? m.meeting_type : "checkin",
+    startIso: startAt ? startAt.toISOString() : null,
+    date: m.date,
+    durationMin: m.duration_minutes,
+    joinUrl: m.link ?? null,
+    notes: (m.summary ?? "").trim() || null,
+    linkedEvents: events.filter((e) => e.meeting_id === m.id).map((e) => ({ id: e.id, title: e.title, kind: e.kind })),
     missed: m.status === "no-show",
   };
 }
@@ -1431,16 +1434,14 @@ export default async function ClientPage({
   // Today's food diary, opened from the ring on Nutrition.
   const foodDiary = getFoodDiary(CLIENT_ID, localDateStr());
 
-  // The Meetings screen: every call still to come (soonest first), then the
-  // ones that happened (newest first). Cancelled calls are left out.
+  // The Meetings screen (9 Oct): every call still to come, then the ones that
+  // happened, each with the events made from it. Cancelled calls are left out.
   const meetings = (() => {
     const today = localDateStr();
     const all = listMeetings(CLIENT_ID).filter((m) => m.status !== "cancelled");
-    const upcoming = all
-      .filter((m) => m.status === "scheduled" && m.date >= today)
-      .sort((a, b) => (a.date === b.date ? (a.time < b.time ? -1 : 1) : a.date < b.date ? -1 : 1))
-      .map((m) => meetingCardView(m, today, phoneTz));
-    const past = all.filter((m) => m.status !== "scheduled" || m.date < today).map(pastMeetingView);
+    const events = listClientEvents(CLIENT_ID);
+    const upcoming = all.filter((m) => m.status === "scheduled" && m.date >= today).map((m) => clientMeetingView(m, events));
+    const past = all.filter((m) => m.status !== "scheduled" || m.date < today).map((m) => clientMeetingView(m, events));
     return { upcoming, past };
   })();
 

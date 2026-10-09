@@ -2,7 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { addMeetingAction, completeMeetingAction, removeMeetingAction, sendChatMessageAction, updateMeetingAction } from "../../../lib/actions";
+import { addEventFromMeetingNoteAction, addMeetingAction, completeMeetingAction, removeMeetingAction, sendChatMessageAction, updateMeetingAction } from "../../../lib/actions";
+import { MEETING_TYPES, type MeetingTypeId } from "../../../lib/meetingTypes";
+import { agreedPoints } from "../../../lib/meetingDates";
 import type React from "react";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
@@ -317,6 +319,7 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                           patchMeeting(upcoming.id, f);
                           if (f.summary !== undefined || f.summaryTitle !== undefined) act(() => updateMeetingAction(fd({ id: upcoming.id, summary: f.summary ?? upcoming.summary, summaryTitle: f.summaryTitle ?? upcoming.summaryTitle })));
                         }}
+                        onAddEvent={(line) => act(() => addEventFromMeetingNoteAction(fd({ meetingId: upcoming.id, text: line, date: upcoming.date })), `Added to ${firstName}'s events: ${line}`)}
                       />
                     )}
                   </div>
@@ -431,6 +434,7 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                             patchMeeting(m.id, f);
                             if (f.summary !== undefined || f.summaryTitle !== undefined) act(() => updateMeetingAction(fd({ id: m.id, summary: f.summary ?? m.summary, summaryTitle: f.summaryTitle ?? m.summaryTitle })));
                           }}
+                          onAddEvent={(line) => act(() => addEventFromMeetingNoteAction(fd({ meetingId: m.id, text: line, date: m.date })), `Added to ${firstName}'s events: ${line}`)}
                         />
                       )}
                     </div>
@@ -472,7 +476,7 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                 act(() => updateMeetingAction(fd({ id: dlg.reschedule!.id, date: v.date, time: v.time, tz: v.tz, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "" })), `Moved to ${longDay(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees the new time`);
               } else {
                 act(
-                  () => addMeetingAction(fd({ clientId, date: v.date, time: v.time, tz: v.tz, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "", repeatWeeks: v.repeatWeeks, count: v.count })),
+                  () => addMeetingAction(fd({ clientId, date: v.date, time: v.time, tz: v.tz, durationMinutes: v.durationMinutes, topic: v.topic, link: v.link ?? "", repeatWeeks: v.repeatWeeks, count: v.count, meetingType: v.meetingType })),
                   v.repeatWeeks
                     ? `${v.count} calls, ${v.repeatWeeks === 1 ? "weekly" : `every ${v.repeatWeeks} weeks`} from ${longDay(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees them on Home`
                     : `${v.topic || "Check-in call"} on ${longDay(v.date)}${v.time ? ` at ${v.time}` : ""} · ${firstName} sees it on Home`
@@ -559,7 +563,7 @@ function PrepNotes({ value, onSave, bare, label = "Prep notes" }: { value: strin
 }
 
 /** An open past call: what was agreed, written for the client. */
-function PastBody({ m, firstName, onPatch, bare }: { m: DraftMeeting; firstName: string; onPatch: (f: Partial<DraftMeeting>) => void; /** Under the next call: no label or indent of its own. */ bare?: boolean }) {
+function PastBody({ m, firstName, onPatch, bare, onAddEvent }: { m: DraftMeeting; firstName: string; onPatch: (f: Partial<DraftMeeting>) => void; /** Under the next call: no label or indent of its own. */ bare?: boolean; /** A saved line of the recap as an event on the client's plan (9 Oct). */ onAddEvent?: (line: string) => void }) {
   const [recap, setRecap] = useState(m.summary);
   // The title starts as the call's name (the Meetings screen's subheading), unless the coach wrote one.
   const [title, setTitle] = useState(m.summaryTitle || m.topic || "Check-in call");
@@ -582,6 +586,19 @@ function PastBody({ m, firstName, onPatch, bare }: { m: DraftMeeting; firstName:
           <textarea value={recap} onChange={(e) => setRecap(e.target.value)} rows={4} placeholder={`What you covered and what ${firstName} agreed to…`} aria-label="Meeting notes" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && changes > 0 && save()} />
         </div>
         )}
+      {/* The saved lines, each one an event on the client's plan in a click (9 Oct): a trip they mentioned, a supplement to start. */}
+      {onAddEvent && changes === 0 && !agreedPoints(m.summary).prose && agreedPoints(m.summary).points.length > 0 && (
+        <ul className="rt-lines" aria-label="Agreed points">
+          {agreedPoints(m.summary).points.map((line, i) => (
+            <li key={i} className="rt-line">
+              <span>{line}</span>
+              <button type="button" className="rd-chip" onClick={() => onAddEvent(line)}>
+                <PlusIcon /> Add as event
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       {changes > 0 && (
         <div className="rd-pending rt-bar">
           <span className="rd-pending-count">{changes}</span>
@@ -689,7 +706,7 @@ function MiniCalendar({ today, selected, dots, onPick }: { today: string; select
 }
 
 /** Booking a call, or moving one: the day, a 24-hour time, how long, what about, the way in. */
-function ScheduleDialog({ date: initialDate, reschedule, lastLink, coachTz, dots, today, onSave }: { date: string; reschedule: DraftMeeting | null; lastLink: string | null; coachTz: string | null; dots: DraftDot[]; today: string; onSave: (v: { date: string; time: string; tz: string; durationMinutes: number; topic: string; link: string | null; repeatWeeks: number; count: number }) => void }) {
+function ScheduleDialog({ date: initialDate, reschedule, lastLink, coachTz, dots, today, onSave }: { date: string; reschedule: DraftMeeting | null; lastLink: string | null; coachTz: string | null; dots: DraftDot[]; today: string; onSave: (v: { date: string; time: string; tz: string; durationMinutes: number; topic: string; link: string | null; repeatWeeks: number; count: number; meetingType: MeetingTypeId }) => void }) {
   const [date, setDate] = useState(reschedule?.date ?? initialDate);
   const [time, setTime] = useState(reschedule?.time ?? "");
   // The time is in the coach's own timezone unless they pick another; a
@@ -700,6 +717,8 @@ function ScheduleDialog({ date: initialDate, reschedule, lastLink, coachTz, dots
     return list.includes(tz) ? list : [tz, ...list];
   });
   const [duration, setDuration] = useState(reschedule?.durationMinutes ?? 30);
+  // What kind of call (9 Oct): the client's Meetings screen colours it by this.
+  const [mtype, setMtype] = useState<MeetingTypeId>("checkin");
   const [topic, setTopic] = useState(reschedule?.topic ?? "");
   const [link, setLink] = useState(reschedule?.link ?? "");
   // A new call can repeat: every 1, 2 or 4 weeks, this many times (0: once).
@@ -768,6 +787,18 @@ function ScheduleDialog({ date: initialDate, reschedule, lastLink, coachTz, dots
               )}
             </div>
           )}
+          {!reschedule && (
+            <div className="rd-field">
+              <span>Kind of call</span>
+              <div className="rd-chips" role="radiogroup" aria-label="Kind of call">
+                {MEETING_TYPES.map((t) => (
+                  <button key={t.id} type="button" role="radio" aria-checked={mtype === t.id} className={`rd-chip${mtype === t.id ? " on" : ""}`} onClick={() => setMtype(t.id)}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <label className="rd-field">
             <span>Topic</span>
             <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Week 6 check-in" maxLength={80} autoFocus={!reschedule} />
@@ -788,7 +819,7 @@ function ScheduleDialog({ date: initialDate, reschedule, lastLink, coachTz, dots
       <DialogFooter>
         <span className="rd-dlg-hint grow">{link.trim() && !linkOk ? "That does not look like a link yet." : ""}</span>
         <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!date || !linkOk} onClick={() => onSave({ date, time: tidyTime(time), tz, durationMinutes: duration, topic: topic.trim(), link: link.trim() || null, repeatWeeks, count: repeatWeeks ? calls : 1 })}>
+        <button type="button" className="rd-btn primary" disabled={!date || !linkOk} onClick={() => onSave({ date, time: tidyTime(time), tz, durationMinutes: duration, topic: topic.trim(), link: link.trim() || null, repeatWeeks, count: repeatWeeks ? calls : 1, meetingType: mtype })}>
           {reschedule ? "Move the call" : repeatWeeks ? `Schedule ${calls} calls` : "Schedule"}
         </button>
       </DialogFooter>

@@ -396,6 +396,8 @@ export type ClientEvent = {
   created_at: string;
   /** "client": the client added it from their Home (7 Oct); otherwise the coach. */
   added_by?: "client" | null;
+  /** Made from a call's note (9 Oct): the meeting it came out of. */
+  meeting_id?: number | null;
 };
 
 // A coach's own event category beside the built-in ones: a name and one of

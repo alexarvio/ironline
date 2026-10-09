@@ -14,7 +14,7 @@ import CoachMessagesScreen, { type CoachMessagesProps } from "./CoachMessagesScr
 import EventsScreen from "./events/EventsScreen";
 import type { HomeEvents } from "./EventsCard";
 import FoodDiaryScreen, { type FoodDiaryProps } from "./FoodDiaryScreen";
-import MeetingsScreen, { type MeetingsProps } from "./MeetingsScreen";
+import MeetingsScreen, { type MeetingsProps } from "./meetings/MeetingsScreen";
 import InvoicesScreen, { type InvoicesProps } from "./InvoicesScreen";
 import type { CoachProfileView } from "../lib/coachProfileView";
 import {
