@@ -1,6 +1,7 @@
 import { requireCoach } from "../../../lib/auth";
 import { loadHome, loadMeasurements, loadMeetings, loadMessages, loadNutrition, loadPictures, loadPlan, loadRail, loadTraining, pickClient, loadInvoices } from "../loaders";
-import RedesignShell, { tabFromParams } from "../RedesignShell";
+import RedesignShell from "../RedesignShell";
+import { tabFromParams } from "../tabs";
 import NoClients from "../NoClients";
 import "../../../components/ui/ui.css";
 import "../training/draft.css";

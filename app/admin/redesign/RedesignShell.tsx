@@ -38,10 +38,6 @@ const TABS = [
 // over any tab. Its address (/admin/redesign/messages) still opens it, on Home.
 type PageTab = (typeof TABS)[number]["key"];
 export type RedesignTab = PageTab | "messages";
-/** The tab a page should open on: ?tab= when it names one, else the page's own. */
-export function tabFromParams(tab: string | undefined, fallback: RedesignTab): RedesignTab {
-  return tab === "messages" || TABS.some((t) => t.key === tab) ? (tab as RedesignTab) : fallback;
-}
 type ChatState = { mounted: boolean; open: boolean; about: DraftLink | null; opened: number; focus: number | null };
 
 // Every tab stays mounted (what was typed on one survives a switch), so a
