@@ -224,7 +224,7 @@ function UpcomingRow({ e, today, coachName, coachPhoto, lit, refFn, onOpen }: Ro
       </span>
       <span className="ev-rail" aria-hidden="true">
         <i className="ev-dot-ring">
-          <TypeIcon path={t.icon} size={12} stroke={2.4} />
+          <TypeIcon path={t.icon} fill={t.fill} size={12} stroke={2.4} />
         </i>
       </span>
       <span className="ev-cell">
@@ -236,7 +236,7 @@ function UpcomingRow({ e, today, coachName, coachPhoto, lit, refFn, onOpen }: Ro
           </span>
           <span className="ev-card-meta">
             <span className="ev-pill">
-              <TypeIcon path={t.icon} size={11} />
+              <TypeIcon path={t.icon} fill={t.fill} size={11} />
               {t.label}
             </span>
             <span>
@@ -290,7 +290,7 @@ function PastRow({ e, today, coachName, coachPhoto, lit, refFn, onOpen }: RowPro
       </span>
       <span className="ev-rail" aria-hidden="true">
         <i className="ev-dot-past">
-          <TypeIcon path={t.icon} size={10} stroke={2.4} />
+          <TypeIcon path={t.icon} fill={t.fill} size={10} stroke={2.4} />
         </i>
       </span>
       <span className="ev-cell">

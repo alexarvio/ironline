@@ -48,7 +48,7 @@ export default function EventDetail({
         <span className="ev-grab" aria-hidden="true" />
         <div className="ev-detail-top">
           <span className="ev-detail-tile">
-            <TypeIcon path={t.icon} size={22} />
+            <TypeIcon path={t.icon} fill={t.fill} size={22} />
           </span>
           <span className="ev-detail-text">
             <h2 id="ev-detail-title">{event.title}</h2>

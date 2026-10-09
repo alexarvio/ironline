@@ -15,9 +15,10 @@ import type { HomeEvent } from "../EventsCard";
 
 export type EventValues = { type: EventTypeId; title: string; start: string; end: string; note: string };
 
-export function TypeIcon({ path, size = 14, stroke = 2 }: { path: string; size?: number; stroke?: number }) {
+export function TypeIcon({ path, fill, size = 14, stroke = 2 }: { path: string; fill?: string; size?: number; stroke?: number }) {
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {fill && <path d={fill} fill="currentColor" stroke="none" />}
       <path d={path} />
     </svg>
   );
@@ -207,7 +208,7 @@ export default function AddEventSheet({
           <div className="evs-head">
             <h2 id="new-event-title">{label}</h2>
             <span className="evs-pill">
-              <TypeIcon path={t.icon} size={12} stroke={2.4} />
+              <TypeIcon path={t.icon} fill={t.fill} size={12} stroke={2.4} />
               {t.label}
             </span>
             <button type="button" className="evs-x" onClick={close} aria-label="Close" disabled={pending}>
@@ -283,7 +284,7 @@ function TypePicker({ value, onPick }: { value: EventTypeId; onPick: (id: EventT
         return (
           <button key={x.id} type="button" role="radio" aria-checked={on} className={`evs-type${on ? " on" : ""}`} style={{ "--tc": x.color, "--trgb": x.rgb } as React.CSSProperties} onClick={() => onPick(x.id)}>
             <span className="evs-type-disc">
-              <TypeIcon path={x.icon} size={15} stroke={2.2} />
+              <TypeIcon path={x.icon} fill={x.fill} size={15} stroke={2.2} />
             </span>
             {x.label}
           </button>
@@ -344,7 +345,7 @@ function SaveBar({ type, editing, ok, pending, error, onSave }: { type: ReturnTy
   return (
     <div className="evs-savebar">
       <button type="button" className="evs-save" onClick={onSave} aria-disabled={!ok || pending} disabled={!ok || pending}>
-        {pending ? <span className="evs-spin" aria-hidden="true" /> : <TypeIcon path={type.icon} size={16} stroke={2.2} />}
+        {pending ? <span className="evs-spin" aria-hidden="true" /> : <TypeIcon path={type.icon} fill={type.fill} size={16} stroke={2.2} />}
         {pending ? (editing ? "Saving…" : "Adding…") : editing ? "Save changes" : `Add ${type.label.toLowerCase()} to your plan`}
       </button>
       {error && <p className="evs-error" role="alert">{error}</p>}
