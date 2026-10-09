@@ -297,12 +297,12 @@ function clientMeetingView(m: ReturnType<typeof listMeetings>[number], events: R
 
 /** The client's events (theirs and the coach's) with the coach's categories: Home's "Coming up" card and the Events screen. */
 function homeEvents(clientId: number): HomeEvents {
-  // The plan's phases, past, running and scheduled, as items on the same
-  // timeline (9 Oct): named, in their track's colour, their objectives
-  // behind the chevron. Not on Home's card, which is the plan card's job.
+  // The plan's phases on the same timeline as their start (9 Oct): one day,
+  // "Strength block 2 starts", in the track's colour, the objectives behind
+  // the chevron. Not a stretch: the phase itself is Home's to keep track of.
   const phases = listClientPhases(clientId)
     .filter((p) => !p.draft)
-    .map((p) => ({ id: -p.id, kind: null, title: p.name, start: p.start_week, end: phaseLastDay(p.end_week) ?? p.start_week, note: (p.objectives ?? []).join(String.fromCharCode(10)), mine: false, phase: p.track }));
+    .map((p) => ({ id: -p.id, kind: null, title: `${p.name} starts`, start: p.start_week, end: p.start_week, note: (p.objectives ?? []).join(String.fromCharCode(10)), mine: false, phase: p.track }));
   return {
     list: [...listClientEvents(clientId).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, mine: e.added_by === "client" })), ...phases],
     categories: listEventCategories(getClient(clientId)?.coach_id ?? 0).map(({ id, label, color }) => ({ id, label, color })),
