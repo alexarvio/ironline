@@ -24,12 +24,7 @@ export function dayLabel(key: string, todayKey: string): string {
   return key.slice(0, 4) === todayKey.slice(0, 4) ? dm : `${dm} ${key.slice(0, 4)}`;
 }
 
-/** "5:26 PM" today and yesterday (the phone's own style), "Wed" this week, "7 Oct" before. */
-export function timeLabel(iso: string, todayKey: string): string {
-  const key = localDayKey(iso);
-  const back = Math.round(dayNum(todayKey) - dayNum(key));
-  const d = new Date(iso);
-  if (back <= 1) return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-  if (back < 7) return DAYS[d.getDay()];
-  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+/** "5:26 PM", the phone's own style: the day header already says the date (9 Oct). */
+export function timeLabel(iso: string): string {
+  return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }

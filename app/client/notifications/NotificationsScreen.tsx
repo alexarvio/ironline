@@ -96,22 +96,22 @@ export default function NotificationsScreen({ items, clientId, coachName }: { it
 
   return (
     <>
-      <header className="cn-header nt-nav">
+      <header className="cn-header ntf-nav">
         <button type="button" className="cn-icon-btn" onClick={() => back?.()} aria-label="Back">
           <ChevronLeftIcon />
         </button>
         <div className="cn-header-titles">
           <h1 className="cn-title">Notifications</h1>
         </div>
-        <button type="button" className={`nt-markall${unread ? "" : " off"}`} onClick={markAll} aria-disabled={!unread} disabled={!unread}>
+        <button type="button" className={`ntf-markall${unread ? "" : " off"}`} onClick={markAll} aria-disabled={!unread} disabled={!unread}>
           {unread ? "Mark all read" : "All read"}
         </button>
       </header>
       <main className="cn-body">
-        <div className="nt-scroll">
+        <div className="ntf-scroll">
           {items.length === 0 ? (
-            <div className="nt-empty">
-              <span className="nt-empty-bell" aria-hidden="true">
+            <div className="ntf-empty">
+              <span className="ntf-empty-bell" aria-hidden="true">
                 <TypeIcon path="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20h4" size={22} stroke={2} />
               </span>
               <b>Nothing yet</b>
@@ -121,10 +121,10 @@ export default function NotificationsScreen({ items, clientId, coachName }: { it
             days.map((d) => {
               const fresh = d.items.filter((n) => !isRead(n)).length;
               return (
-                <section key={d.key} className="nt-day">
-                  <h2 className="nt-day-head">
+                <section key={d.key} className="ntf-day">
+                  <h2 className="ntf-day-head">
                     <span>{todayKey ? dayLabel(d.key, todayKey) : dayLabel(d.key, d.key)}</span>
-                    {fresh > 0 && <span className="nt-day-new" aria-hidden="true">{fresh} new</span>}
+                    {fresh > 0 && <span className="ntf-day-new" aria-hidden="true">{fresh} new</span>}
                   </h2>
                   {d.items.map((n) => (
                     <NotificationItem key={n.id} n={n} read={isRead(n)} todayKey={todayKey} coachFirst={coachFirst} coachPhoto={coach?.photoPath ?? null} onOpen={() => open(n)} />
@@ -134,7 +134,7 @@ export default function NotificationsScreen({ items, clientId, coachName }: { it
             })
           )}
           {shown < items.length && (
-            <div ref={sentinel} className="nt-loading">
+            <div ref={sentinel} className="ntf-loading">
               Loading…
             </div>
           )}
@@ -148,42 +148,42 @@ export default function NotificationsScreen({ items, clientId, coachName }: { it
 function NotificationItem({ n, read, todayKey, coachFirst, coachPhoto, onOpen }: { n: NotifView; read: boolean; todayKey: string | null; coachFirst: string; coachPhoto: string | null; onOpen: () => void }) {
   const t = notificationTypeOf(n.category, n.eventType);
   const gone = n.actionTab === "video" && !n.videoReply;
-  const time = todayKey ? timeLabel(n.createdAt, todayKey) : "";
+  const time = todayKey ? timeLabel(n.createdAt) : "";
   const system = n.category === "system";
   return (
     <button
       type="button"
-      className={`nt-item${read ? " read" : ""}`}
+      className={`ntf-item${read ? " read" : ""}`}
       style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}
       onClick={onOpen}
       aria-label={`${read ? "" : "Unread. "}${t.label}. ${n.title}.${n.body ? ` ${n.body}.` : ""} ${time}`}
     >
-      <span className="nt-avatar" aria-hidden="true">
+      <span className="ntf-avatar" aria-hidden="true">
         {system ? (
-          <span className="nt-avatar-sys">
+          <span className="ntf-avatar-sys">
             <TypeIcon path={t.icon} size={18} stroke={2} />
           </span>
         ) : coachPhoto ? (
           <img src={coachPhoto} alt="" />
         ) : (
-          <span className="nt-avatar-initial">{(coachFirst || "C").charAt(0).toUpperCase()}</span>
+          <span className="ntf-avatar-initial">{(coachFirst || "C").charAt(0).toUpperCase()}</span>
         )}
         {!system && (
-          <span className="nt-badge">
+          <span className="ntf-badge">
             <TypeIcon path={t.icon} size={10} stroke={2.6} />
           </span>
         )}
       </span>
-      <span className="nt-content">
-        <span className="nt-top">
-          <span className="nt-cat">{t.label}</span>
-          <span className="nt-time">{time}</span>
-          {!read && <span className="nt-dot" aria-hidden="true" />}
+      <span className="ntf-content">
+        <span className="ntf-top">
+          <span className="ntf-cat">{t.label}</span>
+          <span className="ntf-time">{time}</span>
+          {!read && <span className="ntf-dot" aria-hidden="true" />}
         </span>
-        <span className="nt-title">{n.title}</span>
-        <span className="nt-bottom">
-          <span className="nt-body">{n.body ?? ""}</span>
-          <span className={`nt-action${gone ? " gone" : ""}`}>{gone ? "No longer available" : t.action}</span>
+        <span className="ntf-title">{n.title}</span>
+        <span className="ntf-bottom">
+          <span className="ntf-body">{n.body ?? ""}</span>
+          <span className={`ntf-action${gone ? " gone" : ""}`}>{gone ? "No longer available" : t.action}</span>
         </span>
       </span>
     </button>
