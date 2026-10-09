@@ -18,7 +18,7 @@ import { TypeIcon } from "./events/AddEventSheet";
 // coach's activity). The client can change or remove only what they added;
 // the coach's events are listed read-only, so both see the same calendar.
 
-export type HomeEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string; /** The client added it. */ mine: boolean };
+export type HomeEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string; /** The client added it. */ mine: boolean; /** A phase of the plan, on the timeline as an event (9 Oct); its track colours it. */ phase?: "training" | "nutrition" | "lifestyle" | null };
 export type HomeEventCategory = { id: string; label: string; color: string };
 export type HomeEvents = { list: HomeEvent[]; categories: HomeEventCategory[] };
 
@@ -49,7 +49,7 @@ export default function EventsCard({ events, today }: { events: HomeEvents; coac
   // A glance (9 Oct): the event running now, if any, with the next one to
   // come under it; else just the next one to come. The whole list, with Add,
   // Change and Remove, is the Events screen (8 Oct).
-  const coming = events.list.filter((e) => e.end >= today).sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.id - b.id));
+  const coming = events.list.filter((e) => !e.phase && e.end >= today).sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.id - b.id));
   const running = coming.find((e) => e.start <= today) ?? null;
   const next = coming.find((e) => e.start > today) ?? null;
   // Rows in the type's colour, as the Events screen draws them (9 Oct): the
