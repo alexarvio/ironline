@@ -70,6 +70,8 @@ export default function EventsCard({ events, coachName, today }: { events: HomeE
             {coming.length > 3 && <span className="hm-ev-more">{coming.length - 3} more</span>}
           </span>
         )}
+        {/* What the card is for, said every time (9 Oct): the client tells the coach what is going on, so the plan can plan around it. */}
+        {coming.length > 0 && <span className="hm-ev-foot">+ Add a trip, an injury, a busy week: anything {coachName} should plan around.</span>}
       </button>
     </section>
   );

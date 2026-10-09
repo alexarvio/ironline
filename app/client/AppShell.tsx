@@ -542,6 +542,12 @@ export default function AppShell({
                       Meetings
                     </button>
                   )}
+                  {/* Events (9 Oct): the deliberate way in; the Home card is the quick one. */}
+                  {events && (
+                    <button type="button" className="app-menu-item" onClick={() => go(() => setPushView("events"))}>
+                      Events
+                    </button>
+                  )}
                   {invoices && (
                     <button type="button" className="app-menu-item" onClick={() => go(() => setPushView("invoices"))}>
                       Invoices

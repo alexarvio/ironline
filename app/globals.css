@@ -17963,6 +17963,7 @@ button.ci-hint { cursor: pointer; }
 .hm-ev-when { flex: none; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
 .hm-ev-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: #141a24; }
 .hm-ev-more { font-size: 12.5px; font-weight: 700; color: #1e3a6e; }
+.hm-ev-foot { display: block; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eef1f5; font-size: 12.5px; line-height: 1.4; font-weight: 600; color: #1e3a6e; }
 /* The Events screen. */
 .ev-add { display: flex; flex-direction: column; gap: 3px; width: 100%; margin: 0; padding: 14px 16px; border: 0; border-radius: 16px; background: #1e3a6e; font: inherit; font-size: 15px; font-weight: 700; text-align: left; color: #fff; cursor: pointer; }
 .ev-add small { font-size: 12.5px; font-weight: 500; color: rgba(255, 255, 255, 0.78); }
