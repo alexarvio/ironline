@@ -160,6 +160,8 @@ a.rm-link.open:hover { background: #d9e2ee; }
 .rm-panel-x { order: 2; margin-left: auto; width: 34px; height: 34px; border: 0; border-radius: 999px; background: #e6ecf3; font: inherit; font-size: 20px; line-height: 1; color: #1e3a6e; cursor: pointer; }
 .rm-panel-x:hover { background: #d8e1ec; }
 /* The chat open: the page narrows by the panel's width, so the two sit side by side (9 Oct). Narrow windows keep the overlay. */
+/* The window keeps its scrollbar gutter whether or not the page is long enough to scroll (9 Oct): the panel is fixed to the right edge, and a scrollbar coming and going between tabs shifted it by its width. */
+html:has(.rd-frame) { scrollbar-gutter: stable; }
 .rd-frame { transition: padding-right 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
 @media (min-width: 1100px) { .rd-frame[data-chat="open"] { padding-right: min(460px, 100vw); } }
 @media (prefers-reduced-motion: reduce) { .rd-chatpanel, .rd-chatpanel.open, .rd-frame { transition: none; } }
