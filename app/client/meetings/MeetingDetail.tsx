@@ -7,7 +7,6 @@ import { meetingTypeOf } from "../../lib/meetingTypes";
 import { agoLabel, agreedPoints, eyebrowDate, icsDataUrl, startingNow, timeRange, untilLabel } from "../../lib/meetingDates";
 import { useOpenEvents } from "../CheckInContext";
 import { TypeIcon } from "../events/AddEventSheet";
-import { CoachAvatar } from "../events/CoachAvatar";
 import { CheckItem, EventChip, startMsOf, type ClientMeetingView } from "./MeetingsScreen";
 
 // One call in full (9 Oct), the sheet the Events screen uses: the type, when,
@@ -88,10 +87,6 @@ export default function MeetingDetail({ m, now, coachFirst, coachPhoto, onClose 
           </>
         )}
 
-        <span className="mt-with">
-          <CoachAvatar name={coachFirst} photoPath={coachPhoto} size={22} ring="row" />
-          with {coachFirst}
-        </span>
         <button type="button" className="ev-close" onClick={onClose}>
           Close
         </button>
