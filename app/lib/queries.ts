@@ -4924,6 +4924,8 @@ export type Meeting = {
   all_day?: boolean;
   /** A repeating call: every meeting scheduled together shares the first one's id. */
   series_id?: number | null;
+  /** What kind of call, for the client's Meetings screen (9 Oct); absent: a check-in. */
+  meeting_type?: "checkin" | "review" | "other" | null;
 };
 export type MeetingNote = {
   id: number;
@@ -4952,7 +4954,8 @@ export function addMeeting(
   /** The coach whose calendar a personal block (no client) goes on. */
   blockCoachId: number | null = null,
   /** The timezone date and time are in; null: the server's. */
-  tz: string | null = null
+  tz: string | null = null,
+  meetingType: "checkin" | "review" | "other" | null = null
 ) {
   const data = getData();
   data.meetings.push({
@@ -4962,6 +4965,7 @@ export function addMeeting(
     date,
     time,
     ...(tz ? { tz } : {}),
+    ...(meetingType ? { meeting_type: meetingType } : {}),
     duration_minutes: durationMinutes || DEFAULT_MEETING_DURATION,
     topic,
     status: "scheduled",
@@ -5498,17 +5502,17 @@ export function listClientEvents(clientId: number): ClientEvent[] {
     .sort((a, b) => (a.start_date < b.start_date ? -1 : a.start_date > b.start_date ? 1 : a.id - b.id));
 }
 
-const cleanEvent = (v: { kind?: string | null; title: string; start: string; end?: string | null; note?: string | null }) => {
+const cleanEvent = (v: { kind?: string | null; title: string; start: string; end?: string | null; note?: string | null; meetingId?: number | null }) => {
   const start = String(v.start).slice(0, 10);
   const endRaw = String(v.end ?? start).slice(0, 10);
   return { kind: v.kind?.trim() || null, title: v.title.trim().slice(0, 80), start, end: endRaw < start ? start : endRaw, note: (v.note ?? "").trim().slice(0, 500) };
 };
 
-export function addClientEvent(clientId: number, v: { kind?: string | null; title: string; start: string; end?: string | null; note?: string | null }, by: "client" | null = null): ClientEvent | null {
+export function addClientEvent(clientId: number, v: { kind?: string | null; title: string; start: string; end?: string | null; note?: string | null; meetingId?: number | null }, by: "client" | null = null): ClientEvent | null {
   const c = cleanEvent(v);
   if (!c.title || !/^\d{4}-\d{2}-\d{2}$/.test(c.start)) return null;
   const data = getData();
-  const row: ClientEvent = { id: allocId("client_events"), client_id: clientId, kind: c.kind, title: c.title, start_date: c.start, end_date: c.end, note: c.note, created_at: new Date().toISOString(), ...(by ? { added_by: by } : {}) };
+  const row: ClientEvent = { id: allocId("client_events"), client_id: clientId, kind: c.kind, title: c.title, start_date: c.start, end_date: c.end, note: c.note, created_at: new Date().toISOString(), ...(by ? { added_by: by } : {}), ...(v.meetingId ? { meeting_id: v.meetingId } : {}) };
   data.client_events.push(row);
   persist();
   return row;
@@ -9597,7 +9601,7 @@ function linkHost(link: string): string {
 
 export function updateMeeting(
   id: number,
-  patch: Partial<Pick<Meeting, "topic" | "link" | "prep_notes" | "meeting_notes" | "summary" | "summary_title" | "date" | "time" | "tz" | "duration_minutes">>
+  patch: Partial<Pick<Meeting, "topic" | "link" | "prep_notes" | "meeting_notes" | "summary" | "summary_title" | "date" | "time" | "tz" | "duration_minutes" | "meeting_type">>
 ) {
   const data = getData();
   const m = data.meetings.find((x) => x.id === id);

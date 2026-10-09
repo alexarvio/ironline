@@ -18239,3 +18239,111 @@ button.ci-hint { cursor: pointer; }
 @keyframes hm-aura-a { 0%, 100% { transform: translate3d(0, 18%, 0) scale(1); opacity: 0.6; } 50% { transform: translate3d(-6%, -18%, 0) scale(1.2); opacity: 1; } }
 @keyframes hm-aura-b { 0%, 100% { transform: translate3d(0, 20%, 0) scale(1.05); opacity: 0.5; } 50% { transform: translate3d(7%, -20%, 0) scale(1.25); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .hm-gap.charging::before, .hm-gap.charging::after { animation: none; opacity: 0.7; } }
+
+/* The Meetings screen, "Agreements first" (9 Oct). Prefix mt-. A sibling of
+   the Events screen: same page, rails, type colours (--c / --rgb) and coach
+   face. Blue #2f6fd6 is the check-in and the next call's accent. */
+.mt-scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding: 10px 16px 60px; background: linear-gradient(180deg, #e3e9f5 0%, #f4f7fc 28%); }
+
+/* ---- The next call. */
+.mt-next { position: relative; display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 24px; background: #fff; box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04), 0 20px 34px -24px rgba(29, 52, 102, 0.6), inset 0 0 0 1px rgba(29, 52, 102, 0.1); }
+.mt-next.empty { flex-direction: column; align-items: flex-start; gap: 3px; padding: 16px; }
+.mt-next.empty b { font-size: 15px; font-weight: 800; color: #141a24; }
+.mt-next.empty small { font-size: 12.5px; font-weight: 600; color: #5b6474; }
+.mt-next-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.mt-tile { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 64px; height: 72px; border-radius: 18px; background: linear-gradient(160deg, #2f6fd6, #1d3466); color: #fff; line-height: 1; box-shadow: 0 10px 18px -10px rgba(29, 52, 102, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+.mt-tile small { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; color: rgba(255, 255, 255, 0.75); }
+.mt-tile b { margin: 3px 0 2px; font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.mt-next-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.mt-eyebrow { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--c, #2f6fd6); }
+.mt-pulse { width: 6px; height: 6px; border-radius: 999px; background: #2f6fd6; animation: mt-pulse 1.6s ease-in-out infinite; }
+@keyframes mt-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(47, 111, 214, 0.5); } 50% { box-shadow: 0 0 0 5px rgba(47, 111, 214, 0); } }
+.mt-next-title { font-size: 16px; font-weight: 800; line-height: 1.25; color: #141a24; }
+.mt-next-sub { font-size: 12.5px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
+.mt-join { flex: none; display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 16px; border-radius: 12px; background: #1d3466; color: #fff; font-size: 14px; font-weight: 800; text-decoration: none; }
+.mt-join.wide { flex: 1; height: 48px; border-radius: 14px; }
+.mt-more { display: flex; flex-direction: column; margin-top: -8px; }
+.mt-more-btn { align-self: flex-start; height: 44px; padding: 0 4px; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 800; color: #2f6fd6; cursor: pointer; }
+.mt-more-list { margin: 0; padding: 0; list-style: none; border-radius: 18px; background: #fff; box-shadow: inset 0 0 0 1px rgba(29, 52, 102, 0.1); overflow: hidden; }
+.mt-more-list > li + li { border-top: 1px solid #eef1f5; }
+.mt-more-row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 8px 14px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.mt-more-date { flex: none; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; color: #5b6474; font-variant-numeric: tabular-nums; }
+.mt-more-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 700; color: #141a24; }
+.mt-more-time { flex: none; font-size: 12px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; }
+
+/* ---- What you've agreed. */
+.mt-sec { padding: 6px 4px 10px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #5b6474; }
+.mt-sec.in { padding: 4px 0 2px; }
+.mt-empty { margin: 0 auto; max-width: 270px; padding-top: 24px; font-size: 13.5px; font-weight: 600; line-height: 1.45; text-align: center; color: #5b6474; }
+.mt-tl { display: flex; flex-direction: column; margin-top: -16px; }
+.mt-r { display: flex; align-items: stretch; gap: 10px; }
+.mt-rail { position: relative; flex: none; width: 14px; }
+.mt-rail::before { content: ""; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: rgba(var(--rgb, 29, 52, 102), 0.35); }
+.mt-rail.quiet::before { background: #dce3ee; }
+.mt-r.last .mt-rail::before { bottom: auto; height: 24px; }
+.mt-dot { position: absolute; left: 1px; top: 18px; width: 12px; height: 12px; box-sizing: border-box; border-radius: 999px; background: var(--c); border: 3px solid #fff; }
+.mt-dot.hollow { top: 15px; background: #fff; border: 2px solid #c5ccd8; }
+.mt-cell { flex: 1; min-width: 0; padding-bottom: 12px; }
+.mt-card { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 20px; background: linear-gradient(160deg, rgba(var(--rgb), 0.1), #fff 55%); box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04), 0 16px 28px -22px rgba(var(--rgb), 0.8), inset 0 0 0 1px rgba(var(--rgb), 0.16); cursor: pointer; transition: transform 0.12s ease; }
+.mt-card:active { transform: scale(0.985); }
+.mt-head { display: flex; align-items: center; gap: 8px; }
+.mt-type { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 9px; background: var(--c); color: #fff; box-shadow: 0 6px 12px -6px rgba(var(--rgb), 0.9); }
+.mt-type.big { width: 44px; height: 44px; border-radius: 14px; }
+.mt-head-text { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.mt-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14.5px; font-weight: 800; color: #141a24; }
+.mt-meta { font-size: 11.5px; font-weight: 600; color: #8b93a1; font-variant-numeric: tabular-nums; }
+.mt-items { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.mt-item { display: flex; align-items: flex-start; gap: 9px; font-size: 13.5px; font-weight: 600; line-height: 1.4; color: #141a24; text-wrap: pretty; }
+.mt-check { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-top: 1px; border-radius: 6px; background: #fff; box-shadow: inset 0 0 0 1.5px rgba(var(--rgb), 0.4); color: var(--c); }
+.mt-prose { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; margin: 0; font-size: 13.5px; font-weight: 600; line-height: 1.45; color: #141a24; }
+.mt-detail .mt-prose { display: block; -webkit-line-clamp: unset; }
+.mt-rest { padding-left: 27px; font-size: 12px; font-weight: 800; color: var(--c); }
+.mt-linked { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding-top: 10px; border-top: 1px dashed rgba(var(--rgb), 0.25); }
+.mt-linked-label { font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #8b93a1; }
+.mt-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.mt-chip { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 4px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px rgba(var(--ergb), 0.3); font: inherit; font-size: 12px; font-weight: 800; color: #141a24; cursor: pointer; }
+.mt-chip::after { content: ""; position: absolute; inset: -8px 0; }
+.mt-chip-ico { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 999px; background: var(--ec); color: #fff; }
+.mt-chip-chev { font-size: 14px; line-height: 1; color: #98a2b3; }
+
+/* A run of calls without notes. */
+.mt-group { border-radius: 16px; background: rgba(255, 255, 255, 0.6); box-shadow: inset 0 0 0 1px #e3e8f0; }
+.mt-group-head { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 10px 12px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.mt-group-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mt-group-title { font-size: 13.5px; font-weight: 700; color: #3a4250; }
+.mt-group-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; font-weight: 600; color: #98a2b3; }
+.mt-group-right { flex: none; font-size: 11.5px; font-weight: 700; color: #98a2b3; }
+.mt-group-chev { flex: none; font-size: 18px; line-height: 1; color: #98a2b3; transition: transform 0.2s ease; }
+.mt-group-chev.open { transform: rotate(90deg); }
+.mt-group-body { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.2s ease, opacity 0.15s ease; }
+.mt-group-body.open { grid-template-rows: 1fr; opacity: 1; }
+.mt-group-clip { min-height: 0; overflow: hidden; }
+.mt-group-list { margin: 0; padding: 0 6px 6px; list-style: none; display: flex; flex-direction: column; }
+.mt-group-row { display: flex; flex-direction: column; gap: 2px; width: 100%; min-height: 44px; padding: 8px 8px; border: 0; border-radius: 10px; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.mt-group-row:active { background: rgba(255, 255, 255, 0.9); }
+.mt-group-row-title { font-size: 13px; font-weight: 700; color: #3a4250; }
+.mt-group-row-meta { font-size: 11.5px; font-weight: 600; color: #98a2b3; }
+.mt-earlier { display: block; width: 100%; height: 44px; margin: 0; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 800; color: #1d3466; cursor: pointer; }
+
+/* ---- The detail sheet. */
+.mt-detail { gap: 12px; }
+.mt-detail-top { display: flex; align-items: center; gap: 12px; }
+.mt-detail-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.mt-detail-text h2 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.2; color: #141a24; }
+.mt-detail-when { font-size: 12.5px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
+.mt-detail-actions { display: flex; gap: 8px; }
+.mt-detail-actions .ev-btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.mt-detail-none { margin: 0; font-size: 13.5px; font-weight: 600; line-height: 1.45; color: #5b6474; }
+.mt-with { display: flex; align-items: center; gap: 8px; padding-top: 4px; font-size: 12.5px; font-weight: 600; color: #8b93a1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mt-pulse { animation: none; }
+  .mt-card, .mt-group-body, .mt-group-chev { transition: none; }
+}
+
+/* A row of choice chips in an admin dialog (9 Oct). */
+.rd-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+/* The admin recap's saved lines with "Add as event" (9 Oct). */
+.rt-lines { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.rt-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 8px; border-radius: 10px; background: #f4f7fc; font-size: 13px; color: #313851; }
+.rt-line > span { flex: 1; min-width: 0; }

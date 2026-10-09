@@ -1,5 +1,7 @@
 "use server";
 
+import { isMeetingTypeId } from "./meetingTypes";
+
 import { redirect } from "next/navigation";
 import { getData, persist, type CoachBusiness, type CoachInvoicing, type MetricAskAt } from "./db";
 import { ASK_AT } from "./metricAskAt";
@@ -1850,9 +1852,11 @@ export async function addMeetingAction(formData: FormData) {
   const tz = tzRaw && isTimezone(tzRaw) ? tzRaw : null;
   // Repeating: every 1, 2 or 4 weeks, 2 to 26 calls, all made now as one series.
   const repeatWeeks = [1, 2, 4].includes(Number(formData.get("repeatWeeks"))) ? Number(formData.get("repeatWeeks")) : 0;
+  const meetingTypeRaw = String(formData.get("meetingType") || "");
+  const meetingType = isMeetingTypeId(meetingTypeRaw) ? meetingTypeRaw : null;
   const count = Math.min(26, Math.max(2, Math.round(Number(formData.get("count")) || 0)));
   if (repeatWeeks) addMeetingSeries(clientId, date, repeatWeeks, count, time, topic, duration, link || null, tz);
-  else addMeeting(clientId, date, time, topic, duration, link || null, null, tz);
+  else addMeeting(clientId, date, time, topic, duration, link || null, null, tz, meetingType);
   const every = repeatWeeks === 1 ? "weekly" : `every-${repeatWeeks}-weeks`;
   logCoachActivity(clientId, repeatWeeks ? `Scheduled ${count} ${every} meetings${topic ? `: "${topic}"` : ""}` : topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", {
     kind: "general",
@@ -1931,6 +1935,23 @@ export async function completeMeetingAction(formData: FormData) {
   }
   revalidatePath("/admin");
   revalidatePath("/client");
+}
+
+/** A line of a call's recap as an event on the client's plan (9 Oct), linked to the call. */
+export async function addEventFromMeetingNoteAction(formData: FormData) {
+  const coach = await requireCoach();
+  const meetingId = Number(formData.get("meetingId"));
+  if (!meetingId || !coachOwnsMeeting(coach.id, meetingId)) return null;
+  const clientId = getClientIdForMeeting(meetingId);
+  if (clientId == null) return null;
+  const text = String(formData.get("text") ?? "").trim().slice(0, 80);
+  const date = String(formData.get("date") ?? "").slice(0, 10);
+  if (!text || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const row = addClientEvent(clientId, { kind: null, title: text, start: date, end: date, note: "", meetingId });
+  noteChange(clientId, `Added to your calendar: ${text}`, { tab: "home", label: "See it", key: `event:${text}` });
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  return row?.id ?? null;
 }
 
 export async function removeMeetingAction(formData: FormData) {
