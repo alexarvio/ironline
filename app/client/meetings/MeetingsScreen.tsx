@@ -5,16 +5,17 @@ import type React from "react";
 import { ChevronLeftIcon } from "../../components/icons";
 import { meetingTypeOf, type MeetingTypeId } from "../../lib/meetingTypes";
 import { eventTypeOf } from "../../lib/eventTypes";
-import { agoLabel, agreedPoints, shortDate, startingNow, tileParts, timeRange, untilLabel } from "../../lib/meetingDates";
+import { agoLabel, agreedPoints, startingNow, tileParts, timeRange, untilLabel } from "../../lib/meetingDates";
 import { useCoachIdentity, useOpenEvents } from "../CheckInContext";
 import { TypeIcon } from "../events/AddEventSheet";
 import MeetingDetail from "./MeetingDetail";
 
-// The Meetings screen, "Agreements first" (9 Oct): the next call on top,
-// then what was agreed on the calls that happened, newest first, on a rail
-// like the Events screen. Calls with notes are tinted cards in their type's
-// colour; runs of calls without notes fold into one quiet row. Everything
-// is read-only for the client: the coach books and writes.
+// The Meetings screen (9 Oct): the next call on top, then every call that
+// happened, newest first, one box each on a rail laid out like the Events
+// screen: the date on the left, the call's icon on the rail in its type's
+// colour, the box with the title. The most recent one starts open with what
+// was agreed; the rest open on a tap. A call with no notes says so. The
+// client reads; the coach books and writes.
 
 export type ClientMeetingView = {
   id: number;
@@ -35,6 +36,7 @@ export type ClientMeetingView = {
 export type MeetingsProps = { upcoming: ClientMeetingView[]; past: ClientMeetingView[] };
 
 const PAGE = 20;
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 export const startMsOf = (m: ClientMeetingView) => (m.startIso ? Date.parse(m.startIso) : Date.parse(`${m.date}T12:00:00`));
 
 export default function MeetingsScreen({ upcoming, past, coachName, onBack }: MeetingsProps & { coachName: string; onBack: () => void }) {
@@ -59,7 +61,8 @@ export default function MeetingsScreen({ upcoming, past, coachName, onBack }: Me
   const sortedUp = [...upcoming].sort((a, b) => startMsOf(a) - startMsOf(b));
   const [next, ...later] = sortedUp;
   const pastSorted = [...past].sort((a, b) => startMsOf(b) - startMsOf(a));
-  const items = groupPast(pastSorted.slice(0, shown));
+  // The most recent call starts open; a tap opens another (and closes it again).
+  const [open, setOpen] = useState<number | null>(pastSorted[0]?.id ?? null);
 
   return (
     <>
@@ -106,15 +109,11 @@ export default function MeetingsScreen({ upcoming, past, coachName, onBack }: Me
             <p className="mt-empty">After your first call, what you and {coachFirst} agree shows up here.</p>
           ) : (
             <>
-              <div className="mt-sec">What you&rsquo;ve agreed</div>
+              <div className="mt-sec">Past meetings</div>
               <div className="mt-tl">
-                {items.map((it, i) =>
-                  it.kind === "card" ? (
-                    <AgreementCard key={it.m.id} m={it.m} now={now} last={i === items.length - 1} coachFirst={coachFirst} onOpen={() => setDetail(it.m)} />
-                  ) : (
-                    <NoNotesGroup key={`g-${it.ms[0].id}`} ms={it.ms} now={now} last={i === items.length - 1} onOpen={(m) => setDetail(m)} />
-                  )
-                )}
+                {pastSorted.slice(0, shown).map((m) => (
+                  <PastCall key={m.id} m={m} now={now} open={open === m.id} coachFirst={coachFirst} onToggle={() => setOpen((o) => (o === m.id ? null : m.id))} />
+                ))}
               </div>
               {pastSorted.length > shown && (
                 <button type="button" className="mt-earlier" onClick={() => setShown((n) => n + PAGE)}>
@@ -159,9 +158,7 @@ function NextCallCard({ m, now, coachFirst, onOpen }: { m: ClientMeetingView | n
             {live ? "Starting now" : `Next call · ${now == null ? "" : untilLabel(ms, now)}`}
           </span>
           <span className="mt-next-title">{m.title}</span>
-          <span className="mt-next-sub">
-            {m.startIso ? timeRange(ms, m.durationMin) : "All day"} · with {coachFirst}
-          </span>
+          <span className="mt-next-sub">{m.startIso ? timeRange(ms, m.durationMin) : "All day"}</span>
         </span>
       </button>
       {live && m.joinUrl && (
@@ -173,22 +170,7 @@ function NextCallCard({ m, now, coachFirst, onOpen }: { m: ClientMeetingView | n
   );
 }
 
-// ---- The timeline: a card per call with notes; a run of calls without notes folded into one row.
-
-type Item = { kind: "card"; m: ClientMeetingView } | { kind: "group"; ms: ClientMeetingView[] };
-function groupPast(list: ClientMeetingView[]): Item[] {
-  const out: Item[] = [];
-  for (const m of list) {
-    const has = agreedPoints(m.notes).points.length > 0;
-    if (has) out.push({ kind: "card", m });
-    else {
-      const last = out[out.length - 1];
-      if (last && last.kind === "group") last.ms.push(m);
-      else out.push({ kind: "group", ms: [m] });
-    }
-  }
-  return out;
-}
+// ---- Shared bits: an agreed point with its check, and an event chip.
 
 export function CheckItem({ text, rgb, color }: { text: string; rgb: string; color: string }) {
   return (
@@ -227,109 +209,60 @@ export function EventChip({ e, onOpen }: { e: { id: number; title: string; kind:
   );
 }
 
-function AgreementCard({ m, now, last, coachFirst, onOpen }: { m: ClientMeetingView; now: number | null; last: boolean; coachFirst: string; onOpen: () => void }) {
+// ---- One past call: the date on the left, the icon on the rail, the box.
+// Open, it shows what was agreed and the events made from it.
+
+function PastCall({ m, now, open, coachFirst, onToggle }: { m: ClientMeetingView; now: number | null; open: boolean; coachFirst: string; onToggle: () => void }) {
   const t = meetingTypeOf(m.type);
   const ms = startMsOf(m);
+  const d = new Date(ms);
   const { points, prose } = agreedPoints(m.notes);
-  const shown = points.slice(0, 4);
-  const rest = points.length - shown.length;
+  const has = points.length > 0 || m.linkedEvents.length > 0;
   const openEvents = useOpenEvents();
-  // Before the phone's clock is read, the date stands alone (no "3 days ago").
-  const nowMs = now ?? ms;
   return (
-    <div className={`mt-r${last ? " last" : ""}`} style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}>
+    <div className={`mt-r${open ? " open" : ""}`} style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}>
+      <span className="mt-td" aria-hidden="true">
+        <b>{d.getDate()}</b>
+        <small>{MONTHS[d.getMonth()]}</small>
+      </span>
       <span className="mt-rail" aria-hidden="true">
-        <i className="mt-dot" />
+        <i className="mt-ico">
+          <TypeIcon path={t.icon} size={15} stroke={2.2} />
+        </i>
       </span>
       <div className="mt-cell">
-        <div className="mt-card" role="button" tabIndex={0} onClick={onOpen} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onOpen())} aria-label={`${t.label} call, ${shortDate(ms, nowMs)}: ${m.title}. ${points.length} agreed point${points.length === 1 ? "" : "s"}${m.linkedEvents.length ? `, ${m.linkedEvents.length} linked event${m.linkedEvents.length === 1 ? "" : "s"}` : ""}`}>
-          <span className="mt-head">
-            <span className="mt-type">
-              <TypeIcon path={t.icon} size={14} stroke={2.2} />
-            </span>
+        <div className={`mt-card${has ? "" : " quiet"}`}>
+          <button type="button" className="mt-head" onClick={onToggle} disabled={!has} aria-expanded={has ? open : undefined} aria-label={`${t.label} call: ${m.title}${now != null ? `, ${agoLabel(ms, now)}` : ""}${has ? `, ${points.length} agreed point${points.length === 1 ? "" : "s"}` : m.missed ? ", missed" : ", no notes"}`}>
             <span className="mt-head-text">
               <span className="mt-title">{m.title}</span>
-              <span className="mt-meta">
-                {shortDate(ms, nowMs)} · {t.label}
-                {now != null ? ` · ${agoLabel(ms, now)}` : ""}
-              </span>
+              {now != null && <span className="mt-meta">{agoLabel(ms, now)}</span>}
             </span>
-          </span>
-          {prose ? (
-            <p className="mt-prose">{points[0]}</p>
-          ) : (
-            <ul className="mt-items">
-              {shown.map((p, i) => (
-                <CheckItem key={i} text={p} rgb={t.rgb} color={t.color} />
-              ))}
-            </ul>
-          )}
-          {rest > 0 && <span className="mt-rest">+{rest} more</span>}
-          {m.linkedEvents.length > 0 && (
-            <span className="mt-linked">
-              <span className="mt-linked-label">Added to your events</span>
-              {m.linkedEvents.map((e) => (
-                <EventChip key={e.id} e={e} onOpen={() => openEvents?.()} />
-              ))}
-            </span>
-          )}
-        </div>
-      </div>
-      <span className="sr-only">with {coachFirst}</span>
-    </div>
-  );
-}
-
-function NoNotesGroup({ ms, now, last, onOpen }: { ms: ClientMeetingView[]; now: number | null; last: boolean; onOpen: (m: ClientMeetingView) => void }) {
-  const [open, setOpen] = useState(false);
-  const one = ms.length === 1;
-  const dateOf = (m: ClientMeetingView) => shortDate(startMsOf(m), now ?? startMsOf(m));
-  const sub = ms.map((m) => `${dateOf(m)} · ${m.title}`).join("  ·  ");
-  const head = (
-    <>
-      <span className="mt-group-text">
-        <span className="mt-group-title">{one ? ms[0].title : `${ms.length} calls without notes`}</span>
-        <span className="mt-group-sub">{sub}</span>
-      </span>
-      <span className="mt-group-right">{ms[0].missed && one ? "Missed" : "No notes"}</span>
-      {!one && <span className={`mt-group-chev${open ? " open" : ""}`} aria-hidden="true">›</span>}
-    </>
-  );
-  return (
-    <div className={`mt-r${last ? " last" : ""}`}>
-      <span className="mt-rail quiet" aria-hidden="true">
-        <i className="mt-dot hollow" />
-      </span>
-      <div className="mt-cell">
-        <div className="mt-group">
-          {one ? (
-            <button type="button" className="mt-group-head" onClick={() => onOpen(ms[0])}>
-              {head}
-            </button>
-          ) : (
-            <button type="button" className="mt-group-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-              {head}
-            </button>
-          )}
-          {!one && (
-            <div className={`mt-group-body${open ? " open" : ""}`} aria-hidden={!open}>
-              <div className="mt-group-clip">
-                <ul className="mt-group-list">
-                  {ms.map((m) => {
-                    const t = meetingTypeOf(m.type);
-                    return (
-                      <li key={m.id}>
-                        <button type="button" className="mt-group-row" onClick={() => onOpen(m)} tabIndex={open ? 0 : -1}>
-                          <span className="mt-group-row-title">{m.title}</span>
-                          <span className="mt-group-row-meta">
-                            {dateOf(m)} · {t.label}
-                            {m.missed ? " · missed" : ""}
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
+            {has ? <span className={`mt-chev${open ? " open" : ""}`} aria-hidden="true">›</span> : <span className="mt-none">{m.missed ? "Missed" : "No notes"}</span>}
+          </button>
+          {has && (
+            <div className={`mt-body${open ? " open" : ""}`} aria-hidden={!open}>
+              <div className="mt-clip">
+                <div className="mt-in">
+                  {points.length > 0 &&
+                    (prose ? (
+                      <p className="mt-prose">{points[0]}</p>
+                    ) : (
+                      <ul className="mt-items">
+                        {points.map((p, i) => (
+                          <CheckItem key={i} text={p} rgb={t.rgb} color={t.color} />
+                        ))}
+                      </ul>
+                    ))}
+                  {m.linkedEvents.length > 0 && (
+                    <span className="mt-linked">
+                      <span className="mt-linked-label">Added to your events</span>
+                      {m.linkedEvents.map((e) => (
+                        <EventChip key={e.id} e={e} onOpen={() => openEvents?.()} />
+                      ))}
+                    </span>
+                  )}
+                  <span className="mt-with-line">with {coachFirst}</span>
+                </div>
               </div>
             </div>
           )}
