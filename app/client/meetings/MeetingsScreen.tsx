@@ -6,7 +6,7 @@ import { ChevronLeftIcon } from "../../components/icons";
 import { meetingTypeOf, type MeetingTypeId } from "../../lib/meetingTypes";
 import { eventTypeOf } from "../../lib/eventTypes";
 import { agoLabel, agreedPoints, startingNow, tileParts, timeRange, untilLabel } from "../../lib/meetingDates";
-import { useCoachIdentity, useOpenEvents } from "../CheckInContext";
+import { useOpenEvents } from "../CheckInContext";
 import { TypeIcon } from "../events/AddEventSheet";
 import MeetingDetail from "./MeetingDetail";
 
@@ -41,7 +41,6 @@ export const startMsOf = (m: ClientMeetingView) => (m.startIso ? Date.parse(m.st
 
 export default function MeetingsScreen({ upcoming, past, coachName, onBack }: MeetingsProps & { coachName: string; onBack: () => void }) {
   const coachFirst = coachName.trim().split(/\s+/)[0] || "your coach";
-  const coach = useCoachIdentity();
   // The phone's clock, once on the phone and then every half minute, so the
   // Join window opens and closes on its own.
   const [now, setNow] = useState<number | null>(null);
@@ -125,7 +124,7 @@ export default function MeetingsScreen({ upcoming, past, coachName, onBack }: Me
         </div>
       </main>
       {/* Opened by a tap, so the clock is set by then. */}
-      {detail && now != null && <MeetingDetail m={detail} now={now} coachFirst={coachFirst} coachPhoto={coach?.photoPath ?? null} onClose={() => setDetail(null)} />}
+      {detail && now != null && <MeetingDetail m={detail} now={now} coachFirst={coachFirst} onClose={() => setDetail(null)} />}
     </>
   );
 }

@@ -13,7 +13,7 @@ import { CheckItem, EventChip, startMsOf, type ClientMeetingView } from "./Meeti
 // and for a call to come the calendar file and Join; for one that happened,
 // everything agreed and the events made from it. Nothing here is editable.
 
-export default function MeetingDetail({ m, now, coachFirst, coachPhoto, onClose }: { m: ClientMeetingView; now: number; coachFirst: string; coachPhoto: string | null; onClose: () => void }) {
+export default function MeetingDetail({ m, now, coachFirst, onClose }: { m: ClientMeetingView; now: number; coachFirst: string; onClose: () => void }) {
   const t = meetingTypeOf(m.type);
   const ms = startMsOf(m);
   const upcoming = ms + m.durationMin * 60000 >= now && !m.notes;
