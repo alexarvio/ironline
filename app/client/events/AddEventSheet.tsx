@@ -346,7 +346,7 @@ function SaveBar({ type, editing, ok, pending, error, onSave }: { type: ReturnTy
     <div className="evs-savebar">
       <button type="button" className="evs-save" onClick={onSave} aria-disabled={!ok || pending} disabled={!ok || pending}>
         {pending ? <span className="evs-spin" aria-hidden="true" /> : <TypeIcon path={type.icon} fill={type.fill} size={16} stroke={2.2} />}
-        {pending ? (editing ? "Saving…" : "Adding…") : editing ? "Save changes" : `Add ${type.label.toLowerCase()} to your plan`}
+        {pending ? (editing ? "Saving…" : "Adding…") : editing ? "Save changes" : "Add to your plan"}
       </button>
       {error && <p className="evs-error" role="alert">{error}</p>}
     </div>

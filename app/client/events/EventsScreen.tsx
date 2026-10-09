@@ -10,14 +10,14 @@ import { ChevronLeftIcon } from "../../components/icons";
 import { useCoachIdentity } from "../CheckInContext";
 import type { HomeEvent, HomeEvents } from "../EventsCard";
 import AddEventSheet, { TypeIcon, type EventValues } from "./AddEventSheet";
-import EventDetail from "./EventDetail";
 import { CoachAvatar } from "./CoachAvatar";
 
 // The Events screen (9 Oct), the "Today line": everything in the client's
 // life the plan should know about, on one rail. Coming up runs down to a
 // TODAY line, what is happening now sits just under it, and earlier ones
 // fade below. The client adds from the navy card on top; the coach's own
-// carry the coach's face and can only be read.
+// carry the coach's face and can only be read. A row with more to it (a
+// note, or the client's own with Edit and Delete) opens in place on a tap.
 
 type Sheet = { event: HomeEvent | null; type: EventTypeId; initial?: EventValues | null; error?: string | null } | null;
 const LAST_TYPE_KEY = "ironline:last-event-type";
@@ -41,9 +41,9 @@ export default function EventsScreen({ events, coachName, today, onBack }: { eve
   const now = list.filter((e) => statusOf(e, today) === "now").sort((a, b) => (a.end < b.end ? -1 : a.end > b.end ? 1 : a.id - b.id));
   const past = list.filter((e) => statusOf(e, today) === "past").sort(byStart).reverse();
 
-  // ---- The sheet, the detail, and a save on its way.
+  // ---- The sheet, the row open in place, and a save on its way.
   const [sheet, setSheet] = useState<Sheet>(null);
-  const [detail, setDetail] = useState<HomeEvent | null>(null);
+  const [open, setOpen] = useState<number | null>(null);
   const [pending, setPending] = useState(false);
   const [highlight, setHighlight] = useState<number | null>(null);
   const rows = useRef(new Map<number, HTMLElement>());
@@ -55,7 +55,7 @@ export default function EventsScreen({ events, coachName, today, onBack }: { eve
       return "trip";
     }
   };
-  const openAdd = (type?: EventTypeId) => setSheet({ event: null, type: type ?? lastType() });
+  const openAdd = () => setSheet({ event: null, type: lastType() });
 
   const todayRef = useRef<HTMLDivElement>(null);
   const centred = useRef(false);
@@ -114,7 +114,7 @@ export default function EventsScreen({ events, coachName, today, onBack }: { eve
     setPending(true);
     try {
       await clientDeleteEventAction(e.id);
-      setDetail(null);
+      setOpen(null);
       setSheet(null);
       router.refresh();
     } finally {
@@ -124,6 +124,19 @@ export default function EventsScreen({ events, coachName, today, onBack }: { eve
 
   const total = upcoming.length + now.length + past.length;
   const tl = todayLabel(today);
+  const rowProps = (e: HomeEvent): RowProps => ({
+    e,
+    today,
+    coachName,
+    coachPhoto,
+    lit: highlight === e.id,
+    open: open === e.id,
+    pending,
+    refFn: (el) => el && rows.current.set(e.id, el),
+    onToggle: () => setOpen((o) => (o === e.id ? null : e.id)),
+    onEdit: () => setSheet({ event: e, type: eventTypeOf(e.kind).id }),
+    onDelete: () => remove(e),
+  });
 
   return (
     <>
@@ -143,7 +156,7 @@ export default function EventsScreen({ events, coachName, today, onBack }: { eve
           <div className="ev-tl">
             {upcoming.length > 0 && <div className="ev-sec ev-sec-up">Coming up</div>}
             {upcoming.map((e) => (
-              <UpcomingRow key={e.id} e={e} today={today} coachName={coachName} coachPhoto={coachPhoto} lit={highlight === e.id} refFn={(el) => el && rows.current.set(e.id, el)} onOpen={() => setDetail(e)} />
+              <UpcomingRow key={e.id} {...rowProps(e)} />
             ))}
 
             <div ref={todayRef} className="ev-today" role="separator" aria-label={tl.long}>
@@ -156,40 +169,25 @@ export default function EventsScreen({ events, coachName, today, onBack }: { eve
             </div>
 
             {now.map((e) => (
-              <NowCard key={e.id} e={e} today={today} coachName={coachName} coachPhoto={coachPhoto} lit={highlight === e.id} refFn={(el) => el && rows.current.set(e.id, el)} onOpen={() => setDetail(e)} />
+              <NowCard key={e.id} {...rowProps(e)} />
             ))}
 
             {total === 0 && <p className="ev-none">Nothing logged yet.</p>}
 
             {past.length > 0 && <div className="ev-sec ev-sec-past">Earlier</div>}
             {past.map((e) => (
-              <PastRow key={e.id} e={e} today={today} coachName={coachName} coachPhoto={coachPhoto} lit={highlight === e.id} refFn={(el) => el && rows.current.set(e.id, el)} onOpen={() => setDetail(e)} />
+              <PastRow key={e.id} {...rowProps(e)} />
             ))}
           </div>
         </div>
       </main>
 
       {sheet && <AddEventSheet event={sheet.event} initialType={sheet.type} initial={sheet.initial ?? null} error={sheet.error ?? null} coachName={coachName} today={today} pending={pending} onClose={() => setSheet(null)} onSubmit={save} onDelete={sheet.event ? () => remove(sheet.event!) : undefined} />}
-      {detail && !sheet && (
-        <EventDetail
-          event={detail}
-          coachName={coachName}
-          coachPhoto={coachPhoto}
-          today={today}
-          pending={pending}
-          onClose={() => setDetail(null)}
-          onEdit={() => {
-            setSheet({ event: detail, type: eventTypeOf(detail.kind).id });
-            setDetail(null);
-          }}
-          onDelete={() => remove(detail)}
-        />
-      )}
     </>
   );
 }
 
-// ---- The add card: the ask, a round +, and a chip per type.
+// ---- The add card: the ask and a round +; the type is picked on the sheet.
 
 function AddEventCard({ coachName, onOpen }: { coachName: string; onOpen: () => void }) {
   return (
@@ -210,11 +208,51 @@ function AddEventCard({ coachName, onOpen }: { coachName: string; onOpen: () => 
   );
 }
 
-type RowProps = { e: HomeEvent; today: string; coachName: string; coachPhoto: string | null; lit: boolean; refFn: (el: HTMLElement | null) => void; onOpen: () => void };
+// ---- The rows. Each is a card with a head (the tap) and, when there is
+// more to it, a body that opens in place: the note, who set it, and for
+// the client's own, Edit and Delete.
 
+type RowProps = { e: HomeEvent; today: string; coachName: string; coachPhoto: string | null; lit: boolean; open: boolean; pending: boolean; refFn: (el: HTMLElement | null) => void; onToggle: () => void; onEdit: () => void; onDelete: () => void };
+
+const hasMore = (e: HomeEvent) => !!e.note || e.mine;
 const rowLabel = (e: HomeEvent, today: string, coachName: string) => `${e.title}, ${eventTypeOf(e.kind).label}, ${rangeLabel(e, today)}, ${relativeLabel(e, today)}${e.mine ? "" : `, set by ${coachName}`}`;
 
-function UpcomingRow({ e, today, coachName, coachPhoto, lit, refFn, onOpen }: RowProps) {
+function RowMore({ e, open, coachName, pending, onEdit, onDelete }: Pick<RowProps, "e" | "open" | "coachName" | "pending" | "onEdit" | "onDelete">) {
+  const [sure, setSure] = useState(false);
+  if (!hasMore(e)) return null;
+  return (
+    <div className={`ev-x${open ? " open" : ""}`} aria-hidden={!open}>
+      <div className="ev-x-clip">
+        <div className="ev-x-in">
+          {e.note && <p className="ev-x-note">{e.note}</p>}
+          <span className="ev-x-by">{e.mine ? `Added by you · ${coachName} can see it` : `Set by ${coachName}`}</span>
+          {e.mine && (
+            <div className="ev-x-actions">
+              <button type="button" className="ev-btn" onClick={onEdit} disabled={pending || !open} tabIndex={open ? 0 : -1}>
+                Edit
+              </button>
+              <button type="button" className={`ev-btn danger${sure ? " sure" : ""}`} onClick={() => (sure ? onDelete() : setSure(true))} disabled={pending || !open} tabIndex={open ? 0 : -1}>
+                {pending ? "Removing…" : sure ? "Yes, remove it" : "Delete"}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Chevron({ e, open }: { e: HomeEvent; open: boolean }) {
+  if (!hasMore(e)) return null;
+  return (
+    <span className={`ev-chev${open ? " open" : ""}`} aria-hidden="true">
+      ›
+    </span>
+  );
+}
+
+function UpcomingRow(p: RowProps) {
+  const { e, today, coachName, coachPhoto, lit, open, refFn, onToggle } = p;
   const t = eventTypeOf(e.kind);
   return (
     <div ref={refFn} className={`ev-r ev-r-up${lit ? " lit" : ""}`} style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}>
@@ -228,28 +266,32 @@ function UpcomingRow({ e, today, coachName, coachPhoto, lit, refFn, onOpen }: Ro
         </i>
       </span>
       <span className="ev-cell">
-        <button type="button" className="ev-card" onClick={onOpen} aria-label={rowLabel(e, today, coachName)}>
-          <span className="ev-card-row">
-            <span className="ev-card-title">{e.title}</span>
-            {!e.mine && <CoachAvatar name={coachName} photoPath={coachPhoto} size={24} ring="card" />}
-            {e.note && <span className="ev-chev" aria-hidden="true">›</span>}
-          </span>
-          <span className="ev-card-meta">
-            <span className="ev-pill">
-              <TypeIcon path={t.icon} fill={t.fill} size={11} />
-              {t.label}
+        <div className={`ev-card${open ? " open" : ""}`}>
+          <button type="button" className="ev-head" onClick={onToggle} disabled={!hasMore(e)} aria-expanded={hasMore(e) ? open : undefined} aria-label={rowLabel(e, today, coachName)}>
+            <span className="ev-card-row">
+              <span className="ev-card-title">{e.title}</span>
+              {!e.mine && <CoachAvatar name={coachName} photoPath={coachPhoto} size={24} ring="card" />}
+              <Chevron e={e} open={open} />
             </span>
-            <span>
-              {rangeLabel(e, today)} · <b>{relativeLabel(e, today)}</b>
+            <span className="ev-card-meta">
+              <span className="ev-pill">
+                <TypeIcon path={t.icon} fill={t.fill} size={11} />
+                {t.label}
+              </span>
+              <span>
+                {rangeLabel(e, today)} · <b>{relativeLabel(e, today)}</b>
+              </span>
             </span>
-          </span>
-        </button>
+          </button>
+          <RowMore {...p} />
+        </div>
       </span>
     </div>
   );
 }
 
-function NowCard({ e, today, coachName, coachPhoto, lit, refFn, onOpen }: RowProps) {
+function NowCard(p: RowProps) {
+  const { e, today, coachName, coachPhoto, lit, open, refFn, onToggle } = p;
   const t = eventTypeOf(e.kind);
   const { day, total } = dayOf(e, today);
   return (
@@ -257,30 +299,34 @@ function NowCard({ e, today, coachName, coachPhoto, lit, refFn, onOpen }: RowPro
       <span className="ev-td" aria-hidden="true" />
       <span className="ev-rail ev-rail-now" aria-hidden="true" />
       <span className="ev-cell">
-        <button type="button" className="ev-now" onClick={onOpen} aria-label={rowLabel(e, today, coachName)}>
+        <div className={`ev-now${open ? " open" : ""}`}>
           <span className="ev-aura" aria-hidden="true" />
-          <span className="ev-now-eyebrow">Happening now · {t.label}</span>
-          <span className="ev-card-row">
-            <span className="ev-card-title">{e.title}</span>
-            {!e.mine && <CoachAvatar name={coachName} photoPath={coachPhoto} size={24} ring="card" />}
-            {e.note && <span className="ev-chev" aria-hidden="true">›</span>}
-          </span>
-          <span className="ev-bar" role="progressbar" aria-valuenow={day} aria-valuemin={1} aria-valuemax={total} aria-label={`Day ${day} of ${total}`}>
-            <i style={{ width: `${(day / total) * 100}%` }} />
-          </span>
-          <span className="ev-now-meta">
-            <span>
-              Day {day} of {total}
+          <button type="button" className="ev-head" onClick={onToggle} disabled={!hasMore(e)} aria-expanded={hasMore(e) ? open : undefined} aria-label={rowLabel(e, today, coachName)}>
+            <span className="ev-now-eyebrow">Happening now · {t.label}</span>
+            <span className="ev-card-row">
+              <span className="ev-card-title">{e.title}</span>
+              {!e.mine && <CoachAvatar name={coachName} photoPath={coachPhoto} size={24} ring="card" />}
+              <Chevron e={e} open={open} />
             </span>
-            <span>until {shortDay(e.end, today)}</span>
-          </span>
-        </button>
+            <span className="ev-bar" role="progressbar" aria-valuenow={day} aria-valuemin={1} aria-valuemax={total} aria-label={`Day ${day} of ${total}`}>
+              <i style={{ width: `${(day / total) * 100}%` }} />
+            </span>
+            <span className="ev-now-meta">
+              <span>
+                Day {day} of {total}
+              </span>
+              <span>until {shortDay(e.end, today)}</span>
+            </span>
+          </button>
+          <RowMore {...p} />
+        </div>
       </span>
     </div>
   );
 }
 
-function PastRow({ e, today, coachName, coachPhoto, lit, refFn, onOpen }: RowProps) {
+function PastRow(p: RowProps) {
+  const { e, today, coachName, coachPhoto, lit, open, refFn, onToggle } = p;
   const t = eventTypeOf(e.kind);
   return (
     <div ref={refFn} className={`ev-r ev-r-past${lit ? " lit" : ""}`} style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}>
@@ -294,16 +340,19 @@ function PastRow({ e, today, coachName, coachPhoto, lit, refFn, onOpen }: RowPro
         </i>
       </span>
       <span className="ev-cell">
-        <button type="button" className="ev-past" onClick={onOpen} aria-label={rowLabel(e, today, coachName)}>
-          <span className="ev-past-text">
-            <span className="ev-past-title">{e.title}</span>
-            <span className="ev-past-meta">
-              {rangeLabel(e, today)} · {relativeLabel(e, today)} · {t.label}
+        <div className={`ev-past${open ? " open" : ""}`}>
+          <button type="button" className="ev-head ev-past-head" onClick={onToggle} disabled={!hasMore(e)} aria-expanded={hasMore(e) ? open : undefined} aria-label={rowLabel(e, today, coachName)}>
+            <span className="ev-past-text">
+              <span className="ev-past-title">{e.title}</span>
+              <span className="ev-past-meta">
+                {rangeLabel(e, today)} · {relativeLabel(e, today)} · {t.label}
+              </span>
             </span>
-          </span>
-          {!e.mine && <CoachAvatar name={coachName} photoPath={coachPhoto} size={22} ring="row" />}
-          {e.note && <span className="ev-chev" aria-hidden="true">›</span>}
-        </button>
+            {!e.mine && <CoachAvatar name={coachName} photoPath={coachPhoto} size={22} ring="row" />}
+            <Chevron e={e} open={open} />
+          </button>
+          <RowMore {...p} />
+        </div>
       </span>
     </div>
   );

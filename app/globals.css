@@ -18006,11 +18006,26 @@ button.ci-hint { cursor: pointer; }
 .ev-rail::before { content: ""; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: #dce3ee; }
 .ev-cell { flex: 1; min-width: 0; padding-left: 8px; }
 .ev-dot-ring { position: absolute; left: -4px; top: 11px; display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 999px; background: #f4f7fc; color: var(--c); }
-.ev-chev { flex: none; font-size: 20px; line-height: 1; color: #8b93a1; }
+.ev-chev { flex: none; font-size: 20px; line-height: 1; color: #8b93a1; transition: transform 0.25s ease; }
+.ev-chev.open { transform: rotate(90deg); }
+/* The body that opens in place: the note, who set it, Edit and Delete. */
+.ev-x { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease; }
+.ev-x.open { grid-template-rows: 1fr; opacity: 1; }
+.ev-x-clip { min-height: 0; overflow: hidden; }
+.ev-x-in { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; }
+.ev-x-note { margin: 0; padding: 10px 12px; border-radius: 12px; background: rgba(var(--rgb), 0.08); font-size: 13.5px; line-height: 1.5; color: #313851; white-space: pre-wrap; }
+.ev-x-by { font-size: 12px; font-weight: 600; color: #8b93a1; }
+.ev-x-actions { display: flex; gap: 8px; }
+.ev-btn { flex: 1; height: 40px; border: 0; border-radius: 12px; background: #f2f4f7; font: inherit; font-size: 13.5px; font-weight: 800; color: #1d3466; cursor: pointer; }
+.ev-btn.danger { color: #b3471d; }
+.ev-btn.danger.sure { background: #fdf3ee; }
+.ev-btn:disabled { cursor: default; }
 
 /* Coming up. */
 .ev-r-up .ev-cell { padding-bottom: 10px; }
-.ev-card { display: flex; flex-direction: column; gap: 6px; width: 100%; margin: 0; padding: 12px 12px 12px 14px; border: 0; border-radius: 18px; background: #fff; font: inherit; color: inherit; text-align: left; cursor: pointer; box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04), 0 14px 24px -20px rgba(var(--rgb), 0.7), inset 0 0 0 1px rgba(var(--rgb), 0.12); }
+.ev-head { display: flex; flex-direction: column; gap: 6px; width: 100%; margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.ev-head:disabled { cursor: default; }
+.ev-card { display: flex; flex-direction: column; width: 100%; padding: 12px 12px 12px 14px; border-radius: 18px; background: #fff; box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04), 0 14px 24px -20px rgba(var(--rgb), 0.7), inset 0 0 0 1px rgba(var(--rgb), 0.12); }
 .ev-card-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .ev-card-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 800; color: #141a24; }
 .ev-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #5b6474; }
@@ -18029,7 +18044,8 @@ button.ci-hint { cursor: pointer; }
 /* Happening now: the rail in the type's colour, no dot, no date. */
 .ev-r-now .ev-cell { padding: 2px 0 14px 8px; }
 .ev-rail-now::before { background: var(--c); }
-.ev-now { position: relative; overflow: hidden; isolation: isolate; transform: translateZ(0); display: flex; flex-direction: column; gap: 8px; width: 100%; margin: 0; padding: 12px 14px; border: 0; border-radius: 18px; background: linear-gradient(135deg, rgba(var(--rgb), 0.12), rgba(var(--rgb), 0.03)); box-shadow: inset 0 0 0 1px rgba(var(--rgb), 0.25); font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.ev-now .ev-head { gap: 8px; }
+.ev-now { position: relative; overflow: hidden; isolation: isolate; transform: translateZ(0); display: flex; flex-direction: column; width: 100%; padding: 12px 14px; border-radius: 18px; background: linear-gradient(135deg, rgba(var(--rgb), 0.12), rgba(var(--rgb), 0.03)); box-shadow: inset 0 0 0 1px rgba(var(--rgb), 0.25); font: inherit; color: inherit; text-align: left; cursor: pointer; }
 .ev-aura { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
 .ev-aura::before, .ev-aura::after { content: ""; position: absolute; left: -10%; right: -10%; top: -20%; bottom: -50%; filter: blur(14px); will-change: transform, opacity; }
 .ev-aura::before { background: radial-gradient(closest-side at 22% 70%, rgba(var(--rgb), 0.38), transparent), radial-gradient(closest-side at 80% 90%, rgba(255, 255, 255, 0.9), transparent); animation: hm-aura-a 4.5s ease-in-out infinite; }
@@ -18046,8 +18062,9 @@ button.ci-hint { cursor: pointer; }
 .ev-r-past .ev-rail::before { background: #e6ebf2; }
 .ev-dot-past { position: absolute; left: -2px; top: 12px; display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 999px; background: #f4f7fc; color: var(--c); opacity: 0.55; }
 .ev-r-past .ev-cell { padding-bottom: 6px; }
-.ev-past { display: flex; align-items: center; gap: 8px; width: 100%; margin: 0; padding: 9px 10px 9px 12px; border: 0; border-radius: 14px; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; transition: background 0.2s ease; }
-.ev-past:hover, .ev-past:active { background: rgba(255, 255, 255, 0.7); }
+.ev-past { display: flex; flex-direction: column; width: 100%; padding: 9px 10px 9px 12px; border-radius: 14px; transition: background 0.2s ease; }
+.ev-past.open, .ev-past:active { background: rgba(255, 255, 255, 0.7); }
+.ev-past-head { flex-direction: row; align-items: center; gap: 8px; }
 .ev-past-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .ev-past-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14.5px; font-weight: 700; color: #3a4250; }
 .ev-past-meta { font-size: 12px; font-weight: 600; color: #8b93a1; }
@@ -18055,6 +18072,8 @@ button.ci-hint { cursor: pointer; }
 
 /* Just added: a soft wash that fades out. */
 .ev-r.lit .ev-card, .ev-r.lit .ev-now, .ev-r.lit .ev-past { animation: ev-lit 600ms ease-out 200ms both; }
+.ev-r.lit .ev-now { animation-name: ev-lit-now; }
+@keyframes ev-lit-now { from { background-color: rgba(var(--rgb), 0.18); } to { background-color: transparent; } }
 @keyframes ev-lit { from { background-color: rgba(var(--rgb), 0.1); } to { background-color: transparent; } }
 .ev-r.lit .ev-card { animation-name: ev-lit-card; }
 @keyframes ev-lit-card { from { background-color: rgba(var(--rgb), 0.1); } to { background-color: #fff; } }
@@ -18142,22 +18161,6 @@ button.ci-hint { cursor: pointer; }
   .evs { animation: ev-scrim-in 0.2s ease both; }
   .evs-wash, .evs-glow, .evs-grab, .evs-pill, .evs-title, .evs-type, .evs-save { transition: none; }
 }
-
-/* The detail. */
-.ev-detail { gap: 14px; }
-.ev-detail-top { display: flex; align-items: center; gap: 12px; }
-.ev-detail-tile { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 14px; background: rgba(var(--rgb), 0.12); color: var(--c); }
-.ev-detail-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.ev-detail-text h2 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.2; color: #141a24; }
-.ev-detail-when { font-size: 12.5px; font-weight: 600; color: #5b6474; }
-.ev-detail-when b { font-weight: 800; color: #141a24; }
-.ev-detail-note { margin: 0; padding: 12px 14px; border-radius: 14px; background: #f4f6fa; font-size: 14px; line-height: 1.5; color: #313851; white-space: pre-wrap; }
-.ev-detail-by { margin: 0; font-size: 12.5px; font-weight: 600; color: #8b93a1; }
-.ev-detail-actions { display: flex; gap: 8px; }
-.ev-btn { flex: 1; height: 48px; border: 0; border-radius: 14px; background: #f2f4f7; font: inherit; font-size: 14px; font-weight: 800; color: #1d3466; cursor: pointer; }
-.ev-btn.danger { color: #b3471d; }
-.ev-btn.danger.sure { background: #fdf3ee; }
-.ev-close { height: 44px; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 700; color: #5b6474; cursor: pointer; }
 
 @media (prefers-reduced-motion: reduce) {
   .ev-sheet { animation: ev-scrim-in 0.2s ease both; }
