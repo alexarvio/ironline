@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { clientAddEventAction, clientDeleteEventAction, clientUpdateEventAction } from "../lib/actions";
 import { NO_CATEGORY, paletteOf } from "../admin/redesign/palette";
 import { useOpenEvents } from "./CheckInContext";
+import { eventTypeOf } from "../lib/eventTypes";
+import { TypeIcon } from "./events/AddEventSheet";
 
 // Home's "Events" card (7 Oct): what is coming up in the client's life that
 // the plan should know about: a trip, an injury, the day they started a
@@ -49,47 +51,58 @@ export default function EventsCard({ events, coachName, today }: { events: HomeE
   const coming = events.list.filter((e) => e.end >= today).sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.id - b.id));
   const running = coming.find((e) => e.start <= today) ?? null;
   const next = coming.find((e) => e.start > today) ?? null;
-  const glow = (hex: string, a: number) => `rgba(${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)}, ${a})`;
-  const upcomingRow = (e: HomeEvent) => {
-    const k = chromeOf(events.categories, e.kind);
-    return (
-      <span className="hm-ev-row">
-        <i className="hm-ev-dot" style={{ background: k.ink }} />
-        <span className="hm-ev-when">{e.start === e.end ? shortDate(e.start) : `${shortDate(e.start)} – ${shortDate(e.end)}`}</span>
-        <span className="hm-ev-title">{e.title}</span>
-      </span>
-    );
+  // Rows in the type's colour, as the Events screen draws them (9 Oct): the
+  // type's icon for a dot, a chevron where there is a note to read there.
+  const vars = (e: HomeEvent) => {
+    const t = eventTypeOf(e.kind);
+    return { t, style: { "--c": t.color, "--rgb": t.rgb } as React.CSSProperties };
   };
   return (
-    <section className="hm-ev" aria-label="Coming up">
-      <button type="button" className="hm-ev-open" onClick={() => openEvents?.()} aria-label="Coming up: open your events">
+    <section className="hm-ev" aria-label="Events">
+      <button type="button" className="hm-ev-open" onClick={() => openEvents?.()} aria-label="Events: open your events">
         <span className="hm-ev-head">
-          <span className="hm-eyebrow">Coming up</span>
+          <span className="hm-eyebrow">Events</span>
           <span className="hm-ev-chev" aria-hidden="true">›</span>
         </span>
         {(running || next) && (
           <span className="hm-ev-list">
             {running &&
               (() => {
-                // In it now: the row on the category's tint with its aura, a "Now" chip, the title, and until when.
-                const k = chromeOf(events.categories, running.kind);
+                // In it now: the row on the type's tint with its aura, a "Now" chip, the title, and until when.
+                const { t, style } = vars(running);
                 return (
-                  <span className="hm-ev-row on" style={{ background: k.tint, "--ev-glow": glow(k.ink, 0.42) } as React.CSSProperties}>
-                    <i className="hm-ev-now" style={{ background: k.ink }}>Now</i>
+                  <span className="hm-ev-row on" style={style}>
+                    <i className="hm-ev-now">
+                      <TypeIcon path={t.icon} fill={t.fill} size={11} stroke={2.4} />
+                      Now
+                    </i>
                     <span className="hm-ev-title">{running.title}</span>
                     <span className="hm-ev-when">{running.start === running.end ? "today" : `until ${shortDate(running.end)}`}</span>
+                    {running.note && <span className="hm-ev-more" aria-hidden="true">›</span>}
                   </span>
                 );
               })()}
-            {next && upcomingRow(next)}
+            {next &&
+              (() => {
+                // The one after: "Next up", the title, and when.
+                const { t, style } = vars(next);
+                return (
+                  <span className="hm-ev-row next" style={style}>
+                    <i className="hm-ev-ico">
+                      <TypeIcon path={t.icon} fill={t.fill} size={13} stroke={2.2} />
+                    </i>
+                    <span className="hm-ev-tag">Next up</span>
+                    <span className="hm-ev-title">{next.title}</span>
+                    <span className="hm-ev-when">{next.start === next.end ? shortDate(next.start) : `${shortDate(next.start)} – ${shortDate(next.end)}`}</span>
+                    {next.note && <span className="hm-ev-more" aria-hidden="true">›</span>}
+                  </span>
+                );
+              })()}
           </span>
         )}
-        {/* What the card is for, said every time, rows or none (9 Oct): the client
-            tells the coach what is going on, so the plan can plan around it. The
-            reason on the left, Add on the right. */}
+        {/* What the card is for (9 Oct): the client tells the coach what is going on, so the plan can plan around it. A tap opens the Events screen. */}
         <span className={`hm-ev-foot${coming.length ? " under" : ""}`}>
           <span className="hm-ev-why">A trip, an injury, a busy week: anything {coachName} should plan around.</span>
-          <span className="hm-ev-add">+ Add</span>
         </span>
       </button>
     </section>
