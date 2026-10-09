@@ -193,11 +193,11 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   const days = getWeek(clientId, weekNumber);
   // The chat about an exercise, both sides (the workout's chat button and the
   // coach's replies link a message to it), by assignment, oldest first.
-  const aboutExercise = new Map<number, { mine: boolean; text: string; when: string }[]>();
+  const aboutExercise = new Map<number, { id: number; mine: boolean; text: string; when: string }[]>();
   for (const m of [...listChatMessages(clientId)].sort((x, y) => x.created_at.localeCompare(y.created_at))) {
     if (m.link?.kind !== "exercise") continue;
     const list = aboutExercise.get(m.link.assignmentId) ?? [];
-    list.push({ mine: m.sender === "coach", text: m.text || "A file", when: new Date(m.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) });
+    list.push({ id: m.id, mine: m.sender === "coach", text: m.text || "A file", when: new Date(m.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) });
     aboutExercise.set(m.link.assignmentId, list);
   }
   const sessions = days.map((d, si) => {

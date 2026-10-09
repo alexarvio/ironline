@@ -67,7 +67,7 @@ export type DraftRow = {
   swap: string | null;
   /** The swap in full: what, when, and the sets logged on it (kept out of this row's numbers). */
   /** The chat about this exercise, both sides, oldest first. */
-  exerciseChat: { mine: boolean; text: string; when: string }[];
+  exerciseChat: { id: number; mine: boolean; text: string; when: string }[];
   swapInfo: { name: string; typed: boolean; when: string; sets: { set: number; kg: number | null; reps: number | null; rpe: number | null; gym: string | null }[] } | null;
   /** What the coach offers instead when the machine is taken. */
   alternatives: { exerciseId: number; name: string; note: string }[];
@@ -377,14 +377,13 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   // Rows whose swap is opened underneath them.
   const [openSwaps, setOpenSwaps] = useState<number[]>([]);
   const toggleSwap = (id: number) => setOpenSwaps((o) => (o.includes(id) ? o.filter((x) => x !== id) : [...o, id]));
-  // Rows whose messages are opened underneath them.
-  const [openChats, setOpenChats] = useState<number[]>([]);
-  const toggleChat = (id: number) => setOpenChats((o) => (o.includes(id) ? o.filter((x) => x !== id) : [...o, id]));
+  // A row's messages open in the chat panel (9 Oct), on the latest of them,
+  // the reply already about the exercise. They used to unfold under the row.
   // Replying to what the client said slides the chat with them in from the
   // right (ChatPanel), the reply pointing at it; outside the shell, the
   // message dialog as before.
   const openChat = useOpenChat();
-  const replyTo = (label: string, link: MessageLink) => (openChat ? openChat({ area: "Training", label, link }) : setDlg({ kind: "message", label, link }));
+  const replyTo = (label: string, link: MessageLink, focus: number | null = null) => (openChat ? openChat({ area: "Training", label, link }, focus) : setDlg({ kind: "message", label, link }));
   useEffect(() => {
     const m = /^#session-(\d+)(?:-ex-(\d+))?$/.exec(window.location.hash);
     if (!m) return;
@@ -881,7 +880,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                           onClick={(ev) => {
                             if (!r.exerciseChat.length) return;
                             if ((ev.target as HTMLElement).closest("input, textarea, select, button, a, [role=button], [role=menuitem], .rd-grip")) return;
-                            toggleChat(r.id);
+                            replyTo(`${r.name} · ${name}, ${week.label}`, { kind: "exercise", dayId: s.id, assignmentId: r.id }, r.exerciseChat[r.exerciseChat.length - 1]?.id ?? null);
                           }}
                         >
                           <span className="rd-grip" {...rowGrip}>
@@ -952,8 +951,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                   <button
                                     type="button"
                                     className="rd-flag chat"
-                                    onClick={() => toggleChat(r.id)}
-                                    aria-expanded={openChats.includes(r.id)}
+                                    onClick={() => replyTo(`${r.name} · ${name}, ${week.label}`, { kind: "exercise", dayId: s.id, assignmentId: r.id }, r.exerciseChat[r.exerciseChat.length - 1]?.id ?? null)}
                                     title={`${firstName} wrote about ${r.name} · read and reply`}
                                     aria-label={`Read what ${firstName} wrote about ${r.name}, and reply`}
                                   >
@@ -1093,18 +1091,6 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                           </div>
                         )}
                         {/* The messages about this exercise, opened under it. */}
-                        {openChats.includes(r.id) && r.exerciseChat.length > 0 && (
-                          <ExerciseChatThread
-                            row={r}
-                            firstName={firstName}
-                            onReply={openChat ? () => replyTo(`${r.name} · ${name}, ${week.label}`, { kind: "exercise", dayId: s.id, assignmentId: r.id }) : undefined}
-                            onSend={(text) => {
-                              const f = fd({ clientId, text });
-                              f.set("link", JSON.stringify({ kind: "exercise", dayId: s.id, assignmentId: r.id }));
-                              act(() => sendChatMessageAction(f));
-                            }}
-                          />
-                        )}
                         </>
                         )}
                       </SortableItem>
@@ -2791,61 +2777,6 @@ function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }:
         </>
       )}
     </DialogContent>
-  );
-}
-
-/** The chat about one exercise, opened under its row (1 Oct; it was a
- *  dialog): both sides' messages about it, oldest first, and a reply linked
- *  to it. The reply is an ordinary chat message, so it is in the full chat
- *  and on the client's side too. */
-function ExerciseChatThread({ row, firstName, onSend, onReply }: { row: DraftRow; firstName: string; onSend: (text: string) => void; /** Reply in the chat panel instead of here. */ onReply?: () => void }) {
-  const [text, setText] = useState("");
-  const list = useRef<HTMLDivElement>(null);
-  // Always at the newest, on opening and when a reply lands.
-  useEffect(() => {
-    const el = list.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [row.exerciseChat.length]);
-  const send = () => {
-    const t = text.trim();
-    if (!t) return;
-    onSend(t);
-    setText("");
-  };
-  return (
-    <div className="rd-exchat rd-exchat-inline" role="region" aria-label={`What you and ${firstName} said about ${row.name}`}>
-      <div ref={list} className="rd-exchat-list">
-        {row.exerciseChat.map((m, i) => (
-          <div key={i} className={`rd-exchat-msg${m.mine ? " mine" : ""}`}>
-            <span className="rd-exchat-text">{m.text}</span>
-            <small>{m.when}</small>
-          </div>
-        ))}
-      </div>
-      {onReply ? (
-        <button type="button" className="rd-note-reply rd-exchat-reply" onClick={onReply}>
-          <ChatIcon /> Reply to {firstName}
-        </button>
-      ) : (
-      <div className="rd-exchat-compose">
-        <textarea
-          rows={2}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder={`Reply to ${firstName}…`}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              send();
-            }
-          }}
-        />
-        <button type="button" className="rd-btn primary" disabled={!text.trim()} onClick={send}>
-          Send
-        </button>
-      </div>
-      )}
-    </div>
   );
 }
 
