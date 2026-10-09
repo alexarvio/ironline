@@ -26,6 +26,8 @@ export type HomePhase = {
   coverUrl: string | null;
   objectives: string[];
   note: string | null;
+  /** The phase the coach has scheduled after this one on the same track (9 Oct); null, none yet. */
+  next?: { name: string; start: string } | null;
 };
 
 const TRACK_LABEL = { nutrition: "Nutrition", training: "Training", lifestyle: "Lifestyle" } as const;
@@ -237,16 +239,19 @@ function PhaseCardCarousel({ phases, coachName, today, nextSession, food, weekDo
           const pr = progressOf(ph, today, coachName);
           const objOpen = openObj.includes(ph.id);
           const tab = TRACK_TAB[ph.track];
+          // The final week with the next phase scheduled: the card names it and charges up (9 Oct); before that, nothing.
+          const charging = !!ph.next && !!ph.end && dayNum(ph.end) - dayNum(today) <= 6;
           return (
             <article
               key={ph.id}
-              className={`pc-card${tab ? " link" : ""}`}
+              className={`pc-card${tab ? " link" : ""}${charging ? " charging" : ""}`}
               data-track={ph.track}
               aria-label={cardLabel(ph, pr)}
               onClick={() => open(ph)}
             >
               <Cover ph={ph} eager={i === 0} />
               <span className="pc-scrim" aria-hidden="true" />
+              {charging && <span className="pc-aura" aria-hidden="true" />}
               <div className="pc-top">
                 <span className="pc-track-chip">
                   <span className="pc-icon">{TRACK_ICON[ph.track]}</span>
@@ -335,6 +340,13 @@ function PhaseCardCarousel({ phases, coachName, today, nextSession, food, weekDo
                         </ol>
                       </div>
                     </div>
+                  </div>
+                )}
+                {charging && ph.next && (
+                  <div className="pc-nextphase">
+                    <span className="pc-nextphase-label">Next phase</span>
+                    <span className="pc-nextphase-name">{ph.next.name}</span>
+                    <span className="pc-nextphase-when">from {short(ph.next.start)}</span>
                   </div>
                 )}
               </div>

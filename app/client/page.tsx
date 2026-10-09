@@ -372,6 +372,11 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
         coverUrl: ph.cover_path ?? defaultPhaseCover(track, ph.id),
         objectives: ph.objectives ?? [],
         note: ph.nutrition?.coach_notes?.trim() || null,
+        // The scheduled phase after this one on the track (9 Oct): the card names it, and charges up in its last week.
+        next: (() => {
+          const n = listClientPhases(CLIENT_ID).find((p) => p.track === track && !p.draft && p.id !== ph.id && p.start_week > ph.start_week && p.start_week > today);
+          return n ? { name: n.name, start: n.start_week } : null;
+        })(),
       },
     ];
   });

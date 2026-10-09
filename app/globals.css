@@ -16844,6 +16844,19 @@ button.pp-row { cursor: zoom-in; }
 .pc-card .pc-obj-more { color: #fff; }
 .pc-dot.on { background: #1e3a6e; }
 .pc-card .pc-left.overdue { color: rgba(255, 255, 255, 0.72); text-align: left; }
+/* The next phase, named at the foot of the panel (9 Oct). */
+.pc-nextphase { display: flex; align-items: baseline; gap: 8px; min-width: 0; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.2); font-size: 12.5px; color: rgba(255, 255, 255, 0.72); }
+.pc-nextphase-label { flex: none; font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+.pc-nextphase-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; color: #fff; }
+.pc-nextphase-when { flex: none; margin-left: auto; }
+/* Charging (9 Oct): the final week with the next phase scheduled. Light rises
+   under the frosted panel, between the cover and the glass, the same aura as
+   the gap card. */
+.pc-aura { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.pc-aura::before, .pc-aura::after { content: ""; position: absolute; left: -20%; right: -20%; top: 20%; bottom: -30%; filter: blur(18px); will-change: transform, opacity; }
+.pc-aura::before { background: radial-gradient(closest-side at 28% 75%, rgba(120, 196, 255, 0.95), transparent), radial-gradient(closest-side at 78% 85%, rgba(255, 255, 255, 0.55), transparent); animation: hm-aura-a 4.5s ease-in-out infinite; }
+.pc-aura::after { background: radial-gradient(closest-side at 62% 80%, rgba(90, 170, 255, 0.85), transparent), radial-gradient(closest-side at 15% 90%, rgba(255, 255, 255, 0.45), transparent); animation: hm-aura-b 6s ease-in-out infinite; animation-delay: -2.5s; }
+@media (prefers-reduced-motion: reduce) { .pc-aura::before, .pc-aura::after { animation: none; opacity: 0.7; } }
 /* The nutrition stock photo: its food sits on the right, so show that side. */
 .pc-cover[src*="nutrition-head"] { object-position: 80% center; }
 /* The card you are on sits in the middle, a bit of the next and previous
