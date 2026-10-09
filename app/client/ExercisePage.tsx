@@ -24,7 +24,7 @@ import {
 export const MAX_WARMUPS = 8;
 
 /** What the workout's ⋯ menu asks of the exercise on screen; n makes each ask new. */
-export type ExerciseRequest = { kind: "note" | "warmup" | "swap"; n: number };
+export type ExerciseRequest = { kind: "note" | "warmup" | "swap" | "media"; n: number };
 type Draft = { weight: string; reps: string; rpe: string };
 
 
@@ -196,6 +196,8 @@ export default function ExercisePage({
   // ---- Swap, video, history.
   const [swapOpen, setSwapOpen] = useState(false);
   const [videoOpen, setVideoOpen] = useState(false);
+  // Sending a picture of the swap (9 Oct): the sheet opens from the swap sheet, marked so.
+  const [mediaAbout, setMediaAbout] = useState<"swap" | null>(null);
   // The workout's ⋯ menu (note, warm-up, swap) lands here, once per ask.
   const [seenRequest, setSeenRequest] = useState(request?.n ?? 0);
   if (request && request.n !== seenRequest) {
@@ -204,7 +206,10 @@ export default function ExercisePage({
       setNoteDraft(myNote);
       setNoteOpen(true);
     } else if (request.kind === "warmup") addWarm();
-    else setSwapOpen(true);
+    else if (request.kind === "media") {
+      setMediaAbout(null);
+      setVideoOpen(true);
+    } else setSwapOpen(true);
   }
   // Progression (9 Oct): last session every working set made the reps (the
   // low end of the range, or the number itself) at a weight above this week's
@@ -312,20 +317,23 @@ export default function ExercisePage({
 
       <CoachNote assignmentId={exercise.id} note={exercise.note} />
 
-      {ask && (
+      {ask && (ask.note || ask.src || ask.reply) && (
         <button
           type="button"
           className={`wo-video${ask.reply ? " replied" : ask.src ? " sent" : " asked"}${ask.reply && !ask.reply.seen ? " unseen" : ""}`}
-          onClick={() => setVideoOpen(true)}
+          onClick={() => {
+            setMediaAbout(null);
+            setVideoOpen(true);
+          }}
         >
           <span className="wo-video-tile">
             <VideoGlyph />
           </span>
           <span className="wo-video-main">
-            <b>{ask.reply ? `${coachName} replied to your video` : ask.src ? "Video sent" : `${coachName} wants a video`}</b>
-            <small>{ask.reply ? "Tap to watch the reply" : ask.src ? `Only ${coachName} sees it` : ask.note || "Of this exercise, this session"}</small>
+            <b>{ask.reply ? `${coachName} replied to your ${ask.media === "photo" ? "photo" : "video"}` : ask.src ? (ask.media === "photo" ? (ask.about === "swap" ? "Photo of the swap sent" : "Photo sent") : "Video sent") : `${coachName} wants a video`}</b>
+            <small>{ask.reply ? "Tap to see the reply" : ask.src ? `Only ${coachName} sees it` : ask.note || "Of this exercise, this session"}</small>
           </span>
-          <span className="wo-video-action">{ask.reply ? "Watch" : ask.src ? "View" : "Record"}</span>
+          <span className="wo-video-action">{ask.reply ? "Open" : ask.src ? "View" : "Record"}</span>
         </button>
       )}
 
@@ -534,10 +542,15 @@ export default function ExercisePage({
             setSwapOpen(false);
             startTransition(() => clearSwapAction(exercise.id));
           }}
+          onPhoto={() => {
+            setSwapOpen(false);
+            setMediaAbout("swap");
+            setVideoOpen(true);
+          }}
           onClose={() => setSwapOpen(false)}
         />
       )}
-      {videoOpen && ask && <VideoAskSheet ask={ask} exerciseName={shownName(exercise)} onClose={() => setVideoOpen(false)} />}
+      {videoOpen && <VideoAskSheet ask={ask} assignmentId={exercise.id} about={mediaAbout} exerciseName={shownName(exercise)} onClose={() => setVideoOpen(false)} />}
     </div>
   );
 }

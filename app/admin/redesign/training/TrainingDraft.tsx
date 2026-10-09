@@ -57,7 +57,7 @@ export type DraftRow = {
   rest: number | null;
   note: string | null;
   logged: { set: number; kg: number | null; reps: number | null; rpe: number | null; gym: string | null }[];
-  video: { requestId: number; state: "asked" | "in" | "replied"; note: string | null; reply: string | null; /** The file the client sent, and the one the coach sent back (9 Oct). */ src: string | null; replySrc: string | null } | null;
+  video: { requestId: number; state: "asked" | "in" | "replied"; note: string | null; reply: string | null; /** The file the client sent, and the one the coach sent back (9 Oct). */ src: string | null; replySrc: string | null; /** A photo or a video; sent unasked; about the swap; with the client's words (9 Oct). */ media: "video" | "photo"; fromClient: boolean; about: "swap" | null; clientNote: string | null } | null;
   /** The demo the client sees on this exercise: the library's, else one set on this row long ago. */
   demo: { url: string; source: "library" | "row" } | null;
   /** The coach keeping that demo off this prescription for this client. */
@@ -969,8 +969,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                     type="button"
                                     className={`rd-flag video ${video.state}`}
                                     onClick={() => setDlg({ kind: "video", rowId: r.id })}
-                                    title={video.state === "in" ? `${firstName}'s video is in · watch and reply` : "Their video · replied"}
-                                    aria-label={video.state === "in" ? `Watch ${firstName}'s video` : "Their video, replied"}
+                                    title={video.state === "in" ? `${firstName}'s ${video.media} is in · ${video.media === "photo" ? "look" : "watch"} and reply` : `Their ${video.media} · replied`}
+                                    aria-label={video.state === "in" ? `${video.media === "photo" ? "See" : "Watch"} ${firstName}'s ${video.media}` : `Their ${video.media}, replied`}
                                   >
                                     <VideoIcon />
                                   </button>
@@ -2704,9 +2704,10 @@ function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }:
   return (
     <DialogContent className="rd-dlg">
       <DialogHeader>
-        <DialogTitle>{!video ? "Ask for a video" : video.state === "asked" ? "Video asked for" : `${firstName}'s video`}</DialogTitle>
+        <DialogTitle>{!video ? "Ask for a video" : video.state === "asked" ? "Video asked for" : `${firstName}'s ${video.media}${video.about === "swap" ? " of the swap" : ""}`}</DialogTitle>
         <DialogDescription>
           {row.name} · {where}
+          {video && video.state !== "asked" && video.fromClient ? ` · sent unasked` : ""}
         </DialogDescription>
       </DialogHeader>
       {!video && (
@@ -2740,13 +2741,20 @@ function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }:
       {(video?.state === "in" || video?.state === "replied") && (
         <>
           {/* The video itself (9 Oct): the stub with a fixed "0:42" stood here, and the coach could not watch what the client sent. */}
-          {video.src ? (
+          {video.src && video.media === "photo" ? (
+            <img className="rd-video" src={video.src} alt={`${firstName}'s photo`} />
+          ) : video.src ? (
             <video className="rd-video" src={video.src} controls playsInline preload="metadata" aria-label={`${firstName}'s video`} />
           ) : (
             <div className="rd-video-stub" role="img" aria-label={`${firstName}'s video`}>
               <PlayIcon />
               <span>{firstName}&rsquo;s video is not here yet</span>
             </div>
+          )}
+          {video.clientNote && (
+            <p className="rd-dlg-para">
+              <b>{firstName} wrote</b> {video.clientNote}
+            </p>
           )}
           {video.state === "replied" && video.replySrc && <video className="rd-video" src={video.replySrc} controls playsInline preload="metadata" aria-label="Your reply video" />}
           {video.state === "replied" ? (

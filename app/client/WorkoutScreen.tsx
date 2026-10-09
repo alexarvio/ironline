@@ -321,6 +321,11 @@ export default function WorkoutScreen({
                     <MenuIcon kind="swap" />
                     {currentEx.swap ? "Change the swap" : "Swap exercise"}
                   </button>
+                  {/* A photo or a video for the coach, unasked (9 Oct): a question about the form, the machine they found. */}
+                  <button type="button" role="menuitem" className="wo-menu-row ico" onClick={() => ask("media")}>
+                    <MenuIcon kind="media" />
+                    Send a photo or video
+                  </button>
                   {/* The note for yourself fourth, after the swap (30 Sep). */}
                   <button type="button" role="menuitem" className="wo-menu-row ico" onClick={() => ask("note")}>
                     <MenuIcon kind="note" />
@@ -479,6 +484,7 @@ const MENU_ICONS = {
   note: ["M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z", "m15 5 4 4"],
   warmup: ["M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"],
   swap: ["M8 3 4 7l4 4", "M4 7h16", "m16 21 4-4-4-4", "M20 17H4"],
+  media: ["M4 7h3l2-3h6l2 3h3v12H4z", "M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"],
   discard: ["M3 6h18", "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6", "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2", "M10 11v6", "M14 11v6"],
 } as const;
 

@@ -180,6 +180,7 @@ import {
   setChatMessageLink,
   setChatMessagePinned,
   addClientEvent,
+  fileClientMedia,
   updateClientEvent,
   deleteClientEvent,
   clientOwnsEvent,
@@ -1398,6 +1399,32 @@ export async function uploadRequestedVideoAction(formData: FormData): Promise<st
   const buffer = Buffer.from(await file.arrayBuffer());
   const saved = saveRequestedVideo(id, buffer, file.type);
   if (!saved) return "That request is gone.";
+  if (saved.previous) await deleteUpload(saved.previous);
+  await putUpload(saved.path, buffer, file.type);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  return null;
+}
+
+/** A photo or video of an exercise from the client, asked for or not (9 Oct): filed on the exercise, the coach sees it on the row. */
+export async function sendExerciseMediaAction(formData: FormData): Promise<string | null> {
+  const assignmentId = Number(formData.get("assignmentId"));
+  const owner = getClientIdForAssignment(assignmentId);
+  if (owner == null) return "That exercise is gone.";
+  await requireClientAccess(owner);
+  const file = formData.get("file") as File | null;
+  if (!file || file.size === 0) return "Choose a photo or a video first.";
+  const isImage = file.type.startsWith("image/");
+  const isVideo = file.type.startsWith("video/");
+  if (!isImage && !isVideo) return "That doesn't look like a photo or a video.";
+  if (isVideo && file.size > MAX_REQUESTED_VIDEO_BYTES) return `That video is ${Math.round(file.size / 1024 / 1024)} MB. The limit is 128 MB: film in 1080p and keep it under two minutes.`;
+  if (isImage && file.size > 20 * 1024 * 1024) return "That photo is over 20 MB. Send a smaller one.";
+  const about = String(formData.get("about") ?? "") === "swap" ? "swap" : null;
+  const row = fileClientMedia(assignmentId, { about, note: String(formData.get("note") ?? ""), media: isImage ? "photo" : "video" });
+  if (!row) return "That exercise is gone.";
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const saved = saveRequestedVideo(row.id, buffer, file.type);
+  if (!saved) return "That exercise is gone.";
   if (saved.previous) await deleteUpload(saved.previous);
   await putUpload(saved.path, buffer, file.type);
   revalidatePath("/admin");

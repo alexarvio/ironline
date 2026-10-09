@@ -17,6 +17,7 @@ export default function AlternativesSheet({
   onPick,
   onClear,
   onClose,
+  onPhoto,
 }: {
   exerciseName: string;
   coachName: string;
@@ -27,6 +28,8 @@ export default function AlternativesSheet({
   onPick: (choice: { libraryExerciseId: number | null; customName: string | null }) => void;
   onClear: () => void;
   onClose: () => void;
+  /** A photo of the machine they used instead, for the coach (9 Oct). */
+  onPhoto?: () => void;
 }) {
   const [typed, setTyped] = useState("");
   // Lifted over the keyboard while "what you did instead" is typed.
@@ -84,6 +87,11 @@ export default function AlternativesSheet({
         <button type="button" className="wo-sheet-btn" disabled={!canUse} onClick={use}>
           {picked != null ? "Use this" : name ? `Use “${name}”` : "Use"}
         </button>
+        {swapped && onPhoto && (
+          <button type="button" className="wo-sheet-text" onClick={onPhoto}>
+            Send {coachName} a photo of what you used
+          </button>
+        )}
         {swapped && (
           <button type="button" className="wo-sheet-text" onClick={onClear}>
             Back to {exerciseName}

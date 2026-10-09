@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { uploadRequestedVideoAction } from "../lib/actions";
+import { sendExerciseMediaAction } from "../lib/actions";
 import { VideoReplyBody, type VideoReplyView } from "./VideoReplySheet";
 
 // The coach asked for a video of this exercise: a camera on the exercise
@@ -18,6 +18,11 @@ export type VideoAsk = {
   sentAt: string | null;
   /** The coach's reply to it, once there is one. */
   reply?: VideoReplyView | null;
+  /** The client sent it unasked (9 Oct); a photo or a video; about the swap. */
+  fromClient?: boolean;
+  media?: "video" | "photo" | null;
+  about?: "swap" | null;
+  clientNote?: string | null;
 };
 
 const MAX_BYTES = 128 * 1024 * 1024;
@@ -34,7 +39,7 @@ function durationOf(url: string): Promise<number | null> {
   });
 }
 
-export default function VideoAskButton({ ask, exerciseName }: { ask: VideoAsk; exerciseName: string }) {
+export default function VideoAskButton({ ask, assignmentId, exerciseName }: { ask: VideoAsk; assignmentId: number; exerciseName: string }) {
   const [open, setOpen] = useState(false);
   const sent = !!ask.src;
   return (
@@ -48,12 +53,15 @@ export default function VideoAskButton({ ask, exerciseName }: { ask: VideoAsk; e
       >
         <VideoGlyph />
       </button>
-      {open && <VideoAskSheet ask={ask} exerciseName={exerciseName} onClose={() => setOpen(false)} />}
+      {open && <VideoAskSheet ask={ask} assignmentId={assignmentId} exerciseName={exerciseName} onClose={() => setOpen(false)} />}
     </>
   );
 }
 
-export function VideoAskSheet({ ask, exerciseName, onClose }: { ask: VideoAsk; exerciseName: string; onClose: () => void }) {
+export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, onClose }: { ask: VideoAsk | null; assignmentId: number; /** Sending a picture of the swap (9 Oct). */ about?: "swap" | null; exerciseName: string; onClose: () => void }) {
+  const isPhoto = (f: File | null) => !!f && f.type.startsWith("image/");
+  const sentPhoto = ask?.media === "photo";
+  const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -73,6 +81,10 @@ export function VideoAskSheet({ ask, exerciseName, onClose }: { ask: VideoAsk; e
     setFile(f);
     setPreview(u);
     setProblem(null);
+    if (f.type.startsWith("image/")) {
+      if (f.size > 20 * 1024 * 1024) setProblem("This photo is over 20 MB. Pick a smaller one.");
+      return;
+    }
     if (f.size > MAX_BYTES) {
       setProblem(`This clip is ${Math.round(f.size / 1024 / 1024)} MB and the limit is 128 MB. Film it in 1080p rather than 4K (Settings › Camera › Record Video), and keep it under two minutes.`);
       return;
@@ -84,10 +96,12 @@ export function VideoAskSheet({ ask, exerciseName, onClose }: { ask: VideoAsk; e
   const send = () => {
     if (!file || problem) return;
     const fd = new FormData();
-    fd.set("requestId", String(ask.id));
+    fd.set("assignmentId", String(assignmentId));
     fd.set("file", file);
+    fd.set("about", about ?? ask?.about ?? "");
+    fd.set("note", note);
     run(async () => {
-      const error = await uploadRequestedVideoAction(fd);
+      const error = await sendExerciseMediaAction(fd);
       if (error) {
         setProblem(error);
         return;
@@ -100,14 +114,14 @@ export function VideoAskSheet({ ask, exerciseName, onClose }: { ask: VideoAsk; e
   const options = (
     <>
       {[
-        { label: ask.src ? "Record a new one" : "Record a video", capture: true },
+        { label: ask?.src ? (ask.note ? "Record a new one" : "Take a new one") : ask?.note ? "Record a video" : "Take a photo or film a video", capture: true },
         { label: "Choose from your phone", capture: false },
       ].map((o) => (
         <label key={o.label} className="pp-app-sheet-option">
           {o.label}
           <input
             type="file"
-            accept="video/*"
+            accept={ask?.note ? "video/*" : "image/*,video/*"}
             capture={o.capture ? "environment" : undefined}
             onChange={(e) => {
               const f = e.target.files?.[0];
@@ -124,14 +138,14 @@ export function VideoAskSheet({ ask, exerciseName, onClose }: { ask: VideoAsk; e
     <div className="vr-sheet-scrim" role="presentation" onClick={() => !sending && onClose()}>
       <div className="pp-app-sheet vr-sheet" role="dialog" aria-modal="true" aria-label={`Video of ${exerciseName}`} onClick={(e) => e.stopPropagation()}>
         <div className="pp-app-sheet-head">
-          <span className="pp-app-sheet-title">{done ? "Sent to your coach" : ask.src && !file ? "Your video" : "Video for your coach"}</span>
+          <span className="pp-app-sheet-title">{done ? "Sent to your coach" : ask?.src && !file ? (sentPhoto ? "Your photo" : "Your video") : ask?.note ? "Video for your coach" : about === "swap" || ask?.about === "swap" ? "A picture of what you used" : "Photo or video for your coach"}</span>
           <span className="pp-app-sheet-sub">{exerciseName}</span>
         </div>
 
         {/* The coach's reply first, when there is one: it is what is new. */}
-        {ask.reply && !done && !file && <VideoReplyBody reply={ask.reply} />}
+        {ask?.reply && !done && !file && <VideoReplyBody reply={ask.reply} />}
 
-        {ask.note && !done && (
+        {ask?.note && !done && (
           <div className="vr-sheet-note">
             <span>Your coach asked</span>
             <p>{ask.note}</p>
@@ -142,29 +156,31 @@ export function VideoAskSheet({ ask, exerciseName, onClose }: { ask: VideoAsk; e
           <p className="vr-sheet-done">✓ Your coach can watch it now.</p>
         ) : file && preview ? (
           <>
-            <video className="vr-sheet-video" src={preview} controls playsInline muted />
+            {isPhoto(file) ? <img className="vr-sheet-video" src={preview} alt="" /> : <video className="vr-sheet-video" src={preview} controls playsInline muted />}
+            {!ask?.note && <input className="vr-sheet-note-in" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Anything to say with it? (optional)" maxLength={300} />}
             {problem && <p className="vr-sheet-problem">{problem}</p>}
             <button type="button" className="vr-sheet-send" onClick={send} disabled={!!problem || sending}>
-              {sending ? "Sending… keep the app open" : ask.src ? "Send instead" : "Send to your coach"}
+              {sending ? "Sending… keep the app open" : ask?.src ? "Send instead" : "Send to your coach"}
             </button>
             {options}
           </>
         ) : (
           <>
-            {ask.src && (
+            {ask?.src && (
               <>
-                <video className="vr-sheet-video" src={ask.src} controls playsInline preload="metadata" />
+                {sentPhoto ? <img className="vr-sheet-video" src={ask.src} alt="" /> : <video className="vr-sheet-video" src={ask.src} controls playsInline preload="metadata" />}
+                {ask.clientNote && <p className="vr-sheet-sent">{ask.clientNote}</p>}
                 {ask.sentAt && <p className="vr-sheet-sent">Sent {new Date(ask.sentAt).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}. Only your coach sees it.</p>}
               </>
             )}
-            {!ask.src && <p className="vr-sheet-hint">Up to two minutes. Film in 1080p so it sends quickly. Only your coach sees it.</p>}
+            {!ask?.src && <p className="vr-sheet-hint">{ask?.note ? "Up to two minutes. Film in 1080p so it sends quickly. Only your coach sees it." : "A photo of the machine, or a clip of a set, with a word if you like. Only your coach sees it."}</p>}
             {options}
           </>
         )}
 
         {!done && (
           <button type="button" className="pp-app-sheet-cancel" onClick={onClose} disabled={sending}>
-            {ask.src && !file ? "Close" : "Cancel"}
+            {ask?.src && !file ? "Close" : "Cancel"}
           </button>
         )}
       </div>

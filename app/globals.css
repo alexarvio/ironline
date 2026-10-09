@@ -13296,7 +13296,9 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .vr-sheet-note { padding: 10px 12px; border-radius: 12px; background: #fdf3e1; }
 .vr-sheet-note span { font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #8a5a12; }
 .vr-sheet-note p { margin: 3px 0 0; font-size: 14px; line-height: 1.45; color: #141a24; white-space: pre-wrap; }
-.vr-sheet-video { display: block; width: 100%; max-height: 46vh; border-radius: 12px; background: #0b0f16; }
+.vr-sheet-video { display: block; width: 100%; max-height: 46vh; border-radius: 12px; background: #0b0f16; object-fit: contain; }
+.vr-sheet-note-in { height: 44px; box-sizing: border-box; padding: 0 12px; border: 0; border-radius: 12px; background: #f4f6fa; font: inherit; font-size: 14px; font-weight: 500; color: #141a24; }
+.vr-sheet-note-in::placeholder { color: #98a2b3; }
 .vr-sheet-hint, .vr-sheet-sent { margin: 0; padding: 0 4px; font-size: 12.5px; line-height: 1.45; color: #5b6474; text-align: center; }
 .vr-sheet-problem { margin: 0; padding: 10px 12px; border-radius: 12px; background: #fdf3ee; font-size: 13px; line-height: 1.45; color: #b3471d; }
 .vr-sheet-send { min-height: 50px; border: 0; border-radius: 12px; background: #1e3a6e; font: inherit; font-size: 15px; font-weight: 800; color: #fff; cursor: pointer; }
