@@ -274,10 +274,6 @@ function UpcomingRow(p: RowProps) {
               <Chevron e={e} open={open} />
             </span>
             <span className="ev-card-meta">
-              <span className="ev-pill">
-                <TypeIcon path={t.icon} fill={t.fill} size={11} />
-                {t.label}
-              </span>
               <span>
                 {rangeLabel(e, today)} · <b>{relativeLabel(e, today)}</b>
               </span>
@@ -345,7 +341,7 @@ function PastRow(p: RowProps) {
             <span className="ev-past-text">
               <span className="ev-past-title">{e.title}</span>
               <span className="ev-past-meta">
-                {rangeLabel(e, today)} · {relativeLabel(e, today)} · {t.label}
+                {rangeLabel(e, today)} · {relativeLabel(e, today)}
               </span>
             </span>
             {!e.mine && <CoachAvatar name={coachName} photoPath={coachPhoto} size={22} ring="row" />}
