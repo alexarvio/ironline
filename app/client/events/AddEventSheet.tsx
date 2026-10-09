@@ -299,11 +299,25 @@ function TypePicker({ value, onPick }: { value: EventTypeId; onPick: (id: EventT
 function WhenSection({ oneDay, start, end, today, onMode, onStart, onEnd }: { oneDay: boolean; start: string; end: string; today: string; onMode: (one: boolean) => void; onStart: (v: string) => void; onEnd: (v: string) => void }) {
   const field = (head: string, value: string, min: string | undefined, onChange: (v: string) => void, extra = "") => {
     const shown = fmt(value, today);
+    // A tap anywhere on the field opens the picker: on a desktop browser the
+    // see-through input only focuses, so ask for the picker outright.
+    const open = (el: HTMLInputElement | null) => {
+      if (!el) return;
+      try {
+        if (typeof el.showPicker === "function") el.showPicker();
+        else el.focus();
+      } catch {
+        el.focus();
+      }
+    };
     return (
-      <span className={`evs-date${shown ? "" : " empty"}${extra}`}>
+      <span className={`evs-date${shown ? "" : " empty"}${extra}`} onClick={(e) => open(e.currentTarget.querySelector("input"))}>
         <span className="evs-date-head">{head}</span>
         <b>{shown ?? "Pick a date"}</b>
-        <input type="date" value={value} min={min} onChange={(e) => onChange(e.target.value)} aria-label={`${head[0] + head.slice(1).toLowerCase()}, ${valid(value) ? longDay(value) : "not set"}`} />
+        <input type="date" value={value} min={min} onChange={(e) => onChange(e.target.value)} onClick={(e) => {
+            e.stopPropagation();
+            open(e.currentTarget);
+          }} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && open(e.currentTarget)} aria-label={`${head[0] + head.slice(1).toLowerCase()}, ${valid(value) ? longDay(value) : "not set"}`} />
       </span>
     );
   };
