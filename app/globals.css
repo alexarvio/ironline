@@ -17251,6 +17251,8 @@ button.ci-hint { cursor: pointer; }
 .cm-msg .cm-edit { flex: 1 1 100%; }
 .cm-msg.linked { padding-right: 16px; }
 .cm-linkdot { top: -15px; right: -11px; z-index: 2; box-shadow: 0 0 0 3px #F4F7FC; }
+/* The dot sits above the bubble, so a linked message keeps room over it: it no longer lands on the day label or the bubble before (9 Oct). */
+.cm-msg.linked { margin-top: 10px; }
 .cm-msg.media .cm-linkdot { top: -15px; right: -11px; }
 /* Home "Quick actions" (25 Sep): what is left today, under the phase cards.
    The phase card's look, small: a stock photo blurred to a wash, the frosted
