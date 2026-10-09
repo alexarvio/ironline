@@ -149,7 +149,10 @@ export default function ExercisePage({
   const [seenWarm, setSeenWarm] = useState(warmKey);
   if (seenWarm !== warmKey) {
     setSeenWarm(warmKey);
-    setWarm(exercise.warmups.map((w) => ({ weight: w.weight != null ? String(kgToUnit(w.weight, unit)) : "", reps: w.reps != null ? String(w.reps) : "", saved: true })));
+    // The server's saved rows, with the rows still being typed kept after
+    // them (9 Oct): ticking one used to bring the page back with only the
+    // saved ones, and the other row just added vanished.
+    setWarm([...exercise.warmups.map((w) => ({ weight: w.weight != null ? String(kgToUnit(w.weight, unit)) : "", reps: w.reps != null ? String(w.reps) : "", saved: true })), ...warm.filter((r) => !r.saved)]);
   }
   const [, startTransition] = useTransition();
   const persistWarm = (rows: { weight: string; reps: string }[]) => {
@@ -158,11 +161,15 @@ export default function ExercisePage({
       .filter((s) => s.weight_kg != null || s.reps != null);
     startTransition(() => saveWarmupSetsAction(exercise.id, sets));
   };
+  // ✓ saves the row; ✕ (an empty row) takes that row away. Only that row:
+  // it used to drop every empty row at once, so two added and one removed
+  // left none (9 Oct).
   const tickWarm = (i: number) => {
-    const rows = warm.map((r, j) => (j === i ? { ...r, saved: true } : r));
-    const kept = rows.filter((r) => r.weight.trim() !== "" || r.reps.trim() !== "");
-    setWarm(kept);
-    persistWarm(kept);
+    const row = warm[i];
+    const empty = row.weight.trim() === "" && row.reps.trim() === "";
+    const rows = empty ? warm.filter((_, j) => j !== i) : warm.map((r, j) => (j === i ? { ...r, saved: true } : r));
+    setWarm(rows);
+    persistWarm(rows);
   };
   const addWarm = () => {
     if (warm.length >= MAX_WARMUPS) return;
