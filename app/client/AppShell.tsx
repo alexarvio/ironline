@@ -28,6 +28,7 @@ import {
   NavigateProvider,
   NotificationsProvider,
   PhotosProvider,
+  BackProvider,
   MeetingsProvider,
   EventsProvider,
   TrainingFocusProvider,
@@ -384,21 +385,16 @@ export default function AppShell({
       </div>
     ) : pushView ? (
       <div className="app-layer app-layer-push cn-screen">
-        <header className="cn-header">
-          <button type="button" className="cn-icon-btn" onClick={() => setPushView(null)} aria-label="Back">
-            <ChevronLeftIcon />
-          </button>
-          <div className="cn-header-titles">
-            <h1 className="cn-title">Notifications</h1>
-          </div>
-          <span className="cn-icon-spacer" aria-hidden="true" />
-        </header>
-        <main className="cn-body">
-          {/* A "Coach note" row opens the messages feed over Notifications. */}
+        {/* The screen draws its own header (Back, the title, Mark all read; 9 Oct). A row opens the chat, an event, a call, or a tab. */}
+        <BackProvider value={() => setPushView(null)}>
           <MessagesProvider value={openMessages}>
-            <NavigateProvider value={goToTab}>{notificationsContent}</NavigateProvider>
+            <EventsProvider value={events ? () => setPushView("events") : null}>
+              <MeetingsProvider value={meetings ? () => setPushView("meetings") : null}>
+                <NavigateProvider value={goToTab}>{notificationsContent}</NavigateProvider>
+              </MeetingsProvider>
+            </EventsProvider>
           </MessagesProvider>
-        </main>
+        </BackProvider>
       </div>
     ) : null;
 
