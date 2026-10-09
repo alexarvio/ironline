@@ -275,8 +275,9 @@ function UpcomingRow(p: RowProps) {
               </span>
               {!e.mine && <CoachAvatar name={coachName} photoPath={coachPhoto} size={24} ring="card" />}
             </span>
+            {/* A single day is already on the rail, so only how far off it is (9 Oct). */}
             <span className="ev-card-meta">
-              <span>{rangeLabel(e, today)}</span>
+              <span>{e.start === e.end ? "" : rangeLabel(e, today)}</span>
               <b>{relativeLabel(e, today)}</b>
             </span>
           </button>
@@ -347,7 +348,7 @@ function PastRow(p: RowProps) {
                 <Chevron e={e} open={open} />
               </span>
               <span className="ev-past-meta">
-                <span>{rangeLabel(e, today)}</span>
+                <span>{e.start === e.end ? "" : rangeLabel(e, today)}</span>
                 <span>{relativeLabel(e, today)}</span>
               </span>
             </span>
