@@ -7,7 +7,7 @@ import { ChevronLeftIcon } from "../../components/icons";
 import { notificationTypeOf, type NotificationCategory } from "../../lib/notificationTypes";
 import type { EventTypeId } from "../../lib/eventTypes";
 import { dayLabel, localDayKey, timeLabel } from "../../lib/notificationDates";
-import { useBack, useCoachIdentity, useNavigateTab, useOpenEvents, useOpenMeetings, useOpenMessages } from "../CheckInContext";
+import { useBack, useCoachIdentity, useNavigateTab, useOpenCheckIn, useOpenEvents, useOpenMeetings, useOpenMessages } from "../CheckInContext";
 import { TypeIcon } from "../events/AddEventSheet";
 import VideoReplySheet, { type VideoReplyView } from "../VideoReplySheet";
 
@@ -40,6 +40,7 @@ export default function NotificationsScreen({ items, clientId, coachName }: { it
   const openMessages = useOpenMessages();
   const openEvents = useOpenEvents();
   const openMeetings = useOpenMeetings();
+  const openCheckIn = useOpenCheckIn();
   const [, start] = useTransition();
 
   // Read state kept here so a tap settles at once; the server follows.
@@ -74,6 +75,7 @@ export default function NotificationsScreen({ items, clientId, coachName }: { it
       if (n.videoReply) setWatching(n.videoReply);
     } else if (n.category === "event_added" || n.category === "event_changed") openEvents?.();
     else if (n.category === "meeting_booked" || n.category === "meeting_changed" || n.category === "meeting_notes") openMeetings?.();
+    else if (n.category === "checkin_comment") openCheckIn?.("daily");
     else if (n.actionTab) navigate?.(n.actionTab, n.actionRef ?? undefined);
   };
   const markAll = () => {

@@ -390,7 +390,9 @@ export default function AppShell({
           <MessagesProvider value={openMessages}>
             <EventsProvider value={events ? () => setPushView("events") : null}>
               <MeetingsProvider value={meetings ? () => setPushView("meetings") : null}>
-                <NavigateProvider value={goToTab}>{notificationsContent}</NavigateProvider>
+                <CheckInProvider value={openCheckIn}>
+                  <NavigateProvider value={goToTab}>{notificationsContent}</NavigateProvider>
+                </CheckInProvider>
               </MeetingsProvider>
             </EventsProvider>
           </MessagesProvider>
