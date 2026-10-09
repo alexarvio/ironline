@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type React from "react";
 import { createPortal } from "react-dom";
 import { EVENT_TYPES, eventTypeOf, type EventTypeId } from "../../lib/eventTypes";
-import { addDays, durationLabel, longDay } from "../../lib/eventDates";
+import { addDays, longDay } from "../../lib/eventDates";
 import { useCoachIdentity } from "../CheckInContext";
 import type { HomeEvent } from "../EventsCard";
 import { CoachAvatar } from "./CoachAvatar";
@@ -225,7 +225,6 @@ export default function AddEventSheet({
           <label className="evs-field">
             <span className="evs-label">What&rsquo;s happening</span>
             <span className={`evs-title${titleFocus || title ? " ring" : ""}`}>
-              <TypeIcon path={t.icon} size={16} stroke={2.2} />
               <input
                 ref={titleRef}
                 value={title}
@@ -338,9 +337,6 @@ function WhenSection({ oneDay, start, end, today, onMode, onStart, onEnd }: { on
           </>
         )}
       </div>
-      <span className="evs-dur" aria-live="polite">
-        {valid(start) && (oneDay || valid(end)) ? durationLabel(start, oneDay ? start : end < start ? start : end, today) : "Pick the dates"}
-      </span>
     </div>
   );
 }
