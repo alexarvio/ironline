@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { memo, useCallback, useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { ChatIcon } from "../../components/icons";
 import { OpenChatContext, type OpenChat } from "./ChatPanel";
 import { Toaster } from "../../components/ui/toast";
-import TrainingDraft, { type DraftProgram, type Library } from "./training/TrainingDraft";
+import TrainingDraft, { type CardioMove, type DraftProgram, type Library } from "./training/TrainingDraft";
 import NutritionDraft, { type DraftNutrition } from "./nutrition/NutritionDraft";
 import MeasurementsDraft, { type DraftMeasurements } from "./measurements/MeasurementsDraft";
 import PicturesDraft, { type DraftPictures } from "./pictures/PicturesDraft";
@@ -38,6 +38,26 @@ const TABS = [
 // over any tab. Its address (/admin/redesign/messages) still opens it, on Home.
 type PageTab = (typeof TABS)[number]["key"];
 export type RedesignTab = PageTab | "messages";
+type ChatState = { mounted: boolean; open: boolean; about: DraftLink | null; opened: number; focus: number | null };
+
+// Every tab stays mounted (what was typed on one survives a switch), so a
+// page read used to redraw all eight, hidden ones too, after any save: a
+// stutter, and scroll and focus moving under the coach's hands. A tab is now
+// redrawn only when its own data changed (2 Oct); its callbacks keep one
+// identity (show, openChat), so they are left out of the comparison.
+const sameData = (a: object, b: object) => {
+  const x = a as Record<string, unknown>;
+  const y = b as Record<string, unknown>;
+  return Object.keys({ ...x, ...y }).every((k) => (typeof x[k] === "function" && typeof y[k] === "function") || x[k] === y[k] || JSON.stringify(x[k]) === JSON.stringify(y[k]));
+};
+const HomeTab = memo(HomeDraft, sameData);
+const TrainingTab = memo(TrainingDraft, sameData);
+const NutritionTab = memo(NutritionDraft, sameData);
+const MeasurementsTab = memo(MeasurementsDraft, sameData);
+const PicturesTab = memo(PicturesDraft, sameData);
+const MeetingsTab = memo(MeetingsDraft, sameData);
+const PlanTab = memo(PlanDraft, sameData);
+const InvoicesTab = memo(InvoicesDraft, sameData);
 
 export type RedesignShellProps = {
   clientId: number;
@@ -46,7 +66,7 @@ export type RedesignShellProps = {
   rail: RailData;
   initialTab: RedesignTab;
   home: DraftHome;
-  training: { draft: DraftProgram | null; library: Library };
+  training: { draft: DraftProgram | null; library: Library; cardioMoves?: CardioMove[] };
   nutrition: DraftNutrition;
   measurements: DraftMeasurements;
   pictures: DraftPictures;
@@ -62,17 +82,30 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
   // The chat sliding in from the right (ChatPanel.tsx): mounted on first
   // use, then kept, so it slides both ways; `opened` counts the openings,
   // so each one sets what the reply is about (and the message to land on).
-  const [chat, setChat] = useState<{ mounted: boolean; open: boolean; about: DraftLink | null; opened: number; focus: number | null }>({ mounted: false, open: false, about: null, opened: 0, focus: null });
+  const [chat, setChat] = useState<ChatState>({ mounted: false, open: false, about: null, opened: 0, focus: null });
   const closeChat = () => setChat((c) => ({ ...c, open: false }));
-  const openChat = (about?: Parameters<OpenChat>[0], focus: number | null = null) => {
-    const next = (c: typeof chat) => ({ mounted: true, open: true, about: about ? { ...about, gone: false } : null, opened: c.opened + 1, focus });
-    if (chat.mounted) setChat(next);
+  // The same function for the life of the page (2 Oct): it reaches every tab
+  // through OpenChatContext, and a new one each render redrew them all.
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = chat.mounted;
+  }, [chat.mounted]);
+  const openChat = useCallback((about?: Parameters<OpenChat>[0], focus: number | null = null) => {
+    const next = (c: ChatState) => ({ mounted: true, open: true, about: about ? { ...about, gone: false } : null, opened: c.opened + 1, focus });
+    if (mountedRef.current) setChat(next);
     else {
       // In closed first, then open a frame later, so even the first one slides.
+      mountedRef.current = true;
       setChat((c) => ({ ...c, mounted: true }));
       requestAnimationFrame(() => requestAnimationFrame(() => setChat(next)));
     }
-  };
+  }, []);
+  // The chat tab's dot: the chat reads its own thread now, not the page, so
+  // opening it clears the dot here, until a newer message from the client.
+  const newestFromClient = messages.messages.find((m) => !m.mine)?.id ?? null;
+  const [seenNewest, setSeenNewest] = useState<number | null>(null);
+  if (chat.open && seenNewest !== newestFromClient) setSeenNewest(newestFromClient);
+  const chatDot = !!messages.unread && seenNewest !== newestFromClient;
   const panelRef = useRef<HTMLElement>(null);
   useEffect(() => {
     if (!chat.open) return;
@@ -129,19 +162,30 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
   // Each tab keeps its own place on the page: leaving one remembers how far
   // down it was, coming back puts it there (a new one opens at the top).
   const scrolls = useRef<Partial<Record<PageTab, number>>>({});
-  const show = (asked: RedesignTab) => {
-    // "Messages" (Home's events) is the chat, over the tab that is open.
-    if (asked === "messages") {
-      openChat();
-      return;
-    }
-    const t = asked;
-    scrolls.current[tab] = window.scrollY;
-    setTab(t);
-    requestAnimationFrame(() => window.scrollTo(0, scrolls.current[t] ?? 0));
-    // Keep the other tab's query (week, programme, phase) out of this one's address.
-    window.history.replaceState(null, "", `/admin/redesign/${t}?client=${clientId}`);
-  };
+  // The tab showing, for show(): it keeps one identity per client, so Home's
+  // copy of it is never a stale one.
+  const tabRef = useRef(tab);
+  useEffect(() => {
+    tabRef.current = tab;
+  }, [tab]);
+  const show = useCallback(
+    (asked: RedesignTab) => {
+      // "Messages" (Home's events) is the chat, over the tab that is open.
+      if (asked === "messages") {
+        openChat();
+        return;
+      }
+      const t = asked;
+      scrolls.current[tabRef.current] = window.scrollY;
+      tabRef.current = t;
+      setTab(t);
+      requestAnimationFrame(() => window.scrollTo(0, scrolls.current[t] ?? 0));
+      // Keep the other tab's query (week, programme, phase) out of this one's address.
+      window.history.replaceState(null, "", `/admin/redesign/${t}?client=${clientId}`);
+    },
+    [clientId, openChat]
+  );
+  const openTab = useCallback((t: string) => show(t as RedesignTab), [show]);
   // A track with no phase and nothing set up yet opens on one button,
   // "Create a … phase" (NoPhase). Anything already there (targets, logs,
   // metrics) keeps the usual screen, phase or not.
@@ -162,11 +206,11 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
           ))}
         </nav>
         <div hidden={tab !== "home"}>
-          <HomeDraft clientId={clientId} firstName={firstName} home={home} onOpenTab={(t) => show(t as RedesignTab)} />
+          <HomeTab clientId={clientId} firstName={firstName} home={home} onOpenTab={openTab} />
         </div>
         <div hidden={tab !== "training"}>
           {training.draft ? (
-            <TrainingDraft key={training.draft.id} clientId={clientId} firstName={firstName} program={training.draft} library={training.library} />
+            <TrainingTab key={training.draft.id} clientId={clientId} firstName={firstName} program={training.draft} library={training.library} cardioMoves={training.cardioMoves} />
           ) : hasPhase("training") ? (
             <NoProgramme clientId={clientId} firstName={firstName} />
           ) : (
@@ -174,30 +218,30 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
           )}
         </div>
         <div hidden={tab !== "nutrition"}>
-          {nutritionBlank ? <NoPhase clientId={clientId} firstName={firstName} track="nutrition" plan={plan} /> : <NutritionDraft key={nutrition.id} clientId={clientId} firstName={firstName} plan={nutrition} />}
+          {nutritionBlank ? <NoPhase clientId={clientId} firstName={firstName} track="nutrition" plan={plan} /> : <NutritionTab key={nutrition.id} clientId={clientId} firstName={firstName} plan={nutrition} />}
         </div>
         <div hidden={tab !== "measurements"}>
-          {measurementsBlank ? <NoPhase clientId={clientId} firstName={firstName} track="lifestyle" plan={plan} /> : <MeasurementsDraft key={measurements.id} clientId={clientId} firstName={firstName} plan={measurements} />}
+          {measurementsBlank ? <NoPhase clientId={clientId} firstName={firstName} track="lifestyle" plan={plan} /> : <MeasurementsTab key={measurements.id} clientId={clientId} firstName={firstName} plan={measurements} />}
         </div>
         <div hidden={tab !== "pictures"}>
-          <PicturesDraft clientId={clientId} firstName={firstName} plan={pictures} />
+          <PicturesTab clientId={clientId} firstName={firstName} plan={pictures} />
         </div>
         <div hidden={tab !== "meetings"}>
-          <MeetingsDraft clientId={clientId} firstName={firstName} plan={meetings} />
+          <MeetingsTab clientId={clientId} firstName={firstName} plan={meetings} />
         </div>
         <div hidden={tab !== "plan"}>
-          <PlanDraft clientId={clientId} firstName={firstName} plan={plan} />
+          <PlanTab clientId={clientId} firstName={firstName} plan={plan} />
         </div>
         <div hidden={tab !== "invoices"}>
-          <InvoicesDraft clientId={clientId} firstName={firstName} clientName={clientName} plan={invoices} />
+          <InvoicesTab clientId={clientId} firstName={firstName} clientName={clientName} plan={invoices} />
         </div>
       </div>
       {/* The chat's tab on the window's right edge, on every screen of a
           client: it slides the chat out. A dot while there is something from
           them not opened yet. */}
-      <button type="button" className={`rd-chattab${chat.open ? " hidden" : ""}`} onClick={() => openChat()} aria-label={`Chat with ${firstName}${messages.unread ? ", new message" : ""}`} title={`Chat with ${firstName}`} tabIndex={chat.open ? -1 : 0}>
+      <button type="button" className={`rd-chattab${chat.open ? " hidden" : ""}`} onClick={() => openChat()} aria-label={`Chat with ${firstName}${chatDot ? ", new message" : ""}`} title={`Chat with ${firstName}`} tabIndex={chat.open ? -1 : 0}>
         <ChatIcon />
-        {messages.unread && <i className="rd-chattab-dot" aria-hidden="true" />}
+        {chatDot && <i className="rd-chattab-dot" aria-hidden="true" />}
       </button>
       {chat.mounted && (
         <aside ref={panelRef} className={`rd-chatpanel${chat.open ? " open" : ""}`} aria-label={`Chat with ${firstName}`} aria-hidden={!chat.open} inert={chat.open ? undefined : true}>

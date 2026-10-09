@@ -723,7 +723,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                 // A click anywhere on the head opens or folds the session (1 Oct),
                 // bar the name (it renames), the grip and the buttons.
                 onClick={(ev) => {
-                  if ((ev.target as HTMLElement).closest("input, textarea, select, button, a, [role=button], [role=menuitem], .rd-grip")) return;
+                  if ((ev.target as HTMLElement).closest("input, textarea, select, button, a, [role=button], [role^=menuitem], .rd-grip")) return;
                   setOpen(isOpen ? null : s.id);
                 }}
               >

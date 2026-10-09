@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
@@ -9,6 +8,7 @@ import { ChevronDownIcon, PinIcon } from "../../../components/icons";
 import Picker from "../Picker";
 import VoiceRecordButton from "../../../components/VoiceRecordButton";
 import ChatMediaGallery from "../../../components/ChatMediaGallery";
+import { chatDraftThreadAction } from "./actions";
 import { deleteChatMessageAction, editChatMessageAction, markSeenAction, pinMessageAction, reactToMessageAction, sendChatMessageAction, setMessageLinkAction } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import type { LinkTargets } from "../../../lib/queries";
@@ -39,9 +39,22 @@ const timeOf = (when: string) => when.split(", ")[1] ?? "";
  *  link each time it opens (`opened` counts the openings), and how to close. */
 export type ChatPanelMode = { about: DraftLink | null; opened: number; onClose: () => void; /** A message to land on (from the feed), lit for a moment. */ focus?: number | null };
 
-export default function MessagesDraft({ clientId, firstName, plan, active, panel = null }: { clientId: number; firstName: string; plan: DraftMessages; /** The tab is the one showing. */ active: boolean; panel?: ChatPanelMode | null }) {
-  const router = useRouter();
+export default function MessagesDraft({ clientId, firstName, plan: fromPage, active, panel = null }: { clientId: number; firstName: string; plan: DraftMessages; /** The tab is the one showing. */ active: boolean; panel?: ChatPanelMode | null }) {
   const [pending, start] = useTransition();
+  // The thread as the chat last fetched it (2 Oct): it asks for itself
+  // (chatDraftThreadAction) rather than re-reading the page, which redrew
+  // every tab of the client. A page read that brings something new still wins.
+  const [plan, setPlan] = useState(fromPage);
+  const pageKey = JSON.stringify(fromPage);
+  const [seenPage, setSeenPage] = useState(pageKey);
+  if (seenPage !== pageKey) {
+    setSeenPage(pageKey);
+    setPlan(fromPage);
+  }
+  const refreshThread = async () => {
+    const next = await chatDraftThreadAction(clientId).catch(() => null);
+    if (next) setPlan(next);
+  };
   const messages = plan.messages;
   const [text, setText] = useState("");
   const [link, setLink] = useState<DraftLink | null>(null);
@@ -82,9 +95,10 @@ export default function MessagesDraft({ clientId, firstName, plan, active, panel
   useEffect(() => {
     if (!active) return;
     markSeenAction(clientId, { tab: "messages" });
-    const id = setInterval(() => router.refresh(), POLL_MS);
+    const id = setInterval(() => void refreshThread(), POLL_MS);
     return () => clearInterval(id);
-  }, [clientId, router, active]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refreshThread reads only clientId
+  }, [clientId, active]);
   // The box takes all the room there is, from where it starts to the foot of
   // the window, and never so much that the page itself scrolls. Measured
   // when the tab is shown (it mounts hidden behind the other tabs) and when
@@ -129,10 +143,11 @@ export default function MessagesDraft({ clientId, firstName, plan, active, panel
     const el = thread.current;
     if (el && atEnd.current) el.scrollTop = el.scrollHeight;
   }, [messages.length]);
+  // After a send, a reaction, a pin: the thread again, not the whole page.
   const act = (fn: () => Promise<void>, done?: () => void) =>
     start(async () => {
       await fn();
-      router.refresh();
+      await refreshThread();
       done?.();
     });
 
