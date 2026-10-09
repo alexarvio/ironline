@@ -165,11 +165,15 @@ export default function AddEventSheet({
     else if (r.top < b.top + 16) box.scrollTop -= b.top + 16 - r.top;
   };
 
-  // ---- Drag down past 120px lets go.
+  // ---- Drag down past 120px lets go. Only a drag that starts on the grabber
+  // or the header counts: a touch anywhere else is a tap or a scroll, and
+  // treating those as a drag moved the sheet under the finger and could
+  // close it mid-scroll (9 Oct).
   const [drag, setDrag] = useState<{ y0: number; dy: number } | null>(null);
+  const [settled, setSettled] = useState(false);
   const onTouchStart = (e: React.TouchEvent) => {
     const target = e.target as HTMLElement;
-    if (target.closest("textarea, input") || (sheet.current?.scrollTop ?? 0) > 0) return;
+    if (!target.closest(".evs-grab, .evs-head") || target.closest("button")) return;
     setDrag({ y0: e.touches[0].clientY, dy: 0 });
   };
   const onTouchMove = (e: React.TouchEvent) => {
@@ -190,7 +194,8 @@ export default function AddEventSheet({
     <div className="ev-scrim" role="presentation" onClick={close}>
       <div
         ref={sheet}
-        className={`evs${drag ? " dragging" : ""}`}
+        className={`evs${settled ? " settled" : ""}${drag ? " dragging" : ""}`}
+        onAnimationEnd={() => setSettled(true)}
         style={style}
         role="dialog"
         aria-modal="true"

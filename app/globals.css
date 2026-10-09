@@ -18097,7 +18097,10 @@ button.ci-hint { cursor: pointer; }
    --rgb on the root colour the wash, glow, grabber, pill, picker and title
    field. The date section and the Add button are navy whatever the type. */
 .evs { position: relative; width: 100%; max-width: 520px; max-height: calc(100dvh - 60px); overflow-y: auto; box-sizing: border-box; border-radius: 28px 28px 0 0; background: #fff; box-shadow: 0 -20px 40px -20px rgba(16, 24, 40, 0.4); animation: ev-sheet-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both; touch-action: pan-y; transition: bottom 0.2s ease; }
-.evs.dragging { animation: none; transition: none; }
+/* Once slid in, the animation is done with, so a drag (an inline transform) never replays it. */
+.evs.settled { animation: none; }
+.evs.dragging { transition: none; }
+.evs-grab, .evs-head { touch-action: none; }
 .evs-wash { position: absolute; left: 0; right: 0; top: 0; height: 150px; background: linear-gradient(180deg, rgba(var(--rgb), 0.16), rgba(var(--rgb), 0)); pointer-events: none; transition: background 0.3s ease; }
 .evs-glow { position: absolute; right: -100px; top: -150px; width: 260px; height: 260px; border-radius: 999px; background: radial-gradient(circle, rgba(var(--rgb), 0.32), transparent 68%); pointer-events: none; transition: background 0.3s ease; }
 .evs-in { position: relative; display: flex; flex-direction: column; gap: 16px; padding: 10px 16px calc(30px + env(safe-area-inset-bottom)); }
