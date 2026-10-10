@@ -5,12 +5,12 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { addClientEventAction, addEventCategoryAction, deleteClientEventAction, deleteEventCategoryAction, updateClientEventAction, updateEventCategoryAction } from "../../../lib/actions";
+import { addClientEventAction, deleteClientEventAction, updateClientEventAction } from "../../../lib/actions";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { ChevronDownIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { MonthRange } from "./PlanDraft";
-import { PALETTE, paletteOf } from "../palette";
-import { eventTypeOf, isEventTypeId } from "../../../lib/eventTypes";
+import { paletteOf } from "../palette";
+import { EVENT_TYPES, eventTypeOf, isEventTypeId } from "../../../lib/eventTypes";
 
 // The New event dialog after the client's sheet and the phase dialog (10 Oct):
 // a category pill in the title, category tiles with icons, the dates as pills.
@@ -45,10 +45,11 @@ export type PlanEvent = { id: number; kind: string | null; title: string; start:
 export type Category = { id: string; label: string; color: string; custom: boolean };
 const NONE = { tint: "#eceff3", ink: "#5b6474", line: "#c3c9d2" };
 // The built-in four and the coach's own come from the loader (listEventCategories).
-/** A category's colours, or grey for none (or one since removed). */
-const chromeOf = (cats: Category[], id: string | null) => {
-  const c = id ? cats.find((x) => x.id === id) : null;
-  return c ? { label: c.label, ...paletteOf(c.color) } : { label: "Event", ...NONE };
+/** The app's six event types colour everything here (10 Oct): the same six the client's sheet has, in the same colours. Anything else is grey "Event". */
+const chromeOf = (_cats: Category[], id: string | null) => {
+  if (!isEventTypeId(id)) return { label: "Event", ...NONE };
+  const t = eventTypeOf(id);
+  return { label: t.label, tint: `rgba(${t.rgb}, 0.12)`, ink: t.color, line: `rgba(${t.rgb}, 0.45)` };
 };
 
 const DAY = 86400000;
@@ -146,9 +147,9 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
   const dayPx = gridPx > 0 ? gridPx / totalDays : 9;
   const labelDays = (title: string) => Math.ceil((title.length * 6.6 + 28) / dayPx);
   const reach = (e: PlanEvent) => (e.start === e.end ? addDays(e.start, labelDays(e.title)) : e.end);
-  const order = [...cats.map((c) => c.id), null];
+  const order = [...EVENT_TYPES.map((t) => t.id), null];
   const groups = order
-    .map((id) => ({ id, chrome: chromeOf(cats, id), events: onGrid.filter((e) => (e.kind && cats.some((c) => c.id === e.kind) ? e.kind : null) === id) }))
+    .map((id) => ({ id, chrome: chromeOf(cats, id), events: onGrid.filter((e) => (isEventTypeId(e.kind) ? e.kind : null) === id) }))
     .filter((g) => g.events.length > 0)
     .map((g) => {
       const lanes: PlanEvent[][] = [];
@@ -348,14 +349,6 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
             today={today}
             event={dlg.event}
             cats={cats}
-            onAddCat={async (label, color) => {
-              const id = await addEventCategoryAction(label, color);
-              router.refresh();
-              toast.success(`Category "${label}" · yours, on every client`);
-              return id ?? "";
-            }}
-            onRenameCat={(id, label, color) => act(() => updateEventCategoryAction(id, label, color), `Category "${label}" changed`)}
-            onRemoveCat={(id) => act(() => deleteEventCategoryAction(id), "Category removed · its events keep their words, lose the colour")}
             onSave={(v) => {
               const was = dlg.event;
               setDlg(null);
@@ -374,24 +367,9 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
 }
 
 // ---- One event: what kind, what to call it, a moment or a stretch, and a note.
-function EventDialog({ today, event, cats, onAddCat, onRenameCat, onRemoveCat, onSave, onDelete }: { today: string; event: PlanEvent | null; cats: Category[]; onAddCat: (label: string, color: string) => Promise<string>; onRenameCat: (id: string, label: string, color: string) => void; onRemoveCat: (id: string) => void; onSave: (v: Omit<PlanEvent, "id">) => void; onDelete: () => void }) {
+function EventDialog({ today, event, cats, onSave, onDelete }: { today: string; event: PlanEvent | null; cats: Category[]; onSave: (v: Omit<PlanEvent, "id">) => void; onDelete: () => void }) {
+  // The six types the client's sheet has (10 Oct); the coach's own categories went, so both sides speak the same six.
   const [kind, setKind] = useState<string | null>(event ? event.kind : null);
-  // A category being made or changed: its name and colour, in a small row under the chips.
-  const [catEdit, setCatEdit] = useState<{ id: string | null; label: string; color: string } | null>(null);
-  const usedColors = new Set(cats.map((c) => c.color));
-  const freeColor = PALETTE.find((p) => !usedColors.has(p.id))?.id ?? PALETTE[0].id;
-  const catOk = !!catEdit && catEdit.label.trim().length > 0 && !cats.some((c) => c.id !== catEdit.id && c.label.trim().toLowerCase() === catEdit.label.trim().toLowerCase());
-  const saveCat = async () => {
-    if (!catEdit || !catOk) return;
-    const draft = catEdit;
-    setCatEdit(null);
-    if (draft.id) onRenameCat(draft.id, draft.label.trim(), draft.color);
-    else {
-      const id = await onAddCat(draft.label.trim(), draft.color);
-      if (id) setKind(id);
-    }
-  };
-  const current = kind ? (cats.find((c) => c.id === kind) ?? null) : null;
   const [title, setTitle] = useState(event?.title ?? "");
   const [shape, setShape] = useState<"event" | "period">(event ? (event.start === event.end ? "event" : "period") : "event");
   const [start, setStart] = useState(event?.start ?? today);
@@ -405,7 +383,6 @@ function EventDialog({ today, event, cats, onAddCat, onRenameCat, onRemoveCat, o
   // Blue until a category is picked (grey on the calendar could not be seen), then that category's colour.
   const cal = kind ? k : paletteOf("blue");
   const calChrome = { band: cal.tint, edge: cal.ink, soft: cal.tint, line: cal.line, chipBg: cal.tint, chipInk: cal.ink, dashed: false };
-  const days = Math.round((parse(end).getTime() - parse(start).getTime()) / DAY) + 1;
   const pickAs = (which: "start" | "end", d: string) => {
     if (which === "start" || d < start) {
       setStart(d);
@@ -426,7 +403,7 @@ function EventDialog({ today, event, cats, onAddCat, onRenameCat, onRemoveCat, o
     pickAs(picking, d);
   };
   const ok = title.trim().length > 0 && !!start && endOk;
-  const placeholder = kind === "trip" ? "Italy with the family" : kind === "health" ? "Sprained ankle" : kind === "family" ? "Wedding in Groningen" : kind === "work" ? "Night shifts all week" : "Started creatine, 5 g a day";
+  const placeholder = isEventTypeId(kind) ? eventTypeOf(kind).placeholder : "What happened, or will";
   return (
     <DialogContent className="rd-dlg rq-ev-dlg">
       <DialogHeader>
@@ -439,80 +416,28 @@ function EventDialog({ today, event, cats, onAddCat, onRenameCat, onRemoveCat, o
             </span>
           </span>
         </DialogTitle>
-        <DialogDescription hidden={!!event}>What happened, which kind, and when. A timestamp is one day; a period runs from one day to another.</DialogDescription>
+        {/* No line under the title (10 Oct): the tiles say it. The description stays for screen readers only. */}
+        <DialogDescription className="sr-only">What happened, which kind, and when.</DialogDescription>
         {event?.byClient && <p className="rq-helper">Added by the client from their Home. What you change here they see too.</p>}
       </DialogHeader>
 
       <div className="rd-field">
         <span>Category</span>
         <div className="evs-types rq-tiles rq-ev-tiles" role="radiogroup" aria-label="Category">
-          {cats.map((x) => {
-            const p = paletteOf(x.color);
-            return (
-              <button key={x.id} type="button" role="radio" aria-checked={kind === x.id} className={`evs-type${kind === x.id ? " on" : ""}`} style={{ "--tc": p.ink, "--trgb": rgbOf(p.ink) } as React.CSSProperties} onClick={() => setKind(kind === x.id ? null : x.id)}>
-                <span className="evs-type-disc">
-                  <KindIcon id={x.id} />
-                </span>
-                {x.label}
-              </button>
-            );
-          })}
-          <button type="button" className="evs-type rq-tile-new" onClick={() => setCatEdit({ id: null, label: "", color: freeColor })}>
-            <span className="evs-type-disc">
-              <PlusIcon />
-            </span>
-            New category
-          </button>
+          {EVENT_TYPES.map((x) => (
+            <button key={x.id} type="button" role="radio" aria-checked={kind === x.id} className={`evs-type${kind === x.id ? " on" : ""}`} style={{ "--tc": x.color, "--trgb": x.rgb } as React.CSSProperties} onClick={() => setKind(kind === x.id ? null : x.id)}>
+              <span className="evs-type-disc">
+                <KindIcon id={x.id} />
+              </span>
+              {x.label}
+            </button>
+          ))}
         </div>
-        {/* Your own: change its name or colour, or take it off, from right here. */}
-        {current?.custom && !catEdit && (
-          <span className="rq-cat-own">
-            <button type="button" className="rd-ex-btn" onClick={() => setCatEdit({ id: current.id, label: current.label, color: current.color })}>
-              Rename or recolour
-            </button>
-            <button type="button" className="rd-ex-btn danger" onClick={() => onRemoveCat(current.id)}>
-              Remove
-            </button>
-          </span>
-        )}
-        {catEdit && (
-          <div className="rq-cat-edit">
-            <input
-              className="rd-input"
-              value={catEdit.label}
-              onChange={(e) => setCatEdit({ ...catEdit, label: e.target.value })}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  saveCat();
-                }
-                if (e.key === "Escape") setCatEdit(null);
-              }}
-              placeholder="Name it: Competition, Exams, Travel for work…"
-              maxLength={24}
-              autoFocus
-              aria-label="Category name"
-            />
-            <span className="rq-cat-colors" role="radiogroup" aria-label="Colour">
-              {PALETTE.map((p) => (
-                <button key={p.id} type="button" role="radio" aria-checked={catEdit.color === p.id} className={`rq-cat-color${catEdit.color === p.id ? " on" : ""}`} style={{ background: p.ink }} onClick={() => setCatEdit({ ...catEdit, color: p.id })} aria-label={p.id} />
-              ))}
-            </span>
-            <span className="rq-cat-edit-actions">
-              <button type="button" className="rd-btn" onClick={() => setCatEdit(null)}>
-                Cancel
-              </button>
-              <button type="button" className="rd-btn primary" disabled={!catOk} onClick={saveCat}>
-                {catEdit.id ? "Save" : "Add"}
-              </button>
-            </span>
-          </div>
-        )}
       </div>
 
       <label className="rd-field">
-        <span>What</span>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={placeholder} maxLength={80} autoFocus={!event} />
+        <span>What&rsquo;s happening</span>
+        <input className={kind ? "rq-what ring" : "rq-what"} style={kind ? ({ "--c": k.ink, "--rgb": rgbOf(k.ink) } as React.CSSProperties) : undefined} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={placeholder} maxLength={80} autoFocus={!event} />
       </label>
 
       {/* The phase dialog's layout (26 Sep): the month to click on the left,
@@ -558,9 +483,9 @@ function EventDialog({ today, event, cats, onAddCat, onRenameCat, onRemoveCat, o
                 </>
               )}
             </div>
-            <p className="rdd-picking">{shape === "event" ? "Click the day on the calendar." : !endOk ? "Ends before it starts." : `${days} ${days === 1 ? "day" : "days"} · ${picking === "start" ? "click the first day" : "now click the last day"}.`}</p>
+            {!endOk && <p className="rdd-picking">Ends before it starts.</p>}
           </div>
-          <label className="rd-field">
+          <label className="rd-field rq-note">
             <span>Note</span>
             <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="What it means for the plan, for you alone." />
           </label>
