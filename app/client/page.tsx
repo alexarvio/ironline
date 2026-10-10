@@ -72,6 +72,7 @@ import {
   listClients,
   meetingProvider,
   listMeetings,
+  openMeetingRequest,
   listClientInvoices,
   listPhotoPeriods,
   listPhotoSlots,
@@ -1381,7 +1382,7 @@ export default async function ClientPage({
     const events = listClientEvents(CLIENT_ID);
     const upcoming = all.filter((m) => m.status === "scheduled" && m.date >= today).map((m) => clientMeetingView(m, events));
     const past = all.filter((m) => m.status !== "scheduled" || m.date < today).map((m) => clientMeetingView(m, events));
-    return { upcoming, past };
+    return { upcoming, past, request: openMeetingRequest(CLIENT_ID) };
   })();
 
   // The Invoices screen: what the coach has sent, to pay first. Absent until the first one arrives.
@@ -1464,6 +1465,7 @@ export default async function ClientPage({
       helpEmail={getCoachEmail(CLIENT_ID)}
       coachProfile={getCoachProfileForClient(CLIENT_ID)}
       coachAvatarPath={getCoachAvatarPath(CLIENT_ID)}
+      clientAvatarPath={client?.avatar_path ?? null}
       foodDiary={foodDiary}
       meetings={meetings}
       invoices={invoices}

@@ -119,6 +119,7 @@ export default function AppShell({
   helpEmail = "",
   coachProfile = null,
   coachAvatarPath = null,
+  clientAvatarPath = null,
   foodDiary = null,
   meetings = null,
   invoices = null,
@@ -153,6 +154,8 @@ export default function AppShell({
   coachProfile?: CoachProfileView | null;
   /** The coach's profile picture, in front of anything they wrote. */
   coachAvatarPath?: string | null;
+  /** The client's own photo from Settings (9 Oct): on the Events rows they added. */
+  clientAvatarPath?: string | null;
   /** Today's food diary, opened from the ring on Nutrition. */
   foodDiary?: FoodDiaryProps | null;
   /** Every call with the coach: to come and past, for the Meetings screen. */
@@ -350,7 +353,7 @@ export default function AppShell({
       </div>
     ) : pushView === "meetings" && meetings ? (
       <div className="app-layer app-layer-push cn-screen">
-        <MeetingsScreen {...meetings} coachName={coachMessages.coachName} onBack={() => setPushView(null)} />
+        <MeetingsScreen {...meetings} clientId={clientId} coachName={coachMessages.coachName} onBack={() => setPushView(null)} />
       </div>
     ) : pushView === "invoices" && invoices ? (
       <div className="app-layer app-layer-push cn-screen">
@@ -362,7 +365,7 @@ export default function AppShell({
       </div>
     ) : pushView === "events" && events ? (
       <div className="app-layer app-layer-push cn-screen">
-        <EventsScreen clientId={clientId} events={events} coachName={coachMessages.coachName.trim().split(/\s+/)[0] || "your coach"} today={checkIn.today} onBack={() => setPushView(null)} />
+        <EventsScreen clientId={clientId} events={events} coachName={coachMessages.coachName.trim().split(/\s+/)[0] || "your coach"} today={checkIn.today} me={{ name: clientName.trim().split(/\s+/)[0] ?? "", photoPath: clientAvatarPath }} onBack={() => setPushView(null)} />
       </div>
     ) : pushView === "settings" && settingsContent ? (
       <div className="app-layer app-layer-push cn-screen">

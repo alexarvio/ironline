@@ -22,7 +22,8 @@ import { CoachAvatar } from "./CoachAvatar";
 type Sheet = { event: HomeEvent | null; type: EventTypeId; initial?: EventValues | null; error?: string | null } | null;
 const LAST_TYPE_KEY = "ironline:last-event-type";
 
-export default function EventsScreen({ clientId, events, coachName, today, onBack }: { clientId: number; events: HomeEvents; coachName: string; today: string; onBack: () => void }) {
+// `me` is the client's own first name and photo (9 Oct): on the rows they added, their face, as the coach's is on the coach's.
+export default function EventsScreen({ clientId, events, coachName, today, me = null, onBack }: { clientId: number; events: HomeEvents; coachName: string; today: string; me?: { name: string; photoPath: string | null } | null; onBack: () => void }) {
   const router = useRouter();
   const coach = useCoachIdentity();
   const coachPhoto = coach?.photoPath ?? null;
@@ -129,6 +130,7 @@ export default function EventsScreen({ clientId, events, coachName, today, onBac
     today,
     coachName,
     coachPhoto,
+    me,
     lit: highlight === e.id,
     open: open === e.id,
     pending,
@@ -212,7 +214,7 @@ function AddEventCard({ coachName, onOpen }: { coachName: string; onOpen: () => 
 // more to it, a body that opens in place: the note, who set it, and for
 // the client's own, Edit and Delete.
 
-type RowProps = { e: HomeEvent; today: string; coachName: string; coachPhoto: string | null; lit: boolean; open: boolean; pending: boolean; refFn: (el: HTMLElement | null) => void; onToggle: () => void; onEdit: () => void; onDelete: () => void };
+type RowProps = { e: HomeEvent; today: string; coachName: string; coachPhoto: string | null; me: { name: string; photoPath: string | null } | null; lit: boolean; open: boolean; pending: boolean; refFn: (el: HTMLElement | null) => void; onToggle: () => void; onEdit: () => void; onDelete: () => void };
 
 const hasMore = (e: HomeEvent) => !!e.note || e.mine;
 // A phase on the timeline (9 Oct): the track's colour, as the plan draws it, and its own icon and label.
@@ -222,6 +224,13 @@ const PHASES = {
   lifestyle: { label: "Lifestyle phase", color: "#a8761f", rgb: "168,118,31", icon: "M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z", fill: undefined as string | undefined },
 };
 const chromeOf = (e: HomeEvent) => (e.phase ? PHASES[e.phase] : eventTypeOf(e.kind));
+/** The face on the row: the coach's on theirs; on what the client added, their own photo when they set one in Settings, else nothing. */
+function SetBy({ e, coachName, coachPhoto, me, size, ring }: Pick<RowProps, "e" | "coachName" | "coachPhoto" | "me"> & { size: number; ring: "card" | "row" }) {
+  if (!e.mine) return <CoachAvatar name={coachName} photoPath={coachPhoto} size={size} ring={ring} />;
+  if (!me?.photoPath) return null;
+  return <CoachAvatar name={me.name || "You"} photoPath={me.photoPath} size={size} ring={ring} />;
+}
+
 const rowLabel = (e: HomeEvent, today: string, coachName: string) => `${e.title}, ${chromeOf(e).label}, ${rangeLabel(e, today)}, ${relativeLabel(e, today)}${e.mine ? "" : `, set by ${coachName}`}`;
 
 function RowMore({ e, open, coachName, pending, onEdit, onDelete }: Pick<RowProps, "e" | "open" | "coachName" | "pending" | "onEdit" | "onDelete">) {
@@ -259,7 +268,7 @@ function Chevron({ e, open }: { e: HomeEvent; open: boolean }) {
 }
 
 function UpcomingRow(p: RowProps) {
-  const { e, today, coachName, coachPhoto, lit, open, refFn, onToggle } = p;
+  const { e, today, coachName, coachPhoto, me, lit, open, refFn, onToggle } = p;
   const t = chromeOf(e);
   return (
     <div ref={refFn} className={`ev-r ev-r-up${lit ? " lit" : ""}`} style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}>
@@ -280,7 +289,7 @@ function UpcomingRow(p: RowProps) {
                 <span className="ev-card-title">{e.title}</span>
                 <Chevron e={e} open={open} />
               </span>
-              {!e.mine && <CoachAvatar name={coachName} photoPath={coachPhoto} size={24} ring="card" />}
+              <SetBy e={e} coachName={coachName} coachPhoto={coachPhoto} me={me} size={24} ring="card" />
             </span>
             {/* The dates only, and only for a stretch: a single day is on the rail, and "in 6 days" went (9 Oct), the rail says when. */}
             {e.start !== e.end && <span className="ev-card-meta">{rangeLabel(e, today)}</span>}
@@ -293,7 +302,7 @@ function UpcomingRow(p: RowProps) {
 }
 
 function NowCard(p: RowProps) {
-  const { e, today, coachName, coachPhoto, lit, open, refFn, onToggle } = p;
+  const { e, today, coachName, coachPhoto, me, lit, open, refFn, onToggle } = p;
   const t = chromeOf(e);
   const { day, total } = dayOf(e, today);
   return (
@@ -310,7 +319,7 @@ function NowCard(p: RowProps) {
                 <span className="ev-card-title">{e.title}</span>
                 <Chevron e={e} open={open} />
               </span>
-              {!e.mine && <CoachAvatar name={coachName} photoPath={coachPhoto} size={24} ring="card" />}
+              <SetBy e={e} coachName={coachName} coachPhoto={coachPhoto} me={me} size={24} ring="card" />
             </span>
             <span className="ev-bar" role="progressbar" aria-valuenow={day} aria-valuemin={1} aria-valuemax={total} aria-label={`Day ${day} of ${total}`}>
               <i style={{ width: `${(day / total) * 100}%` }} />
@@ -330,7 +339,7 @@ function NowCard(p: RowProps) {
 }
 
 function PastRow(p: RowProps) {
-  const { e, today, coachName, coachPhoto, lit, open, refFn, onToggle } = p;
+  const { e, today, coachName, coachPhoto, me, lit, open, refFn, onToggle } = p;
   const t = chromeOf(e);
   return (
     <div ref={refFn} className={`ev-r ev-r-past${lit ? " lit" : ""}`} style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}>
@@ -353,7 +362,7 @@ function PastRow(p: RowProps) {
               </span>
               {e.start !== e.end && <span className="ev-past-meta">{rangeLabel(e, today)}</span>}
             </span>
-            {!e.mine && <CoachAvatar name={coachName} photoPath={coachPhoto} size={22} ring="row" />}
+            <SetBy e={e} coachName={coachName} coachPhoto={coachPhoto} me={me} size={22} ring="row" />
           </button>
           <RowMore {...p} />
         </div>

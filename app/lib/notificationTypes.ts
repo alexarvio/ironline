@@ -37,6 +37,8 @@ const ICON = {
   upload: "M12 16V5M7 10l5-5 5 5M5 19h14",
   camera: "M4 8h4l2-3h4l2 3h4v11H4zM12 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
   leaf: "M5 19c0-8 6-14 14-14 0 8-6 14-14 14zM5 19l7-7",
+  // The apple the Nutrition tab uses (9 Oct), not a leaf.
+  apple: "M15.5 8.5c2.8 0 4.5 2.4 4.5 5.5 0 4-2.7 7.5-5.5 7.5-1 0-1.5-.5-2.5-.5s-1.5.5-2.5.5c-2.8 0-5.5-3.5-5.5-7.5 0-3.1 1.9-5.5 4.7-5.5 1.3 0 2.1.6 3.3.6s1.9-.6 3.5-.6ZM12 8.5V6a2.2 2.2 0 0 1 2-2.2",
   bell: "M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20h4",
   receipt: "M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6",
 };
@@ -61,8 +63,8 @@ export const NOTIFICATION_TYPES: Record<NotificationCategory, NotificationType> 
   event_added: { label: "Event", ...AMBER, icon: EVENT_TYPES[5].icon, action: "View event" },
   event_changed: { label: "Event", ...AMBER, icon: EVENT_TYPES[5].icon, action: "View event" },
   pics_reviewed: { label: "Progress pictures", ...ORANGE, icon: ICON.camera, action: "Open pictures" },
-  nutrition_phase: { label: "Nutrition", ...TEAL, icon: ICON.leaf, action: "See targets" },
-  nutrition_changed: { label: "Nutrition", ...TEAL, icon: ICON.leaf, action: "See targets" },
+  nutrition_phase: { label: "Nutrition", ...TEAL, icon: ICON.apple, action: "See targets" },
+  nutrition_changed: { label: "Nutrition", ...TEAL, icon: ICON.apple, action: "See targets" },
   message: { label: "Message", ...NAVY, icon: ICON.chat, action: "Reply" },
   invoice: { label: "Invoice", ...NAVY, icon: ICON.receipt, action: "View invoice" },
   report: { label: "Report", ...NAVY, icon: ICON.notes, action: "Read report" },
