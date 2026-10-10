@@ -46,15 +46,19 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
   const [sheet, setSheet] = useState<Sheet>(null);
   // Landed on from a notification: that event starts open (when it has more to show) and lit.
   const focused = focusId != null ? (events.list.find((e) => e.id === focusId) ?? null) : null;
-  const [open, setOpen] = useState<number | null>(focused && hasMore(focused) ? focused.id : null);
+  const [open, setOpen] = useState<number | null>(null);
   const [pending, setPending] = useState(false);
   const [highlight, setHighlight] = useState<number | null>(null);
-  // Landed on: scrolled to and open, nothing lit (10 Oct, after a flash and then a pulse both felt off).
+  // Landed on from a notification (10 Oct): the screen opens centred on today as always, then after a beat glides to the
+  // event, which opens if it has more to show and takes the same light shade a row just added gets.
   const landed = useRef(false);
   useEffect(() => {
     if (!focused || landed.current) return;
     landed.current = true;
-    const t = setTimeout(() => rows.current.get(focused.id)?.scrollIntoView({ block: "center", behavior: "smooth" }), 80);
+    const t = setTimeout(() => {
+      if (hasMore(focused)) setOpen(focused.id);
+      setHighlight(focused.id);
+    }, 420);
     return () => clearTimeout(t);
   }, [focused]);
   const rows = useRef(new Map<number, HTMLElement>());
@@ -73,8 +77,6 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
   useEffect(() => {
     if (centred.current) return;
     centred.current = true;
-    // Opened on an event: the highlight below brings it into view instead of today.
-    if (focused) return;
     const el = (now[0] && rows.current.get(now[0].id)) || todayRef.current;
     el?.scrollIntoView({ block: "center" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
