@@ -17263,12 +17263,6 @@ button.ci-hint { cursor: pointer; }
 .wo-nextup-label { flex: none; font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #5b6474; }
 .wo-nextup-name { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wo-nextup-go { flex: none; font-size: 20px; line-height: 1; color: #8b93a1; }
-.ts-last-toggle { justify-self: center; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 1px solid #dfe3e8; border-radius: 10px; background: #fff; color: #5b6474; cursor: pointer; }
-.ts-last-toggle.on { background: #1e3a6e; border-color: #1e3a6e; color: #fff; }
-.ts-last-toggle:disabled { opacity: 0.4; cursor: default; }
-.ts-set.last { background: #f4f7fc; color: #5b6474; border-radius: 10px; }
-.ts-last-note { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin-top: 10px; padding: 12px 14px; border: 0; border-radius: 14px; background: #eef2f8; font: inherit; font-size: 13.5px; font-weight: 700; color: #1e3a6e; cursor: pointer; }
-.ts-last-note span { font-weight: 600; color: #5b6474; }
 .wo-note-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .wo-note-pen { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 999px; background: #f4f7fc; color: #1e3a6e; }
 /* Next up beside the exercise name, on the right (25 Sep). */
@@ -17305,11 +17299,6 @@ button.ci-hint { cursor: pointer; }
 /* Last time, quieter (25 Sep): the clock floats with no box (navy when on),
    the rows show the numbers with no wash, and the line under them is plain
    text saying what they are. */
-.ts-last-toggle, .ts-last-toggle.on { border: 0; background: transparent; color: #8b93a1; }
-.ts-last-toggle.on { color: #1e3a6e; }
-.ts-last-toggle svg { width: 20px; height: 20px; }
-.ts-set.last { background: transparent; color: #313851; border-radius: 0; }
-.ts-last-note { display: block; justify-content: normal; margin-top: 12px; padding: 4px 0; border: 0; border-radius: 0; background: transparent; font-size: 13px; font-weight: 600; line-height: 1.4; color: #5b6474; text-align: center; }
 /* The link bubble on the client's own messages (25 Sep): those sit against
    the right edge, so the top-right corner was off screen; it goes on the
    top-left corner instead, solid white like on the coach's, since the
@@ -17828,7 +17817,7 @@ button.ci-hint { cursor: pointer; }
 /* Last time on or off, nothing moves (2 Oct): its line under the rows takes
    exactly the Log button's place (48 high, same gap above), and so does
    "All sets logged" when there is no button. */
-.wo-sets .ts-last-note, .wo-sets .ts-all-logged { height: 48px; margin-top: 12px; padding: 0 6px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; overflow: hidden; text-align: center; }
+.wo-sets .ts-all-logged { height: 48px; margin-top: 12px; padding: 0 6px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; overflow: hidden; text-align: center; }
 /* Home's phase cards show the phase's whole name (4 Oct): it wraps onto a
    second line rather than ending in "…", and the card grows to hold it. */
 .hl-phase { align-items: flex-start; }

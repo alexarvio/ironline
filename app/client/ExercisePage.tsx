@@ -84,10 +84,7 @@ export default function ExercisePage({
     return exercise.sets + 1;
   })();
   const [editingN, setEditingN] = useState<number | null>(null);
-  // "Last time": the sets not logged yet show what was done the last time
-  // this exercise came round, set by set; off again, the boxes are back as
-  // they were left.
-  const [showLast, setShowLast] = useState(false);
+  // The clock that flipped the rows to last time went (10 Oct): the rows to do carry last session's numbers anyway.
   const last = exercise.lastSets;
   const lastOf = (n: number) => last?.sets.find((s) => s.setNumber === n) ?? null;
   const activeN = editingN ?? (nextSet <= exercise.sets ? nextSet : null);
@@ -350,21 +347,7 @@ export default function ExercisePage({
           )}
           <span>Reps</span>
           {askRpe && <span>Rpe</span>}
-          {last ? (
-            <button
-              type="button"
-              className={`ts-last-toggle${showLast ? " on" : ""}`}
-              aria-pressed={showLast}
-              aria-label={showLast ? "Back to this session" : "Show last time's numbers"}
-              title={showLast ? "Back to this session" : "Last time"}
-              disabled={editingN != null}
-              onClick={() => setShowLast((v) => !v)}
-            >
-              <LastTimeIcon />
-            </button>
-          ) : (
-            <span />
-          )}
+          <span />
         </div>
 
         {/* A warm-up set reads like a working one (1 Oct): logged, its numbers
@@ -402,19 +385,6 @@ export default function ExercisePage({
 
         {Array.from({ length: exercise.sets }, (_, i) => i + 1).map((n) => {
           const log = exercise.logs.find((l) => l.setNumber === n) ?? null;
-          // Last time's numbers in the rows still to do; what is logged stays.
-          if (showLast && !log) {
-            const prev = lastOf(n);
-            return (
-              <div key={n} className="ts-grid ts-set last">
-                <span className="ts-circle">{n}</span>
-                {askWeight && <span>{prev?.weight == null ? "–" : show(prev.weight)}</span>}
-                <span>{prev?.reps ?? "–"}</span>
-                {askRpe && <span>{prev?.rpe ?? "–"}</span>}
-                <span />
-              </div>
-            );
-          }
           if (n === activeN) {
             return (
               <div key={n} className="ts-grid ts-set active">
@@ -452,17 +422,13 @@ export default function ExercisePage({
         })}
 
         {/* Said plainly (9 Oct): the rows carry last session's numbers, the target sits above. Not on the first week, with no last session. */}
-        {last && !showLast && activeN != null && (
+        {last && activeN != null && (
           <div className="ts-prev-note" role="note">
             <span className="ts-prev-mark" aria-hidden="true">!</span>
             <span>The numbers in the rows are what you did last session, {lastDate}. Your target is above.</span>
           </div>
         )}
-        {showLast && last ? (
-          <button type="button" className="ts-last-note" onClick={() => setShowLast(false)}>
-            Your numbers from the last time you did {shownName(exercise)}, {Number(last.date.slice(8, 10))} {MONTHS_SHORT[Number(last.date.slice(5, 7)) - 1]}
-          </button>
-        ) : editingN != null ? (
+        {editingN != null ? (
           <div className="ts-actions">
             <button type="button" className="ts-primary" disabled={pending || draft.reps.trim() === ""} onClick={logActive}>
               {pending ? "Saving…" : `Save set ${editingN}`}
@@ -559,15 +525,6 @@ export default function ExercisePage({
 const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 // A clock turning back: "last time".
-function LastTimeIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
-      <path d="M3 3v5h5" />
-      <path d="M12 7v5l3 2" />
-    </svg>
-  );
-}
 
 // A clean pencil, for editing the note.
 function EditPen() {
