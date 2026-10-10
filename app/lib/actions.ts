@@ -559,7 +559,7 @@ export async function addProgramWeekAction(formData: FormData) {
   // published days only, so without this the new week arrived empty.
   if (program.status === "deployed") publishWeek(clientId, newWeekNumber);
 
-  if (clientSeesTrainingWeek(clientId, newWeekNumber)) noteChange(clientId, `Added a week to your programme: Week ${newWeekNumber}${copyFrom ? `, a copy of week ${copyFrom}` : ""}`, { tab: "training", label: "See your training", key: "training-week", detail: `Week ${newWeekNumber}${copyFrom ? `, a copy of week ${copyFrom}` : ""}` });
+  if (clientSeesTrainingWeek(clientId, newWeekNumber)) noteChange(clientId, `Added a week to your programme: Week ${newWeekNumber}${copyFrom ? `, a copy of week ${copyFrom}` : ""}`, { tab: "training", label: "See your training", key: "training-week", ref: program.id, detail: `Week ${newWeekNumber}${copyFrom ? `, a copy of week ${copyFrom}` : ""}` });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -819,7 +819,7 @@ export async function addInvoiceAction(formData: FormData) {
     | "due";
   if (!description) return;
   addInvoice(clientId, description, amount, status);
-  logCoachActivity(clientId, `Sent a new invoice: "${description}"`, { kind: "general", push: true });
+  logCoachActivity(clientId, `Sent a new invoice: "${description}"`, { kind: "general", push: true, actionTab: "invoices", actionLabel: "See your invoices", actionRef: listClientInvoices(clientId).sort((a, b) => b.id - a.id)[0]?.id });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1562,7 +1562,7 @@ export async function saveCoachNutritionNoteAction(formData: FormData) {
   const phaseRaw = Number(formData.get("phaseId"));
   const notePhase = Number.isInteger(phaseRaw) && phaseRaw > 0 ? phaseRaw : null;
   setNutritionNote(clientId, String(formData.get("note") ?? ""), notePhase);
-  if (notePhase == null || clientSeesPhase(notePhase)) noteChange(clientId, "Left a note on your nutrition", { tab: "nutrition", label: "Read it", key: "nutrition-note" });
+  if (notePhase == null || clientSeesPhase(notePhase)) noteChange(clientId, "Left a note on your nutrition", { tab: "nutrition", label: "Read it", key: "nutrition-note", ref: notePhase ?? undefined });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1762,7 +1762,7 @@ export async function addClientGoalAction(formData: FormData) {
     const newest = mine[mine.length - 1];
     if (newest) setClientGoalStart(newest.id, startRaw);
   }
-  noteChange(clientId, `Set a new goal: ${text}`, { tab: "home", label: "See your goals", key: `goal:${text}` });
+  noteChange(clientId, `Set a new goal: ${text}`, { tab: "home", label: "See your goals", key: `goal:${text}`, ref: listClientGoals(clientId).slice(-1)[0]?.id });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1839,7 +1839,7 @@ export async function updateClientGoalAction(formData: FormData) {
   updateClientGoal(id, text, trackingFor(clientId, coach.id, parseGoalTracking(formData.get("tracking"))));
   const startRaw = String(formData.get("start") ?? "");
   if (/^\d{4}-\d{2}-\d{2}$/.test(startRaw)) setClientGoalStart(id, startRaw);
-  noteChange(clientId, `Updated one of your goals: ${text}`, { tab: "home", label: "See your goals", key: "goal-update", detail: text });
+  noteChange(clientId, `Updated one of your goals: ${text}`, { tab: "home", label: "See your goals", key: "goal-update", ref: id, detail: text });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -1980,7 +1980,7 @@ export async function updateMeetingAction(formData: FormData) {
     const when = patch.date ? new Date(`${patch.date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" }) : "the same day";
     const zone = patch.tz ?? SERVER_TZ;
     const at = patch.time ? ` at ${patch.time} ${tzShort(zone, zonedToUtc(patch.date ?? localDateStr(), patch.time, zone))}` : "";
-    if (clientId != null) logCoachActivity(clientId, `Your call moved to ${when}${at}`, { kind: "general", push: true, actionTab: "home", actionLabel: "View schedule" });
+    if (clientId != null) logCoachActivity(clientId, `Your call moved to ${when}${at}`, { kind: "general", push: true, actionTab: "home", actionLabel: "View schedule", actionRef: id });
   }
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -2020,7 +2020,7 @@ export async function addEventFromMeetingNoteAction(formData: FormData) {
   const date = String(formData.get("date") ?? "").slice(0, 10);
   if (!text || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
   const row = addClientEvent(clientId, { kind: null, title: text, start: date, end: date, note: "", meetingId });
-  noteChange(clientId, `Added to your calendar: ${text}`, { tab: "home", label: "See it", key: `event:${text}` });
+  noteChange(clientId, `Added to your calendar: ${text}`, { tab: "home", label: "See it", key: `event:${text}`, ref: row?.id });
   revalidatePath("/admin");
   revalidatePath("/client");
   return row?.id ?? null;
@@ -2035,7 +2035,7 @@ export async function removeMeetingAction(formData: FormData) {
   const later = formData.get("following") === "1" ? laterInSeries(id) : [];
   removeMeeting(id);
   later.forEach(removeMeeting);
-  noteChange(meetingClient, later.length ? `Cancelled ${later.length + 1} calls` : "Cancelled your call", { tab: "home", label: "See your meetings", key: `meeting-cancel:${id}`, push: true });
+  noteChange(meetingClient, later.length ? `Cancelled ${later.length + 1} calls` : "Cancelled your call", { tab: "home", label: "See your meetings", key: `meeting-cancel:${id}`, ref: Number(id), push: true });
   revalidatePath("/admin");
   // The Calendar's day panel removes from here too.
   revalidatePath("/admin/redesign/calendar");
@@ -2151,7 +2151,7 @@ export type EventInput = { kind?: string | null; title: string; start: string; e
 export async function addClientEventAction(clientId: number, v: EventInput) {
   if (!(await coachForClient(Number(clientId)))) return null;
   const row = addClientEvent(Number(clientId), v);
-  noteChange(Number(clientId), `Added to your calendar: ${v.title}`, { tab: "home", label: "See it", key: `event:${v.title}` });
+  noteChange(Number(clientId), `Added to your calendar: ${v.title}`, { tab: "home", label: "See it", key: `event:${v.title}`, ref: row?.id });
   revalidatePath("/admin");
   return row?.id ?? null;
 }
@@ -2767,6 +2767,7 @@ export async function addCalendarEventAction(formData: FormData) {
       push: true,
       actionTab: "home",
       actionLabel: "View schedule",
+      actionRef: listMeetings(clientId).filter((m) => m.status === "scheduled").sort((a, b) => b.id - a.id)[0]?.id,
     });
   }
   revalidatePath("/admin");
@@ -2785,7 +2786,7 @@ export async function addCalendarEntryAction(v: CalendarEntryInput) {
   const id = addCalendarEntry(coach.id, { ...v, clientId });
   if (id != null && clientId != null) {
     const topic = String(v.topic ?? "").trim();
-    logCoachActivity(clientId, topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", { kind: "general", push: true, actionTab: "home", actionLabel: "View schedule" });
+    logCoachActivity(clientId, topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", { kind: "general", push: true, actionTab: "home", actionLabel: "View schedule", actionRef: id });
   }
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -2804,7 +2805,7 @@ export async function updateCalendarEntryAction(id: number, v: CalendarEntryInpu
   updateCalendarEntry(coach.id, Number(id), { ...v, clientId });
   // The client hears when their call moves, not when the coach's note or colour changes.
   if (clientId != null && before && (before.client_id !== clientId || before.date !== v.date || before.time !== (v.allDay ? "" : v.time))) {
-    noteChange(clientId, "Moved your call", { tab: "home", label: "See your meetings", key: `meeting-move:${id}`, push: true });
+    noteChange(clientId, "Moved your call", { tab: "home", label: "See your meetings", key: `meeting-move:${id}`, ref: Number(id), push: true });
   }
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -2815,7 +2816,7 @@ export async function removeCalendarEntryAction(id: number) {
   if (!coachOwnsMeeting(coach.id, Number(id))) return;
   const meetingClient = getClientIdForMeeting(Number(id));
   removeMeeting(Number(id));
-  noteChange(meetingClient, "Cancelled your call", { tab: "home", label: "See your meetings", key: `meeting-cancel:${id}`, push: true });
+  noteChange(meetingClient, "Cancelled your call", { tab: "home", label: "See your meetings", key: `meeting-cancel:${id}`, ref: Number(id), push: true });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -3017,7 +3018,7 @@ export async function setPhaseGoalsAction(phaseId: number, goals: string[]) {
 export async function saveTrainingNoteAction(phaseId: number, text: string) {
   if (!Number.isInteger(phaseId) || !(await coachForClient(getClientIdForPhase(phaseId)))) return;
   const clientId = setPhaseClientNote(phaseId, String(text ?? ""));
-  if (clientId != null && String(text ?? "").trim() && clientSeesPhase(phaseId)) noteChange(clientId, "Left a note on your training", { tab: "training", label: "Read it", key: "training-note" });
+  if (clientId != null && String(text ?? "").trim() && clientSeesPhase(phaseId)) noteChange(clientId, "Left a note on your training", { tab: "training", label: "Read it", key: "training-note", ref: phaseId });
   revalidatePath("/admin");
   revalidatePath("/client");
 }
@@ -3907,9 +3908,9 @@ function tellClientAboutInvoice(invoiceId: number, before: string) {
   if (!inv || inv.status === before) return;
   const name = inv.number ?? "an invoice";
   if (before === "unpaid" && inv.status !== "unpaid" && inv.status !== "paid") {
-    noteChange(inv.client_id, `Sent you invoice ${name}`, { tab: "invoices", label: "See your invoices", key: `invoice-sent:${invoiceId}`, push: true });
+    noteChange(inv.client_id, `Sent you invoice ${name}`, { tab: "invoices", label: "See your invoices", key: `invoice-sent:${invoiceId}`, ref: invoiceId, push: true });
   } else if (inv.status === "paid") {
-    noteChange(inv.client_id, `Marked invoice ${name} paid`, { tab: "invoices", label: "See your invoices", key: `invoice-paid:${invoiceId}` });
+    noteChange(inv.client_id, `Marked invoice ${name} paid`, { tab: "invoices", label: "See your invoices", key: `invoice-paid:${invoiceId}`, ref: invoiceId });
   }
 }
 

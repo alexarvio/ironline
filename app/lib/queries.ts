@@ -929,6 +929,7 @@ export function deployProgram(programId: number) {
     kind: "programme",
     actionTab: "training",
     actionLabel: "See the week",
+    actionRef: program.id,
   });
 }
 
@@ -2977,6 +2978,7 @@ export function setNutritionPhaseDraft(phaseId: number, draft: boolean): boolean
       kind: "programme",
       actionTab: "nutrition",
       actionLabel: "See your targets",
+      actionRef: phase.id,
     });
   }
   return !draft;
@@ -7946,6 +7948,7 @@ export function schedulePhase(phaseId: number, name: string, startDate: string, 
       kind: "programme",
       actionTab: where[phase.track] ?? "home",
       actionLabel: "Take a look",
+      actionRef: phase.id,
     });
   }
   return live;
@@ -8009,6 +8012,7 @@ export function deployPhaseNow(phaseId: number): boolean {
       kind: "programme",
       actionTab: where[phase.track] ?? "home",
       actionLabel: phase.track === "nutrition" ? "See your targets" : "Take a look",
+      actionRef: phase.id,
     }
   );
   return true;
