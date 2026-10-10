@@ -432,12 +432,13 @@ export default function VideoWhiteboard({ src, requestId, firstName, onSent }: {
               className={`wb-stage${rec === "recording" ? " rec" : ""}`}
               style={{
                 aspectRatio: `${size.w} / ${size.h}`,
-                width: `min(100%, calc(max(320px, 100vh - 330px) * ${(size.w / size.h).toFixed(4)}))`,
+                width: `min(100%, calc(max(320px, 100vh - 250px) * ${(size.w / size.h).toFixed(4)}))`,
               }}
             >
               <video
                 ref={videoEl}
-                src={src}
+                // Same-origin bytes (10 Oct): a redirect to the bucket made the canvas "not origin-clean" and the recorder refused it.
+                src={`${src}${src.includes("?") ? "&" : "?"}stream=1`}
                 playsInline
                 preload="metadata"
                 onLoadedMetadata={(e) => {

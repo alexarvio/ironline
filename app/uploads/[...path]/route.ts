@@ -1,9 +1,10 @@
 import fs from "fs";
 import path from "path";
+import { Readable } from "stream";
 import { DATA_DIR } from "../../lib/db";
 import { canAccessClient, getSessionUser, isOwner } from "../../lib/auth";
 import { coachIdOfClient, coachOwnsExercise } from "../../lib/tenancy";
-import { bucketLink, LINK_CACHE_SECONDS } from "../../lib/storage";
+import { bucketLink, LINK_CACHE_SECONDS, streamUpload } from "../../lib/storage";
 
 // Serves files written by savePhotoUpload/saveChatMedia in queries.ts. Those
 // live under DATA_DIR/uploads rather than /public/uploads so they survive on
@@ -37,7 +38,7 @@ const MIME_TYPES: Record<string, string> = {
 };
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
   const { path: segments } = await params;
@@ -93,8 +94,15 @@ export async function GET(
 
   // Access is settled above. With the storage bucket on, the file downloads
   // from the bucket through a link that expires; a file not copied there yet
-  // is served from the disk below.
-  const link = await bucketLink(segments.join("/"));
+  // is served from the disk below. "?stream=1" (10 Oct) sends the bytes
+  // through the app instead, same-origin, for the whiteboard's canvas.
+  const stream = new URL(request.url).searchParams.get("stream") === "1";
+  const range = request.headers.get("range");
+  if (stream) {
+    const piped = await streamUpload(segments.join("/"), range);
+    if (piped) return piped;
+  }
+  const link = stream ? null : await bucketLink(segments.join("/"));
   if (link) {
     return new Response(null, {
       status: 302,
@@ -116,11 +124,31 @@ export async function GET(
 
   const ext = path.extname(filePath).slice(1).toLowerCase();
   const contentType = MIME_TYPES[ext] ?? "application/octet-stream";
-  const body = fs.readFileSync(filePath);
+  const size = fs.statSync(filePath).size;
 
-  return new Response(new Uint8Array(body), {
+  // A Range request (a video seeking) gets that slice, 206.
+  const m = range && /^bytes=(\d*)-(\d*)$/.exec(range);
+  if (m && (m[1] || m[2])) {
+    const start = m[1] ? Number(m[1]) : Math.max(0, size - Number(m[2]));
+    const end = m[1] && m[2] ? Math.min(Number(m[2]), size - 1) : size - 1;
+    if (start > end || start >= size) return new Response(null, { status: 416, headers: { "Content-Range": `bytes */${size}` } });
+    return new Response(Readable.toWeb(fs.createReadStream(filePath, { start, end })) as ReadableStream, {
+      status: 206,
+      headers: {
+        "Content-Type": contentType,
+        "Content-Length": String(end - start + 1),
+        "Content-Range": `bytes ${start}-${end}/${size}`,
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "private, max-age=3600",
+      },
+    });
+  }
+
+  return new Response(Readable.toWeb(fs.createReadStream(filePath)) as ReadableStream, {
     headers: {
       "Content-Type": contentType,
+      "Content-Length": String(size),
+      "Accept-Ranges": "bytes",
       "Cache-Control": "private, max-age=3600",
     },
   });

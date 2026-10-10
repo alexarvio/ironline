@@ -324,10 +324,12 @@
 /* Two columns from 980px (10 Oct): the picture as tall as the window allows, the note beside it. */
 .wb-left, .wb-right { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 @media (min-width: 980px) {
-  .wb { flex-direction: row; align-items: flex-start; gap: 20px; }
-  .wb-left { flex: 1 1 auto; }
-  .wb-right { flex: 0 0 300px; position: sticky; top: 0; }
-  .wb-right .rd-field textarea { min-height: 140px; }
+  /* The picture alone on the left, as tall as the window; everything else (scrub, tools, note, Send) down the right. */
+  .wb { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 10px 22px; align-items: start; }
+  .wb-left, .wb-right { display: contents; }
+  .wb-left > .wb-stage, .wb-left > .wb-preview { grid-column: 1; grid-row: 1 / span 40; justify-self: center; }
+  .wb-left > :not(.wb-stage):not(.wb-preview), .wb-right > * { grid-column: 2; }
+  .wb-right .rd-field textarea { min-height: 120px; }
 }
 .wb-stage { position: relative; width: 100%; margin: 0 auto; border-radius: 12px; overflow: hidden; background: #000; }
 .wb-stage.rec { box-shadow: inset 0 0 0 3px #ff3b30, 0 0 0 1px #ff3b30; }
@@ -360,7 +362,7 @@
 .wb-color:disabled { opacity: 0.35; cursor: default; transform: none; }
 .wb-rec { background: #b3471d; border-color: #b3471d; }
 .wb-stop { background: #141a24; border-color: #141a24; }
-.wb-preview { display: block; width: auto; max-width: 100%; max-height: max(320px, calc(100vh - 330px)); margin: 0 auto; border-radius: 12px; background: #000; }
+.wb-preview { display: block; width: auto; max-width: 100%; max-height: max(320px, calc(100vh - 250px)); margin: 0 auto; border-radius: 12px; background: #000; }
 .wb-progress { height: 6px; border-radius: 999px; background: #e6ecf3; overflow: hidden; }
 .wb-progress i { display: block; height: 100%; background: #1e3a6e; transition: width 0.2s ease; }
 .wb-problem { color: #b3471d; }

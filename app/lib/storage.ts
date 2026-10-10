@@ -158,6 +158,29 @@ export async function bucketLink(key: string): Promise<string | null> {
 
 export const LINK_CACHE_SECONDS = LINK_SECONDS - 5 * 60;
 
+/**
+ * The file's bytes through the app instead of a link into the bucket (10 Oct):
+ * for the coach's whiteboard, which draws the client's video into a canvas and
+ * records it. A video from another origin taints the canvas and the browser
+ * refuses to record it ("not origin-clean"), so that one video is fetched
+ * same-origin. Range is passed on, so the player can seek. Null when the
+ * bucket is off or does not have the file.
+ */
+export async function streamUpload(key: string, range: string | null): Promise<Response | null> {
+  const b = bucket();
+  if (!b || !(await exists(b, key))) return null;
+  const r = await b.s3.send(new GetObjectCommand({ Bucket: b.bucket, Key: key, ...(range ? { Range: range } : {}) }));
+  const body = r.Body ? (r.Body as { transformToWebStream: () => ReadableStream }).transformToWebStream() : null;
+  const headers: Record<string, string> = {
+    "Content-Type": r.ContentType || mimeFor(key),
+    "Accept-Ranges": "bytes",
+    "Cache-Control": "private, max-age=3600",
+  };
+  if (r.ContentLength != null) headers["Content-Length"] = String(r.ContentLength);
+  if (r.ContentRange) headers["Content-Range"] = r.ContentRange;
+  return new Response(body, { status: r.ContentRange ? 206 : 200, headers });
+}
+
 function walk(dir: string): string[] {
   if (!fs.existsSync(dir)) return [];
   const out: string[] = [];
