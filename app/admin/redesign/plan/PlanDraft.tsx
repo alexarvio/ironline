@@ -16,7 +16,6 @@ import { phaseChrome, phaseStateOf, STATE_LABEL, TRACK_LABEL, TRACK_PALETTE, typ
 import { ConfirmDialog } from "../training/TrainingDraft";
 import Picker from "../Picker";
 import DatePick from "../DatePick";
-import DateText from "../DateText";
 import { phaseDays, phaseLengthLabel, phaseWeeks } from "../../../lib/phases";
 import { SortableItem, SortableList } from "../Sortable";
 import EventsCard, { type Category, type PlanEvent } from "./EventsCard";
@@ -936,9 +935,8 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
         <MonthRange from={from} to={to} onPick={pick} chrome={chrome} planned={planned} cursor={cursor} setCursor={setCursor} today={today} />
         <div className="rdd-fields">
           {/* The dates as two pills with the arrow between (10 Oct), as the client's New event sheet has them. A tap arms
-              that end in the calendar; a typed date still goes in the small field under each. */}
+              that end in the calendar, which is the picker. */}
           <div className="rd-field">
-            <span>When</span>
             <div className="evs-dates rq-dates" style={{ "--c": TRACK_PALETTE[track].ink, "--rgb": rgbOf(TRACK_PALETTE[track].ink) } as React.CSSProperties}>
               <button type="button" className={`evs-date${picking === "start" ? " arm" : ""}${startLocked ? " locked" : ""}`} onClick={() => !startLocked && setPicking("start")} aria-pressed={picking === "start"} disabled={startLocked}>
                 <span className="evs-date-head">STARTS{startLocked ? " · FIXED" : ""}</span>
@@ -953,10 +951,6 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
                 <span className="evs-date-head">ENDS</span>
                 <b>{fmtDay(to)}</b>
               </button>
-            </div>
-            <div className="rq-typed">
-              <DateText value={from} disabled={startLocked} onChange={setStart} label="Starts" onFocus={() => setPicking("start")} />
-              <DateText value={to} onChange={setEnd} label="Ends" onFocus={() => setPicking("end")} />
             </div>
           </div>
           {/* Type the weeks and the end follows; pick the end and the weeks follow. A span the calendar left uneven says so under it. */}
