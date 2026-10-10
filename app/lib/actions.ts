@@ -1899,6 +1899,7 @@ export async function addMeetingAction(formData: FormData) {
     push: true,
     actionTab: "home",
     actionLabel: "View schedule",
+    actionRef: booked?.id,
   });
   revalidatePath("/admin");
   revalidatePath("/client");
@@ -2001,7 +2002,8 @@ export async function completeMeetingAction(formData: FormData) {
   // The recap is what the client takes away: tell them it is there.
   if (summary) {
     const clientId = getClientIdForMeeting(id);
-    if (clientId != null) logCoachActivity(clientId, "Your coach wrote up what you agreed on the call", { kind: "general", actionTab: "home", actionLabel: "Read it" });
+    // action_ref is the meeting (10 Oct): Notifications opens Meetings on that call.
+    if (clientId != null) logCoachActivity(clientId, "Your coach wrote up what you agreed on the call", { kind: "general", actionTab: "home", actionLabel: "Read it", actionRef: id });
   }
   revalidatePath("/admin");
   revalidatePath("/client");

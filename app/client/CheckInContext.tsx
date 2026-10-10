@@ -146,7 +146,8 @@ export function useBack() {
   return useContext(BackContext);
 }
 
-const MeetingsContext = createContext<(() => void) | null>(null);
+// With a meeting id (10 Oct), the screen scrolls to that call and opens it.
+const MeetingsContext = createContext<((meetingId?: number) => void) | null>(null);
 
 export const MeetingsProvider = MeetingsContext.Provider;
 

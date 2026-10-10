@@ -181,6 +181,14 @@ export default function AppShell({
     if (initialPush) window.history.replaceState(null, "", "/client");
   }, [initialPush]);
   const pushView: PushView = chosenPush !== undefined ? chosenPush : storedPush === "food" && foodDiary ? "food" : null;
+  // The call Meetings opens on, from a notification (10 Oct); cleared when the screen closes.
+  const [meetingFocus, setMeetingFocus] = useState<number | null>(null);
+  const openMeetingsAt = meetings
+    ? (meetingId?: number) => {
+        setMeetingFocus(meetingId ?? null);
+        setPushView("meetings");
+      }
+    : null;
   const setPushView = (v: PushView) => {
     setChosenPush(v);
     try {
@@ -353,7 +361,7 @@ export default function AppShell({
       </div>
     ) : pushView === "meetings" && meetings ? (
       <div className="app-layer app-layer-push cn-screen">
-        <MeetingsScreen {...meetings} clientId={clientId} coachName={coachMessages.coachName} onBack={() => setPushView(null)} />
+        <MeetingsScreen {...meetings} clientId={clientId} coachName={coachMessages.coachName} focusId={meetingFocus} onBack={() => (setMeetingFocus(null), setPushView(null))} />
       </div>
     ) : pushView === "invoices" && invoices ? (
       <div className="app-layer app-layer-push cn-screen">
@@ -392,7 +400,7 @@ export default function AppShell({
         <BackProvider value={() => setPushView(null)}>
           <MessagesProvider value={openMessages}>
             <EventsProvider value={events ? () => setPushView("events") : null}>
-              <MeetingsProvider value={meetings ? () => setPushView("meetings") : null}>
+              <MeetingsProvider value={openMeetingsAt}>
                 <CheckInProvider value={openCheckIn}>
                   <NavigateProvider value={goToTab}>{notificationsContent}</NavigateProvider>
                 </CheckInProvider>
@@ -449,7 +457,7 @@ export default function AppShell({
                         : null
                     }
                   >
-                <MeetingsProvider value={meetings ? () => setPushView("meetings") : null}>
+                <MeetingsProvider value={openMeetingsAt}>
                 <EventsProvider value={events ? () => setPushView("events") : null}>
                 <CoachProvider value={coachProfile ? () => setPushView("coach") : null}>
                     <NotificationsProvider value={() => setPushView("notifications")}>

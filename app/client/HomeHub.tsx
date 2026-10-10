@@ -441,7 +441,7 @@ export function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<Upcom
         </div>
       )}
       {openMeetings && (
-        <button type="button" className="hm-mt-all" onClick={openMeetings}>
+        <button type="button" className="hm-mt-all" onClick={() => openMeetings?.()}>
           All meetings
         </button>
       )}
@@ -465,7 +465,7 @@ function LastMeetingCard({ recap, coachFirstName }: { recap: NonNullable<Meeting
       <div className="hm-tasks-head">
         <span className="hm-eyebrow">Last meeting with {coachFirstName}</span>
         {openMeetings && (
-          <button type="button" className="hm-mt-all-link" onClick={openMeetings}>
+          <button type="button" className="hm-mt-all-link" onClick={() => openMeetings?.()}>
             All meetings
           </button>
         )}
