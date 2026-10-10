@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { addEventFromMeetingNoteAction, addMeetingAction, completeMeetingAction, dismissMeetingRequestAction, removeMeetingAction, sendChatMessageAction, updateMeetingAction } from "../../../lib/actions";
+import { addEventFromMeetingNoteAction, addMeetingAction, completeMeetingAction, removeMeetingAction, sendChatMessageAction, updateMeetingAction } from "../../../lib/actions";
 import { MEETING_TYPES, type MeetingTypeId } from "../../../lib/meetingTypes";
 import { agreedPoints } from "../../../lib/meetingDates";
 import type React from "react";
@@ -167,7 +167,6 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
   const past = meetings.filter((m) => !(m.status === "scheduled" && m.date >= today)).sort((a, b) => (a.date < b.date ? 1 : -1));
   const [openPast, setOpenPast] = useState<number | null>(past[0]?.id ?? null);
   const [selectedDay, setSelectedDay] = useState(upcoming?.date ?? today);
-  const [hidRequest, setHidRequest] = useState(false);
   // The month's dots: what came from the server, with what was done here on top.
   const dots: DraftDot[] = [...plan.dots.filter((d) => !d.mine || meetings.some((m) => m.date === d.date && m.time === d.time && m.status !== "cancelled")), ...meetings.filter((m) => m.id < 0 && m.status !== "cancelled").map((m) => ({ date: m.date, time: m.time, durationMinutes: m.durationMinutes, name: firstName, topic: m.topic, mine: true, completed: m.status === "completed" }))];
 
@@ -200,8 +199,8 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
 
       <div className="rt-cols">
         <div className="rt-main">
-          {/* ---- A call the client asked for (9 Oct): on top until it is booked (which answers it) or let go. */}
-          {plan.request && !hidRequest && (
+          {/* ---- A call the client asked for (9 Oct): on top until a call is booked, which answers it. */}
+          {plan.request && (
             <section className="rt-ask" aria-label="Call requested">
               <span className="rt-ask-text">
                 <b>{firstName} asked for a call</b>
@@ -210,17 +209,7 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
                 </span>
               </span>
               <button type="button" className="rd-btn primary" onClick={() => setDlg({ kind: "schedule", date: selectedDay, reschedule: null, topic: plan.request!.about })}>
-                <PlusIcon /> Book it
-              </button>
-              <button
-                type="button"
-                className="rd-btn"
-                onClick={() => {
-                  setHidRequest(true);
-                  act(() => dismissMeetingRequestAction(fd({ clientId, id: plan.request!.id })), "Let go. " + firstName + " sees nothing booked.");
-                }}
-              >
-                Let it go
+                <PlusIcon /> Schedule a call
               </button>
             </section>
           )}
