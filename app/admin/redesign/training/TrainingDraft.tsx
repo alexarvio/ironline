@@ -11,7 +11,7 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { Tabs, TabsList, TabsTrigger, ToggleGroup, ToggleGroupItem } from "../../../components/ui/basics";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { CalendarIcon, ChatIcon, ChevronDownIcon, ColumnsIcon, CopyIcon, DumbbellIcon, EyeIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
-import { VideoIcon } from "../../VideoRequestButton";
+import { PhotoIcon, VideoIcon } from "../../VideoRequestButton";
 import VideoWhiteboard from "./VideoWhiteboard";
 import PhaseDatesDialog from "../PhaseDatesDialog";
 import PhaseSwitcher from "../PhaseSwitcher";
@@ -766,9 +766,12 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                       const vs = rows.map((r) => videos[r.id] ?? null).filter((v) => v && (v.state === "in" || v.state === "replied"));
                       if (vs.length === 0) return null;
                       const waiting = vs.some((v) => v!.state === "in");
+                      // A photo, when that is what came in (10 Oct): the camera, not the video clapper.
+                      const photo = vs.every((v) => v!.media === "photo");
+                      const word = photo ? "photo" : "video";
                       return (
-                        <span className={`rd-flag video ${waiting ? "in" : "replied"}`} title={waiting ? `${firstName} sent a video · waiting for your reply` : "Their video · replied"} aria-label={waiting ? "A video is waiting for your reply" : "Video replied"}>
-                          <VideoIcon />
+                        <span className={`rd-flag video ${waiting ? "in" : "replied"}`} title={waiting ? `${firstName} sent a ${word} · waiting for your reply` : `Their ${word} · replied`} aria-label={waiting ? `A ${word} is waiting for your reply` : `${photo ? "Photo" : "Video"} replied`}>
+                          {photo ? <PhotoIcon /> : <VideoIcon />}
                         </span>
                       );
                     })()}
@@ -971,7 +974,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                     title={video.state === "in" ? `${firstName}'s ${video.media} is in · ${video.media === "photo" ? "look" : "watch"} and reply` : `Their ${video.media} · replied`}
                                     aria-label={video.state === "in" ? `${video.media === "photo" ? "See" : "Watch"} ${firstName}'s ${video.media}` : `Their ${video.media}, replied`}
                                   >
-                                    <VideoIcon />
+                                    {video.media === "photo" ? <PhotoIcon /> : <VideoIcon />}
                                   </button>
                                 )}
                               </span>
@@ -999,8 +1002,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="pb-menu">
                                 <DropdownMenuItem onSelect={() => setDlg({ kind: "video", rowId: r.id })}>
-                                  <VideoIcon />
-                                  {!video ? "Ask for a video" : video.state === "asked" ? "Video asked for · waiting" : video.state === "in" ? "Watch their video · reply" : "Their video · replied"}
+                                  {video?.media === "photo" && video.state !== "asked" ? <PhotoIcon /> : <VideoIcon />}
+                                  {!video ? "Ask for a video" : video.state === "asked" ? "Video asked for · waiting" : video.media === "photo" ? (video.state === "in" ? "See their photo · reply" : "Their photo · replied") : video.state === "in" ? "Watch their video · reply" : "Their video · replied"}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onSelect={() => setDlg({ kind: "demo", rowId: r.id })}>
                                   <PlayIcon /> {(demos[r.id] === undefined ? r.demo : demos[r.id]) ? "Demo video · change" : "Add demo"}
