@@ -152,8 +152,11 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
         <span className="cn-icon-spacer" aria-hidden="true" />
       </header>
       <main className="cn-body">
-        <div className="ev-scroll">
+        {/* The add card above the list, not in it (10 Oct): rows slide under its edge instead of showing round it. */}
+        <div className="ev-top">
           <AddEventCard coachName={coachName} onOpen={openAdd} />
+        </div>
+        <div className="ev-scroll">
 
           <div className="ev-tl">
             {upcoming.length > 0 && <div className="ev-sec ev-sec-up">Coming up</div>}

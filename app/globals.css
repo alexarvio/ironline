@@ -17873,11 +17873,12 @@ button.ci-hint { cursor: pointer; }
 /* Its aura (9 Oct): the category's colour drifting under the row, the phase cards' rhythm. */
 /* The Events screen, the "Today line" (9 Oct). Prefix ev-. Tokens: navy
    #1d3466 is the events accent; each row carries its type as --c / --rgb. */
-.ev-scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding: 10px 16px 120px; background: linear-gradient(180deg, #e3e9f5 0%, #f4f7fc 28%); }
+.ev-top { position: relative; z-index: 3; flex: none; padding: 10px 16px 0; background: #e3e9f5; }
+.ev-scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding: 16px 16px 120px; background: linear-gradient(180deg, #e3e9f5 0%, #f4f7fc 28%); }
 
 /* ---- The add card. */
 /* The add card stays on top while the timeline scrolls under it (9 Oct): whole on every screen, Add always a tap away. */
-.ev-addcard { position: sticky; top: 0; z-index: 3; flex: none; display: flex; flex-direction: column; gap: 12px; padding: 16px 16px 14px; border-radius: 24px; overflow: hidden; background: #1d3466; color: #fff; box-shadow: 0 22px 36px -24px rgba(29, 52, 102, 0.9); }
+.ev-addcard { position: relative; flex: none; display: flex; flex-direction: column; gap: 12px; padding: 16px 16px 14px; border-radius: 24px; overflow: hidden; background: #1d3466; color: #fff; box-shadow: 0 22px 36px -24px rgba(29, 52, 102, 0.9); }
 .ev-addcard-glow { position: absolute; right: -110px; top: -140px; width: 260px; height: 260px; border-radius: 999px; background: radial-gradient(circle, rgba(120, 170, 255, 0.45), transparent 68%); pointer-events: none; }
 .ev-addcard-top { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
 .ev-addcard-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
