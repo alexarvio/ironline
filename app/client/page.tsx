@@ -1139,6 +1139,21 @@ function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
     .filter((m) => (m.summary ?? "").trim())
     .sort((x, y) => (x.date < y.date ? 1 : -1));
   const meetingFor = (createdAt: string) => recapped.find((m) => m.date <= createdAt.slice(0, 10))?.id ?? null;
+  // Likewise an event or a booked call from before: the event by its title in the message, the call by its topic, else the
+  // call booked nearest after the note was written.
+  const allEvents = listClientEvents(CLIENT_ID);
+  const allMeetings = listMeetings(CLIENT_ID).filter((m) => m.status !== "cancelled");
+  const eventFor = (message: string) => {
+    const title = message.replace(/^Added to your calendar:s*/, "").trim();
+    return [...allEvents].reverse().find((e) => e.title.trim() === title)?.id ?? null;
+  };
+  const bookedFor = (message: string, createdAt: string) => {
+    const topic = /Scheduled a meeting[:s—–-]+[“"](.+)[”"]/.exec(message)?.[1]?.trim();
+    const day = createdAt.slice(0, 10);
+    const byTopic = topic ? [...allMeetings].sort((x, y) => (x.date < y.date ? 1 : -1)).find((m) => (m.topic ?? "").trim() === topic && m.date >= day) : null;
+    if (byTopic) return byTopic.id;
+    return [...allMeetings].filter((m) => m.date >= day).sort((x, y) => (x.date < y.date ? -1 : 1))[0]?.id ?? null;
+  };
   const items: NotifView[] = getNotifications(CLIENT_ID, 300)
     .filter(isListed)
     .map((n) => {
@@ -1153,7 +1168,7 @@ function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
         createdAt: n.created_at,
         read: n.read,
         actionTab: n.action_tab,
-        actionRef: n.action_ref ?? (category === "meeting_notes" ? meetingFor(n.created_at) : null),
+        actionRef: n.action_ref ?? (category === "meeting_notes" ? meetingFor(n.created_at) : category === "event_added" ? eventFor(n.message) : category === "meeting_booked" ? bookedFor(n.message, n.created_at) : null),
         videoReply: n.action_tab === "video" ? videoReplies.find((r) => r.id === n.action_ref) ?? null : null,
       };
     });
