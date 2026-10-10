@@ -60,6 +60,10 @@
 .rm-answers-head { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 40px; padding: 4px 8px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 13px; font-weight: 700; color: #1e3a6e; text-align: left; cursor: pointer; }
 .rm-answers-head:hover { background: #f4f7fc; }
 .rm-answers-head small { font-size: 12px; font-weight: 600; color: #8b93a1; }
+.rm-cell { display: flex; align-items: baseline; gap: 8px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; font-weight: 600; color: #141a24; }
+.rm-cell b { font-weight: 700; }
+.rm-cell small { font-size: 11.5px; font-weight: 500; color: #8b93a1; }
+.rm-cell.muted { font-size: 13px; font-weight: 500; color: #5b6474; }
 .rd-session-name { font-size: 15px; font-weight: 700; }
 .rd-session-meta { flex: 1; font-size: 12.5px; color: #8b93a1; }
 .rd-pill { padding: 3px 10px; border-radius: 999px; background: #e6ecf3; font-size: 11.5px; font-weight: 700; color: #1e3a6e; white-space: nowrap; }
@@ -317,19 +321,35 @@
 .rd-dlg.wide { max-width: 900px; }
 /* The whiteboard reply (9 Oct). */
 .wb { display: flex; flex-direction: column; gap: 10px; }
-.wb-stage { position: relative; width: 100%; border-radius: 12px; overflow: hidden; background: #000; }
+.wb-stage { position: relative; width: 100%; margin: 0 auto; border-radius: 12px; overflow: hidden; background: #000; }
+.wb-stage.rec { box-shadow: inset 0 0 0 3px #ff3b30, 0 0 0 1px #ff3b30; }
 .wb-stage video { display: block; width: 100%; height: 100%; object-fit: contain; }
 .wb-overlay { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
 .wb-overlay.erase { cursor: cell; }
-.wb-live { position: absolute; top: 10px; left: 10px; display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 999px; background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 11.5px; font-weight: 800; letter-spacing: 0.08em; }
-.wb-live i { width: 8px; height: 8px; border-radius: 999px; background: #ff3b30; animation: wb-blink 1s steps(2) infinite; }
+.wb-live { position: absolute; top: 12px; left: 12px; display: inline-flex; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; border-radius: 999px; background: rgba(0, 0, 0, 0.72); color: #fff; font-size: 13px; font-weight: 800; letter-spacing: 0.08em; font-variant-numeric: tabular-nums; }
+.wb-live i { width: 10px; height: 10px; border-radius: 999px; background: #ff3b30; box-shadow: 0 0 0 3px rgba(255, 59, 48, 0.35); animation: wb-blink 1s steps(2) infinite; }
+.wb-live-stop { margin-left: 4px; padding: 4px 12px; border: 0; border-radius: 999px; background: #ff3b30; color: #fff; font: inherit; font-size: 12px; font-weight: 800; letter-spacing: 0.04em; cursor: pointer; }
+.wb-live-stop:hover { background: #e0291f; }
 @keyframes wb-blink { to { opacity: 0.2; } }
 .wb-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .wb-scrub { flex: 1; min-width: 120px; accent-color: #1e3a6e; }
 .wb-time { font-size: 12px; font-weight: 700; color: #5b6474; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.wb-colors { display: inline-flex; gap: 5px; }
-.wb-color { width: 20px; height: 20px; padding: 0; border: 2px solid #fff; border-radius: 999px; box-shadow: 0 0 0 1px #c3c9d2; cursor: pointer; }
-.wb-color.on { box-shadow: 0 0 0 2px #1e3a6e; }
+.wb-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.wb-seg { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border-radius: 12px; background: #eef0f3; }
+.wb-tool { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 0; border-radius: 9px; background: none; font: inherit; font-size: 12px; font-weight: 700; color: #5b6474; cursor: pointer; }
+.wb-tool:hover { color: #141a24; }
+.wb-tool.on { background: #fff; color: #1e3a6e; box-shadow: 0 1px 2px rgba(20, 26, 36, 0.1); }
+.wb-tool:disabled { opacity: 0.35; cursor: default; }
+.wb-tool:disabled:hover { color: #5b6474; }
+.wb-width { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 9px; background: none; color: #5b6474; cursor: pointer; }
+.wb-width i { display: block; border-radius: 999px; background: currentColor; }
+.wb-width.on { background: #fff; color: #1e3a6e; box-shadow: 0 1px 2px rgba(20, 26, 36, 0.1); }
+.wb-width:disabled { opacity: 0.35; cursor: default; }
+.wb-colors { display: inline-flex; gap: 6px; padding: 0 2px; }
+.wb-color { width: 22px; height: 22px; padding: 0; border: 2px solid #fff; border-radius: 999px; box-shadow: 0 0 0 1px #c3c9d2; cursor: pointer; transition: transform 0.12s ease; }
+.wb-color:hover { transform: scale(1.12); }
+.wb-color.on { box-shadow: 0 0 0 2.5px #1e3a6e; }
+.wb-color:disabled { opacity: 0.35; cursor: default; transform: none; }
 .wb-rec { background: #b3471d; border-color: #b3471d; }
 .wb-stop { background: #141a24; border-color: #141a24; }
 .wb-preview { display: block; width: 100%; max-height: 420px; border-radius: 12px; background: #000; }
@@ -361,7 +381,8 @@
 .rd-tick { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #313851; }
 .rd-video-stub { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; height: 220px; border-radius: 12px; background: #0b0f16; color: rgba(255, 255, 255, 0.8); font-size: 12.5px; }
 .rd-video-stub svg { width: 34px; height: 34px; }
-.rd-video { display: block; width: 100%; max-height: 380px; border-radius: 12px; background: #0b0f16; object-fit: contain; }
+/* Fits the window (9 Oct): a portrait phone video or photo was taller than the screen and needed a scroll. */
+.rd-dlg .rd-video { display: block; width: auto; max-width: 100%; max-height: min(56vh, 560px); margin: 0 auto; border-radius: 12px; background: #0b0f16; object-fit: contain; }
 .rd-gymlist { display: flex; flex-direction: column; }
 .rd-gymrow { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #eceff3; }
 .rd-gymname { flex: 1; font-size: 14px; font-weight: 600; color: #141a24; display: flex; align-items: center; gap: 8px; }

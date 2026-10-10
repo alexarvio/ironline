@@ -2019,7 +2019,8 @@ function AnswersFeed({ firstName, items, href }: { firstName: string; items: Dra
   const [open, setOpen] = useState<number | null>(null);
   // The feed stays folded under the questions until asked for (9 Oct).
   const [shown, setShown] = useState(false);
-  const grid = { gridTemplateColumns: "20px 150px minmax(160px, 0.8fr) minmax(240px, 1.4fr) 90px 32px", columnGap: 24 } as const;
+  // One line per cell (9 Oct): the day with its time, the session with its week, the gym, the answers, how long it took.
+  const grid = { gridTemplateColumns: "20px 170px minmax(120px, 0.7fr) minmax(110px, 0.6fr) minmax(240px, 1.6fr) 70px 32px", columnGap: 20 } as const;
   const when = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
   const at = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   const said = (a: DraftAnswered["answers"][number]) => (a.kind === "text" ? (a.text ?? "").trim() : a.value != null ? `${a.value}${a.kind === "scale" ? "/10" : a.unit ? ` ${a.unit}` : ""}` : "");
@@ -2040,6 +2041,7 @@ function AnswersFeed({ firstName, items, href }: { firstName: string; items: Dra
             <span />
             <span>Ended</span>
             <span>Session</span>
+            <span>Gym</span>
             <span>Answers</span>
             <span>Took</span>
             <span />
@@ -2053,14 +2055,15 @@ function AnswersFeed({ firstName, items, href }: { firstName: string; items: Dra
                   <span className={`rd-chev${isOpen ? " open" : ""}`} aria-hidden="true">
                     <ChevronDownIcon />
                   </span>
-                  <span className="rd-ex">
-                    <span className="rd-ex-name">{when(it.ended)}</span>
-                    <small>{at(it.ended)}{it.gym ? ` · ${it.gym}` : ""}</small>
+                  <span className="rm-cell">
+                    <b>{when(it.ended)}</b>
+                    <small>{at(it.ended)}</small>
                   </span>
-                  <span className="rd-ex">
-                    <span className="rd-ex-name">{it.name}</span>
+                  <span className="rm-cell">
+                    <b>{it.name}</b>
                     <small>{it.weekLabel}</small>
                   </span>
+                  <span className="rm-cell muted">{it.gym || "—"}</span>
                   <span className="rm-summary">
                     {line.slice(0, 4).join(" · ") || "No answers"}
                     {line.length > 4 ? ` · +${line.length - 4}` : ""}

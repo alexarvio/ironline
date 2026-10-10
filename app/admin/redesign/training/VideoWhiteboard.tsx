@@ -13,10 +13,24 @@ import type React from "react";
 // after the upload, so the client always gets a file that plays.
 
 type Pt = { x: number; y: number };
-type Shape = { kind: "pen"; points: Pt[]; color: string } | { kind: "arrow"; from: Pt; to: Pt; color: string };
+type Shape = ({ kind: "pen"; points: Pt[] } | { kind: "arrow"; from: Pt; to: Pt }) & { color: string; width: number };
 type Rec = "idle" | "recording" | "done";
 
-const COLORS = ["#ff3b30", "#ffd60a", "#34c759", "#0a84ff", "#ffffff"];
+// Eight colours (9 Oct): orange, purple and black joined the five.
+const COLORS = ["#ff3b30", "#ff9500", "#ffd60a", "#34c759", "#0a84ff", "#af52de", "#ffffff", "#000000"];
+/** Line thickness, as a share of a 960-wide picture: thin, medium, thick. */
+const WIDTHS = [2.6, 4.6, 8.5];
+const WIDTH_NAMES = ["Thin", "Medium", "Thick"];
+const TOOLS: { id: "pen" | "arrow" | "erase"; label: string; icon: string }[] = [
+  { id: "pen", label: "Pen", icon: "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" },
+  { id: "arrow", label: "Arrow", icon: "M5 19 19 5M9 5h10v10" },
+  { id: "erase", label: "Eraser", icon: "M20 20H7.5M3.6 13.4 12.6 4.4a2 2 0 0 1 2.8 0l4.2 4.2a2 2 0 0 1 0 2.8l-8.9 8.9a1 1 0 0 1-1.4 0l-5.7-5.7a1 1 0 0 1 0-1.4ZM8.5 8.5l7 7" },
+];
+const Ico = ({ d, size = 18 }: { d: string; size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d={d} />
+  </svg>
+);
 const MAX_W = 1280;
 
 /** Uploads the recording as the reply file, with progress; null when it went up. */
@@ -50,8 +64,56 @@ export default function VideoWhiteboard({ src, requestId, firstName, onSent }: {
   const [size, setSize] = useState<{ w: number; h: number }>({ w: 960, h: 540 });
   const [tool, setTool] = useState<"pen" | "arrow" | "erase">("pen");
   const [color, setColor] = useState(COLORS[0]);
-  const [shapes, setShapes] = useState<Shape[]>([]);
+  const [width, setWidth] = useState(1);
+  const [shapes, setShapesRaw] = useState<Shape[]>([]);
   const shapesRef = useRef<Shape[]>([]);
+  // Undo and redo (9 Oct): every change keeps the list it replaced; undo brings it back and parks the one it undid for redo.
+  const undoStack = useRef<Shape[][]>([]);
+  const redoStack = useRef<Shape[][]>([]);
+  const [histN, setHistN] = useState({ undo: 0, redo: 0 });
+  const setShapes = (fn: (list: Shape[]) => Shape[]) => {
+    const next = fn(shapesRef.current);
+    if (next === shapesRef.current) return;
+    undoStack.current.push(shapesRef.current);
+    redoStack.current = [];
+    shapesRef.current = next;
+    setShapesRaw(next);
+    setHistN({ undo: undoStack.current.length, redo: 0 });
+  };
+  const undo = () => {
+    const prev = undoStack.current.pop();
+    if (!prev) return;
+    redoStack.current.push(shapesRef.current);
+    shapesRef.current = prev;
+    setShapesRaw(prev);
+    setHistN({ undo: undoStack.current.length, redo: redoStack.current.length });
+  };
+  const redo = () => {
+    const next = redoStack.current.pop();
+    if (!next) return;
+    undoStack.current.push(shapesRef.current);
+    shapesRef.current = next;
+    setShapesRaw(next);
+    setHistN({ undo: undoStack.current.length, redo: redoStack.current.length });
+  };
+  // Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z (or Ctrl+Y), as anywhere else; not while typing the note.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === "TEXTAREA" || tag === "INPUT") return;
+      const k = e.key.toLowerCase();
+      if (k === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if ((k === "z" && e.shiftKey) || k === "y") {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const live = useRef<Shape | null>(null);
   const [playing, setPlaying] = useState(false);
   const [t, setT] = useState(0);
@@ -86,7 +148,7 @@ export default function VideoWhiteboard({ src, requestId, firstName, onSent }: {
     for (const s of list) {
       ctx.strokeStyle = s.color;
       ctx.fillStyle = s.color;
-      ctx.lineWidth = Math.max(3, size.w / 220);
+      ctx.lineWidth = Math.max(1.5, (s.width * size.w) / 960);
       if (s.kind === "pen") {
         if (s.points.length < 2) continue;
         ctx.beginPath();
@@ -96,7 +158,7 @@ export default function VideoWhiteboard({ src, requestId, firstName, onSent }: {
       } else {
         const { from, to } = s;
         const a = Math.atan2(to.y - from.y, to.x - from.x);
-        const head = Math.max(14, size.w / 60);
+        const head = Math.max(10, (s.width * 3.2 * size.w) / 960);
         ctx.beginPath();
         ctx.moveTo(from.x, from.y);
         ctx.lineTo(to.x, to.y);
@@ -150,7 +212,7 @@ export default function VideoWhiteboard({ src, requestId, firstName, onSent }: {
       eraseAt(p);
       return;
     }
-    live.current = tool === "pen" ? { kind: "pen", points: [p], color } : { kind: "arrow", from: p, to: p, color };
+    live.current = tool === "pen" ? { kind: "pen", points: [p], color, width: WIDTHS[width] } : { kind: "arrow", from: p, to: p, color, width: WIDTHS[width] };
     paint();
   };
   const move = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -283,7 +345,9 @@ export default function VideoWhiteboard({ src, requestId, firstName, onSent }: {
         </>
       ) : (
         <>
-          <div className="wb-stage" style={{ aspectRatio: `${size.w} / ${size.h}` }}>
+          {/* The stage fits the screen (9 Oct): a portrait phone video is as tall as the window allows, never taller, so the
+              controls below it stay in view. A red ring and a Stop on the picture itself while it records. */}
+          <div className={`wb-stage${rec === "recording" ? " rec" : ""}`} style={{ aspectRatio: `${size.w} / ${size.h}`, width: `min(100%, calc(min(56vh, 560px) * ${(size.w / size.h).toFixed(4)}))` }}>
             <video
               ref={videoEl}
               src={src}
@@ -304,6 +368,9 @@ export default function VideoWhiteboard({ src, requestId, firstName, onSent }: {
             {rec === "recording" && (
               <span className="wb-live" aria-live="polite">
                 <i /> REC {fmt(secs)}
+                <button type="button" className="wb-live-stop" onClick={stop}>
+                  Stop
+                </button>
               </span>
             )}
           </div>
@@ -316,30 +383,40 @@ export default function VideoWhiteboard({ src, requestId, firstName, onSent }: {
               {fmt(t)} / {fmt(dur)}
             </span>
           </div>
-          <div className="wb-row">
-            <span className="rm-cadence wb-tools" role="group" aria-label="Drawing tool">
-              <button type="button" className={tool === "pen" ? "on" : ""} aria-pressed={tool === "pen"} onClick={() => setTool("pen")}>
-                Pen
-              </button>
-              <button type="button" className={tool === "arrow" ? "on" : ""} aria-pressed={tool === "arrow"} onClick={() => setTool("arrow")}>
-                Arrow
-              </button>
-              <button type="button" className={tool === "erase" ? "on" : ""} aria-pressed={tool === "erase"} onClick={() => setTool("erase")}>
-                Eraser
-              </button>
+          {/* The toolbar (9 Oct): the tool as an icon toggle, the thickness, the colour; then undo, redo, clear and Record. */}
+          <div className="wb-bar">
+            <span className="wb-seg" role="group" aria-label="Drawing tool">
+              {TOOLS.map((x) => (
+                <button key={x.id} type="button" className={`wb-tool${tool === x.id ? " on" : ""}`} aria-pressed={tool === x.id} onClick={() => setTool(x.id)} title={x.label}>
+                  <Ico d={x.icon} />
+                  <span>{x.label}</span>
+                </button>
+              ))}
+            </span>
+            <span className="wb-seg" role="group" aria-label="Thickness">
+              {WIDTHS.map((w, i) => (
+                <button key={w} type="button" className={`wb-width${width === i ? " on" : ""}`} aria-pressed={width === i} aria-label={WIDTH_NAMES[i]} title={WIDTH_NAMES[i]} onClick={() => setWidth(i)} disabled={tool === "erase"}>
+                  <i style={{ width: 4 + i * 4, height: 4 + i * 4 }} />
+                </button>
+              ))}
             </span>
             <span className="wb-colors" role="group" aria-label="Colour">
               {COLORS.map((c) => (
-                <button key={c} type="button" className={`wb-color${color === c ? " on" : ""}`} style={{ background: c }} aria-label={c} aria-pressed={color === c} onClick={() => setColor(c)} />
+                <button key={c} type="button" className={`wb-color${color === c ? " on" : ""}`} style={{ background: c }} aria-label={c} aria-pressed={color === c} onClick={() => setColor(c)} disabled={tool === "erase"} />
               ))}
             </span>
-            <button type="button" className="rd-btn ghost sm" onClick={() => setShapes((l) => l.slice(0, -1))} disabled={!shapes.length}>
-              Undo
-            </button>
-            <button type="button" className="rd-btn ghost sm" onClick={() => setShapes([])} disabled={!shapes.length}>
+            <span className="rd-dlg-hint grow" />
+            <span className="wb-seg" role="group" aria-label="History">
+              <button type="button" className="wb-tool" onClick={undo} disabled={!histN.undo} aria-label="Undo" title="Undo (Ctrl+Z)">
+                <Ico d="M3 7v6h6M21 17a9 9 0 0 0-15-6.7L3 13" />
+              </button>
+              <button type="button" className="wb-tool" onClick={redo} disabled={!histN.redo} aria-label="Redo" title="Redo (Ctrl+Shift+Z)">
+                <Ico d="M21 7v6h-6M3 17a9 9 0 0 1 15-6.7l3 2.7" />
+              </button>
+            </span>
+            <button type="button" className="rd-btn sm" onClick={() => setShapes(() => [])} disabled={!shapes.length}>
               Clear
             </button>
-            <span className="rd-dlg-hint grow" />
             {canRecord ? (
               rec === "recording" ? (
                 <button type="button" className="rd-btn primary wb-stop" onClick={stop}>
