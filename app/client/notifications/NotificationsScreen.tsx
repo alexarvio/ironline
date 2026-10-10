@@ -73,7 +73,7 @@ export default function NotificationsScreen({ items, clientId, coachName }: { it
     if (n.actionTab === "chat") openMessages?.();
     else if (n.actionTab === "video") {
       if (n.videoReply) setWatching(n.videoReply);
-    } else if (n.category === "event_added" || n.category === "event_changed") openEvents?.();
+    } else if (n.category === "event_added" || n.category === "event_changed") openEvents?.(n.actionRef ?? undefined);
     else if (n.category === "meeting_booked" || n.category === "meeting_changed" || n.category === "meeting_notes") openMeetings?.(n.actionRef ?? undefined);
     else if (n.category === "checkin_comment") openCheckIn?.("daily");
     else if (n.actionTab) navigate?.(n.actionTab, n.actionRef ?? undefined);

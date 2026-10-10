@@ -74,7 +74,8 @@ export function useFocusRef() {
 
 // Same bridge for the food diary, opened from the ring on Nutrition.
 // The Events screen (8 Oct), from Home's "Coming up" card.
-const EventsContext = createContext<(() => void) | null>(null);
+// With an event id (10 Oct), the screen lands on that event: a glow, and open when it has a note.
+const EventsContext = createContext<((eventId?: number) => void) | null>(null);
 
 export const EventsProvider = EventsContext.Provider;
 

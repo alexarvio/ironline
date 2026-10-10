@@ -23,7 +23,7 @@ type Sheet = { event: HomeEvent | null; type: EventTypeId; initial?: EventValues
 const LAST_TYPE_KEY = "ironline:last-event-type";
 
 // `me` is the client's own first name and photo (9 Oct): on the rows they added, their face, as the coach's is on the coach's.
-export default function EventsScreen({ clientId, events, coachName, today, me = null, onBack }: { clientId: number; events: HomeEvents; coachName: string; today: string; me?: { name: string; photoPath: string | null } | null; onBack: () => void }) {
+export default function EventsScreen({ clientId, events, coachName, today, me = null, focusId = null, onBack }: { clientId: number; events: HomeEvents; coachName: string; today: string; me?: { name: string; photoPath: string | null } | null; /** An event to land on (10 Oct), from a notification: the screen scrolls to it, it glows, and it opens when there is a note. */ focusId?: number | null; onBack: () => void }) {
   const router = useRouter();
   const coach = useCoachIdentity();
   const coachPhoto = coach?.photoPath ?? null;
@@ -44,9 +44,11 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
 
   // ---- The sheet, the row open in place, and a save on its way.
   const [sheet, setSheet] = useState<Sheet>(null);
-  const [open, setOpen] = useState<number | null>(null);
+  // Landed on from a notification: that event starts open (when it has more to show) and lit.
+  const focused = focusId != null ? (events.list.find((e) => e.id === focusId) ?? null) : null;
+  const [open, setOpen] = useState<number | null>(focused && hasMore(focused) ? focused.id : null);
   const [pending, setPending] = useState(false);
-  const [highlight, setHighlight] = useState<number | null>(null);
+  const [highlight, setHighlight] = useState<number | null>(focused ? focused.id : null);
   const rows = useRef(new Map<number, HTMLElement>());
   const lastType = (): EventTypeId => {
     try {
@@ -63,6 +65,8 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
   useEffect(() => {
     if (centred.current) return;
     centred.current = true;
+    // Opened on an event: the highlight below brings it into view instead of today.
+    if (focused) return;
     const el = (now[0] && rows.current.get(now[0].id)) || todayRef.current;
     el?.scrollIntoView({ block: "center" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -72,9 +76,9 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
     if (highlight == null) return;
     const el = rows.current.get(highlight);
     el?.scrollIntoView({ block: "center", behavior: "smooth" });
-    const t = setTimeout(() => setHighlight(null), 900);
+    const t = setTimeout(() => setHighlight(null), highlight === focusId ? 1800 : 900);
     return () => clearTimeout(t);
-  }, [highlight]);
+  }, [highlight]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async (v: EventValues) => {
     const s = sheet;
@@ -132,6 +136,7 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
     coachPhoto,
     me,
     lit: highlight === e.id,
+    glow: highlight === e.id && e.id === focusId,
     open: open === e.id,
     pending,
     refFn: (el) => el && rows.current.set(e.id, el),
@@ -217,7 +222,7 @@ function AddEventCard({ coachName, onOpen }: { coachName: string; onOpen: () => 
 // more to it, a body that opens in place: the note, who set it, and for
 // the client's own, Edit and Delete.
 
-type RowProps = { e: HomeEvent; today: string; coachName: string; coachPhoto: string | null; me: { name: string; photoPath: string | null } | null; lit: boolean; open: boolean; pending: boolean; refFn: (el: HTMLElement | null) => void; onToggle: () => void; onEdit: () => void; onDelete: () => void };
+type RowProps = { e: HomeEvent; today: string; coachName: string; coachPhoto: string | null; me: { name: string; photoPath: string | null } | null; lit: boolean; /** Landed on from a notification: a glow in the type's colour (10 Oct). */ glow: boolean; open: boolean; pending: boolean; refFn: (el: HTMLElement | null) => void; onToggle: () => void; onEdit: () => void; onDelete: () => void };
 
 // Every event opens, the coach's too, with Edit and Delete (10 Oct); a phase only when it has objectives to show.
 const hasMore = (e: HomeEvent) => (e.phase ? !!e.note : true);
@@ -273,10 +278,10 @@ function Chevron({ e, open }: { e: HomeEvent; open: boolean }) {
 }
 
 function UpcomingRow(p: RowProps) {
-  const { e, today, coachName, coachPhoto, me, lit, open, refFn, onToggle } = p;
+  const { e, today, coachName, coachPhoto, me, lit, glow, open, refFn, onToggle } = p;
   const t = chromeOf(e);
   return (
-    <div ref={refFn} className={`ev-r ev-r-up${lit ? " lit" : ""}`} style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}>
+    <div ref={refFn} className={`ev-r ev-r-up${lit ? " lit" : ""}${glow ? " glow" : ""}`} style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}>
       <span className="ev-td" aria-hidden="true">
         <b>{Number(e.start.slice(8, 10))}</b>
         <small>{shortDay(e.start, today).split(" ")[1]}</small>
@@ -307,11 +312,11 @@ function UpcomingRow(p: RowProps) {
 }
 
 function NowCard(p: RowProps) {
-  const { e, today, coachName, coachPhoto, me, lit, open, refFn, onToggle } = p;
+  const { e, today, coachName, coachPhoto, me, lit, glow, open, refFn, onToggle } = p;
   const t = chromeOf(e);
   const { day, total } = dayOf(e, today);
   return (
-    <div ref={refFn} className={`ev-r ev-r-now${lit ? " lit" : ""}`} style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}>
+    <div ref={refFn} className={`ev-r ev-r-now${lit ? " lit" : ""}${glow ? " glow" : ""}`} style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}>
       <span className="ev-td" aria-hidden="true" />
       <span className="ev-rail ev-rail-now" aria-hidden="true" />
       <span className="ev-cell">
@@ -344,10 +349,10 @@ function NowCard(p: RowProps) {
 }
 
 function PastRow(p: RowProps) {
-  const { e, today, coachName, coachPhoto, me, lit, open, refFn, onToggle } = p;
+  const { e, today, coachName, coachPhoto, me, lit, glow, open, refFn, onToggle } = p;
   const t = chromeOf(e);
   return (
-    <div ref={refFn} className={`ev-r ev-r-past${lit ? " lit" : ""}`} style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}>
+    <div ref={refFn} className={`ev-r ev-r-past${lit ? " lit" : ""}${glow ? " glow" : ""}`} style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}>
       <span className="ev-td" aria-hidden="true">
         <b>{Number(e.start.slice(8, 10))}</b>
         <small>{shortDay(e.start, today).split(" ")[1]}</small>

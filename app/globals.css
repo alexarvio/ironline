@@ -17961,6 +17961,9 @@ button.ci-hint { cursor: pointer; }
 .ev-r.lit .ev-now { animation-name: ev-lit-now; }
 @keyframes ev-lit-now { from { background-color: rgba(var(--rgb), 0.18); } to { background-color: transparent; } }
 @keyframes ev-lit { from { background-color: rgba(var(--rgb), 0.1); } to { background-color: transparent; } }
+/* Landed on from a notification (10 Oct): a glow in the type's colour that fades over a second and a half. */
+.ev-r.glow .ev-card, .ev-r.glow .ev-now, .ev-r.glow .ev-past { animation: ev-glow 1.6s ease-out 150ms both; }
+@keyframes ev-glow { 0% { box-shadow: 0 0 0 4px rgba(var(--rgb), 0.55), 0 0 24px 4px rgba(var(--rgb), 0.35); } 100% { box-shadow: 0 0 0 0 rgba(var(--rgb), 0), 0 0 0 0 rgba(var(--rgb), 0); } }
 .ev-r.lit .ev-card { animation-name: ev-lit-card; }
 @keyframes ev-lit-card { from { background-color: rgba(var(--rgb), 0.1); } to { background-color: #fff; } }
 

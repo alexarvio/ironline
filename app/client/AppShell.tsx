@@ -181,6 +181,14 @@ export default function AppShell({
     if (initialPush) window.history.replaceState(null, "", "/client");
   }, [initialPush]);
   const pushView: PushView = chosenPush !== undefined ? chosenPush : storedPush === "food" && foodDiary ? "food" : null;
+  // The event Events opens on, from a notification (10 Oct); cleared when the screen closes.
+  const [eventFocus, setEventFocus] = useState<number | null>(null);
+  const openEventsAt = events
+    ? (eventId?: number) => {
+        setEventFocus(eventId ?? null);
+        setPushView("events");
+      }
+    : null;
   // The call Meetings opens on, from a notification (10 Oct); cleared when the screen closes.
   const [meetingFocus, setMeetingFocus] = useState<number | null>(null);
   const openMeetingsAt = meetings
@@ -373,7 +381,7 @@ export default function AppShell({
       </div>
     ) : pushView === "events" && events ? (
       <div className="app-layer app-layer-push cn-screen">
-        <EventsScreen clientId={clientId} events={events} coachName={coachMessages.coachName.trim().split(/\s+/)[0] || "your coach"} today={checkIn.today} me={{ name: clientName.trim().split(/\s+/)[0] ?? "", photoPath: clientAvatarPath }} onBack={() => setPushView(null)} />
+        <EventsScreen clientId={clientId} events={events} coachName={coachMessages.coachName.trim().split(/\s+/)[0] || "your coach"} today={checkIn.today} me={{ name: clientName.trim().split(/\s+/)[0] ?? "", photoPath: clientAvatarPath }} focusId={eventFocus} onBack={() => (setEventFocus(null), setPushView(null))} />
       </div>
     ) : pushView === "settings" && settingsContent ? (
       <div className="app-layer app-layer-push cn-screen">
@@ -399,7 +407,7 @@ export default function AppShell({
         {/* The screen draws its own header (Back, the title, Mark all read; 9 Oct). A row opens the chat, an event, a call, or a tab. */}
         <BackProvider value={() => setPushView(null)}>
           <MessagesProvider value={openMessages}>
-            <EventsProvider value={events ? () => setPushView("events") : null}>
+            <EventsProvider value={openEventsAt}>
               <MeetingsProvider value={openMeetingsAt}>
                 <CheckInProvider value={openCheckIn}>
                   <NavigateProvider value={goToTab}>{notificationsContent}</NavigateProvider>
@@ -458,7 +466,7 @@ export default function AppShell({
                     }
                   >
                 <MeetingsProvider value={openMeetingsAt}>
-                <EventsProvider value={events ? () => setPushView("events") : null}>
+                <EventsProvider value={openEventsAt}>
                 <CoachProvider value={coachProfile ? () => setPushView("coach") : null}>
                     <NotificationsProvider value={() => setPushView("notifications")}>
                       <NavigateProvider value={goToTab}>
