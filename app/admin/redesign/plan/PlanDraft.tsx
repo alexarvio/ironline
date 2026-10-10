@@ -739,7 +739,7 @@ export function MonthRange({ from, to, onPick, chrome, planned, cursor, setCurso
   );
 }
 
-export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track: initialTrack, others, programs, onSave, onDelete, onDuplicate, onSend }: { clientId: number; firstName: string; today: string; thisWeek: string; phase: PlanPhaseRow | null; track?: PhaseTrack; others: PlanPhaseRow[]; programs: PlanProgramOption[]; onSave: (v: { name: string; track: PhaseTrack; start: string; end: string; programId: number | null }) => void; onDelete?: () => void; /** A copy of this phase as a new draft (a past one, to run again). */ onDuplicate?: () => void; onSend: (v: { name: string; track: PhaseTrack; start: string; end: string; now: boolean }) => void }) {
+export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track: initialTrack, lockTrack = false, others, programs, onSave, onDelete, onDuplicate, onSend }: { clientId: number; firstName: string; today: string; thisWeek: string; phase: PlanPhaseRow | null; track?: PhaseTrack; /** Opened from a track's own tab (10 Oct): the track is given, so no tiles to pick one. */ lockTrack?: boolean; others: PlanPhaseRow[]; programs: PlanProgramOption[]; onSave: (v: { name: string; track: PhaseTrack; start: string; end: string; programId: number | null }) => void; onDelete?: () => void; /** A copy of this phase as a new draft (a past one, to run again). */ onDuplicate?: () => void; onSend: (v: { name: string; track: PhaseTrack; start: string; end: string; now: boolean }) => void }) {
   const editing = !!phase;
   const [track, setTrack] = useState<PhaseTrack>(phase?.track ?? initialTrack ?? "nutrition");
   const [name, setName] = useState(phase?.name ?? "");
@@ -872,9 +872,9 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
             )}
           </span>
         </DialogTitle>
-        {!editing && <DialogDescription>Which track, what it is called, and when it runs. Nutrition and lifestyle phases can start on any day; training runs in weeks, Monday to Sunday.</DialogDescription>}
+        {!editing && <DialogDescription>{lockTrack ? (track === "training" ? "What it is called and when it runs: training goes in weeks, Monday to Sunday." : "What it is called and when it runs; it can start on any day.") : "Which track, what it is called, and when it runs. Nutrition and lifestyle phases can start on any day; training runs in weeks, Monday to Sunday."}</DialogDescription>}
       </DialogHeader>
-      {!editing && (
+      {!editing && !lockTrack && (
         <div className="rd-field">
           <span>Track</span>
           <div className="evs-types rq-tiles" role="radiogroup" aria-label="Track">

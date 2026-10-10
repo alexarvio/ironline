@@ -1634,6 +1634,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
             thisWeek={program.planCtx.thisWeek}
             phase={null}
             track="training"
+            lockTrack
             others={program.planCtx.phases}
             programs={program.planCtx.programs}
             onSave={(v) => {

@@ -659,6 +659,7 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
             thisWeek={plan.planCtx.thisWeek}
             phase={null}
             track="nutrition"
+            lockTrack
             others={plan.planCtx.phases}
             programs={plan.planCtx.programs}
             onSave={(v) => {

@@ -582,6 +582,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
             thisWeek={plan.planCtx.thisWeek}
             phase={null}
             track="lifestyle"
+            lockTrack
             others={plan.planCtx.phases}
             programs={plan.planCtx.programs}
             onSave={(v) => {
