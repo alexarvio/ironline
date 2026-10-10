@@ -103,14 +103,14 @@ export default function CheckInProgress({ history, today }: { history: CheckInHi
     writeStore("session", RANGE_KEY, r);
   };
 
-  // The metric changes from the chips only (28 Sep): the chart is for
-  // reading values with a finger, not for swiping between metrics.
+  // The chips pick a metric; so does a swipe across the chart (10 Oct): left
+  // for the next, right for the one before. A hold on the chart reads values.
   if (!series) return <p className="ci-empty">Nothing logged yet. Your first check-in shows up here.</p>;
 
   return (
     <div className="pg-view">
       <MetricChips tracked={tracked} active={index} onPick={pick} />
-      <MetricChartCard key={series.key} series={series} today={today} range={range} onRange={chooseRange} />
+      <MetricChartCard key={series.key} series={series} today={today} range={range} onRange={chooseRange} onSwipe={(d) => pick(index + d)} />
       <MetricHistory series={series} today={today} page={page} onPage={setPage} />
     </div>
   );
@@ -153,11 +153,14 @@ function MetricChartCard({
   today,
   range,
   onRange,
+  onSwipe,
 }: {
   series: CheckInSeries;
   today: string;
   range: Range;
   onRange: (r: Range) => void;
+  /** A swipe across the chart: +1 the next metric, -1 the one before. */
+  onSwipe: (dir: 1 | -1) => void;
 }) {
   const cat = { hex: series.colour, rgb: series.colourRgb };
   const end = dayNum(today);
@@ -194,7 +197,7 @@ function MetricChartCard({
           </button>
         </div>
       ) : (
-        <Chart key={shown} series={series} points={points} start={start} end={end} today={today} range={shown} cat={cat} />
+        <Chart key={shown} series={series} points={points} start={start} end={end} today={today} range={shown} cat={cat} onSwipe={onSwipe} />
       )}
     </section>
   );
@@ -208,6 +211,7 @@ function Chart({
   today,
   range,
   cat,
+  onSwipe,
 }: {
   series: CheckInSeries;
   points: CheckInSeries["points"];
@@ -216,6 +220,7 @@ function Chart({
   today: string;
   range: Range;
   cat: { hex: string; rgb: string };
+  onSwipe: (dir: 1 | -1) => void;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(311);
@@ -253,30 +258,72 @@ function Chart({
   const dense = (range === "3M" || range === "All") && points.length > 60;
 
   // The marker: the latest point until the mouse is over the chart or a
-  // finger is on it, then the logged point nearest it as it moves; back to
-  // the latest on release. A finger shows the value the moment it lands;
-  // once it moves, a sideways move scrubs (the page stays still) and an up
-  // or down move is the page scrolling (the marker lets go).
+  // finger is on it, then the logged point nearest it; back to the latest on
+  // release. Two gestures on the chart (10 Oct): a finger that lands and
+  // stays (a fifth of a second) scrubs, the marker following it; a finger
+  // that moves sideways straight away is a swipe, the chart slides with it
+  // and lets go into the next metric (left) or the one before (right). An
+  // up or down move is nothing: the chart owns its touches, so the page is
+  // not scrolling either way.
+  const HOLD_MS = 200;
+  const SWIPE_PX = 48;
   const latest = points.length - 1;
   const [sel, setSel] = useState(latest);
   const [scrubbing, setScrubbing] = useState(false);
+  const [shift, setShift] = useState(0);
   const dragging = useRef(false);
+  type Gesture = { x: number; y: number; mode: "wait" | "scrub" | "swipe" | "off"; timer: number };
+  const gesture = useRef<Gesture | null>(null);
   useEffect(() => {
     const el = box.current;
-    // While scrubbing the page doesn't scroll under the finger.
+    // While a finger is on the chart the page doesn't scroll under it.
     const stop = (e: TouchEvent) => {
-      if (dragging.current) e.preventDefault();
+      if (gesture.current) e.preventDefault();
     };
     el?.addEventListener("touchmove", stop, { passive: false });
-    return () => el?.removeEventListener("touchmove", stop);
+    return () => {
+      el?.removeEventListener("touchmove", stop);
+      if (gesture.current) clearTimeout(gesture.current.timer);
+    };
   }, []);
-  const startDrag = (el: HTMLElement, pointerId: number, clientX: number) => {
-    dragging.current = true;
-    setScrubbing(true);
+  const startDrag = (el: HTMLElement, pointerId: number, clientX: number, clientY: number) => {
     try {
       el.setPointerCapture(pointerId);
     } catch {}
+    if (gesture.current) clearTimeout(gesture.current.timer);
+    const g: Gesture = { x: clientX, y: clientY, mode: "wait", timer: 0 };
+    g.timer = window.setTimeout(() => {
+      if (gesture.current !== g || g.mode !== "wait") return;
+      g.mode = "scrub";
+      dragging.current = true;
+      setScrubbing(true);
+      navigator.vibrate?.(8);
+    }, HOLD_MS);
+    gesture.current = g;
+    // The value under the finger shows at once; the hold decides what the move does.
     select(nearest(clientX));
+  };
+  const moveDrag = (clientX: number, clientY: number, pointerType: string) => {
+    const g = gesture.current;
+    if (!g) {
+      if (pointerType !== "touch") select(nearest(clientX));
+      return;
+    }
+    if (g.mode === "scrub") return select(nearest(clientX));
+    if (g.mode === "swipe") return setShift(clientX - g.x);
+    if (g.mode !== "wait") return;
+    const dx = clientX - g.x;
+    const dy = clientY - g.y;
+    if (Math.hypot(dx, dy) < 10) return;
+    clearTimeout(g.timer);
+    if (Math.abs(dx) > Math.abs(dy)) {
+      g.mode = "swipe";
+      setSel(latest);
+      setShift(dx);
+    } else {
+      g.mode = "off";
+      setSel(latest);
+    }
   };
   const nearest = (clientX: number) => {
     const el = box.current;
@@ -300,10 +347,18 @@ function Chart({
       return i;
     });
   };
-  const release = () => {
+  const release = (clientX?: number) => {
+    const g = gesture.current;
+    gesture.current = null;
+    if (g) clearTimeout(g.timer);
     dragging.current = false;
     setScrubbing(false);
     setSel(latest);
+    setShift(0);
+    if (g?.mode === "swipe" && clientX != null) {
+      const dx = clientX - g.x;
+      if (Math.abs(dx) >= SWIPE_PX) onSwipe(dx < 0 ? 1 : -1);
+    }
   };
 
   const selP = points[sel] ?? points[latest];
@@ -328,13 +383,14 @@ function Chart({
         // it lands and follows every move; the chart owns its touches
         // (touch-action: none), since letting the page pan meant iOS took
         // the finger for scrolling and the drag stopped.
-        onPointerDown={(e) => startDrag(e.currentTarget, e.pointerId, e.clientX)}
-        onPointerMove={(e) => {
-          if (dragging.current || e.pointerType !== "touch") select(nearest(e.clientX));
+        style={shift ? { transform: `translateX(${Math.round(shift * 0.35)}px)`, opacity: Math.max(0.4, 1 - Math.abs(shift) / 400) } : undefined}
+        onPointerDown={(e) => startDrag(e.currentTarget, e.pointerId, e.clientX, e.clientY)}
+        onPointerMove={(e) => moveDrag(e.clientX, e.clientY, e.pointerType)}
+        onPointerUp={(e) => release(e.clientX)}
+        onPointerCancel={() => release()}
+        onPointerLeave={() => {
+          if (!gesture.current) release();
         }}
-        onPointerUp={release}
-        onPointerCancel={release}
-        onPointerLeave={release}
         onKeyDown={(e) => {
           if (e.key === "ArrowLeft") setSel((s) => Math.max(0, s - 1));
           else if (e.key === "ArrowRight") setSel((s) => Math.min(latest, s + 1));
@@ -343,7 +399,7 @@ function Chart({
           else return;
           e.preventDefault();
         }}
-        onBlur={release}
+        onBlur={() => release()}
       >
         {gridAt.map((v) => (
           <div key={v} className="pg-grid" style={{ top: y(v) }}>
