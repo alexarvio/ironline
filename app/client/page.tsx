@@ -1134,20 +1134,26 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
 function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
   const coachFirst = getCoachFirstName(CLIENT_ID);
   const videoReplies = listVideoReplies(CLIENT_ID);
+  // A call-notes notification from before 10 Oct carries no meeting: it is read as the latest call with a recap on or before its day.
+  const recapped = listMeetings(CLIENT_ID)
+    .filter((m) => (m.summary ?? "").trim())
+    .sort((x, y) => (x.date < y.date ? 1 : -1));
+  const meetingFor = (createdAt: string) => recapped.find((m) => m.date <= createdAt.slice(0, 10))?.id ?? null;
   const items: NotifView[] = getNotifications(CLIENT_ID, 300)
     .filter(isListed)
     .map((n) => {
       const { title, body } = titleAndBody(n.message, coachFirst);
+      const category = categorize(n);
       return {
         id: n.id,
-        category: categorize(n),
+        category,
         eventType: null,
         title,
         body,
         createdAt: n.created_at,
         read: n.read,
         actionTab: n.action_tab,
-        actionRef: n.action_ref,
+        actionRef: n.action_ref ?? (category === "meeting_notes" ? meetingFor(n.created_at) : null),
         videoReply: n.action_tab === "video" ? videoReplies.find((r) => r.id === n.action_ref) ?? null : null,
       };
     });
