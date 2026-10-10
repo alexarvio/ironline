@@ -219,7 +219,8 @@ function AddEventCard({ coachName, onOpen }: { coachName: string; onOpen: () => 
 
 type RowProps = { e: HomeEvent; today: string; coachName: string; coachPhoto: string | null; me: { name: string; photoPath: string | null } | null; lit: boolean; open: boolean; pending: boolean; refFn: (el: HTMLElement | null) => void; onToggle: () => void; onEdit: () => void; onDelete: () => void };
 
-const hasMore = (e: HomeEvent) => !!e.note || e.mine;
+// Every event opens, the coach's too, with Edit and Delete (10 Oct); a phase only when it has objectives to show.
+const hasMore = (e: HomeEvent) => (e.phase ? !!e.note : true);
 // A phase on the timeline (9 Oct): the track's colour, as the plan draws it, and its own icon and label.
 const PHASES = {
   training: { label: "Training phase", color: "#4c42a8", rgb: "76,66,168", icon: "M6.5 8v8M17.5 8v8M4 10v4M20 10v4M6.5 12h11", fill: undefined as string | undefined },
@@ -244,8 +245,8 @@ function RowMore({ e, open, coachName, pending, onEdit, onDelete }: Pick<RowProp
       <div className="ev-x-clip">
         <div className="ev-x-in">
           {e.note && <p className="ev-x-note">{e.note}</p>}
-          <span className="ev-x-by">{e.mine ? `Added by you · ${coachName} can see it` : `Set by ${coachName}`}</span>
-          {e.mine && (
+          <span className="ev-x-by">{e.mine ? `Added by you · ${coachName} can see it` : e.phase ? `Set by ${coachName}` : `Set by ${coachName} · you can change it`}</span>
+          {!e.phase && (
             <div className="ev-x-actions">
               <button type="button" className="ev-btn" onClick={onEdit} disabled={pending || !open} tabIndex={open ? 0 : -1}>
                 Edit
