@@ -179,7 +179,7 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
 
             {total === 0 && <p className="ev-none">Nothing logged yet.</p>}
 
-            {past.length > 0 && <div className="ev-sec ev-sec-past">Earlier</div>}
+            {past.length > 0 && <div className="ev-sec ev-sec-past">Past</div>}
             {past.map((e) => (
               <PastRow key={e.id} {...rowProps(e)} />
             ))}
@@ -221,11 +221,12 @@ type RowProps = { e: HomeEvent; today: string; coachName: string; coachPhoto: st
 
 // Every event opens, the coach's too, with Edit and Delete (10 Oct); a phase only when it has objectives to show.
 const hasMore = (e: HomeEvent) => (e.phase ? !!e.note : true);
-// A phase on the timeline (9 Oct): the track's colour, as the plan draws it, and its own icon and label.
+// A phase on the timeline (9 Oct): the track's colour, as the plan draws it. One flag for every phase (10 Oct), so a
+// phase reads as a phase at a glance, the colour saying which track; the event types keep their own icons.
 const PHASES = {
-  training: { label: "Training phase", color: "#4c42a8", rgb: "76,66,168", icon: "M6.5 8v8M17.5 8v8M4 10v4M20 10v4M6.5 12h11", fill: undefined as string | undefined },
-  nutrition: { label: "Nutrition phase", color: "#1f7a4d", rgb: "31,122,77", icon: "M5 19c0-8 6-14 14-14 0 8-6 14-14 14zM5 19l7-7", fill: undefined as string | undefined },
-  lifestyle: { label: "Lifestyle phase", color: "#a8761f", rgb: "168,118,31", icon: "M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z", fill: undefined as string | undefined },
+  training: { label: "Training phase", color: "#4c42a8", rgb: "76,66,168", icon: "M5 21V4M5 4h11.5l-2.5 4.5 2.5 4.5H5", fill: undefined as string | undefined },
+  nutrition: { label: "Nutrition phase", color: "#1f7a4d", rgb: "31,122,77", icon: "M5 21V4M5 4h11.5l-2.5 4.5 2.5 4.5H5", fill: undefined as string | undefined },
+  lifestyle: { label: "Lifestyle phase", color: "#a8761f", rgb: "168,118,31", icon: "M5 21V4M5 4h11.5l-2.5 4.5 2.5 4.5H5", fill: undefined as string | undefined },
 };
 const chromeOf = (e: HomeEvent) => (e.phase ? PHASES[e.phase] : eventTypeOf(e.kind));
 /** The face on the row: the coach's on theirs; on what the client added, their own photo when they set one in Settings, else nothing. */
