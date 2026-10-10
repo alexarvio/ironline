@@ -912,6 +912,20 @@ type AssignmentCustomValue = {
 // A simple message thread between one client and their coach — no threads,
 // no attachments, just text in order. "sender" is which side wrote it, so
 // the UI can align/color bubbles without a separate participants table.
+/** A call the client asked for (9 Oct): what about and when suits them, in
+    their words. Open until the coach books a call (booked, with the
+    meeting) or lets it go (dismissed), or the client withdraws it. */
+export type MeetingRequest = {
+  id: number;
+  client_id: number;
+  about: string;
+  when_suits: string | null;
+  created_at: string;
+  status: "open" | "booked" | "dismissed" | "withdrawn";
+  meeting_id?: number | null;
+  settled_at?: string | null;
+};
+
 type ChatMessage = {
   id: number;
   client_id: number;
@@ -1141,6 +1155,7 @@ export type Data = {
   client_preferences: ClientPreferences[];
   client_phases: ClientPhase[];
   client_events: ClientEvent[];
+  meeting_requests?: MeetingRequest[];
   event_categories: EventCategory[];
   calorie_logs: CalorieLog[];
   food_entries: FoodEntry[];
@@ -1185,6 +1200,7 @@ function emptyData(): Data {
     client_preferences: [],
     client_phases: [],
     client_events: [],
+    meeting_requests: [],
     event_categories: [],
     calorie_logs: [],
     food_entries: [],

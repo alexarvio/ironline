@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
+import { requestMeetingAction, withdrawMeetingRequestAction } from "../../lib/actions";
 import type React from "react";
 import { ChevronLeftIcon } from "../../components/icons";
 import { meetingTypeOf, type MeetingTypeId } from "../../lib/meetingTypes";
@@ -33,13 +35,14 @@ export type ClientMeetingView = {
   /** Marked a no-show by the coach. */
   missed: boolean;
 };
-export type MeetingsProps = { upcoming: ClientMeetingView[]; past: ClientMeetingView[] };
+export type MeetingRequestView = { id: number; about: string; whenSuits: string | null; createdAt: string };
+export type MeetingsProps = { upcoming: ClientMeetingView[]; past: ClientMeetingView[]; request?: MeetingRequestView | null };
 
 const PAGE = 20;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 export const startMsOf = (m: ClientMeetingView) => (m.startIso ? Date.parse(m.startIso) : Date.parse(`${m.date}T12:00:00`));
 
-export default function MeetingsScreen({ upcoming, past, coachName, onBack }: MeetingsProps & { coachName: string; onBack: () => void }) {
+export default function MeetingsScreen({ upcoming, past, request = null, clientId = 0, coachName, onBack }: MeetingsProps & { clientId?: number; coachName: string; onBack: () => void }) {
   const coachFirst = coachName.trim().split(/\s+/)[0] || "your coach";
   // The phone's clock, once on the phone and then every half minute, so the
   // Join window opens and closes on its own.
@@ -54,6 +57,23 @@ export default function MeetingsScreen({ upcoming, past, coachName, onBack }: Me
     };
   }, []);
   const [detail, setDetail] = useState<ClientMeetingView | null>(null);
+  // Asking for a call (9 Oct): the sheet, and the ask as it stands once sent (the server's, or the one just made).
+  const [asking, setAsking] = useState(false);
+  const [ask, setAsk] = useState<MeetingRequestView | null>(request);
+  const [askKey, setAskKey] = useState(request?.id ?? null);
+  if ((request?.id ?? null) !== askKey) {
+    setAskKey(request?.id ?? null);
+    setAsk(request);
+  }
+  const [pending, startTransition] = useTransition();
+  const withdraw = () => {
+    if (!ask) return;
+    const id = ask.id;
+    setAsk(null);
+    startTransition(async () => {
+      await withdrawMeetingRequestAction(clientId, id);
+    });
+  };
   const [shown, setShown] = useState(PAGE);
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -76,7 +96,26 @@ export default function MeetingsScreen({ upcoming, past, coachName, onBack }: Me
       </header>
       <main className="cn-body">
         <div className="mt-scroll">
-          <NextCallCard m={next ?? null} now={now} coachFirst={coachFirst} onOpen={() => next && setDetail(next)} />
+          <NextCallCard m={next ?? null} now={now} coachFirst={coachFirst} onOpen={() => next && setDetail(next)} onAsk={ask ? null : () => setAsking(true)} />
+          {ask && (
+            <section className="mt-ask" aria-label="Your request">
+              <span className="mt-ask-text">
+                <b>You asked {coachFirst} for a call</b>
+                <small>
+                  {ask.about}
+                  {ask.whenSuits ? ` · ${ask.whenSuits}` : ""}
+                </small>
+              </span>
+              <button type="button" className="mt-ask-x" onClick={withdraw} disabled={pending}>
+                Withdraw
+              </button>
+            </section>
+          )}
+          {next && !ask && (
+            <button type="button" className="mt-ask-link" onClick={() => setAsking(true)}>
+              Need another call? Ask {coachFirst}
+            </button>
+          )}
           {later.length > 0 && (
             <div className="mt-more">
               <button type="button" className="mt-more-btn" onClick={() => setMoreOpen((o) => !o)} aria-expanded={moreOpen}>
@@ -125,18 +164,79 @@ export default function MeetingsScreen({ upcoming, past, coachName, onBack }: Me
       </main>
       {/* Opened by a tap, so the clock is set by then. */}
       {detail && now != null && <MeetingDetail m={detail} now={now} coachFirst={coachFirst} onClose={() => setDetail(null)} />}
+      {asking && <AskSheet clientId={clientId} coachFirst={coachFirst} onClose={() => setAsking(false)} onSent={(r) => (setAsk(r), setAsking(false))} />}
     </>
+  );
+}
+
+// ---- Asking for a call (9 Oct): what it is about, and when suits, in the
+// client's words. Finlay gets it on Home and as a push, books the call, and
+// it lands on top here like any other.
+
+function AskSheet({ clientId, coachFirst, onClose, onSent }: { clientId: number; coachFirst: string; onClose: () => void; onSent: (r: MeetingRequestView) => void }) {
+  const [about, setAbout] = useState("");
+  const [when, setWhen] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  const ok = about.trim().length > 0;
+  const send = () => {
+    if (!ok || pending) return;
+    startTransition(async () => {
+      const err = await requestMeetingAction(clientId, about, when);
+      if (err) return setError(err);
+      onSent({ id: -Date.now(), about: about.trim(), whenSuits: when.trim() || null, createdAt: new Date().toISOString() });
+    });
+  };
+  return createPortal(
+    <div className="ev-scrim" role="presentation" onClick={onClose}>
+      <div className="ev-sheet mt-asksheet" role="dialog" aria-modal="true" aria-labelledby="mt-ask-title" onClick={(e) => e.stopPropagation()}>
+        <span className="ev-grab" aria-hidden="true" />
+        <div className="evs-head">
+          <h2 id="mt-ask-title">Ask {coachFirst} for a call</h2>
+        </div>
+        <label className="evs-field">
+          <span className="evs-label">What about</span>
+          <span className="evs-title ring" style={{ "--c": "#2f6fd6" } as React.CSSProperties}>
+            <input value={about} onChange={(e) => setAbout(e.target.value)} placeholder="The next phase, my knee, the plan for the holiday" maxLength={140} autoFocus />
+          </span>
+        </label>
+        <label className="evs-field">
+          <span className="evs-label">When suits you</span>
+          <span className="evs-note">
+            <textarea value={when} onChange={(e) => setWhen(e.target.value)} placeholder="Weekday evenings, or Saturday morning" maxLength={140} />
+          </span>
+        </label>
+        {error && <p className="mt-ask-err">{error}</p>}
+        <div className="evs-savebar">
+          <button type="button" className="evs-save" onClick={send} disabled={!ok || pending} aria-disabled={!ok || pending}>
+            {pending ? "Sending…" : "Send to " + coachFirst}
+          </button>
+          <small className="mt-ask-hint">{coachFirst} picks the time and books it. It shows up here.</small>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 
 // ---- The next call: the date tile, when, and Join once it is on.
 
-function NextCallCard({ m, now, coachFirst, onOpen }: { m: ClientMeetingView | null; now: number | null; coachFirst: string; onOpen: () => void }) {
+function NextCallCard({ m, now, coachFirst, onOpen, onAsk }: { m: ClientMeetingView | null; now: number | null; coachFirst: string; onOpen: () => void; onAsk: (() => void) | null }) {
   if (!m) {
     return (
       <section className="mt-next empty" aria-label="Next call">
         <b>Nothing booked yet</b>
         <small>When {coachFirst} books a call, it shows here.</small>
+        {onAsk && (
+          <button type="button" className="mt-ask-btn" onClick={onAsk}>
+            Ask {coachFirst} for a call
+          </button>
+        )}
       </section>
     );
   }

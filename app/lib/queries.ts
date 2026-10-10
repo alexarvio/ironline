@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, mergeDuplicateMetricDefinitions, CardioEntry } from "./db";
-import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientEvent, ClientGym, ClientPhase, CoachProfile, CoachBusiness, CoachInvoicing, CoachPayments, CoachSettings, Data, EventCategory, InvoiceLine, InvoiceParty, KeptActivity, MetricAskAt, PhaseTrack, SessionAnswer, VideoRequest, WorkoutQuestion } from "./db";
+import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientEvent, ClientGym, ClientPhase, CoachProfile, CoachBusiness, CoachInvoicing, CoachPayments, CoachSettings, Data, EventCategory, InvoiceLine, InvoiceParty, KeptActivity, MetricAskAt, PhaseTrack, SessionAnswer, VideoRequest, WorkoutQuestion, MeetingRequest } from "./db";
 import type { CoachProfileFields, CoachProfileView } from "./coachProfileView";
 import { getCatalogFood, searchCatalog, type CatalogFood } from "./foods/catalog";
 import type { OffProduct } from "./foods/openfoodfacts";
@@ -2733,6 +2733,18 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
     });
   }
 
+  // ---- Calls the client asked for (9 Oct) ----
+  for (const r of data.meeting_requests ?? []) {
+    if (r.status !== "open") continue;
+    add(r.client_id, {
+      id: `meeting-request-${r.id}`,
+      category: "notes",
+      at: stampMs(r.created_at),
+      tab: "meetings",
+      text: `asked for a call: “${r.about}”${r.when_suits ? ` · ${r.when_suits}` : ""}`,
+    });
+  }
+
   // ---- Events the client added from their Home (7 Oct) ----
   // A trip, an injury, the day they started something: on the Plan tab's
   // Events grid at once, and here so the coach hears of it.
@@ -4935,6 +4947,47 @@ export type MeetingNote = {
 };
 
 export const DEFAULT_MEETING_DURATION = 60;
+
+// ---- Calls the client asks for (9 Oct) --------------------------------------
+
+export type MeetingRequestView = { id: number; about: string; whenSuits: string | null; createdAt: string };
+
+const requestView = (r: MeetingRequest): MeetingRequestView => ({ id: r.id, about: r.about, whenSuits: r.when_suits, createdAt: r.created_at });
+
+/** The client's open request, if any: one at a time. */
+export function openMeetingRequest(clientId: number): MeetingRequestView | null {
+  const r = (getData().meeting_requests ?? []).filter((x) => x.client_id === clientId && x.status === "open").sort((a, b) => (a.created_at < b.created_at ? 1 : -1))[0];
+  return r ? requestView(r) : null;
+}
+
+/** The client asks for a call. A second ask replaces an open one. */
+export function requestMeeting(clientId: number, about: string, whenSuits: string | null): MeetingRequestView {
+  const data = getData();
+  data.meeting_requests ??= [];
+  const now = new Date().toISOString();
+  for (const r of data.meeting_requests) if (r.client_id === clientId && r.status === "open") (r.status = "withdrawn"), (r.settled_at = now);
+  const row: MeetingRequest = { id: allocId("meeting_requests"), client_id: clientId, about: about.trim(), when_suits: whenSuits?.trim() || null, created_at: now, status: "open" };
+  data.meeting_requests.push(row);
+  persist();
+  return requestView(row);
+}
+
+/** The request is done with: booked (with the call), dismissed by the coach, or withdrawn by the client. */
+export function settleMeetingRequest(clientId: number, id: number, status: "booked" | "dismissed" | "withdrawn", meetingId: number | null = null) {
+  const r = (getData().meeting_requests ?? []).find((x) => x.id === id && x.client_id === clientId);
+  if (!r || r.status !== "open") return false;
+  r.status = status;
+  r.meeting_id = meetingId;
+  r.settled_at = new Date().toISOString();
+  persist();
+  return true;
+}
+
+/** The coach booked a call: the client's open request, if any, is answered by it. */
+export function settleOpenMeetingRequest(clientId: number, meetingId: number) {
+  const r = openMeetingRequest(clientId);
+  if (r) settleMeetingRequest(clientId, r.id, "booked", meetingId);
+}
 
 export function listMeetings(clientId: number): Meeting[] {
   return getData()
@@ -9705,6 +9758,7 @@ export function getMeetingsWorkspaceData(clientId: number) {
   const past = mine.filter((m) => !(m.status === "scheduled" && m.date >= today));
   const lastLink = [...mine].sort((a, b) => (a.date < b.date ? 1 : -1)).find((m) => m.link)?.link ?? null;
   return {
+    request: openMeetingRequest(clientId),
     upcoming: scheduled[0] ? view(scheduled[0]) : null,
     alsoScheduled: scheduled.slice(1).map(view),
     past: past.map(view),

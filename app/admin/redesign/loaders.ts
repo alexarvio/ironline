@@ -607,6 +607,7 @@ export function loadMeetings(clientId: number): DraftMeetings {
   const withGoals = (m: (typeof data.past)[number]): DraftMeeting => ({ ...m, goals: goals.filter((g) => g.meetingId === m.id) });
   return {
     today,
+    request: data.request,
     upcoming: data.upcoming ? withGoals(data.upcoming) : null,
     alsoScheduled: data.alsoScheduled.map(withGoals),
     past: data.past.map(withGoals),

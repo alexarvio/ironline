@@ -7,6 +7,8 @@ import { getData, persist, type CoachBusiness, type CoachInvoicing, type MetricA
 import { ASK_AT } from "./metricAskAt";
 import { createCoachAccount, invoiceCheckout, onboardingLink, stripeConfigured } from "./stripe";
 import { canPayOnline } from "./payments";
+import { sendPushInBackground } from "./push";
+import { coachIdOfClient as coachUserIdOf } from "./tenancy";
 import { appUrl } from "./passwordReset";
 import { lookupOpenFoodFacts, searchOpenFoodFacts } from "./foods/openfoodfacts";
 import { revalidatePath } from "next/cache";
@@ -45,6 +47,10 @@ import {
   meetingIdForNote,
 } from "./tenancy";
 import {
+  listMeetings,
+  requestMeeting,
+  settleMeetingRequest,
+  settleOpenMeetingRequest,
   getClientIdForCardio,
   setCardioDone,
   setCardioSwap,
@@ -1884,6 +1890,9 @@ export async function addMeetingAction(formData: FormData) {
   const count = Math.min(26, Math.max(2, Math.round(Number(formData.get("count")) || 0)));
   if (repeatWeeks) addMeetingSeries(clientId, date, repeatWeeks, count, time, topic, duration, link || null, tz);
   else addMeeting(clientId, date, time, topic, duration, link || null, null, tz, meetingType);
+  // A call the client asked for is answered by whatever gets booked next (9 Oct).
+  const booked = listMeetings(clientId).filter((m) => m.status === "scheduled").sort((a, b) => b.id - a.id)[0];
+  settleOpenMeetingRequest(clientId, booked?.id ?? 0);
   const every = repeatWeeks === 1 ? "weekly" : `every-${repeatWeeks}-weeks`;
   logCoachActivity(clientId, repeatWeeks ? `Scheduled ${count} ${every} meetings${topic ? `: "${topic}"` : ""}` : topic ? `Scheduled a meeting: "${topic}"` : "Scheduled a new meeting", {
     kind: "general",
@@ -1891,6 +1900,40 @@ export async function addMeetingAction(formData: FormData) {
     actionTab: "home",
     actionLabel: "View schedule",
   });
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+// ---- Calls the client asks for (9 Oct) --------------------------------------
+
+/** The client asks for a call: what about, and when suits. The coach hears of it on Home and by push. */
+export async function requestMeetingAction(clientId: number, about: string, whenSuits: string): Promise<string | null> {
+  await requireClientAccess(Number(clientId));
+  const topic = about.trim();
+  if (!topic) return "Say what the call is about.";
+  if (topic.length > 140) return "Keep it to a line.";
+  requestMeeting(Number(clientId), topic, whenSuits.trim().slice(0, 140) || null);
+  const client = getClient(Number(clientId));
+  const coachId = coachUserIdOf(Number(clientId));
+  if (coachId) sendPushInBackground(coachId, { title: `${(client?.name ?? "A client").trim().split(/\s+/)[0]} asked for a call`, body: topic, url: `/admin/redesign/meetings?client=${clientId}`, tag: `meeting-request:${clientId}` });
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  return null;
+}
+
+/** The client takes the ask back. */
+export async function withdrawMeetingRequestAction(clientId: number, id: number) {
+  await requireClientAccess(Number(clientId));
+  settleMeetingRequest(Number(clientId), Number(id), "withdrawn");
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+/** The coach lets the ask go without booking. */
+export async function dismissMeetingRequestAction(formData: FormData) {
+  const clientId = Number(formData.get("clientId"));
+  if (!(await coachForClient(clientId))) return;
+  settleMeetingRequest(clientId, Number(formData.get("id")), "dismissed");
   revalidatePath("/admin");
   revalidatePath("/client");
 }

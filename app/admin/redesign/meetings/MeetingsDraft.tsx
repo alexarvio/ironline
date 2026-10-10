@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { addEventFromMeetingNoteAction, addMeetingAction, completeMeetingAction, removeMeetingAction, sendChatMessageAction, updateMeetingAction } from "../../../lib/actions";
+import { addEventFromMeetingNoteAction, addMeetingAction, completeMeetingAction, dismissMeetingRequestAction, removeMeetingAction, sendChatMessageAction, updateMeetingAction } from "../../../lib/actions";
 import { MEETING_TYPES, type MeetingTypeId } from "../../../lib/meetingTypes";
 import { agreedPoints } from "../../../lib/meetingDates";
 import type React from "react";
@@ -60,6 +60,8 @@ export type DraftMeeting = {
 export type DraftDot = { date: string; time: string; durationMinutes: number; name: string; topic: string; mine: boolean; completed: boolean };
 export type DraftMeetings = {
   today: string;
+  /** The call the client asked for (9 Oct), until it is booked or let go. */
+  request?: { id: number; about: string; whenSuits: string | null; createdAt: string } | null;
   upcoming: DraftMeeting | null;
   alsoScheduled: DraftMeeting[];
   past: DraftMeeting[];
@@ -116,7 +118,7 @@ const providerOf = (link: string) => {
   }
 };
 
-type Dlg = { kind: "message"; label: string } | { kind: "schedule"; date: string; reschedule: DraftMeeting | null } | { kind: "link"; meetingId: number } | { kind: "complete"; meetingId: number } | { kind: "delete"; meetingId: number } | null;
+type Dlg = { kind: "message"; label: string } | { kind: "schedule"; date: string; reschedule: DraftMeeting | null; topic?: string } | { kind: "link"; meetingId: number } | { kind: "complete"; meetingId: number } | { kind: "delete"; meetingId: number } | null;
 
 export default function MeetingsDraft({ clientId, firstName, plan }: { clientId: number; firstName: string; plan: DraftMeetings }) {
   const today = plan.today;
@@ -165,6 +167,7 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
   const past = meetings.filter((m) => !(m.status === "scheduled" && m.date >= today)).sort((a, b) => (a.date < b.date ? 1 : -1));
   const [openPast, setOpenPast] = useState<number | null>(past[0]?.id ?? null);
   const [selectedDay, setSelectedDay] = useState(upcoming?.date ?? today);
+  const [hidRequest, setHidRequest] = useState(false);
   // The month's dots: what came from the server, with what was done here on top.
   const dots: DraftDot[] = [...plan.dots.filter((d) => !d.mine || meetings.some((m) => m.date === d.date && m.time === d.time && m.status !== "cancelled")), ...meetings.filter((m) => m.id < 0 && m.status !== "cancelled").map((m) => ({ date: m.date, time: m.time, durationMinutes: m.durationMinutes, name: firstName, topic: m.topic, mine: true, completed: m.status === "completed" }))];
 
@@ -197,6 +200,30 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
 
       <div className="rt-cols">
         <div className="rt-main">
+          {/* ---- A call the client asked for (9 Oct): on top until it is booked (which answers it) or let go. */}
+          {plan.request && !hidRequest && (
+            <section className="rt-ask" aria-label="Call requested">
+              <span className="rt-ask-text">
+                <b>{firstName} asked for a call</b>
+                <span>
+                  “{plan.request.about}”{plan.request.whenSuits ? ` · ${plan.request.whenSuits}` : ""}
+                </span>
+              </span>
+              <button type="button" className="rd-btn primary" onClick={() => setDlg({ kind: "schedule", date: selectedDay, reschedule: null, topic: plan.request!.about })}>
+                <PlusIcon /> Book it
+              </button>
+              <button
+                type="button"
+                className="rd-btn"
+                onClick={() => {
+                  setHidRequest(true);
+                  act(() => dismissMeetingRequestAction(fd({ clientId, id: plan.request!.id })), "Let go. " + firstName + " sees nothing booked.");
+                }}
+              >
+                Let it go
+              </button>
+            </section>
+          )}
           {/* ---- The next call. Nothing booked: no card (the calendar is where one gets booked). */}
           {upcoming && (
           <section className="rd-session open rn-card">
@@ -466,6 +493,7 @@ export default function MeetingsDraft({ clientId, firstName, plan }: { clientId:
           <ScheduleDialog
             date={dlg.date}
             reschedule={dlg.reschedule}
+            initialTopic={dlg.topic ?? ""}
             lastLink={plan.lastLink}
             coachTz={plan.coachTz ?? null}
             dots={dots}
@@ -706,7 +734,7 @@ function MiniCalendar({ today, selected, dots, onPick }: { today: string; select
 }
 
 /** Booking a call, or moving one: the day, a 24-hour time, how long, what about, the way in. */
-function ScheduleDialog({ date: initialDate, reschedule, lastLink, coachTz, dots, today, onSave }: { date: string; reschedule: DraftMeeting | null; lastLink: string | null; coachTz: string | null; dots: DraftDot[]; today: string; onSave: (v: { date: string; time: string; tz: string; durationMinutes: number; topic: string; link: string | null; repeatWeeks: number; count: number; meetingType: MeetingTypeId }) => void }) {
+function ScheduleDialog({ date: initialDate, reschedule, initialTopic = "", lastLink, coachTz, dots, today, onSave }: { date: string; reschedule: DraftMeeting | null; initialTopic?: string; lastLink: string | null; coachTz: string | null; dots: DraftDot[]; today: string; onSave: (v: { date: string; time: string; tz: string; durationMinutes: number; topic: string; link: string | null; repeatWeeks: number; count: number; meetingType: MeetingTypeId }) => void }) {
   const [date, setDate] = useState(reschedule?.date ?? initialDate);
   const [time, setTime] = useState(reschedule?.time ?? "");
   // The time is in the coach's own timezone unless they pick another; a
@@ -719,7 +747,7 @@ function ScheduleDialog({ date: initialDate, reschedule, lastLink, coachTz, dots
   const [duration, setDuration] = useState(reschedule?.durationMinutes ?? 30);
   // What kind of call (9 Oct): the client's Meetings screen colours it by this.
   const [mtype, setMtype] = useState<MeetingTypeId>("checkin");
-  const [topic, setTopic] = useState(reschedule?.topic ?? "");
+  const [topic, setTopic] = useState(reschedule?.topic ?? initialTopic);
   const [link, setLink] = useState(reschedule?.link ?? "");
   // A new call can repeat: every 1, 2 or 4 weeks, this many times (0: once).
   const [repeatWeeks, setRepeatWeeks] = useState(0);
