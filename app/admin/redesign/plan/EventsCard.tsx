@@ -108,9 +108,11 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
     const b = daysBetween(first, e.end) + 1;
     return { left: (Math.max(0, a) / totalDays) * 100, width: (Math.max(0.6, Math.min(totalDays, b) - Math.max(0, a)) / totalDays) * 100, visible: b > 0 && a < totalDays };
   };
-  // Overlapping events stack into lanes; a pin's label needs room too.
+  // One row a category (10 Oct), only for the categories with something on the
+  // grid, in the coach's category order; an event with no category rows last
+  // as "Event". Within a row, overlapping events stack into lanes; a pin's
+  // label needs room too.
   const onGrid = events.filter((e) => place(e).visible).sort((a, b) => (a.start < b.start ? -1 : 1));
-  const lanes: PlanEvent[][] = [];
   const laneOf = new Map<number, number>();
   // A pin's label needs room to its right: measured against the grid, so
   // the reach is what the label takes on this screen, not a guess.
@@ -126,16 +128,23 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
   const dayPx = gridPx > 0 ? gridPx / totalDays : 9;
   const labelDays = (title: string) => Math.ceil((title.length * 6.6 + 28) / dayPx);
   const reach = (e: PlanEvent) => (e.start === e.end ? addDays(e.start, labelDays(e.title)) : e.end);
-  onGrid.forEach((e) => {
-    let li = lanes.findIndex((l) => l.every((q) => reach(q) < e.start || q.start > reach(e)));
-    if (li < 0) {
-      lanes.push([]);
-      li = lanes.length - 1;
-    }
-    lanes[li].push(e);
-    laneOf.set(e.id, li);
-  });
-  const laneCount = Math.max(1, lanes.length);
+  const order = [...cats.map((c) => c.id), null];
+  const groups = order
+    .map((id) => ({ id, chrome: chromeOf(cats, id), events: onGrid.filter((e) => (e.kind && cats.some((c) => c.id === e.kind) ? e.kind : null) === id) }))
+    .filter((g) => g.events.length > 0)
+    .map((g) => {
+      const lanes: PlanEvent[][] = [];
+      g.events.forEach((e) => {
+        let li = lanes.findIndex((l) => l.every((q) => reach(q) < e.start || q.start > reach(e)));
+        if (li < 0) {
+          lanes.push([]);
+          li = lanes.length - 1;
+        }
+        lanes[li].push(e);
+        laneOf.set(e.id, li);
+      });
+      return { ...g, laneCount: Math.max(1, lanes.length) };
+    });
 
   // The log: every event, newest first; past ones are what slid off the grid.
   const sorted = [...events].sort((a, b) => (a.start > b.start ? -1 : 1));
@@ -197,64 +206,62 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
                 </div>
               </div>
             </div>
-            <div className="rq-tl-row">
-              <div className="rq-tl-label">
-                <span className="rq-track" style={{ background: "#eceff3", color: "#5b6474" }}>
-                  Life
-                </span>
-              </div>
-              <div className="rq-tl-clip">
-                <div ref={lanesRef} className="rq-tl-grid rq-lanes rq-evlanes" style={{ ...cols, gridTemplateRows: `repeat(${laneCount}, 40px)` }}>
-                  {weeks.map((w, i) => (
-                    <span key={w} className="rq-cell" style={{ gridColumn: i + 1, gridRow: `1 / span ${laneCount}` }} />
-                  ))}
-                  {onGrid.length === 0 && (
+            {groups.length === 0 && (
+              <div className="rq-tl-row">
+                <div className="rq-tl-label" />
+                <div className="rq-tl-clip">
+                  <div ref={lanesRef} className="rq-tl-grid rq-lanes rq-evlanes" style={{ ...cols, gridTemplateRows: "repeat(1, 40px)" }}>
+                    {weeks.map((w, i) => (
+                      <span key={w} className="rq-cell" style={{ gridColumn: i + 1, gridRow: "1 / span 1" }} />
+                    ))}
                     <button type="button" className="rq-empty" style={{ gridColumn: `${nowIdx + 1} / span ${Math.min(count - nowIdx, 8)}`, gridRow: 1 }} onClick={() => setDlg({ event: null })}>
                       Nothing on the horizon <b>+ add</b>
                     </button>
-                  )}
-                  {onGrid.map((e) => {
-                    const p = place(e);
-                    const k = chromeOf(cats, e.kind);
-                    const single = e.start === e.end;
-                    const past = e.end < today;
-                    const lane = laneOf.get(e.id) ?? 0;
-                    return single ? (
-                      <button
-                        key={e.id}
-                        type="button"
-                        className={`rq-pin${past ? " past" : ""}`}
-                        style={{ left: `${p.left}%`, top: `${6 + lane * 40}px`, color: k.ink }}
-                        onClick={() => setDlg({ event: e })}
-                        title={`${e.title} · ${longDate(e.start)} · ${standing(today, e)}`}
-                      >
-                        <i style={{ background: k.ink }} />
-                        <span className="rq-pin-text">
-                          <b>{e.title}</b>
-                          <small>
-                            {shortDate(e.start)} · {standing(today, e)}
-                          </small>
-                        </span>
-                      </button>
-                    ) : (
-                      <button
-                        key={e.id}
-                        type="button"
-                        className={`rq-evbar${past ? " past" : ""}`}
-                        style={{ left: `${p.left}%`, width: `${p.width}%`, top: `${6 + lane * 40}px`, background: k.tint, color: k.ink, borderColor: k.line }}
-                        onClick={() => setDlg({ event: e })}
-                        title={`${e.title} · ${longDate(e.start)} → ${longDate(e.end)} · ${standing(today, e)}`}
-                      >
-                        <b>{e.title}</b>
-                        <small>
-                          {daysBetween(e.start, e.end) + 1} days · {standing(today, e)}
-                        </small>
-                      </button>
-                    );
-                  })}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+            {groups.map((g, gi) => (
+              <div key={g.id ?? "none"} className="rq-tl-row">
+                <div className="rq-tl-label">
+                  <span className="rq-track" style={{ background: g.chrome.tint, color: g.chrome.ink }}>
+                    {g.chrome.label}
+                  </span>
+                </div>
+                <div className="rq-tl-clip">
+                  <div ref={gi === 0 ? lanesRef : undefined} className="rq-tl-grid rq-lanes rq-evlanes" style={{ ...cols, gridTemplateRows: `repeat(${g.laneCount}, 40px)` }}>
+                    {weeks.map((w, i) => (
+                      <span key={w} className="rq-cell" style={{ gridColumn: i + 1, gridRow: `1 / span ${g.laneCount}` }} />
+                    ))}
+                    {g.events.map((e) => {
+                      const p = place(e);
+                      const k = chromeOf(cats, e.kind);
+                      const single = e.start === e.end;
+                      const past = e.end < today;
+                      const lane = laneOf.get(e.id) ?? 0;
+                      return single ? (
+                        <button key={e.id} type="button" className={`rq-pin${past ? " past" : ""}`} style={{ left: `${p.left}%`, top: `${6 + lane * 40}px`, color: k.ink }} onClick={() => setDlg({ event: e })} title={`${e.title} · ${longDate(e.start)} · ${standing(today, e)}`}>
+                          <i style={{ background: k.ink }} />
+                          <span className="rq-pin-text">
+                            <b>{e.title}</b>
+                            <small>
+                              {shortDate(e.start)} · {standing(today, e)}
+                            </small>
+                          </span>
+                        </button>
+                      ) : (
+                        <button key={e.id} type="button" className={`rq-evbar${past ? " past" : ""}`} style={{ left: `${p.left}%`, width: `${p.width}%`, top: `${6 + lane * 40}px`, background: k.tint, color: k.ink, borderColor: k.line }} onClick={() => setDlg({ event: e })} title={`${e.title} · ${longDate(e.start)} → ${longDate(e.end)} · ${standing(today, e)}`}>
+                          <b>{e.title}</b>
+                          <small>
+                            {daysBetween(e.start, e.end) + 1} days · {standing(today, e)}
+                          </small>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -269,19 +276,19 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
             <span className="rd-eyebrow">Log</span>
           </button>
           {logOpen && (
-          <div className="rd-btn-group" role="group" aria-label="Which events">
-            {(
-              [
-                ["all", "All"],
-                ["coming", "Coming"],
-                ["past", "Past"],
-              ] as const
-            ).map(([id, label]) => (
-              <button key={id} type="button" className={show === id ? "on" : ""} aria-pressed={show === id} onClick={() => pick(id)}>
-                {label}
-              </button>
-            ))}
-          </div>
+            <div className="rd-btn-group" role="group" aria-label="Which events">
+              {(
+                [
+                  ["all", "All"],
+                  ["coming", "Coming"],
+                  ["past", "Past"],
+                ] as const
+              ).map(([id, label]) => (
+                <button key={id} type="button" className={show === id ? "on" : ""} aria-pressed={show === id} onClick={() => pick(id)}>
+                  {label}
+                </button>
+              ))}
+            </div>
           )}
         </div>
         {!logOpen ? null : listed.length === 0 ? (
@@ -366,7 +373,7 @@ function EventDialog({ today, event, cats, onAddCat, onRenameCat, onRemoveCat, o
       if (id) setKind(id);
     }
   };
-  const current = kind ? cats.find((c) => c.id === kind) ?? null : null;
+  const current = kind ? (cats.find((c) => c.id === kind) ?? null) : null;
   const [title, setTitle] = useState(event?.title ?? "");
   const [shape, setShape] = useState<"event" | "period">(event ? (event.start === event.end ? "event" : "period") : "event");
   const [start, setStart] = useState(event?.start ?? today);

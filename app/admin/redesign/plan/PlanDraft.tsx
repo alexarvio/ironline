@@ -5,7 +5,7 @@ import type React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
-import { addClientGoalAction, addClientPhaseAction, applyGoalDoneChangesAction, duplicateClientPhaseAction, removeClientGoalAction, removeClientPhaseAction, reorderClientGoalsAction, saveAndDeployPhaseNowAction, saveAndSchedulePhaseAction, setClientMainGoalAction, updateClientGoalAction, updateClientPhaseAction } from "../../../lib/actions";
+import { addClientGoalAction, addClientPhaseAction, applyGoalDoneChangesAction, duplicateClientPhaseAction, removeClientGoalAction, removeClientPhaseAction, reorderClientGoalsAction, saveAndDeployPhaseNowAction, saveAndSchedulePhaseAction, updateClientGoalAction, updateClientPhaseAction } from "../../../lib/actions";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { ChevronLeftIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
@@ -24,7 +24,6 @@ import EventsCard, { type Category, type PlanEvent } from "./EventsCard";
 // sheet. Three cards: the one headline goal, the phases as bars on a week
 // grid, and the goals as a table with their live standing.
 //
-// - Main goal: one sentence, typed in place, saved on purpose.
 // - Phases: months and weeks across, one row a track; a bar's edges drag to
 //   change its length, its body drags to move it, a click opens it. A phase
 //   wears its state's colour (phaseChrome): live in its track's, scheduled
@@ -144,16 +143,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
       router.refresh();
       if (said) savedToast(said);
     });
-  // ---- Main goal: typed, then saved on purpose.
-  const [mainSaved, setMainSaved] = useState(plan.mainGoal);
-  const [main, setMain] = useState(plan.mainGoal);
-  // When the server's answer differs from what was here, follow it (derived state, reset during render).
-  const [seenMain, setSeenMain] = useState(plan.mainGoal);
-  if (seenMain !== plan.mainGoal) {
-    setSeenMain(plan.mainGoal);
-    setMainSaved(plan.mainGoal);
-    setMain(plan.mainGoal);
-  }
+  // The Main goal card went from this tab (10 Oct): it was not used. The goal itself stays on the client (Home shows it) and in the data.
 
   // ---- Phases: what is on screen lives here, so a drag shows what it would do.
   const [phases, setPhases] = useState(plan.phases);
@@ -319,35 +309,6 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
           <h1 className="rd-title">{firstName}&rsquo;s plan</h1>
         </div>
       </header>
-
-      {/* ---- Main goal. */}
-      <section className="rd-session open rn-card">
-        <div className="rn-card-head">
-          <h2>Main goal</h2>
-        </div>
-        <div className="rq-main">
-          <input
-            className="rq-main-input"
-            value={main}
-            onChange={(e) => setMain(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
-            placeholder="e.g. Drop to 84 kg and keep the bench moving"
-            aria-label="Main goal"
-            maxLength={140}
-          />
-          <button
-            type="button"
-            className="rd-btn primary"
-            disabled={main.trim() === mainSaved.trim()}
-            onClick={() => {
-              setMainSaved(main.trim());
-              act(() => setClientMainGoalAction(clientId, main.trim()), `Main goal · shows under ${firstName}'s name on Home`);
-            }}
-          >
-            Save
-          </button>
-        </div>
-      </section>
 
       {/* ---- Phases. */}
       <section className="rd-session open rn-card">
