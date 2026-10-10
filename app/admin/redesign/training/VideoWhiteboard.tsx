@@ -13,71 +13,41 @@ import type React from "react";
 // after the upload, so the client always gets a file that plays.
 
 type Pt = { x: number; y: number };
-type Shape = (
-  { kind: "pen"; points: Pt[] } | { kind: "arrow"; from: Pt; to: Pt }
-) & { color: string; width: number };
+type Shape = ({ kind: "pen"; points: Pt[] } | { kind: "arrow"; from: Pt; to: Pt }) & { color: string; width: number };
 type Rec = "idle" | "recording" | "done";
 
 // Eight colours (9 Oct): orange, purple and black joined the five.
-const COLORS = [
-  "#ff3b30",
-  "#ff9500",
-  "#ffd60a",
-  "#34c759",
-  "#0a84ff",
-  "#af52de",
-  "#ffffff",
-  "#000000",
-];
+const COLORS = ["#ff3b30", "#ff9500", "#ffd60a", "#34c759", "#0a84ff", "#af52de", "#ffffff", "#000000"];
 /** Line thickness, as a share of a 960-wide picture: thin, medium, thick. */
 const WIDTHS = [2.6, 4.6, 8.5];
 const WIDTH_NAMES = ["Thin", "Medium", "Thick"];
-const TOOLS: { id: "pen" | "arrow" | "erase"; label: string; icon: string }[] =
-  [
-    {
-      id: "pen",
-      label: "Pen",
-      icon: "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z",
-    },
-    { id: "arrow", label: "Arrow", icon: "M5 19 19 5M9 5h10v10" },
-    {
-      id: "erase",
-      label: "Eraser",
-      icon: "M20 20H7.5M3.6 13.4 12.6 4.4a2 2 0 0 1 2.8 0l4.2 4.2a2 2 0 0 1 0 2.8l-8.9 8.9a1 1 0 0 1-1.4 0l-5.7-5.7a1 1 0 0 1 0-1.4ZM8.5 8.5l7 7",
-    },
-  ];
+const TOOLS: { id: "pen" | "arrow" | "erase"; label: string; icon: string }[] = [
+  {
+    id: "pen",
+    label: "Pen",
+    icon: "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z",
+  },
+  { id: "arrow", label: "Arrow", icon: "M5 19 19 5M9 5h10v10" },
+  {
+    id: "erase",
+    label: "Eraser",
+    icon: "M20 20H7.5M3.6 13.4 12.6 4.4a2 2 0 0 1 2.8 0l4.2 4.2a2 2 0 0 1 0 2.8l-8.9 8.9a1 1 0 0 1-1.4 0l-5.7-5.7a1 1 0 0 1 0-1.4ZM8.5 8.5l7 7",
+  },
+];
 const Ico = ({ d, size = 18 }: { d: string; size?: number }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d={d} />
   </svg>
 );
 const MAX_W = 1280;
 
 /** Uploads the recording as the reply file, with progress; null when it went up. */
-function upload(
-  id: number,
-  blob: Blob,
-  onProgress: (share: number) => void,
-): Promise<string | null> {
+function upload(id: number, blob: Blob, onProgress: (share: number) => void): Promise<string | null> {
   return new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `/api/video-reply/${id}`);
-    xhr.setRequestHeader(
-      "Content-Type",
-      blob.type.split(";")[0] || "video/webm",
-    );
-    xhr.upload.onprogress = (e) =>
-      e.lengthComputable && onProgress(e.loaded / e.total);
+    xhr.setRequestHeader("Content-Type", blob.type.split(";")[0] || "video/webm");
+    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) return resolve(null);
       let message = "The upload failed. Try again.";
@@ -86,40 +56,16 @@ function upload(
       } catch {}
       resolve(message);
     };
-    xhr.onerror = () =>
-      resolve("The upload broke off. Check the connection and try again.");
+    xhr.onerror = () => resolve("The upload broke off. Check the connection and try again.");
     xhr.send(blob);
   });
 }
 
-const mimeFor = () =>
-  [
-    "video/mp4;codecs=avc1,mp4a.40.2",
-    "video/mp4",
-    "video/webm;codecs=vp9,opus",
-    "video/webm;codecs=vp8,opus",
-    "video/webm",
-  ].find(
-    (m) =>
-      typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(m),
-  ) ?? "";
+const mimeFor = () => ["video/mp4;codecs=avc1,mp4a.40.2", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"].find((m) => typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(m)) ?? "";
 
-const fmt = (s: number) =>
-  `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
-export default function VideoWhiteboard({
-  src,
-  requestId,
-  firstName,
-  onSent,
-}: {
-  src: string;
-  requestId: number;
-  firstName: string;
-  /** The file is up: send the note and tell the client. */ onSent: (
-    note: string,
-  ) => void;
-}) {
+export default function VideoWhiteboard({ src, requestId, firstName, onSent }: { src: string; requestId: number; firstName: string; /** The file is up: send the note and tell the client. */ onSent: (note: string) => void }) {
   const videoEl = useRef<HTMLVideoElement>(null);
   const overlay = useRef<HTMLCanvasElement>(null);
   const out = useRef<HTMLCanvasElement>(null);
@@ -201,10 +147,7 @@ export default function VideoWhiteboard({
   const [note, setNote] = useState("");
   const [progress, setProgress] = useState<number | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
-  const canRecord =
-    typeof window !== "undefined" &&
-    typeof MediaRecorder !== "undefined" &&
-    !!mimeFor();
+  const canRecord = typeof window !== "undefined" && typeof MediaRecorder !== "undefined" && !!mimeFor();
 
   useEffect(
     () => () => {
@@ -239,14 +182,8 @@ export default function VideoWhiteboard({
         ctx.stroke();
         ctx.beginPath();
         ctx.moveTo(to.x, to.y);
-        ctx.lineTo(
-          to.x - head * Math.cos(a - Math.PI / 6),
-          to.y - head * Math.sin(a - Math.PI / 6),
-        );
-        ctx.lineTo(
-          to.x - head * Math.cos(a + Math.PI / 6),
-          to.y - head * Math.sin(a + Math.PI / 6),
-        );
+        ctx.lineTo(to.x - head * Math.cos(a - Math.PI / 6), to.y - head * Math.sin(a - Math.PI / 6));
+        ctx.lineTo(to.x - head * Math.cos(a + Math.PI / 6), to.y - head * Math.sin(a + Math.PI / 6));
         ctx.closePath();
         ctx.fill();
       }
@@ -258,10 +195,7 @@ export default function VideoWhiteboard({
     const ctx = c.getContext("2d");
     if (!ctx) return;
     ctx.clearRect(0, 0, c.width, c.height);
-    drawShapes(
-      ctx,
-      live.current ? [...shapesRef.current, live.current] : shapesRef.current,
-    );
+    drawShapes(ctx, live.current ? [...shapesRef.current, live.current] : shapesRef.current);
   };
   // Shapes changed: the layer again (after paint is defined, for the linter).
   useEffect(() => {
@@ -278,18 +212,12 @@ export default function VideoWhiteboard({
   // The eraser (9 Oct): a tap or a drag over a stroke takes that stroke away.
   const near = (s: Shape, p: Pt) => {
     const tol = Math.max(14, size.w / 60);
-    const segs: [Pt, Pt][] =
-      s.kind === "arrow"
-        ? [[s.from, s.to]]
-        : s.points.slice(1).map((q, i) => [s.points[i], q] as [Pt, Pt]);
+    const segs: [Pt, Pt][] = s.kind === "arrow" ? [[s.from, s.to]] : s.points.slice(1).map((q, i) => [s.points[i], q] as [Pt, Pt]);
     return segs.some(([a, b]) => {
       const dx = b.x - a.x;
       const dy = b.y - a.y;
       const len2 = dx * dx + dy * dy || 1;
-      const u = Math.max(
-        0,
-        Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2),
-      );
+      const u = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2));
       return Math.hypot(p.x - (a.x + u * dx), p.y - (a.y + u * dy)) <= tol;
     });
   };
@@ -304,10 +232,7 @@ export default function VideoWhiteboard({
       eraseAt(p);
       return;
     }
-    live.current =
-      tool === "pen"
-        ? { kind: "pen", points: [p], color, width: WIDTHS[width] }
-        : { kind: "arrow", from: p, to: p, color, width: WIDTHS[width] };
+    live.current = tool === "pen" ? { kind: "pen", points: [p], color, width: WIDTHS[width] } : { kind: "arrow", from: p, to: p, color, width: WIDTHS[width] };
     paint();
   };
   const move = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -326,12 +251,7 @@ export default function VideoWhiteboard({
     const s = live.current;
     live.current = null;
     if (!s) return;
-    if (
-      s.kind === "pen"
-        ? s.points.length > 1
-        : Math.hypot(s.to.x - s.from.x, s.to.y - s.from.y) > 4
-    )
-      setShapes((list) => [...list, s]);
+    if (s.kind === "pen" ? s.points.length > 1 : Math.hypot(s.to.x - s.from.x, s.to.y - s.from.y) > 4) setShapes((list) => [...list, s]);
     else paint();
   };
 
@@ -359,13 +279,12 @@ export default function VideoWhiteboard({
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, c.width, c.height);
     ctx.drawImage(v, 0, 0, c.width, c.height);
-    drawShapes(
-      ctx,
-      live.current ? [...shapesRef.current, live.current] : shapesRef.current,
-    );
+    drawShapes(ctx, live.current ? [...shapesRef.current, live.current] : shapesRef.current);
     raf.current = requestAnimationFrame(compose);
   };
   const [starting, setStarting] = useState(false);
+  const [micWait, setMicWait] = useState(false);
+  const [micBlocked, setMicBlocked] = useState(false);
   const start = async () => {
     setProblem(null);
     const c = out.current;
@@ -383,24 +302,39 @@ export default function VideoWhiteboard({
           const el = v as HTMLVideoElement & {
             requestVideoFrameCallback?: (cb: () => void) => number;
           };
-          await Promise.race([
-            new Promise<void>((r) =>
-              el.requestVideoFrameCallback
-                ? el.requestVideoFrameCallback(() => r())
-                : setTimeout(r, 300),
-            ),
-            new Promise<void>((r) => setTimeout(r, 1500)),
-          ]);
+          await Promise.race([new Promise<void>((r) => (el.requestVideoFrameCallback ? el.requestVideoFrameCallback(() => r()) : setTimeout(r, 300))), new Promise<void>((r) => setTimeout(r, 1500))]);
           v.pause();
         } catch {}
       }
+      // The mic, but never a wait on it (10 Oct): Chrome's permission prompt
+      // can sit unanswered in the address bar, and the recorder waited on it
+      // forever, which looked like Record doing nothing. Five seconds, then
+      // the picture records without sound and the hint says why.
       let audio: MediaStream | null = null;
+      let blocked = false;
       try {
-        audio = await navigator.mediaDevices.getUserMedia({ audio: true });
-        setNoMic(false);
+        const state = await navigator.permissions?.query({ name: "microphone" as PermissionName }).then(
+          (p) => p.state,
+          () => "prompt",
+        );
+        if (state === "denied") blocked = true;
+        else {
+          setMicWait(true);
+          let timer: ReturnType<typeof setTimeout> | undefined;
+          const ask = navigator.mediaDevices.getUserMedia({ audio: true });
+          const late = new Promise<null>((r) => (timer = setTimeout(() => r(null), 5000)));
+          audio = await Promise.race([ask, late]);
+          clearTimeout(timer);
+          // Answered after we gave up: let that stream go, it is not in the recording.
+          if (!audio) ask.then((st) => st.getTracks().forEach((t) => t.stop())).catch(() => {});
+        }
       } catch {
-        setNoMic(true);
+        audio = null;
+      } finally {
+        setMicWait(false);
       }
+      setNoMic(!audio);
+      setMicBlocked(blocked);
       mic.current = audio;
       compose();
       const stream = c.captureStream(30);
@@ -432,9 +366,7 @@ export default function VideoWhiteboard({
       raf.current = null;
       mic.current?.getTracks().forEach((x) => x.stop());
       mic.current = null;
-      setProblem(
-        `Recording could not start (${e instanceof Error ? e.message : String(e)}). Try again, or write a note.`,
-      );
+      setProblem(`Recording could not start (${e instanceof Error ? e.message : String(e)}). Try again, or write a note.`);
     } finally {
       setStarting(false);
     }
@@ -489,10 +421,7 @@ export default function VideoWhiteboard({
             <video className="wb-preview" src={preview} controls playsInline />
             <p className="rd-dlg-hint">
               {fmt(secs)} recorded
-              {isMp4
-                ? ""
-                : ` · converted for ${firstName}'s phone after it goes up`}
-              . Not right? Record it again.
+              {isMp4 ? "" : ` · converted for ${firstName}'s phone after it goes up`}. Not right? Record it again.
             </p>
           </>
         ) : (
@@ -514,9 +443,7 @@ export default function VideoWhiteboard({
                 onLoadedMetadata={(e) => {
                   const v = e.currentTarget;
                   const w = Math.min(MAX_W, v.videoWidth || 960);
-                  const h = Math.round(
-                    ((v.videoHeight || 540) * w) / (v.videoWidth || 960),
-                  );
+                  const h = Math.round(((v.videoHeight || 540) * w) / (v.videoWidth || 960));
                   setSize({ w, h });
                   setDur(v.duration || 0);
                 }}
@@ -524,17 +451,7 @@ export default function VideoWhiteboard({
                 onPause={() => setPlaying(false)}
                 onTimeUpdate={(e) => setT(e.currentTarget.currentTime)}
               />
-              <canvas
-                ref={overlay}
-                className={`wb-overlay${tool === "erase" ? " erase" : ""}`}
-                width={size.w}
-                height={size.h}
-                onPointerDown={down}
-                onPointerMove={move}
-                onPointerUp={up}
-                onPointerCancel={up}
-                aria-label="Draw on the video"
-              />
+              <canvas ref={overlay} className={`wb-overlay${tool === "erase" ? " erase" : ""}`} width={size.w} height={size.h} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} aria-label="Draw on the video" />
               {rec === "recording" && (
                 <span className="wb-live" aria-live="polite">
                   <i /> REC {fmt(secs)}
@@ -545,24 +462,10 @@ export default function VideoWhiteboard({
               )}
             </div>
             <div className="wb-row">
-              <button
-                type="button"
-                className="rd-btn sm"
-                onClick={toggle}
-                aria-label={playing ? "Pause" : "Play"}
-              >
+              <button type="button" className="rd-btn sm" onClick={toggle} aria-label={playing ? "Pause" : "Play"}>
                 {playing ? "Pause" : "Play"}
               </button>
-              <input
-                className="wb-scrub"
-                type="range"
-                min={0}
-                max={Math.max(0.01, dur)}
-                step={0.05}
-                value={Math.min(t, dur || 0)}
-                onChange={(e) => seek(Number(e.target.value))}
-                aria-label="Where in the video"
-              />
+              <input className="wb-scrub" type="range" min={0} max={Math.max(0.01, dur)} step={0.05} value={Math.min(t, dur || 0)} onChange={(e) => seek(Number(e.target.value))} aria-label="Where in the video" />
               <span className="wb-time">
                 {fmt(t)} / {fmt(dur)}
               </span>
@@ -571,14 +474,7 @@ export default function VideoWhiteboard({
             <div className="wb-bar">
               <span className="wb-seg" role="group" aria-label="Drawing tool">
                 {TOOLS.map((x) => (
-                  <button
-                    key={x.id}
-                    type="button"
-                    className={`wb-tool${tool === x.id ? " on" : ""}`}
-                    aria-pressed={tool === x.id}
-                    onClick={() => setTool(x.id)}
-                    title={x.label}
-                  >
+                  <button key={x.id} type="button" className={`wb-tool${tool === x.id ? " on" : ""}`} aria-pressed={tool === x.id} onClick={() => setTool(x.id)} title={x.label}>
                     <Ico d={x.icon} />
                     <span>{x.label}</span>
                   </button>
@@ -586,164 +482,76 @@ export default function VideoWhiteboard({
               </span>
               <span className="wb-seg" role="group" aria-label="Thickness">
                 {WIDTHS.map((w, i) => (
-                  <button
-                    key={w}
-                    type="button"
-                    className={`wb-width${width === i ? " on" : ""}`}
-                    aria-pressed={width === i}
-                    aria-label={WIDTH_NAMES[i]}
-                    title={WIDTH_NAMES[i]}
-                    onClick={() => setWidth(i)}
-                    disabled={tool === "erase"}
-                  >
+                  <button key={w} type="button" className={`wb-width${width === i ? " on" : ""}`} aria-pressed={width === i} aria-label={WIDTH_NAMES[i]} title={WIDTH_NAMES[i]} onClick={() => setWidth(i)} disabled={tool === "erase"}>
                     <i style={{ width: 4 + i * 4, height: 4 + i * 4 }} />
                   </button>
                 ))}
               </span>
               <span className="wb-colors" role="group" aria-label="Colour">
                 {COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    className={`wb-color${color === c ? " on" : ""}`}
-                    style={{ background: c }}
-                    aria-label={c}
-                    aria-pressed={color === c}
-                    onClick={() => setColor(c)}
-                    disabled={tool === "erase"}
-                  />
+                  <button key={c} type="button" className={`wb-color${color === c ? " on" : ""}`} style={{ background: c }} aria-label={c} aria-pressed={color === c} onClick={() => setColor(c)} disabled={tool === "erase"} />
                 ))}
               </span>
               <span className="rd-dlg-hint grow" />
               <span className="wb-seg" role="group" aria-label="History">
-                <button
-                  type="button"
-                  className="wb-tool"
-                  onClick={undo}
-                  disabled={!histN.undo}
-                  aria-label="Undo"
-                  title="Undo (Ctrl+Z)"
-                >
+                <button type="button" className="wb-tool" onClick={undo} disabled={!histN.undo} aria-label="Undo" title="Undo (Ctrl+Z)">
                   <Ico d="M3 7v6h6M21 17a9 9 0 0 0-15-6.7L3 13" />
                 </button>
-                <button
-                  type="button"
-                  className="wb-tool"
-                  onClick={redo}
-                  disabled={!histN.redo}
-                  aria-label="Redo"
-                  title="Redo (Ctrl+Shift+Z)"
-                >
+                <button type="button" className="wb-tool" onClick={redo} disabled={!histN.redo} aria-label="Redo" title="Redo (Ctrl+Shift+Z)">
                   <Ico d="M21 7v6h-6M3 17a9 9 0 0 1 15-6.7l3 2.7" />
                 </button>
               </span>
-              <button
-                type="button"
-                className="rd-btn sm"
-                onClick={() => setShapes(() => [])}
-                disabled={!shapes.length}
-              >
+              <button type="button" className="rd-btn sm" onClick={() => setShapes(() => [])} disabled={!shapes.length}>
                 Clear
               </button>
               {canRecord ? (
                 rec === "recording" ? (
-                  <button
-                    type="button"
-                    className="rd-btn primary wb-stop"
-                    onClick={stop}
-                  >
+                  <button type="button" className="rd-btn primary wb-stop" onClick={stop}>
                     Stop
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    className="rd-btn primary wb-rec"
-                    onClick={() => void start()}
-                    disabled={starting}
-                  >
-                    {starting ? "Starting…" : "Record"}
+                  <button type="button" className="rd-btn primary wb-rec" onClick={() => void start()} disabled={starting}>
+                    {micWait ? "Waiting for the mic…" : starting ? "Starting…" : "Record"}
                   </button>
                 )
               ) : (
-                <span className="rd-dlg-hint">
-                  This browser cannot record. Write a note below.
-                </span>
+                <span className="rd-dlg-hint">This browser cannot record. Write a note below.</span>
               )}
             </div>
             {noMic && rec === "recording" && (
-              <p className="rd-dlg-hint">
-                No microphone: recording the picture only.
+              <p className="rd-dlg-hint wb-problem">
+                {micBlocked
+                  ? "The microphone is blocked for this site, so this records the picture only. Click the icon left of the address bar to allow it, then record again."
+                  : "No microphone answered, so this records the picture only. If Chrome is asking for the mic by the address bar, allow it and record again."}
               </p>
             )}
-            {rec === "idle" && (
-              <p className="rd-dlg-hint">
-                Press Record, then play, pause and draw as you talk. {firstName}{" "}
-                gets the drawn-over video with your voice.
-              </p>
-            )}
+            {rec === "idle" && <p className="rd-dlg-hint">Press Record, then play, pause and draw as you talk. {firstName} gets the drawn-over video with your voice.</p>}
           </>
         )}
       </div>
       <div className="wb-right">
         <label className="rd-field">
           <span>Your note</span>
-          <textarea
-            rows={2}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder={
-              blob
-                ? "A line to go with the video (optional)"
-                : "Depth is good. Keep the knees tracking over the toes on the way up."
-            }
-          />
+          <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder={blob ? "A line to go with the video (optional)" : "Depth is good. Keep the knees tracking over the toes on the way up."} />
         </label>
         {problem && <p className="rd-dlg-hint wb-problem">{problem}</p>}
         {progress != null && (
-          <div
-            className="wb-progress"
-            role="progressbar"
-            aria-valuenow={Math.round(progress * 100)}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          >
+          <div className="wb-progress" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}>
             <i style={{ width: `${Math.round(progress * 100)}%` }} />
           </div>
         )}
         <div className="wb-send">
           {rec === "done" && (
-            <button
-              type="button"
-              className="rd-btn ghost sm"
-              onClick={retake}
-              disabled={sending}
-            >
+            <button type="button" className="rd-btn ghost sm" onClick={retake} disabled={sending}>
               Record again
             </button>
           )}
-          <button
-            type="button"
-            className="rd-btn primary"
-            onClick={() => void send()}
-            disabled={sending || (!blob && !note.trim())}
-          >
-            {sending
-              ? progress != null && progress < 1
-                ? `Sending ${Math.round(progress * 100)}%`
-                : "Sending…"
-              : blob
-                ? "Send video and note"
-                : "Send note"}
+          <button type="button" className="rd-btn primary" onClick={() => void send()} disabled={sending || (!blob && !note.trim())}>
+            {sending ? (progress != null && progress < 1 ? `Sending ${Math.round(progress * 100)}%` : "Sending…") : blob ? "Send video and note" : "Send note"}
           </button>
         </div>
       </div>
-      <canvas
-        ref={out}
-        width={size.w}
-        height={size.h}
-        style={{ display: "none" }}
-        aria-hidden="true"
-      />
+      <canvas ref={out} width={size.w} height={size.h} style={{ display: "none" }} aria-hidden="true" />
     </div>
   );
 }
