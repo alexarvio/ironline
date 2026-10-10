@@ -102,6 +102,24 @@ const TRACKS: { id: PhaseTrack; label: string }[] = [
   { id: "training", label: "Training" },
   { id: "lifestyle", label: "Lifestyle" },
 ];
+// The track tiles in the New phase dialog (10 Oct), laid out like the client's
+// New event sheet: an icon on a tinted tile, the chosen one filled.
+const TRACK_ICON: Record<PhaseTrack, string> = {
+  nutrition: "M15.5 8.5c2.8 0 4.5 2.4 4.5 5.5 0 4-2.7 7.5-5.5 7.5-1 0-1.5-.5-2.5-.5s-1.5.5-2.5.5c-2.8 0-5.5-3.5-5.5-7.5 0-3.1 1.9-5.5 4.7-5.5 1.3 0 2.1.6 3.3.6s1.9-.6 3.5-.6ZM12 8.5V6a2.2 2.2 0 0 1 2-2.2",
+  training: "M6.5 8v8M17.5 8v8M4 10v4M20 10v4M6.5 12h11",
+  lifestyle: "M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z",
+};
+const rgbOf = (hex: string) => {
+  const n = parseInt(hex.slice(1), 16);
+  return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
+};
+function TrackIcon({ track, size = 20 }: { track: PhaseTrack; size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={TRACK_ICON[track]} />
+    </svg>
+  );
+}
 // How far ahead the grid shows, in months; each a whole number of weeks.
 const WINDOWS = [
   { months: 3, weeks: 13 },
@@ -870,12 +888,11 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
         <DialogTitle>
           <span className="rq-title-row">
             {editing ? phase.name : "New phase"}
-            {/* Which track it is on, in that track's colour, then its state. */}
-            {editing && (
-              <span className="rq-state" style={{ background: TRACK_PALETTE[track].tint, color: TRACK_PALETTE[track].ink }}>
-                {TRACK_LABEL[track]}
-              </span>
-            )}
+            {/* Which track it is on, a filled pill with the track's icon (10 Oct), then its state. */}
+            <span className="rq-track-pill" style={{ "--c": TRACK_PALETTE[track].ink, "--rgb": rgbOf(TRACK_PALETTE[track].ink) } as React.CSSProperties}>
+              <TrackIcon track={track} size={13} />
+              {TRACK_LABEL[track]}
+            </span>
             <span className="rq-state" style={{ background: chrome.chipBg, color: chrome.chipInk }}>
               {STATE_LABEL[state]}
             </span>
@@ -899,9 +916,12 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
       {!editing && (
         <div className="rd-field">
           <span>Track</span>
-          <div className="rq-kinds">
+          <div className="evs-types rq-tiles" role="radiogroup" aria-label="Track">
             {TRACKS.map((t) => (
-              <button key={t.id} type="button" className={`rd-chip${track === t.id ? " on" : ""}`} style={track === t.id ? { background: TRACK_PALETTE[t.id].ink, borderColor: TRACK_PALETTE[t.id].ink } : undefined} onClick={() => setTrack(t.id)}>
+              <button key={t.id} type="button" role="radio" aria-checked={track === t.id} className={`evs-type${track === t.id ? " on" : ""}`} style={{ "--tc": TRACK_PALETTE[t.id].ink, "--trgb": rgbOf(TRACK_PALETTE[t.id].ink) } as React.CSSProperties} onClick={() => setTrack(t.id)}>
+                <span className="evs-type-disc">
+                  <TrackIcon track={t.id} />
+                </span>
                 {t.label}
               </button>
             ))}
@@ -915,14 +935,30 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
       <div className="rdd-cols">
         <MonthRange from={from} to={to} onPick={pick} chrome={chrome} planned={planned} cursor={cursor} setCursor={setCursor} today={today} />
         <div className="rdd-fields">
-          <label className="rd-field">
-            <span>Starts{startLocked ? " · fixed" : ""}</span>
-            <DateText value={from} disabled={startLocked} onChange={setStart} label="Starts" onFocus={() => setPicking("start")} />
-          </label>
-          <label className="rd-field">
-            <span>Ends</span>
-            <DateText value={to} onChange={setEnd} label="Ends" onFocus={() => setPicking("end")} />
-          </label>
+          {/* The dates as two pills with the arrow between (10 Oct), as the client's New event sheet has them. A tap arms
+              that end in the calendar; a typed date still goes in the small field under each. */}
+          <div className="rd-field">
+            <span>When</span>
+            <div className="evs-dates rq-dates" style={{ "--c": TRACK_PALETTE[track].ink, "--rgb": rgbOf(TRACK_PALETTE[track].ink) } as React.CSSProperties}>
+              <button type="button" className={`evs-date${picking === "start" ? " arm" : ""}${startLocked ? " locked" : ""}`} onClick={() => !startLocked && setPicking("start")} aria-pressed={picking === "start"} disabled={startLocked}>
+                <span className="evs-date-head">STARTS{startLocked ? " · FIXED" : ""}</span>
+                <b>{from === today ? "Today" : fmtDay(from)}</b>
+              </button>
+              <span className="evs-arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              </span>
+              <button type="button" className={`evs-date ends${picking === "end" ? " arm" : ""}`} onClick={() => setPicking("end")} aria-pressed={picking === "end"}>
+                <span className="evs-date-head">ENDS</span>
+                <b>{fmtDay(to)}</b>
+              </button>
+            </div>
+            <div className="rq-typed">
+              <DateText value={from} disabled={startLocked} onChange={setStart} label="Starts" onFocus={() => setPicking("start")} />
+              <DateText value={to} onChange={setEnd} label="Ends" onFocus={() => setPicking("end")} />
+            </div>
+          </div>
           {/* Type the weeks and the end follows; pick the end and the weeks follow. A span the calendar left uneven says so under it. */}
           <label className="rd-field">
             <span>Weeks</span>

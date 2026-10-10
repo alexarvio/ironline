@@ -84,6 +84,17 @@
 
 /* The phase dialog: the track, the dates, and for training the programme behind it. */
 .rq-phase-dlg { max-width: 720px; }
+/* The New phase dialog after the client's New event sheet (10 Oct): a track pill in the title, track tiles, the dates as two pills with an arrow. */
+.rq-track-pill { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 10px 0 8px; border-radius: 999px; background: var(--c); color: #fff; font-size: 11px; font-weight: 800; letter-spacing: 0.02em; text-transform: none; box-shadow: 0 6px 12px -6px rgba(var(--rgb), 0.9); transition: background 0.3s ease, box-shadow 0.3s ease; }
+.rq-phase-dlg .rq-tiles .evs-type { height: 62px; font-size: 12px; }
+.rq-phase-dlg .rq-tiles .evs-type-disc { width: 26px; height: 26px; }
+.rq-dates .evs-date { border: 0; font: inherit; text-align: left; background: rgba(var(--rgb), 0.07); box-shadow: inset 0 0 0 1px rgba(var(--rgb), 0.16); transition: box-shadow 0.2s ease, background 0.2s ease; }
+.rq-dates .evs-date .evs-date-head { color: var(--c); }
+.rq-dates .evs-date.arm { box-shadow: inset 0 0 0 2px var(--c), 0 8px 16px -12px rgba(var(--rgb), 0.8); background: #fff; }
+.rq-dates .evs-date.locked { opacity: 0.6; cursor: default; }
+.rq-dates .evs-arrow { color: var(--c); }
+.rq-typed { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+.rq-typed .rd-input { height: 30px; font-size: 12px; }
 .rq-phase-dlg .rdd-cols { grid-template-columns: minmax(0, 1.15fr) minmax(220px, 0.85fr); }
 .rq-state { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .rq-overlap { margin: 0; min-height: 18px; font-size: 12px; line-height: 1.45; color: #b3471d; }
