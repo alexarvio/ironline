@@ -53,7 +53,7 @@ export default function EventsCard({ events, today }: { events: HomeEvents; coac
   const running = coming.find((e) => e.start <= today) ?? null;
   const next = coming.find((e) => e.start > today) ?? null;
   // Rows in the type's colour, as the Events screen draws them (9 Oct): the
-  // type's icon for a dot, a chevron where there is a note to read there.
+  // type's icon for a dot. One chevron only, the card's own in the header (10 Oct); the rows still open Events.
   const vars = (e: HomeEvent) => {
     const t = eventTypeOf(e.kind);
     return { t, style: { "--c": t.color, "--rgb": t.rgb } as React.CSSProperties };
@@ -78,7 +78,6 @@ export default function EventsCard({ events, today }: { events: HomeEvents; coac
                     <span className="ev-now-eyebrow">Happening now · {t.label}</span>
                     <span className="ev-card-row">
                       <span className="ev-card-title">{running.title}</span>
-                      {running.note && <span className="ev-chev" aria-hidden="true">›</span>}
                     </span>
                     <span className="ev-bar" aria-hidden="true">
                       <i style={{ width: `${(day / total) * 100}%` }} />
@@ -108,7 +107,6 @@ export default function EventsCard({ events, today }: { events: HomeEvents; coac
                         <span className="hm-ev-when">{next.start === next.end ? shortDate(next.start) : `${shortDate(next.start)} – ${shortDate(next.end)}`}</span>
                       </span>
                     </span>
-                    {next.note && <span className="hm-ev-more" aria-hidden="true">›</span>}
                   </span>
                 );
               })()}
