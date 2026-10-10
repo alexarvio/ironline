@@ -172,10 +172,10 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, o
               <>
                 {sentPhoto ? <img className="vr-sheet-video" src={ask.src} alt="" /> : <video className="vr-sheet-video" src={ask.src} controls playsInline preload="metadata" />}
                 {ask.clientNote && <p className="vr-sheet-sent">{ask.clientNote}</p>}
-                {ask.sentAt && <p className="vr-sheet-sent">Sent {new Date(ask.sentAt).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}. Only your coach sees it.</p>}
+                {ask.sentAt && <p className="vr-sheet-sent">Sent {new Date(ask.sentAt).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}.</p>}
               </>
             )}
-            {!ask?.src && <p className="vr-sheet-hint">{ask?.note ? "Up to two minutes. Film in 1080p so it sends quickly. Only your coach sees it." : "A photo of the machine, or a clip of a set, with a word if you like. Only your coach sees it."}</p>}
+            {!ask?.src && <p className="vr-sheet-hint">{ask?.note ? "Up to two minutes. Film in 1080p so it sends quickly." : "A photo of the machine, or a clip of a set, with a word if you like."}</p>}
             {options}
           </>
         )}
