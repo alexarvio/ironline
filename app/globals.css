@@ -17922,8 +17922,6 @@ button.ci-hint { cursor: pointer; }
 .ev-today { display: flex; align-items: center; height: 40px; }
 .ev-today .ev-td { padding: 0; }
 .ev-rail-today { align-self: stretch; }
-.ev-rail-today i { position: absolute; left: 1px; top: 12px; width: 16px; height: 16px; border-radius: 999px; background: #1d3466; box-shadow: 0 0 0 5px rgba(29, 52, 102, 0.15); animation: ev-pulse 2.2s ease-in-out infinite; }
-@keyframes ev-pulse { 0%, 100% { box-shadow: 0 0 0 4px rgba(29, 52, 102, 0.12); } 50% { box-shadow: 0 0 0 9px rgba(29, 52, 102, 0.2); } }
 .ev-today-label { padding-left: 12px; font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #1d3466; white-space: nowrap; }
 .ev-today-rule { flex: 1; margin-left: 10px; border-top: 1.5px dashed rgba(29, 52, 102, 0.3); }
 
@@ -17961,9 +17959,6 @@ button.ci-hint { cursor: pointer; }
 .ev-r.lit .ev-now { animation-name: ev-lit-now; }
 @keyframes ev-lit-now { from { background-color: rgba(var(--rgb), 0.18); } to { background-color: transparent; } }
 @keyframes ev-lit { from { background-color: rgba(var(--rgb), 0.1); } to { background-color: transparent; } }
-/* Landed on from a notification (10 Oct): a glow in the type's colour that fades over a second and a half. */
-.ev-r.glow .ev-card, .ev-r.glow .ev-now, .ev-r.glow .ev-past { animation: ev-pulse 1.3s cubic-bezier(0.2, 0.7, 0.3, 1) 450ms both; }
-@keyframes ev-pulse { 0% { box-shadow: 0 0 0 0 rgba(var(--rgb), 0), 0 0 0 0 rgba(var(--rgb), 0); transform: scale(1); } 28% { box-shadow: 0 0 0 5px rgba(var(--rgb), 0.5), 0 0 34px 8px rgba(var(--rgb), 0.38); transform: scale(1.025); } 60% { box-shadow: 0 0 0 4px rgba(var(--rgb), 0.3), 0 0 24px 4px rgba(var(--rgb), 0.2); transform: scale(1.01); } 100% { box-shadow: 0 0 0 0 rgba(var(--rgb), 0), 0 0 0 0 rgba(var(--rgb), 0); transform: scale(1); } }
 .ev-r.lit .ev-card { animation-name: ev-lit-card; }
 @keyframes ev-lit-card { from { background-color: rgba(var(--rgb), 0.1); } to { background-color: #fff; } }
 
@@ -18148,8 +18143,6 @@ button.ci-hint { cursor: pointer; }
 .mt-tile b { margin: 3px 0 2px; font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .mt-next-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .mt-eyebrow { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--c, #2f6fd6); }
-.mt-pulse { width: 6px; height: 6px; border-radius: 999px; background: #2f6fd6; animation: mt-pulse 1.6s ease-in-out infinite; }
-@keyframes mt-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(47, 111, 214, 0.5); } 50% { box-shadow: 0 0 0 5px rgba(47, 111, 214, 0); } }
 .mt-next-title { font-size: 16px; font-weight: 800; line-height: 1.25; color: #141a24; }
 .mt-next-sub { font-size: 12.5px; font-weight: 600; color: #5b6474; font-variant-numeric: tabular-nums; }
 .mt-join { flex: none; display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 16px; border-radius: 12px; background: #1d3466; color: #fff; font-size: 14px; font-weight: 800; text-decoration: none; }
@@ -18180,9 +18173,6 @@ button.ci-hint { cursor: pointer; }
 .mt-card { display: flex; flex-direction: column; border-radius: 18px; background: rgba(255, 255, 255, 0.6); box-shadow: inset 0 0 0 1px #e3e8f0; }
 /* The most recent call alone wears its colour. */
 /* Landed on from a notification (10 Oct): a flash in the call's colour that fades. */
-/* One pulse (10 Oct): the glow swells in the call's colour, the box lifts and tints, then it all settles, over a second and a bit, once the scroll has landed. */
-.mt-r.lit .mt-card { animation: mt-pulse 1.3s cubic-bezier(0.2, 0.7, 0.3, 1) 450ms both; }
-@keyframes mt-pulse { 0% { box-shadow: 0 0 0 0 rgba(var(--rgb), 0), 0 0 0 0 rgba(var(--rgb), 0); transform: scale(1); } 28% { box-shadow: 0 0 0 5px rgba(var(--rgb), 0.5), 0 0 34px 8px rgba(var(--rgb), 0.38); background-color: rgba(var(--rgb), 0.1); transform: scale(1.025); } 60% { box-shadow: 0 0 0 4px rgba(var(--rgb), 0.3), 0 0 24px 4px rgba(var(--rgb), 0.2); background-color: rgba(var(--rgb), 0.06); transform: scale(1.01); } 100% { box-shadow: 0 0 0 0 rgba(var(--rgb), 0), 0 0 0 0 rgba(var(--rgb), 0); transform: scale(1); } }
 .mt-card.latest { background: linear-gradient(160deg, rgba(var(--rgb), 0.1), #fff 55%); box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04), 0 14px 24px -20px rgba(var(--rgb), 0.7), inset 0 0 0 1px rgba(var(--rgb), 0.14); }
 .mt-head { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; margin: 0; padding: 12px 12px 12px 14px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
 .mt-head:disabled { cursor: default; }
@@ -18223,7 +18213,6 @@ button.ci-hint { cursor: pointer; }
 .mt-detail-none { margin: 0; font-size: 13.5px; font-weight: 600; line-height: 1.45; color: #5b6474; }
 
 @media (prefers-reduced-motion: reduce) {
-  .mt-pulse { animation: none; }
   .mt-body, .mt-chev { transition: none; }
 }
 

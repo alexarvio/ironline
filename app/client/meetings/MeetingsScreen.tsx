@@ -85,20 +85,12 @@ export default function MeetingsScreen({ upcoming, past, request = null, clientI
   const focusPast = focusId != null && pastSorted.some((m) => m.id === focusId);
   const [open, setOpen] = useState<number | null>(focusPast ? focusId : (pastSorted[0]?.id ?? null));
   const rows = useRef(new Map<number, HTMLElement>());
-  const [lit, setLit] = useState<number | null>(null);
   useEffect(() => {
     if (focusId == null) return;
     if (focusPast) {
-      // Past the list's first paint, so the row exists; the scroll is the browser's smooth one, about half a second.
-      const t = setTimeout(() => {
-        rows.current.get(focusId)?.scrollIntoView({ block: "center", behavior: "smooth" });
-        setLit(focusId);
-      }, 80);
-      const off = setTimeout(() => setLit(null), 2200);
-      return () => {
-        clearTimeout(t);
-        clearTimeout(off);
-      };
+      // Past the list's first paint, so the row exists; the scroll is the browser's smooth one. No flash or pulse (10 Oct): the scroll and the open row say it.
+      const t = setTimeout(() => rows.current.get(focusId)?.scrollIntoView({ block: "center", behavior: "smooth" }), 80);
+      return () => clearTimeout(t);
     }
     // A booked call: it is the card on top, or in the "more booked" list; open its detail.
     const m = [...upcoming].find((x) => x.id === focusId);
@@ -174,7 +166,7 @@ export default function MeetingsScreen({ upcoming, past, request = null, clientI
               <div className="mt-sec">Past meetings</div>
               <div className="mt-tl">
                 {pastSorted.slice(0, shown).map((m, i) => (
-                  <PastCall key={m.id} m={m} now={now} open={open === m.id} latest={i === 0} lit={lit === m.id} refFn={(el) => el && rows.current.set(m.id, el)} onToggle={() => setOpen((o) => (o === m.id ? null : m.id))} />
+                  <PastCall key={m.id} m={m} now={now} open={open === m.id} latest={i === 0} refFn={(el) => el && rows.current.set(m.id, el)} onToggle={() => setOpen((o) => (o === m.id ? null : m.id))} />
                 ))}
               </div>
               {pastSorted.length > shown && (
@@ -335,7 +327,7 @@ export function EventChip({ e, onOpen }: { e: { id: number; title: string; kind:
 // ---- One past call: the date on the left, the icon on the rail, the box.
 // Open, it shows what was agreed and the events made from it.
 
-function PastCall({ m, now, open, latest, lit = false, refFn, onToggle }: { m: ClientMeetingView; now: number | null; open: boolean; /** The most recent call: the one box in its colour (9 Oct). */ latest: boolean; /** Landed on from a notification: a short flash (10 Oct). */ lit?: boolean; refFn?: (el: HTMLElement | null) => void; onToggle: () => void }) {
+function PastCall({ m, now, open, latest, refFn, onToggle }: { m: ClientMeetingView; now: number | null; open: boolean; /** The most recent call: the one box in its colour (9 Oct). */ latest: boolean; refFn?: (el: HTMLElement | null) => void; onToggle: () => void }) {
   const t = meetingTypeOf(m.type);
   const ms = startMsOf(m);
   const d = new Date(ms);
@@ -343,7 +335,7 @@ function PastCall({ m, now, open, latest, lit = false, refFn, onToggle }: { m: C
   const has = points.length > 0 || m.linkedEvents.length > 0;
   const openEvents = useOpenEvents();
   return (
-    <div ref={refFn} className={`mt-r${open ? " open" : ""}${lit ? " lit" : ""}`} style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}>
+    <div ref={refFn} className={`mt-r${open ? " open" : ""}`} style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}>
       <span className="mt-td" aria-hidden="true">
         <b>{d.getDate()}</b>
         <small>{MONTHS[d.getMonth()]}</small>
