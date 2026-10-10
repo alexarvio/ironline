@@ -8,9 +8,27 @@ import { toast } from "sonner";
 import { addClientEventAction, addEventCategoryAction, deleteClientEventAction, deleteEventCategoryAction, updateClientEventAction, updateEventCategoryAction } from "../../../lib/actions";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { ChevronDownIcon, PlusIcon, TrashIcon } from "../../../components/icons";
-import DateText from "../DateText";
 import { MonthRange } from "./PlanDraft";
 import { PALETTE, paletteOf } from "../palette";
+import { eventTypeOf, isEventTypeId } from "../../../lib/eventTypes";
+
+// The New event dialog after the client's sheet and the phase dialog (10 Oct):
+// a category pill in the title, category tiles with icons, the dates as pills.
+const CUSTOM_ICON = "M20 12.5 12.5 20a1.5 1.5 0 0 1-2.1 0L4 13.6V4h9.6l6.4 6.4a1.5 1.5 0 0 1 0 2.1zM8 8h.01";
+const iconOf = (id: string | null) => (isEventTypeId(id) ? eventTypeOf(id) : null);
+const rgbOf = (hex: string) => {
+  const n = parseInt(hex.slice(1), 16);
+  return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
+};
+function KindIcon({ id, size = 20 }: { id: string | null; size?: number }) {
+  const t = iconOf(id);
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {t?.fill && <path d={t.fill} fill="currentColor" stroke="none" opacity={0.35} />}
+      <path d={t ? t.icon : CUSTOM_ICON} />
+    </svg>
+  );
+}
 
 // Events on the plan: what happens in the client's life that the plan has to
 // live with, on the same week grid as the phases, under the same "now" line.
@@ -388,7 +406,6 @@ function EventDialog({ today, event, cats, onAddCat, onRenameCat, onRemoveCat, o
   const cal = kind ? k : paletteOf("blue");
   const calChrome = { band: cal.tint, edge: cal.ink, soft: cal.tint, line: cal.line, chipBg: cal.tint, chipInk: cal.ink, dashed: false };
   const days = Math.round((parse(end).getTime() - parse(start).getTime()) / DAY) + 1;
-  const shortDay = (d: string) => parse(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   const pickAs = (which: "start" | "end", d: string) => {
     if (which === "start" || d < start) {
       setStart(d);
@@ -416,7 +433,8 @@ function EventDialog({ today, event, cats, onAddCat, onRenameCat, onRemoveCat, o
         <DialogTitle>
           <span className="rq-title-row">
             {event ? event.title : "New event"}
-            <span className="rq-state" style={{ background: k.tint, color: k.ink }}>
+            <span className="rq-track-pill" style={{ "--c": k.ink, "--rgb": rgbOf(k.ink) } as React.CSSProperties}>
+              <KindIcon id={kind} size={13} />
               {k.label}
             </span>
           </span>
@@ -427,18 +445,23 @@ function EventDialog({ today, event, cats, onAddCat, onRenameCat, onRemoveCat, o
 
       <div className="rd-field">
         <span>Category</span>
-        <div className="rq-kinds">
+        <div className="evs-types rq-tiles rq-ev-tiles" role="radiogroup" aria-label="Category">
           {cats.map((x) => {
             const p = paletteOf(x.color);
             return (
-              <button key={x.id} type="button" className={`rd-chip${kind === x.id ? " on" : ""}`} style={kind === x.id ? { background: p.ink, borderColor: p.ink } : undefined} onClick={() => setKind(kind === x.id ? null : x.id)} aria-pressed={kind === x.id}>
-                <i className="rq-cat-dot" style={{ background: kind === x.id ? "#fff" : p.ink }} />
+              <button key={x.id} type="button" role="radio" aria-checked={kind === x.id} className={`evs-type${kind === x.id ? " on" : ""}`} style={{ "--tc": p.ink, "--trgb": rgbOf(p.ink) } as React.CSSProperties} onClick={() => setKind(kind === x.id ? null : x.id)}>
+                <span className="evs-type-disc">
+                  <KindIcon id={x.id} />
+                </span>
                 {x.label}
               </button>
             );
           })}
-          <button type="button" className="rd-chip alt" onClick={() => setCatEdit({ id: null, label: "", color: freeColor })}>
-            + New category
+          <button type="button" className="evs-type rq-tile-new" onClick={() => setCatEdit({ id: null, label: "", color: freeColor })}>
+            <span className="evs-type-disc">
+              <PlusIcon />
+            </span>
+            New category
           </button>
         </div>
         {/* Your own: change its name or colour, or take it off, from right here. */}
@@ -500,51 +523,43 @@ function EventDialog({ today, event, cats, onAddCat, onRenameCat, onRemoveCat, o
         <MonthRange from={start} to={shape === "event" ? start : end} onPick={pick} chrome={calChrome} planned={[]} cursor={cursor} setCursor={setCursor} today={today} />
         <div className="rdd-fields">
           <div className="rd-field">
-            <span>When</span>
-            <div className="rd-btn-group rq-groups" role="group" aria-label="A timestamp or a period">
-              <button type="button" className={shape === "event" ? "on" : ""} aria-pressed={shape === "event"} onClick={() => setShape("event")}>
-                Timestamp
-              </button>
-              <button type="button" className={shape === "period" ? "on" : ""} aria-pressed={shape === "period"} onClick={() => setShape("period")}>
-                A period
-              </button>
-            </div>
-          </div>
-          {shape === "event" ? (
-            <label className="rd-field">
-              <span>On</span>
-              <DateText
-                value={start}
-                onChange={(d) => {
-                  setStart(d);
-                  setEnd(d);
-                  setCursor(d.slice(0, 7));
-                }}
-                label="On"
-              />
-            </label>
-          ) : (
-            <>
-              <label className="rd-field">
-                <span>Starts</span>
-                <DateText value={start} onChange={(d) => pickAs("start", d)} label="Starts" onFocus={() => setPicking("start")} />
-              </label>
-              <label className="rd-field">
-                <span>Ends</span>
-                <DateText value={end} onChange={(d) => pickAs("end", d)} label="Ends" onFocus={() => setPicking("end")} />
-              </label>
-              <div className="rd-field">
-                <span>Length</span>
-                <span className="rdd-length">
-                  {endOk ? `${days} ${days === 1 ? "day" : "days"}` : "Ends before it starts"}
-                  <small>
-                    {shortDay(start)} – {shortDay(end)}
-                  </small>
+            <span className="rq-when-head">
+              When
+              <span className="evs-seg" role="group" aria-label="A timestamp or a period">
+                <button type="button" className={shape === "period" ? "on" : ""} aria-pressed={shape === "period"} onClick={() => setShape("period")}>
+                  Date range
+                </button>
+                <button type="button" className={shape === "event" ? "on" : ""} aria-pressed={shape === "event"} onClick={() => setShape("event")}>
+                  One day
+                </button>
+              </span>
+            </span>
+            <div className="evs-dates rq-dates" style={{ "--c": cal.ink, "--rgb": rgbOf(cal.ink) } as React.CSSProperties}>
+              {shape === "event" ? (
+                <span className="evs-date arm">
+                  <span className="evs-date-head">DATE</span>
+                  <b>{start === today ? "Today" : longDate(start)}</b>
                 </span>
-              </div>
-            </>
-          )}
-          <p className="rdd-picking">{shape === "event" ? "Click the day it happened." : picking === "start" ? "Click a day for the start." : "Now click a day for the end."}</p>
+              ) : (
+                <>
+                  <button type="button" className={`evs-date${picking === "start" ? " arm" : ""}`} onClick={() => setPicking("start")} aria-pressed={picking === "start"}>
+                    <span className="evs-date-head">STARTS</span>
+                    <b>{start === today ? "Today" : longDate(start)}</b>
+                  </button>
+                  <span className="evs-arrow" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h14M13 6l6 6-6 6" />
+                    </svg>
+                  </span>
+                  <button type="button" className={`evs-date ends${picking === "end" ? " arm" : ""}`} onClick={() => setPicking("end")} aria-pressed={picking === "end"}>
+                    <span className="evs-date-head">ENDS</span>
+                    <b>{longDate(end)}</b>
+                  </button>
+                </>
+              )}
+            </div>
+            <p className="rdd-picking">{shape === "event" ? "Click the day on the calendar." : !endOk ? "Ends before it starts." : `${days} ${days === 1 ? "day" : "days"} · ${picking === "start" ? "click the first day" : "now click the last day"}.`}</p>
+          </div>
           <label className="rd-field">
             <span>Note</span>
             <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="What it means for the plan, for you alone." />
