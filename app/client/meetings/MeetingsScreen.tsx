@@ -94,7 +94,7 @@ export default function MeetingsScreen({ upcoming, past, request = null, clientI
         rows.current.get(focusId)?.scrollIntoView({ block: "center", behavior: "smooth" });
         setLit(focusId);
       }, 80);
-      const off = setTimeout(() => setLit(null), 1600);
+      const off = setTimeout(() => setLit(null), 2200);
       return () => {
         clearTimeout(t);
         clearTimeout(off);

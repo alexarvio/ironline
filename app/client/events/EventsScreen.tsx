@@ -76,7 +76,7 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
     if (highlight == null) return;
     const el = rows.current.get(highlight);
     el?.scrollIntoView({ block: "center", behavior: "smooth" });
-    const t = setTimeout(() => setHighlight(null), highlight === focusId ? 1800 : 900);
+    const t = setTimeout(() => setHighlight(null), highlight === focusId ? 2200 : 900);
     return () => clearTimeout(t);
   }, [highlight]); // eslint-disable-line react-hooks/exhaustive-deps
 
