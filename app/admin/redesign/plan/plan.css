@@ -174,8 +174,8 @@
 .rq-ev-past .rq-evrow-main b { color: #5b6474; }
 /* The event dialog is the phase dialog's twin (26 Sep): same width, same columns. */
 .rq-ev-dlg { max-width: 720px; }
-.rq-ev-tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
-.rq-ev-tiles .evs-type { height: 60px; font-size: 11.5px; }
+.rq-ev-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.rq-ev-tiles .evs-type { height: 62px; font-size: 12px; }
 /* The title field takes the category's colour once one is picked, as the client's sheet does. */
 .rq-ev-dlg .rd-field input.rq-what.ring { border-color: transparent; box-shadow: inset 0 0 0 1.5px var(--c); background: rgba(var(--rgb), 0.04); }
 .rq-ev-dlg .rd-field input.rq-what.ring:focus { box-shadow: inset 0 0 0 1.5px var(--c), 0 0 0 3px rgba(var(--rgb), 0.14); }
