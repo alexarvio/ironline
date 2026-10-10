@@ -6,6 +6,7 @@ import { useKeyboardInset } from "./useKeyboardInset";
 import { saveSkipReasonAction } from "../lib/actions";
 import { ChevronLeftIcon } from "../components/icons";
 import GymSheet from "./GymSheet";
+import { VideoAskSheet } from "./VideoAskSheet";
 import type { GymOption } from "./GymPicker";
 import {
   CoachNote,
@@ -324,6 +325,9 @@ function ExerciseCard({ exercise, index, done, coachName, gymId }: { exercise: S
   const thenTop = exercise.lastSets ? top(exercise.lastSets.sets) : null;
   const delta = nowTop != null && thenTop != null ? roundTo(nowTop - thenTop, 2) : null;
   const [open, setOpen] = useState(false);
+  // The photo or video and the coach's reply open from here too (10 Oct): a finished session keeps them on the exercise they came from.
+  const [videoOpen, setVideoOpen] = useState(false);
+  const media = ask?.media === "photo" ? "photo" : "video";
   if (done) {
     return (
       <div className={`so-card so-card-fold${open ? " open" : ""}${exDone ? " done" : ""}`}>
@@ -381,14 +385,23 @@ function ExerciseCard({ exercise, index, done, coachName, gymId }: { exercise: S
           <TargetTable cells={targets} />
           {exercise.note.text && <CoachNote assignmentId={exercise.id} note={exercise.note} />}
           {ask && (
-            <div className={`so-video${ask.reply ? " replied" : ask.src ? " sent" : ""}`}>
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="3" y="6" width="13" height="12" rx="2" />
-                <path d="M16 10l5-3v10l-5-3z" />
-              </svg>
-              {ask.reply ? `${coachName} replied to your video` : ask.src ? `Video sent to ${coachName}` : `${coachName} wants a video of this one`}
-            </div>
+            <button type="button" className={`so-video${ask.reply ? " replied" : ask.src ? " sent" : ""}`} onClick={() => setVideoOpen(true)}>
+              {media === "photo" ? (
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7H8l1.5-2.5h5L16 7h3.5A1.5 1.5 0 0 1 21 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z" />
+                  <circle cx="12" cy="13" r="3.4" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="3" y="6" width="13" height="12" rx="2" />
+                  <path d="M16 10l5-3v10l-5-3z" />
+                </svg>
+              )}
+              <span>{ask.reply ? (ask.carried ? `${coachName}'s reply on this exercise` : `${coachName} replied to your ${media}`) : ask.src ? `${media === "photo" ? "Photo" : "Video"} sent to ${coachName}` : `${coachName} wants a video of this one`}</span>
+              <b>{ask.reply ? "Open" : ask.src ? "View" : "Record"}</b>
+            </button>
           )}
+          {videoOpen && <VideoAskSheet ask={ask} assignmentId={exercise.id} exerciseName={exercise.swap?.name ?? exercise.name} onClose={() => setVideoOpen(false)} />}
         </div>
       )}
     </div>

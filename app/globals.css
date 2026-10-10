@@ -15850,8 +15850,12 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .so-note .coach-mark { margin-top: 1px; }
 .so-note span { font-size: 13.5px; line-height: 1.4; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; white-space: pre-wrap; }
 .so-note.open span { -webkit-line-clamp: unset; display: block; }
-.so-video { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #9a5b0c; }
-.so-video svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; }
+/* A button since 10 Oct: it opens the photo or video and the reply. */
+.so-video { display: flex; align-items: center; gap: 8px; width: 100%; margin: 0; padding: 10px 12px; border: 0; border-radius: 12px; background: #fff7ea; font: inherit; font-size: 13px; font-weight: 700; color: #9a5b0c; text-align: left; cursor: pointer; }
+.so-video span { flex: 1; min-width: 0; }
+.so-video b { flex: none; font-size: 12px; font-weight: 800; }
+.so-video.sent, .so-video.replied { background: #eef3fc; }
+.so-video svg { flex: none; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; }
 .so-video.sent, .so-video.replied { color: #2f5d8f; }
 .so-cta { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 16px 30px; background: linear-gradient(rgba(244, 247, 252, 0), #F4F7FC 30%); }
 .so-start { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; height: 58px; border: 0; border-radius: 18px; background: #1e3a6e; color: #fff; font: inherit; font-size: 17px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 20px rgba(30, 58, 110, 0.3); font-variant-numeric: tabular-nums; }
