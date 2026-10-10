@@ -183,27 +183,8 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
   // Last week behind now (a week and a half with where today sits), so a phase that just ended stays on the
   // timeline and drifts off as the weeks go by. No "Show past" (30 Sep, the
   // user's call): a past phase is looked back on from its own tab's switcher.
-  const back = 1;
-  const first = addWeeks(thisWeek, -back);
-  const count = win + back;
-  const weeks = Array.from({ length: count }, (_, i) => addWeeks(first, i));
-  const nowIdx = weeksBetween(first, thisWeek);
-  const months: { label: string; start: number; span: number }[] = [];
-  weeks.forEach((w, i) => {
-    const label = monthName(w);
-    const prev = months[months.length - 1];
-    if (prev && prev.label === label) prev.span += 1;
-    else months.push({ label, start: i, span: 1 });
-  });
-  // How many weeks the grid slides left, and where today then sits on screen
-  // (in columns). The line stays where it has always been drawn and the
-  // weeks slide so today's day is under it (30 Sep: the weeks sat a week
-  // off the line, so the bars' "behind us" shade stopped short of it).
-  const shift = (nowIdx + intoWeek) * (1 - win / count);
-  const nowCol = nowIdx + intoWeek - shift;
-  const cols: React.CSSProperties = { gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))`, width: `${(count / win) * 100}%`, transform: `translateX(${-(shift / count) * 100}%)` };
-  // The "now" line at today's spot; none when today is past the window's right edge.
-  const nowLeft = nowCol >= 0 && nowCol <= win ? `calc(108px + (100% - 108px) * ${nowCol / win})` : null;
+  // The grid for this window (the maths in gridFor, shared with the Events card, which has a window of its own since 10 Oct).
+  const { first, count, weeks, nowIdx, months, cols, nowLeft, shift } = gridFor(win, thisWeek, intoWeek);
 
   const weekAt = (clientX: number) => {
     const el = areaRef.current;
@@ -450,7 +431,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
       </section>
 
       {/* ---- Events: life around the plan, on the same weeks. */}
-      <EventsCard clientId={clientId} events={plan.events} categories={plan.eventCategories} today={today} weeks={weeks} count={count} cols={cols} months={months} nowIdx={nowIdx} nowLeft={nowLeft} win={win} windows={WINDOWS} onWin={(w) => setWin(w as Win)} />
+      <EventsCard clientId={clientId} events={plan.events} categories={plan.eventCategories} today={today} thisWeek={thisWeek} intoWeek={intoWeek} windows={WINDOWS} />
 
       {/* ---- Goals. */}
       <section className="rd-session open rn-card">
@@ -737,6 +718,36 @@ export function MonthRange({ from, to, onPick, chrome, planned, cursor, setCurso
       </div>
     </div>
   );
+}
+
+/**
+ * The week grid for a window: last week for context, this week in the second
+ * column, and most of the grid what is coming. "Now" is one fixed line a week
+ * and a half in; the weeks slide under it as the week goes by. A phase that
+ * just ended stays a week and drifts off (no "Show past", 30 Sep). The line
+ * stays where it is drawn and the weeks slide so today's day is under it
+ * (30 Sep: the weeks sat a week off the line, so the bars' "behind us" shade
+ * stopped short of it).
+ */
+export function gridFor(win: number, thisWeek: string, intoWeek: number) {
+  const back = 1;
+  const first = addWeeks(thisWeek, -back);
+  const count = win + back;
+  const weeks = Array.from({ length: count }, (_, i) => addWeeks(first, i));
+  const nowIdx = weeksBetween(first, thisWeek);
+  const months: { label: string; start: number; span: number }[] = [];
+  weeks.forEach((w, i) => {
+    const label = monthName(w);
+    const prev = months[months.length - 1];
+    if (prev && prev.label === label) prev.span += 1;
+    else months.push({ label, start: i, span: 1 });
+  });
+  const shift = (nowIdx + intoWeek) * (1 - win / count);
+  const nowCol = nowIdx + intoWeek - shift;
+  const cols: React.CSSProperties = { gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))`, width: `${(count / win) * 100}%`, transform: `translateX(${-(shift / count) * 100}%)` };
+  // The "now" line at today's spot; none when today is past the window's right edge.
+  const nowLeft = nowCol >= 0 && nowCol <= win ? `calc(108px + (100% - 108px) * ${nowCol / win})` : null;
+  return { first, count, weeks, nowIdx, months, cols, nowLeft, shift };
 }
 
 export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track: initialTrack, lockTrack = false, others, programs, onSave, onDelete, onDuplicate, onSend }: { clientId: number; firstName: string; today: string; thisWeek: string; phase: PlanPhaseRow | null; track?: PhaseTrack; /** Opened from a track's own tab (10 Oct): the track is given, so no tiles to pick one. */ lockTrack?: boolean; others: PlanPhaseRow[]; programs: PlanProgramOption[]; onSave: (v: { name: string; track: PhaseTrack; start: string; end: string; programId: number | null }) => void; onDelete?: () => void; /** A copy of this phase as a new draft (a past one, to run again). */ onDuplicate?: () => void; onSend: (v: { name: string; track: PhaseTrack; start: string; end: string; now: boolean }) => void }) {

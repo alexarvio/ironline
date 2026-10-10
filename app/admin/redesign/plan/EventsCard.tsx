@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { addClientEventAction, deleteClientEventAction, updateClientEventAction } from "../../../lib/actions";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { ChevronDownIcon, PlusIcon, TrashIcon } from "../../../components/icons";
-import { MonthRange } from "./PlanDraft";
+import { gridFor, MonthRange } from "./PlanDraft";
 import { paletteOf } from "../palette";
 import { EVENT_TYPES, eventTypeOf, isEventTypeId } from "../../../lib/eventTypes";
 
@@ -88,22 +88,31 @@ export type EventsCardProps = {
   events: PlanEvent[];
   categories: Category[];
   today: string;
-  /** The Monday of every column, in order, and how many there are. */
-  weeks: string[];
-  count: number;
-  /** The grid's own styling: the columns, the width, the slide under "now". */
-  cols: React.CSSProperties;
-  months: { label: string; start: number; span: number }[];
-  nowIdx: number;
-  nowLeft: string | null;
-  win: number;
-  /** The 3 / 6 / 9 / 12 month switch, shared with the phases so both grids move together. */
+  thisWeek: string;
+  /** How far through this week it is, 0 to 1, from the server so both renders agree. */
+  intoWeek: number;
+  /** The 3 / 6 / 9 / 12 month choices. The card keeps its own choice (10 Oct), apart from the phases'. */
   windows: readonly { months: number; weeks: number }[];
-  onWin: (weeks: number) => void;
 };
+const EV_WIN_KEY = "rq-events-window";
 
-export default function EventsCard({ clientId, events, categories: cats, today, weeks, count, cols, months, nowIdx, nowLeft, win, windows, onWin }: EventsCardProps) {
+export default function EventsCard({ clientId, events, categories: cats, today, thisWeek, intoWeek, windows }: EventsCardProps) {
   const router = useRouter();
+  // Its own window, remembered in the browser; the server renders 3 months and the saved choice follows after the first paint.
+  const [win, setWinState] = useState(windows[0]?.weeks ?? 13);
+  useEffect(() => {
+    try {
+      const saved = Number(window.localStorage.getItem(EV_WIN_KEY));
+      if (windows.some((w) => w.weeks === saved)) Promise.resolve().then(() => setWinState(saved));
+    } catch {}
+  }, [windows]);
+  const onWin = (w: number) => {
+    setWinState(w);
+    try {
+      window.localStorage.setItem(EV_WIN_KEY, String(w));
+    } catch {}
+  };
+  const { count, weeks, nowIdx, months, cols, nowLeft } = gridFor(win, thisWeek, intoWeek);
   const [, start] = useTransition();
   // Every save goes to the server and the page re-reads; the card holds no copy.
   const act = (fn: () => Promise<unknown>, said?: string) =>
