@@ -291,6 +291,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   const noteMeta = getClientProgramNoteMeta(clientId, program.id);
   const draft: DraftProgram = {
     id: program.id,
+    planCtx: planCtxOf(clientId),
     programs,
     answersFeed,
     name: program.name ?? "Programme",
@@ -366,6 +367,7 @@ export function loadNutrition(clientId: number, params: { phase?: string }): Dra
     id: phase.id,
     goals: goalsOf(phase.id),
     phases: phases.map((p) => ({ id: p.id, name: p.name, weeks: p.weeks, state: p.state })),
+    planCtx: planCtxOf(clientId),
     name: phase.name,
     status: phase.state,
     weeks: phase.weeks,
@@ -469,6 +471,7 @@ export function loadMeasurements(clientId: number, params: { phase?: string }): 
     id: selected?.id ?? 0,
     goals: goalsOf(selected?.id),
     phases,
+    planCtx: planCtxOf(clientId),
     name: selected?.name ?? "Check-ins",
     status: selected ? STATE[selected.status] : "live",
     weeks: selected ? phaseWeeks(selected.start_week, selected.end_week) : 0,
@@ -626,6 +629,12 @@ const intoWeek = () => {
   const now = new Date();
   return (((now.getDay() + 6) % 7) + (now.getHours() + now.getMinutes() / 60) / 24) / 7;
 };
+
+/** What the New phase dialog needs on the other tabs (10 Oct): the plan's dates, phases and programmes. */
+function planCtxOf(clientId: number): Pick<DraftPlan, "today" | "thisWeek" | "phases" | "programs"> {
+  const d = getPlanData(clientId);
+  return { today: d.today, thisWeek: d.thisWeek, phases: d.phases, programs: d.programs };
+}
 
 export function loadPlan(clientId: number): DraftPlan {
   const d = getPlanData(clientId);

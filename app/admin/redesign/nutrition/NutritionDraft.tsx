@@ -15,6 +15,7 @@ import type { LoggedDay, LoggedDaysView, LoggedMeal, MealComment } from "../../.
 import DatePick from "../DatePick";
 import { ConfirmDialog, MessageDialog, fmtDate, stateLabel } from "../training/TrainingDraft";
 import PhaseDatesDialog from "../PhaseDatesDialog";
+import { PhaseDialog, phaseForm as planPhaseForm, type DraftPlan } from "../plan/PlanDraft";
 import PhaseSwitcher from "../PhaseSwitcher";
 import PhaseGoalsCard from "../PhaseGoalsCard";
 import CoachNoteCard from "../CoachNoteCard";
@@ -48,6 +49,8 @@ export type DraftSupplement = {
 };
 export type DraftNutrition = {
   id: number;
+  /** The plan behind the tab (10 Oct): today, this week, every phase and programme, for the New phase dialog the Plan tab has. */
+  planCtx: Pick<DraftPlan, "today" | "thisWeek" | "phases" | "programs">;
   /** The coach's goals for the phase, up to three. */
   goals: string[];
   phases: { id: number; name: string; weeks: number; state: State }[];
@@ -83,11 +86,6 @@ const phaseForm = (v: { id?: number; clientId?: number; track: string; name: str
     f.set("lastDay", v.end);
   }
   return f;
-};
-const plusWeeks = (start: string, weeks: number) => {
-  const d = new Date(`${start}T00:00:00`);
-  d.setDate(d.getDate() + Math.max(0, weeks - 1) * 7);
-  return d.toISOString().slice(0, 10);
 };
 const n = (v: number) => Math.round(v).toLocaleString("en-US");
 const ON_TARGET = 200;
@@ -652,13 +650,22 @@ export default function NutritionDraft({ clientId, firstName, plan }: { clientId
             }}
           />
         )}
+        {/* The Plan tab's New phase dialog, here too (10 Oct), on this track. */}
         {dlg?.kind === "newPhase" && (
-          <NewPhaseDialog
-            onCreate={(v) => {
+          <PhaseDialog
+            clientId={clientId}
+            firstName={firstName}
+            today={plan.planCtx.today}
+            thisWeek={plan.planCtx.thisWeek}
+            phase={null}
+            track="nutrition"
+            others={plan.planCtx.phases}
+            programs={plan.planCtx.programs}
+            onSave={(v) => {
               close();
-              const start = v.start || today;
-              act(() => addClientPhaseAction(phaseForm({ clientId, track: "nutrition", name: v.name || "New phase", start, end: plusWeeks(start, v.weeks) })), `${v.name || "New phase"} drafted: ${v.weeks} weeks from ${fmtDate(start)}`);
+              act(() => addClientPhaseAction(planPhaseForm({ clientId, ...v })), `${v.name} drafted: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
             }}
+            onSend={() => {}}
           />
         )}
         {dlg?.kind === "deploy" && !startHasCome && (
@@ -943,42 +950,3 @@ function PhotoDialog({ firstName, date, meal, comments, onSend }: { firstName: s
 }
 
 
-function NewPhaseDialog({ onCreate }: { onCreate: (v: { name: string; weeks: number; start: string }) => void }) {
-  const [name, setName] = useState("");
-  // Typed, not picked: any whole number of weeks from 1 to 52.
-  const [weeksText, setWeeksText] = useState("4");
-  const weeks = Math.round(Number(weeksText));
-  const weeksOk = Number.isFinite(weeks) && weeks >= 1 && weeks <= 52;
-  const [start, setStart] = useState("");
-  return (
-    <DialogContent className="rd-dlg">
-      <DialogHeader>
-        <DialogTitle>New nutrition phase</DialogTitle>
-        <DialogDescription>A draft: only you see it until it is scheduled. It lands on the Plan tab&rsquo;s nutrition lane.</DialogDescription>
-      </DialogHeader>
-      <label className="rd-field">
-        <span>Name</span>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Cut A" maxLength={60} autoFocus />
-      </label>
-      <div className="rd-field-row">
-        <label className="rd-field rd-field-weeks">
-          <span>Length</span>
-          <span className="rd-weeks-field">
-            <input type="number" inputMode="numeric" min={1} max={52} step={1} value={weeksText} onChange={(e) => setWeeksText(e.target.value)} aria-label="Length in weeks" />
-            <small>{weeksOk && weeks === 1 ? "week" : "weeks"}</small>
-          </span>
-        </label>
-        <label className="rd-field">
-          <span>Starts</span>
-          <DatePick value={start} onChange={setStart} label="Starts" placeholder="Pick the start" />
-        </label>
-      </div>
-      <DialogFooter>
-        <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!weeksOk} onClick={() => onCreate({ name: name.trim(), weeks, start })}>
-          Create draft
-        </button>
-      </DialogFooter>
-    </DialogContent>
-  );
-}

@@ -296,7 +296,11 @@ export function PhaseDialog({
   const available = programs.filter((p) => !p.linked);
   const vars = { "--sel-edge": sel.edge, "--sel-soft": sel.soft, "--sel-band": sel.band } as CSSProperties;
   const title = scheduling ? "Schedule phase" : editing ? "Edit phase" : "New phase";
-  const action = scheduling ? schedulePhaseAction : editing ? updateClientPhaseAction : addClientPhaseAction;
+  // addClientPhaseAction says what it made (10 Oct); a form action must give nothing back, so it is wrapped.
+  const addQuiet = async (fd: FormData) => {
+    await addClientPhaseAction(fd);
+  };
+  const action = scheduling ? schedulePhaseAction : editing ? updateClientPhaseAction : addQuiet;
 
   return createPortal(
     <div className="pl-dlg-scrim" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>

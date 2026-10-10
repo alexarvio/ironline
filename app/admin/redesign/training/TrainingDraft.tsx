@@ -5,7 +5,8 @@ import type React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { addExerciseToLibraryAction, addExerciseVariationAction, markProgramNoteSeenAction, markVideoSeenAction, setRowDemoHiddenAction, setRowVariationAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, createProgramWithAction, deployProgramAction, removeGymAction, removeProgramWeekAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, saveTrainingNoteAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
+import { PhaseDialog, phaseForm as planPhaseForm, type DraftPlan } from "../plan/PlanDraft";
+import { addExerciseToLibraryAction, addExerciseVariationAction, markProgramNoteSeenAction, markVideoSeenAction, setRowDemoHiddenAction, setRowVariationAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, addClientPhaseAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, deployProgramAction, removeGymAction, removeProgramWeekAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, saveTrainingNoteAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger, ToggleGroup, ToggleGroupItem } from "../../../components/ui/basics";
@@ -82,6 +83,8 @@ export type DraftSession = { id: number; number: number; name: string; setsPlann
 export type DraftAnswered = { dayId: number; weekIdx: number; weekLabel: string; name: string; ended: string; duration: number | null; gym: string | null; note: string | null; answers: { label: string; kind: "scale" | "number" | "text"; value: number | null; text: string | null; unit: string }[] };
 export type DraftProgram = {
   id: number;
+  /** The plan behind the tab (10 Oct): today, this week, every phase and programme, for the New phase dialog the Plan tab has. */
+  planCtx: Pick<DraftPlan, "today" | "thisWeek" | "phases" | "programs">;
   /** Every workout ended in this programme, newest first, with its answers. */
   answersFeed: DraftAnswered[];
   programs: { id: number; name: string; weeks: number; state: "live" | "past" | "scheduled" | "draft" }[];
@@ -1622,17 +1625,27 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           />
         )}
 
+        {/* The Plan tab's New phase dialog, here too (10 Oct): a training phase with its programme, new or one waiting. */}
         {dlg?.kind === "newProgram" && (
-          <NewProgramDialog
-            onCreate={(v) => {
+          <PhaseDialog
+            clientId={clientId}
+            firstName={firstName}
+            today={program.planCtx.today}
+            thisWeek={program.planCtx.thisWeek}
+            phase={null}
+            track="training"
+            others={program.planCtx.phases}
+            programs={program.planCtx.programs}
+            onSave={(v) => {
               close();
               startTransition(async () => {
-                const id = await createProgramWithAction(clientId, v.name, v.weeks, v.start || null);
-                savedToast(`${v.name || "New programme"} · ${v.weeks} weeks, a draft`);
-                if (id) router.push(`${window.location.pathname}?client=${clientId}&tab=training&program=${id}&week=1`, { scroll: false });
+                const made = await addClientPhaseAction(planPhaseForm({ clientId, ...v }));
+                savedToast(`${v.name} drafted: ${v.programId ? "on its programme" : "a new programme"}`);
+                if (made?.programId) router.push(`${window.location.pathname}?client=${clientId}&tab=training&program=${made.programId}&week=1`, { scroll: false });
                 else router.refresh();
               });
             }}
+            onSend={() => {}}
           />
         )}
 

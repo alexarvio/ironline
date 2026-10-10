@@ -2854,10 +2854,10 @@ function saveObjectivesFrom(phaseId: number, formData: FormData) {
   setPhaseObjectives(phaseId, formData.getAll("objectives").map(String));
 }
 
-export async function addClientPhaseAction(formData: FormData) {
+export async function addClientPhaseAction(formData: FormData): Promise<{ phaseId: number; programId: number | null } | null> {
   const clientId = Number(formData.get("clientId"));
   const fields = readPhaseForm(formData);
-  if (!fields || !(await coachForClient(clientId))) return;
+  if (!fields || !(await coachForClient(clientId))) return null;
   const rawProgram = String(formData.get("programId") ?? "");
   // Only one of this client's own programmes can be linked.
   const programId = /^\d+$/.test(rawProgram) && getClientIdForProgram(Number(rawProgram)) === clientId ? Number(rawProgram) : null;
@@ -2865,6 +2865,7 @@ export async function addClientPhaseAction(formData: FormData) {
   saveObjectivesFrom(added.id, formData);
   revalidatePath("/admin");
   revalidatePath("/client");
+  return { phaseId: added.id, programId: added.program_id ?? null };
 }
 
 /**
