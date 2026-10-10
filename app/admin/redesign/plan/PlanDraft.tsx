@@ -811,8 +811,9 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
   // Training can't overlap: say the weeks rule and the nearest week that fits, and hold Save.
   const weekClash = !byDay && overlap ? (overlap.from > startWeek ? { side: "end" as const, day: addDays(overlap.from, -1) } : { side: "start" as const, day: addDays(overlap.to, 1) }) : null;
   const WEEK_RULE = "Training goes week by week: a phase always starts on a Monday and ends on a Sunday.";
+  // A clash says only what is in the way and the nearest week that fits (10 Oct); the week rule is for a day that moved.
   const note = weekClash
-    ? `${WEEK_RULE} ${weekClash.side === "end" ? `${overlap!.name} starts ${fmtDay(overlap!.from)}, so this one has to end on ${fmtDay(weekClash.day)}.` : `${overlap!.name} runs until ${fmtDay(overlap!.to)}, so this one can start on ${fmtDay(weekClash.day)} at the earliest.`}`
+    ? `${weekClash.side === "end" ? `${overlap!.name} starts ${fmtDay(overlap!.from)}, so this one has to end on ${fmtDay(weekClash.day)}.` : `${overlap!.name} runs until ${fmtDay(overlap!.to)}, so this one can start on ${fmtDay(weekClash.day)} at the earliest.`}`
     : overlap
       ? `Overlaps ${overlap.name} (${fmtDay(overlap.from)} – ${fmtDay(overlap.to)}) on the same track.`
       : !byDay && moved
@@ -949,7 +950,8 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
               </span>
               <button type="button" className={`evs-date ends${picking === "end" ? " arm" : ""}`} onClick={() => setPicking("end")} aria-pressed={picking === "end"}>
                 <span className="evs-date-head">ENDS</span>
-                <b>{fmtDay(to)}</b>
+                {/* A training phase ends on its week's Sunday, so that is the day shown. */}
+                <b>{fmtDay(byDay ? to : savedTo)}</b>
               </button>
             </div>
           </div>
