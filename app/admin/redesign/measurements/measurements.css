@@ -39,8 +39,9 @@
 .rm-th { display: flex; flex-direction: column; gap: 1px; }
 .rm-th em { font-size: 10px; font-style: normal; font-weight: 700; letter-spacing: 0.06em; }
 .rm-td { padding: 10px 0; border-top: 1px solid #eceff3; font-size: 14px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; white-space: nowrap; }
-/* The date, then the note bubble when there is one, both on the line's centre, flush left. */
+/* The date flush left; the note bubble, when there is one, at the cell's right edge (12 Oct), so every bubble lines up down the column, by the first metric. */
 .rm-td.date { display: flex; align-items: center; gap: 8px; font-weight: 600; color: #313851; padding-left: 10px; }
+.rm-td.date .rm-notebtn { margin-left: auto; }
 .rm-td.now { color: #1e3a6e; }
 .rm-td.none { color: #c3c9d2; font-weight: 500; }
 .rm-td.change { border-top: 1px solid #dfe3e8; font-size: 13px; color: #5b6474; }
