@@ -79,21 +79,30 @@ export default function ExercisePage({
   // ---- Working sets, one at a time: the next set to log has the row to
   // type into, logged rows read back in green with an Edit, and the rest
   // wait in grey. One button under the rows logs the active set.
+  // Extra sets (12 Oct): once every prescribed set is logged, the client can
+  // add one. It is logged as set N+1, an extra, never a change to the plan:
+  // next week still shows the coach's count. One unlogged extra at a time.
+  const [extraAdded, setExtraAdded] = useState(0);
+  const maxLogged = exercise.logs.reduce((m, l) => Math.max(m, l.setNumber), 0);
+  const rows = Math.max(exercise.sets + extraAdded, maxLogged);
+  const extraLogged = Math.max(0, maxLogged - exercise.sets);
   const nextSet = (() => {
-    for (let n = 1; n <= exercise.sets; n++) if (!exercise.logs.some((l) => l.setNumber === n)) return n;
-    return exercise.sets + 1;
+    for (let n = 1; n <= rows; n++) if (!exercise.logs.some((l) => l.setNumber === n)) return n;
+    return rows + 1;
   })();
   const [editingN, setEditingN] = useState<number | null>(null);
   // The clock that flipped the rows to last time went (10 Oct): the rows to do carry last session's numbers anyway.
   const last = exercise.lastSets;
   const lastOf = (n: number) => last?.sets.find((s) => s.setNumber === n) ?? null;
-  const activeN = editingN ?? (nextSet <= exercise.sets ? nextSet : null);
+  const activeN = editingN ?? (nextSet <= rows ? nextSet : null);
   // A set still to do starts from what this set was last session (9 Oct),
   // weight and reps; with no last session in this phase, the coach's target.
+  // An extra set with no last-time twin starts from the set before it.
   const freshDraft = (n: number | null): Draft => {
     const log = n != null ? exercise.logs.find((l) => l.setNumber === n) ?? null : null;
     if (log) return { weight: show(log.weight), reps: log.reps != null ? String(log.reps) : "", rpe: log.rpe != null ? String(log.rpe) : "" };
-    const prev = n != null ? lastOf(n) : null;
+    const before = n != null && n > exercise.sets ? exercise.logs.find((l) => l.setNumber === n - 1) ?? null : null;
+    const prev = n != null ? lastOf(n) ?? before : null;
     return { weight: show(prev?.weight ?? targetWeight), reps: prev?.reps != null ? String(prev.reps) : "", rpe: targetRpe != null ? String(targetRpe) : "" };
   };
   const [draft, setDraft] = useState<Draft>(() => freshDraft(activeN));
@@ -118,7 +127,8 @@ export default function ExercisePage({
     fd.set("unit", unit);
     // The last set to do, logged now (not one changed afterwards): once it
     // shows as done, the workout slides on to what comes next (1 Oct).
-    const finishing = editingN == null && exercise.logs.filter((l) => l.setNumber !== activeN && l.setNumber <= exercise.sets).length + 1 >= exercise.sets;
+    // An extra set never slides on: the exercise was done before it.
+    const finishing = editingN == null && activeN <= exercise.sets && exercise.logs.filter((l) => l.setNumber !== activeN && l.setNumber <= exercise.sets).length + 1 >= exercise.sets;
     setPending(true);
     try {
       await logSetAction(fd);
@@ -383,12 +393,14 @@ export default function ExercisePage({
           )
         )}
 
-        {Array.from({ length: exercise.sets }, (_, i) => i + 1).map((n) => {
+        {Array.from({ length: rows }, (_, i) => i + 1).map((n) => {
           const log = exercise.logs.find((l) => l.setNumber === n) ?? null;
+          // Beyond the coach's count: the row reads as an extra (dashed circle).
+          const extra = n > exercise.sets ? " extra" : "";
           if (n === activeN) {
             return (
-              <div key={n} className="ts-grid ts-set active">
-                <span className="ts-circle active">{n}</span>
+              <div key={n} className={`ts-grid ts-set active${extra}`}>
+                <span className="ts-circle active" title={extra ? "Extra set" : undefined}>{n}</span>
                 {askWeight && numberInput({ value: draft.weight, placeholder: unitLabel, label: `Set ${n} weight in ${unitLabel}`, decimal: true, disabled: pending, onChange: (v) => setDraft({ ...draft, weight: v }) })}
                 {numberInput({ value: draft.reps, placeholder: exercise.reps || "reps", label: `Set ${n} reps`, disabled: pending, reps: true, onChange: (v) => setDraft({ ...draft, reps: v }) })}
                 {askRpe && numberInput({ value: draft.rpe, placeholder: "RPE", label: `Set ${n} RPE`, decimal: true, disabled: pending, onChange: (v) => setDraft({ ...draft, rpe: v }) })}
@@ -398,8 +410,8 @@ export default function ExercisePage({
           }
           if (log) {
             return (
-              <div key={n} className="ts-grid ts-set logged">
-                <span className="ts-circle done">✓</span>
+              <div key={n} className={`ts-grid ts-set logged${extra}`}>
+                <span className="ts-circle done" title={extra ? "Extra set" : undefined}>✓</span>
                 {askWeight && <span>{log.weight == null ? "–" : show(log.weight)}</span>}
                 <span>{log.reps ?? "–"}</span>
                 {askRpe && <span>{log.rpe ?? "–"}</span>}
@@ -438,7 +450,25 @@ export default function ExercisePage({
             </button>
           </div>
         ) : activeN == null ? (
-          <div className="ts-all-logged">All {exercise.sets} sets logged</div>
+          <div className="ts-all-logged">
+            <span>
+              All {exercise.sets} sets logged
+              {extraLogged > 0 && ` · ${extraLogged} extra`}
+            </span>
+            {/* One more than the coach asked for (12 Oct): logged as an extra, the plan unchanged. */}
+            <button type="button" className="ts-addset" onClick={() => setExtraAdded((e) => Math.max(e, extraLogged) + 1)}>
+              Add a set
+            </button>
+          </div>
+        ) : activeN > exercise.sets ? (
+          <div className="ts-actions">
+            <button type="button" className="ts-primary" disabled={pending || draft.reps.trim() === ""} onClick={logActive}>
+              {pending ? "Logging…" : `Log extra set ${activeN}`}
+            </button>
+            <button type="button" className="ts-cancel" onClick={() => setExtraAdded((e) => Math.max(0, e - 1))} disabled={pending}>
+              Cancel
+            </button>
+          </div>
         ) : (
           <button type="button" className="ts-primary" disabled={pending || draft.reps.trim() === ""} onClick={logActive}>
             {pending ? "Logging…" : `Log set ${activeN} of ${exercise.sets}`}

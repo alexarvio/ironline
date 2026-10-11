@@ -934,7 +934,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                               r.logged.map((l) => {
                                 const over = l.kg != null && r.kg != null ? l.kg - r.kg : 0;
                                 return (
-                                  <span key={l.set} className={`rd-set${over > 0 ? " up" : over < 0 ? " down" : ""}`} title={l.gym ?? undefined}>
+                                  <span key={l.set} className={`rd-set${over > 0 ? " up" : over < 0 ? " down" : ""}${l.set > r.sets ? " extra" : ""}`} title={l.set > r.sets ? `Extra set${l.gym ? ` · ${l.gym}` : ""}` : l.gym ?? undefined}>
                                     {kgOf(l.kg, lbs)}×{l.reps ?? "—"}
                                     {l.rpe != null && <small>@{l.rpe}</small>}
                                   </span>

@@ -355,7 +355,10 @@ function ExerciseCard({ exercise, index, done, coachName, gymId }: { exercise: S
                   .sort((a, b) => a.setNumber - b.setNumber)
                   .map((l) => (
                     <div key={l.id} className="so-set">
-                      <span className="so-set-n">Set {l.setNumber}</span>
+                      <span className="so-set-n">
+                        Set {l.setNumber}
+                        {l.setNumber > exercise.sets ? " · extra" : ""}
+                      </span>
                       <span>{l.weight != null ? `${kgToUnit(l.weight, "kg")} kg` : "–"}</span>
                       <span>{l.reps != null ? `${l.reps} reps` : "–"}</span>
                       {exercise.logs.some((x) => x.rpe != null) && <span>{l.rpe != null ? `RPE ${l.rpe}` : "–"}</span>}

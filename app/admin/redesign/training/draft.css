@@ -103,6 +103,8 @@
 .rd-set small { font-size: 10.5px; color: #8b93a1; margin-left: 2px; }
 .rd-set.up { background: #dff3ea; color: #1b7a4b; }
 .rd-set.down { background: #fdf3ee; color: #b3471d; }
+/* A set beyond the prescribed count (12 Oct): the client added it; dashed, so it reads as extra. */
+.rd-set.extra { outline: 1px dashed #a0a7b3; outline-offset: -1px; }
 .rd-row.cardio .rd-ex { font-weight: 500; }
 
 .rd-detail { display: flex; flex-direction: column; gap: 14px; padding: 4px 10px 14px; }
