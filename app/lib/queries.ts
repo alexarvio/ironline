@@ -8607,9 +8607,13 @@ export function getLastSets(assignmentId: number, gymId: number | null): { date:
   const own = wa ? data.program_days.find((pd) => pd.id === wa.program_day_id) : undefined;
   const sameGym = (h: (typeof history)[number]) => gymId != null && (h.logs[0]?.gym_id ?? null) === gymId;
   const sameSlot = history.filter((h) => h.day.day_of_week === own?.day_of_week);
-  // Another session only from an earlier week, never the same week's.
+  // Another session from an earlier week before this week's: Thursday's
+  // compares with last Thursday, not with Monday's.
   const earlier = history.filter((h) => own == null || h.day.week_number < own.week_number);
-  const pick = sameSlot.find(sameGym) || sameSlot[0] || earlier.find(sameGym) || earlier[0];
+  // No earlier week at all (the phase's first week, or the exercise is new
+  // to it): the latest session anywhere, this week's included, so the
+  // second time in a week starts from the first (11 Oct).
+  const pick = sameSlot.find(sameGym) || sameSlot[0] || earlier.find(sameGym) || earlier[0] || history.find(sameGym) || history[0];
   if (!pick) return null;
   return { date: dayDate(pick.day, pick.logs), sets: pick.logs.map(setView) };
 }
