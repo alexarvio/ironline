@@ -102,3 +102,13 @@
 .rfd-quote { font-weight: 500; font-style: italic; color: #5b6474; }
 .rfd-ontrack { margin: 0; padding: 0 4px; font-size: 13px; line-height: 1.5; color: #8b93a1; }
 .rfd-ontrack b { color: #1b7a4b; }
+
+/* Calmer (12 Oct): one line a client, the words cut to fit, "+N" for the rest, five a bucket. */
+.rfd-row.rfd-need { grid-template-columns: 190px minmax(0, 1fr) 36px 72px; padding-top: 10px; padding-bottom: 10px; }
+.rfd-one { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rfd-moreto { justify-self: center; padding: 2px 7px; border-radius: 999px; background: #eef0f3; font-size: 11px; font-weight: 700; color: #5b6474; cursor: help; }
+.rfd-need .rfd-when { justify-self: end; }
+.rfd-more > summary { list-style: none; padding: 8px 18px 10px 228px; font-size: 12.5px; font-weight: 700; color: #2f5d8f; cursor: pointer; }
+.rfd-more > summary::-webkit-details-marker { display: none; }
+.rfd-more > summary:hover { text-decoration: underline; }
+.rfd-more[open] > summary { display: none; }

@@ -49,6 +49,8 @@ const BUCKETS: { id: HomeAction["group"]; label: string; sub: string }[] = [
 ];
 const TAB_ROUTE: Record<string, string> = { photos: "pictures" };
 const PAGE = 20;
+/** Start here rows shown in a bucket before "Show N more". */
+const SHOWN = 5;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const matches = (e: FeedEvent, filter: FilterId) => (FILTERS.find((f) => f.id === filter)!.holds as readonly FeedCategory[]).includes(e.category);
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -152,6 +154,33 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
   const avatar = new Map(rail.clients.map((c) => [c.id, c.avatarPath]));
   const clock = (e: FeedEvent) => (e.timeKnown ? feedClock(e.at) : "");
 
+  // A Start here row: one line. The rest of what is open sits in the
+  // "+N" count's title, and on the client's Home.
+  const needRow = ({ client, lead, rest, to, since }: Need) => {
+    const ago = waiting(since, now);
+    const first = lead[0];
+    const more = [...lead.slice(1), ...rest];
+    return (
+      <Link key={client.id} href={to} className="rfd-row rfd-need">
+        {who(client.id, client.name)}
+        <span className="rfd-main">
+          <span className="rfd-text rfd-one">
+            <b>{first.title}</b>
+            {first.tone === "note" && first.detail && <em className="rfd-quote"> &ldquo;{first.detail}&rdquo;</em>}
+          </span>
+        </span>
+        {more.length > 0 ? (
+          <span className="rfd-moreto" title={more.map((a) => a.title).join(" · ")}>
+            +{more.length}
+          </span>
+        ) : (
+          <span />
+        )}
+        <span className="rfd-when">{ago ?? ""}</span>
+      </Link>
+    );
+  };
+
   const who = (id: number, name: string) => (
     <span className="rfd-who">
       <span className="rfd-avatar" aria-hidden="true">
@@ -227,27 +256,15 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
                         <h3 className="rfd-bucket-title">
                           {b.label} <span>· {b.sub}</span>
                         </h3>
-                        {rows.map(({ client, lead, rest, to, since }) => {
-                          const ago = waiting(since, now);
-                          return (
-                            <Link key={client.id} href={to} className="rfd-row rfd-need">
-                              {who(client.id, client.name)}
-                              <span className="rfd-main">
-                                <span className="rfd-text">
-                                  {lead.map((a, i) => (
-                                    <span key={a.id}>
-                                      {i > 0 && " · "}
-                                      <b>{a.title}</b>
-                                      {a.tone === "note" && a.detail && <em className="rfd-quote"> &ldquo;{a.detail}&rdquo;</em>}
-                                    </span>
-                                  ))}
-                                </span>
-                                {rest.length > 0 && <span className="rfd-detail">Also: {rest.map((a) => a.title.charAt(0).toLowerCase() + a.title.slice(1)).join(" · ")}</span>}
-                              </span>
-                              <span className="rfd-when">{ago ? (ago === "just now" ? ago : `${ago} waiting`) : ""}</span>
-                            </Link>
-                          );
-                        })}
+                        {/* One line a client (12 Oct, calmer): the first thing, its words cut to
+                            a line, and how many more; five a bucket, the rest behind "Show". */}
+                        {rows.slice(0, SHOWN).map(needRow)}
+                        {rows.length > SHOWN && (
+                          <details className="rfd-more">
+                            <summary>Show {rows.length - SHOWN} more</summary>
+                            {rows.slice(SHOWN).map(needRow)}
+                          </details>
+                        )}
                       </div>
                     );
                   })}

@@ -6070,7 +6070,8 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
   if (dailyDefs.length) {
     const lastDaily = listMetricPeriods(dailyDefs.map((d) => d.id), 1)[0] ?? null;
     const gap = lastDaily ? Math.floor((middayMs(today) - middayMs(lastDaily)) / 86400000) : null;
-    if (gap != null && gap >= 2) {
+    // Three days (12 Oct; two lit up half the clients on any Monday).
+    if (gap != null && gap >= 3) {
       actions.push({ id: "checkin-daily", tone: "due", group: "check", title: `No daily check-in for ${gap} days`, detail: `Last one ${feedTimeLabel(middayMs(lastDaily!), false)}.`, tab: "measurements", at: middayMs(lastDaily!) });
     }
   }
@@ -6086,7 +6087,8 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
         const done = as.every((a) => getLogsForAssignment(a.id).length >= a.sets) && listCardioForDay(d.id).every((c) => isCardioDone(c.id));
         return !done && !d.skip_reason;
       });
-      if (missed.length) {
+      // Two or more (12 Oct): one missed session in a week is life, not a signal.
+      if (missed.length >= 2) {
         actions.push({
           id: "missed-sessions",
           tone: "due",
@@ -6102,7 +6104,9 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
   // Their own words waiting to be read: notes and reasons, not plain logging.
   // Not chat messages: those wait for a reply, above.
   for (const e of unseen) {
-    if (!e.note || e.category === "messages") continue;
+    // Nor a note on a check-in (12 Oct): those read in Activity and on
+    // Measurements; in Start here they were most of the noise.
+    if (!e.note || e.category === "messages" || e.category === "measurements") continue;
     actions.push({ id: `read-${e.id}`, tone: "note", group: "check", title: e.text.charAt(0).toUpperCase() + e.text.slice(1), detail: e.note, tab: e.tab, at: e.at, eventId: e.id });
   }
   // Gone quiet: nothing at all logged for a while.
