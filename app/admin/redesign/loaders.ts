@@ -13,6 +13,8 @@ import {
   phaseCheckInDays,
   chatQuote,
   chatUnread,
+  feedClock,
+  mediaWords,
   syncClientLoginEmail,
   getMetricEntries,
   getCoachProfile,
@@ -809,4 +811,21 @@ export function loadInvoices(coachId: number, clientId: number): DraftInvoices {
     },
     missing,
   };
+}
+
+// ---- The chat dock (12 Oct): every client's chat, for the screens that are
+// not one client's. Newest word first, then those with no messages, by name.
+export type DockChat = { id: number; name: string; avatarPath: string | null; unread: boolean; last: { text: string; when: string; mine: boolean } | null };
+export function loadChatDock(coach: { id: number }): DockChat[] {
+  const today = localDateStr();
+  const rows = getData()
+    .clients.filter((c) => c.coach_id === coach.id)
+    .map((c) => {
+      const m = listChatMessages(c.id).filter((x) => x.text.trim() || x.media_path).at(-1) ?? null;
+      const at = m ? new Date(m.created_at) : null;
+      const when = at ? (localDateStr(at) === today ? feedClock(at.getTime()) : at.toLocaleDateString("en-GB", { day: "numeric", month: "short" })) : "";
+      return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, unread: chatUnread(c.id), last: m ? { text: m.text.trim() || mediaWords(m.media_type), when, mine: m.sender === "coach" } : null, at: at?.getTime() ?? 0 };
+    })
+    .sort((a, b) => b.at - a.at || a.name.localeCompare(b.name));
+  return rows.map(({ at: _at, ...r }) => r);
 }

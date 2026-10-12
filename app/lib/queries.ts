@@ -5924,6 +5924,10 @@ export type HomeAction = {
   id: string;
   /** "urgent": stops the client; "due": something is owed; "note": words to read. */
   tone: "urgent" | "due" | "note";
+  /** What kind of move it asks of the coach (12 Oct, the Feed's buckets):
+      "reply" someone is waiting on an answer; "check" the client is
+      slipping; "setup" something on the coach's side needs fixing. */
+  group: "reply" | "check" | "setup";
   title: string;
   detail: string;
   /** The admin tab that deals with it, if one does. */
@@ -5967,7 +5971,7 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
 
   const actions: HomeAction[] = [];
   if (clientLockedOut(clientId)) {
-    actions.push({ id: "locked", tone: "urgent", title: "Locked out of signing in", detail: "Too many wrong passwords. Clear the lock from their card, or it lifts by itself.", tab: null, at: Date.now() });
+    actions.push({ id: "locked", tone: "urgent", group: "setup", title: "Locked out of signing in", detail: "Too many wrong passwords. Clear the lock from their card, or it lifts by itself.", tab: null, at: Date.now() });
   }
   // ---- Waiting on the coach (12 Oct): things with a reply owed, which stay
   // until answered, not until looked at. The Feed's "Needs you" lane is these,
@@ -5983,6 +5987,7 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
     actions.push({
       id: `reply-${oldest.id}`,
       tone: "note",
+      group: "reply",
       title: unanswered.length === 1 ? "A message waiting for your reply" : `${unanswered.length} messages waiting for your reply`,
       detail: words || `Sent ${mediaWords(oldest.media_type)}.`,
       tab: "messages",
@@ -5998,6 +6003,7 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
     actions.push({
       id: `reply-video-${v.id}`,
       tone: "due",
+      group: "reply",
       title: `${v.media === "photo" ? "Photo" : "Video"} of ${name} waiting for your reply`,
       detail: v.from_client ? "They sent it on their own." : "The one you asked for.",
       tab: "training",
@@ -6008,7 +6014,7 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
   // A call they asked for, not yet booked or let go.
   for (const r of data.meeting_requests ?? []) {
     if (r.client_id !== clientId || r.status !== "open") continue;
-    actions.push({ id: `call-${r.id}`, tone: "due", title: "Asked for a call", detail: `“${r.about}”${r.when_suits ? ` · ${r.when_suits}` : ""}`, tab: "meetings", at: stampMs(r.created_at), eventId: `meeting-request-${r.id}` });
+    actions.push({ id: `call-${r.id}`, tone: "due", group: "reply", title: "Asked for a call", detail: `“${r.about}”${r.when_suits ? ` · ${r.when_suits}` : ""}`, tab: "meetings", at: stampMs(r.created_at), eventId: `meeting-request-${r.id}` });
   }
   // An invoice past its due date, still unpaid.
   const today = localDateStr();
@@ -6018,6 +6024,7 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
     actions.push({
       id: `invoice-${inv.id}`,
       tone: "due",
+      group: "setup",
       title: `Invoice ${inv.number ?? ""} ${days === 1 ? "a day" : `${days} days`} overdue`.replace(/\s+/g, " "),
       detail: inv.description,
       tab: "invoices",
@@ -6028,14 +6035,14 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
   // No phase live on training or nutrition (8 Oct): the client's Home says
   // "no phase running" until there is one; this is the nudge from this side.
   if (!getCurrentPhase(clientId, "training") && !getCurrentPhase(clientId, "nutrition")) {
-    actions.push({ id: "no-phase", tone: "due", title: "No phase running", detail: "Their Home says so until a training or nutrition phase is live. Create or schedule one on Plan.", tab: "plan" });
+    actions.push({ id: "no-phase", tone: "due", group: "setup", title: "No phase running", detail: "Their Home says so until a training or nutrition phase is live. Create or schedule one on Plan.", tab: "plan" });
   }
   const program = getDeployedProgram(clientId);
   if (program) {
     const index = getProgramCurrentWeekIndex(program);
     const liveWeek = program.start_week + index - 1;
     if (!getWeek(clientId, liveWeek).some((d) => getAssignmentsForDay(d.id).length > 0)) {
-      actions.push({ id: "week", tone: "urgent", title: `${programWeekLabel(program, liveWeek)} has no sessions`, detail: "This is the week they are in, so they have nothing to train.", tab: "training" });
+      actions.push({ id: "week", tone: "urgent", group: "setup", title: `${programWeekLabel(program, liveWeek)} has no sessions`, detail: "This is the week they are in, so they have nothing to train.", tab: "training" });
     }
     // The programme running out with nothing queued behind it.
     const left = program.total_weeks - index;
@@ -6044,6 +6051,7 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
       actions.push({
         id: "program-ending",
         tone: "due",
+        group: "setup",
         title: left <= 0 ? `${program.name || "Their programme"} ends this week` : `${program.name || "Their programme"} ends next week`,
         detail: "Nothing is scheduled to follow it.",
         tab: "training",
@@ -6051,21 +6059,57 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
     }
   }
   const due = getCheckInStatus(clientId);
-  const DUE = { daily: "Today's daily check-in", weekly: "This week's weekly check-in", monthly: "This month's monthly check-in", measurements: "Today's measurements" };
+  const DUE = { weekly: "This week's weekly check-in", monthly: "This month's monthly check-in", measurements: "Today's measurements" };
   for (const t of due.dueTypes) {
-    actions.push({ id: `checkin-${t}`, tone: "due", title: `${DUE[t]} not logged`, detail: "They have not filled it in yet.", tab: "measurements", at: stampMs(`${today} 00:00:00`) });
+    // Today's daily check-in not in yet is not a signal at nine in the
+    // morning (12 Oct): the daily one counts once two days have gone by.
+    if (t === "daily") continue;
+    actions.push({ id: `checkin-${t}`, tone: "due", group: "check", title: `${DUE[t]} not logged`, detail: "They have not filled it in yet.", tab: "measurements", at: stampMs(`${today} 00:00:00`) });
+  }
+  const dailyDefs = listMetricDefinitions(clientId, "daily").filter(deployedToClient);
+  if (dailyDefs.length) {
+    const lastDaily = listMetricPeriods(dailyDefs.map((d) => d.id), 1)[0] ?? null;
+    const gap = lastDaily ? Math.floor((middayMs(today) - middayMs(lastDaily)) / 86400000) : null;
+    if (gap != null && gap >= 2) {
+      actions.push({ id: "checkin-daily", tone: "due", group: "check", title: `No daily check-in for ${gap} days`, detail: `Last one ${feedTimeLabel(middayMs(lastDaily!), false)}.`, tab: "measurements", at: middayMs(lastDaily!) });
+    }
+  }
+  // Last week's sessions not done (12 Oct): the week is over, so these are
+  // missed, not pending. Only inside the programme's own weeks.
+  if (program) {
+    const index = getProgramCurrentWeekIndex(program);
+    const lastWeek = program.start_week + index - 2;
+    if (lastWeek >= program.start_week) {
+      const sessions = getWeek(clientId, lastWeek).filter((d) => getAssignmentsForDay(d.id).length > 0 || listCardioForDay(d.id).length > 0);
+      const missed = sessions.filter((d) => {
+        const as = getAssignmentsForDay(d.id);
+        const done = as.every((a) => getLogsForAssignment(a.id).length >= a.sets) && listCardioForDay(d.id).every((c) => isCardioDone(c.id));
+        return !done && !d.skip_reason;
+      });
+      if (missed.length) {
+        actions.push({
+          id: "missed-sessions",
+          tone: "due",
+          group: "check",
+          title: `Missed ${missed.length} of ${sessions.length} session${sessions.length === 1 ? "" : "s"} last week`,
+          detail: missed.map((d) => d.label || `Session ${d.day_of_week}`).join(", "),
+          tab: "training",
+          at: stampMs(`${weekStart(today)} 00:00:00`),
+        });
+      }
+    }
   }
   // Their own words waiting to be read: notes and reasons, not plain logging.
   // Not chat messages: those wait for a reply, above.
   for (const e of unseen) {
     if (!e.note || e.category === "messages") continue;
-    actions.push({ id: `read-${e.id}`, tone: "note", title: e.text.charAt(0).toUpperCase() + e.text.slice(1), detail: e.note, tab: e.tab, at: e.at, eventId: e.id });
+    actions.push({ id: `read-${e.id}`, tone: "note", group: "check", title: e.text.charAt(0).toUpperCase() + e.text.slice(1), detail: e.note, tab: e.tab, at: e.at, eventId: e.id });
   }
   // Gone quiet: nothing at all logged for a while.
   const last = all[0]?.at ?? null;
   if (last != null) {
     const days = Math.floor((Date.now() - last) / 86400000);
-    if (days >= 5) actions.push({ id: "quiet", tone: "due", title: `Nothing logged for ${days} days`, detail: `Last seen ${feedTimeLabel(last, false)}.`, tab: null, at: last });
+    if (days >= 5) actions.push({ id: "quiet", tone: "due", group: "check", title: `Nothing logged for ${days} days`, detail: `Last seen ${feedTimeLabel(last, false)}.`, tab: null, at: last });
   }
 
   return {

@@ -22,8 +22,10 @@ import {
   TableHeader,
   TableRow,
 } from "../../../components/ui/basics";
-import { loadRail } from "../loaders";
+import { loadChatDock, loadRail } from "../loaders";
 import RedesignRail from "../RedesignRail";
+import ChatDock from "../ChatDock";
+import "../messages/messages.css";
 import "../../../components/ui/ui.css";
 import "../training/draft.css";
 import "../rail.css";
@@ -217,6 +219,7 @@ export default async function BusinessPage() {
   return (
     <div className="rd-frame">
       <RedesignRail rail={loadRail(coach)} clientId={0} />
+      <ChatDock chats={loadChatDock(coach)} />
       <div className="rd-page">
         <div className="bzd">
           <header>

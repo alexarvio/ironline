@@ -4,23 +4,29 @@ import ClientFilter from "./ClientFilter";
 import { requireCoach, isOwner } from "../../../lib/auth";
 import { feedClock, getActivityFeed, getClientHome, listLoginLocks, localDateStr, type FeedCategory, type FeedEvent, type HomeAction } from "../../../lib/queries";
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/basics";
-import { feedHref, loadRail, type RailClient } from "../loaders";
+import { feedHref, loadChatDock, loadRail, type RailClient } from "../loaders";
 import RedesignRail from "../RedesignRail";
+import ChatDock from "../ChatDock";
 import "../../../components/ui/ui.css";
 import "../training/draft.css";
 import "../rail.css";
+import "../messages/messages.css";
 import "./feed.css";
 
 // The Feed in the redesign, the rail on its left (replaces /admin?view=feed).
-// Two lanes (12 Oct; before, one log of everything):
-// - Needs you: what is waiting on the coach, across every client, oldest
-//   first so nothing is left. The same list each client's Home spells out
-//   (getClientHome), so the rail's dot, Home and this agree. A row leaves
-//   once it is dealt with (replied, booked, paid, logged), not once looked at.
-// - Activity: everything clients log, newest first, one kind at a time,
-//   grouped by day and folded to one row per client per day (three sessions
-//   from one client read as one line; open it for each). All clients or one.
-// Sign-in lockouts between the two.
+// Where a coach starts their day (12 Oct; before, one log of everything):
+// - Start here: the clients that need a move from the coach, one row each,
+//   in three buckets in the order to take them: Reply (someone is waiting on
+//   an answer), Check on (someone is slipping), Set up (something on the
+//   coach's side needs fixing). A client sits in the first bucket they
+//   qualify for, with every reason on their row; the one waiting longest
+//   first. The same list each client's Home spells out (getClientHome), so
+//   the rail's dot, Home and this agree. A row leaves once the thing is
+//   dealt with, not once looked at.
+// - On track: everyone else, as names.
+// - Activity: everything clients log, newest first, one kind at a time, by
+//   day, folded to one row per client per day. All clients or one.
+// Sign-in lockouts between Start here and Activity.
 //   /admin/redesign/feed?cat=training&client=12&page=2
 export const dynamic = "force-dynamic";
 
@@ -36,20 +42,24 @@ const FILTERS = [
 ] as const satisfies readonly { id: string; label: string; holds: readonly FeedCategory[] }[];
 type FilterId = (typeof FILTERS)[number]["id"];
 const CATEGORY_LABEL: Record<FeedCategory, string> = { training: "Training", nutrition: "Nutrition", measurements: "Measurements", notes: "Note", billing: "Invoice", messages: "Message" };
-const TONE_LABEL: Record<HomeAction["tone"], string> = { urgent: "Urgent", due: "Due", note: "To read" };
-const TAB_LABEL: Record<string, string> = { plan: "Plan", training: "Training", nutrition: "Nutrition", measurements: "Measurements", meetings: "Meetings", photos: "Progress pictures", messages: "Messages", invoices: "Invoices" };
+const BUCKETS: { id: HomeAction["group"]; label: string; sub: string }[] = [
+  { id: "reply", label: "Reply", sub: "someone is waiting on you" },
+  { id: "check", label: "Check on", sub: "someone is slipping" },
+  { id: "setup", label: "Set up", sub: "something to fix on your side" },
+];
 const TAB_ROUTE: Record<string, string> = { photos: "pictures" };
 const PAGE = 20;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const matches = (e: FeedEvent, filter: FilterId) => (FILTERS.find((f) => f.id === filter)!.holds as readonly FeedCategory[]).includes(e.category);
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-type Need = { client: RailClient; action: HomeAction; to: string };
+/** One client in Start here: in which bucket, with every open item. */
+type Need = { client: RailClient; group: HomeAction["group"]; lead: HomeAction[]; rest: HomeAction[]; to: string; since: number | null };
 /** One client's doings on one day, newest first inside. */
 type Group = { key: string; day: string; clientId: number; clientName: string; events: FeedEvent[] };
 
 /** "just now", "3 hours", "4 days": how long something has been waiting. */
-function waiting(at: number | undefined, now: number): string | null {
+function waiting(at: number | null, now: number): string | null {
   if (at == null) return null;
   const ms = now - at;
   if (ms < 60 * 60 * 1000) return "just now";
@@ -75,9 +85,8 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
   const today = localDateStr();
   const yesterday = localDateStr(new Date(now - DAY_MS));
 
-  // ---- Needs you: every client's open items, urgent first, then the one
-  // waiting longest. A row opens on exactly what it is about when an event
-  // carries it, else on the tab that deals with it.
+  // ---- Start here. A row opens on exactly what its first item is about
+  // when an event carries it, else on the tab that deals with it.
   const byId = new Map(everything.map((e) => [e.id, e] as const));
   const needHref = (c: RailClient, a: HomeAction): string => {
     if (a.href) return a.href;
@@ -86,11 +95,24 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
     if (exact) return exact;
     return `/admin/redesign/${a.tab ? TAB_ROUTE[a.tab] ?? a.tab : "home"}?client=${c.id}`;
   };
-  const needs: Need[] = rail.clients
-    .filter((c) => clientId == null || c.id === clientId)
-    .flatMap((c) => getClientHome(c.id, everything).actions.map((action) => ({ client: c, action, to: needHref(c, action) })))
-    .sort((x, y) => (x.action.tone === "urgent" ? 0 : 1) - (y.action.tone === "urgent" ? 0 : 1) || (x.action.at ?? now) - (y.action.at ?? now));
-  const needClients = new Set(needs.map((n) => n.client.id)).size;
+  const order: HomeAction["group"][] = ["reply", "check", "setup"];
+  const needs: Need[] = [];
+  const onTrack: RailClient[] = [];
+  for (const c of rail.clients) {
+    if (clientId != null && c.id !== clientId) continue;
+    const actions = getClientHome(c.id, everything).actions;
+    if (actions.length === 0) {
+      onTrack.push(c);
+      continue;
+    }
+    const group = order.find((g) => actions.some((a) => a.group === g))!;
+    const byAge = (x: HomeAction, y: HomeAction) => (x.at ?? now) - (y.at ?? now);
+    const lead = actions.filter((a) => a.group === group).sort(byAge);
+    const rest = actions.filter((a) => a.group !== group).sort((x, y) => order.indexOf(x.group) - order.indexOf(y.group) || byAge(x, y));
+    const since = lead[0].at ?? null;
+    needs.push({ client: c, group, lead, rest, to: needHref(c, lead[0]), since });
+  }
+  needs.sort((x, y) => order.indexOf(x.group) - order.indexOf(y.group) || (x.since ?? now) - (y.since ?? now));
 
   // ---- Activity: the kind on, by day, one row per client per day.
   const events = all.filter((e) => matches(e, filter));
@@ -188,38 +210,54 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
             <ClientFilter value={clientId == null ? "" : String(clientId)} clients={rail.clients} hrefFor={Object.fromEntries([["", href(filter, 1, null)], ...rail.clients.map((c) => [String(c.id), href(filter, 1, c.id)])])} />
           </header>
 
-          {/* ---- Needs you */}
+          {/* ---- Start here */}
           <section className="rfd-lane">
             <h2 className="rfd-lane-title">
-              Needs you
-              <span>
-                {needs.length === 0
-                  ? " · nothing is waiting on you"
-                  : ` · ${needs.length} open item${needs.length === 1 ? "" : "s"}${clientId == null ? ` across ${needClients} client${needClients === 1 ? "" : "s"}` : ""}`}
-              </span>
+              Start here
+              <span>{needs.length === 0 ? " · nothing needs you" : ` · ${needs.length} client${needs.length === 1 ? "" : "s"}`}</span>
             </h2>
             {needs.length > 0 && (
               <Card className="rfd-card">
                 <CardContent className="rfd-rows">
-                  {needs.map(({ client, action, to }) => {
-                    const since = waiting(action.at, now);
+                  {BUCKETS.map((b) => {
+                    const rows = needs.filter((n) => n.group === b.id);
+                    if (rows.length === 0) return null;
                     return (
-                      <Link key={`${client.id}-${action.id}`} href={to} className="rfd-row rfd-need">
-                        {who(client.id, client.name)}
-                        <span className={`rfd-tone ${action.tone}`}>{TONE_LABEL[action.tone]}</span>
-                        <span className="rfd-main">
-                          <span className="rfd-text">
-                            <b>{action.title}</b>
-                          </span>
-                          {action.detail && <span className={`rfd-detail${action.tone === "note" ? " quote" : ""}`}>{action.tone === "note" ? <>&ldquo;{action.detail}&rdquo;</> : action.detail}</span>}
-                        </span>
-                        {action.tab && <span className="rfd-tab">{TAB_LABEL[action.tab] ?? action.tab}</span>}
-                        <span className="rfd-when">{since ? (since === "just now" ? since : `${since} waiting`) : ""}</span>
-                      </Link>
+                      <div key={b.id} className={`rfd-bucket ${b.id}`}>
+                        <h3 className="rfd-bucket-title">
+                          {b.label} <span>· {b.sub}</span>
+                        </h3>
+                        {rows.map(({ client, lead, rest, to, since }) => {
+                          const ago = waiting(since, now);
+                          return (
+                            <Link key={client.id} href={to} className="rfd-row rfd-need">
+                              {who(client.id, client.name)}
+                              <span className="rfd-main">
+                                <span className="rfd-text">
+                                  {lead.map((a, i) => (
+                                    <span key={a.id}>
+                                      {i > 0 && " · "}
+                                      <b>{a.title}</b>
+                                      {a.tone === "note" && a.detail && <em className="rfd-quote"> &ldquo;{a.detail}&rdquo;</em>}
+                                    </span>
+                                  ))}
+                                </span>
+                                {rest.length > 0 && <span className="rfd-detail">Also: {rest.map((a) => a.title.charAt(0).toLowerCase() + a.title.slice(1)).join(" · ")}</span>}
+                              </span>
+                              <span className="rfd-when">{ago ? (ago === "just now" ? ago : `${ago} waiting`) : ""}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
                     );
                   })}
                 </CardContent>
               </Card>
+            )}
+            {onTrack.length > 0 && clientId == null && (
+              <p className="rfd-ontrack">
+                <b>On track</b> · {onTrack.map((c) => c.name).join(", ")}
+              </p>
             )}
           </section>
 
@@ -324,6 +362,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
           </section>
         </div>
       </div>
+      <ChatDock chats={loadChatDock(coach)} />
     </div>
   );
 }

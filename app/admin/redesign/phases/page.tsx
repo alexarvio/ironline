@@ -1,6 +1,8 @@
 import { requireCoach } from "../../../lib/auth";
-import { loadRail } from "../loaders";
+import { loadChatDock, loadRail } from "../loaders";
 import RedesignRail from "../RedesignRail";
+import ChatDock from "../ChatDock";
+import "../messages/messages.css";
 import PhasesBoard from "./PhasesBoard";
 import { loadPhasesBoard } from "./load";
 import "../../../components/ui/ui.css";
@@ -18,6 +20,7 @@ export default async function PhasesPage() {
   return (
     <div className="rd-frame">
       <RedesignRail rail={loadRail(coach)} clientId={0} />
+      <ChatDock chats={loadChatDock(coach)} />
       <div className="rd-page">
         <PhasesBoard data={loadPhasesBoard(coach.id)} />
       </div>

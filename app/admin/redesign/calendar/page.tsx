@@ -4,8 +4,10 @@ import { getCalendarDay, getCalendarMonth, getMeetingConflicts, listCalendarCate
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/basics";
 import { ChevronLeftIcon } from "../../../components/icons";
 import AutosaveNote from "../../AutosaveNote";
-import { loadRail } from "../loaders";
+import { loadChatDock, loadRail } from "../loaders";
 import RedesignRail from "../RedesignRail";
+import ChatDock from "../ChatDock";
+import "../messages/messages.css";
 import { entryColors } from "../palette";
 import CalendarDay, { type CalEntry } from "./CalendarDay";
 import "../../../components/ui/ui.css";
@@ -62,6 +64,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   return (
     <div className="rd-frame">
       <RedesignRail rail={loadRail(coach)} clientId={0} />
+      <ChatDock chats={loadChatDock(coach)} />
       <div className="rd-page rcl-page">
         <div className="rcl">
           {conflicts.length > 0 && (

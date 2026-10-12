@@ -88,3 +88,17 @@
 .rfd-fold-body { padding-bottom: 4px; background: #fbfcfd; }
 .rfd-row.in-fold { padding-top: 9px; padding-bottom: 9px; border-top: 1px solid #f1f3f6; }
 .rfd-row.in-fold:first-child { border-top: 1px solid #eef1f5; }
+
+/* Start here (12 Oct): three buckets in the order to take them, a client
+   once, every reason on the row; then everyone else as names. */
+.rfd-bucket { padding-bottom: 4px; }
+.rfd-bucket + .rfd-bucket { border-top: 1px solid #eef1f5; }
+.rfd-bucket-title { margin: 0; padding: 12px 18px 4px; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #a32d2d; }
+.rfd-bucket.check .rfd-bucket-title { color: #a8501f; }
+.rfd-bucket.setup .rfd-bucket-title { color: #5b6474; }
+.rfd-bucket-title span { font-weight: 600; letter-spacing: 0; text-transform: none; color: #8b93a1; }
+.rfd-row.rfd-need { grid-template-columns: 190px minmax(0, 1fr) auto; }
+.rfd-bucket .rfd-row.rfd-need:first-of-type { border-top: 0; }
+.rfd-quote { font-weight: 500; font-style: italic; color: #5b6474; }
+.rfd-ontrack { margin: 0; padding: 0 4px; font-size: 13px; line-height: 1.5; color: #8b93a1; }
+.rfd-ontrack b { color: #1b7a4b; }
