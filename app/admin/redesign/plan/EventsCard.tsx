@@ -122,6 +122,13 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
       if (said) toast.success(said);
     });
   const [dlg, setDlg] = useState<{ event: PlanEvent | null } | null>(null);
+  // Dragging on the grid (12 Oct), as the phases: a bar moves whole, or by
+  // either edge; a pin moves. Nothing saves on its own: letting go opens a
+  // dialog saying what changes, and Move saves it.
+  type Drag = { id: number; edge: "start" | "end" | "move"; start: string; end: string; moved: boolean; origStart: string; origEnd: string; anchor: string | null };
+  const [drag, setDrag] = useState<Drag | null>(null);
+  const [moveDlg, setMoveDlg] = useState<{ id: number; start: string; end: string } | null>(null);
+  const justDragged = useRef(false);
   const [show, setShow] = useState<"coming" | "past" | "all">("all");
   // The log folds away under the grid; open, it is ten to a page.
   const [logOpen, setLogOpen] = useState(false);
@@ -129,12 +136,61 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
   const first = weeks[0];
   const totalDays = count * 7;
 
+  // The dates an event is drawn at: the drag's while it is being dragged, the
+  // dialog's while the move waits for a yes, else its own.
+  const live = (e: PlanEvent) => {
+    const d = drag?.id === e.id ? drag : moveDlg?.id === e.id ? moveDlg : null;
+    return d ? { start: d.start, end: d.end } : { start: e.start, end: e.end };
+  };
   // Where an event sits on the grid, as fractions of its width; the grid is
   // week columns, so a day is a seventh of one.
   const place = (e: PlanEvent) => {
-    const a = daysBetween(first, e.start);
-    const b = daysBetween(first, e.end) + 1;
+    const { start, end } = live(e);
+    const a = daysBetween(first, start);
+    const b = daysBetween(first, end) + 1;
     return { left: (Math.max(0, a) / totalDays) * 100, width: (Math.max(0.6, Math.min(totalDays, b) - Math.max(0, a)) / totalDays) * 100, visible: b > 0 && a < totalDays };
+  };
+  // The day under the pointer, on the grid's first lanes (every row is as wide).
+  const lanesRef = useRef<HTMLDivElement>(null);
+  const dayAt = (clientX: number) => {
+    const el = lanesRef.current;
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return addDays(first, Math.max(0, Math.min(totalDays - 1, Math.floor(((clientX - r.left) / r.width) * totalDays))));
+  };
+  const beginDrag = (ev: React.PointerEvent, e: PlanEvent, edge: Drag["edge"]) => {
+    if (ev.button !== 0 && ev.pointerType === "mouse") return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    (ev.currentTarget as HTMLElement).setPointerCapture(ev.pointerId);
+    setDrag({ id: e.id, edge, start: e.start, end: e.end, moved: false, origStart: e.start, origEnd: e.end, anchor: edge === "move" ? dayAt(ev.clientX) : null });
+  };
+  const moveDrag = (ev: React.PointerEvent) => {
+    if (!drag) return;
+    const day = dayAt(ev.clientX);
+    if (!day) return;
+    setDrag((d) => {
+      if (!d) return d;
+      let next = d;
+      if (d.edge === "move" && d.anchor) {
+        const delta = daysBetween(d.anchor, day);
+        next = { ...d, start: addDays(d.origStart, delta), end: addDays(d.origEnd, delta) };
+      } else if (d.edge === "start") next = { ...d, start: day <= d.end ? day : d.end };
+      else next = { ...d, end: day >= d.start ? day : d.start };
+      return { ...next, moved: d.moved || next.start !== d.start || next.end !== d.end };
+    });
+  };
+  const endDrag = (ev: React.PointerEvent) => {
+    if (!drag) return;
+    (ev.currentTarget as HTMLElement).releasePointerCapture(ev.pointerId);
+    const d = drag;
+    setDrag(null);
+    if (d.moved) {
+      justDragged.current = true;
+      setTimeout(() => (justDragged.current = false), 300);
+    }
+    if (d.start === d.origStart && d.end === d.origEnd) return;
+    setMoveDlg({ id: d.id, start: d.start, end: d.end });
   };
   // One row a category (10 Oct), only for the categories with something on the
   // grid, in the coach's category order; an event with no category rows last
@@ -144,7 +200,6 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
   const laneOf = new Map<number, number>();
   // A pin's label needs room to its right: measured against the grid, so
   // the reach is what the label takes on this screen, not a guess.
-  const lanesRef = useRef<HTMLDivElement>(null);
   const [gridPx, setGridPx] = useState(0);
   useEffect(() => {
     const el = lanesRef.current;
@@ -257,7 +312,7 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
                   </span>
                 </div>
                 <div className="rq-tl-clip">
-                  <div ref={gi === 0 ? lanesRef : undefined} className="rq-tl-grid rq-lanes rq-evlanes" style={{ ...cols, gridTemplateRows: `repeat(${g.laneCount}, 40px)` }}>
+                  <div ref={gi === 0 ? lanesRef : undefined} className="rq-tl-grid rq-lanes rq-evlanes" style={{ ...cols, gridTemplateRows: `repeat(${g.laneCount}, 40px)` }} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>
                     {weeks.map((w, i) => (
                       <span key={w} className="rq-cell" style={{ gridColumn: i + 1, gridRow: `1 / span ${g.laneCount}` }} />
                     ))}
@@ -267,21 +322,40 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
                       const single = e.start === e.end;
                       const past = e.end < today;
                       const lane = laneOf.get(e.id) ?? 0;
+                      const shown = { ...e, ...live(e) };
+                      const dragging = drag?.id === e.id;
+                      const open = () => {
+                        if (justDragged.current || drag) return;
+                        setDlg({ event: e });
+                      };
                       return single ? (
-                        <button key={e.id} type="button" className={`rq-pin${past ? " past" : ""}`} style={{ left: `${p.left}%`, top: `${6 + lane * 40}px`, color: k.ink }} onClick={() => setDlg({ event: e })} title={`${e.title} · ${longDate(e.start)} · ${standing(today, e)}`}>
+                        <button key={e.id} type="button" className={`rq-pin${past ? " past" : ""}${dragging ? " dragging" : ""}`} style={{ left: `${p.left}%`, top: `${6 + lane * 40}px`, color: k.ink }} onPointerDown={(ev) => beginDrag(ev, e, "move")} onClick={open} title={`${e.title} · ${longDate(e.start)} · ${standing(today, e)} · click to edit · drag to move`}>
                           <i style={{ background: k.ink }} />
                           <span className="rq-pin-text">
                             <b>{e.title}</b>
                             <small>
-                              {shortDate(e.start)} · {standing(today, e)}
+                              {shortDate(shown.start)} · {standing(today, shown)}
                             </small>
                           </span>
                         </button>
                       ) : (
-                        <button key={e.id} type="button" className={`rq-evbar${past ? " past" : ""}`} style={{ left: `${p.left}%`, width: `${p.width}%`, top: `${6 + lane * 40}px`, background: k.tint, color: k.ink, borderColor: k.line }} onClick={() => setDlg({ event: e })} title={`${e.title} · ${longDate(e.start)} → ${longDate(e.end)} · ${standing(today, e)}`}>
+                        <button
+                          key={e.id}
+                          type="button"
+                          className={`rq-evbar${past ? " past" : ""}${dragging ? " dragging" : ""}`}
+                          style={{ left: `${p.left}%`, width: `${p.width}%`, top: `${6 + lane * 40}px`, background: k.tint, color: k.ink, borderColor: k.line }}
+                          onPointerDown={(ev) => {
+                            if ((ev.target as HTMLElement).closest(".rq-bar-edge")) return;
+                            beginDrag(ev, e, "move");
+                          }}
+                          onClick={open}
+                          title={`${e.title} · ${longDate(e.start)} → ${longDate(e.end)} · ${standing(today, e)} · click to edit · drag to move, or an edge to stretch`}
+                        >
+                          <span className="rq-bar-edge left" onPointerDown={(ev) => beginDrag(ev, e, "start")} onClick={(ev) => ev.stopPropagation()} />
+                          <span className="rq-bar-edge right" onPointerDown={(ev) => beginDrag(ev, e, "end")} onClick={(ev) => ev.stopPropagation()} />
                           <b>{e.title}</b>
                           <small>
-                            {daysBetween(e.start, e.end) + 1} days · {standing(today, e)}
+                            {daysBetween(shown.start, shown.end) + 1} days · {standing(today, shown)}
                           </small>
                         </button>
                       );
@@ -351,6 +425,25 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
           </div>
         )}
       </div>
+
+      {/* Let go after a drag: what changes, and a yes before it saves. */}
+      <Dialog open={!!moveDlg} onOpenChange={(o) => !o && setMoveDlg(null)}>
+        {moveDlg && events.find((e) => e.id === moveDlg.id) && (
+          <MoveEventDialog
+            event={events.find((e) => e.id === moveDlg.id)!}
+            start={moveDlg.start}
+            end={moveDlg.end}
+            cats={cats}
+            onCancel={() => setMoveDlg(null)}
+            onSave={() => {
+              const e = events.find((x) => x.id === moveDlg.id)!;
+              const { start, end } = moveDlg;
+              setMoveDlg(null);
+              act(() => updateClientEventAction(clientId, e.id, { kind: e.kind, title: e.title, start, end, note: e.note }), `${e.title}: ${start === end ? longDate(start) : `${shortDate(start)} → ${shortDate(end)}`}`);
+            }}
+          />
+        )}
+      </Dialog>
 
       <Dialog open={!!dlg} onOpenChange={(o) => !o && setDlg(null)}>
         {dlg && (
@@ -511,6 +604,59 @@ function EventDialog({ today, event, cats, onSave, onDelete }: { today: string; 
         <DialogClose className="rd-btn">Cancel</DialogClose>
         <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onSave({ kind, title: title.trim(), start, end: shape === "event" ? start : end, note: note.trim() })}>
           {event ? "Save" : "Add event"}
+        </button>
+      </DialogFooter>
+    </DialogContent>
+  );
+}
+
+// ---- After a drag: what moves, from what to what, and a yes before it saves.
+function MoveEventDialog({ event: e, start, end, cats, onCancel, onSave }: { event: PlanEvent; start: string; end: string; cats: Category[]; onCancel: () => void; onSave: () => void }) {
+  const k = chromeOf(cats, e.kind);
+  const single = e.start === e.end;
+  const len = (a: string, b: string) => `${daysBetween(a, b) + 1} day${daysBetween(a, b) === 0 ? "" : "s"}`;
+  const rows = single
+    ? [{ label: "Date", was: longDate(e.start), now: longDate(start) }]
+    : [
+        { label: "Start", was: longDate(e.start), now: longDate(start) },
+        { label: "End", was: longDate(e.end), now: longDate(end) },
+        { label: "Length", was: len(e.start, e.end), now: len(start, end) },
+      ];
+  return (
+    <DialogContent className="rd-dlg">
+      <DialogHeader>
+        <DialogTitle>
+          <span className="rq-title-row">
+            Move {e.title}
+            <span className="rq-track-pill" style={{ "--c": k.ink, "--rgb": rgbOf(k.ink) } as React.CSSProperties}>
+              <KindIcon id={e.kind} size={13} />
+              {k.label}
+            </span>
+          </span>
+        </DialogTitle>
+        <DialogDescription>{e.byClient ? "The client added this event; they see the new dates too." : "Nothing saves until you say so."}</DialogDescription>
+      </DialogHeader>
+      <div className="rd-rows">
+        {rows.map((r) => (
+          <div key={r.label} className="rd-row">
+            <div className="rd-row-main static" style={{ gridTemplateColumns: "80px minmax(0, 1fr) 20px minmax(0, 1fr)", columnGap: 12 }}>
+              <span className="rd-cols" style={{ padding: 0 }}>
+                {r.label}
+              </span>
+              <span className={`rd-num${r.was === r.now ? "" : " quiet"}`}>{r.was}</span>
+              <span className="rd-num quiet">{r.was === r.now ? "" : "→"}</span>
+              <span className="rd-num">{r.was === r.now ? "" : r.now}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <DialogFooter>
+        <span className="rd-dlg-hint grow" />
+        <button type="button" className="rd-btn" onClick={onCancel}>
+          Cancel
+        </button>
+        <button type="button" className="rd-btn primary" onClick={onSave}>
+          Move event
         </button>
       </DialogFooter>
     </DialogContent>
