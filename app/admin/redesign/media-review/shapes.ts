@@ -12,11 +12,11 @@ export type Shape = { tool: Tool; color: string; pts: Pt[]; size?: number };
 export const SIZES = [
   { id: 0.6, name: "Small", dot: 5 },
   { id: 1, name: "Medium", dot: 8 },
-  { id: 1.8, name: "Large", dot: 12 },
+  { id: 1.5, name: "Large", dot: 12 },
 ] as const;
 
-/** The design was drawn on a 280-wide frame: sizes scale from there to the media's own width. */
-export const unitFor = (mediaW: number) => Math.max(1, mediaW / 280);
+/** Sizes scale with the media's long edge (12 Oct): a wide screen recording and a tall phone clip get the same weight of line. The width alone made a landscape video's lines three times too thick. */
+export const unitFor = (w: number, h: number) => Math.max(0.5, Math.max(w, h) / 700);
 export const STROKE = 4;
 export const UNDERLAY = 7;
 export const UNDERLAY_COLOR = "rgba(0,0,0,.35)";

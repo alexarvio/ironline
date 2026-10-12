@@ -112,7 +112,7 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
   // on either side, the top and the playback bar, at the media's own shape
   // (.mrv-fit, container units). Measured here only for the camera bubble.
   const frameRef = useRef<HTMLDivElement>(null);
-  const unit = unitFor(natural.w);
+  const unit = unitFor(natural.w, natural.h);
 
   // ---- Playback.
   const mediaEl = useRef<HTMLVideoElement | HTMLImageElement | null>(null);
