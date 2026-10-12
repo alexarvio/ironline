@@ -34,11 +34,24 @@ export type MediaReview = {
   thread: ThreadItem[];
 };
 
+// The palette (12 Oct): one swatch on the toolbox, the rest a click away.
 const COLORS = [
   { id: "#FFD60A", name: "Yellow" },
+  { id: "#FF9F0A", name: "Orange" },
   { id: "#FF453A", name: "Red" },
-  { id: "#32D74B", name: "Green" },
+  { id: "#FF375F", name: "Pink" },
+  { id: "#BF5AF2", name: "Purple" },
+  { id: "#5E5CE6", name: "Indigo" },
+  { id: "#0A84FF", name: "Blue" },
+  { id: "#64D2FF", name: "Cyan" },
+  { id: "#30D158", name: "Green" },
+  { id: "#B4F000", name: "Lime" },
   { id: "#FFFFFF", name: "White" },
+  { id: "#8E8E93", name: "Grey" },
+  { id: "#000000", name: "Black" },
+  { id: "#AC8E68", name: "Brown" },
+  { id: "#FF6B6B", name: "Coral" },
+  { id: "#00C7BE", name: "Teal" },
 ];
 const TOOLS: { id: Tool; name: string; key: string; icon: string }[] = [
   { id: "pen", name: "Pen", key: "P", icon: "M4 20l4-1 11-11-3-3L5 16zM14 6l3 3" },
@@ -165,6 +178,7 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
   // ---- Drawing (record mode only).
   const [tool, setTool] = useState<Tool>("arrow");
   const [color, setColor] = useState(COLORS[0].id);
+  const [palette, setPalette] = useState(false);
   // How big the next shape is drawn (12 Oct): small, medium, large.
   const [size, setSize] = useState<number>(1);
   const stepSize = (d: number) => {
@@ -190,6 +204,7 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
   };
   const down = (e: React.PointerEvent<SVGSVGElement>) => {
     if (mode !== "record") return;
+    setPalette(false);
     e.currentTarget.setPointerCapture(e.pointerId);
     const v = videoOf();
     if (v && !v.paused) {
@@ -430,6 +445,7 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
       onEscapeKeyDown={(e) => {
         e.preventDefault();
         if (confirm) return setConfirm(null);
+        if (palette) return setPalette(false);
         if (mode === "record") askBack();
         else onClose();
       }}
@@ -580,11 +596,33 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
                 </button>
               ))}
               <span className="mrv-tools-div" />
-              {COLORS.map((c) => (
-                <button key={c.id} type="button" className={`mrv-swatch${color === c.id ? " on" : ""}`} aria-pressed={color === c.id} aria-label={c.name} title={c.name} onClick={() => setColor(c.id)}>
-                  <i style={{ background: c.id }} />
+              {/* The colour on, and the rest of the palette beside the toolbox when opened. */}
+              <span className="mrv-palette-wrap">
+                <button type="button" className="mrv-swatch on" aria-expanded={palette} aria-label={`Colour: ${COLORS.find((c) => c.id === color)?.name ?? "custom"}. Choose another`} title="Colour" onClick={() => setPalette((o) => !o)}>
+                  <i style={{ background: color }} />
                 </button>
-              ))}
+                {palette && (
+                  <span className="mrv-palette" role="listbox" aria-label="Colours">
+                    {COLORS.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        role="option"
+                        aria-selected={color === c.id}
+                        className={`mrv-pal${color === c.id ? " on" : ""}`}
+                        aria-label={c.name}
+                        title={c.name}
+                        onClick={() => {
+                          setColor(c.id);
+                          setPalette(false);
+                        }}
+                      >
+                        <i style={{ background: c.id }} />
+                      </button>
+                    ))}
+                  </span>
+                )}
+              </span>
               <span className="mrv-tools-div" />
               {SIZES.map((z) => (
                 <button key={z.id} type="button" className={`mrv-size${size === z.id ? " on" : ""}`} aria-pressed={size === z.id} aria-label={`${z.name} ([ or ])`} title={`${z.name} ([ or ])`} onClick={() => setSize(z.id)}>
