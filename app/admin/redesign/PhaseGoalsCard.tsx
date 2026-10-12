@@ -49,7 +49,8 @@ export default function PhaseGoalsCard({ phaseId, phaseName, firstName, goals }:
       <h2 className="rd-goals-h">
         <button type="button" className="rd-goals-head" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
           <span className="rd-goals-title">Phase goals</span>
-          <span className="rd-goals-sub">Up to {PHASE_OBJECTIVES_MAX}</span>
+          {/* How many are set, closed (12 Oct): "2 of 3", or "None yet" as the note card says it. */}
+          <span className="rd-goals-sub">{goals.filter((g) => g.trim()).length ? `${goals.filter((g) => g.trim()).length} of ${PHASE_OBJECTIVES_MAX}` : "None yet"}</span>
           <span className={`rd-goals-chev${open ? " open" : ""}`} aria-hidden="true">
             <ChevronDownIcon />
           </span>
