@@ -108,6 +108,8 @@ import {
   createProgram,
   deployProgram,
   getClient,
+  dismissHomeAction,
+  setEngagementParts,
   getReportTemplate,
   renameProgram,
   removeProgram,
@@ -2704,6 +2706,20 @@ export async function deleteClientAction(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/client");
   redirect("/admin");
+}
+
+// Needs you → Mark as read (12 Oct): the item leaves Home, the Feed and the rail.
+export async function dismissHomeActionAction(clientId: number, actionId: string) {
+  if (!(await coachForClient(Number(clientId)))) return;
+  dismissHomeAction(Number(clientId), String(actionId));
+  revalidatePath("/admin");
+}
+
+// Keeping up → what counts for this client (12 Oct).
+export async function setEngagementPartsAction(clientId: number, ids: string[]) {
+  if (!(await coachForClient(Number(clientId)))) return;
+  setEngagementParts(Number(clientId), Array.isArray(ids) ? ids.map(String) : []);
+  revalidatePath("/admin");
 }
 
 // The redesign's Delete client (12 Oct), from the Details dialog on Home:

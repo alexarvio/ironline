@@ -34,11 +34,12 @@ export const dynamic = "force-dynamic";
 // source category has a home: a note on the programme is training, an
 // invoice is billing.
 const FILTERS = [
-  { id: "training", label: "Training", holds: ["training", "notes"] },
+  { id: "training", label: "Training", holds: ["training"] },
   { id: "nutrition", label: "Nutrition", holds: ["nutrition"] },
   { id: "measurements", label: "Measurements", holds: ["measurements"] },
   { id: "invoices", label: "Invoices", holds: ["billing"] },
-  { id: "messages", label: "Messages", holds: ["messages"] },
+  // A call asked for, an event added, a note on the programme: the client's words, with the messages (12 Oct).
+  { id: "messages", label: "Messages", holds: ["messages", "notes"] },
 ] as const satisfies readonly { id: string; label: string; holds: readonly FeedCategory[] }[];
 type FilterId = (typeof FILTERS)[number]["id"];
 const CATEGORY_LABEL: Record<FeedCategory, string> = { training: "Training", nutrition: "Nutrition", measurements: "Measurements", notes: "Note", billing: "Invoice", messages: "Message" };

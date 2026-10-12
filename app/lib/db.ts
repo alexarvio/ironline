@@ -36,6 +36,12 @@ type Client = {
   // id to the event's time when it was seen. An event is new to the coach
   // while it is missing here or has moved on since (a note edited again).
   coach_seen?: Record<string, number>;
+  // Needs-you items the coach marked as read (12 Oct): action id to when.
+  // An item comes back once something newer stands behind it.
+  coach_dismissed?: Record<string, number>;
+  // What Keeping up counts for this client (12 Oct), by part id; unset is
+  // the default three (sessions, check-ins, food logged).
+  engagement_parts?: string[];
   // The coach's own standing note about this client, on their Home. Theirs
   // alone: the client never sees it.
   coach_note?: string;

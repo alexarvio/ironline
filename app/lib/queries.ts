@@ -5938,7 +5938,28 @@ export type HomeAction = {
   eventId?: string;
   /** An exact place to open, when no event carries it (an invoice). */
   href?: string;
+  /** The newest thing behind it (epoch ms), when newer than `at`: a later
+      message in the same unanswered run. Marked as read before this, it comes back. */
+  latest?: number;
 };
+
+/** Needs-you items that are a standing state rather than one thing: marked as
+    read, they stay away a fortnight, then come back if still true. */
+const STANDING_ACTIONS = new Set(["no-phase", "week", "program-ending", "quiet", "missed-sessions", "checkin-daily", "checkin-weekly", "checkin-monthly", "checkin-measurements", "locked"]);
+const DISMISS_STANDING_MS = 14 * 86400000;
+
+/** The coach marked a Needs-you item as read (12 Oct): it leaves Home, the Feed and the rail's dot. */
+export function dismissHomeAction(clientId: number, actionId: string) {
+  const client = getData().clients.find((c) => c.id === clientId);
+  if (!client || !actionId) return;
+  // Kept small: only the items still open stay recorded.
+  const open = new Set(getClientHome(clientId).actions.map((a) => a.id));
+  const next: Record<string, number> = {};
+  for (const [id, at] of Object.entries(client.coach_dismissed ?? {})) if (open.has(id)) next[id] = at;
+  next[actionId] = Date.now();
+  client.coach_dismissed = next;
+  persist();
+}
 
 export type HomeEvent = FeedEvent & { when: string; unseen: boolean };
 
@@ -5983,6 +6004,7 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
   const unanswered = chat.filter((m) => m.sender === "client" && !m.reactions?.coach && (!lastCoach || stampMs(m.created_at) > stampMs(lastCoach.created_at)));
   if (unanswered.length) {
     const oldest = unanswered[unanswered.length - 1];
+    const newest = unanswered[0];
     const words = oldest.text.trim();
     actions.push({
       id: `reply-${oldest.id}`,
@@ -5992,6 +6014,7 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
       detail: words || `Sent ${mediaWords(oldest.media_type)}.`,
       tab: "messages",
       at: stampMs(oldest.created_at),
+      latest: stampMs(newest.created_at),
       eventId: `chat-${oldest.id}`,
     });
   }
@@ -6116,8 +6139,18 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
     if (days >= 5) actions.push({ id: "quiet", tone: "due", group: "check", title: `Nothing logged for ${days} days`, detail: `Last seen ${feedTimeLabel(last, false)}.`, tab: null, at: last });
   }
 
+  // What the coach marked as read stays away until something newer stands
+  // behind it; a standing state, for a fortnight.
+  const dismissed = client?.coach_dismissed ?? {};
+  const open = actions.filter((a) => {
+    const at = dismissed[a.id];
+    if (at == null) return true;
+    if ((a.latest ?? a.at ?? 0) > at) return true;
+    return STANDING_ACTIONS.has(a.id) && Date.now() - at > DISMISS_STANDING_MS;
+  });
+
   return {
-    actions,
+    actions: open,
     events,
     eventTotal: all.length,
     unseenCount: unseen.length,
@@ -6161,7 +6194,21 @@ export type EngagementPart = {
   note?: string;
 };
 
+/** What Keeping up can count (12 Oct). The coach picks per client; the default is the first three. */
+export const ENGAGEMENT_OPTIONS = [
+  { id: "training", label: "Sessions done" },
+  { id: "checkins", label: "Check-ins" },
+  { id: "nutrition", label: "Food logged" },
+  { id: "kcal", label: "Calories on target" },
+  { id: "protein", label: "Protein on target" },
+] as const;
+export const ENGAGEMENT_DEFAULT = ["training", "checkins", "nutrition"];
+
 export type ClientEngagement = {
+  /** Every part, whether it can be counted for this client (and why not). */
+  options: { id: string; label: string; available: boolean; why?: string }[];
+  /** The parts the coach picked. */
+  chosen: string[];
   /** The average across the parts that apply, or null when none do. */
   overall: number | null;
   /** The client's first day, when it falls inside the window: counting starts there. */
@@ -6217,7 +6264,7 @@ export function clientStartDate(clientId: number): string | null {
 // altogether and lose eight points. Normalise first and the difference in
 // rhythm stops mattering — which is the whole reason a daily thing and a
 // weekly thing can sit in one score at all.
-function engagementWindow(clientId: number, days: number, back: number, since: string | null): { parts: EngagementPart[]; overall: number | null } {
+function engagementWindow(clientId: number, days: number, back: number, since: string | null): { parts: EngagementPart[]; all: EngagementPart[]; overall: number | null } {
   const data = getData();
   const today = localDateStr();
   const to = plusDays(today, -days * back);
@@ -6226,7 +6273,7 @@ function engagementWindow(clientId: number, days: number, back: number, since: s
   // wholly before it (the one the trend compares with, for a new client)
   // has nothing in it and says nothing.
   const from = since && since > windowFrom ? since : windowFrom;
-  if (from > to) return { parts: [], overall: null };
+  if (from > to) return { parts: [], all: [], overall: null };
   const firstWeek = weekStart(from);
   const current = back === 0;
   const weeks = Math.max(1, Math.round(days / 7));
@@ -6331,6 +6378,28 @@ function engagementWindow(clientId: number, days: number, back: number, since: s
     for (const e of data.food_entries ?? []) if (e.client_id === clientId) logged.add(e.date);
     const run = streakTo((d) => logged.has(d));
     add("nutrition", "Food logged", pastDays.filter((d) => logged.has(d)).length, pastDays.length, "day", run >= 2 ? `${run}-day streak` : undefined);
+
+    // The day's totals, the diary and the quick calorie logs together.
+    const goals = getNutritionGoalsSummary(clientId);
+    const kcalOf = new Map<string, number>();
+    const proteinOf = new Map<string, number>();
+    for (const c of listCalorieLogs(clientId, 400)) kcalOf.set(c.date, (kcalOf.get(c.date) ?? 0) + (c.kcal ?? 0));
+    for (const e of data.food_entries ?? []) {
+      if (e.client_id !== clientId) continue;
+      kcalOf.set(e.date, (kcalOf.get(e.date) ?? 0) + (e.kcal ?? 0));
+      proteinOf.set(e.date, (proteinOf.get(e.date) ?? 0) + (e.protein ?? 0));
+    }
+    // On target: within 10% of the training-day or the rest-day calories, out
+    // of the days they logged at all (an unlogged day counts against Food logged).
+    const loggedDays = pastDays.filter((d) => logged.has(d));
+    const near = (v: number, t: number) => t > 0 && Math.abs(v - t) <= t * 0.1;
+    add("kcal", "Calories on target", loggedDays.filter((d) => near(kcalOf.get(d) ?? 0, goals.trainingKcal) || near(kcalOf.get(d) ?? 0, goals.restKcal)).length, loggedDays.length, "logged day");
+    // Protein: at least 90% of the lower of the two targets, on the days the diary has it.
+    const proteinTarget = Math.min(...[goals.trainingProtein, goals.restProtein].filter((x) => x > 0));
+    if (Number.isFinite(proteinTarget)) {
+      const withProtein = pastDays.filter((d) => proteinOf.has(d));
+      add("protein", "Protein on target", withProtein.filter((d) => (proteinOf.get(d) ?? 0) >= proteinTarget * 0.9).length, withProtein.length, "logged day");
+    }
   }
 
   // Progress pictures are deliberately NOT scored. A sheet is a thing the
@@ -6338,7 +6407,11 @@ function engagementWindow(clientId: number, days: number, back: number, since: s
   // month swung the whole figure by a quarter. The gallery says whether they
   // came in; this card is about what the client does day to day.
 
-  return { parts, overall: parts.length ? Math.round(parts.reduce((s, p) => s + p.pct, 0) / parts.length) : null };
+  // Only what the coach picked counts (12 Oct), in the order of the options.
+  const chosen = new Set(getData().clients.find((c) => c.id === clientId)?.engagement_parts ?? ENGAGEMENT_DEFAULT);
+  const order = ENGAGEMENT_OPTIONS.map((o) => o.id as string);
+  const counted = parts.filter((p) => chosen.has(p.id)).sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  return { parts: counted, all: parts, overall: counted.length ? Math.round(counted.reduce((s, p) => s + p.pct, 0) / counted.length) : null };
 }
 
 export function getClientEngagement(clientId: number, days: number = ENGAGEMENT_DAYS): ClientEngagement {
@@ -6349,7 +6422,23 @@ export function getClientEngagement(clientId: number, days: number = ENGAGEMENT_
   // happened.
   const before = engagementWindow(clientId, days, 1, start);
   const windowFrom = plusDays(localDateStr(), -(days - 1));
-  return { overall: now.overall, previous: before.overall, parts: now.parts, days, since: start && start > windowFrom ? start : null };
+  const can = new Set(now.all.map((p) => p.id));
+  const hasNutrition = !!getNutritionGoalsSummary(clientId).trainingKcal;
+  const why = (id: string) => (id === "training" ? "No live programme" : id === "checkins" ? "No check-ins set up" : hasNutrition ? "Nothing logged yet" : "No nutrition targets");
+  const options = ENGAGEMENT_OPTIONS.map((o) => ({ id: o.id as string, label: o.label as string, available: can.has(o.id), why: can.has(o.id) ? undefined : why(o.id) }));
+  const chosen = getData().clients.find((c) => c.id === clientId)?.engagement_parts ?? ENGAGEMENT_DEFAULT;
+  return { overall: now.overall, previous: before.overall, parts: now.parts, days, since: start && start > windowFrom ? start : null, options, chosen };
+}
+
+/** The parts Keeping up counts for this client; at least one, only known ids. */
+export function setEngagementParts(clientId: number, ids: string[]) {
+  const client = getData().clients.find((c) => c.id === clientId);
+  if (!client) return;
+  const known = new Set(ENGAGEMENT_OPTIONS.map((o) => o.id as string));
+  const clean = [...new Set(ids.filter((id) => known.has(id)))];
+  if (clean.length === 0) return;
+  client.engagement_parts = clean;
+  persist();
 }
 
 /** The coach's own note about a client. Theirs alone; the client never sees it. */

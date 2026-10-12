@@ -3,7 +3,9 @@
 import Pager from "../Pager";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { deleteClientConfirmedAction, saveCoachNoteAction, sendChatMessageAction } from "../../../lib/actions";
+import { deleteClientConfirmedAction, dismissHomeActionAction, saveCoachNoteAction, sendChatMessageAction, setEngagementPartsAction } from "../../../lib/actions";
+import { useOpenChat } from "../ChatPanel";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import ClientCardEditor from "../../ClientCardEditor";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
@@ -11,6 +13,7 @@ import { AccountIcon, ChatIcon, TrashIcon } from "../../../components/icons";
 import type { ClientEngagement, HomeAction, OverviewPanel } from "../../../lib/queries";
 import { MessageDialog } from "../training/TrainingDraft";
 import AppAccessButton from "./AppAccessButton";
+import type { NeedView } from "../loaders";
 import type { ClientAccess } from "../../../lib/access-actions";
 
 // The calmer Home tab, as a draft on real data, in the Training draft's
@@ -37,7 +40,7 @@ export type DraftHome = {
   /** The whole client card, for the live editor in the Details dialog. */
   panel: OverviewPanel;
   coachNote: { text: string; savedLabel: string | null };
-  actions: HomeAction[];
+  actions: NeedView[];
   events: DraftEvent[];
   eventTotal: number;
   engagement: ClientEngagement;
@@ -55,11 +58,13 @@ const TONE_LABEL: Record<HomeAction["tone"], string> = { urgent: "Urgent", due: 
 const CATEGORY_LABEL: Record<string, string> = { training: "Training", nutrition: "Nutrition", measurements: "Measurements", notes: "Note", billing: "Invoice", messages: "Message" };
 // Activity is read one kind at a time; every source category has a home here.
 const FILTERS = [
-  { id: "training", label: "Training", holds: ["training", "notes"] },
+  // A call asked for, an event added, a note on the programme: words from the
+  // client, so with the messages (12 Oct), not under Training.
+  { id: "training", label: "Training", holds: ["training"] },
   { id: "nutrition", label: "Nutrition", holds: ["nutrition"] },
   { id: "measurements", label: "Measurements", holds: ["measurements"] },
   { id: "invoices", label: "Invoices", holds: ["billing"] },
-  { id: "messages", label: "Messages", holds: ["messages"] },
+  { id: "messages", label: "Messages", holds: ["messages", "notes"] },
 ] as const;
 type FilterId = (typeof FILTERS)[number]["id"];
 const PAGE = 12;
@@ -84,6 +89,19 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
   // The facts about them, and the coach's note: a click away, not on the page.
   const [details, setDetails] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const openChat = useOpenChat();
+  // Keeping up's pick, ahead of the server's answer, so the ticks move at once.
+  const [parts, setParts] = useState<string[] | null>(null);
+  const chosenParts = parts ?? home.engagement.chosen;
+  const toggleSpart = (id: string) => {
+    const next = chosenParts.includes(id) ? chosenParts.filter((x) => x !== id) : [...chosenParts, id];
+    if (next.length === 0) return;
+    setParts(next);
+    act(() => setEngagementPartsAction(clientId, next));
+  };
+  // Marked as read: gone at once, the server catching up behind.
+  const [done, setDone] = useState<Set<string>>(() => new Set());
+  const needs = home.actions.filter((a) => !done.has(a.id));
   const [photo, setPhoto] = useState(false);
   const [filter, setFilter] = useState<FilterId>(FILTERS[0].id);
   const [page, setPage] = useState(1);
@@ -154,16 +172,39 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
           </section>
 
           {/* ---- Keeping up: one score, three behaviours. */}
-          {eng.overall != null && (
+          {eng.options.some((o) => o.available) && (
             <section className="rd-session open rn-card">
               <div className="rn-card-head">
                 <h2>
                   Keeping up <span title={eng.since ? `Counted from ${new Date(`${eng.since}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}, their first day` : undefined}>· last {eng.days} days</span>
                 </h2>
+                {/* What counts for this client (12 Oct): the coach's pick, at least one. */}
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger className="rd-btn">What counts</DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="pb-menu">
+                    <div className="rh-parts-label">Counted in {firstName}&rsquo;s score</div>
+                    {eng.options.map((o) => (
+                      <DropdownMenuCheckboxItem
+                        key={o.id}
+                        checked={chosenParts.includes(o.id)}
+                        disabled={!o.available || (chosenParts.length === 1 && chosenParts.includes(o.id))}
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          toggleSpart(o.id);
+                        }}
+                      >
+                        <span className="rh-part-opt">
+                          {o.label}
+                          {o.why && <small>{o.why}</small>}
+                        </span>
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               <div className="rh-board">
                 <div className="rh-score">
-                  <Dial pct={eng.overall} />
+                  <Dial pct={eng.overall ?? 0} />
                   <span className="rh-score-word">Overall</span>
                   {shift == null ? (
                     <span className="rh-trend flat">nothing to compare yet</span>
@@ -198,19 +239,21 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
           <section className="rd-session open rn-card">
             <div className="rn-card-head">
               <h2>
-                Needs you <span>· {home.actions.length ? `${home.actions.length} open item${home.actions.length === 1 ? "" : "s"}` : `nothing is waiting on you for ${firstName}`}</span>
+                Needs you <span>· {needs.length ? `${needs.length} open item${needs.length === 1 ? "" : "s"}` : `nothing is waiting on you for ${firstName}`}</span>
               </h2>
-              {home.actions.length > 0 && (
+              {needs.length > 0 && (
                 <button type="button" className="rd-btn" onClick={() => setMsg(true)}>
                   Nudge {firstName}
                 </button>
               )}
             </div>
-            {home.actions.length > 0 ? (
+            {needs.length > 0 ? (
               <div className="rd-rows">
-                {home.actions.map((a) => (
-                  <div key={a.id} className="rd-row">
-                    <button type="button" className={`rd-row-main rh-row${a.tab ? "" : " static"}`} onClick={() => go(a.tab)}>
+                {/* A click opens the thing itself (12 Oct); on hover, Reply opens
+                    the chat about it, and ✓ marks it read so it leaves. */}
+                {needs.map((a) => (
+                  <div key={a.id} className="rd-row rh-need">
+                    <button type="button" className="rd-row-main rh-row" onClick={() => router.push(a.open)}>
                       <span className={`rh-tone ${a.tone}`}>{TONE_LABEL[a.tone]}</span>
                       <span className="rh-row-main">
                         <b>{a.title}</b>
@@ -218,6 +261,35 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
                       </span>
                       {a.tab && <span className="rd-pill quiet">{TAB_LABEL[a.tab] ?? a.tab}</span>}
                     </button>
+                    <span className="rh-need-acts">
+                      {a.reply && openChat && (
+                        <button
+                          type="button"
+                          className="rd-btn sm"
+                          onClick={() => {
+                            const r = a.reply!;
+                            openChat(r.link ? { area: r.area, label: r.label, link: r.link } : null, r.focus);
+                          }}
+                          title={`Reply to ${firstName} about this`}
+                        >
+                          <ChatIcon /> Reply
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="rd-btn ghost sm rh-need-done"
+                        onClick={() => {
+                          setDone((d) => new Set(d).add(a.id));
+                          act(() => dismissHomeActionAction(clientId, a.id));
+                        }}
+                        aria-label="Mark as read"
+                        title="Mark as read"
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M5 12.5l4.5 4.5L19 7.5" />
+                        </svg>
+                      </button>
+                    </span>
                   </div>
                 ))}
               </div>

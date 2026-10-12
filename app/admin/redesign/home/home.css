@@ -127,3 +127,19 @@
 /* Delete client (12 Oct): quiet, last in the Details dialog. */
 .rh-delete { display: flex; justify-content: flex-end; padding-top: 8px; border-top: 1px solid #eef1f5; }
 .rh-delete-error { margin: 0; font-size: 13px; font-weight: 600; color: #a32d2d; }
+
+/* Needs you (12 Oct): a click opens the thing; on hover, Reply and a tick to mark it read. */
+.rh-need { display: flex; align-items: center; gap: 8px; padding-right: 10px; }
+.rh-need > .rd-row-main { flex: 1; min-width: 0; }
+.rh-need-acts { display: inline-flex; align-items: center; gap: 4px; opacity: 0; transition: opacity 0.12s; }
+.rh-need:hover .rh-need-acts, .rh-need:focus-within .rh-need-acts { opacity: 1; }
+@media (hover: none) { .rh-need-acts { opacity: 0.7; } }
+.rh-need-acts .rd-btn.sm { height: 30px; padding: 0 10px; font-size: 12px; gap: 6px; }
+.rh-need-acts .rd-btn.sm svg { width: 14px; height: 14px; }
+.rh-need-done { width: 30px; height: 30px; }
+.rh-need-done:hover { background: #dff3ea; color: #1b7a4b; }
+
+/* Keeping up's picker: what counts, with why a part cannot when it cannot. */
+.rh-parts-label { padding: 6px 10px 4px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #8b93a1; }
+.rh-part-opt { display: flex; flex-direction: column; gap: 1px; }
+.rh-part-opt small { font-size: 11px; font-weight: 500; color: #8b93a1; }

@@ -3,7 +3,7 @@ import { getData } from "../../lib/db";
 import { getUserForClient, isOwner } from "../../lib/auth";
 import { mailConfigured } from "../../lib/mail";
 import { clerkOn } from "../../lib/clerk";
-import { getCoachSettings, getInvoiceView, listInvoices, type FeedEvent, type InvoiceView } from "../../lib/queries";
+import { getCoachSettings, getInvoiceView, listInvoices, type FeedEvent, type HomeAction, type InvoiceView } from "../../lib/queries";
 import { hasBankDetails, invoicingFor } from "../../lib/countries";
 import {
   clientAttention,
@@ -664,6 +664,36 @@ export function loadPlan(clientId: number): DraftPlan {
  * programme; an invoice opens the invoice. The rest open their tab. Null
  * for a client who deleted their account: there is nothing left to open.
  */
+// ---- A Needs-you item, opened and answered (12 Oct): where a click takes
+// the coach, and what a reply from it is about. Shared by Home and the Feed.
+export type NeedReply = { area: string; label: string; link: MessageLink | null; focus: number | null };
+export type NeedView = HomeAction & { open: string; reply: NeedReply | null };
+const NEED_TAB_ROUTE: Record<string, string> = { photos: "pictures" };
+const NEED_AREA: Record<string, string> = { training: "Training", nutrition: "Nutrition", measurements: "Check-in", meetings: "Meetings", messages: "Chat", invoices: "Invoice", plan: "Plan", photos: "Progress pictures" };
+/** What the coach fixes on their side: nothing to say to the client from these. */
+const NO_REPLY = new Set(["no-phase", "week", "program-ending", "locked"]);
+export function needView(clientId: number, a: HomeAction, byId: Map<string, FeedEvent>): NeedView {
+  const ev = a.eventId ? byId.get(a.eventId) : undefined;
+  const open = a.href ?? (ev ? feedHref(ev) : null) ?? `/admin/redesign/${a.tab ? NEED_TAB_ROUTE[a.tab] ?? a.tab : "home"}?client=${clientId}`;
+  if (NO_REPLY.has(a.id)) return { ...a, open, reply: null };
+  const area = NEED_AREA[a.tab ?? ""] ?? "Chat";
+  // An unanswered message: the chat, at it.
+  const msg = /^reply-(\d+)$/.exec(a.id);
+  if (msg) return { ...a, open, reply: { area, label: a.title, link: null, focus: Number(msg[1]) } };
+  // A video or photo: the reply points at the exercise it is of.
+  const vid = /^reply-video-(\d+)$/.exec(a.id);
+  if (vid) {
+    const data = getData();
+    const v = data.video_requests.find((x) => x.id === Number(vid[1]));
+    const wa = v ? data.workout_assignments.find((w) => w.id === v.assignment_id) : undefined;
+    return { ...a, open, reply: { area: "Training", label: a.title.replace(/ waiting for your reply$/, ""), link: wa ? { kind: "exercise", dayId: wa.program_day_id, assignmentId: wa.id } : null, focus: null } };
+  }
+  // Something they wrote on a session or a food day: the reply points there.
+  const t = ev?.target;
+  const link: MessageLink | null = t?.kind === "session" ? { kind: "session", dayId: t.dayId } : t?.kind === "food" ? { kind: "food", date: t.date } : a.id.startsWith("checkin-") ? { kind: "checkin", section: a.id === "checkin-weekly" ? "weekly" : a.id === "checkin-monthly" ? "monthly" : "daily" } : null;
+  return { ...a, open, reply: { area, label: a.title, link, focus: null } };
+}
+
 export function feedHref(e: Pick<FeedEvent, "clientId" | "tab" | "category" | "target">): string | null {
   const tab = (name: string, rest = "") => `/admin/redesign/${name}?client=${e.clientId}${rest}`;
   const t = e.target;
@@ -714,7 +744,10 @@ export function loadHome(clientId: number): DraftHome {
     snapshot: panel.snapshot.map((s) => (s.label === "Weight" && s.suffix?.startsWith("level") ? { ...s, suffix: undefined } : s)),
     panel,
     coachNote: panel.coachNote,
-    actions: home.actions,
+    actions: (() => {
+      const byId = new Map(home.events.map((e) => [e.id, e] as const));
+      return home.actions.map((a) => needView(clientId, a, byId));
+    })(),
     events: home.events.map((e) => ({ id: e.id, category: e.category, text: e.text, note: e.note, when: e.when, tab: e.tab, href: feedHref(e) })),
     eventTotal: home.eventTotal,
     engagement: getClientEngagement(clientId),

@@ -481,7 +481,7 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
             <span className="rm-link">
               <LinkGlyph />
               <span>{link.label}</span>
-              <button type="button" className="rm-link-x" onClick={() => setLink(null)} aria-label="Remove the link">
+              <button type="button" className="rm-link-x" onClick={() => setLink(null)} aria-label="Remove the link" title="Remove the link">
                 ×
               </button>
             </span>
