@@ -143,3 +143,10 @@
 .rh-parts-label { padding: 6px 10px 4px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #8b93a1; }
 .rh-part-opt { display: flex; flex-direction: column; gap: 1px; }
 .rh-part-opt small { font-size: 11px; font-weight: 500; color: #8b93a1; }
+
+/* The tab pill in one centred column on every Needs-you row (12 Oct): a
+   fixed column for the pill, and a fixed width for the hover buttons, so a
+   row without Reply does not push its pill further right. */
+.rh-need .rd-row-main.rh-row, .rh-need .rh-row.rh-row { grid-template-columns: 96px minmax(0, 1fr) 132px; }
+.rh-need .rh-row > .rd-pill { justify-self: center; text-align: center; }
+.rh-need .rh-need-acts { flex: none; width: 120px; justify-content: flex-end; }
