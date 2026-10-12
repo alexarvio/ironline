@@ -7,18 +7,32 @@ import { chatDraftThreadAction } from "./messages/actions";
 
 // The chat on the screens that are not one client's (12 Oct): Feed, Calendar,
 // Phases, Library, Business. The same tab on the window's right edge as on
-// a client's screens (RedesignShell), but it opens on the list of chats,
-// newest word first, a dot by those with something unread; picking one
-// shows that thread (MessagesDraft, which fetches and refreshes itself),
-// with a way back to the list. Closing slides it away; Esc too.
+// a client's screens (RedesignShell), but it opens on the list of chats, as
+// WhatsApp lays it out: the face, the name, the last message, and on the
+// right when it was and a dot for unread. Picking one shows that thread
+// (MessagesDraft, which fetches and refreshes itself), with a way back to
+// the list. The tab stays out while open and closes it; Esc too.
 
-export type DockChat = { id: number; name: string; avatarPath: string | null; unread: boolean; last: { text: string; when: string; mine: boolean } | null };
+export type DockChat = { id: number; name: string; avatarPath: string | null; unread: boolean; last: { text: string; at: number; mine: boolean } | null };
+
+const DAY_MS = 86400000;
+/** WhatsApp's: the time today, "Yesterday", the weekday within the week, then the date. */
+function whenLabel(at: number, now: Date): string {
+  const d = new Date(at);
+  const midnight = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const days = Math.round((midnight(now) - midnight(d)) / DAY_MS);
+  if (days <= 0) return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  if (days === 1) return "Yesterday";
+  if (days < 7) return d.toLocaleDateString("en-GB", { weekday: "long" });
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
 
 export default function ChatDock({ chats }: { chats: DockChat[] }) {
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState<DockChat | null>(null);
   const [thread, setThread] = useState<{ id: number; plan: DraftMessages } | null>(null);
+  // Counts the openings of a thread: each one lands on its newest message.
   const [opened, setOpened] = useState(0);
   const [q, setQ] = useState("");
   // Dots cleared here as chats are opened; the page's own flags are from its render.
@@ -26,6 +40,7 @@ export default function ChatDock({ chats }: { chats: DockChat[] }) {
   const unread = chats.filter((c) => c.unread && !read.has(c.id)).length;
 
   const show = () => {
+    if (pick && thread) setOpened((n) => n + 1);
     if (mounted) return setOpen(true);
     // In closed first, then open a frame later, so even the first one slides.
     setMounted(true);
@@ -59,12 +74,13 @@ export default function ChatDock({ chats }: { chats: DockChat[] }) {
   const needle = q.trim().toLowerCase();
   const shown = needle ? chats.filter((c) => c.name.toLowerCase().includes(needle)) : chats;
   const inThread = pick && thread && thread.id === pick.id;
+  const now = new Date();
 
   return (
     <>
-      <button type="button" className={`rd-chattab${open ? " hidden" : ""}`} onClick={show} aria-label={`Chats${unread ? `, ${unread} unread` : ""}`} title="Chats" tabIndex={open ? -1 : 0}>
+      <button type="button" className={`rd-chattab${open ? " open" : ""}`} onClick={() => (open ? close() : show())} aria-label={open ? "Close the chats" : `Chats${unread ? `, ${unread} unread` : ""}`} title={open ? "Close the chats" : "Chats"} aria-expanded={open}>
         <ChatIcon />
-        {unread > 0 && <i className="rd-chattab-dot" aria-hidden="true" />}
+        {unread > 0 && !open && <i className="rd-chattab-dot" aria-hidden="true" />}
       </button>
       {mounted && (
         <aside className={`rd-chatpanel rd-chatdock${open ? " open" : ""}`} aria-label="Chats" aria-hidden={!open} inert={open ? undefined : true}>
@@ -91,24 +107,31 @@ export default function ChatDock({ chats }: { chats: DockChat[] }) {
                 {shown.length === 0 ? (
                   <p className="rd-dock-empty">No one by that name.</p>
                 ) : (
-                  shown.map((c) => (
-                    <button key={c.id} type="button" className={`rd-dock-row${c.unread && !read.has(c.id) ? " unread" : ""}`} onClick={() => void choose(c)}>
-                      <span className="rfd-avatar rd-dock-avatar" aria-hidden="true">
-                        {c.avatarPath ? (
-                          // eslint-disable-next-line @next/next/no-img-element -- the client's own upload, served by the app
-                          <img src={c.avatarPath} alt="" />
-                        ) : (
-                          c.name.charAt(0).toUpperCase()
-                        )}
-                      </span>
-                      <span className="rd-dock-main">
-                        <b>{c.name}</b>
-                        <small>{c.last ? `${c.last.mine ? "You: " : ""}${c.last.text}` : "No messages yet"}</small>
-                      </span>
-                      <span className="rd-dock-when">{c.last?.when ?? ""}</span>
-                      {c.unread && !read.has(c.id) && <i className="rd-dock-dot" aria-hidden="true" />}
-                    </button>
-                  ))
+                  shown.map((c) => {
+                    const isUnread = c.unread && !read.has(c.id);
+                    return (
+                      <button key={c.id} type="button" className={`rd-dock-row${isUnread ? " unread" : ""}`} onClick={() => void choose(c)}>
+                        <span className="rd-dock-avatar" aria-hidden="true">
+                          {c.avatarPath ? (
+                            // eslint-disable-next-line @next/next/no-img-element -- the client's own upload, served by the app
+                            <img src={c.avatarPath} alt="" />
+                          ) : (
+                            c.name.charAt(0).toUpperCase()
+                          )}
+                        </span>
+                        <span className="rd-dock-main">
+                          <span className="rd-dock-top">
+                            <b>{c.name}</b>
+                            <span className="rd-dock-when">{c.last ? whenLabel(c.last.at, now) : ""}</span>
+                          </span>
+                          <span className="rd-dock-bottom">
+                            <small>{c.last ? `${c.last.mine ? "You: " : ""}${c.last.text}` : "No messages yet"}</small>
+                            {isUnread && <i className="rd-dock-dot" aria-label="Unread" />}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })
                 )}
               </div>
             </div>

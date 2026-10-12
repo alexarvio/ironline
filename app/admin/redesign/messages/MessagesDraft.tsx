@@ -226,6 +226,15 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
   // Opened from the feed on one message: there, lit, not at the newest.
   const focusOn = panel?.focus ?? null;
   const opening = panel?.opened ?? 0;
+  // Every other opening lands on the newest message (12 Oct, as WhatsApp),
+  // wherever the coach had scrolled to the last time it was open.
+  useLayoutEffect(() => {
+    if (!opening || focusOn != null) return;
+    const el = thread.current;
+    if (!el) return;
+    atEnd.current = true;
+    el.scrollTop = el.scrollHeight;
+  }, [opening, focusOn]);
   useEffect(() => {
     if (focusOn == null || !opening) return;
     const t = setTimeout(() => goToMessage(focusOn), 340);

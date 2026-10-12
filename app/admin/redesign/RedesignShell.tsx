@@ -227,7 +227,8 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
       {/* The chat's tab on the window's right edge, on every screen of a
           client: it slides the chat out. A dot while there is something from
           them not opened yet. */}
-      <button type="button" className={`rd-chattab${chat.open ? " hidden" : ""}`} onClick={() => openChat()} aria-label={`Chat with ${firstName}${chatDot ? ", new message" : ""}`} title={`Chat with ${firstName}`} tabIndex={chat.open ? -1 : 0}>
+      {/* It stays out while the chat is open (12 Oct), on the panel's edge, and closes it. */}
+      <button type="button" className={`rd-chattab${chat.open ? " open" : ""}`} onClick={() => (chat.open ? closeChat() : openChat())} aria-label={chat.open ? "Close the chat" : `Chat with ${firstName}${chatDot ? ", new message" : ""}`} title={chat.open ? "Close the chat" : `Chat with ${firstName}`} aria-expanded={chat.open}>
         <ChatIcon />
         {chatDot && <i className="rd-chattab-dot" aria-hidden="true" />}
       </button>
