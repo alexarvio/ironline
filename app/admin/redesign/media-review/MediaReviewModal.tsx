@@ -5,7 +5,7 @@ import type React from "react";
 import { useRouter } from "next/navigation";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { markVideoSeenAction, replyToMediaAction, sendFormReviewAction } from "../../../lib/actions";
-import { pathOf, simplify, STROKE, UNDERLAY, UNDERLAY_COLOR, unitFor, worthKeeping, type Pt, type Shape, type Tool } from "./shapes";
+import { pathOf, simplify, SIZES, STROKE, UNDERLAY, UNDERLAY_COLOR, unitFor, worthKeeping, type Pt, type Shape, type Tool } from "./shapes";
 import { MAX_SECONDS, recordingSupported, useReviewRecorder, type Corner } from "./useReviewRecorder";
 
 // The coach's media review (12 Oct, design 18a): one modal for every photo or
@@ -165,6 +165,12 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
   // ---- Drawing (record mode only).
   const [tool, setTool] = useState<Tool>("arrow");
   const [color, setColor] = useState(COLORS[0].id);
+  // How big the next shape is drawn (12 Oct): small, medium, large.
+  const [size, setSize] = useState<number>(1);
+  const stepSize = (d: number) => {
+    const i = SIZES.findIndex((x) => x.id === size);
+    setSize(SIZES[Math.max(0, Math.min(SIZES.length - 1, i + d))].id);
+  };
   const [shapes, setShapes] = useState<Shape[]>([]);
   const shapesRef = useRef<Shape[]>([]);
   useEffect(() => {
@@ -192,7 +198,7 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
       setTimeout(() => setFlash(false), 1600);
     }
     const p = toMedia(e);
-    liveRef.current = { tool, color, pts: [p, p] };
+    liveRef.current = { tool, color, size, pts: [p, p] };
     redraw();
   };
   const move = (e: React.PointerEvent<SVGSVGElement>) => {
@@ -396,6 +402,8 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
         e.preventDefault();
         return undo();
       }
+      if (k === "[") return stepSize(-1);
+      if (k === "]") return stepSize(1);
       const v = videoOf();
       if (v?.paused && k === "arrowleft") step(-FRAME);
       if (v?.paused && k === "arrowright") step(FRAME);
@@ -481,8 +489,8 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
               const d = pathOf(s, unit);
               return (
                 <g key={i}>
-                  <path d={d} stroke={UNDERLAY_COLOR} strokeWidth={UNDERLAY * unit} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d={d} stroke={s.color} strokeWidth={STROKE * unit} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d={d} stroke={UNDERLAY_COLOR} strokeWidth={UNDERLAY * unit * (s.size ?? 1)} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d={d} stroke={s.color} strokeWidth={STROKE * unit * (s.size ?? 1)} fill="none" strokeLinecap="round" strokeLinejoin="round" />
                 </g>
               );
             })}
@@ -575,6 +583,12 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
               {COLORS.map((c) => (
                 <button key={c.id} type="button" className={`mrv-swatch${color === c.id ? " on" : ""}`} aria-pressed={color === c.id} aria-label={c.name} title={c.name} onClick={() => setColor(c.id)}>
                   <i style={{ background: c.id }} />
+                </button>
+              ))}
+              <span className="mrv-tools-div" />
+              {SIZES.map((z) => (
+                <button key={z.id} type="button" className={`mrv-size${size === z.id ? " on" : ""}`} aria-pressed={size === z.id} aria-label={`${z.name} ([ or ])`} title={`${z.name} ([ or ])`} onClick={() => setSize(z.id)}>
+                  <i style={{ width: z.dot, height: z.dot, background: color }} />
                 </button>
               ))}
               <span className="mrv-tools-div" />
@@ -835,7 +849,7 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
                   Camera {camOn ? "on" : "off"}
                 </button>
               </div>
-              <p className="mrv-keys">P pen · A arrow · L line · O circle · Z undo · Space play/pause</p>
+              <p className="mrv-keys">P pen · A arrow · L line · O circle · [ ] size · Z undo · Space play/pause</p>
             </div>
           </div>
         )}

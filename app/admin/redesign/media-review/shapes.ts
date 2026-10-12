@@ -6,7 +6,14 @@
 
 export type Tool = "pen" | "arrow" | "line" | "circle";
 export type Pt = [number, number];
-export type Shape = { tool: Tool; color: string; pts: Pt[] };
+/** size: how big it is drawn, 1 the default; thickness and arrowhead scale with it (12 Oct). */
+export type Shape = { tool: Tool; color: string; pts: Pt[]; size?: number };
+/** Small, medium, large. */
+export const SIZES = [
+  { id: 0.6, name: "Small", dot: 5 },
+  { id: 1, name: "Medium", dot: 8 },
+  { id: 1.8, name: "Large", dot: 12 },
+] as const;
 
 /** The design was drawn on a 280-wide frame: sizes scale from there to the media's own width. */
 export const unitFor = (mediaW: number) => Math.max(1, mediaW / 280);
@@ -70,7 +77,7 @@ export function pathOf(s: Shape, unit: number): string {
   if (s.tool === "line") return `M${f(x0)} ${f(y0)}L${f(x1)} ${f(y1)}`;
   if (s.tool === "arrow") {
     const a = Math.atan2(y1 - y0, x1 - x0);
-    const h = HEAD * unit;
+    const h = HEAD * unit * Math.max(0.8, s.size ?? 1);
     const l = [x1 - h * Math.cos(a - HEAD_ANGLE), y1 - h * Math.sin(a - HEAD_ANGLE)];
     const r = [x1 - h * Math.cos(a + HEAD_ANGLE), y1 - h * Math.sin(a + HEAD_ANGLE)];
     return `M${f(x0)} ${f(y0)}L${f(x1)} ${f(y1)}M${f(l[0])} ${f(l[1])}L${f(x1)} ${f(y1)}L${f(r[0])} ${f(r[1])}`;
@@ -99,10 +106,10 @@ export function paintShapes(ctx: CanvasRenderingContext2D, shapes: Shape[], unit
   for (const s of shapes) {
     const path = new Path2D(pathOf(s, unit));
     ctx.strokeStyle = UNDERLAY_COLOR;
-    ctx.lineWidth = UNDERLAY * unit;
+    ctx.lineWidth = UNDERLAY * unit * (s.size ?? 1);
     ctx.stroke(path);
     ctx.strokeStyle = s.color;
-    ctx.lineWidth = STROKE * unit;
+    ctx.lineWidth = STROKE * unit * (s.size ?? 1);
     ctx.stroke(path);
   }
   ctx.restore();
