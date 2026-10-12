@@ -108,8 +108,10 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
     return () => ro.disconnect();
   }, []);
   const [natural, setNatural] = useState({ w: 1080, h: 1920 });
-  const fit = Math.min((stage.w * 0.92) / natural.w, Math.max(120, stage.h - 152) / natural.h);
-  const frame = { w: Math.round(natural.w * fit), h: Math.round(natural.h * fit) };
+  // The frame is sized by CSS (12 Oct): as big as fits between the toolbox
+  // on either side, the top and the playback bar, at the media's own shape
+  // (.mrv-fit, container units). Measured here only for the camera bubble.
+  const frameRef = useRef<HTMLDivElement>(null);
   const unit = unitFor(natural.w);
 
   // ---- Playback.
@@ -283,7 +285,10 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
     shapes: () => (liveRef.current ? [...shapesRef.current, liveRef.current] : shapesRef.current),
     unit: () => unit,
     camera: () => (camOn && camStream ? camVideo.current : null),
-    bubble: () => ({ corner, share: 92 / Math.max(1, frame.w), inset: 20 / Math.max(1, frame.w) }),
+    bubble: () => {
+      const fw = Math.max(1, frameRef.current?.clientWidth ?? 1);
+      return { corner, share: 92 / fw, inset: 20 / fw };
+    },
   });
   const setMicOn = (on: boolean) => {
     setMicOnState(on);
@@ -434,7 +439,8 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
 
       {/* ---- The stage */}
       <div ref={stageRef} className={`mrv-stage${mode === "record" ? " rec-mode" : ""}`}>
-        <div className="mrv-frame" style={{ width: frame.w, height: frame.h }}>
+        <div className="mrv-fit">
+        <div ref={frameRef} className="mrv-frame" style={{ "--r": natural.w / natural.h } as React.CSSProperties}>
           {isVideo ? (
             <video
               key={showing.url}
@@ -482,6 +488,7 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
             })}
           </svg>
           {flash && <span className="mrv-flash">Paused to draw</span>}
+        </div>
         </div>
 
         {/* Playback, videos only. */}

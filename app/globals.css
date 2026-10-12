@@ -18425,3 +18425,8 @@ button.ci-hint { cursor: pointer; }
   .mrv-countdown, .mrv-tools, .mrv-body { animation: none; }
   .mrv-recframe, .mrv-cam { transition: none; }
 }
+
+/* The media as big as the stage allows (12 Oct): between the toolbox on either
+   side (84px), the top (36px) and the playback bar (116px), at its own shape. */
+.mrv-fit { position: absolute; inset: 36px 84px 116px; container-type: size; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.mrv-fit > .mrv-frame { position: relative; top: auto; left: auto; transform: none; pointer-events: auto; width: min(100cqw, calc(100cqh * var(--r, 0.5625))); height: min(100cqh, calc(100cqw / var(--r, 0.5625))); }
