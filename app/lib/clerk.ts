@@ -13,6 +13,23 @@ export function clerkOn(): boolean {
   return process.env.AUTH_PROVIDER === "clerk" && !!process.env.CLERK_SECRET_KEY && !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 }
 
+/**
+ * Who is signed in, read from the request itself (12 Oct), for a route the
+ * proxy does not run on (the coach's video-reply upload: the proxy would cut
+ * off a big body). auth() there throws, since clerkMiddleware never saw the
+ * request; that crash was the "upload failed" on every form review sent.
+ */
+export async function clerkUserIdFromRequest(request: Request): Promise<string | null> {
+  try {
+    const client = await clerkClient();
+    const state = await client.authenticateRequest(request);
+    if (!state.isSignedIn) return null;
+    return state.toAuth().userId ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** The Clerk account signed in on this request, with its verified emails. */
 export async function clerkIdentity(): Promise<{ userId: string; emails: string[]; name: string | null } | null> {
   const { userId } = await auth();

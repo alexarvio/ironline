@@ -80,7 +80,7 @@ function upload(id: number, blob: Blob, onProgress: (share: number) => void): Pr
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) return resolve(null);
-      let message = "The upload failed. Try again.";
+      let message = `The upload failed (${xhr.status || "no answer"}). Try again.`;
       try {
         message = JSON.parse(xhr.responseText).error ?? message;
       } catch {}

@@ -1,4 +1,4 @@
-import { getSessionUser } from "../../../lib/auth";
+import { getRequestUser } from "../../../lib/auth";
 import { coachOwnsClient } from "../../../lib/tenancy";
 import { getClientIdForVideoRequest } from "../../../lib/queries";
 import { receiveReplyVideo } from "../../../lib/videoReplyUpload";
@@ -14,7 +14,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const { id: raw } = await params;
   const id = Number(raw);
   const clientId = Number.isInteger(id) && id > 0 ? getClientIdForVideoRequest(id) : null;
-  const user = await getSessionUser();
+  // From the request: the proxy does not run here, so Clerk's auth() cannot (12 Oct).
+  const user = await getRequestUser(request);
   if (clientId == null || !user || user.role !== "coach" || !coachOwnsClient(user.id, clientId)) {
     return Response.json({ error: "Not found" }, { status: 404 });
   }

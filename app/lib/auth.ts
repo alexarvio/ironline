@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { allocId, claimUnownedRows, getData, persist } from "./db";
 import { clearLockoutsFor } from "./loginLockout";
 import { coachOwnsClient, seedCoachLibrary } from "./tenancy";
-import { clerkOn, clerkUserRow, deleteClerkUser } from "./clerk";
+import { clerkOn, clerkUserIdFromRequest, clerkUserRow, deleteClerkUser } from "./clerk";
 import { isTimezone } from "./timezones";
 import { setViewZone } from "./viewZone";
 
@@ -157,6 +157,18 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
     must_change_password: user.must_change_password,
   };
 });
+
+/**
+ * The signed-in user for a route the proxy does not run on (12 Oct): with
+ * Clerk on, read from the request, since Clerk's auth() needs its middleware;
+ * else the session cookie, as getSessionUser reads it.
+ */
+export async function getRequestUser(request: Request): Promise<SessionUser | null> {
+  if (!clerkOn()) return getSessionUser();
+  const clerkId = await clerkUserIdFromRequest(request);
+  const row = clerkId ? getData().users.find((u) => u.clerk_user_id === clerkId) : null;
+  return row ? { id: row.id, email: row.email, role: row.role, client_id: row.client_id, must_change_password: false, pending: !!row.pending } : null;
+}
 
 // ---- Guards -------------------------------------------------------------
 
