@@ -446,6 +446,17 @@ export default function ExercisePage({
           );
         })}
 
+        {/* Right under the last row, always (12 Oct), whichever set is on: one
+            more than the coach asked for, logged as an extra, the plan
+            unchanged. Added before the last set is logged, it waits as a row
+            and the workout does not slide on past it. An unlogged extra row
+            has a ✕. */}
+        {editingN == null && (
+          <button type="button" className="ts-addset" onClick={() => setExtraAdded((e) => Math.max(e, extraLogged) + 1)} disabled={pending}>
+            Add a set
+          </button>
+        )}
+
         {/* Said plainly (9 Oct): the rows carry last session's numbers, the target sits above. Not on the first week, with no last session. */}
         {last && activeN != null && (
           <div className="ts-prev-note" role="note">
@@ -472,16 +483,6 @@ export default function ExercisePage({
             {pending ? "Logging…" : activeN > exercise.sets ? `Log extra set ${activeN}` : `Log set ${activeN} of ${exercise.sets}`}
           </button>
         )}
-        {/* Always there (12 Oct), whichever set is on: one more than the coach
-            asked for, logged as an extra, the plan unchanged. Added before the
-            last set is logged, it waits below and the workout does not slide
-            on past it. An unlogged extra row has a ✕. */}
-        {editingN == null && (
-          <button type="button" className="ts-addset" onClick={() => setExtraAdded((e) => Math.max(e, extraLogged) + 1)} disabled={pending}>
-            Add a set
-          </button>
-        )}
-
       </div>
 
       {noteOpen ? (
