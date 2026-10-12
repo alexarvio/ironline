@@ -59,3 +59,32 @@
 .rfd-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .rfd-row.still { cursor: default; }
 .rfd-row.still:hover { background: none; }
+
+/* Two lanes (12 Oct): Needs you over Activity. The title row carries the
+   client picker; each lane has its own heading, Activity's with the kinds. */
+.rfd-head { flex-direction: row; align-items: center; justify-content: space-between; }
+.rfd-lane { display: flex; flex-direction: column; gap: 10px; }
+.rfd-lane-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.rfd-lane-title { margin: 0; font-size: 15px; font-weight: 700; color: #141a24; }
+.rfd-lane-title span { font-weight: 500; color: #8b93a1; }
+
+/* A Needs-you row: who, how pressing, what (and their words), which tab, how long. */
+.rfd-row.rfd-need { grid-template-columns: 190px 72px minmax(0, 1fr) auto auto; }
+.rfd-tone { box-sizing: border-box; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; text-align: center; white-space: nowrap; background: #eef0f3; color: #5b6474; }
+.rfd-tone.due { background: #fbeee6; color: #a8501f; }
+.rfd-tone.urgent { background: #fbeaea; color: #a32d2d; }
+.rfd-tone.note { background: #fff3dc; color: #8a5a12; }
+.rfd-detail { font-size: 13px; color: #5b6474; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rfd-detail.quote { font-style: italic; }
+.rfd-tab { padding: 3px 8px; border-radius: 999px; background: #eef0f3; font-size: 11px; font-weight: 700; color: #5b6474; white-space: nowrap; }
+
+/* One client's day folded to a line; open, each thing is its own row under it. */
+.rfd-fold { border-top: 1px solid #eef1f5; }
+.rfd-fold:first-child { border-top: 0; }
+.rfd-fold-sum { border-top: 0; cursor: pointer; list-style: none; }
+.rfd-fold-sum::-webkit-details-marker { display: none; }
+.rfd-fold[open] .rfd-fold-sum { background: #f7f9fc; }
+.rfd-kinds { display: flex; flex-wrap: wrap; gap: 4px; }
+.rfd-fold-body { padding-bottom: 4px; background: #fbfcfd; }
+.rfd-row.in-fold { padding-top: 9px; padding-bottom: 9px; border-top: 1px solid #f1f3f6; }
+.rfd-row.in-fold:first-child { border-top: 1px solid #eef1f5; }

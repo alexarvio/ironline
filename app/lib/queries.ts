@@ -5928,6 +5928,12 @@ export type HomeAction = {
   detail: string;
   /** The admin tab that deals with it, if one does. */
   tab: string | null;
+  /** Since when it has been waiting (epoch ms), for the Feed's queue; none for a standing state. */
+  at?: number;
+  /** The feed event it is about, so the Feed can land on it (feedHref). */
+  eventId?: string;
+  /** An exact place to open, when no event carries it (an invoice). */
+  href?: string;
 };
 
 export type HomeEvent = FeedEvent & { when: string; unseen: boolean };
@@ -5961,7 +5967,63 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
 
   const actions: HomeAction[] = [];
   if (clientLockedOut(clientId)) {
-    actions.push({ id: "locked", tone: "urgent", title: "Locked out of signing in", detail: "Too many wrong passwords. Clear the lock from their card, or it lifts by itself.", tab: null });
+    actions.push({ id: "locked", tone: "urgent", title: "Locked out of signing in", detail: "Too many wrong passwords. Clear the lock from their card, or it lifts by itself.", tab: null, at: Date.now() });
+  }
+  // ---- Waiting on the coach (12 Oct): things with a reply owed, which stay
+  // until answered, not until looked at. The Feed's "Needs you" lane is these,
+  // oldest first, across every client.
+  // A message with no answer after it: the last word in the chat is theirs
+  // (a reaction from the coach counts as an answer).
+  const chat = data.chat_messages.filter((m) => m.client_id === clientId && (m.text.trim() || m.media_path)).sort((a, b) => stampMs(b.created_at) - stampMs(a.created_at));
+  const lastCoach = chat.find((m) => m.sender === "coach");
+  const unanswered = chat.filter((m) => m.sender === "client" && !m.reactions?.coach && (!lastCoach || stampMs(m.created_at) > stampMs(lastCoach.created_at)));
+  if (unanswered.length) {
+    const oldest = unanswered[unanswered.length - 1];
+    const words = oldest.text.trim();
+    actions.push({
+      id: `reply-${oldest.id}`,
+      tone: "note",
+      title: unanswered.length === 1 ? "A message waiting for your reply" : `${unanswered.length} messages waiting for your reply`,
+      detail: words || `Sent ${mediaWords(oldest.media_type)}.`,
+      tab: "messages",
+      at: stampMs(oldest.created_at),
+      eventId: `chat-${oldest.id}`,
+    });
+  }
+  // A video or photo they sent, with no reply from the coach yet.
+  for (const v of data.video_requests ?? []) {
+    if (v.client_id !== clientId || !v.file_path || !v.submitted_at || v.replied_at) continue;
+    const a = data.workout_assignments.find((w) => w.id === v.assignment_id);
+    const name = a ? data.exercises.find((e) => e.id === a.exercise_id)?.name ?? "an exercise" : "an exercise";
+    actions.push({
+      id: `reply-video-${v.id}`,
+      tone: "due",
+      title: `${v.media === "photo" ? "Photo" : "Video"} of ${name} waiting for your reply`,
+      detail: v.from_client ? "They sent it on their own." : "The one you asked for.",
+      tab: "training",
+      at: stampMs(v.submitted_at),
+      eventId: `video-${v.id}-${v.submitted_at}`,
+    });
+  }
+  // A call they asked for, not yet booked or let go.
+  for (const r of data.meeting_requests ?? []) {
+    if (r.client_id !== clientId || r.status !== "open") continue;
+    actions.push({ id: `call-${r.id}`, tone: "due", title: "Asked for a call", detail: `“${r.about}”${r.when_suits ? ` · ${r.when_suits}` : ""}`, tab: "meetings", at: stampMs(r.created_at), eventId: `meeting-request-${r.id}` });
+  }
+  // An invoice past its due date, still unpaid.
+  const today = localDateStr();
+  for (const inv of data.invoices) {
+    if (inv.client_id !== clientId || inv.status === "paid" || !inv.due_date || inv.due_date >= today) continue;
+    const days = Math.round((stampMs(`${today} 00:00:00`) - stampMs(`${inv.due_date} 00:00:00`)) / 86400000);
+    actions.push({
+      id: `invoice-${inv.id}`,
+      tone: "due",
+      title: `Invoice ${inv.number ?? ""} ${days === 1 ? "a day" : `${days} days`} overdue`.replace(/\s+/g, " "),
+      detail: inv.description,
+      tab: "invoices",
+      at: stampMs(`${inv.due_date} 00:00:00`),
+      href: `/admin/redesign/invoices/${inv.id}`,
+    });
   }
   // No phase live on training or nutrition (8 Oct): the client's Home says
   // "no phase running" until there is one; this is the nudge from this side.
@@ -5991,18 +6053,19 @@ export function getClientHome(clientId: number, feed?: FeedEvent[]): ClientHome 
   const due = getCheckInStatus(clientId);
   const DUE = { daily: "Today's daily check-in", weekly: "This week's weekly check-in", monthly: "This month's monthly check-in", measurements: "Today's measurements" };
   for (const t of due.dueTypes) {
-    actions.push({ id: `checkin-${t}`, tone: "due", title: `${DUE[t]} not logged`, detail: "They have not filled it in yet.", tab: "measurements" });
+    actions.push({ id: `checkin-${t}`, tone: "due", title: `${DUE[t]} not logged`, detail: "They have not filled it in yet.", tab: "measurements", at: stampMs(`${today} 00:00:00`) });
   }
   // Their own words waiting to be read: notes and reasons, not plain logging.
+  // Not chat messages: those wait for a reply, above.
   for (const e of unseen) {
-    if (!e.note) continue;
-    actions.push({ id: `read-${e.id}`, tone: "note", title: e.text.charAt(0).toUpperCase() + e.text.slice(1), detail: e.note, tab: e.tab });
+    if (!e.note || e.category === "messages") continue;
+    actions.push({ id: `read-${e.id}`, tone: "note", title: e.text.charAt(0).toUpperCase() + e.text.slice(1), detail: e.note, tab: e.tab, at: e.at, eventId: e.id });
   }
   // Gone quiet: nothing at all logged for a while.
   const last = all[0]?.at ?? null;
   if (last != null) {
     const days = Math.floor((Date.now() - last) / 86400000);
-    if (days >= 5) actions.push({ id: "quiet", tone: "due", title: `Nothing logged for ${days} days`, detail: `Last seen ${feedTimeLabel(last, false)}.`, tab: null });
+    if (days >= 5) actions.push({ id: "quiet", tone: "due", title: `Nothing logged for ${days} days`, detail: `Last seen ${feedTimeLabel(last, false)}.`, tab: null, at: last });
   }
 
   return {
