@@ -717,6 +717,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
             chat: rows.some((r) => r.exerciseChat.some((m) => !m.mine)),
             video: rows.some((r) => videoIn(r.id)),
             swap: rows.some((r) => r.swap),
+            // Sets the client added beyond the prescription (12 Oct, "Add a set").
+            extra: rows.some((r) => extraOf(r) > 0),
           };
           return (
             <SortableItem key={s.id} id={s.id} as="section" anchor={`session-${s.id}`} className={`rd-session${isOpen ? " open" : ""}`}>
@@ -778,6 +780,15 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                           {photo ? <PhotoIcon /> : <VideoIcon />}
                         </span>
                       );
+                    })()}
+                    {(() => {
+                      // Extra sets in this session, all exercises together (12 Oct).
+                      const n = rows.reduce((t, r) => t + extraOf(r), 0);
+                      return n > 0 ? (
+                        <span className="rd-extradot static" title={`${firstName} added ${n} extra set${n === 1 ? "" : "s"} in this session`} aria-label={`${n} extra set${n === 1 ? "" : "s"}`}>
+                          +{n}
+                        </span>
+                      ) : null;
                     })()}
                     {(() => {
                       const n = rows.filter((r) => r.swap).length;
@@ -986,6 +997,15 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                   >
                                     {video.media === "photo" ? <PhotoIcon /> : <VideoIcon />}
                                   </button>
+                                )}
+                              </span>
+                              )}
+                              {flagCols.extra && (
+                              <span className="rd-flag-slot">
+                                {extraOf(r) > 0 && (
+                                  <span className="rd-extradot static" title={`${firstName} added ${extraOf(r)} extra set${extraOf(r) === 1 ? "" : "s"}: ${r.sets} prescribed, ${r.sets + extraOf(r)} done`} aria-label={`${extraOf(r)} extra set${extraOf(r) === 1 ? "" : "s"}`}>
+                                    +{extraOf(r)}
+                                  </span>
                                 )}
                               </span>
                               )}
@@ -3058,6 +3078,9 @@ function NoteDialog({ firstName, note, onSeen }: { firstName: string; note: { te
   );
 }
 
+
+/** Sets the client logged beyond the prescription ("Add a set", 12 Oct). A swapped row's sets are the swap's. */
+const extraOf = (r: { sets: number; swap: string | null; logged: { set: number }[] }) => (r.swap ? 0 : r.logged.filter((l) => l.set > r.sets).length);
 
 // Two arrows passing each other: a swap.
 function SwapIcon() {
