@@ -3114,6 +3114,18 @@ export async function copyProgramDayAction(formData: FormData) {
   revalidatePath("/admin");
 }
 
+// A session's ⋯ → "Apply to remaining weeks" (12 Oct): this session, as it is
+// this week, into the same slot of every later week of the programme. For a
+// programme whose later weeks were laid out before one session was finished.
+export async function applyDayToLaterWeeksAction(programDayId: number) {
+  const owner = clientIdForProgramDay(programDayId);
+  if (!Number.isInteger(programDayId) || owner == null || !(await coachForClient(owner))) return;
+  const touched = copyProgramDayToLaterWeeks(programDayId, programDayId);
+  if (touched > 0 && clientSeesProgramDay(programDayId)) trainingChange(owner, programDayId, `Applied ${dayWords(programDayId)} to the remaining weeks`);
+  revalidatePath("/client");
+  revalidatePath("/admin");
+}
+
 
 // ---- Library video straight from the exercise picker's add-new form -------
 

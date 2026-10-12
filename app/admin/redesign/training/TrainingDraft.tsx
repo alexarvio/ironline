@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PhaseDialog, phaseForm as planPhaseForm, type DraftPlan } from "../plan/PlanDraft";
-import { addExerciseToLibraryAction, addExerciseVariationAction, markProgramNoteSeenAction, markVideoSeenAction, setRowDemoHiddenAction, setRowVariationAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, addClientPhaseAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, deployProgramAction, removeGymAction, removeProgramWeekAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, saveTrainingNoteAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
+import { addExerciseToLibraryAction, addExerciseVariationAction, markProgramNoteSeenAction, markVideoSeenAction, setRowDemoHiddenAction, setRowVariationAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, applyDayToLaterWeeksAction, addClientPhaseAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, deployProgramAction, removeGymAction, removeProgramWeekAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, saveTrainingNoteAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger, ToggleGroup, ToggleGroupItem } from "../../../components/ui/basics";
@@ -151,6 +151,7 @@ type Dlg =
   | { kind: "newVariation"; rowId: number }
   | { kind: "message"; label: string; link: MessageLink }
   | { kind: "copySession"; sessionId: number }
+  | { kind: "applyLater"; sessionId: number }
   | { kind: "copyWeek" }
   | { kind: "deleteSession"; sessionId: number }
   | { kind: "deploy" }
@@ -816,6 +817,12 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                         <CopyIcon /> Duplicate session
                       </DropdownMenuItem>
                     )}
+                    {/* This session into the same slot of every later week (12 Oct). */}
+                    {(rows.length > 0 || s.cardio.length > 0) && laterLabel && (
+                      <DropdownMenuItem onSelect={() => setDlg({ kind: "applyLater", sessionId: s.id })}>
+                        <CopyIcon /> Apply to remaining weeks
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "deleteSession", sessionId: s.id })}>
                       <TrashIcon /> Delete session
@@ -1465,6 +1472,19 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               const target = to === "new" ? null : sessionById(to);
               close();
               act(() => copyProgramDayAction(fd({ fromDayId: src.id, toDayId: to === "new" ? "new" : to, applyToRemainingWeeks: also ? "1" : null })), to === "new" ? `Added as Session ${n}${also && laterLabel ? `, and in ${laterLabel}` : ""}` : `Replaced ${target?.name ?? "session"}${also && laterLabel ? `, and in ${laterLabel}` : ""}`);
+            }}
+          />
+        )}
+
+        {dlg?.kind === "applyLater" && sessionById(dlg.sessionId) && (
+          <ConfirmDialog
+            title={`Apply ${sessionById(dlg.sessionId)!.name} to ${laterLabel}`}
+            description={`${sessionById(dlg.sessionId)!.name} in each of those weeks becomes what it is in ${week.label}: its ${sessionById(dlg.sessionId)!.rows.length} ${sessionById(dlg.sessionId)!.rows.length === 1 ? "exercise" : "exercises"}${sessionById(dlg.sessionId)!.cardio.length ? " and cardio" : ""}. Anything the client logged on those sessions goes with them.`}
+            confirm="Apply"
+            onConfirm={() => {
+              const src = sessionById(dlg.sessionId)!;
+              close();
+              act(() => applyDayToLaterWeeksAction(src.id), `${src.name} applied to ${laterLabel}`);
             }}
           />
         )}
