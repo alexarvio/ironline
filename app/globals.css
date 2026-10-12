@@ -17824,8 +17824,9 @@ button.ci-hint { cursor: pointer; }
    "All sets logged" when there is no button. */
 .wo-sets .ts-all-logged { height: 48px; margin-top: 12px; padding: 0 6px; display: flex; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box; overflow: hidden; text-align: center; }
 /* An extra set (12 Oct): "Add a set" on the all-logged line; its rows wear a dashed circle, so it never reads as part of the plan. */
-.wo-sets .ts-addset { border: 0; background: none; font: inherit; font-size: 12px; font-weight: 800; color: #2f5d8f; cursor: pointer; padding: 6px 8px; }
-.wo-sets .ts-addset::before { content: "·"; color: #a0a7b3; margin-right: 8px; }
+.wo-sets .ts-addset { display: block; width: 100%; margin-top: 6px; border: 0; background: none; font: inherit; font-size: 12px; font-weight: 800; color: #2f5d8f; cursor: pointer; padding: 8px; }
+.wo-sets .ts-addset:disabled { color: #a0a7b3; cursor: default; }
+.wo-sets .ts-set.extra .ts-circle { border-style: dashed; }
 .wo-sets .ts-set.extra .ts-circle.active { background: #fff; border: 1.5px dashed #1e3a6e; color: #1e3a6e; }
 .wo-sets .ts-set.extra .ts-circle.done { background: #fff; border: 1.5px dashed #2f7a3f; color: #2f7a3f; }
 /* Home's phase cards show the phase's whole name (4 Oct): it wraps onto a
