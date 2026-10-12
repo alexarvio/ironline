@@ -3,11 +3,11 @@
 import Pager from "../Pager";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { saveCoachNoteAction, sendChatMessageAction } from "../../../lib/actions";
+import { deleteClientConfirmedAction, saveCoachNoteAction, sendChatMessageAction } from "../../../lib/actions";
 import ClientCardEditor from "../../ClientCardEditor";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
-import { AccountIcon, ChatIcon } from "../../../components/icons";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
+import { AccountIcon, ChatIcon, TrashIcon } from "../../../components/icons";
 import type { ClientEngagement, HomeAction, OverviewPanel } from "../../../lib/queries";
 import { MessageDialog } from "../training/TrainingDraft";
 import AppAccessButton from "./AppAccessButton";
@@ -83,6 +83,7 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
   };
   // The facts about them, and the coach's note: a click away, not on the page.
   const [details, setDetails] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [photo, setPhoto] = useState(false);
   const [filter, setFilter] = useState<FilterId>(FILTERS[0].id);
   const [page, setPage] = useState(1);
@@ -274,9 +275,27 @@ export default function HomeDraft({ clientId, firstName, home, onOpenTab }: { cl
               {/* The old tab's card editor, as is: member info and coaching info, each with an Edit. */}
               <ClientCardEditor clientId={clientId} panel={home.panel} chrome="rail" />
               <NoteCard text={home.coachNote.text} savedLabel={home.coachNote.savedLabel} onSave={(v) => act(() => saveCoachNoteAction(clientId, v), "Coach note")} />
+              {/* Last, and quiet (12 Oct): the one thing here that cannot be undone. */}
+              <div className="rh-delete">
+                <button
+                  type="button"
+                  className="rd-btn danger ghost"
+                  onClick={() => {
+                    setDetails(false);
+                    setDeleting(true);
+                  }}
+                >
+                  <TrashIcon /> Delete {firstName}
+                </button>
+              </div>
             </div>
           </DialogContent>
         )}
+      </Dialog>
+
+      {/* Deleting: what goes, what stays, and their name typed to be sure. */}
+      <Dialog open={deleting} onOpenChange={(o) => !o && setDeleting(false)}>
+        {deleting && <DeleteClientDialog clientId={clientId} name={home.name} onCancel={() => setDeleting(false)} />}
       </Dialog>
 
       {/* The photo, large. */}
@@ -381,5 +400,55 @@ function NoteCard({ text, savedLabel, onSave }: { text: string; savedLabel: stri
         <p className={`rh-note${saved ? "" : " empty"}`}>{saved || "Nothing yet. A standing note about this client, for you alone."}</p>
       )}
     </section>
+  );
+}
+
+// ---- Delete a client: everything of theirs goes, their invoices stay.
+function DeleteClientDialog({ clientId, name, onCancel }: { clientId: number; name: string; onCancel: () => void }) {
+  const router = useRouter();
+  const [typed, setTyped] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, start] = useTransition();
+  const ok = typed.trim().toLowerCase() === name.trim().toLowerCase();
+  const go = () =>
+    start(async () => {
+      const err = await deleteClientConfirmedAction(clientId, typed);
+      if (err) return setError(err);
+      toast.success(`${name} deleted`);
+      router.push("/admin/redesign/feed");
+    });
+  return (
+    <DialogContent className="rd-dlg">
+      <DialogHeader>
+        <DialogTitle>Delete {name}?</DialogTitle>
+        <DialogDescription>
+          Their login, programmes, logged sets, check-ins, measurements, photos, meetings, chat and notes go, and cannot be brought back. Their invoices stay, under their name, as the law asks.
+        </DialogDescription>
+      </DialogHeader>
+      <label className="rd-field">
+        <span>Type their name to confirm</span>
+        <input
+          value={typed}
+          onChange={(e) => {
+            setTyped(e.target.value);
+            setError(null);
+          }}
+          onKeyDown={(e) => e.key === "Enter" && ok && !busy && go()}
+          placeholder={name}
+          autoFocus
+          autoComplete="off"
+        />
+      </label>
+      {error && <p className="rh-delete-error">{error}</p>}
+      <DialogFooter>
+        <span className="rd-dlg-hint grow" />
+        <button type="button" className="rd-btn" onClick={onCancel} disabled={busy}>
+          Cancel
+        </button>
+        <button type="button" className="rd-btn danger" onClick={go} disabled={!ok || busy}>
+          {busy ? "Deleting…" : "Delete for good"}
+        </button>
+      </DialogFooter>
+    </DialogContent>
   );
 }

@@ -2706,6 +2706,21 @@ export async function deleteClientAction(formData: FormData) {
   redirect("/admin");
 }
 
+// The redesign's Delete client (12 Oct), from the Details dialog on Home:
+// the coach types the client's name to confirm, checked here as well. Their
+// invoices stay, carrying their name, as on a self-delete. No redirect: the
+// page moves on to the Feed itself. Returns an error to show, or null.
+export async function deleteClientConfirmedAction(clientId: number, typedName: string): Promise<string | null> {
+  if (!(await coachForClient(clientId))) return "That client is not yours.";
+  const client = getClient(clientId);
+  if (!client) return "That client no longer exists.";
+  if (typedName.trim().toLowerCase() !== client.name.trim().toLowerCase()) return "The name does not match.";
+  await eraseClient(clientId, { selfDeleted: false, keepInvoices: true });
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  return null;
+}
+
 // Removes one week from a programme; later weeks move up. The confirm is in
 // the rail's dialog. Live and past weeks of a deployed programme are refused
 // here too, not just hidden in the UI, so a stale form can't delete history.

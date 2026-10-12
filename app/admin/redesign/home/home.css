@@ -123,3 +123,7 @@
 .rh-access-error { margin: 0; font-size: 12.5px; font-weight: 600; color: #a32d2d; }
 .rh-access-given { display: flex; align-items: center; gap: 12px; }
 .rh-access-given code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13.5px; letter-spacing: 0.04em; }
+
+/* Delete client (12 Oct): quiet, last in the Details dialog. */
+.rh-delete { display: flex; justify-content: flex-end; padding-top: 8px; border-top: 1px solid #eef1f5; }
+.rh-delete-error { margin: 0; font-size: 13px; font-weight: 600; color: #a32d2d; }

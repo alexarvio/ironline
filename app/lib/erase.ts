@@ -15,7 +15,7 @@ import { deleteClerkUser } from "./clerk";
 // Every uploads folder that is per client: <kind>/<clientId>/...
 const CLIENT_UPLOAD_KINDS = ["avatars", "chat", "demos", "meals", "phases", "progress", "videos"] as const;
 
-export async function eraseClient(clientId: number, opts: { selfDeleted: boolean }) {
+export async function eraseClient(clientId: number, opts: { selfDeleted: boolean; keepInvoices?: boolean }) {
   const data = getData();
   const client = data.clients.find((c) => c.id === clientId);
   if (!client) return;
@@ -32,7 +32,9 @@ export async function eraseClient(clientId: number, opts: { selfDeleted: boolean
   }
   // The rows first: from here the client is gone from the app, whatever
   // happens to the file clean-up below.
-  removeClient(clientId, { keepInvoices: opts.selfDeleted });
+  // Invoices are business records the coach must keep (7 years in the
+  // Netherlands): a self-delete keeps them, and so does the redesign's delete.
+  removeClient(clientId, { keepInvoices: opts.selfDeleted || !!opts.keepInvoices });
   for (const id of clerkIds) await deleteClerkUser(id);
 
   const failures: unknown[] = [];
