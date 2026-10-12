@@ -200,6 +200,9 @@ export type VideoRequest = {
   replied_at?: string | null;
   /** When the client first opened the reply. */
   reply_seen_at?: string | null;
+  /** A recorded form review (12 Oct): how long, and how many drawings were on it. */
+  reply_duration_ms?: number | null;
+  reply_annotations?: number | null;
   /** The client sent it without being asked (9 Oct). */
   from_client?: boolean;
   /** What the file is; absent on rows from before photos: a video. */

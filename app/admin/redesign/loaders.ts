@@ -194,11 +194,11 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   const days = getWeek(clientId, weekNumber);
   // The chat about an exercise, both sides (the workout's chat button and the
   // coach's replies link a message to it), by assignment, oldest first.
-  const aboutExercise = new Map<number, { id: number; mine: boolean; text: string; when: string }[]>();
+  const aboutExercise = new Map<number, { id: number; mine: boolean; text: string; when: string; at: number; media: { path: string; type: string } | null }[]>();
   for (const m of [...listChatMessages(clientId)].sort((x, y) => x.created_at.localeCompare(y.created_at))) {
     if (m.link?.kind !== "exercise") continue;
     const list = aboutExercise.get(m.link.assignmentId) ?? [];
-    list.push({ id: m.id, mine: m.sender === "coach", text: m.text || "A file", when: new Date(m.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) });
+    list.push({ id: m.id, mine: m.sender === "coach", text: m.text || (m.media_path ? "" : "A file"), when: new Date(m.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }), at: new Date(m.created_at).getTime(), media: m.media_path ? { path: m.media_path, type: m.media_type ?? "file" } : null });
     aboutExercise.set(m.link.assignmentId, list);
   }
   const sessions = days.map((d, si) => {
@@ -269,7 +269,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
               sets: logs.map((l) => ({ set: l.set_number, kg: l.weight_kg, reps: l.reps, rpe: l.rpe_actual, gym: l.gym_id != null ? gymName.get(l.gym_id) ?? null : null })),
             }
           : null,
-        video: v ? { requestId: v.id, state: (v.replied_at ? "replied" : v.file_path ? "in" : "asked") as "asked" | "in" | "replied", note: v.note, reply: v.reply_note ?? null, src: v.file_path ?? null, replySrc: v.reply_file_path ?? null, media: (v.media ?? "video") as "video" | "photo", fromClient: !!v.from_client, about: v.about ?? null, clientNote: v.client_note ?? null } : null,
+        video: v ? { requestId: v.id, state: (v.replied_at ? "replied" : v.file_path ? "in" : "asked") as "asked" | "in" | "replied", note: v.note, reply: v.reply_note ?? null, src: v.file_path ?? null, replySrc: v.reply_file_path ?? null, media: (v.media ?? "video") as "video" | "photo", fromClient: !!v.from_client, about: v.about ?? null, clientNote: v.client_note ?? null, sentAt: v.submitted_at ?? null, repliedAt: v.replied_at ?? null, replyDurationMs: v.reply_duration_ms ?? null, replyAnnotations: v.reply_annotations ?? null } : null,
         demo: a.exercise_video_url ? { url: a.exercise_video_url, source: "library" as const } : a.demo_url ? { url: a.demo_url, source: "row" as const } : null,
         demoHidden: !!a.demo_hidden,
         history,

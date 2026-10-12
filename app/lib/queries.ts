@@ -10913,6 +10913,39 @@ export function sendVideoReply(id: number, note: string): boolean {
   return true;
 }
 
+// ---- The media review (12 Oct): one modal for every photo or video a client
+// sends. What the coach says there lands twice, as the request's reply on
+// the exercise (carried to the next session) and in the chat linked to the
+// exercise, with the one notification the reply already sends.
+function exerciseLinkFor(row: VideoRequest): MessageLink | null {
+  const a = getData().workout_assignments.find((w) => w.id === row.assignment_id);
+  return a ? { kind: "exercise", dayId: a.program_day_id, assignmentId: a.id } : null;
+}
+/** A text reply to a client's photo or video. */
+export function replyToMedia(id: number, text: string): boolean {
+  const row = getData().video_requests.find((r) => r.id === id);
+  const clean = text.trim().slice(0, 2000);
+  if (!row || !clean) return false;
+  if (!sendVideoReply(id, clean)) return false;
+  sendChatMessage(row.client_id, "coach", clean, undefined, exerciseLinkFor(row));
+  return true;
+}
+/** A recorded form review: its file is already up (/api/video-reply); the message, its length and the drawing count follow. */
+export function sendFormReview(id: number, message: string, meta: { durationMs: number; annotations: number }): boolean {
+  const row = getData().video_requests.find((r) => r.id === id);
+  if (!row || !row.reply_file_path) return false;
+  row.reply_duration_ms = Number.isFinite(meta.durationMs) ? Math.max(0, Math.round(meta.durationMs)) : null;
+  row.reply_annotations = Number.isFinite(meta.annotations) ? Math.max(0, Math.round(meta.annotations)) : null;
+  if (!sendVideoReply(id, message)) return false;
+  // The clip in the chat too, pointing at the exercise.
+  sendChatMessage(row.client_id, "coach", message.trim().slice(0, 2000), { path: row.reply_file_path, type: "video", name: "Form review.mp4" }, exerciseLinkFor(row));
+  return true;
+}
+/** A file some chat message shows: a newer review must not delete it from under the chat. */
+export function chatUsesFile(path: string): boolean {
+  return getData().chat_messages.some((m) => m.media_path === path);
+}
+
 /** Takes the reply back. Returns its video, to delete. */
 export function removeVideoReply(id: number): string | null {
   const row = getData().video_requests.find((r) => r.id === id);

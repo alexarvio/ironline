@@ -109,6 +109,8 @@ import {
   deployProgram,
   getClient,
   dismissHomeAction,
+  replyToMedia,
+  sendFormReview,
   setEngagementParts,
   getReportTemplate,
   renameProgram,
@@ -2720,6 +2722,23 @@ export async function setEngagementPartsAction(clientId: number, ids: string[]) 
   if (!(await coachForClient(Number(clientId)))) return;
   setEngagementParts(Number(clientId), Array.isArray(ids) ? ids.map(String) : []);
   revalidatePath("/admin");
+}
+
+// The media review (12 Oct): a text reply, and a recorded form review whose
+// file is already up through /api/video-reply.
+export async function replyToMediaAction(id: number, text: string): Promise<boolean> {
+  if (!Number.isInteger(id) || !(await coachForClient(getClientIdForVideoRequest(id)))) return false;
+  const ok = replyToMedia(id, String(text ?? ""));
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  return ok;
+}
+export async function sendFormReviewAction(id: number, message: string, meta: { durationMs: number; annotations: number }): Promise<boolean> {
+  if (!Number.isInteger(id) || !(await coachForClient(getClientIdForVideoRequest(id)))) return false;
+  const ok = sendFormReview(id, String(message ?? ""), { durationMs: Number(meta?.durationMs), annotations: Number(meta?.annotations) });
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  return ok;
 }
 
 // The redesign's Delete client (12 Oct), from the Details dialog on Home:

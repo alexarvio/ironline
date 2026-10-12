@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger, ToggleGroup, ToggleGroupItem } from "../..
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { CalendarIcon, ChatIcon, ChevronDownIcon, ColumnsIcon, CopyIcon, DumbbellIcon, EyeIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { PhotoIcon, VideoIcon } from "../../VideoRequestButton";
-import VideoWhiteboard from "./VideoWhiteboard";
+import MediaReviewModal, { reviewable, type MediaReview, type ThreadItem } from "../media-review/MediaReviewModal";
 import PhaseDatesDialog from "../PhaseDatesDialog";
 import PhaseSwitcher from "../PhaseSwitcher";
 import PhaseGoalsCard from "../PhaseGoalsCard";
@@ -59,7 +59,7 @@ export type DraftRow = {
   rest: number | null;
   note: string | null;
   logged: { set: number; kg: number | null; reps: number | null; rpe: number | null; gym: string | null }[];
-  video: { requestId: number; state: "asked" | "in" | "replied"; note: string | null; reply: string | null; /** The file the client sent, and the one the coach sent back (9 Oct). */ src: string | null; replySrc: string | null; /** A photo or a video; sent unasked; about the swap; with the client's words (9 Oct). */ media: "video" | "photo"; fromClient: boolean; about: "swap" | null; clientNote: string | null } | null;
+  video: { requestId: number; state: "asked" | "in" | "replied"; note: string | null; reply: string | null; /** The file the client sent, and the one the coach sent back (9 Oct). */ src: string | null; replySrc: string | null; /** A photo or a video; sent unasked; about the swap; with the client's words (9 Oct). */ media: "video" | "photo"; fromClient: boolean; about: "swap" | null; clientNote: string | null; /** When it came in and when it was answered; a recorded review's length and drawings (12 Oct). */ sentAt?: string | null; repliedAt?: string | null; replyDurationMs?: number | null; replyAnnotations?: number | null } | null;
   /** The demo the client sees on this exercise: the library's, else one set on this row long ago. */
   demo: { url: string; source: "library" | "row" } | null;
   /** The coach keeping that demo off this prescription for this client. */
@@ -69,7 +69,7 @@ export type DraftRow = {
   swap: string | null;
   /** The swap in full: what, when, and the sets logged on it (kept out of this row's numbers). */
   /** The chat about this exercise, both sides, oldest first. */
-  exerciseChat: { id: number; mine: boolean; text: string; when: string }[];
+  exerciseChat: { id: number; mine: boolean; text: string; when: string; at?: number; media?: { path: string; type: string } | null }[];
   swapInfo: { name: string; typed: boolean; when: string; sets: { set: number; kg: number | null; reps: number | null; rpe: number | null; gym: string | null }[] } | null;
   /** What the coach offers instead when the machine is taken. */
   alternatives: { exerciseId: number; name: string; note: string }[];
@@ -1441,7 +1441,15 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           />
         )}
 
-        {dlg?.kind === "video" && rowById(dlg.rowId) && (
+        {/* A photo or video that came in: the media review (12 Oct), one modal for all of them. */}
+        {dlg?.kind === "video" && rowById(dlg.rowId) && reviewable(videos[dlg.rowId]) && (
+          <MediaReviewModal
+            key={`${dlg.rowId}-${videos[dlg.rowId]!.requestId}`}
+            review={reviewOf(rowById(dlg.rowId)!, videos[dlg.rowId]!, sessions.find((s) => s.rows.some((r) => r.id === dlg.rowId)) ?? null, viewIdx, firstName, (kg) => `${kgOf(kg, lbs)} ${unit}`)}
+            onClose={close}
+          />
+        )}
+        {dlg?.kind === "video" && rowById(dlg.rowId) && !reviewable(videos[dlg.rowId]) && (
           <VideoDialog
             row={rowById(dlg.rowId)!}
             video={videos[dlg.rowId] ?? null}
@@ -2750,6 +2758,37 @@ function DemoDialog({ row, demo, onSave, onRemove }: { row: DraftRow; demo: Draf
   );
 }
 
+/** What the media review shows for one exercise's photo or video: the context, the sets, and every word about it, oldest first. */
+function reviewOf(row: DraftRow, video: NonNullable<DraftRow["video"]>, session: DraftSession | null, weekNo: number, firstName: string, weight: (kg: number | null) => string): MediaReview {
+  const ms = (iso: string | null | undefined) => (iso ? new Date(iso).getTime() : 0);
+  const thread: ThreadItem[] = [];
+  // What was said about the exercise in the chat; the review's own copy there is the review below.
+  for (const m of row.exerciseChat) {
+    if (m.media && m.media.path === video.replySrc) continue;
+    const words = m.text || (m.media ? (m.media.type === "image" ? "A photo" : m.media.type === "video" ? "A video" : "A file") : "");
+    if (!words) continue;
+    thread.push({ id: `c${m.id}`, kind: "text", mine: m.mine, text: words, at: m.at ?? 0 });
+  }
+  if (video.replySrc) {
+    thread.push({ id: `r${video.requestId}`, kind: "review", url: video.replySrc, durationMs: video.replyDurationMs ?? null, annotations: video.replyAnnotations ?? null, message: video.reply, at: ms(video.repliedAt) });
+  } else if (video.reply && !row.exerciseChat.some((m) => m.mine && m.text === video.reply)) {
+    // A written reply from before the chat carried them.
+    thread.push({ id: `n${video.requestId}`, kind: "text", mine: true, text: video.reply, at: ms(video.repliedAt) });
+  }
+  return {
+    requestId: video.requestId,
+    unseen: video.state === "in",
+    client: { firstName, name: firstName, avatarPath: null },
+    exercise: { name: row.name, session: session?.name ?? "Session", week: weekNo, day: session?.number ?? 1 },
+    requested: !video.fromClient,
+    media: [{ kind: video.media, url: video.src! }],
+    sentAt: video.sentAt ?? null,
+    sets: row.logged.map((l) => ({ n: l.set, label: `${weight(l.kg)} × ${l.reps ?? "—"}` })),
+    clientMessage: video.clientNote ? { text: video.clientNote, at: video.sentAt ?? null } : null,
+    thread: thread.sort((a, b) => a.at - b.at),
+  };
+}
+
 function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }: { row: DraftRow; video: DraftRow["video"]; firstName: string; where: string; onAsk: (note: string) => void; onCancel: () => void; onReply: (reply: string) => void }) {
   const [note, setNote] = useState("");
   const [reply, setReply] = useState("");
@@ -2758,10 +2797,9 @@ function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }:
   useEffect(() => {
     if (seenId != null) void markVideoSeenAction(seenId);
   }, [seenId]);
-  // The whiteboard (9 Oct): the client's video with a drawing layer and the mic, recorded as the reply.
-  const board = video?.state === "in" && video.media === "video" && !!video.src;
+  // A photo or video that came in opens the media review instead (12 Oct, MediaReviewModal); this dialog asks for one, waits, or says it is not here yet.
   return (
-    <DialogContent className={`rd-dlg${board ? " wide" : ""}`}>
+    <DialogContent className="rd-dlg">
       <DialogHeader>
         <DialogTitle>{!video ? "Ask for a video" : video.state === "asked" ? "Video asked for" : `${firstName}'s ${video.media}${video.about === "swap" ? " of the swap" : ""}`}</DialogTitle>
         <DialogDescription>
@@ -2800,9 +2838,7 @@ function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }:
       {(video?.state === "in" || video?.state === "replied") && (
         <>
           {/* The video itself (9 Oct): the stub with a fixed "0:42" stood here, and the coach could not watch what the client sent. */}
-          {board ? (
-            <VideoWhiteboard src={video.src!} requestId={video.requestId} firstName={firstName} onSent={(note) => onReply(note)} />
-          ) : video.src && video.media === "photo" ? (
+          {video.src && video.media === "photo" ? (
             <img className="rd-video" src={video.src} alt={`${firstName}'s photo`} />
           ) : video.src ? (
             <video className="rd-video" src={video.src} controls playsInline preload="metadata" aria-label={`${firstName}'s video`} />
@@ -2822,7 +2858,7 @@ function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }:
             <p className="rd-dlg-para">
               <b>Your reply</b> {video.reply}
             </p>
-          ) : board ? null : (
+          ) : (
             <>
               <label className="rd-field">
                 <span>Your reply</span>
@@ -2833,7 +2869,7 @@ function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }:
           )}
           <DialogFooter>
             <DialogClose className="rd-btn">Close</DialogClose>
-            {video.state === "in" && !board && (
+            {video.state === "in" && (
               <button type="button" className="rd-btn primary" disabled={!reply.trim()} onClick={() => onReply(reply.trim())}>
                 Send reply
               </button>

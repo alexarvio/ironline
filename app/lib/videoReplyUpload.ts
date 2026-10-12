@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { once } from "events";
 import { DATA_DIR } from "./db";
-import { setVideoReplyFile, videoReplyTarget } from "./queries";
+import { chatUsesFile, setVideoReplyFile, videoReplyTarget } from "./queries";
 import { deleteUpload, putUploadFromDisk } from "./storage";
 import { toMp4 } from "./transcode";
 
@@ -63,7 +63,8 @@ export async function receiveReplyVideo(request: Request, id: number): Promise<R
   }
   await putUploadFromDisk(filed.publicPath, filed.filePath, filedType);
   const previous = setVideoReplyFile(id, filed.publicPath);
-  if (previous) {
+  // The one it replaces goes, unless the chat still shows it (a form review, 12 Oct).
+  if (previous && !chatUsesFile(previous)) {
     await deleteUpload(previous);
     const old = path.join(DATA_DIR, previous.replace(/^\//, ""));
     if (old.startsWith(path.join(DATA_DIR, "uploads"))) fs.rmSync(old, { force: true });
