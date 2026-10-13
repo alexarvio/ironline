@@ -5,6 +5,8 @@ import { isMeetingTypeId } from "./meetingTypes";
 import { redirect } from "next/navigation";
 import { getData, persist, type CoachBusiness, type CoachInvoicing, type MetricAskAt } from "./db";
 import { ASK_AT } from "./metricAskAt";
+import { isGymColor, isGymKind } from "./gymColors";
+import { listClientGyms } from "./queries";
 import { createCoachAccount, invoiceCheckout, onboardingLink, stripeConfigured } from "./stripe";
 import { canPayOnline } from "./payments";
 import { sendPushInBackground } from "./push";
@@ -3323,6 +3325,20 @@ export async function removeGymAction(gymId: number) {
   removeClientGym(Number(gymId));
   revalidatePath("/client");
   revalidatePath("/admin");
+}
+
+/** The client adds a gym from the picker (13 Oct): name, colour, type. Back with the gym, or why not. */
+export async function clientAddGymAction(programDayId: number, name: string, color: string, kind: string): Promise<{ id: number; name: string; color: "navy" | "indigo" | "teal" | "rust" | "sand" | "slate"; kind: "gym" | "home" | "hotel" } | { error: string }> {
+  const owner = clientIdForProgramDay(Number(programDayId));
+  if (owner == null || !(await canAccessClient(owner))) return { error: "Not signed in." };
+  const clean = String(name ?? "").trim().replace(/\s+/g, " ");
+  if (clean.length < 2) return { error: "Give the gym a name." };
+  if (listClientGyms(owner).some((g) => g.name.toLowerCase() === clean.toLowerCase())) return { error: `You already have a gym called ${clean}` };
+  const gym = addClientGym(owner, clean, isGymColor(color) ? color : "navy", isGymKind(kind) ? kind : "gym");
+  if (!gym) return { error: "Couldn't add the gym." };
+  revalidatePath("/client");
+  revalidatePath("/admin");
+  return { id: gym.id, name: gym.name, color: isGymColor(gym.color) ? gym.color : "navy", kind: gym.kind ?? "gym" };
 }
 
 export async function pickGymAction(programDayId: number, gymId: number) {

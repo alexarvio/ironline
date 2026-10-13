@@ -5,9 +5,9 @@ import { useDismiss } from "./useDismiss";
 import { discardSessionAction, endSessionAction } from "../lib/actions";
 import { ChatIcon, ChevronLeftIcon } from "../components/icons";
 import { useOpenMessages } from "./CheckInContext";
-import type { GymOption } from "./GymPicker";
+import type { GymOption } from "./GymPickerDialog";
 import ExercisePage, { MAX_WARMUPS, type ExerciseRequest } from "./ExercisePage";
-import GymSheet from "./GymSheet";
+import GymPickerDialog from "./GymPickerDialog";
 import RestTimerPill, { useRestTimer } from "./RestTimer";
 import SwipeToEnd from "./SwipeToEnd";
 import {
@@ -154,6 +154,14 @@ export default function WorkoutScreen({
   const current = pages[Math.min(page, pages.length - 1)];
   const currentRest = current.kind === "exercise" ? day.exercises[current.index].rest : null;
 
+  // The line shown as an exercise completes, gone again after a moment.
+  const [toast, setToast] = useState<string | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2400);
+    return () => clearTimeout(t);
+  }, [toast]);
+
   // The ⋯ menu and the sheets.
   const [menuOpen, setMenuOpen] = useState(false);
   useDismiss(menuOpen, () => setMenuOpen(false));
@@ -256,7 +264,7 @@ export default function WorkoutScreen({
     <div ref={screenRef} className="app-layer app-layer-push wo-screen" role="dialog" aria-label={`${day.title} workout`}>
       <header className="wo-head">
         <div className="wo-head-row">
-          <button type="button" className="wo-head-btn" onClick={onBack} aria-label="Back to the session overview">
+          <button type="button" className="wo-head-btn" onClick={() => (ended || editing || window.confirm("Leave workout? Your sets are saved.") ? onBack() : undefined)} aria-label="Back to the session overview">
             <ChevronLeftIcon />
           </button>
           <div className="wo-head-mid">
@@ -269,11 +277,7 @@ export default function WorkoutScreen({
         </div>
         <div className="wo-head-row2 right">
           {day.gyms.length > 0 && (
-            <button type="button" className="wo-gym-chip" onClick={() => setGymOpen(true)}>
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z" />
-                <circle cx="12" cy="10" r="2.5" />
-              </svg>
+            <button type="button" className="wo-gym-chip" onClick={() => setGymOpen(true)} aria-label={gymName ? `At ${gymName}. Switch gym` : "Pick a gym"}>
               {gymName ?? "Pick a gym"}
             </button>
           )}
@@ -362,7 +366,10 @@ export default function WorkoutScreen({
                   const n = pages[nextOpen(i)];
                   return n?.kind === "exercise" ? shownName(day.exercises[n.index]) : n?.kind === "cardio" ? day.cardio[n.index].name : null;
                 })()}
-                onNext={() => jumpTo(nextOpen(i))}
+                onNext={(line) => {
+                  if (line) setToast(line);
+                  jumpTo(nextOpen(i));
+                }}
                 request={request?.page === i ? request : null}
                 tools={headTools("wo-round-btn wo-ex-btn", day.exercises[p.index])}
               />
@@ -450,21 +457,23 @@ export default function WorkoutScreen({
         ))}
       </div>
 
+      {/* A line as an exercise completes (13 Oct): "{name} done · on to {next}". */}
+      {toast && (
+        <div className="wo-toast" role="status">
+          {toast}
+        </div>
+      )}
+      {/* The bottom bar (13 Oct): the rest timer alone. Exercises move on by themselves, and a swipe goes either way. */}
       <div className="wo-dock">
-        <button type="button" className="wo-dock-btn prev" onClick={() => jumpTo(page - 1)} disabled={page === 0} aria-label="Previous">
-          <ChevronLeftIcon />
-        </button>
         <RestTimerPill timer={rest} targetSeconds={currentRest} />
-        <button type="button" className="wo-dock-btn next" onClick={() => jumpTo(page + 1)} disabled={page >= pages.length - 1} aria-label="Next">
-          <ChevronLeftIcon />
-        </button>
       </div>
 
       {gymOpen && (
-        <GymSheet
+        <GymPickerDialog
           gyms={day.gyms}
           gymId={gymId}
-          mode="change"
+          mode="switch"
+          dayId={day.key}
           onPick={(g) => {
             setGymOpen(false);
             if (g.id !== gymId) {

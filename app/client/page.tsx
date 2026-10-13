@@ -28,6 +28,8 @@ import {
   targetAtGym,
   getLogsForAssignment,
   getLastWarmupSets,
+  gymSessionStats,
+  currentGymId,
   getLastSets,
   getExerciseUnit,
   getLatestClientExerciseNotes,
@@ -115,6 +117,7 @@ import AppShell, { AppTab } from "./AppShell";
 import AvatarUpload from "./AvatarUpload";
 import { phaseCovers, phaseDays, phaseLastDay, phaseWeekIndex, phaseWeeks } from "../lib/phases";
 import { defaultPhaseCover } from "../lib/phaseCovers";
+import { isGymColor } from "../lib/gymColors";
 import { SERVER_TZ, hourIn, isTimezone, meetingLabelsIn, zonedToUtc } from "../lib/timezones";
 import { cookies } from "next/headers";
 import type { HomePhase, PhaseFoodToday } from "./PhaseCards";
@@ -681,6 +684,9 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
           // switching gym in the session changes them without a round trip.
           const gyms = listClientGyms(CLIENT_ID);
           const allGyms = listClientGyms(CLIENT_ID, true);
+          // The picker's rows (13 Oct): colour, type, sessions there and the last visit.
+          const gymStats = gymSessionStats(CLIENT_ID);
+          const lastGymId = currentGymId(CLIENT_ID);
           const home = homeGymId(CLIENT_ID);
           const notesByGym = new Map(
             allGyms.map((g) => [g.id, showMyNotes ? getClientExerciseNotes(CLIENT_ID, g.id) : new Map<number, string>()] as const)
@@ -711,7 +717,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                 key: day.id,
                 index: i + 1,
                 week: week - (program?.start_week ?? 1) + 1,
-                gyms: dayGyms.map((g) => ({ id: g.id, name: g.name })),
+                gyms: dayGyms.map((g) => ({ id: g.id, name: g.name, color: isGymColor(g.color) ? g.color : "navy", kind: g.kind ?? "gym", sessions: gymStats.get(g.id)?.sessions ?? 0, lastUsedAt: gymStats.get(g.id)?.lastUsedAt ?? null, lastUsed: g.id === lastGymId })),
                 gymId,
                 // The coach's own name for the session. Without one it is
                 // numbered by its place in the week; the weekday is never

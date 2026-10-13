@@ -344,6 +344,12 @@ export type ClientGym = {
   archived: boolean;
   /** Set by the coach's "Make home"; missing on a client who never switched. */
   is_home?: boolean;
+  /** The picker's colour (13 Oct, lib/gymColors.ts); missing, navy. */
+  color?: string;
+  /** Gym, home or hotel: for the icon and history only. */
+  kind?: "gym" | "home" | "hotel";
+  /** A logo on the badge instead of the initials; none yet. */
+  logo_path?: string | null;
 };
 
 // The client's note about a whole programme, for the coach. One per

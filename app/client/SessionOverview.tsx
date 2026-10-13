@@ -5,9 +5,9 @@ import { useDismiss } from "./useDismiss";
 import { useKeyboardInset } from "./useKeyboardInset";
 import { saveSkipReasonAction } from "../lib/actions";
 import { ChevronLeftIcon } from "../components/icons";
-import GymSheet from "./GymSheet";
+import GymPickerDialog from "./GymPickerDialog";
 import { VideoAskSheet } from "./VideoAskSheet";
-import type { GymOption } from "./GymPicker";
+import type { GymOption } from "./GymPickerDialog";
 import {
   CoachNote,
   clock,
@@ -97,17 +97,16 @@ export default function SessionOverview({
   const pillClass = status;
 
   const [seenAuto, setSeenAuto] = useState(false);
+  // Exactly one gym: no question, it starts there. None yet: the pop-up
+  // opens on its Add form. Two or more: the pop-up, last used preselected.
   const start = () => {
-    if (day.gyms.length > 1) setGymOpen(true);
-    else onStart(day.gyms[0] ?? null);
+    if (day.gyms.length === 1) onStart(day.gyms[0]);
+    else setGymOpen(true);
   };
   // Arrived from Home's Start: straight into the gym question, or the start.
   if (autoStart !== seenAuto) {
     setSeenAuto(autoStart);
-    if (autoStart && !liveElsewhere && currentWeek) {
-      if (day.gyms.length > 1) setGymOpen(true);
-      else onStart(day.gyms[0] ?? null);
-    }
+    if (autoStart && !liveElsewhere && currentWeek) start();
   }
 
   return (
@@ -291,10 +290,11 @@ export default function SessionOverview({
         </div>
       )}
       {gymOpen && (
-        <GymSheet
+        <GymPickerDialog
           gyms={day.gyms}
           gymId={day.gymId}
           mode="start"
+          dayId={day.key}
           onPick={(g) => {
             setGymOpen(false);
             onStart(g);

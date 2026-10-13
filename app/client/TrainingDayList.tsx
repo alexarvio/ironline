@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { pickGymAction, startSessionAction } from "../lib/actions";
-import type { GymOption } from "./GymPicker";
+import type { GymOption } from "./GymPickerDialog";
 import SessionOverview, { STATUS_LABEL } from "./SessionOverview";
 import WorkoutScreen from "./WorkoutScreen";
 import { useFocusRef, useOpenMessages, useTrainingFocus, type TrainingFocus } from "./CheckInContext";

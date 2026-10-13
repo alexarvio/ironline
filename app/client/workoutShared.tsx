@@ -5,7 +5,7 @@ import { clearCardioSwapAction, saveSkipReasonAction, setCardioDoneAction, swapC
 import AlternativesSheet from "./AlternativesSheet";
 import ExerciseCoachNote from "./ExerciseCoachNote";
 import type { VideoAsk } from "./VideoAskSheet";
-import type { GymOption } from "./GymPicker";
+import type { GymOption } from "./GymPickerDialog";
 
 // What the client's Training tab, a session's overview and the workout all
 // share: the shapes the server page hands over, the unit rules, and the
