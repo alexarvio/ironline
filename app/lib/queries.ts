@@ -1111,6 +1111,7 @@ export function applyDueProgramDeployments() {
   if (rescheduled) persist();
   const due = data.training_programs.filter((p) => p.status === "draft" && p.scheduled_at && p.scheduled_at <= now);
   due.forEach((program) => deployProgram(program.id));
+  endStaleSessions();
   // Mends training phases whose draft flag and programme disagree (see
   // alignPhaseDraft); a no-op once they agree.
   let realigned = false;
@@ -8478,13 +8479,39 @@ export function setWarmupSets(assignmentId: number, sets: { weight_kg: number | 
 // ---- The client's session on the app: begun, ended, discarded ----------
 
 /** The session this client is in the middle of, if any: begun and not ended. */
-export function liveSessionFor(clientId: number): { id: number; label: string; startedAt: string } | null {
+export function liveSessionFor(clientId: number): { id: number; label: string; startedAt: string; week: number } | null {
   const data = getData();
   const day = data.program_days.find((pd) => pd.client_id === clientId && pd.session_started_at && !pd.session_ended_at);
   if (!day) return null;
   const week = data.program_days.filter((pd) => pd.client_id === clientId && pd.week_number === day.week_number).sort((a, b) => a.day_of_week - b.day_of_week);
   const idx = week.findIndex((pd) => pd.id === day.id);
-  return { id: day.id, label: day.label || `Session ${idx + 1}`, startedAt: day.session_started_at! };
+  return { id: day.id, label: day.label || `Session ${idx + 1}`, startedAt: day.session_started_at!, week: day.week_number };
+}
+
+// A session begun and forgotten (13 Oct, Roziena): its clock ran for days,
+// no other session could start ("Finish FullBody first"), and once its week
+// was behind her there was no way to reach it to end it. No workout lasts
+// twelve hours: past that it is over, ended at its last set, or, with
+// nothing logged, as if never begun. Runs on every request, like the rest
+// of applyDueProgramDeployments.
+const STALE_SESSION_MS = 12 * 3600000;
+export function endStaleSessions() {
+  const data = getData();
+  const now = Date.now();
+  for (const day of [...data.program_days]) {
+    if (!day.session_started_at || day.session_ended_at) continue;
+    const started = stampMs(day.session_started_at);
+    if (!Number.isFinite(started) || now - started < STALE_SESSION_MS) continue;
+    const ids = new Set(data.workout_assignments.filter((wa) => wa.program_day_id === day.id).map((wa) => wa.id));
+    const logged = data.set_logs.filter((sl) => ids.has(sl.workout_assignment_id)).map((sl) => stampMs(sl.logged_at)).filter(Number.isFinite);
+    const cardioDone = listCardioForDay(day.id).some((c) => isCardioDone(c.id));
+    if (logged.length === 0 && !cardioDone) {
+      discardSession(day.id);
+      continue;
+    }
+    const endedAt = new Date(Math.max(started, ...logged)).toISOString();
+    endSession(day.id, endedAt, day.session_note ?? "", sessionAnswers(day).map((a) => ({ id: a.id, value: a.text ?? a.value ?? null })));
+  }
 }
 
 /** The client began the session: its clock starts. One live session per

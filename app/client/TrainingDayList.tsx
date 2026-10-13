@@ -6,7 +6,7 @@ import { pickGymAction, startSessionAction } from "../lib/actions";
 import type { GymOption } from "./GymPickerDialog";
 import SessionOverview, { STATUS_LABEL } from "./SessionOverview";
 import WorkoutScreen from "./WorkoutScreen";
-import { useFocusRef, useOpenMessages, useTrainingFocus, type TrainingFocus } from "./CheckInContext";
+import { useFocusRef, useNavigateTab, useOpenMessages, useTrainingFocus, type TrainingFocus } from "./CheckInContext";
 import { clock, durationMinutes, elapsedMs, loggedSets, plannedSets, sessionStatus, shortDate, useTicker, type SessionDay } from "./workoutShared";
 
 // The week's sessions as rows on the Training tab. A row opens the
@@ -51,7 +51,7 @@ export default function TrainingDayList({
   coachName: string;
   clientName?: string;
   /** The client's session in progress, wherever it is. */
-  liveSession: { id: number; label: string; startedAt: string } | null;
+  liveSession: { id: number; label: string; startedAt: string; week: number } | null;
 }) {
   const [view, setViewState] = useState<View>(null);
   // Put back from storage after a reload: shown in place, not slid in.
@@ -73,6 +73,7 @@ export default function TrainingDayList({
   const focusExercise = trainingFocus?.exercise ?? null;
   const focusStart = !!trainingFocus?.start;
   const openMessages = useOpenMessages();
+  const goToTab = useNavigateTab();
   // The link from the chat whose way back has been used, so opening the same
   // session again from the list comes back to the list.
   const [chatDone, setChatDone] = useState<TrainingFocus | null>(null);
@@ -89,7 +90,7 @@ export default function TrainingDayList({
   }, []);
   useEffect(() => {
     if (focus == null || !days.some((d) => d.key === focus)) return;
-    const t = setTimeout(() => setView({ dayId: focus, screen: "overview" }), 0);
+    const t = setTimeout(() => setView({ dayId: focus, screen: trainingFocus?.resume ? "workout" : "overview" }), 0);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- a new arrival only
   }, [focus, focusExercise]);
@@ -187,12 +188,16 @@ export default function TrainingDayList({
           className="tr-resume"
           onClick={() => {
             if (liveDay) setView({ dayId: liveDay.key, screen: "workout" });
+            // Begun in another week (Sunday's session, seen on Monday; 13 Oct):
+            // Training comes up on that week, inside the session, so it can be
+            // ended. Tapping used to do nothing, and the session could never be closed.
+            else goToTab?.("training", liveSession.id, { week: liveSession.week, exercise: null, resume: true });
           }}
         >
           <span className="tr-row-dot" aria-hidden="true" />
           <span className="tr-resume-main">
             <b>{liveSession.label} in progress</b>
-            {liveDay && <small>{liveDay.gyms.find((g) => g.id === gymIdFor(liveDay))?.name ?? "Tap to carry on"}</small>}
+            <small>{(liveDay ? liveDay.gyms.find((g) => g.id === gymIdFor(liveDay))?.name : null) ?? "Tap to carry on"}</small>
           </span>
           <span className="tr-resume-time">{clock(elapsedMs(liveSession.startedAt, null, now))}</span>
           <span className="tr-resume-chip">Resume</span>

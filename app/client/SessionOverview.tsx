@@ -243,7 +243,8 @@ export default function SessionOverview({
         </div>
       </div>
 
-      {currentWeek && !done && status !== "skipped" && (
+      {/* A session still going in a past week (13 Oct) can be resumed, so it can be ended. */}
+      {(currentWeek || live) && !done && status !== "skipped" && (
         <div className="so-cta">
           {live ? (
             <button type="button" className="so-start" onClick={onResume}>
