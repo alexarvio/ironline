@@ -18822,3 +18822,6 @@ button.ts-circle:focus-visible { outline: 2px solid #2f5d8f; outline-offset: 2px
 
 /* The pop-up's number box takes five digits (13 Oct, Alex: 50,000 steps). */
 .cki-num { width: 136px; }
+
+/* The pop-up's eyebrow wraps (13 Oct): a long phase name is shown in full. */
+.cki-eyebrow { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.35; }
