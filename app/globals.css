@@ -18595,3 +18595,13 @@ button.ci-hint { cursor: pointer; }
 .wo-rest-opt.on { background: #141a24; color: #fff; }
 .wo-rest-opt:disabled { opacity: 0.4; cursor: default; }
 @media (prefers-reduced-motion: reduce) { .lw-row, .lw-open, .wo-toast, .wo-rest-menu { animation: none; } }
+
+/* Sets fold and unfold (13 Oct): the box's height eases between states; the green row's numbers sit in columns, the weight right-aligned so "kg ×" lines up. */
+.lw-fold { overflow: hidden; will-change: height; }
+.lw-row, .lw-open { animation: none; }
+.lw-row-sum { display: flex; align-items: baseline; gap: 7px; }
+.lw-row-w { min-width: 4.5ch; text-align: right; font-variant-numeric: tabular-nums; }
+.lw-row-w.wide { min-width: 0; text-align: left; }
+.lw-row-u { font-size: 14px; font-weight: 800; }
+.lw-row-x { font-size: 16px; font-weight: 700; opacity: 0.7; }
+.lw-row-r { font-variant-numeric: tabular-nums; }

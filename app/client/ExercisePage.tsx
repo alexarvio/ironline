@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { clearSwapAction, logSetAction, saveExerciseNoteAction, saveWarmupSetsAction, swapExerciseAction } from "../lib/actions";
 import { displayToKg, fmtWeight, kgToDisplay, planToDisplay, readUnitPref, stepFor, unitLabel as labelOf, writeUnitPref, type Unit } from "../lib/units";
@@ -247,14 +247,32 @@ export default function ExercisePage({
     []
   );
   // Every working set in: 1.4s, then on to what is next.
+  // Every working set in: 1.4s, then on to what is next. The latest onNext
+  // and names sit in a ref, so the timer survives the re-renders of the
+  // save landing and the server's refresh (13 Oct: they used to cancel it).
   const doneSeen = useRef(allDone);
+  const latest = useRef({ onNext, line: nextName ? `${shownName(exercise)} done · on to ${nextName}` : undefined });
+  useEffect(() => {
+    latest.current = { onNext, line: nextName ? `${shownName(exercise)} done · on to ${nextName}` : undefined };
+  });
+  const jumpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (allDone === doneSeen.current) return;
     doneSeen.current = allDone;
-    if (!allDone || !onNext) return;
-    const t = setTimeout(() => onNext(nextName ? `${shownName(exercise)} done · on to ${nextName}` : undefined), ADVANCE_MS);
-    return () => clearTimeout(t);
-  }, [allDone, onNext, nextName, exercise]);
+    if (jumpTimer.current) clearTimeout(jumpTimer.current);
+    jumpTimer.current = null;
+    if (!allDone) return;
+    jumpTimer.current = setTimeout(() => {
+      jumpTimer.current = null;
+      latest.current.onNext?.(latest.current.line);
+    }, ADVANCE_MS);
+  }, [allDone]);
+  useEffect(
+    () => () => {
+      if (jumpTimer.current) clearTimeout(jumpTimer.current);
+    },
+    []
+  );
 
   // ---- A change on a row: the value lands, the save and the fold are scheduled.
   const applyRow = (row: Row, patch: Partial<Vals>) => {
@@ -382,6 +400,20 @@ export default function ExercisePage({
     const r = shownOf(row, "reps");
     return askWeight || row.kind === "warm" ? `${w.text} ${uLabel} × ${r.text}` : `${r.text} reps`;
   };
+  // The same, laid out (13 Oct): the weight in a right-aligned column, so "kg ×" lines up down the card.
+  const summaryCells = (row: Row) => {
+    const w = shownOf(row, "weight");
+    const r = shownOf(row, "reps");
+    if (!(askWeight || row.kind === "warm")) return <span className="lw-row-w wide">{r.text} reps</span>;
+    return (
+      <>
+        <span className="lw-row-w">{w.text}</span>
+        <span className="lw-row-u">{uLabel}</span>
+        <span className="lw-row-x">×</span>
+        <span className="lw-row-r">{r.text}</span>
+      </>
+    );
+  };
 
   return (
     <div className="wo-page-inner lw" data-ex={exercise.id}>
@@ -467,10 +499,12 @@ export default function ExercisePage({
         <div className="lw-rows">
           {rows.map((row) => {
             const open = row.id === current;
+            const state = open ? "open" : row.saved ? "done" : "todo";
             if (!open) {
               const rpe = shownOf(row, "rpe");
               return (
-                <button key={row.id} type="button" className={`lw-row${row.saved ? " done" : " upcoming"}`} onClick={() => setCurrent(row.id)} aria-label={`${row.kind === "warm" ? "Warm-up" : "Set"} ${row.n}, ${summary(row)}${row.saved ? ", logged" : ", planned"}. Open`}>
+                <Fold key={row.id} state={state}>
+                <button type="button" className={`lw-row${row.saved ? " done" : " upcoming"}`} onClick={() => setCurrent(row.id)} aria-label={`${row.kind === "warm" ? "Warm-up" : "Set"} ${row.n}, ${summary(row)}${row.saved ? ", logged" : ", planned"}. Open`}>
                   <span className="lw-row-badge" aria-hidden="true">
                     {row.saved ? (
                       <svg viewBox="0 0 24 24">
@@ -480,15 +514,17 @@ export default function ExercisePage({
                       row.label
                     )}
                   </span>
-                  <span className="lw-row-sum">{summary(row)}</span>
+                  <span className="lw-row-sum">{summaryCells(row)}</span>
                   {askRpe && row.kind === "work" && !rpe.ghost && <span className="lw-row-rpe">RPE {rpe.text}</span>}
                   {askRpe && row.kind === "work" && rpe.ghost && rpe.value != null && !row.saved && <span className="lw-row-rpe">RPE {rpe.text}</span>}
                 </button>
+                </Fold>
               );
             }
             const busy = row.kind === "work" && saving.includes(row.n);
             return (
-              <div key={row.id} className={`lw-open${row.saved ? " saved" : ""}`}>
+              <Fold key={row.id} state={state}>
+              <div className={`lw-open${row.saved ? " saved" : ""}`}>
                 <div className="lw-open-head">
                   <button type="button" className="lw-badge" onClick={() => acceptAll(row)} aria-label={`Log ${row.kind === "warm" ? "warm-up" : "set"} ${row.n} as planned`} title="Log as planned">
                     {row.label}
@@ -512,6 +548,7 @@ export default function ExercisePage({
                 <Stepper row={row} field="reps" label="REPS" shown={shownOf(row, "reps")} min={0} max={9999} onStep={(d) => step(row, "reps", d)} onTyped={(t) => typed(row, "reps", t)} ariaUnit="reps" />
                 {askRpe && row.kind === "work" && <Stepper row={row} field="rpe" label="RPE" shown={shownOf(row, "rpe")} min={1} max={10} small onStep={(d) => step(row, "rpe", d)} onTyped={(t) => typed(row, "rpe", t)} ariaUnit="RPE" />}
               </div>
+              </Fold>
             );
           })}
         </div>
@@ -592,6 +629,45 @@ export default function ExercisePage({
           <video className="lw-demo-video" src={exercise.videoUrl} controls autoPlay playsInline onClick={(e) => e.stopPropagation()} />
         </div>
       )}
+    </div>
+  );
+}
+
+// ---- A row's box, its height easing from one state to the next (13 Oct):
+// a set folding to a line and the next unfolding read as one movement,
+// not a swap. The height is measured after each change and tweened from
+// the last one; between tweens the box is free to size itself.
+function Fold({ state, children }: { state: string; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const last = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.transition = "none";
+    el.style.height = "";
+    const next = el.offsetHeight;
+    const from = last.current;
+    last.current = next;
+    if (from == null || from === next || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    el.style.height = `${from}px`;
+    void el.offsetHeight;
+    el.style.transition = "height 0.32s cubic-bezier(0.2, 0.8, 0.2, 1)";
+    el.style.height = `${next}px`;
+    const done = () => {
+      el.style.height = "";
+      el.style.transition = "";
+      last.current = el.offsetHeight;
+    };
+    el.addEventListener("transitionend", done, { once: true });
+    const t = setTimeout(done, 400);
+    return () => {
+      clearTimeout(t);
+      el.removeEventListener("transitionend", done);
+    };
+  }, [state]);
+  return (
+    <div ref={ref} className="lw-fold">
+      {children}
     </div>
   );
 }
