@@ -18624,3 +18624,6 @@ button.ci-hint { cursor: pointer; }
 .lw-open.saved.warm .lw-value:not(.ghost) .lw-num { color: #9a5b00; }
 .lw-row-r { min-width: 3ch; text-align: left; }
 .lw-row-rpe { min-width: 6ch; text-align: right; }
+
+/* The open set title (13 Oct): small caps again; making it a button had reset its font. */
+.lw-open-title { font-family: inherit; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; line-height: 1; }
