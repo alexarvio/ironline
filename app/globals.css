@@ -18829,3 +18829,13 @@ button.ts-circle:focus-visible { outline: 2px solid #2f5d8f; outline-offset: 2px
 /* The floating nav stretches wider (13 Oct, Alex): the tabs spread across it. */
 .app-layer-main .app-bottom-nav.dark { width: calc(100% - 32px); max-width: 420px; justify-content: space-around; padding: 6px 10px; }
 .app-bottom-nav.dark .app-tab-btn { flex: 1 1 0; width: auto; }
+
+/* The pinned exercise head is compact (13 Oct, Alex): it was taking a third of the screen. */
+.lw .wo-ex-head { padding: 10px 16px 8px; gap: 0; }
+.lw .wo-ex-top { align-items: center; }
+.lw .wo-ex-tools { margin-top: 0; }
+.lw .wo-ex-title-row { gap: 1px; margin-top: 2px; }
+.lw .wo-ex-name { font-size: 22px; line-height: 1.1; }
+.lw .wo-nextup-label { font-size: 10px; }
+.lw .wo-nextup-name { font-size: 13.5px; }
+.wo-page-inner.lw { gap: 10px; }
