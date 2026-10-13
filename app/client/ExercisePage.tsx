@@ -220,11 +220,18 @@ export default function ExercisePage({
   // ---- Advancing: 1.4s after the open set is in (and still open), it folds
   // and the next one still to do opens. Another change restarts the wait.
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The latest rows, for the timer: the one it was set from still had the
+  // set it was folding as open, so the last set of an exercise used to
+  // find itself and stay open (13 Oct).
+  const liveFirstUnsaved = useRef(firstUnsaved);
+  useEffect(() => {
+    liveFirstUnsaved.current = firstUnsaved;
+  });
   const scheduleAdvance = (id: RowId, ms = ADVANCE_MS) => {
     if (advanceTimer.current) clearTimeout(advanceTimer.current);
     advanceTimer.current = setTimeout(() => {
       advanceTimer.current = null;
-      setCurrent((c) => (c === id ? firstUnsaved(id) : c));
+      setCurrent((c) => (c === id ? liveFirstUnsaved.current(id) : c));
       buzz(4);
     }, ms);
   };
@@ -376,6 +383,22 @@ export default function ExercisePage({
     else window.open(exercise.videoUrl, "_blank", "noopener");
   };
 
+  // ---- Typing along a set (13 Oct, Alex): the big numbers are boxes; a tap
+  // opens the keyboard, Next commits and hands the focus to the next box in
+  // the same breath, so weight, reps and RPE are typed in one go.
+  const fieldRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const fieldOrder = (row: Row): Field[] => [...((askWeight || row.kind === "warm") ? (["weight"] as Field[]) : []), "reps", ...(askRpe && row.kind === "work" ? (["rpe"] as Field[]) : [])];
+  const nextField = (row: Row, field: Field): Field | null => {
+    const order = fieldOrder(row);
+    return order[order.indexOf(field) + 1] ?? null;
+  };
+  const focusNext = (row: Row, field: Field) => {
+    const next = nextField(row, field);
+    const el = next ? fieldRefs.current[`${row.id}:${next}`] : null;
+    if (el) el.focus();
+    else fieldRefs.current[`${row.id}:${field}`]?.blur();
+  };
+
   // ---- What a row shows: entered in ink, else the plan in grey.
   const shownOf = (row: Row, field: Field): { text: string; ghost: boolean; value: number | null } => {
     const key = field === "weight" ? "weightKg" : field;
@@ -495,7 +518,7 @@ export default function ExercisePage({
               const rpe = shownOf(row, "rpe");
               return (
                 <Fold key={row.id} state={state}>
-                <button type="button" className={`lw-row${row.saved ? " done" : " upcoming"}${row.kind === "warm" ? " warm" : ""}`} onClick={() => setCurrent(row.id)} aria-label={`${row.kind === "warm" ? "Warm-up" : "Set"} ${row.n}, ${summary(row)}${row.saved ? ", logged" : ", planned"}. Open`}>
+                <button type="button" className={`lw-row${row.saved ? " done" : " upcoming"}${row.kind === "warm" ? " warm" : ""}${row.extra && row.kind === "work" ? " extra" : ""}`} onClick={() => setCurrent(row.id)} aria-label={`${row.kind === "warm" ? "Warm-up" : "Set"} ${row.n}, ${summary(row)}${row.saved ? ", logged" : ", planned"}. Open`}>
                   <span className="lw-row-badge" aria-hidden="true">
                     {row.saved ? (
                       <svg viewBox="0 0 24 24">
@@ -515,7 +538,7 @@ export default function ExercisePage({
             const busy = row.kind === "work" && saving.includes(row.n);
             return (
               <Fold key={row.id} state={state}>
-              <div className={`lw-open${row.saved ? " saved" : ""}${row.kind === "warm" ? " warm" : ""}`}>
+              <div className={`lw-open${row.saved ? " saved" : ""}${row.kind === "warm" ? " warm" : ""}${row.extra && row.kind === "work" ? " extra" : ""}`}>
                 <div className="lw-open-head">
                   <button type="button" className="lw-badge" onClick={() => acceptAll(row)} aria-label={`Log ${row.kind === "warm" ? "warm-up" : "set"} ${row.n} as planned`} title="Log as planned">
                     {row.label}
@@ -541,9 +564,9 @@ export default function ExercisePage({
                     </button>
                   )}
                 </div>
-                {(askWeight || row.kind === "warm") && <Stepper row={row} field="weight" label={uLabel.toUpperCase()} shown={shownOf(row, "weight")} min={0} max={9999} onStep={(d) => step(row, "weight", d)} onTyped={(t) => typed(row, "weight", t)} ariaUnit={unit === "kg" ? "kilograms" : "pounds"} />}
-                <Stepper row={row} field="reps" label="REPS" shown={shownOf(row, "reps")} min={0} max={9999} onStep={(d) => step(row, "reps", d)} onTyped={(t) => typed(row, "reps", t)} ariaUnit="reps" />
-                {askRpe && row.kind === "work" && <Stepper row={row} field="rpe" label="RPE" shown={shownOf(row, "rpe")} min={1} max={10} small onStep={(d) => step(row, "rpe", d)} onTyped={(t) => typed(row, "rpe", t)} ariaUnit="RPE" />}
+                {(askWeight || row.kind === "warm") && <Stepper row={row} field="weight" label={uLabel.toUpperCase()} shown={shownOf(row, "weight")} onStep={(d) => step(row, "weight", d)} onTyped={(t) => typed(row, "weight", t)} ariaUnit={unit === "kg" ? "kilograms" : "pounds"} inputRef={(el) => (fieldRefs.current[`${row.id}:weight`] = el)} hasNext={nextField(row, "weight") != null} onNext={() => focusNext(row, "weight")} />}
+                <Stepper row={row} field="reps" label="REPS" shown={shownOf(row, "reps")} onStep={(d) => step(row, "reps", d)} onTyped={(t) => typed(row, "reps", t)} ariaUnit="reps" inputRef={(el) => (fieldRefs.current[`${row.id}:reps`] = el)} hasNext={nextField(row, "reps") != null} onNext={() => focusNext(row, "reps")} />
+                {askRpe && row.kind === "work" && <Stepper row={row} field="rpe" label="RPE" shown={shownOf(row, "rpe")} small onStep={(d) => step(row, "rpe", d)} onTyped={(t) => typed(row, "rpe", t)} ariaUnit="RPE" inputRef={(el) => (fieldRefs.current[`${row.id}:rpe`] = el)} hasNext={false} onNext={() => focusNext(row, "rpe")} />}
               </div>
               </Fold>
             );
@@ -669,42 +692,45 @@ function Fold({ state, children }: { state: string; children: React.ReactNode })
   );
 }
 
-// ---- One stepper row: −, the number (the plan in grey until taken), +.
-// Press and hold − / + repeats, faster after a second and a half. A long
-// press on the number opens a box to type a big jump. Arrow keys step it.
+// ---- One stepper row: −, the number, +. The number is a box: the plan
+// sits in it in grey as the placeholder until something is typed or
+// stepped; a tap opens the keyboard with the figure selected; Next (or
+// Enter) commits and moves to the next box of the set; tapping away
+// commits too. Arrow keys step it.
 function Stepper({
   row,
   field,
   label,
   shown,
-  min,
-  max,
   small = false,
   onStep,
   onTyped,
   ariaUnit,
+  inputRef,
+  hasNext,
+  onNext,
 }: {
   row: Row;
   field: Field;
   label: string;
   shown: { text: string; ghost: boolean; value: number | null };
-  min: number;
-  max: number;
   small?: boolean;
   onStep: (dir: 1 | -1) => void;
   onTyped: (text: string) => void;
   ariaUnit: string;
+  inputRef: (el: HTMLInputElement | null) => void;
+  hasNext: boolean;
+  onNext: () => void;
 }) {
-  const [typing, setTyping] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    if (typing != null) inputRef.current?.focus();
-  }, [typing]);
-  const size = shown.text.length >= 5 ? " s5" : shown.text.length === 4 ? " s4" : "";
+  // What is being typed, while the box has the focus; null otherwise.
+  const [draft, setDraft] = useState<string | null>(null);
+  const text = draft ?? (shown.ghost ? "" : shown.text);
+  const sizeOf = (t: string) => (t.length >= 5 ? " s5" : t.length === 4 ? " s4" : "");
+  const size = sizeOf(text || shown.text);
   const name = `${row.kind === "warm" ? "Warm-up" : "Set"} ${row.n} ${field === "weight" ? "weight" : field}, ${ariaUnit}`;
   const commit = () => {
-    if (typing != null && typing.trim() !== "") onTyped(typing);
-    setTyping(null);
+    if (draft != null && draft.trim() !== "" && draft !== shown.text) onTyped(draft);
+    setDraft(null);
   };
   return (
     <div className={`lw-step${small ? " small" : ""}`}>
@@ -713,33 +739,30 @@ function Stepper({
           <path d="M5 12h14" />
         </svg>
       </StepButton>
-      {typing != null ? (
+      <label className={`lw-value${shown.ghost && draft == null ? " ghost" : ""}`}>
         <input
           ref={inputRef}
-          className={`lw-type${size}`}
-          value={typing}
+          className={`lw-num lw-num-input${size}`}
+          type="text"
           inputMode="decimal"
-          aria-label={name}
-          onChange={(e) => setTyping(e.target.value)}
-          onFocus={(e) => e.currentTarget.select()}
+          autoComplete="off"
+          enterKeyHint={hasNext ? "next" : "done"}
+          value={text}
+          placeholder={shown.ghost ? shown.text : ""}
+          aria-label={shown.ghost ? `${name}. Planned ${shown.text}` : name}
+          onFocus={(e) => {
+            setDraft(e.currentTarget.value);
+            const el = e.currentTarget;
+            setTimeout(() => el.select(), 0);
+          }}
+          onChange={(e) => setDraft(e.target.value.replace(/[^0-9.,]/g, ""))}
           onBlur={commit}
           onKeyDown={(e) => {
-            if (e.key === "Enter") commit();
-            if (e.key === "Escape") setTyping(null);
-          }}
-        />
-      ) : (
-        <HoldButton
-          className={`lw-value${shown.ghost ? " ghost" : ""}`}
-          role="spinbutton"
-          ariaLabel={shown.ghost ? `${name}. Planned ${shown.text}, tap to type` : `${name}, tap to type`}
-          ariaNow={shown.value}
-          min={min}
-          max={max}
-          onTap={() => setTyping(shown.value == null ? "" : shown.text)}
-          onHold={() => setTyping(shown.value == null ? "" : shown.text)}
-          onKeyDown={(e) => {
-            if (e.key === "ArrowUp" || e.key === "ArrowRight") {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              commit();
+              onNext();
+            } else if (e.key === "ArrowUp" || e.key === "ArrowRight") {
               e.preventDefault();
               onStep(1);
             } else if (e.key === "ArrowDown" || e.key === "ArrowLeft") {
@@ -747,13 +770,11 @@ function Stepper({
               onStep(-1);
             }
           }}
-        >
-          <span className={`lw-num${size}`}>{shown.text}</span>
-          <span className="lw-num-label" aria-hidden="true">
-            {label}
-          </span>
-        </HoldButton>
-      )}
+        />
+        <span className="lw-num-label" aria-hidden="true">
+          {label}
+        </span>
+      </label>
       <StepButton className="lw-plus" onFire={() => onStep(1)} label={`${name}: more`}>
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 5v14M5 12h14" />
@@ -767,51 +788,6 @@ function Stepper({
 function StepButton({ className, onFire, label, children }: { className: string; onFire: () => void; label: string; children: React.ReactNode }) {
   return (
     <button type="button" className={className} aria-label={label} onClick={onFire} onContextMenu={(e) => e.preventDefault()}>
-      {children}
-    </button>
-  );
-}
-
-/** A tap does one thing, a half-second hold another. */
-function HoldButton({ className, role, ariaLabel, ariaNow, min, max, onTap, onHold, onKeyDown, children }: { className: string; role: string; ariaLabel: string; ariaNow: number | null; min: number; max: number; onTap: () => void; onHold: () => void; onKeyDown: (e: React.KeyboardEvent) => void; children: React.ReactNode }) {
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const held = useRef(false);
-  const clear = () => {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = null;
-  };
-  useEffect(() => clear, []);
-  return (
-    <button
-      type="button"
-      className={className}
-      role={role}
-      aria-label={ariaLabel}
-      aria-valuenow={ariaNow ?? undefined}
-      aria-valuemin={min}
-      aria-valuemax={max}
-      onPointerDown={() => {
-        clear();
-        held.current = false;
-        timer.current = setTimeout(() => {
-          held.current = true;
-          buzz(10);
-          onHold();
-        }, 500);
-      }}
-      onPointerUp={clear}
-      onPointerCancel={clear}
-      onPointerLeave={clear}
-      onContextMenu={(e) => e.preventDefault()}
-      onClick={() => {
-        if (held.current) {
-          held.current = false;
-          return;
-        }
-        onTap();
-      }}
-      onKeyDown={onKeyDown}
-    >
       {children}
     </button>
   );

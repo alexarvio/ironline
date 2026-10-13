@@ -18778,3 +18778,22 @@ button.ts-circle:focus-visible { outline: 2px solid #2f5d8f; outline-offset: 2px
 .app-bottom-nav.dark .app-tab-btn.active, .app-bottom-nav.dark .app-tab-btn:hover { background: none; }
 .app-bottom-nav.dark .app-tab-btn.active { color: #12132B; }
 .app-bottom-nav.dark .app-tab-btn.active .app-tab-label { font-weight: 800; }
+
+/* The set's numbers are boxes (13 Oct): the plan in grey as the placeholder, a tap opens the keyboard, Next moves along the set. */
+.lw-value { cursor: text; }
+.lw-num-input { width: 100%; min-width: 0; padding: 0; border: 0; background: none; text-align: center; color: #141a24; outline: none; -webkit-user-select: text; user-select: text; caret-color: #1d3466; }
+.lw-num-input::placeholder { color: #C1C8D3; opacity: 1; }
+.lw-open.saved .lw-value:not(.ghost) .lw-num-input { color: #1f5a33; }
+.lw-open.saved.warm .lw-value:not(.ghost) .lw-num-input { color: #9a5b00; }
+.lw-num-input:focus { color: #141a24; }
+
+/* An extra set (13 Oct, Alex): one the client added past the coach's count reads dashed, folded or open, now and whenever it is looked at again. */
+.lw-row.extra { box-shadow: none; outline: 1.5px dashed #C5CCD8; outline-offset: -1.5px; }
+.lw-row.extra .lw-row-badge { box-shadow: none; border: 2px dashed #C5CCD8; box-sizing: border-box; }
+.lw-row.done.extra { outline-color: rgba(47, 122, 63, 0.55); }
+.lw-row.done.extra .lw-row-badge { border: 0; background: transparent; outline: 2px dashed #2f7a3f; outline-offset: -2px; }
+.lw-row.done.extra .lw-row-badge svg { stroke: #2f7a3f; }
+.lw-open.extra { box-shadow: 0 14px 26px -18px rgba(29, 52, 102, 0.55); outline: 2px dashed #1d3466; outline-offset: -2px; }
+.lw-open.extra.saved { outline-color: #2f7a3f; }
+.lw-open.extra .lw-badge { background: transparent; color: #1d3466; outline: 2px dashed #1d3466; outline-offset: -2px; }
+.lw-open.extra.saved .lw-badge { color: #2f7a3f; outline-color: #2f7a3f; }
