@@ -18609,3 +18609,7 @@ button.ci-hint { cursor: pointer; }
 /* The open set folds from its title (13 Oct). */
 .lw-open-title { display: inline-flex; align-items: center; gap: 5px; padding: 6px 4px; border: 0; background: none; font: inherit; cursor: pointer; }
 .lw-open-title svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; opacity: 0.8; }
+
+/* The green rows read from the right (13 Oct, Alex): "45 kg × 10" sits where RPE does, RPE after it. */
+.lw-row-sum { justify-content: flex-end; }
+.lw-row-rpe { margin-left: 2px; }
