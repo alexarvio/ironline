@@ -18584,7 +18584,7 @@ button.ts-circle:focus-visible { outline: 2px solid #2f5d8f; outline-offset: 2px
 .lw-unit-btn { height: 30px; padding: 0 14px; border: 0; border-radius: 999px; background: transparent; color: #8b93a1; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; transition: background 0.2s, color 0.2s; }
 .lw-unit-btn.on { background: #fff; color: #1d3466; box-shadow: 0 2px 6px -2px rgba(16, 24, 40, 0.25); }
 .lw-rows { display: flex; flex-direction: column; gap: 6px; }
-.lw-row { display: flex; align-items: center; gap: 12px; width: 100%; height: 56px; padding: 0 14px 0 10px; border: 0; border-radius: 18px; background: transparent; box-shadow: inset 0 0 0 1.5px #E3E8F0; font: inherit; color: #AEB6C2; text-align: left; cursor: pointer; animation: lw-fold 0.25s ease-out; }
+.lw-row { display: flex; align-items: center; gap: 12px; width: 100%; height: 56px; padding: 0 14px 0 10px; border: 0; border-radius: 18px; background: transparent; box-shadow: inset 0 0 0 1.5px #E3E8F0; font: inherit; color: #AEB6C2; text-align: left; cursor: pointer; animation: lw-fold 0.5s ease-out; }
 .lw-row.done { background: rgba(47, 122, 63, 0.08); box-shadow: none; color: #1f5a33; }
 .lw-row-badge { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; box-shadow: inset 0 0 0 2px #DCE3EE; font-size: 14px; font-weight: 800; color: #98A2B3; }
 .lw-row.done .lw-row-badge { background: #2f7a3f; box-shadow: none; }
@@ -18592,7 +18592,7 @@ button.ts-circle:focus-visible { outline: 2px solid #2f5d8f; outline-offset: 2px
 .lw-row-sum { flex: 1; min-width: 0; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lw-row-rpe { flex: none; font-size: 13px; font-weight: 800; color: #AEB6C2; font-variant-numeric: tabular-nums; }
 .lw-row.done .lw-row-rpe { color: #5b8a6a; }
-.lw-open { display: flex; flex-direction: column; padding: 8px 8px 4px; border-radius: 22px; background: #fff; box-shadow: 0 14px 26px -18px rgba(29, 52, 102, 0.55), inset 0 0 0 2px #1d3466; transition: box-shadow 0.25s; animation: lw-unfold 0.25s ease-out; }
+.lw-open { display: flex; flex-direction: column; padding: 8px 8px 4px; border-radius: 22px; background: #fff; box-shadow: 0 14px 26px -18px rgba(29, 52, 102, 0.55), inset 0 0 0 2px #1d3466; transition: box-shadow 0.5s; animation: lw-unfold 0.5s ease-out; }
 .lw-open.saved { box-shadow: 0 14px 26px -18px rgba(29, 52, 102, 0.55), inset 0 0 0 2px #2f7a3f; }
 @keyframes lw-unfold { from { opacity: 0; transform: translateY(-4px); } }
 @keyframes lw-fold { from { opacity: 0; } }

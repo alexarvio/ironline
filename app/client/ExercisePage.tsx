@@ -671,7 +671,7 @@ function Fold({ state, children }: { state: string; children: React.ReactNode })
     if (from == null || from === next || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     el.style.height = `${from}px`;
     void el.offsetHeight;
-    el.style.transition = "height 0.32s cubic-bezier(0.2, 0.8, 0.2, 1)";
+    el.style.transition = "height 0.64s cubic-bezier(0.2, 0.8, 0.2, 1)";
     el.style.height = `${next}px`;
     const done = () => {
       el.style.height = "";
@@ -679,7 +679,7 @@ function Fold({ state, children }: { state: string; children: React.ReactNode })
       last.current = el.offsetHeight;
     };
     el.addEventListener("transitionend", done, { once: true });
-    const t = setTimeout(done, 400);
+    const t = setTimeout(done, 760);
     return () => {
       clearTimeout(t);
       el.removeEventListener("transitionend", done);
