@@ -276,10 +276,18 @@ function PhaseCardCarousel({ phases, coachName, today, nextSession, food, weekDo
       el.style.scrollSnapType = "";
     }, 450);
   };
-  const open = (ph: HomePhase) => {
+  const open = (ph: HomePhase, i: number) => {
     // The end of a mouse drag, not a tap.
     if (dragged.current) {
       dragged.current = false;
+      return;
+    }
+    // The edge of the next card, showing beside the one in front (13 Oct):
+    // a tap brings it to the front. Only the card in front opens its tab.
+    if (i !== active) {
+      const el = scroller.current;
+      const card = el?.firstElementChild as HTMLElement | null;
+      if (el && card) el.scrollTo({ left: i * (card.offsetWidth + 12), behavior: "smooth" });
       return;
     }
     const tab = TRACK_TAB[ph.track];
@@ -291,7 +299,7 @@ function PhaseCardCarousel({ phases, coachName, today, nextSession, food, weekDo
     <>
       <div ref={scroller} className="pc-scroller" role="region" aria-label="Your phases" tabIndex={0} onScroll={onScroll} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
         {phases.map((ph, i) => (
-          <PhaseCard key={ph.id} ph={{ ...ph, coverUrl: coverFor(ph.track) }} eager={i === 0} coachName={coachName} today={today} nextSession={nextSession} food={food} weekDone={weekDone} checkInCount={checkInCount} onOpen={() => open(ph)} onHold={() => setHoldTrack(ph.track)} onLog={checkIn ? () => setLogOpen(true) : undefined} />
+          <PhaseCard key={ph.id} ph={{ ...ph, coverUrl: coverFor(ph.track) }} eager={i === 0} coachName={coachName} today={today} nextSession={nextSession} food={food} weekDone={weekDone} checkInCount={checkInCount} onOpen={() => open(ph, i)} onHold={() => setHoldTrack(ph.track)} onLog={checkIn ? () => setLogOpen(true) : undefined} />
         ))}
       </div>
       {count > 1 && (
