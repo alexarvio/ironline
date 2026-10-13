@@ -164,18 +164,54 @@ export function Bar({ pr, small }: { pr: Progress; small?: boolean }) {
 }
 
 function Cover({ ph, eager }: { ph: HomePhase; eager?: boolean }) {
+  // A picture that fails to load is tried again (13 Oct): three more times,
+  // a little apart, with a fresh query so the browser asks again, and once
+  // more when the app comes back to the foreground. A request that died
+  // while the server was restarting for a deploy used to hide the picture
+  // for good until the page was reloaded.
+  const [attempt, setAttempt] = useState(0);
   const [failed, setFailed] = useState(false);
   const ref = useRef<HTMLImageElement>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retry = () => {
+    if (timer.current) return;
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      setAttempt((n) => {
+        if (n >= 3) {
+          setFailed(true);
+          return n;
+        }
+        return n + 1;
+      });
+    }, 1500 * (attempt + 1));
+  };
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+  }, []);
   // A picture that failed before React was listening: onError never comes.
   useEffect(() => {
     const img = ref.current;
     if (!img?.complete || img.naturalWidth > 0) return;
-    const t = setTimeout(() => setFailed(true), 0);
+    const t = setTimeout(retry, 0);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on mount
   }, []);
+  // Back in the foreground: one more go.
+  useEffect(() => {
+    if (!failed) return;
+    const on = () => {
+      if (document.visibilityState !== "visible") return;
+      setFailed(false);
+      setAttempt(0);
+    };
+    document.addEventListener("visibilitychange", on);
+    return () => document.removeEventListener("visibilitychange", on);
+  }, [failed]);
   if (!ph.coverUrl || failed) return null;
+  const src = attempt > 0 ? `${ph.coverUrl}${ph.coverUrl.includes("?") ? "&" : "?"}r=${attempt}` : ph.coverUrl;
   // eslint-disable-next-line @next/next/no-img-element -- an upload served by the app's own route, or a public file
-  return <img ref={ref} className="pc-cover" src={ph.coverUrl} alt="" draggable={false} loading={eager ? "eager" : "lazy"} onError={() => setFailed(true)} />;
+  return <img key={src} ref={ref} className="pc-cover" src={src} alt="" draggable={false} loading={eager ? "eager" : "lazy"} onError={retry} />;
 }
 
 // ---- A · carousel ---------------------------------------------------------
