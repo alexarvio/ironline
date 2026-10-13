@@ -323,7 +323,7 @@ export default function WorkoutScreen({
                   </button>
                   <button type="button" role="menuitem" className="wo-menu-row ico" onClick={() => ask("swap")}>
                     <MenuIcon kind="swap" />
-                    {currentEx.swap ? "Change the swap" : "Swap exercise"}
+                    {currentEx.swap ? "Change today's substitute" : "Substitute today"}
                   </button>
                   {/* A photo or a video for the coach, unasked (9 Oct): a question about the form, the machine they found. */}
                   <button type="button" role="menuitem" className="wo-menu-row ico" onClick={() => ask("media")}>

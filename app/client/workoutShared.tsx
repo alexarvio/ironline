@@ -256,7 +256,7 @@ export function CardioCard({ cardio, index, readOnly = false, coachName = "Your 
       {cardio.swap && (
         <div className="wo-swap-banner">
           <span>
-            Swapped from <b>{cardio.name}</b>. {coachName} will see this.
+            Instead of <b>{cardio.name}</b>, today only. {coachName} will see this.
           </span>
           {!readOnly && (
             <button type="button" onClick={() => startTransition(() => clearCardioSwapAction(cardio.id))}>
@@ -288,7 +288,7 @@ export function CardioCard({ cardio, index, readOnly = false, coachName = "Your 
       )}
       {!readOnly && (
         <button type="button" className="ts-cardio-swap" onClick={() => setSwapOpen(true)} disabled={pending}>
-          {cardio.swap ? "Change the swap" : "Swap for something else"}
+          {cardio.swap ? "Change today's substitute" : "Substitute today"}
         </button>
       )}
       {swapOpen && (

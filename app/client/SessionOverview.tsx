@@ -380,7 +380,7 @@ function ExerciseCard({ exercise, index, done, coachName, gymId }: { exercise: S
         <span className={`so-num${exDone ? " done" : ""}`}>{index}</span>
         <span className="so-card-main">
           <span className="so-card-name">{shownName(exercise)}</span>
-          {exercise.swap && <span className="so-card-summary">Swapped for {exercise.name}</span>}
+          {exercise.swap && <span className="so-card-summary">Substituted with {exercise.name}</span>}
         </span>
         <span className={`so-card-chev${open ? " up" : ""}`} aria-hidden="true" />
       </button>
@@ -431,7 +431,7 @@ function CardioFold({ cardio, index, done }: { cardio: SessionCardio; index: num
         <span className={`so-num${cardio.done ? " done" : ""}`}>{index}</span>
         <span className="so-card-main">
           <span className="so-card-name">{cardio.swap ?? cardio.name}</span>
-          {cardio.swap && <span className="so-card-summary">Swapped for {cardio.swap}</span>}
+          {cardio.swap && <span className="so-card-summary">Substituted with {cardio.swap}</span>}
         </span>
         <span className={`so-card-chev${open ? " up" : ""}`} aria-hidden="true" />
       </button>

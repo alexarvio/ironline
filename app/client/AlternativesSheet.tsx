@@ -43,10 +43,10 @@ export default function AlternativesSheet({
   };
   return (
     <div className="wo-sheet-scrim" style={kb ? { paddingBottom: kb } : undefined} onClick={onClose}>
-      <div className="wo-sheet" role="dialog" aria-label={`Swap ${exerciseName}`} onClick={(e) => e.stopPropagation()}>
+      <div className="wo-sheet" role="dialog" aria-label={`Substitute ${exerciseName} today`} onClick={(e) => e.stopPropagation()}>
         <span className="wo-sheet-grab" aria-hidden="true" />
-        <h2 className="wo-sheet-title">Swap {exerciseName}</h2>
-        <p className="wo-sheet-sub">Machine taken? Log what you did instead. {coachName} sees the swap.</p>
+        <h2 className="wo-sheet-title">Substitute {exerciseName} today</h2>
+        <p className="wo-sheet-sub">Machine taken? Log what you did instead, for today only. The plan stays as it is. {coachName} will see it.</p>
         {suggested.length > 0 && (
           <>
           <div className="wo-sheet-kicker">Suggested by {coachName}</div>

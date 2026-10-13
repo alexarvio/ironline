@@ -793,7 +793,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                     {(() => {
                       const n = rows.filter((r) => r.swap).length;
                       return n > 0 ? (
-                        <span className="rd-swapdot static" title={`${firstName} swapped ${n} exercise${n === 1 ? "" : "s"} in this session`} aria-label={`${n} swapped`}>
+                        <span className="rd-swapdot static" title={`${firstName} substituted ${n} exercise${n === 1 ? "" : "s"} in this session`} aria-label={`${n} substituted`}>
                           <SwapIcon />
                           {n > 1 && <b>{n}</b>}
                         </span>
@@ -2209,7 +2209,7 @@ function AlternativesDialog({ row, firstName, library, onSave }: { row: DraftRow
     <DialogContent className="rd-dlg">
       <DialogHeader>
         <DialogTitle>Alternatives for {row.name}</DialogTitle>
-        <DialogDescription>What {firstName} can do instead when the machine is taken. They pick one from the swap in their workout.</DialogDescription>
+        <DialogDescription>What {firstName} can do instead when the machine is taken. They pick one from "Substitute today" in their workout.</DialogDescription>
       </DialogHeader>
       {list.length > 0 && (
         <ul className="rd-alt-list">
@@ -2264,7 +2264,7 @@ function CardioAlternativesDialog({ cardio, firstName, onSave }: { cardio: Draft
     <DialogContent className="rd-dlg">
       <DialogHeader>
         <DialogTitle>Alternatives for {cardio.name}</DialogTitle>
-        <DialogDescription>What {firstName} can do instead when the machine is taken. They pick one from the swap in their workout, and it counts as done.</DialogDescription>
+        <DialogDescription>What {firstName} can do instead when the machine is taken. They pick one from "Substitute today" in their workout, and it counts as done.</DialogDescription>
       </DialogHeader>
       {list.length > 0 && (
         <ul className="rd-alt-list">
@@ -2801,7 +2801,7 @@ function VideoDialog({ row, video, firstName, where, onAsk, onCancel, onReply }:
   return (
     <DialogContent className="rd-dlg">
       <DialogHeader>
-        <DialogTitle>{!video ? "Ask for a video" : video.state === "asked" ? "Video asked for" : `${firstName}'s ${video.media}${video.about === "swap" ? " of the swap" : ""}`}</DialogTitle>
+        <DialogTitle>{!video ? "Ask for a video" : video.state === "asked" ? "Video asked for" : `${firstName}'s ${video.media}${video.about === "swap" ? " of the substitute" : ""}`}</DialogTitle>
         <DialogDescription>
           {row.name} · {where}
           {video && video.state !== "asked" && video.fromClient ? ` · sent unasked` : ""}
