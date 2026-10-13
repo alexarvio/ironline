@@ -18819,3 +18819,6 @@ button.ts-circle:focus-visible { outline: 2px solid #2f5d8f; outline-offset: 2px
 /* Demo (13 Oct, Alex): no circle round the play mark, and the mark two and a half times the size. */
 .lw-demo-play { width: auto; height: auto; border-radius: 0; background: none; }
 .lw-demo-play svg { width: 25px; height: 25px; margin-left: 0; }
+
+/* The pop-up's number box takes five digits (13 Oct, Alex: 50,000 steps). */
+.cki-num { width: 136px; }
