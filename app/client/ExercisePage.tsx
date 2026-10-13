@@ -10,7 +10,8 @@ import { CoachNote, shownName, useWeightUnit, type SessionExercise } from "./wor
 
 // One exercise, as a page of the workout (13 Oct, "Stepper sheet"): logging
 // is the whole screen. The sets card holds one row a set; exactly one is
-// open, with very large numbers and − / + for weight, reps and RPE. The
+// open, with very large numbers and − / + for weight, reps and RPE (one tap,
+// one step: 0.5 kg; anything bigger is typed). The
 // plan sits in the open set as grey numbers: a tap takes one, the set's
 // badge takes them all. A set saves itself as soon as weight and reps are
 // in, folds into a green row 1.4s later and the next set opens. When every
@@ -634,11 +635,11 @@ function Stepper({
   };
   return (
     <div className={`lw-step${small ? " small" : ""}`}>
-      <RepeatButton className="lw-minus" onFire={() => onStep(-1)} label={`${name}: less`}>
+      <StepButton className="lw-minus" onFire={() => onStep(-1)} label={`${name}: less`}>
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M5 12h14" />
         </svg>
-      </RepeatButton>
+      </StepButton>
       {typing != null ? (
         <input
           ref={inputRef}
@@ -680,57 +681,19 @@ function Stepper({
           </span>
         </HoldButton>
       )}
-      <RepeatButton className="lw-plus" onFire={() => onStep(1)} label={`${name}: more`}>
+      <StepButton className="lw-plus" onFire={() => onStep(1)} label={`${name}: more`}>
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 5v14M5 12h14" />
         </svg>
-      </RepeatButton>
+      </StepButton>
     </div>
   );
 }
 
-/** − / +: fires on press, then repeats while held (after 400ms every 120ms, after 1.5s every 60ms). */
-function RepeatButton({ className, onFire, label, children }: { className: string; onFire: () => void; label: string; children: React.ReactNode }) {
-  const timers = useRef<{ t: ReturnType<typeof setTimeout> | null; i: ReturnType<typeof setInterval> | null; fast: ReturnType<typeof setTimeout> | null; held: boolean }>({ t: null, i: null, fast: null, held: false });
-  const stop = () => {
-    const s = timers.current;
-    if (s.t) clearTimeout(s.t);
-    if (s.i) clearInterval(s.i);
-    if (s.fast) clearTimeout(s.fast);
-    s.t = s.i = s.fast = null;
-  };
-  useEffect(() => stop, []);
-  const down = (e: React.PointerEvent) => {
-    if (e.pointerType === "mouse" && e.button !== 0) return;
-    e.preventDefault();
-    stop();
-    timers.current.held = true;
-    onFire();
-    timers.current.t = setTimeout(() => {
-      timers.current.i = setInterval(onFire, 120);
-      timers.current.fast = setTimeout(() => {
-        if (timers.current.i) clearInterval(timers.current.i);
-        timers.current.i = setInterval(onFire, 60);
-      }, 1100);
-    }, 400);
-  };
-  const up = () => {
-    stop();
-    timers.current.held = false;
-  };
+/** − / +: one tap, one step (13 Oct: no repeat while held, it felt like it ran away; a big jump is typed). */
+function StepButton({ className, onFire, label, children }: { className: string; onFire: () => void; label: string; children: React.ReactNode }) {
   return (
-    <button
-      type="button"
-      className={className}
-      aria-label={label}
-      onPointerDown={down}
-      onPointerUp={up}
-      onPointerCancel={up}
-      onPointerLeave={up}
-      onContextMenu={(e) => e.preventDefault()}
-      // A keyboard's Enter or Space (no pointer): one step.
-      onClick={(e) => e.detail === 0 && onFire()}
-    >
+    <button type="button" className={className} aria-label={label} onClick={onFire} onContextMenu={(e) => e.preventDefault()}>
       {children}
     </button>
   );
