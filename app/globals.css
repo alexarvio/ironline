@@ -18825,3 +18825,7 @@ button.ts-circle:focus-visible { outline: 2px solid #2f5d8f; outline-offset: 2px
 
 /* The pop-up's eyebrow wraps (13 Oct): a long phase name is shown in full. */
 .cki-eyebrow { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.35; }
+
+/* The floating nav stretches wider (13 Oct, Alex): the tabs spread across it. */
+.app-layer-main .app-bottom-nav.dark { width: calc(100% - 32px); max-width: 420px; justify-content: space-around; padding: 6px 10px; }
+.app-bottom-nav.dark .app-tab-btn { flex: 1 1 0; width: auto; }
