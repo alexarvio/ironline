@@ -18627,3 +18627,9 @@ button.ci-hint { cursor: pointer; }
 
 /* The open set title (13 Oct): small caps again; making it a button had reset its font. */
 .lw-open-title { font-family: inherit; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; line-height: 1; }
+
+/* KG / LBS sits in the open set's header (13 Oct): the exercise's unit, every saved set records it. */
+.lw-open-head .lw-unit { margin-left: auto; padding: 2px; }
+.lw-open-head .lw-unit-btn { height: 26px; padding: 0 10px; font-size: 12px; }
+.lw-open-head .lw-remove { margin-left: auto; margin-right: 8px; }
+.lw-open-head .lw-remove + .lw-unit { margin-left: 0; }
