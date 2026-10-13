@@ -504,7 +504,7 @@ export default function ExercisePage({
               const rpe = shownOf(row, "rpe");
               return (
                 <Fold key={row.id} state={state}>
-                <button type="button" className={`lw-row${row.saved ? " done" : " upcoming"}`} onClick={() => setCurrent(row.id)} aria-label={`${row.kind === "warm" ? "Warm-up" : "Set"} ${row.n}, ${summary(row)}${row.saved ? ", logged" : ", planned"}. Open`}>
+                <button type="button" className={`lw-row${row.saved ? " done" : " upcoming"}${row.kind === "warm" ? " warm" : ""}`} onClick={() => setCurrent(row.id)} aria-label={`${row.kind === "warm" ? "Warm-up" : "Set"} ${row.n}, ${summary(row)}${row.saved ? ", logged" : ", planned"}. Open`}>
                   <span className="lw-row-badge" aria-hidden="true">
                     {row.saved ? (
                       <svg viewBox="0 0 24 24">
@@ -515,8 +515,8 @@ export default function ExercisePage({
                     )}
                   </span>
                   <span className="lw-row-sum">{summaryCells(row)}</span>
-                  {askRpe && row.kind === "work" && !rpe.ghost && <span className="lw-row-rpe">RPE {rpe.text}</span>}
-                  {askRpe && row.kind === "work" && rpe.ghost && rpe.value != null && !row.saved && <span className="lw-row-rpe">RPE {rpe.text}</span>}
+                  {/* The RPE slot is always there, empty on a warm-up, so the numbers line up down the card. */}
+                  {askRpe && <span className="lw-row-rpe">{row.kind === "work" && rpe.value != null && (!rpe.ghost || !row.saved) ? `RPE ${rpe.text}` : ""}</span>}
                 </button>
                 </Fold>
               );
@@ -524,7 +524,7 @@ export default function ExercisePage({
             const busy = row.kind === "work" && saving.includes(row.n);
             return (
               <Fold key={row.id} state={state}>
-              <div className={`lw-open${row.saved ? " saved" : ""}`}>
+              <div className={`lw-open${row.saved ? " saved" : ""}${row.kind === "warm" ? " warm" : ""}`}>
                 <div className="lw-open-head">
                   <button type="button" className="lw-badge" onClick={() => acceptAll(row)} aria-label={`Log ${row.kind === "warm" ? "warm-up" : "set"} ${row.n} as planned`} title="Log as planned">
                     {row.label}

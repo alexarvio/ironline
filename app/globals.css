@@ -18613,3 +18613,14 @@ button.ci-hint { cursor: pointer; }
 /* The green rows read from the right (13 Oct, Alex): "45 kg × 10" sits where RPE does, RPE after it. */
 .lw-row-sum { justify-content: flex-end; }
 .lw-row-rpe { margin-left: 2px; }
+
+/* Warm-ups read amber, not green (13 Oct), tick and all; the columns are fixed widths (weight right, reps 3ch, an RPE slot even when empty) so every row lines up. */
+.lw-row.done.warm { background: rgba(217, 138, 28, 0.1); color: #9a5b00; }
+.lw-row.done.warm .lw-row-badge { background: #d98a1c; }
+.lw-open.saved.warm { box-shadow: 0 14px 26px -18px rgba(29, 52, 102, 0.55), inset 0 0 0 2px #d98a1c; }
+.lw-open.saved.warm .lw-badge { background: #d98a1c; }
+.lw-open.saved.warm .lw-open-title { color: #9a5b00; }
+.lw-open.saved.warm .lw-saved { background: #FDF1DC; color: #9a5b00; }
+.lw-open.saved.warm .lw-value:not(.ghost) .lw-num { color: #9a5b00; }
+.lw-row-r { min-width: 3ch; text-align: left; }
+.lw-row-rpe { min-width: 6ch; text-align: right; }
