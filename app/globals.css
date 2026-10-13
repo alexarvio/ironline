@@ -18839,3 +18839,9 @@ button.ts-circle:focus-visible { outline: 2px solid #2f5d8f; outline-offset: 2px
 .lw .wo-nextup-label { font-size: 10px; }
 .lw .wo-nextup-name { font-size: 13.5px; }
 .wo-page-inner.lw { gap: 10px; }
+
+/* The pinned head meets the blue (13 Oct, Alex): the page's top padding showed through above it, so the exercise pages carry none and the head starts at the top. */
+.wo-page { padding-top: 0; }
+.wo-page-inner { padding-top: 20px; }
+.wo-page-inner.lw { padding-top: 0; }
+.lw .wo-ex-head { margin-top: 0; }
