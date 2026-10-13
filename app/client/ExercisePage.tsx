@@ -529,7 +529,13 @@ export default function ExercisePage({
                   <button type="button" className="lw-badge" onClick={() => acceptAll(row)} aria-label={`Log ${row.kind === "warm" ? "warm-up" : "set"} ${row.n} as planned`} title="Log as planned">
                     {row.label}
                   </button>
-                  <span className="lw-open-title">{row.kind === "warm" ? `Warm-up ${row.n}` : `Set ${row.n}`}</span>
+                  {/* The title folds the set (13 Oct): the next one still to do opens, or none. */}
+                  <button type="button" className="lw-open-title" onClick={() => setCurrent(firstUnsaved(row.id) === row.id ? null : firstUnsaved(row.id))} aria-label={`Close ${row.kind === "warm" ? "warm-up" : "set"} ${row.n}`}>
+                    {row.kind === "warm" ? `Warm-up ${row.n}` : `Set ${row.n}`}
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="m6 15 6-6 6 6" />
+                    </svg>
+                  </button>
                   {row.saved && (
                     <span className="lw-saved" role="status">
                       <svg viewBox="0 0 24 24" aria-hidden="true">

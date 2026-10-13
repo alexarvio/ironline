@@ -18605,3 +18605,7 @@ button.ci-hint { cursor: pointer; }
 .lw-row-u { font-size: 14px; font-weight: 800; }
 .lw-row-x { font-size: 16px; font-weight: 700; opacity: 0.7; }
 .lw-row-r { font-variant-numeric: tabular-nums; }
+
+/* The open set folds from its title (13 Oct). */
+.lw-open-title { display: inline-flex; align-items: center; gap: 5px; padding: 6px 4px; border: 0; background: none; font: inherit; cursor: pointer; }
+.lw-open-title svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; opacity: 0.8; }
