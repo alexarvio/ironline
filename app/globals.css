@@ -18803,3 +18803,15 @@ button.ts-circle:focus-visible { outline: 2px solid #2f5d8f; outline-offset: 2px
 .lw-demo:active { background: #182c57; }
 .lw-demo-play { background: rgba(255, 255, 255, 0.18); }
 .lw-demo-play svg { fill: #fff; }
+
+/* Restored (13 Oct): the open set's title is small caps again; the rule had been cut with the old lifestyle styles. */
+.lw-open-title { font-family: inherit; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; line-height: 1; }
+/* The number box is exactly its font's height (13 Oct), so the row's hairline no longer runs through the unit label. */
+.lw-num-input { font-family: inherit; height: 64px; line-height: 64px; }
+.lw-num-input.s4 { height: 54px; line-height: 54px; }
+.lw-num-input.s5 { height: 46px; line-height: 46px; }
+.lw-step.small .lw-num-input { height: 44px; line-height: 44px; }
+.lw-step { height: auto; min-height: 84px; padding: 4px 0; box-sizing: border-box; }
+.lw-step.small { min-height: 70px; }
+/* The exercise's head stays put (13 Oct, Alex): which exercise, its name, what is next, the chat and the ⋯ ride at the top while the sets scroll under. */
+.lw .wo-ex-head { position: sticky; top: 0; z-index: 4; margin: -20px -16px 0; padding: 20px 16px 10px; background: #F4F7FC; box-shadow: 0 10px 10px -10px rgba(18, 19, 43, 0.12); }
