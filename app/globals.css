@@ -18815,3 +18815,7 @@ button.ts-circle:focus-visible { outline: 2px solid #2f5d8f; outline-offset: 2px
 .lw-step.small { min-height: 70px; }
 /* The exercise's head stays put (13 Oct, Alex): which exercise, its name, what is next, the chat and the ⋯ ride at the top while the sets scroll under. */
 .lw .wo-ex-head { position: sticky; top: 0; z-index: 4; margin: -20px -16px 0; padding: 20px 16px 10px; background: #F4F7FC; box-shadow: 0 10px 10px -10px rgba(18, 19, 43, 0.12); }
+
+/* Demo (13 Oct, Alex): no circle round the play mark, and the mark two and a half times the size. */
+.lw-demo-play { width: auto; height: auto; border-radius: 0; background: none; }
+.lw-demo-play svg { width: 25px; height: 25px; margin-left: 0; }
