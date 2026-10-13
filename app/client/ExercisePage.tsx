@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { clearSwapAction, logSetAction, saveExerciseNoteAction, saveWarmupSetsAction, swapExerciseAction } from "../lib/actions";
-import { displayToKg, fmtWeight, kgToDisplay, planToDisplay, readUnitPref, stepFor, unitLabel as labelOf, writeUnitPref, type Unit } from "../lib/units";
+import { displayToKg, fmtWeight, kgToDisplay, planToDisplay, stepFor, unitLabel as labelOf, type Unit } from "../lib/units";
 import AlternativesSheet from "./AlternativesSheet";
 import { VideoAskSheet, VideoGlyph } from "./VideoAskSheet";
 import { CoachNote, shownName, useWeightUnit, type SessionExercise } from "./workoutShared";
@@ -70,22 +70,10 @@ export default function ExercisePage({
   /** A working set was saved: the dock's rest timer may want to know. */
   onSetLogged?: () => void;
 }) {
-  // ---- The unit. Kg or lbs as this exercise was last logged, else what
-  // this client chose on any exercise; the toggle sets it for all of them.
-  const [unit, setUnitRaw] = useWeightUnit(exercise.name, exercise.unit ?? null);
-  useEffect(() => {
-    if (exercise.unit) return;
-    const t = setTimeout(() => {
-      const p = readUnitPref();
-      if (p) setUnitRaw(p);
-    }, 0);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on opening
-  }, []);
-  const setUnit = (u: Unit) => {
-    setUnitRaw(u);
-    writeUnitPref(u);
-  };
+  // ---- The unit, this exercise alone (13 Oct, Alex: one machine may be
+  // marked in lbs while the rest is kg): as it was last logged, else as
+  // this phone remembers it. The toggle changes only this exercise.
+  const [unit, setUnit] = useWeightUnit(exercise.name, exercise.unit ?? null);
   const uLabel = labelOf(unit);
 
   // The weight for the gym trained at: a machine there is its own machine,

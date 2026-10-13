@@ -5,7 +5,6 @@
 
 export type Unit = "kg" | "lb";
 const LB_PER_KG = 2.20462;
-const UNIT_PREF_KEY = "ironline.client.weight-unit";
 
 /** A logged or typed figure, as shown: kg to 0.25, lbs to 0.5. */
 export const kgToDisplay = (kg: number, unit: Unit) => (unit === "kg" ? Math.round(kg * 4) / 4 : Math.round(kg * LB_PER_KG * 2) / 2);
@@ -18,18 +17,3 @@ export const stepFor = (unit: Unit) => (unit === "kg" ? 0.5 : 1);
 export const unitLabel = (unit: Unit) => (unit === "kg" ? "kg" : "lbs");
 /** "202.5", "100", never "202.50". */
 export const fmtWeight = (v: number) => String(Math.round(v * 100) / 100);
-
-/** The client's unit, this phone (the toggle on the sets card sets it for every exercise). */
-export function readUnitPref(): Unit | null {
-  try {
-    const v = localStorage.getItem(UNIT_PREF_KEY);
-    return v === "kg" || v === "lb" ? v : null;
-  } catch {
-    return null;
-  }
-}
-export function writeUnitPref(unit: Unit) {
-  try {
-    localStorage.setItem(UNIT_PREF_KEY, unit);
-  } catch {}
-}
