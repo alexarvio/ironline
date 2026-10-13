@@ -8854,14 +8854,13 @@ export function getLastSets(assignmentId: number, gymId: number | null): { date:
     session's own sets first, then the last time at the same gym (a machine
     is marked one way or the other), then the last time anywhere. Null when
     no set of it says (none logged, or all from before units were kept). */
-export function getExerciseUnit(assignmentId: number, gymId: number | null): "kg" | "lb" | null {
+export function getExerciseUnit(assignmentId: number): "kg" | "lb" | null {
+  // This session's own sets only (13 Oct, Alex): every exercise starts in kg;
+  // a set already logged in lbs here keeps the exercise in lbs on return.
   const own = getData()
     .set_logs.filter((sl) => sl.workout_assignment_id === assignmentId && sl.unit)
     .sort((a, b) => (a.logged_at < b.logged_at ? 1 : -1))[0];
-  if (own?.unit) return own.unit;
-  const told = exerciseHistoryFor(assignmentId).filter((h) => h.logs.some((l) => l.unit));
-  const pick = told.find((h) => gymId != null && (h.logs[0]?.gym_id ?? null) === gymId) || told[0];
-  return pick ? [...pick.logs].reverse().find((l) => l.unit)?.unit ?? null : null;
+  return own?.unit ?? null;
 }
 
 /** The coach's latest reply on this exercise from an earlier session of the

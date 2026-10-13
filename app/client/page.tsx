@@ -741,7 +741,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                   sets: a.sets,
                   reps: a.reps,
                   targetWeight: a.target_weight_kg,
-                  unit: getExerciseUnit(a.id, gymId),
+                  unit: getExerciseUnit(a.id),
                   targetRpe: a.rpe_target,
                   tempo: a.tempo,
                   rest: a.rest_seconds ?? null,

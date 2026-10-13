@@ -6,7 +6,7 @@ import { clearSwapAction, logSetAction, saveExerciseNoteAction, saveWarmupSetsAc
 import { displayToKg, fmtWeight, kgToDisplay, planToDisplay, stepFor, unitLabel as labelOf, type Unit } from "../lib/units";
 import AlternativesSheet from "./AlternativesSheet";
 import { VideoAskSheet, VideoGlyph } from "./VideoAskSheet";
-import { CoachNote, shownName, useWeightUnit, type SessionExercise } from "./workoutShared";
+import { CoachNote, shownName, type SessionExercise } from "./workoutShared";
 
 // One exercise, as a page of the workout (13 Oct, "Stepper sheet"): logging
 // is the whole screen. The sets card holds one row a set; exactly one is
@@ -71,9 +71,11 @@ export default function ExercisePage({
   onSetLogged?: () => void;
 }) {
   // ---- The unit, this exercise alone (13 Oct, Alex: one machine may be
-  // marked in lbs while the rest is kg): as it was last logged, else as
-  // this phone remembers it. The toggle changes only this exercise.
-  const [unit, setUnit] = useWeightUnit(exercise.name, exercise.unit ?? null);
+  // marked in lbs while the rest is kg). Every exercise starts in kg; the
+  // toggle on a set carries through the exercise's other sets, and a set
+  // already logged in lbs this session keeps it in lbs on coming back.
+  // Nothing is remembered for the next exercise or the next session.
+  const [unit, setUnit] = useState<Unit>(exercise.unit ?? "kg");
   const uLabel = labelOf(unit);
 
   // The weight for the gym trained at: a machine there is its own machine,
