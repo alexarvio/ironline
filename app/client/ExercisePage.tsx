@@ -473,8 +473,18 @@ export default function ExercisePage({
         <div className="lw-card-head">
           <span className="lw-eyebrow">Sets</span>
           <span className={`lw-progress${allDone ? " done" : ""}`}>
-            {doneCount} of {workRows.length} done
+            {doneCount}/{workRows.length}
           </span>
+          {/* KG / LBS on the card's row (13 Oct, back where it was): the exercise's unit, every set of it. */}
+          {askWeight && (
+            <div className="lw-unit" role="radiogroup" aria-label="Weight unit for this exercise">
+              {(["kg", "lb"] as Unit[]).map((u) => (
+                <button key={u} type="button" role="radio" aria-checked={unit === u} className={`lw-unit-btn${unit === u ? " on" : ""}`} onClick={() => setUnit(u)}>
+                  {u === "kg" ? "KG" : "LBS"}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="lw-rows">
@@ -529,15 +539,6 @@ export default function ExercisePage({
                     <button type="button" className="lw-remove" onClick={() => (row.kind === "warm" ? removeWarm(row.n - 1) : removeExtra(row))} aria-label={`Remove ${row.kind === "warm" ? "warm-up" : "extra set"} ${row.n}`}>
                       Remove
                     </button>
-                  )}
-                  {(askWeight || row.kind === "warm") && (
-                    <div className="lw-unit" role="radiogroup" aria-label="Weight unit for this exercise">
-                      {(["kg", "lb"] as Unit[]).map((u) => (
-                        <button key={u} type="button" role="radio" aria-checked={unit === u} className={`lw-unit-btn${unit === u ? " on" : ""}`} onClick={() => setUnit(u)}>
-                          {u === "kg" ? "KG" : "LBS"}
-                        </button>
-                      ))}
-                    </div>
                   )}
                 </div>
                 {(askWeight || row.kind === "warm") && <Stepper row={row} field="weight" label={uLabel.toUpperCase()} shown={shownOf(row, "weight")} min={0} max={9999} onStep={(d) => step(row, "weight", d)} onTyped={(t) => typed(row, "weight", t)} ariaUnit={unit === "kg" ? "kilograms" : "pounds"} />}
