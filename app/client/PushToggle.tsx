@@ -90,7 +90,7 @@ function NativePushToggle({ ready }: { ready: boolean }) {
 
   const detail =
     state === "blocked"
-      ? "Blocked for Ironline in your phone's settings"
+      ? "Blocked for NorCoach in your phone's settings"
       : state === "unsupported"
         ? "Not available yet"
         : "On your lock screen, even with the app closed";
@@ -164,9 +164,9 @@ function WebPushToggle({ publicKey }: { publicKey: string }) {
 
   const detail =
     state === "install"
-      ? "Add Ironline to your Home Screen first: Share, then Add to Home Screen"
+      ? "Add NorCoach to your Home Screen first: Share, then Add to Home Screen"
       : state === "blocked"
-        ? "Blocked for Ironline in your phone's settings"
+        ? "Blocked for NorCoach in your phone's settings"
         : state === "unsupported"
           ? "This browser can't show notifications"
           : "On your lock screen, even with the app closed";

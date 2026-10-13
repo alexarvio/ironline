@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { AppleIcon, ChevronDownIcon, DumbbellIcon, HeartIcon } from "../components/icons";
 import { useNavigateTab, useOpenCheckIn, useOpenFood } from "./CheckInContext";
 import FitTitle from "./FitTitle";
+import CardPictureSheet, { useLongPress, type CardCovers } from "./CardPictureSheet";
+import CheckInDialog, { type CheckInForm } from "./CheckInDialog";
 
 // Home's "Your plan": the live phase on each track, training → nutrition →
 // lifestyle. A carousel of picture cards (tap one to open its tab), one card
@@ -30,8 +32,8 @@ export type HomePhase = {
   next?: { name: string; start: string } | null;
 };
 
-const TRACK_LABEL = { nutrition: "Nutrition", training: "Training", lifestyle: "Lifestyle" } as const;
-const TRACK_ICON = { nutrition: <AppleIcon />, training: <DumbbellIcon />, lifestyle: <HeartIcon /> };
+export const TRACK_LABEL = { nutrition: "Nutrition", training: "Training", lifestyle: "Lifestyle" } as const;
+export const TRACK_ICON = { nutrition: <AppleIcon />, training: <DumbbellIcon />, lifestyle: <HeartIcon /> };
 // The tab each track opens; lifestyle has none yet.
 const TRACK_TAB = { nutrition: "nutrition", training: "training", lifestyle: null } as const;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -97,8 +99,16 @@ export default function PhaseCards({
   food = null,
   weekDone = null,
   checkInCount = null,
+  checkIn = null,
+  clientId,
+  ownCovers = {},
 }: {
   phases: HomePhase[];
+  /** Today's check-in lines (13 Oct): the lifestyle card's Log opens them in a pop-up. */
+  checkIn?: CheckInForm | null;
+  clientId: number;
+  /** The client's own card pictures (12 Oct), a track at a time. */
+  ownCovers?: CardCovers;
   coachName: string;
   nextSession?: PhaseNextSession;
   food?: PhaseFoodToday;
@@ -127,7 +137,7 @@ export default function PhaseCards({
     // No heading: the cards sit straight under the greeting.
     <section className={`pc-plan ${mode}`} aria-label="Your plan">
       {mode === "carousel" ? (
-        <PhaseCardCarousel phases={phases} coachName={coachName} today={today} nextSession={nextSession} food={food} weekDone={weekDone} checkInCount={checkInCount} />
+        <PhaseCardCarousel phases={phases} coachName={coachName} today={today} nextSession={nextSession} food={food} weekDone={weekDone} checkInCount={checkInCount} checkIn={checkIn} clientId={clientId} ownCovers={ownCovers} />
       ) : (
         <div className="pc-stack">
           {phases.map((ph, i) => (
@@ -170,21 +180,28 @@ function Cover({ ph, eager }: { ph: HomePhase; eager?: boolean }) {
 
 // ---- A · carousel ---------------------------------------------------------
 
-function PhaseCardCarousel({ phases, coachName, today, nextSession, food, weekDone, checkInCount }: { phases: HomePhase[]; coachName: string; today: string; nextSession: PhaseNextSession; food: PhaseFoodToday; weekDone: { nextWeekLabel: string } | null; checkInCount: { done: number; total: number } | null }) {
-  const goToTab = useNavigateTab();
-  const openFood = useOpenFood();
+function PhaseCardCarousel({ phases, coachName, today, nextSession, food, weekDone, checkInCount, checkIn, clientId, ownCovers }: { phases: HomePhase[]; coachName: string; today: string; nextSession: PhaseNextSession; food: PhaseFoodToday; weekDone: { nextWeekLabel: string } | null; checkInCount: { done: number; total: number } | null; checkIn: CheckInForm | null; clientId: number; ownCovers: CardCovers }) {
+  // Today's check-in in a pop-up (13 Oct): Log on the lifestyle card opens
+  // it; Save folds it away and Home stays where it was.
+  const [logOpen, setLogOpen] = useState(false);
   const openCheckIn = useOpenCheckIn();
-  const kcal = (v: number) => Math.round(v).toLocaleString("en-US");
+  // The client's own pictures (12 Oct): press and hold a card, and the sheet
+  // offers the camera roll; what was just picked shows at once, until the
+  // page comes back with it. null in the override: back to the coach's.
+  const [override, setOverride] = useState<Partial<Record<HomePhase["track"], string | null>>>({});
+  const [holdTrack, setHoldTrack] = useState<HomePhase["track"] | null>(null);
+  const ownFor = (track: HomePhase["track"]) => (track in override ? (override[track] ?? null) : (ownCovers[track] ?? null));
+  const coachCoverOf = (track: HomePhase["track"]) => phases.find((p) => p.track === track)?.coverUrl ?? null;
+  const coverFor = (track: HomePhase["track"]) => ownFor(track) ?? coachCoverOf(track);
+  const count = phases.length;
+  const goToTab = useNavigateTab();
   const scroller = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
-  // Which cards have their objectives open: none, on arrival.
-  const [openObj, setOpenObj] = useState<number[]>([]);
-  const toggleObj = (id: number) => setOpenObj((o) => (o.includes(id) ? o.filter((x) => x !== id) : [...o, id]));
   const onScroll = () => {
     const el = scroller.current;
     const card = el?.firstElementChild as HTMLElement | null;
     if (!el || !card) return;
-    setActive(Math.min(phases.length - 1, Math.round(el.scrollLeft / (card.offsetWidth + 12))));
+    setActive(Math.min(count - 1, Math.round(el.scrollLeft / (card.offsetWidth + 12))));
   };
   // A finger swipes it natively. A mouse (the phone preview on a computer)
   // drags it: snapping is off while the mouse moves it, then it settles on
@@ -217,7 +234,7 @@ function PhaseCardCarousel({ phases, coachName, today, nextSession, food, weekDo
     dragged.current = true;
     const card = el.firstElementChild as HTMLElement | null;
     const step = (card?.offsetWidth ?? 300) + 12;
-    const i = Math.max(0, Math.min(phases.length - 1, Math.round(el.scrollLeft / step)));
+    const i = Math.max(0, Math.min(count - 1, Math.round(el.scrollLeft / step)));
     el.scrollTo({ left: i * step, behavior: "smooth" });
     setTimeout(() => {
       el.style.scrollSnapType = "";
@@ -231,137 +248,165 @@ function PhaseCardCarousel({ phases, coachName, today, nextSession, food, weekDo
     }
     const tab = TRACK_TAB[ph.track];
     if (tab) goToTab?.(tab);
+    // The lifestyle card itself opens the check-in screen; its Log, the pop-up.
+    else if (ph.track === "lifestyle") openCheckIn?.("daily");
   };
   return (
     <>
       <div ref={scroller} className="pc-scroller" role="region" aria-label="Your phases" tabIndex={0} onScroll={onScroll} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
-        {phases.map((ph, i) => {
-          const pr = progressOf(ph, today, coachName);
-          const objOpen = openObj.includes(ph.id);
-          const tab = TRACK_TAB[ph.track];
-          // The final week with the next phase scheduled: the card names it and charges up (9 Oct); before that, nothing.
-          const charging = !!ph.next && !!ph.end && dayNum(ph.end) - dayNum(today) <= 6;
-          return (
-            <article
-              key={ph.id}
-              className={`pc-card${tab ? " link" : ""}${charging ? " charging" : ""}`}
-              data-track={ph.track}
-              aria-label={cardLabel(ph, pr)}
-              onClick={() => open(ph)}
-            >
-              <Cover ph={ph} eager={i === 0} />
-              <span className="pc-scrim" aria-hidden="true" />
-              {charging && <span className="pc-aura" aria-hidden="true" />}
-              <div className="pc-top">
-                <span className="pc-track-chip">
-                  <span className="pc-icon">{TRACK_ICON[ph.track]}</span>
-                  {TRACK_LABEL[ph.track]}
-                </span>
-                <span className="pc-week-chip">{pr.weekLabel}</span>
-              </div>
-              <div className="pc-panel">
-                {/* The name with how long is left on its right (one row, 29 Sep), the bar, and the first and last day under it. */}
-                <div className="pc-name-row">
-                  <h3 className="pc-name-h">
-                    <FitTitle className="pc-name" min={16}>
-                      {ph.name}
-                    </FitTitle>
-                  </h3>
-                  <span className={`pc-left${pr.overdue ? " overdue" : ""}`}>{pr.leftLabel ?? pr.throughLabel}</span>
-                </div>
-                <div className="pc-progress">
-                  <Bar pr={pr} />
-                  {ph.end && (
-                    <div className="pc-ends">
-                      <span>{short(ph.start)}</span>
-                      <span>{short(ph.end)}</span>
-                    </div>
-                  )}
-                </div>
-                {/* Each track's one thing to do now: training opens the next
-                    session (Start session is pressed there), nutrition opens today's food
-                    diary, lifestyle opens the check-in. */}
-                {ph.track === "training" && nextSession && (
-                  <ActionRow
-                    label={nextSession.live ? "In progress" : "Up next"}
-                    name={nextSession.name}
-                    action={nextSession.live ? "Resume" : "Start"}
-                    onClick={() => goToTab?.("training", nextSession.dayId)}
-                  />
-                )}
-                {ph.track === "training" && !nextSession && weekDone && (
-                  <ActionRow label="Week done" name={`Next week starts ${weekDone.nextWeekLabel}`} action="View" onClick={() => goToTab?.("training")} />
-                )}
-                {ph.track === "nutrition" && (
-                  <ActionRow
-                    label="Today"
-                    name={food?.target ? `${kcal(food.target)} kcal` : "Your food diary"}
-                    action="Log"
-                    onClick={() => (openFood ? openFood() : goToTab?.("nutrition"))}
-                  />
-                )}
-                {ph.track === "lifestyle" && openCheckIn && (
-                  <ActionRow
-                    label="Check-in"
-                    name={checkInCount ? (checkInCount.done >= checkInCount.total ? "All logged" : `${checkInCount.done} of ${checkInCount.total} logged`) : "Today's check-in"}
-                    action="Check in"
-                    onClick={() => openCheckIn("daily")}
-                  />
-                )}
-                {/* The coach's objectives, folded to one row so every card
-                    opens the same size, whatever the coach has set. */}
-                {ph.objectives.length > 0 && (
-                  <div className="pc-obj">
-                    <button
-                      type="button"
-                      className="pc-obj-toggle"
-                      aria-expanded={objOpen}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleObj(ph.id);
-                      }}
-                    >
-                      <span className="pc-obj-label">Objectives from {coachName}</span>
-                      <span className={`pc-obj-chev${objOpen ? " open" : ""}`} aria-hidden="true">
-                        <ChevronDownIcon />
-                      </span>
-                    </button>
-                    {/* Always there, its height eased open: the panel grows
-                        upwards smoothly and the list fades in under the row. */}
-                    <div className={`pc-obj-body${objOpen ? " open" : ""}`} aria-hidden={!objOpen}>
-                      <div className="pc-obj-clip">
-                        <ol className="pc-obj-list">
-                          {ph.objectives.slice(0, 3).map((o, j) => (
-                            <li key={j}>
-                              <span className="pc-obj-n">{j + 1}</span>
-                              <span className="pc-obj-text">{o}</span>
-                            </li>
-                          ))}
-                        </ol>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {charging && ph.next && (
-                  <div className="pc-nextphase">
-                    <span className="pc-nextphase-label">Next phase</span>
-                    <span className="pc-nextphase-name">{ph.next.name}</span>
-                    <span className="pc-nextphase-when">from {short(ph.next.start)}</span>
-                  </div>
-                )}
-              </div>
-            </article>
-          );
-        })}
+        {phases.map((ph, i) => (
+          <PhaseCard key={ph.id} ph={{ ...ph, coverUrl: coverFor(ph.track) }} eager={i === 0} coachName={coachName} today={today} nextSession={nextSession} food={food} weekDone={weekDone} checkInCount={checkInCount} onOpen={() => open(ph)} onHold={() => setHoldTrack(ph.track)} onLog={checkIn ? () => setLogOpen(true) : undefined} />
+        ))}
       </div>
-      {phases.length > 1 && (
+      {count > 1 && (
         <div className="pc-dots" aria-hidden="true">
           {phases.map((ph, i) => (
             <span key={ph.id} className={`pc-dot${i === active ? " on" : ""}`} data-track={ph.track} />
           ))}
         </div>
       )}
+      {holdTrack && (
+        <CardPictureSheet
+          clientId={clientId}
+          track={holdTrack}
+          coachName={coachName}
+          shown={coverFor(holdTrack)}
+          own={ownFor(holdTrack)}
+          onSaved={(t, url) => setOverride((o) => ({ ...o, [t]: url }))}
+          onClose={() => setHoldTrack(null)}
+        />
+      )}
+      {logOpen && checkIn && <CheckInDialog clientId={clientId} form={checkIn} today={today} coachName={coachName} phaseName={phases.find((p) => p.track === "lifestyle" && p.id > 0)?.name ?? null} onClose={() => setLogOpen(false)} />}
     </>
+  );
+}
+
+/** One picture card: the cover, the chips, and the frosted panel with the
+    name, the bar, the track's one thing to do and the objectives. The
+    carousel and Home's accordion (12 Oct) both show these. */
+export function PhaseCard({ ph, eager, coachName, today, nextSession, food, weekDone, checkInCount, onOpen, onHold, onLog }: { ph: HomePhase; eager?: boolean; coachName: string; today: string; nextSession: PhaseNextSession; food: PhaseFoodToday; weekDone: { nextWeekLabel: string } | null; checkInCount: { done: number; total: number } | null; onOpen: () => void; /** Pressed and held (12 Oct): the picture sheet. */ onHold?: () => void; /** The lifestyle card's Log (13 Oct): today's check-in in a pop-up. */ onLog?: () => void }) {
+  const hold = useLongPress(() => onHold?.());
+  const goToTab = useNavigateTab();
+  const openFood = useOpenFood();
+  const openCheckIn = useOpenCheckIn();
+  const kcal = (v: number) => Math.round(v).toLocaleString("en-US");
+  // The objectives: folded, on arrival.
+  const [objOpen, setObjOpen] = useState(false);
+  const toggleObj = () => setObjOpen((o) => !o);
+  const pr = progressOf(ph, today, coachName);
+  const tab = TRACK_TAB[ph.track];
+  // The final week with the next phase scheduled: the card names it and charges up (9 Oct); before that, nothing.
+  const charging = !!ph.next && !!ph.end && dayNum(ph.end) - dayNum(today) <= 6;
+  return (
+    <article
+            className={`pc-card${tab ? " link" : ""}${charging ? " charging" : ""}`}
+      data-track={ph.track}
+      aria-label={cardLabel(ph, pr)}
+      onClick={onOpen}
+      {...hold}
+    >
+      <Cover key={ph.coverUrl ?? ""} ph={ph} eager={eager} />
+      <span className="pc-scrim" aria-hidden="true" />
+      {charging && <span className="pc-aura" aria-hidden="true" />}
+      <div className="pc-top">
+        <span className="pc-track-chip">
+          <span className="pc-icon">{TRACK_ICON[ph.track]}</span>
+          {TRACK_LABEL[ph.track]}
+        </span>
+        <span className="pc-week-chip">{pr.weekLabel}</span>
+      </div>
+      <div className="pc-panel">
+        {/* The name with how long is left on its right (one row, 29 Sep), the bar, and the first and last day under it. */}
+        <div className="pc-name-row">
+          <h3 className="pc-name-h">
+            <FitTitle className="pc-name" min={16}>
+              {ph.name}
+            </FitTitle>
+          </h3>
+          <span className={`pc-left${pr.overdue ? " overdue" : ""}`}>{pr.leftLabel ?? pr.throughLabel}</span>
+        </div>
+        <div className="pc-progress">
+          <Bar pr={pr} />
+          {ph.end && (
+            <div className="pc-ends">
+              <span>{short(ph.start)}</span>
+              <span>{short(ph.end)}</span>
+            </div>
+          )}
+        </div>
+        {/* Each track's one thing to do now: training opens the next
+            session (Start session is pressed there), nutrition opens today's food
+            diary, lifestyle opens the check-in. */}
+        {ph.track === "training" && nextSession && (
+          <ActionRow
+            label={nextSession.live ? "In progress" : "Up next"}
+            name={nextSession.name}
+            action={nextSession.live ? "Resume" : "Start"}
+            onClick={() => goToTab?.("training", nextSession.dayId)}
+          />
+        )}
+        {ph.track === "training" && !nextSession && weekDone && (
+          <ActionRow label="Week done" name={`Next week starts ${weekDone.nextWeekLabel}`} action="View" onClick={() => goToTab?.("training")} />
+        )}
+        {ph.track === "nutrition" && (
+          <ActionRow
+            label="Today"
+            name={food?.target ? `${kcal(food.target)} kcal` : "Your food diary"}
+            action="Log"
+            onClick={() => (openFood ? openFood() : goToTab?.("nutrition"))}
+          />
+        )}
+        {ph.track === "lifestyle" && (onLog || openCheckIn) && (
+          <ActionRow
+            label="Check-in"
+            name={checkInCount ? (checkInCount.done >= checkInCount.total ? "All logged" : `${checkInCount.done} of ${checkInCount.total} logged`) : "Today's check-in"}
+            action="Log"
+            onClick={() => (onLog ? onLog() : openCheckIn?.("daily"))}
+          />
+        )}
+        {/* The coach's objectives, folded to one row so every card
+            opens the same size, whatever the coach has set. */}
+        {ph.objectives.length > 0 && (
+          <div className="pc-obj">
+            <button
+              type="button"
+              className="pc-obj-toggle"
+              aria-expanded={objOpen}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleObj();
+              }}
+            >
+              <span className="pc-obj-label">Objectives from {coachName}</span>
+              <span className={`pc-obj-chev${objOpen ? " open" : ""}`} aria-hidden="true">
+                <ChevronDownIcon />
+              </span>
+            </button>
+            {/* Always there, its height eased open: the panel grows
+                upwards smoothly and the list fades in under the row. */}
+            <div className={`pc-obj-body${objOpen ? " open" : ""}`} aria-hidden={!objOpen}>
+              <div className="pc-obj-clip">
+                <ol className="pc-obj-list">
+                  {ph.objectives.slice(0, 3).map((o, j) => (
+                    <li key={j}>
+                      <span className="pc-obj-n">{j + 1}</span>
+                      <span className="pc-obj-text">{o}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </div>
+          </div>
+        )}
+        {charging && ph.next && (
+          <div className="pc-nextphase">
+            <span className="pc-nextphase-label">Next phase</span>
+            <span className="pc-nextphase-name">{ph.next.name}</span>
+            <span className="pc-nextphase-when">from {short(ph.next.start)}</span>
+          </div>
+        )}
+      </div>
+    </article>
   );
 }
 

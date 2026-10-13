@@ -7,8 +7,8 @@ import type { MetadataRoute } from "next";
 // colour; the transparent mark used inside the app is public/brand/logo.png.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Ironline",
-    short_name: "Ironline",
+    name: "NorCoach",
+    short_name: "NorCoach",
     description: "Your training, check-ins and progress from your coach.",
     start_url: "/client",
     display: "standalone",

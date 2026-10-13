@@ -30,6 +30,7 @@ import {
   getLastWarmupSets,
   gymSessionStats,
   currentGymId,
+  getClientCardCovers,
   getLastSets,
   getExerciseUnit,
   getLatestClientExerciseNotes,
@@ -42,8 +43,6 @@ import {
   getCheckInSections,
   getCheckInHistory,
   getCheckInStreak,
-  yesterdaysOpenMetrics,
-  type CheckInMetric,
   getWorkoutCalendar,
   getActivityCalendar,
   getCheckInStatus,
@@ -88,7 +87,6 @@ import {
   VITAMIN_ITEMS,
 } from "../lib/queries";
 import TrainingDayList from "./TrainingDayList";
-import type { HomeLifestyleMetric } from "./HomeLifestyleCard";
 
 import { ProgressPicturesRow, type ProgressPicturesProps } from "./ProgressPicturesScreen";
 import HomeHub, { type LatestActivity, type UpcomingMeeting } from "./HomeHub";
@@ -117,6 +115,7 @@ import AppShell, { AppTab } from "./AppShell";
 import AvatarUpload from "./AvatarUpload";
 import { phaseCovers, phaseDays, phaseLastDay, phaseWeekIndex, phaseWeeks } from "../lib/phases";
 import { defaultPhaseCover } from "../lib/phaseCovers";
+import { CardPicturesRows } from "./CardPictureSheet";
 import { isGymColor } from "../lib/gymColors";
 import { SERVER_TZ, hourIn, isTimezone, meetingLabelsIn, zonedToUtc } from "../lib/timezones";
 import { cookies } from "next/headers";
@@ -313,8 +312,6 @@ function homeEvents(clientId: number): HomeEvents {
 function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; photos: ProgressPics; food: PhaseFoodToday; phoneTz: string | null }) {
   const client = getClient(CLIENT_ID);
   const today = localDateStr();
-  // A weekly or monthly line belongs on Home until it is in, and on the day it went in; not after.
-  const stillAskedToday = (m: CheckInMetric) => !m.value || !m.loggedAt || localDateStr(new Date(m.loggedAt)) >= today;
 
   const upcomingMeeting = listMeetings(CLIENT_ID)
     .filter((m) => m.status === "scheduled" && m.date >= today)
@@ -393,6 +390,8 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
   });
   return (
     <HomeHub
+      clientId={CLIENT_ID}
+      cardCovers={getClientCardCovers(CLIENT_ID)}
       dateLabel={dateLabel}
       firstName={(client?.name ?? "").trim().split(/\s+/)[0] || "there"}
       coach={{ firstName: coachFirst, photoPath: getCoachAvatarPath(CLIENT_ID) }}
@@ -418,44 +417,9 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
         return { next: next ? { track: next.track, name: next.name, start: next.start_week } : null };
       })()}
       events={homeEvents(CLIENT_ID)}
-      checkInCard={{
-        clientId: CLIENT_ID,
-        // Today's daily metrics in the coach's order, then this week's (30 Sep): the
-        // same questions the check-in lists, so the ring counts what it does.
-        // A weekly or monthly one done on an earlier day of its week or month
-        // has left the card (4 Oct): it started every morning as "1 of 4"
-        // with nothing logged that day.
-        metrics: [
-          ...(sections.sections.find((s) => s.id === "daily")?.metrics ?? []).map(homeMetric),
-          ...(sections.sections.find((s) => s.id === "weekly")?.metrics ?? []).filter(stillAskedToday).map((m) => ({ ...homeMetric(m), weekly: true })),
-          // And this month's, once its day has come.
-          ...(monthlyOpen ? sections.sections.find((s) => s.id === "monthly")?.metrics ?? [] : []).filter(stillAskedToday).map((m) => ({ ...homeMetric(m), monthly: true })),
-        ],
-        // Yesterday's questions left open: asked once today's are in.
-        yesterday: (() => {
-          const y = yesterdaysOpenMetrics(CLIENT_ID);
-          return y ? y.metrics.map((m) => ({ ...homeMetric(m), date: y.date })) : [];
-        })(),
-      }}
+      checkInForm={{ date: today, sections: sections.sections, weeklyOpen, monthlyOpen }}
     />
   );
-}
-
-// A daily check-in line as Home's lifestyle card logs it.
-function homeMetric(m: CheckInMetric): HomeLifestyleMetric {
-  const dec = m.step.includes(".") ? m.step.split(".")[1].length : 0;
-  return {
-    id: m.id,
-    name: m.name,
-    unit: m.scaleMax ? `/ ${m.scaleMax}` : m.unit,
-    precision: Math.min(2, dec),
-    kind: m.scaleMax ? "scale" : "number",
-    scale: m.scaleMax ? { min: 1, max: m.scaleMax } : undefined,
-    today: m.value === "" ? null : Number(m.value),
-    last: m.last ? { value: m.last.value, date: m.last.period } : null,
-    // Today's own lines are never locked: the feed's older days are.
-    locked: false,
-  };
 }
 
 // The date the coach did it, as "21 Sep".
@@ -1103,6 +1067,24 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
         </div>
       </section>
 
+      {/* The pictures behind the Home cards (12 Oct): the client's own from their camera roll, or the coach's. Press and hold a card on Home does the same. */}
+      <section className="home-dark-section">
+        <span className="home-dark-section-title">Card pictures</span>
+        <div className="home-dark-rows">
+          <CardPicturesRows
+            clientId={CLIENT_ID}
+            coachName={getCoachFirstName(CLIENT_ID)}
+            rows={(["lifestyle", "training", "nutrition"] as const).map((track) => {
+              const ph = getCurrentPhase(CLIENT_ID, track);
+              const own = getClientCardCovers(CLIENT_ID)[track] ?? null;
+              const coach = ph ? (ph.cover_path ?? defaultPhaseCover(track, ph.id)) : track === "lifestyle" ? "/img/lifestyle-bottle.jpg" : defaultPhaseCover(track, 0);
+              return { track, own, coach };
+            })}
+          />
+        </div>
+        <p className="st-note">Press and hold a card on Home to change its picture too.</p>
+      </section>
+
       <ConnectedApps />
 
       <section className="home-dark-section">
@@ -1127,7 +1109,7 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
           Log out
         </button>
       </form>
-      <div className="settings-footnote">Ironline · Full Potential Coaching</div>
+      <div className="settings-footnote">NorCoach · Full Potential Coaching</div>
       </div>
     </div>
   );

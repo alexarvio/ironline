@@ -30,6 +30,9 @@ type Client = {
   // Set by the client from their Settings tab; shown wherever the coach sees
   // them. Absent on rows written before this field existed.
   avatar_path?: string | null;
+  /** The client's own picture behind a Home card, a track at a time (12 Oct):
+      an upload ("/uploads/covers/..."). Absent, the coach's phase cover shows. */
+  card_covers?: Partial<Record<PhaseTrack, string>>;
   /** The food diary's meals in the client's own order (meal ids); absent: the standard order, added meals after. */
   meal_order?: string[] | null;
   // What the coach has already looked at on this client's Home: feed event

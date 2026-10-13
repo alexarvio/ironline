@@ -520,7 +520,7 @@ export default function FoodDiaryScreen({
         <button type="button" className="app-header-icon-btn" onClick={onBack} aria-label="Back">
           <ChevronLeftIcon />
         </button>
-        <span className="app-header-brand">Ironline</span>
+        <span className="app-header-brand">NorCoach</span>
         <div className="app-header-actions">
           <span className="app-header-icon-btn fdi-bar-spacer" aria-hidden="true" />
         </div>

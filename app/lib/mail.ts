@@ -47,25 +47,25 @@ async function send(to: string, subject: string, text: string, html: string, wha
 export async function sendPasswordResetEmail({ to, resetUrl }: { to: string; resetUrl: string }): Promise<boolean> {
   if (!mailConfigured()) return false;
   const text = [
-    "Someone asked to reset the password for your Ironline account.",
+    "Someone asked to reset the password for your NorCoach account.",
     "",
     `Choose a new password: ${resetUrl}`,
     "",
     "The link works once, for the next hour. If you didn't ask for this, ignore this email: your password stays as it is.",
   ].join("\n");
-  const html = `<p>Someone asked to reset the password for your Ironline account.</p>
+  const html = `<p>Someone asked to reset the password for your NorCoach account.</p>
 <p><a href="${escape(resetUrl)}">Choose a new password</a></p>
 <p>The link works once, for the next hour. If you didn&rsquo;t ask for this, ignore this email: your password stays as it is.</p>`;
-  return send(to, "Reset your Ironline password", text, html, "password reset");
+  return send(to, "Reset your NorCoach password", text, html, "password reset");
 }
 
 /** The invite's words, as text and as HTML: sent below, and shown on the onboarding board. */
 export function inviteEmail({ to, firstName, coachName, password, signInUrl }: { to: string; firstName: string; coachName: string; password: string; signInUrl: string }) {
-  const subject = "Your Ironline login";
+  const subject = "Your NorCoach login";
   const text = [
     `Hi ${firstName},`,
     "",
-    `${coachName} has set up your Ironline account.`,
+    `${coachName} has set up your NorCoach account.`,
     "",
     `Sign in at ${signInUrl}`,
     `Email: ${to}`,
@@ -74,8 +74,8 @@ export function inviteEmail({ to, firstName, coachName, password, signInUrl }: {
     "The app asks you to choose your own password the first time you sign in.",
   ].join("\n");
   const html = `<p>Hi ${escape(firstName)},</p>
-<p>${escape(coachName)} has set up your Ironline account.</p>
-<p><a href="${escape(signInUrl)}">Sign in to Ironline</a><br>
+<p>${escape(coachName)} has set up your NorCoach account.</p>
+<p><a href="${escape(signInUrl)}">Sign in to NorCoach</a><br>
 Email: <b>${escape(to)}</b><br>
 Temporary password: <b style="letter-spacing:0.04em">${escape(password)}</b></p>
 <p>The app asks you to choose your own password the first time you sign in.</p>`;
@@ -93,9 +93,9 @@ export async function sendInviteEmail({ coachEmail, ...details }: { to: string; 
 export async function sendCoachApprovedEmail({ to, name, signInUrl }: { to: string; name: string; signInUrl: string }): Promise<boolean> {
   if (!mailConfigured()) return false;
   const first = name.split(" ")[0] || name;
-  const text = [`Hi ${first},`, "", "Your Ironline coach account is ready.", "", `Sign in: ${signInUrl}`].join("\n");
+  const text = [`Hi ${first},`, "", "Your NorCoach coach account is ready.", "", `Sign in: ${signInUrl}`].join("\n");
   const html = `<p>Hi ${escape(first)},</p>
-<p>Your Ironline coach account is ready.</p>
-<p><a href="${escape(signInUrl)}">Sign in to Ironline</a></p>`;
-  return send(to, "You're in: your Ironline coach account", text, html, "coach approved", { fromName: "Ironline" });
+<p>Your NorCoach coach account is ready.</p>
+<p><a href="${escape(signInUrl)}">Sign in to NorCoach</a></p>`;
+  return send(to, "You're in: your NorCoach coach account", text, html, "coach approved", { fromName: "NorCoach" });
 }

@@ -6,7 +6,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { clerkOn } from "./lib/clerk";
 
 export const metadata: Metadata = {
-  title: "Ironline",
+  title: "NorCoach",
   description: "Coach + client core loop prototype",
   // "Add to Home Screen" support: the manifest (app/manifest.ts) carries the
   // name, icons and standalone display for Android/Chrome; iOS ignores most
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "Ironline",
+    title: "NorCoach",
     statusBarStyle: "default",
   },
 };
@@ -49,7 +49,7 @@ const bricolage = localFont({
   variable: "--font-bricolage",
   display: "swap",
 });
-// Kirana: the "Ironline" wordmark at the top left of the client app.
+// Kirana: the "NorCoach" wordmark at the top left of the client app.
 const kirana = localFont({
   src: "./fonts/Kirana-Regular.ttf",
   variable: "--font-brand",

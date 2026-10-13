@@ -5,8 +5,9 @@ import { markNotificationReadAction } from "../lib/actions";
 import VideoReplySheet, { type VideoReplyView } from "./VideoReplySheet";
 import PhaseCards, { type HomePhase, type PhaseFoodToday } from "./PhaseCards";
 import ProgressPicsCard, { type ProgressPics } from "./ProgressPicsCard";
-import HomeLifestyleCard, { type HomeLifestyleMetric } from "./HomeLifestyleCard";
+import type { CheckInForm } from "./CheckInDialog";
 import EventsCard, { type HomeEvents } from "./EventsCard";
+import type { CardCovers } from "./CardPictureSheet";
 import { ChevronDownIcon } from "../components/icons";
 import { tzShort } from "../lib/timezones";
 import type { LinkView } from "../lib/messageLinks";
@@ -103,12 +104,18 @@ export default function HomeHub({
   weekDone,
   today,
   food,
-  checkInCard,
+  checkInForm = null,
   events,
   trainedToday,
   todayNext = null,
   planGap = null,
+  clientId = 0,
+  cardCovers = {},
 }: {
+  /** Whose Home this is; the redesign mock-ups pass none. */
+  clientId?: number;
+  /** The client's own card pictures (12 Oct), a track at a time. */
+  cardCovers?: CardCovers;
   /** With nothing to do: the next thing, "Next week starts Mon 13 Oct"; null, nothing to say. */
   todayNext?: string | null;
   /** No phase live on training or nutrition: what is next, if anything is scheduled. */
@@ -128,8 +135,8 @@ export default function HomeHub({
   hello?: string;
   /** The check-in as the screen shows it, for the lifestyle card. */
   checkInCount: { done: number; total: number } | null;
-  /** Home's lifestyle card: today's daily metrics, logged in place (HomeLifestyleCard). */
-  checkInCard: { clientId: number; metrics: HomeLifestyleMetric[]; yesterday: HomeLifestyleMetric[] } | null;
+  /** Today's check-in lines (13 Oct): the lifestyle card's Log opens them in a pop-up. */
+  checkInForm?: CheckInForm | null;
   /** No session left this week: when the next one starts. */
   weekDone: { nextWeekLabel: string } | null;
   /** A session was ended today. */
@@ -141,6 +148,14 @@ export default function HomeHub({
 }) {
   const lifestyle = phases.find((p) => p.track === "lifestyle") ?? null;
   const plan = phases.filter((p) => p.track !== "lifestyle");
+  const hasCheckIns = !!checkInForm && checkInForm.sections.some((s) => s.metrics.length > 0);
+  // The cards (13 Oct): lifestyle first, as a picture card like the others
+  // (a plain "Check-in" card when there are lines to log but no phase), then
+  // training and nutrition.
+  const cards: HomePhase[] = [
+    ...(lifestyle ? [lifestyle] : hasCheckIns ? [{ id: -1, track: "lifestyle" as const, name: "Check-in", start: today, end: null, coverUrl: "/img/lifestyle-bottle.jpg", objectives: [], note: null, next: null }] : []),
+    ...plan,
+  ];
   // What is still to do today, counted the way the cards under it show it.
   const foodDone = !!food && ((!!food.mealsTotal && (food.mealsLogged ?? 0) >= food.mealsTotal) || (!!food.target && food.eaten >= food.target * 0.9));
   const todoItems = [
@@ -157,14 +172,23 @@ export default function HomeHub({
             empty. The cards below say what is due; Today speaks only when
             nothing is, so the top of the page still says something true. */}
         {todoItems.length === 0 && <TodayCard next={todayNext} coachName={coach.firstName} hasPlan={plan.length > 0} nextPhaseStart={planGap?.next?.start ?? null} />}
-        {/* Lifestyle first (29 Sep): a white card with the ring and one metric at a time, only with a live phase and daily metrics. */}
-        {checkInCard && checkInCard.metrics.length > 0 && <HomeLifestyleCard clientId={checkInCard.clientId} today={today} phase={lifestyle} coachName={coach.firstName} metrics={checkInCard.metrics} yesterday={checkInCard.yesterday} />}
-        {/* "Your plan": training and nutrition, a card a live phase, each with its one thing to do. */}
-        {plan.length > 0 ? (
-          <PhaseCards phases={plan} coachName={coach.firstName} today={today} nextSession={session ? { dayId: session.dayId, name: session.name, live: !!session.live } : null} food={food} weekDone={weekDone} checkInCount={checkInCount} />
-        ) : (
-          <PlanGapCard gap={planGap ?? { next: null }} coachName={coach.firstName} />
+        {/* "Your plan" (12 Oct): one swipe, lifestyle → training → nutrition, every card the same size.
+            The lifestyle card's Log opens today's check-in in a pop-up (13 Oct); the card itself opens the screen. */}
+        {cards.length > 0 && (
+          <PhaseCards
+            phases={cards}
+            coachName={coach.firstName}
+            today={today}
+            nextSession={session ? { dayId: session.dayId, name: session.name, live: !!session.live } : null}
+            food={food}
+            weekDone={weekDone}
+            checkInCount={checkInCount}
+            checkIn={hasCheckIns ? checkInForm : null}
+            clientId={clientId}
+            ownCovers={cardCovers}
+          />
         )}
+        {plan.length === 0 && <PlanGapCard gap={planGap ?? { next: null }} coachName={coach.firstName} />}
         {progressPics && <TodaysTasks pics={progressPics} />}
         {/* What is coming up in their life (7 Oct): a trip, an injury, something started. Theirs to add; the coach's listed too. Above the coach's latest (9 Oct). */}
         <EventsCard events={events} coachName={coach.firstName} today={today} />

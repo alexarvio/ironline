@@ -6592,6 +6592,8 @@ export type CheckInMetric = {
   loggedAt: string | null;
   // When in the day it is asked for (metricAskAt); measurements: the morning.
   askAt?: MetricAskAt;
+  /** The metric's group (METRIC_GROUPS key), for its colour on the check-in pop-up (13 Oct). */
+  category?: string;
 };
 
 export type CheckInSection = {
@@ -6803,6 +6805,7 @@ function checkInTrackerSection(
         last: previous?.value != null ? { value: previous.value, period: previous.period } : null,
         loggedAt: current?.logged_at ?? null,
         askAt: metricAskAt(def),
+        category: def.category,
       };
     }),
   };
@@ -6836,6 +6839,7 @@ function checkInMeasureSection(clientId: number, date: string, onlyIfLogged = fa
         scaleMax: null,
         last: previous != null ? { value: previous, period: previousDate! } : null,
         loggedAt: values.find((v) => v.field_id === f.id && v.date === date)?.logged_at ?? null,
+        category: "measurements",
       };
     }),
   };
@@ -7025,7 +7029,7 @@ export function logCoachActivity(
   if (opts.kind !== "reminder" && worthABuzz) {
     const user = data.users.find((u) => u.role === "client" && u.client_id === clientId);
     if (user) {
-      // The phone shows "Ironline" and the icon above this already, so the
+      // The phone shows "NorCoach" and the icon above this already, so the
       // title says what kind of news it is and the body what happened.
       const coach = getCoachDisplayName(clientId);
       const title =
@@ -10207,6 +10211,52 @@ export function setClientGoalStart(id: number, startDate: string) {
 }
 
 // ---- Client avatar: set by the client, shown to the coach everywhere ------
+
+/** The client's own Home card pictures (12 Oct), by track. */
+export function getClientCardCovers(clientId: number): Partial<Record<PhaseTrack, string>> {
+  return getData().clients.find((c) => c.id === clientId)?.card_covers ?? {};
+}
+
+/** An uploaded card picture of the client's own. Returns the old path, for the storage bucket. */
+export function saveClientCardCover(clientId: number, track: PhaseTrack, buffer: Buffer, mimeType: string): { saved: string; previous: string | null } | null {
+  const client = getData().clients.find((c) => c.id === clientId);
+  if (!client) return null;
+  const ext = (mimeType.split("/")[1] || "jpg").replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "jpg";
+  const dir = path.join(DATA_DIR, "uploads", "covers", String(clientId));
+  fs.mkdirSync(dir, { recursive: true });
+  const filename = `${track}.${ext}`;
+  fs.writeFileSync(path.join(dir, filename), buffer);
+  const previous = client.card_covers?.[track] ?? null;
+  const prevFile = previous?.split("?")[0].split("/").pop();
+  if (prevFile && prevFile !== filename) {
+    try {
+      fs.unlinkSync(path.join(dir, prevFile));
+    } catch {
+      /* already gone */
+    }
+  }
+  const saved = `/uploads/covers/${clientId}/${filename}?v=${Date.now()}`;
+  client.card_covers = { ...(client.card_covers ?? {}), [track]: saved };
+  persist();
+  return { saved, previous };
+}
+
+/** Back to the coach's picture. Returns the path removed, for the storage bucket. */
+export function clearClientCardCover(clientId: number, track: PhaseTrack): string | null {
+  const client = getData().clients.find((c) => c.id === clientId);
+  const previous = client?.card_covers?.[track] ?? null;
+  if (!client || !previous) return null;
+  const rest = { ...client.card_covers };
+  delete rest[track];
+  client.card_covers = Object.keys(rest).length ? rest : undefined;
+  persist();
+  try {
+    fs.unlinkSync(path.join(DATA_DIR, previous.split("?")[0].slice(1)));
+  } catch {
+    /* already gone */
+  }
+  return previous;
+}
 
 export function saveClientAvatar(clientId: number, buffer: Buffer, mimeType: string): string {
   const client = getData().clients.find((c) => c.id === clientId);

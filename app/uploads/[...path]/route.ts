@@ -51,6 +51,7 @@ export async function GET(
   //   uploads/meals/<clientId>/<date>/<meal>.<ext>
   //   uploads/videos/<clientId>/<requestId>-<stamp>.<ext>
   //   uploads/phases/<clientId>/<phaseId>.<ext>
+  //   uploads/covers/<clientId>/<track>.<ext>   the client's own Home card pictures (12 Oct)
   // Progress photos are about as sensitive as this app gets, and without
   // this check anyone who guessed or was sent a URL could fetch any
   // client's. 404 rather than 403 for an unauthorized caller, since a
@@ -83,7 +84,7 @@ export async function GET(
   } else {
     // uploads/avatars/<clientId>/avatar.<ext>: the client's profile photo,
     // per-client and checked like the rest.
-    if (kind !== "progress" && kind !== "chat" && kind !== "demos" && kind !== "avatars" && kind !== "meals" && kind !== "videos" && kind !== "phases") {
+    if (kind !== "progress" && kind !== "chat" && kind !== "demos" && kind !== "avatars" && kind !== "meals" && kind !== "videos" && kind !== "phases" && kind !== "covers") {
       return new Response("Not found", { status: 404 });
     }
     const clientId = Number(clientIdRaw);

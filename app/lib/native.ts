@@ -26,7 +26,7 @@ export function nativePlatform(): NativePlatform | null {
 /** Calls a native plugin method; throws outside the app. */
 export function callNative<T>(plugin: string, method: string, options?: object): Promise<T> {
   const c = nativeApp();
-  if (!c?.nativePromise) return Promise.reject(new Error("Not in the Ironline app"));
+  if (!c?.nativePromise) return Promise.reject(new Error("Not in the NorCoach app"));
   return c.nativePromise(plugin, method, options) as Promise<T>;
 }
 

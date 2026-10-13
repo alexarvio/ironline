@@ -1,4 +1,4 @@
-# Ironline UI guidelines
+# NorCoach UI guidelines
 
 How the app looks, so a new screen matches the ones already there without discussion.
 
@@ -17,7 +17,7 @@ rest catches up screen by screen.** §10 lists what each screen still needs.
 | Role | Face | Where |
 |---|---|---|
 | Everything | **Archivo** 400–800 | body, tables, buttons, pills, inputs, labels, **and every figure** |
-| Wordmark | **Kirana** (`--font-brand`, local) | "IRONLINE" in the client top bar, uppercase, 17–18px |
+| Wordmark | **Kirana** (`--font-brand`, local) | "NORCOACH" in the client top bar, uppercase, 17–18px |
 | Display lines | **Newsreader** 500–600 | a dialog title, and the client app's display lines (the "Hello, *Name*." greeting) |
 
 **Numbers are Archivo, 700, tabular** (changed 20 Sep 2026). Newsreader was the face for a big
@@ -179,7 +179,7 @@ decide which variant a part gets.
 
 Every client tab opens the same way:
 
-1. The fixed top bar (burger · IRONLINE · bell), off-white with Navy, see-through over a banner
+1. The fixed top bar (burger · NORCOACH · bell), off-white with Navy, see-through over a banner
    until the page scrolls.
 2. A full-bleed banner holding the tab's one big fact: a Label eyebrow, a Display line, and a
    progress line where there is one. Side padding 22, bottom 58, top `calc(var(--topbar-h) + 2px)`.

@@ -1,5 +1,6 @@
 "use client";
 
+import { coverJpeg } from "../lib/coverJpeg";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
@@ -672,32 +673,6 @@ function PhaseObjectivesField({ value, onChange }: { value: string[]; onChange: 
       <small className="pl-hint">Shown on the client&rsquo;s Home, in this order.</small>
     </div>
   );
-}
-
-// Cut to the carousel card's 3:4 (900×1200) in the browser, so what goes up
-// is small and already the right shape.
-async function coverJpeg(file: File): Promise<Blob | null> {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise<HTMLImageElement>((ok, fail) => {
-      const i = new Image();
-      i.onload = () => ok(i);
-      i.onerror = fail;
-      i.src = url;
-    });
-    const W = 900, H = 1200;
-    const scale = Math.max(W / img.naturalWidth, H / img.naturalHeight);
-    const w = img.naturalWidth * scale, h = img.naturalHeight * scale;
-    const canvas = document.createElement("canvas");
-    canvas.width = W;
-    canvas.height = H;
-    canvas.getContext("2d")!.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
-    return await new Promise((ok) => canvas.toBlob(ok, "image/jpeg", 0.85));
-  } catch {
-    return null;
-  } finally {
-    URL.revokeObjectURL(url);
-  }
 }
 
 // The picture on the client's Home card: an upload, one of the stock ones,

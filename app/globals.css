@@ -17234,7 +17234,7 @@ button.ci-hint { cursor: pointer; }
    the Android keyboard, which shortens the screen without making it wide. */
 @media (orientation: landscape) and (max-height: 500px) and (min-aspect-ratio: 3/2) {
   .phone-frame::after {
-    content: "Turn your phone upright to use Ironline";
+    content: "Turn your phone upright to use NorCoach";
     position: fixed; inset: 0; z-index: 10000;
     display: flex; align-items: center; justify-content: center; padding: 24px;
     background: #F4F7FC; color: #141a24;
@@ -18445,6 +18445,54 @@ button.ci-hint { cursor: pointer; }
 .mrv-pal i { width: 22px; height: 22px; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25); }
 .mrv-pal.on i { box-shadow: 0 0 0 3px rgba(14, 17, 24, 0.95), 0 0 0 5px #fff; }
 
+/* ---- Home · the client's own card pictures (12 Oct) ----------------------
+   Press and hold a card (no save-image menu from the phone, no text
+   selection) and a sheet comes up from the foot: the picture as it is,
+   Choose from your photos, Use {coach}'s picture. Settings · Card pictures
+   lists a row a track and opens the same sheet. */
+.pc-card, .pc-lead { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.pc-lead input, .pc-lead textarea { -webkit-user-select: text; user-select: text; }
+.cv-scrim { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; background: rgba(8, 15, 35, 0.45); animation: cv-fade 0.18s ease-out; }
+.cv-sheet { width: 100%; max-width: 480px; box-sizing: border-box; padding: 10px 20px calc(20px + env(safe-area-inset-bottom, 0px)); border-radius: 26px 26px 0 0; background: #fff; color: #313851; font-family: var(--font-archivo), "Archivo", -apple-system, BlinkMacSystemFont, sans-serif; animation: cv-rise 0.26s cubic-bezier(0.22, 1, 0.36, 1); }
+.cv-sheet.busy { pointer-events: none; }
+.cv-grab { display: block; width: 40px; height: 4px; margin: 0 auto 16px; border-radius: 99px; background: #dfe3e8; }
+.cv-head { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.cv-thumb { flex: none; width: 72px; height: 96px; border-radius: 14px; overflow: hidden; background: linear-gradient(180deg, #0b0f16 0%, #1e3a6e 100%); }
+.cv-thumb img, .cv-row-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.cv-head-text { min-width: 0; }
+.cv-title { margin: 0; font-size: 20px; font-weight: 700; color: #141a24; }
+.cv-sub { margin: 4px 0 0; font-size: 13.5px; line-height: 1.4; color: #5b6474; }
+.cv-actions { display: flex; flex-direction: column; gap: 8px; }
+.cv-btn { width: 100%; height: 52px; border: 1.5px solid #dfe3e8; border-radius: 16px; background: #fff; color: #1e3a6e; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+.cv-btn.primary { border-color: #1e3a6e; background: #1e3a6e; color: #fff; }
+.cv-btn.plain { border-color: transparent; color: #5b6474; font-weight: 600; }
+.cv-btn:disabled { opacity: 0.6; cursor: default; }
+@keyframes cv-fade { from { opacity: 0; } }
+@keyframes cv-rise { from { transform: translateY(40px); opacity: 0; } }
+/* Settings · Card pictures: the row is a button, the small picture on its left. */
+.cv-row { width: 100%; gap: 12px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.cv-row .home-dark-row-body { flex: 1; min-width: 0; }
+.cv-row-thumb { flex: none; width: 40px; height: 52px; border-radius: 10px; overflow: hidden; background: linear-gradient(180deg, #0b0f16 0%, #1e3a6e 100%); }
+
+/* ---- Workout · sets log themselves (13 Oct) --------------------------------
+   Every working set is a row of boxes, last session's numbers in them. A
+   box left (tap away, Next, Done, Enter) logs the row; the set number is a
+   button that logs it as shown. Logged rows go green and stay editable. */
+button.ts-circle { padding: 0; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+button.ts-circle:disabled { cursor: default; }
+button.ts-circle:focus-visible { outline: 2px solid #2f5d8f; outline-offset: 2px; }
+.ts-set.todo, .ts-set.logged { padding: 6px 0; }
+.ts-set.todo .ts-input, .ts-set.logged .ts-input { border: 0; border-bottom: 2px solid #d5dce6; border-radius: 8px 8px 0 0; }
+.ts-set.todo .ts-input.reps:placeholder-shown { border-bottom-color: #1e3a6e; animation: ts-line-pulse 1.6s ease-in-out infinite; }
+.ts-set.logged .ts-input { color: #2f7a3f; border-bottom-color: rgba(47, 122, 63, 0.35); }
+.ts-set.todo .ts-input:focus, .ts-set.logged .ts-input:focus { border-bottom-color: #1e3a6e; animation: none; }
+.ts-set.saving .ts-input { opacity: 0.55; }
+.ts-set.saving .ts-circle { opacity: 0.6; }
+@media (prefers-reduced-motion: reduce) { .ts-set.todo .ts-input.reps:placeholder-shown { animation: none; } }
+/* The demo, where Log was: the same navy block, a play mark and plain words. */
+.ts-demo { display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; line-height: 48px; }
+.ts-demo svg { width: 18px; height: 18px; }
+
 /* ---- Workout · the gym pop-up (13 Oct, "Gym rows") -----------------------
    Centred over the dimmed overview. Rows with a coloured initials badge,
    the selected one tinted and ringed in its colour; the top of the card
@@ -18625,11 +18673,108 @@ button.ci-hint { cursor: pointer; }
 .lw-row-r { min-width: 3ch; text-align: left; }
 .lw-row-rpe { min-width: 6ch; text-align: right; }
 
-/* The open set title (13 Oct): small caps again; making it a button had reset its font. */
-.lw-open-title { font-family: inherit; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; line-height: 1; }
+/* ---- The check-in pop-up, "Rows" (13 Oct) --------------------------------
+   The gym pop-up's language: a centred card over the blurred screen, a sand
+   glow at the top, bordered rows, one navy button. A header with a ring
+   (one segment a metric, its group's colour once filled), the rows by
+   frequency, the note to the coach, and Save at the foot. Colour appears
+   only on what is filled. */
+.cki-card { position: relative; display: flex; flex-direction: column; width: 100%; max-width: 440px; max-height: calc(100dvh - 72px); border-radius: 30px; background: #fff; overflow: hidden; box-shadow: 0 40px 70px -24px rgba(0, 0, 0, 0.6); animation: gpk-pop 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); font-family: var(--font-archivo), "Archivo", -apple-system, BlinkMacSystemFont, sans-serif; color: #141a24; }
+.cki-card.closing { animation: gpk-pop 0.18s ease-in reverse forwards; }
+.cki-glow { position: absolute; right: -120px; top: -170px; width: 300px; height: 300px; border-radius: 50%; background: radial-gradient(circle, rgba(168, 118, 31, 0.3), transparent 68%); pointer-events: none; }
+.cki-wash { position: absolute; left: 0; right: 0; top: 0; height: 130px; background: linear-gradient(180deg, rgba(168, 118, 31, 0.1), transparent); pointer-events: none; }
+.cki-head { position: relative; flex: none; display: flex; align-items: flex-start; gap: 12px; padding: 20px 18px 12px; }
+.cki-ring { position: relative; flex: none; width: 52px; height: 52px; border-radius: 50%; transition: background 0.3s; }
+.cki-ring::after { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: #fff; }
+.cki-ring-in { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+.cki-ring-in b { font-size: 16px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.cki-ring-in small { margin-top: 1px; font-size: 9px; font-weight: 800; color: #8b93a1; }
+.cki-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.cki-eyebrow { font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #8a5f16; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cki-title { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
+.cki-sub { margin: 0; font-size: 13px; font-weight: 600; color: #5b6474; }
+.cki-sub.done { color: #2f7a3f; }
+.cki-body { position: relative; flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 0 18px 12px; overscroll-behavior: contain; }
+.cki-group-label { padding: 8px 2px 2px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #8b93a1; }
+.cki-row { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 18px; background: #fff; box-shadow: inset 0 0 0 1px #E3E8F0; transition: background 0.2s, box-shadow 0.2s; }
+.cki-row.filled { background: rgba(var(--c-rgb), 0.06); box-shadow: inset 0 0 0 1.5px rgba(var(--c-rgb), 0.35); }
+.cki-row-top { display: flex; align-items: center; gap: 12px; }
+.cki-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.cki-row-name { font-size: 15.5px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cki-row-last { font-size: 12px; font-weight: 600; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cki-num { flex: none; display: flex; align-items: center; gap: 4px; width: 100px; height: 46px; box-sizing: border-box; padding: 0 12px; border-radius: 14px; background: #F4F6FA; transition: box-shadow 0.2s; }
+.cki-row.filled .cki-num { box-shadow: inset 0 0 0 1.5px var(--c); }
+.cki-num.bad { box-shadow: inset 0 0 0 1.5px #B42318; }
+.cki-num input { flex: 1; min-width: 0; width: 100%; text-align: right; border: 0; background: none; font: inherit; font-size: 20px; font-weight: 800; color: #141a24; font-variant-numeric: tabular-nums; outline: none; }
+.cki-num input::placeholder { color: #AEB6C2; font-weight: 800; }
+.cki-unit { flex: none; font-size: 12.5px; font-weight: 800; color: #8b93a1; }
+.cki-error { font-size: 12px; font-weight: 700; color: #B42318; }
+.cki-scale { position: relative; display: flex; height: 44px; border-radius: 14px; background: #F4F6FA; overflow: hidden; touch-action: pan-y; -webkit-user-select: none; user-select: none; }
+.cki-scale-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 14px; background: linear-gradient(90deg, rgba(var(--c-rgb), 0.35), var(--c)); transition: width 0.25s; pointer-events: none; }
+.cki-scale button { position: relative; flex: 1; min-width: 0; height: 44px; padding: 0; border: 0; background: none; font: inherit; font-size: 14px; font-weight: 800; color: #5b6474; cursor: pointer; transition: color 0.15s; }
+.cki-scale button.in { color: #fff; }
+.cki-note-box { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border-radius: 18px; background: #F4F6FA; transition: box-shadow 0.2s; }
+.cki-note-box.has { box-shadow: inset 0 0 0 1.5px #1d3466; }
+.cki-avatar { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg, #2a3a5c, #141a24); color: #fff; font-size: 12px; font-weight: 800; }
+.cki-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.cki-note-box textarea { flex: 1; min-width: 0; height: 56px; resize: none; border: 0; background: none; font: inherit; font-size: 14px; font-weight: 500; line-height: 1.45; color: #141a24; outline: none; }
+.cki-note-box textarea::placeholder { color: #98A2B3; }
+.cki-foot { flex: none; display: flex; flex-direction: column; gap: 8px; padding: 12px 18px 18px; border-top: 1px solid #EEF1F5; }
+.cki-save { display: flex; align-items: center; justify-content: center; gap: 10px; height: 56px; border: 0; border-radius: 17px; background: #1d3466; color: #fff; font: inherit; font-size: 15.5px; font-weight: 800; cursor: pointer; box-shadow: 0 14px 24px -12px rgba(29, 52, 102, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.2); transition: background 0.2s, box-shadow 0.2s; }
+.cki-save:disabled { background: rgba(29, 52, 102, 0.32); box-shadow: none; cursor: default; }
+.cki-spin { width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid rgba(255, 255, 255, 0.35); border-top-color: #fff; animation: cki-spin 0.8s linear infinite; }
+@keyframes cki-spin { to { transform: rotate(360deg); } }
+.cki-footnote { margin: 0; text-align: center; font-size: 12px; font-weight: 600; color: #8b93a1; }
+.cki-confirm { display: flex; gap: 8px; }
+.cki-confirm-text { flex: 1; align-self: center; font-size: 13px; font-weight: 700; color: #141a24; }
+.cki-confirm button { height: 40px; padding: 0 14px; border: 0; border-radius: 12px; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+.cki-confirm .keep { background: #F2F4F7; color: #141a24; }
+.cki-confirm .discard { background: #B42318; color: #fff; }
+.cki-toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); z-index: 80; transform: translateX(-50%); display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 999px; background: #141a24; color: #fff; font-size: 13px; font-weight: 700; white-space: nowrap; box-shadow: 0 12px 24px -12px rgba(0, 0, 0, 0.6); animation: gpk-fade 0.2s ease-out; }
+@media (prefers-reduced-motion: reduce) { .cki-card, .cki-card.closing, .cki-toast { animation: gpk-fade 0.15s ease-out; } }
 
-/* KG / LBS sits in the open set's header (13 Oct): the exercise's unit, every saved set records it. */
-.lw-open-head .lw-unit { margin-left: auto; padding: 2px; }
-.lw-open-head .lw-unit-btn { height: 26px; padding: 0 10px; font-size: 12px; }
-.lw-open-head .lw-remove { margin-left: auto; margin-right: 8px; }
-.lw-open-head .lw-remove + .lw-unit { margin-left: 0; }
+/* The pop-up's rows breathe, filled is green, the number floats with its unit in a fixed slot so every figure lines up (13 Oct, Alex). */
+.cki-rows { display: flex; flex-direction: column; gap: 10px; }
+.cki-group + .cki-group { margin-top: 2px; }
+.cki-num { width: auto; min-width: 96px; justify-content: flex-end; padding: 0; background: none; box-shadow: none; }
+.cki-row.filled .cki-num { box-shadow: none; }
+.cki-num.bad input { text-decoration: underline; text-decoration-color: #B42318; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+.cki-num input { font-size: 22px; }
+.cki-unit { display: inline-block; width: 26px; text-align: left; }
+
+/* The number box is a fixed 96px (13 Oct): the input had taken its default width and squeezed the names to "Wei…". */
+.cki-num { flex: none; width: 96px; min-width: 0; }
+.cki-num input { flex: 1 1 0; width: 0; min-width: 0; }
+
+/* ---- The bottom nav floats (13 Oct, Alex, after Hevy): a translucent
+   dark pill inset from the edges and lifted off the bottom, the content
+   scrolling under it; icon over a small label, the tab you are on in a
+   lighter pill. Pushed screens (z-index 5) still cover it. */
+.app-layer-main .app-bottom-nav.dark { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); transform: translateX(-50%); z-index: 4; width: auto; padding: 6px; gap: 2px; border: 1px solid rgba(255, 255, 255, 0.14); border-top-color: rgba(255, 255, 255, 0.2); border-radius: 999px; background: rgba(18, 19, 43, 0.74); -webkit-backdrop-filter: blur(18px) saturate(150%); backdrop-filter: blur(18px) saturate(150%); box-shadow: 0 18px 40px -14px rgba(10, 12, 30, 0.6); }
+.app-bottom-nav.dark .app-tab-btn { flex: none; flex-direction: column; justify-content: center; gap: 3px; width: 66px; height: 56px; padding: 0; border-radius: 999px; color: rgba(255, 255, 255, 0.72); transition: background 0.2s, color 0.2s; }
+.app-bottom-nav.dark .app-tab-btn:hover { background: rgba(255, 255, 255, 0.08); }
+.app-bottom-nav.dark .app-tab-btn.active { background: rgba(255, 255, 255, 0.16); color: #fff; }
+.app-tab-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.01em; line-height: 1; white-space: nowrap; }
+.app-bottom-nav.dark .app-tab-badge { top: 8px; right: 16px; border-color: #12132B; }
+.app-layer-main .app-content { padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px)); }
+.app-layer-main .app-sticky-footer { padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+.app-chat-return { bottom: calc(100% + 10px); }
+
+/* Frosted (13 Oct, Alex): the floating nav is see-through glass, the page blurring through it. */
+.app-layer-main .app-bottom-nav.dark { background: rgba(255, 255, 255, 0.55); border: 1px solid rgba(255, 255, 255, 0.75); -webkit-backdrop-filter: blur(22px) saturate(170%); backdrop-filter: blur(22px) saturate(170%); box-shadow: 0 14px 34px -14px rgba(18, 19, 43, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.8); }
+.app-bottom-nav.dark .app-tab-btn { color: rgba(18, 19, 43, 0.6); }
+.app-bottom-nav.dark .app-tab-btn:hover { background: rgba(18, 19, 43, 0.06); }
+.app-bottom-nav.dark .app-tab-btn.active { background: rgba(18, 19, 43, 0.1); color: #12132B; }
+.app-bottom-nav.dark .app-tab-badge { border-color: rgba(255, 255, 255, 0.9); }
+
+/* More glass than white (13 Oct): a quarter-opaque wash over a heavy blur, so what scrolls under it shows through. */
+.app-layer-main .app-bottom-nav.dark { background: rgba(255, 255, 255, 0.28); border-color: rgba(255, 255, 255, 0.55); -webkit-backdrop-filter: blur(26px) saturate(180%); backdrop-filter: blur(26px) saturate(180%); box-shadow: 0 14px 34px -14px rgba(18, 19, 43, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.6); }
+.app-bottom-nav.dark .app-tab-btn.active { background: rgba(18, 19, 43, 0.12); }
+
+/* A tad lighter still (13 Oct). */
+.app-layer-main .app-bottom-nav.dark { background: rgba(255, 255, 255, 0.16); border-color: rgba(255, 255, 255, 0.45); }
+
+/* No pill behind the tab you are on (13 Oct): its icon and label simply read in ink, the rest in grey. */
+.app-bottom-nav.dark .app-tab-btn.active, .app-bottom-nav.dark .app-tab-btn:hover { background: none; }
+.app-bottom-nav.dark .app-tab-btn.active { color: #12132B; }
+.app-bottom-nav.dark .app-tab-btn.active .app-tab-label { font-weight: 800; }

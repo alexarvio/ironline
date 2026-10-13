@@ -16,7 +16,7 @@ export default function HomeStateScreen({ props }: { props: HomeProps }) {
             <button type="button" className="app-header-icon-btn" aria-label="Menu">
               <MenuIcon />
             </button>
-            <span className="app-header-brand">Ironline</span>
+            <span className="app-header-brand">NorCoach</span>
             <div className="app-header-actions">
               <button type="button" className="app-header-icon-btn" aria-label="Notifications">
                 <BellIcon />

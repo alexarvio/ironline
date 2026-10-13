@@ -8,7 +8,7 @@
 @source "./";
 @source "../../admin";
 
-/* shadcn's colour names, mapped onto Ironline's design system
+/* shadcn's colour names, mapped onto NorCoach's design system
    (docs/UI-GUIDELINES.md): one navy, ink text, the tint for hover. */
 @theme inline {
   --color-background: #ffffff;

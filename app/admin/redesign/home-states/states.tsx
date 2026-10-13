@@ -24,7 +24,6 @@ const base = {
   hello: "Good morning",
   today: TODAY,
   recap: null,
-  checkInCard: null,
 };
 
 export function homeProps(state: StateId): HomeProps {
@@ -74,17 +73,6 @@ export function homeProps(state: StateId): HomeProps {
       { id: 2, track: "nutrition", name: "Lean bulk", start: "2026-09-07", end: "2026-10-11", coverUrl: "/img/nutrition-head.jpg", objectives: ["2,800 kcal a day", "180 g protein"], note: null, next: { name: "Lean bulk 2", start: "2026-10-12" } },
       { id: 3, track: "lifestyle", name: "Sleep and steps", start: "2026-09-07", end: "2026-10-11", coverUrl: "/img/lifestyle-head.jpg", objectives: ["8 hours a night", "10,000 steps"], note: null, next: { name: "Sleep and steps 2", start: "2026-10-12" } },
     ],
-    // The lifestyle card: today's daily metrics, one logged of four.
-    checkInCard: {
-      clientId: 0,
-      metrics: [
-        { id: "weight", name: "Weight", unit: "kg", precision: 1, kind: "number", today: 83.4, last: { value: 83.6, date: "2026-10-07" }, locked: false },
-        { id: "sleep", name: "Hours of sleep", unit: "h", precision: 1, kind: "number", today: null, last: { value: 7.5, date: "2026-10-07" }, locked: false },
-        { id: "energy", name: "Morning energy", unit: "/ 10", precision: 0, kind: "scale", scale: { min: 1, max: 10 }, today: null, last: { value: 7, date: "2026-10-07" }, locked: false },
-        { id: "steps", name: "Steps", unit: "", precision: 0, kind: "number", today: null, last: { value: 9200, date: "2026-10-07" }, locked: false },
-      ],
-      yesterday: [],
-    },
     checkInCount: { done: 1, total: 4 },
     weekDone: null,
     trainedToday: false,

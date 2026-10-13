@@ -437,7 +437,7 @@ export default function AppShell({
             <button type="button" className="app-header-icon-btn" onClick={() => setMenuOpen(true)} aria-label="Menu" aria-expanded={menuOpen}>
               <MenuIcon />
             </button>
-            <span className="app-header-brand">Ironline</span>
+            <span className="app-header-brand">NorCoach</span>
             <div className="app-header-actions">
               <button type="button" className="app-header-icon-btn" onClick={() => setPushView("notifications")} aria-label="Notifications">
                 <BellIcon />
@@ -524,9 +524,10 @@ export default function AppShell({
                   setFocusRef(null);
                 }}
               >
-                <span className="app-tab-icon" aria-label={t.label}>
+                <span className="app-tab-icon" aria-hidden="true">
                   {t.icon}
                 </span>
+                <span className="app-tab-label">{t.label}</span>
               </button>
             ))}
             {/* The chat, fourth (7 Oct): it opens over the tab underneath and
@@ -535,6 +536,7 @@ export default function AppShell({
               <span className="app-tab-icon" aria-label={`Messages with ${coachMessages.coachName}`}>
                 <ChatIcon />
               </span>
+              <span className="app-tab-label">Chat</span>
               {chatUnread && pushView !== "messages" && <span className="app-tab-badge" aria-hidden="true" />}
             </button>
           </nav>
@@ -548,7 +550,7 @@ export default function AppShell({
               <button type="button" className="app-menu-scrim" onClick={() => setMenuOpen(false)} aria-label="Close menu" />
               <nav className="app-menu" aria-label="Menu">
                 <div className="app-menu-head">
-                  <span className="app-header-brand app-menu-brand">Ironline</span>
+                  <span className="app-header-brand app-menu-brand">NorCoach</span>
                   {/* The coach's business, hardcoded like the rail and the Settings
                       footnote until the coach profile carries it. */}
                   <span className="app-menu-name">Full Potential Coaching</span>
@@ -587,7 +589,7 @@ export default function AppShell({
                   {helpEmail && (
                     <a
                       className="app-menu-item app-menu-item-link"
-                      href={`mailto:${helpEmail}?subject=${encodeURIComponent("Ironline app")}`}
+                      href={`mailto:${helpEmail}?subject=${encodeURIComponent("NorCoach app")}`}
                       onClick={() => setMenuOpen(false)}
                     >
                       <span className="app-menu-ico">
@@ -606,7 +608,7 @@ export default function AppShell({
                       Log out
                     </button>
                   </form>
-                  <span className="app-menu-footnote">Ironline · Full Potential Coaching</span>
+                  <span className="app-menu-footnote">NorCoach · Full Potential Coaching</span>
                 </div>
               </nav>
             </>

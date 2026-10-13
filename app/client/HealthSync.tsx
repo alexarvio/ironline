@@ -108,7 +108,7 @@ export function ConnectedApps() {
             </div>
           ))}
         </div>
-        <div className="home-dark-empty st-note">Health syncing needs the Ironline mobile app (not available on web).</div>
+        <div className="home-dark-empty st-note">Health syncing needs the NorCoach mobile app (not available on web).</div>
       </section>
     );
   }
@@ -161,7 +161,7 @@ export function ConnectedApps() {
         </button>
       </div>
       <div className="home-dark-empty st-note">
-        {note ?? `Only your daily step count is read. Ironline never writes to ${name}.`}
+        {note ?? `Only your daily step count is read. NorCoach never writes to ${name}.`}
       </div>
     </section>
   );

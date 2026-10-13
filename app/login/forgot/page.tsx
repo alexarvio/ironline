@@ -17,12 +17,12 @@ export default async function ForgotPasswordPage({ searchParams }: { searchParam
       <div className="auth-card">
         <div className="auth-brand">
           <Image src="/brand/logo.png" alt="" width={19} height={32} priority />
-          Ironline
+          NorCoach
         </div>
         <h1 className="auth-title">Reset your password</h1>
 
         {sent ? (
-          <p className="auth-ok">If that email has an Ironline account, a link to choose a new password is on its way. It works for the next hour.</p>
+          <p className="auth-ok">If that email has an NorCoach account, a link to choose a new password is on its way. It works for the next hour.</p>
         ) : (
           <>
             <p className="auth-note auth-note-top">Enter the email you sign in with, and we&rsquo;ll send you a link to choose a new password.</p>

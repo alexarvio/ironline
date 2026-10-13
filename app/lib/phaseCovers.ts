@@ -7,7 +7,7 @@ import type { PhaseTrack } from "./db";
 export const PHASE_COVERS: Record<PhaseTrack, string[]> = {
   nutrition: ["/img/nutrition-head.jpg"],
   training: ["/img/session-head.jpg"],
-  lifestyle: ["/img/lifestyle-head.jpg"],
+  lifestyle: ["/img/lifestyle-bottle.jpg"],
 };
 
 export const PHASE_OBJECTIVES_MAX = 3;

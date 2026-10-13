@@ -18,7 +18,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
       <div className="auth-card au-card">
         <div className="auth-brand">
           <Image src="/brand/logo.png" alt="" width={19} height={32} priority />
-          Ironline
+          NorCoach
         </div>
         {children}
       </div>
@@ -240,13 +240,13 @@ export function WaitingScreen({ name, signOut }: { name: string; signOut?: React
   );
 }
 
-/** Signed in, but this email has no Ironline account. */
+/** Signed in, but this email has no NorCoach account. */
 export function NoAccountScreen({ email, signOut }: { email: string; signOut?: ReactNode }) {
   return (
     <AuthShell>
       <h1 className="auth-title">No account yet</h1>
       <p className="au-lead">
-        There&rsquo;s no Ironline account for <b>{email}</b>. If you train with a coach, ask them to invite you with this email. Coaching others yourself?{" "}
+        There&rsquo;s no NorCoach account for <b>{email}</b>. If you train with a coach, ask them to invite you with this email. Coaching others yourself?{" "}
         <a href="/signup">Create a coach account</a>.
       </p>
       <p className="auth-note">{signOut ?? <a href="#">Use a different email</a>}</p>
@@ -340,14 +340,14 @@ export function InviteEmailScreen({ firstName, coachName, email }: { firstName: 
   return (
     <div className="ob-mail">
       <div className="ob-mail-head">
-        <span className="ob-mail-subject">{coachName} invited you to Ironline</span>
+        <span className="ob-mail-subject">{coachName} invited you to NorCoach</span>
         <span className="ob-mail-from">
-          {coachName} &lt;hello@ironline.app&gt; · to {email}
+          {coachName} &lt;hello@norcoach.app&gt; · to {email}
         </span>
       </div>
       <div className="ob-mail-body">
         <p>Hi {firstName},</p>
-        <p>{coachName} has set you up on Ironline, where your training, food and check-ins live.</p>
+        <p>{coachName} has set you up on NorCoach, where your training, food and check-ins live.</p>
         <p>
           <a className="au-mail-btn" href="#">
             Accept the invite

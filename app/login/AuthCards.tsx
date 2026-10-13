@@ -13,7 +13,7 @@ export function LoginCard({ error, deleted, reset, canReset }: { error?: string;
       <div className="auth-card">
         <div className="auth-brand">
           <Image src="/brand/logo.png" alt="" width={19} height={32} priority />
-          Ironline
+          NorCoach
         </div>
         <h1 className="auth-title">Sign in</h1>
 
@@ -61,7 +61,7 @@ export function ChangePasswordCard({ error }: { error?: string }) {
       <div className="auth-card">
         <div className="auth-brand">
           <Image src="/brand/logo.png" alt="" width={19} height={32} priority />
-          Ironline
+          NorCoach
         </div>
         <h1 className="auth-title">Choose a password</h1>
         <p className="auth-note auth-note-top">

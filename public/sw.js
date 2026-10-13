@@ -1,4 +1,4 @@
-// Ironline's service worker: shows push notifications while the app is
+// NorCoach's service worker: shows push notifications while the app is
 // closed, and opens the app when one is tapped. Nothing else: no caching,
 // so the app behaves exactly as it does without it. See app/lib/push.ts.
 
@@ -13,7 +13,7 @@ self.addEventListener("push", (event) => {
     message = { body: event.data ? event.data.text() : "" };
   }
   event.waitUntil(
-    self.registration.showNotification(message.title || "Ironline", {
+    self.registration.showNotification(message.title || "NorCoach", {
       body: message.body || "",
       icon: "/icon.png",
       badge: "/icon.png",
@@ -28,7 +28,7 @@ self.addEventListener("notificationclick", (event) => {
   const url = new URL((event.notification.data && event.notification.data.url) || "/client", self.location.origin).href;
   event.waitUntil(
     (async () => {
-      // Bring an open Ironline window forward rather than opening another.
+      // Bring an open NorCoach window forward rather than opening another.
       const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
       for (const w of windows) {
         if (new URL(w.url).origin === self.location.origin) {

@@ -1,7 +1,7 @@
 {
   "name": "ironline-mobile",
   "private": true,
-  "description": "Native iPhone and Android shell for Ironline (Capacitor). Loads the live site; see README.md.",
+  "description": "Native iPhone and Android shell for NorCoach (Capacitor). Loads the live site; see README.md.",
   "scripts": {
     "sync": "cap sync",
     "android": "cap open android",

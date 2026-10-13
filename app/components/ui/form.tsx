@@ -1,7 +1,7 @@
 "use client";
 
 // shadcn/ui's Input, Textarea, Label, Switch and Select (new-york v4), in the
-// same colour names as basics.tsx (ui.css maps them onto Ironline's navy,
+// same colour names as basics.tsx (ui.css maps them onto NorCoach's navy,
 // ink and tint). Styled through [data-slot] like the rest of ui/.
 import * as React from "react";
 import { Label as LabelPrimitive, Select as SelectPrimitive, Switch as SwitchPrimitive } from "radix-ui";

@@ -87,7 +87,7 @@ export default function CoachWelcome({ data }: { data: WelcomeData }) {
         <div className="wl-top">
           <div className="auth-brand">
             <Image src="/brand/logo.png" alt="" width={19} height={32} priority />
-            Ironline
+            NorCoach
           </div>
           <span className="wl-count" aria-label={`Step ${step} of 3`}>
             {step}/3

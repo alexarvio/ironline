@@ -3,7 +3,7 @@
 import { isMeetingTypeId } from "./meetingTypes";
 
 import { redirect } from "next/navigation";
-import { getData, persist, type CoachBusiness, type CoachInvoicing, type MetricAskAt } from "./db";
+import { getData, persist, type CoachBusiness, type CoachInvoicing, type MetricAskAt, type PhaseTrack } from "./db";
 import { ASK_AT } from "./metricAskAt";
 import { isGymColor, isGymKind } from "./gymColors";
 import { listClientGyms } from "./queries";
@@ -157,6 +157,8 @@ import {
   saveNutritionPlan,
   savePhotoPeriodNote,
   savePhotoUpload,
+  saveClientCardCover,
+  clearClientCardCover,
   saveMealPhoto,
   getMealPhoto,
   removeMealPhoto,
@@ -3559,6 +3561,30 @@ export async function saveSkipReasonAction(programDayId: number, text: string) {
 // ---- Client avatar --------------------------------------------------------
 // The client sets it from Settings; a coach may also set or clear it.
 // requireClientAccess pins a client to their own id regardless of the form.
+
+// The client's own picture behind a Home card (12 Oct): from a press-and-hold
+// on the card, or Settings · Card pictures. One a track, kept across phases.
+const CARD_TRACKS = new Set(["lifestyle", "training", "nutrition"]);
+export async function uploadCardCoverAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const track = String(formData.get("track") ?? "");
+  if (!CARD_TRACKS.has(track)) return;
+  const file = formData.get("file") as File | null;
+  if (!file || file.size === 0 || file.size > 6 * 1024 * 1024 || !file.type.startsWith("image/")) return;
+  const body = Buffer.from(await file.arrayBuffer());
+  const r = saveClientCardCover(clientId, track as PhaseTrack, body, file.type);
+  if (!r) return;
+  if (r.previous && keyOf(r.previous) !== keyOf(r.saved)) await deleteUpload(r.previous);
+  await putUpload(r.saved, body, file.type);
+  revalidatePath("/client");
+}
+
+export async function resetCardCoverAction(clientId: number, track: PhaseTrack) {
+  const id = await requireClientAccess(Number(clientId));
+  if (!CARD_TRACKS.has(track)) return;
+  await deleteUpload(clearClientCardCover(id, track));
+  revalidatePath("/client");
+}
 
 export async function uploadClientAvatarAction(formData: FormData) {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));

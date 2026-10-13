@@ -10,7 +10,7 @@ import { clerkOn, clerkUserIdFromRequest, clerkUserRow, deleteClerkUser } from "
 import { isTimezone } from "./timezones";
 import { setViewZone } from "./viewZone";
 
-// Authentication and authorization for Ironline.
+// Authentication and authorization for NorCoach.
 //
 // Two roles, and the distinction matters for every query in the app:
 //   - "coach"  — one coach account (Finlay is one of them). Access to the CRM
