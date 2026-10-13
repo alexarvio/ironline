@@ -728,8 +728,14 @@ function Stepper({
   const sizeOf = (t: string) => (t.length >= 5 ? " s5" : t.length === 4 ? " s4" : "");
   const size = sizeOf(text || shown.text);
   const name = `${row.kind === "warm" ? "Warm-up" : "Set"} ${row.n} ${field === "weight" ? "weight" : field}, ${ariaUnit}`;
+  // Leaving the box takes what was typed, the plan's own figure included
+  // (13 Oct: typing 40 over a planned 40 used to be ignored); an untouched
+  // grey box left with Next takes the plan.
   const commit = () => {
-    if (draft != null && draft.trim() !== "" && draft !== shown.text) onTyped(draft);
+    if (draft != null) {
+      if (draft.trim() !== "") onTyped(draft);
+      else if (shown.ghost && shown.value != null) onTyped(shown.text);
+    }
     setDraft(null);
   };
   return (
