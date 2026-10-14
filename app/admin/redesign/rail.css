@@ -159,6 +159,11 @@
 .rr-more { cursor: pointer; }
 .rr-more.open { background: var(--c); color: #fff; }
 /* The reasons unfolded under a row (14 Oct): one line each in its colour, a ✓ on the ones the coach can clear. */
+/* Unfolds and folds (14 Oct): the rows grow from nothing to their height, fading in. */
+.rr-reasons-wrap { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.22s ease, opacity 0.18s ease; }
+.rr-reasons-wrap.open { grid-template-rows: 1fr; opacity: 1; }
+.rr-reasons-wrap > .rr-reasons { min-height: 0; overflow: hidden; }
+@media (prefers-reduced-motion: reduce) { .rr-reasons-wrap { transition: none; } }
 .rr-reasons { list-style: none; margin: 0 0 4px; padding: 2px 8px 4px 50px; display: flex; flex-direction: column; gap: 4px; }
 .rr-reasons li { display: flex; align-items: center; gap: 7px; min-height: 24px; font-size: 11.5px; font-weight: 700; color: var(--c); }
 .rr-reasons li > span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

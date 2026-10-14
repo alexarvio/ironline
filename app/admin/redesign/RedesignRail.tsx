@@ -178,7 +178,8 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
             </span>
           )}
         </Link>
-        {open && (
+        {more > 0 && (
+          <div className={`rr-reasons-wrap${open ? " open" : ""}`} aria-hidden={!open} inert={open ? undefined : true}>
           <ul className="rr-reasons">
             {c.reasons.map((r) => (
               <li key={r.actionId} style={{ "--c": ATTENTION[r.type].color, "--rgb": ATTENTION[r.type].rgb } as React.CSSProperties}>
@@ -194,6 +195,7 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
               </li>
             ))}
           </ul>
+          </div>
         )}
       </li>
     );
