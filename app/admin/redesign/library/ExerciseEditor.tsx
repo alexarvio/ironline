@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
-import { CheckIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, PlayIcon, PlusIcon, SearchIcon, TrashIcon } from "../../../components/icons";
+import { CheckIcon, ChevronDownIcon, ChevronLeftIcon, PlayIcon, PlusIcon, SearchIcon, TrashIcon } from "../../../components/icons";
 import { clearExerciseDemoAction, setExerciseDemoLinkAction } from "../../../lib/actions";
 import { groupColour } from "../../../lib/muscleGroups";
 import { assignVideoToExerciseAction, createLibraryExerciseAction, saveExerciseSubstitutesAction, saveExerciseVariationsAction, updateLibraryExerciseAction, uploadLibraryVideoAction } from "./actions";
@@ -55,17 +55,15 @@ export default function ExerciseEditor({
   items,
   videos,
   groups,
-  siblings,
   onClose,
-  onSwitch,
   onOpenOther,
   onChanged,
   backTo,
 }: {
-  /** The exercises prev and next move through, in the grid's order; this one among them. */
-  siblings: number[];
-  /** Prev, next or a card behind the drawer: the editor moves to that exercise, the drawer stays. */
-  onSwitch: (id: number) => void;
+  /** Kept for the page: the exercises of the group, in order (unused since prev / next went, 14 Oct). */
+  siblings?: number[];
+  /** Kept for the page: a card behind the scrim switches the editor. */
+  onSwitch?: (id: number) => void;
   item: LibraryItem;
   items: LibraryItem[];
   videos: LibraryVideo[];
@@ -248,14 +246,6 @@ export default function ExerciseEditor({
     setClosing(false);
     if (ok) onClose();
   };
-  // Prev / next (14 Oct): through the group, wrapping round; what is waiting to save goes first.
-  const at = siblings.indexOf(item.id);
-  const n = siblings.length;
-  const step = async (dir: 1 | -1) => {
-    if (n < 2) return;
-    await save.flush();
-    onSwitch(siblings[((at < 0 ? 0 : at) + dir + n) % n]);
-  };
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     headingRef.current?.focus();
@@ -268,13 +258,11 @@ export default function ExerciseEditor({
         return;
       }
       if (e.key === "Escape") void done();
-      else if (e.key === "ArrowRight" || e.key === "j") void step(1);
-      else if (e.key === "ArrowLeft" || e.key === "k") void step(-1);
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- the handlers read the latest closures through refs below
-  }, [at, n, closing]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- done reads the latest state when it runs
+  }, [closing]);
 
   // ---- Variations.
   const addVariation = () => {
@@ -445,19 +433,7 @@ export default function ExerciseEditor({
               <button type="button" className="exm-back" onClick={() => onOpenOther(backTo.id)}>
                 <ChevronLeftIcon /> Back to {backTo.name}
               </button>
-            ) : (
-              <>
-                <button type="button" className="exd-navbtn" onClick={() => void step(-1)} aria-label="Previous exercise" disabled={n < 2}>
-                  <ChevronLeftIcon />
-                </button>
-                <span className="exd-pos" aria-live="polite">
-                  {Math.max(1, at + 1)} of {Math.max(1, n)}
-                </span>
-                <button type="button" className="exd-navbtn" onClick={() => void step(1)} aria-label="Next exercise" disabled={n < 2}>
-                  <ChevronRightIcon />
-                </button>
-              </>
-            )}
+            ) : null}
             <button type="button" className="exm-close" onClick={() => void done()} aria-label="Close">
               ✕
             </button>
