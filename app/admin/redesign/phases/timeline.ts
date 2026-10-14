@@ -164,7 +164,8 @@ export function soonPhases(c: ClientLike, tracksOn: Set<PhaseTrack>, today: stri
 export function clientStatus(c: ClientLike, tracksOn: Set<PhaseTrack>, today: string): ClientStatus {
   const soon = soonPhases(c, tracksOn, today)[0];
   if (soon) return { kind: "soon", track: soon.track, days: daysLeft(soon, today) };
-  if (phasesOn(c, tracksOn).length > 0) return { kind: "planned" };
+  // Planned only when something is still to run; a client whose phases are all behind them has nothing planned.
+  if (phasesOn(c, tracksOn).some((p) => p.end >= today)) return { kind: "planned" };
   return { kind: "none" };
 }
 

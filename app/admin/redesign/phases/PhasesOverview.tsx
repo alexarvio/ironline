@@ -498,7 +498,12 @@ function ClientBlock({
                 </button>
               </>
             ) : (
-              "Nothing in these months"
+              <>
+                Nothing in these months
+                <button type="button" className="pov-none-link" onClick={() => onPlan("training", today)}>
+                  + Plan a phase
+                </button>
+              </>
             )}
           </div>
         ) : (
