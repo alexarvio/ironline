@@ -54,7 +54,7 @@ type Client = {
 };
 // Each coach has their own library (seeded from presets.ts), so coach_id is
 // the owner. Optional only for rows from before multi-coach.
-type Exercise = { id: number; name: string; muscle_tags: string | null; video_url: string | null; coach_id?: number; /** The coach's default cue, pre-filled as the note when the exercise is added to a session (5 Oct). */ cue?: string | null; /** Taken out of the library (5 Oct): gone from the pickers, kept wherever it is already prescribed. */ archived?: boolean; /** Versions of it (close grip, wide grip…), each with its own demo (6 Oct). */ variations?: ExerciseVariation[] };
+type Exercise = { id: number; name: string; muscle_tags: string | null; video_url: string | null; coach_id?: number; /** The coach's default cue, pre-filled as the note when the exercise is added to a session (5 Oct). */ cue?: string | null; /** Taken out of the library (5 Oct): gone from the pickers, kept wherever it is already prescribed. */ archived?: boolean; /** Versions of it (close grip, wide grip…), each with its own demo (6 Oct). */ variations?: ExerciseVariation[]; /** What to do instead when the machine is taken (14 Oct): up to three others of the library, each with a note. A prescription with no alternatives of its own offers these. */ substitutes?: { exercise_id: number; note: string | null }[] };
 /** A version of an exercise: its name and its own demo (a coach video or a link); null falls back to the exercise's. */
 type ExerciseVariation = { id: number; name: string; video_url: string | null; /** Its own default cue; absent: the exercise's. */ cue?: string | null };
 // One training session in a programme week. Sessions are not tied to a

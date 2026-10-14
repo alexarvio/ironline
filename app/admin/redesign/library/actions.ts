@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireCoach } from "../../../lib/auth";
 import { coachOwnsExercise } from "../../../lib/tenancy";
-import { addCoachVideo, addExercise, listCoachVideos, removeCoachVideo, renameCoachVideo, setExerciseArchived, setExerciseVariations, setExerciseVideoUrl, updateExercise } from "../../../lib/queries";
+import { addCoachVideo, addExercise, listCoachVideos, removeCoachVideo, renameCoachVideo, setExerciseArchived, setExerciseSubstitutes, setExerciseVariations, setExerciseVideoUrl, updateExercise } from "../../../lib/queries";
 import { deleteUpload, putUpload } from "../../../lib/storage";
 
 // The coach's Library page (5 Oct): an exercise's name, group and default
@@ -32,6 +32,19 @@ export async function saveExerciseVariationsAction(exerciseId: number, list: { i
   setExerciseVariations(
     Number(exerciseId),
     (Array.isArray(list) ? list : []).map((v) => ({ id: v?.id == null ? null : Number(v.id), name: String(v?.name ?? ""), video_url: ok(typeof v?.video === "string" ? v.video.trim() : null), cue: typeof v?.cue === "string" ? v.cue : null }))
+  );
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  return true;
+}
+
+/** The exercise's substitutes (14 Oct): others of the coach's own library, with a note each. */
+export async function saveExerciseSubstitutesAction(exerciseId: number, list: { exerciseId: number; note: string }[]): Promise<boolean> {
+  const coach = await requireCoach();
+  if (!coachOwnsExercise(coach.id, Number(exerciseId))) return false;
+  setExerciseSubstitutes(
+    Number(exerciseId),
+    (Array.isArray(list) ? list : []).filter((s) => coachOwnsExercise(coach.id, Number(s?.exerciseId))).map((s) => ({ exercise_id: Number(s.exerciseId), note: typeof s?.note === "string" ? s.note : null }))
   );
   revalidatePath("/admin");
   revalidatePath("/client");

@@ -48,7 +48,7 @@ export function localDayOf(stamp: string): string {
 }
 
 export type ExerciseVariation = { id: number; name: string; video_url: string | null; cue?: string | null };
-export type Exercise = { id: number; name: string; muscle_tags: string | null; video_url: string | null; coach_id?: number; cue?: string | null; archived?: boolean; variations?: ExerciseVariation[] };
+export type Exercise = { id: number; name: string; muscle_tags: string | null; video_url: string | null; coach_id?: number; cue?: string | null; archived?: boolean; variations?: ExerciseVariation[]; substitutes?: { exercise_id: number; note: string | null }[] };
 export type ProgramDay = {
   id: number;
   client_id: number;
@@ -1592,6 +1592,8 @@ export function progressTargetFromLogs(workoutAssignmentId: number) {
   const data = getData();
   const wa = data.workout_assignments.find((x) => x.id === workoutAssignmentId);
   if (!wa) return;
+  // Sets on a substitute (14 Oct) say nothing about the prescribed exercise's weight.
+  if (wa.swap) return;
   const day = data.program_days.find((pd) => pd.id === wa.program_day_id);
   if (!day) return;
   const logs = data.set_logs.filter((sl) => sl.workout_assignment_id === wa.id);
@@ -8711,6 +8713,35 @@ export function setExerciseVariations(exerciseId: number, list: { id?: number | 
   persist();
 }
 
+/** The library's substitutes for an exercise (14 Oct): up to three others of
+    the same coach's library, each with a note. Offered to the client when
+    the machine is taken, in every programme, unless a session has its own. */
+export function setExerciseSubstitutes(exerciseId: number, list: { exercise_id: number; note: string | null }[]) {
+  const data = getData();
+  const e = data.exercises.find((x) => x.id === exerciseId);
+  if (!e) return;
+  const seen = new Set<number>();
+  const clean = list
+    .filter((s) => {
+      if (s.exercise_id === e.id || seen.has(s.exercise_id)) return false;
+      const other = data.exercises.find((x) => x.id === s.exercise_id);
+      if (!other || other.coach_id !== e.coach_id) return false;
+      seen.add(s.exercise_id);
+      return true;
+    })
+    .map((s) => ({ exercise_id: s.exercise_id, note: s.note?.trim().slice(0, 200) || null }))
+    .slice(0, 3);
+  if (clean.length) e.substitutes = clean;
+  else delete e.substitutes;
+  persist();
+}
+
+/** What a prescription offers instead (14 Oct): its own alternatives, else the library's substitutes for its exercise. */
+export function effectiveAlternatives(wa: { exercise_id: number; alternatives?: { exercise_id: number; note: string | null }[] }): { exercise_id: number; note: string | null }[] {
+  if (wa.alternatives?.length) return wa.alternatives;
+  return getData().exercises.find((e) => e.id === wa.exercise_id)?.substitutes ?? [];
+}
+
 /** One more variation on an exercise (typed in the session builder); the variation, an existing one of that name, or null. */
 export function addExerciseVariation(exerciseId: number, name: string): ExerciseVariation | null {
   const e = getData().exercises.find((x) => x.id === exerciseId);
@@ -8831,8 +8862,11 @@ function exerciseHistoryFor(assignmentId: number): { day: ProgramDay; logs: SetL
   const wa = data.workout_assignments.find((x) => x.id === assignmentId);
   const day = wa && data.program_days.find((pd) => pd.id === wa.program_day_id);
   if (!wa || !day) return [];
-  const exerciseId = wa.swap ? wa.swap.library_exercise_id : wa.exercise_id;
-  if (exerciseId == null) return [];
+  // A substitute is for the day (14 Oct, Alex): a swapped session has no
+  // "last time" of its own, and its sets are nobody's history, neither the
+  // prescribed exercise's nor the substitute's.
+  if (wa.swap) return [];
+  const exerciseId = wa.exercise_id;
   const days = new Map(data.program_days.filter((pd) => pd.client_id === day.client_id).map((pd) => [pd.id, pd]));
   const at = (pd: { week_number: number; day_of_week: number }) => pd.week_number * 100 + pd.day_of_week;
   // This phase only (9 Oct): the programme whose weeks hold this day. An
@@ -8841,9 +8875,8 @@ function exerciseHistoryFor(assignmentId: number): { day: ProgramDay; logs: SetL
   const inPhase = (pd: { week_number: number }) => !program || (pd.week_number >= program.start_week && pd.week_number < program.start_week + program.total_weeks);
   const out: { day: ProgramDay; logs: SetLog[] }[] = [];
   for (const other of data.workout_assignments) {
-    if (other.id === wa.id) continue;
-    const otherExercise = other.swap ? other.swap.library_exercise_id : other.exercise_id;
-    if (otherExercise !== exerciseId) continue;
+    if (other.id === wa.id || other.swap) continue;
+    if (other.exercise_id !== exerciseId) continue;
     const pd = days.get(other.program_day_id);
     if (!pd || !inPhase(pd) || at(pd) >= at(day)) continue;
     const logs = data.set_logs.filter((sl) => sl.workout_assignment_id === other.id).sort((a, b) => a.set_number - b.set_number);

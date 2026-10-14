@@ -144,3 +144,10 @@
 /* The Cardio shelf has no group head over its columns, so the card gives them room of their own. */
 .lb-cardio .rd-rows { padding-top: 14px; }
 .lb-cardio .lb-cols { padding-top: 8px; padding-bottom: 12px; }
+
+/* Substitutes (14 Oct): a block under the exercise's rows, one row a substitute, a picker for the next. */
+.lb-subs { display: flex; flex-direction: column; gap: 8px; padding: 12px 10px; border: 1px solid #EEEEEE; border-radius: 14px; background: #fff; }
+.lb-subs-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.lb-subs-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.8fr) 40px; gap: 14px; align-items: center; padding: 6px 0 6px 6px; border-radius: 12px; background: #FAFAFA; }
+.lb-subs-name { font-size: 13px; font-weight: 700; color: #333333; }
+.lb-subs-pick { align-self: flex-start; height: 38px; max-width: 320px; padding: 0 10px; border: 1px solid #E0E0E0; border-radius: 10px; background: #fff; font: inherit; font-size: 13px; color: #333333; }

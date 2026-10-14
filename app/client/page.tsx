@@ -31,6 +31,7 @@ import {
   gymSessionStats,
   currentGymId,
   getClientCardPictures,
+  effectiveAlternatives,
   getLastSets,
   getExerciseUnit,
   getLatestClientExerciseNotes,
@@ -711,7 +712,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                   swap: a.swap
                     ? { libraryExerciseId: a.swap.library_exercise_id, name: (a.swap.library_exercise_id != null ? libraryName.get(a.swap.library_exercise_id) : null) ?? a.swap.custom_name ?? "Another exercise" }
                     : null,
-                  alternatives: (a.alternatives ?? []).filter((x) => libraryName.has(x.exercise_id)).map((x) => ({ id: x.exercise_id, name: libraryName.get(x.exercise_id)!, note: x.note })),
+                  alternatives: effectiveAlternatives(a).filter((x) => libraryName.has(x.exercise_id)).map((x) => ({ id: x.exercise_id, name: libraryName.get(x.exercise_id)!, note: x.note })),
                   sets: a.sets,
                   reps: a.reps,
                   targetWeight: a.target_weight_kg,

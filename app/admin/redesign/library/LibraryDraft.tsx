@@ -11,7 +11,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { ChevronDownIcon, MoreIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from "../../../components/icons";
 import { clearExerciseDemoAction, setExerciseDemoLinkAction } from "../../../lib/actions";
-import { archiveLibraryExerciseAction, assignVideoToExerciseAction, createLibraryExerciseAction, deleteLibraryVideoAction, renameLibraryVideoAction, saveExerciseVariationsAction, updateLibraryExerciseAction, uploadLibraryVideoAction } from "./actions";
+import { archiveLibraryExerciseAction, assignVideoToExerciseAction, createLibraryExerciseAction, deleteLibraryVideoAction, renameLibraryVideoAction, saveExerciseSubstitutesAction, saveExerciseVariationsAction, updateLibraryExerciseAction, uploadLibraryVideoAction } from "./actions";
 import type { LibraryData, LibraryItem, LibraryVideo } from "./load";
 
 // The coach's Library (5 Oct, rebuilt 6 Oct on the shadcn parts and the
@@ -376,6 +376,8 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
             onVideosChanged={() => router.refresh()}
             onVideoDelete={(v) => act(() => deleteLibraryVideoAction(v.id), `${v.name} deleted`)}
             onVariations={(list, said) => act(() => saveExerciseVariationsAction(open.id, list), said)}
+            items={data.items}
+            onSubstitutes={(list, said) => act(() => saveExerciseSubstitutesAction(open.id, list), said)}
             onDemoRemove={() => {
               const f = new FormData();
               f.set("exerciseId", String(open.id));
@@ -767,6 +769,8 @@ function ItemDialog({
   onVideoDelete,
   onVariations,
   onDemoRemove,
+  items,
+  onSubstitutes,
 }: {
   item: LibraryItem;
   groups: { slug: string; label: string }[];
@@ -779,6 +783,9 @@ function ItemDialog({
   onVideoDelete: (v: LibraryVideo) => void;
   onVariations: (list: { id: number | null; name: string; video: string | null; cue: string }[], said: string) => void;
   onDemoRemove: () => void;
+  /** The whole library, for the substitute picker. */
+  items: LibraryItem[];
+  onSubstitutes: (list: { exerciseId: number; note: string }[], said: string) => void;
 }) {
   const [name, setName] = useState(item.name);
   const [group, setGroup] = useState(item.group);
@@ -800,6 +807,19 @@ function ItemDialog({
     onVariations(next.map((x) => (x.id < 0 ? { ...x, id: null } : x)), said);
   };
   const videoOf = (id: number) => videos.find((v) => v.id === id) ?? null;
+  // Substitutes (14 Oct): shown straight away, the page's copy taking over when it changes, like the variations.
+  const [subs, setSubs] = useState(item.substitutes);
+  const subsKey = JSON.stringify(item.substitutes);
+  const [seenSubs, setSeenSubs] = useState(subsKey);
+  if (seenSubs !== subsKey) {
+    setSeenSubs(subsKey);
+    setSubs(item.substitutes);
+  }
+  const saveSubs = (next: LibraryItem["substitutes"], said: string) => {
+    setSubs(next);
+    onSubstitutes(next.map((x) => ({ exerciseId: x.exerciseId, note: x.note })), said);
+  };
+  const subOptions = items.filter((x) => x.id !== item.id && !x.archived && !subs.some((s) => s.exerciseId === x.id)).sort((a, b) => a.name.localeCompare(b.name));
   // An upload is not a link: the link field shows only a pasted one.
   const linkOf = (url: string | null) => (url && !isVideoFile(url) ? url : "");
   const patchVar = (id: number, patch: { name?: string; video?: string | null; cue?: string }, said: string) => saveVars(vars.map((x) => (x.id === id ? { ...x, ...patch } : x)), said);
@@ -907,10 +927,55 @@ function ItemDialog({
           </div>
         )}
       </div>
+      {/* Substitutes (14 Oct): what the client is offered when the machine is taken, in every programme, unless a session has alternatives of its own. */}
+      <div className="lb-subs">
+        <div className="lb-subs-head">
+          <Label>Substitutes</Label>
+          <span className="rd-dlg-hint">When the machine is taken: up to three, offered in every programme unless a session has alternatives of its own. Sets on a substitute count for the session, not for anyone&rsquo;s weights.</span>
+        </div>
+        {subs.map((s) => (
+          <div key={s.exerciseId} className="lb-subs-row">
+            <span className="lb-subs-name">{s.name}</span>
+            <Input
+              className="h-[38px]"
+              value={s.note}
+              onChange={(e) => setSubs((l) => l.map((x) => (x.exerciseId === s.exerciseId ? { ...x, note: e.target.value } : x)))}
+              onBlur={() => {
+                if (JSON.stringify(subs) !== seenSubs) saveSubs(subs, `${item.name} · substitutes saved`);
+              }}
+              maxLength={200}
+              placeholder="Note · optional, e.g. same reps, a little lighter"
+              aria-label={`Note on ${s.name}`}
+            />
+            <Button variant="ghost" size="icon" className="lb-bin" disabled={pending} onClick={() => saveSubs(subs.filter((x) => x.exerciseId !== s.exerciseId), `${s.name} taken off ${item.name}`)} aria-label={`Take ${s.name} off the substitutes`} title="Take off">
+              <TrashIcon />
+            </Button>
+          </div>
+        ))}
+        {subs.length < 3 && (
+          <select
+            className="lb-subs-pick"
+            value=""
+            disabled={pending}
+            aria-label="Add a substitute"
+            onChange={(e) => {
+              const o = items.find((x) => x.id === Number(e.target.value));
+              if (o) saveSubs([...subs, { exerciseId: o.id, name: o.name, note: "" }], `${o.name} is a substitute for ${item.name}`);
+            }}
+          >
+            <option value="">{subs.length ? "Add another…" : "Add a substitute…"}</option>
+            {subOptions.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.name}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
       <DialogVideos videos={videos} onChanged={onVideosChanged} onDelete={onVideoDelete} />
       {/* Demos, links, variations and their cues save as they are set; only the name, group and cue wait for Save. With nothing waiting, the button is Done. */}
       <DialogFooter>
-        <span className="rd-dlg-hint grow">{pending ? "Saving…" : changed ? "Name, group or cue changed · not saved yet" : "Demos, links and variations are saved as you set them."}</span>
+        <span className="rd-dlg-hint grow">{pending ? "Saving…" : changed ? "Name, group or cue changed · not saved yet" : "Demos, links, variations and substitutes are saved as you set them."}</span>
         {changed ? (
           <>
             <DialogClose asChild>

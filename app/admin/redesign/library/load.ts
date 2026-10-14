@@ -17,6 +17,8 @@ export type LibraryItem = {
   archived: boolean;
   /** Close grip, wide grip…: each with its own demo (a video path or link), or none yet. */
   variations: { id: number; name: string; video: string | null; /** Its own default cue; empty: the exercise's. */ cue: string }[];
+  /** What to do instead when the machine is taken (14 Oct): up to three others of the library, with a note each. */
+  substitutes: { exerciseId: number; name: string; note: string }[];
 };
 export type LibraryVideo = { id: number; path: string; name: string; at: string; /** File size; null for clips uploaded before it was kept. */ bytes: number | null; usedBy: { id: number; name: string }[] };
 export type LibraryData = { groups: { slug: string; label: string }[]; items: LibraryItem[]; videos: LibraryVideo[] };
@@ -35,6 +37,10 @@ export function loadLibrary(coachId: number): LibraryData {
       clients: counts.get(e.id) ?? 0,
       archived: !!e.archived,
       variations: (e.variations ?? []).map((v) => ({ id: v.id, name: v.name, video: v.video_url, cue: v.cue ?? "" })),
+      substitutes: (e.substitutes ?? []).flatMap((s) => {
+        const o = exercises.find((x) => x.id === s.exercise_id);
+        return o ? [{ exerciseId: o.id, name: o.name, note: s.note ?? "" }] : [];
+      }),
     })),
     videos: listCoachVideos(coachId).map((v) => ({ id: v.id, path: v.path, name: v.name, at: v.at, bytes: v.bytes ?? null, usedBy: exercises.flatMap((e) => [...(e.video_url === v.path ? [{ id: e.id, name: e.name }] : []), ...(e.variations ?? []).filter((x) => x.video_url === v.path).map(() => ({ id: e.id, name: e.name }))]).filter((x, i, all) => all.findIndex((y) => y.id === x.id) === i) })),
   };
