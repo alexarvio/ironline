@@ -114,19 +114,19 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
   const pendingId = pending && pending.from === here ? pending.id : null;
   const markedId = pendingId ?? clientId;
   const setPendingId = (id: number) => setPending({ id, from: here });
-  // Mark handled: the reasons the coach can clear go, with five seconds to take it back.
-  const handled = (c: RailData["clients"][number]) => {
-    const clearable = c.reasons.filter((r) => r.clearable);
-    if (clearable.length === 0) return;
-    void Promise.all(clearable.map((r) => dismissHomeActionAction(c.id, r.actionId))).then(() => router.refresh());
-    toast(`${c.name.split(" ")[0]} marked handled`, { duration: 5000, description: clearable.map((r) => r.text).join(" · ") });
+  // The +n pill unfolds every reason under the row (14 Oct, Alex); one client open at a time.
+  const [openId, setOpenId] = useState<number | null>(null);
+  // Mark one reason handled, with a word to say so.
+  const handledOne = (c: RailData["clients"][number], r: AttentionReason) => {
+    void dismissHomeActionAction(c.id, r.actionId).then(() => router.refresh());
+    toast(`${c.name.split(" ")[0]}: "${r.text}" marked handled`, { duration: 5000 });
   };
 
   const row = (c: RailData["clients"][number]) => {
     const active = c.id === markedId;
     const top = c.reasons[0] ?? null;
     const more = c.reasons.length - 1;
-    const all = c.reasons.map((r) => `${ATTENTION[r.type].label}: ${r.text}`).join("\n");
+    const open = openId === c.id;
     return (
       <li key={c.id}>
         <Link
@@ -135,7 +135,6 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
           style={top ? ({ "--c": ATTENTION[top.type].color, "--rgb": ATTENTION[top.type].rgb } as React.CSSProperties) : undefined}
           aria-current={active ? "page" : undefined}
           aria-label={top ? `${c.name}. Needs you: ${c.reasons.map((r) => r.text).join(", ")}` : `${c.name}. All good`}
-          title={more > 0 ? all : undefined}
           onClick={() => setPendingId(c.id)}
         >
           <span className={`rr-avatar${c.notSignedIn ? " pending" : ""}`} title={c.notSignedIn ? "Hasn't signed in to the app yet" : undefined}>
@@ -155,31 +154,47 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
             <span className="rr-name">{c.name}</span>
             {top && <span className="rr-reason">{top.text}</span>}
           </span>
-          {top && c.reasons.some((r) => r.clearable) && (
+          {more > 0 && (
             <span
               role="button"
               tabIndex={0}
-              className="rr-handled"
-              aria-label={`Mark ${c.name} handled`}
-              title="Mark handled"
+              className={`rr-more${open ? " open" : ""}`}
+              aria-expanded={open}
+              aria-label={open ? `Fold ${c.name}'s reasons` : `${more} more for ${c.name}: show them`}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                handled(c);
+                setOpenId(open ? null : c.id);
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   e.stopPropagation();
-                  handled(c);
+                  setOpenId(open ? null : c.id);
                 }
               }}
             >
-              ✓
+              {open ? "−" : `+${more}`}
             </span>
           )}
-          {more > 0 && <span className="rr-more">+{more}</span>}
         </Link>
+        {open && (
+          <ul className="rr-reasons">
+            {c.reasons.map((r) => (
+              <li key={r.actionId} style={{ "--c": ATTENTION[r.type].color, "--rgb": ATTENTION[r.type].rgb } as React.CSSProperties}>
+                <i className="rr-reason-ico" aria-hidden="true">
+                  <ReasonIcon type={r.type} size={9} />
+                </i>
+                <span>{r.text}</span>
+                {r.clearable && (
+                  <button type="button" className="rr-handled" onClick={() => handledOne(c, r)} aria-label={`Mark "${r.text}" handled`} title="Mark handled">
+                    ✓
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </li>
     );
   };

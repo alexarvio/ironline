@@ -156,9 +156,15 @@
 .rr-row.needs .rr-name { font-weight: 800; }
 .rr-reason { font-size: 11.5px; font-weight: 700; color: var(--c); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rr-more { flex: none; display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: rgba(var(--rgb), 0.1); color: var(--c); font-size: 10.5px; font-weight: 800; }
-.rr-handled { flex: none; display: none; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; background: #E8F3EC; color: #2f7a3f; font-size: 12px; font-weight: 800; }
-.rr-row:hover .rr-handled, .rr-row:focus-within .rr-handled { display: inline-flex; }
-.rr-row:hover .rr-more, .rr-row:focus-within .rr-more { display: none; }
+.rr-more { cursor: pointer; }
+.rr-more.open { background: var(--c); color: #fff; }
+/* The reasons unfolded under a row (14 Oct): one line each in its colour, a ✓ on the ones the coach can clear. */
+.rr-reasons { list-style: none; margin: 0 0 4px; padding: 2px 8px 4px 50px; display: flex; flex-direction: column; gap: 4px; }
+.rr-reasons li { display: flex; align-items: center; gap: 7px; min-height: 24px; font-size: 11.5px; font-weight: 700; color: var(--c); }
+.rr-reasons li > span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rr-reason-ico { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 999px; background: rgba(var(--rgb), 0.12); color: var(--c); }
+.rr-handled { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 999px; background: #E8F3EC; color: #2f7a3f; font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
+.rr-handled:hover { background: #d7e6da; }
 .rr-new { margin: 0; height: 40px; padding: 0; border: 0; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1.5px #DCE3EE; font-size: 13px; font-weight: 800; color: #1d3466; }
 .rr-new svg { width: 13px; height: 13px; }
 .rr-new:hover { background: #F7F9FC; color: #1d3466; }
