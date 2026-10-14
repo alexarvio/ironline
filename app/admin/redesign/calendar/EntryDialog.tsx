@@ -98,7 +98,6 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
   const [clientQ, setClientQ] = useState("");
   const [note, setNote] = useState(e?.note ?? "");
   const [removing, setRemoving] = useState(false);
-  const [discarding, setDiscarding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timeOpen, setTimeOpen] = useState(false);
@@ -113,9 +112,6 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
   const client = clientId != null ? clients.find((c) => c.id === clientId) ?? null : null;
   const first = (name: string) => name.split(" ")[0];
   const endMin = toMin(time) + length;
-  // Changed since it opened: closing asks first.
-  const [initial] = useState(() => JSON.stringify({ cat, topic, date, allDay, time, length, clientId, note }));
-  const dirty = JSON.stringify({ cat, topic, date, allDay, time, length, clientId, note }) !== initial;
   const ok = topic.trim().length > 0 && !!date && (allDay || !!time);
 
   // Overlaps with the day's other entries, as a warning only.
@@ -162,10 +158,8 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
     toast.success("Removed");
     onDone();
   };
-  const tryClose = () => {
-    if (dirty) setDiscarding(true);
-    else onDone();
-  };
+  // The X and Cancel just close (14 Oct): no "Discard changes?" in between.
+  const tryClose = onDone;
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
       if ((ev.metaKey || ev.ctrlKey) && ev.key === "Enter") {
@@ -500,27 +494,13 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
             </button>
           ))}
         <span className="cal-entry-spacer" />
-        {discarding ? (
-          <span className="cal-entry-confirm">
-            Discard changes?
-            <button type="button" className="cal-entry-danger" onClick={onDone}>
-              Discard
-            </button>
-            <button type="button" className="cal-entry-cancel" onClick={() => setDiscarding(false)}>
-              Keep editing
-            </button>
-          </span>
-        ) : (
-          <>
-            <button type="button" className="cal-entry-cancel" onClick={tryClose}>
-              Cancel
-            </button>
-            <button type="button" className="cal-entry-save" disabled={!ok || saving} aria-disabled={!ok || saving} onClick={() => void save()}>
-              {saving ? <span className="cal-entry-spin" aria-hidden="true" /> : null}
-              {e ? "Save" : "Add"}
-            </button>
-          </>
-        )}
+        <button type="button" className="cal-entry-cancel" onClick={tryClose}>
+          Cancel
+        </button>
+        <button type="button" className="cal-entry-save" disabled={!ok || saving} aria-disabled={!ok || saving} onClick={() => void save()}>
+          {saving ? <span className="cal-entry-spin" aria-hidden="true" /> : null}
+          {e ? "Save" : "Add"}
+        </button>
       </footer>
     </DialogContent>
   );
