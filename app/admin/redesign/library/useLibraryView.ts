@@ -49,7 +49,8 @@ export function useLibraryView(firstGroup: string | null) {
       return v;
     });
   }, []);
-  const toggle = useCallback((slug: string) => setOpen((o) => (o.includes(slug) ? o.filter((x) => x !== slug) : [...o, slug])), [setOpen]);
+  // One group open at a time (14 Oct, Alex): opening one folds the one before.
+  const toggle = useCallback((slug: string) => setOpen((o) => (o.includes(slug) ? [] : [slug])), [setOpen]);
   const setSettings = useCallback((patch: Partial<LibrarySettings>) => {
     setSettingsState((s) => {
       const v = { ...s, ...patch };

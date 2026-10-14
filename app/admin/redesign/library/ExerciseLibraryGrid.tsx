@@ -4,9 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type React from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { ChevronDownIcon, PencilIcon, PlayIcon, SearchIcon } from "../../../components/icons";
-import { groupColour } from "../../../lib/muscleGroups";
 import { assignVideoToExerciseAction, uploadLibraryVideoAction } from "./actions";
 import type { LibraryItem } from "./load";
 import { useLibraryView, type LibraryFilter } from "./useLibraryView";
@@ -22,6 +20,7 @@ const isUpload = (url: string) => url.startsWith("/uploads/") || /\.(mp4|mov|m4v
 const providerOf = (url: string) => (/youtu\.?be/i.test(url) ? "YouTube" : /vimeo/i.test(url) ? "Vimeo" : "Link");
 const fmtDuration = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
 const FALLBACKS = ["linear-gradient(150deg,#55648a,#1a2030)", "linear-gradient(150deg,#4a6b7a,#162028)", "linear-gradient(150deg,#665a7d,#1c1828)", "linear-gradient(150deg,#5a6f5f,#18221c)"];
+const NAVY = { color: "#1d3466", rgb: "29,52,102" };
 const FILTERS: { id: LibraryFilter; label: string }[] = [
   { id: "all", label: "All" },
   { id: "nodemo", label: "No demo" },
@@ -70,8 +69,6 @@ export default function ExerciseLibraryGrid({
     variations: searched.filter((i) => i.variations.length > 0).length,
     substitutes: searched.filter((i) => i.substitutes.length > 0).length,
   };
-  const live = items.filter((i) => !i.archived);
-  const withDemo = live.filter((i) => i.video).length;
   const filtering = !!needle || filter !== "all";
   const anyMatch = searched.filter(passes).length > 0;
 
@@ -105,23 +102,6 @@ export default function ExerciseLibraryGrid({
             </button>
           )}
         </div>
-        <span className="lib-summary">
-          {withDemo} of {live.length} {cardio ? "movements" : "exercises"} have a demo
-        </span>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button type="button" className="lib-view" aria-label="View settings">
-              View <ChevronDownIcon />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => view.setSettings({ density: "comfortable" })}>{settings.density === "comfortable" ? "✓ " : ""}Comfortable</DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => view.setSettings({ density: "compact" })}>{settings.density === "compact" ? "✓ " : ""}Compact</DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => view.setSettings({ thumbs: "portrait" })}>{settings.thumbs === "portrait" ? "✓ " : ""}Portrait thumbnails</DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => view.setSettings({ thumbs: "landscape" })}>{settings.thumbs === "landscape" ? "✓ " : ""}Landscape thumbnails</DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => view.setSettings({ cues: !settings.cues })}>{settings.cues ? "✓ " : ""}Show cues</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       {needle && !anyMatch && (
@@ -134,11 +114,11 @@ export default function ExerciseLibraryGrid({
       )}
 
       {blocks.map((g) => {
-        const c = groupColour(g.slug);
+        // No colour coding on the page for now (14 Oct, Alex): every group in navy.
+        const c = NAVY;
         const all = items.filter((i) => i.group === g.slug);
         const alive = all.filter((i) => !i.archived);
         const shown = all.filter((i) => matches(i) && passes(i)).sort((a, b) => a.name.localeCompare(b.name));
-        const demoN = alive.filter((i) => i.video).length;
         const isOpen = needle ? shown.length > 0 : view.open.includes(g.slug);
         const noun = cardio ? "movement" : "exercise";
         return (
@@ -152,20 +132,6 @@ export default function ExerciseLibraryGrid({
               <span className="lib-group-count">
                 {filtering ? `${shown.length} of ${alive.length}` : `${alive.length} ${alive.length === 1 ? noun : `${noun}s`}`}
                 {needle && shown.length === 0 ? " · 0 matches" : ""}
-              </span>
-              <span className="lib-coverage">
-                {alive.length === 0 ? (
-                  <span className="lib-coverage-text">Empty</span>
-                ) : (
-                  <>
-                    <span className="lib-bar" aria-hidden="true">
-                      <span style={{ width: `${Math.round((demoN / alive.length) * 100)}%` }} />
-                    </span>
-                    <span className="lib-coverage-text">
-                      {demoN} of {alive.length} with demo
-                    </span>
-                  </>
-                )}
               </span>
             </button>
             {isOpen && (

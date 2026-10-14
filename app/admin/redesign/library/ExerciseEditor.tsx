@@ -58,6 +58,7 @@ export default function ExerciseEditor({
   onClose,
   onOpenOther,
   onChanged,
+  onCreated,
   backTo,
 }: {
   /** Kept for the page: the exercises of the group, in order (unused since prev / next went, 14 Oct). */
@@ -73,6 +74,8 @@ export default function ExerciseEditor({
   onOpenOther: (id: number) => void;
   /** The page re-reads the library (the list behind, the videos). */
   onChanged: () => void;
+  /** Create mode (14 Oct): the exercise exists once it is named; then the page opens the editor on it. */
+  onCreated?: (id: number) => void;
   /** The exercise this one was opened from, for "← Back to …". */
   backTo?: { id: number; name: string } | null;
 }) {
@@ -111,10 +114,17 @@ export default function ExerciseEditor({
 
   const gc = groupColour(group);
   const used = item.clients;
+  // Create mode: a draft with no id yet. Group and cue are kept here and go with the name; the rest waits for the name.
+  const unnamed = item.id === 0;
+  const needName = () => {
+    if (!unnamed) return false;
+    toast("Give it a name first, then the rest.");
+    return true;
+  };
   const others = useMemo(() => items.filter((x) => x.id !== item.id && !x.archived), [items, item.id]);
 
   // ---- Saves.
-  const patch = (p: { name?: string; group?: string; cue?: string | null }) => () => updateLibraryExerciseAction(item.id, p);
+  const patch = (p: { name?: string; group?: string; cue?: string | null }) => () => (unnamed ? Promise.resolve(true) : updateLibraryExerciseAction(item.id, p));
   const saveName = () => {
     const n = name.trim();
     if (!n) {
@@ -129,6 +139,15 @@ export default function ExerciseEditor({
     setNameHint(null);
     if (n === savedName) return;
     setSavedName(n);
+    if (unnamed) {
+      void save.run(async () => {
+        const id = await createLibraryExerciseAction(n, group, cue.trim());
+        if (id == null) throw new Error("create");
+        onChanged();
+        onCreated?.(id);
+      });
+      return;
+    }
     save.now("name", patch({ name: n }));
   };
   const pickGroup = (slug: string) => {
@@ -136,25 +155,30 @@ export default function ExerciseEditor({
     void save.run(patch({ group: slug }));
   };
   const saveVars = (next: Var[]) => {
+    if (needName()) return;
     setVars(next);
     void save.run(() => saveExerciseVariationsAction(item.id, next.map((v) => ({ id: v.id < 0 ? null : v.id, name: v.name, video: v.video, cue: v.cue }))).then(onChanged));
   };
   const saveVarsLater = (next: Var[]) => {
+    if (needName()) return;
     setVars(next);
     save.later("vars", () => saveExerciseVariationsAction(item.id, next.map((v) => ({ id: v.id < 0 ? null : v.id, name: v.name, video: v.video, cue: v.cue }))).then(onChanged));
   };
   const saveSubs = (next: Sub[], later = false) => {
+    if (needName()) return;
     setSubs(next);
     const job = () => saveExerciseSubstitutesAction(item.id, next.map((s) => ({ exerciseId: s.exerciseId, note: s.note, variationId: s.variationId })));
     if (later) save.later("subs", job);
     else void save.run(job);
   };
   const setDemoVideo = (videoId: number, path: string) => {
+    if (needName()) return;
     setDemo(path);
     setPlaying(false);
     void save.run(() => assignVideoToExerciseAction(item.id, videoId).then(onChanged));
   };
   const removeDemo = () => {
+    if (needName()) return;
     setDemo(null);
     setPlaying(false);
     void save.run(() => {
@@ -164,6 +188,7 @@ export default function ExerciseEditor({
     });
   };
   const useLink = () => {
+    if (link.trim() && needName()) return;
     const u = link.trim();
     if (!u) {
       setLinkBad(false);
@@ -188,7 +213,7 @@ export default function ExerciseEditor({
     });
   };
   const upload = async (file: File | undefined, forVar: number | null = null) => {
-    if (!file || uploading) return;
+    if (!file || uploading || needName()) return;
     if (!file.type.startsWith("video/")) {
       toast.error("That isn't a video.");
       return;
@@ -419,7 +444,7 @@ export default function ExerciseEditor({
           <div className="exm-head-text">
             <div className="exm-title-row">
               <h2 id="exd-title" ref={headingRef} tabIndex={-1} className="exm-title">
-                {name.trim() || "Untitled exercise"}
+                {name.trim() || (unnamed ? "New exercise" : "Untitled exercise")}
               </h2>
               <span className="exm-pill">{groups.find((g) => g.slug === group)?.label ?? group}</span>
               <button type="button" className={`exm-state ${save.state}`} aria-live="polite" onClick={save.state === "error" ? save.retry : undefined} title={save.state === "error" ? "Click to try again" : undefined}>
@@ -597,7 +622,7 @@ export default function ExerciseEditor({
           <section className="exm-col exm-details">
             <label className="exm-field">
               {sectionLabel("Name")}
-              <input className="exm-input name" value={name} onChange={(e) => setName(e.target.value)} onBlur={saveName} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} placeholder="Exercise name" maxLength={60} />
+              <input className="exm-input name" value={name} autoFocus={unnamed} onChange={(e) => setName(e.target.value)} onBlur={saveName} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} placeholder={unnamed ? "Name it, e.g. Seated cable row" : "Exercise name"} maxLength={60} />
               {nameHint && <small className="exm-err">{nameHint}</small>}
             </label>
 

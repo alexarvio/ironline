@@ -6,11 +6,10 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Toaster } from "../../../components/ui/toast";
 import { Badge, Button, Card, CardContent, Tabs, TabsList, TabsTrigger } from "../../../components/ui/basics";
-import { Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from "../../../components/ui/form";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
+import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/form";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { MoreIcon, PencilIcon, PlusIcon, TrashIcon } from "../../../components/icons";
-import { archiveLibraryExerciseAction, assignVideoToExerciseAction, createLibraryExerciseAction, deleteLibraryVideoAction, renameLibraryVideoAction, uploadLibraryVideoAction } from "./actions";
+import { archiveLibraryExerciseAction, assignVideoToExerciseAction, deleteLibraryVideoAction, renameLibraryVideoAction, uploadLibraryVideoAction } from "./actions";
 import type { LibraryData, LibraryItem, LibraryVideo } from "./load";
 import ExerciseEditor from "./ExerciseEditor";
 import ExerciseDrawer, { DRAWER_WIDTH } from "./ExerciseDrawer";
@@ -49,6 +48,7 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
   const closeEditor = () => {
     setClosingItem(open);
     setOpenId(null);
+    setCreating(null);
     setOpenFrom(null);
     setTimeout(() => setClosingItem(null), 240);
   };
@@ -89,8 +89,10 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
   const onShelf = data.items.filter((i) => (shelf === "cardio" ? i.group === "cardio" : i.group !== "cardio"));
   const removedCount = onShelf.filter((i) => i.archived).length;
   const open = openId != null ? data.items.find((i) => i.id === openId) ?? null : null;
-  // What the drawer shows: the open one, or the one it is closing on.
-  const shownItem = open ?? closingItem;
+  // New in {Group} (14 Oct): the editor on a draft with no id; it exists once named.
+  const draft: LibraryItem | null = creating != null ? { id: 0, name: "", group: creating, video: null, cue: "", clients: 0, archived: false, variations: [], substitutes: [] } : null;
+  // What the editor shows: the open one, a draft, or the one it is closing on.
+  const shownItem = open ?? draft ?? closingItem;
 
   const archive = (i: LibraryItem) => act(() => archiveLibraryExerciseAction(i.id, !i.archived), i.archived ? `${i.name} back in the library` : `${i.name} taken out of the library`);
 
@@ -143,7 +145,7 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
         />
       )}
 
-      <ExerciseDrawer open={open != null} colour={groupColour(shownItem?.group)} onClose={closeEditor} onCardUnder={(id) => openItem(id)}>
+      <ExerciseDrawer open={open != null || creating != null} colour={groupColour(shownItem?.group)} onClose={closeEditor} onCardUnder={(id) => openItem(id)}>
         {shownItem && (
           <ExerciseEditor
             key={shownItem.id}
@@ -166,31 +168,14 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
               setOpenId(id);
             }}
             onChanged={() => router.refresh()}
+            onCreated={(id) => {
+              setCreating(null);
+              setOpenId(id);
+            }}
           />
         )}
       </ExerciseDrawer>
 
-      <Dialog open={creating != null} onOpenChange={(o) => !o && setCreating(null)}>
-        {creating != null && (
-          <CreateDialog
-            group={creating}
-            groupLabel={data.groups.find((g) => g.slug === creating)?.label ?? "Other"}
-            onCreate={(v) => {
-              const group = creating;
-              setCreating(null);
-              start(async () => {
-                const id = await createLibraryExerciseAction(v.name, group, v.cue);
-                router.refresh();
-                if (id) {
-                  toast.success(`${v.name} added to your library`);
-                  // Open it, so its demo can go on straight away.
-                  setTimeout(() => setOpenId(id), 400);
-                }
-              });
-            }}
-          />
-        )}
-      </Dialog>
       <Toaster />
     </div>
   );
@@ -404,32 +389,3 @@ function VideosShelf({
 }
 
 /** Under an exercise's rows in its dialog: every video of the coach's to drag up onto a demo slot, and new ones dropped or uploaded here. */
-function CreateDialog({ group, groupLabel, onCreate }: { group: string; groupLabel: string; onCreate: (v: { name: string; cue: string }) => void }) {
-  const cardio = group === "cardio";
-  const [name, setName] = useState("");
-  const [cue, setCue] = useState("");
-  return (
-    <DialogContent className="rd-dlg">
-      <DialogHeader>
-        <DialogTitle>{cardio ? "New cardio movement" : `New exercise in ${groupLabel}`}</DialogTitle>
-        <DialogDescription>{cardio ? "Offered when you add cardio to a session." : "Offered when you add an exercise to a session. Its demo goes on next."}</DialogDescription>
-      </DialogHeader>
-      <div className="lb-field">
-        <Label htmlFor="lb-new-name">Name</Label>
-        <Input id="lb-new-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder={cardio ? "Incline walk" : "Seated cable row"} autoFocus onKeyDown={(e) => e.key === "Enter" && name.trim() && onCreate({ name: name.trim(), cue: cue.trim() })} />
-      </div>
-      <div className="lb-field">
-        <Label htmlFor="lb-new-cue">Default cue</Label>
-        <Textarea id="lb-new-cue" rows={2} className="min-h-16" value={cue} onChange={(e) => setCue(e.target.value)} maxLength={300} placeholder={cardio ? "Keep it conversational" : "Squeeze at the top"} />
-      </div>
-      <DialogFooter>
-        <DialogClose asChild>
-          <Button variant="outline">Cancel</Button>
-        </DialogClose>
-        <Button disabled={!name.trim()} onClick={() => onCreate({ name: name.trim(), cue: cue.trim() })}>
-          Add to library
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  );
-}
