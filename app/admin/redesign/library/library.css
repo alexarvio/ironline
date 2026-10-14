@@ -310,7 +310,7 @@
 @media (max-width: 720px) { .exd { width: 100vw; border-radius: 0; } }
 .exd-content { position: relative; display: flex; flex-direction: column; flex: 1; min-height: 0; animation: gpk-fade 0.15s ease; }
 .exd .exm-head { padding: 22px 22px 0; }
-.exd .exm-body { flex: 1; display: flex; flex-direction: column; gap: 18px; min-height: 0; overflow-y: auto; padding: 18px 22px; }
+.exd .exm-body { flex: 1; display: flex; flex-direction: column; align-items: stretch; gap: 18px; min-height: 0; overflow-y: auto; padding: 18px 22px; }
 .exd .exm-details { gap: 18px; }
 .exd .exm-preview { height: 300px; background: #0e1118; }
 .exd .exm-poster.large { object-fit: contain; background: #0e1118; }
@@ -327,7 +327,8 @@
 .exd-pos { font-size: 12px; font-weight: 700; color: #8b93a1; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .exd .exm-close { margin-left: 4px; }
 .exd .exm-title:focus { outline: none; }
-/* The page makes room: the grid reflows into the space left of the drawer. */
-.lb.lb-drawer-open { padding-right: 600px; transition: padding-right 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
-@media (max-width: 720px) { .lb.lb-drawer-open { padding-right: 0; } }
+/* The drawer sits over the page (14 Oct, Alex): nothing reflows behind it. */
 .lib-card.editing::after { content: ""; position: absolute; inset: 0; border-radius: 18px; box-shadow: inset 0 0 0 2.5px var(--c); pointer-events: none; }
+/* The chat stays within reach while the drawer is open (14 Oct, Alex): its tab and panel sit above the drawer, so a chat opens over it and closes back to it. */
+.rd-chattab { z-index: 75; }
+.rd-chatpanel { z-index: 76; }
