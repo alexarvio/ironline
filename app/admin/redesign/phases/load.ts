@@ -1,4 +1,4 @@
-import { getPlanData, listClientEvents, listClientPhases, listClients, localDateStr, type PlanPhaseRow, type PlanProgramOption } from "../../../lib/queries";
+import { getPlanData, listClientEvents, listClientPhases, listClients, listEventCategories, localDateStr, type PlanPhaseRow, type PlanProgramOption } from "../../../lib/queries";
 import { phaseLastDay } from "../../../lib/phases";
 import type { OverviewEvent, OverviewPhase } from "./timeline";
 
@@ -17,7 +17,7 @@ export type OverviewClient = {
   events: OverviewEvent[];
   plan: { phases: PlanPhaseRow[]; programs: PlanProgramOption[] };
 };
-export type PhasesOverviewData = { today: string; thisWeek: string; coachId: number; clients: OverviewClient[] };
+export type PhasesOverviewData = { today: string; thisWeek: string; coachId: number; clients: OverviewClient[]; /** The event dialog's categories. */ categories: { id: string; label: string; color: string; custom: boolean }[] };
 
 export function loadPhasesOverview(coachId: number): PhasesOverviewData {
   const today = localDateStr();
@@ -40,5 +40,5 @@ export function loadPhasesOverview(coachId: number): PhasesOverviewData {
     const events: OverviewEvent[] = listClientEvents(c.id).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, addedBy: e.added_by === "client" ? "client" : "coach" }));
     return { id: c.id, name: c.name ?? "Client", avatarPath: c.avatar_path ?? null, phases, events, plan: { phases: plan.phases, programs: plan.programs } };
   });
-  return { today, thisWeek, coachId, clients };
+  return { today, thisWeek, coachId, clients, categories: listEventCategories(coachId) };
 }
