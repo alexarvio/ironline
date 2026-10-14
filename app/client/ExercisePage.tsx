@@ -87,7 +87,8 @@ export default function ExercisePage({
   const swapped = exercise.swap != null;
   const targetWeight = swapped ? null : gymWeight;
   const targetRpe = swapped ? null : exercise.targetRpe;
-  const askRpe = targetRpe != null || exercise.logs.some((l) => l.rpe != null);
+  // RPE is off the set rows (14 Oct, Alex, after Strava): weight and reps only, side by side. A figure logged before stays in the data.
+  const askRpe = false;
   const last = exercise.lastSets;
   const lastOf = (n: number) => last?.sets.find((s) => s.setNumber === n) ?? null;
   // "8-10" → 8, "12" → 12: the reps the plan asks for.
@@ -564,9 +565,11 @@ export default function ExercisePage({
                     </button>
                   )}
                 </div>
+                {/* Weight and reps side by side (14 Oct): the figure big, its label under it, − and + below. */}
+                <div className="lw-fields">
                 {(askWeight || row.kind === "warm") && <Stepper row={row} field="weight" label={uLabel.toUpperCase()} shown={shownOf(row, "weight")} onStep={(d) => step(row, "weight", d)} onTyped={(t) => typed(row, "weight", t)} ariaUnit={unit === "kg" ? "kilograms" : "pounds"} inputRef={(el) => (fieldRefs.current[`${row.id}:weight`] = el)} hasNext={nextField(row, "weight") != null} onNext={() => focusNext(row, "weight")} />}
                 <Stepper row={row} field="reps" label="REPS" shown={shownOf(row, "reps")} onStep={(d) => step(row, "reps", d)} onTyped={(t) => typed(row, "reps", t)} ariaUnit="reps" inputRef={(el) => (fieldRefs.current[`${row.id}:reps`] = el)} hasNext={nextField(row, "reps") != null} onNext={() => focusNext(row, "reps")} />
-                {askRpe && row.kind === "work" && <Stepper row={row} field="rpe" label="RPE" shown={shownOf(row, "rpe")} small onStep={(d) => step(row, "rpe", d)} onTyped={(t) => typed(row, "rpe", t)} ariaUnit="RPE" inputRef={(el) => (fieldRefs.current[`${row.id}:rpe`] = el)} hasNext={false} onNext={() => focusNext(row, "rpe")} />}
+                </div>
               </div>
               </Fold>
             );
