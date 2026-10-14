@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireCoach } from "../../../lib/auth";
-import { getCalendarDay, getCalendarMonth, getMeetingConflicts, listCalendarCategories, listClients, localDateStr, type MeetingWithClient } from "../../../lib/queries";
+import { clientReasons, getActivityFeed, getCalendarDay, getCalendarMonth, getMeetingConflicts, listCalendarCategories, listClients, localDateStr, type MeetingWithClient } from "../../../lib/queries";
+import { ATTENTION } from "../../../lib/attentionReasons";
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/basics";
 import { ChevronLeftIcon } from "../../../components/icons";
 import AutosaveNote from "../../AutosaveNote";
@@ -54,7 +55,12 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
     note: m.prep_notes ?? "",
     conflict: conflictIds.has(m.id),
   }));
-  const clients = listClients(coach.id).map((c) => ({ id: c.id, name: c.name }));
+  // Each with why they need the coach, as the rail says it (14 Oct), for the With picker.
+  const feed = getActivityFeed(coach.id);
+  const clients = listClients(coach.id).map((c) => {
+    const r = clientReasons(c.id, feed)[0];
+    return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, reason: r ? { text: r.text, color: ATTENTION[r.type].color, rgb: ATTENTION[r.type].rgb } : null };
+  });
   // eslint-disable-next-line react-hooks/purity -- a server render reads the clock once, on purpose
   const renderedAt = Date.now();
 
