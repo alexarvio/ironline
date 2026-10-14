@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { addCalendarCategoryAction, addCalendarEntryAction, deleteEventCategoryAction, removeCalendarEntryAction, updateCalendarEntryAction, updateEventCategoryAction } from "../../../lib/actions";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { Switch } from "../../../components/ui/form";
-import { ChevronDownIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { ChevronDownIcon, TrashIcon } from "../../../components/icons";
 import DatePick from "../DatePick";
 import Picker from "../Picker";
 import { PALETTE, entryColors, paletteOf, type Category } from "../palette";
@@ -101,9 +101,6 @@ export default function CalendarDay({ date, entries, categories, clients }: { da
           {top.map((e) => (
             <Pill key={e.id} e={e} cats={categories} slots={2} onOpen={() => setDlg({ entry: e, date, time: e.time || "09:00" })} />
           ))}
-          <button type="button" className="cdg-add" onClick={() => setDlg({ entry: null, date, time: "09:00" })}>
-            <PlusIcon /> Add
-          </button>
         </div>
       </div>
 
