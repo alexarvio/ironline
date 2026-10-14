@@ -101,10 +101,10 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
 
   const q = fold(query.trim());
   const matches = (name: string) => !q || fold(name).includes(q);
-  const needs = rail.clients.filter((c) => c.reasons.length > 0 && matches(c.name));
-  // The most pressing kind first, then the one waiting longest.
-  needs.sort((a, b) => ATTENTION[a.reasons[0].type].rank - ATTENTION[b.reasons[0].type].rank || (a.reasons[0].since || Infinity) - (b.reasons[0].since || Infinity));
-  const good = rail.clients.filter((c) => c.reasons.length === 0 && matches(c.name)).sort((a, b) => a.name.localeCompare(b.name));
+  // A to Z, always (14 Oct, Alex); the reason line and the toggle do the rest.
+  const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name);
+  const needs = rail.clients.filter((c) => c.reasons.length > 0 && matches(c.name)).sort(byName);
+  const good = rail.clients.filter((c) => c.reasons.length === 0 && matches(c.name)).sort(byName);
   const needsYou = rail.clients.filter((c) => c.reasons.length > 0).length;
   const [adding, setAdding] = useState(false);
   // The client just clicked is marked at once, before the page arrives (a
@@ -264,7 +264,7 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
               // One list (14 Oct, Alex): the toggle above already says which; those needing the coach come first, the rest A to Z.
               <>
                 {needs.length === 0 && !q && filter === "needs" && <p className="rr-nobody">✓ Nobody needs you right now</p>}
-                <ul className="rr-rows">{[...needs, ...(filter === "all" ? good : [])].map(row)}</ul>
+                <ul className="rr-rows">{(filter === "all" ? [...needs, ...good].sort(byName) : needs).map(row)}</ul>
               </>
             )}
           </div>
