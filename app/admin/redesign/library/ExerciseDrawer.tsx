@@ -11,7 +11,8 @@ import { createPortal } from "react-dom";
 // scrim closes it, unless a card sits under the pointer: then that card
 // opens instead.
 
-export const DRAWER_WIDTH = 720;
+/** Nothing sits beside a centred modal: the page only scrolls a card into view vertically. */
+export const DRAWER_WIDTH = 0;
 
 export default function ExerciseDrawer({
   open,
