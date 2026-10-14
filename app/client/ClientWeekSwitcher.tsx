@@ -2,6 +2,7 @@
 
 import { ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { useTrainingFocus } from "./CheckInContext";
+import PictureCycle from "./PictureCycle";
 
 // Read-only week switcher for the client's own Training tab — every
 // existing week's content is pre-rendered server-side (see TrainingTab in
@@ -19,6 +20,7 @@ export default function ClientWeekSwitcher({
   weekLabels,
   completedWeeks = [],
   banner,
+  pictures,
 }: {
   weeks: number[];
   currentWeek: number;
@@ -31,6 +33,8 @@ export default function ClientWeekSwitcher({
   completedWeeks?: number[];
   /** The banner's top (brand, programme, progress), rendered by the server page. */
   banner?: ReactNode;
+  /** The client's own pictures (14 Oct), taking turns behind the banner; none, the banner's own photo. */
+  pictures?: string[];
 }) {
   // A coach message's link can land on an earlier week; otherwise this one.
   const focus = useTrainingFocus();
@@ -109,6 +113,7 @@ export default function ClientWeekSwitcher({
     <div>
       {banner != null ? (
         <header className="tr-banner">
+          {pictures && pictures.length > 0 && <PictureCycle pictures={pictures} className="tr-banner-pic" />}
           <span className="tr-banner-glow" aria-hidden="true" />
           {banner}
           {strip}

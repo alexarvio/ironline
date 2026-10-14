@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import PictureCycle from "./PictureCycle";
 import { CalendarIcon, ChecklistIcon, ChevronDownIcon, ChevronLeftIcon, DumbbellIcon } from "../components/icons";
 import FitTitle from "./FitTitle";
 import CheckInProgress, { type CheckInFeedDay, type CheckInHistory } from "./CheckInProgress";
@@ -43,6 +44,8 @@ export type CheckInSection = {
 export type CheckInProps = {
   dateLabel: string;
   today: string;
+  /** The client's own lifestyle pictures (14 Oct), taking turns behind the banner. */
+  pictures?: string[];
   sections: CheckInSection[];
   // Which segments still have no entry for their current period.
   dueSections: string[];
@@ -79,6 +82,7 @@ export default function CheckInScreen({
   stats,
   calendar,
   initialSection,
+  pictures,
   onBack,
 }: {
   clientId: number;
@@ -93,6 +97,7 @@ export default function CheckInScreen({
   calendar: ActivityDay[];
   initialSection: string;
   dueSections: string[];
+  pictures?: string[];
   onBack: () => void;
 }) {
   const todayRows = buildGroups(sections, weeklyOpen, monthlyOpen).flatMap((g) => g.rows);
@@ -132,6 +137,7 @@ export default function CheckInScreen({
         {/* The photo banner, the Training and Nutrition banners' size: the
             date, and the pills that switch between Entries, Progress and Calendar. */}
         <header className={`tr-banner ci-banner${view === "progress" ? " progress" : ""}`}>
+          {pictures && pictures.length > 0 && <PictureCycle pictures={pictures} className="tr-banner-pic" />}
           <div className="tr-kicker">{["Daily", weeklyOpen ? "weekly" : null, monthlyOpen && sections.some((s) => s.id === "monthly") ? "monthly" : null].filter(Boolean).join(" · ")}</div>
           <FitTitle className="tr-name">{dateLabel}</FitTitle>
           <div className="tr-weeks ci-views" role="tablist" aria-label="Check-in">

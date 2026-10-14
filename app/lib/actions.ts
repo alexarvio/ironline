@@ -157,8 +157,9 @@ import {
   saveNutritionPlan,
   savePhotoPeriodNote,
   savePhotoUpload,
-  saveClientCardCover,
+  addClientCardPicture,
   clearClientCardCover,
+  removeClientCardPicture,
   saveMealPhoto,
   getMealPhoto,
   removeMealPhoto,
@@ -3565,24 +3566,32 @@ export async function saveSkipReasonAction(programDayId: number, text: string) {
 // The client's own picture behind a Home card (12 Oct): from a press-and-hold
 // on the card, or Settings · Card pictures. One a track, kept across phases.
 const CARD_TRACKS = new Set(["lifestyle", "training", "nutrition"]);
-export async function uploadCardCoverAction(formData: FormData) {
+/** One more picture of the client's own (up to six a track). Returns its path, for the sheet to show at once. */
+export async function uploadCardCoverAction(formData: FormData): Promise<string | null> {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const track = String(formData.get("track") ?? "");
-  if (!CARD_TRACKS.has(track)) return;
+  if (!CARD_TRACKS.has(track)) return null;
   const file = formData.get("file") as File | null;
-  if (!file || file.size === 0 || file.size > 6 * 1024 * 1024 || !file.type.startsWith("image/")) return;
+  if (!file || file.size === 0 || file.size > 6 * 1024 * 1024 || !file.type.startsWith("image/")) return null;
   const body = Buffer.from(await file.arrayBuffer());
-  const r = saveClientCardCover(clientId, track as PhaseTrack, body, file.type);
-  if (!r) return;
-  if (r.previous && keyOf(r.previous) !== keyOf(r.saved)) await deleteUpload(r.previous);
+  const r = addClientCardPicture(clientId, track as PhaseTrack, body, file.type);
+  if (!r) return null;
   await putUpload(r.saved, body, file.type);
+  revalidatePath("/client");
+  return r.saved;
+}
+
+export async function removeCardPictureAction(clientId: number, track: PhaseTrack, publicPath: string) {
+  const id = await requireClientAccess(Number(clientId));
+  if (!CARD_TRACKS.has(track)) return;
+  await deleteUpload(removeClientCardPicture(id, track, String(publicPath)));
   revalidatePath("/client");
 }
 
 export async function resetCardCoverAction(clientId: number, track: PhaseTrack) {
   const id = await requireClientAccess(Number(clientId));
   if (!CARD_TRACKS.has(track)) return;
-  await deleteUpload(clearClientCardCover(id, track));
+  for (const p of clearClientCardCover(id, track)) await deleteUpload(p);
   revalidatePath("/client");
 }
 

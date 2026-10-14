@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useRef, useState } from "react";
+import PictureCycle from "./PictureCycle";
 import { useOpenFood } from "./CheckInContext";
 import { useTween } from "../components/useTween";
 
@@ -55,6 +56,7 @@ export default function NutritionTargetsCard({
   phase,
   footer,
   eatenKcal = 0,
+  pictures,
 }: {
   training: NutritionTargetSet;
   rest: NutritionTargetSet;
@@ -64,6 +66,8 @@ export default function NutritionTargetsCard({
   phase: ReactNode;
   /** The foot of the calories card: the supplements fold. */
   footer?: ReactNode;
+  /** The client's own pictures (14 Oct), taking turns behind the banner; none, the banner's own photo. */
+  pictures?: string[];
   /** Calories logged in the food diary today; the ring's centre counts down from the target. */
   eatenKcal?: number;
 }) {
@@ -89,6 +93,7 @@ export default function NutritionTargetsCard({
   return (
     <>
       <header className="nd-banner nd-photo">
+        {pictures && pictures.length > 0 && <PictureCycle pictures={pictures} className="tr-banner-pic" />}
         {phase}
 
         <div className="nd-tabs" role="tablist" aria-label="Day type">
@@ -133,7 +138,7 @@ export default function NutritionTargetsCard({
                   <g transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}>
                     {rings.map((ring) => (
                       <g key={ring.id}>
-                        <circle cx={SIZE / 2} cy={SIZE / 2} r={ring.r} fill="none" stroke="#e6ecf3" strokeWidth={STROKE} />
+                        <circle cx={SIZE / 2} cy={SIZE / 2} r={ring.r} fill="none" stroke="#E0F2F1" strokeWidth={STROKE} />
                         <circle
                           className="nd-ring-arc"
                           cx={SIZE / 2}

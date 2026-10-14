@@ -30,7 +30,7 @@ import {
   getLastWarmupSets,
   gymSessionStats,
   currentGymId,
-  getClientCardCovers,
+  getClientCardPictures,
   getLastSets,
   getExerciseUnit,
   getLatestClientExerciseNotes,
@@ -391,7 +391,7 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
   return (
     <HomeHub
       clientId={CLIENT_ID}
-      cardCovers={getClientCardCovers(CLIENT_ID)}
+      cardCovers={getClientCardPictures(CLIENT_ID)}
       dateLabel={dateLabel}
       firstName={(client?.name ?? "").trim().split(/\s+/)[0] || "there"}
       coach={{ firstName: coachFirst, photoPath: getCoachAvatarPath(CLIENT_ID) }}
@@ -531,6 +531,16 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
 // and Home's card show. Both sides: the client answers from the same screen.
 // The thread as the Messages screen shows it: chatThreadViews in lib/queries.ts.
 const coachMessagesFor = chatThreadViews;
+
+/** Behind a track's banner (14 Oct): the client's own card pictures, taking
+    turns; else the coach's phase cover, when they chose one; else nothing,
+    and the banner keeps its own photo. */
+function bannerPictures(clientId: number, track: "training" | "nutrition" | "lifestyle"): string[] {
+  const own = getClientCardPictures(clientId)[track];
+  if (own?.length) return own;
+  const cover = getCurrentPhase(clientId, track)?.cover_path;
+  return cover ? [cover] : [];
+}
 
 function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID: number; week: number; currentWeek: number; showMyNotes: boolean }) {
   const days = getWeekDays(CLIENT_ID, week);
@@ -914,6 +924,7 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   return (
     <div className="nd">
       <NutritionTargetsCard
+        pictures={bannerPictures(CLIENT_ID, "nutrition")}
         training={training}
         rest={rest}
         // Always opens on Training day; Rest day is a tap away.
@@ -1076,7 +1087,7 @@ function SettingsTab({ CLIENT_ID }: { CLIENT_ID: number }) {
             coachName={getCoachFirstName(CLIENT_ID)}
             rows={(["lifestyle", "training", "nutrition"] as const).map((track) => {
               const ph = getCurrentPhase(CLIENT_ID, track);
-              const own = getClientCardCovers(CLIENT_ID)[track] ?? null;
+              const own = getClientCardPictures(CLIENT_ID)[track] ?? [];
               const coach = ph ? (ph.cover_path ?? defaultPhaseCover(track, ph.id)) : track === "lifestyle" ? "/img/lifestyle-bottle.jpg" : defaultPhaseCover(track, 0);
               return { track, own, coach };
             })}
@@ -1291,6 +1302,7 @@ export default async function ClientPage({
       day: "numeric",
     }),
     today: localDateStr(),
+    pictures: bannerPictures(CLIENT_ID, "lifestyle"),
     sections: checkInData.sections,
     dueSections: checkInStatusForScreen.dueTypes as string[],
     weeklyOpen: weeklyCheckInOpen(CLIENT_ID),
@@ -1436,6 +1448,7 @@ export default async function ClientPage({
             weekLabels={trainingWeekLabels}
             completedWeeks={completedWeeks}
             banner={trainingBanner}
+            pictures={bannerPictures(CLIENT_ID, "training")}
           />
         </div>
       ),

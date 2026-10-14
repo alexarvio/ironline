@@ -351,6 +351,7 @@ export default function AppShell({
           history={checkIn.history}
           stats={checkIn.stats}
           calendar={checkIn.calendar}
+          pictures={checkIn.pictures}
           onBack={backFrom("checkin")}
         />
       </div>

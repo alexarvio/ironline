@@ -18845,3 +18845,17 @@ button.ts-circle:focus-visible { outline: 2px solid #2f5d8f; outline-offset: 2px
 .wo-page-inner { padding-top: 20px; }
 .wo-page-inner.lw { padding-top: 0; }
 .lw .wo-ex-head { margin-top: 0; }
+
+/* ---- The client's own pictures, taking turns (14 Oct): on the Home card
+   and behind the Training, Nutrition and check-in banners. One shows; the
+   next fades in over it every few seconds. The banner layer sits under the
+   banner's own darkening (::before), above its background photo. */
+.pc-cycle, .tr-banner > .tr-banner-pic, .nd-banner > .tr-banner-pic { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.tr-banner, .nd-banner { isolation: isolate; }
+.tr-banner > .tr-banner-pic, .nd-banner > .tr-banner-pic { z-index: -1; }
+.pc-cycle img, .tr-banner-pic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1.4s ease; }
+.pc-cycle img.on, .tr-banner-pic img.on { opacity: 1; }
+.cv-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 0 0 16px; }
+.cv-cell { position: relative; aspect-ratio: 3 / 4; border-radius: 12px; overflow: hidden; background: #E0E0E0; }
+.cv-cell img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.cv-cell button { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.55); color: #fff; font: inherit; font-size: 16px; line-height: 24px; cursor: pointer; }

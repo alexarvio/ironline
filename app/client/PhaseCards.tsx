@@ -5,6 +5,7 @@ import { AppleIcon, ChevronDownIcon, DumbbellIcon, HeartIcon } from "../componen
 import { useNavigateTab, useOpenCheckIn, useOpenFood } from "./CheckInContext";
 import FitTitle from "./FitTitle";
 import CardPictureSheet, { useLongPress, type CardCovers } from "./CardPictureSheet";
+import PictureCycle from "./PictureCycle";
 import CheckInDialog, { type CheckInForm } from "./CheckInDialog";
 
 // Home's "Your plan": the live phase on each track, training → nutrition →
@@ -224,11 +225,17 @@ function PhaseCardCarousel({ phases, coachName, today, nextSession, food, weekDo
   // The client's own pictures (12 Oct): press and hold a card, and the sheet
   // offers the camera roll; what was just picked shows at once, until the
   // page comes back with it. null in the override: back to the coach's.
-  const [override, setOverride] = useState<Partial<Record<HomePhase["track"], string | null>>>({});
+  const [override, setOverride] = useState<Partial<Record<HomePhase["track"], string[]>>>({});
   const [holdTrack, setHoldTrack] = useState<HomePhase["track"] | null>(null);
-  const ownFor = (track: HomePhase["track"]) => (track in override ? (override[track] ?? null) : (ownCovers[track] ?? null));
+  const ownFor = (track: HomePhase["track"]): string[] => override[track] ?? ownCovers[track] ?? [];
   const coachCoverOf = (track: HomePhase["track"]) => phases.find((p) => p.track === track)?.coverUrl ?? null;
-  const coverFor = (track: HomePhase["track"]) => ownFor(track) ?? coachCoverOf(track);
+  // The client's own pictures, taking turns (14 Oct); none, the coach's one.
+  const coverFor = (track: HomePhase["track"]): string[] => {
+    const own = ownFor(track);
+    if (own.length) return own;
+    const coach = coachCoverOf(track);
+    return coach ? [coach] : [];
+  };
   const count = phases.length;
   const goToTab = useNavigateTab();
   const scroller = useRef<HTMLDivElement>(null);
@@ -299,7 +306,7 @@ function PhaseCardCarousel({ phases, coachName, today, nextSession, food, weekDo
     <>
       <div ref={scroller} className="pc-scroller" role="region" aria-label="Your phases" tabIndex={0} onScroll={onScroll} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
         {phases.map((ph, i) => (
-          <PhaseCard key={ph.id} ph={{ ...ph, coverUrl: coverFor(ph.track) }} eager={i === 0} coachName={coachName} today={today} nextSession={nextSession} food={food} weekDone={weekDone} checkInCount={checkInCount} onOpen={() => open(ph, i)} onHold={() => setHoldTrack(ph.track)} onLog={checkIn ? () => setLogOpen(true) : undefined} />
+          <PhaseCard key={ph.id} ph={{ ...ph, coverUrl: coverFor(ph.track)[0] ?? null }} pictures={coverFor(ph.track)} eager={i === 0} coachName={coachName} today={today} nextSession={nextSession} food={food} weekDone={weekDone} checkInCount={checkInCount} onOpen={() => open(ph, i)} onHold={() => setHoldTrack(ph.track)} onLog={checkIn ? () => setLogOpen(true) : undefined} />
         ))}
       </div>
       {count > 1 && (
@@ -314,9 +321,9 @@ function PhaseCardCarousel({ phases, coachName, today, nextSession, food, weekDo
           clientId={clientId}
           track={holdTrack}
           coachName={coachName}
-          shown={coverFor(holdTrack)}
           own={ownFor(holdTrack)}
-          onSaved={(t, url) => setOverride((o) => ({ ...o, [t]: url }))}
+          coach={coachCoverOf(holdTrack)}
+          onSaved={(t, pictures) => setOverride((o) => ({ ...o, [t]: pictures }))}
           onClose={() => setHoldTrack(null)}
         />
       )}
@@ -328,7 +335,7 @@ function PhaseCardCarousel({ phases, coachName, today, nextSession, food, weekDo
 /** One picture card: the cover, the chips, and the frosted panel with the
     name, the bar, the track's one thing to do and the objectives. The
     carousel and Home's accordion (12 Oct) both show these. */
-export function PhaseCard({ ph, eager, coachName, today, nextSession, food, weekDone, checkInCount, onOpen, onHold, onLog }: { ph: HomePhase; eager?: boolean; coachName: string; today: string; nextSession: PhaseNextSession; food: PhaseFoodToday; weekDone: { nextWeekLabel: string } | null; checkInCount: { done: number; total: number } | null; onOpen: () => void; /** Pressed and held (12 Oct): the picture sheet. */ onHold?: () => void; /** The lifestyle card's Log (13 Oct): today's check-in in a pop-up. */ onLog?: () => void }) {
+export function PhaseCard({ ph, pictures, eager, coachName, today, nextSession, food, weekDone, checkInCount, onOpen, onHold, onLog }: { ph: HomePhase; /** The client's own pictures (14 Oct), taking turns; one or none, the cover shows. */ pictures?: string[]; eager?: boolean; coachName: string; today: string; nextSession: PhaseNextSession; food: PhaseFoodToday; weekDone: { nextWeekLabel: string } | null; checkInCount: { done: number; total: number } | null; onOpen: () => void; /** Pressed and held (12 Oct): the picture sheet. */ onHold?: () => void; /** The lifestyle card's Log (13 Oct): today's check-in in a pop-up. */ onLog?: () => void }) {
   const hold = useLongPress(() => onHold?.());
   const goToTab = useNavigateTab();
   const openFood = useOpenFood();
@@ -349,7 +356,7 @@ export function PhaseCard({ ph, eager, coachName, today, nextSession, food, week
       onClick={onOpen}
       {...hold}
     >
-      <Cover key={ph.coverUrl ?? ""} ph={ph} eager={eager} />
+      {pictures && pictures.length > 1 ? <PictureCycle pictures={pictures} className="pc-cycle" /> : <Cover key={ph.coverUrl ?? ""} ph={ph} eager={eager} />}
       <span className="pc-scrim" aria-hidden="true" />
       {charging && <span className="pc-aura" aria-hidden="true" />}
       <div className="pc-top">

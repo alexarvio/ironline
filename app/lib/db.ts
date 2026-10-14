@@ -33,6 +33,8 @@ type Client = {
   /** The client's own picture behind a Home card, a track at a time (12 Oct):
       an upload ("/uploads/covers/..."). Absent, the coach's phase cover shows. */
   card_covers?: Partial<Record<PhaseTrack, string>>;
+  /** Several of their own (14 Oct), taking turns on the card and behind the track's banner. Supersedes card_covers. */
+  card_pictures?: Partial<Record<PhaseTrack, string[]>>;
   /** The food diary's meals in the client's own order (meal ids); absent: the standard order, added meals after. */
   meal_order?: string[] | null;
   // What the coach has already looked at on this client's Home: feed event

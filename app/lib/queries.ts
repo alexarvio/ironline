@@ -10239,50 +10239,87 @@ export function setClientGoalStart(id: number, startDate: string) {
 
 // ---- Client avatar: set by the client, shown to the coach everywhere ------
 
-/** The client's own Home card pictures (12 Oct), by track. */
-export function getClientCardCovers(clientId: number): Partial<Record<PhaseTrack, string>> {
-  return getData().clients.find((c) => c.id === clientId)?.card_covers ?? {};
-}
-
-/** An uploaded card picture of the client's own. Returns the old path, for the storage bucket. */
-export function saveClientCardCover(clientId: number, track: PhaseTrack, buffer: Buffer, mimeType: string): { saved: string; previous: string | null } | null {
+/** The client's own pictures (12 Oct, several since 14 Oct), by track: on
+    the Home card and behind the track's banner, taking turns. A client from
+    before had one, in card_covers; it reads as a list of one. */
+const CARD_TRACKS_ALL: PhaseTrack[] = ["lifestyle", "training", "nutrition"];
+const MAX_CARD_PICTURES = 6;
+export function getClientCardPictures(clientId: number): Partial<Record<PhaseTrack, string[]>> {
   const client = getData().clients.find((c) => c.id === clientId);
-  if (!client) return null;
-  const ext = (mimeType.split("/")[1] || "jpg").replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "jpg";
-  const dir = path.join(DATA_DIR, "uploads", "covers", String(clientId));
-  fs.mkdirSync(dir, { recursive: true });
-  const filename = `${track}.${ext}`;
-  fs.writeFileSync(path.join(dir, filename), buffer);
-  const previous = client.card_covers?.[track] ?? null;
-  const prevFile = previous?.split("?")[0].split("/").pop();
-  if (prevFile && prevFile !== filename) {
-    try {
-      fs.unlinkSync(path.join(dir, prevFile));
-    } catch {
-      /* already gone */
-    }
+  if (!client) return {};
+  const out: Partial<Record<PhaseTrack, string[]>> = {};
+  for (const track of CARD_TRACKS_ALL) {
+    const list = client.card_pictures?.[track] ?? (client.card_covers?.[track] ? [client.card_covers[track]!] : []);
+    if (list.length) out[track] = list;
   }
-  const saved = `/uploads/covers/${clientId}/${filename}?v=${Date.now()}`;
-  client.card_covers = { ...(client.card_covers ?? {}), [track]: saved };
-  persist();
-  return { saved, previous };
+  return out;
 }
 
-/** Back to the coach's picture. Returns the path removed, for the storage bucket. */
-export function clearClientCardCover(clientId: number, track: PhaseTrack): string | null {
-  const client = getData().clients.find((c) => c.id === clientId);
-  const previous = client?.card_covers?.[track] ?? null;
-  if (!client || !previous) return null;
-  const rest = { ...client.card_covers };
-  delete rest[track];
-  client.card_covers = Object.keys(rest).length ? rest : undefined;
-  persist();
+/** The first of each, for anything that shows one picture. */
+export function getClientCardCovers(clientId: number): Partial<Record<PhaseTrack, string>> {
+  const out: Partial<Record<PhaseTrack, string>> = {};
+  for (const [track, list] of Object.entries(getClientCardPictures(clientId))) if (list?.[0]) out[track as PhaseTrack] = list[0];
+  return out;
+}
+
+const coverFile = (publicPath: string) => path.join(DATA_DIR, publicPath.split("?")[0].slice(1));
+const unlinkQuietly = (file: string) => {
   try {
-    fs.unlinkSync(path.join(DATA_DIR, previous.split("?")[0].slice(1)));
+    fs.unlinkSync(file);
   } catch {
     /* already gone */
   }
-  return previous;
+};
+function setCardPictures(client: ReturnType<typeof getData>["clients"][number], track: PhaseTrack, list: string[]) {
+  const pictures = { ...(client.card_pictures ?? {}) };
+  if (list.length) pictures[track] = list;
+  else delete pictures[track];
+  client.card_pictures = Object.keys(pictures).length ? pictures : undefined;
+  // The one picture from before lives in the list now.
+  if (client.card_covers?.[track]) {
+    const rest = { ...client.card_covers };
+    delete rest[track];
+    client.card_covers = Object.keys(rest).length ? rest : undefined;
+  }
+}
+
+/** One more picture of the client's own, up to six a track. Null: no room, or no client. */
+export function addClientCardPicture(clientId: number, track: PhaseTrack, buffer: Buffer, mimeType: string): { saved: string } | null {
+  const client = getData().clients.find((c) => c.id === clientId);
+  if (!client) return null;
+  const have = getClientCardPictures(clientId)[track] ?? [];
+  if (have.length >= MAX_CARD_PICTURES) return null;
+  const ext = (mimeType.split("/")[1] || "jpg").replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "jpg";
+  const dir = path.join(DATA_DIR, "uploads", "covers", String(clientId));
+  fs.mkdirSync(dir, { recursive: true });
+  const filename = `${track}-${Date.now()}.${ext}`;
+  fs.writeFileSync(path.join(dir, filename), buffer);
+  const saved = `/uploads/covers/${clientId}/${filename}`;
+  setCardPictures(client, track, [...have, saved]);
+  persist();
+  return { saved };
+}
+
+/** One of them taken off. Returns the path removed, for the storage bucket. */
+export function removeClientCardPicture(clientId: number, track: PhaseTrack, publicPath: string): string | null {
+  const client = getData().clients.find((c) => c.id === clientId);
+  const have = client ? getClientCardPictures(clientId)[track] ?? [] : [];
+  if (!client || !have.includes(publicPath)) return null;
+  setCardPictures(client, track, have.filter((p) => p !== publicPath));
+  persist();
+  unlinkQuietly(coverFile(publicPath));
+  return publicPath;
+}
+
+/** Back to the coach's picture: every one of the client's own goes. Returns the paths removed, for the storage bucket. */
+export function clearClientCardCover(clientId: number, track: PhaseTrack): string[] {
+  const client = getData().clients.find((c) => c.id === clientId);
+  const have = client ? getClientCardPictures(clientId)[track] ?? [] : [];
+  if (!client || !have.length) return [];
+  setCardPictures(client, track, []);
+  persist();
+  have.forEach((p) => unlinkQuietly(coverFile(p)));
+  return have;
 }
 
 export function saveClientAvatar(clientId: number, buffer: Buffer, mimeType: string): string {
