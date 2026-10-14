@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { addClientPhaseAction, removeClientPhaseAction, updateClientPhaseAction } from "../../../lib/actions";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { eventTypeOf } from "../../../lib/eventTypes";
+import PhaseDetailDialog from "./PhaseDetailDialog";
 import type { PhaseTrack } from "../../../lib/db";
 import { TRACK_LABEL } from "../../phaseChrome";
 import { PhaseDialog, phaseForm } from "../plan/PlanDraft";
@@ -307,88 +308,41 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
         </div>
       </section>
 
-      {/* ---- A bar's or a marker's detail, and the way to the client's Plan. */}
+      {/* ---- A bar's detail (PhaseDetailDialog, read-only), or a marker's, and the way to the client's Plan. */}
       <Dialog open={!!picked} onOpenChange={(o) => !o && setPicked(null)}>
-        {picked && (
-          <DialogContent className="rd-dlg">
-            {"phase" in picked ? (
-              <>
-                <DialogHeader>
-                  <DialogTitle>{picked.phase.name}</DialogTitle>
-                  <DialogDescription>
-                    {picked.client.name} · {TRACK_LABEL[picked.phase.track]} phase
-                  </DialogDescription>
-                </DialogHeader>
-                <dl className="pov-facts">
+        {picked &&
+          ("phase" in picked ? (
+            <PhaseDetailDialog client={picked.client} phase={picked.phase} today={today} onMove={(p) => setPicked({ client: picked.client, phase: p })} />
+          ) : (
+            <DialogContent className="rd-dlg">
+              <DialogHeader>
+                <DialogTitle>{picked.event.title}</DialogTitle>
+                <DialogDescription>
+                  {picked.client.name} · {eventTypeOf(picked.event.kind).label} · added by {picked.event.addedBy === "client" ? first(picked.client.name) : "you"}
+                </DialogDescription>
+              </DialogHeader>
+              <dl className="pov-facts">
+                <div>
+                  <dt>Dates</dt>
+                  <dd>
+                    {shortDate(picked.event.start)}
+                    {picked.event.end > picked.event.start && ` – ${shortDate(picked.event.end)}`}
+                  </dd>
+                </div>
+                {picked.event.note && (
                   <div>
-                    <dt>State</dt>
-                    <dd>{{ draft: "Draft", running: `Week ${weekIndexOf(picked.phase, today)} of ${weeksOf(picked.phase)}`, upcoming: "Scheduled", done: "Done" }[phaseStatus(picked.phase, today)]}</dd>
+                    <dt>Note</dt>
+                    <dd>{picked.event.note}</dd>
                   </div>
-                  <div>
-                    <dt>Dates</dt>
-                    <dd>
-                      {shortDate(picked.phase.start)} – {shortDate(picked.phase.end)} · {weeksOf(picked.phase)} weeks
-                    </dd>
-                  </div>
-                  {phaseStatus(picked.phase, today) === "running" && (
-                    <div>
-                      <dt>Left</dt>
-                      <dd>{leftLabel(daysLeft(picked.phase, today))}</dd>
-                    </div>
-                  )}
-                  {endingSoon(picked.phase, picked.client.phases, today) && (
-                    <div>
-                      <dt>Then</dt>
-                      <dd>Nothing planned after it on {TRACK_LABEL[picked.phase.track]}.</dd>
-                    </div>
-                  )}
-                </dl>
-              </>
-            ) : (
-              <>
-                <DialogHeader>
-                  <DialogTitle>{picked.event.title}</DialogTitle>
-                  <DialogDescription>
-                    {picked.client.name} · {eventTypeOf(picked.event.kind).label} · added by {picked.event.addedBy === "client" ? first(picked.client.name) : "you"}
-                  </DialogDescription>
-                </DialogHeader>
-                <dl className="pov-facts">
-                  <div>
-                    <dt>Dates</dt>
-                    <dd>
-                      {shortDate(picked.event.start)}
-                      {picked.event.end > picked.event.start && ` – ${shortDate(picked.event.end)}`}
-                    </dd>
-                  </div>
-                  {picked.event.note && (
-                    <div>
-                      <dt>Note</dt>
-                      <dd>{picked.event.note}</dd>
-                    </div>
-                  )}
-                </dl>
-              </>
-            )}
-            <DialogFooter>
-              {"phase" in picked && endingSoon(picked.phase, picked.client.phases, today) && (
-                <button
-                  type="button"
-                  className="rd-btn"
-                  onClick={() => {
-                    const { client, phase } = picked;
-                    setPicked(null);
-                    setNewPhase({ client, track: phase.track, start: addDays(phase.end, 1) });
-                  }}
-                >
-                  Plan next
-                </button>
-              )}
-              <Link className="rd-btn primary" href={PLAN(picked.client.id)}>
-                Open {first(picked.client.name)}&rsquo;s Plan
-              </Link>
-            </DialogFooter>
-          </DialogContent>
-        )}
+                )}
+              </dl>
+              <DialogFooter>
+                <Link className="rd-btn primary" href={PLAN(picked.client.id)}>
+                  Open {first(picked.client.name)}&rsquo;s Plan
+                </Link>
+              </DialogFooter>
+            </DialogContent>
+          ))}
       </Dialog>
 
       {/* ---- New phase, the Plan's own dialog, opened on the track and the day after the one ending. */}

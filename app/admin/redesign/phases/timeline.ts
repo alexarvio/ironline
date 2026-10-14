@@ -17,6 +17,10 @@ export type OverviewPhase = {
   /** What is stored (lib/phases.ts): the Monday of the last week, or the last day minus 6. */
   endWeek: string;
   draft: boolean;
+  /** The coach's objectives for it, as the client's Home card shows them. */
+  objectives: string[];
+  /** A training phase's programme, for the way to its Training tab. */
+  programId: number | null;
 };
 export type OverviewEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string; addedBy: "coach" | "client" };
 
@@ -221,4 +225,31 @@ export function stackEvents(events: OverviewEvent[], r: Range, widthPx: number):
     placed.push({ event: e, row, x, x1 });
   }
   return { placed, overflow };
+}
+
+// ---- The detail pop-up ---------------------------------------------------------
+
+export type PhaseState = PhaseStatus | "soon";
+/** The status, with "soon" for a running phase that is ending soon. */
+export const phaseState = (p: OverviewPhase, all: OverviewPhase[], today: string): PhaseState => (endingSoon(p, all, today) ? "soon" : phaseStatus(p, today));
+
+/** The phase that comes after this one on the same track, the nearest first. */
+export function nextOnTrack(p: OverviewPhase, all: OverviewPhase[]): OverviewPhase | null {
+  return all.filter((q) => q.track === p.track && q.id !== p.id && q.end > p.end).sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0))[0] ?? null;
+}
+/** The one before it on the same track. */
+export function prevOnTrack(p: OverviewPhase, all: OverviewPhase[]): OverviewPhase | null {
+  return all.filter((q) => q.track === p.track && q.id !== p.id && q.start < p.start).sort((a, b) => (a.end > b.end ? -1 : a.end < b.end ? 1 : 0))[0] ?? null;
+}
+
+/** The week segments: a column a week, the last one shorter when the days don't come out even. */
+export function weekSegments(p: OverviewPhase, today: string): { days: number; fill: number }[] {
+  const total = daysBetween(p.start, p.end) + 1;
+  const elapsed = Math.min(total, Math.max(0, daysBetween(p.start, today) + 1));
+  const out: { days: number; fill: number }[] = [];
+  for (let d = 0; d < total; d += 7) {
+    const days = Math.min(7, total - d);
+    out.push({ days, fill: Math.min(1, Math.max(0, (elapsed - d) / days)) });
+  }
+  return out;
 }
