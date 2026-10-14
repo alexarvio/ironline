@@ -261,27 +261,10 @@ export default function RedesignRail({ rail, clientId, settings }: { rail: RailD
             ) : needs.length === 0 && good.length === 0 ? (
               <p className="rr-empty">No client matches that.</p>
             ) : (
+              // One list (14 Oct, Alex): the toggle above already says which; those needing the coach come first, the rest A to Z.
               <>
-                {needs.length > 0 ? (
-                  <>
-                    <h2 className="rr-section needs">
-                      <span>Needs you</span>
-                      <span>{needs.length}</span>
-                    </h2>
-                    <ul className="rr-rows">{needs.map(row)}</ul>
-                  </>
-                ) : (
-                  !q && <p className="rr-nobody">✓ Nobody needs you right now</p>
-                )}
-                {filter === "all" && good.length > 0 && (
-                  <>
-                    <h2 className="rr-section">
-                      <span>All good</span>
-                      <span>{good.length}</span>
-                    </h2>
-                    <ul className="rr-rows">{good.map(row)}</ul>
-                  </>
-                )}
+                {needs.length === 0 && !q && filter === "needs" && <p className="rr-nobody">✓ Nobody needs you right now</p>}
+                <ul className="rr-rows">{[...needs, ...(filter === "all" ? good : [])].map(row)}</ul>
               </>
             )}
           </div>
