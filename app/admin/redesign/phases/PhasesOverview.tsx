@@ -478,7 +478,8 @@ function ClientBlock({
   // Where empty space was clicked: the chooser opens there.
   const [spot, setSpot] = useState<{ x: number; y: number; day: string } | null>(null);
   const status = clientStatus(c, tracksOn, today);
-  const statusText = status.kind === "soon" ? `${TRACK_LABEL[status.track]} ends ${status.days <= 0 ? "today" : `in ${status.days} day${status.days === 1 ? "" : "s"}`}` : status.kind === "planned" ? "All planned" : "Nothing planned";
+  // Said only when something is ending (14 Oct): a quiet row says nothing under the name.
+  const statusText = status.kind === "soon" ? `${TRACK_LABEL[status.track]} ends ${status.days <= 0 ? "today" : `in ${status.days} day${status.days === 1 ? "" : "s"}`}` : null;
 
   // The lanes with something in the window, in the fixed order.
   // Two phases on one track over the same days (Sam Rivera, 14 Oct) each get a row of their own, so both are seen whole.
@@ -493,11 +494,10 @@ function ClientBlock({
   });
   const events = eventsOn ? stackEvents(c.events, range, width) : { placed: [], overflow: [] };
   const eventRows = events.placed.length || events.overflow.length ? Math.max(...events.placed.map((p) => p.row + 1), events.overflow.length ? 1 : 0) : 0;
-  const nothingAtAll = phasesOn(c, tracksOn).length === 0 && (!eventsOn || c.events.length === 0);
   const empty = lanes.length === 0 && eventRows === 0;
 
   return (
-    <div role="group" aria-label={`${c.name}, ${statusText}`} className="pov-client" style={{ display: "contents" }}>
+    <div role="group" aria-label={statusText ? `${c.name}, ${statusText}` : c.name} className="pov-client" style={{ display: "contents" }}>
       <div className="pov-client-cell">
         <span className="pov-avatar">
           {c.avatarPath ? (
@@ -511,7 +511,7 @@ function ClientBlock({
           <Link href={PLAN(c.id)} className="pov-client-name">
             {c.name}
           </Link>
-          <small className={`pov-status ${status.kind}`}>{statusText}</small>
+          {status.kind === "soon" && <small className="pov-status soon">{statusText}</small>}
         </span>
       </div>
       {/* A click on empty space (14 Oct): a new phase for this client, from the day under the pointer (never before today). */}
@@ -568,23 +568,19 @@ function ClientBlock({
         ))}
         {todayX != null && <i className="pov-today-line" style={{ left: `${todayX * 100}%` }} aria-hidden="true" />}
         {empty ? (
-          <div className="pov-none">
-            {nothingAtAll ? (
-              <>
-                No phases yet
-                <button type="button" className="pov-none-link" onClick={() => onPlan("training", today)}>
-                  + Plan first phase
-                </button>
-              </>
-            ) : (
-              <>
-                Nothing in these months
-                <button type="button" className="pov-none-link" onClick={() => onPlan("training", today)}>
-                  + Plan a phase
-                </button>
-              </>
-            )}
-          </div>
+          <>
+            {/* Nothing in the window (14 Oct): just the two ways in, no box, so every empty client looks the same. */}
+            <div className="pov-none">
+              <button type="button" className="pov-none-link" onClick={() => onPlan("training", today)}>
+                + Plan a phase
+              </button>
+            </div>
+            <div className="pov-none">
+              <button type="button" className="pov-none-link" onClick={() => onEvent(today)}>
+                + Add an event
+              </button>
+            </div>
+          </>
         ) : (
           <>
             {lanes.map((lane) => (
