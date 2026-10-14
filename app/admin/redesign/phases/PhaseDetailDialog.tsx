@@ -83,7 +83,7 @@ export default function PhaseDetailDialog({ client, phase: p, today, onMove }: {
   return (
     <DialogContent
       className="phd"
-      style={{ "--c": col.c, "--rgb": col.rgb } as React.CSSProperties}
+      style={{ "--c": col.c, "--rgb": col.rgb, "--s": col.solid } as React.CSSProperties}
       aria-describedby="phd-state"
       onOpenAutoFocus={(ev) => {
         ev.preventDefault();
@@ -144,7 +144,7 @@ export default function PhaseDetailDialog({ client, phase: p, today, onMove }: {
             <div className="phd-weeks" style={{ gridTemplateColumns: segments.map((s) => `${s.days}fr`).join(" ") }} aria-hidden="true">
               {segments.map((s, i) => {
                 const now = s.fill > 0 && s.fill < 1;
-                return <i key={i} className={`phd-week${s.fill >= 1 ? " past" : now ? " now" : ""}`} style={now ? { background: `linear-gradient(90deg, var(--c) ${s.fill * 100}%, rgba(var(--rgb), 0.16) ${s.fill * 100}%)` } : undefined} />;
+                return <i key={i} className={`phd-week${s.fill >= 1 ? " past" : now ? " now" : ""}`} style={now ? { background: `linear-gradient(90deg, var(--s, var(--c)) ${s.fill * 100}%, rgba(var(--rgb), 0.16) ${s.fill * 100}%)` } : undefined} />;
               })}
             </div>
           )}
