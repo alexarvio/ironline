@@ -236,7 +236,7 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
             return (
               <button key={c.id} type="button" role="radio" aria-checked={on} className={`cal-entry-tile${on ? " on" : ""}${c.color === "grey" ? " other" : ""}`} style={{ "--tc": cInk, "--trgb": hexRgb(cInk) } as React.CSSProperties} onClick={() => pickCat(c.id)}>
                 <span className="cal-entry-disc">
-                  <CatIcon d={iconOf(c.id)} />
+                  <CatIcon d={iconOf(c.id)} size={22} stroke={2} />
                 </span>
                 {c.label}
               </button>
@@ -361,7 +361,7 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
               </button>
             </span>
           </div>
-          <div className={`cal-entry-boxes${allDay ? " one" : ""}`}>
+          <div className="cal-entry-boxes">
             <span className="cal-entry-box">
               <span className="cal-entry-box-head">Day</span>
               <DatePick value={date} onChange={setDate} label={`Day, ${date ? longDate(date) : "none"}`} className="cal-entry-daypick" />
@@ -369,7 +369,18 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
                 {date ? shortDate(date) : "Pick a day"}
               </span>
             </span>
-            {!allDay && (
+            {allDay ? (
+              <>
+                <span className="cal-entry-box off" aria-hidden="true">
+                  <span className="cal-entry-box-head">Starts</span>
+                  <span className="cal-entry-box-val">All day</span>
+                </span>
+                <span className="cal-entry-box ends off" aria-hidden="true">
+                  <span className="cal-entry-box-head">Ends</span>
+                  <span className="cal-entry-box-val">—</span>
+                </span>
+              </>
+            ) : (
               <>
                 <PopoverPrimitive.Root open={timeOpen} modal onOpenChange={setTimeOpen}>
                   <PopoverPrimitive.Trigger className="cal-entry-box" aria-label={`Starts, ${time}`}>
@@ -437,29 +448,30 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
               </>
             )}
           </div>
-          {!allDay && (
-            <div className="cal-entry-chips" role="radiogroup" aria-label="Length">
-              {LENGTHS.map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  role="radio"
-                  aria-checked={!customLength && length === m}
-                  className={`cal-entry-chip${!customLength && length === m ? " on" : ""}`}
-                  onClick={() => {
-                    setLength(m);
-                    setCustomLength(false);
-                  }}
-                >
-                  {lengthLabel(m)}
-                </button>
-              ))}
-              <button type="button" role="radio" aria-checked={customLength} className={`cal-entry-chip${customLength ? " on" : ""}`} onClick={() => setCustomLength(true)}>
-                Custom
+          {/* All day keeps the rows (14 Oct): the boxes read All day and the lengths go quiet, so the pop-up never changes size. */}
+          <div className={`cal-entry-chips${allDay ? " off" : ""}`} role="radiogroup" aria-label="Length" aria-disabled={allDay}>
+            {LENGTHS.map((m) => (
+              <button
+                key={m}
+                type="button"
+                role="radio"
+                disabled={allDay}
+                aria-checked={!customLength && length === m}
+                className={`cal-entry-chip${!customLength && length === m ? " on" : ""}`}
+                onClick={() => {
+                  setLength(m);
+                  setCustomLength(false);
+                }}
+              >
+                {lengthLabel(m)}
               </button>
-            </div>
-          )}
-          {overlap && <small className="cal-entry-overlap">{overlap}</small>}
+            ))}
+            <button type="button" role="radio" disabled={allDay} aria-checked={customLength} className={`cal-entry-chip${customLength ? " on" : ""}`} onClick={() => setCustomLength(true)}>
+              Custom
+            </button>
+          </div>
+          {/* Always a line, so an overlap appearing never moves the pop-up. */}
+          <small className="cal-entry-overlap">{overlap ?? "\u00a0"}</small>
         </div>
 
         {/* Note */}
