@@ -10,9 +10,9 @@ import { Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectV
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { ChevronDownIcon, MoreIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from "../../../components/icons";
-import { clearExerciseDemoAction, setExerciseDemoLinkAction } from "../../../lib/actions";
-import { archiveLibraryExerciseAction, assignVideoToExerciseAction, createLibraryExerciseAction, deleteLibraryVideoAction, renameLibraryVideoAction, saveExerciseSubstitutesAction, saveExerciseVariationsAction, updateLibraryExerciseAction, uploadLibraryVideoAction } from "./actions";
+import { archiveLibraryExerciseAction, assignVideoToExerciseAction, createLibraryExerciseAction, deleteLibraryVideoAction, renameLibraryVideoAction, saveExerciseVariationsAction, uploadLibraryVideoAction } from "./actions";
 import type { LibraryData, LibraryItem, LibraryVideo } from "./load";
+import ExerciseEditorModal from "./ExerciseEditorModal";
 
 // The coach's Library (5 Oct, rebuilt 6 Oct on the shadcn parts and the
 // Training tab's rows). Three shelves on tabs:
@@ -33,8 +33,6 @@ const ytId = (url: string) => /(?:youtu\.be\/|[?&]v=|shorts\/|embed\/)([\w-]{11}
 const isVideoFile = (url: string) => url.startsWith("/uploads/") || /\.(mp4|mov|m4v|webm)(\?|$)/i.test(url);
 /** "lat_pulldown-2" and "Lat Pulldown" compare the same. */
 const norm = (s: string) => s.toLowerCase().replace(/\.[a-z0-9]{2,5}$/, "").replace(/[^a-z0-9]+/g, " ").replace(/\b\d+\b/g, " ").replace(/\s+/g, " ").trim();
-/** What a video carries while it is dragged: its id. */
-const VIDEO_DRAG = "application/x-ironline-video";
 
 /** A demo's picture: YouTube's thumbnail, the clip's first frame, or a plain mark for any other link. */
 function Thumb({ url, label }: { url: string | null; label: string }) {
@@ -58,77 +56,10 @@ function Thumb({ url, label }: { url: string | null; label: string }) {
   return <span className="lb-thumb link">Link</span>;
 }
 
-const fmtDuration = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
-const fmtBytes = (n: number) => (n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(n >= 10 * 1024 * 1024 ? 0 : 1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
-const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-
-/** A video of the coach's, draggable onto a demo: the clip up top, then its name, length, size and date. */
-function VideoChip({ v, title, onDelete }: { v: LibraryVideo; title: string; /** Given: a bin on hover; a second click deletes (off every exercise it is on). */ onDelete?: (v: LibraryVideo) => void }) {
-  // The length comes from the clip itself once its metadata has loaded.
-  const [seconds, setSeconds] = useState<number | null>(null);
-  const [full, setFull] = useState(false);
-  // The bin asks once: a second click deletes.
-  const [confirm, setConfirm] = useState(false);
-  const meta = [seconds != null ? fmtDuration(seconds) : null, v.bytes != null ? fmtBytes(v.bytes) : null, fmtDate(v.at)].filter(Boolean).join(" · ");
-  return (
-    <div
-      className="lb-drawer-item"
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.setData(VIDEO_DRAG, String(v.id));
-        e.dataTransfer.setData("text/plain", v.name);
-        e.dataTransfer.effectAllowed = "copy";
-      }}
-      title={title}
-    >
-      {onDelete &&
-        (confirm ? (
-          <Button
-            variant="outline"
-            size="sm"
-            className="lb-vid-del confirm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(v);
-            }}
-            onMouseLeave={() => setConfirm(false)}
-            onBlur={() => setConfirm(false)}
-          >
-            Delete{v.usedBy.length ? ` · off ${v.usedBy.length}` : ""}?
-          </Button>
-        ) : (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lb-bin lb-vid-del"
-            onClick={(e) => {
-              e.stopPropagation();
-              setConfirm(true);
-            }}
-            aria-label={`Delete ${v.name}`}
-            title="Delete this video"
-          >
-            <TrashIcon />
-          </Button>
-        ))}
-      <span className="lb-thumb">
-        <video src={`${v.path}#t=0.5`} preload="metadata" muted playsInline draggable={false} onLoadedMetadata={(e) => Number.isFinite(e.currentTarget.duration) && setSeconds(e.currentTarget.duration)} />
-      </span>
-      <span className="lb-drawer-text">
-        {/* A long name: click it to read the whole thing, click again to fold it. */}
-        <b className={full ? "full" : ""} title={full ? undefined : v.name} role="button" tabIndex={0} onClick={(e) => (e.stopPropagation(), setFull((x) => !x))} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), setFull((x) => !x))}>
-          {v.name}
-        </b>
-        <span className="lb-drawer-meta">{meta}</span>
-        <small className={v.usedBy.length ? "" : "none"}>{v.usedBy.length ? `On ${v.usedBy.map((e) => e.name).join(", ")}` : "Not used yet"}</small>
-      </span>
-    </div>
-  );
-}
 
 export default function LibraryDraft({ data }: { data: LibraryData }) {
   const router = useRouter();
-  const [pending, start] = useTransition();
+  const [, start] = useTransition();
   const [shelf, setShelf] = useState<Shelf>("exercises");
   const [q, setQ] = useState("");
   const [showRemoved, setShowRemoved] = useState(false);
@@ -141,6 +72,8 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
     setOpenId(id);
   };
   const [openId, setOpenId] = useState<number | null>(null);
+  // A substitute opened from an exercise's editor (14 Oct): the one to go back to.
+  const [openFrom, setOpenFrom] = useState<{ id: number; name: string } | null>(null);
   const [creating, setCreating] = useState<string | null>(null);
   const act = (fn: () => Promise<unknown>, said?: string) =>
     start(async () => {
@@ -347,45 +280,25 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
         </>
       )}
 
-      <Dialog open={open != null} onOpenChange={(o) => !o && setOpenId(null)}>
-        {open && (
-          <ItemDialog
-            key={open.id}
-            item={open}
-            groups={data.groups}
-            videos={data.videos}
-            pending={pending}
-            onSave={(patch) => {
-              setOpenId(null);
-              act(() => updateLibraryExerciseAction(open.id, patch), `${patch.name ?? open.name} saved`);
-            }}
-            onPickVideo={(videoId) => act(() => assignVideoToExerciseAction(open.id, videoId), `${data.videos.find((v) => v.id === videoId)?.name ?? "Video"} is now the demo on ${open.name}`)}
-            onDemoLink={(url) =>
-              start(async () => {
-                const f = new FormData();
-                f.set("exerciseId", String(open.id));
-                f.set("demoUrl", url);
-                const err = await setExerciseDemoLinkAction(f);
-                if (err) toast.error(err);
-                else {
-                  router.refresh();
-                  toast.success(`Demo on ${open.name} · every client's sheet with it`);
-                }
-              })
-            }
-            onVideosChanged={() => router.refresh()}
-            onVideoDelete={(v) => act(() => deleteLibraryVideoAction(v.id), `${v.name} deleted`)}
-            onVariations={(list, said) => act(() => saveExerciseVariationsAction(open.id, list), said)}
-            items={data.items}
-            onSubstitutes={(list, said) => act(() => saveExerciseSubstitutesAction(open.id, list), said)}
-            onDemoRemove={() => {
-              const f = new FormData();
-              f.set("exerciseId", String(open.id));
-              act(() => clearExerciseDemoAction(f), `Demo taken off ${open.name}`);
-            }}
-          />
-        )}
-      </Dialog>
+      {open && (
+        <ExerciseEditorModal
+          key={open.id}
+          item={open}
+          items={data.items}
+          videos={data.videos}
+          groups={data.groups}
+          backTo={openFrom && openFrom.id !== open.id ? openFrom : null}
+          onClose={() => {
+            setOpenId(null);
+            setOpenFrom(null);
+          }}
+          onOpenOther={(id) => {
+            setOpenFrom(openFrom && id === openFrom.id ? null : { id: open.id, name: open.name });
+            setOpenId(id);
+          }}
+          onChanged={() => router.refresh()}
+        />
+      )}
 
       <Dialog open={creating != null} onOpenChange={(o) => !o && setCreating(null)}>
         {creating != null && (
@@ -622,380 +535,6 @@ function VideosShelf({
 }
 
 /** Under an exercise's rows in its dialog: every video of the coach's to drag up onto a demo slot, and new ones dropped or uploaded here. */
-function DialogVideos({ videos, onChanged, onDelete }: { videos: LibraryVideo[]; onChanged: () => void; onDelete: (v: LibraryVideo) => void }) {
-  const [q, setQ] = useState("");
-  const [queue, setQueue] = useState<{ done: number; total: number; current: string } | null>(null);
-  // Files from the computer held over the panel.
-  const [drag, setDrag] = useState(false);
-  const input = useRef<HTMLInputElement>(null);
-  const needle = q.trim().toLowerCase();
-  // Only the clips not on any exercise yet: with a long library, the ones still to place.
-  const [unusedOnly, setUnusedOnly] = useState(false);
-  const unused = videos.filter((v) => v.usedBy.length === 0).length;
-  const shown = videos.filter((v) => (!unusedOnly || v.usedBy.length === 0) && (!needle || v.name.toLowerCase().includes(needle)));
-  const upload = async (files: File[]) => {
-    const { count, errors } = await uploadAll(files, setQueue);
-    if (!count) return;
-    onChanged();
-    if (errors.length) toast.error(errors.join(" "));
-  };
-  return (
-    <aside
-      className={`lb-dlg-videos${drag ? " over" : ""}`}
-      aria-label="Your videos"
-      onDragOver={(e) => {
-        if (!e.dataTransfer.types.includes("Files")) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "copy";
-        setDrag(true);
-      }}
-      onDragLeave={(e) => !e.currentTarget.contains(e.relatedTarget as Node) && setDrag(false)}
-      onDrop={(e) => {
-        if (!e.dataTransfer.types.includes("Files")) return;
-        e.preventDefault();
-        setDrag(false);
-        if (!queue) void upload([...e.dataTransfer.files]);
-      }}
-    >
-      <div className="lb-dlg-videos-head">
-        <Label>Your videos</Label>
-        {videos.length > 4 && (
-          <label className="lb-search">
-            <SearchIcon />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search videos" aria-label="Search videos" className="h-8" />
-          </label>
-        )}
-        {videos.length > 0 && (
-          <Button variant={unusedOnly ? "default" : "outline"} size="sm" aria-pressed={unusedOnly} onClick={() => setUnusedOnly((x) => !x)}>
-            Not used yet · {unused}
-          </Button>
-        )}
-        <Button variant="outline" size="sm" disabled={!!queue} onClick={() => input.current?.click()}>
-          <PlusIcon /> Upload
-        </Button>
-        <input
-          ref={input}
-          type="file"
-          accept="video/*"
-          multiple
-          hidden
-          onChange={(e) => {
-            const files = [...(e.target.files ?? [])];
-            e.target.value = "";
-            void upload(files);
-          }}
-        />
-      </div>
-      {queue && (
-        <small className="lb-hint">
-          Uploading {queue.done + 1} of {queue.total} · {queue.current}…
-        </small>
-      )}
-      <div className="lb-drawer-list">
-        {shown.map((v) => (
-          <VideoChip key={v.id} v={v} title={`Drag ${v.name} onto a demo slot`} onDelete={onDelete} />
-        ))}
-        {shown.length === 0 && <p className="lb-empty">{needle ? "No video matches that." : unusedOnly ? "Every video is on an exercise." : drag ? "Drop to upload" : "No videos yet. Drop videos from your computer here, or Upload; then drag one up onto a demo slot."}</p>}
-      </div>
-    </aside>
-  );
-}
-
-/** A demo's slot on a row: the video it has (click to watch), or a dashed box; a video dragged up from the panel below and dropped here becomes the demo. */
-function DropSlot({ url, label, small, pending, onDrop, onClear }: { url: string | null; label: string; small?: boolean; pending: boolean; onDrop: (videoId: number) => void; onClear: () => void }) {
-  const [over, setOver] = useState(false);
-  return (
-    <span
-      className={`lb-slot${small ? " small" : ""}${over ? " over" : ""}`}
-      onDragOver={(e) => {
-        if (!e.dataTransfer.types.includes(VIDEO_DRAG)) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "copy";
-        setOver(true);
-      }}
-      onDragLeave={(e) => !e.currentTarget.contains(e.relatedTarget as Node) && setOver(false)}
-      onDrop={(e) => {
-        setOver(false);
-        const id = Number(e.dataTransfer.getData(VIDEO_DRAG));
-        if (!id) return;
-        e.preventDefault();
-        onDrop(id);
-      }}
-      title={url ? `${label}: open the demo` : `Drop a video here for ${label}`}
-    >
-      {url ? (
-        <a href={url} target="_blank" rel="noreferrer" draggable={false}>
-          <Thumb url={url} label={label} />
-        </a>
-      ) : (
-        <span className="lb-thumb none">{over ? "Drop" : "Drop video"}</span>
-      )}
-      {url && (
-        <button type="button" className="lb-slot-x" disabled={pending} onClick={onClear} aria-label={`Take the demo off ${label}`} title="Take the demo off">
-          ×
-        </button>
-      )}
-    </span>
-  );
-}
-
-/** A link as a demo (YouTube, Vimeo…): used on Enter or when the field is left. Keyed on its value by the row, so a saved link reads back. */
-function LinkField({ value, label, pending, onUse, onClear, className }: { value: string; label: string; pending: boolean; onUse: (url: string) => void; /** The field emptied while a link was the demo: the demo comes off. */ onClear?: () => void; className?: string }) {
-  const [v, setV] = useState(value);
-  const use = () => {
-    const u = v.trim();
-    if (u && u !== value) onUse(u);
-    else if (!u && value && onClear) onClear();
-  };
-  return <Input className={className} value={v} onChange={(e) => setV(e.target.value)} onBlur={use} onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()} placeholder="Paste a link (YouTube, Vimeo…)" aria-label={`${label} link`} disabled={pending} />;
-}
-
-/**
- * One exercise or movement, as rows: the exercise itself up top (its demo,
- * name, group, default cue, a link, and + for a variation), each variation
- * under it as a lesser row (its own demo, name and link), and the coach's
- * videos below to drag up onto any of the demo slots. Name, group and cue
- * save with the button; demos, links and variations save as they are set.
- */
-function ItemDialog({
-  item,
-  groups,
-  videos,
-  pending,
-  onSave,
-  onPickVideo,
-  onDemoLink,
-  onVideosChanged,
-  onVideoDelete,
-  onVariations,
-  onDemoRemove,
-  items,
-  onSubstitutes,
-}: {
-  item: LibraryItem;
-  groups: { slug: string; label: string }[];
-  videos: LibraryVideo[];
-  pending: boolean;
-  onSave: (patch: { name?: string; group?: string; cue?: string | null }) => void;
-  onPickVideo: (videoId: number) => void;
-  onDemoLink: (url: string) => void;
-  onVideosChanged: () => void;
-  onVideoDelete: (v: LibraryVideo) => void;
-  onVariations: (list: { id: number | null; name: string; video: string | null; cue: string }[], said: string) => void;
-  onDemoRemove: () => void;
-  /** The whole library, for the substitute picker. */
-  items: LibraryItem[];
-  onSubstitutes: (list: { exerciseId: number; note: string }[], said: string) => void;
-}) {
-  const [name, setName] = useState(item.name);
-  const [group, setGroup] = useState(item.group);
-  const [cue, setCue] = useState(item.cue);
-  // A variation being named, in the row that appears for it; null: none.
-  const [adding, setAdding] = useState<string | null>(null);
-  const changed = name.trim() !== item.name || group !== item.group || cue.trim() !== item.cue;
-  // What the rows show straight away (6 Oct): the page's copy takes over when
-  // it changes, so nothing vanishes and reappears while a save is read back.
-  const [vars, setVars] = useState(item.variations);
-  const varsKey = JSON.stringify(item.variations);
-  const [seenVars, setSeenVars] = useState(varsKey);
-  if (seenVars !== varsKey) {
-    setSeenVars(varsKey);
-    setVars(item.variations);
-  }
-  const saveVars = (next: LibraryItem["variations"], said: string) => {
-    setVars(next);
-    onVariations(next.map((x) => (x.id < 0 ? { ...x, id: null } : x)), said);
-  };
-  const videoOf = (id: number) => videos.find((v) => v.id === id) ?? null;
-  // Substitutes (14 Oct): shown straight away, the page's copy taking over when it changes, like the variations.
-  const [subs, setSubs] = useState(item.substitutes);
-  const subsKey = JSON.stringify(item.substitutes);
-  const [seenSubs, setSeenSubs] = useState(subsKey);
-  if (seenSubs !== subsKey) {
-    setSeenSubs(subsKey);
-    setSubs(item.substitutes);
-  }
-  const saveSubs = (next: LibraryItem["substitutes"], said: string) => {
-    setSubs(next);
-    onSubstitutes(next.map((x) => ({ exerciseId: x.exerciseId, note: x.note })), said);
-  };
-  const subOptions = items.filter((x) => x.id !== item.id && !x.archived && !subs.some((s) => s.exerciseId === x.id)).sort((a, b) => a.name.localeCompare(b.name));
-  // An upload is not a link: the link field shows only a pasted one.
-  const linkOf = (url: string | null) => (url && !isVideoFile(url) ? url : "");
-  const patchVar = (id: number, patch: { name?: string; video?: string | null; cue?: string }, said: string) => saveVars(vars.map((x) => (x.id === id ? { ...x, ...patch } : x)), said);
-  const addVariation = () => {
-    const n = (adding ?? "").trim();
-    setAdding(null);
-    // A temporary id until the save is read back; the server gives it the real one.
-    if (n) saveVars([...vars, { id: -Date.now(), name: n, video: null, cue: "" }], `${item.name} · ${n} added`);
-  };
-  return (
-    <DialogContent className="rd-dlg lb-dlg">
-      <DialogHeader>
-        <DialogTitle>{item.name}</DialogTitle>
-        <DialogDescription>Changes show in every programme that uses it.</DialogDescription>
-      </DialogHeader>
-      <div className="lb-xrows">
-        <div className="lb-xhead">
-          <Label aria-hidden="true">Demo</Label>
-          <Label aria-hidden="true">Name</Label>
-          <Label aria-hidden="true">Group</Label>
-          <Label aria-hidden="true">Default cue</Label>
-          <Label aria-hidden="true">Link</Label>
-          {/* On the header's right, like Upload on the videos band: a new variation row under the exercise. */}
-          <Button variant="outline" size="sm" className="lb-addvar" disabled={pending || adding != null} onClick={() => setAdding("")} title="Add a variation (close grip, wide grip…)">
-            <PlusIcon /> Variation
-          </Button>
-        </div>
-        <div className="lb-xrow main">
-          <DropSlot url={item.video} label={item.name} pending={pending} onDrop={onPickVideo} onClear={onDemoRemove} />
-          <Input className="h-[42px] text-[15px] font-bold" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} aria-label="Name" />
-          <Select value={group} onValueChange={setGroup}>
-            <SelectTrigger className="h-[42px]" aria-label="Group">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {groups.map((g) => (
-                <SelectItem key={g.slug} value={g.slug}>
-                  {g.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input className="h-[42px]" value={cue} onChange={(e) => setCue(e.target.value)} maxLength={300} placeholder="Pull elbow to hip" aria-label="Default cue" />
-          <LinkField key={item.video ?? ""} className="h-[42px]" value={linkOf(item.video)} label={item.name} pending={pending} onUse={onDemoLink} onClear={onDemoRemove} />
-        </div>
-        {vars.map((v) => (
-          <div key={v.id} className="lb-xrow sub">
-            <i className="lb-sub-mark" aria-hidden="true" />
-            <DropSlot
-              small
-              url={v.video}
-              label={`${item.name} · ${v.name}`}
-              pending={pending}
-              onDrop={(id) => {
-                const vid = videoOf(id);
-                if (vid) patchVar(v.id, { video: vid.path }, `${vid.name} is now the demo on ${item.name} · ${v.name}`);
-              }}
-              onClear={() => patchVar(v.id, { video: null }, `Demo taken off ${v.name}`)}
-            />
-            <Input
-              key={v.name}
-              className="h-[38px] font-semibold"
-              defaultValue={v.name}
-              maxLength={40}
-              aria-label="Variation name"
-              disabled={pending}
-              onBlur={(e) => {
-                const n = e.target.value.trim();
-                if (n && n !== v.name) patchVar(v.id, { name: n }, `Renamed to ${n}`);
-                else e.target.value = v.name;
-              }}
-              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-            />
-            {/* Its own cue: the note a session row starts with when this variation is picked. Empty: the exercise's. */}
-            <Input
-              key={`c${v.cue}`}
-              className="h-[38px]"
-              defaultValue={v.cue}
-              maxLength={300}
-              placeholder={item.cue ? `Cue · else "${item.cue}"` : "Cue for this variation"}
-              aria-label="Variation cue"
-              disabled={pending}
-              onBlur={(e) => {
-                const c = e.target.value.trim();
-                if (c !== v.cue) patchVar(v.id, { cue: c }, c ? `Cue set on ${v.name}` : `Cue cleared on ${v.name}`);
-              }}
-              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-            />
-            <LinkField key={`l${v.video ?? ""}`} className="h-[38px]" value={linkOf(v.video)} label={`${item.name} · ${v.name}`} pending={pending} onUse={(url) => patchVar(v.id, { video: url }, `Link set on ${item.name} · ${v.name}`)} onClear={() => patchVar(v.id, { video: null }, `Demo taken off ${v.name}`)} />
-            <Button variant="ghost" size="icon" className="lb-bin" disabled={pending} onClick={() => saveVars(vars.filter((x) => x.id !== v.id), `${v.name} deleted`)} aria-label={`Delete ${v.name}`} title="Delete this variation">
-              <TrashIcon />
-            </Button>
-          </div>
-        ))}
-        {adding != null && (
-          <div className="lb-xrow sub adding">
-            <i className="lb-sub-mark" aria-hidden="true" />
-            <Input autoFocus className="h-[38px]" value={adding} onChange={(e) => setAdding(e.target.value)} maxLength={40} placeholder="Close grip, wide grip…" aria-label="New variation" onKeyDown={(e) => (e.key === "Enter" ? addVariation() : e.key === "Escape" ? setAdding(null) : undefined)} />
-            <Button size="sm" disabled={!adding.trim()} onClick={addVariation}>
-              Add
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setAdding(null)}>
-              Cancel
-            </Button>
-          </div>
-        )}
-      </div>
-      {/* Substitutes (14 Oct): what the client is offered when the machine is taken, in every programme, unless a session has alternatives of its own. */}
-      <div className="lb-subs">
-        <div className="lb-subs-head">
-          <Label>Substitutes</Label>
-          <span className="rd-dlg-hint">When the machine is taken: up to three, offered in every programme unless a session has alternatives of its own. Sets on a substitute count for the session, not for anyone&rsquo;s weights.</span>
-        </div>
-        {subs.map((s) => (
-          <div key={s.exerciseId} className="lb-subs-row">
-            <span className="lb-subs-name">{s.name}</span>
-            <Input
-              className="h-[38px]"
-              value={s.note}
-              onChange={(e) => setSubs((l) => l.map((x) => (x.exerciseId === s.exerciseId ? { ...x, note: e.target.value } : x)))}
-              onBlur={() => {
-                if (JSON.stringify(subs) !== seenSubs) saveSubs(subs, `${item.name} · substitutes saved`);
-              }}
-              maxLength={200}
-              placeholder="Note · optional, e.g. same reps, a little lighter"
-              aria-label={`Note on ${s.name}`}
-            />
-            <Button variant="ghost" size="icon" className="lb-bin" disabled={pending} onClick={() => saveSubs(subs.filter((x) => x.exerciseId !== s.exerciseId), `${s.name} taken off ${item.name}`)} aria-label={`Take ${s.name} off the substitutes`} title="Take off">
-              <TrashIcon />
-            </Button>
-          </div>
-        ))}
-        {subs.length < 3 && (
-          <select
-            className="lb-subs-pick"
-            value=""
-            disabled={pending}
-            aria-label="Add a substitute"
-            onChange={(e) => {
-              const o = items.find((x) => x.id === Number(e.target.value));
-              if (o) saveSubs([...subs, { exerciseId: o.id, name: o.name, note: "" }], `${o.name} is a substitute for ${item.name}`);
-            }}
-          >
-            <option value="">{subs.length ? "Add another…" : "Add a substitute…"}</option>
-            {subOptions.map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.name}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
-      <DialogVideos videos={videos} onChanged={onVideosChanged} onDelete={onVideoDelete} />
-      {/* Demos, links, variations and their cues save as they are set; only the name, group and cue wait for Save. With nothing waiting, the button is Done. */}
-      <DialogFooter>
-        <span className="rd-dlg-hint grow">{pending ? "Saving…" : changed ? "Name, group or cue changed · not saved yet" : "Demos, links, variations and substitutes are saved as you set them."}</span>
-        {changed ? (
-          <>
-            <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DialogClose>
-            <Button disabled={!name.trim() || pending} onClick={() => onSave({ ...(name.trim() !== item.name ? { name: name.trim() } : {}), ...(group !== item.group ? { group } : {}), ...(cue.trim() !== item.cue ? { cue: cue.trim() } : {}) })}>
-              Save
-            </Button>
-          </>
-        ) : (
-          <DialogClose asChild>
-            <Button disabled={pending}>Done</Button>
-          </DialogClose>
-        )}
-      </DialogFooter>
-    </DialogContent>
-  );
-}
-
-/** A new exercise (in the group it was started from) or cardio movement. */
 function CreateDialog({ group, groupLabel, onCreate }: { group: string; groupLabel: string; onCreate: (v: { name: string; cue: string }) => void }) {
   const cardio = group === "cardio";
   const [name, setName] = useState("");
