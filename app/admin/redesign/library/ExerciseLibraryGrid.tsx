@@ -179,16 +179,15 @@ export default function ExerciseLibraryGrid({
                     if (e.key === "Escape") setRenaming(null);
                   }}
                 />
-              ) : (
+              ) : cardio ? (
                 <span className="lib-group-name">{g.label}</span>
-              )}
-              {!cardio && renaming?.slug !== g.slug && (
+              ) : (
                 <span
                   role="button"
                   tabIndex={0}
-                  className="lib-group-pencil"
-                  aria-label={`Rename ${g.label}`}
-                  title="Rename"
+                  className="lib-group-name renamable"
+                  title="Click to rename"
+                  aria-label={`${g.label}: click to rename`}
                   onClick={(e) => {
                     e.stopPropagation();
                     setRenaming({ slug: g.slug, label: g.label });
@@ -201,7 +200,7 @@ export default function ExerciseLibraryGrid({
                     }
                   }}
                 >
-                  <PencilIcon />
+                  {g.label}
                 </span>
               )}
               <span className="lib-group-count">
