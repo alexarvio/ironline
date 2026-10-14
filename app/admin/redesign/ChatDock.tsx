@@ -27,6 +27,8 @@ function whenLabel(at: number, now: Date): string {
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
+const DOCK_KEY = "norcoach:chat-dock";
+
 export default function ChatDock({ chats }: { chats: DockChat[] }) {
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
@@ -41,12 +43,23 @@ export default function ChatDock({ chats }: { chats: DockChat[] }) {
 
   const show = () => {
     if (pick && thread) setOpened((n) => n + 1);
+    remember(true);
     if (mounted) return setOpen(true);
     // In closed first, then open a frame later, so even the first one slides.
     setMounted(true);
     requestAnimationFrame(() => requestAnimationFrame(() => setOpen(true)));
   };
-  const close = () => setOpen(false);
+  const close = () => {
+    remember(false);
+    setOpen(false);
+  };
+  // Open stays open across the admin's screens (14 Oct, Alex): each screen mounts its own
+  // dock, so the state lives in sessionStorage, the chat on screen included.
+  const remember = (isOpen: boolean, chatId: number | null = pick?.id ?? null) => {
+    try {
+      window.sessionStorage.setItem(DOCK_KEY, JSON.stringify({ open: isOpen, chat: isOpen ? chatId : null }));
+    } catch {}
+  };
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && !document.querySelector("[role=dialog]") && close();
@@ -62,6 +75,7 @@ export default function ChatDock({ chats }: { chats: DockChat[] }) {
   }, [open]);
 
   const choose = async (c: DockChat) => {
+    remember(true, c.id);
     setPick(c);
     setThread(null);
     setRead((r) => new Set(r).add(c.id));
@@ -71,6 +85,21 @@ export default function ChatDock({ chats }: { chats: DockChat[] }) {
       setOpened((n) => n + 1);
     }
   };
+  useEffect(() => {
+    let saved: { open?: boolean; chat?: number | null } | null = null;
+    try {
+      saved = JSON.parse(window.sessionStorage.getItem(DOCK_KEY) ?? "null");
+    } catch {}
+    if (!saved?.open) return;
+    const t = setTimeout(() => {
+      setMounted(true);
+      setOpen(true);
+      const c = saved?.chat != null ? chats.find((x) => x.id === saved!.chat) : null;
+      if (c) void choose(c);
+    }, 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on mount
+  }, []);
   const needle = q.trim().toLowerCase();
   const shown = needle ? chats.filter((c) => c.name.toLowerCase().includes(needle)) : chats;
   const inThread = pick && thread && thread.id === pick.id;
@@ -86,7 +115,14 @@ export default function ChatDock({ chats }: { chats: DockChat[] }) {
         <aside className={`rd-chatpanel rd-chatdock${open ? " open" : ""}`} aria-label="Chats" aria-hidden={!open} inert={open ? undefined : true}>
           {inThread ? (
             <>
-              <button type="button" className="rd-dock-back" onClick={() => setPick(null)}>
+              <button
+                type="button"
+                className="rd-dock-back"
+                onClick={() => {
+                  remember(true, null);
+                  setPick(null);
+                }}
+              >
                 ‹ All chats
               </button>
               <MessagesDraft clientId={pick.id} firstName={pick.name.split(" ")[0]} plan={thread.plan} active={open} panel={{ about: null, opened, onClose: close, focus: null }} />
