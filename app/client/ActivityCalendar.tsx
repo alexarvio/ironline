@@ -21,8 +21,8 @@ export type ActivityDay = {
 };
 
 const PARTS = [
-  { id: "training", label: "Training", colour: "#1e3a6e" },
-  { id: "nutrition", label: "Nutrition", colour: "#1f7a4d" },
+  { id: "training", label: "Training", colour: "#1E3A5F" },
+  { id: "nutrition", label: "Nutrition", colour: "#2E7D32" },
   { id: "lifestyle", label: "Check-ins", colour: "#d98a1c" },
 ] as const;
 

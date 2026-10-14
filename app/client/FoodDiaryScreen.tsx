@@ -1323,7 +1323,7 @@ function Ring({ id, share }: { id: (typeof MACROS)[number]; share: number }) {
   const length = useTween(share * circumference);
   return (
     <g>
-      <circle cx={SIZE / 2} cy={SIZE / 2} r={r} fill="none" stroke="#e6ecf3" strokeWidth={STROKE} />
+      <circle cx={SIZE / 2} cy={SIZE / 2} r={r} fill="none" stroke="#E0F2F1" strokeWidth={STROKE} />
       <circle className="nd-ring-arc" cx={SIZE / 2} cy={SIZE / 2} r={r} fill="none" stroke={HUE[id]} strokeWidth={STROKE} strokeLinecap="butt" style={{ strokeDasharray: `${length} ${circumference}`, strokeOpacity: length > 0 ? 1 : 0 }} />
     </g>
   );

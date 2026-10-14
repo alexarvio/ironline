@@ -114,7 +114,7 @@ function lastLine(m: CheckInMetric, source: RowSource, date: string): string {
   return `${when} ${reading}`;
 }
 // Filled is green, whatever the metric (13 Oct, Alex: no colour coding for now).
-const GREEN = { hex: "#2f7a3f", rgb: "47,122,63" };
+const GREEN = { hex: "#2E7D32", rgb: "46,125,50" };
 const colourOf = () => GREEN;
 
 export default function CheckInDialog({

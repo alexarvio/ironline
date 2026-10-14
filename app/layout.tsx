@@ -57,7 +57,7 @@ const kirana = localFont({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#2f5d8f",
+  themeColor: "#1E3A5F",
   width: "device-width",
   initialScale: 1,
   // The client app is a phone UI with its own type sizes; pinch-zoom stays

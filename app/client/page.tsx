@@ -587,14 +587,14 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
               {/* Green once the week is complete, like a finished session's pill. */}
               <div className={`tr-ring${sessionsLeft <= 0 ? " done" : ""}`} role="img" aria-label={`${pct}% of this week's sessions done`}>
                 <svg viewBox="0 0 96 96" aria-hidden="true">
-                  <circle cx="48" cy="48" r={ringR} fill="none" stroke={sessionsLeft <= 0 ? "#DFF3EA" : "#e6ecf3"} strokeWidth="5" />
+                  <circle cx="48" cy="48" r={ringR} fill="none" stroke={sessionsLeft <= 0 ? "#E8F5E9" : "#E0F2F1"} strokeWidth="5" />
                   <circle
                     className="tr-ring-fill"
                     cx="48"
                     cy="48"
                     r={ringR}
                     fill="none"
-                    stroke={sessionsLeft <= 0 ? "#2f7a3f" : "#2f5d8f"}
+                    stroke={sessionsLeft <= 0 ? "#2E7D32" : "#00897B"}
                     strokeWidth="5"
                     strokeLinecap="round"
                     transform="rotate(-90 48 48)"
