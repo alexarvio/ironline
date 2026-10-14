@@ -1,4 +1,5 @@
 import fs from "fs";
+import { sortReasons, type AttentionReason } from "./attentionReasons";
 import path from "path";
 import { allocId, DATA_DIR, DAY_NAMES_FULL, getData, persist, mergeDuplicateMetricDefinitions, CardioEntry } from "./db";
 import type { CalorieLog, CheckInNote, CustomFood, FoodDay, FoodEntry, FoodMealSlot, OffFood, SavedDay, SavedMeal, ClientEvent, ClientGym, ClientPhase, CoachProfile, CoachBusiness, CoachInvoicing, CoachPayments, CoachSettings, Data, EventCategory, InvoiceLine, InvoiceParty, KeptActivity, MetricAskAt, PhaseTrack, SessionAnswer, VideoRequest, WorkoutQuestion, MeetingRequest } from "./db";
@@ -6533,6 +6534,31 @@ export function markClientEventsSeen(clientId: number, which: { all: true } | { 
  * one dot, not a badge count, because the useful question at a glance is
  * "who needs me", not "how many things".
  */
+/** The same, as the rail's reasons (14 Oct): one line a kind, in its colour, the most pressing first. */
+export function clientReasons(clientId: number, feed?: FeedEvent[]): AttentionReason[] {
+  const out: AttentionReason[] = [];
+  for (const a of getClientHome(clientId, feed).actions) {
+    const since = a.at ?? 0;
+    if (a.id.startsWith("reply-video-")) {
+      const m = /^(Photo|Video) of (.+?) waiting/.exec(a.title);
+      out.push({ type: "video", text: m ? `${m[2]} ${m[1].toLowerCase()} to review` : "Video to review", since, clearable: true, actionId: a.id });
+    } else if (a.id.startsWith("reply-")) {
+      const n = /^(\d+) messages/.exec(a.title);
+      const quote = a.detail.startsWith("Sent ") ? null : a.detail.trim();
+      out.push({ type: "message", text: n ? `${n[1]} new messages` : quote ? `“${quote.length > 40 ? `${quote.slice(0, 39).trimEnd()}…` : quote}”` : "New message", since, clearable: true, actionId: a.id });
+    } else if (a.id.startsWith("call-")) {
+      out.push({ type: "message", text: "Asked for a call", since, clearable: true, actionId: a.id });
+    } else if (a.id.startsWith("invoice-")) {
+      out.push({ type: "invoice", text: a.title, since, clearable: false, actionId: a.id });
+    } else if (a.id.startsWith("checkin-")) {
+      out.push({ type: "checkin", text: a.title, since, clearable: false, actionId: a.id });
+    } else {
+      out.push({ type: "phase", text: a.title, since, clearable: a.id === "program-ending", actionId: a.id });
+    }
+  }
+  return sortReasons(out);
+}
+
 export function clientAttention(clientId: number, feed?: FeedEvent[]): string | null {
   // The same list the client's Home spells out; the dot's title is the first
   // of them, and how many more there are.

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import type { AttentionReason } from "../../lib/attentionReasons";
 import { getData } from "../../lib/db";
 import { getUserForClient, isOwner } from "../../lib/auth";
 import { mailConfigured } from "../../lib/mail";
@@ -6,7 +7,7 @@ import { clerkOn } from "../../lib/clerk";
 import { getCoachSettings, getInvoiceView, listInvoices, type FeedEvent, type HomeAction, type InvoiceView } from "../../lib/queries";
 import { hasBankDetails, invoicingFor } from "../../lib/countries";
 import {
-  clientAttention,
+  clientReasons,
   getActivityFeed,
   getAssignmentsForDay,
   getClientProfile,
@@ -389,7 +390,7 @@ export function loadNutrition(clientId: number, params: { phase?: string }): Dra
 
 // ---- The rail ------------------------------------------------------------------
 
-export type RailClient = { id: number; name: string; avatarPath: string | null; attention: string | null; notSignedIn: boolean };
+export type RailClient = { id: number; name: string; avatarPath: string | null; /** Why they need the coach (14 Oct), the most pressing first; empty: all good. */ reasons: AttentionReason[]; notSignedIn: boolean };
 export type RailData = { clients: RailClient[]; coach: { name: string; photoPath: string | null }; isOwner: boolean; inviteReady: boolean; /** Sign-in through Clerk: New client sends an invite link, no password. */ clerk: boolean };
 
 /** The left rail's data: every client with whether they need the coach, and the coach at the foot. */
@@ -399,7 +400,7 @@ export function loadRail(coach: { id: number; email: string; role: "coach" | "cl
   const feed = getActivityFeed(coach.id);
   const clients = listClients(coach.id).map((c) => {
     const user = getUserForClient(c.id);
-    return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, attention: clientAttention(c.id, feed), notSignedIn: !user || user.must_change_password };
+    return { id: c.id, name: c.name, avatarPath: c.avatar_path ?? null, reasons: clientReasons(c.id, feed), notSignedIn: !user || user.must_change_password };
   });
   const profile = getCoachProfile(coach.id);
   return { clients, coach: { name: profile?.display_name?.trim() || nameFromEmail(coach.email), photoPath: profile?.avatar_path ?? null }, isOwner: isOwner(coach), inviteReady: mailConfigured(), clerk: clerkOn() };
