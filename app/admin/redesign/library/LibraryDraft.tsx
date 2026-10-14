@@ -9,10 +9,11 @@ import { Badge, Button, Card, CardContent, Tabs, TabsList, TabsTrigger } from ".
 import { Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from "../../../components/ui/form";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
-import { ChevronDownIcon, MoreIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from "../../../components/icons";
-import { archiveLibraryExerciseAction, assignVideoToExerciseAction, createLibraryExerciseAction, deleteLibraryVideoAction, renameLibraryVideoAction, saveExerciseVariationsAction, uploadLibraryVideoAction } from "./actions";
+import { MoreIcon, PencilIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { archiveLibraryExerciseAction, assignVideoToExerciseAction, createLibraryExerciseAction, deleteLibraryVideoAction, renameLibraryVideoAction, uploadLibraryVideoAction } from "./actions";
 import type { LibraryData, LibraryItem, LibraryVideo } from "./load";
 import ExerciseEditorModal from "./ExerciseEditorModal";
+import ExerciseLibraryGrid from "./ExerciseLibraryGrid";
 
 // The coach's Library (5 Oct, rebuilt 6 Oct on the shadcn parts and the
 // Training tab's rows). Three shelves on tabs:
@@ -29,48 +30,15 @@ import ExerciseEditorModal from "./ExerciseEditorModal";
 
 type Shelf = "exercises" | "cardio" | "videos";
 
-const ytId = (url: string) => /(?:youtu\.be\/|[?&]v=|shorts\/|embed\/)([\w-]{11})/.exec(url)?.[1] ?? null;
-const isVideoFile = (url: string) => url.startsWith("/uploads/") || /\.(mp4|mov|m4v|webm)(\?|$)/i.test(url);
 /** "lat_pulldown-2" and "Lat Pulldown" compare the same. */
 const norm = (s: string) => s.toLowerCase().replace(/\.[a-z0-9]{2,5}$/, "").replace(/[^a-z0-9]+/g, " ").replace(/\b\d+\b/g, " ").replace(/\s+/g, " ").trim();
-
-/** A demo's picture: YouTube's thumbnail, the clip's first frame, or a plain mark for any other link. */
-function Thumb({ url, label }: { url: string | null; label: string }) {
-  if (!url) return <span className="lb-thumb none">No demo</span>;
-  const id = ytId(url);
-  if (id)
-    return (
-      <span className="lb-thumb">
-        {/* eslint-disable-next-line @next/next/no-img-element -- YouTube's own thumbnail */}
-        <img src={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`} alt={`${label} demo`} loading="lazy" />
-        <i className="lb-play" aria-hidden="true" />
-      </span>
-    );
-  if (isVideoFile(url))
-    return (
-      <span className="lb-thumb">
-        <video src={`${url}#t=0.5`} preload="metadata" muted playsInline aria-label={`${label} demo`} />
-        <i className="lb-play" aria-hidden="true" />
-      </span>
-    );
-  return <span className="lb-thumb link">Link</span>;
-}
-
 
 export default function LibraryDraft({ data }: { data: LibraryData }) {
   const router = useRouter();
   const [, start] = useTransition();
   const [shelf, setShelf] = useState<Shelf>("exercises");
-  const [q, setQ] = useState("");
   const [showRemoved, setShowRemoved] = useState(false);
-  const [openGroups, setOpenGroups] = useState<string[]>([]);
-  // The one exercise whose variations are unfolded under it in the list: opening another, or an exercise itself, folds it.
-  const [openVar, setOpenVar] = useState<number | null>(null);
-  const toggleVars = (id: number) => setOpenVar((o) => (o === id ? null : id));
-  const openItem = (id: number) => {
-    setOpenVar(null);
-    setOpenId(id);
-  };
+  const openItem = (id: number) => setOpenId(id);
   const [openId, setOpenId] = useState<number | null>(null);
   // A substitute opened from an exercise's editor (14 Oct): the one to go back to.
   const [openFrom, setOpenFrom] = useState<{ id: number; name: string } | null>(null);
@@ -83,97 +51,13 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
     });
 
   const groups = data.groups.filter((g) => g.slug !== "cardio");
-  const needle = q.trim().toLowerCase();
-  const filtering = !!needle;
   const onShelf = data.items.filter((i) => (shelf === "cardio" ? i.group === "cardio" : i.group !== "cardio"));
-  const shown = onShelf.filter((i) => showRemoved || !i.archived).filter((i) => !needle || i.name.toLowerCase().includes(needle) || i.cue.toLowerCase().includes(needle));
   const removedCount = onShelf.filter((i) => i.archived).length;
   const open = openId != null ? data.items.find((i) => i.id === openId) ?? null : null;
-  const toggleGroup = (slug: string) => setOpenGroups((o) => (o.includes(slug) ? o.filter((x) => x !== slug) : [...o, slug]));
 
   const archive = (i: LibraryItem) => act(() => archiveLibraryExerciseAction(i.id, !i.archived), i.archived ? `${i.name} back in the library` : `${i.name} taken out of the library`);
 
   // An exercise, as a row inside its group: like an exercise inside a session.
-  const row = (i: LibraryItem) => (
-    <div key={i.id} className="rd-row">
-      <div
-        className={`rd-row-main lb-row-main${i.archived ? " archived" : ""}`}
-        role="button"
-        tabIndex={0}
-        onClick={() => openItem(i.id)}
-        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), openItem(i.id))}
-      >
-        <Thumb url={i.video} label={i.name} />
-        <span className="rd-ex">
-          <span className="rd-ex-name">
-            {i.name}
-            {i.archived && <Badge className="lb-badge-muted">Taken out</Badge>}
-            {i.variations.length > 0 && (
-              <button
-                type="button"
-                className={`lb-varchev${openVar === i.id ? " open" : ""}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleVars(i.id);
-                }}
-                aria-expanded={openVar === i.id}
-                aria-label={`${openVar === i.id ? "Fold" : "Show"} the ${i.variations.length} ${i.variations.length === 1 ? "variation" : "variations"} of ${i.name}`}
-                title={`${i.variations.length} ${i.variations.length === 1 ? "variation" : "variations"}`}
-              >
-                <ChevronDownIcon />
-              </button>
-            )}
-          </span>
-        </span>
-        <span className={`lb-cue${i.cue ? "" : " none"}`}>{i.cue || "No default cue"}</span>
-        {/* The bin shows on hover: it takes the exercise out of the library (wherever it is prescribed, it stays). A taken-out row offers Put back instead. */}
-        <span className="rd-row-more lb-row-more" onClick={(e) => e.stopPropagation()}>
-          {i.archived ? (
-            <Button variant="outline" size="sm" onClick={() => archive(i)}>
-              Put back
-            </Button>
-          ) : (
-            <Button variant="ghost" size="icon" className="lb-bin" onClick={() => archive(i)} aria-label={`Take ${i.name} out of the library`} title="Take out of the library">
-              <TrashIcon />
-            </Button>
-          )}
-        </span>
-      </div>
-      {/* Unfolded: each variation as a lesser row under its exercise, its own demo (else the exercise's) and cue; a click opens the exercise to edit them. */}
-      {openVar === i.id &&
-        i.variations.map((v) => (
-          <div key={v.id} className="rd-row-main lb-row-main lb-var-row" role="button" tabIndex={0} onClick={() => openItem(i.id)} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), openItem(i.id))}>
-            <Thumb url={v.video} label={`${i.name} · ${v.name}`} />
-            <span className="rd-ex">
-              <span className="rd-ex-name">
-                <i className="lb-sub-mark" aria-hidden="true" />
-                {v.name}
-              </span>
-            </span>
-            <span className={`lb-cue${v.cue || i.cue ? "" : " none"}`}>{v.cue || i.cue || "No cue"}</span>
-            <span className="rd-row-more lb-row-more" onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="icon" className="lb-bin" onClick={() => act(() => saveExerciseVariationsAction(i.id, i.variations.filter((x) => x.id !== v.id)), `${v.name} deleted`)} aria-label={`Delete ${v.name}`} title="Delete this variation">
-                <TrashIcon />
-              </Button>
-            </span>
-          </div>
-        ))}
-    </div>
-  );
-  const cols = (
-    <div className="rd-cols lb-cols" aria-hidden="true">
-      <span>Demo</span>
-      <span>Exercise</span>
-      <span>Default cue</span>
-      <span />
-    </div>
-  );
-  const addRow = (slug: string, label: string) => (
-    <button type="button" className="rd-session add lb-add" onClick={() => setCreating(slug)}>
-      + {label}
-    </button>
-  );
-
   return (
     <div className="rd lb">
       <header className="rd-head">
@@ -185,10 +69,7 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
         <div className="rd-head-actions">
           <Tabs
             value={shelf}
-            onValueChange={(v) => {
-              setShelf(v as Shelf);
-              setQ("");
-            }}
+            onValueChange={(v) => setShelf(v as Shelf)}
           >
             <TabsList aria-label="Shelf">
               <TabsTrigger value="exercises">Exercises</TabsTrigger>
@@ -210,74 +91,18 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
           onRename={(v, name) => act(() => renameLibraryVideoAction(v.id, name), `Renamed to ${name}`)}
         />
       ) : (
-        <>
-          {/* Find: search, and the ones taken out. */}
-          <div className="lb-tools">
-            <label className="lb-search">
-              <SearchIcon />
-              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={shelf === "cardio" ? "Search movements" : "Search exercises or cues"} aria-label="Search the library" />
-            </label>
-            {removedCount > 0 && (
-              <Button variant={showRemoved ? "default" : "outline"} size="sm" aria-pressed={showRemoved} onClick={() => setShowRemoved((v) => !v)}>
-                Taken out · {removedCount}
-              </Button>
-            )}
-          </div>
-
-          {/* The groups, spaced as the sessions are on the Training tab. */}
-          <div className="rd-sessions">
-          {shelf === "cardio" ? (
-            <section className="rd-session open lb-cardio">
-              <div className="rd-rows">
-                {cols}
-                {shown.map(row)}
-                {shown.length === 0 && <p className="lb-empty">{filtering ? "Nothing matches that." : "No cardio movements yet."}</p>}
-                {addRow("cardio", "New movement")}
-              </div>
-            </section>
-          ) : (
-            // One folded row a group, like a session on the Training tab; a search opens the ones with matches.
-            groups.map((g) => {
-              const all = onShelf.filter((i) => i.group === g.slug && !i.archived);
-              const inGroup = shown.filter((i) => i.group === g.slug);
-              if (filtering && inGroup.length === 0) return null;
-              const isOpen = filtering || openGroups.includes(g.slug);
-              return (
-                <section key={g.slug} className={`rd-session${isOpen ? " open" : ""}`}>
-                  <div
-                    className="rd-session-head"
-                    onClick={(ev) => {
-                      if ((ev.target as HTMLElement).closest("button, [role=menuitem]")) return;
-                      toggleGroup(g.slug);
-                    }}
-                  >
-                    <button type="button" className="rd-session-toggle" onClick={() => toggleGroup(g.slug)} aria-expanded={isOpen} aria-label={isOpen ? `Fold ${g.label}` : `Open ${g.label}`}>
-                      <span className={`rd-chev${isOpen ? " open" : ""}`} aria-hidden="true">
-                        <ChevronDownIcon />
-                      </span>
-                    </button>
-                    <span className="rd-session-namecol lb-groupname">
-                      <span className="rd-session-name">{g.label}</span>
-                    </span>
-                    <span className="rd-session-count">
-                      {all.length} {all.length === 1 ? "exercise" : "exercises"}
-                    </span>
-                    <span className="rd-session-tags" />
-                  </div>
-                  {isOpen && (
-                    <div className="rd-rows">
-                      {inGroup.length > 0 && cols}
-                      {inGroup.map(row)}
-                      {inGroup.length === 0 && <p className="lb-empty">Nothing in {g.label} yet.</p>}
-                      {addRow(g.slug, `New exercise in ${g.label}`)}
-                    </div>
-                  )}
-                </section>
-              );
-            })
-          )}
-          </div>
-        </>
+        <ExerciseLibraryGrid
+          items={onShelf.filter((i) => showRemoved || !i.archived)}
+          groups={groups}
+          cardio={shelf === "cardio"}
+          removedShown={showRemoved}
+          removedCount={removedCount}
+          onToggleRemoved={() => setShowRemoved((v) => !v)}
+          onOpen={openItem}
+          onNew={(slug) => setCreating(slug)}
+          onArchive={archive}
+          onChanged={() => router.refresh()}
+        />
       )}
 
       {open && (
@@ -313,7 +138,6 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
                 router.refresh();
                 if (id) {
                   toast.success(`${v.name} added to your library`);
-                  setOpenGroups((o) => (o.includes(group) ? o : [...o, group]));
                   // Open it, so its demo can go on straight away.
                   setTimeout(() => setOpenId(id), 400);
                 }
