@@ -311,11 +311,21 @@ export default function ExerciseEditorModal({
     const hits = pool.filter((x) => x.name.toLowerCase().includes(needle));
     return [...hits.filter((x) => x.group === group).sort(demoFirst), ...hits.filter((x) => x.group !== group).sort(demoFirst)].slice(0, 8);
   }, [others, subs, q, group]);
+  const [searchPos, setSearchPos] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   useEffect(() => {
     if (!searchOpen) return;
-    const t = setTimeout(() => searchWrap.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }), 30);
-    return () => clearTimeout(t);
-  }, [searchOpen, q]);
+    const place = () => {
+      const r = searchWrap.current?.getBoundingClientRect();
+      if (r) setSearchPos({ x: r.left, y: r.bottom + 6, w: r.width, h: Math.max(160, Math.min(360, window.innerHeight - r.bottom - 18)) });
+    };
+    place();
+    document.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      document.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [searchOpen, q, subs.length]);
   const addSub = (x: LibraryItem) => {
     if (subs.length >= MAX_SUBS) return;
     saveSubs([...subs, { exerciseId: x.id, name: x.name, note: "", variationId: null }]);
@@ -389,7 +399,7 @@ export default function ExerciseEditorModal({
         style={{ "--g": gc.color, "--g-rgb": gc.rgb } as React.CSSProperties}
         aria-describedby={undefined}
         onPointerDownOutside={(e) => {
-          if ((e.target as Element | null)?.closest(".exm-popover, .exm-lightbox")) e.preventDefault();
+          if ((e.target as Element | null)?.closest(".exm-popover, .exm-lightbox, .exm-dropdown")) e.preventDefault();
         }}
       >
         <span className="exm-glow" aria-hidden="true" />
@@ -974,8 +984,10 @@ export default function ExerciseEditorModal({
                       aria-label="Add a substitute"
                     />
                   </label>
-                  {searchOpen && (
-                    <div className="exm-dropdown" role="listbox">
+                  {searchOpen &&
+                    searchPos &&
+                    createPortal(
+                    <div className="exm-dropdown" role="listbox" style={{ left: searchPos.x, top: searchPos.y, width: searchPos.w, maxHeight: searchPos.h }}>
                       <span className="exm-mini">{q.trim() ? "Results" : `Suggested · ${groups.find((g) => g.slug === group)?.label ?? group}`}</span>
                       {candidates.map((x, k) => {
                         const c = groupColour(x.group);
@@ -1003,7 +1015,8 @@ export default function ExerciseEditorModal({
                           )}
                         </div>
                       )}
-                    </div>
+                    </div>,
+                    document.body
                   )}
                 </div>
               ) : (
