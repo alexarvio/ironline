@@ -1029,7 +1029,6 @@ export default function ExerciseEditorModal({
 
         {/* ---- Footer */}
         <footer className="exm-foot">
-          <small className="exm-faint">Demos, links, variations and substitutes save as you set them.</small>
           <button type="button" className="exm-done" onClick={() => void done()} disabled={closing}>
             {closing ? <span className="exm-spin" aria-hidden="true" /> : null}
             Done

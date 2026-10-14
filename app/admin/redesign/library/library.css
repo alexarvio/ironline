@@ -133,7 +133,7 @@
 .exm-state.error { background: #FBEDE7; color: #B42318; cursor: pointer; }
 .exm-sub { margin: 0; font-size: 13px; font-weight: 500; color: #5b6474; }
 .exm-close { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 999px; background: #F2F4F7; color: #5b6474; font-size: 12px; font-weight: 800; cursor: pointer; }
-.exm-body { position: relative; display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 22px; align-items: start; min-height: 0; overflow-y: auto; padding-right: 4px; }
+.exm-body { position: relative; flex: 1; display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 22px; align-items: start; min-height: 0; overflow-y: auto; padding-right: 4px; }
 @media (max-width: 820px) { .exm-body { grid-template-columns: minmax(0, 1fr); } }
 .exm-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .exm-details { gap: 18px; }
@@ -261,7 +261,7 @@
 .exm-option b { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .exm-option small { width: 60px; text-align: right; font-size: 11.5px; font-weight: 600; color: #98A2B3; }
 .exm-nomatch { padding: 10px; font-size: 13px; font-weight: 600; color: #8b93a1; }
-.exm-foot { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 14px; border-top: 1px solid #EEF1F5; }
+.exm-foot { position: relative; flex: none; margin-top: auto; display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding-top: 14px; border-top: 1px solid #EEF1F5; }
 .exm-foot .exm-faint { font-size: 12.5px; font-weight: 500; }
 .exm-done { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 26px; border: 0; border-radius: 13px; background: #1d3466; color: #fff; font: inherit; font-size: 14.5px; font-weight: 800; box-shadow: 0 12px 22px -12px rgba(29, 52, 102, 0.95); cursor: pointer; }
 .exm-done:disabled { opacity: 0.8; cursor: default; }
