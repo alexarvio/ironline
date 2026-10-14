@@ -27,7 +27,8 @@ export function loadLibrary(coachId: number): LibraryData {
   const counts = exerciseClientCounts(coachId);
   const exercises = listExercises(coachId);
   return {
-    groups: [...coachGroups(coachId).filter((g) => g.slug !== "cardio"), { slug: "cardio", label: "Cardio" }],
+    // Cardio before Other (14 Oct): Other is always the last tile.
+    groups: [...coachGroups(coachId).filter((g) => g.slug !== "cardio" && g.slug !== "other"), { slug: "cardio", label: "Cardio" }, ...coachGroups(coachId).filter((g) => g.slug === "other")],
     items: exercises.map((e) => ({
       id: e.id,
       name: e.name,
