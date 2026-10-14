@@ -1,16 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { addCalendarCategoryAction, addCalendarEntryAction, deleteEventCategoryAction, removeCalendarEntryAction, updateCalendarEntryAction, updateEventCategoryAction } from "../../../lib/actions";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import { Switch } from "../../../components/ui/form";
-import { ChevronDownIcon, TrashIcon } from "../../../components/icons";
-import DatePick from "../DatePick";
-import Picker from "../Picker";
-import { PALETTE, entryColors, paletteOf, type Category } from "../palette";
+import { useState } from "react";
+import { Dialog } from "../../../components/ui/dialog";
+import { ChevronDownIcon } from "../../../components/icons";
+import { entryColors, type Category } from "../palette";
+import EntryDialog, { type EntryClient, type Open } from "./EntryDialog";
 
 // The Calendar's chosen day, hour by hour, and the dialog that adds to it or
 // changes an entry. Every entry is a pill in its category's colour, on one
@@ -36,7 +30,6 @@ const FIRST_HOUR = 6;
 const LAST_HOUR = 21;
 const SLOT_MIN = 15;
 const SLOT_PX = 20; // one quarter-hour row
-const LENGTHS = [15, 30, 45, 60, 75, 90, 120, 150, 180, 240];
 
 const toMin = (t: string) => {
   const [h, m] = t.split(":").map(Number);
@@ -45,11 +38,9 @@ const toMin = (t: string) => {
 const hhmm = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
 const hourLabel = (h: number) => `${h % 12 === 0 ? 12 : h % 12} ${h < 12 ? "AM" : "PM"}`;
 const lengthLabel = (m: number) => (m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m / 60} h`);
-const longDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
 
-type Open = { entry: CalEntry | null; date: string; time: string };
 
-export default function CalendarDay({ date, entries, categories, clients }: { date: string; entries: CalEntry[]; categories: Category[]; clients: { id: number; name: string }[] }) {
+export default function CalendarDay({ date, entries, categories, clients }: { date: string; entries: CalEntry[]; categories: Category[]; clients: EntryClient[] }) {
   const [dlg, setDlg] = useState<Open | null>(null);
 
   const startMin = FIRST_HOUR * 60;
@@ -129,7 +120,7 @@ export default function CalendarDay({ date, entries, categories, clients }: { da
       </div>
 
       <Dialog open={!!dlg} onOpenChange={(o) => !o && setDlg(null)}>
-        {dlg && <EntryDialog key={`${dlg.entry?.id ?? "new"}:${dlg.time}`} open={dlg} cats={categories} clients={clients} onDone={() => setDlg(null)} />}
+        {dlg && <EntryDialog key={`${dlg.entry?.id ?? "new"}:${dlg.time}`} open={dlg} cats={categories} clients={clients} dayEntries={entries} onDone={() => setDlg(null)} />}
       </Dialog>
     </div>
   );
@@ -176,258 +167,3 @@ function Pill({ e, cats, slots, height, onOpen }: { e: CalEntry; cats: Category[
   );
 }
 
-// ---- Add or change one entry, laid out like the New client dialog: a tinted
-// head, hairline rows two to a line, what is still needed at its foot.
-function EntryDialog({ open, cats, clients, onDone }: { open: Open; cats: Category[]; clients: { id: number; name: string }[]; onDone: () => void }) {
-  const router = useRouter();
-  const [, start] = useTransition();
-  const e = open.entry;
-  const [topic, setTopic] = useState(e?.topic ?? "");
-  const [date, setDate] = useState(open.date);
-  const [allDay, setAllDay] = useState(e?.allDay ?? false);
-  const [time, setTime] = useState(e?.time || open.time);
-  const [length, setLength] = useState(String(e?.durationMinutes ?? 60));
-  const [client, setClient] = useState(e?.clientId != null ? String(e.clientId) : "");
-  const [cat, setCat] = useState<string | null>(e ? e.category : null);
-  const [catTouched, setCatTouched] = useState(!!e);
-  const [note, setNote] = useState(e?.note ?? "");
-  const [catEdit, setCatEdit] = useState<{ id: string | null; label: string; color: string } | null>(null);
-
-  const usedColors = new Set(cats.map((c) => c.color));
-  const freeColor = PALETTE.find((p) => !usedColors.has(p.id))?.id ?? PALETTE[0].id;
-  const catOk = !!catEdit && catEdit.label.trim().length > 0 && !cats.some((c) => c.id !== catEdit.id && c.label.trim().toLowerCase() === catEdit.label.trim().toLowerCase());
-  const current = cat ? cats.find((c) => c.id === cat) ?? null : null;
-
-  const act = (fn: () => Promise<unknown>, said: string) =>
-    start(async () => {
-      await fn();
-      router.refresh();
-      toast.success(said);
-    });
-
-  const saveCat = async () => {
-    if (!catEdit || !catOk) return;
-    const draft = catEdit;
-    setCatEdit(null);
-    if (draft.id) act(() => updateEventCategoryAction(draft.id!, draft.label.trim(), draft.color), `Category "${draft.label.trim()}" changed`);
-    else {
-      const id = await addCalendarCategoryAction(draft.label.trim(), draft.color);
-      router.refresh();
-      if (id) {
-        setCat(id);
-        setCatTouched(true);
-      }
-    }
-  };
-
-  const lengths = LENGTHS.includes(Number(length)) ? LENGTHS : [...LENGTHS, Number(length)].sort((a, b) => a - b);
-  const missing = [!date && "a day", !allDay && !time && "a time", !topic.trim() && !client && "what it is"].filter(Boolean) as string[];
-  const ok = missing.length === 0;
-  const clientName = clients.find((c) => String(c.id) === client)?.name;
-
-  const save = () => {
-    if (!ok) return;
-    // The time is in this browser's timezone, as every time on the Calendar reads.
-    const v = { date, time: allDay ? "" : time, tz: allDay ? null : browserZone(), durationMinutes: Number(length) || 60, allDay, topic: topic.trim(), clientId: client ? Number(client) : null, category: cat, note: note.trim() };
-    onDone();
-    const label = topic.trim() || clientName || "Entry";
-    act(() => (e ? updateCalendarEntryAction(e.id, v) : addCalendarEntryAction(v)), e ? `${label} · saved` : `${label} · added`);
-  };
-
-  return (
-    <DialogContent className="ncd" aria-describedby={undefined}>
-      <header className="ncd-head">
-        <div>
-          <DialogTitle className="ncd-title">{e ? "Entry" : "New entry"}</DialogTitle>
-          <DialogDescription className="ncd-sub">
-            {date ? longDate(date) : "No day yet"}
-            {e?.clientId != null && (
-              <>
-                {" · "}
-                <Link href={`/admin/redesign/meetings?client=${e.clientId}`} className="ncd-link">
-                  Open {e.clientName.split(" ")[0]}&rsquo;s meetings
-                </Link>
-              </>
-            )}
-          </DialogDescription>
-        </div>
-        <DialogClose className="cc-dialog-x" aria-label="Close">
-          ×
-        </DialogClose>
-      </header>
-
-      <div className="ncd-body">
-        <div className="nc-grid">
-          <label className="nc-row full">
-            <span className="nc-label">What</span>
-            <span className="nc-control">
-              <input className="nc-input" value={topic} onChange={(x) => setTopic(x.target.value)} placeholder="Check-in call, gym session, admin…" maxLength={120} autoFocus={!e} onKeyDown={(x) => x.key === "Enter" && save()} />
-            </span>
-          </label>
-
-          <div className="nc-row">
-            <span className="nc-label">Day</span>
-            <span className="nc-control">
-              <DatePick value={date} onChange={setDate} label="Day" className="ncd-flat" />
-            </span>
-          </div>
-          <label className="nc-row">
-            <span className="nc-label">All day</span>
-            <span className="nc-control ncd-switch">
-              <Switch checked={allDay} onCheckedChange={setAllDay} aria-label="All day" />
-              <span>{allDay ? "Yes, no time" : "No"}</span>
-            </span>
-          </label>
-
-          {!allDay && (
-            <>
-              <label className="nc-row">
-                <span className="nc-label">Starts</span>
-                <span className="nc-control">
-                  <input className="nc-input" type="time" step={300} value={time} onChange={(x) => setTime(x.target.value)} />
-                </span>
-              </label>
-              <div className="nc-row">
-                <span className="nc-label">Length</span>
-                <span className="nc-control">
-                  <Picker value={length} onChange={setLength} label="Length" className="ncd-flat" options={lengths.map((m) => ({ value: String(m), label: lengthLabel(m), hint: time ? `until ${hhmm(toMin(time) + m)}` : undefined }))} />
-                </span>
-              </div>
-            </>
-          )}
-
-          <div className="nc-row full">
-            <span className="nc-label">With</span>
-            <span className="nc-control">
-              <Picker
-                value={client}
-                onChange={(v) => {
-                  setClient(v);
-                  if (!catTouched) setCat(v ? "call" : null);
-                }}
-                label="With"
-                className="ncd-flat"
-                options={[{ value: "", label: "Just you", hint: "no client" }, ...clients.map((c) => ({ value: String(c.id), label: c.name }))]}
-              />
-            </span>
-          </div>
-
-          <div className="nc-row full">
-            <span className="nc-label">Category</span>
-            <span className="nc-control cal-cats">
-              {cats.map((x) => {
-                const p = paletteOf(x.color);
-                const on = cat === x.id;
-                return (
-                  <button
-                    key={x.id}
-                    type="button"
-                    className={`rd-chip${on ? " on" : ""}`}
-                    style={on ? { background: p.ink, borderColor: p.ink } : undefined}
-                    onClick={() => {
-                      setCat(on ? null : x.id);
-                      setCatTouched(true);
-                    }}
-                    aria-pressed={on}
-                  >
-                    <i className="rq-cat-dot" style={{ background: on ? "#fff" : p.ink }} />
-                    {x.label}
-                  </button>
-                );
-              })}
-              <button type="button" className="rd-chip alt" onClick={() => setCatEdit({ id: null, label: "", color: freeColor })}>
-                + New category
-              </button>
-            </span>
-            {current?.custom && !catEdit && (
-              <span className="rq-cat-own">
-                <button type="button" className="rd-ex-btn" onClick={() => setCatEdit({ id: current.id, label: current.label, color: current.color })}>
-                  Rename or recolour
-                </button>
-                <button
-                  type="button"
-                  className="rd-ex-btn danger"
-                  onClick={() => {
-                    setCat(null);
-                    act(() => deleteEventCategoryAction(current.id), "Category removed · its entries go grey");
-                  }}
-                >
-                  Remove
-                </button>
-              </span>
-            )}
-            {catEdit && (
-              <div className="rq-cat-edit">
-                <input
-                  className="rd-input"
-                  value={catEdit.label}
-                  onChange={(x) => setCatEdit({ ...catEdit, label: x.target.value })}
-                  onKeyDown={(x) => {
-                    if (x.key === "Enter") {
-                      x.preventDefault();
-                      saveCat();
-                    }
-                  }}
-                  placeholder="Name it: Content, Sales calls, Family…"
-                  maxLength={24}
-                  autoFocus
-                  aria-label="Category name"
-                />
-                <span className="rq-cat-colors" role="radiogroup" aria-label="Colour">
-                  {PALETTE.map((p) => (
-                    <button key={p.id} type="button" role="radio" aria-checked={catEdit.color === p.id} className={`rq-cat-color${catEdit.color === p.id ? " on" : ""}`} style={{ background: p.ink }} onClick={() => setCatEdit({ ...catEdit, color: p.id })} aria-label={p.id} />
-                  ))}
-                </span>
-                <span className="rq-cat-edit-actions">
-                  <button type="button" className="rd-btn" onClick={() => setCatEdit(null)}>
-                    Cancel
-                  </button>
-                  <button type="button" className="rd-btn primary" disabled={!catOk} onClick={saveCat}>
-                    {catEdit.id ? "Save" : "Add"}
-                  </button>
-                </span>
-              </div>
-            )}
-          </div>
-
-          <label className="nc-row full">
-            <span className="nc-label">
-              Note <span className="ncd-aside">only you see it</span>
-            </span>
-            <span className="nc-control">
-              <textarea className="nc-input ncd-note" rows={3} value={note} onChange={(x) => setNote(x.target.value)} placeholder="What to bring up, what to prepare…" maxLength={2000} />
-            </span>
-          </label>
-        </div>
-      </div>
-
-      <footer className="ncd-foot">
-        {e && (
-          <button
-            type="button"
-            className="rd-btn danger"
-            onClick={() => {
-              onDone();
-              act(() => removeCalendarEntryAction(e.id), "Removed");
-            }}
-          >
-            <TrashIcon /> Remove
-          </button>
-        )}
-        <span className={`ncd-status${ok ? "" : " bad"}`}>{ok ? "" : `Still needed: ${missing.join(", ")}`}</span>
-        <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!ok} onClick={save}>
-          {e ? "Save" : "Add"}
-        </button>
-      </footer>
-    </DialogContent>
-  );
-}
-
-function browserZone(): string | null {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
-  } catch {
-    return null;
-  }
-}
