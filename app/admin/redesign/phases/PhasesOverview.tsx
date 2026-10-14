@@ -533,7 +533,7 @@ function ClientBlock({
                       key={p.id}
                       type="button"
                       className={`pov-bar ${st}${soon ? " soon" : ""}${sp.clipStart ? " clip-l" : ""}${sp.clipEnd ? " clip-r" : ""}`}
-                      style={{ left: `${sp.left * 100}%`, width: `${sp.width * 100}%`, "--c": col.c, "--rgb": col.rgb } as React.CSSProperties}
+                      style={{ left: `${sp.left * 100}%`, width: `${sp.width * 100}%`, "--c": col.c, "--rgb": col.rgb, "--tint": col.tint, "--line": col.line } as React.CSSProperties}
                       title={tip}
                       aria-label={tip}
                       onClick={() => onPick({ client: c, phase: p })}
