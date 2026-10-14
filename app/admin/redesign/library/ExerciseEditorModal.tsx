@@ -5,7 +5,7 @@ import type React from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import { CheckIcon, ChevronLeftIcon, PlayIcon, PlusIcon, SearchIcon, TrashIcon } from "../../../components/icons";
+import { CheckIcon, ChevronDownIcon, ChevronLeftIcon, PlayIcon, PlusIcon, SearchIcon, TrashIcon } from "../../../components/icons";
 import { clearExerciseDemoAction, setExerciseDemoLinkAction } from "../../../lib/actions";
 import { groupColour } from "../../../lib/muscleGroups";
 import { assignVideoToExerciseAction, createLibraryExerciseAction, saveExerciseSubstitutesAction, saveExerciseVariationsAction, updateLibraryExerciseAction, uploadLibraryVideoAction } from "./actions";
@@ -25,7 +25,7 @@ import { useAutosave } from "./useAutosave";
 // that suggests the same group first.
 
 type Var = { id: number; name: string; video: string | null; cue: string };
-type Sub = { exerciseId: number; name: string; note: string };
+type Sub = { exerciseId: number; name: string; note: string; variationId: number | null };
 
 const MAX_SUBS = 12;
 /** What a video carries while it is dragged from Your videos: its id. */
@@ -142,7 +142,7 @@ export default function ExerciseEditorModal({
   };
   const saveSubs = (next: Sub[], later = false) => {
     setSubs(next);
-    const job = () => saveExerciseSubstitutesAction(item.id, next.map((s) => ({ exerciseId: s.exerciseId, note: s.note })));
+    const job = () => saveExerciseSubstitutesAction(item.id, next.map((s) => ({ exerciseId: s.exerciseId, note: s.note, variationId: s.variationId })));
     if (later) save.later("subs", job);
     else void save.run(job);
   };
@@ -318,7 +318,7 @@ export default function ExerciseEditorModal({
   }, [searchOpen, q]);
   const addSub = (x: LibraryItem) => {
     if (subs.length >= MAX_SUBS) return;
-    saveSubs([...subs, { exerciseId: x.id, name: x.name, note: "" }]);
+    saveSubs([...subs, { exerciseId: x.id, name: x.name, note: "", variationId: null }]);
     setQ("");
     setCursor(0);
     if (subs.length + 1 >= MAX_SUBS) setSearchOpen(false);
@@ -352,6 +352,8 @@ export default function ExerciseEditorModal({
     saveSubs(next);
   };
   const dragSub = useRef<number | null>(null);
+  // The chevron by a substitute's name (14 Oct, Alex): one of that exercise's variations, when it has any.
+  const [subMenu, setSubMenu] = useState<{ id: number; x: number; y: number } | null>(null);
   const [creating, setCreating] = useState(false);
   const createAndAdd = async () => {
     const n = q.trim();
@@ -831,7 +833,7 @@ export default function ExerciseEditorModal({
                   >
                     <button
                       type="button"
-                      className="exm-rank"
+                      className="exm-handle"
                       aria-label={`Substitute ${i + 1}: move with Alt and the arrow keys`}
                       onKeyDown={(e) => {
                         if (!e.altKey) return;
@@ -844,7 +846,7 @@ export default function ExerciseEditorModal({
                         }
                       }}
                     >
-                      {i + 1}
+                      ⋮⋮
                     </button>
                     <span
                       className={`exm-subthumb${x?.video ? "" : " none"}${overSub === s.exerciseId ? " over" : ""}`}
@@ -866,13 +868,65 @@ export default function ExerciseEditorModal({
                       {x?.video ? <Poster url={x.video} /> : overSub === s.exerciseId ? "Drop" : "No demo"}
                     </span>
                     <span className="exm-subinfo">
-                      <button type="button" className="exm-subname" onClick={() => onOpenOther(s.exerciseId)} title={`Open ${s.name}`}>
-                        {s.name}
-                      </button>
+                      <span className="exm-subname-row">
+                        <button type="button" className="exm-subname" onClick={() => onOpenOther(s.exerciseId)} title={`Open ${s.name}`}>
+                          {s.name}
+                        </button>
+                        {!!x?.variations.length && (
+                          <button
+                            type="button"
+                            className="exm-chev"
+                            aria-label={`Which variation of ${s.name}`}
+                            aria-expanded={subMenu?.id === s.exerciseId}
+                            onClick={(e) => {
+                              if (subMenu?.id === s.exerciseId) {
+                                setSubMenu(null);
+                                return;
+                              }
+                              const r = e.currentTarget.getBoundingClientRect();
+                              setSubMenu({ id: s.exerciseId, x: r.left, y: r.bottom + 6 });
+                            }}
+                          >
+                            <ChevronDownIcon />
+                          </button>
+                        )}
+                      </span>
                       <span className="exm-subline">
                         <span className="exm-minipill">{groups.find((g) => g.slug === x?.group)?.label ?? "Other"}</span>
-                        <small>{x?.video ? "Demo attached" : "No demo yet"}</small>
+                        {s.variationId != null && <span className="exm-subvar">{x?.variations.find((v) => v.id === s.variationId)?.name ?? ""}</span>}
                       </span>
+                      {subMenu?.id === s.exerciseId &&
+                        x &&
+                        createPortal(
+                          <div className="exm-popover" role="menu" style={{ left: subMenu.x, top: subMenu.y }}>
+                            <button
+                              type="button"
+                              role="menuitemradio"
+                              aria-checked={s.variationId == null}
+                              onClick={() => {
+                                setSubMenu(null);
+                                saveSubs(subs.map((y) => (y.exerciseId === s.exerciseId ? { ...y, variationId: null } : y)));
+                              }}
+                            >
+                              {x.name}, as it is
+                            </button>
+                            {x.variations.map((v) => (
+                              <button
+                                key={v.id}
+                                type="button"
+                                role="menuitemradio"
+                                aria-checked={s.variationId === v.id}
+                                onClick={() => {
+                                  setSubMenu(null);
+                                  saveSubs(subs.map((y) => (y.exerciseId === s.exerciseId ? { ...y, variationId: v.id } : y)));
+                                }}
+                              >
+                                {v.name}
+                              </button>
+                            ))}
+                          </div>,
+                          document.body
+                        )}
                     </span>
                     <input
                       className="exm-input small"

@@ -48,7 +48,7 @@ export function localDayOf(stamp: string): string {
 }
 
 export type ExerciseVariation = { id: number; name: string; video_url: string | null; cue?: string | null };
-export type Exercise = { id: number; name: string; muscle_tags: string | null; video_url: string | null; coach_id?: number; cue?: string | null; archived?: boolean; variations?: ExerciseVariation[]; substitutes?: { exercise_id: number; note: string | null }[] };
+export type Exercise = { id: number; name: string; muscle_tags: string | null; video_url: string | null; coach_id?: number; cue?: string | null; archived?: boolean; variations?: ExerciseVariation[]; substitutes?: { exercise_id: number; note: string | null; variation_id?: number | null }[] };
 export type ProgramDay = {
   id: number;
   client_id: number;
@@ -8719,7 +8719,7 @@ export function setExerciseVariations(exerciseId: number, list: { id?: number | 
     coach's library, each with a note, in the coach's order. Offered to the
     client when the machine is taken, in every programme, unless a session
     keeps them off. No cap worth the name (12): nobody adds six. */
-export function setExerciseSubstitutes(exerciseId: number, list: { exercise_id: number; note: string | null }[]) {
+export function setExerciseSubstitutes(exerciseId: number, list: { exercise_id: number; note: string | null; variation_id?: number | null }[]) {
   const data = getData();
   const e = data.exercises.find((x) => x.id === exerciseId);
   if (!e) return;
@@ -8732,7 +8732,11 @@ export function setExerciseSubstitutes(exerciseId: number, list: { exercise_id: 
       seen.add(s.exercise_id);
       return true;
     })
-    .map((s) => ({ exercise_id: s.exercise_id, note: s.note?.trim().slice(0, 200) || null }))
+    .map((s) => {
+      const other = data.exercises.find((x) => x.id === s.exercise_id);
+      const variation = s.variation_id != null && other?.variations?.some((v) => v.id === s.variation_id) ? s.variation_id : null;
+      return { exercise_id: s.exercise_id, note: s.note?.trim().slice(0, 200) || null, ...(variation != null ? { variation_id: variation } : {}) };
+    })
     .slice(0, 12);
   if (clean.length) e.substitutes = clean;
   else delete e.substitutes;
@@ -8740,14 +8744,14 @@ export function setExerciseSubstitutes(exerciseId: number, list: { exercise_id: 
 }
 
 /** The library's substitutes for an exercise, as set on the Library page. */
-export function librarySubstitutesFor(exerciseId: number): { exercise_id: number; note: string | null }[] {
+export function librarySubstitutesFor(exerciseId: number): { exercise_id: number; note: string | null; variation_id?: number | null }[] {
   return getData().exercises.find((e) => e.id === exerciseId)?.substitutes ?? [];
 }
 
 /** What a prescription offers instead (14 Oct): its own alternatives, then
     the library's substitutes for its exercise unless the session keeps
     those off. The session's own note wins where both name the same exercise. */
-export function effectiveAlternatives(wa: { exercise_id: number; alternatives?: { exercise_id: number; note: string | null }[]; library_substitutes_off?: boolean }): { exercise_id: number; note: string | null }[] {
+export function effectiveAlternatives(wa: { exercise_id: number; alternatives?: { exercise_id: number; note: string | null }[]; library_substitutes_off?: boolean }): { exercise_id: number; note: string | null; variation_id?: number | null }[] {
   const own = wa.alternatives ?? [];
   const lib = wa.library_substitutes_off ? [] : librarySubstitutesFor(wa.exercise_id);
   return [...own, ...lib.filter((l) => !own.some((o) => o.exercise_id === l.exercise_id))];

@@ -715,7 +715,13 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                   swap: a.swap
                     ? { libraryExerciseId: a.swap.library_exercise_id, name: (a.swap.library_exercise_id != null ? libraryName.get(a.swap.library_exercise_id) : null) ?? a.swap.custom_name ?? "Another exercise" }
                     : null,
-                  alternatives: effectiveAlternatives(a).filter((x) => library.has(x.exercise_id)).map((x) => ({ id: x.exercise_id, name: library.get(x.exercise_id)!.name, note: x.note, video: library.get(x.exercise_id)!.video_url })),
+                  alternatives: effectiveAlternatives(a)
+                    .filter((x) => library.has(x.exercise_id))
+                    .map((x) => {
+                      const e = library.get(x.exercise_id)!;
+                      const variation = x.variation_id != null ? e.variations?.find((v) => v.id === x.variation_id) ?? null : null;
+                      return { id: x.exercise_id, name: variation ? `${e.name} · ${variation.name}` : e.name, note: x.note, video: variation?.video_url ?? e.video_url };
+                    }),
                   group: library.has(a.exercise_id) ? exerciseGroup(library.get(a.exercise_id)!) : "other",
                   sets: a.sets,
                   reps: a.reps,

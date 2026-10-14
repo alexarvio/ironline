@@ -39,12 +39,12 @@ export async function saveExerciseVariationsAction(exerciseId: number, list: { i
 }
 
 /** The exercise's substitutes (14 Oct): others of the coach's own library, with a note each. */
-export async function saveExerciseSubstitutesAction(exerciseId: number, list: { exerciseId: number; note: string }[]): Promise<boolean> {
+export async function saveExerciseSubstitutesAction(exerciseId: number, list: { exerciseId: number; note: string; variationId?: number | null }[]): Promise<boolean> {
   const coach = await requireCoach();
   if (!coachOwnsExercise(coach.id, Number(exerciseId))) return false;
   setExerciseSubstitutes(
     Number(exerciseId),
-    (Array.isArray(list) ? list : []).filter((s) => coachOwnsExercise(coach.id, Number(s?.exerciseId))).map((s) => ({ exercise_id: Number(s.exerciseId), note: typeof s?.note === "string" ? s.note : null }))
+    (Array.isArray(list) ? list : []).filter((s) => coachOwnsExercise(coach.id, Number(s?.exerciseId))).map((s) => ({ exercise_id: Number(s.exerciseId), note: typeof s?.note === "string" ? s.note : null, variation_id: s?.variationId == null ? null : Number(s.variationId) }))
   );
   revalidatePath("/admin");
   revalidatePath("/client");
