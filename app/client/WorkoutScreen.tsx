@@ -55,6 +55,7 @@ export default function WorkoutScreen({
   gymId,
   onPickGym,
   coachName,
+  coachPhoto = null,
   clientName = "",
   focusExercise,
   onBack,
@@ -68,6 +69,7 @@ export default function WorkoutScreen({
   gymId: number | null;
   onPickGym: (gym: GymOption) => void;
   coachName: string;
+  coachPhoto?: string | null;
   /** The client's first name, for the wrap-up. */
   clientName?: string;
   focusExercise: number | null;
@@ -362,6 +364,7 @@ export default function WorkoutScreen({
                 total={day.exercises.length}
                 gymId={gymId}
                 coachName={coachName}
+                coachPhoto={coachPhoto}
                 nextName={(() => {
                   const n = pages[nextOpen(i)];
                   return n?.kind === "exercise" ? shownName(day.exercises[n.index]) : n?.kind === "cardio" ? day.cardio[n.index].name : null;

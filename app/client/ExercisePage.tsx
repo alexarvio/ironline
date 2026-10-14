@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "rea
 import type React from "react";
 import { clearSwapAction, logSetAction, saveExerciseNoteAction, saveWarmupSetsAction, swapExerciseAction } from "../lib/actions";
 import { displayToKg, fmtWeight, kgToDisplay, planToDisplay, stepFor, unitLabel as labelOf, type Unit } from "../lib/units";
-import AlternativesSheet from "./AlternativesSheet";
+import SwapExerciseDialog from "./workout/SwapExerciseDialog";
 import { VideoAskSheet, VideoGlyph } from "./VideoAskSheet";
 import { CoachNote, shownName, type SessionExercise } from "./workoutShared";
 
@@ -48,6 +48,7 @@ export default function ExercisePage({
   total,
   gymId,
   coachName,
+  coachPhoto = null,
   nextName = null,
   onNext,
   request = null,
@@ -61,6 +62,7 @@ export default function ExercisePage({
   total: number;
   gymId: number | null;
   coachName: string;
+  coachPhoto?: string | null;
   /** The exercise (or cardio) after this one. */
   nextName?: string | null;
   /** Every set is in: on to the next page, with a line for the toast. */
@@ -622,18 +624,16 @@ export default function ExercisePage({
       ) : null}
 
       {swapOpen && (
-        <AlternativesSheet
-          exerciseName={exercise.name}
-          coachName={coachName}
-          suggested={exercise.alternatives}
-          swapped={exercise.swap}
-          onPick={(choice) => {
+        <SwapExerciseDialog
+          exercise={{ name: exercise.name, group: exercise.group }}
+          targets={{ sets: exercise.sets, reps: exercise.reps, rpe: exercise.targetRpe, time: exercise.time }}
+          suggestions={exercise.alternatives}
+          current={exercise.swap}
+          coach={{ firstName: coachName, photo: coachPhoto }}
+          photoSent={!!exercise.videoRequest && exercise.videoRequest.about === "swap" && !!exercise.videoRequest.src}
+          onSwap={(choice) => {
             setSwapOpen(false);
             startTransition(() => swapExerciseAction(exercise.id, choice));
-          }}
-          onClear={() => {
-            setSwapOpen(false);
-            startTransition(() => clearSwapAction(exercise.id));
           }}
           onPhoto={() => {
             setSwapOpen(false);

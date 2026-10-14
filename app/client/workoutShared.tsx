@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { clearCardioSwapAction, saveSkipReasonAction, setCardioDoneAction, swapCardioAction } from "../lib/actions";
-import AlternativesSheet from "./AlternativesSheet";
+import SwapExerciseDialog from "./workout/SwapExerciseDialog";
 import ExerciseCoachNote from "./ExerciseCoachNote";
 import type { VideoAsk } from "./VideoAskSheet";
 import type { GymOption } from "./GymPickerDialog";
@@ -26,7 +26,9 @@ export type SessionExercise = {
   /** What the client did instead, when they swapped. */
   swap: { libraryExerciseId: number | null; name: string } | null;
   /** What the coach offers instead when the machine is taken. */
-  alternatives: { id: number; name: string; note: string | null }[];
+  alternatives: { id: number; name: string; note: string | null; /** The substitute's demo (14 Oct), for the thumb on the swap pop-up. */ video: string | null }[];
+  /** The exercise's muscle group (14 Oct): the swap pop-up's colour. */
+  group: string;
   sets: number;
   reps: string;
   targetWeight: number | null;
@@ -292,19 +294,16 @@ export function CardioCard({ cardio, index, readOnly = false, coachName = "Your 
         </button>
       )}
       {swapOpen && (
-        <AlternativesSheet
-          exerciseName={cardio.name}
-          coachName={coachName}
-          suggested={cardio.alternatives.map((a, i) => ({ id: i, name: a.name, note: a.note }))}
-          swapped={cardio.swap ? { libraryExerciseId: null, name: cardio.swap } : null}
-          onPick={(choice) => {
+        <SwapExerciseDialog
+          exercise={{ name: cardio.name, group: "cardio" }}
+          targets={{ sets: 1, reps: "", rpe: null, time: cardio.time || null }}
+          suggestions={cardio.alternatives.map((a, i) => ({ id: i, name: a.name, note: a.note, video: null }))}
+          current={cardio.swap ? { libraryExerciseId: (() => { const i = cardio.alternatives.findIndex((a) => a.name === cardio.swap); return i >= 0 ? i : null; })(), name: cardio.swap } : null}
+          coach={{ firstName: coachName, photo: null }}
+          onSwap={(choice) => {
             setSwapOpen(false);
             const name = choice.libraryExerciseId != null ? cardio.alternatives[choice.libraryExerciseId]?.name : choice.customName;
             if (name) startTransition(() => swapCardioAction(cardio.id, name));
-          }}
-          onClear={() => {
-            setSwapOpen(false);
-            startTransition(() => clearCardioSwapAction(cardio.id));
           }}
           onClose={() => setSwapOpen(false)}
         />

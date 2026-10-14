@@ -32,6 +32,7 @@ import {
   currentGymId,
   getClientCardPictures,
   effectiveAlternatives,
+  exerciseGroup,
   getLastSets,
   getExerciseUnit,
   getLatestClientExerciseNotes,
@@ -667,7 +668,8 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
             allGyms.map((g) => [g.id, showMyNotes ? getClientExerciseNotes(CLIENT_ID, g.id) : new Map<number, string>()] as const)
           );
           const coachId = getClient(CLIENT_ID)?.coach_id ?? null;
-          const libraryName = new Map(coachId != null ? listExercises(coachId).map((e) => [e.id, e.name] as const) : []);
+          const library = new Map(coachId != null ? listExercises(coachId).map((e) => [e.id, e] as const) : []);
+          const libraryName = new Map([...library].map(([id, e]) => [id, e.name] as const));
           const videoReplies = listVideoReplies(CLIENT_ID);
           return (
             <>
@@ -679,6 +681,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
               currentWeek={isCurrent}
               pastWeek={isPast}
               coachName={getCoachFirstName(CLIENT_ID)}
+              coachPhoto={getCoachAvatarPath(CLIENT_ID)}
               clientName={(getClient(CLIENT_ID)?.name ?? "").trim().split(/\s+/)[0] ?? ""}
               liveSession={liveSessionFor(CLIENT_ID)}
               days={trainingDays.map(({ day, assignments }, i) => {
@@ -712,7 +715,8 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                   swap: a.swap
                     ? { libraryExerciseId: a.swap.library_exercise_id, name: (a.swap.library_exercise_id != null ? libraryName.get(a.swap.library_exercise_id) : null) ?? a.swap.custom_name ?? "Another exercise" }
                     : null,
-                  alternatives: effectiveAlternatives(a).filter((x) => libraryName.has(x.exercise_id)).map((x) => ({ id: x.exercise_id, name: libraryName.get(x.exercise_id)!, note: x.note })),
+                  alternatives: effectiveAlternatives(a).filter((x) => library.has(x.exercise_id)).map((x) => ({ id: x.exercise_id, name: library.get(x.exercise_id)!.name, note: x.note, video: library.get(x.exercise_id)!.video_url })),
+                  group: library.has(a.exercise_id) ? exerciseGroup(library.get(a.exercise_id)!) : "other",
                   sets: a.sets,
                   reps: a.reps,
                   targetWeight: a.target_weight_kg,
