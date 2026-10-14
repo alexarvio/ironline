@@ -6,13 +6,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Popover as PopoverPrimitive } from "radix-ui";
 import { toast } from "sonner";
-import { addClientPhaseAction, removeClientPhaseAction, updateClientPhaseAction } from "../../../lib/actions";
+import { addClientEventAction, addClientPhaseAction, removeClientPhaseAction, updateClientPhaseAction } from "../../../lib/actions";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { eventTypeOf } from "../../../lib/eventTypes";
 import PhaseDetailDialog from "./PhaseDetailDialog";
 import type { PhaseTrack } from "../../../lib/db";
 import { TRACK_LABEL } from "../../phaseChrome";
 import { PhaseDialog, phaseForm } from "../plan/PlanDraft";
+import { EventDialog } from "../plan/EventsCard";
 import DatePick from "../DatePick";
 import type { OverviewClient, PhasesOverviewData } from "./load";
 import {
@@ -145,6 +146,7 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
   const [leaving, setLeaving] = useState<Set<number>>(new Set());
   const [picked, setPicked] = useState<Picked>(null);
   const [newPhase, setNewPhase] = useState<{ client: OverviewClient; track: PhaseTrack; start: string; /** Plan next: the track is given. A first phase: the coach picks it. */ lock: boolean } | null>(null);
+  const [newEvent, setNewEvent] = useState<{ client: OverviewClient; day: string } | null>(null);
   const leave = (id: number) => setLeaving((s) => new Set(s).add(id));
   const act = (fn: () => Promise<unknown>, said: string, undo?: () => Promise<unknown>) =>
     start(async () => {
@@ -285,7 +287,7 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
             <p className="pov-empty">Nobody needs attention: every running phase has something planned after it.</p>
           ) : (
             shown.map((c) => (
-              <ClientBlock key={c.id} client={c} today={today} range={range} tracksOn={tracksOn} eventsOn={eventsOn} width={width} lines={lines} todayX={todayIn ? todayX : null} onPick={setPicked} onPlan={(track, startDay) => setNewPhase({ client: c, track, start: startDay, lock: false })} />
+              <ClientBlock key={c.id} client={c} today={today} range={range} tracksOn={tracksOn} eventsOn={eventsOn} width={width} lines={lines} todayX={todayIn ? todayX : null} onPick={setPicked} onPlan={(track, startDay) => setNewPhase({ client: c, track, start: startDay, lock: false })} onEvent={(day) => setNewEvent({ client: c, day })} />
             ))
           )}
         </div>
@@ -370,6 +372,24 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
           />
         )}
       </Dialog>
+
+      {/* ---- New event, the Plan's own dialog, on the day clicked. */}
+      <Dialog open={!!newEvent} onOpenChange={(o) => !o && setNewEvent(null)}>
+        {newEvent && (
+          <EventDialog
+            today={today}
+            event={null}
+            cats={data.categories}
+            initialStart={newEvent.day}
+            onSave={(v) => {
+              const client = newEvent.client;
+              setNewEvent(null);
+              act(() => addClientEventAction(client.id, v), `Event for ${first(client.name)}: ${v.title}`);
+            }}
+            onDelete={() => setNewEvent(null)}
+          />
+        )}
+      </Dialog>
     </div>
   );
 }
@@ -441,6 +461,7 @@ function ClientBlock({
   todayX,
   onPick,
   onPlan,
+  onEvent,
 }: {
   client: OverviewClient;
   today: string;
@@ -452,7 +473,10 @@ function ClientBlock({
   todayX: number | null;
   onPick: (p: Picked) => void;
   onPlan: (track: PhaseTrack, start: string) => void;
+  onEvent: (start: string) => void;
 }) {
+  // Where empty space was clicked: the chooser opens there.
+  const [spot, setSpot] = useState<{ x: number; y: number; day: string } | null>(null);
   const status = clientStatus(c, tracksOn, today);
   const statusText = status.kind === "soon" ? `${TRACK_LABEL[status.track]} ends ${status.days <= 0 ? "today" : `in ${status.days} day${status.days === 1 ? "" : "s"}`}` : status.kind === "planned" ? "All planned" : "Nothing planned";
 
@@ -489,12 +513,56 @@ function ClientBlock({
           </Link>
           <small className={`pov-status ${status.kind}`}>{statusText}</small>
         </span>
-        {/* Another phase, any track, from here (14 Oct): shows when the row is hovered. */}
-        <button type="button" className="pov-add" onClick={() => onPlan("training", today)} aria-label={`Plan a phase for ${first(c.name)}`}>
-          + Phase
-        </button>
       </div>
-      <div className="pov-track-cell">
+      {/* A click on empty space (14 Oct): a new phase for this client, from the day under the pointer (never before today). */}
+      <div
+        className="pov-track-cell"
+        title="Click an empty spot to plan a phase from that day"
+        onClick={(ev) => {
+          if ((ev.target as HTMLElement).closest("button, a")) return;
+          const rect = ev.currentTarget.getBoundingClientRect();
+          const x = Math.min(1, Math.max(0, (ev.clientX - rect.left) / Math.max(1, rect.width - 20)));
+          const day = addDays(range.start, Math.round(x * range.days));
+          setSpot({ x, y: ev.clientY - rect.top, day: day < today ? today : day });
+        }}
+      >
+        {/* The chooser at that spot: a phase or an event, from that day. */}
+        {spot && (
+          <PopoverPrimitive.Root open onOpenChange={(o) => !o && setSpot(null)}>
+            <PopoverPrimitive.Anchor asChild>
+              <i className="pov-spot" style={{ left: `calc(${spot.x} * (100% - 20px))`, top: spot.y }} aria-hidden="true" />
+            </PopoverPrimitive.Anchor>
+            <PopoverPrimitive.Portal>
+              <PopoverPrimitive.Content align="start" sideOffset={6} className="pb-menu pov-spot-menu" onOpenAutoFocus={(e) => e.preventDefault()}>
+                <span className="pov-spot-head">
+                  {shortDate(spot.day)} · {first(c.name)}
+                </span>
+                <button
+                  type="button"
+                  className="pov-spot-opt"
+                  onClick={() => {
+                    const d = spot.day;
+                    setSpot(null);
+                    onPlan("training", d);
+                  }}
+                >
+                  <i /> New phase
+                </button>
+                <button
+                  type="button"
+                  className="pov-spot-opt"
+                  onClick={() => {
+                    const d = spot.day;
+                    setSpot(null);
+                    onEvent(d);
+                  }}
+                >
+                  <i className="ev" /> New event
+                </button>
+              </PopoverPrimitive.Content>
+            </PopoverPrimitive.Portal>
+          </PopoverPrimitive.Root>
+        )}
         {lines.map((x) => (
           <i key={x} className="pov-gridline" style={{ left: `${x * 100}%` }} aria-hidden="true" />
         ))}

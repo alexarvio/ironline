@@ -469,14 +469,15 @@ export default function EventsCard({ clientId, events, categories: cats, today, 
 }
 
 // ---- One event: what kind, what to call it, a moment or a stretch, and a note.
-function EventDialog({ today, event, cats, onSave, onDelete }: { today: string; event: PlanEvent | null; cats: Category[]; onSave: (v: Omit<PlanEvent, "id">) => void; onDelete: () => void }) {
+/** Also opened from the Phases overview (14 Oct), on the day clicked there. */
+export function EventDialog({ today, event, cats, initialStart, onSave, onDelete }: { today: string; event: PlanEvent | null; cats: Category[]; /** A new event opens on this day. */ initialStart?: string; onSave: (v: Omit<PlanEvent, "id">) => void; onDelete: () => void }) {
   // The six types the client's sheet has (10 Oct); the coach's own categories went, so both sides speak the same six.
   // A new event starts on Trip, the first tile (14 Oct).
   const [kind, setKind] = useState<string | null>(event ? event.kind : "trip");
   const [title, setTitle] = useState(event?.title ?? "");
   const [shape, setShape] = useState<"event" | "period">(event ? (event.start === event.end ? "event" : "period") : "event");
-  const [start, setStart] = useState(event?.start ?? today);
-  const [end, setEnd] = useState(event?.end ?? addDays(today, 6));
+  const [start, setStart] = useState(event?.start ?? initialStart ?? today);
+  const [end, setEnd] = useState(event?.end ?? addDays(initialStart ?? today, 6));
   const [note, setNote] = useState(event?.note ?? "");
   const k = chromeOf(cats, kind);
   const endOk = shape === "event" || end >= start;
