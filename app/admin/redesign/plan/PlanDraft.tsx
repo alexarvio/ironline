@@ -750,12 +750,12 @@ export function gridFor(win: number, thisWeek: string, intoWeek: number) {
   return { first, count, weeks, nowIdx, months, cols, nowLeft, shift };
 }
 
-export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track: initialTrack, lockTrack = false, others, programs, onSave, onDelete, onDuplicate, onSend }: { clientId: number; firstName: string; today: string; thisWeek: string; phase: PlanPhaseRow | null; track?: PhaseTrack; /** Opened from a track's own tab (10 Oct): the track is given, so no tiles to pick one. */ lockTrack?: boolean; others: PlanPhaseRow[]; programs: PlanProgramOption[]; onSave: (v: { name: string; track: PhaseTrack; start: string; end: string; programId: number | null }) => void; onDelete?: () => void; /** A copy of this phase as a new draft (a past one, to run again). */ onDuplicate?: () => void; onSend: (v: { name: string; track: PhaseTrack; start: string; end: string; now: boolean }) => void }) {
+export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track: initialTrack, lockTrack = false, initialStart, others, programs, onSave, onDelete, onDuplicate, onSend }: { clientId: number; firstName: string; today: string; thisWeek: string; phase: PlanPhaseRow | null; track?: PhaseTrack; /** A new phase opens on this day (the Phases overview: the day after the one ending). */ initialStart?: string; /** Opened from a track's own tab (10 Oct): the track is given, so no tiles to pick one. */ lockTrack?: boolean; others: PlanPhaseRow[]; programs: PlanProgramOption[]; onSave: (v: { name: string; track: PhaseTrack; start: string; end: string; programId: number | null }) => void; onDelete?: () => void; /** A copy of this phase as a new draft (a past one, to run again). */ onDuplicate?: () => void; onSend: (v: { name: string; track: PhaseTrack; start: string; end: string; now: boolean }) => void }) {
   const editing = !!phase;
   const [track, setTrack] = useState<PhaseTrack>(phase?.track ?? initialTrack ?? "nutrition");
   const [name, setName] = useState(phase?.name ?? "");
-  const [from, setFrom] = useState(phase?.start_week ?? thisWeek);
-  const [to, setTo] = useState(phase ? addDays(phase.end_week, 6) : addDays(addWeeks(thisWeek, 3), 6));
+  const [from, setFrom] = useState(phase?.start_week ?? initialStart ?? thisWeek);
+  const [to, setTo] = useState(phase ? addDays(phase.end_week, 6) : addDays(addWeeks(initialStart ?? thisWeek, 3), 6));
   // Opens on this month; a phase still to come opens on the month it starts.
   const [cursor, setCursor] = useState((from > today ? from : today).slice(0, 7));
   const [picking, setPicking] = useState<"start" | "end">("start");
