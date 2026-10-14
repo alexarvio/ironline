@@ -144,7 +144,7 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
   // Acting on a phase: the row folds away, the change saves, Undo puts it back.
   const [leaving, setLeaving] = useState<Set<number>>(new Set());
   const [picked, setPicked] = useState<Picked>(null);
-  const [newPhase, setNewPhase] = useState<{ client: OverviewClient; track: PhaseTrack; start: string } | null>(null);
+  const [newPhase, setNewPhase] = useState<{ client: OverviewClient; track: PhaseTrack; start: string; /** Plan next: the track is given. A first phase: the coach picks it. */ lock: boolean } | null>(null);
   const leave = (id: number) => setLeaving((s) => new Set(s).add(id));
   const act = (fn: () => Promise<unknown>, said: string, undo?: () => Promise<unknown>) =>
     start(async () => {
@@ -222,7 +222,7 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
                     <i style={{ width: `${progressOf(phase, today) * 100}%` }} />
                   </span>
                   <span className="pov-actions">
-                    <button type="button" className="pov-plan" onClick={() => setNewPhase({ client, track: phase.track, start: addDays(phase.end, 1) })}>
+                    <button type="button" className="pov-plan" onClick={() => setNewPhase({ client, track: phase.track, start: addDays(phase.end, 1), lock: true })}>
                       Plan next
                     </button>
                     <ExtendMenu phase={phase} onPick={(endWeek) => extend(phase, endWeek)} />
@@ -285,7 +285,7 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
             <p className="pov-empty">Nobody needs attention: every running phase has something planned after it.</p>
           ) : (
             shown.map((c) => (
-              <ClientBlock key={c.id} client={c} today={today} range={range} tracksOn={tracksOn} eventsOn={eventsOn} width={width} lines={lines} todayX={todayIn ? todayX : null} onPick={setPicked} onPlan={(track, startDay) => setNewPhase({ client: c, track, start: startDay })} />
+              <ClientBlock key={c.id} client={c} today={today} range={range} tracksOn={tracksOn} eventsOn={eventsOn} width={width} lines={lines} todayX={todayIn ? todayX : null} onPick={setPicked} onPlan={(track, startDay) => setNewPhase({ client: c, track, start: startDay, lock: false })} />
             ))
           )}
         </div>
@@ -338,7 +338,7 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
             thisWeek={thisWeek}
             phase={null}
             track={newPhase.track}
-            lockTrack
+            lockTrack={newPhase.lock}
             initialStart={newPhase.start}
             others={newPhase.client.plan.phases}
             programs={newPhase.client.plan.programs}
