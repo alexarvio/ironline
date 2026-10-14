@@ -5,7 +5,7 @@ import type React from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
-import { ChevronDownIcon, PencilIcon, PlayIcon, SearchIcon } from "../../../components/icons";
+import { ChevronDownIcon, PlayIcon, SearchIcon } from "../../../components/icons";
 import { assignVideoToExerciseAction, createLibraryGroupAction, renameLibraryGroupAction, uploadLibraryVideoAction } from "./actions";
 import type { LibraryItem } from "./load";
 import { useLibraryView, type LibraryFilter } from "./useLibraryView";
@@ -445,7 +445,7 @@ function ExerciseCard({
           </button>
         ) : (
           <span className="lib-edit" aria-hidden="true">
-            <PencilIcon /> Edit
+            Edit
           </span>
         )}
       </div>
