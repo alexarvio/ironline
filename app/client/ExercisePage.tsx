@@ -87,7 +87,7 @@ export default function ExercisePage({
   const swapped = exercise.swap != null;
   const targetWeight = swapped ? null : gymWeight;
   const targetRpe = swapped ? null : exercise.targetRpe;
-  // RPE is off the set rows (14 Oct, Alex, after Strava): weight and reps only, side by side. A figure logged before stays in the data.
+  // RPE is off the set rows (14 Oct, Alex, after Strava): weight and reps only, side by side, typed (the − and + went the same day; the arrow keys still step). A figure logged before stays in the data.
   const askRpe = false;
   const last = exercise.lastSets;
   const lastOf = (n: number) => last?.sets.find((s) => s.setNumber === n) ?? null;
@@ -743,11 +743,6 @@ function Stepper({
   };
   return (
     <div className={`lw-step${small ? " small" : ""}`}>
-      <StepButton className="lw-minus" onFire={() => onStep(-1)} label={`${name}: less`}>
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M5 12h14" />
-        </svg>
-      </StepButton>
       <label className={`lw-value${shown.ghost && draft == null ? " ghost" : ""}`}>
         <input
           ref={inputRef}
@@ -784,23 +779,10 @@ function Stepper({
           {label}
         </span>
       </label>
-      <StepButton className="lw-plus" onFire={() => onStep(1)} label={`${name}: more`}>
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 5v14M5 12h14" />
-        </svg>
-      </StepButton>
     </div>
   );
 }
 
-/** − / +: one tap, one step (13 Oct: no repeat while held, it felt like it ran away; a big jump is typed). */
-function StepButton({ className, onFire, label, children }: { className: string; onFire: () => void; label: string; children: React.ReactNode }) {
-  return (
-    <button type="button" className={className} aria-label={label} onClick={onFire} onContextMenu={(e) => e.preventDefault()}>
-      {children}
-    </button>
-  );
-}
 
 // A clean pencil, for editing the note.
 function EditPen() {

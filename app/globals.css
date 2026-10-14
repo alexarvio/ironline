@@ -18876,3 +18876,5 @@ button.ts-circle:focus-visible { outline: 2px solid #2f5d8f; outline-offset: 2px
 .lw-fields .lw-num-input { height: 60px; line-height: 60px; }
 .lw-fields .lw-num-input.s4 { height: 50px; line-height: 50px; }
 .lw-fields .lw-num-input.s5 { height: 42px; line-height: 42px; }
+/* The − and + went (14 Oct): the figure is typed. */
+.lw-fields .lw-step { display: flex; justify-content: center; }
