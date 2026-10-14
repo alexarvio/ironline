@@ -349,6 +349,8 @@ export default function ExerciseEditorModal({
   const [demoSeconds, setDemoSeconds] = useState<number | null>(null);
 
   const byId = (id: number) => items.find((x) => x.id === id) ?? null;
+  // Variations and substitutes share one place, a tab each (14 Oct, Alex): both open ran the dialog out of room.
+  const [tab, setTab] = useState<"variations" | "substitutes">("variations");
   const sectionLabel = (text: string) => <span className="exm-label">{text}</span>;
 
   return (
@@ -370,9 +372,7 @@ export default function ExerciseEditorModal({
                 {save.state === "saved" ? "Saved" : save.state === "saving" ? "Saving…" : "Not saved"}
               </button>
             </div>
-            <DialogDescription className="exm-sub">
-              Changes show in every programme that uses it{used > 0 ? ` · used by ${used} client${used === 1 ? "" : "s"}` : ""}
-            </DialogDescription>
+            <DialogDescription className="sr-only">Changes show in every programme that uses it{used > 0 ? ` · used by ${used} client${used === 1 ? "" : "s"}` : ""}.</DialogDescription>
           </div>
           <button type="button" className="exm-close" onClick={() => void done()} aria-label="Close">
             ✕
@@ -547,13 +547,21 @@ export default function ExerciseEditorModal({
               <small className="exm-faint">Clients see it under the exercise name. You can override it per session.</small>
             </label>
 
-            {/* ---- Variations */}
-            <div className="exm-field">
-              <div className="exm-section-head">
-                {sectionLabel("Variations")}
-                <span className="exm-count">{vars.length}</span>
-                <small className="exm-faint grow">Same movement, different grip or setup. Pick one per client.</small>
-              </div>
+            {/* ---- Variations and substitutes, a tab each */}
+            <div className="exm-tabs" role="tablist" aria-label="Variations or substitutes">
+              <button type="button" role="tab" aria-selected={tab === "variations"} className={`exm-tab${tab === "variations" ? " on" : ""}`} onClick={() => setTab("variations")}>
+                Variations <span className="exm-count">{vars.length}</span>
+              </button>
+              <button type="button" role="tab" aria-selected={tab === "substitutes"} className={`exm-tab${tab === "substitutes" ? " on" : ""}`} onClick={() => setTab("substitutes")}>
+                Substitutes
+                <span className={`exm-count${subs.length >= MAX_SUBS ? " full" : ""}`}>
+                  {subs.length} of {MAX_SUBS}
+                </span>
+              </button>
+            </div>
+            {tab === "variations" && (
+            <div className="exm-field" role="tabpanel">
+              <small className="exm-faint">Same movement, different grip or setup. Pick one per client.</small>
               {vars.map((v, i) => {
                 const linkShown = v.video && !isUpload(v.video) && !v.cue ? v.video : v.cue;
                 const hasLink = !!v.video && !isUpload(v.video);
@@ -743,16 +751,11 @@ export default function ExerciseEditorModal({
                 <PlusIcon /> Add variation
               </button>
             </div>
+            )}
 
-            {/* ---- Substitutes */}
-            <div className="exm-field">
-              <div className="exm-section-head">
-                {sectionLabel("Substitutes")}
-                <span className={`exm-count${subs.length >= MAX_SUBS ? " full" : ""}`}>
-                  {subs.length} of {MAX_SUBS}
-                </span>
-                <small className="exm-faint grow">Offered when the machine&rsquo;s taken, in every programme unless a session sets its own.</small>
-              </div>
+            {tab === "substitutes" && (
+            <div className="exm-field" role="tabpanel">
+              <small className="exm-faint">Offered when the machine&rsquo;s taken, in every programme unless a session sets its own.</small>
               {subs.map((s, i) => {
                 const x = byId(s.exerciseId);
                 const c = groupColour(x?.group);
@@ -884,6 +887,7 @@ export default function ExerciseEditorModal({
                 <small className="exm-faint">That&rsquo;s three. Remove one to add another.</small>
               )}
             </div>
+            )}
           </section>
         </div>
 
