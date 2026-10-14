@@ -18887,3 +18887,9 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .ev-sheet { padding: 22px 18px 20px; }
 .evs-in { padding: 22px 16px 18px; }
 .ev-sheet .ev-grab, .evs-grab { display: none; }
+/* The picture sheet (14 Oct, Alex): no thumbnail by the title, a count in it, and a dashed + cell at the end of the grid for the next picture. */
+.cv-count { margin-left: 8px; font-size: 13px; font-weight: 800; color: #9E9E9E; }
+.cv-add { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0; border: 2px dashed #BDBDBD; border-radius: 12px; background: #FAFAFA; color: #757575; font: inherit; cursor: pointer; }
+.cv-add:disabled { opacity: 0.6; cursor: default; }
+.cv-add-plus { font-size: 28px; font-weight: 500; line-height: 1; color: #1E3A5F; }
+.cv-add-text { font-size: 11px; font-weight: 800; }

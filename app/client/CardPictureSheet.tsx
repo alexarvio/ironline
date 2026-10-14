@@ -95,23 +95,26 @@ export default function CardPictureSheet({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
-  const pick = async (file: File | undefined) => {
-    if (!file || busy || list.length >= MAX_PICTURES) return;
+  // Several at once from the camera roll (14 Oct): each cut to the card and
+  // uploaded in turn, the grid filling as they land; past six, the rest are left.
+  const pick = async (files: FileList | null) => {
+    if (!files?.length || busy) return;
     setBusy(true);
-    const blob = await coverJpeg(file);
-    if (blob) {
+    let next = list;
+    for (const file of Array.from(files).slice(0, Math.max(0, MAX_PICTURES - list.length))) {
+      const blob = await coverJpeg(file);
+      if (!blob) continue;
       const fd = new FormData();
       fd.set("clientId", String(clientId));
       fd.set("track", track);
       fd.set("file", new File([blob], "cover.jpg", { type: "image/jpeg" }));
       const saved = await uploadCardCoverAction(fd);
-      if (saved) {
-        const next = [...list, saved];
-        setList(next);
-        onSaved(track, next);
-        router.refresh();
-      }
+      if (!saved) break;
+      next = [...next, saved];
+      setList(next);
+      onSaved(track, next);
     }
+    router.refresh();
     if (fileRef.current) fileRef.current.value = "";
     setBusy(false);
   };
@@ -135,45 +138,41 @@ export default function CardPictureSheet({
     setBusy(false);
     onClose();
   };
-  const picture = list[0] ?? coach;
   const full = list.length >= MAX_PICTURES;
   return createPortal(
     <div className="cv-scrim" onClick={onClose}>
       <div className={`cv-sheet${busy ? " busy" : ""}`} role="dialog" aria-label={`${TRACK_LABEL[track]} card pictures`} onClick={(e) => e.stopPropagation()}>
         <span className="cv-grab" aria-hidden="true" />
         <div className="cv-head">
-          <span className="cv-thumb" data-track={track}>
-            {/* eslint-disable-next-line @next/next/no-img-element -- an upload or a public file */}
-            {picture && <img src={picture} alt="" />}
-          </span>
           <div className="cv-head-text">
-            <h2 className="cv-title">{TRACK_LABEL[track]} card</h2>
+            <h2 className="cv-title">
+              {TRACK_LABEL[track]} card <span className="cv-count">{list.length}/{MAX_PICTURES}</span>
+            </h2>
             <p className="cv-sub">
               {list.length === 0
-                ? `${coachName}'s picture. Add your own: on the card on Home and behind the ${TRACK_LABEL[track]} screen.`
-                : list.length === 1
-                  ? "Your photo, on the card on Home and behind the screen. Add more and they take turns."
-                  : `${list.length} of your photos, taking turns on the card and behind the screen.`}
+                ? `${coachName}'s picture shows. Yours go on the card on Home and behind the ${TRACK_LABEL[track]} screen; several take turns.`
+                : "On the card on Home and behind the screen, taking turns."}
             </p>
           </div>
         </div>
-        {list.length > 0 && (
-          <div className="cv-grid">
-            {list.map((p) => (
-              <span key={p} className="cv-cell">
-                {/* eslint-disable-next-line @next/next/no-img-element -- an upload */}
-                <img src={p} alt="" />
-                <button type="button" disabled={busy} onClick={() => remove(p)} aria-label="Remove this picture">
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
+        <div className="cv-grid">
+          {list.map((p) => (
+            <span key={p} className="cv-cell">
+              {/* eslint-disable-next-line @next/next/no-img-element -- an upload */}
+              <img src={p} alt="" />
+              <button type="button" disabled={busy} onClick={() => remove(p)} aria-label="Remove this picture">
+                ×
+              </button>
+            </span>
+          ))}
+          {!full && (
+            <button type="button" className="cv-cell cv-add" disabled={busy} onClick={() => fileRef.current?.click()} aria-label="Add pictures from your photos">
+              <span className="cv-add-plus" aria-hidden="true">+</span>
+              <span className="cv-add-text">{busy ? "Saving…" : "Add"}</span>
+            </button>
+          )}
+        </div>
         <div className="cv-actions">
-          <button type="button" className="cv-btn primary" disabled={busy || full} onClick={() => fileRef.current?.click()}>
-            {busy ? "Saving…" : full ? "Six is the most" : list.length ? "Add another from your photos" : "Choose from your photos"}
-          </button>
           {list.length > 0 && (
             <button type="button" className="cv-btn" disabled={busy} onClick={reset}>
               Use {coachName}&rsquo;s picture
@@ -183,7 +182,7 @@ export default function CardPictureSheet({
             {list.length ? "Done" : "Cancel"}
           </button>
         </div>
-        <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => pick(e.target.files?.[0])} />
+        <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => pick(e.target.files)} />
       </div>
     </div>,
     document.body
