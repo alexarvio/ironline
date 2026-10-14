@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { CheckIcon, ChevronLeftIcon, PlayIcon, PlusIcon, SearchIcon, TrashIcon } from "../../../components/icons";
@@ -27,6 +28,8 @@ type Var = { id: number; name: string; video: string | null; cue: string };
 type Sub = { exerciseId: number; name: string; note: string };
 
 const MAX_SUBS = 12;
+/** What a video carries while it is dragged from Your videos: its id. */
+const VIDEO_DRAG = "application/x-ironline-video";
 const ytId = (url: string) => /(?:youtu\.be\/|[?&]v=|shorts\/|embed\/)([\w-]{11})/.exec(url)?.[1] ?? null;
 const isUpload = (url: string) => url.startsWith("/uploads/") || /\.(mp4|mov|m4v|webm)(\?|$)/i.test(url);
 const isUrl = (s: string) => /^https?:\/\/\S+\.\S+/i.test(s.trim());
@@ -270,7 +273,25 @@ export default function ExerciseEditorModal({
     next.splice(to, 0, v);
     saveVars(next);
   };
-  const [varMenu, setVarMenu] = useState<number | null>(null);
+  const [varMenu, setVarMenu] = useState<{ id: number; x: number; y: number } | null>(null);
+  const openVarMenu = (v: Var, el: HTMLElement) => {
+    if (varMenu?.id === v.id) {
+      setVarMenu(null);
+      return;
+    }
+    const r = el.getBoundingClientRect();
+    setVarMenu({ id: v.id, x: r.left, y: r.bottom + 6 });
+  };
+  // A video dragged from Your videos onto a slot (14 Oct, Alex).
+  const [overVar, setOverVar] = useState<number | null>(null);
+  const [overSub, setOverSub] = useState<number | null>(null);
+  const droppedVideo = (e: React.DragEvent) => {
+    const id = Number(e.dataTransfer.getData(VIDEO_DRAG));
+    return id ? videos.find((x) => x.id === id) ?? null : null;
+  };
+  // A video of yours, clicked: a preview, big enough to tell which it is.
+  const [preview, setPreview] = useState<LibraryVideo | null>(null);
+  const [previewSeconds, setPreviewSeconds] = useState<number | null>(null);
   const [varLinkFor, setVarLinkFor] = useState<number | null>(null);
   const [varLink, setVarLink] = useState("");
   const dragVar = useRef<number | null>(null);
@@ -361,7 +382,14 @@ export default function ExerciseEditorModal({
 
   return (
     <Dialog open onOpenChange={(o) => !o && void done()}>
-      <DialogContent className="exm" style={{ "--g": gc.color, "--g-rgb": gc.rgb } as React.CSSProperties} aria-describedby={undefined}>
+      <DialogContent
+        className="exm"
+        style={{ "--g": gc.color, "--g-rgb": gc.rgb } as React.CSSProperties}
+        aria-describedby={undefined}
+        onPointerDownOutside={(e) => {
+          if ((e.target as Element | null)?.closest(".exm-popover, .exm-lightbox")) e.preventDefault();
+        }}
+      >
         <span className="exm-glow" aria-hidden="true" />
         {/* ---- Header */}
         <header className="exm-head">
@@ -394,15 +422,21 @@ export default function ExerciseEditorModal({
               <div
                 className={`exm-preview${demo ? "" : " empty"}${dragOver ? " over" : ""}`}
                 onDragOver={(e) => {
-                  if (!e.dataTransfer.types.includes("Files")) return;
+                  if (!e.dataTransfer.types.includes("Files") && !e.dataTransfer.types.includes(VIDEO_DRAG)) return;
                   e.preventDefault();
                   setDragOver(true);
                 }}
                 onDragLeave={(e) => !e.currentTarget.contains(e.relatedTarget as Node) && setDragOver(false)}
                 onDrop={(e) => {
+                  setDragOver(false);
+                  const v = droppedVideo(e);
+                  if (v) {
+                    e.preventDefault();
+                    setDemoVideo(v.id, v.path);
+                    return;
+                  }
                   if (!e.dataTransfer.types.includes("Files")) return;
                   e.preventDefault();
-                  setDragOver(false);
                   void upload(e.dataTransfer.files[0]);
                 }}
               >
@@ -488,12 +522,30 @@ export default function ExerciseEditorModal({
                 {videos.length === 0 ? (
                   <small className="exm-faint">None yet. Upload one above.</small>
                 ) : (
+                  <>
+                  <small className="exm-faint">Click one to watch it; drag it onto the demo, a variation or a substitute.</small>
                   <div className="exm-videos">
                     {shownVideos.map((v) => {
                       const on = demo === v.path;
                       const usedOn = v.usedBy.map((u) => u.name).join(", ");
                       return (
-                        <button key={v.id} type="button" className={`exm-vid${on ? " on" : ""}`} onClick={() => setDemoVideo(v.id, v.path)} title={`${v.name} · ${usedOn ? `Used on ${usedOn}` : "Not used yet"}`} aria-label={`${v.name}${on ? ", the demo" : ""}`} aria-pressed={on}>
+                        <button
+                          key={v.id}
+                          type="button"
+                          className={`exm-vid${on ? " on" : ""}`}
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData(VIDEO_DRAG, String(v.id));
+                            e.dataTransfer.effectAllowed = "copy";
+                          }}
+                          onClick={() => {
+                            setPreviewSeconds(null);
+                            setPreview(v);
+                          }}
+                          title={`${v.name} · ${usedOn ? `Used on ${usedOn}` : "Not used yet"} · click to watch, drag onto a demo`}
+                          aria-label={`${v.name}${on ? ", the demo" : ""}: watch`}
+                          aria-pressed={on}
+                        >
                           <VideoThumb path={v.path} />
                           {on && (
                             <span className="exm-vid-check" aria-hidden="true">
@@ -504,11 +556,12 @@ export default function ExerciseEditorModal({
                       );
                     })}
                   </div>
-                )}
                 {videos.length > 6 && (
                   <button type="button" className="exm-textbtn" onClick={() => setAllVideos((x) => !x)}>
                     {allVideos ? "Show fewer" : `See all ${videos.length}`}
                   </button>
+                )}
+                  </>
                 )}
               </div>
             </div>
@@ -602,20 +655,42 @@ export default function ExerciseEditorModal({
                       ⋮⋮
                     </button>
                     <div className="exm-slot-wrap">
-                      {v.video ? (
-                        <button type="button" className="exm-slot has" onClick={() => setVarMenu(varMenu === v.id ? null : v.id)} aria-label={`${v.name || "Variation"} demo`} aria-expanded={varMenu === v.id}>
-                          <Poster url={v.video} />
-                          <span className="exm-slot-play" aria-hidden="true">
-                            <PlayIcon />
-                          </span>
-                        </button>
-                      ) : (
-                        <button type="button" className="exm-slot" onClick={() => setVarMenu(varMenu === v.id ? null : v.id)} aria-expanded={varMenu === v.id}>
-                          + Demo
-                        </button>
-                      )}
-                      {varMenu === v.id && (
-                        <div className="exm-popover" role="menu">
+                      <button
+                        type="button"
+                        className={`exm-slot${v.video ? " has" : ""}${overVar === v.id ? " over" : ""}`}
+                        onClick={(e) => openVarMenu(v, e.currentTarget)}
+                        aria-label={v.video ? `${v.name || "Variation"} demo` : `Add a demo to ${v.name || "the variation"}`}
+                        aria-expanded={varMenu?.id === v.id}
+                        onDragOver={(e) => {
+                          if (!e.dataTransfer.types.includes(VIDEO_DRAG)) return;
+                          e.preventDefault();
+                          setOverVar(v.id);
+                        }}
+                        onDragLeave={() => setOverVar(null)}
+                        onDrop={(e) => {
+                          setOverVar(null);
+                          const x = droppedVideo(e);
+                          if (!x) return;
+                          e.preventDefault();
+                          saveVars(vars.map((y) => (y.id === v.id ? { ...y, video: x.path } : y)));
+                        }}
+                      >
+                        {v.video ? (
+                          <>
+                            <Poster url={v.video} />
+                            <span className="exm-slot-play" aria-hidden="true">
+                              <PlayIcon />
+                            </span>
+                          </>
+                        ) : overVar === v.id ? (
+                          "Drop"
+                        ) : (
+                          "+ Demo"
+                        )}
+                      </button>
+                      {varMenu?.id === v.id &&
+                        createPortal(
+                        <div className="exm-popover" role="menu" style={{ left: varMenu.x, top: varMenu.y }}>
                           {v.video && (
                             <a role="menuitem" href={v.video} target="_blank" rel="noreferrer" onClick={() => setVarMenu(null)}>
                               Play
@@ -643,24 +718,6 @@ export default function ExerciseEditorModal({
                           >
                             {v.video ? "Replace: a link" : "A link"}
                           </button>
-                          {videos.length > 0 && (
-                            <div className="exm-popover-videos">
-                              <span className="exm-mini">Your videos</span>
-                              {videos.slice(0, 8).map((x) => (
-                                <button
-                                  key={x.id}
-                                  type="button"
-                                  role="menuitem"
-                                  onClick={() => {
-                                    setVarMenu(null);
-                                    saveVars(vars.map((y) => (y.id === v.id ? { ...y, video: x.path } : y)));
-                                  }}
-                                >
-                                  {x.name}
-                                </button>
-                              ))}
-                            </div>
-                          )}
                           {v.video && (
                             <button
                               type="button"
@@ -674,7 +731,8 @@ export default function ExerciseEditorModal({
                               Remove
                             </button>
                           )}
-                        </div>
+                        </div>,
+                        document.body
                       )}
                       {varLinkFor === v.id && (
                         <div className="exm-popover">
@@ -789,7 +847,25 @@ export default function ExerciseEditorModal({
                     >
                       {i + 1}
                     </button>
-                    <span className={`exm-subthumb${x?.video ? "" : " none"}`}>{x?.video ? <Poster url={x.video} /> : "No demo"}</span>
+                    <span
+                      className={`exm-subthumb${x?.video ? "" : " none"}${overSub === s.exerciseId ? " over" : ""}`}
+                      onDragOver={(e) => {
+                        if (!e.dataTransfer.types.includes(VIDEO_DRAG)) return;
+                        e.preventDefault();
+                        setOverSub(s.exerciseId);
+                      }}
+                      onDragLeave={() => setOverSub(null)}
+                      onDrop={(e) => {
+                        setOverSub(null);
+                        const d = droppedVideo(e);
+                        if (!d) return;
+                        e.preventDefault();
+                        void save.run(() => assignVideoToExerciseAction(s.exerciseId, d.id).then(onChanged));
+                        toast.success(`${d.name} is now the demo on ${s.name}`);
+                      }}
+                    >
+                      {x?.video ? <Poster url={x.video} /> : overSub === s.exerciseId ? "Drop" : "No demo"}
+                    </span>
                     <span className="exm-subinfo">
                       <button type="button" className="exm-subname" onClick={() => onOpenOther(s.exerciseId)} title={`Open ${s.name}`}>
                         {s.name}
@@ -893,6 +969,41 @@ export default function ExerciseEditorModal({
             Done
           </button>
         </footer>
+        {preview &&
+          createPortal(
+            <div className="exm-lightbox" role="dialog" aria-label={`${preview.name}`} onClick={() => setPreview(null)}>
+              <div className="exm-lightbox-card" onClick={(e) => e.stopPropagation()}>
+                <video src={preview.path} controls autoPlay playsInline onLoadedMetadata={(e) => Number.isFinite(e.currentTarget.duration) && setPreviewSeconds(e.currentTarget.duration)} />
+                <div className="exm-lightbox-row">
+                  <span className="exm-lightbox-text">
+                    <b>{preview.name}</b>
+                    <small>
+                      {previewSeconds != null ? `${fmtDuration(previewSeconds)} · ` : ""}
+                      {preview.usedBy.length ? `On ${preview.usedBy.map((u) => u.name).join(", ")}` : "Not used yet"}
+                    </small>
+                  </span>
+                  {demo === preview.path ? (
+                    <span className="exm-state saved">The demo</span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="exm-upload-btn"
+                      onClick={() => {
+                        setDemoVideo(preview.id, preview.path);
+                        setPreview(null);
+                      }}
+                    >
+                      Use as the demo
+                    </button>
+                  )}
+                  <button type="button" className="exm-close" onClick={() => setPreview(null)} aria-label="Close">
+                    ✕
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )}
       </DialogContent>
     </Dialog>
   );
