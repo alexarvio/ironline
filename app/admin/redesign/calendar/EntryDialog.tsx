@@ -456,8 +456,8 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
                 type="button"
                 role="radio"
                 disabled={allDay}
-                aria-checked={!customLength && length === m}
-                className={`cal-entry-chip${!customLength && length === m ? " on" : ""}`}
+                aria-checked={!allDay && !customLength && length === m}
+                className={`cal-entry-chip${!allDay && !customLength && length === m ? " on" : ""}`}
                 onClick={() => {
                   setLength(m);
                   setCustomLength(false);
@@ -466,7 +466,7 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
                 {lengthLabel(m)}
               </button>
             ))}
-            <button type="button" role="radio" disabled={allDay} aria-checked={customLength} className={`cal-entry-chip${customLength ? " on" : ""}`} onClick={() => setCustomLength(true)}>
+            <button type="button" role="radio" disabled={allDay} aria-checked={!allDay && customLength} className={`cal-entry-chip${!allDay && customLength ? " on" : ""}`} onClick={() => setCustomLength(true)}>
               Custom
             </button>
           </div>
