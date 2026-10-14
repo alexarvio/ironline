@@ -94,7 +94,8 @@
 /* ---- The entry pop-up (14 Oct): the New event dialog's language. --c /
    --rgb carry the category's colour; the day and time boxes and Save stay navy. */
 .cal-entry { width: min(580px, 100vw - 32px); max-width: none; max-height: calc(100vh - 48px); display: flex; flex-direction: column; gap: 0; padding: 0; border: 0; border-radius: 24px; background: #fff; box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.55); overflow: hidden; font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; animation: cal-entry-pop 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); }
-@keyframes cal-entry-pop { from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+/* Only scale and fade: the dialog is already centred with the translate property, so a translate here would shift it twice (it popped in from above the screen, 14 Oct). */
+@keyframes cal-entry-pop { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
 .cal-entry-glow { position: absolute; right: -150px; top: -230px; width: 380px; height: 380px; border-radius: 999px; background: radial-gradient(circle, rgba(var(--rgb), 0.22), transparent 68%); pointer-events: none; transition: background 0.3s ease; }
 .cal-entry-wash { position: absolute; left: 0; right: 0; top: 0; height: 140px; background: linear-gradient(180deg, rgba(var(--rgb), 0.09), transparent); pointer-events: none; transition: background 0.3s ease; }
 .cal-entry-body { position: relative; flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; padding: 22px 24px 18px; }
