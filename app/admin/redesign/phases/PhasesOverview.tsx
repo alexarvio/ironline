@@ -28,7 +28,6 @@ import {
   mondayOf,
   needsAttention,
   phaseStatus,
-  phasesOn,
   progressOf,
   rangeOf,
   shortDate,
