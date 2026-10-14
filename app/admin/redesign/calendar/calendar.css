@@ -190,9 +190,9 @@
 .cal-entry-remove svg { width: 15px; height: 15px; }
 .cal-entry-remove:hover { background: #FBEDE7; }
 .cal-entry-confirm { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #5b6474; }
-.cal-entry-danger { height: 36px; padding: 0 12px; border: 0; border-radius: 11px; background: #B42318; color: #fff; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+.cal-entry-danger { height: 44px; padding: 0 14px; border: 0; border-radius: 11px; background: #B42318; color: #fff; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
 .cal-entry-cancel { height: 44px; padding: 0 18px; border: 0; border-radius: 13px; background: #fff; box-shadow: inset 0 0 0 1px #DCE3EE; font: inherit; font-size: 14px; font-weight: 800; color: #1d3466; cursor: pointer; }
-.cal-entry-confirm .cal-entry-cancel { height: 36px; padding: 0 12px; font-size: 13px; }
+.cal-entry-confirm .cal-entry-cancel { height: 44px; padding: 0 14px; font-size: 13px; }
 .cal-entry-save { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 24px; border: 0; border-radius: 13px; background: #1d3466; color: #fff; font: inherit; font-size: 14.5px; font-weight: 800; box-shadow: 0 12px 22px -12px rgba(29, 52, 102, 0.95); cursor: pointer; }
 .cal-entry-save:disabled { background: rgba(29, 52, 102, 0.32); box-shadow: none; cursor: default; }
 .cal-entry-spin { width: 14px; height: 14px; border-radius: 999px; border: 2px solid rgba(255, 255, 255, 0.35); border-top-color: #fff; animation: exm-spin 0.8s linear infinite; }
