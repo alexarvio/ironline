@@ -567,7 +567,6 @@ export default function ExerciseEditorModal({
             <div className="exm-field" role="tabpanel">
               <small className="exm-faint">Same movement, different grip or setup. Pick one per client.</small>
               {vars.map((v, i) => {
-                const linkShown = v.video && !isUpload(v.video) && !v.cue ? v.video : v.cue;
                 const hasLink = !!v.video && !isUpload(v.video);
                 return (
                   <div
@@ -714,25 +713,16 @@ export default function ExerciseEditorModal({
                         else save.now("vars");
                       }}
                     />
-                    <span className={`exm-cuefield${hasLink && !v.cue ? " linked" : ""}`}>
-                      <input
-                        className="exm-input small"
-                        value={linkShown}
-                        maxLength={300}
-                        placeholder="Cue, or a link to a demo"
-                        aria-label={`Variation ${i + 1} cue`}
-                        onChange={(e) => {
-                          const t = e.target.value;
-                          saveVarsLater(vars.map((y) => (y.id === v.id ? (isUrl(t) ? { ...y, video: t.trim(), cue: "" } : { ...y, cue: t, video: hasLink ? null : y.video }) : y)));
-                        }}
-                        onBlur={() => save.now("vars")}
-                      />
-                      {hasLink && !v.cue && (
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                          <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />
-                        </svg>
-                      )}
-                    </span>
+                    {/* The cue alone (14 Oct, Alex): a demo link goes through the demo slot, where "A link" is. */}
+                    <input
+                      className="exm-input small"
+                      value={v.cue}
+                      maxLength={120}
+                      placeholder="Cue, e.g. elbows tucked"
+                      aria-label={`Variation ${i + 1} cue`}
+                      onChange={(e) => saveVarsLater(vars.map((y) => (y.id === v.id ? { ...y, cue: e.target.value } : y)))}
+                      onBlur={() => save.now("vars")}
+                    />
                     <button type="button" className="exm-rowbtn" onClick={() => removeVariation(v)} aria-label={`Delete variation ${v.name || i + 1}`}>
                       <TrashIcon />
                     </button>
