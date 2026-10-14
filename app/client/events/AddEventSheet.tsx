@@ -173,7 +173,8 @@ export default function AddEventSheet({
   const [settled, setSettled] = useState(false);
   const onTouchStart = (e: React.TouchEvent) => {
     const target = e.target as HTMLElement;
-    if (!target.closest(".evs-grab, .evs-head") || target.closest("button")) return;
+    // A pop-up since 14 Oct, not a sheet: nothing to drag down (the grabber is hidden), the × and the scrim close it.
+    if (!target.closest(".evs-grab") || target.closest("button")) return;
     setDrag({ y0: e.touches[0].clientY, dy: 0 });
   };
   const onTouchMove = (e: React.TouchEvent) => {

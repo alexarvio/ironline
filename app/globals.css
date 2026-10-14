@@ -18878,3 +18878,12 @@ button.ts-circle:focus-visible { outline: 2px solid #2f5d8f; outline-offset: 2px
 .lw-fields .lw-num-input.s5 { height: 42px; line-height: 42px; }
 /* The − and + went (14 Oct): the figure is typed. */
 .lw-fields .lw-step { display: flex; justify-content: center; }
+
+/* ---- Pop-ups, not sheets (14 Oct, Alex, after the gym question): the new
+   event, the call ask and a call's detail come up in the middle of the
+   screen, the gym pop-up's shape, instead of sliding up from the bottom. */
+.ev-scrim { align-items: center; padding: 0 18px; background: rgba(14, 18, 28, 0.5); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.ev-sheet, .evs { max-width: 420px; max-height: calc(100dvh - 80px); border-radius: 30px; box-shadow: 0 40px 70px -24px rgba(0, 0, 0, 0.6); animation: gpk-pop 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.ev-sheet { padding: 22px 18px 20px; }
+.evs-in { padding: 22px 16px 18px; }
+.ev-sheet .ev-grab, .evs-grab { display: none; }
