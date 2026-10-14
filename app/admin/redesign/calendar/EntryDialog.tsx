@@ -277,8 +277,8 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
                 </button>
               </div>
             ) : picking ? (
-              /* The list floats over the pop-up (a portal), so the pop-up keeps its size; a click anywhere else closes it. */
-              <PopoverPrimitive.Root open onOpenChange={(o) => !o && (setPicking(false), setClientQ(""))}>
+              /* The list floats over the pop-up (a portal), so the pop-up keeps its size; a click anywhere else closes it. Modal: its own scroll lock, else the dialog's swallows the wheel. */
+              <PopoverPrimitive.Root open modal onOpenChange={(o) => !o && (setPicking(false), setClientQ(""))}>
                 <PopoverPrimitive.Anchor asChild>
                   <span className="cal-entry-what ring">
                     <SearchIcon />
@@ -375,7 +375,7 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
             </span>
             {!allDay && (
               <>
-                <PopoverPrimitive.Root open={timeOpen} onOpenChange={setTimeOpen}>
+                <PopoverPrimitive.Root open={timeOpen} modal onOpenChange={setTimeOpen}>
                   <PopoverPrimitive.Trigger className="cal-entry-box" aria-label={`Starts, ${time}`}>
                     <span className="cal-entry-box-head">Starts</span>
                     <span className="cal-entry-box-val">{time}</span>
