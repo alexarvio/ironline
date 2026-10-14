@@ -457,9 +457,16 @@ function ClientBlock({
   const statusText = status.kind === "soon" ? `${TRACK_LABEL[status.track]} ends ${status.days <= 0 ? "today" : `in ${status.days} day${status.days === 1 ? "" : "s"}`}` : status.kind === "planned" ? "All planned" : "Nothing planned";
 
   // The lanes with something in the window, in the fixed order.
-  const lanes = TRACKS.filter((t) => tracksOn.has(t))
-    .map((t) => ({ track: t, phases: c.phases.filter((p) => p.track === t).filter((p) => spanOf(p.start, p.end, range).width >= TINY.hide) }))
-    .filter((l) => l.phases.length > 0);
+  // Two phases on one track over the same days (Sam Rivera, 14 Oct) each get a row of their own, so both are seen whole.
+  const lanes = TRACKS.filter((t) => tracksOn.has(t)).flatMap((t) => {
+    const rows: OverviewPhase[][] = [];
+    for (const p of c.phases.filter((x) => x.track === t && spanOf(x.start, x.end, range).width >= TINY.hide).sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0))) {
+      let row = rows.find((r) => r.every((q) => q.end < p.start || q.start > p.end));
+      if (!row) rows.push((row = []));
+      row.push(p);
+    }
+    return rows.map((phases, row) => ({ track: t, row, phases }));
+  });
   const events = eventsOn ? stackEvents(c.events, range, width) : { placed: [], overflow: [] };
   const eventRows = events.placed.length || events.overflow.length ? Math.max(...events.placed.map((p) => p.row + 1), events.overflow.length ? 1 : 0) : 0;
   const nothingAtAll = phasesOn(c, tracksOn).length === 0 && (!eventsOn || c.events.length === 0);
@@ -482,6 +489,10 @@ function ClientBlock({
           </Link>
           <small className={`pov-status ${status.kind}`}>{statusText}</small>
         </span>
+        {/* Another phase, any track, from here (14 Oct): shows when the row is hovered. */}
+        <button type="button" className="pov-add" onClick={() => onPlan("training", today)} aria-label={`Plan a phase for ${first(c.name)}`}>
+          + Phase
+        </button>
       </div>
       <div className="pov-track-cell">
         {lines.map((x) => (
@@ -509,21 +520,19 @@ function ClientBlock({
         ) : (
           <>
             {lanes.map((lane) => (
-              <div key={lane.track} className="pov-lane" aria-label={TRACK_LABEL[lane.track]}>
-                {lane.phases.map((p, i) => {
+              <div key={`${lane.track}-${lane.row}`} className="pov-lane" aria-label={lane.row ? undefined : TRACK_LABEL[lane.track]}>
+                {lane.phases.map((p) => {
                   const sp = spanOf(p.start, p.end, range);
                   const st = phaseStatus(p, today);
                   const soon = endingSoon(p, c.phases, today);
                   const col = TRACK_COLOR[p.track];
-                  // Two phases on one track over the same days should not happen: the later sits lower, ringed rust, as a warning.
-                  const clash = lane.phases.slice(0, i).some((q) => q.start <= p.end && q.end >= p.start);
                   const tip = phaseTip(p, today);
                   const label = sp.width >= TINY.label;
                   return (
                     <button
                       key={p.id}
                       type="button"
-                      className={`pov-bar ${st}${soon ? " soon" : ""}${sp.clipStart ? " clip-l" : ""}${sp.clipEnd ? " clip-r" : ""}${clash ? " clash" : ""}`}
+                      className={`pov-bar ${st}${soon ? " soon" : ""}${sp.clipStart ? " clip-l" : ""}${sp.clipEnd ? " clip-r" : ""}`}
                       style={{ left: `${sp.left * 100}%`, width: `${sp.width * 100}%`, "--c": col.c, "--rgb": col.rgb } as React.CSSProperties}
                       title={tip}
                       aria-label={tip}
