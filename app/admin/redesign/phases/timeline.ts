@@ -25,7 +25,6 @@ export type OverviewPhase = {
 export type OverviewEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string; addedBy: "coach" | "client" };
 
 export const TRACKS: PhaseTrack[] = ["lifestyle", "training", "nutrition"];
-/** The tracks' colours on this page: lifestyle gold, training indigo, nutrition green. */
 /** The tracks' colours, the Plan tab's (phaseChrome TRACK_PALETTE): a pale tint for a bar, its ink for the words and a line for the edge. */
 export const TRACK_COLOR: Record<PhaseTrack, { c: string; rgb: string; tint: string; line: string }> = {
   lifestyle: { c: "#4a4a45", rgb: "74,74,69", tint: "#efede6", line: "#cfcbbd" },
