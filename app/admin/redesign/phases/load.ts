@@ -1,4 +1,4 @@
-import { getPlanData, listClientEvents, listClientPhases, listClients, listEventCategories, localDateStr, type PlanPhaseRow, type PlanProgramOption } from "../../../lib/queries";
+import { getCoachProfile, getPlanData, listClientEvents, listClientPhases, listClients, listEventCategories, localDateStr, type PlanPhaseRow, type PlanProgramOption } from "../../../lib/queries";
 import { phaseLastDay } from "../../../lib/phases";
 import type { OverviewEvent, OverviewPhase } from "./timeline";
 
@@ -17,9 +17,9 @@ export type OverviewClient = {
   events: OverviewEvent[];
   plan: { phases: PlanPhaseRow[]; programs: PlanProgramOption[] };
 };
-export type PhasesOverviewData = { today: string; thisWeek: string; coachId: number; clients: OverviewClient[]; /** The event dialog's categories. */ categories: { id: string; label: string; color: string; custom: boolean }[] };
+export type PhasesOverviewData = { today: string; thisWeek: string; coachId: number; clients: OverviewClient[]; /** The event dialog's categories. */ categories: { id: string; label: string; color: string; custom: boolean }[]; /** For the "added by you" badge. */ coach: { name: string; photoPath: string | null } };
 
-export function loadPhasesOverview(coachId: number): PhasesOverviewData {
+export function loadPhasesOverview(coachId: number, coachEmail = ""): PhasesOverviewData {
   const today = localDateStr();
   let thisWeek = today;
   const clients = listClients(coachId).map((c) => {
@@ -37,8 +37,10 @@ export function loadPhasesOverview(coachId: number): PhasesOverviewData {
       objectives: objectives.get(p.id) ?? [],
       programId: p.program?.id ?? null,
     }));
-    const events: OverviewEvent[] = listClientEvents(c.id).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, addedBy: e.added_by === "client" ? "client" : "coach" }));
+    const events: OverviewEvent[] = listClientEvents(c.id).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, addedBy: e.added_by === "client" ? "client" : "coach", createdAt: String(e.created_at ?? "").slice(0, 10) }));
     return { id: c.id, name: c.name ?? "Client", avatarPath: c.avatar_path ?? null, phases, events, plan: { phases: plan.phases, programs: plan.programs } };
   });
-  return { today, thisWeek, coachId, clients, categories: listEventCategories(coachId) };
+  const profile = getCoachProfile(coachId);
+  const coach = { name: profile?.display_name?.trim() || coachEmail.split("@")[0].replace(/[._-]+/g, " ").replace(/bw/g, (ch) => ch.toUpperCase()) || "Coach", photoPath: profile?.avatar_path ?? null };
+  return { today, thisWeek, coachId, clients, categories: listEventCategories(coachId), coach };
 }

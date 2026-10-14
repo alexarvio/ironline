@@ -7,9 +7,10 @@ import { useRouter } from "next/navigation";
 import { Popover as PopoverPrimitive } from "radix-ui";
 import { toast } from "sonner";
 import { addClientEventAction, addClientPhaseAction, removeClientPhaseAction, updateClientPhaseAction } from "../../../lib/actions";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
+import { Dialog } from "../../../components/ui/dialog";
 import { eventTypeOf } from "../../../lib/eventTypes";
 import PhaseDetailDialog from "./PhaseDetailDialog";
+import EventDetailDialog from "./EventDetailDialog";
 import type { PhaseTrack } from "../../../lib/db";
 import { TRACK_LABEL } from "../../phaseChrome";
 import { PhaseDialog, phaseForm } from "../plan/PlanDraft";
@@ -33,7 +34,6 @@ import {
   shortDate,
   soonPhases,
   soonTag,
-  sortClients,
   spanOf,
   stackEvents,
   TINY,
@@ -137,7 +137,8 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
         .sort((a, b) => (a.phase.end < b.phase.end ? -1 : a.phase.end > b.phase.end ? 1 : a.client.name.localeCompare(b.client.name))),
     [clients, tracksOn, today]
   );
-  const sorted = useMemo(() => sortClients(clients, tracksOn, today), [clients, tracksOn, today]);
+  // All clients: A to Z, nothing else (14 Oct, Alex). Needs attention: only those with a phase ending soon, A to Z too.
+  const sorted = useMemo(() => [...clients].sort((a, b) => a.name.localeCompare(b.name)), [clients]);
   const attention = useMemo(() => sorted.filter((c) => needsAttention(c, tracksOn, today)), [sorted, tracksOn, today]);
   const shown = prefs.view === "attention" ? attention : sorted;
 
@@ -298,34 +299,7 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
           ("phase" in picked ? (
             <PhaseDetailDialog client={picked.client} phase={picked.phase} today={today} onMove={(p) => setPicked({ client: picked.client, phase: p })} />
           ) : (
-            <DialogContent className="rd-dlg">
-              <DialogHeader>
-                <DialogTitle>{picked.event.title}</DialogTitle>
-                <DialogDescription>
-                  {picked.client.name} · {eventTypeOf(picked.event.kind).label} · added by {picked.event.addedBy === "client" ? first(picked.client.name) : "you"}
-                </DialogDescription>
-              </DialogHeader>
-              <dl className="pov-facts">
-                <div>
-                  <dt>Dates</dt>
-                  <dd>
-                    {shortDate(picked.event.start)}
-                    {picked.event.end > picked.event.start && ` – ${shortDate(picked.event.end)}`}
-                  </dd>
-                </div>
-                {picked.event.note && (
-                  <div>
-                    <dt>Note</dt>
-                    <dd>{picked.event.note}</dd>
-                  </div>
-                )}
-              </dl>
-              <DialogFooter>
-                <Link className="rd-btn primary" href={PLAN(picked.client.id)}>
-                  Open {first(picked.client.name)}&rsquo;s Plan
-                </Link>
-              </DialogFooter>
-            </DialogContent>
+            <EventDetailDialog client={picked.client} event={picked.event} today={today} coach={data.coach} />
           ))}
       </Dialog>
 
