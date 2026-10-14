@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -12,7 +12,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreIcon, PencilIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { archiveLibraryExerciseAction, assignVideoToExerciseAction, createLibraryExerciseAction, deleteLibraryVideoAction, renameLibraryVideoAction, uploadLibraryVideoAction } from "./actions";
 import type { LibraryData, LibraryItem, LibraryVideo } from "./load";
-import ExerciseEditorModal from "./ExerciseEditorModal";
+import ExerciseEditor from "./ExerciseEditor";
+import ExerciseDrawer, { DRAWER_WIDTH } from "./ExerciseDrawer";
+import { groupColour } from "../../../lib/muscleGroups";
 import ExerciseLibraryGrid from "./ExerciseLibraryGrid";
 
 // The coach's Library (5 Oct, rebuilt 6 Oct on the shadcn parts and the
@@ -38,10 +40,43 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
   const [, start] = useTransition();
   const [shelf, setShelf] = useState<Shelf>("exercises");
   const [showRemoved, setShowRemoved] = useState(false);
-  const openItem = (id: number) => setOpenId(id);
   const [openId, setOpenId] = useState<number | null>(null);
   // A substitute opened from an exercise's editor (14 Oct): the one to go back to.
   const [openFrom, setOpenFrom] = useState<{ id: number; name: string } | null>(null);
+  // The editor keeps showing while the drawer slides out (14 Oct).
+  const [closingItem, setClosingItem] = useState<LibraryItem | null>(null);
+  const openItem = (id: number) => setOpenId(id);
+  const closeEditor = () => {
+    setClosingItem(open);
+    setOpenId(null);
+    setOpenFrom(null);
+    setTimeout(() => setClosingItem(null), 240);
+  };
+  // The drawer (14 Oct): the URL names the open exercise, so a reload or a shared link reopens it.
+  useEffect(() => {
+    const id = Number(new URLSearchParams(window.location.search).get("edit"));
+    if (!id) return;
+    const t = setTimeout(() => setOpenId(id), 0);
+    return () => clearTimeout(t);
+  }, []);
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (openId != null) url.searchParams.set("edit", String(openId));
+    else url.searchParams.delete("edit");
+    window.history.replaceState(null, "", url.toString());
+  }, [openId]);
+  // The edited card stays in view: the page scrolls (never scrollIntoView) when the card sits under the drawer or off the screen.
+  useEffect(() => {
+    if (openId == null) return;
+    const t = setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(`[data-exercise-id="${openId}"]`);
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const hidden = r.top < 80 || r.bottom > window.innerHeight - 20 || r.right > window.innerWidth - (window.innerWidth > 720 ? DRAWER_WIDTH : 0);
+      if (hidden) window.scrollTo({ top: Math.max(0, window.scrollY + r.top - 120), behavior: "smooth" });
+    }, 320);
+    return () => clearTimeout(t);
+  }, [openId]);
   const [creating, setCreating] = useState<string | null>(null);
   const act = (fn: () => Promise<unknown>, said?: string) =>
     start(async () => {
@@ -54,12 +89,14 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
   const onShelf = data.items.filter((i) => (shelf === "cardio" ? i.group === "cardio" : i.group !== "cardio"));
   const removedCount = onShelf.filter((i) => i.archived).length;
   const open = openId != null ? data.items.find((i) => i.id === openId) ?? null : null;
+  // What the drawer shows: the open one, or the one it is closing on.
+  const shownItem = open ?? closingItem;
 
   const archive = (i: LibraryItem) => act(() => archiveLibraryExerciseAction(i.id, !i.archived), i.archived ? `${i.name} back in the library` : `${i.name} taken out of the library`);
 
   // An exercise, as a row inside its group: like an exercise inside a session.
   return (
-    <div className="rd lb">
+    <div className={`rd lb${open ? " lb-drawer-open" : ""}`}>
       <header className="rd-head">
         <div className="rd-head-main">
           <span className="rd-eyebrow">Library</span>
@@ -102,28 +139,36 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
           onNew={(slug) => setCreating(slug)}
           onArchive={archive}
           onChanged={() => router.refresh()}
+          editingId={openId}
         />
       )}
 
-      {open && (
-        <ExerciseEditorModal
-          key={open.id}
-          item={open}
-          items={data.items}
-          videos={data.videos}
-          groups={data.groups}
-          backTo={openFrom && openFrom.id !== open.id ? openFrom : null}
-          onClose={() => {
-            setOpenId(null);
-            setOpenFrom(null);
-          }}
-          onOpenOther={(id) => {
-            setOpenFrom(openFrom && id === openFrom.id ? null : { id: open.id, name: open.name });
-            setOpenId(id);
-          }}
-          onChanged={() => router.refresh()}
-        />
-      )}
+      <ExerciseDrawer open={open != null} colour={groupColour(shownItem?.group)} onClose={closeEditor} onCardUnder={(id) => openItem(id)}>
+        {shownItem && (
+          <ExerciseEditor
+            key={shownItem.id}
+            item={shownItem}
+            items={data.items}
+            videos={data.videos}
+            groups={data.groups}
+            siblings={data.items
+              .filter((i) => i.group === shownItem.group && !i.archived)
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((i) => i.id)}
+            backTo={openFrom && openFrom.id !== shownItem.id ? openFrom : null}
+            onClose={closeEditor}
+            onSwitch={(id) => {
+              setOpenFrom(null);
+              setOpenId(id);
+            }}
+            onOpenOther={(id) => {
+              setOpenFrom(openFrom && id === openFrom.id ? null : { id: shownItem.id, name: shownItem.name });
+              setOpenId(id);
+            }}
+            onChanged={() => router.refresh()}
+          />
+        )}
+      </ExerciseDrawer>
 
       <Dialog open={creating != null} onOpenChange={(o) => !o && setCreating(null)}>
         {creating != null && (

@@ -40,7 +40,10 @@ export default function ExerciseLibraryGrid({
   onNew,
   onArchive,
   onChanged,
+  editingId = null,
 }: {
+  /** The exercise open in the drawer (14 Oct): its card is ringed. */
+  editingId?: number | null;
   /** The shelf's exercises, the taken-out ones included when the coach asked for them. */
   items: LibraryItem[];
   groups: { slug: string; label: string }[];
@@ -168,7 +171,7 @@ export default function ExerciseLibraryGrid({
             {isOpen && (
               <div id={`lib-grid-${g.slug}`} role="region" aria-label={`${g.label} ${noun}s`} className={`lib-grid${settings.density === "compact" ? " compact" : ""}`}>
                 {shown.map((i, k) => (
-                  <ExerciseCard key={i.id} item={i} index={k} colour={c} thumbs={settings.thumbs} showCue={settings.cues} onOpen={() => onOpen(i.id)} onPlay={() => setPlaying(i)} onArchive={() => onArchive(i)} onChanged={onChanged} />
+                  <ExerciseCard key={i.id} item={i} index={k} colour={c} thumbs={settings.thumbs} showCue={settings.cues} editing={i.id === editingId} onOpen={() => onOpen(i.id)} onPlay={() => setPlaying(i)} onArchive={() => onArchive(i)} onChanged={onChanged} />
                 ))}
                 <button type="button" className="lib-new" onClick={() => onNew(g.slug)}>
                   <span className="lib-new-plus" aria-hidden="true">
@@ -219,11 +222,13 @@ function ExerciseCard({
   colour,
   thumbs,
   showCue,
+  editing = false,
   onOpen,
   onPlay,
   onArchive,
   onChanged,
 }: {
+  editing?: boolean;
   item: LibraryItem;
   index: number;
   colour: { color: string; rgb: string };
@@ -273,7 +278,8 @@ function ExerciseCard({
   const subNames = item.substitutes.map((x) => x.name).join(", ");
   return (
     <div
-      className={`lib-card${item.archived ? " archived" : ""}`}
+      className={`lib-card${item.archived ? " archived" : ""}${editing ? " editing" : ""}`}
+      data-exercise-id={item.id}
       role="button"
       tabIndex={0}
       aria-label={`${item.name}. ${demoState}. ${item.variations.length} variations, ${item.substitutes.length} substitutes. Edit.`}

@@ -4,8 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
-import { CheckIcon, ChevronDownIcon, ChevronLeftIcon, PlayIcon, PlusIcon, SearchIcon, TrashIcon } from "../../../components/icons";
+import { CheckIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, PlayIcon, PlusIcon, SearchIcon, TrashIcon } from "../../../components/icons";
 import { clearExerciseDemoAction, setExerciseDemoLinkAction } from "../../../lib/actions";
 import { groupColour } from "../../../lib/muscleGroups";
 import { assignVideoToExerciseAction, createLibraryExerciseAction, saveExerciseSubstitutesAction, saveExerciseVariationsAction, updateLibraryExerciseAction, uploadLibraryVideoAction } from "./actions";
@@ -51,16 +50,22 @@ function Poster({ url, large, onDuration }: { url: string | null; large?: boolea
   return <span className={`exm-poster${large ? " large" : ""}`} aria-hidden="true" />;
 }
 
-export default function ExerciseEditorModal({
+export default function ExerciseEditor({
   item,
   items,
   videos,
   groups,
+  siblings,
   onClose,
+  onSwitch,
   onOpenOther,
   onChanged,
   backTo,
 }: {
+  /** The exercises prev and next move through, in the grid's order; this one among them. */
+  siblings: number[];
+  /** Prev, next or a card behind the drawer: the editor moves to that exercise, the drawer stays. */
+  onSwitch: (id: number) => void;
   item: LibraryItem;
   items: LibraryItem[];
   videos: LibraryVideo[];
@@ -243,6 +248,33 @@ export default function ExerciseEditorModal({
     setClosing(false);
     if (ok) onClose();
   };
+  // Prev / next (14 Oct): through the group, wrapping round; what is waiting to save goes first.
+  const at = siblings.indexOf(item.id);
+  const n = siblings.length;
+  const step = async (dir: 1 | -1) => {
+    if (n < 2) return;
+    await save.flush();
+    onSwitch(siblings[((at < 0 ? 0 : at) + dir + n) % n]);
+  };
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.closest("input, textarea, select, [contenteditable=true]") || t.closest(".exm-lightbox"))) {
+        if (e.key === "Escape") t.blur();
+        return;
+      }
+      if (e.key === "Escape") void done();
+      else if (e.key === "ArrowRight" || e.key === "j") void step(1);
+      else if (e.key === "ArrowLeft" || e.key === "k") void step(-1);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the handlers read the latest closures through refs below
+  }, [at, n, closing]);
 
   // ---- Variations.
   const addVariation = () => {
@@ -393,36 +425,43 @@ export default function ExerciseEditorModal({
   const sectionLabel = (text: string) => <span className="exm-label">{text}</span>;
 
   return (
-    <Dialog open onOpenChange={(o) => !o && void done()}>
-      <DialogContent
-        className="exm"
-        style={{ "--g": gc.color, "--g-rgb": gc.rgb } as React.CSSProperties}
-        aria-describedby={undefined}
-        onPointerDownOutside={(e) => {
-          if ((e.target as Element | null)?.closest(".exm-popover, .exm-lightbox, .exm-dropdown")) e.preventDefault();
-        }}
-      >
-        <span className="exm-glow" aria-hidden="true" />
+    <div className="exd-content" style={{ "--g": gc.color, "--g-rgb": gc.rgb } as React.CSSProperties}>
         {/* ---- Header */}
         <header className="exm-head">
           <div className="exm-head-text">
-            {backTo && (
-              <button type="button" className="exm-back" onClick={() => onOpenOther(backTo.id)}>
-                <ChevronLeftIcon /> Back to {backTo.name}
-              </button>
-            )}
             <div className="exm-title-row">
-              <DialogTitle className="exm-title">{name.trim() || "Untitled exercise"}</DialogTitle>
+              <h2 id="exd-title" ref={headingRef} tabIndex={-1} className="exm-title">
+                {name.trim() || "Untitled exercise"}
+              </h2>
               <span className="exm-pill">{groups.find((g) => g.slug === group)?.label ?? group}</span>
               <button type="button" className={`exm-state ${save.state}`} aria-live="polite" onClick={save.state === "error" ? save.retry : undefined} title={save.state === "error" ? "Click to try again" : undefined}>
                 {save.state === "saved" ? "Saved" : save.state === "saving" ? "Saving…" : "Not saved"}
               </button>
             </div>
-            <DialogDescription className="sr-only">Changes show in every programme that uses it{used > 0 ? ` · used by ${used} client${used === 1 ? "" : "s"}` : ""}.</DialogDescription>
+            <p className="sr-only">Changes show in every programme that uses it{used > 0 ? ` · used by ${used} client${used === 1 ? "" : "s"}` : ""}.</p>
           </div>
-          <button type="button" className="exm-close" onClick={() => void done()} aria-label="Close">
-            ✕
-          </button>
+          <div className="exd-nav">
+            {backTo ? (
+              <button type="button" className="exm-back" onClick={() => onOpenOther(backTo.id)}>
+                <ChevronLeftIcon /> Back to {backTo.name}
+              </button>
+            ) : (
+              <>
+                <button type="button" className="exd-navbtn" onClick={() => void step(-1)} aria-label="Previous exercise" disabled={n < 2}>
+                  <ChevronLeftIcon />
+                </button>
+                <span className="exd-pos" aria-live="polite">
+                  {Math.max(1, at + 1)} of {Math.max(1, n)}
+                </span>
+                <button type="button" className="exd-navbtn" onClick={() => void step(1)} aria-label="Next exercise" disabled={n < 2}>
+                  <ChevronRightIcon />
+                </button>
+              </>
+            )}
+            <button type="button" className="exm-close" onClick={() => void done()} aria-label="Close">
+              ✕
+            </button>
+          </div>
         </header>
 
         {/* ---- Body */}
@@ -1029,6 +1068,18 @@ export default function ExerciseEditorModal({
 
         {/* ---- Footer */}
         <footer className="exm-foot">
+          <small className="exm-faint">
+            {save.state === "saving" ? "Saving…" : save.state === "error" ? (
+              <>
+                Couldn&rsquo;t save ·{" "}
+                <button type="button" className="exm-textbtn" onClick={save.retry}>
+                  Retry
+                </button>
+              </>
+            ) : (
+              "Saves as you go."
+            )}
+          </small>
           <button type="button" className="exm-done" onClick={() => void done()} disabled={closing}>
             {closing ? <span className="exm-spin" aria-hidden="true" /> : null}
             Done
@@ -1069,8 +1120,7 @@ export default function ExerciseEditorModal({
             </div>,
             document.body
           )}
-      </DialogContent>
-    </Dialog>
+    </div>
   );
 }
 
