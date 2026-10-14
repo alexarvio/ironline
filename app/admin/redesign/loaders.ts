@@ -65,7 +65,7 @@ import {
   METRIC_GROUPS,
   METRIC_LIBRARY,
   metricGroup,
-  MUSCLE_GROUPS,
+  coachGroups,
   programWeekLabel,
   videoRequestsFor,
   sessionAnswers,
@@ -118,7 +118,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   const libName = new Map(listExercises(coachId).map((e) => [e.id, e.name] as const));
   // Each with its default cue (the Library page, 5 Oct): the note an exercise
   // starts with when it is added to a session.
-  const library: Library = MUSCLE_GROUPS.filter((g) => g.slug !== "cardio" && (byGroup[g.slug]?.length ?? 0) > 0).map((g) => ({
+  const library: Library = coachGroups(coachId).filter((g) => g.slug !== "cardio" && (byGroup[g.slug]?.length ?? 0) > 0).map((g) => ({
     slug: g.slug,
     label: g.label,
     exercises: (byGroup[g.slug] ?? []).map((e) => ({ id: e.id, name: e.name, ...(e.cue ? { cue: e.cue } : {}), ...(e.variations?.length ? { variations: e.variations.map((v) => ({ id: v.id, name: v.name, ...(v.cue ? { cue: v.cue } : {}) })) } : {}) })),

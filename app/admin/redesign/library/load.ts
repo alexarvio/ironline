@@ -1,4 +1,4 @@
-import { exerciseClientCounts, exerciseGroup, listCoachVideos, listExercises, MUSCLE_GROUPS } from "../../../lib/queries";
+import { coachGroups, exerciseClientCounts, exerciseGroup, listCoachVideos, listExercises } from "../../../lib/queries";
 
 // The coach's Library page (5 Oct): every exercise of theirs, its group, its
 // demo, its default cue, and how many of their clients have it in a
@@ -27,7 +27,7 @@ export function loadLibrary(coachId: number): LibraryData {
   const counts = exerciseClientCounts(coachId);
   const exercises = listExercises(coachId);
   return {
-    groups: MUSCLE_GROUPS.map((g) => ({ slug: g.slug, label: g.label })),
+    groups: [...coachGroups(coachId).filter((g) => g.slug !== "cardio"), { slug: "cardio", label: "Cardio" }],
     items: exercises.map((e) => ({
       id: e.id,
       name: e.name,

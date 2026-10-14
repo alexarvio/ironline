@@ -384,9 +384,42 @@ const TAG_TO_GROUP: Record<string, string> = {
   conditioning: "cardio",
 };
 
+/** The coach's groups (14 Oct): the built-in ones, renamed where the coach did, then their own, Other last. */
+export function coachGroups(coachId: number | null | undefined): { slug: string; label: string }[] {
+  const own = (coachId != null ? getData().users.find((u) => u.id === coachId)?.library_groups : null) ?? [];
+  const labelOf = (slug: string, fallback: string) => own.find((o) => o.slug === slug)?.label ?? fallback;
+  const base = MUSCLE_GROUPS.filter((g) => g.slug !== "other").map((g) => ({ slug: g.slug, label: labelOf(g.slug, g.label) }));
+  const custom = own.filter((o) => !MUSCLE_GROUPS.some((g) => g.slug === o.slug)).map((o) => ({ slug: o.slug, label: o.label }));
+  return [...base, ...custom, { slug: "other", label: labelOf("other", "Other") }];
+}
+const isGroupOf = (coachId: number | null | undefined, slug: string) => coachGroups(coachId).some((g) => g.slug === slug);
+
+/** A built-in group under the coach's own name, or one of theirs renamed. */
+export function renameCoachGroup(coachId: number, slug: string, label: string) {
+  const u = getData().users.find((x) => x.id === coachId);
+  const clean = label.trim().slice(0, 30);
+  if (!u || !clean || !isGroupOf(coachId, slug)) return;
+  const own = (u.library_groups ?? []).filter((o) => o.slug !== slug);
+  u.library_groups = [...own, { slug, label: clean }];
+  persist();
+}
+
+/** A group of the coach's own; its slug is made from the label. Null when the name is empty or taken. */
+export function addCoachGroup(coachId: number, label: string): { slug: string; label: string } | null {
+  const u = getData().users.find((x) => x.id === coachId);
+  const clean = label.trim().slice(0, 30);
+  if (!u || !clean) return null;
+  if (coachGroups(coachId).some((g) => g.label.toLowerCase() === clean.toLowerCase())) return null;
+  const slug = `g-${clean.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || Date.now()}`;
+  if (isGroupOf(coachId, slug)) return null;
+  u.library_groups = [...(u.library_groups ?? []), { slug, label: clean }];
+  persist();
+  return { slug, label: clean };
+}
+
 function primaryGroup(exercise: Exercise): string {
   const first = (exercise.muscle_tags ?? "").split(",")[0]?.trim().toLowerCase() ?? "";
-  return TAG_TO_GROUP[first] ?? (MUSCLE_GROUPS.some((g) => g.slug === first) ? first : "other");
+  return TAG_TO_GROUP[first] ?? (MUSCLE_GROUPS.some((g) => g.slug === first) || (first.startsWith("g-") && isGroupOf(exercise.coach_id, first)) ? first : "other");
 }
 /** The group an exercise is filed under (back, chest, … cardio, other). */
 export const exerciseGroup = primaryGroup;
@@ -395,14 +428,15 @@ export const exerciseGroup = primaryGroup;
 export function listExercisesByGroup(coachId: number): Record<string, Exercise[]> {
   const all = listExercises(coachId).filter((e) => !e.archived);
   const byGroup: Record<string, Exercise[]> = {};
-  MUSCLE_GROUPS.forEach((g) => (byGroup[g.slug] = []));
+  coachGroups(coachId).forEach((g) => (byGroup[g.slug] = []));
+  byGroup.cardio = byGroup.cardio ?? [];
   all.forEach((e) => byGroup[primaryGroup(e)].push(e));
   return byGroup;
 }
 
 export function addExercise(coachId: number, name: string, muscleGroup: string, videoUrl: string | null): Exercise {
   const data = getData();
-  const group = MUSCLE_GROUPS.some((g) => g.slug === muscleGroup) ? muscleGroup : "other";
+  const group = isGroupOf(coachId, muscleGroup) || muscleGroup === "cardio" ? muscleGroup : "other";
   const exercise: Exercise = {
     id: allocId("exercises"),
     name,
@@ -422,7 +456,7 @@ export function updateExercise(exerciseId: number, patch: { name?: string; group
   const e = getData().exercises.find((x) => x.id === exerciseId);
   if (!e) return;
   if (patch.name !== undefined && patch.name.trim()) e.name = patch.name.trim().slice(0, 60);
-  if (patch.group !== undefined) e.muscle_tags = MUSCLE_GROUPS.some((g) => g.slug === patch.group) ? patch.group : "other";
+  if (patch.group !== undefined) e.muscle_tags = isGroupOf(e.coach_id, patch.group) || patch.group === "cardio" ? patch.group : "other";
   if (patch.cue !== undefined) {
     const cue = (patch.cue ?? "").trim().slice(0, 300);
     if (cue) e.cue = cue;

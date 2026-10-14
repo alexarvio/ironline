@@ -1070,6 +1070,8 @@ type ClientPreferences = {
 // nothing client-facing may ever take a client id from user input instead.
 type User = {
   id: number;
+  /** The coach's library groups (14 Oct): a built-in slug with the coach's own label, or a group of their own ("g-…"). */
+  library_groups?: { slug: string; label: string }[];
   email: string; // stored lowercased — this is the login lookup key
   password_hash: string; // scrypt, stored as "salt:derivedKey" in hex
   role: "coach" | "client";

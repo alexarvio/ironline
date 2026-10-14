@@ -32,6 +32,8 @@ const DOCK_KEY = "norcoach:chat-dock";
 export default function ChatDock({ chats }: { chats: DockChat[] }) {
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
+  // Put back open on a new screen (14 Oct, Alex): in place, no slide and no page contracting.
+  const [still, setStill] = useState(false);
   const [pick, setPick] = useState<DockChat | null>(null);
   const [thread, setThread] = useState<{ id: number; plan: DraftMessages } | null>(null);
   // Counts the openings of a thread: each one lands on its newest message.
@@ -91,13 +93,23 @@ export default function ChatDock({ chats }: { chats: DockChat[] }) {
       saved = JSON.parse(window.sessionStorage.getItem(DOCK_KEY) ?? "null");
     } catch {}
     if (!saved?.open) return;
+    const frame = document.querySelector(".rd-frame");
+    frame?.setAttribute("data-chat-still", "");
     const t = setTimeout(() => {
+      setStill(true);
       setMounted(true);
       setOpen(true);
       const c = saved?.chat != null ? chats.find((x) => x.id === saved!.chat) : null;
       if (c) void choose(c);
     }, 0);
-    return () => clearTimeout(t);
+    const t2 = setTimeout(() => {
+      setStill(false);
+      frame?.removeAttribute("data-chat-still");
+    }, 400);
+    return () => {
+      clearTimeout(t);
+      clearTimeout(t2);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on mount
   }, []);
   const needle = q.trim().toLowerCase();
@@ -112,7 +124,7 @@ export default function ChatDock({ chats }: { chats: DockChat[] }) {
         {unread > 0 && !open && <i className="rd-chattab-dot" aria-hidden="true" />}
       </button>
       {mounted && (
-        <aside className={`rd-chatpanel rd-chatdock${open ? " open" : ""}`} aria-label="Chats" aria-hidden={!open} inert={open ? undefined : true}>
+        <aside className={`rd-chatpanel rd-chatdock${open ? " open" : ""}${still ? " still" : ""}`} aria-label="Chats" aria-hidden={!open} inert={open ? undefined : true}>
           {inThread ? (
             <>
               <button

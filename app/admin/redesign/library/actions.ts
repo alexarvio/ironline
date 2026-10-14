@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireCoach } from "../../../lib/auth";
 import { coachOwnsExercise } from "../../../lib/tenancy";
-import { addCoachVideo, addExercise, listCoachVideos, removeCoachVideo, renameCoachVideo, setExerciseArchived, setExerciseSubstitutes, setExerciseVariations, setExerciseVideoUrl, updateExercise } from "../../../lib/queries";
+import { addCoachGroup, addCoachVideo, addExercise, listCoachVideos, renameCoachGroup, removeCoachVideo, renameCoachVideo, setExerciseArchived, setExerciseSubstitutes, setExerciseVariations, setExerciseVideoUrl, updateExercise } from "../../../lib/queries";
 import { deleteUpload, putUpload } from "../../../lib/storage";
 
 // The coach's Library page (5 Oct): an exercise's name, group and default
@@ -49,6 +49,22 @@ export async function saveExerciseSubstitutesAction(exerciseId: number, list: { 
   revalidatePath("/admin");
   revalidatePath("/client");
   return true;
+}
+
+/** A group under the coach's own name (14 Oct). */
+export async function renameLibraryGroupAction(slug: string, label: string): Promise<boolean> {
+  const coach = await requireCoach();
+  renameCoachGroup(coach.id, String(slug ?? ""), String(label ?? ""));
+  revalidatePath("/admin");
+  return true;
+}
+
+/** A group of the coach's own (14 Oct). Its slug, or null when the name is empty or taken. */
+export async function createLibraryGroupAction(label: string): Promise<string | null> {
+  const coach = await requireCoach();
+  const made = addCoachGroup(coach.id, String(label ?? ""));
+  revalidatePath("/admin");
+  return made?.slug ?? null;
 }
 
 export async function archiveLibraryExerciseAction(exerciseId: number, archived: boolean): Promise<boolean> {

@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { ChevronDownIcon, PencilIcon, PlayIcon, SearchIcon } from "../../../components/icons";
-import { assignVideoToExerciseAction, uploadLibraryVideoAction } from "./actions";
+import { assignVideoToExerciseAction, createLibraryGroupAction, renameLibraryGroupAction, uploadLibraryVideoAction } from "./actions";
 import type { LibraryItem } from "./load";
 import { useLibraryView, type LibraryFilter } from "./useLibraryView";
 
@@ -69,6 +69,29 @@ export default function ExerciseLibraryGrid({
   const searched = items.filter(matches);
   const anyMatch = searched.length > 0;
 
+  // Renaming a group (14 Oct): the pencil by its name, the name as a box, Enter or leaving it saves.
+  const [renaming, setRenaming] = useState<{ slug: string; label: string } | null>(null);
+  const [newGroup, setNewGroup] = useState<string | null>(null);
+  const commitRename = async () => {
+    if (!renaming) return;
+    const label = renaming.label.trim();
+    setRenaming(null);
+    if (!label) return;
+    await renameLibraryGroupAction(renaming.slug, label);
+    onChanged();
+  };
+  const commitNew = async () => {
+    const label = (newGroup ?? "").trim();
+    setNewGroup(null);
+    if (!label) return;
+    const slug = await createLibraryGroupAction(label);
+    if (!slug) {
+      toast.error("That name is taken, or empty.");
+      return;
+    }
+    onChanged();
+    view.setOpen([slug]);
+  };
   // The lightbox: a demo with sound.
   const [playing, setPlaying] = useState<LibraryItem | null>(null);
   useEffect(() => {
@@ -141,7 +164,46 @@ export default function ExerciseLibraryGrid({
               <span className="lib-chev" aria-hidden="true">
                 <ChevronDownIcon />
               </span>
-              <span className="lib-group-name">{g.label}</span>
+              {renaming?.slug === g.slug ? (
+                <input
+                  className="lib-group-rename"
+                  value={renaming.label}
+                  autoFocus
+                  maxLength={30}
+                  aria-label={`Rename ${g.label}`}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => setRenaming({ slug: g.slug, label: e.target.value })}
+                  onBlur={() => void commitRename()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.currentTarget.blur();
+                    if (e.key === "Escape") setRenaming(null);
+                  }}
+                />
+              ) : (
+                <span className="lib-group-name">{g.label}</span>
+              )}
+              {!cardio && renaming?.slug !== g.slug && (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  className="lib-group-pencil"
+                  aria-label={`Rename ${g.label}`}
+                  title="Rename"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setRenaming({ slug: g.slug, label: g.label });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setRenaming({ slug: g.slug, label: g.label });
+                    }
+                  }}
+                >
+                  <PencilIcon />
+                </span>
+              )}
               <span className="lib-group-count">
                 {filtering ? `${shown.length} of ${alive.length}` : `${alive.length} ${alive.length === 1 ? noun : `${noun}s`}`}
                 {needle && shown.length === 0 ? " · 0 matches" : ""}
@@ -174,6 +236,35 @@ export default function ExerciseLibraryGrid({
           </section>
         );
       })}
+
+      {!cardio &&
+        (newGroup == null ? (
+          <button type="button" className="lib-newgroup" onClick={() => setNewGroup("")}>
+            + New group
+          </button>
+        ) : (
+          <div className="lib-newgroup-row">
+            <input
+              className="lib-group-rename"
+              value={newGroup}
+              autoFocus
+              maxLength={30}
+              placeholder="Group name, e.g. Shoulders"
+              aria-label="New group name"
+              onChange={(e) => setNewGroup(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void commitNew();
+                if (e.key === "Escape") setNewGroup(null);
+              }}
+            />
+            <button type="button" className="lib-create" onClick={() => void commitNew()} disabled={!newGroup.trim()}>
+              Add
+            </button>
+            <button type="button" className="lib-view" onClick={() => setNewGroup(null)}>
+              Cancel
+            </button>
+          </div>
+        ))}
 
       {playing &&
         playing.video &&
