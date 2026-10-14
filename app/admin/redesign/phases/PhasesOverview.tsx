@@ -593,14 +593,12 @@ function ClientBlock({
                   ))}
               </div>
             ))}
-        {/* No events in these months: the way to add one, under a hairline, since events are their own thing. */}
-        {eventRows === 0 && (
-          <div className="pov-none events">
+        {/* Always a way to add an event (14 Oct), under whatever event rows there are; the hairline sits on this row when there are none. */}
+          <div className={`pov-none${eventRows === 0 ? " events" : ""}`}>
             <button type="button" className="pov-none-link" onClick={() => onEvent(today)}>
               + Add an event
             </button>
           </div>
-        )}
       </div>
     </div>
   );
