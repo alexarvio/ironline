@@ -59,19 +59,15 @@ export default function ExerciseLibraryGrid({
 }) {
   const blocks = cardio ? [{ slug: "cardio", label: "Cardio" }] : groups;
   const view = useLibraryView(blocks[0]?.slug ?? null);
-  const { needle, filter, settings } = view;
+  const { needle, settings } = view;
+  // The filter chips sit inside each group (14 Oct, Alex), one choice a group.
+  const [filters, setFilters] = useState<Record<string, LibraryFilter>>({});
+  const filterOf = (slug: string): LibraryFilter => filters[slug] ?? "all";
 
   const matches = (i: LibraryItem) => !needle || i.name.toLowerCase().includes(needle) || i.cue.toLowerCase().includes(needle);
-  const passes = (i: LibraryItem) => filter === "all" || (filter === "nodemo" ? !i.video : filter === "variations" ? i.variations.length > 0 : i.substitutes.length > 0);
+  const passesFilter = (i: LibraryItem, filter: LibraryFilter) => filter === "all" || (filter === "nodemo" ? !i.video : filter === "variations" ? i.variations.length > 0 : i.substitutes.length > 0);
   const searched = items.filter(matches);
-  const counts = {
-    all: searched.length,
-    nodemo: searched.filter((i) => !i.video).length,
-    variations: searched.filter((i) => i.variations.length > 0).length,
-    substitutes: searched.filter((i) => i.substitutes.length > 0).length,
-  };
-  const filtering = !!needle || filter !== "all";
-  const anyMatch = searched.filter(passes).length > 0;
+  const anyMatch = searched.length > 0;
 
   // The lightbox: a demo with sound.
   const [playing, setPlaying] = useState<LibraryItem | null>(null);
@@ -90,12 +86,6 @@ export default function ExerciseLibraryGrid({
           <input value={view.q} onChange={(e) => view.setQ(e.target.value)} placeholder={cardio ? "Search movements or cues" : "Search exercises or cues"} aria-label="Search the library" />
         </label>
         <div className="lib-chips" role="group" aria-label="Filter">
-          {FILTERS.map((f) => (
-            <button key={f.id} type="button" className={`lib-chip${filter === f.id ? " on" : ""}`} aria-pressed={filter === f.id} onClick={() => view.setFilter(f.id)}>
-              {f.label}
-              <span className="lib-chip-n">{counts[f.id]}</span>
-            </button>
-          ))}
           {removedCount > 0 && (
             <button type="button" className={`lib-chip${removedShown ? " on" : ""}`} aria-pressed={removedShown} onClick={onToggleRemoved}>
               Taken out
@@ -131,7 +121,16 @@ export default function ExerciseLibraryGrid({
         const c = NAVY;
         const all = items.filter((i) => i.group === g.slug);
         const alive = all.filter((i) => !i.archived);
-        const shown = all.filter((i) => matches(i) && passes(i)).sort((a, b) => a.name.localeCompare(b.name));
+        const filter = filterOf(g.slug);
+        const filtering = !!needle || filter !== "all";
+        const inSearch = all.filter(matches);
+        const counts = {
+          all: inSearch.length,
+          nodemo: inSearch.filter((i) => !i.video).length,
+          variations: inSearch.filter((i) => i.variations.length > 0).length,
+          substitutes: inSearch.filter((i) => i.substitutes.length > 0).length,
+        };
+        const shown = inSearch.filter((i) => passesFilter(i, filter)).sort((a, b) => a.name.localeCompare(b.name));
         const isOpen = needle ? shown.length > 0 : view.open.includes(g.slug);
         const noun = cardio ? "movement" : "exercise";
         return (
@@ -148,6 +147,15 @@ export default function ExerciseLibraryGrid({
               </span>
             </button>
             {isOpen && (
+              <>
+              <div className="lib-chips in-group" role="group" aria-label={`Filter ${g.label}`}>
+                {FILTERS.map((f) => (
+                  <button key={f.id} type="button" className={`lib-chip${filter === f.id ? " on" : ""}`} aria-pressed={filter === f.id} onClick={() => setFilters((m) => ({ ...m, [g.slug]: f.id }))}>
+                    {f.label}
+                    <span className="lib-chip-n">{counts[f.id]}</span>
+                  </button>
+                ))}
+              </div>
               <div id={`lib-grid-${g.slug}`} role="region" aria-label={`${g.label} ${noun}s`} className={`lib-grid${settings.density === "compact" ? " compact" : ""}`}>
                 {shown.map((i, k) => (
                   <ExerciseCard key={i.id} item={i} index={k} colour={c} thumbs={settings.thumbs} showCue={settings.cues} editing={i.id === editingId} onOpen={() => onOpen(i.id)} onPlay={() => setPlaying(i)} onArchive={() => onArchive(i)} onChanged={onChanged} />
@@ -160,6 +168,7 @@ export default function ExerciseLibraryGrid({
                 </button>
                 {filtering && shown.length === 0 && alive.length > 0 && <p className="lib-nomatch">Nothing matches this filter in {g.label}.</p>}
               </div>
+              </>
             )}
           </section>
         );
