@@ -1,4 +1,4 @@
-import { getPlanData, listClientEvents, listClients, localDateStr, type PlanPhaseRow, type PlanProgramOption } from "../../../lib/queries";
+import { getPlanData, listClientEvents, listClientPhases, listClients, localDateStr, type PlanPhaseRow, type PlanProgramOption } from "../../../lib/queries";
 import { phaseLastDay } from "../../../lib/phases";
 import type { OverviewEvent, OverviewPhase } from "./timeline";
 
@@ -24,6 +24,7 @@ export function loadPhasesOverview(coachId: number): PhasesOverviewData {
   let thisWeek = today;
   const clients = listClients(coachId).map((c) => {
     const plan = getPlanData(c.id);
+    const objectives = new Map(listClientPhases(c.id).map((p) => [p.id, p.objectives ?? []]));
     thisWeek = plan.thisWeek;
     const phases: OverviewPhase[] = plan.phases.map((p) => ({
       id: p.id,
@@ -33,6 +34,8 @@ export function loadPhasesOverview(coachId: number): PhasesOverviewData {
       end: phaseLastDay(p.end_week),
       endWeek: p.end_week,
       draft: p.draft || p.program?.status === "draft",
+      objectives: objectives.get(p.id) ?? [],
+      programId: p.program?.id ?? null,
     }));
     const events: OverviewEvent[] = listClientEvents(c.id).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start_date, end: e.end_date, note: e.note, addedBy: e.added_by === "client" ? "client" : "coach" }));
     return { id: c.id, name: c.name ?? "Client", avatarPath: c.avatar_path ?? null, phases, events, plan: { phases: plan.phases, programs: plan.programs } };
