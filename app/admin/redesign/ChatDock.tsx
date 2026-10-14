@@ -119,7 +119,7 @@ export default function ChatDock({ chats }: { chats: DockChat[] }) {
 
   return (
     <>
-      <button type="button" className={`rd-chattab${open ? " open" : ""}`} onClick={() => (open ? close() : show())} aria-label={open ? "Close the chats" : `Chats${unread ? `, ${unread} unread` : ""}`} title={open ? "Close the chats" : "Chats"} aria-expanded={open}>
+      <button type="button" className={`rd-chattab${open ? " open" : ""}${still ? " still" : ""}`} onClick={() => (open ? close() : show())} aria-label={open ? "Close the chats" : `Chats${unread ? `, ${unread} unread` : ""}`} title={open ? "Close the chats" : "Chats"} aria-expanded={open}>
         <ChatIcon />
         {unread > 0 && !open && <i className="rd-chattab-dot" aria-hidden="true" />}
       </button>

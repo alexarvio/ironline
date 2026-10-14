@@ -166,7 +166,7 @@ html:has(.rd-frame) { scrollbar-gutter: stable; }
 @media (min-width: 1100px) { .rd-frame[data-chat="open"] { padding-right: min(460px, 100vw); } }
 @media (prefers-reduced-motion: reduce) { .rd-chatpanel, .rd-chatpanel.open, .rd-frame { transition: none; } }
 /* Put back open on a new screen (14 Oct): already in place, nothing moves. */
-.rd-chatpanel.still, .rd-chatpanel.still.open, .rd-frame[data-chat-still] { transition: none; }
+.rd-chatpanel.still, .rd-chatpanel.still.open, .rd-frame[data-chat-still], .rd-chattab.still { transition: none; }
 
 /* ---- The text bar, roomier (2 Oct): one + on the left (photo, file, link),
    the box, and on the right the mic while it is empty, Send once there are
