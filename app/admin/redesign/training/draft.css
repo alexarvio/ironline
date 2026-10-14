@@ -319,7 +319,7 @@
 .rd-full { margin: 0; padding: 12px 14px; font-size: 12.5px; color: #8b93a1; }
 .rd-note-text { white-space: pre-wrap; }
 
-.rd-dlg { max-width: 520px; gap: 14px; font-family: var(--font-archivo), system-ui, sans-serif; }
+.rd-dlg { max-width: 580px; gap: 14px; font-family: var(--font-archivo), system-ui, sans-serif; }
 .rd-dlg.wide { max-width: min(1500px, calc(100vw - 40px)); }
 /* The whiteboard reply (9 Oct). */
 .wb { display: flex; flex-direction: column; gap: 14px; }
@@ -501,7 +501,7 @@
 .rd-weeks-field input { width: 84px; height: 38px; text-align: center; font-weight: 700; color: #1e3a6e; font-variant-numeric: tabular-nums; }
 .rd-weeks-field small { font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; color: #5b6474; }
 /* The demo dialog: what the client sees, and a link or a file to set it. */
-.rd-demo-dlg { max-width: 560px; }
+.rd-demo-dlg { max-width: 620px; }
 .rd-demo-tag { background: #e6e4fa; color: #3a3390; }
 .rd-demo-on { background: #1e3a6e; color: #fff; }
 .rd-demo-off { background: #eef0f3; color: #5b6474; }
@@ -788,7 +788,7 @@
 .rd-flag-slot .rd-extradot { padding: 0 4px; }
 
 /* The substitutes dialog (14 Oct): the library's rows, greyed when kept off this session; the session's own under them. */
-.rd-subs-dlg { max-width: 640px; }
+.rd-subs-dlg { max-width: 720px; }
 .rd-alt-lib.off { opacity: 0.45; }
 .rd-alt-row.lib { grid-template-columns: minmax(120px, 0.8fr) 1.4fr auto; padding: 8px 10px; border-radius: 10px; background: #FAFAFA; }
 .rd-alt-note { font-size: 13px; color: #757575; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

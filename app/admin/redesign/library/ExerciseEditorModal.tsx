@@ -26,7 +26,7 @@ import { useAutosave } from "./useAutosave";
 type Var = { id: number; name: string; video: string | null; cue: string };
 type Sub = { exerciseId: number; name: string; note: string };
 
-const MAX_SUBS = 3;
+const MAX_SUBS = 12;
 const ytId = (url: string) => /(?:youtu\.be\/|[?&]v=|shorts\/|embed\/)([\w-]{11})/.exec(url)?.[1] ?? null;
 const isUpload = (url: string) => url.startsWith("/uploads/") || /\.(mp4|mov|m4v|webm)(\?|$)/i.test(url);
 const isUrl = (s: string) => /^https?:\/\/\S+\.\S+/i.test(s.trim());
@@ -280,6 +280,7 @@ export default function ExerciseEditorModal({
   const [searchOpen, setSearchOpen] = useState(false);
   const [cursor, setCursor] = useState(0);
   const searchRef = useRef<HTMLInputElement>(null);
+  const searchWrap = useRef<HTMLDivElement>(null);
   const candidates = useMemo(() => {
     const taken = new Set(subs.map((s) => s.exerciseId));
     const pool = others.filter((x) => !taken.has(x.id));
@@ -289,6 +290,11 @@ export default function ExerciseEditorModal({
     const hits = pool.filter((x) => x.name.toLowerCase().includes(needle));
     return [...hits.filter((x) => x.group === group).sort(demoFirst), ...hits.filter((x) => x.group !== group).sort(demoFirst)].slice(0, 8);
   }, [others, subs, q, group]);
+  useEffect(() => {
+    if (!searchOpen) return;
+    const t = setTimeout(() => searchWrap.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }), 30);
+    return () => clearTimeout(t);
+  }, [searchOpen, q]);
   const addSub = (x: LibraryItem) => {
     if (subs.length >= MAX_SUBS) return;
     saveSubs([...subs, { exerciseId: x.id, name: x.name, note: "" }]);
@@ -554,9 +560,7 @@ export default function ExerciseEditorModal({
               </button>
               <button type="button" role="tab" aria-selected={tab === "substitutes"} className={`exm-tab${tab === "substitutes" ? " on" : ""}`} onClick={() => setTab("substitutes")}>
                 Substitutes
-                <span className={`exm-count${subs.length >= MAX_SUBS ? " full" : ""}`}>
-                  {subs.length} of {MAX_SUBS}
-                </span>
+                <span className="exm-count">{subs.length}</span>
               </button>
             </div>
             {tab === "variations" && (
@@ -765,7 +769,7 @@ export default function ExerciseEditorModal({
                     className="exm-row sub"
                     style={{ "--c": c.color, "--rgb": c.rgb } as React.CSSProperties}
                     role="group"
-                    aria-label={`Substitute ${i + 1} of ${MAX_SUBS}, ${s.name}`}
+                    aria-label={`Substitute ${i + 1} of ${subs.length}, ${s.name}`}
                     draggable
                     onDragStart={(e) => {
                       dragSub.current = i;
@@ -821,7 +825,7 @@ export default function ExerciseEditorModal({
                 );
               })}
               {subs.length < MAX_SUBS ? (
-                <div className="exm-search-wrap">
+                <div className="exm-search-wrap" ref={searchWrap}>
                   <label className="exm-search">
                     <SearchIcon />
                     <input
@@ -884,7 +888,7 @@ export default function ExerciseEditorModal({
                   )}
                 </div>
               ) : (
-                <small className="exm-faint">That&rsquo;s three. Remove one to add another.</small>
+                <small className="exm-faint">That&rsquo;s plenty. Remove one to add another.</small>
               )}
             </div>
             )}

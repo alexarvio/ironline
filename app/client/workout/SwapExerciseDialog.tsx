@@ -32,7 +32,7 @@ export default function SwapExerciseDialog({
 }: {
   exercise: { name: string; group: string };
   targets: { sets: number; reps: string; rpe: number | null; time: string | null };
-  /** Up to three, in the coach's order; none, and the field is the only choice. */
+  /** In the coach's order; none, and the field is the only choice. */
   suggestions: SwapSuggestion[];
   /** The swap in place, when the pop-up is opened again. */
   current: { libraryExerciseId: number | null; name: string } | null;
@@ -45,7 +45,7 @@ export default function SwapExerciseDialog({
   onClose: () => void;
 }) {
   const c = groupColour(exercise.group);
-  const list = suggestions.slice(0, 3);
+  const list = suggestions;
   const currentPick = current?.libraryExerciseId != null && list.some((s) => s.id === current.libraryExerciseId) ? current.libraryExerciseId : null;
   const [picked, setPicked] = useState<number | null>(currentPick ?? (current ? null : list[0]?.id ?? null));
   const [own, setOwn] = useState(current && current.libraryExerciseId == null ? current.name : "");

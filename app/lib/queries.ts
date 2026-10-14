@@ -8715,9 +8715,10 @@ export function setExerciseVariations(exerciseId: number, list: { id?: number | 
   persist();
 }
 
-/** The library's substitutes for an exercise (14 Oct): up to three others of
-    the same coach's library, each with a note. Offered to the client when
-    the machine is taken, in every programme, unless a session has its own. */
+/** The library's substitutes for an exercise (14 Oct): others of the same
+    coach's library, each with a note, in the coach's order. Offered to the
+    client when the machine is taken, in every programme, unless a session
+    keeps them off. No cap worth the name (12): nobody adds six. */
 export function setExerciseSubstitutes(exerciseId: number, list: { exercise_id: number; note: string | null }[]) {
   const data = getData();
   const e = data.exercises.find((x) => x.id === exerciseId);
@@ -8732,7 +8733,7 @@ export function setExerciseSubstitutes(exerciseId: number, list: { exercise_id: 
       return true;
     })
     .map((s) => ({ exercise_id: s.exercise_id, note: s.note?.trim().slice(0, 200) || null }))
-    .slice(0, 3);
+    .slice(0, 12);
   if (clean.length) e.substitutes = clean;
   else delete e.substitutes;
   persist();
