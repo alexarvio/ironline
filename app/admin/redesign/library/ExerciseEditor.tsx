@@ -424,12 +424,9 @@ export default function ExerciseEditor({
     addSub({ id, name: n, group, video: null, cue: "", clients: 0, archived: false, variations: [], substitutes: [] });
   };
 
-  // ---- Your videos: the unused first, then the ones on this exercise, then the rest; six, or all.
-  const shownVideos = useMemo(() => {
-    const rank = (v: LibraryVideo) => (v.usedBy.length === 0 ? 0 : v.usedBy.some((u) => u.id === item.id) ? 1 : 2);
-    const sorted = [...videos].sort((a, b) => rank(a) - rank(b) || b.at.localeCompare(a.at));
-    return allVideos ? sorted : sorted.slice(0, 6);
-  }, [videos, allVideos, item.id]);
+  // ---- Your videos (14 Oct, Alex): only the ones on no exercise yet, this one's own demo included; newest first; six, or all.
+  const freeVideos = useMemo(() => videos.filter((v) => v.usedBy.length === 0 || (v.usedBy.length === 1 && v.usedBy[0].id === item.id)).sort((a, b) => b.at.localeCompare(a.at)), [videos, item.id]);
+  const shownVideos = useMemo(() => (allVideos ? freeVideos : freeVideos.slice(0, 6)), [freeVideos, allVideos]);
   const [demoSeconds, setDemoSeconds] = useState<number | null>(null);
 
   const byId = (id: number) => items.find((x) => x.id === id) ?? null;
@@ -571,8 +568,8 @@ export default function ExerciseEditor({
                     + Upload
                   </button>
                 </div>
-                {videos.length === 0 ? (
-                  <small className="exm-faint">None yet. Upload one above.</small>
+                {freeVideos.length === 0 ? (
+                  <small className="exm-faint">{videos.length ? "Every video is on an exercise already." : "None yet. Upload one above."}</small>
                 ) : (
                   <>
                   <div className="exm-videos">
@@ -607,9 +604,9 @@ export default function ExerciseEditor({
                       );
                     })}
                   </div>
-                {videos.length > 6 && (
+                {freeVideos.length > 6 && (
                   <button type="button" className="exm-textbtn" onClick={() => setAllVideos((x) => !x)}>
-                    {allVideos ? "Show fewer" : `See all ${videos.length}`}
+                    {allVideos ? "Show fewer" : `See all ${freeVideos.length}`}
                   </button>
                 )}
                   </>
