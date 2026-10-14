@@ -786,3 +786,10 @@
 /* Extra sets the client added (12 Oct): a green +N beside the swap's amber arrows, on the row and the session head. */
 .rd-extradot { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: #dff3ea; color: #1b7a4b; font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; vertical-align: middle; cursor: default; box-sizing: border-box; }
 .rd-flag-slot .rd-extradot { padding: 0 4px; }
+
+/* The substitutes dialog (14 Oct): the library's rows, greyed when kept off this session; the session's own under them. */
+.rd-subs-dlg { max-width: 640px; }
+.rd-alt-lib.off { opacity: 0.45; }
+.rd-alt-row.lib { grid-template-columns: minmax(120px, 0.8fr) 1.4fr auto; padding: 8px 10px; border-radius: 10px; background: #FAFAFA; }
+.rd-alt-note { font-size: 13px; color: #757575; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rd-alt-tag { font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #9E9E9E; }

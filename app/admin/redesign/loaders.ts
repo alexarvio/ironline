@@ -53,6 +53,7 @@ import {
   listLifestylePhases,
   listMetricsForPhase,
   listExercisesByGroup,
+  librarySubstitutesFor,
   listExercises,
   listNutritionPhases,
   listPrograms,
@@ -275,6 +276,8 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
         history,
         swap: a.swap ? (a.swap.library_exercise_id != null ? libName.get(a.swap.library_exercise_id) ?? null : null) ?? a.swap.custom_name ?? null : null,
         alternatives: (a.alternatives ?? []).filter((x) => libName.has(x.exercise_id)).map((x) => ({ exerciseId: x.exercise_id, name: libName.get(x.exercise_id)!, note: x.note ?? "" })),
+        librarySubstitutes: librarySubstitutesFor(a.exercise_id).filter((x) => libName.has(x.exercise_id)).map((x) => ({ exerciseId: x.exercise_id, name: libName.get(x.exercise_id)!, note: x.note ?? "" })),
+        libraryOff: !!a.library_substitutes_off,
         d7: pct(lastWeek),
         d30: pct(monthBack),
       };

@@ -90,6 +90,8 @@ export type WorkoutAssignment = {
   swap?: { library_exercise_id: number | null; custom_name: string | null; at: string };
   /** The coach's alternatives (see db.ts). */
   alternatives?: { exercise_id: number; note: string | null }[];
+  /** The library's substitutes for this exercise kept off this session (14 Oct); absent, they are offered along with the alternatives above. */
+  library_substitutes_off?: boolean;
   /** The exercise's variation asked for (see db.ts). */
   variation_id?: number | null;
   /** The demo kept off this prescription (see db.ts). */
@@ -8736,10 +8738,18 @@ export function setExerciseSubstitutes(exerciseId: number, list: { exercise_id: 
   persist();
 }
 
-/** What a prescription offers instead (14 Oct): its own alternatives, else the library's substitutes for its exercise. */
-export function effectiveAlternatives(wa: { exercise_id: number; alternatives?: { exercise_id: number; note: string | null }[] }): { exercise_id: number; note: string | null }[] {
-  if (wa.alternatives?.length) return wa.alternatives;
-  return getData().exercises.find((e) => e.id === wa.exercise_id)?.substitutes ?? [];
+/** The library's substitutes for an exercise, as set on the Library page. */
+export function librarySubstitutesFor(exerciseId: number): { exercise_id: number; note: string | null }[] {
+  return getData().exercises.find((e) => e.id === exerciseId)?.substitutes ?? [];
+}
+
+/** What a prescription offers instead (14 Oct): its own alternatives, then
+    the library's substitutes for its exercise unless the session keeps
+    those off. The session's own note wins where both name the same exercise. */
+export function effectiveAlternatives(wa: { exercise_id: number; alternatives?: { exercise_id: number; note: string | null }[]; library_substitutes_off?: boolean }): { exercise_id: number; note: string | null }[] {
+  const own = wa.alternatives ?? [];
+  const lib = wa.library_substitutes_off ? [] : librarySubstitutesFor(wa.exercise_id);
+  return [...own, ...lib.filter((l) => !own.some((o) => o.exercise_id === l.exercise_id))];
 }
 
 /** One more variation on an exercise (typed in the session builder); the variation, an existing one of that name, or null. */
@@ -8825,7 +8835,7 @@ export function setAssignmentVariation(assignmentId: number, variationId: number
 /** The coach's alternatives for an exercise, set on this row and on the
  *  same exercise in the same session for the rest of its programme, so they
  *  hold week after week. Returns how many rows took them. */
-export function setExerciseAlternatives(assignmentId: number, list: { exercise_id: number; note: string | null }[]): number {
+export function setExerciseAlternatives(assignmentId: number, list: { exercise_id: number; note: string | null }[], libraryOff?: boolean): number {
   const data = getData();
   const wa = data.workout_assignments.find((x) => x.id === assignmentId);
   const day = wa ? data.program_days.find((d) => d.id === wa.program_day_id) : undefined;
@@ -8844,6 +8854,11 @@ export function setExerciseAlternatives(assignmentId: number, list: { exercise_i
     if (x.id !== wa.id && (x.exercise_id !== wa.exercise_id || !days.has(x.program_day_id))) continue;
     if (clean.length) x.alternatives = clean.map((c) => ({ ...c }));
     else delete x.alternatives;
+    // The library's substitutes on or off this session (14 Oct), the same weeks as the alternatives.
+    if (libraryOff != null) {
+      if (libraryOff) x.library_substitutes_off = true;
+      else delete x.library_substitutes_off;
+    }
     n++;
   }
   persist();

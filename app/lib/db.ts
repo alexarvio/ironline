@@ -538,6 +538,8 @@ type WorkoutAssignment = {
   // their library, each with an optional note. The client picks one from the
   // swap sheet. Absent or empty: the sheet offers only "write it down".
   alternatives?: { exercise_id: number; note: string | null }[];
+  /** The library's substitutes for this exercise kept off this session (14 Oct); absent, they are offered along with the alternatives above. */
+  library_substitutes_off?: boolean;
   // Which of the exercise's variations is asked for (close grip…): its name
   // goes after the exercise's, its demo before the exercise's. Absent: the
   // exercise as it is. Sets still count for the exercise.
