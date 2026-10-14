@@ -258,7 +258,7 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
             </span>
             <span>
               <i className="ev">
-                <EventIcon kind="trip" size={8} />
+                <EventIcon kind="trip" size={14} />
               </i>{" "}
               Event
             </span>
@@ -474,8 +474,6 @@ function ClientBlock({
   onPlan: (track: PhaseTrack, start: string) => void;
   onEvent: (start: string) => void;
 }) {
-  // Where empty space was clicked: the chooser opens there.
-  const [spot, setSpot] = useState<{ x: number; y: number; day: string } | null>(null);
   const status = clientStatus(c, tracksOn, today);
   // Said only when something is ending (14 Oct): a quiet row says nothing under the name.
   const statusText = status.kind === "soon" ? `${TRACK_LABEL[status.track]} ends ${status.days <= 0 ? "today" : `in ${status.days} day${status.days === 1 ? "" : "s"}`}` : null;
@@ -493,7 +491,6 @@ function ClientBlock({
   });
   const events = eventsOn ? stackEvents(c.events, range, width) : { placed: [], overflow: [] };
   const eventRows = events.placed.length || events.overflow.length ? Math.max(...events.placed.map((p) => p.row + 1), events.overflow.length ? 1 : 0) : 0;
-  const empty = lanes.length === 0 && eventRows === 0;
 
   return (
     <div role="group" aria-label={statusText ? `${c.name}, ${statusText}` : c.name} className="pov-client" style={{ display: "contents" }}>
@@ -513,75 +510,11 @@ function ClientBlock({
           {status.kind === "soon" && <small className="pov-status soon">{statusText}</small>}
         </span>
       </div>
-      {/* A click on empty space (14 Oct): a new phase for this client, from the day under the pointer (never before today). */}
-      <div
-        className="pov-track-cell"
-        title="Click an empty spot to plan a phase from that day"
-        onClick={(ev) => {
-          if ((ev.target as HTMLElement).closest("button, a")) return;
-          const rect = ev.currentTarget.getBoundingClientRect();
-          const x = Math.min(1, Math.max(0, (ev.clientX - rect.left) / Math.max(1, rect.width - 20)));
-          const day = addDays(range.start, Math.round(x * range.days));
-          setSpot({ x, y: ev.clientY - rect.top, day: day < today ? today : day });
-        }}
-      >
-        {/* The chooser at that spot: a phase or an event, from that day. */}
-        {spot && (
-          <PopoverPrimitive.Root open onOpenChange={(o) => !o && setSpot(null)}>
-            <PopoverPrimitive.Anchor asChild>
-              <i className="pov-spot" style={{ left: `calc(${spot.x} * (100% - 20px))`, top: spot.y }} aria-hidden="true" />
-            </PopoverPrimitive.Anchor>
-            <PopoverPrimitive.Portal>
-              <PopoverPrimitive.Content align="start" sideOffset={6} className="pb-menu pov-spot-menu" onOpenAutoFocus={(e) => e.preventDefault()}>
-                <span className="pov-spot-head">
-                  {shortDate(spot.day)} · {first(c.name)}
-                </span>
-                <button
-                  type="button"
-                  className="pov-spot-opt"
-                  onClick={() => {
-                    const d = spot.day;
-                    setSpot(null);
-                    onPlan("training", d);
-                  }}
-                >
-                  <i /> New phase
-                </button>
-                <button
-                  type="button"
-                  className="pov-spot-opt"
-                  onClick={() => {
-                    const d = spot.day;
-                    setSpot(null);
-                    onEvent(d);
-                  }}
-                >
-                  <i className="ev" /> New event
-                </button>
-              </PopoverPrimitive.Content>
-            </PopoverPrimitive.Portal>
-          </PopoverPrimitive.Root>
-        )}
+      <div className="pov-track-cell">
         {lines.map((x) => (
           <i key={x} className="pov-gridline" style={{ left: `${x * 100}%` }} aria-hidden="true" />
         ))}
         {todayX != null && <i className="pov-today-line" style={{ left: `${todayX * 100}%` }} aria-hidden="true" />}
-        {empty ? (
-          <>
-            {/* Nothing in the window (14 Oct): just the two ways in, no box, so every empty client looks the same. */}
-            <div className="pov-none">
-              <button type="button" className="pov-none-link" onClick={() => onPlan("training", today)}>
-                + Plan a phase
-              </button>
-            </div>
-            <div className="pov-none">
-              <button type="button" className="pov-none-link" onClick={() => onEvent(today)}>
-                + Add an event
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
             {lanes.map((lane) => (
               <div key={`${lane.track}-${lane.row}`} className="pov-lane" aria-label={lane.row ? undefined : TRACK_LABEL[lane.track]}>
                 {lane.phases.map((p) => {
@@ -608,8 +541,14 @@ function ClientBlock({
                 })}
               </div>
             ))}
+        {/* Always a way to plan the next phase (14 Oct), under whatever lanes there are. */}
+        <div className="pov-none">
+          <button type="button" className="pov-none-link" onClick={() => onPlan("training", today)}>
+            + Plan a phase
+          </button>
+        </div>
             {Array.from({ length: eventRows }, (_, r) => (
-              <div key={r} className="pov-ev-row" aria-label={r === 0 ? "Events" : undefined}>
+              <div key={r} className={`pov-ev-row${r === 0 ? " first" : ""}`} aria-label={r === 0 ? "Events" : undefined}>
                 {events.placed
                   .filter((pe) => pe.row === r)
                   .map(({ event: e, x }) => {
@@ -621,7 +560,7 @@ function ClientBlock({
                         {sp && sp.width > 0 && <i className="pov-ev-range" style={{ left: `${sp.left * 100}%`, width: `${sp.width * 100}%` }} aria-hidden="true" />}
                         <button type="button" className="pov-ev" style={{ left: `${x * 100}%` }} title={tip} aria-label={tip} onClick={() => onPick({ client: c, event: e })}>
                           <span className="pov-ev-mark">
-                            <EventIcon kind={e.kind} />
+                            <EventIcon kind={e.kind} size={18} />
                           </span>
                           <span className="pov-ev-label">{e.title}</span>
                         </button>
@@ -641,7 +580,7 @@ function ClientBlock({
                             return (
                               <button key={e.id} type="button" className="pov-ev-list-row" style={{ "--c": t.color } as React.CSSProperties} onClick={() => onPick({ client: c, event: e })}>
                                 <span className="pov-ev-mark small">
-                                  <EventIcon kind={e.kind} size={10} />
+                                  <EventIcon kind={e.kind} size={14} />
                                 </span>
                                 <b>{e.title}</b>
                                 <small>{shortDate(e.start)}</small>
@@ -654,7 +593,13 @@ function ClientBlock({
                   ))}
               </div>
             ))}
-          </>
+        {/* No events in these months: the way to add one, under a hairline, since events are their own thing. */}
+        {eventRows === 0 && (
+          <div className="pov-none events">
+            <button type="button" className="pov-none-link" onClick={() => onEvent(today)}>
+              + Add an event
+            </button>
+          </div>
         )}
       </div>
     </div>

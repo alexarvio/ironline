@@ -185,7 +185,6 @@ export default function PhaseDetailDialog({ client, phase: p, today, onMove }: {
       </div>
 
       <footer className="phd-foot">
-        <span className="phd-note">{draft ? "Only you see a draft until it’s sent." : "Changes are made in the client’s plan."}</span>
         <Link ref={openRef} href={href} className="phd-open">
           Open plan
           <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
