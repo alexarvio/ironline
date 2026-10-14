@@ -6,18 +6,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Popover as PopoverPrimitive } from "radix-ui";
 import { toast } from "sonner";
-import { addCalendarCategoryAction, addCalendarEntryAction, removeCalendarEntryAction, updateCalendarEntryAction } from "../../../lib/actions";
+import { addCalendarEntryAction, removeCalendarEntryAction, updateCalendarEntryAction } from "../../../lib/actions";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { SearchIcon, TrashIcon } from "../../../components/icons";
 import DatePick from "../DatePick";
-import { PALETTE, paletteOf, type Category } from "../palette";
+import { paletteOf, type Category } from "../palette";
 import type { CalEntry } from "./CalendarDay";
 
 // The Calendar's entry pop-up (14 Oct): the New event and New phase
 // dialogs' language. A glow and a title pill in the category's colour,
-// the categories as tinted tiles, filled fields, navy day and time boxes,
-// a navy Save. A client can be picked, with the line that says why they
-// need the coach, as the rail shows it.
+// the categories as tinted tiles (six, three a row; Other grey), filled
+// fields, navy day and time boxes, a navy Save. A client can be picked
+// from a list that floats over the pop-up, with the line that says why
+// they need the coach, as the rail shows it.
 
 export type EntryClient = { id: number; name: string; avatarPath: string | null; /** Why they need the coach, as the rail says it; null: all good. */ reason: { text: string; color: string; rgb: string } | null };
 export type Open = { entry: CalEntry | null; date: string; time: string };
@@ -27,9 +28,11 @@ const PRESET: Record<string, { icon: string; placeholder: string; length: number
   training: { icon: "M6.5 8v8M17.5 8v8M4 10v4M20 10v4M6.5 12h11", placeholder: "e.g. Session with Mattia", length: 60 },
   admin: { icon: "M6 3h12v18H6zM9 8h6M9 12h6M9 16h4", placeholder: "e.g. Write programmes", length: 60 },
   personal: { icon: "M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z", placeholder: "e.g. Gym, lunch, school run", length: 60 },
+  content: { icon: "M4 8h3.5l2-3h5l2 3H20v11H4zM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z", placeholder: "e.g. Film the week's reels", length: 60 },
+  other: { icon: "M5 12h.01M12 12h.01M19 12h.01", placeholder: "What is it?", length: 60 },
 };
 const TAG_ICON = "M20 12l-8 8-9-9V4h7l10 8zM7.5 7.5h.01";
-const LENGTHS = [15, 30, 45, 60, 90];
+const LENGTHS = [15, 30, 45, 60];
 const LAST_CAT_KEY = "norcoach:cal-last-category";
 
 const hexRgb = (hex: string) => {
@@ -94,7 +97,6 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
   const [picking, setPicking] = useState(false);
   const [clientQ, setClientQ] = useState("");
   const [note, setNote] = useState(e?.note ?? "");
-  const [catEdit, setCatEdit] = useState<{ label: string; color: string } | null>(null);
   const [removing, setRemoving] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -134,16 +136,6 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
       window.localStorage.setItem(LAST_CAT_KEY, id);
     } catch {}
   };
-  const usedColors = new Set(cats.map((c) => c.color));
-  const freeColor = PALETTE.find((p) => !usedColors.has(p.id))?.id ?? PALETTE[0].id;
-  const addCat = async () => {
-    if (!catEdit || !catEdit.label.trim()) return;
-    const id = await addCalendarCategoryAction(catEdit.label.trim(), catEdit.color);
-    setCatEdit(null);
-    router.refresh();
-    if (id) pickCat(id);
-  };
-
   const save = async () => {
     if (!ok || saving) return;
     setSaving(true);
@@ -190,7 +182,7 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
     const q = clientQ.trim().toLowerCase();
     return clients.filter((c) => !q || c.name.toLowerCase().includes(q)).sort((a, b) => Number(!!b.reason) - Number(!!a.reason) || a.name.localeCompare(b.name));
   }, [clients, clientQ]);
-  const withHidden = (cat === "personal" || cat === "admin") && clientId == null;
+  const withHidden = (cat === "personal" || cat === "admin" || cat === "content") && clientId == null;
 
   return (
     <DialogContent
@@ -237,13 +229,13 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
           </button>
         </header>
 
-        {/* Category tiles, each in its own colour; the picked one solid. */}
+        {/* Category tiles, three a row, each in its own colour; the picked one solid. Other is grey. */}
         <div className="cal-entry-tiles" role="radiogroup" aria-label="Category">
           {cats.map((c) => {
             const cInk = paletteOf(c.color).ink;
             const on = c.id === cat;
             return (
-              <button key={c.id} type="button" role="radio" aria-checked={on} className={`cal-entry-tile${on ? " on" : ""}`} style={{ "--tc": cInk, "--trgb": hexRgb(cInk) } as React.CSSProperties} onClick={() => pickCat(c.id)}>
+              <button key={c.id} type="button" role="radio" aria-checked={on} className={`cal-entry-tile${on ? " on" : ""}${c.color === "grey" ? " other" : ""}`} style={{ "--tc": cInk, "--trgb": hexRgb(cInk) } as React.CSSProperties} onClick={() => pickCat(c.id)}>
                 <span className="cal-entry-disc">
                   <CatIcon d={iconOf(c.id)} />
                 </span>
@@ -251,46 +243,7 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
               </button>
             );
           })}
-          {!catEdit && (
-            <button type="button" className="cal-entry-tile new" onClick={() => setCatEdit({ label: "", color: freeColor })}>
-              <span className="cal-entry-disc">+</span>
-              New
-            </button>
-          )}
         </div>
-        {catEdit && (
-          <div className="cal-entry-newcat">
-            <input
-              className="cal-entry-input"
-              value={catEdit.label}
-              onChange={(x) => setCatEdit({ ...catEdit, label: x.target.value })}
-              onKeyDown={(x) => {
-                if (x.key === "Enter") {
-                  x.preventDefault();
-                  void addCat();
-                }
-                if (x.key === "Escape") setCatEdit(null);
-              }}
-              placeholder="Name it: Content, Sales calls, Family…"
-              maxLength={24}
-              autoFocus
-              aria-label="Category name"
-            />
-            <span className="rq-cat-colors" role="radiogroup" aria-label="Colour">
-              {PALETTE.map((p) => (
-                <button key={p.id} type="button" role="radio" aria-checked={catEdit.color === p.id} className={`rq-cat-color${catEdit.color === p.id ? " on" : ""}`} style={{ background: p.ink }} onClick={() => setCatEdit({ ...catEdit, color: p.id })} aria-label={p.id} />
-              ))}
-            </span>
-            <span className="cal-entry-newcat-actions">
-              <button type="button" className="cal-entry-cancel" onClick={() => setCatEdit(null)}>
-                Cancel
-              </button>
-              <button type="button" className="cal-entry-save" disabled={!catEdit.label.trim()} onClick={() => void addCat()}>
-                Add
-              </button>
-            </span>
-          </div>
-        )}
 
         {/* What */}
         <label className="cal-entry-field">
@@ -324,65 +277,71 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
                 </button>
               </div>
             ) : picking ? (
-              <div className="cal-entry-picker">
-                <span className="cal-entry-what ring">
-                  <SearchIcon />
-                  <input
-                    autoFocus
-                    value={clientQ}
-                    onChange={(x) => setClientQ(x.target.value)}
-                    placeholder="Search clients"
-                    aria-label="Search clients"
-                    onKeyDown={(x) => {
-                      if (x.key === "Escape") setPicking(false);
-                      if (x.key === "Enter" && sortedClients[0]) {
-                        setClientId(sortedClients[0].id);
-                        setPicking(false);
-                      }
-                    }}
-                  />
-                </span>
-                <div className="cal-entry-drop" role="listbox">
-                  {clientId != null && (
-                    <button type="button" role="option" aria-selected={false} className="cal-entry-opt" onClick={() => (setClientId(null), setPicking(false))}>
-                      <span className="cal-entry-avatar none">–</span>
-                      <span className="cal-entry-client-text">
-                        <b>Just you</b>
-                        <small>no client</small>
-                      </span>
-                    </button>
-                  )}
-                  {sortedClients.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      role="option"
-                      aria-selected={c.id === clientId}
-                      className="cal-entry-opt"
-                      style={c.reason ? ({ "--rc": c.reason.color } as React.CSSProperties) : undefined}
-                      onClick={() => {
-                        setClientId(c.id);
-                        setPicking(false);
-                        setClientQ("");
+              /* The list floats over the pop-up (a portal), so the pop-up keeps its size; a click anywhere else closes it. */
+              <PopoverPrimitive.Root open onOpenChange={(o) => !o && (setPicking(false), setClientQ(""))}>
+                <PopoverPrimitive.Anchor asChild>
+                  <span className="cal-entry-what ring">
+                    <SearchIcon />
+                    <input
+                      autoFocus
+                      value={clientQ}
+                      onChange={(x) => setClientQ(x.target.value)}
+                      placeholder="Search clients"
+                      aria-label="Search clients"
+                      onKeyDown={(x) => {
+                        if (x.key === "Escape") setPicking(false);
+                        if (x.key === "Enter" && sortedClients[0]) {
+                          setClientId(sortedClients[0].id);
+                          setPicking(false);
+                          setClientQ("");
+                        }
                       }}
-                    >
-                      <span className="cal-entry-avatar">
-                        {c.avatarPath ? (
-                          // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
-                          <img src={c.avatarPath} alt="" />
-                        ) : (
-                          c.name.slice(0, 1).toUpperCase()
-                        )}
-                      </span>
-                      <span className="cal-entry-client-text">
-                        <b>{c.name}</b>
-                        <small className={c.reason ? "reason" : ""}>{c.reason ? c.reason.text : "All good"}</small>
-                      </span>
-                    </button>
-                  ))}
-                  {sortedClients.length === 0 && <p className="cal-entry-none">No client by that name.</p>}
-                </div>
-              </div>
+                    />
+                  </span>
+                </PopoverPrimitive.Anchor>
+                <PopoverPrimitive.Portal>
+                  <PopoverPrimitive.Content align="start" sideOffset={6} className="cal-entry-drop" role="listbox" onOpenAutoFocus={(ev) => ev.preventDefault()} onCloseAutoFocus={(ev) => ev.preventDefault()}>
+                    {clientId != null && (
+                      <button type="button" role="option" aria-selected={false} className="cal-entry-opt" onClick={() => (setClientId(null), setPicking(false))}>
+                        <span className="cal-entry-avatar none">–</span>
+                        <span className="cal-entry-client-text">
+                          <b>Just you</b>
+                          <small>no client</small>
+                        </span>
+                      </button>
+                    )}
+                    {sortedClients.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        role="option"
+                        aria-selected={c.id === clientId}
+                        className="cal-entry-opt"
+                        style={c.reason ? ({ "--rc": c.reason.color } as React.CSSProperties) : undefined}
+                        onClick={() => {
+                          setClientId(c.id);
+                          setPicking(false);
+                          setClientQ("");
+                        }}
+                      >
+                        <span className="cal-entry-avatar">
+                          {c.avatarPath ? (
+                            // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
+                            <img src={c.avatarPath} alt="" />
+                          ) : (
+                            c.name.slice(0, 1).toUpperCase()
+                          )}
+                        </span>
+                        <span className="cal-entry-client-text">
+                          <b>{c.name}</b>
+                          <small className={c.reason ? "reason" : ""}>{c.reason ? c.reason.text : "All good"}</small>
+                        </span>
+                      </button>
+                    ))}
+                    {sortedClients.length === 0 && <p className="cal-entry-none">No client by that name.</p>}
+                  </PopoverPrimitive.Content>
+                </PopoverPrimitive.Portal>
+              </PopoverPrimitive.Root>
             ) : (
               <button type="button" className="cal-entry-pickbtn" onClick={() => setPicking(true)}>
                 <SearchIcon />
@@ -509,9 +468,7 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
 
         {/* Note */}
         <label className="cal-entry-field">
-          <span className="cal-entry-label">
-            Note <span className="cal-entry-aside">only you see it</span>
-          </span>
+          <span className="cal-entry-label">Note</span>
           <textarea className="cal-entry-note" value={note} onChange={(x) => setNote(x.target.value)} placeholder="What to bring up, what to prepare…" maxLength={2000} rows={3} />
         </label>
         {error && <p className="cal-entry-error">{error}</p>}

@@ -5646,12 +5646,14 @@ export function listEventCategories(coachId: number): { id: string; label: strin
   return [...EVENT_PRESETS.map((p) => ({ ...p, custom: false })), ...own];
 }
 
-/** The Calendar's four to start with; the coach's own are event_categories rows with scope "calendar". */
+/** The Calendar's six to start with (Other is grey); the coach's own are event_categories rows with scope "calendar". */
 export const CALENDAR_PRESETS: { id: string; label: string; color: string }[] = [
   { id: "call", label: "Client call", color: "blue" },
   { id: "training", label: "Training", color: "green" },
   { id: "admin", label: "Admin", color: "amber" },
   { id: "personal", label: "Personal", color: "purple" },
+  { id: "content", label: "Content", color: "orange" },
+  { id: "other", label: "Other", color: "grey" },
 ];
 
 export function listCalendarCategories(coachId: number): { id: string; label: string; color: string; custom: boolean }[] {
