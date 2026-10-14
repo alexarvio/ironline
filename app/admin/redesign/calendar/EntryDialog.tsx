@@ -182,7 +182,6 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
     const q = clientQ.trim().toLowerCase();
     return clients.filter((c) => !q || c.name.toLowerCase().includes(q)).sort((a, b) => Number(!!b.reason) - Number(!!a.reason) || a.name.localeCompare(b.name));
   }, [clients, clientQ]);
-  const withHidden = (cat === "personal" || cat === "admin" || cat === "content") && clientId == null;
 
   return (
     <DialogContent
@@ -253,104 +252,101 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
             <input ref={titleRef} value={topic} onChange={(x) => setTopic(x.target.value)} placeholder={suggested ?? placeholder} maxLength={80} autoFocus={!e} aria-label="What" />
           </span>
         </label>
-
-        {/* With */}
-        {!withHidden && (
-          <div className="cal-entry-field">
-            <span className="cal-entry-label">With</span>
-            {client && !picking ? (
-              <div className="cal-entry-client" style={client.reason ? ({ "--rc": client.reason.color } as React.CSSProperties) : undefined}>
-                <span className="cal-entry-avatar">
-                  {client.avatarPath ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
-                    <img src={client.avatarPath} alt="" />
-                  ) : (
-                    client.name.slice(0, 1).toUpperCase()
-                  )}
-                </span>
-                <span className="cal-entry-client-text">
-                  <b>{client.name}</b>
-                  <small className={client.reason ? "reason" : ""}>{client.reason ? client.reason.text : "All good"}</small>
-                </span>
-                <button type="button" className="cal-entry-change" onClick={() => setPicking(true)}>
-                  Change
-                </button>
-              </div>
-            ) : picking ? (
-              /* The list floats over the pop-up (a portal), so the pop-up keeps its size; a click anywhere else closes it. Modal: its own scroll lock, else the dialog's swallows the wheel. */
-              <PopoverPrimitive.Root open modal onOpenChange={(o) => !o && (setPicking(false), setClientQ(""))}>
-                <PopoverPrimitive.Anchor asChild>
-                  <span className="cal-entry-what ring">
-                    <SearchIcon />
-                    <input
-                      autoFocus
-                      value={clientQ}
-                      onChange={(x) => setClientQ(x.target.value)}
-                      placeholder="Search clients"
-                      aria-label="Search clients"
-                      onKeyDown={(x) => {
-                        if (x.key === "Escape") setPicking(false);
-                        if (x.key === "Enter" && sortedClients[0]) {
-                          setClientId(sortedClients[0].id);
-                          setPicking(false);
-                          setClientQ("");
-                        }
-                      }}
-                    />
-                  </span>
-                </PopoverPrimitive.Anchor>
-                <PopoverPrimitive.Portal>
-                  <PopoverPrimitive.Content align="start" sideOffset={6} className="cal-entry-drop" role="listbox" onOpenAutoFocus={(ev) => ev.preventDefault()} onCloseAutoFocus={(ev) => ev.preventDefault()}>
-                    {clientId != null && (
-                      <button type="button" role="option" aria-selected={false} className="cal-entry-opt" onClick={() => (setClientId(null), setPicking(false))}>
-                        <span className="cal-entry-avatar none">–</span>
-                        <span className="cal-entry-client-text">
-                          <b>Just you</b>
-                          <small>no client</small>
-                        </span>
-                      </button>
-                    )}
-                    {sortedClients.map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        role="option"
-                        aria-selected={c.id === clientId}
-                        className="cal-entry-opt"
-                        style={c.reason ? ({ "--rc": c.reason.color } as React.CSSProperties) : undefined}
-                        onClick={() => {
-                          setClientId(c.id);
-                          setPicking(false);
-                          setClientQ("");
-                        }}
-                      >
-                        <span className="cal-entry-avatar">
-                          {c.avatarPath ? (
-                            // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
-                            <img src={c.avatarPath} alt="" />
-                          ) : (
-                            c.name.slice(0, 1).toUpperCase()
-                          )}
-                        </span>
-                        <span className="cal-entry-client-text">
-                          <b>{c.name}</b>
-                          <small className={c.reason ? "reason" : ""}>{c.reason ? c.reason.text : "All good"}</small>
-                        </span>
-                      </button>
-                    ))}
-                    {sortedClients.length === 0 && <p className="cal-entry-none">No client by that name.</p>}
-                  </PopoverPrimitive.Content>
-                </PopoverPrimitive.Portal>
-              </PopoverPrimitive.Root>
-            ) : (
-              <button type="button" className="cal-entry-pickbtn" onClick={() => setPicking(true)}>
-                <SearchIcon />
-                Pick a client · optional
+        {/* With, on every category (14 Oct): the pop-up keeps one height, so switching tiles never makes it jump. */}
+        <div className="cal-entry-field">
+          <span className="cal-entry-label">With</span>
+          {client && !picking ? (
+            <div className="cal-entry-client" style={client.reason ? ({ "--rc": client.reason.color } as React.CSSProperties) : undefined}>
+              <span className="cal-entry-avatar">
+                {client.avatarPath ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
+                  <img src={client.avatarPath} alt="" />
+                ) : (
+                  client.name.slice(0, 1).toUpperCase()
+                )}
+              </span>
+              <span className="cal-entry-client-text">
+                <b>{client.name}</b>
+                <small className={client.reason ? "reason" : ""}>{client.reason ? client.reason.text : "All good"}</small>
+              </span>
+              <button type="button" className="cal-entry-change" onClick={() => setPicking(true)}>
+                Change
               </button>
-            )}
-            {e && client && <small className="cal-entry-faint">{first(client.name)} sees this in their app.</small>}
-          </div>
-        )}
+            </div>
+          ) : picking ? (
+            /* The list floats over the pop-up (a portal), so the pop-up keeps its size; a click anywhere else closes it. Modal: its own scroll lock, else the dialog's swallows the wheel. */
+            <PopoverPrimitive.Root open modal onOpenChange={(o) => !o && (setPicking(false), setClientQ(""))}>
+              <PopoverPrimitive.Anchor asChild>
+                <span className="cal-entry-what ring">
+                  <SearchIcon />
+                  <input
+                    autoFocus
+                    value={clientQ}
+                    onChange={(x) => setClientQ(x.target.value)}
+                    placeholder="Search clients"
+                    aria-label="Search clients"
+                    onKeyDown={(x) => {
+                      if (x.key === "Escape") setPicking(false);
+                      if (x.key === "Enter" && sortedClients[0]) {
+                        setClientId(sortedClients[0].id);
+                        setPicking(false);
+                        setClientQ("");
+                      }
+                    }}
+                  />
+                </span>
+              </PopoverPrimitive.Anchor>
+              <PopoverPrimitive.Portal>
+                <PopoverPrimitive.Content align="start" sideOffset={6} className="cal-entry-drop" role="listbox" onOpenAutoFocus={(ev) => ev.preventDefault()} onCloseAutoFocus={(ev) => ev.preventDefault()}>
+                  {clientId != null && (
+                    <button type="button" role="option" aria-selected={false} className="cal-entry-opt" onClick={() => (setClientId(null), setPicking(false))}>
+                      <span className="cal-entry-avatar none">–</span>
+                      <span className="cal-entry-client-text">
+                        <b>Just you</b>
+                        <small>no client</small>
+                      </span>
+                    </button>
+                  )}
+                  {sortedClients.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      role="option"
+                      aria-selected={c.id === clientId}
+                      className="cal-entry-opt"
+                      style={c.reason ? ({ "--rc": c.reason.color } as React.CSSProperties) : undefined}
+                      onClick={() => {
+                        setClientId(c.id);
+                        setPicking(false);
+                        setClientQ("");
+                      }}
+                    >
+                      <span className="cal-entry-avatar">
+                        {c.avatarPath ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- client-uploaded file
+                          <img src={c.avatarPath} alt="" />
+                        ) : (
+                          c.name.slice(0, 1).toUpperCase()
+                        )}
+                      </span>
+                      <span className="cal-entry-client-text">
+                        <b>{c.name}</b>
+                        <small className={c.reason ? "reason" : ""}>{c.reason ? c.reason.text : "All good"}</small>
+                      </span>
+                    </button>
+                  ))}
+                  {sortedClients.length === 0 && <p className="cal-entry-none">No client by that name.</p>}
+                </PopoverPrimitive.Content>
+              </PopoverPrimitive.Portal>
+            </PopoverPrimitive.Root>
+          ) : (
+            <button type="button" className="cal-entry-pickbtn" onClick={() => setPicking(true)}>
+              <SearchIcon />
+              Pick a client · optional
+            </button>
+          )}
+          {e && client && <small className="cal-entry-faint">{first(client.name)} sees this in their app.</small>}
+        </div>
 
         {/* When */}
         <div className="cal-entry-field">
