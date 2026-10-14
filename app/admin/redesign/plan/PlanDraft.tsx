@@ -883,7 +883,8 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
             )}
           </span>
         </DialogTitle>
-        {!editing && <DialogDescription>{lockTrack ? (track === "training" ? "What it is called and when it runs: training goes in weeks, Monday to Sunday." : "What it is called and when it runs; it can start on any day.") : "Which track, what it is called, and when it runs. Nutrition and lifestyle phases can start on any day; training runs in weeks, Monday to Sunday."}</DialogDescription>}
+        {/* No explanation line (14 Oct): the tiles and the calendar say it. A hidden one for screen readers. */}
+        {!editing && <DialogDescription className="sr-only">{lockTrack ? "What it is called and when it runs." : "Which track, what it is called, and when it runs."}</DialogDescription>}
       </DialogHeader>
       {!editing && !lockTrack && (
         <div className="rd-field">
