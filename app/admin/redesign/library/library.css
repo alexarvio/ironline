@@ -241,7 +241,7 @@
 .lib-chip.on { background: #141a24; color: #fff; box-shadow: 0 8px 16px -8px rgba(20, 26, 36, 0.6); }
 .lib-chip.on .lib-chip-n { background: rgba(255, 255, 255, 0.18); }
 .lib-summary { margin-left: auto; font-size: 12.5px; font-weight: 700; color: #5b6474; }
-.lib-view { display: inline-flex; align-items: center; gap: 4px; height: 36px; padding: 0 12px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #DCE3EE; font: inherit; font-size: 12.5px; font-weight: 800; color: #1d3466; cursor: pointer; }
+.lib-view { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; height: 36px; padding: 0 12px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #DCE3EE; font: inherit; font-size: 12.5px; font-weight: 800; color: #1d3466; cursor: pointer; }
 .lib-view svg { width: 12px; height: 12px; }
 .lib-none { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 28px 0 8px; font-size: 14px; font-weight: 600; color: #5b6474; }
 .lib-none p { margin: 0; }

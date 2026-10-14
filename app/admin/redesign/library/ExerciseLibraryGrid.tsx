@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type React from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { ChevronDownIcon, PencilIcon, PlayIcon, SearchIcon } from "../../../components/icons";
 import { assignVideoToExerciseAction, uploadLibraryVideoAction } from "./actions";
 import type { LibraryItem } from "./load";
@@ -102,6 +103,18 @@ export default function ExerciseLibraryGrid({
             </button>
           )}
         </div>
+        {/* View (14 Oct, Alex): the cards bigger or smaller, nothing else. */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button type="button" className="lib-view" aria-label="View: card size">
+              View <ChevronDownIcon />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => view.setSettings({ density: "comfortable" })}>{settings.density === "comfortable" ? "✓ " : ""}Bigger cards</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => view.setSettings({ density: "compact" })}>{settings.density === "compact" ? "✓ " : ""}Smaller cards</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {needle && !anyMatch && (
