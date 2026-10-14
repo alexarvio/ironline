@@ -94,7 +94,8 @@ export default function ExerciseLibraryGrid({
           )}
         </div>
         {/* View (14 Oct, Alex): the cards bigger or smaller, nothing else. */}
-        <DropdownMenu>
+        {/* Not modal: a modal menu locks the page's scroll, the scrollbar goes, and the page jumps (14 Oct, Alex). */}
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild>
             <button type="button" className="lib-view" aria-label="View: card size">
               View <ChevronDownIcon />
