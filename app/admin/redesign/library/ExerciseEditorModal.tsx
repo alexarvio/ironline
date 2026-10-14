@@ -523,7 +523,6 @@ export default function ExerciseEditorModal({
                   <small className="exm-faint">None yet. Upload one above.</small>
                 ) : (
                   <>
-                  <small className="exm-faint">Click one to watch it; drag it onto the demo, a variation or a substitute.</small>
                   <div className="exm-videos">
                     {shownVideos.map((v) => {
                       const on = demo === v.path;
