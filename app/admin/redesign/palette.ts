@@ -11,9 +11,9 @@ export const PALETTE: { id: string; tint: string; ink: string; line: string }[] 
   { id: "rose", tint: "#fbe9ee", ink: "#9b2c4a", line: "#e7a9b8" },
   { id: "teal", tint: "#e0f2f2", ink: "#146b6b", line: "#9dd0d0" },
 ];
-export const paletteOf = (id: string) => PALETTE.find((p) => p.id === id) ?? PALETTE[0];
-/** No category: grey. */
+/** No category: grey. The Calendar's "Other" preset wears it too, as "grey". */
 export const NO_CATEGORY = { tint: "#eceff3", ink: "#5b6474", line: "#c3c9d2" };
+export const paletteOf = (id: string) => PALETTE.find((p) => p.id === id) ?? (id === "grey" ? { id: "grey", ...NO_CATEGORY } : PALETTE[0]);
 
 export type Category = { id: string; label: string; color: string; custom: boolean };
 
