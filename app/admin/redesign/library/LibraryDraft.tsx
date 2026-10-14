@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import type React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Toaster } from "../../../components/ui/toast";
-import { Badge, Button, Card, CardContent, Tabs, TabsList, TabsTrigger } from "../../../components/ui/basics";
-import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/form";
+import { Button, Card, CardContent, Tabs, TabsList, TabsTrigger } from "../../../components/ui/basics";
+import { Input } from "../../../components/ui/form";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
-import { MoreIcon, PencilIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { MoreIcon, PencilIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { archiveLibraryExerciseAction, assignVideoToExerciseAction, deleteLibraryVideoAction, renameLibraryVideoAction, uploadLibraryVideoAction } from "./actions";
 import type { LibraryData, LibraryItem, LibraryVideo } from "./load";
 import ExerciseEditor from "./ExerciseEditor";
@@ -123,7 +124,6 @@ export default function LibraryDraft({ data }: { data: LibraryData }) {
         <VideosShelf
           videos={data.videos}
           items={data.items.filter((i) => !i.archived)}
-          groups={data.groups}
           onChanged={() => router.refresh()}
           onAssign={(exerciseId, videoId, name) => act(() => assignVideoToExerciseAction(exerciseId, videoId), `Demo on ${name}`)}
           onDelete={(v) => act(() => deleteLibraryVideoAction(v.id), `${v.name} deleted`)}
@@ -204,7 +204,6 @@ async function uploadAll(files: File[], onProgress: (p: { done: number; total: n
 function VideosShelf({
   videos,
   items,
-  groups,
   onChanged,
   onAssign,
   onDelete,
@@ -212,7 +211,6 @@ function VideosShelf({
 }: {
   videos: LibraryVideo[];
   items: LibraryItem[];
-  groups: { slug: string; label: string }[];
   onChanged: () => void;
   onAssign: (exerciseId: number, videoId: number | null, name: string) => void;
   onDelete: (v: LibraryVideo) => void;
@@ -224,6 +222,8 @@ function VideosShelf({
   const [unusedOnly, setUnusedOnly] = useState(false);
   // The clip whose name is being typed, in place of its title.
   const [renaming, setRenaming] = useState<number | null>(null);
+  // The clip playing large, with sound.
+  const [playing, setPlaying] = useState<LibraryVideo | null>(null);
   const upload = async (files: File[]) => {
     const { count, errors } = await uploadAll(files, setQueue);
     if (!count) return;
@@ -294,97 +294,104 @@ function VideosShelf({
       {shown.length === 0 ? (
         <p className="lb-empty">{videos.length ? "Every video is in use." : "No videos yet."}</p>
       ) : (
-        <div className="lb-wall">
-          {shown.map((v) => {
-            const hint = v.usedBy.length === 0 ? suggest(v) : null;
-            return (
-              <Card key={v.id} className="lb-vid">
-                <video className="lb-vid-player" src={`${v.path}#t=0.5`} controls preload="metadata" playsInline />
-                <div className="lb-vid-head">
-                  {renaming === v.id ? (
-                    <Input
-                      autoFocus
-                      className="h-8"
-                      defaultValue={v.name}
-                      maxLength={120}
-                      aria-label="Video name"
-                      onBlur={(e) => {
-                        const n = e.target.value.trim();
-                        setRenaming(null);
-                        if (n && n !== v.name) onRename(v, n);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") e.currentTarget.blur();
-                        if (e.key === "Escape") {
-                          e.currentTarget.value = v.name;
-                          e.currentTarget.blur();
-                        }
-                      }}
-                    />
-                  ) : (
-                    <b title={v.name}>{v.name}</b>
-                  )}
-                  <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" aria-label={`More for ${v.name}`}>
-                        <MoreIcon />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    {/* Beside the card, not over the clip. */}
-                    <DropdownMenuContent side="right" align="start" className="pb-menu">
-                      <DropdownMenuItem onSelect={() => setRenaming(v.id)}>
-                        <PencilIcon /> Rename
-                      </DropdownMenuItem>
-                      <DropdownMenuItem variant="destructive" onSelect={() => onDelete(v)}>
-                        <TrashIcon /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                {v.usedBy.length > 0 ? (
-                  <Badge className="lb-badge-ok">Demo on {v.usedBy.map((e) => e.name).join(", ")}</Badge>
-                ) : hint ? (
-                  <Button variant="outline" size="sm" className="lb-vid-hint" onClick={() => onAssign(hint.id, v.id, hint.name)}>
-                    Use for {hint.name}
-                  </Button>
-                ) : (
-                  <Badge className="lb-badge-muted">Not on an exercise yet</Badge>
-                )}
-                <Select
-                  value=""
-                  onValueChange={(id) => {
-                    const ex = items.find((i) => i.id === Number(id));
-                    if (ex) onAssign(ex.id, v.id, ex.name);
-                  }}
-                >
-                  <SelectTrigger aria-label={`Give ${v.name} to an exercise`}>
-                    <SelectValue placeholder={v.usedBy.length ? "Also use for…" : "Use for exercise…"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {groups.map((g) => {
-                      const inGroup = items.filter((i) => i.group === g.slug);
-                      return inGroup.length ? (
-                        <div key={g.slug}>
-                          <SelectItem value={`group:${g.slug}`} disabled className="lb-select-group">
-                            {g.label}
-                          </SelectItem>
-                          {inGroup.map((i) => (
-                            <SelectItem key={i.id} value={String(i.id)}>
-                              {i.name}
-                              {i.video ? " · has a demo" : ""}
-                            </SelectItem>
-                          ))}
-                        </div>
-                      ) : null;
-                    })}
-                  </SelectContent>
-                </Select>
-              </Card>
-            );
-          })}
+        // The clips as cards (14 Oct, Alex), laid out as the exercises are: the clip, its length, its size and date; no title.
+        <div className="lib-grid lib-videos">
+          {shown.map((v, k) => (
+            <VideoCard key={v.id} v={v} index={k} hint={v.usedBy.length === 0 ? suggest(v) : null} renaming={renaming === v.id} onRename={(name) => { setRenaming(null); if (name && name !== v.name) onRename(v, name); }} onStartRename={() => setRenaming(v.id)} onDelete={() => onDelete(v)} onAssign={(ex) => onAssign(ex.id, v.id, ex.name)} onPlay={() => setPlaying(v)} />
+          ))}
         </div>
       )}
+      {playing &&
+        createPortal(
+          <div className="exm-lightbox" role="dialog" aria-label={playing.name} onClick={() => setPlaying(null)}>
+            <div className="exm-lightbox-card" onClick={(e) => e.stopPropagation()}>
+              <video src={playing.path} controls autoPlay playsInline />
+              <div className="exm-lightbox-row">
+                <span className="exm-lightbox-text">
+                  <b>{playing.name}</b>
+                  <small>{playing.usedBy.length ? `On ${playing.usedBy.map((e) => e.name).join(", ")}` : "Not on an exercise yet"}</small>
+                </span>
+                <button type="button" className="exm-close" onClick={() => setPlaying(null)} aria-label="Close">
+                  ✕
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </>
+  );
+}
+
+const fmtDuration = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
+const fmtBytes = (n: number) => (n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(n >= 10 * 1024 * 1024 ? 0 : 1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+const FALLBACKS = ["linear-gradient(150deg,#55648a,#1a2030)", "linear-gradient(150deg,#4a6b7a,#162028)", "linear-gradient(150deg,#665a7d,#1c1828)", "linear-gradient(150deg,#5a6f5f,#18221c)"];
+
+/** One clip as a card: its first frame with a play disc and its length, then its size and date; ⋯ renames or deletes it; a matching exercise with no demo is offered. */
+function VideoCard({ v, index, hint, renaming, onRename, onStartRename, onDelete, onAssign, onPlay }: { v: LibraryVideo; index: number; hint: LibraryItem | null; renaming: boolean; onRename: (name: string) => void; onStartRename: () => void; onDelete: () => void; onAssign: (ex: LibraryItem) => void; onPlay: () => void }) {
+  const [seconds, setSeconds] = useState<number | null>(null);
+  return (
+    <div className="lib-card">
+      <div className="lib-thumb portrait" style={{ background: FALLBACKS[index % FALLBACKS.length] }}>
+        <video className="lib-poster" src={`${v.path}#t=0.5`} preload="metadata" muted playsInline onLoadedMetadata={(e) => Number.isFinite(e.currentTarget.duration) && setSeconds(e.currentTarget.duration)} />
+        <span className="lib-shade" aria-hidden="true" />
+        <button type="button" className="lib-play" aria-label={`Play ${v.name}`} onClick={onPlay}>
+          <PlayIcon />
+        </button>
+        {seconds != null && <span className="lib-chip-dur">{fmtDuration(seconds)}</span>}
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger asChild>
+            <button type="button" className="lib-edit" aria-label={`More for ${v.name}`}>
+              <MoreIcon />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="pb-menu">
+            <DropdownMenuItem onSelect={onStartRename}>
+              <PencilIcon /> Rename
+            </DropdownMenuItem>
+            <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+              <TrashIcon /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <div className="lib-body">
+        {renaming && (
+          <Input
+            autoFocus
+            className="h-8"
+            defaultValue={v.name}
+            maxLength={120}
+            aria-label="Video name"
+            onBlur={(e) => onRename(e.target.value.trim())}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.currentTarget.blur();
+              if (e.key === "Escape") {
+                e.currentTarget.value = v.name;
+                e.currentTarget.blur();
+              }
+            }}
+          />
+        )}
+        <span className="lib-cue" title={v.name}>
+          {[v.bytes != null ? fmtBytes(v.bytes) : null, fmtDate(v.at)].filter(Boolean).join(" · ")}
+        </span>
+        <span className="lib-cardchips">
+          {v.usedBy.length > 0 ? (
+            <span className="lib-cardchip navy" title={v.usedBy.map((e) => e.name).join(", ")}>
+              On {v.usedBy.length === 1 ? v.usedBy[0].name : `${v.usedBy.length} exercises`}
+            </span>
+          ) : hint ? (
+            <button type="button" className="lib-cardchip navy lib-cardchip-btn" onClick={() => onAssign(hint)}>
+              Use for {hint.name}
+            </button>
+          ) : (
+            <span className="lib-cardchip">Not used yet</span>
+          )}
+        </span>
+      </div>
+    </div>
   );
 }
 
