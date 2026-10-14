@@ -20,7 +20,6 @@ import {
   clientStatus,
   daysLeft,
   endingSoon,
-  EVENTS_COLOR,
   gridLines,
   leftLabel,
   monthAnchor,
@@ -57,16 +56,14 @@ import {
 // when done, a rust ring when ending soon. Events are round markers with
 // their category's icon. The maths lives in timeline.ts.
 
-type Lane = PhaseTrack | "events";
-const LANES: Lane[] = [...TRACKS, "events"];
-const LANE_LABEL: Record<Lane, string> = { ...TRACK_LABEL, events: "Events" };
+const ALL_TRACKS = new Set<PhaseTrack>(TRACKS);
 const RANGES: Months[] = [3, 6, 12];
 const EXTENDS = [1, 2, 4];
 const first = (name: string) => name.split(" ")[0];
 const PLAN = (id: number) => `/admin/redesign/plan?client=${id}`;
 
-type Prefs = { tracks: Record<Lane, boolean>; months: Months; view: "all" | "attention" };
-const DEFAULT_PREFS: Prefs = { tracks: { lifestyle: true, training: true, nutrition: true, events: true }, months: 3, view: "all" };
+type Prefs = { months: Months; view: "all" | "attention" };
+const DEFAULT_PREFS: Prefs = { months: 3, view: "all" };
 const prefsKey = (coachId: number) => `norcoach:phases:${coachId}`;
 
 type Picked = { client: OverviewClient; phase: OverviewPhase } | { client: OverviewClient; event: OverviewEvent } | null;
@@ -101,7 +98,7 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
       const raw = window.localStorage.getItem(prefsKey(coachId));
       if (raw) {
         const p = JSON.parse(raw) as Partial<Prefs>;
-        start(() => setPrefs({ tracks: { ...DEFAULT_PREFS.tracks, ...(p.tracks ?? {}) }, months: RANGES.includes(p.months as Months) ? (p.months as Months) : 3, view: p.view === "attention" ? "attention" : "all" }));
+        start(() => setPrefs({ months: RANGES.includes(p.months as Months) ? (p.months as Months) : 3, view: p.view === "attention" ? "attention" : "all" }));
       }
     } catch {}
     loaded.current = true;
@@ -112,9 +109,9 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
       window.localStorage.setItem(prefsKey(coachId), JSON.stringify(prefs));
     } catch {}
   }, [prefs, coachId]);
-  const setTrack = (l: Lane, on: boolean) => setPrefs((p) => ({ ...p, tracks: { ...p.tracks, [l]: on } }));
-  const tracksOn = useMemo(() => new Set<PhaseTrack>(TRACKS.filter((t) => prefs.tracks[t])), [prefs.tracks]);
-  const eventsOn = prefs.tracks.events;
+  // Every track and the events, always (14 Oct, Alex: no toggles; every client is shown as they are).
+  const tracksOn = ALL_TRACKS;
+  const eventsOn = true;
 
   // The window: the 1st of this month, shifted by the arrows, N months on.
   const [shift, setShift] = useState(0);
@@ -179,18 +176,6 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
           <p className="pov-sub">Every client&rsquo;s plan and events on one timeline.</p>
         </div>
         <div className="pov-tools">
-          <div className="pov-chips">
-            {LANES.map((l) => {
-              const col = l === "events" ? EVENTS_COLOR : TRACK_COLOR[l];
-              const on = prefs.tracks[l];
-              return (
-                <button key={l} type="button" className={`pov-chip${on ? " on" : ""}`} aria-pressed={on} style={{ "--c": col.c, "--rgb": col.rgb } as React.CSSProperties} onClick={() => setTrack(l, !on)}>
-                  <i aria-hidden="true" />
-                  {LANE_LABEL[l]}
-                </button>
-              );
-            })}
-          </div>
           <div className="pov-nav">
             <button type="button" className="pov-arrow" onClick={() => setShift((s) => s - 1)} aria-label="A month earlier">
               ‹
@@ -232,11 +217,9 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
                     </Link>
                     <span className="pov-who-what">{phase.name}</span>
                   </span>
+                  <span className="pov-left">{leftLabel(left)}</span>
                   <span className="pov-prog" title={`Week ${weekIndexOf(phase, today)} of ${weeksOf(phase)}`} aria-label={`Week ${weekIndexOf(phase, today)} of ${weeksOf(phase)}`}>
                     <i style={{ width: `${progressOf(phase, today) * 100}%` }} />
-                  </span>
-                  <span className="pov-left">
-                    {leftLabel(left)} · {shortDate(phase.end)}
                   </span>
                   <span className="pov-actions">
                     <button type="button" className="pov-plan" onClick={() => setNewPhase({ client, track: phase.track, start: addDays(phase.end, 1) })}>
