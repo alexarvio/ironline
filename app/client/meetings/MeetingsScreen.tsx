@@ -224,7 +224,7 @@ function AskSheet({ clientId, coachFirst, onClose, onSent }: { clientId: number;
       <div className="ev-sheet mt-asksheet" role="dialog" aria-modal="true" aria-labelledby="mt-ask-title" onClick={(e) => e.stopPropagation()}>
         <span className="ev-grab" aria-hidden="true" />
         <div className="evs-head">
-          <h2 id="mt-ask-title">Ask {coachFirst} for a call</h2>
+          <h2 id="mt-ask-title">Request a meeting</h2>
         </div>
         <label className="evs-field">
           <span className="evs-label">What about</span>
@@ -241,9 +241,8 @@ function AskSheet({ clientId, coachFirst, onClose, onSent }: { clientId: number;
         {error && <p className="mt-ask-err">{error}</p>}
         <div className="evs-savebar">
           <button type="button" className="evs-save" onClick={send} disabled={!ok || pending} aria-disabled={!ok || pending}>
-            {pending ? "Sending…" : "Send to " + coachFirst}
+            {pending ? "Sending…" : "Request"}
           </button>
-          <small className="mt-ask-hint">{coachFirst} picks the time and books it. It shows up here.</small>
         </div>
       </div>
     </div>,
