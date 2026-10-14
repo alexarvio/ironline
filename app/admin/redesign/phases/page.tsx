@@ -24,7 +24,7 @@ export default async function PhasesPage() {
       <RedesignRail rail={loadRail(coach)} clientId={0} />
       <ChatDock chats={loadChatDock(coach)} />
       <div className="rd-page">
-        <PhasesOverview data={loadPhasesOverview(coach.id)} />
+        <PhasesOverview data={loadPhasesOverview(coach.id, coach.email)} />
       </div>
     </div>
   );

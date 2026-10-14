@@ -22,7 +22,7 @@ export type OverviewPhase = {
   /** A training phase's programme, for the way to its Training tab. */
   programId: number | null;
 };
-export type OverviewEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string; addedBy: "coach" | "client" };
+export type OverviewEvent = { id: number; kind: string | null; title: string; start: string; end: string; note: string; addedBy: "coach" | "client"; /** When it was added, yyyy-mm-dd. */ createdAt: string };
 
 export const TRACKS: PhaseTrack[] = ["lifestyle", "training", "nutrition"];
 /** The tracks' colours, the Plan tab's (phaseChrome TRACK_PALETTE): a pale tint for a bar, its ink for the words and a line for the edge. */
@@ -254,4 +254,29 @@ export function weekSegments(p: OverviewPhase, today: string): { days: number; f
     out.push({ days, fill: Math.min(1, Math.max(0, (elapsed - d) / days)) });
   }
   return out;
+}
+
+// ---- The event pop-up ---------------------------------------------------------
+
+export type EventTiming = { chip: { text: string; cls: "solid" | "rust" | "track" | "done" }; relative: string; pct: number; range: boolean; days: number };
+
+/** The timing chip, the relative line and the progress, from the dates and today. */
+export function eventTiming(e: OverviewEvent, today: string): EventTiming {
+  const range = e.end > e.start;
+  const days = daysBetween(e.start, e.end) + 1;
+  const toStart = daysBetween(today, e.start);
+  const toEnd = daysBetween(today, e.end);
+  const trip = e.kind === "trip";
+  if (toStart > 0) {
+    const inWords = toStart === 1 ? "Tomorrow" : toStart >= 14 ? `In ${Math.round(toStart / 7)} weeks` : `In ${toStart} days`;
+    return { chip: { text: inWords, cls: toStart === 1 ? "rust" : "track" }, relative: range ? `Starts in ${toStart} day${toStart === 1 ? "" : "s"}` : inWords, pct: 0, range, days };
+  }
+  if (toEnd < 0) {
+    const ago = -toEnd;
+    const relative = ago === 1 ? (range ? "Ended yesterday" : "Yesterday") : range ? `Ended ${ago} days ago` : `${ago} days ago`;
+    return { chip: { text: range ? "Ended" : "Done", cls: "done" }, relative, pct: 1, range, days };
+  }
+  if (!range) return { chip: { text: "Today", cls: "solid" }, relative: "Today", pct: 1, range, days };
+  const day = daysBetween(e.start, today) + 1;
+  return { chip: { text: `Now · day ${day} of ${days}`, cls: "solid" }, relative: toEnd === 0 ? (trip ? "Back tomorrow" : "Ends today") : `${trip ? "Back" : "Ends"} in ${toEnd} day${toEnd === 1 ? "" : "s"}`, pct: day / days, range, days };
 }
