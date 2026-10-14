@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
 import { clientAddEventAction, clientDeleteEventAction, clientUpdateEventAction } from "../../lib/actions";
-import { eventTypeOf, isEventTypeId, type EventTypeId } from "../../lib/eventTypes";
+import { eventTypeOf, type EventTypeId } from "../../lib/eventTypes";
 import { dayOf, rangeLabel, relativeLabel, shortDay, statusOf, todayLabel } from "../../lib/eventDates";
 import { ChevronLeftIcon } from "../../components/icons";
 import { useCoachIdentity } from "../CheckInContext";
@@ -62,15 +62,8 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
     return () => clearTimeout(t);
   }, [focused]);
   const rows = useRef(new Map<number, HTMLElement>());
-  const lastType = (): EventTypeId => {
-    try {
-      const v = localStorage.getItem(LAST_TYPE_KEY);
-      return isEventTypeId(v) ? v : "trip";
-    } catch {
-      return "trip";
-    }
-  };
-  const openAdd = () => setSheet({ event: null, type: lastType() });
+  // Always Trip, the first tile (14 Oct, Alex): it used to open on the type used last.
+  const openAdd = () => setSheet({ event: null, type: "trip" });
 
   const todayRef = useRef<HTMLDivElement>(null);
   const centred = useRef(false);
