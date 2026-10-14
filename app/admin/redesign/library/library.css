@@ -267,3 +267,5 @@
 .exm-done:disabled { opacity: 0.8; cursor: default; }
 .exm-spin { width: 14px; height: 14px; border-radius: 999px; border: 2px solid rgba(255, 255, 255, 0.35); border-top-color: #fff; animation: exm-spin 0.8s linear infinite; }
 @keyframes exm-spin { to { transform: rotate(360deg); } }
+/* Floated out of the dialog (the results, a slot menu, the preview): the dialog turns pointer events off outside itself, so these turn them back on. */
+.exm-dropdown, .exm-popover, .exm-lightbox { pointer-events: auto; }
