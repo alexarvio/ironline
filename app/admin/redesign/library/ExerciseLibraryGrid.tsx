@@ -71,7 +71,8 @@ export default function ExerciseLibraryGrid({
 
   // Renaming a group (14 Oct): the pencil by its name, the name as a box, Enter or leaving it saves.
   const [renaming, setRenaming] = useState<{ slug: string; label: string } | null>(null);
-  const [newGroup, setNewGroup] = useState<string | null>(null);
+  // + New group (14 Oct, Alex): the row lands at once as "Muscle group", its name open to type over, like a new session on the Training tab.
+  const [adding, setAdding] = useState(false);
   const commitRename = async () => {
     if (!renaming) return;
     const label = renaming.label.trim();
@@ -80,17 +81,21 @@ export default function ExerciseLibraryGrid({
     await renameLibraryGroupAction(renaming.slug, label);
     onChanged();
   };
-  const commitNew = async () => {
-    const label = (newGroup ?? "").trim();
-    setNewGroup(null);
-    if (!label) return;
+  const addGroup = async () => {
+    if (adding) return;
+    setAdding(true);
+    const taken = new Set(groups.map((g) => g.label.toLowerCase()));
+    let label = "Muscle group";
+    for (let n = 2; taken.has(label.toLowerCase()); n++) label = `Muscle group ${n}`;
     const slug = await createLibraryGroupAction(label);
+    setAdding(false);
     if (!slug) {
-      toast.error("That name is taken, or empty.");
+      toast.error("Couldn't add a group.");
       return;
     }
     onChanged();
     view.setOpen([slug]);
+    setRenaming({ slug, label });
   };
   // The lightbox: a demo with sound.
   const [playing, setPlaying] = useState<LibraryItem | null>(null);
@@ -171,6 +176,7 @@ export default function ExerciseLibraryGrid({
                   autoFocus
                   maxLength={30}
                   aria-label={`Rename ${g.label}`}
+                  onFocus={(e) => e.currentTarget.select()}
                   onClick={(e) => e.stopPropagation()}
                   onChange={(e) => setRenaming({ slug: g.slug, label: e.target.value })}
                   onBlur={() => void commitRename()}
@@ -236,34 +242,11 @@ export default function ExerciseLibraryGrid({
         );
       })}
 
-      {!cardio &&
-        (newGroup == null ? (
-          <button type="button" className="lib-newgroup" onClick={() => setNewGroup("")}>
-            + New group
-          </button>
-        ) : (
-          <div className="lib-newgroup-row">
-            <input
-              className="lib-group-rename"
-              value={newGroup}
-              autoFocus
-              maxLength={30}
-              placeholder="Group name, e.g. Shoulders"
-              aria-label="New group name"
-              onChange={(e) => setNewGroup(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void commitNew();
-                if (e.key === "Escape") setNewGroup(null);
-              }}
-            />
-            <button type="button" className="lib-create" onClick={() => void commitNew()} disabled={!newGroup.trim()}>
-              Add
-            </button>
-            <button type="button" className="lib-view" onClick={() => setNewGroup(null)}>
-              Cancel
-            </button>
-          </div>
-        ))}
+      {!cardio && (
+        <button type="button" className="lib-newgroup" disabled={adding} onClick={() => void addGroup()}>
+          + New group
+        </button>
+      )}
 
       {playing &&
         playing.video &&
