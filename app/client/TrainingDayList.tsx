@@ -109,18 +109,28 @@ export default function TrainingDayList({
     setGymPick({ dayId: d.key, gymId: g.id });
     void pickGymAction(d.key, g.id);
   };
+  // Straight into the workout (14 Oct, Alex): the screen used to wait for the
+  // server's answer, seconds on a phone, the whole page rebuilding behind it.
+  // Now it opens at once with the start stamped here; the server takes the
+  // same stamp, and only a refusal (another session still going) brings the
+  // overview back with the reason.
+  const [startedHere, setStartedHere] = useState<{ dayId: number; at: string } | null>(null);
   const start = (d: SessionDay, g: GymOption | null) => {
     if (g) {
       setGymPick({ dayId: d.key, gymId: g.id });
       void pickGymAction(d.key, g.id);
     }
+    const at = new Date().toISOString();
+    setStartProblem(null);
+    setStartedHere({ dayId: d.key, at });
+    setView({ dayId: d.key, screen: "workout" });
     startTransition(async () => {
-      const r = await startSessionAction(d.key);
+      const r = await startSessionAction(d.key, at);
       if (!r.ok) {
+        setStartedHere(null);
+        setView({ dayId: d.key, screen: "overview" });
         setStartProblem(r.other ? `Finish ${r.other} first.` : "Couldn't start the session.");
-        return;
       }
-      setView({ dayId: d.key, screen: "workout" });
     });
   };
 
@@ -245,7 +255,7 @@ export default function TrainingDayList({
       {openDay && host && (view?.screen === "workout" || (view?.screen === "edit" && openDay.endedAt)) && createPortal(
         <WorkoutScreen
           key={`${openDay.key}:${view.screen}`}
-          day={openDay}
+          day={openDay.startedAt == null && startedHere?.dayId === openDay.key ? { ...openDay, startedAt: startedHere.at } : openDay}
           editing={view.screen === "edit"}
           gymId={gymIdFor(openDay)}
           onPickGym={(g) => pickGym(openDay, g)}
