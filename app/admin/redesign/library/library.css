@@ -303,7 +303,7 @@
    scrim, the grid still readable; the editor's parts restacked in one column. */
 .exd-scrim { position: fixed; inset: 0; z-index: 60; background: rgba(20, 26, 36, 0.18); animation: gpk-fade 0.28s ease; }
 .exd-scrim.closing { animation: gpk-fade 0.2s ease-in reverse forwards; }
-.exd { position: fixed; z-index: 70; top: 0; right: 0; bottom: 0; width: min(600px, 100vw); display: flex; flex-direction: column; background: #fff; border-radius: 22px 0 0 22px; overflow: hidden; box-shadow: -30px 0 60px -30px rgba(16, 24, 40, 0.45); animation: exd-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; }
+.exd { position: fixed; z-index: 70; top: 0; right: 0; bottom: 0; width: min(720px, 100vw); display: flex; flex-direction: column; background: #fff; border-radius: 22px 0 0 22px; overflow: hidden; box-shadow: -30px 0 60px -30px rgba(16, 24, 40, 0.45); animation: exd-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; }
 .exd.closing { animation: exd-in 0.2s ease-in reverse forwards; }
 @keyframes exd-in { from { transform: translateX(100%); } to { transform: none; } }
 @media (prefers-reduced-motion: reduce) { .exd, .exd.closing { animation: gpk-fade 0.2s ease both; } }
@@ -312,7 +312,7 @@
 .exd .exm-head { padding: 22px 22px 0; }
 .exd .exm-body { flex: 1; display: flex; flex-direction: column; align-items: stretch; gap: 18px; min-height: 0; overflow-y: auto; padding: 18px 22px; }
 .exd .exm-details { gap: 18px; }
-.exd .exm-preview { height: 300px; background: #0e1118; }
+.exd .exm-preview { height: 340px; background: #0e1118; }
 .exd .exm-poster.large { object-fit: contain; background: #0e1118; }
 .exd .exm-play { width: 48px; height: 48px; }
 .exd .exm-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }

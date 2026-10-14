@@ -11,7 +11,7 @@ import { createPortal } from "react-dom";
 // scrim closes it, unless a card sits under the pointer: then that card
 // opens instead.
 
-export const DRAWER_WIDTH = 600;
+export const DRAWER_WIDTH = 720;
 
 export default function ExerciseDrawer({
   open,
