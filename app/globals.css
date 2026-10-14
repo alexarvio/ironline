@@ -18164,7 +18164,7 @@ button.ci-hint { cursor: pointer; }
 .mt-more-list > li + li { border-top: 1px solid #F5F5F5; }
 .mt-more-row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 8px 14px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
 .mt-more-date { flex: none; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; color: #757575; font-variant-numeric: tabular-nums; }
-.mt-more-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 700; color: #333333; }
+.mt-more-title { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 14px; font-weight: 700; color: #333333; }
 .mt-more-time { flex: none; font-size: 12px; font-weight: 600; color: #9E9E9E; font-variant-numeric: tabular-nums; }
 
 /* ---- Past meetings: one box a call, on the Events screen's rail
@@ -18191,7 +18191,7 @@ button.ci-hint { cursor: pointer; }
 .mt-head { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; margin: 0; padding: 12px 12px 12px 14px; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
 .mt-head:disabled { cursor: default; }
 .mt-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.mt-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 800; color: #333333; }
+.mt-title { overflow-wrap: anywhere; font-size: 15px; font-weight: 800; color: #333333; }
 .mt-card:not(.latest) .mt-title { font-weight: 700; color: #3a4250; }
 .mt-meta { font-size: 11.5px; font-weight: 600; color: #9E9E9E; }
 .mt-none { flex: none; font-size: 11.5px; font-weight: 700; color: #BDBDBD; }
