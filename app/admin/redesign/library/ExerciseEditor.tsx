@@ -1068,18 +1068,16 @@ export default function ExerciseEditor({
 
         {/* ---- Footer */}
         <footer className="exm-foot">
-          <small className="exm-faint">
-            {save.state === "saving" ? "Saving…" : save.state === "error" ? (
-              <>
-                Couldn&rsquo;t save ·{" "}
-                <button type="button" className="exm-textbtn" onClick={save.retry}>
-                  Retry
-                </button>
-              </>
-            ) : (
-              "Saves as you go."
-            )}
-          </small>
+          {save.state === "error" ? (
+            <small className="exm-err">
+              Couldn&rsquo;t save ·{" "}
+              <button type="button" className="exm-textbtn" onClick={save.retry}>
+                Retry
+              </button>
+            </small>
+          ) : (
+            <span />
+          )}
           <button type="button" className="exm-done" onClick={() => void done()} disabled={closing}>
             {closing ? <span className="exm-spin" aria-hidden="true" /> : null}
             Done
