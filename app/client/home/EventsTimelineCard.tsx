@@ -14,6 +14,14 @@ import type { HomeEvents } from "../EventsCard";
 // the past ones read as done. The whole list stays the Events screen.
 
 const NEUTRAL_RGB = "16,24,40";
+// A phase on the row (15 Oct): one flag, the track's colour, as the Events screen draws it.
+const FLAG = "M5 21V4M5 4h11.5l-2.5 4.5 2.5 4.5H5";
+const PHASES = {
+  training: { color: "#3a3390", rgb: "58,51,144", icon: FLAG, fill: undefined as string | undefined },
+  nutrition: { color: "#1f7a4d", rgb: "31,122,77", icon: FLAG, fill: undefined as string | undefined },
+  lifestyle: { color: "#a8761f", rgb: "168,118,31", icon: FLAG, fill: undefined as string | undefined },
+};
+const chromeOf = (e: { kind: string | null; phase?: "training" | "nutrition" | "lifestyle" | null }) => (e.phase ? PHASES[e.phase] : eventTypeOf(e.kind));
 const CALENDAR = "M4 6h16v14H4zM4 10h16M9 3v4M15 3v4";
 
 /** A lighter start for the gradient: the type's colour pulled a quarter of the way to white. */
@@ -27,7 +35,7 @@ function lighter(hex: string): string {
 export default function EventsTimelineCard({ events, today }: { events: HomeEvents; today: string }) {
   const openEvents = useOpenEvents();
   const { items, todayIndex } = useMemo(
-    () => buildTimeline(events.list.filter((e) => !e.phase).map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start, end: e.end })), today),
+    () => buildTimeline(events.list.map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start, end: e.end, phase: e.phase ?? null })), today),
     [events.list, today],
   );
   const cardRef = useRef<HTMLElement>(null);
@@ -89,7 +97,7 @@ export default function EventsTimelineCard({ events, today }: { events: HomeEven
   };
 
   const focusedItem = items[focused];
-  const focusedRgb = focusedItem?.event ? eventTypeOf(focusedItem.event.kind).rgb : NEUTRAL_RGB;
+  const focusedRgb = focusedItem?.event ? chromeOf(focusedItem.event).rgb : NEUTRAL_RGB;
   const onToday = focused === todayIndex;
 
   // The dots: at most 12, a window around the focused one.
@@ -131,13 +139,14 @@ export default function EventsTimelineCard({ events, today }: { events: HomeEven
 
 function Item({ item, focused, onPick }: { item: TimelineItem; focused: boolean; onPick: () => void }) {
   // Every pill the same size (15 Oct); only the centred one grows, in CSS, so the swipe reads as a pop.
-  const t = item.event ? eventTypeOf(item.event.kind) : null;
+  const t = item.event ? chromeOf(item.event) : null;
   const style = (t ? { "--c": t.color, "--c2": lighter(t.color), "--rgb": t.rgb } : {}) as React.CSSProperties;
   const slotClass = item.slot === "more" ? " more" : item.slot === "today" && !item.event ? " free" : ` ${item.slot}`;
   const spoken = item.slot === "more" ? "See all events" : item.event ? `${item.label}: ${item.event.title}, ${item.when}${item.slot === "past" ? ", done" : ""}` : "Today: nothing on, free day";
   return (
     <button type="button" role="option" aria-selected={focused} aria-label={spoken} className="evt-slot" onClick={onPick}>
       <span className={`evt-item${slotClass}${focused ? " on" : ""}`} style={style}>
+        {focused && t && <span className="ev-aura" aria-hidden="true" />}
         <span className="evt-tile" aria-hidden="true">
           {item.slot === "more" ? <TypeIcon path="M5 12h14M13 6l6 6-6 6" size={20} stroke={2.2} /> : t ? <TypeIcon path={t.icon} fill={t.fill} size={20} stroke={2.2} /> : <TypeIcon path={CALENDAR} size={20} stroke={2.2} />}
         </span>

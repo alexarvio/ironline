@@ -2,7 +2,7 @@
 // opened on today. Pure: the window, the labels and the relative "when" for
 // each item, so the card only draws.
 
-export type TimelineEvent = { id: number; kind: string | null; title: string; start: string; end: string };
+export type TimelineEvent = { id: number; kind: string | null; title: string; start: string; end: string; /** A phase of the plan on the timeline: its track colours it. */ phase?: "training" | "nutrition" | "lifestyle" | null };
 
 export type TimelineItem =
   | { key: string; slot: "past" | "today" | "upcoming"; event: TimelineEvent; label: string; when: string }

@@ -193,7 +193,7 @@ export default function HomeHub({
         {progressPics && <TodaysTasks pics={progressPics} />}
         {/* What is coming up in their life (7 Oct): a trip, an injury, something started. Theirs to add; the coach's listed too. Above the coach's latest (9 Oct). */}
         {/* The timeline row (15 Oct) once there is anything at all; else the old card's empty state. */}
-        {events.list.some((e) => !e.phase) ? <EventsTimelineCard events={events} today={today} /> : <EventsCard events={events} coachName={coach.firstName} today={today} />}
+        {events.list.length > 0 ? <EventsTimelineCard events={events} today={today} /> : <EventsCard events={events} coachName={coach.firstName} today={today} />}
         <LatestActivityCard a={latestActivity} coach={coach} />
         {upcoming ? (
           <MeetingCard m={upcoming} recap={recap} coachFirstName={coach.firstName} />
