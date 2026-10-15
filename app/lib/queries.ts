@@ -12365,3 +12365,20 @@ export function resolveRecurringVideoAsks(day: ProgramDay, assignments: WorkoutA
   }
   if (changed) persist();
 }
+
+/** A variation goes from the library (15 Oct): rows asking for it go back to the standard exercise, substitutes pointing at it to the exercise itself. The variation is returned for its demo file. */
+export function removeExerciseVariation(exerciseId: number, variationId: number): ExerciseVariation | null {
+  const data = getData();
+  const e = data.exercises.find((x) => x.id === exerciseId);
+  const v = e?.variations?.find((x) => x.id === variationId) ?? null;
+  if (!e || !v) return null;
+  e.variations = (e.variations ?? []).filter((x) => x.id !== variationId);
+  for (const wa of data.workout_assignments) if (wa.exercise_id === exerciseId && wa.variation_id === variationId) delete wa.variation_id;
+  for (const other of data.exercises) for (const s of other.substitutes ?? []) if (s.exercise_id === exerciseId && s.variation_id === variationId) delete s.variation_id;
+  if (v.video_url && v.video_url.startsWith("/uploads/")) {
+    const old = path.join(DATA_DIR, v.video_url.slice(1));
+    if (old.startsWith(path.join(DATA_DIR, "uploads"))) fs.rmSync(old, { force: true });
+  }
+  persist();
+  return v;
+}
