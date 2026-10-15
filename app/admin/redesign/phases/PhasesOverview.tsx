@@ -211,7 +211,7 @@ export default function PhasesOverview({ data }: { data: PhasesOverviewData }) {
               const col = TRACK_COLOR[phase.track];
               const left = daysLeft(phase, today);
               return (
-                <li key={phase.id} className={`pov-soon-row${leaving.has(phase.id) ? " leaving" : ""}`} style={{ "--c": col.c, "--rgb": col.rgb, "--s": col.solid } as React.CSSProperties}>
+                <li key={phase.id} className={`pov-soon-row${leaving.has(phase.id) ? " leaving" : ""}`} style={{ "--c": col.c, "--rgb": col.rgb, "--s": col.solid, "--tint": col.tint, "--line": col.line } as React.CSSProperties}>
                   <span className="pov-pill">{TRACK_LABEL[phase.track]}</span>
                   <span className="pov-who">
                     <Link href={PLAN(client.id)} className="pov-who-name">
