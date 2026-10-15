@@ -231,7 +231,7 @@ const hasMore = (e: HomeEvent) => (e.phase ? !!e.note : true);
 // A phase on the timeline (9 Oct): the track's colour, as the plan draws it. One flag for every phase (10 Oct), so a
 // phase reads as a phase at a glance, the colour saying which track; the event types keep their own icons.
 const PHASES = {
-  training: { label: "Training phase", color: "#4c42a8", rgb: "76,66,168", icon: "M5 21V4M5 4h11.5l-2.5 4.5 2.5 4.5H5", fill: undefined as string | undefined },
+  training: { label: "Training phase", color: "#3a3390", rgb: "58,51,144", icon: "M5 21V4M5 4h11.5l-2.5 4.5 2.5 4.5H5", fill: undefined as string | undefined },
   nutrition: { label: "Nutrition phase", color: "#1f7a4d", rgb: "31,122,77", icon: "M5 21V4M5 4h11.5l-2.5 4.5 2.5 4.5H5", fill: undefined as string | undefined },
   lifestyle: { label: "Lifestyle phase", color: "#a8761f", rgb: "168,118,31", icon: "M5 21V4M5 4h11.5l-2.5 4.5 2.5 4.5H5", fill: undefined as string | undefined },
 };

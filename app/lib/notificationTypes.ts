@@ -44,7 +44,7 @@ const ICON = {
 };
 
 const BLUE = { color: "#2f6fd6", rgb: "47,111,214" };
-const INDIGO = { color: "#4c42a8", rgb: "76,66,168" };
+const INDIGO = { color: "#3a3390", rgb: "58,51,144" };
 const AMBER = { color: "#a8761f", rgb: "168,118,31" };
 const ORANGE = { color: "#b8471f", rgb: "184,71,31" };
 const TEAL = { color: "#1d7a70", rgb: "29,122,112" };

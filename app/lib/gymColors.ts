@@ -7,7 +7,7 @@ export type GymKind = "gym" | "home" | "hotel";
 
 export const GYM_COLORS: Record<GymColorKey, { hex: string; rgb: string; label: string }> = {
   navy: { hex: "#1d3466", rgb: "29,52,102", label: "Navy" },
-  indigo: { hex: "#4c42a8", rgb: "76,66,168", label: "Indigo" },
+  indigo: { hex: "#3a3390", rgb: "58,51,144", label: "Indigo" },
   teal: { hex: "#1d7a70", rgb: "29,122,112", label: "Teal" },
   rust: { hex: "#b8471f", rgb: "184,71,31", label: "Rust" },
   sand: { hex: "#a8761f", rgb: "168,118,31", label: "Sand" },

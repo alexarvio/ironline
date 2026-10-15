@@ -8068,7 +8068,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .ch-phases { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 22px 16px; }
 .ch-phase { display: inline-flex; align-items: baseline; gap: 8px; padding: 7px 12px; border: 1px solid #EEEEEE; border-radius: 10px; background: #FAFAFA; min-width: 0; }
 .ch-phase-track { font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
-.ch-phase-track.training { color: #4c42a8; }
+.ch-phase-track.training { color: #3a3390; }
 .ch-phase-track.nutrition { color: #1f6a52; }
 .ch-phase-track.lifestyle { color: #6b6a62; }
 .ch-phase-name { font-size: 13px; font-weight: 700; color: #333333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -8166,7 +8166,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .ch-newdot { width: 6px; height: 6px; margin-top: 6px; border-radius: 999px; background: transparent; }
 .ch-event.new .ch-newdot { background: #c2622f; }
 .ch-cat { box-sizing: border-box; min-width: 0; padding: 3px 7px; border-radius: 6px; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #F5F5F5; color: #757575; }
-.ch-cat.training { background: #e9e7fa; color: #4c42a8; }
+.ch-cat.training { background: #e9e7fa; color: #3a3390; }
 .ch-cat.nutrition { background: #e0efe7; color: #1f6a52; }
 .ch-cat.measurements { background: #E0F2F1; color: #1E3A5F; }
 .ch-cat.notes { background: #fff3dc; color: #8a5a12; }
@@ -14870,7 +14870,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .nl-date { font-size: 13px; font-weight: 700; color: #333333; }
 .nl-kcal { font-family: var(--font-serif, Newsreader), Georgia, serif; font-size: 17px; color: #333333; font-variant-numeric: tabular-nums; }
 .nl-daytag { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; background: #EEEEEE; color: #757575; }
-.nl-daytag.training { background: #e9e7fa; color: #4c42a8; }
+.nl-daytag.training { background: #e9e7fa; color: #3a3390; }
 .nl-vs { font-size: 12.5px; font-weight: 700; color: #9E9E9E; }
 .nl-vs.good { color: #1f6a52; }
 .nl-vs.warn { color: #a8501f; }
@@ -15086,7 +15086,7 @@ a.pl-dlg-save { display: inline-flex; align-items: center; text-decoration: none
 .ml-group { --ml: #757575; --ml-tint: #F5F5F5; margin-top: 14px; }
 /* The same hues as the group pills' tints and the client's Progress charts (lib/categoryColors.ts). */
 .ml-group.g-body { --ml: #00897B; --ml-tint: #cfe0f2; }
-.ml-group.g-sleep { --ml: #4c42a8; --ml-tint: #d8d3f0; }
+.ml-group.g-sleep { --ml: #3a3390; --ml-tint: #d8d3f0; }
 .ml-group.g-activity { --ml: #2E7D32; --ml-tint: #c9e7d5; }
 .ml-group.g-fatigue { --ml: #b0691f; --ml-tint: #f4dcc0; }
 .ml-group.g-lifestyle { --ml: #1d7b86; --ml-tint: #c9e6ea; }
@@ -18307,11 +18307,11 @@ button.ci-hint { cursor: pointer; }
 .mrv-body.record .mrv-scroll { gap: 16px; padding-bottom: 18px; }
 
 /* Context */
-.mrv-ctx { border-radius: 18px; padding: 12px 14px; background: rgba(76, 66, 168, 0.06); box-shadow: inset 0 0 0 1px rgba(76, 66, 168, 0.14); display: flex; flex-direction: column; gap: 10px; }
+.mrv-ctx { border-radius: 18px; padding: 12px 14px; background: rgba(58, 51, 144, 0.06); box-shadow: inset 0 0 0 1px rgba(58, 51, 144, 0.14); display: flex; flex-direction: column; gap: 10px; }
 .mrv-ctx-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.mrv-eyebrow { font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; color: #4c42a8; }
+.mrv-eyebrow { font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; color: #3a3390; }
 .mrv-req { flex: none; display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; background: #F5F5F5; font-size: 10.5px; font-weight: 800; color: #757575; white-space: nowrap; }
-.mrv-req.asked { background: #4c42a8; color: #fff; }
+.mrv-req.asked { background: #3a3390; color: #fff; }
 .mrv-sets { display: flex; flex-wrap: wrap; gap: 6px; }
 .mrv-set { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 9px; border-radius: 8px; background: #fff; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; color: #333333; }
 .mrv-set b { font-weight: 800; color: #8b84c9; }

@@ -196,8 +196,8 @@ export default function ExerciseProgressDialog({
               <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ left: 8, right: 42, top: 14, bottom: 14, width: "calc(100% - 50px)", height: "calc(100% - 28px)" }} aria-hidden="true">
                 <defs>
                   <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0" stopColor="#4c42a8" stopOpacity="0.22" />
-                    <stop offset="1" stopColor="#4c42a8" stopOpacity="0" />
+                    <stop offset="0" stopColor="#3a3390" stopOpacity="0.22" />
+                    <stop offset="1" stopColor="#3a3390" stopOpacity="0" />
                   </linearGradient>
                 </defs>
                 {[0, 50, 100].map((y) => (
