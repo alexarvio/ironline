@@ -18954,21 +18954,22 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .lw-reps-target { letter-spacing: 0.08em; }
 
 /* ---- Home: the events timeline card (15 Oct). One swipeable row, opened on today; the centred item grows and takes its colour. Prefix evt-. */
-.evt { display: flex; flex-direction: column; gap: 8px; padding: 14px 0 12px; border-radius: 26px; background: #fff; box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04), 0 22px 36px -26px rgba(var(--focus-rgb, 16, 24, 40), 0.8); transition: box-shadow 0.3s; font-family: var(--font-archivo), "Archivo", system-ui, sans-serif; color: #141a24; }
+.evt { display: flex; flex-direction: column; gap: 6px; padding: 4px 0 0; margin: 0 -16px; background: none; font-family: var(--font-archivo), "Archivo", system-ui, sans-serif; color: #141a24; }
 .evt-head { display: flex; align-items: center; justify-content: space-between; height: 26px; padding: 0 16px; }
+.evt-head .evt-eyebrow { padding-left: 2px; }
 .evt-eyebrow { font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #5b6474; }
 .evt-all { padding: 0; border: 0; background: none; font: inherit; font-size: 12px; font-weight: 800; color: #1d3466; cursor: pointer; }
 .evt-back { height: 26px; padding: 0 10px; border: 0; border-radius: 999px; background: #141a24; color: #fff; font: inherit; font-size: 11.5px; font-weight: 800; cursor: pointer; }
 .evt-wrap { position: relative; }
-.evt-spine { position: absolute; left: 0; right: 0; top: 52px; border-top: 2px dashed #DCE3EE; pointer-events: none; }
-.evt-row { position: relative; display: flex; align-items: center; gap: 6px; height: 178px; padding: 6px 0 10px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; scroll-snap-type: x mandatory; touch-action: pan-x pan-y; outline: none; }
+.evt-spine { position: absolute; left: 0; right: 0; top: 60px; border-top: 2px dashed #DCE3EE; pointer-events: none; }
+.evt-row { position: relative; display: flex; align-items: center; gap: 6px; height: 196px; padding: 6px 0 10px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; scroll-snap-type: x mandatory; touch-action: pan-x pan-y; outline: none; }
 .evt-row::-webkit-scrollbar { display: none; }
 .evt-row:focus-visible { box-shadow: inset 0 0 0 2px #1d3466; }
 .evt-slot { flex: none; width: 132px; padding: 0; border: 0; background: none; font: inherit; color: inherit; scroll-snap-align: center; cursor: pointer; }
 .evt-item { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 132px; box-sizing: border-box; padding: 14px 8px 12px; border-radius: 20px; text-align: center; background: #fff; box-shadow: inset 0 0 0 1px rgba(var(--rgb, 16, 24, 40), 0.18); opacity: 0.85; transition: background 0.25s, box-shadow 0.25s, color 0.25s, opacity 0.25s, filter 0.25s; will-change: transform; }
-.evt-tile { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 14px; background: rgba(var(--rgb, 91, 100, 114), 0.12); color: var(--c, #5b6472); transition: background 0.25s, color 0.25s; }
+.evt-tile { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 15px; background: rgba(var(--rgb, 91, 100, 114), 0.12); color: var(--c, #5b6472); transition: background 0.25s, color 0.25s; }
 .evt-label { font-size: 9.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; color: #98A2B3; }
-.evt-title { width: 100%; font-size: 15px; font-weight: 900; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.evt-title { width: 100%; font-size: 16px; font-weight: 900; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .evt-when { font-size: 11.5px; font-weight: 700; white-space: nowrap; color: var(--c, #98A2B3); }
 /* Past: done. */
 .evt-item.past { filter: blur(1.4px) grayscale(0.8); opacity: 0.5; box-shadow: inset 0 0 0 1px #EEF1F5; }
@@ -18991,3 +18992,6 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .evt-dot.today { width: 14px; background: #C5CCD8; }
 .evt-dot.on { background: #141a24; }
 @media (prefers-reduced-motion: reduce) { .evt, .evt-item, .evt-tile, .evt-dot { transition: none; } .evt-row { scroll-behavior: auto; } }
+/* The events row bleeds to the screen edges; its eyebrow lines up with the other sections (28px in). */
+.hm > .hm-body > .evt { margin-left: -16px; margin-right: -16px; }
+.evt-head { padding: 0 28px; }

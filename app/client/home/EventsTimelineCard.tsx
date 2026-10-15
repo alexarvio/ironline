@@ -104,11 +104,7 @@ export default function EventsTimelineCard({ events, today }: { events: HomeEven
     <section ref={cardRef} className="evt" aria-label="Events" style={{ "--focus-rgb": focusedRgb } as React.CSSProperties}>
       <div className="evt-head">
         <span className="evt-eyebrow">Events</span>
-        {onToday ? (
-          <button type="button" className="evt-all" onClick={() => openEvents?.()}>
-            See all ›
-          </button>
-        ) : (
+        {!onToday && (
           <button type="button" className="evt-back" onClick={() => scrollTo(todayIndex)} aria-label="Back to today">
             Back to today
           </button>
@@ -135,7 +131,8 @@ export default function EventsTimelineCard({ events, today }: { events: HomeEven
 
 function Item({ item, index, pos, focused, onPick }: { item: TimelineItem; index: number; pos: number; focused: boolean; onPick: () => void }) {
   const d = Math.min(Math.abs(index - pos), 2);
-  const scale = 1.08 - d * 0.16;
+  // The centred one big, the neighbours just under full size, the rest small.
+  const scale = 1.16 - d * 0.2;
   const t = item.event ? eventTypeOf(item.event.kind) : null;
   const style = {
     transform: `scale(${scale.toFixed(3)})`,
