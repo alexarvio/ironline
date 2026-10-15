@@ -18555,7 +18555,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .lw-card { display: flex; flex-direction: column; gap: 6px; padding: 10px 10px 8px; border-radius: 26px; background: #fff; box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04), 0 16px 30px -24px rgba(30, 58, 95, 0.5); }
 .lw-card-head { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 6px; }
 .lw-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #9E9E9E; }
-.lw-progress { font-size: 12px; font-weight: 800; color: #1E3A5F; font-variant-numeric: tabular-nums; }
+.lw-progress { font-size: 13px; font-weight: 800; color: #1E3A5F; font-variant-numeric: tabular-nums; }
 .lw-reps-target { flex: 1; text-align: center; font-size: 13px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #1E3A5F; white-space: nowrap; }
 .lw-progress.done { color: #2E7D32; }
 .lw-unit { display: flex; margin-left: auto; padding: 3px; border-radius: 999px; background: #F5F5F5; }
@@ -18969,3 +18969,5 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .wo-ex-tools .wo-ex-btn svg { width: 19px; height: 19px; stroke-width: 1.9; }
 .wo-ex-title-row { flex-direction: row; align-items: baseline; gap: 6px; }
 @media (prefers-reduced-motion: reduce) { .wo-pill-dot { animation: none; } .wo-ex-top .wo-ex-name { animation: none; } }
+.lw-card-head .lw-eyebrow { font-size: 13px; letter-spacing: 0.08em; color: #9E9E9E; }
+.lw-reps-target { letter-spacing: 0.08em; }
