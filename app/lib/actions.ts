@@ -79,6 +79,7 @@ import {
   setAssignmentDemoHidden,
   setExerciseVariationVideo,
   addExerciseVariation,
+  removeExerciseVariation,
   laterInSeries,
   updateMeeting,
   completeMeeting,
@@ -3545,6 +3546,19 @@ export async function setRowDemoHiddenAction(assignmentId: number, hidden: boole
 }
 
 // Which of the exercise's variations a row asks for (the row's ⋯ menu); null: the exercise as it is.
+/** A variation deleted from the library (15 Oct): its rows go back to standard, its demo file goes. */
+export async function removeExerciseVariationAction(exerciseId: number, variationId: number): Promise<boolean> {
+  const coach = await requireCoach();
+  if (!coachOwnsExercise(coach.id, Number(exerciseId))) return false;
+  const v = removeExerciseVariation(Number(exerciseId), Number(variationId));
+  if (!v) return false;
+  // Its demo clip, when it was an upload: the bucket copy here, the disk copy in the query.
+  if (v.video_url && v.video_url.startsWith("/uploads/")) await deleteUpload(v.video_url);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+  return true;
+}
+
 export async function setRowVariationAction(assignmentId: number, variationId: number | null) {
   const id = Number(assignmentId);
   const owner = Number.isInteger(id) ? getClientIdForAssignment(id) : null;

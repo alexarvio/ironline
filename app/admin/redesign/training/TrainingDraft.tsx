@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PhaseDialog, phaseForm as planPhaseForm, type DraftPlan } from "../plan/PlanDraft";
-import { addExerciseToLibraryAction, addExerciseVariationAction, markProgramNoteSeenAction, markVideoSeenAction, setRowDemoHiddenAction, setRowVariationAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, applyDayToLaterWeeksAction, addClientPhaseAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, deployProgramAction, removeGymAction, removeProgramWeekAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, saveTrainingNoteAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
+import { addExerciseToLibraryAction, addExerciseVariationAction, markProgramNoteSeenAction, markVideoSeenAction, setRowDemoHiddenAction, setRowVariationAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, applyDayToLaterWeeksAction, addClientPhaseAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, deployProgramAction, removeGymAction, removeExerciseVariationAction, removeProgramWeekAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, saveTrainingNoteAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger, ToggleGroup, ToggleGroupItem } from "../../../components/ui/basics";
@@ -153,6 +153,7 @@ const pendingCount = (p: Pending) => p.added.length + p.removed.length + p.cardi
 
 type Dlg =
   | { kind: "progress"; rowId: number }
+  | { kind: "deleteVariation"; rowId: number }
   | { kind: "editExercise"; sessionId: number; rowId: number }
   | { kind: "editCardio"; sessionId: number; cardioId: number }
   | { kind: "cardioAlternatives"; sessionId: number; cardioId: number }
@@ -1080,6 +1081,12 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                           <DropdownMenuItem onSelect={() => setDlg({ kind: "newVariation", rowId: r.id })}>
                                             <PlusIcon /> New variation…
                                           </DropdownMenuItem>
+                                          {/* The variation the row is on can go from the library here (15 Oct): a confirm first. */}
+                                          {current && (
+                                            <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "deleteVariation", rowId: r.id })}>
+                                              <TrashIcon /> Delete {current.name}…
+                                            </DropdownMenuItem>
+                                          )}
                                         </DropdownMenuSubContent>
                                       </DropdownMenuSub>
                                     );
@@ -1622,6 +1629,27 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           />
         )}
 
+        {dlg?.kind === "deleteVariation" && rowById(dlg.rowId) && (
+          (() => {
+            const row = rowById(dlg.rowId)!;
+            const ex = library.flatMap((g) => g.exercises).find((e) => e.id === row.exerciseId);
+            const v = ex?.variations?.find((x) => x.id === row.variationId) ?? null;
+            const base = v ? row.name.slice(0, -(v.name.length + 3)) : row.name;
+            if (!v) return null;
+            return (
+              <ConfirmDialog
+                title={`Delete ${v.name}?`}
+                description={`It goes from ${base} in your library, for every client. Rows on it go back to the standard ${base}; sets logged on it stay.`}
+                confirm="Delete variation"
+                danger
+                onConfirm={() => {
+                  close();
+                  act(() => removeExerciseVariationAction(row.exerciseId, v.id), `${v.name} deleted from ${base}`);
+                }}
+              />
+            );
+          })()
+        )}
         {dlg?.kind === "deleteSession" && sessionById(dlg.sessionId) && (
           (() => {
             const gone = sessionById(dlg.sessionId)!;
