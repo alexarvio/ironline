@@ -133,12 +133,10 @@ export default function AskVideoDialog({
       </div>
 
       <footer className="avr-foot">
-        {editing && onWithdraw ? (
+        {editing && onWithdraw && (
           <button type="button" className="avr-withdraw" onClick={onWithdraw}>
             Withdraw the request
           </button>
-        ) : (
-          <span className="avr-note">{firstName} can film or upload, up to 2 min.</span>
         )}
         <button type="button" className="avr-cancel" onClick={onClose}>
           Cancel
