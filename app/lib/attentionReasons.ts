@@ -19,7 +19,7 @@ export type AttentionReason = {
 export const ATTENTION: Record<AttentionType, { label: string; color: string; rgb: string; icon: string; rank: number }> = {
   invoice: { label: "Invoice", color: "#b8471f", rgb: "184,71,31", icon: "M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6", rank: 0 },
   checkin: { label: "Missed check-ins", color: "#a8761f", rgb: "168,118,31", icon: "M9 11l3 3 8-8M20 12v7H4V5h11", rank: 1 },
-  video: { label: "Video to review", color: "#4c42a8", rgb: "76,66,168", icon: "M8 5v14l11-7z", rank: 2 },
+  video: { label: "Video to review", color: "#3a3390", rgb: "58,51,144", icon: "M8 5v14l11-7z", rank: 2 },
   message: { label: "Message", color: "#1d3466", rgb: "29,52,102", icon: "M4 5h16v11H9l-5 4z", rank: 3 },
   phase: { label: "Phase ending", color: "#1f7a4d", rgb: "31,122,77", icon: "M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z", rank: 4 },
 };

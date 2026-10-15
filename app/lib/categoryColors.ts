@@ -8,7 +8,7 @@ export type GroupColour = { hex: string; rgb: string; tint: string };
 
 export const GROUP_COLOUR: Record<string, GroupColour> = {
   body: { hex: "#2f5d8f", rgb: "47,93,143", tint: "#cfe0f2" },
-  sleep: { hex: "#4c42a8", rgb: "76,66,168", tint: "#d8d3f0" },
+  sleep: { hex: "#3a3390", rgb: "58,51,144", tint: "#d8d3f0" },
   activity: { hex: "#1f7a4d", rgb: "31,122,77", tint: "#c9e7d5" },
   fatigue: { hex: "#b0691f", rgb: "176,105,31", tint: "#f4dcc0" },
   lifestyle: { hex: "#1d7b86", rgb: "29,123,134", tint: "#c9e6ea" },
