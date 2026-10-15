@@ -12,7 +12,8 @@ export type TimelineItem =
 const DAY = 86400000;
 const parse = (iso: string) => new Date(`${iso}T00:00:00`);
 const daysBetween = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / DAY);
-const dayMon = (iso: string) => parse(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const dayMon = (iso: string) => `${parse(iso).getDate()} ${MONTHS[parse(iso).getMonth()]}`;
 const dayOnly = (iso: string) => String(parse(iso).getDate());
 
 const PAST = 5;
@@ -30,16 +31,17 @@ export function whenUpcoming(today: string, start: string): string {
 }
 
 export function whenPast(e: TimelineEvent, today: string): string {
-  if (ongoing(e, today)) return `Started ${dayMon(e.start)}`;
+  if (ongoing(e, today)) return `Since ${dayMon(e.start)}`;
   if (e.start === e.end) return dayMon(e.start);
   const sameMonth = e.start.slice(0, 7) === e.end.slice(0, 7);
-  return sameMonth ? `${dayOnly(e.start)}–${dayMon(e.end)}` : `${dayMon(e.start)} – ${dayMon(e.end)}`;
+  // Thin spaces around the dash.
+  return sameMonth ? `${dayOnly(e.start)} – ${dayMon(e.end)}` : `${dayMon(e.start)} – ${dayMon(e.end)}`;
 }
 
 export function whenToday(e: TimelineEvent, today: string): { label: string; when: string } {
-  if (e.start < today && e.end > today) return { label: "Happening now", when: `Until ${dayMon(e.end)}` };
-  if (e.start < today && e.end === today) return { label: "Happening now", when: "Last day" };
-  if (e.start === today && e.end > today) return { label: e.kind === "supplement" ? "Starts today" : "Happening now", when: e.kind === "supplement" ? "From today" : `Until ${dayMon(e.end)}` };
+  if (e.start < today && e.end > today) return { label: "Now", when: `Until ${dayMon(e.end)}` };
+  if (e.start < today && e.end === today) return { label: "Now", when: "Last day" };
+  if (e.start === today && e.end > today) return { label: e.kind === "supplement" ? "Starts today" : "Now", when: e.kind === "supplement" ? "From today" : `Until ${dayMon(e.end)}` };
   return { label: "Today", when: "All day" };
 }
 
@@ -70,5 +72,5 @@ export function buildTimeline(events: TimelineEvent[], today: string): { items: 
 }
 
 /** The item the row centres on when it opens: the first of today's. */
-export const STRIDE = 138;
-export const ITEM_WIDTH = 132;
+export const STRIDE = 148;
+export const ITEM_WIDTH = 140;

@@ -5,31 +5,37 @@ import type React from "react";
 import { eventTypeOf } from "../../lib/eventTypes";
 import { buildTimeline, ITEM_WIDTH, STRIDE, type TimelineItem } from "../../lib/eventTimeline";
 import { useOpenEvents } from "../CheckInContext";
-import { TypeIcon } from "../events/AddEventSheet";
 import type { HomeEvents } from "../EventsCard";
 
-// Home's events card as a swipeable timeline (15 Oct): every event on one
-// row, past on the left, today in the middle, what is coming on the right.
-// It opens centred on today; the centred one grows and takes its colour,
-// the past ones read as done. The whole list stays the Events screen.
+// Home's events as a hairline timeline (15 Oct, restyled the same evening):
+// every event a thin ring with a fine-line icon in its colour, strung along
+// one hairline across the screen, past on the left, today in the middle,
+// what is coming on the right. It opens centred on today; the centred ring
+// is fully coloured with a faint halo and its title grows; past ones read as
+// done. The whole list stays the Events screen.
 
-const NEUTRAL_RGB = "16,24,40";
-// A phase on the row (15 Oct): one flag, the track's colour, as the Events screen draws it.
+const NEUTRAL = { color: "#5b6474", rgb: "91,100,116", icon: "M4 6h16v14H4zM4 10h16M9 3v4M15 3v4" };
+// A phase on the row: one flag, the track's colour, as the Events screen draws it.
 const FLAG = "M5 21V4M5 4h11.5l-2.5 4.5 2.5 4.5H5";
 const PHASES = {
-  training: { color: "#3a3390", rgb: "58,51,144", icon: FLAG, fill: undefined as string | undefined },
-  nutrition: { color: "#1f7a4d", rgb: "31,122,77", icon: FLAG, fill: undefined as string | undefined },
-  lifestyle: { color: "#a8761f", rgb: "168,118,31", icon: FLAG, fill: undefined as string | undefined },
+  training: { color: "#3a3390", rgb: "58,51,144", icon: FLAG },
+  nutrition: { color: "#1f7a4d", rgb: "31,122,77", icon: FLAG },
+  lifestyle: { color: "#a8761f", rgb: "168,118,31", icon: FLAG },
 };
-const chromeOf = (e: { kind: string | null; phase?: "training" | "nutrition" | "lifestyle" | null }) => (e.phase ? PHASES[e.phase] : eventTypeOf(e.kind));
-const CALENDAR = "M4 6h16v14H4zM4 10h16M9 3v4M15 3v4";
+type Chrome = { color: string; rgb: string; icon: string };
+const chromeOf = (e: { kind: string | null; phase?: "training" | "nutrition" | "lifestyle" | null }): Chrome => {
+  if (e.phase) return PHASES[e.phase];
+  const t = eventTypeOf(e.kind);
+  return { color: t.color, rgb: t.rgb, icon: t.icon };
+};
 
-/** A lighter start for the gradient: the type's colour pulled a quarter of the way to white. */
-function lighter(hex: string): string {
-  const n = parseInt(hex.slice(1), 16);
-  const mix = (v: number) => Math.round(v + (255 - v) * 0.28);
-  const r = mix((n >> 16) & 255), g = mix((n >> 8) & 255), b = mix(n & 255);
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
+/** A fine-line icon, 1.6 stroke, round caps and joins, no fills. */
+function LineIcon({ path, size = 20 }: { path: string; size?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={path} />
+    </svg>
+  );
 }
 
 export default function EventsTimelineCard({ events, today }: { events: HomeEvents; today: string }) {
@@ -38,21 +44,21 @@ export default function EventsTimelineCard({ events, today }: { events: HomeEven
     () => buildTimeline(events.list.map((e) => ({ id: e.id, kind: e.kind, title: e.title, start: e.start, end: e.end, phase: e.phase ?? null })), today),
     [events.list, today],
   );
-  const cardRef = useRef<HTMLElement>(null);
+  const wrapRef = useRef<HTMLElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
   const [side, setSide] = useState(0);
   const [pos, setPos] = useState(todayIndex);
   const focused = Math.min(items.length - 1, Math.max(0, Math.round(pos)));
   const reduced = useRef(false);
 
-  // The side padding puts the first and last item within reach of the centre.
+  // The side padding puts the first and last ring within reach of the centre.
   useLayoutEffect(() => {
-    const card = cardRef.current;
-    if (!card) return;
-    const measure = () => setSide(Math.max(0, (card.clientWidth - ITEM_WIDTH) / 2));
+    const el = wrapRef.current;
+    if (!el) return;
+    const measure = () => setSide(Math.max(0, (el.clientWidth - ITEM_WIDTH) / 2));
     measure();
     const ro = new ResizeObserver(measure);
-    ro.observe(card);
+    ro.observe(el);
     reduced.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     return () => ro.disconnect();
   }, []);
@@ -66,7 +72,7 @@ export default function EventsTimelineCard({ events, today }: { events: HomeEven
     opened.current = true;
   }, [side, todayIndex]);
 
-  // The scroll drives the scale and the focus, one update a frame.
+  // The scroll drives the ring scale and the focus, one update a frame.
   const raf = useRef(0);
   const lastFocused = useRef(todayIndex);
   const onScroll = useCallback(() => {
@@ -95,9 +101,6 @@ export default function EventsTimelineCard({ events, today }: { events: HomeEven
       scrollTo(Math.min(items.length - 1, Math.max(0, focused + (e.key === "ArrowLeft" ? -1 : 1))));
     }
   };
-
-  const focusedItem = items[focused];
-  const focusedRgb = focusedItem?.event ? chromeOf(focusedItem.event).rgb : NEUTRAL_RGB;
   const onToday = focused === todayIndex;
 
   // The dots: at most 12, a window around the focused one.
@@ -109,12 +112,19 @@ export default function EventsTimelineCard({ events, today }: { events: HomeEven
   }, [items, focused]);
 
   return (
-    <section ref={cardRef} className="evt" aria-label="Events" style={{ "--focus-rgb": focusedRgb } as React.CSSProperties}>
+    <section ref={wrapRef} className="evt" aria-label="Events">
       <div className="evt-head">
         <span className="evt-eyebrow">Events</span>
-        {!onToday && (
-          <button type="button" className="evt-back" onClick={() => scrollTo(todayIndex)} aria-label="Back to today">
-            Back to today
+        {onToday ? (
+          <button type="button" className="evt-all" onClick={() => openEvents?.()}>
+            See all
+          </button>
+        ) : (
+          <button type="button" className="evt-today" onClick={() => scrollTo(todayIndex)} aria-label="Back to today">
+            <svg viewBox="0 0 24 24" width={11} height={11} fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M15 5l-7 7 7 7" />
+            </svg>
+            Today
           </button>
         )}
       </div>
@@ -123,46 +133,37 @@ export default function EventsTimelineCard({ events, today }: { events: HomeEven
         <span className="evt-spine" aria-hidden="true" />
         <div ref={rowRef} className="evt-row" role="listbox" aria-label="Events" tabIndex={0} onScroll={onScroll} onKeyDown={onKey} style={{ paddingLeft: side, paddingRight: side }}>
           {items.map((it, i) => (
-            <Item key={it.key} item={it} focused={i === focused} onPick={() => (i === focused ? (it.slot === "more" ? openEvents?.() : it.event ? openEvents?.(it.event.id) : openEvents?.()) : scrollTo(i))} />
+            <Item key={it.key} item={it} index={i} pos={pos} focused={i === focused} onPick={() => (i === focused ? (it.slot === "more" ? openEvents?.() : it.event ? openEvents?.(it.event.id) : openEvents?.()) : scrollTo(i))} />
           ))}
         </div>
       </div>
 
       <div className="evt-dots" aria-hidden="true">
         {dots.map((i) => (
-          <i key={i} className={`evt-dot${i === focused ? " on" : ""}${i === todayIndex ? " today" : items[i].slot === "past" ? " past" : ""}`} />
+          <i key={i} className={`evt-dot${i === focused ? " on" : i === todayIndex ? " today" : ""}`} />
         ))}
       </div>
     </section>
   );
 }
 
-function Item({ item, focused, onPick }: { item: TimelineItem; focused: boolean; onPick: () => void }) {
-  // Every pill the same size (15 Oct); only the centred one grows, in CSS, so the swipe reads as a pop.
-  const t = item.event ? chromeOf(item.event) : null;
-  const style = (t ? { "--c": t.color, "--c2": lighter(t.color), "--rgb": t.rgb } : {}) as React.CSSProperties;
-  const slotClass = item.slot === "more" ? " more" : item.slot === "today" && !item.event ? " free" : ` ${item.slot}`;
+function Item({ item, index, pos, focused, onPick }: { item: TimelineItem; index: number; pos: number; focused: boolean; onPick: () => void }) {
+  const d = Math.min(Math.abs(index - pos), 2);
+  const scale = 1.1 - d * 0.12;
+  const c: Chrome = item.event ? chromeOf(item.event) : NEUTRAL;
+  const icon = item.slot === "more" ? "M5 12h14M13 6l6 6-6 6" : c.icon;
+  const cls = `evt-item ${item.slot}${focused ? " on" : ""}`;
   const spoken = item.slot === "more" ? "See all events" : item.event ? `${item.label}: ${item.event.title}, ${item.when}${item.slot === "past" ? ", done" : ""}` : "Today: nothing on, free day";
   return (
-    <button type="button" role="option" aria-selected={focused} aria-label={spoken} className="evt-slot" onClick={onPick}>
-      <span className={`evt-item${slotClass}${focused ? " on" : ""}`} style={style}>
-        {focused && t && <span className="ev-aura" aria-hidden="true" />}
-        <span className="evt-tile" aria-hidden="true">
-          {item.slot === "more" ? <TypeIcon path="M5 12h14M13 6l6 6-6 6" size={20} stroke={2.2} /> : t ? <TypeIcon path={t.icon} fill={t.fill} size={20} stroke={2.2} /> : <TypeIcon path={CALENDAR} size={20} stroke={2.2} />}
-        </span>
-        {item.slot === "more" ? (
-          <>
-            <span className="evt-label">All</span>
-            <span className="evt-title">See all events ›</span>
-            <span className="evt-when">Past and coming</span>
-          </>
-        ) : (
-          <>
-            <span className="evt-label">{item.label}</span>
-            <span className="evt-title">{item.event ? item.event.title : "Nothing on"}</span>
-            <span className="evt-when">{item.when}</span>
-          </>
-        )}
+    <button type="button" role="option" aria-selected={focused} aria-label={spoken} className={cls} style={{ "--c": c.color, "--rgb": c.rgb } as React.CSSProperties} onClick={onPick}>
+      <span className="evt-ring" style={{ transform: `scale(${scale.toFixed(3)})` }}>
+        {focused && <i className="evt-halo" aria-hidden="true" />}
+        <LineIcon path={icon} />
+      </span>
+      <span className="evt-text">
+        <span className="evt-label">{item.slot === "more" ? "All" : item.label}</span>
+        <span className="evt-title">{item.slot === "more" ? "See all events" : item.event ? item.event.title : "Nothing on"}</span>
+        <span className="evt-when">{item.slot === "more" ? "Past and coming" : item.when}</span>
       </span>
     </button>
   );
