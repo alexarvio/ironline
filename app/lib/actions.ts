@@ -3509,7 +3509,7 @@ export async function swapExerciseAction(assignmentId: number, payload: { librar
 
 // The coach's alternatives for an exercise (the row's ⋯ menu). Library
 // exercises only, the coach's own.
-export async function setExerciseAlternativesAction(assignmentId: number, list: { exerciseId: number; note: string }[], libraryOff?: boolean) {
+export async function setExerciseAlternativesAction(assignmentId: number, list: { exerciseId: number; note: string }[], libraryOff?: boolean, hidden?: number[]) {
   const id = Number(assignmentId);
   const owner = Number.isInteger(id) ? getClientIdForAssignment(id) : null;
   if (owner == null || !(await coachForClient(owner))) return;
@@ -3518,7 +3518,8 @@ export async function setExerciseAlternativesAction(assignmentId: number, list: 
   const clean = (Array.isArray(list) ? list : [])
     .map((x) => ({ exercise_id: Number(x?.exerciseId), note: typeof x?.note === "string" ? x.note : null }))
     .filter((x) => Number.isInteger(x.exercise_id) && mine.has(x.exercise_id));
-  setExerciseAlternatives(id, clean, typeof libraryOff === "boolean" ? libraryOff : undefined);
+  const off = Array.isArray(hidden) ? hidden.map(Number).filter((x) => Number.isInteger(x) && mine.has(x)) : undefined;
+  setExerciseAlternatives(id, clean, typeof libraryOff === "boolean" ? libraryOff : undefined, off);
   revalidatePath("/admin");
   revalidatePath("/client");
 }

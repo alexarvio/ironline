@@ -93,6 +93,7 @@ export type WorkoutAssignment = {
   alternatives?: { exercise_id: number; note: string | null }[];
   /** The library's substitutes for this exercise kept off this session (14 Oct); absent, they are offered along with the alternatives above. */
   library_substitutes_off?: boolean;
+  library_substitutes_hidden?: number[];
   /** The exercise's variation asked for (see db.ts). */
   variation_id?: number | null;
   /** The demo kept off this prescription (see db.ts). */
@@ -8820,11 +8821,12 @@ export function librarySubstitutesFor(exerciseId: number): { exercise_id: number
 /** What a prescription offers instead (14 Oct): its own alternatives, then
     the library's substitutes for its exercise unless the session keeps
     those off. The session's own note wins where both name the same exercise. */
-export function effectiveAlternatives(wa: { exercise_id: number; alternatives?: { exercise_id: number; note: string | null }[]; library_substitutes_off?: boolean }): { exercise_id: number; note: string | null; variation_id?: number | null }[] {
+export function effectiveAlternatives(wa: { exercise_id: number; alternatives?: { exercise_id: number; note: string | null }[]; library_substitutes_off?: boolean; library_substitutes_hidden?: number[] }): { exercise_id: number; note: string | null; variation_id?: number | null }[] {
   const own = wa.alternatives ?? [];
   // A session's own picks replace the library's (15 Oct); with none, the library's are offered.
   if (own.length) return own;
-  const lib = wa.library_substitutes_off ? [] : librarySubstitutesFor(wa.exercise_id);
+  const hidden = new Set(wa.library_substitutes_hidden ?? []);
+  const lib = wa.library_substitutes_off ? [] : librarySubstitutesFor(wa.exercise_id).filter((l) => !hidden.has(l.exercise_id));
   return lib;
 }
 
@@ -8911,7 +8913,7 @@ export function setAssignmentVariation(assignmentId: number, variationId: number
 /** The coach's alternatives for an exercise, set on this row and on the
  *  same exercise in the same session for the rest of its programme, so they
  *  hold week after week. Returns how many rows took them. */
-export function setExerciseAlternatives(assignmentId: number, list: { exercise_id: number; note: string | null }[], libraryOff?: boolean): number {
+export function setExerciseAlternatives(assignmentId: number, list: { exercise_id: number; note: string | null }[], libraryOff?: boolean, hidden?: number[]): number {
   const data = getData();
   const wa = data.workout_assignments.find((x) => x.id === assignmentId);
   const day = wa ? data.program_days.find((d) => d.id === wa.program_day_id) : undefined;
@@ -8934,6 +8936,11 @@ export function setExerciseAlternatives(assignmentId: number, list: { exercise_i
     if (libraryOff != null) {
       if (libraryOff) x.library_substitutes_off = true;
       else delete x.library_substitutes_off;
+    }
+    // Library substitutes switched off on this session (15 Oct), the same weeks.
+    if (hidden) {
+      if (hidden.length) x.library_substitutes_hidden = [...hidden];
+      else delete x.library_substitutes_hidden;
     }
     n++;
   }

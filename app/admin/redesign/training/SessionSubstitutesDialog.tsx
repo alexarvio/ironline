@@ -41,11 +41,11 @@ export default function SessionSubstitutesDialog({
   onSave,
   onClose,
 }: {
-  row: { id: number; exerciseId: number; name: string; alternatives: SessionSub[]; librarySubstitutes: SessionSub[] };
+  row: { id: number; exerciseId: number; name: string; alternatives: SessionSub[]; librarySubstitutes: SessionSub[]; /** Library substitutes switched off on this session. */ libraryHidden: number[] };
   firstName: string;
   session: string;
   library: Library;
-  onSave: (list: SessionSub[]) => Promise<void>;
+  onSave: (list: SessionSub[], hidden: number[]) => Promise<void>;
   onClose: () => void;
 }) {
   const all = useMemo<LibEx[]>(() => library.flatMap((g) => g.exercises.map((e) => ({ id: e.id, name: e.name, group: e.group ?? g.slug, video: e.video ?? null, variations: e.variations ?? [] }))), [library]);
@@ -55,8 +55,11 @@ export default function SessionSubstitutesDialog({
   const groupLabel = library.find((g) => g.slug === group)?.label ?? "the library";
 
   const [list, setList] = useState<SessionSub[]>(row.alternatives.map((a) => ({ ...a })));
-  const [initial] = useState(() => JSON.stringify(row.alternatives.map((a) => [a.exerciseId, a.note.trim()])));
-  const dirty = JSON.stringify(list.map((a) => [a.exerciseId, a.note.trim()])) !== initial;
+  // Library substitutes switched off just for this session: offered unless the coach says otherwise.
+  const [hidden, setHidden] = useState<number[]>(row.libraryHidden);
+  const snapshot = (l: SessionSub[], h: number[]) => JSON.stringify([l.map((a) => [a.exerciseId, a.note.trim()]), [...h].sort((a, b) => a - b)]);
+  const [initial] = useState(() => snapshot(row.alternatives, row.libraryHidden));
+  const dirty = snapshot(list, hidden) !== initial;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // The pop-up only ever renders in the browser, so the dismissed flag can be read up front.
@@ -119,13 +122,12 @@ export default function SessionSubstitutesDialog({
   };
 
   const replaced = list.length > 0;
-  const offered = list.length || row.librarySubstitutes.length;
   const save = async () => {
     if (!dirty || saving) return;
     setSaving(true);
     setError(null);
     try {
-      await onSave(list.map((s) => ({ ...s, note: s.note.trim() })));
+      await onSave(list.map((s) => ({ ...s, note: s.note.trim() })), hidden);
     } catch {
       setError("That didn’t save. Try again.");
       setSaving(false);
@@ -168,7 +170,7 @@ export default function SessionSubstitutesDialog({
               <path d="M12 11v5M12 8h.01" />
             </svg>
             <span>
-              When the machine’s taken, {firstName} picks one under <b>Swap exercise</b>. Targets carry over; those sets don’t count toward this exercise’s weight history.
+              When the machine’s taken, {firstName} picks one under <b>Substitute today</b>. Targets carry over; those sets don’t count toward this exercise’s weight history.
             </span>
             <button type="button" className="ssb-info-x" onClick={dismissInfo} aria-label="Got it, hide this">
               ✕
@@ -190,16 +192,27 @@ export default function SessionSubstitutesDialog({
           ) : (
             <>
               <ul className={`ssb-lib${replaced ? " replaced" : ""}`}>
-                {row.librarySubstitutes.map((s) => (
-                  <li key={s.exerciseId} className="ssb-librow" aria-label={`${s.name}, ${replaced ? "replaced" : "offered"}`}>
-                    <Thumb video={byId.get(s.exerciseId)?.video ?? null} />
-                    <span className="ssb-text">
-                      <b>{s.name}</b>
-                      <small>{s.note ? `“${s.note}”` : "No note"}</small>
-                    </span>
-                    <span className="ssb-tag">{replaced ? "Replaced" : "Offered"}</span>
-                  </li>
-                ))}
+                {row.librarySubstitutes.map((s) => {
+                  const off = hidden.includes(s.exerciseId);
+                  return (
+                    <li key={s.exerciseId} className={`ssb-librow${off && !replaced ? " off" : ""}`} aria-label={`${s.name}, ${replaced ? "replaced" : off ? "not offered on this session" : "offered"}`}>
+                      <Thumb video={byId.get(s.exerciseId)?.video ?? null} />
+                      <span className="ssb-text">
+                        <b>{s.name}</b>
+                        <small>{s.note ? `“${s.note}”` : "No note"}</small>
+                      </span>
+                      {replaced ? (
+                        <span className="ssb-tag">Replaced</span>
+                      ) : (
+                        /* Offered by default; the coach can switch one off just for this session (15 Oct). */
+                        <button type="button" role="switch" aria-checked={!off} className="ssb-offer" onClick={() => setHidden((h) => (off ? h.filter((id) => id !== s.exerciseId) : [...h, s.exerciseId]))} aria-label={`${s.name} offered on this session`}>
+                          {off ? "Off" : "Offered"}
+                          <i aria-hidden="true" />
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
               {replaced && <p className="ssb-replaced">This session’s picks replace these for {firstName}.</p>}
             </>
@@ -327,7 +340,6 @@ export default function SessionSubstitutesDialog({
       </div>
 
       <footer className="ssb-foot">
-        <span className="ssb-status">{offered ? `${firstName} is offered ${offered} · saved on ${session} for the rest of the programme` : "Nothing offered yet"}</span>
         <button type="button" className="ssb-cancel" onClick={onClose}>
           Cancel
         </button>
