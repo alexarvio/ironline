@@ -1132,3 +1132,72 @@
 .ssb-offer i::after { content: ""; position: absolute; top: 3px; left: 15px; width: 14px; height: 14px; border-radius: 999px; background: #fff; box-shadow: 0 2px 4px rgba(16, 24, 40, 0.25); transition: left 0.2s; }
 .ssb-offer[aria-checked="false"] i::after { left: 3px; }
 .ssb-librow.off { opacity: 0.55; }
+
+/* ---- The Variation pop-up (15 Oct): which variation the client does on this session, from which week. Prefix vrp-. */
+.vrp { width: min(560px, 100vw - 32px); max-width: none; max-height: calc(100vh - 48px); display: flex; flex-direction: column; gap: 0; padding: 0; border: 0; border-radius: 24px; background: #fff; box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.55); overflow: hidden; font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; animation: avr-pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.vrp[data-state="closed"] { animation: avr-out 0.15s ease forwards; }
+.vrp-glow { position: absolute; right: -150px; top: -230px; width: 380px; height: 380px; border-radius: 999px; background: radial-gradient(circle, rgba(76, 66, 168, 0.24), transparent 68%); pointer-events: none; }
+.vrp-wash { position: absolute; left: 0; right: 0; top: 0; height: 130px; background: linear-gradient(180deg, rgba(76, 66, 168, 0.09), transparent); pointer-events: none; }
+.vrp-body { position: relative; flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; padding: 22px 24px 18px; }
+.vrp-head { display: flex; align-items: flex-start; gap: 14px; }
+.vrp-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-top: 2px; color: #4c42a8; }
+.vrp-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.vrp-title { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.2; }
+.vrp-context { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 0; }
+.vrp-pill { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; background: #4c42a8; color: #fff; font-size: 11.5px; font-weight: 800; }
+.vrp-meta { font-size: 12.5px; font-weight: 600; color: #5b6474; }
+.vrp-x { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.85); box-shadow: inset 0 0 0 1px rgba(16, 24, 40, 0.08); color: #5b6474; cursor: pointer; }
+.vrp-section { display: flex; flex-direction: column; gap: 8px; }
+.vrp-label { font-size: 12px; font-weight: 800; color: #5b6474; }
+.vrp-list { display: flex; flex-direction: column; gap: 6px; }
+.vrp-item { position: relative; display: flex; flex-direction: column; gap: 6px; }
+.vrp-card { width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px 48px 8px 8px; border: 0; border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1px #E3E8F0; font: inherit; text-align: left; cursor: pointer; transition: background 0.2s, box-shadow 0.2s; }
+.vrp-card.on { background: rgba(76, 66, 168, 0.07); box-shadow: inset 0 0 0 2px #4c42a8; }
+.vrp-card:focus-visible { outline: 2px solid #1d3466; outline-offset: 2px; }
+.vrp-thumb { position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 42px; border-radius: 10px; overflow: hidden; background: linear-gradient(150deg, #55648a, #1a2030); }
+.vrp-thumb img, .vrp-thumb video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.vrp-thumb.has i { position: relative; width: 0; height: 0; border-left: 10px solid #fff; border-top: 6px solid transparent; border-bottom: 6px solid transparent; margin-left: 2px; }
+.vrp-thumb.none { box-sizing: border-box; border: 1.5px dashed #C5CCD8; background: #fff; font-size: 9.5px; font-weight: 800; color: #98A2B3; }
+.vrp-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.vrp-name-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.vrp-name-row b { font-size: 14.5px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vrp-now { flex: none; display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 999px; background: #F2F4F7; color: #5b6474; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.vrp-text small { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vrp-radio { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; box-sizing: border-box; border: 2px solid #C5CCD8; border-radius: 999px; background: #fff; color: #fff; }
+.vrp-radio.on { border-color: #4c42a8; background: #4c42a8; }
+/* Delete sits on the card's right edge, next to the radio. */
+.vrp-delete { position: absolute; right: 8px; top: 13px; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 9px; background: none; color: #B0B7C3; cursor: pointer; }
+.vrp-delete:hover { background: #FBEDE7; color: #B42318; }
+.vrp-card { padding-right: 84px; }
+.vrp-radio { position: absolute; right: 48px; top: 18px; }
+.vrp-confirm { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-radius: 12px; background: #FBEDE7; }
+.vrp-confirm > span { flex: 1; font-size: 12.5px; font-weight: 700; line-height: 1.35; color: #8a3517; }
+.vrp-keep { height: 30px; padding: 0 10px; border: 0; border-radius: 9px; background: #fff; font: inherit; font-size: 12px; font-weight: 800; color: #3a4250; cursor: pointer; }
+.vrp-danger { height: 30px; padding: 0 10px; border: 0; border-radius: 9px; background: #B42318; color: #fff; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+.vrp-newbtn { height: 42px; border: 0; border-radius: 13px; background: #fff; box-shadow: inset 0 0 0 1.5px #DCE3EE; font: inherit; font-size: 13px; font-weight: 800; color: #1d3466; cursor: pointer; }
+.vrp-newbtn:hover { background: #F7F9FC; }
+.vrp-new { display: flex; flex-direction: column; gap: 8px; }
+.vrp-new-row { display: flex; gap: 8px; }
+.vrp-field { flex: 1; display: flex; align-items: center; height: 46px; padding: 0 14px; border-radius: 14px; background: #F4F6FA; box-shadow: inset 0 0 0 1.5px #4c42a8; }
+.vrp-field.dup { box-shadow: inset 0 0 0 1.5px #B42318; }
+.vrp-field input { flex: 1; min-width: 0; border: 0; outline: none; background: none; font: inherit; font-size: 14.5px; font-weight: 700; color: #141a24; }
+.vrp-field input::placeholder { color: #98A2B3; font-weight: 500; }
+.vrp-add { flex: none; height: 46px; padding: 0 16px; border: 0; border-radius: 14px; background: #1d3466; color: #fff; font: inherit; font-size: 13.5px; font-weight: 800; cursor: pointer; }
+.vrp-add:disabled { background: #fff; color: #98A2B3; box-shadow: inset 0 0 0 1px #DCE3EE; cursor: default; }
+.vrp-dup { font-size: 12px; font-weight: 700; color: #B42318; }
+.vrp-ideas { display: flex; gap: 6px; flex-wrap: wrap; }
+.vrp-idea { height: 28px; padding: 0 10px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #DCE3EE; font: inherit; font-size: 12px; font-weight: 700; color: #3a4250; white-space: nowrap; cursor: pointer; }
+.vrp-idea:hover { background: #F7F9FC; }
+.vrp-seg { display: flex; padding: 3px; border-radius: 999px; background: #F2F4F7; }
+.vrp-seg button { flex: 1; height: 32px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 12.5px; font-weight: 800; color: #667085; white-space: nowrap; cursor: pointer; }
+.vrp-seg button.on { background: #fff; color: #1d3466; box-shadow: 0 2px 6px -2px rgba(16, 24, 40, 0.25); }
+.vrp-info { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 14px; background: #F4F6FA; font-size: 12.5px; font-weight: 600; line-height: 1.45; color: #3a4250; }
+.vrp-info svg { flex: none; margin-top: 1px; color: #5b6474; }
+.vrp-error { margin: -6px 0 0; font-size: 12.5px; font-weight: 700; color: #B42318; }
+.vrp-foot { position: relative; flex: none; display: flex; align-items: center; gap: 8px; padding: 14px 24px 18px; border-top: 1px solid #EEF1F5; background: #fff; }
+.vrp-link { flex: 1; font-size: 12.5px; font-weight: 700; color: #1d3466; text-decoration: none; }
+.vrp-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.vrp-cancel { height: 44px; padding: 0 18px; border: 0; border-radius: 13px; background: #fff; box-shadow: inset 0 0 0 1px #DCE3EE; font: inherit; font-size: 14px; font-weight: 800; color: #1d3466; cursor: pointer; }
+.vrp-save { display: inline-flex; align-items: center; gap: 7px; height: 44px; padding: 0 24px; border: 0; border-radius: 13px; background: #1d3466; color: #fff; font: inherit; font-size: 14.5px; font-weight: 800; box-shadow: 0 12px 22px -12px rgba(29, 52, 102, 0.95); cursor: pointer; }
+.vrp-save:disabled { background: rgba(29, 52, 102, 0.32); box-shadow: none; cursor: default; }
+.vrp-spin { width: 14px; height: 14px; border-radius: 999px; border: 2px solid rgba(255, 255, 255, 0.35); border-top-color: #fff; animation: avr-spin 0.8s linear infinite; }
