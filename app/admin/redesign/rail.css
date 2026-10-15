@@ -102,3 +102,10 @@
 .rtour-actions { display: flex; align-items: center; justify-content: space-between; }
 .rtour-go { display: flex; gap: 6px; }
 @media (prefers-reduced-motion: reduce) { .rtour-lit, .rtour-card { transition: none; } }
+
+/* No jump when a pop-up opens (15 Oct, Alex): the page keeps its scrollbar
+   gutter while the body is scroll-locked, and the lock's own right margin
+   (its way of making up for a vanished scrollbar) is cancelled, so nothing
+   behind the pop-up moves. */
+html:has(.rd-frame) { scrollbar-gutter: stable; }
+html:has(.rd-frame) body[data-scroll-locked][data-scroll-locked] { margin-right: 0 !important; }
