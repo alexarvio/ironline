@@ -129,7 +129,7 @@ export default function VariationDialog({
 
   const info =
     scope === "from"
-      ? `${firstName} does ${chosen.name} on ${session} from Week ${week}.${week > 1 ? ` Weeks 1–${week - 1} stay as logged.` : ""}`
+      ? `${firstName} does ${chosen.name} on ${session} from Week ${week}.${week === 2 ? " Week 1 stays as logged." : week > 2 ? ` Weeks 1–${week - 1} stay as logged.` : ""}`
       : scope === "just"
         ? `Only Week ${week} uses ${chosen.name}. Week ${week + 1} goes back to ${currentName}.`
         : `Every ${session} week shows ${chosen.name}, including weeks already logged. Logged sets keep the variation they were done on.`;
