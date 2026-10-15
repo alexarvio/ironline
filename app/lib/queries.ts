@@ -5650,9 +5650,9 @@ export function listEventCategories(coachId: number): { id: string; label: strin
 /** The Calendar's six to start with (Other is grey); the coach's own are event_categories rows with scope "calendar". */
 export const CALENDAR_PRESETS: { id: string; label: string; color: string }[] = [
   { id: "call", label: "Client call", color: "blue" },
-  { id: "training", label: "Training", color: "green" },
+  { id: "training", label: "Training", color: "purple" },
   { id: "admin", label: "Admin", color: "amber" },
-  { id: "personal", label: "Personal", color: "purple" },
+  { id: "personal", label: "Personal", color: "rose" },
   { id: "content", label: "Content", color: "orange" },
   { id: "other", label: "Other", color: "grey" },
 ];

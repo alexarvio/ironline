@@ -4,7 +4,7 @@
 export const PALETTE: { id: string; tint: string; ink: string; line: string }[] = [
   { id: "blue", tint: "#e3f0fb", ink: "#1d5a94", line: "#9cc3e6" },
   { id: "orange", tint: "#fdf3ee", ink: "#b3471d", line: "#e5b39a" },
-  { id: "purple", tint: "#f1e9fb", ink: "#5a3d9a", line: "#c9b5ea" },
+  { id: "purple", tint: "#e6e4fa", ink: "#3a3390", line: "#b9b4ec" },
   { id: "navy", tint: "#e6ecf3", ink: "#1e3a6e", line: "#b8c6d9" },
   { id: "green", tint: "#dff3ea", ink: "#1b7a4b", line: "#9fd3bb" },
   { id: "amber", tint: "#fff3dc", ink: "#8a5a12", line: "#e7cf9a" },
