@@ -830,9 +830,8 @@
 .avr-switch-text b { font-size: 13.5px; font-weight: 800; }
 .avr-switch-text small { font-size: 12px; font-weight: 600; color: #8b93a1; }
 .avr-error { margin: -6px 0 0; font-size: 12.5px; font-weight: 700; color: #B42318; }
-.avr-foot { position: relative; display: flex; align-items: center; gap: 8px; padding: 14px 24px 18px; border-top: 1px solid #EEF1F5; background: #fff; }
-.avr-note { flex: 1; font-size: 12.5px; font-weight: 600; color: #8b93a1; }
-.avr-withdraw { flex: 1; padding: 0; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 800; color: #B42318; text-align: left; cursor: pointer; }
+.avr-foot { position: relative; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 14px 24px 18px; border-top: 1px solid #EEF1F5; background: #fff; }
+.avr-withdraw { margin-right: auto; padding: 0; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 800; color: #B42318; text-align: left; cursor: pointer; }
 .avr-cancel { height: 44px; padding: 0 18px; border: 0; border-radius: 13px; background: #fff; box-shadow: inset 0 0 0 1px #DCE3EE; font: inherit; font-size: 14px; font-weight: 800; color: #1d3466; cursor: pointer; }
 .avr-ask { display: inline-flex; align-items: center; gap: 7px; height: 44px; padding: 0 22px; border: 0; border-radius: 13px; background: #1d3466; color: #fff; font: inherit; font-size: 14.5px; font-weight: 800; box-shadow: 0 12px 22px -12px rgba(29, 52, 102, 0.95); cursor: pointer; }
 .avr-ask:disabled { opacity: 0.7; cursor: default; }
