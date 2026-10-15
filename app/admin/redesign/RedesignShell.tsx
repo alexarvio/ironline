@@ -66,7 +66,7 @@ export type RedesignShellProps = {
   rail: RailData;
   initialTab: RedesignTab;
   home: DraftHome;
-  training: { draft: DraftProgram | null; library: Library; cardioMoves?: CardioMove[] };
+  training: { draft: DraftProgram | null; library: Library; cardioMoves?: CardioMove[]; videos?: { id: number; path: string; name: string; at: string; bytes: number | null }[] };
   nutrition: DraftNutrition;
   measurements: DraftMeasurements;
   pictures: DraftPictures;
@@ -198,7 +198,7 @@ export default function RedesignShell({ clientId, clientName, firstName, rail, i
         </div>
         <div hidden={tab !== "training"}>
           {training.draft ? (
-            <TrainingTab key={training.draft.id} clientId={clientId} firstName={firstName} program={training.draft} library={training.library} cardioMoves={training.cardioMoves} />
+            <TrainingTab key={training.draft.id} clientId={clientId} firstName={firstName} program={training.draft} library={training.library} cardioMoves={training.cardioMoves} coachVideos={training.videos} />
           ) : hasPhase("training") ? (
             <NoProgramme clientId={clientId} firstName={firstName} />
           ) : (

@@ -5,7 +5,7 @@ import { getData } from "../../lib/db";
 import { getUserForClient, isOwner } from "../../lib/auth";
 import { mailConfigured } from "../../lib/mail";
 import { clerkOn } from "../../lib/clerk";
-import { getCoachSettings, getInvoiceView, listInvoices, type FeedEvent, type HomeAction, type InvoiceView } from "../../lib/queries";
+import { getCoachSettings, getInvoiceView, listInvoices, type FeedEvent, type HomeAction, type InvoiceView, listCoachVideos, exerciseClientCounts } from "../../lib/queries";
 import { hasBankDetails, invoicingFor } from "../../lib/countries";
 import {
   clientReasons,
@@ -101,7 +101,7 @@ export function pickClient(coachId: number, asked: string | undefined) {
 
 // ---- Training -----------------------------------------------------------------
 
-export function loadTraining(coachId: number, clientId: number, params: { week?: string; program?: string }): { draft: DraftProgram | null; library: Library; cardioMoves: CardioMove[] } {
+export function loadTraining(coachId: number, clientId: number, params: { week?: string; program?: string }): { draft: DraftProgram | null; library: Library; cardioMoves: CardioMove[]; videos: { id: number; path: string; name: string; at: string; bytes: number | null }[] } {
   // Every programme the client has had, is on, or has waiting: the switch in
   // the header. The one shown is the one asked for, else the live one.
   const live = getDeployedProgram(clientId);
@@ -157,7 +157,9 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   // The coach's cardio movements, offered when a cardio is added, each with its cue.
   const cardioMoves = (byGroup.cardio ?? []).map((e) => ({ name: e.name, cue: e.cue ?? "" }));
 
-  if (!program) return { draft: null, library, cardioMoves };
+  const videos = listCoachVideos(coachId).map((v) => ({ id: v.id, path: v.path, name: v.name, at: v.at, bytes: v.bytes ?? null }));
+  const demoClients = exerciseClientCounts(coachId);
+  if (!program) return { draft: null, library, cardioMoves, videos };
 
   const liveIdx = program.status === "deployed" ? getProgramCurrentWeekIndex(program) : 0;
   const askedWeek = Number(params.week);
@@ -304,6 +306,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
             }
           : null,
         video: v ? { requestId: v.id, recurring: !!v.recurring, state: (v.replied_at ? "replied" : v.file_path ? "in" : "asked") as "asked" | "in" | "replied", note: v.note, reply: v.reply_note ?? null, src: v.file_path ?? null, replySrc: v.reply_file_path ?? null, media: (v.media ?? "video") as "video" | "photo", fromClient: !!v.from_client, about: v.about ?? null, clientNote: v.client_note ?? null, sentAt: v.submitted_at ?? null, repliedAt: v.replied_at ?? null, replyDurationMs: v.reply_duration_ms ?? null, replyAnnotations: v.reply_annotations ?? null } : null,
+        demoClients: demoClients.get(a.exercise_id) ?? 1,
         demo: a.exercise_video_url ? { url: a.exercise_video_url, source: "library" as const } : a.demo_url ? { url: a.demo_url, source: "row" as const } : null,
         demoHidden: !!a.demo_hidden,
         history,
@@ -351,7 +354,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     gyms,
     note: noteMeta ? { seen: noteMeta.seen, text: noteMeta.text, when: new Date(noteMeta.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) } : null,
   };
-  return { draft, library, cardioMoves };
+  return { draft, library, cardioMoves, videos };
 }
 
 // ---- Nutrition ----------------------------------------------------------------
