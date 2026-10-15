@@ -25,6 +25,7 @@ import Picker from "../Picker";
 import AskVideoDialog from "./AskVideoDialog";
 import SessionSubstitutesDialog from "./SessionSubstitutesDialog";
 import VariationDialog from "./VariationDialog";
+import DemoVideoDialog, { type CoachClip } from "./DemoVideoDialog";
 import ClientGymsDialog from "./ClientGymsDialog";
 import DeleteSessionDialog from "./DeleteSessionDialog";
 import ExerciseProgressDialog from "./ExerciseProgressDialog";
@@ -68,6 +69,8 @@ export type DraftRow = {
   video: { requestId: number; /** Ask every session (15 Oct). */ recurring?: boolean; state: "asked" | "in" | "replied"; note: string | null; reply: string | null; /** The file the client sent, and the one the coach sent back (9 Oct). */ src: string | null; replySrc: string | null; /** A photo or a video; sent unasked; about the swap; with the client's words (9 Oct). */ media: "video" | "photo"; fromClient: boolean; about: "swap" | null; clientNote: string | null; /** When it came in and when it was answered; a recorded review's length and drawings (12 Oct). */ sentAt?: string | null; repliedAt?: string | null; replyDurationMs?: number | null; replyAnnotations?: number | null } | null;
   /** The demo the client sees on this exercise: the library's, else one set on this row long ago. */
   demo: { url: string; source: "library" | "row" } | null;
+  /** How many of the coach's clients have this exercise on a sheet. */
+  demoClients?: number;
   /** The coach keeping that demo off this prescription for this client. */
   demoHidden: boolean;
   history: { week: number; label: string; target: number | null; targetReps: string; setsPlanned: number; sets: { n: number; kg: number | null; reps: number | null; rpe: number | null }[]; best: number | null; e1rm: number | null; gym: string | null; /** yyyy-mm-dd of the session (15 Oct). */ date: string | null; current: boolean }[];
@@ -178,7 +181,7 @@ type Dlg =
   | { kind: "addWeek" }
   | null;
 
-export default function TrainingDraft({ clientId, firstName, program, library, cardioMoves = [] }: { clientId: number; firstName: string; program: DraftProgram; library: Library; cardioMoves?: CardioMove[] }) {
+export default function TrainingDraft({ clientId, firstName, program, library, cardioMoves = [], coachVideos = [] }: { clientId: number; firstName: string; program: DraftProgram; library: Library; cardioMoves?: CardioMove[]; coachVideos?: CoachClip[] }) {
   // An exercise added from the library starts with its default cue as the note (5 Oct).
   const cueOf = (exerciseId: number | null) => (exerciseId == null ? "" : library.flatMap((g) => g.exercises).find((e) => e.id === exerciseId)?.cue ?? "");
   const router = useRouter();
@@ -1427,28 +1430,36 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         )}
 
         {dlg?.kind === "demo" && rowById(dlg.rowId) && (
-          <DemoDialog
-            row={rowById(dlg.rowId)!}
-            demo={demos[dlg.rowId] === undefined ? rowById(dlg.rowId)!.demo : demos[dlg.rowId]}
-            onSave={(v) => {
+          <DemoVideoDialog
+            exerciseName={rowById(dlg.rowId)!.name}
+            clientsUsing={rowById(dlg.rowId)!.demoClients ?? 1}
+            current={demos[dlg.rowId] === undefined ? rowById(dlg.rowId)!.demo : demos[dlg.rowId]}
+            videos={coachVideos}
+            onClose={close}
+            onLink={async (url) => {
               const row = rowById(dlg.rowId)!;
+              await setExerciseDemoLinkAction(fd({ exerciseId: row.exerciseId, variationId: row.variationId ?? null, demoUrl: url }));
+              setDemos((d) => ({ ...d, [row.id]: { url, source: "library" } }));
               close();
-              if (v.url) {
-                setDemos((d) => ({ ...d, [row.id]: { url: v.url!, source: "library" } }));
-                act(() => setExerciseDemoLinkAction(fd({ exerciseId: row.exerciseId, variationId: row.variationId ?? null, demoUrl: v.url })), `Demo on ${row.name} · every client's sheet with it`);
-              } else if (v.file) {
-                const f = new FormData();
-                f.set("exerciseId", String(row.exerciseId));
-                if (row.variationId != null) f.set("variationId", String(row.variationId));
-                f.set("file", v.file);
-                act(() => uploadExerciseVideoAction(f), `Demo on ${row.name} · every client's sheet with it`);
-              }
+              toast.success(`Demo updated${(row.demoClients ?? 1) > 1 ? ` for ${row.demoClients} clients` : ""}`);
+              router.refresh();
             }}
-            onRemove={() => {
+            onUpload={async (file) => {
               const row = rowById(dlg.rowId)!;
+              const f = new FormData();
+              f.set("exerciseId", String(row.exerciseId));
+              if (row.variationId != null) f.set("variationId", String(row.variationId));
+              f.set("file", file);
+              await uploadExerciseVideoAction(f);
               close();
+              toast.success(`Demo updated${(row.demoClients ?? 1) > 1 ? ` for ${row.demoClients} clients` : ""}`);
+              router.refresh();
+            }}
+            onRemove={async () => {
+              const row = rowById(dlg.rowId)!;
+              await clearExerciseDemoAction(fd({ exerciseId: row.exerciseId, variationId: row.variationId ?? null }));
               setDemos((d) => ({ ...d, [row.id]: null }));
-              act(() => clearExerciseDemoAction(fd({ exerciseId: row.exerciseId, variationId: row.variationId ?? null })), `Demo taken off ${row.name}`);
+              router.refresh();
             }}
           />
         )}
@@ -2466,107 +2477,6 @@ function AddCardioRow({ moves = [], onChange, onClose }: { /** The coach's cardi
 
 // ---- Dialogs ------------------------------------------------------------------
 
-// ---- The demo video on an exercise: what the client sees now, and a link or
-// a file to set it. Per exercise, not per row: it follows the exercise onto
-// every client's sheet until the coach changes it.
-function DemoDialog({ row, demo, onSave, onRemove }: { row: DraftRow; demo: DraftRow["demo"]; onSave: (v: { url?: string; file?: File }) => void; onRemove: () => void }) {
-  const [how, setHow] = useState<"link" | "file">("link");
-  const [url, setUrl] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const uploaded = !!demo && demo.url.startsWith("/uploads/");
-  const host = (u: string) => {
-    try {
-      return new URL(u).hostname.replace(/^www\./, "");
-    } catch {
-      return null;
-    }
-  };
-  const linkOk = /^https?:\/\/\S+$/i.test(url.trim());
-  const ok = how === "link" ? linkOk : !!file;
-  return (
-    <DialogContent className="rd-dlg rd-demo-dlg">
-      <DialogHeader>
-        <DialogTitle>
-          <span className="rq-title-row">
-            {row.name}
-            <span className="rq-state rd-demo-tag">Demo video</span>
-            <span className={`rq-state ${demo ? "rd-demo-on" : "rd-demo-off"}`}>{demo ? "Attached" : "None yet"}</span>
-          </span>
-        </DialogTitle>
-        <DialogDescription>Shows on every client&rsquo;s sheet that has {row.name}, so a demo is set once.</DialogDescription>
-      </DialogHeader>
-
-      <div className="rd-field">
-        <span>The client sees</span>
-        {demo ? (
-          <a href={demo.url} target="_blank" rel="noreferrer" className="rd-demo-current">
-            <PlayIcon />
-            <span className="rd-demo-current-main">
-              <b>{uploaded ? "An uploaded video" : host(demo.url) ?? demo.url}</b>
-              <small>{uploaded ? "From your files" : demo.url}</small>
-            </span>
-            <em>{demo.source === "row" ? "set on this row only" : "open"}</em>
-          </a>
-        ) : (
-          <p className="rd-dlg-hint">Nothing yet.</p>
-        )}
-      </div>
-
-      <div className="rd-field">
-        <span>{demo ? "Replace it with" : "Attach"}</span>
-        <div className="rd-btn-group rq-groups" role="group" aria-label="How to attach">
-          <button type="button" className={how === "link" ? "on" : ""} aria-pressed={how === "link"} onClick={() => setHow("link")}>
-            Paste a link
-          </button>
-          <button type="button" className={how === "file" ? "on" : ""} aria-pressed={how === "file"} onClick={() => setHow("file")}>
-            Upload a file
-          </button>
-        </div>
-      </div>
-
-      {how === "link" ? (
-        <label className="rd-field">
-          <span>Link</span>
-          <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://youtube.com/watch?v=…" inputMode="url" autoFocus />
-          <small className="rd-dlg-hint">{url.trim() && !linkOk ? "That is not a link the client can open." : linkOk ? `Opens on ${host(url) ?? "the web"}.` : "YouTube, Vimeo, a Drive share: anything the client can open."}</small>
-        </label>
-      ) : (
-        <label className="rd-field">
-          <span>File</span>
-          <span className={`rd-demo-drop${file ? " has" : ""}`}>
-            <input type="file" accept="video/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} aria-label="Pick a video file" />
-            {file ? (
-              <>
-                <b>{file.name}</b>
-                <small>{Math.max(1, Math.round(file.size / 1048576))} MB · click to change</small>
-              </>
-            ) : (
-              <>
-                <b>Pick a video</b>
-                <small>MP4 or MOV, straight off your computer</small>
-              </>
-            )}
-          </span>
-        </label>
-      )}
-
-      <DialogFooter>
-        {demo && (
-          <button type="button" className="rd-btn danger" onClick={onRemove}>
-            <TrashIcon /> Remove
-          </button>
-        )}
-        <span className="rd-dlg-hint grow" />
-        <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onSave(how === "link" ? { url: url.trim() } : { file: file! })}>
-          {demo ? "Replace" : "Attach"}
-        </button>
-      </DialogFooter>
-    </DialogContent>
-  );
-}
-
-/** What the media review shows for one exercise's photo or video: the context, the sets, and every word about it, oldest first. */
 function reviewOf(row: DraftRow, video: NonNullable<DraftRow["video"]>, session: DraftSession | null, weekNo: number, firstName: string, weight: (kg: number | null) => string): MediaReview {
   const ms = (iso: string | null | undefined) => (iso ? new Date(iso).getTime() : 0);
   const thread: ThreadItem[] = [];
