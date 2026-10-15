@@ -10,7 +10,7 @@ import type { DraftLink } from "./messages/MessagesDraft";
 // Null outside the shell, so a caller keeps its own way of replying.
 
 /** Opens the chat, about something and, when given, on one message (9 Oct). */
-export type OpenChat = (about?: Pick<DraftLink, "area" | "label" | "link"> | null, focus?: number | null) => void;
+export type OpenChat = (about?: Pick<DraftLink, "area" | "label" | "link" | "draft"> | null, focus?: number | null) => void;
 
 export const OpenChatContext = createContext<OpenChat | null>(null);
 
