@@ -671,12 +671,18 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
 // ---- The phase dialog: track, name, dates on a month, and for training the programme behind it.
 
 /** Six rows of a month, the picked weeks tinted in the phase's own colours, other phases on the track as a grey mark. */
-export function MonthRange({ from, to, onPick, chrome, planned, cursor, setCursor, today }: { from: string; to: string; onPick: (day: string) => void; chrome: ReturnType<typeof phaseChrome>; planned: { name: string; from: string; to: string }[]; cursor: string; setCursor: (m: string) => void; today: string }) {
+export function MonthRange({ from, to, onPick, chrome, planned, cursor, setCursor, today }: { from: string; to: string; onPick: (day: string) => void; chrome: ReturnType<typeof phaseChrome>; planned: { name: string; from: string; to: string; draft?: boolean }[]; cursor: string; setCursor: (m: string) => void; today: string }) {
   const [y, mo] = cursor.split("-").map(Number);
   const first = new Date(y, mo - 1, 1);
   const gridStart = mondayOf(isoOf(first));
   const days = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
   const move = (n: number) => setCursor(isoOf(new Date(y, mo - 1 + n, 1)).slice(0, 7));
+  // What a day is to the new phase (15 Oct): taken by another phase on the track, in the new range, both (an overlap), or free.
+  const kindOf = (x: string) => {
+    const b = planned.some((p) => x >= p.from && x <= p.to);
+    const r = !!from && !!to && x >= from && x <= to;
+    return b && r ? "overlap" : r ? "new" : b ? "taken" : "free";
+  };
   return (
     <div className="rdd-cal">
       <div className="rdd-cal-head">
@@ -696,26 +702,53 @@ export function MonthRange({ from, to, onPick, chrome, planned, cursor, setCurso
             {d}
           </span>
         ))}
-        {days.map((d) => {
+        {/* Taken days as grey stripes, the new phase solid at its ends and tinted between, an overlap in red stripes (15 Oct). Runs read as bars per week row. */}
+        {days.map((d, i) => {
           const inR = !!from && !!to && d >= from && d <= to;
           const busy = planned.find((p) => d >= p.from && d <= p.to);
+          const kind = kindOf(d);
+          const col = i % 7;
+          const prevSame = col > 0 && kindOf(days[i - 1]) === kind;
+          const nextSame = col < 6 && kindOf(days[i + 1]) === kind;
+          const run = kind === "free" ? "" : !prevSame && !nextSame ? " run-one" : !prevSame ? " run-start" : !nextSame ? " run-end" : " run-mid";
+          const edge = d === from || d === to;
+          const overlap = kind === "overlap";
+          const tip = busy ? `${busy.name} · ${shortDate(busy.from)} – ${shortDate(busy.to)}${busy.draft ? " · draft" : ""}` : undefined;
           return (
             <button
               key={d}
               type="button"
-              className={`rdd-cell${d === today ? " today" : ""}${inR ? " in" : ""}${d === from ? " start" : ""}${d === to ? " end" : ""}${parse(d).getMonth() !== mo - 1 ? " past" : ""}`}
-              style={inR ? { background: d === from || d === to ? chrome.edge : chrome.band, color: d === from || d === to ? "#fff" : chrome.edge } : undefined}
+              className={`rdd-cell${d === today ? " today" : ""}${inR && !overlap ? " in" : ""}${overlap ? " overlap" : kind === "taken" ? " taken" : ""}${d === from ? " start" : ""}${d === to ? " end" : ""}${run}${parse(d).getMonth() !== mo - 1 ? " past" : ""}`}
+              style={inR && !overlap ? { background: edge ? chrome.edge : `rgba(${rgbOf(chrome.edge)}, 0.12)`, color: edge ? "#fff" : chrome.edge } : undefined}
               onClick={() => onPick(d)}
-              aria-label={fmtDay(d)}
-              aria-pressed={d === from || d === to}
-              title={busy ? `${busy.name} is planned here` : undefined}
+              aria-label={`${fmtDay(d)}, ${overlap ? `overlaps ${busy!.name}` : inR ? "in new phase" : busy ? `taken by ${busy.name}` : "free"}`}
+              aria-pressed={edge}
+              title={tip}
             >
               {Number(d.slice(8))}
-              {busy && !inR && <i className="rq-busy" aria-hidden="true" />}
             </button>
           );
         })}
       </div>
+      {(planned.length > 0 || (!!from && !!to)) && (
+        <div className="rdd-legend" aria-hidden="true">
+          {planned.length > 0 && (
+            <span>
+              <i className="taken" /> {planned.length === 1 ? `${planned[0].name} (taken)` : "Taken by other phases"}
+            </span>
+          )}
+          {!!from && !!to && (
+            <span>
+              <i style={{ background: chrome.edge }} /> New phase
+            </span>
+          )}
+          {days.some((d) => kindOf(d) === "overlap") && (
+            <span>
+              <i className="overlap" /> Overlap
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -774,7 +807,7 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
   const state = phaseStateOf({ draft: isDraft, startWeek, endWeek, today });
   const chrome = phaseChrome(track, state);
   const weeks = phaseWeeks(startWeek, endWeek);
-  const planned = others.filter((o) => o.track === track && o.id !== phase?.id).map((o) => ({ name: o.name, from: o.start_week, to: addDays(o.end_week, 6) }));
+  const planned = others.filter((o) => o.track === track && o.id !== phase?.id).map((o) => ({ name: o.name, from: o.start_week, to: addDays(o.end_week, 6), draft: o.draft || o.program?.status === "draft" }));
   // Against the days that will be saved, so a training phase is checked by its whole weeks.
   const savedTo = addDays(endWeek, 6);
   const overlap = planned.find((p) => p.from <= savedTo && p.to >= startWeek) ?? null;

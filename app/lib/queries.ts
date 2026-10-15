@@ -8422,13 +8422,19 @@ export function removeClientGym(gymId: number) {
   const gym = (getData().client_gyms ?? []).find((g) => g.id === gymId);
   if (!gym) return;
   const others = listClientGyms(gym.client_id).filter((g) => g.id !== gymId);
-  if (homeGymId(gym.client_id) === gymId && others.length > 0) setHomeGym(others[0].id);
+  // The home gym going: the most used of the rest takes over (15 Oct).
+  if (homeGymId(gym.client_id) === gymId && others.length > 0) {
+    const stats = gymSessionStats(gym.client_id);
+    const next = [...others].sort((a, b) => (stats.get(b.id)?.sessions ?? 0) - (stats.get(a.id)?.sessions ?? 0) || a.id - b.id)[0];
+    setHomeGym(next.id);
+  }
   gym.archived = true;
   persist();
 }
 
 /** For the picker's rows (13 Oct): sessions trained at each gym, and when the last was. A day counts for the gym of its sets. */
-export function gymSessionStats(clientId: number): Map<number, { sessions: number; lastUsedAt: string | null }> {
+export function gymSessionStats(clientId: number): Map<number, { sessions: number; lastUsedAt: string | null; /** Sessions in the last 56 days (15 Oct, the coach's gyms pop-up). */ sessions8w: number }> {
+  const since = new Date(Date.now() - 56 * 86400000).toISOString();
   const data = getData();
   const home = homeGymId(clientId);
   const days = new Map(data.program_days.filter((pd) => pd.client_id === clientId).map((pd) => [pd.id, pd]));
@@ -8440,17 +8446,18 @@ export function gymSessionStats(clientId: number): Map<number, { sessions: numbe
     const g = sl.gym_id ?? home;
     if (g != null) dayGym.set(d, g);
   }
-  const out = new Map<number, { sessions: number; lastUsedAt: string | null }>();
+  const out = new Map<number, { sessions: number; lastUsedAt: string | null; sessions8w: number }>();
   for (const [d, g] of dayGym) {
     const pd = days.get(d)!;
     const at = pd.session_started_at ?? pd.session_ended_at ?? null;
-    const row = out.get(g) ?? { sessions: 0, lastUsedAt: null };
+    const row = out.get(g) ?? { sessions: 0, lastUsedAt: null, sessions8w: 0 };
     row.sessions += 1;
+    if (at && at >= since) row.sessions8w += 1;
     if (at && (!row.lastUsedAt || at > row.lastUsedAt)) row.lastUsedAt = at;
     out.set(g, row);
   }
   for (const g of listClientGyms(clientId, true)) {
-    const row = out.get(g.id) ?? { sessions: 0, lastUsedAt: null };
+    const row = out.get(g.id) ?? { sessions: 0, lastUsedAt: null, sessions8w: 0 };
     if (g.last_used_at && (!row.lastUsedAt || g.last_used_at > row.lastUsedAt)) row.lastUsedAt = g.last_used_at;
     out.set(g.id, row);
   }

@@ -25,6 +25,8 @@ import Picker from "../Picker";
 import AskVideoDialog from "./AskVideoDialog";
 import SessionSubstitutesDialog from "./SessionSubstitutesDialog";
 import NewVariationDialog from "./NewVariationDialog";
+import ClientGymsDialog from "./ClientGymsDialog";
+import DeleteSessionDialog from "./DeleteSessionDialog";
 import DatePick from "../DatePick";
 
 // The calmer builder, as a draft on real data. Nothing here saves: every
@@ -40,7 +42,7 @@ import DatePick from "../DatePick";
 // - Edits queue on the session's own bar at its foot: cells typed into, rows
 //   added, removed or dragged into a new order, the name. Apply lands them.
 
-export type Gym = { id: number; name: string; home: boolean };
+export type Gym = { id: number; name: string; home: boolean; /** The picker's colour and the gym's use (15 Oct), for the gyms pop-up. */ color: string; rgb: string; sessions8w: number; lastSessionAt: string | null };
 export type Library = { slug: string; label: string; exercises: { id: number; name: string; /** Its muscle group and its demo (15 Oct): the substitutes and variation pop-ups. */ group?: string; video?: string | null; /** The coach's default cue (Library page): the note it starts with when added. */ cue?: string; /** Close grip, wide grip… (Library page): one can be picked per row; its own cue, if any, is the note the row starts with. */ variations?: PickedVariation[] }[] }[];
 /** A variation as the picker hands it over with the exercise. */
 export type PickedVariation = { id: number; name: string; cue?: string; /** Its own demo (15 Oct). */ video?: string | null };
@@ -1595,17 +1597,30 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         )}
 
         {dlg?.kind === "deleteSession" && sessionById(dlg.sessionId) && (
-          <ConfirmDialog
-            title={`Delete ${sessionById(dlg.sessionId)!.name}`}
-            description="The session goes, with its exercises, cardio and anything the client logged on them. The sessions after it move up."
-            confirm="Delete"
-            danger
-            onConfirm={() => {
-              const gone = sessionById(dlg.sessionId)!;
-              close();
-              act(() => removeSessionAction(fd({ programDayId: gone.id })), `${gone.name} deleted`);
-            }}
-          />
+          (() => {
+            const gone = sessionById(dlg.sessionId)!;
+            return (
+              <DeleteSessionDialog
+                number={gone.number}
+                name={/^Session \d+$/.test(gone.name) ? null : gone.name}
+                programme={program.name}
+                firstName={firstName}
+                exercises={gone.rows.length}
+                cardioBlocks={gone.cardio.length}
+                loggedSets={gone.setsLogged}
+                lastLoggedAt={gone.ended}
+                hasUploads={gone.rows.some((r) => !!r.video?.src)}
+                sessionsAfter={sessions.filter((x) => x.number > gone.number).map((x) => x.number)}
+                onDelete={async () => {
+                  await removeSessionAction(fd({ programDayId: gone.id }));
+                  close();
+                  router.refresh();
+                  toast.success(`Session ${gone.number} deleted`);
+                }}
+                onClose={close}
+              />
+            );
+          })()
         )}
 
         {dlg?.kind === "removeWeek" && (
@@ -1721,15 +1736,24 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         )}
 
         {dlg?.kind === "gyms" && (
-          <GymsDialog
+          <ClientGymsDialog
             firstName={firstName}
             gyms={gyms}
-            onAdd={(nm) => act(() => addGymAction(clientId, nm), `${nm} added`)}
-            onRemove={(id) => {
-              const g = gyms.find((x) => x.id === id);
-              act(() => removeGymAction(id), `${g?.name ?? "Gym"} removed`);
+            today={today}
+            onAdd={async (nm) => {
+              const made = await addGymAction(clientId, nm);
+              router.refresh();
+              return made ? { id: made.id, name: made.name, home: gyms.length === 0, color: "#1d3466", rgb: "29,52,102", sessions8w: 0, lastSessionAt: null } : null;
             }}
-            onHome={(id) => act(() => setHomeGymAction(id), "Home gym changed")}
+            onHome={async (id) => {
+              await setHomeGymAction(id);
+              router.refresh();
+            }}
+            onRemove={async (id) => {
+              await removeGymAction(id);
+              router.refresh();
+            }}
+            onClose={close}
           />
         )}
 
@@ -2958,51 +2982,6 @@ export function ConfirmDialog({ title, description, confirm, danger, tick, onCon
         <button type="button" className={`rd-btn ${danger ? "danger-solid" : "primary"}`} onClick={() => onConfirm(also)} autoFocus>
           {confirm}
         </button>
-      </DialogFooter>
-    </DialogContent>
-  );
-}
-
-function GymsDialog({ firstName, gyms, onAdd, onRemove, onHome }: { firstName: string; gyms: Gym[]; onAdd: (name: string) => void; onRemove: (id: number) => void; onHome: (id: number) => void }) {
-  const [name, setName] = useState("");
-  const add = () => {
-    if (!name.trim()) return;
-    onAdd(name.trim());
-    setName("");
-  };
-  return (
-    <DialogContent className="rd-dlg">
-      <DialogHeader>
-        <DialogTitle>{firstName}&rsquo;s gyms</DialogTitle>
-        <DialogDescription>Each gym keeps its own weights. The home gym&rsquo;s weight is the plain figure; {firstName} picks the gym at the start of a session.</DialogDescription>
-      </DialogHeader>
-      <div className="rd-gymlist">
-        {gyms.map((g) => (
-          <div key={g.id} className="rd-gymrow">
-            <span className="rd-gymname">
-              {g.name}
-              {g.home && <em>Home</em>}
-            </span>
-            {!g.home && (
-              <button type="button" className="rd-btn ghost wide" onClick={() => onHome(g.id)}>
-                Make home
-              </button>
-            )}
-            <button type="button" className="rd-btn ghost sm" onClick={() => onRemove(g.id)} aria-label={`Remove ${g.name}`} title="Remove (what was logged there stays)">
-              <TrashIcon />
-            </button>
-          </div>
-        ))}
-        {gyms.length === 0 && <p className="rd-dlg-hint">No gyms yet: the weights are one figure.</p>}
-      </div>
-      <div className="rd-field-row">
-        <input className="rd-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Gym name" maxLength={40} onKeyDown={(e) => e.key === "Enter" && add()} />
-        <button type="button" className="rd-btn" onClick={add} disabled={!name.trim()}>
-          <PlusIcon /> Add gym
-        </button>
-      </div>
-      <DialogFooter>
-        <DialogClose className="rd-btn primary">Done</DialogClose>
       </DialogFooter>
     </DialogContent>
   );
