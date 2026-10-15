@@ -132,7 +132,7 @@ export default function EventsTimelineCard({ events, today }: { events: HomeEven
 function Item({ item, index, pos, focused, onPick }: { item: TimelineItem; index: number; pos: number; focused: boolean; onPick: () => void }) {
   const d = Math.min(Math.abs(index - pos), 2);
   // The centred one big, the neighbours just under full size, the rest small.
-  const scale = 1.16 - d * 0.2;
+  const scale = 1.16 - d * 0.22;
   const t = item.event ? eventTypeOf(item.event.kind) : null;
   const style = {
     transform: `scale(${scale.toFixed(3)})`,
