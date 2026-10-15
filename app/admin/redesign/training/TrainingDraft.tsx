@@ -82,6 +82,8 @@ export type DraftRow = {
   /** The library's substitutes for the exercise (14 Oct), offered too unless libraryOff. */
   librarySubstitutes: { exerciseId: number; name: string; note: string }[];
   libraryOff: boolean;
+  /** Library substitutes switched off on this session (15 Oct). */
+  libraryHidden: number[];
   d7: number | null;
   d30: number | null;
 };
@@ -345,7 +347,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         });
         const addedRows: DraftRow[] = p.added
           .filter((a): a is Added & AddedExercise => a.kind === "exercise")
-          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: Math.max(1, parseInt(String(a.sets), 10) || 3), reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: Number(a.rpe) || null, tempo: a.tempo?.trim() || null, rest: restSeconds(a.rest ?? ""), note: a.note?.trim() || null, logged: [], video: null, demo: null, demoHidden: false, history: [], swap: null, swapInfo: null, exerciseChat: [], alternatives: [], librarySubstitutes: [], libraryOff: false, d7: null, d30: null }));
+          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: Math.max(1, parseInt(String(a.sets), 10) || 3), reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: Number(a.rpe) || null, tempo: a.tempo?.trim() || null, rest: restSeconds(a.rest ?? ""), note: a.note?.trim() || null, logged: [], video: null, demo: null, demoHidden: false, history: [], swap: null, swapInfo: null, exerciseChat: [], alternatives: [], librarySubstitutes: [], libraryOff: false, libraryHidden: [], d7: null, d30: null }));
         const addedCardio: DraftCardio[] = p.added
           .filter((a): a is Added & AddedCardio => a.kind === "cardio")
           .map((a, i) => ({ id: -(Date.now() + 500 + i), name: a.name, time: a.time, pace: a.pace, incline: a.incline, distance: a.distance, notes: a.note, done: false }));
@@ -1084,7 +1086,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                   })()}
                                 <DropdownMenuItem onSelect={() => setDlg({ kind: "alternatives", rowId: r.id })}>
                                   <DumbbellIcon /> {(() => {
-                                    const n = r.alternatives.length || r.librarySubstitutes.length;
+                                    const n = r.alternatives.length || r.librarySubstitutes.filter((s) => !r.libraryHidden.includes(s.exerciseId)).length;
                                     return n ? `Substitutes · ${n}${r.alternatives.length ? " · this session" : ""}` : "Substitutes";
                                   })()}
                                 </DropdownMenuItem>
@@ -1458,11 +1460,11 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
             firstName={firstName}
             session={sessions.find((s) => s.rows.some((r) => r.id === dlg.rowId))?.name ?? "Session"}
             library={library}
-            onSave={async (list) => {
+            onSave={async (list, hidden) => {
               const row = rowById(dlg.rowId)!;
               const session = sessions.find((s) => s.rows.some((r) => r.id === row.id))?.name ?? "this session";
               // A session's own picks replace the library's (15 Oct); an empty list means the library's are offered.
-              await setExerciseAlternativesAction(row.id, list.map((x) => ({ exerciseId: x.exerciseId, note: x.note })), list.length > 0);
+              await setExerciseAlternativesAction(row.id, list.map((x) => ({ exerciseId: x.exerciseId, note: x.note })), list.length > 0, hidden);
               close();
               router.refresh();
               toast.success(`Substitutes saved for ${session}`);

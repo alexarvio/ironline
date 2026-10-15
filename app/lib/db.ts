@@ -544,6 +544,8 @@ type WorkoutAssignment = {
   alternatives?: { exercise_id: number; note: string | null }[];
   /** The library's substitutes for this exercise kept off this session (14 Oct); absent, they are offered along with the alternatives above. */
   library_substitutes_off?: boolean;
+  /** Library substitutes the coach switched off on this session (15 Oct): exercise ids. Everything else the library offers is offered. */
+  library_substitutes_hidden?: number[];
   // Which of the exercise's variations is asked for (close grip…): its name
   // goes after the exercise's, its demo before the exercise's. Absent: the
   // exercise as it is. Sets still count for the exercise.

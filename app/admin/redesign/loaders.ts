@@ -290,6 +290,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
         alternatives: (a.alternatives ?? []).filter((x) => libName.has(x.exercise_id)).map((x) => ({ exerciseId: x.exercise_id, name: libName.get(x.exercise_id)!, note: x.note ?? "" })),
         librarySubstitutes: librarySubstitutesFor(a.exercise_id).filter((x) => libName.has(x.exercise_id)).map((x) => ({ exerciseId: x.exercise_id, name: libName.get(x.exercise_id)!, note: x.note ?? "" })),
         libraryOff: !!a.library_substitutes_off,
+        libraryHidden: a.library_substitutes_hidden ?? [],
         d7: pct(lastWeek),
         d30: pct(monthBack),
       };

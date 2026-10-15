@@ -903,7 +903,7 @@
 .ssb-copy:hover { color: #1d3466; }
 .ssb-full { margin: 0; font-size: 12.5px; font-weight: 600; color: #8b93a1; }
 .ssb-error, .nvr-error { margin: -6px 0 0; font-size: 12.5px; font-weight: 700; color: #B42318; }
-.ssb-foot { position: relative; display: flex; align-items: center; gap: 8px; padding: 14px 24px 18px; border-top: 1px solid #EEF1F5; background: #fff; border-radius: 0 0 24px 24px; }
+.ssb-foot { position: relative; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 14px 24px 18px; border-top: 1px solid #EEF1F5; background: #fff; border-radius: 0 0 24px 24px; }
 .ssb-status { flex: 1; font-size: 12.5px; font-weight: 600; line-height: 1.4; color: #8b93a1; }
 .ssb-cancel, .nvr-cancel { height: 44px; padding: 0 18px; border: 0; border-radius: 13px; background: #fff; box-shadow: inset 0 0 0 1px #DCE3EE; font: inherit; font-size: 14px; font-weight: 800; color: #1d3466; cursor: pointer; }
 .ssb-save, .nvr-primary { display: inline-flex; align-items: center; gap: 7px; height: 44px; padding: 0 24px; border: 0; border-radius: 13px; background: #1d3466; color: #fff; font: inherit; font-size: 14.5px; font-weight: 800; white-space: nowrap; box-shadow: 0 12px 22px -12px rgba(29, 52, 102, 0.95); cursor: pointer; }
@@ -1125,3 +1125,11 @@
 .exp-foot { position: relative; flex: none; display: flex; align-items: center; gap: 8px; padding: 14px 24px 18px; border-top: 1px solid #EEF1F5; background: #fff; }
 .exp-howbtn { flex: 1; display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 700; color: #5b6474; text-align: left; cursor: pointer; }
 .exp-msg { display: inline-flex; align-items: center; gap: 7px; height: 44px; padding: 0 20px; border: 0; border-radius: 13px; background: #1d3466; color: #fff; font: inherit; font-size: 14px; font-weight: 800; white-space: nowrap; box-shadow: 0 12px 22px -12px rgba(29, 52, 102, 0.95); cursor: pointer; }
+/* A library substitute offered or not on this session (15 Oct): a small switch on its row, on by default. */
+.ssb-offer { display: inline-flex; align-items: center; gap: 8px; padding: 0; border: 0; background: none; font: inherit; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #4c42a8; white-space: nowrap; cursor: pointer; }
+.ssb-offer[aria-checked="false"] { color: #98A2B3; }
+.ssb-offer i { position: relative; display: inline-block; width: 32px; height: 20px; border-radius: 999px; background: #4c42a8; transition: background 0.2s; }
+.ssb-offer[aria-checked="false"] i { background: #D5DAE3; }
+.ssb-offer i::after { content: ""; position: absolute; top: 3px; left: 15px; width: 14px; height: 14px; border-radius: 999px; background: #fff; box-shadow: 0 2px 4px rgba(16, 24, 40, 0.25); transition: left 0.2s; }
+.ssb-offer[aria-checked="false"] i::after { left: 3px; }
+.ssb-librow.off { opacity: 0.55; }
