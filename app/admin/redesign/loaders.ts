@@ -121,7 +121,8 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   const library: Library = coachGroups(coachId).filter((g) => g.slug !== "cardio" && (byGroup[g.slug]?.length ?? 0) > 0).map((g) => ({
     slug: g.slug,
     label: g.label,
-    exercises: (byGroup[g.slug] ?? []).map((e) => ({ id: e.id, name: e.name, ...(e.cue ? { cue: e.cue } : {}), ...(e.variations?.length ? { variations: e.variations.map((v) => ({ id: v.id, name: v.name, ...(v.cue ? { cue: v.cue } : {}) })) } : {}) })),
+    // group and video (15 Oct): the substitutes and variation pop-ups search by group and show a demo's poster.
+    exercises: (byGroup[g.slug] ?? []).map((e) => ({ id: e.id, name: e.name, group: g.slug, video: e.video_url ?? null, ...(e.cue ? { cue: e.cue } : {}), ...(e.variations?.length ? { variations: e.variations.map((v) => ({ id: v.id, name: v.name, video: v.video_url ?? null, ...(v.cue ? { cue: v.cue } : {}) })) } : {}) })),
   }));
   // The coach's cardio movements, offered when a cardio is added, each with its cue.
   const cardioMoves = (byGroup.cardio ?? []).map((e) => ({ name: e.name, cue: e.cue ?? "" }));

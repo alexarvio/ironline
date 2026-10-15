@@ -8789,8 +8789,10 @@ export function librarySubstitutesFor(exerciseId: number): { exercise_id: number
     those off. The session's own note wins where both name the same exercise. */
 export function effectiveAlternatives(wa: { exercise_id: number; alternatives?: { exercise_id: number; note: string | null }[]; library_substitutes_off?: boolean }): { exercise_id: number; note: string | null; variation_id?: number | null }[] {
   const own = wa.alternatives ?? [];
+  // A session's own picks replace the library's (15 Oct); with none, the library's are offered.
+  if (own.length) return own;
   const lib = wa.library_substitutes_off ? [] : librarySubstitutesFor(wa.exercise_id);
-  return [...own, ...lib.filter((l) => !own.some((o) => o.exercise_id === l.exercise_id))];
+  return lib;
 }
 
 /** One more variation on an exercise (typed in the session builder); the variation, an existing one of that name, or null. */
