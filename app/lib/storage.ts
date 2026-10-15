@@ -95,6 +95,7 @@ export async function putUpload(publicPath: string | null | undefined, body: Buf
   try {
     await b.s3.send(new PutObjectCommand({ Bucket: b.bucket, Key: key, Body: body, ContentType: contentType || mimeFor(key) }));
     inBucket.add(key);
+    linkCache.delete(key);
     dropDiskCopy(key);
   } catch (error) {
     // The file is on the disk and is served from there; the startup copy
@@ -130,6 +131,7 @@ export async function deleteUpload(publicPath: string | null | undefined) {
   const key = publicPath ? keyOf(publicPath) : null;
   if (!b || !key) return;
   inBucket.delete(key);
+  linkCache.delete(key);
   try {
     await b.s3.send(new DeleteObjectCommand({ Bucket: b.bucket, Key: key }));
   } catch {
@@ -167,10 +169,20 @@ export async function deleteUploadFolder(folder: string) {
 }
 
 /** A link into the bucket that expires, or null to serve the file from the disk. */
+// One signed link per file for most of its lifetime (15 Oct): a fresh signature on
+// every request meant a new URL each time, so the browser could never reuse a photo
+// it had just downloaded and a chat re-fetched every image on every open.
+const linkCache = new Map<string, { url: string; until: number }>();
+
 export async function bucketLink(key: string): Promise<string | null> {
   const b = bucket();
-  if (!b || !(await exists(b, key))) return null;
-  return getSignedUrl(b.s3, new GetObjectCommand({ Bucket: b.bucket, Key: key }), { expiresIn: LINK_SECONDS });
+  if (!b) return null;
+  const hit = linkCache.get(key);
+  if (hit && hit.until > Date.now()) return hit.url;
+  if (!(await exists(b, key))) return null;
+  const url = await getSignedUrl(b.s3, new GetObjectCommand({ Bucket: b.bucket, Key: key }), { expiresIn: LINK_SECONDS });
+  linkCache.set(key, { url, until: Date.now() + (LINK_SECONDS - 6 * 60) * 1000 });
+  return url;
 }
 
 export const LINK_CACHE_SECONDS = LINK_SECONDS - 5 * 60;
