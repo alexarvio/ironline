@@ -103,7 +103,16 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, o
     fd.set("about", about ?? ask?.about ?? "");
     fd.set("note", note);
     run(async () => {
-      const error = await sendExerciseMediaAction(fd);
+      // A failed request (the connection dropped, the body refused) used to throw
+      // out of here and crash the screen (15 Oct): now it reads as a line in the sheet.
+      let error: string | null;
+      try {
+        error = await sendExerciseMediaAction(fd);
+      } catch (e) {
+        const mb = Math.round(file.size / 1024 / 1024);
+        error = `That didn't send${mb ? ` (${mb} MB)` : ""}. Check your connection and try again; a shorter clip helps.`;
+        console.error("[media] send failed", e);
+      }
       if (error) {
         setProblem(error);
         return;
