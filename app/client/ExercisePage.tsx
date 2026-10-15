@@ -114,12 +114,13 @@ export default function ExercisePage({
   const logOf = (n: number) => exercise.logs.find((l) => l.setNumber === n) ?? null;
   // What the client stepped or typed on a set, over what the server has.
   const [drafts, setDrafts] = useState<Record<number, Partial<Vals>>>({});
-  // A set's plan: what this set was last session, else the coach's figures;
+  // A set's plan: the coach's weight (one source of truth, 15 Oct), reps
+  // and RPE from what this set was last session, else the coach's figures;
   // an extra set with no last-time twin follows the set before it.
   const planOf = (n: number): Vals => {
     const before = n > exercise.sets ? logOf(n - 1) : null;
     const prev = lastOf(n) ?? before;
-    return { weightKg: prev?.weight ?? planWeight, reps: prev?.reps ?? repLow, rpe: prev?.rpe ?? targetRpe };
+    return { weightKg: (n > exercise.sets ? before?.weight : null) ?? planWeight ?? prev?.weight ?? null, reps: prev?.reps ?? repLow, rpe: prev?.rpe ?? targetRpe };
   };
   const enteredOf = (n: number): Vals => {
     const log = logOf(n);
