@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 
 // Deleting a session (15 Oct), in the shared pop-up language, red: what goes
@@ -42,6 +42,7 @@ export default function DeleteSessionDialog({
   onClose: () => void;
 }) {
   const [agreed, setAgreed] = useState(false);
+  const cancelRef = useRef<HTMLButtonElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const gated = loggedSets > 0;
@@ -74,8 +75,9 @@ export default function DeleteSessionDialog({
       role="alertdialog"
       aria-describedby="dls-desc"
       onOpenAutoFocus={(ev) => {
+        // Cancel takes the focus (a beat after the mount, past the dialog's own focus move).
         ev.preventDefault();
-        requestAnimationFrame(() => (document.querySelector(".dls-cancel") as HTMLButtonElement | null)?.focus());
+        setTimeout(() => cancelRef.current?.focus(), 60);
       }}
     >
       <span className="dls-glow" aria-hidden="true" />
@@ -154,7 +156,7 @@ export default function DeleteSessionDialog({
 
       <footer className="dls-foot">
         <span className="dls-note">This can’t be undone.</span>
-        <button type="button" className="dls-cancel" onClick={onClose}>
+        <button ref={cancelRef} type="button" className="dls-cancel" onClick={onClose}>
           Cancel
         </button>
         <button type="button" className="dls-delete" disabled={!can || busy} aria-describedby={gated ? "dls-ack" : undefined} onClick={() => void del()}>
