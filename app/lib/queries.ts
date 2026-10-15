@@ -1463,6 +1463,7 @@ export function updateAssignmentFields(
   // A weight the coach types is theirs: see progressTargetFromLogs.
   if ("target_weight_kg" in fields && fields.target_weight_kg !== assignment.target_weight_kg) {
     assignment.target_set_at = new Date().toISOString();
+    assignment.target_pinned = exerciseBeingLogged(assignment);
   }
 
   Object.assign(assignment, fields);
@@ -1626,6 +1627,22 @@ export function logSet(
 // no entry yet has no target of its own to meet (the coach's weight was
 // only a starting point on a different machine), so what the client lifted
 // there becomes that gym's weight going forward.
+/** The client has logged this exercise on an earlier day of their programme:
+    a target the coach types now is a change to a running plan, not the plan
+    being written. */
+function exerciseBeingLogged(wa: WorkoutAssignment): boolean {
+  const data = getData();
+  const day = data.program_days.find((pd) => pd.id === wa.program_day_id);
+  if (!day) return false;
+  const earlier = new Set(
+    data.program_days
+      .filter((pd) => pd.client_id === day.client_id && (pd.week_number < day.week_number || (pd.week_number === day.week_number && pd.day_of_week < day.day_of_week)))
+      .map((pd) => pd.id),
+  );
+  const rows = new Set(data.workout_assignments.filter((x) => x.exercise_id === wa.exercise_id && earlier.has(x.program_day_id)).map((x) => x.id));
+  return data.set_logs.some((sl) => rows.has(sl.workout_assignment_id));
+}
+
 export function progressTargetFromLogs(workoutAssignmentId: number) {
   const data = getData();
   const wa = data.workout_assignments.find((x) => x.id === workoutAssignmentId);
@@ -1670,7 +1687,9 @@ export function progressTargetFromLogs(workoutAssignmentId: number) {
     if (gym == null) {
       if (wa.target_weight_kg == null || bestWeight < wa.target_weight_kg) continue;
       for (const other of later) {
-        // The coach set this one by hand after these sets were logged: theirs.
+        // The coach changed this one while the plan was running (pinned), or
+        // set it by hand after these sets were logged: theirs.
+        if (other.target_pinned) continue;
         if (other.target_set_at && stampMs(other.target_set_at) >= lastLoggedMs) continue;
         const target = Math.max(other.target_weight_kg ?? 0, bestWeight);
         if (target === other.target_weight_kg) continue;
@@ -1684,6 +1703,7 @@ export function progressTargetFromLogs(workoutAssignmentId: number) {
     if (own != null && bestWeight < own) continue;
     for (const other of later) {
       const entry = other.gym_targets?.[gym];
+      if (other.target_pinned && entry?.kg != null) continue;
       if (entry?.set_at && stampMs(entry.set_at) >= lastLoggedMs) continue;
       const target = entry?.kg == null ? bestWeight : Math.max(entry.kg, bestWeight);
       if (target === entry?.kg) continue;
@@ -9512,6 +9532,7 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
       // A weight the coach types is theirs: see progressTargetFromLogs.
       if ("target_weight_kg" in typed && typed.target_weight_kg !== target.target_weight_kg) {
         target.target_set_at = new Date().toISOString();
+        target.target_pinned = exerciseBeingLogged(target);
       }
       Object.assign(target, typed);
     }

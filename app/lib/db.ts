@@ -525,6 +525,10 @@ type WorkoutAssignment = {
   // only writes itself forward from sets logged after this, so a target the
   // coach lowers stays lowered. Missing on rows never edited by hand.
   target_set_at?: string | null;
+  // The coach typed this target while the client was already logging the
+  // exercise (15 Oct): it holds. Sets from earlier weeks never move it; the
+  // weight goal counts on from it for the weeks after.
+  target_pinned?: boolean;
   // Weight targets for the client's other gyms, by gym id. The home gym's
   // target is target_weight_kg; a gym with no entry here starts from it.
   // `set_at` marks one the coach typed, as target_set_at does.

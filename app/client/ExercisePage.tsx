@@ -100,16 +100,10 @@ export default function ExercisePage({
     const one = exercise.reps.match(/^\s*(\d+)\s*$/);
     return one ? Number(one[1]) : null;
   })();
-  // Progression (9 Oct): last session every working set made the reps at a
-  // weight above this week's target: the plan rises to that weight.
-  const progressed = (() => {
-    if (!last || repLow == null || targetWeight == null || swapped) return null;
-    const rows = Array.from({ length: exercise.sets }, (_, i) => lastOf(i + 1));
-    if (rows.some((r) => !r || r.reps == null || r.weight == null || r.reps < repLow)) return null;
-    const held = Math.min(...rows.map((r) => r!.weight!));
-    return held > targetWeight ? held : null;
-  })();
-  const planWeight = progressed ?? targetWeight;
+  // One source of truth (15 Oct): the plan's weight is the coach's target,
+  // which the server moves up itself from what was logged. The sheet adds
+  // no rule of its own.
+  const planWeight = targetWeight;
 
   // ---- Working sets. Extra sets (12 Oct): once every prescribed set is in,
   // the client can add one. It is logged as set N+1, an extra, never a
