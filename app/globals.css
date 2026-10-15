@@ -18961,13 +18961,13 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .evt-all { padding: 0; border: 0; background: none; font: inherit; font-size: 12px; font-weight: 800; color: #1d3466; cursor: pointer; }
 .evt-back { height: 26px; padding: 0 10px; border: 0; border-radius: 999px; background: #141a24; color: #fff; font: inherit; font-size: 11.5px; font-weight: 800; cursor: pointer; }
 .evt-wrap { position: relative; }
-.evt-spine { position: absolute; left: 0; right: 0; top: 56px; border-top: 2px dashed #DCE3EE; pointer-events: none; }
-.evt-row { position: relative; display: flex; align-items: center; gap: 6px; height: 176px; padding: 6px 0 10px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; scroll-snap-type: x mandatory; touch-action: pan-x pan-y; outline: none; }
+.evt-spine { position: absolute; left: 0; right: 0; top: 66px; border-top: 2px dashed #DCE3EE; pointer-events: none; }
+.evt-row { position: relative; display: flex; align-items: center; gap: 6px; height: 196px; padding: 6px 0 10px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; scroll-snap-type: x mandatory; touch-action: pan-x pan-y; outline: none; }
 .evt-row::-webkit-scrollbar { display: none; }
 .evt-row:focus-visible { box-shadow: inset 0 0 0 2px #1d3466; }
 .evt-slot { position: relative; z-index: 1; flex: none; width: 132px; padding: 0; border: 0; background: none; font: inherit; color: inherit; scroll-snap-align: center; cursor: pointer; }
 .evt-slot[aria-selected="true"] { z-index: 2; }
-.evt-item { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 132px; box-sizing: border-box; padding: 14px 8px 12px; border-radius: 20px; text-align: center; background: #fff; box-shadow: inset 0 0 0 1px rgba(var(--rgb, 16, 24, 40), 0.18); opacity: 0.85; transition: background 0.25s, box-shadow 0.25s, color 0.25s, opacity 0.25s, filter 0.25s; will-change: transform; }
+.evt-item { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 132px; box-sizing: border-box; padding: 14px 8px 12px; border-radius: 20px; text-align: center; background: #fff; box-shadow: inset 0 0 0 1px rgba(var(--rgb, 16, 24, 40), 0.18); opacity: 0.85; transform: scale(1); transition: background 0.25s, box-shadow 0.25s, color 0.25s, opacity 0.25s, filter 0.25s, transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); will-change: transform; }
 .evt-tile { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; color: var(--c, #5b6472); transition: color 0.25s; }
 .evt-tile svg { width: 28px; height: 28px; }
 .evt-label { font-size: 9.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; color: #98A2B3; }
@@ -18981,7 +18981,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .evt-item.free .evt-tile, .evt-item.more .evt-tile { color: #5b6472; }
 .evt-item.free .evt-when, .evt-item.more .evt-when { color: #98A2B3; }
 /* The one in the centre. */
-.evt-item.on { opacity: 1; filter: none; }
+.evt-item.on { opacity: 1; filter: none; transform: scale(1.14); }
 .evt-item.on:not(.free):not(.more) { background: linear-gradient(160deg, var(--c2), var(--c)); box-shadow: 0 0 0 4px #F4F6FA, 0 16px 26px -14px rgba(var(--rgb), 0.95); color: #fff; }
 .evt-item.on:not(.free):not(.more) .evt-tile { color: #fff; }
 .evt-item.on:not(.free):not(.more) .evt-label { color: rgba(255, 255, 255, 0.8); }

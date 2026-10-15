@@ -130,7 +130,7 @@ export default function EventsTimelineCard({ events, today }: { events: HomeEven
 }
 
 function Item({ item, focused, onPick }: { item: TimelineItem; focused: boolean; onPick: () => void }) {
-  // Every pill the same size (15 Oct): the centred one is told apart by its colour alone.
+  // Every pill the same size (15 Oct); only the centred one grows, in CSS, so the swipe reads as a pop.
   const t = item.event ? eventTypeOf(item.event.kind) : null;
   const style = (t ? { "--c": t.color, "--c2": lighter(t.color), "--rgb": t.rgb } : {}) as React.CSSProperties;
   const slotClass = item.slot === "more" ? " more" : item.slot === "today" && !item.event ? " free" : ` ${item.slot}`;
