@@ -17,6 +17,9 @@ import { MAX_SECONDS, recordingSupported, useReviewRecorder, type Corner } from 
 // video and sent as the reply. A reply lands on the exercise (and carries to
 // the next session) and in the chat, linked to the exercise.
 
+/** An upload drawn into the recorder's canvas must come from this origin (15 Oct): the plain path redirects to the bucket, which taints the canvas ("Canvas is not origin-clean"); ?stream=1 sends the bytes through the app. */
+const sameOrigin = (url: string) => (url.startsWith("/uploads/") ? `${url}${url.includes("?") ? "&" : "?"}stream=1` : url);
+
 export type ThreadItem =
   | { id: string; kind: "text"; mine: boolean; text: string; at: number }
   | { id: string; kind: "review"; url: string; durationMs: number | null; annotations: number | null; message: string | null; at: number };
@@ -94,7 +97,8 @@ function upload(id: number, blob: Blob, onProgress: (share: number) => void): Pr
 export default function MediaReviewModal({ review, onClose }: { review: MediaReview; onClose: () => void }) {
   const router = useRouter();
   const first = review.client.firstName;
-  const [mode, setMode] = useState<"talk" | "record">("talk");
+  // Opens on the recorder (15 Oct, Alex): the panel is the client, the video, where it comes from, and the recording. The thread and the text box went; a review reaches the chat on its own.
+  const [mode, setMode] = useState<"talk" | "record">("record");
   const [idx, setIdx] = useState(0);
   const item = review.media[Math.min(idx, review.media.length - 1)];
   // A sent review playing on the stage in place of the client's media.
@@ -339,7 +343,6 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
     setMode("talk");
     setConfirm(null);
   };
-  const askBack = () => (recDirty ? setConfirm("back") : backToTalk());
   const askClose = () => (mode === "record" && recDirty ? setConfirm("close") : onClose());
   const enterRecord = () => {
     setStageReview(null);
@@ -446,8 +449,7 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
         e.preventDefault();
         if (confirm) return setConfirm(null);
         if (palette) return setPalette(false);
-        if (mode === "record") askBack();
-        else onClose();
+        askClose();
       }}
       onInteractOutside={(e) => {
         if (mode === "record" && recDirty) {
@@ -471,7 +473,7 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
               ref={(el) => {
                 mediaEl.current = el;
               }}
-              src={showing.url}
+              src={sameOrigin(showing.url)}
               playsInline
               preload="metadata"
               onLoadedMetadata={(e) => {
@@ -492,7 +494,7 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
               ref={(el) => {
                 mediaEl.current = el;
               }}
-              src={showing.url}
+              src={sameOrigin(showing.url)}
               alt={`${first}'s photo`}
               onLoad={(e) => {
                 const im = e.currentTarget;
@@ -567,7 +569,7 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
             ‹ Back to {first}&rsquo;s {item.kind}
           </button>
         )}
-        {mode === "talk" && review.media.length > 1 && (
+        {!recording && review.media.length > 1 && (
           <>
             <span className="mrv-count">
               {item.kind.toUpperCase()} {idx + 1} OF {review.media.length}
@@ -792,13 +794,46 @@ export default function MediaReviewModal({ review, onClose }: { review: MediaRev
         ) : (
           <div className="mrv-body record" key="record">
             <div className="mrv-scroll">
-              <button type="button" className="mrv-back" onClick={askBack}>
-                ← Back to conversation
-              </button>
-              <div>
-                <h2 className="mrv-title">Record a review</h2>
-                <p className="mrv-sub">Your voice, drawings and video playback are recorded together, so {first} sees exactly what you see.</p>
-              </div>
+              <section className="mrv-ctx">
+                <div className="mrv-ctx-row">
+                  <span className="mrv-eyebrow">
+                    {review.exercise.session.toUpperCase()} · WK {review.exercise.week} · DAY {review.exercise.day}
+                  </span>
+                  <span className={`mrv-req${review.requested ? " asked" : ""}`}>{review.requested ? "You asked for this" : "Sent unasked"}</span>
+                </div>
+                {review.sets.length > 0 ? (
+                  <div className="mrv-sets">
+                    {review.sets.map((s) => (
+                      <span key={s.n} className="mrv-set">
+                        <b>{s.n}</b>
+                        {s.label}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mrv-nosets">No sets logged on it yet.</p>
+                )}
+              </section>
+
+              {review.clientMessage && (
+                <div className="mrv-msg theirs">
+                  <span className="mrv-msg-avatar" aria-hidden="true">
+                    {review.client.avatarPath ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- the client's own upload, served by the app
+                      <img src={review.client.avatarPath} alt="" />
+                    ) : (
+                      first.charAt(0).toUpperCase()
+                    )}
+                  </span>
+                  <span className="mrv-msg-col">
+                    <small>
+                      {first}
+                      {review.clientMessage.at ? ` · ${hhmm(review.clientMessage.at)}` : ""}
+                    </small>
+                    <span className="mrv-bubble theirs">{review.clientMessage.text}</span>
+                  </span>
+                </div>
+              )}
 
               {recorder.micDenied && micOn && (
                 <p className="mrv-banner">
