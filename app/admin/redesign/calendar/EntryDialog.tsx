@@ -102,6 +102,8 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
   const [error, setError] = useState<string | null>(null);
   const [timeOpen, setTimeOpen] = useState(false);
   const [timeTyped, setTimeTyped] = useState("");
+  const [endOpen, setEndOpen] = useState(false);
+  const [endTyped, setEndTyped] = useState("");
   const titleRef = useRef<HTMLInputElement>(null);
 
   const current = cats.find((c) => c.id === cat) ?? cats[0];
@@ -421,24 +423,61 @@ export default function EntryDialog({ open, cats, clients, dayEntries, onDone }:
                     </PopoverPrimitive.Content>
                   </PopoverPrimitive.Portal>
                 </PopoverPrimitive.Root>
-                <span className="cal-entry-box ends" aria-live="polite">
-                  <span className="cal-entry-box-head">Ends</span>
-                  {customLength ? (
-                    <input
-                      className="cal-entry-box-val input"
-                      type="time"
-                      step={300}
-                      value={hhmm(endMin)}
-                      aria-label="Ends"
-                      onChange={(x) => {
-                        const m = toMin(x.target.value) - toMin(time);
-                        if (m > 0) setLength(m);
-                      }}
-                    />
-                  ) : (
+                {customLength ? (
+                  /* Custom: the end is picked like the start (15 Oct), typed or from the list; the browser's time field fought every keystroke. */
+                  <PopoverPrimitive.Root open={endOpen} modal onOpenChange={setEndOpen}>
+                    <PopoverPrimitive.Trigger className="cal-entry-box" aria-label={`Ends, ${hhmm(endMin)}`}>
+                      <span className="cal-entry-box-head">Ends</span>
+                      <span className="cal-entry-box-val">{hhmm(endMin)}</span>
+                    </PopoverPrimitive.Trigger>
+                    <PopoverPrimitive.Portal>
+                      <PopoverPrimitive.Content align="start" sideOffset={6} className="pb-menu cal-entry-times">
+                        <input
+                          className="cal-entry-input small"
+                          value={endTyped}
+                          onChange={(x) => setEndTyped(x.target.value)}
+                          placeholder="Type a time, e.g. 1530"
+                          aria-label="Type the end time"
+                          autoFocus
+                          onKeyDown={(x) => {
+                            if (x.key === "Enter") {
+                              const t = parseTime(endTyped);
+                              const m = t ? toMin(t) - toMin(time) : 0;
+                              if (m > 0) {
+                                setLength(m);
+                                setEndTyped("");
+                                setEndOpen(false);
+                              }
+                            }
+                          }}
+                        />
+                        <div className="cal-entry-timelist">
+                          {SLOTS.filter((t) => toMin(t) > toMin(time)).map((t) => (
+                            <button
+                              key={t}
+                              type="button"
+                              className={`cal-entry-time${t === hhmm(endMin) ? " on" : ""}`}
+                              ref={(el) => {
+                                if (el && t === hhmm(endMin)) el.scrollIntoView({ block: "center" });
+                              }}
+                              onClick={() => {
+                                setLength(toMin(t) - toMin(time));
+                                setEndOpen(false);
+                              }}
+                            >
+                              {t}
+                            </button>
+                          ))}
+                        </div>
+                      </PopoverPrimitive.Content>
+                    </PopoverPrimitive.Portal>
+                  </PopoverPrimitive.Root>
+                ) : (
+                  <span className="cal-entry-box ends" aria-live="polite">
+                    <span className="cal-entry-box-head">Ends</span>
                     <span className="cal-entry-box-val">{hhmm(endMin)}</span>
-                  )}
-                </span>
+                  </span>
+                )}
               </>
             )}
           </div>
