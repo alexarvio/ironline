@@ -164,6 +164,7 @@ import {
   getMealPhoto,
   removeMealPhoto,
   requestExerciseVideo,
+  setVideoRequestRecurring,
   removeVideoRequest,
   getClientIdForVideoRequest,
   saveRequestedVideo,
@@ -1338,14 +1339,23 @@ export async function uploadMealPhotoAction(formData: FormData) {
 
 // The coach asks for a video of one exercise in one session (or changes what
 // they asked for). Called directly from the builder's dialog.
-export async function requestExerciseVideoAction(assignmentId: number, note: string) {
+export async function requestExerciseVideoAction(assignmentId: number, note: string, recurring = false) {
   const id = Number(assignmentId);
   if (!Number.isInteger(id) || !(await coachForClient(getClientIdForAssignment(id)))) return;
-  requestExerciseVideo(id, String(note ?? ""));
+  requestExerciseVideo(id, String(note ?? ""), !!recurring);
   if (clientSeesAssignment(id)) {
     const w = assignmentWords(id);
-    noteChange(getClientIdForAssignment(id), `Asked you for a video of ${w.name} in ${w.dayId != null ? dayWords(w.dayId) : "a session"}`, { tab: "training", label: "See which", key: `video-ask:${id}`, ref: w.dayId ?? undefined });
+    noteChange(getClientIdForAssignment(id), `Asked you for a video of ${w.name} in ${w.dayId != null ? dayWords(w.dayId) : "a session"}${recurring ? ", and in every session like it" : ""}`, { tab: "training", label: "See which", key: `video-ask:${id}`, ref: w.dayId ?? undefined });
   }
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+/** Ask every session on or off (15 Oct); off takes back the unanswered requests it made. */
+export async function setVideoRequestRecurringAction(id: number, on: boolean) {
+  const owner = getClientIdForVideoRequest(Number(id));
+  if (owner == null || !(await coachForClient(owner))) return;
+  setVideoRequestRecurring(Number(id), !!on);
   revalidatePath("/admin");
   revalidatePath("/client");
 }

@@ -11064,7 +11064,7 @@ export function fileClientMedia(assignmentId: number, v: { about: "swap" | null;
 }
 
 /** Asks for a video of one exercise in one session; asking again only updates the note. */
-export function requestExerciseVideo(assignmentId: number, note: string): VideoRequest | null {
+export function requestExerciseVideo(assignmentId: number, note: string, recurring = false): VideoRequest | null {
   const clientId = getClientIdForAssignment(assignmentId);
   if (clientId == null) return null;
   const data = getData();
@@ -11072,6 +11072,7 @@ export function requestExerciseVideo(assignmentId: number, note: string): VideoR
   const existing = data.video_requests.find((r) => r.assignment_id === assignmentId);
   if (existing) {
     existing.note = clean;
+    setRecurring(data, existing, recurring);
     persist();
     return existing;
   }
@@ -11084,6 +11085,7 @@ export function requestExerciseVideo(assignmentId: number, note: string): VideoR
     file_path: null,
     submitted_at: null,
     seen_at: null,
+    ...(recurring ? { recurring: true } : {}),
   };
   data.video_requests.push(row);
   persist();
@@ -12273,4 +12275,51 @@ export function setCardioAlternatives(entryId: number, list: { name: string; not
   }
   persist();
   return n;
+}
+
+// ---- Ask every session (15 Oct). A recurring request is an ordinary request
+// row flagged `recurring`; every later session of the same name that has the
+// same exercise gets a request of its own, made from it, the moment the
+// client's app loads that session (resolveRecurringVideoAsks). Turning it
+// off stops the making and takes back the ones nobody has answered yet.
+
+function setRecurring(data: Data, row: VideoRequest, on: boolean) {
+  if (on) row.recurring = true;
+  else {
+    delete row.recurring;
+    data.video_requests = data.video_requests.filter((r) => !(r.recur_parent === row.id && !r.file_path));
+  }
+}
+
+export function setVideoRequestRecurring(id: number, on: boolean): boolean {
+  const data = getData();
+  const row = data.video_requests.find((r) => r.id === id);
+  if (!row) return false;
+  setRecurring(data, row, on);
+  persist();
+  return true;
+}
+
+/** Requests this session's exercises inherit from recurring ones on earlier sessions of the same name. */
+export function resolveRecurringVideoAsks(day: ProgramDay, assignments: WorkoutAssignment[]) {
+  const data = getData();
+  const label = (day.label ?? "").trim().toLowerCase();
+  if (!label) return;
+  const parents = data.video_requests.filter((r) => r.recurring && r.client_id === day.client_id && !r.from_client);
+  if (parents.length === 0) return;
+  const dayOf = new Map(data.program_days.map((d) => [d.id, d] as const));
+  const assignmentOf = new Map(data.workout_assignments.map((a) => [a.id, a] as const));
+  let changed = false;
+  for (const a of assignments) {
+    if (data.video_requests.some((r) => r.assignment_id === a.id)) continue;
+    const parent = parents.find((p) => {
+      const pa = assignmentOf.get(p.assignment_id);
+      const pd = pa ? dayOf.get(pa.program_day_id) : null;
+      return !!pa && !!pd && pa.exercise_id === a.exercise_id && (pd.label ?? "").trim().toLowerCase() === label && pd.week_number < day.week_number;
+    });
+    if (!parent) continue;
+    data.video_requests.push({ id: allocId("video_requests"), client_id: day.client_id, assignment_id: a.id, note: parent.note, requested_at: new Date().toISOString(), file_path: null, submitted_at: null, seen_at: null, recur_parent: parent.id });
+    changed = true;
+  }
+  if (changed) persist();
 }

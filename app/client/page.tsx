@@ -40,6 +40,7 @@ import {
   liveSessionFor,
   listExercises,
   videoRequestsFor,
+  resolveRecurringVideoAsks,
   listVideoReplies,
   getCurrentWeekNumber,
   getCheckInSections,
@@ -687,6 +688,8 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
               days={trainingDays.map(({ day, assignments }, i) => {
                 const gymId = dayGymId(day.id);
                 // Videos the coach asked for in this session.
+                // Ask every session (15 Oct): requests this session inherits from recurring ones are made here, as the app loads it.
+                resolveRecurringVideoAsks(day, assignments);
                 const videoAsks = videoRequestsFor(assignments.map((a) => a.id));
                 // A removed gym still shows on a session that was trained there.
                 const dayGym = allGyms.find((g) => g.id === gymId);

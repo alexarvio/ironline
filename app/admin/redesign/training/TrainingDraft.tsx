@@ -22,6 +22,7 @@ import CoachNoteCard from "../CoachNoteCard";
 import { SortableItem, SortableList } from "../Sortable";
 import { useOpenChat } from "../ChatPanel";
 import Picker from "../Picker";
+import AskVideoDialog from "./AskVideoDialog";
 import DatePick from "../DatePick";
 
 // The calmer builder, as a draft on real data. Nothing here saves: every
@@ -59,7 +60,7 @@ export type DraftRow = {
   rest: number | null;
   note: string | null;
   logged: { set: number; kg: number | null; reps: number | null; rpe: number | null; gym: string | null }[];
-  video: { requestId: number; state: "asked" | "in" | "replied"; note: string | null; reply: string | null; /** The file the client sent, and the one the coach sent back (9 Oct). */ src: string | null; replySrc: string | null; /** A photo or a video; sent unasked; about the swap; with the client's words (9 Oct). */ media: "video" | "photo"; fromClient: boolean; about: "swap" | null; clientNote: string | null; /** When it came in and when it was answered; a recorded review's length and drawings (12 Oct). */ sentAt?: string | null; repliedAt?: string | null; replyDurationMs?: number | null; replyAnnotations?: number | null } | null;
+  video: { requestId: number; /** Ask every session (15 Oct). */ recurring?: boolean; state: "asked" | "in" | "replied"; note: string | null; reply: string | null; /** The file the client sent, and the one the coach sent back (9 Oct). */ src: string | null; replySrc: string | null; /** A photo or a video; sent unasked; about the swap; with the client's words (9 Oct). */ media: "video" | "photo"; fromClient: boolean; about: "swap" | null; clientNote: string | null; /** When it came in and when it was answered; a recorded review's length and drawings (12 Oct). */ sentAt?: string | null; repliedAt?: string | null; replyDurationMs?: number | null; replyAnnotations?: number | null } | null;
   /** The demo the client sees on this exercise: the library's, else one set on this row long ago. */
   demo: { url: string; source: "library" | "row" } | null;
   /** The coach keeping that demo off this prescription for this client. */
@@ -1036,7 +1037,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                               <DropdownMenuContent align="end" className="pb-menu">
                                 <DropdownMenuItem onSelect={() => setDlg({ kind: "video", rowId: r.id })}>
                                   {video?.media === "photo" && video.state !== "asked" ? <PhotoIcon /> : <VideoIcon />}
-                                  {!video ? "Ask for a video" : video.state === "asked" ? "Video asked for · waiting" : video.media === "photo" ? (video.state === "in" ? "See their photo · reply" : "Their photo · replied") : video.state === "in" ? "Watch their video · reply" : "Their video · replied"}
+                                  {!video ? "Ask for a video" : video.state === "asked" ? `Video asked for · waiting${video.recurring ? " · every session" : ""}` : video.media === "photo" ? (video.state === "in" ? "See their photo · reply" : "Their photo · replied") : video.state === "in" ? "Watch their video · reply" : "Their video · replied"}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onSelect={() => setDlg({ kind: "demo", rowId: r.id })}>
                                   <PlayIcon /> {(demos[r.id] === undefined ? r.demo : demos[r.id]) ? "Demo video · change" : "Add demo"}
@@ -1456,7 +1457,36 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
             onClose={close}
           />
         )}
-        {dlg?.kind === "video" && rowById(dlg.rowId) && !reviewable(videos[dlg.rowId]) && (
+        {/* Asking for a video, or editing the ask (15 Oct, AskVideoDialog): no request yet, or one still unanswered that the coach made. */}
+        {dlg?.kind === "video" && rowById(dlg.rowId) && (!videos[dlg.rowId] || (videos[dlg.rowId]!.state === "asked" && !videos[dlg.rowId]!.fromClient)) && (
+          <AskVideoDialog
+            firstName={firstName}
+            exerciseName={rowById(dlg.rowId)!.swap ?? rowById(dlg.rowId)!.name}
+            session={sessions.find((s) => s.rows.some((r) => r.id === dlg.rowId))?.name ?? "Session"}
+            week={week.index}
+            targets={[rowById(dlg.rowId)!.reps ? `${rowById(dlg.rowId)!.sets} × ${rowById(dlg.rowId)!.reps}` : rowById(dlg.rowId)!.sets ? `${rowById(dlg.rowId)!.sets} sets` : "", rowById(dlg.rowId)!.rpe != null ? `RPE ${rowById(dlg.rowId)!.rpe}` : ""].filter(Boolean).join(" · ")}
+            existing={videos[dlg.rowId] ? { note: videos[dlg.rowId]!.note ?? "", recurring: !!videos[dlg.rowId]!.recurring } : null}
+            onAsk={async (note, recurring) => {
+              const rowId = dlg.rowId;
+              const session = sessions.find((s) => s.rows.some((r) => r.id === rowId))?.name ?? "Session";
+              await requestExerciseVideoAction(rowId, note, recurring);
+              close();
+              router.refresh();
+              toast.success(recurring ? `Asked ${firstName} for a video, every ${session} session` : `Asked ${firstName} for a video`);
+            }}
+            onWithdraw={
+              videos[dlg.rowId]
+                ? () => {
+                    const v = videos[dlg.rowId]!;
+                    close();
+                    act(() => removeVideoRequestAction(v.requestId), "Request withdrawn");
+                  }
+                : undefined
+            }
+            onClose={close}
+          />
+        )}
+        {dlg?.kind === "video" && rowById(dlg.rowId) && videos[dlg.rowId] && !(videos[dlg.rowId]!.state === "asked" && !videos[dlg.rowId]!.fromClient) && !reviewable(videos[dlg.rowId]) && (
           <VideoDialog
             row={rowById(dlg.rowId)!}
             video={videos[dlg.rowId] ?? null}

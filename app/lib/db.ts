@@ -205,6 +205,10 @@ export type VideoRequest = {
   replied_at?: string | null;
   /** When the client first opened the reply. */
   reply_seen_at?: string | null;
+  /** Ask every session (15 Oct): this request renews on every later session of the same name that has this exercise, until turned off. */
+  recurring?: boolean;
+  /** Made from a recurring request: the one it came from. */
+  recur_parent?: number | null;
   /** A recorded form review (12 Oct): how long, and how many drawings were on it. */
   reply_duration_ms?: number | null;
   reply_annotations?: number | null;
