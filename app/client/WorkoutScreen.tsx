@@ -266,25 +266,29 @@ export default function WorkoutScreen({
     <div ref={screenRef} className="app-layer app-layer-push wo-screen" role="dialog" aria-label={`${day.title} workout`}>
       <header className="wo-head">
         <div className="wo-head-row">
-          <button type="button" className="wo-head-btn" onClick={() => (ended || editing || window.confirm("Leave workout? Your sets are saved.") ? onBack() : undefined)} aria-label="Back to the session overview">
+          <button type="button" className="wo-head-btn" onClick={() => (ended || editing || window.confirm("Leave workout? Your sets are saved.") ? onBack() : undefined)} aria-label="Back">
             <ChevronLeftIcon />
           </button>
-          <div className="wo-head-mid">
-            <div className="wo-head-kicker">{editing ? `Editing · ${day.title}` : day.title}</div>
-            <div className={`wo-head-clock${ended ? " ended" : ""}`}>{clock(ms)}</div>
-          </div>
-          {/* On an exercise the chat and ⋯ sit on its own row (ExercisePage's
+          {/* The gym and the live clock in one ink capsule (15 Oct), the only dark thing up here; a tap switches gym. */}
+          <button
+            type="button"
+            className={`wo-pill${ended ? " ended" : ""}`}
+            onClick={() => day.gyms.length > 0 && setGymOpen(true)}
+            disabled={day.gyms.length === 0}
+            aria-label={`${gymName ?? (editing ? `Editing · ${day.title}` : day.title)}, ${clock(ms)} elapsed${day.gyms.length > 0 ? ". Switch gym" : ""}`}
+          >
+            <span className="wo-pill-glow" aria-hidden="true" />
+            <span className="wo-pill-gym">{gymName ?? (editing ? `Editing · ${day.title}` : day.gyms.length > 0 ? "Pick a gym" : day.title)}</span>
+            <span className="wo-pill-clock">
+              <i className="wo-pill-dot" aria-hidden="true" />
+              {clock(ms)}
+            </span>
+          </button>
+          {/* On an exercise the chat and ⋯ sit by its name (ExercisePage's
               tools); on a cardio or the wrap up, here. */}
           <div className="wo-head-right">{!currentEx && headTools("wo-head-btn")}</div>
         </div>
-        <div className="wo-head-row2 right">
-          {day.gyms.length > 0 && (
-            <button type="button" className="wo-gym-chip" onClick={() => setGymOpen(true)} aria-label={gymName ? `At ${gymName}. Switch gym` : "Pick a gym"}>
-              {gymName ?? "Pick a gym"}
-            </button>
-          )}
-        </div>
-        <div className="wo-segments" role="tablist" aria-label="Exercises">
+        <div className={`wo-segments${pages.length > 10 ? " many" : ""}`} role="tablist" aria-label="Exercises">
           {pages.map((p, i) => (
             <button
               key={i}
@@ -362,6 +366,7 @@ export default function WorkoutScreen({
                 exercise={day.exercises[p.index]}
                 index={p.index + 1}
                 total={day.exercises.length}
+                sessionLabel={editing ? `Editing · ${day.title}` : day.title}
                 gymId={gymId}
                 coachName={coachName}
                 coachPhoto={coachPhoto}

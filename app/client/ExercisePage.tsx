@@ -46,6 +46,7 @@ export default function ExercisePage({
   exercise,
   index,
   total,
+  sessionLabel = "",
   gymId,
   coachName,
   coachPhoto = null,
@@ -60,6 +61,8 @@ export default function ExercisePage({
   exercise: SessionExercise;
   index: number;
   total: number;
+  /** The session's name, for the eyebrow ("Pull · Exercise 1 of 6"). */
+  sessionLabel?: string;
   gymId: number | null;
   coachName: string;
   coachPhoto?: string | null;
@@ -429,14 +432,17 @@ export default function ExercisePage({
   return (
     <div className="wo-page-inner lw" data-ex={exercise.id}>
       <div className="wo-ex-head">
+        <div className="wo-eyebrow">
+          {sessionLabel && <span className="wo-eyebrow-session">{sessionLabel}</span>}
+          <span className="wo-eyebrow-count">
+            {sessionLabel ? "· " : ""}Exercise {index} of {total}
+          </span>
+        </div>
         <div className="wo-ex-top">
-          <div className="wo-kicker">
-            Exercise {index} of {total}
-          </div>
+          <h2 key={exercise.id} className="wo-ex-name">{shownName(exercise)}</h2>
           <div className="wo-ex-tools">{tools}</div>
         </div>
         <div className="wo-ex-title-row">
-          <h2 className="wo-ex-name">{shownName(exercise)}</h2>
           <div className="wo-nextup">
             <span className="wo-nextup-label">{nextName ? "Next up" : "Last exercise"}</span>
             {nextName && <span className="wo-nextup-name">{nextName}</span>}
