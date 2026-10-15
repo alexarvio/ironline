@@ -22,7 +22,7 @@ import { ConfirmDialog } from "../training/TrainingDraft";
 // their app; the thread refreshes itself while it is open.
 
 /** href: where it opens on the coach's side (sent links that still open). */
-export type DraftLink = { area: string; label: string; gone: boolean; link?: MessageLink; href?: string };
+export type DraftLink = { area: string; label: string; gone: boolean; link?: MessageLink; href?: string; /** Words to start the message with (15 Oct, the progress pop-up's nudge); the coach edits them before sending. */ draft?: string };
 export type DraftMedia = { path: string; type: "image" | "video" | "audio" | "file"; name?: string | null };
 export type DraftMessage = { id: number; mine: boolean; text: string; when: string; media?: DraftMedia | null; link: DraftLink | null; reactions?: { coach?: string | null; client?: string | null }; pinned?: boolean; edited?: boolean; /** The message it answers, quoted (mine: the coach's own). */ replyTo?: { id: number; mine: boolean; text: string } | null };
 /** Newest first, as the loader hands them over. */
@@ -63,6 +63,7 @@ export default function MessagesDraft({ clientId, firstName, plan: fromPage, act
   if (panel && panel.opened !== seenOpen) {
     setSeenOpen(panel.opened);
     setLink(panel.about);
+    if (panel.about?.draft) setText(panel.about.draft);
   }
   useEffect(() => {
     if (!panel?.opened) return;

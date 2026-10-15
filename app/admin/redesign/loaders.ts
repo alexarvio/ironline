@@ -244,6 +244,8 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
           // 60 kg × 22 then 60.5 kg × 8 reads as a drop, not +0.4%.
           e1rm: wl.length ? Math.max(...wl.map((l) => (l.weight_kg ?? 0) * (1 + (l.reps ?? 0) / 30))) : null,
           gym: wl[0]?.gym_id != null ? gymName.get(wl[0].gym_id) ?? null : null,
+          /** When the session happened (15 Oct, the progress pop-up): ended, else started, else the first set logged. */
+          date: (wd?.session_ended_at ?? wd?.session_started_at ?? wl[0]?.logged_at ?? null)?.slice(0, 10) ?? null,
           current: i + 1 === weekIdx,
         };
       }).filter((h): h is NonNullable<typeof h> => h != null);

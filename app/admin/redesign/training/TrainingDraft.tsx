@@ -27,6 +27,7 @@ import SessionSubstitutesDialog from "./SessionSubstitutesDialog";
 import NewVariationDialog from "./NewVariationDialog";
 import ClientGymsDialog from "./ClientGymsDialog";
 import DeleteSessionDialog from "./DeleteSessionDialog";
+import ExerciseProgressDialog from "./ExerciseProgressDialog";
 import DatePick from "../DatePick";
 
 // The calmer builder, as a draft on real data. Nothing here saves: every
@@ -69,7 +70,7 @@ export type DraftRow = {
   demo: { url: string; source: "library" | "row" } | null;
   /** The coach keeping that demo off this prescription for this client. */
   demoHidden: boolean;
-  history: { week: number; label: string; target: number | null; targetReps: string; setsPlanned: number; sets: { n: number; kg: number | null; reps: number | null; rpe: number | null }[]; best: number | null; e1rm: number | null; gym: string | null; current: boolean }[];
+  history: { week: number; label: string; target: number | null; targetReps: string; setsPlanned: number; sets: { n: number; kg: number | null; reps: number | null; rpe: number | null }[]; best: number | null; e1rm: number | null; gym: string | null; /** yyyy-mm-dd of the session (15 Oct). */ date: string | null; current: boolean }[];
   /** What the client did instead, when they swapped the exercise. */
   swap: string | null;
   /** The swap in full: what, when, and the sets logged on it (kept out of this row's numbers). */
@@ -396,7 +397,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   // right (ChatPanel), the reply pointing at it; outside the shell, the
   // message dialog as before.
   const openChat = useOpenChat();
-  const replyTo = (label: string, link: MessageLink, focus: number | null = null) => (openChat ? openChat({ area: "Training", label, link }, focus) : setDlg({ kind: "message", label, link }));
+  const replyTo = (label: string, link: MessageLink, focus: number | null = null, draft?: string) => (openChat ? openChat({ area: "Training", label, link, ...(draft ? { draft } : {}) }, focus) : setDlg({ kind: "message", label, link }));
   useEffect(() => {
     const m = /^#session-(\d+)(?:-ex-(\d+))?$/.exec(window.location.hash);
     if (!m) return;
@@ -1356,7 +1357,30 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
 
       {/* ---- Dialogs. One open at a time. */}
       <Dialog open={dlg != null} onOpenChange={(o) => !o && close()}>
-        {dlg?.kind === "progress" && rowById(dlg.rowId) && <ProgressDialog row={rowById(dlg.rowId)!} lbs={lbs} unit={unit} multiGym={multiGym} />}
+        {dlg?.kind === "progress" && rowById(dlg.rowId) && (
+          (() => {
+            const row = rowById(dlg.rowId)!;
+            const session = sessions.find((x) => x.rows.some((r) => r.id === row.id));
+            return (
+              <ExerciseProgressDialog
+                exerciseName={row.name}
+                firstName={firstName}
+                targets={{ sets: row.sets, reps: row.reps, kg: row.kg, rpe: row.rpe }}
+                gyms={[...gyms].sort((a, b) => Number(b.home) - Number(a.home)).map((g) => g.name)}
+                sessions={row.history
+                  .filter((h) => h.sets.some((x) => x.kg != null && x.reps != null))
+                  .map((h) => ({ date: h.date, planWeek: h.week, gym: h.gym, sets: h.sets.filter((x) => x.kg != null && x.reps != null).map((x) => ({ weight: x.kg!, reps: x.reps!, rpe: x.rpe })) }))}
+                today={today}
+                lbs={lbs}
+                onMessage={(draft) => {
+                  close();
+                  replyTo(`${row.name} · ${session?.name ?? "Session"}, ${week.label}`, { kind: "exercise", dayId: session?.id ?? 0, assignmentId: row.id }, null, draft);
+                }}
+                onClose={close}
+              />
+            );
+          })()
+        )}
 
         {dlg?.kind === "editExercise" && rowById(dlg.rowId) && (
           <EditExerciseDialog
@@ -2444,229 +2468,6 @@ function AddCardioRow({ moves = [], onChange, onClose }: { /** The coach's cardi
 }
 
 // ---- Dialogs ------------------------------------------------------------------
-
-function ProgressDialog({ row, lbs, unit, multiGym }: { row: DraftRow; lbs: boolean; unit: string; multiGym: boolean }) {
-  // The breakdown behind the 7 / 30 day figures, read top to bottom: what is
-  // asked, the verdict in three numbers, the curve, then week by week.
-  const h = row.history;
-  const logged = h.filter((w) => w.sets.length > 0 && w.best != null);
-  const shown = (kg: number) => (lbs ? Math.round(kg * LB * 2) / 2 : Math.round(kg * 2) / 2);
-  // Up to the week on screen: the verdict is about where the client is now.
-  const cur = h.find((w) => w.current) ?? null;
-  const upTo = logged.filter((w) => !cur || w.week <= cur.week);
-  // The weeks in a row, most recent back, where the estimated one-rep max did
-  // not go up (weight and reps together, so fewer reps at a bit more weight
-  // is not progress).
-  const est = (w: (typeof h)[number]) => w.e1rm ?? 0;
-  const stall = (() => {
-    let n = 0;
-    for (let i = upTo.length - 1; i > 0; i--) {
-      if (est(upTo[i]) > est(upTo[i - 1]) + 0.05) break;
-      n++;
-    }
-    return n;
-  })();
-  const lastStep = upTo.length > 1 ? est(upTo[upTo.length - 1]) - est(upTo[upTo.length - 2]) : null;
-  const verdict =
-    upTo.length === 0
-      ? { text: "Nothing logged yet", cls: "none" }
-      : upTo.length === 1
-      ? { text: "First week logged", cls: "none" }
-      : lastStep != null && lastStep < -0.05
-      ? { text: "Dropping", cls: "down" }
-      : stall >= 2
-      ? { text: `Stalled ${stall} weeks`, cls: "flat" }
-      : stall === 1
-      ? { text: "Flat last week", cls: "flat" }
-      : { text: "Progressing", cls: "up" };
-  // Against the coach's targets, a week at a time: each set on target when
-  // its reps reach the bottom of the range at the target weight or heavier;
-  // at the top when they reach the top of it. With no weight set, reps only.
-  const range = (r: string): { lo: number; hi: number } | null => {
-    const m = r.match(/(\d+)\s*(?:[-–to]+\s*(\d+))?/);
-    if (!m) return null;
-    const lo = Number(m[1]);
-    const hi = m[2] ? Number(m[2]) : lo;
-    return { lo: Math.min(lo, hi), hi: Math.max(lo, hi) };
-  };
-  const onTarget = (w: (typeof h)[number]) => {
-    const r = range(w.targetReps);
-    if (!r || w.sets.length === 0) return null;
-    const heavyEnough = (kg: number | null) => w.target == null || (kg != null && kg >= w.target - 0.01);
-    const hit = w.sets.filter((st) => st.reps != null && st.reps >= r.lo && heavyEnough(st.kg)).length;
-    const top = w.sets.filter((st) => st.reps != null && st.reps >= r.hi && heavyEnough(st.kg)).length;
-    const n = w.sets.length;
-    return top === n && r.hi > r.lo
-      ? { text: "Top of range", cls: "top" }
-      : hit === n
-      ? { text: "On target", cls: "up" }
-      : hit === 0
-      ? { text: "Below target", cls: "down" }
-      : { text: `${hit} of ${n} on target`, cls: "flat" };
-  };
-  const pct = (v: number | null) => (v == null ? "—" : v === 0 ? "0%" : `${v > 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}%`);
-  const tone = (v: number | null) => (v == null ? "none" : v > 0 ? "up" : v < 0 ? "down" : "flat");
-
-  // The last four weeks, up to the one on screen (fewer when the programme
-  // is younger): the chart and the table both show just these.
-  const lastWk = cur?.week ?? (h.length ? h[h.length - 1].week : 1);
-  const firstWk = Math.max(h.length ? h[0].week : 1, lastWk - 3);
-  const win = h.filter((w) => w.week >= firstWk && w.week <= lastWk);
-  const winLogged = win.filter((w) => w.sets.length > 0 && w.best != null);
-  // The curve: each week's best set, the target dashed across.
-  // Taller than it is busy, so the line has room to rise and fall.
-  const W = 480;
-  const H = 150;
-  const pad = { l: 34, r: 14, t: 24, b: 22 };
-  const values = [...winLogged.map((w) => w.best!), ...win.map((w) => w.target).filter((t): t is number => t != null)];
-  const lo = values.length ? Math.min(...values) : 0;
-  const hi = values.length ? Math.max(...values) : 1;
-  // Room above the highest point and below the lowest: at least 2.5% of the
-  // weight and 1 kg, more on a wide range (60 to 60.5 draws from about 58.5 to 62).
-  const margin = Math.max(1, hi * 0.025, (hi - lo) * 0.25);
-  const yLo = lo - margin;
-  const yHi = hi + margin;
-  const weeksShown = Array.from({ length: lastWk - firstWk + 1 }, (_, i) => firstWk + i);
-  const xw = (wk: number) => pad.l + (lastWk === firstWk ? (W - pad.l - pad.r) / 2 : ((wk - firstWk) / (lastWk - firstWk)) * (W - pad.l - pad.r));
-  const y = (v: number) => pad.t + (1 - (v - yLo) / (yHi - yLo)) * (H - pad.t - pad.b);
-  const pts = winLogged.map((w) => ({ w, px: xw(w.week), py: y(w.best!) }));
-  const labelOf = (wk: number) => h.find((w) => w.week === wk)?.label.replace("Week ", "W") ?? `W${wk}`;
-
-  return (
-    <DialogContent className="rd-dlg rd-progress rd-progress2">
-      <DialogHeader>
-        <DialogTitle>{row.name}</DialogTitle>
-      </DialogHeader>
-
-      {/* 1 · What is asked, on one line. */}
-      <div className="rp-target">
-        <span>
-          <b>
-            {row.sets} × {row.reps || "—"}
-          </b>
-        </span>
-        <span>
-          <b>{kgOf(row.kg, lbs)}</b> {unit}
-        </span>
-        {multiGym &&
-          row.gymKg
-            .filter((g) => g.kg !== row.kg)
-            .map((g) => (
-              <span key={g.gym}>
-                <b>{kgOf(g.kg, lbs)}</b> {unit} at {g.gym}
-              </span>
-            ))}
-        {row.rpe != null && (
-          <span>
-            RPE <b>{row.rpe}</b>
-          </span>
-        )}
-        {row.tempo && (
-          <span>
-            Tempo <b>{row.tempo}</b>
-          </span>
-        )}
-        {restOf(row.rest) && (
-          <span>
-            Rest <b>{restOf(row.rest)}</b>
-          </span>
-        )}
-        {row.note && <em>&ldquo;{row.note}&rdquo;</em>}
-      </div>
-
-      {/* 2 · The verdict in three numbers. */}
-      <div className="rp-stats">
-        <div className={`rp-stat ${tone(row.d7)}`}>
-          <small>vs last week</small>
-          <b>{pct(row.d7)}</b>
-          {row.d7 == null && upTo.length > 0 && <em>Not logged the week before</em>}
-        </div>
-        <div className={`rp-stat ${tone(row.d30)}`}>
-          <small>over 4 weeks</small>
-          <b>{pct(row.d30)}</b>
-        </div>
-        <div className={`rp-stat ${verdict.cls}`}>
-          <small>Trend</small>
-          <b>{verdict.text}</b>
-        </div>
-      </div>
-
-      {/* 3 · The curve over the last four weeks: the best set each week, the target dashed. */}
-      {pts.length > 0 && (
-        <svg className="rp-chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${row.name}: best set by week`}>
-          {/* The scale's top and bottom, so the headroom reads. */}
-          <text x={pad.l - 6} y={y(yHi) + 3} className="rp-axis" textAnchor="end">
-            {shown(yHi)}
-          </text>
-          <text x={pad.l - 6} y={y(yLo) + 3} className="rp-axis" textAnchor="end">
-            {shown(yLo)}
-          </text>
-          {pts.length > 1 && <polyline points={pts.map((q) => `${q.px},${q.py}`).join(" ")} className="rp-line" />}
-          {pts.map((q) => (
-            <g key={q.w.week}>
-              <circle cx={q.px} cy={q.py} r={q.w.current ? 5 : 3.5} className={`rp-dot${q.w.current ? " now" : ""}`} />
-              <text x={q.px} y={q.py - 8} className="rp-val" textAnchor="middle">
-                {shown(q.w.best!)}
-              </text>
-            </g>
-          ))}
-          {weeksShown.map((wk) => (
-            <text key={wk} x={xw(wk)} y={H - 4} className={`rp-axis${wk === lastWk ? " now" : ""}`} textAnchor="middle">
-              {labelOf(wk)}
-            </text>
-          ))}
-        </svg>
-      )}
-
-      {/* 4 · The last four weeks set by set, as before, with each week's change
-          from the week before on its first row. */}
-      <table className="rd-progress-table rp-table">
-        <thead>
-          <tr>
-            <th>Week</th>
-            <th>Set</th>
-            <th>Weight ({unit})</th>
-            <th>Reps</th>
-            <th>RPE</th>
-            {h.some((w) => w.gym) && <th>Gym</th>}
-            <th>Target</th>
-            <th>Change</th>
-          </tr>
-        </thead>
-        <tbody>
-          {[...winLogged].reverse().map((w) => {
-            const prev = logged.find((q) => q.week === w.week - 1) ?? null;
-            const stepPct = prev && est(prev) > 0 ? Math.round(((est(w) - est(prev)) / est(prev)) * 1000) / 10 : null;
-            const verdictW = onTarget(w);
-            return w.sets.map((st, i) => {
-              return (
-                <tr key={`${w.week}-${st.n}`} className={`${w.current ? "now" : ""}${i === 0 ? " first" : ""}`}>
-                  <td>{i === 0 && w.label}</td>
-                  <td>{st.n}</td>
-                  <td>{st.kg != null ? kgOf(st.kg, lbs) : "—"}</td>
-                  <td>{st.reps ?? "—"}</td>
-                  <td>{st.rpe ?? "—"}</td>
-                  {h.some((q) => q.gym) && <td>{i === 0 ? w.gym ?? "" : ""}</td>}
-                  <td>{i === 0 && verdictW && <span className={`rp-hit ${verdictW.cls}`}>{verdictW.text}</span>}</td>
-                  <td className={`rp-change ${stepPct == null ? "none" : stepPct > 0 ? "up" : stepPct < 0 ? "down" : "flat"}`}>{i === 0 ? pct(stepPct) : ""}</td>
-                </tr>
-              );
-            });
-          })}
-          {winLogged.length === 0 && (
-            <tr className="none">
-              <td colSpan={8}>Nothing logged on this exercise in the last four weeks.</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-      <p className="rp-howto">
-        The percentages and the trend compare each week&rsquo;s best set with its reps counted, as an estimated one-rep max (weight × (1 + reps ÷ 30)): more reps at the same weight is progress, and fewer reps at a little more weight is not. <b>Vs last week</b> is against the week before;{" "}
-        <b>over 4 weeks</b> against the earliest week logged in the last four; <b>Change</b> is each week against the one before. <b>Target</b> checks each set against what you asked that week: on target when its reps reach the bottom of the range at the target weight or heavier, <b>top of range</b> when every set reached the top (time to go heavier). The chart shows the heaviest weight each week.
-      </p>
-    </DialogContent>
-  );
-}
 
 // ---- The demo video on an exercise: what the client sees now, and a link or
 // a file to set it. Per exercise, not per row: it follows the exercise onto
