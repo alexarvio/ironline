@@ -17825,28 +17825,8 @@ button.ci-hint { cursor: pointer; }
 .hm-recap-sub + .hm-recap-text { padding-top: 4px; }
 
 /* ---- Home: "Coming up" (8 Oct), a glance at the next events; a tap opens the Events screen. */
-.hm-ev { border: 1px solid #E0E0E0; border-radius: 20px; background: #fff; overflow: hidden; }
-.hm-ev-open { display: block; width: 100%; margin: 0; padding: 12px 16px 14px; border: 0; background: none; font: inherit; text-align: left; color: inherit; cursor: pointer; }
-.hm-ev-open:active { background: #F5F5F5; }
-.hm-ev-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.hm-ev-chev { font-size: 20px; line-height: 1; color: #9E9E9E; }
-.hm-ev-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
-.hm-ev-row { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 14px; }
-.hm-ev-ico { flex: none; display: inline-flex; color: var(--c); }
-.hm-ev-tag { flex: none; font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--c); }
-.hm-ev-row.next { align-items: flex-start; }
-.hm-ev-row.next .hm-ev-ico { margin-top: 2px; }
-.hm-ev-next-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.hm-ev-next-line { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
-.hm-ev-row.next .hm-ev-when { flex: none; font-weight: 500; }
-.hm-ev-empty { display: block; margin-top: 6px; font-size: 13px; font-weight: 600; color: #757575; }
-.hm-ev-more { flex: none; font-size: 18px; line-height: 1; color: #9E9E9E; }
-.hm-ev-when { flex: none; font-weight: 600; color: #757575; font-variant-numeric: tabular-nums; }
-.hm-ev-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: #333333; }
 /* In an event now (9 Oct): the row sits on the category's tint with a "Now" chip. */
 /* The Events screen's "happening now" card on Home (9 Oct): the same classes, as a span inside the card's button. */
-.hm-ev-nowcard { gap: 8px; margin-bottom: 4px; }
-.hm-ev-nowcard .ev-card-title { font-size: 15px; }
 /* Its aura (9 Oct): the category's colour drifting under the row, the phase cards' rhythm. */
 /* The Events screen, the "Today line" (9 Oct). Prefix ev-. Tokens: navy
    #1E3A5F is the events accent; each row carries its type as --c / --rgb. */
@@ -18972,3 +18952,42 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 @media (prefers-reduced-motion: reduce) { .wo-pill-dot { animation: none; } .wo-ex-top .wo-ex-name { animation: none; } }
 .lw-card-head .lw-eyebrow { font-size: 13px; letter-spacing: 0.08em; color: #9E9E9E; }
 .lw-reps-target { letter-spacing: 0.08em; }
+
+/* ---- Home: the events timeline card (15 Oct). One swipeable row, opened on today; the centred item grows and takes its colour. Prefix evt-. */
+.evt { display: flex; flex-direction: column; gap: 8px; padding: 14px 0 12px; border-radius: 26px; background: #fff; box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04), 0 22px 36px -26px rgba(var(--focus-rgb, 16, 24, 40), 0.8); transition: box-shadow 0.3s; font-family: var(--font-archivo), "Archivo", system-ui, sans-serif; color: #141a24; }
+.evt-head { display: flex; align-items: center; justify-content: space-between; height: 26px; padding: 0 16px; }
+.evt-eyebrow { font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #5b6474; }
+.evt-all { padding: 0; border: 0; background: none; font: inherit; font-size: 12px; font-weight: 800; color: #1d3466; cursor: pointer; }
+.evt-back { height: 26px; padding: 0 10px; border: 0; border-radius: 999px; background: #141a24; color: #fff; font: inherit; font-size: 11.5px; font-weight: 800; cursor: pointer; }
+.evt-wrap { position: relative; }
+.evt-spine { position: absolute; left: 0; right: 0; top: 52px; border-top: 2px dashed #DCE3EE; pointer-events: none; }
+.evt-row { position: relative; display: flex; align-items: center; gap: 6px; height: 178px; padding: 6px 0 10px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; scroll-snap-type: x mandatory; touch-action: pan-x pan-y; outline: none; }
+.evt-row::-webkit-scrollbar { display: none; }
+.evt-row:focus-visible { box-shadow: inset 0 0 0 2px #1d3466; }
+.evt-slot { flex: none; width: 132px; padding: 0; border: 0; background: none; font: inherit; color: inherit; scroll-snap-align: center; cursor: pointer; }
+.evt-item { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 132px; box-sizing: border-box; padding: 14px 8px 12px; border-radius: 20px; text-align: center; background: #fff; box-shadow: inset 0 0 0 1px rgba(var(--rgb, 16, 24, 40), 0.18); opacity: 0.85; transition: background 0.25s, box-shadow 0.25s, color 0.25s, opacity 0.25s, filter 0.25s; will-change: transform; }
+.evt-tile { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 14px; background: rgba(var(--rgb, 91, 100, 114), 0.12); color: var(--c, #5b6472); transition: background 0.25s, color 0.25s; }
+.evt-label { font-size: 9.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; color: #98A2B3; }
+.evt-title { width: 100%; font-size: 15px; font-weight: 900; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.evt-when { font-size: 11.5px; font-weight: 700; white-space: nowrap; color: var(--c, #98A2B3); }
+/* Past: done. */
+.evt-item.past { filter: blur(1.4px) grayscale(0.8); opacity: 0.5; box-shadow: inset 0 0 0 1px #EEF1F5; }
+.evt-item.past .evt-when { color: #98A2B3; }
+/* Today with nothing on, and the See all ghost. */
+.evt-item.free, .evt-item.more { background: #F4F6FA; box-shadow: inset 0 0 0 1px #E3E8F0; opacity: 0.85; }
+.evt-item.free .evt-tile, .evt-item.more .evt-tile { background: rgba(91, 100, 114, 0.12); color: #5b6472; }
+.evt-item.free .evt-when, .evt-item.more .evt-when { color: #98A2B3; }
+/* The one in the centre. */
+.evt-item.on { opacity: 1; filter: none; }
+.evt-item.on:not(.free):not(.more) { background: linear-gradient(160deg, var(--c2), var(--c)); box-shadow: 0 16px 26px -14px rgba(var(--rgb), 0.95); color: #fff; }
+.evt-item.on:not(.free):not(.more) .evt-tile { background: rgba(255, 255, 255, 0.22); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3); color: #fff; }
+.evt-item.on:not(.free):not(.more) .evt-label { color: rgba(255, 255, 255, 0.8); }
+.evt-item.on:not(.free):not(.more) .evt-when { color: rgba(255, 255, 255, 0.88); }
+.evt-item.free.on, .evt-item.more.on { background: #F4F6FA; box-shadow: inset 0 0 0 1px #E3E8F0; color: #141a24; }
+/* Position dots. */
+.evt-dots { display: flex; justify-content: center; gap: 4px; }
+.evt-dot { width: 5px; height: 5px; border-radius: 9px; background: #DCE3EE; transition: width 0.2s, background 0.2s; }
+.evt-dot.past { background: #E3E8F0; }
+.evt-dot.today { width: 14px; background: #C5CCD8; }
+.evt-dot.on { background: #141a24; }
+@media (prefers-reduced-motion: reduce) { .evt, .evt-item, .evt-tile, .evt-dot { transition: none; } .evt-row { scroll-behavior: auto; } }

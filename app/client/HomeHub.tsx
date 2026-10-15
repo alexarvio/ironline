@@ -7,6 +7,7 @@ import PhaseCards, { type HomePhase, type PhaseFoodToday } from "./PhaseCards";
 import ProgressPicsCard, { type ProgressPics } from "./ProgressPicsCard";
 import type { CheckInForm } from "./CheckInDialog";
 import EventsCard, { type HomeEvents } from "./EventsCard";
+import EventsTimelineCard from "./home/EventsTimelineCard";
 import type { CardCovers } from "./CardPictureSheet";
 import { ChevronDownIcon } from "../components/icons";
 import { tzShort } from "../lib/timezones";
@@ -191,7 +192,8 @@ export default function HomeHub({
         {plan.length === 0 && <PlanGapCard gap={planGap ?? { next: null }} coachName={coach.firstName} />}
         {progressPics && <TodaysTasks pics={progressPics} />}
         {/* What is coming up in their life (7 Oct): a trip, an injury, something started. Theirs to add; the coach's listed too. Above the coach's latest (9 Oct). */}
-        <EventsCard events={events} coachName={coach.firstName} today={today} />
+        {/* The timeline row (15 Oct) once there is anything at all; else the old card's empty state. */}
+        {events.list.some((e) => !e.phase) ? <EventsTimelineCard events={events} today={today} /> : <EventsCard events={events} coachName={coach.firstName} today={today} />}
         <LatestActivityCard a={latestActivity} coach={coach} />
         {upcoming ? (
           <MeetingCard m={upcoming} recap={recap} coachFirstName={coach.firstName} />
