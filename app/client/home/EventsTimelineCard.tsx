@@ -115,7 +115,7 @@ export default function EventsTimelineCard({ events, today }: { events: HomeEven
         <span className="evt-spine" aria-hidden="true" />
         <div ref={rowRef} className="evt-row" role="listbox" aria-label="Events" tabIndex={0} onScroll={onScroll} onKeyDown={onKey} style={{ paddingLeft: side, paddingRight: side }}>
           {items.map((it, i) => (
-            <Item key={it.key} item={it} index={i} pos={pos} focused={i === focused} onPick={() => (i === focused ? (it.slot === "more" ? openEvents?.() : it.event ? openEvents?.(it.event.id) : openEvents?.()) : scrollTo(i))} />
+            <Item key={it.key} item={it} focused={i === focused} onPick={() => (i === focused ? (it.slot === "more" ? openEvents?.() : it.event ? openEvents?.(it.event.id) : openEvents?.()) : scrollTo(i))} />
           ))}
         </div>
       </div>
@@ -129,15 +129,10 @@ export default function EventsTimelineCard({ events, today }: { events: HomeEven
   );
 }
 
-function Item({ item, index, pos, focused, onPick }: { item: TimelineItem; index: number; pos: number; focused: boolean; onPick: () => void }) {
-  const d = Math.min(Math.abs(index - pos), 2);
-  // The centred one big, the neighbours just under full size, the rest small.
-  const scale = 1.16 - d * 0.22;
+function Item({ item, focused, onPick }: { item: TimelineItem; focused: boolean; onPick: () => void }) {
+  // Every pill the same size (15 Oct): the centred one is told apart by its colour alone.
   const t = item.event ? eventTypeOf(item.event.kind) : null;
-  const style = {
-    transform: `scale(${scale.toFixed(3)})`,
-    ...(t ? { "--c": t.color, "--c2": lighter(t.color), "--rgb": t.rgb } : {}),
-  } as React.CSSProperties;
+  const style = (t ? { "--c": t.color, "--c2": lighter(t.color), "--rgb": t.rgb } : {}) as React.CSSProperties;
   const slotClass = item.slot === "more" ? " more" : item.slot === "today" && !item.event ? " free" : ` ${item.slot}`;
   const spoken = item.slot === "more" ? "See all events" : item.event ? `${item.label}: ${item.event.title}, ${item.when}${item.slot === "past" ? ", done" : ""}` : "Today: nothing on, free day";
   return (
