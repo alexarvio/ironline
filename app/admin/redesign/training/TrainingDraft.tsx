@@ -23,6 +23,8 @@ import { SortableItem, SortableList } from "../Sortable";
 import { useOpenChat } from "../ChatPanel";
 import Picker from "../Picker";
 import AskVideoDialog from "./AskVideoDialog";
+import SessionSubstitutesDialog from "./SessionSubstitutesDialog";
+import NewVariationDialog from "./NewVariationDialog";
 import DatePick from "../DatePick";
 
 // The calmer builder, as a draft on real data. Nothing here saves: every
@@ -39,9 +41,9 @@ import DatePick from "../DatePick";
 //   added, removed or dragged into a new order, the name. Apply lands them.
 
 export type Gym = { id: number; name: string; home: boolean };
-export type Library = { slug: string; label: string; exercises: { id: number; name: string; /** The coach's default cue (Library page): the note it starts with when added. */ cue?: string; /** Close grip, wide grip… (Library page): one can be picked per row; its own cue, if any, is the note the row starts with. */ variations?: PickedVariation[] }[] }[];
+export type Library = { slug: string; label: string; exercises: { id: number; name: string; /** Its muscle group and its demo (15 Oct): the substitutes and variation pop-ups. */ group?: string; video?: string | null; /** The coach's default cue (Library page): the note it starts with when added. */ cue?: string; /** Close grip, wide grip… (Library page): one can be picked per row; its own cue, if any, is the note the row starts with. */ variations?: PickedVariation[] }[] }[];
 /** A variation as the picker hands it over with the exercise. */
-export type PickedVariation = { id: number; name: string; cue?: string };
+export type PickedVariation = { id: number; name: string; cue?: string; /** Its own demo (15 Oct). */ video?: string | null };
 /** A cardio movement from the coach's library, offered when a cardio is added, with its default cue. */
 export type CardioMove = { name: string; cue: string };
 export type DraftRow = {
@@ -1079,8 +1081,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                   })()}
                                 <DropdownMenuItem onSelect={() => setDlg({ kind: "alternatives", rowId: r.id })}>
                                   <DumbbellIcon /> {(() => {
-                                    const n = r.alternatives.length + (r.libraryOff ? 0 : r.librarySubstitutes.filter((s) => !r.alternatives.some((x) => x.exerciseId === s.exerciseId)).length);
-                                    return n ? `Substitutes · ${n}` : "Substitutes";
+                                    const n = r.alternatives.length || r.librarySubstitutes.length;
+                                    return n ? `Substitutes · ${n}${r.alternatives.length ? " · this session" : ""}` : "Substitutes";
                                   })()}
                                 </DropdownMenuItem>
                                 {/* Only once the programme is live: before that the client has nothing of it to talk about. */}
@@ -1391,34 +1393,55 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         )}
 
         {dlg?.kind === "newVariation" && rowById(dlg.rowId) && (
-          <NewVariationDialog
-            row={rowById(dlg.rowId)!}
-            firstName={firstName}
-            onCreate={(name) => {
-              const row = rowById(dlg.rowId)!;
-              close();
-              // Made in the library, then picked on this row (and the weeks after).
-              act(async () => {
-                const made = await addExerciseVariationAction(row.exerciseId, name);
-                if (made) await setRowVariationAction(row.id, made.id);
-              }, `${row.name} · ${name} · ${firstName} sees it from this week`);
-            }}
-          />
+          (() => {
+            const row = rowById(dlg.rowId)!;
+            const ex = library.flatMap((g) => g.exercises).find((e) => e.id === row.exerciseId);
+            const variations = (ex?.variations ?? []).map((v) => ({ id: v.id, name: v.name, hasDemo: !!v.video }));
+            const current = variations.find((v) => v.id === row.variationId) ?? null;
+            const base = current ? row.name.slice(0, -(current.name.length + 3)) : row.name;
+            return (
+              <NewVariationDialog
+                firstName={firstName}
+                exerciseName={base}
+                group={ex?.group ?? null}
+                week={week.index}
+                variations={variations}
+                currentVariationId={row.variationId ?? null}
+                onUse={async (v) => {
+                  close();
+                  await setRowVariationAction(row.id, v.id);
+                  router.refresh();
+                  toast.success(`${firstName} is on ${v.name} from Week ${week.index}`);
+                }}
+                onCreate={async (name) => {
+                  close();
+                  // Made in the library, then picked on this row (and the weeks after).
+                  const made = await addExerciseVariationAction(row.exerciseId, name);
+                  if (made) await setRowVariationAction(row.id, made.id);
+                  router.refresh();
+                  toast.success(`${name} added for ${firstName}`, { action: { label: "Add demo", onClick: () => setDlg({ kind: "demo", rowId: row.id }) } });
+                }}
+                onClose={close}
+              />
+            );
+          })()
         )}
         {dlg?.kind === "alternatives" && rowById(dlg.rowId) && (
-          <AlternativesDialog
+          <SessionSubstitutesDialog
             row={rowById(dlg.rowId)!}
             firstName={firstName}
+            session={sessions.find((s) => s.rows.some((r) => r.id === dlg.rowId))?.name ?? "Session"}
             library={library}
-            onSave={(list, libraryOff) => {
+            onSave={async (list) => {
               const row = rowById(dlg.rowId)!;
+              const session = sessions.find((s) => s.rows.some((r) => r.id === row.id))?.name ?? "this session";
+              // A session's own picks replace the library's (15 Oct); an empty list means the library's are offered.
+              await setExerciseAlternativesAction(row.id, list.map((x) => ({ exerciseId: x.exerciseId, note: x.note })), list.length > 0);
               close();
-              const n = list.length + (libraryOff ? 0 : row.librarySubstitutes.filter((s) => !list.some((x) => x.exerciseId === s.exerciseId)).length);
-              act(
-                () => setExerciseAlternativesAction(row.id, list.map((x) => ({ exerciseId: x.exerciseId, note: x.note })), libraryOff),
-                n ? `${n} substitute${n === 1 ? "" : "s"} for ${row.name}` : `No substitutes for ${row.name}`
-              );
+              router.refresh();
+              toast.success(`Substitutes saved for ${session}`);
             }}
+            onClose={close}
           />
         )}
 
@@ -2211,129 +2234,6 @@ function AnswersFeed({ firstName, items, href }: { firstName: string; items: Dra
         </div>
       )}
     </div>
-  );
-}
-
-/** A new variation of the row's exercise (close grip, wide grip…): it goes to the Library and onto this row. */
-function NewVariationDialog({ row, firstName, onCreate }: { row: DraftRow; firstName: string; onCreate: (name: string) => void }) {
-  const [name, setName] = useState("");
-  const ok = name.trim().length > 0;
-  return (
-    <DialogContent className="rd-dlg">
-      <DialogHeader>
-        <DialogTitle>New variation of {row.name}</DialogTitle>
-        <DialogDescription>It lands in your Library under the exercise (its own demo and cue go on there), and {firstName} gets it on this row from this week.</DialogDescription>
-      </DialogHeader>
-      <label className="rd-field">
-        <span>Name</span>
-        <input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} placeholder="Close grip, wide grip…" autoFocus onKeyDown={(e) => e.key === "Enter" && ok && onCreate(name.trim())} />
-      </label>
-      <DialogFooter>
-        <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onCreate(name.trim())}>
-          Add
-        </button>
-      </DialogFooter>
-    </DialogContent>
-  );
-}
-
-function AlternativesDialog({ row, firstName, library, onSave }: { row: DraftRow; firstName: string; library: Library; onSave: (list: DraftRow["alternatives"], libraryOff: boolean) => void }) {
-  const [list, setList] = useState(row.alternatives);
-  // The library's substitutes (14 Oct): offered on this session too, unless kept off here.
-  const [libraryOn, setLibraryOn] = useState(!row.libraryOff);
-  const [adding, setAdding] = useState(false);
-  const edit = (exerciseId: number, note: string) => setList((l) => l.map((x) => (x.exerciseId === exerciseId ? { ...x, note } : x)));
-  const fromLibrary = row.librarySubstitutes.filter((s) => !list.some((x) => x.exerciseId === s.exerciseId));
-  const offered = list.length + (libraryOn ? fromLibrary.length : 0);
-  return (
-    <DialogContent className="rd-dlg rq-ev-dlg rd-subs-dlg">
-      <DialogHeader>
-        <DialogTitle>
-          <span className="rq-title-row">
-            Substitutes
-            <span className="rq-track-pill" style={{ "--c": "#1E3A5F", "--rgb": "30, 58, 95" } as React.CSSProperties}>
-              <DumbbellIcon />
-              {row.name}
-            </span>
-          </span>
-        </DialogTitle>
-        <DialogDescription className="sr-only">What {firstName} can do instead when the machine is taken.</DialogDescription>
-        <p className="rq-helper">What {firstName} can do instead when the machine is taken: they pick one from &ldquo;Substitute today&rdquo; in their workout. Sets on it count for the session, not for anyone&rsquo;s weights.</p>
-      </DialogHeader>
-
-      <div className="rd-field">
-        <span className="rq-when-head">
-          From the library
-          {row.librarySubstitutes.length > 0 && (
-            <span className="evs-seg" role="group" aria-label="The library's substitutes on this session">
-              <button type="button" className={libraryOn ? "on" : ""} aria-pressed={libraryOn} onClick={() => setLibraryOn(true)}>
-                Offered
-              </button>
-              <button type="button" className={libraryOn ? "" : "on"} aria-pressed={!libraryOn} onClick={() => setLibraryOn(false)}>
-                Not on this session
-              </button>
-            </span>
-          )}
-        </span>
-        {row.librarySubstitutes.length === 0 ? (
-          <small className="rd-dlg-hint">None on {row.name} in the library yet. Set them on the Library page and every programme gets them.</small>
-        ) : (
-          <ul className={`rd-alt-list rd-alt-lib${libraryOn ? "" : " off"}`}>
-            {row.librarySubstitutes.map((x) => (
-              <li key={x.exerciseId} className="rd-alt-row lib">
-                <span className="rd-alt-name">{x.name}</span>
-                <span className="rd-alt-note">{x.note || "No note"}</span>
-                <span className="rd-alt-tag">Library</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="rd-field">
-        <span>This session&rsquo;s own</span>
-        {list.length > 0 && (
-          <ul className="rd-alt-list">
-            {list.map((x) => (
-              <li key={x.exerciseId} className="rd-alt-row">
-                <span className="rd-alt-name">{x.name}</span>
-                <input className="rd-input" value={x.note} onChange={(e) => edit(x.exerciseId, e.target.value)} placeholder="Note · optional, e.g. same reps, a little lighter" maxLength={200} />
-                <button type="button" className="rd-btn ghost sm" onClick={() => setList((l) => l.filter((y) => y.exerciseId !== x.exerciseId))} aria-label={`Remove ${x.name}`}>
-                  <TrashIcon />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        {adding ? (
-          <AddExerciseRow
-            library={library}
-            onPick={(name, exerciseId) => {
-              if (exerciseId !== row.exerciseId && !list.some((x) => x.exerciseId === exerciseId)) setList((l) => [...l, { exerciseId, name, note: "" }]);
-              setAdding(false);
-            }}
-            onClose={() => setAdding(false)}
-          />
-        ) : (
-          list.length < 8 && (
-            <button type="button" className="rd-btn rd-alt-add" onClick={() => setAdding(true)}>
-              <PlusIcon /> Add one for this session
-            </button>
-          )
-        )}
-      </div>
-
-      <p className="rd-addrow-hint">
-        {offered ? `${offered} offered. ` : "Nothing offered yet. "}Saved on this session for the rest of the programme.
-      </p>
-      <DialogFooter>
-        <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" onClick={() => onSave(list, !libraryOn)}>
-          Save
-        </button>
-      </DialogFooter>
-    </DialogContent>
   );
 }
 

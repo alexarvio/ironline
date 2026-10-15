@@ -839,3 +839,106 @@
 .avr-spin { width: 14px; height: 14px; border-radius: 999px; border: 2px solid rgba(255, 255, 255, 0.35); border-top-color: #fff; animation: avr-spin 0.8s linear infinite; }
 @keyframes avr-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .avr, .avr[data-state="closed"] { animation: none; } }
+
+/* ---- Session substitutes (15 Oct): the shared pop-up language, indigo. Prefix ssb-. Overflow stays visible for the search's list; the glow lives in a clipped layer. */
+.ssb { width: min(600px, 100vw - 32px); max-width: none; display: flex; flex-direction: column; gap: 0; padding: 0; border: 0; border-radius: 24px; background: #fff; box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.55); overflow: visible; font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; animation: avr-pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.ssb[data-state="closed"] { animation: avr-out 0.15s ease forwards; }
+.ssb-decor { position: absolute; inset: 0; border-radius: 24px; overflow: hidden; pointer-events: none; }
+.ssb-glow { position: absolute; right: -150px; top: -230px; width: 380px; height: 380px; border-radius: 999px; background: radial-gradient(circle, rgba(76, 66, 168, 0.24), transparent 68%); }
+.ssb-wash { position: absolute; left: 0; right: 0; top: 0; height: 130px; background: linear-gradient(180deg, rgba(76, 66, 168, 0.09), transparent); }
+.ssb-body { position: relative; display: flex; flex-direction: column; gap: 18px; padding: 22px 24px 18px; }
+.ssb-head { display: flex; align-items: flex-start; gap: 14px; }
+.ssb-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-top: 2px; color: #4c42a8; }
+.ssb-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.ssb-title { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.2; }
+.ssb-context { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 0; }
+.ssb-pill { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; background: #4c42a8; color: #fff; font-size: 11.5px; font-weight: 800; }
+.ssb-meta { font-size: 12.5px; font-weight: 600; color: #5b6474; }
+.ssb-x { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.85); box-shadow: inset 0 0 0 1px rgba(16, 24, 40, 0.08); color: #5b6474; cursor: pointer; }
+.ssb-info { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 14px; background: #F4F6FA; font-size: 12.5px; font-weight: 600; line-height: 1.45; color: #3a4250; }
+.ssb-info svg { flex: none; margin-top: 1px; color: #5b6474; }
+.ssb-info span { flex: 1; }
+.ssb-info-x { flex: none; width: 24px; height: 24px; margin: -4px -4px 0 0; padding: 0; border: 0; border-radius: 999px; background: none; font-size: 11px; font-weight: 800; color: #98A2B3; cursor: pointer; }
+.ssb-section { display: flex; flex-direction: column; gap: 8px; }
+.ssb-label-row { display: flex; align-items: center; gap: 8px; margin: 0; }
+.ssb-label { flex: none; font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #5b6474; white-space: nowrap; }
+.ssb-spacer { flex: 1; }
+.ssb-link { font-size: 12px; font-weight: 800; color: #1d3466; text-decoration: none; white-space: nowrap; }
+.ssb-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.ssb-count { flex: none; display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 999px; background: #F2F4F7; color: #5b6474; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.ssb-count.full { background: #1d3466; color: #fff; }
+.ssb-empty { margin: 0; padding: 12px 14px; border-radius: 14px; box-shadow: inset 0 0 0 1.5px #E3E8F0; font-size: 12.5px; font-weight: 600; color: #8b93a1; }
+.ssb-lib, .ssb-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ssb-librow { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 8px 12px 8px 8px; border-radius: 14px; background: #F7F9FC; transition: opacity 0.2s; }
+.ssb-lib.replaced .ssb-librow { opacity: 0.5; }
+.ssb-replaced { margin: 0; font-size: 12px; font-weight: 700; color: #4c42a8; }
+.ssb-thumb { display: block; width: 56px; height: 42px; border-radius: 10px; object-fit: cover; background: linear-gradient(150deg, #55648a, #1a2030); }
+.ssb-thumb.none { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; border: 1.5px dashed #C5CCD8; background: #fff; font-size: 9.5px; font-weight: 800; color: #98A2B3; }
+.ssb-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ssb-text b { font-size: 14px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ssb-text small { font-size: 12px; font-weight: 600; color: #8b93a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ssb-tag { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #98A2B3; white-space: nowrap; }
+.ssb-row { display: grid; grid-template-columns: 26px 56px minmax(0, 1fr) minmax(0, 1.1fr) 36px; gap: 10px; align-items: center; padding: 8px 8px 8px 10px; border-radius: 14px; background: rgba(76, 66, 168, 0.05); box-shadow: inset 0 0 0 1px rgba(76, 66, 168, 0.16); }
+.ssb-row .ssb-text small { font-size: 11.5px; }
+.ssb-rank { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 999px; background: #1d3466; color: #fff; font-size: 12px; font-weight: 800; }
+.ssb-note { width: 100%; height: 40px; padding: 0 12px; border: 0; border-radius: 11px; outline: none; background: #fff; box-shadow: inset 0 0 0 1px #DCE3EE; font: inherit; font-size: 13px; font-weight: 600; color: #141a24; box-sizing: border-box; }
+.ssb-note:focus { box-shadow: inset 0 0 0 1.5px #1d3466; }
+.ssb-note::placeholder { color: #98A2B3; }
+.ssb-remove { width: 36px; height: 36px; padding: 0; border: 0; border-radius: 10px; background: none; font-size: 12px; font-weight: 800; color: #98A2B3; cursor: pointer; }
+.ssb-remove:hover { background: #FBEDE7; color: #B42318; }
+.ssb-search-wrap { position: relative; display: flex; flex-direction: column; gap: 8px; }
+.ssb-search { display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 14px; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #DCE3EE; color: #8b93a1; transition: box-shadow 0.2s; }
+.ssb-search:focus-within, .ssb-search.open { box-shadow: inset 0 0 0 1.5px #1d3466; }
+.ssb-search input { flex: 1; min-width: 0; border: 0; outline: none; background: none; font: inherit; font-size: 14px; font-weight: 600; color: #141a24; }
+.ssb-search input::placeholder { color: #98A2B3; }
+.ssb-drop { position: absolute; top: 52px; left: 0; right: 0; z-index: 5; display: flex; flex-direction: column; gap: 2px; padding: 6px; border-radius: 16px; background: #fff; box-shadow: 0 24px 40px -16px rgba(16, 24, 40, 0.35), inset 0 0 0 1px #E3E8F0; }
+.ssb-drop-label { padding: 6px 10px 4px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #8b93a1; }
+.ssb-opt { display: flex; align-items: center; gap: 10px; height: 42px; padding: 0 10px; border: 0; border-radius: 11px; background: none; font: inherit; text-align: left; cursor: pointer; }
+.ssb-opt span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 700; color: #141a24; }
+.ssb-opt small { font-size: 11.5px; font-weight: 600; color: #98A2B3; white-space: nowrap; }
+.ssb-opt:hover, .ssb-opt.on { background: #F4F7FC; }
+.ssb-nomatch { display: flex; align-items: center; gap: 10px; padding: 10px; font-size: 13px; font-weight: 600; color: #8b93a1; }
+.ssb-create { margin-left: auto; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 800; color: #1d3466; cursor: pointer; white-space: nowrap; }
+.ssb-copy { align-self: flex-start; padding: 0 2px; border: 0; background: none; font: inherit; font-size: 12px; font-weight: 800; color: #98A2B3; cursor: pointer; }
+.ssb-copy:hover { color: #1d3466; }
+.ssb-full { margin: 0; font-size: 12.5px; font-weight: 600; color: #8b93a1; }
+.ssb-error, .nvr-error { margin: -6px 0 0; font-size: 12.5px; font-weight: 700; color: #B42318; }
+.ssb-foot { position: relative; display: flex; align-items: center; gap: 8px; padding: 14px 24px 18px; border-top: 1px solid #EEF1F5; background: #fff; border-radius: 0 0 24px 24px; }
+.ssb-status { flex: 1; font-size: 12.5px; font-weight: 600; line-height: 1.4; color: #8b93a1; }
+.ssb-cancel, .nvr-cancel { height: 44px; padding: 0 18px; border: 0; border-radius: 13px; background: #fff; box-shadow: inset 0 0 0 1px #DCE3EE; font: inherit; font-size: 14px; font-weight: 800; color: #1d3466; cursor: pointer; }
+.ssb-save, .nvr-primary { display: inline-flex; align-items: center; gap: 7px; height: 44px; padding: 0 24px; border: 0; border-radius: 13px; background: #1d3466; color: #fff; font: inherit; font-size: 14.5px; font-weight: 800; white-space: nowrap; box-shadow: 0 12px 22px -12px rgba(29, 52, 102, 0.95); cursor: pointer; }
+.ssb-save:disabled, .nvr-primary:disabled { background: rgba(29, 52, 102, 0.32); box-shadow: none; cursor: default; }
+.ssb-spin, .nvr-spin { width: 14px; height: 14px; border-radius: 999px; border: 2px solid rgba(255, 255, 255, 0.35); border-top-color: #fff; animation: avr-spin 0.8s linear infinite; }
+
+/* ---- New variation (15 Oct): the shared pop-up language, indigo. Prefix nvr-. */
+.nvr { width: min(540px, 100vw - 32px); max-width: none; display: flex; flex-direction: column; gap: 0; padding: 0; border: 0; border-radius: 24px; background: #fff; box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.55); overflow: hidden; font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; animation: avr-pop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.nvr[data-state="closed"] { animation: avr-out 0.15s ease forwards; }
+.nvr-glow { position: absolute; right: -140px; top: -220px; width: 360px; height: 360px; border-radius: 999px; background: radial-gradient(circle, rgba(76, 66, 168, 0.24), transparent 68%); pointer-events: none; }
+.nvr-wash { position: absolute; left: 0; right: 0; top: 0; height: 130px; background: linear-gradient(180deg, rgba(76, 66, 168, 0.09), transparent); pointer-events: none; }
+.nvr-body { position: relative; display: flex; flex-direction: column; gap: 18px; padding: 22px 24px 18px; }
+.nvr-head { display: flex; align-items: flex-start; gap: 14px; }
+.nvr-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-top: 2px; color: #4c42a8; }
+.nvr-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.nvr-title { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.2; }
+.nvr-context { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 12.5px; font-weight: 600; color: #5b6474; }
+.nvr-pill { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; background: #4c42a8; color: #fff; font-size: 11.5px; font-weight: 800; }
+.nvr-x { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.85); box-shadow: inset 0 0 0 1px rgba(16, 24, 40, 0.08); color: #5b6474; cursor: pointer; }
+.nvr-field { display: flex; flex-direction: column; gap: 8px; }
+.nvr-label { font-size: 12px; font-weight: 800; color: #5b6474; }
+.nvr-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.nvr-chip { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 0; border-radius: 999px; background: rgba(76, 66, 168, 0.06); box-shadow: inset 0 0 0 1px rgba(76, 66, 168, 0.18); font: inherit; font-size: 13px; font-weight: 800; color: #3a4250; white-space: nowrap; cursor: pointer; transition: background 0.2s; }
+.nvr-chip.on { background: #4c42a8; color: #fff; box-shadow: 0 8px 14px -8px rgba(76, 66, 168, 0.9); }
+.nvr-or { display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #98A2B3; }
+.nvr-or i { flex: 1; height: 1px; background: #EEF1F5; }
+.nvr-name { display: flex; align-items: center; gap: 10px; height: 50px; padding: 0 14px; border-radius: 15px; background: #F4F6FA; color: #4c42a8; transition: box-shadow 0.2s; }
+.nvr-name.filled { box-shadow: inset 0 0 0 1.5px #4c42a8; }
+.nvr-name.dup { box-shadow: inset 0 0 0 1.5px #B42318; }
+.nvr-name input { flex: 1; min-width: 0; border: 0; outline: none; background: none; font: inherit; font-size: 15px; font-weight: 700; color: #141a24; }
+.nvr-name input::placeholder { color: #98A2B3; font-weight: 500; }
+.nvr-dup { font-size: 12px; font-weight: 700; color: #B42318; }
+.nvr-ideas { display: flex; gap: 6px; flex-wrap: wrap; }
+.nvr-idea { height: 28px; padding: 0 10px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #DCE3EE; font: inherit; font-size: 12px; font-weight: 700; color: #3a4250; white-space: nowrap; cursor: pointer; }
+.nvr-idea:hover { background: #F7F9FC; }
+.nvr-info { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 10px 12px; border-radius: 14px; background: #F4F6FA; font-size: 12.5px; font-weight: 600; line-height: 1.45; color: #3a4250; }
+.nvr-info svg { flex: none; margin-top: 1px; color: #5b6474; }
+.nvr-foot { position: relative; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 14px 24px 18px; border-top: 1px solid #EEF1F5; background: #fff; }
