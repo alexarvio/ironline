@@ -9,8 +9,8 @@ import { DATA_DIR } from "./db";
 //
 // On when UPLOADS_STORE=bucket and the UPLOADS_* credentials are set; remove
 // UPLOADS_STORE and everything reads from the disk again, as before. While
-// it is on, every upload is still written to the disk too (the fallback, and
-// what the nightly backup mirrors), and a file not yet in the bucket is
+// it is on, an upload is written to the disk only until its copy is in the
+// bucket (15 Oct: the volume had filled with copies), and a file not yet there is
 // served from the disk. The stored paths stay "/uploads/<key>", so nothing in
 // the data changes; the /uploads route checks access, then redirects to a
 // link into the bucket that expires after a few minutes.
@@ -73,7 +73,21 @@ async function exists(b: Bucket, key: string): Promise<boolean> {
   }
 }
 
-/** Copies a just-saved upload into the bucket. Does nothing when the bucket is off. */
+/**
+ * The disk copy goes once the bucket has the file (15 Oct): the 500 MB
+ * volume had filled with videos that were already in the bucket, and every
+ * upload failed with ENOSPC. The disk now only holds a file between its
+ * upload and its copy, so the volume stays small whatever comes in.
+ */
+function dropDiskCopy(key: string) {
+  try {
+    fs.rmSync(path.join(DATA_DIR, "uploads", key), { force: true });
+  } catch {
+    /* a copy that is not there is fine */
+  }
+}
+
+/** Copies a just-saved upload into the bucket, then lets the disk copy go. Does nothing when the bucket is off. */
 export async function putUpload(publicPath: string | null | undefined, body: Buffer, contentType?: string) {
   const b = bucket();
   const key = publicPath ? keyOf(publicPath) : null;
@@ -81,6 +95,7 @@ export async function putUpload(publicPath: string | null | undefined, body: Buf
   try {
     await b.s3.send(new PutObjectCommand({ Bucket: b.bucket, Key: key, Body: body, ContentType: contentType || mimeFor(key) }));
     inBucket.add(key);
+    dropDiskCopy(key);
   } catch (error) {
     // The file is on the disk and is served from there; the startup copy
     // puts it in the bucket next time. Worth knowing about, not worth
@@ -102,6 +117,8 @@ export async function putUploadFromDisk(publicPath: string, filePath: string, co
     await b.s3.send(
       new PutObjectCommand({ Bucket: b.bucket, Key: key, Body: fs.createReadStream(filePath), ContentLength: size, ContentType: contentType || mimeFor(key) })
     );
+    inBucket.add(key);
+    dropDiskCopy(key);
   } catch (error) {
     console.error("[uploads] could not copy to the bucket:", key, error);
     import("@sentry/nextjs").then((Sentry) => Sentry.captureException(error)).catch(() => {});
@@ -204,21 +221,27 @@ export async function copyDiskUploadsToBucket() {
   let copied = 0;
   let skipped = 0;
   let failed = 0;
+  let freed = 0;
   for (const file of walk(root)) {
     const key = path.relative(root, file).split(path.sep).join("/");
     if (key.startsWith("branding/")) continue; // served from elsewhere, not a client file
     if (await exists(b, key)) {
+      // Already in the bucket: the disk copy is dead weight (15 Oct), so it goes.
       skipped++;
+      dropDiskCopy(key);
+      freed++;
       continue;
     }
     try {
       await b.s3.send(new PutObjectCommand({ Bucket: b.bucket, Key: key, Body: fs.readFileSync(file), ContentType: mimeFor(key) }));
       inBucket.add(key);
       copied++;
+      dropDiskCopy(key);
+      freed++;
     } catch (error) {
       failed++;
       console.error(`[uploads] could not copy ${key}:`, error instanceof Error ? error.message : error);
     }
   }
-  console.log(`[uploads] bucket on: copied ${copied} file(s) from the disk, ${skipped} already there, ${failed} failed`);
+  console.log(`[uploads] bucket on: copied ${copied} file(s) from the disk, ${skipped} already there, ${failed} failed; ${freed} disk copies freed`);
 }
