@@ -1,3 +1,4 @@
+import { GYM_COLORS, isGymColor } from "../../lib/gymColors";
 import { redirect } from "next/navigation";
 import { getData } from "../../lib/db";
 import { getUserForClient, isOwner } from "../../lib/auth";
@@ -54,6 +55,8 @@ import {
   listMetricsForPhase,
   listExercisesByGroup,
   librarySubstitutesFor,
+  homeGymId,
+  gymSessionStats,
   listExercises,
   listNutritionPhases,
   listPrograms,
@@ -109,7 +112,13 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
 
   const gymRows = listClientGyms(clientId);
   const gymName = new Map(gymRows.map((g) => [g.id, g.name] as const));
-  const gyms = gymRows.map((g, i) => ({ id: g.id, name: g.name, home: i === 0 }));
+  // Home is the gym marked home (15 Oct: it used to be whichever came first), with each gym's colour and its sessions for the coach's gyms pop-up.
+  const homeId = homeGymId(clientId);
+  const gymStats = gymSessionStats(clientId);
+  const gyms = gymRows.map((g) => {
+    const c = GYM_COLORS[isGymColor(g.color) ? g.color : "navy"];
+    return { id: g.id, name: g.name, home: g.id === homeId, color: c.hex, rgb: c.rgb, sessions8w: gymStats.get(g.id)?.sessions8w ?? 0, lastSessionAt: gymStats.get(g.id)?.lastUsedAt ?? null };
+  });
 
   // The coach's library, for the add-exercise row; cardio has its own form.
   const byGroup = listExercisesByGroup(coachId);

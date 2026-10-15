@@ -105,7 +105,6 @@
 .rq-fix:hover { background: #fae6dc; }
 .rdd-picking { min-height: 18px; }
 .rd-dlg .rq-title-row { display: flex; align-items: center; gap: 10px; width: 100%; }
-.rq-busy { position: absolute; left: 30%; right: 30%; bottom: 4px; height: 3px; border-radius: 999px; background: #c3c9d2; }
 .rdd-cell { position: relative; }
 /* Days of the next or last month fade, band and all, so the month shown ends where it ends. */
 .rq-phase-dlg .rdd-cell.past { opacity: 0.35; }
