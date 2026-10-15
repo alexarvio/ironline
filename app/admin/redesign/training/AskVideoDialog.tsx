@@ -70,7 +70,7 @@ export default function AskVideoDialog({
       aria-describedby={undefined}
       onOpenAutoFocus={(ev) => {
         ev.preventDefault();
-        text.current?.focus();
+        requestAnimationFrame(() => text.current?.focus());
       }}
       onKeyDown={(ev) => {
         if ((ev.metaKey || ev.ctrlKey) && ev.key === "Enter") {
