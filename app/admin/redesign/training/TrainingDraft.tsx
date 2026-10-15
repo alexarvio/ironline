@@ -24,7 +24,7 @@ import { useOpenChat } from "../ChatPanel";
 import Picker from "../Picker";
 import AskVideoDialog from "./AskVideoDialog";
 import SessionSubstitutesDialog from "./SessionSubstitutesDialog";
-import NewVariationDialog from "./NewVariationDialog";
+import VariationDialog from "./VariationDialog";
 import ClientGymsDialog from "./ClientGymsDialog";
 import DeleteSessionDialog from "./DeleteSessionDialog";
 import ExerciseProgressDialog from "./ExerciseProgressDialog";
@@ -84,6 +84,8 @@ export type DraftRow = {
   libraryOff: boolean;
   /** Library substitutes switched off on this session (15 Oct). */
   libraryHidden: number[];
+  /** The client's last top set on each variation of this exercise (15 Oct), null being the standard exercise. */
+  variationLast: { variationId: number | null; weight: number; reps: number; date: string }[];
   d7: number | null;
   d30: number | null;
 };
@@ -153,7 +155,7 @@ const pendingCount = (p: Pending) => p.added.length + p.removed.length + p.cardi
 
 type Dlg =
   | { kind: "progress"; rowId: number }
-  | { kind: "deleteVariation"; rowId: number }
+  | { kind: "variation"; rowId: number }
   | { kind: "editExercise"; sessionId: number; rowId: number }
   | { kind: "editCardio"; sessionId: number; cardioId: number }
   | { kind: "cardioAlternatives"; sessionId: number; cardioId: number }
@@ -348,7 +350,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         });
         const addedRows: DraftRow[] = p.added
           .filter((a): a is Added & AddedExercise => a.kind === "exercise")
-          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: Math.max(1, parseInt(String(a.sets), 10) || 3), reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: Number(a.rpe) || null, tempo: a.tempo?.trim() || null, rest: restSeconds(a.rest ?? ""), note: a.note?.trim() || null, logged: [], video: null, demo: null, demoHidden: false, history: [], swap: null, swapInfo: null, exerciseChat: [], alternatives: [], librarySubstitutes: [], libraryOff: false, libraryHidden: [], d7: null, d30: null }));
+          .map((a, i) => ({ id: -(Date.now() + i + 1), exerciseId: a.exerciseId ?? 0, name: a.name, sets: Math.max(1, parseInt(String(a.sets), 10) || 3), reps: a.reps, kg: a.kg, gymKg: gyms.map((g) => ({ gym: g.name, kg: a.kg })), rpe: Number(a.rpe) || null, tempo: a.tempo?.trim() || null, rest: restSeconds(a.rest ?? ""), note: a.note?.trim() || null, logged: [], video: null, demo: null, demoHidden: false, history: [], swap: null, swapInfo: null, exerciseChat: [], alternatives: [], librarySubstitutes: [], libraryOff: false, libraryHidden: [], variationLast: [], d7: null, d30: null }));
         const addedCardio: DraftCardio[] = p.added
           .filter((a): a is Added & AddedCardio => a.kind === "cardio")
           .map((a, i) => ({ id: -(Date.now() + 500 + i), name: a.name, time: a.time, pace: a.pace, incline: a.incline, distance: a.distance, notes: a.note, done: false }));
@@ -1064,31 +1066,9 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                     const base = current ? r.name.slice(0, -(current.name.length + 3)) : r.name;
                                     const pickVariation = (id: number | null) => act(() => setRowVariationAction(r.id, id), `${base}${id != null ? ` · ${variations.find((v) => v.id === id)?.name}` : ""} · ${firstName} sees it from this week`);
                                     return (
-                                      <DropdownMenuSub>
-                                        <DropdownMenuSubTrigger>
-                                          <ColumnsIcon /> Variation · {current ? current.name : "standard"}
-                                        </DropdownMenuSubTrigger>
-                                        <DropdownMenuSubContent className="pb-menu">
-                                          <DropdownMenuCheckboxItem checked={!current} onSelect={() => pickVariation(null)}>
-                                            Standard
-                                          </DropdownMenuCheckboxItem>
-                                          {variations.map((v) => (
-                                            <DropdownMenuCheckboxItem key={v.id} checked={current?.id === v.id} onSelect={() => pickVariation(v.id)}>
-                                              {v.name}
-                                            </DropdownMenuCheckboxItem>
-                                          ))}
-                                          <DropdownMenuSeparator />
-                                          <DropdownMenuItem onSelect={() => setDlg({ kind: "newVariation", rowId: r.id })}>
-                                            <PlusIcon /> New variation…
-                                          </DropdownMenuItem>
-                                          {/* The variation the row is on can go from the library here (15 Oct): a confirm first. */}
-                                          {current && (
-                                            <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "deleteVariation", rowId: r.id })}>
-                                              <TrashIcon /> Delete {current.name}…
-                                            </DropdownMenuItem>
-                                          )}
-                                        </DropdownMenuSubContent>
-                                      </DropdownMenuSub>
+                                      <DropdownMenuItem onSelect={() => setDlg({ kind: "variation", rowId: r.id })}>
+                                        <ColumnsIcon /> Variation · {current ? current.name : "standard"}
+                                      </DropdownMenuItem>
                                     );
                                   })()}
                                 <DropdownMenuItem onSelect={() => setDlg({ kind: "alternatives", rowId: r.id })}>
@@ -1427,40 +1407,6 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           />
         )}
 
-        {dlg?.kind === "newVariation" && rowById(dlg.rowId) && (
-          (() => {
-            const row = rowById(dlg.rowId)!;
-            const ex = library.flatMap((g) => g.exercises).find((e) => e.id === row.exerciseId);
-            const variations = (ex?.variations ?? []).map((v) => ({ id: v.id, name: v.name, hasDemo: !!v.video }));
-            const current = variations.find((v) => v.id === row.variationId) ?? null;
-            const base = current ? row.name.slice(0, -(current.name.length + 3)) : row.name;
-            return (
-              <NewVariationDialog
-                firstName={firstName}
-                exerciseName={base}
-                group={ex?.group ?? null}
-                week={week.index}
-                variations={variations}
-                currentVariationId={row.variationId ?? null}
-                onUse={async (v) => {
-                  close();
-                  await setRowVariationAction(row.id, v.id);
-                  router.refresh();
-                  toast.success(`${firstName} is on ${v.name} from Week ${week.index}`);
-                }}
-                onCreate={async (name) => {
-                  close();
-                  // Made in the library, then picked on this row (and the weeks after).
-                  const made = await addExerciseVariationAction(row.exerciseId, name);
-                  if (made) await setRowVariationAction(row.id, made.id);
-                  router.refresh();
-                  toast.success(`${name} added for ${firstName}`, { action: { label: "Add demo", onClick: () => setDlg({ kind: "demo", rowId: row.id }) } });
-                }}
-                onClose={close}
-              />
-            );
-          })()
-        )}
         {dlg?.kind === "alternatives" && rowById(dlg.rowId) && (
           <SessionSubstitutesDialog
             row={rowById(dlg.rowId)!}
@@ -1629,23 +1575,44 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           />
         )}
 
-        {dlg?.kind === "deleteVariation" && rowById(dlg.rowId) && (
+        {/* Which variation the client does on this session (15 Oct, VariationDialog): Standard or one from the library, from which week; a new one made inline; one deleted. */}
+        {dlg?.kind === "variation" && rowById(dlg.rowId) && (
           (() => {
             const row = rowById(dlg.rowId)!;
             const ex = library.flatMap((g) => g.exercises).find((e) => e.id === row.exerciseId);
-            const v = ex?.variations?.find((x) => x.id === row.variationId) ?? null;
-            const base = v ? row.name.slice(0, -(v.name.length + 3)) : row.name;
-            if (!v) return null;
+            const variations = ex?.variations ?? [];
+            const current = variations.find((v) => v.id === row.variationId) ?? null;
+            const base = current ? row.name.slice(0, -(current.name.length + 3)) : row.name;
+            const session = sessions.find((x) => x.rows.some((r) => r.id === row.id))?.name ?? "Session";
+            const lastOf = (id: number | null) => row.variationLast.find((x) => x.variationId === id) ?? null;
+            const options = [{ variationId: null as number | null, name: "Standard", video: ex?.video ?? null, last: lastOf(null) }, ...variations.map((v) => ({ variationId: v.id as number | null, name: v.name, video: v.video ?? null, last: lastOf(v.id) }))];
             return (
-              <ConfirmDialog
-                title={`Delete ${v.name}?`}
-                description={`It goes from ${base} in your library, for every client. Rows on it go back to the standard ${base}; sets logged on it stay.`}
-                confirm="Delete variation"
-                danger
-                onConfirm={() => {
+              <VariationDialog
+                firstName={firstName}
+                exerciseName={base}
+                group={ex?.group ?? null}
+                session={session}
+                week={week.index}
+                lbs={lbs}
+                current={row.variationId ?? null}
+                options={options}
+                onSave={async (variationId, scope) => {
+                  await setRowVariationAction(row.id, variationId, scope);
                   close();
-                  act(() => removeExerciseVariationAction(row.exerciseId, v.id), `${v.name} deleted from ${base}`);
+                  router.refresh();
+                  const name = options.find((o) => o.variationId === variationId)?.name ?? "Standard";
+                  toast.success(scope === "from" ? `${firstName} on ${name} from Week ${week.index}` : scope === "just" ? `${firstName} on ${name} for Week ${week.index}` : `${firstName} on ${name} for the whole programme`);
                 }}
+                onCreate={async (name) => {
+                  const made = await addExerciseVariationAction(row.exerciseId, name);
+                  router.refresh();
+                  return made ? { variationId: made.id, name: made.name, video: null, last: null } : null;
+                }}
+                onDelete={async (variationId) => {
+                  await removeExerciseVariationAction(row.exerciseId, variationId);
+                  router.refresh();
+                }}
+                onClose={close}
               />
             );
           })()

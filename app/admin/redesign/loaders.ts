@@ -57,6 +57,7 @@ import {
   listExercisesByGroup,
   librarySubstitutesFor,
   homeGymId,
+  dayGymId,
   gymSessionStats,
   listExercises,
   listNutritionPhases,
@@ -111,6 +112,25 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     (p.id === live?.id ? "live" : p.status === "deployed" && live && p.start_week < live.start_week ? "past" : p.status === "deployed" || p.scheduled_at ? "scheduled" : "draft") as "live" | "past" | "scheduled" | "draft";
   const programs = all.map((p) => ({ id: p.id, name: p.name ?? "Programme", weeks: p.total_weeks, state: stateOf(p) }));
 
+  // The client's last top set on each variation of an exercise (15 Oct, the Variation pop-up): newest session first, its heaviest set.
+  const clientDayIds = new Set(getData().program_days.filter((pd) => pd.client_id === clientId).map((pd) => pd.id));
+  const clientAssignments = getData().workout_assignments.filter((wa) => clientDayIds.has(wa.program_day_id));
+  const variationLastFor = (exerciseId: number, gymId: number | null) => {
+    const out: { variationId: number | null; weight: number; reps: number; date: string }[] = [];
+    const byVariation = new Map<number | null, { weight: number; reps: number; date: string }>();
+    for (const wa of clientAssignments) {
+      if (wa.exercise_id !== exerciseId || wa.swap) continue;
+      const logs = getLogsForAssignment(wa.id).filter((l) => l.weight_kg != null && l.reps != null && (gymId == null || l.gym_id == null || l.gym_id === gymId));
+      if (!logs.length) continue;
+      const date = logs.map((l) => l.logged_at).sort().pop()!;
+      const top = logs.reduce((best, l) => (!best || (l.weight_kg ?? 0) > (best.weight_kg ?? 0) || ((l.weight_kg ?? 0) === (best.weight_kg ?? 0) && (l.reps ?? 0) > (best.reps ?? 0)) ? l : best), logs[0]);
+      const key = wa.variation_id ?? null;
+      const had = byVariation.get(key);
+      if (!had || date > had.date) byVariation.set(key, { weight: top.weight_kg!, reps: top.reps!, date });
+    }
+    for (const [variationId, last] of byVariation) out.push({ variationId, ...last });
+    return out;
+  };
   const gymRows = listClientGyms(clientId);
   const gymName = new Map(gymRows.map((g) => [g.id, g.name] as const));
   // Home is the gym marked home (15 Oct: it used to be whichever came first), with each gym's colour and its sessions for the coach's gyms pop-up.
@@ -292,6 +312,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
         librarySubstitutes: librarySubstitutesFor(a.exercise_id).filter((x) => libName.has(x.exercise_id)).map((x) => ({ exerciseId: x.exercise_id, name: libName.get(x.exercise_id)!, note: x.note ?? "" })),
         libraryOff: !!a.library_substitutes_off,
         libraryHidden: a.library_substitutes_hidden ?? [],
+        variationLast: variationLastFor(a.exercise_id, dayGymId(d.id)),
         d7: pct(lastWeek),
         d30: pct(monthBack),
       };

@@ -3559,11 +3559,11 @@ export async function removeExerciseVariationAction(exerciseId: number, variatio
   return true;
 }
 
-export async function setRowVariationAction(assignmentId: number, variationId: number | null) {
+export async function setRowVariationAction(assignmentId: number, variationId: number | null, scope: "from" | "just" | "all" = "from") {
   const id = Number(assignmentId);
   const owner = Number.isInteger(id) ? getClientIdForAssignment(id) : null;
   if (owner == null || !(await coachForClient(owner))) return;
-  setAssignmentVariation(id, variationId == null ? null : Number(variationId));
+  setAssignmentVariation(id, variationId == null ? null : Number(variationId), scope === "just" || scope === "all" ? scope : "from");
   revalidatePath("/admin");
   revalidatePath("/client");
 }

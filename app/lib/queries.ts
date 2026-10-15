@@ -8886,14 +8886,26 @@ export function setAssignmentDemoHidden(assignmentId: number, hidden: boolean): 
 
 /** The variation a row asks for, set on this row and on the same row in the
  *  same session for the rest of its programme (sameRowForward). */
-export function setAssignmentVariation(assignmentId: number, variationId: number | null): number {
+export function setAssignmentVariation(assignmentId: number, variationId: number | null, scope: "from" | "just" | "all" = "from"): number {
   const data = getData();
   const wa = data.workout_assignments.find((x) => x.id === assignmentId);
   const day = wa ? data.program_days.find((d) => d.id === wa.program_day_id) : undefined;
   if (!wa || !day) return 0;
   const exercise = data.exercises.find((e) => e.id === wa.exercise_id);
   const id = variationId != null && exercise?.variations?.some((v) => v.id === variationId) ? variationId : null;
-  const rows = sameRowForward(wa);
+  // From this week on (the usual), just this week, or every week of the session in the programme (15 Oct).
+  const rows =
+    scope === "just"
+      ? [wa]
+      : scope === "all"
+        ? (() => {
+            const program = data.training_programs.find((p) => p.client_id === day.client_id && day.week_number >= p.start_week && day.week_number < p.start_week + p.total_weeks);
+            const first = program ? program.start_week : day.week_number;
+            const last = program ? program.start_week + program.total_weeks - 1 : day.week_number;
+            const days = new Set(data.program_days.filter((d) => d.client_id === day.client_id && d.day_of_week === day.day_of_week && d.week_number >= first && d.week_number <= last).map((d) => d.id));
+            return data.workout_assignments.filter((x) => x.exercise_id === wa.exercise_id && days.has(x.program_day_id));
+          })()
+        : sameRowForward(wa);
   // The note a row starts with: the variation's own cue, else the exercise's.
   // Only where the note is still one of those defaults (or empty): a note the
   // coach wrote themselves stays.
