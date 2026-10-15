@@ -502,7 +502,7 @@ export default function ExercisePage({
             {doneCount}/{workRows.length}
           </span>
           {/* The coach's rep range (15 Oct), once for the exercise: the big numbers in each set stay what was done last time. */}
-          {exercise.reps.trim() && <span className="lw-reps-target">· {exercise.reps.trim().replace(/\s*(?:-|–|to)\s*/i, "–")} reps</span>}
+          {exercise.reps.trim() && <span className="lw-reps-target">{exercise.reps.trim().replace(/\s*(?:-|–|to)\s*/i, "–")} reps</span>}
           {/* KG / LBS on the card's row (13 Oct, back where it was): the exercise's unit, every set of it. */}
           {askWeight && (
             <div className="lw-unit" role="radiogroup" aria-label="Weight unit for this exercise">

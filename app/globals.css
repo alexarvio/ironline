@@ -18569,7 +18569,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .lw-card-head { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 6px; }
 .lw-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #9E9E9E; }
 .lw-progress { font-size: 12px; font-weight: 800; color: #1E3A5F; font-variant-numeric: tabular-nums; }
-.lw-reps-target { margin-left: 2px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #9E9E9E; white-space: nowrap; }
+.lw-reps-target { margin-left: 12px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #1E3A5F; white-space: nowrap; }
 .lw-progress.done { color: #2E7D32; }
 .lw-unit { display: flex; margin-left: auto; padding: 3px; border-radius: 999px; background: #F5F5F5; }
 .lw-unit-btn { height: 30px; padding: 0 14px; border: 0; border-radius: 999px; background: transparent; color: #9E9E9E; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; transition: background 0.2s, color 0.2s; }
