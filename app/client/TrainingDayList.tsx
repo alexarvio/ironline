@@ -43,6 +43,7 @@ export default function TrainingDayList({
   coachPhoto = null,
   clientName = "",
   liveSession,
+  headerPicture = null,
 }: {
   days: SessionDay[];
   /** The selected week is the current one: sessions can be started. */
@@ -55,6 +56,8 @@ export default function TrainingDayList({
   clientName?: string;
   /** The client's session in progress, wherever it is. */
   liveSession: { id: number; label: string; startedAt: string; week: number } | null;
+  /** The client's own training picture (15 Oct) behind the session header; none, the stock one. */
+  headerPicture?: string | null;
 }) {
   const [view, setViewState] = useState<View>(null);
   // Put back from storage after a reload: shown in place, not slid in.
@@ -239,6 +242,7 @@ export default function TrainingDayList({
           currentWeek={currentWeek}
           liveElsewhere={liveSession && liveSession.id !== openDay.key ? liveSession.label : null}
           coachName={coachName}
+          picture={headerPicture}
           onBack={() => {
             setView(null);
             // Opened from a link in the chat: Back goes back to the chat, once.

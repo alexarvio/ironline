@@ -685,6 +685,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
               coachPhoto={getCoachAvatarPath(CLIENT_ID)}
               clientName={(getClient(CLIENT_ID)?.name ?? "").trim().split(/\s+/)[0] ?? ""}
               liveSession={liveSessionFor(CLIENT_ID)}
+              headerPicture={bannerPictures(CLIENT_ID, "training")[0] ?? null}
               days={trainingDays.map(({ day, assignments }, i) => {
                 const gymId = dayGymId(day.id);
                 // Videos the coach asked for in this session.

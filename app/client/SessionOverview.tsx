@@ -44,6 +44,7 @@ export default function SessionOverview({
 
   liveElsewhere,
   coachName,
+  picture = null,
   onBack,
   onStart,
   onResume,
@@ -58,6 +59,8 @@ export default function SessionOverview({
   /** Another session is live: this one cannot start until it is finished. */
   liveElsewhere: string | null;
   coachName: string;
+  /** The client's own training picture behind the header; none, the stock one. */
+  picture?: string | null;
   onBack: () => void;
   /** The client picked a gym (or there was nothing to pick) and pressed Start. */
   onStart: (gym: GymOption | null) => void;
@@ -111,7 +114,7 @@ export default function SessionOverview({
 
   return (
     <div className={`app-layer app-layer-push so-screen${still ? " still" : ""}`} role="dialog" aria-label={day.title}>
-      <header className="so-head">
+      <header className="so-head" style={picture ? { backgroundImage: `url("${picture}")`, backgroundPosition: "center" } : undefined}>
         <div className="so-head-row">
         <button type="button" className="so-back" onClick={onBack} aria-label="Back to training">
           <ChevronLeftIcon />

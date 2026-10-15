@@ -18569,7 +18569,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .lw-card-head { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 6px; }
 .lw-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #9E9E9E; }
 .lw-progress { font-size: 12px; font-weight: 800; color: #1E3A5F; font-variant-numeric: tabular-nums; }
-.lw-reps-target { margin-left: 12px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #1E3A5F; white-space: nowrap; }
+.lw-reps-target { margin-left: 12px; font-size: 13px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #1E3A5F; white-space: nowrap; }
 .lw-progress.done { color: #2E7D32; }
 .lw-unit { display: flex; margin-left: auto; padding: 3px; border-radius: 999px; background: #F5F5F5; }
 .lw-unit-btn { height: 30px; padding: 0 14px; border: 0; border-radius: 999px; background: transparent; color: #9E9E9E; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; transition: background 0.2s, color 0.2s; }
@@ -18790,10 +18790,10 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .lw-open.extra.saved .lw-badge { color: #2E7D32; outline-color: #2E7D32; }
 
 /* The Demo row stands out (13 Oct, Alex): navy, white play mark and text. */
-.lw-demo { background: #1E3A5F; color: #fff; box-shadow: 0 14px 24px -12px rgba(30, 58, 95, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
-.lw-demo:active { background: #182c57; }
-.lw-demo-play { background: rgba(255, 255, 255, 0.18); }
-.lw-demo-play svg { fill: #fff; }
+.lw-demo { background: #e6ecf3; color: #1e3a6e; box-shadow: inset 0 0 0 1px #b8c6d9; }
+.lw-demo:active { background: #d9e2ee; }
+.lw-demo-play { background: none; }
+.lw-demo-play svg { fill: #1e3a6e; }
 
 /* Restored (13 Oct): the open set's title is small caps again; the rule had been cut with the old lifestyle styles. */
 .lw-open-title { font-family: inherit; font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; line-height: 1; }

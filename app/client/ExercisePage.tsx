@@ -460,6 +460,8 @@ export default function ExercisePage({
         </div>
       )}
 
+      <CoachNote assignmentId={exercise.id} note={exercise.note} />
+
       {/* The coach's demo, its own row; nothing at all without one. */}
       {exercise.videoUrl && (
         <button type="button" className="lw-demo" onClick={openDemo}>
@@ -472,7 +474,6 @@ export default function ExercisePage({
         </button>
       )}
 
-      <CoachNote assignmentId={exercise.id} note={exercise.note} />
 
       {ask && (ask.note || ask.src || ask.reply) && (
         <button
