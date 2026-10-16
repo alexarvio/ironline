@@ -19103,3 +19103,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .hm-mt-row.link:active { background: rgba(20, 26, 36, 0.04); }
 /* The row top padding is 14px and the ring 48px: the spine runs through the ring centre at 38px. */
 .evt-spine { top: 38px; }
+/* The pictures pill flat on the page (16 Oct): no white fill or edge, the ring, the words and Start alone; the inner disc in the page grey. */
+.ppp, .ppp.done { padding: 6px 4px 6px 8px; background: none; box-shadow: none; }
+.ppp:active { background: none; }
+.ppp-disc { background: #F5F5F5; }
