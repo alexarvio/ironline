@@ -103,14 +103,6 @@ export default function EventsTimelineCard({ events, today }: { events: HomeEven
   };
   const onToday = focused === todayIndex;
 
-  // The dots: at most 12, a window around the focused one.
-  const dots = useMemo(() => {
-    const n = items.length;
-    if (n <= 12) return items.map((_, i) => i);
-    const start = Math.min(Math.max(0, focused - 6), n - 12);
-    return Array.from({ length: 12 }, (_, k) => start + k);
-  }, [items, focused]);
-
   return (
     <section ref={wrapRef} className="evt" aria-label="Events">
       <div className="evt-head">
@@ -133,30 +125,23 @@ export default function EventsTimelineCard({ events, today }: { events: HomeEven
         <span className="evt-spine" aria-hidden="true" />
         <div ref={rowRef} className="evt-row" role="listbox" aria-label="Events" tabIndex={0} onScroll={onScroll} onKeyDown={onKey} style={{ paddingLeft: side, paddingRight: side }}>
           {items.map((it, i) => (
-            <Item key={it.key} item={it} index={i} pos={pos} focused={i === focused} onPick={() => (i === focused ? (it.slot === "more" ? openEvents?.() : it.event ? openEvents?.(it.event.id) : openEvents?.()) : scrollTo(i))} />
+            <Item key={it.key} item={it} focused={i === focused} onPick={() => (i === focused ? (it.slot === "more" ? openEvents?.() : it.event ? openEvents?.(it.event.id) : openEvents?.()) : scrollTo(i))} />
           ))}
         </div>
       </div>
 
-      <div className="evt-dots" aria-hidden="true">
-        {dots.map((i) => (
-          <i key={i} className={`evt-dot${i === focused ? " on" : i === todayIndex ? " today" : ""}`} />
-        ))}
-      </div>
     </section>
   );
 }
 
-function Item({ item, index, pos, focused, onPick }: { item: TimelineItem; index: number; pos: number; focused: boolean; onPick: () => void }) {
-  const d = Math.min(Math.abs(index - pos), 2);
-  const scale = 1.1 - d * 0.12;
+function Item({ item, focused, onPick }: { item: TimelineItem; focused: boolean; onPick: () => void }) {
   const c: Chrome = item.event ? chromeOf(item.event) : NEUTRAL;
   const icon = item.slot === "more" ? "M5 12h14M13 6l6 6-6 6" : c.icon;
   const cls = `evt-item ${item.slot}${focused ? " on" : ""}`;
   const spoken = item.slot === "more" ? "See all events" : item.event ? `${item.label}: ${item.event.title}, ${item.when}${item.slot === "past" ? ", done" : ""}` : "Today: nothing on, free day";
   return (
     <button type="button" role="option" aria-selected={focused} aria-label={spoken} className={cls} style={{ "--c": c.color, "--rgb": c.rgb } as React.CSSProperties} onClick={onPick}>
-      <span className="evt-ring" style={{ transform: `scale(${scale.toFixed(3)})` }}>
+      <span className="evt-ring">
         {focused && <i className="evt-halo" aria-hidden="true" />}
         <LineIcon path={icon} />
       </span>
