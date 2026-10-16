@@ -18957,7 +18957,8 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .evp-r.now .evp-date { padding-top: 9px; }
 /* Out of the spot, a row fades back; a live one stays bright. */
 .evp-row { opacity: 0.38; transition: opacity 0.25s; }
-.evp-r.now .evp-row, .evp-r.focus .evp-row { opacity: 1; }
+.evp-r.now .evp-row { opacity: 0.66; }
+.evp-r.focus .evp-row { opacity: 1; }
 .evp-date b { font-size: 22px; font-weight: 300; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: #141a24; }
 .evp-r.now .evp-date b { font-size: 26px; color: var(--c); }
 .evp-date small { margin-top: 3px; font-size: 9.5px; font-weight: 600; letter-spacing: 0.14em; color: #98A2B3; }
