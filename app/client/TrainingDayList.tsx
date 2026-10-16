@@ -149,7 +149,8 @@ export default function TrainingDayList({
 
   return (
     <>
-      <div className="tr-rows" ref={(el) => setHost(el?.closest<HTMLElement>(".app-stack") ?? null)}>
+      <div className="trh-rows" ref={(el) => setHost(el?.closest<HTMLElement>(".app-stack") ?? null)}>
+        <span className="trh-spine" aria-hidden="true" />
         {days.map((d) => {
           const status = sessionStatus(d, pastWeek);
           const isNext = d.key === nextKey;
@@ -172,20 +173,35 @@ export default function TrainingDayList({
                   .filter(Boolean)
                   .join(" · ");
           const tone = status === "done" ? "done" : status === "unfinished" ? "unfinished" : status === "live" ? "live" : isNext ? "next" : status;
+          // The hairline row (16 Oct, docs/DESIGN-RULES.md): the session's number as a light numeral, the dumbbell
+          // on the spine (a ring when it is live or next, a tick once done), a small label, the title and the line under it.
+          const label = isNext && status === "upcoming" ? "Up next" : status === "upcoming" && logged > 0 ? "Started" : status === "upcoming" ? null : STATUS_LABEL[status];
           return (
-            <button key={d.key} type="button" className={`tr-row ${tone}`} onClick={() => setView({ dayId: d.key, screen: "overview" })}>
-              <span className={`tr-row-tile ${tone}`}>{d.index}</span>
-              <span className="tr-row-main">
-                <span className="tr-row-title">{d.title}</span>
-                <span className="tr-row-sub">{sub}</span>
+            <button key={d.key} type="button" className={`trh-row ${tone}`} onClick={() => setView({ dayId: d.key, screen: "overview" })} aria-label={`${d.title}, ${label ? `${label.toLowerCase()}, ` : ""}${sub}`}>
+              <span className="trh-num" aria-hidden="true">
+                <b>{d.index}</b>
+                <small>Session</small>
               </span>
-              {(status !== "upcoming" || isNext || logged > 0) && (
-              <span className={`tr-row-pill ${tone}`}>
-                {status === "live" && <span className="tr-row-dot" aria-hidden="true" />}
-                {isNext && status === "upcoming" ? "Up next" : status === "upcoming" && logged > 0 ? "Started" : STATUS_LABEL[status]}
+              <span className="trh-node" aria-hidden="true">
+                <span className="trh-ring">
+                  <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+                    <path d={status === "done" ? "M5 12.5l4.5 4.5L19 7.5" : status === "skipped" || status === "missed" ? "M6 6l12 12M18 6 6 18" : "M6.5 8v8M17.5 8v8M4 10v4M20 10v4M6.5 12h11"} />
+                  </svg>
+                </span>
               </span>
-              )}
-              <span className="tr-row-chev" aria-hidden="true" />
+              <span className="trh-text">
+                {label && (
+                  <span className="trh-label">
+                    {status === "live" && <i className="trh-dot" aria-hidden="true" />}
+                    {label}
+                  </span>
+                )}
+                <span className="trh-title">{d.title}</span>
+                <span className="trh-sub">{sub}</span>
+              </span>
+              <svg className="trh-chev" viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M9 6l6 6-6 6" />
+              </svg>
             </button>
           );
         })}
