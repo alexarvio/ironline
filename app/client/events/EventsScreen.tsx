@@ -404,7 +404,6 @@ function EventRow(p: RowProps) {
         </span>
         <span className="evp-node" aria-hidden="true">
           <span className={`evp-ring${isNow ? " now" : ""}`}>
-            {isNow && <i className="evp-halo" />}
             <LineIcon path={c.icon} size={isNow ? 19 : 18} />
           </span>
         </span>
