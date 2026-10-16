@@ -18955,24 +18955,24 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .evp-row:disabled { cursor: default; }
 .evp-date { flex: none; display: flex; flex-direction: column; align-items: flex-end; width: 62px; box-sizing: border-box; padding: 7px 4px 0 0; line-height: 1; }
 .evp-r.now .evp-date { padding-top: 9px; }
-/* Out of the spot, a row fades back; a live one stays bright. */
-.evp-row { opacity: 0.38; transition: opacity 0.25s; }
-.evp-r.now .evp-row { opacity: 0.66; }
-.evp-r.focus .evp-row { opacity: 1; }
+/* Out of the spot a row fades back, but only its words, date and icon: the ring's page-coloured disc stays solid so the spine never runs through an icon. What is to come keeps its colour; what is past goes grey and dimmer; a live one stays brighter. */
+.evp-date, .evp-text, .evp-ring svg { transition: opacity 0.25s; }
+.evp-r:not(.focus) .evp-date, .evp-r:not(.focus) .evp-text, .evp-r:not(.focus) .evp-ring svg { opacity: 0.55; }
+.evp-r.now:not(.focus) .evp-date, .evp-r.now:not(.focus) .evp-text, .evp-r.now:not(.focus) .evp-ring svg { opacity: 0.75; }
 .evp-date b { font-size: 22px; font-weight: 300; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: #141a24; }
 .evp-r.now .evp-date b { font-size: 26px; color: var(--c); }
 .evp-date small { margin-top: 3px; font-size: 9.5px; font-weight: 600; letter-spacing: 0.14em; color: #98A2B3; }
 .evp-node { flex: none; display: flex; justify-content: center; width: 56px; }
-.evp-ring { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #F5F6F8; color: var(--c); transform: scale(1); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.evp-ring { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #F5F6F8; box-shadow: 0 0 0 4px #F5F6F8; color: var(--c); transform: scale(1); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .evp-ring.now { width: 44px; height: 44px; box-shadow: inset 0 0 0 1px var(--c); animation: evp-pulse 2.4s ease-in-out infinite; }
 .evp-halo { position: absolute; inset: -5px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(var(--rgb), 0.25); animation: evp-halo 2.4s ease-in-out infinite; }
-@keyframes evp-pulse { 0%, 100% { box-shadow: inset 0 0 0 1px var(--c), 0 0 0 0 rgba(var(--rgb), 0.28); } 50% { box-shadow: inset 0 0 0 1px var(--c), 0 0 0 7px rgba(var(--rgb), 0); } }
+@keyframes evp-pulse { 0%, 100% { box-shadow: 0 0 0 4px #F5F6F8, inset 0 0 0 1px var(--c), 0 0 0 4px rgba(var(--rgb), 0.28); } 50% { box-shadow: 0 0 0 4px #F5F6F8, inset 0 0 0 1px var(--c), 0 0 0 11px rgba(var(--rgb), 0); } }
 @keyframes evp-halo { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 /* The row at the snap point. */
-.evp-r.focus .evp-ring { transform: scale(1.25); box-shadow: inset 0 0 0 1px var(--c); }
+.evp-r.focus .evp-ring { transform: scale(1.25); box-shadow: 0 0 0 4px #F5F6F8, inset 0 0 0 1px var(--c); }
 .evp-r.focus .evp-ring.now { box-shadow: inset 0 0 0 1px var(--c); }
 .evp-r.focus .evp-title { font-size: 18px; font-weight: 600; }
-.evp-r.past.focus .evp-row { opacity: 0.85; }
+.evp-r.past.focus .evp-date, .evp-r.past.focus .evp-text, .evp-r.past.focus .evp-ring svg { opacity: 0.85; }
 .evp-chev { flex: none; color: #98A2B3; transition: transform 0.25s; }
 .evp-r.open .evp-chev { transform: rotate(90deg); }
 .evp-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; padding-left: 16px; }
@@ -18989,7 +18989,8 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .evp-fill { position: absolute; left: 0; top: -0.5px; height: 2px; border-radius: 2px; background: var(--c); }
 .evp-knob { position: absolute; right: -3.5px; top: -3px; width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
 .evp-progress small { flex: none; font-size: 11.5px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--c); }
-.evp-r.past .evp-row { opacity: 0.3; filter: grayscale(1); }
+.evp-r.past .evp-date, .evp-r.past .evp-text, .evp-r.past .evp-ring svg { filter: grayscale(1); }
+.evp-r.past:not(.focus) .evp-date, .evp-r.past:not(.focus) .evp-text, .evp-r.past:not(.focus) .evp-ring svg { opacity: 0.3; }
 .evp-x { padding: 0 20px 0 134px; }
 .evp-r.open .evp-x { padding-bottom: 8px; }
 .evp-r.lit .evp-row { animation: evp-lit 600ms ease-out 200ms both; border-radius: 14px; }
