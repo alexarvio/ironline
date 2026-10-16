@@ -19094,3 +19094,6 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .hm-mt-all { align-self: flex-end; min-height: 28px; }
 .hm-mt-more { font-size: 13px; font-weight: 600; color: #141a24; }
 .hm-last-meeting .hm-mt { padding-top: 0; }
+
+.hm-meeting { display: flex; flex-direction: column; margin-top: 4px; }
+.hm-meeting .hm-mt { padding-top: 0; }

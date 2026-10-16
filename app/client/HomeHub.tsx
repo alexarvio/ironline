@@ -465,7 +465,17 @@ export function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<Upcom
   const shown = localMeetingLabels(m, now);
   const pillLabel = live ? "Live" : shown.inLabel;
   return (
-    <section className={`hm-mt${openMeetings ? " link" : ""}`} aria-label={`Next meeting with ${coachFirstName}`} onClick={openMeetings ? (e) => openFromCard(e, openMeetings) : undefined}>
+    <section className="hm-meeting" aria-label={`Next meeting with ${coachFirstName}`}>
+      {/* Its own head (16 Oct), like Events and Latest from: it used to read as part of the section above. */}
+      <div className="hm-tasks-head">
+        <span className="hm-eyebrow">Meetings</span>
+        {openMeetings && (
+          <button type="button" className="hm-mt-all-link" onClick={() => openMeetings?.()}>
+            All meetings
+          </button>
+        )}
+      </div>
+    <div className={`hm-mt${openMeetings ? " link" : ""}`} onClick={openMeetings ? (e) => openFromCard(e, openMeetings) : undefined}>
       <span className="hm-mt-glow" aria-hidden="true" />
       <div className="hm-mt-row">
         <div className="hm-mt-date">
@@ -474,7 +484,7 @@ export function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<Upcom
         </div>
         <div className="hm-mt-main">
           <div className="hm-mt-top">
-            <span className="hm-mt-eyebrow">With {coachFirstName}</span>
+            <span className="hm-mt-eyebrow">Next · with {coachFirstName}</span>
             <span className={`hm-mt-pill${live ? " live" : shown.inLabel === "Today" ? " today" : ""}`} aria-label={pillLabel}>
               {live && <span className="hm-mt-live-dot" aria-hidden="true" />}
               {pillLabel}
@@ -503,11 +513,7 @@ export function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<Upcom
           <RecapFold recap={recap} />
         </div>
       )}
-      {openMeetings && (
-        <button type="button" className="hm-mt-all" onClick={() => openMeetings?.()}>
-          All meetings
-        </button>
-      )}
+    </div>
     </section>
   );
 }
