@@ -19038,3 +19038,5 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .hm .evt-ring { background: #F5F5F5; box-shadow: 0 0 0 4px #F5F5F5; }
 .hm .evt-item.on .evt-ring { box-shadow: inset 0 0 0 1px var(--c); }
 .hm .evt-item.live .evt-ring { box-shadow: inset 0 0 0 1px var(--c); }
+/* The card scroller is its own compositing layer; without a background it can show the app layer behind Home (a lighter grey) instead of the page. */
+.pc-scroller { background: #F5F5F5; }
