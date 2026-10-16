@@ -19068,9 +19068,9 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 /* The meeting card: date numerals in a light weight, a hairline chip for the countdown, an ink pill only when the call is joinable. */
 .hm-mt, .hm-mt.hm-mt-last { gap: 12px; padding: 4px 12px 8px; border: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible; }
 .hm-mt-glow { display: none; }
-.hm-mt-date { width: 52px; align-items: flex-end; }
-.hm-mt-date b { font-family: var(--font-archivo), "Archivo", sans-serif; font-size: 28px; font-weight: 300; letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums; color: #141a24; }
-.hm-mt-date small { margin-top: 3px; font-size: 9.5px; font-weight: 600; letter-spacing: 0.14em; color: #98A2B3; }
+.hm-mt-date { width: auto; min-width: 56px; align-items: flex-start; }
+.hm-mt-date b { font-family: var(--font-archivo), "Archivo", sans-serif; font-size: 36px; font-weight: 300; letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums; color: #141a24; }
+.hm-mt-date small { margin-top: 4px; padding-left: 2px; font-size: 10px; font-weight: 600; letter-spacing: 0.16em; color: #98A2B3; }
 .hm-mt-row { gap: 16px; }
 .hm-mt-eyebrow { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; color: #98A2B3; }
 .hm-mt-pill, .hm-recap-head .hm-mt-pill { padding: 0 9px; height: 22px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #DCE1E8; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; color: #3a4250; }
