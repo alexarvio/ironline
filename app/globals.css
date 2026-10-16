@@ -19097,3 +19097,6 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 
 .hm-meeting { display: flex; flex-direction: column; margin-top: 4px; }
 .hm-meeting .hm-mt { padding-top: 0; }
+
+.hm-mt-row.link { cursor: pointer; border-radius: 14px; }
+.hm-mt-row.link:active { background: rgba(20, 26, 36, 0.04); }

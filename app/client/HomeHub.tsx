@@ -475,9 +475,10 @@ export function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<Upcom
           </button>
         )}
       </div>
-    <div className={`hm-mt${openMeetings ? " link" : ""}`} onClick={openMeetings ? (e) => openFromCard(e, openMeetings) : undefined}>
+    <div className="hm-mt">
       <span className="hm-mt-glow" aria-hidden="true" />
-      <div className="hm-mt-row">
+      {/* Only the next call itself opens the Meetings screen (16 Oct); the recap under it folds open in place. */}
+      <div className={`hm-mt-row${openMeetings ? " link" : ""}`} role={openMeetings ? "button" : undefined} tabIndex={openMeetings ? 0 : undefined} onClick={openMeetings ? () => openMeetings() : undefined} onKeyDown={openMeetings ? (e) => (e.key === "Enter" || e.key === " ") && openMeetings() : undefined}>
         <div className="hm-mt-date">
           <b>{shown.dayNumber}</b>
           <small>{shown.monthCap}</small>
@@ -518,12 +519,6 @@ export function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<Upcom
   );
 }
 
-// On Home, a tap anywhere on a meeting card opens the Meetings screen; its
-// own buttons and the call's link keep doing their thing.
-function openFromCard(e: React.MouseEvent, open: () => void) {
-  if ((e.target as HTMLElement).closest("a, button")) return;
-  open();
-}
 
 // Nothing booked: the coach's notes from the last call instead.
 function LastMeetingCard({ recap, coachFirstName }: { recap: NonNullable<MeetingRecap>; coachFirstName: string }) {
@@ -539,7 +534,7 @@ function LastMeetingCard({ recap, coachFirstName }: { recap: NonNullable<Meeting
           </button>
         )}
       </div>
-      <div className={`hm-mt hm-mt-last${openMeetings ? " link" : ""}`} onClick={openMeetings ? (e) => openFromCard(e, openMeetings) : undefined}>
+      <div className="hm-mt hm-mt-last">
         <span className="hm-mt-glow" aria-hidden="true" />
         {/* The date sits on the title's line, by the chevron, not on a line of its own (6 Oct). */}
         <RecapFold recap={recap} date={recap.dateLabel} />
