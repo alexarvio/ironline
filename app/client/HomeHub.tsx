@@ -1,5 +1,6 @@
 "use client";
 
+import { NOTIFICATION_TYPES, type NotificationCategory } from "../lib/notificationTypes";
 import { useEffect, useState, useTransition } from "react";
 import { markNotificationReadAction } from "../lib/actions";
 import VideoReplySheet, { type VideoReplyView } from "./VideoReplySheet";
@@ -282,6 +283,29 @@ function TodaysTasks({ pics }: { pics: NonNullable<ProgressPics> }) {
 
 // ---- 4 · Latest from the coach --------------------------------------------
 
+/** Where the coach acted, as the notifications colour it (16 Oct): the badge on the avatar. */
+function areaOf(a: LatestActivity): NotificationCategory {
+  switch (a.kind) {
+    case "message":
+    case "goal":
+      return "message";
+    case "comment":
+      return a.context === "training" ? "training_changed" : a.context === "nutrition" ? "nutrition_changed" : a.context === "checkin" ? "checkin_comment" : a.context === "photos" ? "pics_reviewed" : "message";
+    case "video":
+      return "video_reply";
+    case "deploy":
+      return a.track === "nutrition" ? "nutrition_phase" : a.track === "lifestyle" ? "checkin_comment" : "training_block";
+    case "meeting":
+      return "meeting_notes";
+    case "report":
+      return "report";
+    case "invoice":
+      return "invoice";
+    default:
+      return "system";
+  }
+}
+
 function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstName: string; photoPath: string | null } }) {
   const openMessages = useOpenMessages();
   const openCoach = useOpenCoach();
@@ -335,6 +359,7 @@ function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstNam
   };
   const initial = (coach.firstName || "C").trim().charAt(0).toUpperCase();
   const body = a.body?.trim() || null;
+  const area = NOTIFICATION_TYPES[areaOf(a)];
   // Who and when on top, what they did as the title under the name, what they
   // wrote under that. Tapping anywhere goes to where it happened.
   return (
@@ -351,6 +376,11 @@ function LatestActivityCard({ a, coach }: { a: LatestActivity; coach: { firstNam
             ) : (
               <span className="hm-lt-initial">{initial}</span>
             )}
+            <span className="hm-lt-area" style={{ background: area.color }} title={area.label}>
+              <svg viewBox="0 0 24 24" width={10} height={10} fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d={area.icon} />
+              </svg>
+            </span>
           </span>
           <span className="hm-lt-text">
             <span className="hm-lt-meta">

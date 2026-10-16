@@ -19000,3 +19000,6 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .evp-r.lit .evp-row { animation: evp-lit 600ms ease-out 200ms both; border-radius: 14px; }
 @keyframes evp-lit { from { background-color: rgba(var(--rgb), 0.1); } to { background-color: transparent; } }
 @media (prefers-reduced-motion: reduce) { .evp-r.lit .evp-row { animation: none; } .evp-ring.now, .evp-fill, .evp-knob { animation: none; } .evp-ring, .evp-chev { transition: none; } }
+
+/* Latest from the coach: a small badge on the avatar in the colour of where they acted, with its icon (16 Oct). */
+.hm-lt-area { position: absolute; right: -2px; bottom: -2px; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; color: #fff; box-shadow: 0 0 0 2px #fff; }
