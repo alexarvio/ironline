@@ -19040,6 +19040,5 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .hm .evt-item.live .evt-ring { box-shadow: inset 0 0 0 1px var(--c); }
 /* The card scroller is its own compositing layer; without a background it can show the app layer behind Home (a lighter grey) instead of the page. */
 .pc-scroller { background: #F5F5F5; }
-/* The card scroller composites on its own and could render its grey a hair lighter than the page around it (16 Oct); the whole page as one layer, and the column painted too, so every part draws the same way. */
-.hm { transform: translateZ(0); }
+/* The Home column painted in the page grey (16 Oct). */
 .hm-body { background: #F5F5F5; }
