@@ -18904,7 +18904,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .hm > .hm-body > .evt { margin-left: -16px; margin-right: -16px; }
 .evt-head { display: flex; align-items: center; justify-content: space-between; height: 28px; padding: 0 28px; }
 .evt-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: #5b6474; }
-.evt-today { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px 0 10px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #DCE1E8; font: inherit; font-size: 12px; font-weight: 600; color: #141a24; cursor: pointer; }
+.evt-today { display: flex; align-items: center; gap: 5px; height: 28px; padding: 0; border: 0; background: none; font: inherit; font-size: 12px; font-weight: 600; color: #141a24; cursor: pointer; }
 .evt-wrap { position: relative; }
 .evt-spine { position: absolute; left: 0; right: 0; top: 48px; border-top: 1px solid #E1E5EB; pointer-events: none; }
 .evt-row { position: relative; display: flex; align-items: flex-start; gap: 8px; padding: 24px 0 8px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; scroll-snap-type: x mandatory; touch-action: pan-x pan-y; outline: none; }
