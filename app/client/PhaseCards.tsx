@@ -309,13 +309,6 @@ function PhaseCardCarousel({ phases, coachName, today, nextSession, food, weekDo
           <PhaseCard key={ph.id} ph={{ ...ph, coverUrl: coverFor(ph.track)[0] ?? null }} pictures={coverFor(ph.track)} eager={i === 0} coachName={coachName} today={today} nextSession={nextSession} food={food} weekDone={weekDone} checkInCount={checkInCount} onOpen={() => open(ph, i)} onHold={() => setHoldTrack(ph.track)} onLog={checkIn ? () => setLogOpen(true) : undefined} />
         ))}
       </div>
-      {count > 1 && (
-        <div className="pc-dots" aria-hidden="true">
-          {phases.map((ph, i) => (
-            <span key={ph.id} className={`pc-dot${i === active ? " on" : ""}`} data-track={ph.track} />
-          ))}
-        </div>
-      )}
       {holdTrack && (
         <CardPictureSheet
           clientId={clientId}
