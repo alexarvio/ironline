@@ -187,7 +187,10 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
     if (!raf.current)
       raf.current = requestAnimationFrame(() => {
         raf.current = 0;
-        setFocusRow(nearest());
+        const id = nearest();
+        setFocusRow(id);
+        // An open row closes once the list moves on from it (16 Oct).
+        setOpen((o) => (o != null && o !== id ? null : o));
         const box = scrollRef.current;
         if (!box || pastShown >= pastAll.length) return;
         if (box.scrollTop + box.clientHeight > box.scrollHeight - 240) setPastShown((n) => n + PAGE);
