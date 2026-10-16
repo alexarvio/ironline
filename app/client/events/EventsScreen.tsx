@@ -32,7 +32,7 @@ const statusOf = (e: HomeEvent, today: string): Status => (e.start > today ? "ne
 const FLAG = "M5 21V4M5 4h11.5l-2.5 4.5 2.5 4.5H5";
 const PHASES = {
   training: { label: "Training phase", color: "#3a3390", rgb: "58,51,144", icon: FLAG },
-  nutrition: { label: "Nutrition phase", color: "#1f7a4d", rgb: "31,122,77", icon: FLAG },
+  nutrition: { label: "Nutrition phase", color: "#1d7a70", rgb: "29,122,112", icon: FLAG },
   lifestyle: { label: "Lifestyle phase", color: "#a8761f", rgb: "168,118,31", icon: FLAG },
 };
 type Chrome = { label: string; color: string; rgb: string; icon: string };

@@ -30,7 +30,7 @@ export const TRACKS: PhaseTrack[] = ["lifestyle", "training", "nutrition"];
 export const TRACK_COLOR: Record<PhaseTrack, { c: string; rgb: string; tint: string; line: string; solid: string }> = {
   lifestyle: { c: "#4a4a45", rgb: "176,154,98", tint: "#efede6", line: "#cfcbbd", solid: "#b09a62" },
   training: { c: "#3a3390", rgb: "58,51,144", tint: "#e6e4fa", line: "#b9b4ec", solid: "#3a3390" },
-  nutrition: { c: "#0f5c46", rgb: "15,92,70", tint: "#dff3ea", line: "#9fd3bb", solid: "#0f5c46" },
+  nutrition: { c: "#1d7a70", rgb: "29,122,112", tint: "#dff1ef", line: "#9fd3cd", solid: "#1d7a70" },
 };
 export const EVENTS_COLOR = { c: "#2f5d8f", rgb: "47,93,143" };
 

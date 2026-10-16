@@ -13,7 +13,7 @@ export const GROUP_COLOUR: Record<string, GroupColour> = {
   fatigue: { hex: "#b0691f", rgb: "176,105,31", tint: "#f4dcc0" },
   lifestyle: { hex: "#1d7b86", rgb: "29,123,134", tint: "#c9e6ea" },
   stress: { hex: "#b5393d", rgb: "181,57,61", tint: "#f3cfcf" },
-  nutrition: { hex: "#5f7a18", rgb: "95,122,24", tint: "#e6ebb8" },
+  nutrition: { hex: "#1d7a70", rgb: "29,122,112", tint: "#dff1ef" },
   training: { hex: "#5a4fb8", rgb: "90,79,184", tint: "#d5d2f3" },
   wellbeing: { hex: "#6b4aa8", rgb: "107,74,168", tint: "#e2d7ee" },
   measurements: { hex: "#5b6474", rgb: "91,100,116", tint: "#dde3e9" },

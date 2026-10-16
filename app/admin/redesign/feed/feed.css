@@ -28,7 +28,7 @@
 .rfd-row:hover { background: #f7f9fc; }
 .rfd-cat { justify-content: center; }
 .rfd-cat.training, .rfd-cat.notes { background: #e6e4fa; color: #3a3390; }
-.rfd-cat.nutrition { background: #dff3ea; color: #0f5c46; }
+.rfd-cat.nutrition { background: #dff1ef; color: #1d7a70; }
 .rfd-cat.measurements { background: #efede6; color: #4a4a45; }
 .rfd-cat.billing { background: #fff3dc; color: #8a5a12; }
 .rfd-cat.messages { background: #e3ecf8; color: #1e3a6e; }

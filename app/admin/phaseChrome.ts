@@ -34,7 +34,7 @@ export type PhaseChrome = {
 
 /** The track palettes, from .pl-bar / .pl-track-tag. The tag always wears these. */
 export const TRACK_PALETTE: Record<PhaseTrack, { tint: string; ink: string; soft: string; line: string }> = {
-  nutrition: { tint: "#dff3ea", ink: "#0f5c46", soft: "#cfeade", line: "#9fd3bb" },
+  nutrition: { tint: "#dff1ef", ink: "#1d7a70", soft: "#cfe9e5", line: "#9fd3cd" },
   training: { tint: "#e6e4fa", ink: "#3a3390", soft: "#dcd8f6", line: "#b9b4ec" },
   lifestyle: { tint: "#efede6", ink: "#4a4a45", soft: "#e4e1d5", line: "#cfcbbd" },
 };
