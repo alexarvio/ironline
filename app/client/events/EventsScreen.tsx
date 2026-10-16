@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
 import { clientAddEventAction, clientDeleteEventAction, clientUpdateEventAction } from "../../lib/actions";
@@ -390,10 +390,23 @@ function EventRow(p: RowProps) {
   const photo = e.mine ? (me?.photoPath ?? null) : coachPhoto;
   const spoken = `${label ? `${label} ` : ""}${e.title}, ${c.label}, ${when}, added by ${who}${status === "past" ? ", past" : ""}`;
   const progress = isNow && e.start !== e.end ? dayOf(e, today) : null;
+  // A title cut short (16 Oct) gets the chevron too: open, the row shows it in full.
+  const titleRef = useRef<HTMLSpanElement>(null);
+  const [clipped, setClipped] = useState(false);
+  useLayoutEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    const check = () => setClipped(el.scrollWidth > el.clientWidth + 1);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [e.title, focus]);
+  const more = hasMore(e) || clipped;
   const left = progress ? progress.total - progress.day : 0;
   return (
     <div ref={refFn} className={`evp-r ${status}${lit ? " lit" : ""}${focus ? " focus" : ""}${open ? " open" : ""}`} style={{ "--c": c.color, "--rgb": c.rgb } as React.CSSProperties}>
-      <button type="button" className={`evp-row${label ? " labelled" : ""}`} onClick={onToggle} disabled={!hasMore(e)} aria-expanded={hasMore(e) ? open : undefined} aria-label={spoken}>
+      <button type="button" className={`evp-row${label ? " labelled" : ""}`} onClick={onToggle} disabled={!more} aria-expanded={more ? open : undefined} aria-label={spoken}>
         <span className="evp-date" aria-hidden="true">
           {showDate && (
             <>
@@ -410,8 +423,8 @@ function EventRow(p: RowProps) {
         <span className="evp-text">
           {label && <span className="evp-label">{label}</span>}
           <span className="evp-title-row">
-            <span className="evp-title">{e.title}</span>
-            {e.note && (
+            <span ref={titleRef} className="evp-title">{e.title}</span>
+            {(e.note || clipped) && (
               <svg className="evp-chev" viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M9 6l6 6-6 6" />
               </svg>
@@ -433,18 +446,19 @@ function EventRow(p: RowProps) {
           )}
         </span>
       </button>
-      <RowMore {...p} />
+      <RowMore {...p} clipped={clipped} />
     </div>
   );
 }
 
-function RowMore({ e, open, coachName, pending, onEdit, onDelete }: Pick<RowProps, "e" | "open" | "coachName" | "pending" | "onEdit" | "onDelete">) {
+function RowMore({ e, open, coachName, pending, clipped, onEdit, onDelete }: Pick<RowProps, "e" | "open" | "coachName" | "pending" | "onEdit" | "onDelete"> & { clipped: boolean }) {
   const [sure, setSure] = useState(false);
-  if (!hasMore(e)) return null;
+  if (!hasMore(e) && !clipped) return null;
   return (
     <div className={`ev-x evp-x${open ? " open" : ""}`} aria-hidden={!open}>
       <div className="ev-x-clip">
         <div className="ev-x-in">
+          {clipped && <p className="evp-x-title">{e.title}</p>}
           {e.note && <p className="ev-x-note">{e.note}</p>}
           <span className="ev-x-by">{e.mine ? `Added by you · ${coachName} can see it` : e.phase ? `Set by ${coachName}` : `Set by ${coachName} · you can change it`}</span>
           {!e.phase && (
