@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { markAllNotificationsReadAction, markNotificationReadAction } from "../../lib/actions";
 import { ChevronLeftIcon } from "../../components/icons";
@@ -12,9 +12,11 @@ import { TypeIcon } from "../events/AddEventSheet";
 import VideoReplySheet, { type VideoReplyView } from "../VideoReplySheet";
 
 // The Notifications screen, "Clean feed" (9 Oct): what the coach did,
-// grouped by day, newest first; unread ones are lifted cards in their
-// category's colour, read ones flat rows. The coach's face with a badge
-// for the category on every row. No reminders here: those live on Home.
+// grouped by day, newest first. In the hairline language since 16 Oct: flat
+// rows on the page with a hairline between them; an unread one has the ink
+// dot and a heavier title. The coach's face with a badge for the category on
+// every row. Long words are cut to two lines with a chevron that opens them
+// in place. No reminders here: those live on Home.
 
 export type NotifView = {
   id: number;
@@ -98,7 +100,7 @@ export default function NotificationsScreen({ items, clientId, coachName }: { it
 
   return (
     <>
-      <header className="cn-header ntf-nav">
+      <header className="cn-header ntf-nav evp-nav">
         <button type="button" className="cn-icon-btn" onClick={() => back?.()} aria-label="Back">
           <ChevronLeftIcon />
         </button>
@@ -152,12 +154,62 @@ function NotificationItem({ n, read, todayKey, coachFirst, coachPhoto, onOpen }:
   const gone = n.actionTab === "video" && !n.videoReply;
   const time = todayKey ? timeLabel(n.createdAt) : "";
   const system = n.category === "system";
+  // Long words (16 Oct): cut to two lines as before, and when cut, a chevron
+  // by the title opens the rest in place, the height eased open and shut.
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [clipped, setClipped] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  useLayoutEffect(() => {
+    const el = textRef.current;
+    if (!el || expanded) return;
+    const check = () => setClipped([...el.querySelectorAll<HTMLElement>(".ntf-title, .ntf-body")].some((x) => x.scrollHeight > x.clientHeight + 1));
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [n.title, n.body, expanded]);
+  const toggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const el = textRef.current;
+    if (!el) return setExpanded((x) => !x);
+    const from = el.offsetHeight;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Height from → to, then back to auto: on transitionend, or after 350ms if the browser skipped the transition.
+    const ease = (to: number, done?: () => void) => {
+      el.style.height = `${from}px`;
+      void el.offsetHeight;
+      el.style.height = `${to}px`;
+      let ended = false;
+      const end = () => {
+        if (ended) return;
+        ended = true;
+        el.style.height = "";
+        done?.();
+      };
+      el.addEventListener("transitionend", end, { once: true });
+      setTimeout(end, 350);
+    };
+    if (!expanded) {
+      setExpanded(true);
+      if (!reduce) requestAnimationFrame(() => ease(el.scrollHeight));
+    } else if (reduce) {
+      setExpanded(false);
+    } else {
+      // Shut: measure the cut height, ease down to it, then cut the lines again.
+      el.classList.remove("open");
+      const to = el.offsetHeight;
+      el.classList.add("open");
+      ease(to, () => setExpanded(false));
+    }
+  };
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       className={`ntf-item${read ? " read" : ""}`}
       style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}
       onClick={onOpen}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && e.target === e.currentTarget && (e.preventDefault(), onOpen())}
       aria-label={`${read ? "" : "Unread. "}${t.label}. ${n.title}.${n.body ? ` ${n.body}.` : ""} ${time}`}
     >
       <span className="ntf-avatar" aria-hidden="true">
@@ -182,12 +234,21 @@ function NotificationItem({ n, read, todayKey, coachFirst, coachPhoto, onOpen }:
           <span className="ntf-time">{time}</span>
           {!read && <span className="ntf-dot" aria-hidden="true" />}
         </span>
-        <span className="ntf-title">{n.title}</span>
-        <span className="ntf-bottom">
-          <span className="ntf-body">{n.body ?? ""}</span>
-          <span className={`ntf-action${gone ? " gone" : ""}`}>{gone ? "No longer available" : t.action}</span>
+        <span className="ntf-title-row">
+          <span ref={textRef} className={`ntf-text${expanded ? " open" : ""}`}>
+            <span className="ntf-title">{n.title}</span>
+            {n.body && <span className="ntf-body">{n.body}</span>}
+          </span>
+          {(clipped || expanded) && (
+            <button type="button" className={`ntf-more${expanded ? " open" : ""}`} onClick={toggle} aria-expanded={expanded} aria-label={expanded ? "Show less" : "Show all"}>
+              <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+            </button>
+          )}
         </span>
+        <span className={`ntf-action${gone ? " gone" : ""}`}>{gone ? "No longer available" : t.action}</span>
       </span>
-    </button>
+    </div>
   );
 }
