@@ -6,7 +6,7 @@ Read this before touching any client screen. One hero language, one everyday lan
 - **Hero**: the phase cards on Home only. Full-bleed photo, dark glass panel, white type. Nothing else may look like this.
 - **Hairline**: everything else. Thin 1px lines, rings and icons alone, light type, the page colour behind. No white cards with borders and drop shadows, no gradient fills, no tiles around icons.
 
-**Kept as is (16 Oct, by choice):** the Training tab's week card and its session cards (white, tinted green when done, "Up next" chip). Do not restyle them to hairline; the hairline attempt was reverted. They are the one list drawn as cards.
+**The one exception (16 Oct, by choice):** the Training tab's week card and its session cards keep their card shape (the done tint does real work on a to-do list). They speak the shared tokens: 500/600 type, the palette indigo and green, tints at 8–12%, a white hairline chip for Up next. Do not restyle them to hairline rows; that was tried and reverted.
 
 ## 2. Page and lines
 - Page `#F5F5F5` on Home, `#F5F6F8` on the pushed screens (Events, Workout, Notifications). One per screen, never two tones on one screen.
