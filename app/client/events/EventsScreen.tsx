@@ -263,7 +263,16 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
     open: open === e.id,
     pending,
     refFn: (el) => el && rows.current.set(e.id, el),
-    onToggle: () => setOpen((o) => (o === e.id ? null : e.id)),
+    // A tap on a row brings it to the spot as it opens (16 Oct), wherever the list was.
+    onToggle: () => {
+      setOpen((o) => (o === e.id ? null : e.id));
+      const box = scrollRef.current;
+      const el = rows.current.get(e.id);
+      if (box && el) {
+        box.scrollTo({ top: Math.max(0, el.offsetTop + Math.min(el.offsetHeight, 72) / 2 - box.clientHeight * SNAP), behavior: "smooth" });
+        setFocusRow(e.id);
+      }
+    },
     onEdit: () => setSheet({ event: e, type: eventTypeOf(e.kind).id }),
     onDelete: () => remove(e),
   });
