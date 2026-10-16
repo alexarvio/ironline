@@ -6,6 +6,7 @@ import { markNotificationReadAction } from "../lib/actions";
 import VideoReplySheet, { type VideoReplyView } from "./VideoReplySheet";
 import PhaseCards, { type HomePhase, type PhaseFoodToday } from "./PhaseCards";
 import { type ProgressPics } from "./ProgressPicsCard";
+import ProgressPicsPill from "./home/ProgressPicsPill";
 import type { CheckInForm } from "./CheckInDialog";
 import EventsCard, { type HomeEvents } from "./EventsCard";
 import EventsTimelineCard from "./home/EventsTimelineCard";
@@ -281,29 +282,11 @@ function TodaysTasks({ pics }: { pics: NonNullable<ProgressPics> }) {
   if (!due && !wasDue) return null;
   return (
     <section className="hm-tasks" aria-label="Progress pictures">
-      <PicsTaskRow pics={pics} done={!due} />
+      <ProgressPicsPill pics={pics} />
     </section>
   );
 }
 
-function PicsTaskRow({ pics, done }: { pics: NonNullable<ProgressPics>; done: boolean }) {
-  const openPhotos = useOpenPhotos();
-  return (
-    <button type="button" className={`hm-pt${done ? " done" : ""}`} onClick={() => openPhotos?.()} aria-label={done ? "Progress pictures completed. View." : `Progress pictures, ${pics.uploaded} of ${pics.total} uploaded, due now. Start.`}>
-      <span className="hm-pt-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
-          <circle cx="12" cy="13" r="3.5" />
-        </svg>
-      </span>
-      <span className="hm-pt-text">
-        <b>Progress pictures</b>
-        <small>{done ? "Completed" : pics.uploaded > 0 ? `${pics.uploaded} of ${pics.total} · due now` : "Due now"}</small>
-      </span>
-      <span className="hm-pt-go" aria-hidden="true">{done ? "View" : "Start"}</span>
-    </button>
-  );
-}
 
 // ---- 4 · Latest from the coach --------------------------------------------
 
