@@ -19101,3 +19101,5 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 
 .hm-mt-row.link { cursor: pointer; border-radius: 14px; }
 .hm-mt-row.link:active { background: rgba(20, 26, 36, 0.04); }
+/* The row top padding is 14px and the ring 48px: the spine runs through the ring centre at 38px. */
+.evt-spine { top: 38px; }
