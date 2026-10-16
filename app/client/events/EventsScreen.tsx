@@ -5,7 +5,7 @@ import type React from "react";
 import { useRouter } from "next/navigation";
 import { clientAddEventAction, clientDeleteEventAction, clientUpdateEventAction } from "../../lib/actions";
 import { eventTypeOf, EVENT_TYPES, type EventTypeId } from "../../lib/eventTypes";
-import { dayOf, daysBetween, shortDay, todayLabel } from "../../lib/eventDates";
+import { dayOf, daysBetween, shortDay } from "../../lib/eventDates";
 import { ChevronLeftIcon } from "../../components/icons";
 import { useCoachIdentity } from "../CheckInContext";
 import type { HomeEvent, HomeEvents } from "../EventsCard";
@@ -147,22 +147,53 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
   const openAdd = () => setSheet({ event: null, type: "trip" });
 
   // On open, the TODAY marker about 30% down the screen, so what is coming and what is on sit in view.
+  // The list snaps a row to one spot, 36% down the screen (16 Oct): whichever
+  // row sits there is the focus and grows a little. It opens on what is on
+  // today, else the soonest to come, else the latest past.
   const scrollRef = useRef<HTMLDivElement>(null);
-  const todayRef = useRef<HTMLDivElement>(null);
+  const [focusRow, setFocusRow] = useState<number | null>(null);
+  const SNAP = 0.36;
+  const nearest = () => {
+    const box = scrollRef.current;
+    if (!box) return null;
+    const target = box.scrollTop + box.clientHeight * SNAP;
+    let best: number | null = null;
+    let dist = Infinity;
+    rows.current.forEach((el, id) => {
+      if (!el.isConnected) return;
+      const d = Math.abs(el.offsetTop + Math.min(el.offsetHeight, 72) / 2 - target);
+      if (d < dist) {
+        dist = d;
+        best = id;
+      }
+    });
+    return best;
+  };
   const centred = useRef(false);
   useEffect(() => {
     if (centred.current) return;
     centred.current = true;
     const box = scrollRef.current;
-    const marker = todayRef.current;
-    if (!box || !marker) return;
-    box.scrollTop = Math.max(0, marker.offsetTop - box.clientHeight * 0.3);
+    if (!box) return;
+    const first = now[0] ?? upcoming[upcoming.length - 1] ?? pastAll[0] ?? null;
+    const el = first ? rows.current.get(first.id) : null;
+    const top = el ? el.offsetTop + Math.min(el.offsetHeight, 72) / 2 : 0;
+    box.scrollTop = Math.max(0, top - box.clientHeight * SNAP);
+    setFocusRow(first?.id ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  const raf = useRef(0);
   const onScroll = () => {
-    const box = scrollRef.current;
-    if (!box || pastShown >= pastAll.length) return;
-    if (box.scrollTop + box.clientHeight > box.scrollHeight - 240) setPastShown((n) => n + PAGE);
+    if (!raf.current)
+      raf.current = requestAnimationFrame(() => {
+        raf.current = 0;
+        setFocusRow(nearest());
+        const box = scrollRef.current;
+        if (!box || pastShown >= pastAll.length) return;
+        if (box.scrollTop + box.clientHeight > box.scrollHeight - 240) setPastShown((n) => n + PAGE);
+      });
   };
+  useEffect(() => () => cancelAnimationFrame(raf.current), []);
 
   useEffect(() => {
     if (highlight == null) return;
@@ -219,7 +250,6 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
     }
   };
 
-  const tl = todayLabel(today);
   const rowProps = (e: HomeEvent, status: Status, label: "Now" | "Next" | "Last" | null): RowProps => ({
     e,
     status,
@@ -229,6 +259,7 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
     coachPhoto,
     me,
     lit: highlight === e.id,
+    focus: focusRow === e.id,
     open: open === e.id,
     pending,
     refFn: (el) => el && rows.current.set(e.id, el),
@@ -249,7 +280,7 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
         <span className="cn-icon-spacer" aria-hidden="true" />
       </header>
       <main className="cn-body">
-        <div ref={scrollRef} className="evp-scroll" onScroll={onScroll}>
+        <div className="evp-top">
           <button type="button" className="evp-add" onClick={openAdd}>
             <span className="evp-add-text">
               <b>Add an event</b>
@@ -278,11 +309,11 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
               })}
             </div>
           )}
-
+        </div>
+        <div ref={scrollRef} className="evp-scroll" onScroll={onScroll}>
           <div className="evp-tl">
             <span className="evp-spine" aria-hidden="true" />
 
-            {list.length > 0 && <div className="evp-sec">Coming up</div>}
             {list.length > 0 && upcoming.length === 0 && (
               <button type="button" className="evp-empty" onClick={openAdd}>
                 Nothing planned. Add a trip or something you&rsquo;re starting
@@ -291,12 +322,6 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
             {upcoming.map((e, i) => (
               <EventRow key={e.id} {...rowProps(e, "next", i === upcoming.length - 1 ? "Next" : null)} />
             ))}
-
-            <div ref={todayRef} className="evp-today" role="heading" aria-level={2} aria-label={tl.long}>
-              <i className="evp-today-dot" aria-hidden="true" />
-              <span className="evp-today-label">Today · {tl.short}</span>
-              <span className="evp-today-rule" aria-hidden="true" />
-            </div>
 
             {now.map((e) => (
               <EventRow key={e.id} {...rowProps(e, "now", "Now")} />
@@ -326,6 +351,8 @@ type RowProps = {
   coachPhoto: string | null;
   me: { name: string; photoPath: string | null } | null;
   lit: boolean;
+  /** The row at the snap point: a little bigger. */
+  focus: boolean;
   open: boolean;
   pending: boolean;
   refFn: (el: HTMLElement | null) => void;
@@ -335,7 +362,7 @@ type RowProps = {
 };
 
 function EventRow(p: RowProps) {
-  const { e, status, label, today, coachName, coachPhoto, me, lit, open, refFn, onToggle } = p;
+  const { e, status, label, today, coachName, coachPhoto, me, lit, focus, open, refFn, onToggle } = p;
   const c = chromeOf(e);
   const isNow = status === "now";
   const when = whenOf(e, status, today);
@@ -345,22 +372,27 @@ function EventRow(p: RowProps) {
   const progress = isNow && e.start !== e.end ? dayOf(e, today) : null;
   const left = progress ? progress.total - progress.day : 0;
   return (
-    <div ref={refFn} className={`evp-r ${status}${lit ? " lit" : ""}${open ? " open" : ""}`} style={{ "--c": c.color, "--rgb": c.rgb } as React.CSSProperties}>
+    <div ref={refFn} className={`evp-r ${status}${lit ? " lit" : ""}${focus ? " focus" : ""}${open ? " open" : ""}`} style={{ "--c": c.color, "--rgb": c.rgb } as React.CSSProperties}>
       <button type="button" className={`evp-row${label ? " labelled" : ""}`} onClick={onToggle} disabled={!hasMore(e)} aria-expanded={hasMore(e) ? open : undefined} aria-label={spoken}>
         <span className="evp-date" aria-hidden="true">
-          <b>{e.start.slice(8, 10)}</b>
-          <small>{monthOf(e.start)}</small>
+          <b>{(isNow ? today : e.start).slice(8, 10)}</b>
+          <small>{monthOf(isNow ? today : e.start)}</small>
         </span>
         <span className="evp-node" aria-hidden="true">
-          <span className="evp-ring">
+          <span className={`evp-ring${isNow ? " now" : ""}`}>
             {isNow && <i className="evp-halo" />}
-            <LineIcon path={c.icon} size={isNow ? 19 : 16} />
+            <LineIcon path={c.icon} size={isNow ? 19 : 18} />
           </span>
         </span>
         <span className="evp-text">
           {label && <span className="evp-label">{label}</span>}
           <span className="evp-title-row">
             <span className="evp-title">{e.title}</span>
+            {e.note && (
+              <svg className="evp-chev" viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+            )}
             <span className="evp-by" role="img" aria-label={`Added by ${who}`}>
               {photo ? <img src={photo} alt="" /> : (who || "?").trim().charAt(0).toUpperCase()}
             </span>
