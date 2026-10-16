@@ -19108,3 +19108,32 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .ppp, .ppp.done { padding: 6px 4px 6px 8px; background: none; box-shadow: none; }
 .ppp:active { background: none; }
 .ppp-disc { background: #F5F5F5; }
+/* ---- Training tab, the middle path (16 Oct): the cards stay, their voice matches the rest. Type 500/600, the palette indigo and green, tints at 12%, a hairline chip for Up next, the week ring in indigo. */
+.tr-label { font-weight: 600; letter-spacing: 0.18em; color: #5b6474; }
+.tr-days-num { font-weight: 300; letter-spacing: -0.03em; color: #141a24; }
+.tr-days-of { font-weight: 500; color: #8b93a1; }
+.tr-days-status { font-weight: 500; color: #8b93a1; }
+.tr-days-status.done { font-weight: 600; color: #2f7a3f; }
+.tr-ring svg circle:first-child { stroke: #E1E5EB; }
+.tr-ring-fill { stroke: #3a3390 !important; }
+.tr-ring.done .tr-ring-fill { stroke: #2f7a3f !important; }
+.tr-ring-pct { font-weight: 600; color: #141a24; }
+.tr-sessions-title { font-weight: 600; color: #141a24; }
+.tr-row { border: 0; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.tr-row.done, .tr-row.done.done { background: rgba(47, 122, 63, 0.08); box-shadow: inset 0 0 0 1px rgba(47, 122, 63, 0.18); }
+.tr-row.unfinished { background: rgba(168, 118, 31, 0.08); box-shadow: inset 0 0 0 1px rgba(168, 118, 31, 0.2); }
+.tr-row.live { box-shadow: inset 0 0 0 1px #3a3390; }
+.tr-row-tile, .tr-row-tile.live, .tr-row-tile.next { font-weight: 500; color: #3a3390; }
+.tr-row-tile.done { color: #2f7a3f; }
+.tr-row-tile.unfinished { color: #a8761f; }
+.tr-row-title { font-weight: 600; color: #141a24; }
+.tr-row-sub { font-weight: 500; color: #8b93a1; }
+.tr-row-pill { font-weight: 600; }
+.tr-row-pill.next { background: #fff; box-shadow: inset 0 0 0 1px #DCE1E8; color: #141a24; }
+.tr-row-pill.done { color: #2f7a3f; }
+.tr-row-pill.live { background: #3a3390; color: #fff; }
+.tr-row-pill.unfinished { color: #a8761f; }
+.tr-row-pill.skipped { background: transparent; color: #8b93a1; }
+.tr-row-chev { border-color: #98A2B3; }
+.tr-resume { border-radius: 999px; background: #141a24; }
+.tr-resume-main b, .tr-resume-time, .tr-resume-chip { font-weight: 600; }
