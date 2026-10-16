@@ -110,9 +110,6 @@ export default function EventsTimelineCard({ events, today }: { events: HomeEven
         <span className="evt-eyebrow">Events</span>
         {!onToday && (
           <button type="button" className="evt-today" onClick={() => scrollTo(todayIndex)} aria-label="Back to now">
-            <svg viewBox="0 0 24 24" width={11} height={11} fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M15 5l-7 7 7 7" />
-            </svg>
             To now
           </button>
         )}
