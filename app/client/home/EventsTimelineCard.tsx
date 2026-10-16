@@ -101,7 +101,8 @@ export default function EventsTimelineCard({ events, today }: { events: HomeEven
       scrollTo(Math.min(items.length - 1, Math.max(0, focused + (e.key === "ArrowLeft" ? -1 : 1))));
     }
   };
-  const onToday = focused === todayIndex;
+  // On any of today's items (there can be several), not just the first.
+  const onToday = items[focused]?.slot === "today";
 
   return (
     <section ref={wrapRef} className="evt" aria-label="Events">
