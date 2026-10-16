@@ -18904,7 +18904,6 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .hm > .hm-body > .evt { margin-left: -16px; margin-right: -16px; }
 .evt-head { display: flex; align-items: center; justify-content: space-between; height: 28px; padding: 0 28px; }
 .evt-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: #5b6474; }
-.evt-all { padding: 0; border: 0; background: none; font: inherit; font-size: 12px; font-weight: 600; color: #5b6474; cursor: pointer; }
 .evt-today { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px 0 10px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #DCE1E8; font: inherit; font-size: 12px; font-weight: 600; color: #141a24; cursor: pointer; }
 .evt-wrap { position: relative; }
 .evt-spine { position: absolute; left: 0; right: 0; top: 48px; border-top: 1px solid #E1E5EB; pointer-events: none; }
@@ -18912,21 +18911,24 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .evt-row::-webkit-scrollbar { display: none; }
 .evt-row:focus-visible .evt-item.on .evt-ring { box-shadow: inset 0 0 0 1px var(--c), 0 0 0 2px #1d3466; }
 .evt-item { flex: none; display: flex; flex-direction: column; align-items: center; gap: 12px; width: 140px; padding: 0; border: 0; background: none; font: inherit; color: inherit; scroll-snap-align: center; cursor: pointer; opacity: 0.8; transition: opacity 0.25s, filter 0.25s; }
-.evt-ring { position: relative; display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%; background: #F5F6F8; box-shadow: inset 0 0 0 1px rgba(var(--rgb), 0.35); color: var(--c); transform: scale(1); transition: box-shadow 0.25s, transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); will-change: transform; }
-.evt-halo { position: absolute; inset: -6px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(var(--rgb), 0.25); }
+.evt-ring { position: relative; display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%; background: #F5F6F8; box-shadow: none; color: var(--c); transform: scale(1); transition: box-shadow 0.25s, transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); will-change: transform; }
 .evt-text { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; }
 .evt-label { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; white-space: nowrap; color: #98A2B3; }
 .evt-title { max-width: 100%; font-size: 14px; font-weight: 500; letter-spacing: -0.01em; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #141a24; transition: font-size 0.2s; }
 .evt-when { font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; color: #8b93a1; }
+.evt-item.upcoming { opacity: 0.55; }
 .evt-item.past { opacity: 0.42; filter: blur(1.2px) grayscale(1); }
-.evt-item.more { opacity: 0.7; }
+.evt-item.more { opacity: 0.55; }
+.evt-item.live { opacity: 0.75; }
+.evt-item.live .evt-ring { box-shadow: inset 0 0 0 1px var(--c); animation: evt-pulse 2.4s ease-in-out infinite; }
+@keyframes evt-pulse { 0%, 100% { box-shadow: inset 0 0 0 1px var(--c), 0 0 0 0 rgba(var(--rgb), 0.3); } 50% { box-shadow: inset 0 0 0 1px var(--c), 0 0 0 9px rgba(var(--rgb), 0); } }
 .evt-item.on { opacity: 1; filter: none; }
 .evt-item.on .evt-ring { box-shadow: inset 0 0 0 1px var(--c); transform: scale(1.3); }
 .evt-item.on { gap: 18px; }
 .evt-item.on .evt-label { color: var(--c); }
 .evt-item.on .evt-title { font-size: 17px; font-weight: 600; }
 .evt-item.on .evt-when { color: #3a4250; }
-@media (prefers-reduced-motion: reduce) { .evt-item, .evt-ring, .evt-title { transition: none; } .evt-row { scroll-behavior: auto; } }
+@media (prefers-reduced-motion: reduce) { .evt-item, .evt-ring, .evt-title { transition: none; } .evt-item.live .evt-ring { animation: none; } .evt-row { scroll-behavior: auto; } }
 
 /* ---- The Events screen as an itinerary (15 Oct): one 1px spine, thin rings, fine icons, light type, no cards. Prefix evp-. */
 .evp-nav { background: #F5F6F8; }

@@ -107,11 +107,7 @@ export default function EventsTimelineCard({ events, today }: { events: HomeEven
     <section ref={wrapRef} className="evt" aria-label="Events">
       <div className="evt-head">
         <span className="evt-eyebrow">Events</span>
-        {onToday ? (
-          <button type="button" className="evt-all" onClick={() => openEvents?.()}>
-            See all
-          </button>
-        ) : (
+        {!onToday && (
           <button type="button" className="evt-today" onClick={() => scrollTo(todayIndex)} aria-label="Back to today">
             <svg viewBox="0 0 24 24" width={11} height={11} fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M15 5l-7 7 7 7" />
@@ -137,12 +133,12 @@ export default function EventsTimelineCard({ events, today }: { events: HomeEven
 function Item({ item, focused, onPick }: { item: TimelineItem; focused: boolean; onPick: () => void }) {
   const c: Chrome = item.event ? chromeOf(item.event) : NEUTRAL;
   const icon = item.slot === "more" ? "M5 12h14M13 6l6 6-6 6" : c.icon;
-  const cls = `evt-item ${item.slot}${focused ? " on" : ""}`;
+  const live = item.slot === "today" && !!item.event;
+  const cls = `evt-item ${item.slot}${focused ? " on" : ""}${live ? " live" : ""}`;
   const spoken = item.slot === "more" ? "See all events" : item.event ? `${item.label}: ${item.event.title}, ${item.when}${item.slot === "past" ? ", done" : ""}` : "Today: nothing on, free day";
   return (
     <button type="button" role="option" aria-selected={focused} aria-label={spoken} className={cls} style={{ "--c": c.color, "--rgb": c.rgb } as React.CSSProperties} onClick={onPick}>
       <span className="evt-ring">
-        {focused && <i className="evt-halo" aria-hidden="true" />}
         <LineIcon path={icon} />
       </span>
       <span className="evt-text">
