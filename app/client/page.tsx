@@ -1,3 +1,4 @@
+import { isEventTypeId } from "../lib/eventTypes";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "../lib/auth";
 import { touchPresence } from "../lib/presence";
@@ -1173,16 +1174,19 @@ function NotificationsPanel({ CLIENT_ID }: { CLIENT_ID: number }) {
     .map((n) => {
       const { title, body } = titleAndBody(n.message, coachFirst);
       const category = categorize(n);
+      const actionRef = n.action_ref ?? (category === "meeting_notes" ? meetingFor(n.created_at) : category === "event_added" ? eventFor(n.message) : category === "meeting_booked" ? bookedFor(n.message, n.created_at) : null);
+      // An event's notification wears the event's own colour and icon (16 Oct), not the generic amber.
+      const event = category === "event_added" || category === "event_changed" ? allEvents.find((e) => e.id === actionRef) ?? null : null;
       return {
         id: n.id,
         category,
-        eventType: null,
+        eventType: event && isEventTypeId(event.kind) ? event.kind : null,
         title,
         body,
         createdAt: n.created_at,
         read: n.read,
         actionTab: n.action_tab,
-        actionRef: n.action_ref ?? (category === "meeting_notes" ? meetingFor(n.created_at) : category === "event_added" ? eventFor(n.message) : category === "meeting_booked" ? bookedFor(n.message, n.created_at) : null),
+        actionRef,
         videoReply: n.action_tab === "video" ? videoReplies.find((r) => r.id === n.action_ref) ?? null : null,
       };
     });
