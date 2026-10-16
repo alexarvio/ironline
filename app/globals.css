@@ -18960,7 +18960,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .evp-r:not(.focus) .evp-date, .evp-r:not(.focus) .evp-text, .evp-r:not(.focus) .evp-ring svg { opacity: 0.55; }
 .evp-r.now:not(.focus) .evp-date, .evp-r.now:not(.focus) .evp-text, .evp-r.now:not(.focus) .evp-ring svg { opacity: 0.75; }
 .evp-date b { font-size: 22px; font-weight: 300; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: #141a24; }
-.evp-r.now .evp-date b { font-size: 26px; color: var(--c); }
+.evp-r.now .evp-date b { font-size: 26px; }
 .evp-date small { margin-top: 3px; font-size: 9.5px; font-weight: 600; letter-spacing: 0.14em; color: #98A2B3; }
 .evp-node { flex: none; display: flex; justify-content: center; width: 56px; }
 .evp-ring { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #F5F6F8; box-shadow: 0 0 0 4px #F5F6F8; color: var(--c); transform: scale(1); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }

@@ -253,10 +253,16 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
     }
   };
 
+  // One date per day (16 Oct): a row on the same day as the one above it shows no numeral.
+  const ordered = [...upcoming.map((e) => ({ e, status: "next" as Status })), ...now.map((e) => ({ e, status: "now" as Status })), ...past.map((e) => ({ e, status: "past" as Status }))];
+  const dateOf = (e: HomeEvent, status: Status) => (status === "now" ? today : e.start);
+  const showDate = new Map<number, boolean>();
+  ordered.forEach((r, i) => showDate.set(r.e.id, i === 0 || dateOf(r.e, r.status) !== dateOf(ordered[i - 1].e, ordered[i - 1].status)));
   const rowProps = (e: HomeEvent, status: Status, label: "Now" | "Next" | "Last" | null): RowProps => ({
     e,
     status,
     label,
+    showDate: showDate.get(e.id) ?? true,
     today,
     coachName,
     coachPhoto,
@@ -358,6 +364,8 @@ type RowProps = {
   e: HomeEvent;
   status: Status;
   label: "Now" | "Next" | "Last" | null;
+  /** The first row of its day carries the numeral; the rest of that day none. */
+  showDate: boolean;
   today: string;
   coachName: string;
   coachPhoto: string | null;
@@ -374,7 +382,7 @@ type RowProps = {
 };
 
 function EventRow(p: RowProps) {
-  const { e, status, label, today, coachName, coachPhoto, me, lit, focus, open, refFn, onToggle } = p;
+  const { e, status, label, showDate, today, coachName, coachPhoto, me, lit, focus, open, refFn, onToggle } = p;
   const c = chromeOf(e);
   const isNow = status === "now";
   const when = whenOf(e, status, today);
@@ -387,8 +395,12 @@ function EventRow(p: RowProps) {
     <div ref={refFn} className={`evp-r ${status}${lit ? " lit" : ""}${focus ? " focus" : ""}${open ? " open" : ""}`} style={{ "--c": c.color, "--rgb": c.rgb } as React.CSSProperties}>
       <button type="button" className={`evp-row${label ? " labelled" : ""}`} onClick={onToggle} disabled={!hasMore(e)} aria-expanded={hasMore(e) ? open : undefined} aria-label={spoken}>
         <span className="evp-date" aria-hidden="true">
-          <b>{(isNow ? today : e.start).slice(8, 10)}</b>
-          <small>{monthOf(isNow ? today : e.start)}</small>
+          {showDate && (
+            <>
+              <b>{(isNow ? today : e.start).slice(8, 10)}</b>
+              <small>{monthOf(isNow ? today : e.start)}</small>
+            </>
+          )}
         </span>
         <span className="evp-node" aria-hidden="true">
           <span className={`evp-ring${isNow ? " now" : ""}`}>
