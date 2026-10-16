@@ -54,11 +54,11 @@ const monthOf = (iso: string) => MONTHS[Number(iso.slice(5, 7)) - 1];
 /** The row's "when" line. */
 function whenOf(e: HomeEvent, status: Status, today: string): string {
   if (status === "next") {
+    // The countdown, then the date it starts (16 Oct); a stretch shows both ends.
     const n = daysBetween(today, e.start);
-    if (n <= 1) return "Tomorrow";
-    if (n < 21) return `In ${n} days`;
-    if (n <= 60) return `In ${Math.round(n / 7)} weeks`;
-    return shortDay(e.start, today);
+    const rel = n <= 1 ? "Tomorrow" : n < 21 ? `In ${n} days` : n <= 60 ? `In ${Math.round(n / 7)} weeks` : null;
+    const date = e.start === e.end ? shortDay(e.start, today) : `${shortDay(e.start, today)} – ${shortDay(e.end, today)}`;
+    return rel ? `${rel} · ${date}` : date;
   }
   if (status === "now") {
     if (e.start === e.end) return "Today";

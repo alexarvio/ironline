@@ -22,12 +22,11 @@ const UPCOMING = 8;
 /** An ongoing stretch that began earlier: a supplement started, a phase of life. Reads as "Started …", in the past. */
 const ongoing = (e: TimelineEvent, today: string) => e.kind === "supplement" && e.start < today;
 
+/** "In 7 days · 22 Oct": the countdown, then the date it starts (16 Oct). */
 export function whenUpcoming(today: string, start: string): string {
   const n = daysBetween(today, start);
-  if (n <= 1) return "Tomorrow";
-  if (n < 21) return `In ${n} days`;
-  if (n <= 60) return `In ${Math.round(n / 7)} weeks`;
-  return dayMon(start);
+  const rel = n <= 1 ? "Tomorrow" : n < 21 ? `In ${n} days` : n <= 60 ? `In ${Math.round(n / 7)} weeks` : null;
+  return rel ? `${rel} · ${dayMon(start)}` : dayMon(start);
 }
 
 export function whenPast(e: TimelineEvent, today: string): string {
