@@ -18910,7 +18910,8 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .evt-row { position: relative; display: flex; align-items: flex-start; gap: 8px; padding: 24px 0 8px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; scroll-snap-type: x mandatory; touch-action: pan-x pan-y; outline: none; }
 .evt-row::-webkit-scrollbar { display: none; }
 .evt-row:focus-visible .evt-item.on .evt-ring { box-shadow: inset 0 0 0 1px var(--c), 0 0 0 2px #1d3466; }
-.evt-item { flex: none; display: flex; flex-direction: column; align-items: center; gap: 12px; width: 140px; padding: 0; border: 0; background: none; font: inherit; color: inherit; scroll-snap-align: center; cursor: pointer; opacity: 0.8; transition: opacity 0.25s, filter 0.25s; }
+.evt-item { flex: none; display: flex; flex-direction: column; align-items: center; gap: 12px; width: 140px; padding: 0; border: 0; background: none; font: inherit; color: inherit; scroll-snap-align: center; cursor: pointer; }
+.evt-text, .evt-ring svg { transition: opacity 0.25s, filter 0.25s; }
 .evt-ring { position: relative; display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%; background: #F5F6F8; box-shadow: none; color: var(--c); transform: scale(1); transition: box-shadow 0.25s, transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); will-change: transform; }
 .evt-text { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; }
 .evt-label { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; white-space: nowrap; color: #98A2B3; }
@@ -18922,13 +18923,13 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .evt-item.on .evt-text { transform: translateY(7px); }
 .evt-row { padding-bottom: 16px; }
 .evt-when { font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; color: #8b93a1; }
-.evt-item.upcoming { opacity: 0.55; }
-.evt-item.past { opacity: 0.42; filter: blur(1.2px) grayscale(1); }
-.evt-item.more { opacity: 0.55; }
-.evt-item.live { opacity: 0.75; }
+/* The fade and the blur sit on the words and the icon, never on the ring's disc, which stays solid so the hairline always breaks around it. */
+.evt-item.upcoming .evt-text, .evt-item.upcoming .evt-ring svg, .evt-item.more .evt-text, .evt-item.more .evt-ring svg { opacity: 0.55; }
+.evt-item.past .evt-text, .evt-item.past .evt-ring svg { opacity: 0.42; filter: blur(1.2px) grayscale(1); }
+.evt-item.live .evt-text, .evt-item.live .evt-ring svg { opacity: 0.75; }
 .evt-item.live .evt-ring { box-shadow: inset 0 0 0 1px var(--c); animation: evt-pulse 2.4s ease-in-out infinite; }
 @keyframes evt-pulse { 0%, 100% { box-shadow: inset 0 0 0 1px var(--c), 0 0 0 0 rgba(var(--rgb), 0.3); } 50% { box-shadow: inset 0 0 0 1px var(--c), 0 0 0 9px rgba(var(--rgb), 0); } }
-.evt-item.on { opacity: 1; filter: none; }
+.evt-item.on .evt-text, .evt-item.on .evt-ring svg { opacity: 1; filter: none; }
 .evt-item.on .evt-ring { box-shadow: inset 0 0 0 1px var(--c); transform: scale(1.3); }
 .evt-item.on .evt-label { color: var(--c); }
 .evt-item.on .evt-title { font-size: 17px; font-weight: 600; }
