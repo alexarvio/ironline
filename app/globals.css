@@ -19028,3 +19028,9 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .ppp-btn { flex: none; display: flex; align-items: center; height: 38px; padding: 0 18px; border-radius: 999px; background: #141a24; color: #fff; font-size: 13.5px; font-weight: 600; }
 .ppp.done .ppp-btn { background: #fff; color: #141a24; box-shadow: inset 0 0 0 1px #DCE1E8; }
 @media (prefers-reduced-motion: reduce) { .ppp-dot { animation: none; } }
+/* Tighter Home (16 Oct): the cards no longer leave room for dots, and the pill and the events row sit closer. */
+.pc-scroller { padding-bottom: 12px; }
+.hm-tasks { margin-top: -4px; }
+.evt { gap: 4px; }
+.evt-head { height: 24px; }
+.evt-row { padding: 14px 0 10px; }
