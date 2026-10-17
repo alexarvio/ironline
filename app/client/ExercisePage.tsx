@@ -347,13 +347,23 @@ export default function ExercisePage({
 
   // ---- Your note: the one for the gym trained at; where that gym has none,
   // the home gym's, else the latest from any gym, so a note never seems gone.
-  const myNote = (gymId != null ? exercise.gymNotes?.[gymId] : "") || exercise.myNote;
+  const storedNote = (gymId != null ? exercise.gymNotes?.[gymId] : "") || exercise.myNote;
+  // Shown the moment Save is tapped (17 Oct, Alex: it took a second to appear), until the page's copy
+  // catches up; the save runs behind it.
+  const [savedNote, setSavedNote] = useState<string | null>(null);
+  const [seenStored, setSeenStored] = useState(storedNote);
+  if (seenStored !== storedNote) {
+    setSeenStored(storedNote);
+    setSavedNote(null);
+  }
+  const myNote = savedNote ?? storedNote;
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState(myNote);
   const saveNote = () => {
     const next = noteDraft.trim();
     setNoteOpen(false);
     if (next === myNote.trim()) return;
+    setSavedNote(next);
     const fd = new FormData();
     fd.set("assignmentId", String(exercise.id));
     fd.set("gymId", gymId == null ? "" : String(gymId));
