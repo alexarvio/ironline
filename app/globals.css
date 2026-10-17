@@ -20218,3 +20218,9 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .tr .week-locked-card.week-locked-card .week-locked-icon svg { width: 18px; height: 18px; stroke-width: 1.6; }
 .tr .week-locked-card.week-locked-card .week-locked-title { font-size: 17px; font-weight: 600; color: #141a24; }
 .tr .week-locked-card.week-locked-card .week-locked-sub { max-width: 300px; margin: 6px auto 0; font-size: 13.5px; font-weight: 500; line-height: 1.5; color: #8b93a1; }
+/* Supplements on Nutrition wears the same capsule as the Supplements filter on Events (17 Oct, Alex): lib/eventTypes.ts' supplement icon, in its green. Doubled for the dev-server CSS order. */
+.nd .nd-supps-toggle.nd-supps-toggle::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231f7a4d' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.5 20.5l10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7zM8.5 8.5l7 7'/%3E%3C/svg%3E"); }
+/* An opened event's Edit and Delete in the shared voice (17 Oct, Alex): white hairline pills at 600, Edit in ink, Delete in the palette rust; the "are you sure" step a faint rust tint. */
+.ev-x .ev-btn.ev-btn { height: 40px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 13.5px; font-weight: 600; color: #141a24; }
+.ev-x .ev-btn.ev-btn.danger { color: #b8471f; }
+.ev-x .ev-btn.ev-btn.danger.sure { background: rgba(184, 71, 31, 0.06); box-shadow: inset 0 0 0 1px rgba(184, 71, 31, 0.35); }

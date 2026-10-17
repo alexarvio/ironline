@@ -518,7 +518,7 @@ function RowMore({ e, open, coachName, pending, clipped, onEdit, onDelete }: Pic
         <div className="ev-x-in">
           {clipped && <p className="evp-x-title">{e.title}</p>}
           {e.note && <p className="ev-x-note">{e.note}</p>}
-          <span className="ev-x-by">{e.mine ? `Added by you · ${coachName} can see it` : e.phase ? `Set by ${coachName}` : `Set by ${coachName} · you can change it`}</span>
+          {/* No "Added by you · Finlay can see it" line (17 Oct, Alex): the avatar on the row already says whose it is. */}
           {!e.phase && (
             <div className="ev-x-actions">
               <button type="button" className="ev-btn" onClick={onEdit} disabled={pending || !open} tabIndex={open ? 0 : -1}>
