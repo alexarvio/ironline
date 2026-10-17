@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import { BookmarkIcon, CameraIcon, ChevronDownIcon, ChevronLeftIcon, PlusIcon, SearchIcon, TrashIcon } from "../components/icons";
 import {
   addCustomFoodAction,
@@ -158,6 +159,22 @@ export default function FoodDiaryScreen({
   const today = initial.date;
   const floor = addDays(today, -DAYS_BACK);
   const [diary, setDiary] = useState<FoodDiaryProps>(initial);
+  // The diary's actions no longer refresh the whole client page (17 Oct), so once
+  // something has changed here, leaving refreshes it: Home's and Nutrition's totals
+  // catch up then, in one go, instead of on every add.
+  const router = useRouter();
+  const changed = useRef(false);
+  const firstDiary = useRef(true);
+  useEffect(() => {
+    if (firstDiary.current) firstDiary.current = false;
+    else changed.current = true;
+  }, [diary]);
+  useEffect(
+    () => () => {
+      if (changed.current) router.refresh();
+    },
+    [router]
+  );
   const [date, setDate] = useState(initial.date);
   const [loading, startLoad] = useTransition();
   const load = (d: string) =>
@@ -230,48 +247,59 @@ export default function FoodDiaryScreen({
     keyboardHold.current?.remove();
     keyboardHold.current = null;
   };
+  // The meal shows the moment + is tapped (17 Oct, Alex: it waited on two round
+  // trips and felt slow): a stand-in row under a temporary id, its name box
+  // mounted during the tap so iOS opens the keyboard for it; the server's id
+  // replaces the stand-in when it comes. Naming before then waits for that id.
+  const pendingMeal = useRef<{ temp: FoodMeal; id: Promise<FoodMeal | null> } | null>(null);
+  const realId = async (id: FoodMeal) => (pendingMeal.current?.temp === id ? await pendingMeal.current.id : id);
   const addMealNow = () => {
     releaseKeyboardHold();
-    const hold = document.createElement("input");
-    hold.type = "text";
-    hold.setAttribute("aria-hidden", "true");
-    hold.tabIndex = -1;
-    // 16px so iOS does not zoom; in view so it does not scroll.
-    hold.style.cssText = "position:fixed;top:40%;left:0;width:1px;height:1px;opacity:0;border:0;padding:0;font-size:16px;pointer-events:none;";
-    document.body.appendChild(hold);
-    hold.focus({ preventScroll: true });
-    keyboardHold.current = hold;
+    const temp: FoodMeal = `new-${Date.now()}`;
+    setDiary((d) => ({ ...d, meals: [...d.meals, { id: temp, label: "New meal", own: true, kcal: 0, protein: 0, carbs: 0, fat: 0, entries: [], savedAs: null, photo: null, comments: [] }] }));
+    setNamingId(temp);
     const fd = new FormData();
     fd.set("clientId", String(clientId));
     fd.set("name", "New meal");
     fd.set("date", date);
-    startLoad(async () => {
-      const id = await addFoodMealAction(fd);
-      const next = await getFoodDiaryAction(clientId, date);
-      if (next) setDiary(next);
-      if (id) setNamingId(id);
-      else releaseKeyboardHold();
+    const id = addFoodMealAction(fd).catch(() => null);
+    pendingMeal.current = { temp, id };
+    void id.then((real) => {
+      if (pendingMeal.current?.temp === temp) pendingMeal.current = null;
+      if (!real) {
+        setDiary((d) => ({ ...d, meals: d.meals.filter((m) => m.id !== temp) }));
+        setNamingId((n) => (n === temp ? null : n));
+        return;
+      }
+      setDiary((d) => ({ ...d, meals: d.meals.map((m) => (m.id === temp ? { ...m, id: real } : m)) }));
+      setNamingId((n) => (n === temp ? real : n));
     });
   };
   // Leaving the name box: an empty or untouched name means the meal was not wanted.
   const finishNaming = (id: FoodMeal, name: string) => {
     setNamingId(null);
     const clean = name.trim();
-    const fd = new FormData();
-    fd.set("clientId", String(clientId));
-    fd.set("meal", id);
     if (!clean || clean === "New meal") {
-      startLoad(async () => {
-        await removeFoodMealAction(fd);
-        const next = await getFoodDiaryAction(clientId, date);
-        if (next) setDiary(next);
+      setDiary((d) => ({ ...d, meals: d.meals.filter((m) => m.id !== id) }));
+      void realId(id).then((real) => {
+        if (!real) return;
+        const fd = new FormData();
+        fd.set("clientId", String(clientId));
+        fd.set("meal", real);
+        // The server's id may land after the row went: drop it again.
+        setDiary((d) => ({ ...d, meals: d.meals.filter((m) => m.id !== real) }));
+        return removeFoodMealAction(fd);
       });
       return;
     }
-    fd.set("name", clean);
-    setDiary({ ...diary, meals: diary.meals.map((m) => (m.id === id ? { ...m, label: clean } : m)) });
-    startLoad(async () => {
-      await renameFoodMealAction(fd);
+    setDiary((d) => ({ ...d, meals: d.meals.map((m) => (m.id === id ? { ...m, label: clean } : m)) }));
+    void realId(id).then((real) => {
+      if (!real) return;
+      const fd = new FormData();
+      fd.set("clientId", String(clientId));
+      fd.set("meal", real);
+      fd.set("name", clean);
+      return renameFoodMealAction(fd);
     });
   };
   // Naming the day to save it.
@@ -1209,7 +1237,7 @@ export default function FoodDiaryScreen({
               })}
             </section>
 
-            <button type="button" className="fdi-add-meal" onClick={addMealNow} disabled={loading || namingId != null}>
+            <button type="button" className="fdi-add-meal" onClick={addMealNow} disabled={namingId != null}>
               <PlusIcon />
               Add a meal
             </button>

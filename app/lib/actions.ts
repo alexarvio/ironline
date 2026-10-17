@@ -1334,7 +1334,6 @@ export async function uploadMealPhotoAction(formData: FormData) {
   if (previous && keyOf(previous) !== keyOf(saved)) await deleteUpload(previous);
   await putUpload(saved, buffer, file.type);
   revalidatePath("/admin");
-  revalidatePath("/client");
 }
 
 // ---- Video requests ----------------------------------------------------------
@@ -1467,7 +1466,6 @@ export async function removeMealPhotoAction(formData: FormData) {
   const was = removeMealPhoto(clientId, date, meal);
   if (was) await deleteUpload(was);
   revalidatePath("/admin");
-  revalidatePath("/client");
 }
 
 export async function saveNutritionTargetsAction(formData: FormData) {
@@ -3787,6 +3785,9 @@ const gramsOf = (v: FormDataEntryValue | null) => {
   return Number.isFinite(n) && n > 0 && n <= 5000 ? n : null;
 };
 
+// The food diary's actions leave /client alone (17 Oct): the diary reads its day back
+// itself, and a revalidate re-rendered the whole client page inside every add,
+// which made adding food slow and jumpy. Leaving the diary refreshes the page once.
 export async function addFoodEntryAction(formData: FormData) {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const date = String(formData.get("date") ?? "");
@@ -3796,7 +3797,6 @@ export async function addFoodEntryAction(formData: FormData) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !hasFoodMeal(clientId, meal, date) || !foodId || grams == null) return;
   const serving = String(formData.get("serving") ?? "").trim().slice(0, 80) || null;
   addFoodEntry(clientId, date, meal as FoodMeal, foodId, grams, serving);
-  revalidatePath("/client");
   revalidatePath("/admin");
 }
 
@@ -3807,7 +3807,6 @@ export async function updateFoodEntryAction(formData: FormData) {
   if (!Number.isInteger(id) || grams == null) return;
   const serving = String(formData.get("serving") ?? "").trim().slice(0, 80) || null;
   updateFoodEntry(clientId, id, grams, serving);
-  revalidatePath("/client");
   revalidatePath("/admin");
 }
 
@@ -3816,7 +3815,6 @@ export async function removeFoodEntryAction(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!Number.isInteger(id)) return;
   removeFoodEntry(clientId, id);
-  revalidatePath("/client");
   revalidatePath("/admin");
 }
 
@@ -3836,7 +3834,6 @@ export async function addCustomFoodAction(formData: FormData): Promise<string | 
   const servingLabel = String(formData.get("servingLabel") ?? "").trim().slice(0, 40) || null;
   const servingGrams = gramsOf(formData.get("servingGrams"));
   const row = addCustomFood(clientId, { name, kcal, protein, carbs, fat, servingLabel: servingLabel && servingGrams ? servingLabel : null, servingGrams: servingLabel && servingGrams ? servingGrams : null });
-  revalidatePath("/client");
   return `custom:${row.id}`;
 }
 
@@ -3862,7 +3859,6 @@ export async function addFoodMealAction(formData: FormData): Promise<string | nu
   const date = String(formData.get("date") ?? "");
   if (!name || !diaryDateOk(date)) return null;
   const row = addFoodMeal(clientId, name, date);
-  revalidatePath("/client");
   return `m:${row.id}`;
 }
 
@@ -3872,7 +3868,6 @@ export async function renameFoodMealAction(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim().slice(0, 30);
   if (!Number.isInteger(id) || !name) return;
   renameFoodMeal(clientId, id, name);
-  revalidatePath("/client");
 }
 
 export async function removeFoodMealAction(formData: FormData) {
@@ -3880,7 +3875,6 @@ export async function removeFoodMealAction(formData: FormData) {
   const id = Number(String(formData.get("meal") ?? "").replace(/^m:/, ""));
   if (!Number.isInteger(id)) return;
   removeFoodMeal(clientId, id);
-  revalidatePath("/client");
 }
 
 export async function copyFoodMealAction(formData: FormData) {
@@ -3901,7 +3895,6 @@ export async function setFoodDayTypeAction(formData: FormData) {
   const dayType = formData.get("dayType");
   if (!diaryDateOk(date) || (dayType !== "training" && dayType !== "rest")) return;
   setFoodDayType(clientId, date, dayType);
-  revalidatePath("/client");
   revalidatePath("/admin");
 }
 
@@ -3915,7 +3908,6 @@ export async function reorderFoodMealsAction(formData: FormData) {
     .filter(Boolean)
     .slice(0, 30);
   reorderFoodMeals(clientId, date, ids);
-  revalidatePath("/client");
 }
 
 export async function pushFoodDayAction(formData: FormData) {
@@ -3923,7 +3915,6 @@ export async function pushFoodDayAction(formData: FormData) {
   const date = String(formData.get("date") ?? "");
   if (!diaryDateOk(date)) return;
   pushFoodDayToCalorieLog(clientId, date);
-  revalidatePath("/client");
   revalidatePath("/admin");
 }
 
@@ -3934,7 +3925,6 @@ export async function saveMealAction(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim().slice(0, 40);
   if (!DATE.test(date) || !name) return;
   saveMeal(clientId, date, meal, name);
-  revalidatePath("/client");
 }
 
 export async function deleteSavedMealAction(formData: FormData) {
@@ -3942,7 +3932,6 @@ export async function deleteSavedMealAction(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!Number.isInteger(id)) return;
   deleteSavedMeal(clientId, id);
-  revalidatePath("/client");
 }
 
 export async function addSavedMealAction(formData: FormData) {
@@ -3952,7 +3941,6 @@ export async function addSavedMealAction(formData: FormData) {
   const meal = String(formData.get("meal") ?? "");
   if (!Number.isInteger(id) || !diaryDateOk(date)) return;
   addSavedMeal(clientId, id, date, meal);
-  revalidatePath("/client");
 }
 
 // ---- Open Food Facts ---------------------------------------------------------
@@ -3990,7 +3978,6 @@ export async function copyFoodDayAction(formData: FormData) {
   const toDate = String(formData.get("toDate") ?? "");
   if (!DATE.test(fromDate) || !diaryDateOk(toDate) || fromDate === toDate) return;
   copyFoodDay(clientId, fromDate, toDate);
-  revalidatePath("/client");
   revalidatePath("/admin");
 }
 
@@ -4000,7 +3987,6 @@ export async function saveDayAction(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim().slice(0, 40);
   if (!DATE.test(date) || !name) return;
   saveDay(clientId, date, name);
-  revalidatePath("/client");
 }
 
 export async function deleteSavedDayAction(formData: FormData) {
@@ -4008,7 +3994,6 @@ export async function deleteSavedDayAction(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!Number.isInteger(id)) return;
   deleteSavedDay(clientId, id);
-  revalidatePath("/client");
 }
 
 export async function addSavedDayAction(formData: FormData) {
@@ -4017,7 +4002,6 @@ export async function addSavedDayAction(formData: FormData) {
   const date = String(formData.get("date") ?? "");
   if (!Number.isInteger(id) || !diaryDateOk(date)) return;
   addSavedDay(clientId, id, date);
-  revalidatePath("/client");
   revalidatePath("/admin");
 }
 
