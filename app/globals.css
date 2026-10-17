@@ -20114,3 +20114,43 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .lw-demo.lw-demo .lw-demo-play svg { width: 32px; height: 32px; }
 /* No hairline over Your note on the workout (17 Oct, Alex): space alone parts it from the sets. */
 .lw .wo-note.wo-note, .lw .wo-note.wo-note.editing { border-top: 0; padding-top: 8px; }
+/* "Photo or video for your coach" in the shared voice too (17 Oct, Alex); it is the same .vr-sheet as the reply viewer, so it takes the plain sheet, the flat reply and Close above. The choices are white tiles with the hairline and ink words at 600; what the coach asked sits flat under the small grey label, no amber box; the note field white with the hairline; Send one ink pill; a problem in the palette rust on no fill. */
+.vr-sheet .pp-app-sheet-option { min-height: 50px; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 14.5px; font-weight: 600; color: #141a24; }
+.vr-sheet .pp-app-sheet-option:active { background: #F5F6F8; }
+.vr-sheet .vr-sheet-hint, .vr-sheet .vr-sheet-sent { font-size: 12.5px; font-weight: 500; color: #8b93a1; }
+.vr-sheet .vr-sheet-note { padding: 0 4px; border-radius: 0; background: none; }
+.vr-sheet .vr-sheet-note span { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
+.vr-sheet .vr-sheet-note p { font-size: 14px; font-weight: 500; color: #3a4250; }
+.vr-sheet .vr-sheet-note-in { border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
+.vr-sheet .vr-sheet-note-in:focus { outline: none; box-shadow: inset 0 0 0 1.5px #141a24; }
+.vr-sheet .vr-sheet-note-in::placeholder { color: #98A2B3; }
+.vr-sheet .vr-sheet-send { min-height: 48px; border-radius: 999px; background: #141a24; font-weight: 600; }
+.vr-sheet .vr-sheet-send:disabled { background: #C9CFD8; }
+.vr-sheet .vr-sheet-problem { padding: 0 4px; border-radius: 0; background: none; font-weight: 500; color: #b8471f; }
+.vr-sheet .vr-sheet-done { font-weight: 600; color: #2f7a3f; }
+/* Swap exercise in the shared voice (17 Oct, Alex): a plain white sheet, no glow or wash; the title at 600; the muscle group a thin ring in its colour, not a filled chip; Targets carry over flat under the small grey label; the choices white tiles with the hairline, the chosen one an ink edge and an ink tick, no tint or shadow; the field white with the hairline (ink while typing); Swap one ink pill; the photo link ink at 600. Doubled for the dev-server CSS order. */
+.sw-card.sw-card .sw-glow, .sw-card.sw-card .sw-wash { display: none; }
+.sw-card.sw-card .sw-title { font-size: 20px; font-weight: 600; color: #141a24; }
+.sw-card.sw-card .sw-pill { height: 22px; padding: 0 9px; background: none; box-shadow: inset 0 0 0 1px var(--c); color: var(--c); font-size: 11px; font-weight: 600; }
+.sw-card.sw-card .sw-sub { font-size: 13px; font-weight: 500; color: #8b93a1; }
+.sw-card.sw-card .sw-sub b { font-weight: 600; color: #141a24; }
+.sw-card.sw-card .sw-close { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
+.sw-card.sw-card .sw-targets { padding: 10px 4px; border-radius: 0; background: none; border-top: 1px solid #E1E5EB; border-bottom: 1px solid #E1E5EB; }
+.sw-card.sw-card .sw-targets-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
+.sw-card.sw-card .sw-targets-val { font-weight: 600; }
+.sw-card.sw-card .sw-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+.sw-card.sw-card .sw-row { border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.sw-card.sw-card .sw-row.on { background: #fff; box-shadow: inset 0 0 0 1.5px #141a24; }
+.sw-card.sw-card .sw-thumb.none { background: #F5F6F8; border: 1px dashed #C9CFD8; font-weight: 500; }
+.sw-card.sw-card .sw-name { font-weight: 600; color: #141a24; }
+.sw-card.sw-card .sw-note { font-weight: 500; color: #8b93a1; }
+.sw-card.sw-card .sw-check { border: 1px solid #C9CFD8; }
+.sw-card.sw-card .sw-row.on .sw-check { border: 0; background: #141a24; }
+.sw-card.sw-card .sw-check svg { stroke: #fff; stroke-width: 3; }
+.sw-card.sw-card .sw-field { border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.sw-card.sw-card .sw-field.on { box-shadow: inset 0 0 0 1.5px #141a24; }
+.sw-card.sw-card .sw-field input { font-weight: 500; }
+.sw-card.sw-card .sw-primary { height: 48px; border-radius: 999px; background: #141a24; box-shadow: none; font-size: 15px; font-weight: 600; }
+.sw-card.sw-card .sw-primary.off { background: #C9CFD8; }
+.sw-card.sw-card .sw-photo { font-weight: 600; color: #141a24; }
+.sw-card.sw-card .sw-sent { background: none; box-shadow: inset 0 0 0 1px #2f7a3f; font-weight: 600; }
