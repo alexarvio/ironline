@@ -593,7 +593,9 @@ export default function ExercisePage({
       {swapped ? null : noteOpen ? (
         <div className="wo-note editing">
           <span className="wo-note-label">Your note</span>
-          <textarea className="wo-note-input" value={noteDraft} autoFocus rows={2} placeholder="Seat height, grip, cues. Only you see this." onChange={(e) => setNoteDraft(e.target.value)} />
+          <textarea className="wo-note-input" value={noteDraft} autoFocus rows={2} placeholder="Seat height, grip, cues. Only you see this." onChange={(e) => setNoteDraft(e.target.value)} onBlur={() => noteDraft.trim() === myNote.trim() && setNoteOpen(false)} />
+          {/* Cancel and Save only once the note has changed (17 Oct, Alex). */}
+          {noteDraft.trim() !== myNote.trim() && (
           <div className="wo-note-foot">
             <button
               type="button"
@@ -609,6 +611,7 @@ export default function ExercisePage({
               Save
             </button>
           </div>
+          )}
         </div>
       ) : myNote.trim() ? (
         <button

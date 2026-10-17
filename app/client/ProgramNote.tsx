@@ -75,12 +75,18 @@ export default function ProgramNote({
           maxLength={1000}
           rows={3}
           onChange={(e) => setDraft(e.target.value)}
+          // Nothing typed: tapping away closes it, as Cancel would (17 Oct).
+          onBlur={() => {
+            if (!changed && !saving) cancel();
+          }}
           onKeyDown={(e) => {
             if (e.key === "Escape") cancel();
           }}
           placeholder="How the programme feels, what is not working, what you want more of"
           aria-label={`Note for ${coachName} about this programme`}
         />
+        {/* Cancel and Send only once something is typed (17 Oct, Alex). */}
+        {changed && (
         <div className="tr-note-actions">
           <button type="button" className="tr-note-btn" onClick={cancel} disabled={saving}>
             Cancel
@@ -89,6 +95,7 @@ export default function ProgramNote({
             {saving ? "Sending…" : saved ? (next ? "Save" : "Remove") : "Send"}
           </button>
         </div>
+        )}
       </form>
     );
   }
