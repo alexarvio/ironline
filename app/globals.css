@@ -20258,3 +20258,15 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 /* The page title shows at rest too (17 Oct, Alex): white over the photo like the back arrow, ink on the frosted bar once scrolled. */
 .pp-one > .ci-bar:not(.stuck) .ci-title { opacity: 1; color: #fff; }
 .pp-one > .ci-bar .ci-title { font-size: 17px; font-weight: 600; }
+
+/* A sheet folds open and shut (17 Oct): the height eases on a grid row, the body fades and settles; the chevron turns with it. */
+.pp-app-past-fold { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.38s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease; }
+.pp-app-past-fold.open { grid-template-rows: 1fr; opacity: 1; }
+.pp-app-past-clip { min-height: 0; overflow: hidden; }
+.pp-app-past-fold .pp-app-past-body { transform: translateY(-6px); transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1); }
+.pp-app-past-fold.open .pp-app-past-body { transform: none; }
+.pp-app-past-chevron { transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1); }
+@media (prefers-reduced-motion: reduce) { .pp-app-past-fold, .pp-app-past-fold .pp-app-past-body, .pp-app-past-chevron { transition: none; } }
+/* Remove photo in the photo pop-up (17 Oct): a white hairline pill with the words in the palette rust. */
+.pp-app-sheet-remove { min-height: 48px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; font-size: 14px; font-weight: 600; color: #b8471f; cursor: pointer; }
+.pp-app-sheet-remove:disabled { opacity: 0.5; cursor: default; }

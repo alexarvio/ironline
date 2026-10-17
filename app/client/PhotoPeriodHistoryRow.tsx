@@ -45,6 +45,9 @@ export default function PhotoPeriodHistoryRow({
   // The photo open full screen, as an index into the sent ones.
   const [viewing, setViewing] = useState<number | null>(null);
   const sent = photos.filter((p): p is Photo & { src: string } => !!p.src);
+  // The body mounts the first time the row opens and then stays, so closing can ease shut (17 Oct).
+  const [mounted, setMounted] = useState(open);
+  if (open && !mounted) setMounted(true);
 
   return (
     <article className="pp-app-past">
@@ -62,7 +65,9 @@ export default function PhotoPeriodHistoryRow({
         </span>
       </button>
 
-      {open && (
+      <div className={`pp-app-past-fold${open ? " open" : ""}`} aria-hidden={!open}>
+        <div className="pp-app-past-clip">
+      {mounted && (
         <div className="pp-app-past-body">
           {/* The angles as a swipe of big cards (17 Oct, Alex), the empty ones too; a photo opens full screen in the app (a link to the image from the home screen has no way back). */}
           <PhotoDeck
@@ -84,6 +89,8 @@ export default function PhotoPeriodHistoryRow({
           {footer}
         </div>
       )}
+        </div>
+      </div>
 
       {viewing != null && sent[viewing] && (
         <PhotoViewer photos={sent} index={viewing} onIndex={setViewing} onClose={() => setViewing(null)} title={title} />
