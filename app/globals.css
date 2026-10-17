@@ -20025,3 +20025,37 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .lw .wo-note.wo-note .wo-note-save { border-radius: 999px; background: #141a24; font-weight: 600; padding: 8px 16px; }
 /* From your coach kept the old box's 16px corners, so its one hairline curved down at both ends like the top of a container (17 Oct, Alex). Square, so it is a straight line like Your note's. */
 .lw .ts-coachnote.ts-coachnote { border-radius: 0; background: none; }
+/* ---- The workout's last page in the hairline language (17 Oct, Alex): the title at 600 in ink; the exercises as flat rows on the page with a hairline between them, a thin ring with the number (green with a tick once done, no fill and no green row); How was it? and the note to the coach as sections under a hairline with the small grey label; the 1–10 tiles white with the hairline, the chosen one ink and the ones under it a faint ink tint; the note on an underline; Swipe to end in ink, not navy, green once done. Doubled for the dev-server CSS order. */
+.wo-wrap.wo-wrap { gap: 20px; }
+.wo-wrap .wo-wrap-title { font-size: 26px; font-weight: 600; color: #141a24; }
+.wo-wrap .wo-wrap-sub { font-size: 14px; font-weight: 500; color: #8b93a1; }
+.wo-wrap .wo-checklist { border-radius: 0; background: none; overflow: visible; }
+.wo-wrap .wo-check-row, .wo-wrap .wo-check-row.done { min-height: 52px; padding: 6px 4px; border-top: 1px solid #E1E5EB; background: none; }
+.wo-wrap .wo-check-row:first-child { border-top: 0; }
+.wo-wrap .wo-check-row:active { background: rgba(20, 26, 36, 0.03); }
+.wo-wrap .wo-check-circle { width: 28px; height: 28px; background: none; box-shadow: inset 0 0 0 1px #C9CFD8; font-size: 12px; font-weight: 500; color: #8b93a1; }
+.wo-wrap .wo-check-circle.done { background: none; box-shadow: inset 0 0 0 1.5px #2f7a3f; color: #2f7a3f; }
+.wo-wrap .wo-check-name { font-size: 15px; font-weight: 500; color: #141a24; }
+.wo-wrap .wo-check-status { font-size: 12.5px; font-weight: 500; color: #8b93a1; }
+.wo-wrap .wo-check-status.done { font-weight: 600; color: #2f7a3f; }
+.wo-wrap .wo-check-status.part { font-weight: 600; color: #a8761f; }
+.wo-wrap .wo-ask, .wo-wrap .wo-coach-note { gap: 14px; padding: 14px 4px 0; border-top: 1px solid #E1E5EB; border-radius: 0; background: none; }
+.wo-wrap .wo-coach-note { gap: 6px; }
+.wo-wrap .wo-note-label { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
+.wo-wrap .wo-scale-head b { font-size: 15px; font-weight: 500; color: #141a24; }
+.wo-wrap .wo-scale-head span { font-weight: 500; color: #8b93a1; }
+.wo-wrap .wo-scale-row { gap: 5px; }
+.wo-wrap .wo-scale-dot { border-radius: 10px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 13.5px; font-weight: 500; color: #5b6474; }
+.wo-wrap .wo-scale-dot.in { background: rgba(20, 26, 36, 0.08); box-shadow: none; color: #141a24; }
+.wo-wrap .wo-scale-dot.on { background: #141a24; box-shadow: none; color: #fff; font-weight: 600; }
+.wo-wrap .wo-ask-num, .wo-wrap .wo-ask-field .wo-note-input { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.wo-wrap .wo-ask-num input { font-weight: 500; color: #141a24; }
+.wo-wrap .wo-ask-num small { font-weight: 500; color: #8b93a1; }
+.wo-wrap .wo-coach-note .wo-note-input { padding: 4px 0 8px; border-bottom: 1px solid #C9CFD8; font-size: 16px; font-weight: 500; color: #141a24; }
+.wo-wrap .wo-coach-note .wo-note-input:focus { border-bottom-color: #141a24; }
+.wo-wrap .wo-swipe { background: #141a24; }
+.wo-wrap .wo-swipe.locked { background: #2f7a3f; }
+.wo-wrap .wo-swipe-label { font-weight: 600; }
+.wo-wrap .wo-swipe-handle { color: #141a24; }
+.wo-wrap .wo-swipe.locked .wo-swipe-handle { color: #2f7a3f; }
+.wo-wrap .wo-save-edit { background: #141a24; font-weight: 600; }
