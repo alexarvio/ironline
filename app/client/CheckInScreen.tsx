@@ -119,6 +119,34 @@ export default function CheckInScreen({
     setStuck((s) => (s ? y > 48 : y > 72));
   };
 
+  // Nothing to check in and nothing ever logged (17 Oct, Alex): the screen is bare like Training and
+  // Nutrition with no phase: a black-and-white banner, "Your lifestyle", one line. Past readings, from an
+  // earlier lifestyle phase, keep the full screen so they can still be seen.
+  const hasPast = history.series.some((s) => s.points.length > 0) || history.days.some((d) => d.items.length > 0);
+  if (todayRows.length === 0 && !hasPast) {
+    return (
+      <div className="ci-screen ci-one ci-naked">
+        <div className="ci-scroll">
+          <div className="ci-bar">
+            <button type="button" className="ci-back" onClick={onBack} aria-label="Back to home">
+              <ChevronLeftIcon />
+            </button>
+            <span aria-hidden="true" />
+            <span aria-hidden="true" />
+          </div>
+          <header className="tr-banner ci-banner ci-naked-banner">
+            {pictures && pictures.length > 0 && <PictureCycle pictures={pictures} className="tr-banner-pic" />}
+            <div className="tr-kicker">Lifestyle</div>
+            <FitTitle className="tr-name">Your lifestyle</FitTitle>
+          </header>
+          <div className="tr-body">
+            <p className="empty-note">Your phase will be deployed soon.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="ci-screen ci-one">
       <div className="ci-scroll" onScroll={onScroll}>

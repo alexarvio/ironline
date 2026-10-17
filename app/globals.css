@@ -20319,3 +20319,5 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 /* Today's empty ring pulses exactly like Home's and like a live event (17 Oct, Alex: the halo was thicker): the shared evp-pulse in ink, 1px edge and a soft glow out to 9px. */
 .evp-r.today .evp-ring.evp-ring { animation: evp-pulse 2.4s ease-in-out infinite; box-shadow: inset 0 0 0 1px #141a24; }
 @media (prefers-reduced-motion: reduce) { .evp-r.today .evp-ring.evp-ring { animation: none; } }
+/* Check-in with nothing to log and nothing logged (17 Oct, Alex): the Training banner's size, in black and white, no pills. */
+.tr-banner.ci-banner.ci-naked-banner { filter: grayscale(1); padding-bottom: 26px; }
