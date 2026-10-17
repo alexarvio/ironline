@@ -20063,3 +20063,5 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .gpk-start .gpk-dot.gpk-dot { display: none; }
 /* An event's note opens flat (17 Oct, Alex): no tinted box behind it, just the text on the page in the body colour, the chevron still opening it. */
 .ev-x-note.ev-x-note { padding: 0; border-radius: 0; background: none; font-size: 14px; font-weight: 500; line-height: 1.5; color: #3a4250; }
+/* The event progress knob centred on the line exactly (17 Oct, Alex): fixed offsets (top -3px on a 2px fill nudged half a pixel) left it a touch low; now it is centred by transform on the fill's middle. */
+.evp-knob.evp-knob { top: 50%; right: 0; transform: translate(50%, -50%); }
