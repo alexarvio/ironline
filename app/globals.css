@@ -20231,3 +20231,6 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 /* Progress pictures: the bar's own title shows only once the bar is frosted; over the photo the banner's title is the one (17 Oct). */
 .pp-one > .ci-bar:not(.stuck) .ci-title { opacity: 0; }
 .pp-one > .ci-bar .ci-title { transition: opacity 0.2s; }
+/* Edit and Delete as their words alone (17 Oct, Alex: no pills), side by side at the left under the note: Edit in ink, Delete in the palette rust, 600; the "are you sure" step just its words too. */
+.ev-x .ev-x-actions { justify-content: flex-start; gap: 22px; }
+.ev-x .ev-btn.ev-btn, .ev-x .ev-btn.ev-btn.danger.sure { flex: none; width: auto; height: 32px; padding: 0; border-radius: 0; background: none; box-shadow: none; font-size: 13.5px; font-weight: 600; }
