@@ -702,7 +702,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                 key: day.id,
                 index: i + 1,
                 week: week - (program?.start_week ?? 1) + 1,
-                gyms: dayGyms.map((g) => ({ id: g.id, name: g.name, color: isGymColor(g.color) ? g.color : "navy", kind: g.kind ?? "gym", sessions: gymStats.get(g.id)?.sessions ?? 0, lastUsedAt: gymStats.get(g.id)?.lastUsedAt ?? null, lastUsed: g.id === lastGymId })),
+                gyms: dayGyms.map((g) => ({ id: g.id, name: g.name, color: isGymColor(g.color) ? g.color : "navy", kind: g.kind ?? "gym", sessions: gymStats.get(g.id)?.sessions ?? 0, lastUsedAt: gymStats.get(g.id)?.lastUsedAt ?? null, lastUsed: g.id === lastGymId, logo: g.logo_path ?? null })),
                 gymId,
                 // The coach's own name for the session. Without one it is
                 // numbered by its place in the week; the weekday is never

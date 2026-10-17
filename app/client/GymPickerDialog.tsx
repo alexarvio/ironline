@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { clientAddGymAction } from "../lib/actions";
+import { clientAddGymAction, uploadGymLogoAction } from "../lib/actions";
+import { coverJpeg } from "../lib/coverJpeg";
 import { GYM_COLORS, GYM_COLOR_KEYS, GYM_KINDS, gymColor, initials, nextFreeColor, type GymColorKey, type GymKind } from "../lib/gymColors";
 
 // Which gym the session is at (13 Oct, "Gym rows"): a centred pop-up over
@@ -26,7 +27,33 @@ export type GymOption = {
   lastUsedAt: string | null;
   /** The gym new sessions start on: the one picked most recently. */
   lastUsed: boolean;
+  /** The client's picture on the badge instead of the initials (17 Oct); null, the initials. */
+  logo?: string | null;
 };
+
+// A gym's picture, square and small (17 Oct): tap the badge to add or change it.
+const shrink = (file: File) => coverJpeg(file, 320, 320);
+async function sendLogo(gymId: number, blob: Blob): Promise<string | null> {
+  const fd = new FormData();
+  fd.set("gymId", String(gymId));
+  fd.set("file", new File([blob], "gym.jpg", { type: "image/jpeg" }));
+  return uploadGymLogoAction(fd);
+}
+
+/** The badge's face: the picture when there is one, else the initials. */
+function BadgeFace({ name, logo }: { name: string; logo?: string | null }) {
+  return logo ? <img className="gpk-badge-img" src={logo} alt="" draggable={false} /> : <>{initials(name)}</>;
+}
+
+/** The little camera in the badge's corner that says it can take a picture. */
+const CameraDot = () => (
+  <span className="gpk-badge-cam" aria-hidden="true">
+    <svg viewBox="0 0 24 24">
+      <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7H8l1.5-2.5h5L16 7h3.5A1.5 1.5 0 0 1 21 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z" />
+      <circle cx="12" cy="13" r="3.4" />
+    </svg>
+  </span>
+);
 
 /** Just the count (13 Oct): "11 sessions", "1 session", "0 sessions". */
 const meta = (g: GymOption) => `${g.sessions} session${g.sessions === 1 ? "" : "s"}`;
@@ -78,6 +105,45 @@ export default function GymPickerDialog({
     if (adding) setTimeout(() => nameRef.current?.focus(), 60);
   }, [adding]);
 
+  // The picture: picked in the form it waits (shown from memory) until the
+  // gym exists; picked for a gym in the list it goes up straight away.
+  const fileRef = useRef<HTMLInputElement>(null);
+  const pickFor = useRef<"new" | number>("new");
+  const [newLogo, setNewLogo] = useState<{ blob: Blob; url: string } | null>(null);
+  const [logoBusy, setLogoBusy] = useState<"new" | number | null>(null);
+  useEffect(() => () => void (newLogo && URL.revokeObjectURL(newLogo.url)), [newLogo]);
+  const choosePicture = (forWhat: "new" | number) => {
+    pickFor.current = forWhat;
+    fileRef.current?.click();
+  };
+  const onPicture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const target = pickFor.current;
+    setLogoBusy(target);
+    const blob = await shrink(file);
+    if (!blob) {
+      setLogoBusy(null);
+      setToast("Couldn't read that picture.");
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+    if (target === "new") {
+      setNewLogo({ blob, url: URL.createObjectURL(blob) });
+      setLogoBusy(null);
+      return;
+    }
+    const logo = await sendLogo(target, blob);
+    setLogoBusy(null);
+    if (!logo) {
+      setToast("Couldn't save the picture. Try again.");
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+    setList((l) => l.map((g) => (g.id === target ? { ...g, logo } : g)));
+  };
+
   // Focus: the card takes it, Escape closes, and the Start button has it back after.
   const card = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -114,15 +180,18 @@ export default function GymPickerDialog({
     if (!valid) return;
     setBusy(true);
     const r = await clientAddGymAction(dayId, clean, color, kind);
-    setBusy(false);
     if (!r || "error" in r) {
+      setBusy(false);
       setToast(r?.error ?? "Couldn't add the gym. Try again.");
       setTimeout(() => setToast(null), 3000);
       return;
     }
-    const gym: GymOption = { id: r.id, name: r.name, color: r.color, kind: r.kind, sessions: 0, lastUsedAt: null, lastUsed: false };
+    const logo = newLogo ? await sendLogo(r.id, newLogo.blob) : null;
+    setBusy(false);
+    const gym: GymOption = { id: r.id, name: r.name, color: r.color, kind: r.kind, sessions: 0, lastUsedAt: null, lastUsed: false, logo };
     setList((l) => [...l.filter((g) => g.id !== gym.id), gym]);
     setSelected(gym.id);
+    setNewLogo(null);
     setName("");
     setColor(nextFreeColor([...list, gym]));
     setKind("gym");
@@ -151,6 +220,7 @@ export default function GymPickerDialog({
   return createPortal(
     <div className={`gpk-overlay${closing ? " closing" : ""}`} onClick={close}>
       <div ref={card} className={`gpk-card${closing ? " closing" : ""}`} role="dialog" aria-modal="true" aria-labelledby="gpk-title" style={{ "--g": tint.hex, "--g-rgb": tint.rgb } as React.CSSProperties} onClick={(e) => e.stopPropagation()}>
+        <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => void onPicture(e)} />
         <span className="gpk-glow" aria-hidden="true" />
         <span className="gpk-wash" aria-hidden="true" />
         {adding ? (
@@ -168,9 +238,10 @@ export default function GymPickerDialog({
               </h2>
             </div>
             <div className="gpk-name-row">
-              <span className="gpk-badge big" style={{ background: GYM_COLORS[color].hex, boxShadow: `0 12px 20px -10px rgba(${GYM_COLORS[color].rgb},.9), inset 0 1px 0 rgba(255,255,255,.25)` }} aria-hidden="true">
-                {initials(name)}
-              </span>
+              <button type="button" className={`gpk-badge big gpk-badge-btn${logoBusy === "new" ? " busy" : ""}`} style={{ background: GYM_COLORS[color].hex }} onClick={() => choosePicture("new")} aria-label={newLogo ? "Change the gym's picture" : "Add a picture of the gym"}>
+                <BadgeFace name={name} logo={newLogo?.url} />
+                <CameraDot />
+              </button>
               <label className="gpk-field">
                 <span className="gpk-label">Gym name</span>
                 <span className={`gpk-input-box${clean.length >= 2 && !duplicate ? " valid" : ""}`}>
@@ -238,9 +309,11 @@ export default function GymPickerDialog({
                 const c = GYM_COLORS[g.color];
                 const on = g.id === selected;
                 return (
-                  <button key={g.id} type="button" role="radio" aria-checked={on} aria-label={`${g.name}, ${meta(g)}`} tabIndex={on ? 0 : -1} className={`gpk-row${on ? " on" : ""}`} style={on ? { background: `rgba(${c.rgb},.07)`, boxShadow: `inset 0 0 0 2px ${c.hex}` } : undefined} onClick={() => setSelected(g.id)} onKeyDown={(e) => onRowKey(e, i)}>
-                    <span className="gpk-badge" style={{ background: c.hex, boxShadow: `0 8px 14px -8px rgba(${c.rgb},.9), inset 0 1px 0 rgba(255,255,255,.25)` }} aria-hidden="true">
-                      {initials(g.name)}
+                  <div key={g.id} className="gpk-row-wrap">
+                  <button type="button" role="radio" aria-checked={on} aria-label={`${g.name}, ${meta(g)}`} tabIndex={on ? 0 : -1} className={`gpk-row${on ? " on" : ""}`} style={on ? { background: `rgba(${c.rgb},.07)`, boxShadow: `inset 0 0 0 2px ${c.hex}` } : undefined} onClick={() => setSelected(g.id)} onKeyDown={(e) => onRowKey(e, i)}>
+                    <span className={`gpk-badge${logoBusy === g.id ? " busy" : ""}`} style={{ background: c.hex }} aria-hidden="true">
+                      <BadgeFace name={g.name} logo={g.logo} />
+                      {on && <CameraDot />}
                     </span>
                     <span className="gpk-row-text">
                       <span className="gpk-row-name">{g.name}</span>
@@ -254,6 +327,9 @@ export default function GymPickerDialog({
                       )}
                     </span>
                   </button>
+                  {/* Over the picked row's badge, beside the row rather than inside it: a button can't hold a button. */}
+                  {on && <button type="button" className="gpk-badge-pick" onClick={() => choosePicture(g.id)} aria-label={g.logo ? `Change ${g.name}'s picture` : `Add a picture of ${g.name}`} />}
+                  </div>
                 );
               })}
               <button type="button" className="gpk-addrow" onClick={() => setAdding(true)}>
@@ -269,6 +345,11 @@ export default function GymPickerDialog({
               <span className="gpk-dot" aria-hidden="true" />
               <span className="gpk-start-label">{mode === "switch" ? `Switch to ${chosen?.name ?? "…"}` : `Start at ${chosen?.name ?? "…"}`}</span>
             </button>
+            {toast && (
+              <div className="gpk-toast" role="alert">
+                {toast}
+              </div>
+            )}
           </div>
         )}
       </div>

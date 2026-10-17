@@ -283,6 +283,7 @@ import {
   setCheckInNote,
   setClientExerciseNote,
   addClientGym,
+  saveGymLogo,
   removeClientGym,
   getClientIdForGym,
   pickGymForDay,
@@ -3353,6 +3354,23 @@ export async function clientAddGymAction(programDayId: number, name: string, col
   revalidatePath("/client");
   revalidatePath("/admin");
   return { id: gym.id, name: gym.name, color: isGymColor(gym.color) ? gym.color : "navy", kind: gym.kind ?? "gym" };
+}
+
+/** The client's picture for one of their gyms (17 Oct): square, already shrunk in the browser. Back with its path. */
+export async function uploadGymLogoAction(formData: FormData): Promise<string | null> {
+  const gymId = Number(formData.get("gymId"));
+  const owner = getClientIdForGym(gymId);
+  if (owner == null || !(await canAccessClient(owner))) return null;
+  const file = formData.get("file") as File | null;
+  if (!file || file.size === 0 || file.size > 6 * 1024 * 1024 || !file.type.startsWith("image/")) return null;
+  const body = Buffer.from(await file.arrayBuffer());
+  const r = saveGymLogo(gymId, body, file.type);
+  if (!r) return null;
+  if (r.previous && keyOf(r.previous) !== keyOf(r.saved)) await deleteUpload(r.previous);
+  await putUpload(r.saved, body, file.type);
+  revalidatePath("/client");
+  revalidatePath("/admin");
+  return r.saved;
 }
 
 export async function pickGymAction(programDayId: number, gymId: number) {

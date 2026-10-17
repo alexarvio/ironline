@@ -8437,6 +8437,29 @@ export function getClientIdForGym(gymId: number): number | null {
   return (getData().client_gyms ?? []).find((g) => g.id === gymId)?.client_id ?? null;
 }
 
+/** A gym's picture on its badge (17 Oct, like a profile picture). Back with the new path and the one it replaced. */
+export function saveGymLogo(gymId: number, buffer: Buffer, mimeType: string): { saved: string; previous: string | null } | null {
+  const gym = (getData().client_gyms ?? []).find((g) => g.id === gymId);
+  if (!gym) return null;
+  const ext = (mimeType.split("/")[1] || "jpg").replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "jpg";
+  const dir = path.join(DATA_DIR, "uploads", "gyms", String(gym.client_id));
+  fs.mkdirSync(dir, { recursive: true });
+  const filename = `${gym.id}.${ext}`;
+  fs.writeFileSync(path.join(dir, filename), buffer);
+  const previous = gym.logo_path ?? null;
+  const old = previous?.split("?")[0].split("/").pop();
+  if (old && old !== filename) {
+    try {
+      fs.unlinkSync(path.join(dir, old));
+    } catch {
+      /* already gone */
+    }
+  }
+  gym.logo_path = `/uploads/gyms/${gym.client_id}/${filename}?v=${Date.now()}`;
+  persist();
+  return { saved: gym.logo_path, previous };
+}
+
 /** Adds a gym, or brings back a removed one of the same name. */
 export function addClientGym(clientId: number, name: string, color?: string, kind?: ClientGym["kind"]): ClientGym | null {
   const clean = name.trim().replace(/\s+/g, " ").slice(0, 40);

@@ -19984,3 +19984,18 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 /* The video row in the session overview flat on the page (17 Oct, Alex): no white pill, just the icon, the words and Open in a line. The icon starts at the content's left edge like TARGET and the coach's note; Open is centred in the last quarter, under the RPE column, instead of hard against the right. Doubled for the dev-server CSS order. */
 .so-screen .so-video.so-video, .so-screen .so-video.so-video.sent, .so-screen .so-video.so-video.replied { height: 44px; padding: 0; border-radius: 0; background: none; box-shadow: none; }
 .so-screen .so-video.so-video b { flex: 0 0 25%; text-align: center; }
+/* A picture per gym on its badge (17 Oct, Alex: like a profile picture). The photo fills the rounded square; the gym's colour shows only while it loads. Tap the form's badge, or the picked row's, to add or change it; a small camera in the corner says so. */
+.gpk-badge { position: relative; overflow: visible; }
+.gpk-badge-img { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
+.gpk-badge-btn { border: 0; padding: 0; font: inherit; cursor: pointer; }
+.gpk-badge-btn:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; }
+.gpk-badge-cam { position: absolute; right: -5px; bottom: -5px; display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
+.gpk-badge.big .gpk-badge-cam { width: 24px; height: 24px; right: -6px; bottom: -6px; }
+.gpk-badge-cam svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.gpk-badge.big .gpk-badge-cam svg { width: 14px; height: 14px; }
+.gpk-badge.busy { animation: gpk-badge-busy 1s ease-in-out infinite; }
+@keyframes gpk-badge-busy { 50% { opacity: 0.55; } }
+.gpk-row-wrap { position: relative; }
+.gpk-badge-pick { position: absolute; left: 12px; top: 50%; width: 44px; height: 44px; margin-top: -22px; padding: 0; border: 0; border-radius: 14px; background: none; cursor: pointer; }
+.gpk-badge-pick:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .gpk-badge.busy { animation: none; opacity: 0.6; } }
