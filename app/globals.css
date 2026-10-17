@@ -20061,3 +20061,5 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .wo-wrap .wo-save-edit { background: #141a24; font-weight: 600; }
 /* The Start button loses the gym-colour dot (17 Oct, Alex): a navy ring on the ink pill read as a stray blue dot, and the gym's picture or badge already says which one. */
 .gpk-start .gpk-dot.gpk-dot { display: none; }
+/* An event's note opens flat (17 Oct, Alex): no tinted box behind it, just the text on the page in the body colour, the chevron still opening it. */
+.ev-x-note.ev-x-note { padding: 0; border-radius: 0; background: none; font-size: 14px; font-weight: 500; line-height: 1.5; color: #3a4250; }
