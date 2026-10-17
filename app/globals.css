@@ -20012,3 +20012,14 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .lw-row.lw-row.done.warm .lw-row-badge svg { stroke: #cbad79; }
 .lw-row.lw-row.extra .lw-row-badge { box-shadow: none; outline: 1.5px dashed #C9CFD8; outline-offset: -1.5px; }
 .lw-row.lw-row.done.extra .lw-row-badge { box-shadow: none; outline: 1.5px dashed #82ad8b; outline-offset: -1.5px; }
+/* Your note in the hairline language (17 Oct, Alex), like From your coach above it: no white box, a hairline over it, the same 10px label and 14px text, the pencil in the label grey. Editing keeps it flat: the text sits on a hairline underline, Cancel a text action, Save a small ink pill. Doubled for the dev-server CSS order. */
+.lw .wo-note.wo-note, .lw .wo-note.wo-note.editing { gap: 6px; margin-top: 4px; padding: 12px 4px 0; border: 0; border-top: 1px solid #E1E5EB; border-radius: 0; background: none; box-shadow: none; color: #3a4250; }
+.lw .wo-note.wo-note .wo-note-head { gap: 8px; }
+.lw .wo-note.wo-note .wo-note-pen { color: #5b6474; }
+.lw .wo-note.wo-note .wo-note-pen svg { width: 13px; height: 13px; }
+.lw .wo-note.wo-note .wo-note-label { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
+.lw .wo-note.wo-note .wo-note-text { font-size: 14px; font-weight: 500; line-height: 1.45; color: #3a4250; }
+.lw .wo-note.wo-note .wo-note-input { padding: 4px 0 8px; border-bottom: 1px solid #C9CFD8; font-size: 16px; font-weight: 500; color: #141a24; }
+.lw .wo-note.wo-note .wo-note-input:focus { border-bottom-color: #141a24; }
+.lw .wo-note.wo-note .wo-note-cancel { font-weight: 600; color: #5b6474; }
+.lw .wo-note.wo-note .wo-note-save { border-radius: 999px; background: #141a24; font-weight: 600; padding: 8px 16px; }
