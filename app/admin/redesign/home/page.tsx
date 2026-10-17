@@ -16,6 +16,8 @@ import "../messages/messages.css";
 import "../invoices/invoices.css";
 import "../ncdialog.css";
 import "../rail.css";
+import "../look-hairline.css";
+import LookFlag from "../LookFlag";
 
 // The redesign drafts, opened on Home. Read-only: nothing here saves.
 // Local only, not for live.
@@ -29,6 +31,9 @@ export default async function HomeRedesignPage({ searchParams }: { searchParams:
   touchPresence(coach, client ? `${firstName} · Home` : "Clients");
   if (!client) return <NoClients rail={loadRail(coach)} />;
   return (
+    <>
+    {/* ?look=hairline: the admin in the client app's language, as a preview (17 Oct). */}
+    <LookFlag />
     <RedesignShell
       clientId={client.id}
       clientName={client.name ?? "Client"}
@@ -45,5 +50,6 @@ export default async function HomeRedesignPage({ searchParams }: { searchParams:
       messages={loadMessages(client.id)}
       invoices={loadInvoices(coach.id, client.id)}
     />
+    </>
   );
 }
