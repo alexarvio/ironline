@@ -20059,3 +20059,5 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .wo-wrap .wo-swipe-handle { color: #141a24; }
 .wo-wrap .wo-swipe.locked .wo-swipe-handle { color: #2f7a3f; }
 .wo-wrap .wo-save-edit { background: #141a24; font-weight: 600; }
+/* The Start button loses the gym-colour dot (17 Oct, Alex): a navy ring on the ink pill read as a stray blue dot, and the gym's picture or badge already says which one. */
+.gpk-start .gpk-dot.gpk-dot { display: none; }
