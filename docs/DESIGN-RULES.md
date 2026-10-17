@@ -12,7 +12,7 @@ Read this before touching any client screen. One hero language, one everyday lan
 
 ## 2. Page and lines
 - Page `#F5F5F5` on Home, `#F5F6F8` on the pushed screens (Events, Workout, Notifications). One per screen, never two tones on one screen.
-- Hairline `#E1E5EB`. Separate things with one hairline or with space, never with a box.
+- Hairline `#E1E5EB`. Separate rows and sections with **space alone** (17 Oct, Alex): no lines between list rows, no lines over sections or above buttons. The only line on a screen is a timeline's spine (Events, the Home events row), and a note's own underline where nothing sits right under it.
 - White `#fff` only for a pill or a button, and it gets `inset 0 0 0 1px #E1E5EB`, never a shadow.
 
 ## 3. Type (Archivo)

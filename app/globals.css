@@ -20290,3 +20290,6 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .so-screen .so-card + .so-card::before { display: none; }
 .so-screen .so-tbl { border-top: 0; }
 .so-screen .so-card-toggle { padding-top: 13px; padding-bottom: 13px; }
+/* Space alone between sections on Home too (17 Oct, Alex): no line over the coach's actions or the meeting recap. */
+.hm-lt-foot { border-top: 0; padding-top: 4px; }
+.hm-mt-recap { border-top: 0; padding-top: 6px; }
