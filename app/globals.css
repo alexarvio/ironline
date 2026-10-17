@@ -20255,3 +20255,6 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .cki-note-box.cki-note-box textarea { font-size: 16px; font-weight: 500; color: #141a24; }
 /* Swap exercise: no hairline over Targets carry over, only under it (17 Oct, Alex). */
 .sw-card.sw-card .sw-targets { border-top: 0; padding-top: 4px; }
+/* The page title shows at rest too (17 Oct, Alex): white over the photo like the back arrow, ink on the frosted bar once scrolled. */
+.pp-one > .ci-bar:not(.stuck) .ci-title { opacity: 1; color: #fff; }
+.pp-one > .ci-bar .ci-title { font-size: 17px; font-weight: 600; }
