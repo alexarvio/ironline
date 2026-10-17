@@ -456,7 +456,10 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
   const weekAgo = Date.now() - 7 * 86400000;
   const sent = coachMessagesFor(clientId).filter((m) => !m.mine && (m.text.trim() || m.media));
   const latestMsg = sent[sent.length - 1] ?? null;
-  const notes = getNotifications(clientId).filter((n) => n.kind !== "reminder");
+  // A coach chat message's own notification ("Your coach sent you a video")
+  // is only its echo: read the message itself (17 Oct), so a form review shows
+  // as the reply it is rather than a bare "Sent you a note".
+  const notes = getNotifications(clientId).filter((n) => n.kind !== "reminder" && n.kind !== "coach_note");
   const latestNote = notes[0] ?? null;
   const msgAt = latestMsg ? new Date(`${latestMsg.dateIso}T${latestMsg.timeLabel}:00`).getTime() : 0;
   const noteAt = latestNote ? new Date(latestNote.created_at).getTime() : 0;
@@ -468,20 +471,25 @@ function latestCoachActivity(clientId: number, coachFirst: string): LatestActivi
 
   if (latestMsg && msgAt >= noteAt) {
     const iso = `${latestMsg.dateIso}T${latestMsg.timeLabel}:00`;
+    // A form review lands in the chat too, pointing at the exercise: show it
+    // as the reply, which View plays in the pop-up (17 Oct).
+    const media = latestMsg.media;
+    const reply = media?.type === "video" ? listVideoReplies(clientId).find((r) => r.replySrc === media.path) ?? null : null;
+    if (reply) return { kind: "video", title: `Replied to your video of ${reply.exerciseName}`, body: reply.replyNote || null, whenLabel: relativeLabel(iso), cta: "Watch", videoReply: reply, unread, unseen: !reply.seen, moreThisWeek };
     if (latestMsg.link && !latestMsg.link.gone) {
       const k = latestMsg.link.link.kind;
       const context = k === "food" || k === "nutrition" ? "nutrition" : k === "checkin" ? "checkin" : k === "photos" ? "photos" : "training";
       const cta = context === "nutrition" ? "View meal" : context === "checkin" ? "View check-in" : context === "photos" ? "View pictures" : "View session";
       return { kind: "comment", context, title: `Commented on ${COMMENT_ON[context]}`, body: latestMsg.text || null, whenLabel: relativeLabel(iso), cta, link: latestMsg.link, unread, unseen: unread > 0, moreThisWeek };
     }
-    return { kind: "message", title: "Sent you a message", body: latestMsg.text || (latestMsg.media ? "Sent you a file" : null), whenLabel: relativeLabel(iso), cta: "Reply", link: latestMsg.link, unread, unseen: unread > 0, moreThisWeek };
+    return { kind: "message", title: "Sent you a message", body: latestMsg.text || (media ? (media.type === "video" ? "Sent you a video" : media.type === "image" ? "Sent you a photo" : media.type === "audio" ? "Sent you a voice message" : "Sent you a file") : null), whenLabel: relativeLabel(iso), cta: "Reply", link: latestMsg.link, unread, unseen: unread > 0, moreThisWeek };
   }
   if (latestNote) {
     const when = relativeLabel(latestNote.created_at);
     const base = { whenLabel: when, notificationId: latestNote.id, actionTab: latestNote.action_tab, actionRef: latestNote.action_ref, unread, unseen: !latestNote.read, moreThisWeek };
     if (latestNote.action_tab === "video") {
       const reply = listVideoReplies(clientId).find((r) => r.id === latestNote.action_ref) ?? null;
-      return { kind: "video", title: "Replied to your video", body: reply?.replyNote || null, cta: "Watch", videoReply: reply, ...base };
+      return { kind: "video", title: reply ? `Replied to your video of ${reply.exerciseName}` : "Replied to your video", body: reply?.replyNote || null, cta: "Watch", videoReply: reply, ...base };
     }
     // The button says where it goes, after what changed: View training,
     // View nutrition, View check-in (a lifestyle phase), and so on. A
