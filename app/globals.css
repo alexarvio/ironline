@@ -20295,3 +20295,5 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .hm-mt-recap { border-top: 0; padding-top: 6px; }
 /* Request a meeting: What about lined up with When suits you (17 Oct, Alex). Safari gives a text input its own inner padding and look; both off, so the words start at the label's edge. */
 .mt-asksheet .evs-title.evs-title input { margin: 0; padding: 0; -webkit-appearance: none; appearance: none; border-radius: 0; text-indent: 0; }
+/* The food diary's rings ride the same 600ms tween as its figures (17 Oct, Alex): the arcs were tweened in code AND eased again by this CSS transition, so they trailed the numbers and landed late. With the transition off, the ring fills (or winds back to an empty day) frame for frame with the count. */
+.fdi-targets .nd-ring-arc.nd-ring-arc { transition: none; }
