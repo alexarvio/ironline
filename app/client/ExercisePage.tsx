@@ -525,13 +525,31 @@ export default function ExercisePage({
 
       {/* ---- The sets card. */}
       <div className="lw-card">
+        {/* The coach's targets, big enough to read mid-set (17 Oct, Alex: the rep range faded into the Sets label): sets × reps, weight, RPE, time. */}
+        {(() => {
+          const reps = exercise.reps.trim().replace(/\s*(?:-|–|to)\s*/i, "–");
+          const parts = [
+            exercise.sets > 0 && reps ? `${exercise.sets} × ${reps} reps` : reps ? `${reps} reps` : exercise.sets > 0 ? `${exercise.sets} ${exercise.sets === 1 ? "set" : "sets"}` : null,
+            targetWeight != null ? `${fmtWeight(planToDisplay(targetWeight, unit))} ${uLabel}` : null,
+            targetRpe != null && String(targetRpe).trim() ? `RPE ${targetRpe}` : null,
+            exercise.time?.trim() ? exercise.time.trim() : null,
+          ].filter(Boolean) as string[];
+          return parts.length ? (
+            <div className="lw-target">
+              <span className="lw-target-label">Target</span>
+              <span className="lw-target-vals">
+                {parts.map((p, i) => (
+                  <span key={i}>{p}</span>
+                ))}
+              </span>
+            </div>
+          ) : null;
+        })()}
         <div className="lw-card-head">
           <span className="lw-eyebrow">Sets</span>
           <span className={`lw-progress${allDone ? " done" : ""}`}>
             {doneCount}/{workRows.length}
           </span>
-          {/* The coach's rep range (15 Oct), once for the exercise: the big numbers in each set stay what was done last time. */}
-          {exercise.reps.trim() && <span className="lw-reps-target">{exercise.reps.trim().replace(/\s*(?:-|–|to)\s*/i, "–")} reps</span>}
           {/* KG / LBS on the card's row (13 Oct, back where it was): the exercise's unit, every set of it. */}
           {askWeight && (
             <div className="lw-unit" role="radiogroup" aria-label="Weight unit for this exercise">

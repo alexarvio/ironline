@@ -20321,3 +20321,8 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 @media (prefers-reduced-motion: reduce) { .evp-r.today .evp-ring.evp-ring { animation: none; } }
 /* Check-in with nothing to log and nothing logged (17 Oct, Alex): the Training banner's size, in black and white, no pills. */
 .tr-banner.ci-banner.ci-naked-banner { filter: grayscale(1); padding-bottom: 26px; }
+/* The coach's targets on the workout (17 Oct, Alex): their own line over the sets, big enough to read mid-set. The small grey label, then sets × reps, weight, RPE and time in ink at 18px, a dot between. */
+.lw-target { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 18px; }
+.lw-target-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+.lw-target-vals { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 0; font-size: 18px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; }
+.lw-target-vals > span + span::before { content: "·"; margin: 0 9px; color: #98A2B3; font-weight: 500; }
