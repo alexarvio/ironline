@@ -20226,3 +20226,5 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .ev-x .ev-btn.ev-btn.danger.sure { background: rgba(184, 71, 31, 0.06); box-shadow: inset 0 0 0 1px rgba(184, 71, 31, 0.35); }
 /* Edit photos in the shared voice (17 Oct, Alex): a white hairline pill, ink words at 600, not navy. Doubled for the dev-server CSS order. */
 .pp-app-edit-photos.pp-app-edit-photos { min-height: 44px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 14px; font-weight: 600; color: #141a24; }
+/* What your coach said sits under the pictures with space alone, no hairline (17 Oct, Alex). */
+.pp-app-notes.pp-app-notes { border-top: 0; padding-top: 6px; }
