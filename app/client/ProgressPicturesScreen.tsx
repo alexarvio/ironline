@@ -349,7 +349,7 @@ function OpenSheet({
                 label: s.label,
                 src: src ?? null,
                 // Sent (17 Oct, Alex): locked, it is Finlay's now; no Change on the card. "Edit photos" on the sent sheet reopens it.
-                state: uploading ? "Sending…" : ready ? "Ready" : ticked ? "Sent" : null,
+                state: uploading ? "Sending…" : ready ? "Ready" : null, // no "Sent" chip (17 Oct, Alex): a sent card shows its tick, or Change while editing
                 tone: ready ? ("ready" as const) : ticked && !uploading ? ("sent" as const) : null,
                 // Editing (17 Oct, Alex: a sent photo could not be swapped or taken off): every card opens again.
                 locked: ticked && !uploading && !editing,
