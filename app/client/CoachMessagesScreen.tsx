@@ -317,7 +317,8 @@ export default function CoachMessagesScreen({ coachName, messages: fromPage, vie
       )}
       <main ref={body} className="cm-body">
         {days.length === 0 ? (
-          <p className="cm-empty">Nothing yet. {coachName} writes here between calls: a nudge, a tweak to the plan, a well done. You can write back any time.</p>
+          // An empty chat (17 Oct, Alex): one quiet line, low over the box where the first message will go.
+          <p className="cm-start">This is the beginning of your chat with {coachName.trim().split(/s+/)[0] || coachName}</p>
         ) : (
           days.map((d) => (
             <section key={d.label} className="cm-day">
