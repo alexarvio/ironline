@@ -260,8 +260,6 @@ function TodaysTasks({ pics }: { pics: NonNullable<ProgressPics> }) {
   const due = pics.status === "due";
   // Just done: a short buzz on phones that can.
   const [seenDue, setSeenDue] = useState(due);
-  // Due when this visit began: once done, the row says so until the next visit.
-  const [wasDue] = useState(due);
   if (seenDue !== due) {
     setSeenDue(due);
     if (!due) {
@@ -270,9 +268,10 @@ function TodaysTasks({ pics }: { pics: NonNullable<ProgressPics> }) {
       } catch {}
     }
   }
-  // A quiet task row (16 Oct), not a tile: it shows while a set is due, says Done
-  // for the rest of this visit once it is, and is gone next time.
-  if (!due && !wasDue) return null;
+  // A quiet task row (16 Oct), not a tile: it shows while a set is due and says
+  // Completed for the rest of the day the last picture went in (17 Oct, Alex:
+  // it used to vanish on coming back from the pictures screen, which remounts
+  // Home). When to show it at all is the server's call (homePhotos).
   return (
     <section className="hm-tasks" aria-label="Progress pictures">
       <ProgressPicsPill pics={pics} />
