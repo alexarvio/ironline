@@ -6639,6 +6639,24 @@ export function ensureDefaultMetrics(clientId: number) {
   addMetricDefinition(clientId, "Body", "Weight", "kg", "daily");
 }
 
+// The Weight line the app used to add by itself to a client with no check-in
+// lines (removed 17 Oct, Alex): it was filed under no phase, so the coach's
+// Check-ins page never showed it and it could not be taken off. Dropped when it
+// is still exactly that: the client's only line, Body · Weight · kg · daily,
+// no phase, nothing logged, no measurement fields, no lifestyle phase. Anything a
+// coach set up, or that has a reading, stays.
+export function dropUnusedAutoWeight(clientId: number) {
+  const data = getData();
+  const mine = data.metric_definitions.filter((m) => m.client_id === clientId);
+  if (mine.length !== 1) return;
+  const m = mine[0];
+  if (m.name !== "Weight" || m.category !== "Body" || m.unit !== "kg" || m.frequency !== "daily" || m.phase_id != null) return;
+  if (data.measurement_fields.some((f) => f.client_id === clientId)) return;
+  if (data.metric_entries.some((e) => e.metric_definition_id === m.id)) return;
+  if (listClientPhases(clientId).some((p) => p.track === "lifestyle")) return;
+  removeMetricDefinition(m.id);
+}
+
 export function getCheckInStatus(clientId: number): CheckInStatus {
   const today = localDateStr();
   const thisWeek = weekStart(today);

@@ -68,6 +68,7 @@ import {
   listClientPhases,
   weekStart,
   weeklyCheckInAskedToday,
+  dropUnusedAutoWeight,
   monthlyCheckInAskedToday,
   getPhotoCadence,
   getPhotoInstructions,
@@ -325,6 +326,8 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
   // ---- The check-in, counted the way its screen shows it (today's, plus
   // the week's on its day or while still owed), for the lifestyle card. ----
   // No Weight seeded for a client with no check-in lines (17 Oct, Alex): a new client starts with nothing; the coach adds what they want asked.
+  // One the app added before that, untouched and invisible to the coach, goes.
+  dropUnusedAutoWeight(CLIENT_ID);
   const sections = getCheckInSections(CLIENT_ID);
   const weeklyOpen = weeklyCheckInAskedToday(CLIENT_ID, sections.sections);
   const monthlyOpen = monthlyCheckInAskedToday(CLIENT_ID, sections.sections);
