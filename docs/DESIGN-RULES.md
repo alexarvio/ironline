@@ -40,6 +40,7 @@ Read this before touching any client screen. One hero language, one everyday lan
 - Segments and chips: white with the hairline, the active one ink with white text.
 - Anything on/off (17 Oct, Alex): white while off, ink while on. The rest timer, KG/LBS, filter chips, Settings switches, the current tab in the nav. An action like Demo is not a toggle: it stays a white secondary pill.
 - Inside a row, an action is its words alone (Fill in, Edit, Use, View), no pill.
+- A note the client writes (17 Oct, Alex), in a pop-up or on a page: no box, the words on a hairline underline (`#C9CFD8`, ink while typing), 16px at 500. Cancel is a text action, Save or Send a small ink pill. Short fields like numbers, names and search keep their white hairline box.
 - Exceptions by choice: the indigo Live chip and the navy-tinted Up next chip on Training.
 - No navy fills, no gradients, no shadows under buttons.
 
