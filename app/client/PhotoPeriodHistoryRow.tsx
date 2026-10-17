@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import PhotoDeck from "./PhotoDeck";
 import { ChevronDownIcon, ChevronLeftIcon } from "../components/icons";
@@ -123,7 +124,8 @@ export function PhotoViewer({
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  return (
+  // On the page itself, not inside the screen (17 Oct): inside, the pushed screen's header drew over the bar, a second back arrow and its title on "2 of 2".
+  return createPortal(
     <div
       className="pp-app-viewer"
       role="dialog"
@@ -166,6 +168,7 @@ export function PhotoViewer({
           </button>
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
