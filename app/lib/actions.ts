@@ -3788,34 +3788,40 @@ const gramsOf = (v: FormDataEntryValue | null) => {
 // The food diary's actions leave /client alone (17 Oct): the diary reads its day back
 // itself, and a revalidate re-rendered the whole client page inside every add,
 // which made adding food slow and jumpy. Leaving the diary refreshes the page once.
-export async function addFoodEntryAction(formData: FormData) {
+/** The day as it now is comes back (17 Oct), so the diary needs one round trip, not a save and then a read. */
+export async function addFoodEntryAction(formData: FormData): Promise<FoodDiaryView | null> {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const date = String(formData.get("date") ?? "");
   const meal = String(formData.get("meal") ?? "");
   const foodId = String(formData.get("foodId") ?? "");
   const grams = gramsOf(formData.get("grams"));
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !hasFoodMeal(clientId, meal, date) || !foodId || grams == null) return;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !hasFoodMeal(clientId, meal, date) || !foodId || grams == null) return null;
   const serving = String(formData.get("serving") ?? "").trim().slice(0, 80) || null;
   addFoodEntry(clientId, date, meal as FoodMeal, foodId, grams, serving);
   revalidatePath("/admin");
+  return getFoodDiary(clientId, date);
 }
 
-export async function updateFoodEntryAction(formData: FormData) {
+export async function updateFoodEntryAction(formData: FormData): Promise<FoodDiaryView | null> {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const id = Number(formData.get("id"));
   const grams = gramsOf(formData.get("grams"));
-  if (!Number.isInteger(id) || grams == null) return;
+  if (!Number.isInteger(id) || grams == null) return null;
   const serving = String(formData.get("serving") ?? "").trim().slice(0, 80) || null;
   updateFoodEntry(clientId, id, grams, serving);
   revalidatePath("/admin");
+  const date = String(formData.get("date") ?? "");
+  return diaryDateOk(date) ? getFoodDiary(clientId, date) : null;
 }
 
-export async function removeFoodEntryAction(formData: FormData) {
+export async function removeFoodEntryAction(formData: FormData): Promise<FoodDiaryView | null> {
   const clientId = await requireClientAccess(Number(formData.get("clientId")));
   const id = Number(formData.get("id"));
-  if (!Number.isInteger(id)) return;
+  if (!Number.isInteger(id)) return null;
   removeFoodEntry(clientId, id);
   revalidatePath("/admin");
+  const date = String(formData.get("date") ?? "");
+  return diaryDateOk(date) ? getFoodDiary(clientId, date) : null;
 }
 
 /** Returns the new food's id ("custom:12") so the diary can add it straight away. */

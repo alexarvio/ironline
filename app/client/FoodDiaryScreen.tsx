@@ -72,6 +72,25 @@ export type FoodOptionView = {
   servings: [string, number][];
 };
 export type Macros = { kcal: number; protein: number; carbs: number; fat: number };
+
+// ---- At once (17 Oct): an add, an edit or a remove shows before the server answers.
+const r1 = (n: number) => Math.round(n * 10) / 10;
+type MacroKey = "kcal" | "protein" | "carbs" | "fat";
+/** The day with its meal and day totals worked out again from the rows. */
+function retotal(d: FoodDiaryProps): FoodDiaryProps {
+  const meals = d.meals.map((m) => {
+    const tot = (k: MacroKey) => r1(m.entries.reduce((s, e) => s + e[k], 0));
+    return { ...m, kcal: Math.round(tot("kcal")), protein: tot("protein"), carbs: tot("carbs"), fat: tot("fat") };
+  });
+  const all = meals.flatMap((m) => m.entries);
+  const sum = (k: MacroKey) => r1(all.reduce((s, e) => s + e[k], 0));
+  return { ...d, meals, eaten: { kcal: sum("kcal"), protein: sum("protein"), carbs: sum("carbs"), fat: sum("fat") } };
+}
+/** A row's macros from the food's per-100 g values. */
+const rowOf = (food: FoodOptionView, grams: number) => {
+  const k = grams / 100;
+  return { kcal: r1(food.kcal * k), protein: r1(food.protein * k), carbs: r1(food.carbs * k), fat: r1(food.fat * k) };
+};
 export type FoodDiaryProps = {
   date: string;
   dateLabel: string;
@@ -315,19 +334,24 @@ export default function FoodDiaryScreen({
   useDropOnTapOutside(askRemove != null, setAskRemove);
   useDropOnTapOutside(askForgetDay != null, setAskForgetDay);
   const forgetHold = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The row goes at once; the server's day replaces the guess when it comes.
+  const applyLocal = (fn: (d: FoodDiaryProps) => FoodDiaryProps) => setDiary((d) => retotal(fn(d)));
+  const settle = (forDate: string, next: FoodDiaryProps | null) => {
+    if (next && next.date === forDate) setDiary((d) => (d.date === forDate ? next : d));
+    else if (!next) reload();
+  };
   const removeRow = (id: number) => {
     const fd = new FormData();
     fd.set("clientId", String(clientId));
     fd.set("id", String(id));
+    fd.set("date", date);
     setAskRemove(null);
     const meal = diary.meals.find((m) => m.entries.some((e) => e.id === id))?.id;
     if (meal) holdMeal(meal);
     if (panel?.kind === "amount" && panel.entry?.id === id) setPanel(null);
-    startLoad(async () => {
-      await removeFoodEntryAction(fd);
-      const next = await getFoodDiaryAction(clientId, date);
-      if (next) setDiary(next);
-    });
+    applyLocal((d) => ({ ...d, meals: d.meals.map((m) => ({ ...m, entries: m.entries.filter((e) => e.id !== id) })) }));
+    const forDate = date;
+    void removeFoodEntryAction(fd).then((next) => settle(forDate, next), () => reload());
   };
   // Which meal is being saved under a name.
   const [savingMeal, setSavingMeal] = useState<FoodMeal | null>(null);
@@ -1179,10 +1203,9 @@ export default function FoodDiaryScreen({
                             mealLabel={meal.label}
                             food={open.food}
                             entry={e}
-                            onDone={() => {
-                              closePanel();
-                              reload();
-                            }}
+                            apply={applyLocal}
+                            settle={settle}
+                            onDone={closePanel}
                             onCancel={closePanel}
                           />
                         )}
@@ -1218,10 +1241,9 @@ export default function FoodDiaryScreen({
                         meal={meal.id}
                         mealLabel={meal.label}
                         food={open.food}
-                        onDone={() => {
-                          closePanel();
-                          reload();
-                        }}
+                        apply={applyLocal}
+                        settle={settle}
+                        onDone={closePanel}
                         onCancel={() => {
                           holdMeal(meal.id);
                           setPanel({ kind: "search", meal: meal.id });
@@ -1655,6 +1677,8 @@ function AmountPanel({
   mealLabel,
   food,
   entry,
+  apply,
+  settle,
   onDone,
   onCancel,
 }: {
@@ -1664,6 +1688,10 @@ function AmountPanel({
   mealLabel: string;
   food: FoodOptionView;
   entry?: FoodEntryView;
+  /** Shows the change on the day at once. */
+  apply: (fn: (d: FoodDiaryProps) => FoodDiaryProps) => void;
+  /** Puts the server's day in place of the guess. */
+  settle: (forDate: string, next: FoodDiaryProps | null) => void;
   onDone: () => void;
   onCancel: () => void;
 }) {
@@ -1695,7 +1723,8 @@ function AmountPanel({
   const startAmount = entry ? entry.grams / unit.grams : unit.portion ? 1 : unit.id === "ml" ? 250 : 100;
   const [amountText, setAmountText] = useState(g(startAmount));
   const [confirmRemove, setConfirmRemove] = useState(false);
-  const [pending, start] = useTransition();
+  // Saves no longer wait on the server, so nothing is pending here.
+  const pending = false;
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     const t = setTimeout(() => {
@@ -1719,34 +1748,39 @@ function AmountPanel({
     if (grams > 0) setAmountText(g(grams / next.grams));
   };
 
+  // The panel closes and the row shows at once (17 Oct); the server's day replaces the guess when it comes.
   const save = () => {
     if (!ok) return;
+    const g1 = Math.round(grams * 10) / 10;
     const fd = new FormData();
     fd.set("clientId", String(clientId));
-    fd.set("grams", String(Math.round(grams * 10) / 10));
+    fd.set("grams", String(g1));
     fd.set("serving", servingLabel ?? "");
-    start(async () => {
-      if (entry) {
-        fd.set("id", String(entry.id));
-        await updateFoodEntryAction(fd);
-      } else {
-        fd.set("date", date);
-        fd.set("meal", meal);
-        fd.set("foodId", food.id);
-        await addFoodEntryAction(fd);
-      }
+    fd.set("date", date);
+    const macros = rowOf(food, g1);
+    if (entry) {
+      fd.set("id", String(entry.id));
+      apply((d) => ({ ...d, meals: d.meals.map((m) => ({ ...m, entries: m.entries.map((e) => (e.id === entry.id ? { ...e, grams: g1, serving: servingLabel, ...macros } : e)) })) }));
       onDone();
-    });
+      void updateFoodEntryAction(fd).then((next) => settle(date, next), () => settle(date, null));
+    } else {
+      fd.set("meal", meal);
+      fd.set("foodId", food.id);
+      const temp: FoodEntryView = { id: -Date.now(), meal, food_id: food.id, name: food.name, grams: g1, serving: servingLabel, ...macros };
+      apply((d) => ({ ...d, meals: d.meals.map((m) => (m.id === meal ? { ...m, entries: [...m.entries, temp] } : m)) }));
+      onDone();
+      void addFoodEntryAction(fd).then((next) => settle(date, next), () => settle(date, null));
+    }
   };
   const remove = () => {
     if (!entry) return;
     const fd = new FormData();
     fd.set("clientId", String(clientId));
     fd.set("id", String(entry.id));
-    start(async () => {
-      await removeFoodEntryAction(fd);
-      onDone();
-    });
+    fd.set("date", date);
+    apply((d) => ({ ...d, meals: d.meals.map((m) => ({ ...m, entries: m.entries.filter((e) => e.id !== entry.id) })) }));
+    onDone();
+    void removeFoodEntryAction(fd).then((next) => settle(date, next), () => settle(date, null));
   };
 
   return (
