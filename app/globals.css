@@ -20274,3 +20274,6 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .pp-todo-save { border-top: 0; box-shadow: none; }
 /* No line between the note and Save (17 Oct). */
 .cki-foot { border-top: 0; box-shadow: none; }
+/* In the check-in and add-event pop-ups the note has no underline (17 Oct, Alex): Save sits right under it, and the line read as a bar between the two. */
+.cki-note-box.cki-note-box, .cki-note-box.cki-note-box.has, .cki-note-box.cki-note-box:focus-within { border-bottom: 0; }
+.evs-note.evs-note textarea, .evs-note.evs-note textarea:focus { border-bottom: 0; }
