@@ -64,7 +64,7 @@ export default function InvoicesScreen({ invoices, onBack }: InvoicesProps & { o
         <div className="mts-scroll">
           <section className="mts-section" aria-label="To pay">
             <div className="mts-head">To pay</div>
-            {open.length > 0 ? list(open) : <p className="mts-empty">Nothing to pay right now.</p>}
+            {open.length > 0 ? list(open) : <p className="mts-empty">{invoices.length === 0 ? "No invoices yet." : "Nothing to pay right now."}</p>}
           </section>
           {paid.length > 0 && (
             <section className="mts-section" aria-label="Paid">
