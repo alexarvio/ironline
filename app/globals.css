@@ -20281,3 +20281,8 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .mt-asksheet .evs-title, .mt-asksheet .evs-title.ring { height: auto; padding: 6px 0 8px; border-radius: 0; background: none; box-shadow: none; }
 .mt-asksheet .evs-title input { font-size: 16px; font-weight: 500; }
 .mt-asksheet .evs-note.evs-note textarea { height: auto; min-height: 48px; padding: 6px 0 8px; font-size: 16px; }
+/* The wrap-up page without lines (17 Oct, Alex): rows and sections are set apart by space alone; the note sits right above the swipe, so no underline either. */
+.wo-wrap .wo-checklist, .wo-wrap .wo-checklist.wo-checklist { border: 0; box-shadow: none; }
+.wo-wrap .wo-check-row, .wo-wrap .wo-check-row.done, .wo-wrap .wo-check-row:first-child { border-top: 0; }
+.wo-wrap .wo-ask, .wo-wrap .wo-coach-note { border-top: 0; padding-top: 18px; }
+.wo-wrap .wo-coach-note .wo-note-input, .wo-wrap .wo-coach-note .wo-note-input:focus { border-bottom: 0; }
