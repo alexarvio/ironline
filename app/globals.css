@@ -19981,3 +19981,6 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .cm-msg.mine.mine .cm-edit-cancel { border-color: #C9CFD8; background: #fff; color: #141a24; }
 .cm-msg.mine.mine .cm-edit-save { background: #141a24; color: #fff; }
 .cm-compose .chat-send-btn.chat-send-btn, .cm-compose .chat-send-btn.chat-send-btn:hover { background: #E6EAF1; border-color: #E6EAF1; box-shadow: none; color: #141a24; font-weight: 600; }
+/* The video row in the session overview flat on the page (17 Oct, Alex): no white pill, just the icon, the words and Open in a line. The icon starts at the content's left edge like TARGET and the coach's note; Open is centred in the last quarter, under the RPE column, instead of hard against the right. Doubled for the dev-server CSS order. */
+.so-screen .so-video.so-video, .so-screen .so-video.so-video.sent, .so-screen .so-video.so-video.replied { height: 44px; padding: 0; border-radius: 0; background: none; box-shadow: none; }
+.so-screen .so-video.so-video b { flex: 0 0 25%; text-align: center; }
