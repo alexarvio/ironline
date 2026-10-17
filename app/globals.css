@@ -19967,3 +19967,17 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 /* The week ring in Training's own indigo (17 Oct, Alex: black was too sad); green when the week is done. */
 .tr-body .tr-ring .tr-ring-fill { stroke: #3a3390 !important; }
 .tr-body .tr-ring.done .tr-ring-fill { stroke: #2f7a3f !important; }
+/* The phase cards lose their drop shadow (17 Oct, Alex): its haze darkened the grey for ~15px around each card, so the strip behind the cards read as a different background from the rest of Home. Flat on the page like everything else. Doubled for the dev-server CSS order. */
+.pc-card.pc-card { box-shadow: none; }
+/* Your chat bubbles on a soft grey-blue tint, not ink (17 Oct, Alex: solid black was heavy on the eye). Ink text, palette-grey times, the edit, file and quote bits re-toned for a light bubble; the coach's stay white with the hairline. Send matches: ink on the same tint. Doubled for the dev-server CSS order. */
+.cm-msg.mine.mine { background: #E6EAF1; box-shadow: none; }
+.cm-msg.mine.mine .cm-msg-text { color: #141a24; }
+.cm-msg.mine.mine .cm-msg-time { color: #6b7383; }
+.cm-msg.mine.mine .cm-chev { color: #6b7383; }
+.cm-msg.mine.mine .cm-msg-file { background: rgba(20, 26, 36, 0.05); border-color: #D3D9E2; color: #141a24; }
+.cm-msg.mine.mine .cm-quote { background: rgba(20, 26, 36, 0.05); border-left-color: #8b93a1; }
+.cm-msg.mine.mine .cm-quote b { color: #141a24; }
+.cm-msg.mine.mine .cm-quote span { color: #5b6474; }
+.cm-msg.mine.mine .cm-edit-cancel { border-color: #C9CFD8; background: #fff; color: #141a24; }
+.cm-msg.mine.mine .cm-edit-save { background: #141a24; color: #fff; }
+.cm-compose .chat-send-btn.chat-send-btn, .cm-compose .chat-send-btn.chat-send-btn:hover { background: #E6EAF1; border-color: #E6EAF1; box-shadow: none; color: #141a24; font-weight: 600; }
