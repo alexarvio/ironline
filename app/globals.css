@@ -20272,3 +20272,5 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .pp-app-sheet-remove:disabled { opacity: 0.5; cursor: default; }
 /* No line between the photos and Done / Send while editing (17 Oct). */
 .pp-todo-save { border-top: 0; box-shadow: none; }
+/* No line between the note and Save (17 Oct). */
+.cki-foot { border-top: 0; box-shadow: none; }
