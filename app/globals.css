@@ -20270,3 +20270,5 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 /* Remove photo in the photo pop-up (17 Oct): a white hairline pill with the words in the palette rust. */
 .pp-app-sheet-remove { min-height: 48px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font: inherit; font-size: 14px; font-weight: 600; color: #b8471f; cursor: pointer; }
 .pp-app-sheet-remove:disabled { opacity: 0.5; cursor: default; }
+/* No line between the photos and Done / Send while editing (17 Oct). */
+.pp-todo-save { border-top: 0; box-shadow: none; }
