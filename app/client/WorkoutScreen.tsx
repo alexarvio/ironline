@@ -336,11 +336,13 @@ export default function WorkoutScreen({
                     <MenuIcon kind="media" />
                     Send a photo or video
                   </button>
-                  {/* The note for yourself fourth, after the swap (30 Sep). */}
-                  <button type="button" role="menuitem" className="wo-menu-row ico" onClick={() => ask("note")}>
-                    <MenuIcon kind="note" />
-                    {currentNote ? "Edit your note" : "Add a note for yourself"}
-                  </button>
+                  {/* The note for yourself fourth, after the swap (30 Sep); not on a substitute, whose note would be the replaced exercise's (17 Oct). */}
+                  {!currentEx.swap && (
+                    <button type="button" role="menuitem" className="wo-menu-row ico" onClick={() => ask("note")}>
+                      <MenuIcon kind="note" />
+                      {currentNote ? "Edit your note" : "Add a note for yourself"}
+                    </button>
+                  )}
                 </>
               )}
               {/* Editing a finished session: no Discard, it is kept. */}

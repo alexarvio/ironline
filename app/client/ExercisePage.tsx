@@ -453,7 +453,7 @@ export default function ExercisePage({
       {exercise.swap && (
         <div className="wo-swap-banner">
           <span>
-            Instead of <b>{exercise.name}</b>, today only. {coachName} will see this.
+            Substitute for <b>{exercise.name}</b>
           </span>
           <button type="button" onClick={() => startTransition(() => clearSwapAction(exercise.id))}>
             Undo
@@ -461,7 +461,8 @@ export default function ExercisePage({
         </div>
       )}
 
-      <CoachNote assignmentId={exercise.id} note={exercise.note} />
+      {/* Swapped (17 Oct, Alex): the coach's cue, the client's own note and the video asks belong to the exercise it replaced, so none of them show. */}
+      {!swapped && <CoachNote assignmentId={exercise.id} note={exercise.note} />}
 
       {/* The coach's demo, its own row; nothing at all without one. */}
       {exercise.videoUrl && (
@@ -476,7 +477,7 @@ export default function ExercisePage({
       )}
 
 
-      {ask && (ask.note || ask.src || ask.reply) && (
+      {ask && (!swapped || ask.about === "swap") && (ask.note || ask.src || ask.reply) && (
         <button
           type="button"
           className={`wo-video${ask.reply ? " replied" : ask.src ? " sent" : " asked"}${ask.reply && !ask.reply.seen ? " unseen" : ""}`}
@@ -589,7 +590,7 @@ export default function ExercisePage({
         {failed && <div className="lw-offline">Couldn&rsquo;t save · trying again on your next change</div>}
       </div>
 
-      {noteOpen ? (
+      {swapped ? null : noteOpen ? (
         <div className="wo-note editing">
           <span className="wo-note-label">Your note</span>
           <textarea className="wo-note-input" value={noteDraft} autoFocus rows={2} placeholder="Seat height, grip, cues. Only you see this." onChange={(e) => setNoteDraft(e.target.value)} />
