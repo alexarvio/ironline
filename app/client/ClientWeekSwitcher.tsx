@@ -136,8 +136,8 @@ export default function ClientWeekSwitcher({
           <div>
             <div className="week-locked-title">{weekLabels?.[selected] ?? `Week ${selected}`} is locked</div>
             <div className="week-locked-sub">
-              It opens when the week starts. Finish this week&rsquo;s sessions first. Your coach builds each
-              week on the last.
+              It opens when the week starts. Your coach plans each week from how the last one went, so finish
+              this week&rsquo;s sessions first.
             </div>
           </div>
         </div>
