@@ -1458,7 +1458,8 @@ export default async function ClientPage({
   const invoices = (() => {
     const today = localDateStr();
     const list = listClientInvoices(CLIENT_ID);
-    if (list.length === 0) return null;
+    // Always there (17 Oct, Alex): with none yet the menu still has Invoices, and the screen says there is nothing to pay.
+    if (list.length === 0) return { invoices: [] };
     const short = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
     const rows = list.map((v) => {
       const when = new Date(`${v.issueDate}T12:00:00`);
