@@ -45,6 +45,28 @@ export default function PhotoPeriodHistoryRow({
   // The photo open full screen, as an index into the sent ones.
   const [viewing, setViewing] = useState<number | null>(null);
   const sent = photos.filter((p): p is Photo & { src: string } => !!p.src);
+  // Opening a sheet waited on its photos (17 Oct, Alex): they are fetched quietly once the screen
+  // has settled, one after another, so a tap on the row finds them in the cache.
+  const srcKey = sent.map((p) => p.src).join("|");
+  useEffect(() => {
+    if (!srcKey) return;
+    let cancelled = false;
+    const queue = srcKey.split("|");
+    const next = () => {
+      if (cancelled) return;
+      const src = queue.shift();
+      if (!src) return;
+      const img = new Image();
+      img.decoding = "async";
+      img.onload = img.onerror = () => next();
+      img.src = src;
+    };
+    const t = setTimeout(next, 600);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [srcKey]);
   // The body mounts the first time the row opens and then stays, so closing can ease shut (17 Oct).
   const [mounted, setMounted] = useState(open);
   if (open && !mounted) setMounted(true);
