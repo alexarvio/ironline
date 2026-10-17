@@ -20065,3 +20065,10 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .ev-x-note.ev-x-note { padding: 0; border-radius: 0; background: none; font-size: 14px; font-weight: 500; line-height: 1.5; color: #3a4250; }
 /* The event progress knob centred on the line exactly (17 Oct, Alex): fixed offsets (top -3px on a 2px fill nudged half a pixel) left it a touch low; now it is centred by transform on the fill's middle. */
 .evp-knob.evp-knob { top: 50%; right: 0; transform: translate(50%, -50%); }
+/* The focused ring grows by size, not by transform (17 Oct, Alex: one side looked thicker). iOS Safari draws a scaled layer at its old size and stretches it, so the 1.5px edge came out uneven. Now the ring is laid out at the bigger size (36 to 46, the live one 44 to 56, about ×1.27) with negative margins so nothing around it moves, and the edge is drawn crisp at its final size; only the icon inside is scaled. Doubled for the dev-server CSS order. */
+.evp-ring.evp-ring { transform: none; transition: width 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), margin 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.evp-r.focus .evp-ring.evp-ring { transform: none; width: 46px; height: 46px; margin: -5px; }
+.evp-r.focus .evp-ring.evp-ring.now { width: 56px; height: 56px; margin: -6px; }
+.evp-ring.evp-ring svg { transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.25s; }
+.evp-r.focus .evp-ring.evp-ring svg { transform: scale(1.27); }
+@media (prefers-reduced-motion: reduce) { .evp-ring.evp-ring, .evp-ring.evp-ring svg { transition: none; } }
