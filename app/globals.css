@@ -20234,3 +20234,10 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 /* Edit and Delete as their words alone (17 Oct, Alex: no pills), side by side at the left under the note: Edit in ink, Delete in the palette rust, 600; the "are you sure" step just its words too. */
 .ev-x .ev-x-actions { justify-content: flex-start; gap: 22px; }
 .ev-x .ev-btn.ev-btn, .ev-x .ev-btn.ev-btn.danger.sure { flex: none; width: auto; height: 32px; padding: 0; border-radius: 0; background: none; box-shadow: none; font-size: 13.5px; font-weight: 600; }
+/* A new meal's name in the shared voice (17 Oct, Alex): the box white with the hairline, ink while typing, 500 type, not a teal edge; the empty meal's note flat in the secondary grey, no grey box; Remove this meal a text action in the palette rust. Doubled for the dev-server CSS order. */
+.fdi-meal-name-box.fdi-meal-name-box { height: 40px; border: 0; border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1.5px #141a24; font-weight: 500; color: #141a24; outline: none; }
+.fdi-meal-name-box.fdi-meal-name-box::placeholder { color: #98A2B3; }
+.fdi-meal-empty .fdi-meal-empty-note.fdi-meal-empty-note { padding: 4px 0; border-radius: 0; background: none; font-size: 13.5px; font-weight: 500; color: #8b93a1; }
+.fdi-meal-empty .fdi-meal-empty-note.fdi-meal-empty-note { text-align: left; }
+.fdi-meal-empty.fdi-meal-empty { align-items: flex-start; padding: 0 0 12px; }
+.fdi-meal-remove.fdi-meal-remove { padding: 6px 0; font-weight: 600; color: #b8471f; }
