@@ -5804,6 +5804,28 @@ export function monthlyCheckInOpen(clientId: number, dateStr = localDateStr()): 
   return day != null && Number(dateStr.slice(8, 10)) >= day;
 }
 
+// Whether the week's (or month's) lines belong on TODAY's check-in (17 Oct,
+// Alex): on the agreed day, and after it only while still owed. Once all are
+// filled they stop riding along every day after, which also stops the ring
+// starting each day with that chunk already full. Filled today, they stay
+// for the rest of today so what was just saved can be seen and edited.
+function periodAskedToday(section: CheckInSection | undefined, period: string, isTheDay: boolean, dateStr: string): boolean {
+  if (isTheDay || !section?.metrics.length) return true;
+  if (section.metrics.some((m) => m.value === "")) return true;
+  return getMetricEntries(section.metrics.map((m) => Number(m.id))).some((e) => e.period === period && e.logged_at?.slice(0, 10) === dateStr);
+}
+
+export function weeklyCheckInAskedToday(clientId: number, sections: CheckInSection[], dateStr = localDateStr()): boolean {
+  if (!weeklyCheckInOpen(clientId, dateStr)) return false;
+  const monBased = (new Date(`${dateStr}T00:00:00`).getDay() + 6) % 7;
+  return periodAskedToday(sections.find((s) => s.id === "weekly"), weekStart(dateStr), monBased === (weeklyCheckInWeekday(clientId) ?? 0), dateStr);
+}
+
+export function monthlyCheckInAskedToday(clientId: number, sections: CheckInSection[], dateStr = localDateStr()): boolean {
+  if (!monthlyCheckInOpen(clientId, dateStr)) return false;
+  return periodAskedToday(sections.find((s) => s.id === "monthly"), monthStart(dateStr), Number(dateStr.slice(8, 10)) === monthlyCheckInDay(clientId), dateStr);
+}
+
 /** The monthly metrics the client is asked for: none until the coach has picked the day. */
 export function listMonthlyMetricsAsked(clientId: number): MetricDefinition[] {
   return monthlyCheckInDay(clientId) == null ? [] : listMetricDefinitions(clientId, "monthly").filter(deployedToClient);

@@ -68,8 +68,8 @@ import {
   getStoredNutritionPlan,
   listClientPhases,
   weekStart,
-  weeklyCheckInOpen,
-  monthlyCheckInOpen,
+  weeklyCheckInAskedToday,
+  monthlyCheckInAskedToday,
   getPhotoCadence,
   getPhotoInstructions,
   getPhotoPeriodNote,
@@ -323,11 +323,11 @@ function HomeTab({ CLIENT_ID, photos, food, phoneTz }: { CLIENT_ID: number; phot
   const upcoming: UpcomingMeeting = upcomingMeeting ? meetingCardView(upcomingMeeting, today, phoneTz) : null;
 
   // ---- The check-in, counted the way its screen shows it (today's, plus
-  // the week's while its window is open), for the lifestyle card. ----
+  // the week's on its day or while still owed), for the lifestyle card. ----
   ensureDefaultMetrics(CLIENT_ID);
   const sections = getCheckInSections(CLIENT_ID);
-  const weeklyOpen = weeklyCheckInOpen(CLIENT_ID);
-  const monthlyOpen = monthlyCheckInOpen(CLIENT_ID);
+  const weeklyOpen = weeklyCheckInAskedToday(CLIENT_ID, sections.sections);
+  const monthlyOpen = monthlyCheckInAskedToday(CLIENT_ID, sections.sections);
   const onScreen = sections.sections.filter((s) => s.id === "daily" || (s.id === "monthly" ? monthlyOpen : weeklyOpen)).flatMap((s) => s.metrics);
   const checkInCount = { done: onScreen.filter((m) => m.value !== "").length, total: onScreen.length };
 
@@ -1326,8 +1326,8 @@ export default async function ClientPage({
     pictures: bannerPictures(CLIENT_ID, "lifestyle"),
     sections: checkInData.sections,
     dueSections: checkInStatusForScreen.dueTypes as string[],
-    weeklyOpen: weeklyCheckInOpen(CLIENT_ID),
-    monthlyOpen: monthlyCheckInOpen(CLIENT_ID),
+    weeklyOpen: weeklyCheckInAskedToday(CLIENT_ID, checkInData.sections),
+    monthlyOpen: monthlyCheckInAskedToday(CLIENT_ID, checkInData.sections),
     objectives: getCurrentPhase(CLIENT_ID, "lifestyle")?.objectives ?? [],
     history: getCheckInHistory(CLIENT_ID),
     // The hub's streak and month, and everything done, day by day, for its calendar (28 Sep).
