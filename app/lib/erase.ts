@@ -13,7 +13,7 @@ import { deleteClerkUser } from "./clerk";
 // out after 30 days.
 
 // Every uploads folder that is per client: <kind>/<clientId>/...
-const CLIENT_UPLOAD_KINDS = ["avatars", "chat", "demos", "meals", "phases", "progress", "videos"] as const;
+const CLIENT_UPLOAD_KINDS = ["avatars", "chat", "covers", "demos", "gyms", "meals", "phases", "progress", "videos"] as const;
 
 export async function eraseClient(clientId: number, opts: { selfDeleted: boolean; keepInvoices?: boolean }) {
   const data = getData();
