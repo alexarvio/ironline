@@ -51,7 +51,8 @@ const GROUP_LABELS: Record<string, string> = { trip: "Trips", supplement: "Suppl
 const TODAY_ROW = 0;
 
 // Every event opens, the coach's too, with Edit and Delete (10 Oct); a phase only when it has objectives to show.
-const hasMore = (e: HomeEvent) => (e.phase ? !!e.note : true);
+// A past event opens only for its note (17 Oct, Alex): it can no longer be edited or deleted, like a phase.
+const hasMore = (e: HomeEvent, status?: Status) => (e.phase || status === "past" ? !!e.note : true);
 
 const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 const monthOf = (iso: string) => MONTHS[Number(iso.slice(5, 7)) - 1];
@@ -436,7 +437,7 @@ function EventRow(p: RowProps) {
     ro.observe(el);
     return () => ro.disconnect();
   }, [e.title, focus]);
-  const more = hasMore(e) || clipped;
+  const more = hasMore(e, status) || clipped;
   const left = progress ? progress.total - progress.day : 0;
   return (
     <div ref={refFn} className={`evp-r ${status}${lit ? " lit" : ""}${focus ? " focus" : ""}${open ? " open" : ""}`} style={{ "--c": c.color, "--rgb": c.rgb } as React.CSSProperties}>
@@ -509,9 +510,9 @@ function FreeDayRow({ today, title, focus, refFn }: { today: string; title: stri
   );
 }
 
-function RowMore({ e, open, coachName, pending, clipped, onEdit, onDelete }: Pick<RowProps, "e" | "open" | "coachName" | "pending" | "onEdit" | "onDelete"> & { clipped: boolean }) {
+function RowMore({ e, status, open, coachName, pending, clipped, onEdit, onDelete }: Pick<RowProps, "e" | "status" | "open" | "coachName" | "pending" | "onEdit" | "onDelete"> & { clipped: boolean }) {
   const [sure, setSure] = useState(false);
-  if (!hasMore(e) && !clipped) return null;
+  if (!hasMore(e, status) && !clipped) return null;
   return (
     <div className={`ev-x evp-x${open ? " open" : ""}`} aria-hidden={!open}>
       <div className="ev-x-clip">
@@ -519,7 +520,7 @@ function RowMore({ e, open, coachName, pending, clipped, onEdit, onDelete }: Pic
           {clipped && <p className="evp-x-title">{e.title}</p>}
           {e.note && <p className="ev-x-note">{e.note}</p>}
           {/* No "Added by you · Finlay can see it" line (17 Oct, Alex): the avatar on the row already says whose it is. */}
-          {!e.phase && (
+          {!e.phase && status !== "past" && (
             <div className="ev-x-actions">
               <button type="button" className="ev-btn" onClick={onEdit} disabled={pending || !open} tabIndex={open ? 0 : -1}>
                 Edit
