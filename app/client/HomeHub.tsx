@@ -207,7 +207,7 @@ export default function HomeHub({
         {upcoming ? (
           <MeetingCard m={upcoming} recap={recap} coachFirstName={coach.firstName} />
         ) : (
-          recap && <LastMeetingCard recap={recap} coachFirstName={coach.firstName} />
+          recap ? <LastMeetingCard recap={recap} coachFirstName={coach.firstName} /> : <NoMeetingsCard coachFirstName={coach.firstName} />
         )}
       </div>
     </div>
@@ -516,6 +516,24 @@ export function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<Upcom
 
 
 // Nothing booked: the coach's notes from the last call instead.
+// No call booked and none had yet (17 Oct, Alex): the section still shows, so the client knows calls live here, with the way to ask for one.
+function NoMeetingsCard({ coachFirstName }: { coachFirstName: string }) {
+  const openMeetings = useOpenMeetings();
+  return (
+    <section className="hm-last-meeting hm-no-meeting" aria-label={`Meetings with ${coachFirstName}`}>
+      <div className="hm-tasks-head">
+        <span className="hm-eyebrow">Meetings with {coachFirstName}</span>
+        {openMeetings && (
+          <button type="button" className="hm-mt-all-link" onClick={() => openMeetings?.()}>
+            Request a meeting
+          </button>
+        )}
+      </div>
+      <p className="hm-mt-none">No meetings yet.</p>
+    </section>
+  );
+}
+
 function LastMeetingCard({ recap, coachFirstName }: { recap: NonNullable<MeetingRecap>; coachFirstName: string }) {
   const openMeetings = useOpenMeetings();
   // A heading above, like "Latest from": the card holds the date and the notes.

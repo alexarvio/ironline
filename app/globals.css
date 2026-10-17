@@ -20310,3 +20310,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .cm-start { margin: auto 0 0; padding: 0 24px 14px; font-size: 12.5px; font-weight: 500; color: #8b93a1; text-align: center; }
 /* Media in the chat header as its icon and word alone, no white pill (17 Oct, Alex). Doubled for the dev-server CSS order. */
 .cmg-btn.cm-media-btn, .cmg-btn.cm-media-btn:hover { height: auto; padding: 6px 4px; border: 0; border-radius: 0; background: none; box-shadow: none; font-weight: 600; color: #141a24; }
+/* Nutrition with nothing set up (17 Oct, Alex): the Training banner's size and type over the nutrition photo. */
+.tr-banner.nd-naked-banner { background-image: url("/img/nutrition-head.jpg"); background-position: right center; }
+/* Home's meetings with none yet (17 Oct): the heading and Request a meeting, one quiet line under it. */
+.hm-mt-none { margin: 0; padding: 4px 0 0; font-size: 14px; font-weight: 500; color: #8b93a1; }

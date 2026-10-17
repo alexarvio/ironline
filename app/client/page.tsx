@@ -100,6 +100,7 @@ import type { ProgressPics } from "./ProgressPicsCard";
 import NutritionTargetsCard, { type NutritionTargetSet } from "./NutritionTargetsCard";
 import CoachCard from "./CoachCard";
 import FitTitle from "./FitTitle";
+import PictureCycle from "./PictureCycle";
 import PhaseObjectives from "./PhaseObjectives";
 import PushToggle from "./PushToggle";
 import { ConnectedApps } from "./HealthSync";
@@ -823,6 +824,24 @@ function NutritionTab({ CLIENT_ID }: { CLIENT_ID: number }) {
   // The nutrition phase the client is in, named as the coach named it on the
   // Plan tab: which week of it this is, one segment per week, and when it ends.
   const nutritionPhase = getCurrentPhase(CLIENT_ID, "nutrition");
+  // Nothing set up yet (17 Oct, Alex: "very naked"): the Training tab's banner, same size, with the nutrition photo,
+  // and one line. No day tabs, rings, supplements or last 7 days until the coach deploys a phase or targets.
+  if (!nutritionPhase && !hasTargets) {
+    const pics = bannerPictures(CLIENT_ID, "nutrition");
+    return (
+      <div className="tr nd-naked">
+        <header className="tr-banner nd-naked-banner">
+          {pics.length > 0 && <PictureCycle pictures={pics} className="tr-banner-pic" />}
+          <span className="tr-banner-glow" aria-hidden="true" />
+          <div className="tr-kicker">Nutrition</div>
+          <FitTitle className="tr-name">Your nutrition</FitTitle>
+        </header>
+        <div className="tr-body">
+          <p className="empty-note">Your phase will be deployed soon.</p>
+        </div>
+      </div>
+    );
+  }
   const phaseSlot = nutritionPhase ? (
     (() => {
       const total = phaseWeeks(nutritionPhase.start_week, nutritionPhase.end_week);
