@@ -19999,3 +19999,23 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .gpk-badge-pick { position: absolute; left: 12px; top: 50%; width: 44px; height: 44px; margin-top: -22px; padding: 0; border: 0; border-radius: 14px; background: none; cursor: pointer; }
 .gpk-badge-pick:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .gpk-badge.busy { animation: none; opacity: 0.6; } }
+/* The workout's video row flat on the page too (17 Oct, Alex), like the session overview's: no white pill, the icon, the words and Open in a line. */
+.lw .wo-video.wo-video, .lw .wo-video.wo-video.sent, .lw .wo-video.wo-video.replied { padding: 6px 0; border-radius: 0; background: none; box-shadow: none; }
+.lw .wo-video.wo-video .wo-video-tile { margin-left: -3px; }
+.lw .wo-video.asked .wo-video-tile::after, .lw .wo-video.unseen .wo-video-tile::after { border-color: #F5F6F8; }
+/* The set rows (17 Oct, Alex): bigger, about twice the numbers; a logged set's numbers in green the way a warm-up's are amber; a set added beyond the plan keeps a dashed circle once logged; and the timeline no longer shows through the circles, which were faded with opacity: they now take muted colours on a solid disc of the page grey instead. Doubled for the dev-server CSS order. */
+.lw-row.lw-row, .lw-row.lw-row.done, .lw-row.lw-row.extra, .lw-row.lw-row.done.extra, .lw-row.lw-row.done.warm { height: 68px; gap: 16px; padding: 0 6px 0 2px; }
+.lw-row.lw-row .lw-row-badge { width: 36px; height: 36px; background: #F5F6F8; font-size: 14px; opacity: 1; }
+.lw-row.lw-row .lw-row-badge svg { width: 16px; height: 16px; }
+.lw-row.lw-row .lw-row-sum { font-size: 30px; gap: 8px; }
+.lw-row.lw-row .lw-row-u { font-size: 15px; }
+.lw-row.lw-row .lw-row-x { font-size: 18px; }
+.lw-row.lw-row .lw-row-rpe { font-size: 13px; }
+.lw-row.lw-row.done { color: #2f7a3f; }
+.lw-row.lw-row.done .lw-row-badge { box-shadow: inset 0 0 0 1.5px #82ad8b; outline: 0; }
+.lw-row.lw-row.done .lw-row-badge svg { stroke: #82ad8b; }
+.lw-row.lw-row.done.warm { color: #a8761f; }
+.lw-row.lw-row.done.warm .lw-row-badge { box-shadow: inset 0 0 0 1.5px #cbad79; }
+.lw-row.lw-row.done.warm .lw-row-badge svg { stroke: #cbad79; }
+.lw-row.lw-row.extra .lw-row-badge { box-shadow: none; outline: 1.5px dashed #C9CFD8; outline-offset: -1.5px; }
+.lw-row.lw-row.done.extra .lw-row-badge { box-shadow: none; outline: 1.5px dashed #82ad8b; outline-offset: -1.5px; }
