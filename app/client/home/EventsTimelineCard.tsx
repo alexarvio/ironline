@@ -131,11 +131,13 @@ export default function EventsTimelineCard({ events, today }: { events: HomeEven
 function Item({ item, focused, onPick }: { item: TimelineItem; focused: boolean; onPick: () => void }) {
   const c: Chrome = item.event ? chromeOf(item.event) : NEUTRAL;
   const icon = item.slot === "more" ? "M5 12h14M13 6l6 6-6 6" : c.icon;
-  const live = item.slot === "today" && !!item.event;
+  // Today always pulses (17 Oct, Alex): a live event in its colour, an empty day in ink.
+  const live = item.slot === "today";
+  const ink = item.slot === "today" && !item.event;
   const cls = `evt-item ${item.slot}${focused ? " on" : ""}${live ? " live" : ""}`;
-  const spoken = item.slot === "more" ? "See all events" : item.event ? `${item.label}: ${item.event.title}, ${item.when}${item.slot === "past" ? ", done" : ""}` : "Today: nothing on, free day";
+  const spoken = item.slot === "more" ? "See all events" : item.event ? `${item.label}: ${item.event.title}, ${item.when}${item.slot === "past" ? ", done" : ""}` : "Today: nothing on";
   return (
-    <button type="button" role="option" aria-selected={focused} aria-label={spoken} className={cls} style={{ "--c": c.color, "--rgb": c.rgb } as React.CSSProperties} onClick={onPick}>
+    <button type="button" role="option" aria-selected={focused} aria-label={spoken} className={cls} style={{ "--c": ink ? "#141a24" : c.color, "--rgb": ink ? "20,26,36" : c.rgb } as React.CSSProperties} onClick={onPick}>
       <span className="evt-ring">
         <LineIcon path={icon} />
       </span>

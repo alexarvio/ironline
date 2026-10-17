@@ -487,7 +487,7 @@ function EventRow(p: RowProps) {
   );
 }
 
-// Today with nothing on: the date, an empty ring in ink with no icon, and the words. Nothing to open.
+// Today with nothing on: the date, an empty ring in ink with no icon, pulsing like a live event's (17 Oct), and the words; no "Free day" line. Nothing to open.
 function FreeDayRow({ today, title, focus, refFn }: { today: string; title: string; focus: boolean; refFn: (el: HTMLElement | null) => void }) {
   return (
     <div ref={refFn} className={`evp-r today${focus ? " focus" : ""}`} style={{ "--c": "#141a24", "--rgb": "20,26,36" } as React.CSSProperties}>
@@ -504,7 +504,6 @@ function FreeDayRow({ today, title, focus, refFn }: { today: string; title: stri
           <span className="evp-title-row">
             <span className="evp-title">{title}</span>
           </span>
-          <span className="evp-when">Free day</span>
         </span>
       </div>
     </div>

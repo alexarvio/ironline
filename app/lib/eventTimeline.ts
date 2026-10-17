@@ -6,7 +6,7 @@ export type TimelineEvent = { id: number; kind: string | null; title: string; st
 
 export type TimelineItem =
   | { key: string; slot: "past" | "today" | "upcoming"; event: TimelineEvent; label: string; when: string }
-  | { key: string; slot: "today"; event: null; label: "Today"; when: "Free day" }
+  | { key: string; slot: "today"; event: null; label: "Today"; when: "" }
   | { key: string; slot: "more"; event: null; label: ""; when: "" };
 
 const DAY = 86400000;
@@ -63,7 +63,7 @@ export function buildTimeline(events: TimelineEvent[], today: string): { items: 
     items.push({ key: `p${e.id}`, slot: "past", event: e, label: last ? "Last" : ongoing(e, today) ? "Started" : "Done", when: whenPast(e, today) });
   });
   const todayIndex = items.length;
-  if (todays.length === 0) items.push({ key: "today", slot: "today", event: null, label: "Today", when: "Free day" });
+  if (todays.length === 0) items.push({ key: "today", slot: "today", event: null, label: "Today", when: "" });
   for (const e of todays) items.push({ key: `t${e.id}`, slot: "today", event: e, ...whenToday(e, today) });
   upcoming.forEach((e, i) => items.push({ key: `u${e.id}`, slot: "upcoming", event: e, label: i === 0 ? "Next" : "Coming up", when: whenUpcoming(today, e.start) }));
   items.push({ key: "more", slot: "more", event: null, label: "", when: "" });
