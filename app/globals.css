@@ -20169,3 +20169,40 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 /* The first objective's ring had its top shaved off (17 Oct, Alex): the -1px lift poked it above the fold's clip. No lift, and 2px of room at the top of the list. */
 .po.po .po-n { margin-top: 0; }
 .po.po .po-list { padding-top: 2px; }
+/* ---- Adding food in the shared voice (17 Oct, Alex): the meal's add panel flat on the page (no grey box), the small grey label; Search / Copy a meal as a segment, white with the hairline and the chosen side ink; the search field and the barcode button white with the hairline, ink while typing; results flat rows under hairlines, 500/600 type; Cancel, Back, Search packaged foods and Add your own food as ink text actions, not teal; the amount and unit fields white with the hairline; Add one ink pill. The barcode sheet the same: a plain white sheet, the typed field and Look up as hairline field and pill, the error in the palette rust. The protein, carbs and fat colours stay. Doubled for the dev-server CSS order. */
+.fdi-panel.fdi-panel { margin: 4px 0 14px; padding: 10px 4px 4px; border-radius: 0; background: none; }
+.fdi-row-wrap.selected > .fdi-panel.fdi-panel { border-radius: 0; }
+.fdi-panel.fdi-panel .fdi-panel-cancel { font-weight: 600; color: #141a24; }
+.fdi-panel.fdi-panel .fdi-modes { padding: 0; gap: 6px; border-radius: 0; background: none; }
+.fdi-panel.fdi-panel .fdi-mode { min-height: 38px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-weight: 600; color: #141a24; }
+.fdi-panel.fdi-panel .fdi-mode.on { background: #141a24; box-shadow: none; color: #fff; }
+.fdi-panel.fdi-panel .fdi-search, .fdi-panel.fdi-panel .fdi-scan-btn { border: 0; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #8b93a1; }
+.fdi-panel.fdi-panel .fdi-search:focus-within { box-shadow: inset 0 0 0 1.5px #141a24; }
+.fdi-panel.fdi-panel .fdi-scan-btn { color: #141a24; }
+.fdi-panel.fdi-panel .fdi-search input { font-weight: 500; color: #141a24; }
+.fdi-panel.fdi-panel .fdi-search input::placeholder { color: #98A2B3; }
+.fdi-panel.fdi-panel .fdi-results-label, .fdi-panel.fdi-panel .fdi-field-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
+.fdi-panel.fdi-panel .fdi-result { border-top-color: #E1E5EB; }
+.fdi-panel.fdi-panel .fdi-result-name { font-weight: 500; color: #141a24; }
+.fdi-panel.fdi-panel .fdi-result-hint { font-weight: 500; color: #8b93a1; }
+.fdi-panel.fdi-panel .fdi-result-kcal { font-weight: 600; color: #141a24; }
+.fdi-panel.fdi-panel .fdi-result-kcal small { color: #8b93a1; }
+.fdi-panel.fdi-panel .fdi-more { border-top-color: #E1E5EB; font-weight: 600; color: #141a24; }
+.fdi-panel.fdi-panel .fdi-link { font-weight: 600; color: #141a24; }
+.fdi-panel.fdi-panel .fdi-hint, .fdi-panel.fdi-panel .fdi-empty { font-weight: 500; color: #8b93a1; }
+.fdi-panel.fdi-panel .fdi-food-name { font-size: 16px; font-weight: 600; color: #141a24; }
+.fdi-panel.fdi-panel .fdi-amount input, .fdi-panel.fdi-panel .fdi-unit select { border: 0; border-radius: 14px; background-color: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-weight: 500; color: #141a24; }
+.fdi-panel.fdi-panel .fdi-amount input:focus, .fdi-panel.fdi-panel .fdi-unit select:focus { box-shadow: inset 0 0 0 1.5px #141a24; outline: none; }
+.fdi-panel.fdi-panel .fdi-primary, .fdi-scan.fdi-scan .fdi-primary { min-height: 48px; border-radius: 999px; background: #141a24; font-weight: 600; color: #fff; }
+.fdi-panel.fdi-panel .fdi-primary:disabled { background: #C9CFD8; color: #fff; }
+.fdi-panel.fdi-panel .fdi-secondary, .fdi-scan.fdi-scan .fdi-secondary { border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-weight: 600; color: #141a24; }
+.fdi-scan.fdi-scan .fdi-secondary:disabled { color: #98A2B3; }
+.fdi-scan-scrim.fdi-scan-scrim { background: rgba(20, 26, 36, 0.45); }
+.fdi-scan.fdi-scan { gap: 14px; padding: 18px 18px calc(16px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; background: #fff; }
+.fdi-scan.fdi-scan .fdi-sheet-title { font-size: 17px; font-weight: 600; color: #141a24; }
+.fdi-scan.fdi-scan .fdi-sheet-x { color: #141a24; }
+.fdi-scan.fdi-scan .fdi-scan-view { border-radius: 14px; background: #141a24; }
+.fdi-scan.fdi-scan .fdi-scan-error { font-weight: 500; color: #b8471f; }
+.fdi-scan.fdi-scan .fdi-scan-typed input { border: 0; border-radius: 14px; box-shadow: inset 0 0 0 1px #E1E5EB; font-weight: 500; color: #141a24; }
+.fdi-scan.fdi-scan .fdi-scan-typed input:focus { box-shadow: inset 0 0 0 1.5px #141a24; }
+.fdi-scan.fdi-scan .fdi-scan-typed input::placeholder { color: #98A2B3; }
