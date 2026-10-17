@@ -20161,3 +20161,5 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .tr-body .tr-note-btn.tr-note-btn { height: 36px; padding: 0 10px; border: 0; border-radius: 999px; background: none; font-size: 13px; font-weight: 600; color: #5b6474; }
 .tr-body .tr-note-btn.tr-note-btn.primary { padding: 0 16px; background: #141a24; color: #fff; }
 .tr-body .tr-note-btn.tr-note-btn.primary:disabled { background: #C9CFD8; opacity: 1; }
+/* Training's sessions without hairlines between them (17 Oct, Alex): the spine and the space do the parting. */
+.tr-body .tr-row + .tr-row::after, .tr-body .tr-x + .tr-row::after { display: none; }
