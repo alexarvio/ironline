@@ -7,6 +7,7 @@ import { useOpenPhotos } from "./CheckInContext";
 import CoachMark from "./CoachMark";
 import FitTitle from "./FitTitle";
 import ProgressCompare from "./ProgressCompare";
+import PhotoDeck from "./PhotoDeck";
 import PhotoPeriodHistoryRow, { NOTE_LABELS, type HistoryNote } from "./PhotoPeriodHistoryRow";
 
 // Deliberately does not import from ../lib/queries (a "use client" file
@@ -299,47 +300,39 @@ function OpenSheet({
             </p>
           )}
 
-          {/* One numbered row per angle the coach asks for, Add on the right. */}
-          <ol className="pp-todo-rows">
-            {sheet.slots.map((s, i) => {
+          {/* How to take them, first (17 Oct, Alex): the coach's general instructions sit above the cards, read before the camera comes out. */}
+          {sheet.instructions && (
+            <div className="pp-todo-coach first">
+              <span className="pp-app-coach-label coach-eyebrow">
+                <CoachMark />
+                How to take them
+              </span>
+              <p className="pp-app-coach-text">{sheet.instructions}</p>
+            </div>
+          )}
+
+          {/* The angles the coach asks for as a swipe of big cards (17 Oct, Alex); an empty one is a card too, a tap adds or changes its photo. */}
+          <PhotoDeck
+            disabled={saving}
+            onTap={(i) => setPicking(sheet.slots[i])}
+            items={sheet.slots.map((s) => {
               const item = staged[s.id];
               const uploading = uploadingId === s.id;
               const src = item?.preview ?? s.src;
               const ticked = item ? sent.includes(s.id) : !!s.src;
               const ready = !!item && !ticked && !uploading;
-              return (
-                <li key={s.id} className={`pp-todo-row${ready ? " ready" : ""}`}>
-                  {src ? (
-                    <span className="pp-todo-thumb">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={src} alt="" />
-                    </span>
-                  ) : (
-                    <span className="pp-todo-num" aria-hidden="true">
-                      {i + 1}
-                    </span>
-                  )}
-                  <span className="pp-todo-name">
-                    {s.label}
-                    {(uploading || ready || ticked) && (
-                      <span className={`pp-todo-state${ticked && !uploading ? " sent" : ""}`}>
-                        {uploading ? "Sending…" : ready ? "Ready" : "Sent"}
-                      </span>
-                    )}
-                  </span>
-                  <button
-                    type="button"
-                    className="pp-todo-add"
-                    disabled={saving}
-                    onClick={() => setPicking(s)}
-                    aria-label={src ? `Change ${s.label}` : `Add ${s.label}`}
-                  >
-                    {src ? "Change" : "Add"}
-                  </button>
-                </li>
-              );
+              return {
+                key: s.id,
+                label: s.label,
+                src: src ?? null,
+                // Sent (17 Oct, Alex): locked, it is Finlay's now; no Change on the card. "Edit photos" on the sent sheet reopens it.
+                state: uploading ? "Sending…" : ready ? "Ready" : ticked ? "Sent" : null,
+                tone: ready ? ("ready" as const) : ticked && !uploading ? ("sent" as const) : null,
+                locked: ticked && !uploading,
+                action: ticked && !uploading ? null : src ? "Change" : "Add photo",
+              };
             })}
-          </ol>
+          />
 
           {(stagedCount > 0 || editing || saving) && (
             <div className="pp-todo-save">
@@ -357,16 +350,6 @@ function OpenSheet({
                   {saving ? "Sending…" : stagedCount === 1 ? "Send 1 photo" : `Send ${stagedCount} photos`}
                 </button>
               )}
-            </div>
-          )}
-
-          {sheet.instructions && (
-            <div className="pp-todo-coach">
-              <span className="pp-app-coach-label coach-eyebrow">
-                <CoachMark />
-                From your coach
-              </span>
-              <p className="pp-app-coach-text">{sheet.instructions}</p>
             </div>
           )}
 

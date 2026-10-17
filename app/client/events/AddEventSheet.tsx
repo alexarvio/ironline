@@ -76,10 +76,16 @@ export default function AddEventSheet({
   const ok = title.trim().length > 0 && valid(start) && endOk;
   const dirty = title.trim() !== (seed?.title ?? "") || note.trim() !== (seed?.note ?? "");
 
-  // ---- The type: its colour everywhere marked (type); Supplement opens on One day until the mode is touched.
+  // ---- The type: its colour everywhere marked (type). Until the mode is touched, a new event follows the
+  // type both ways (17 Oct, Alex): One day for a supplement, a date range for the rest. It used to switch to
+  // One day for a supplement and then stay there whatever was picked next.
   const pickType = (id: EventTypeId) => {
     setType(id);
-    if (!touchedMode && eventTypeOf(id).oneDay) setOneDay(true);
+    if (touchedMode || seed) return;
+    const one = !!eventTypeOf(id).oneDay;
+    if (one === oneDay) return;
+    setOneDay(one);
+    if (!one) setEnd(addDays(start, 6));
   };
   const setMode = (one: boolean) => {
     setTouchedMode(true);

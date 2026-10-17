@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import PhotoDeck from "./PhotoDeck";
 import { ChevronDownIcon, ChevronLeftIcon } from "../components/icons";
 
 type Photo = { slotId: number; label: string; src: string | null };
@@ -62,38 +63,11 @@ export default function PhotoPeriodHistoryRow({
 
       {open && (
         <div className="pp-app-past-body">
-          {/* A row per angle, as it was asked for: the photo (tap for full screen) and its name. */}
-          <div className="pp-rows">
-            {photos.map((p) =>
-              p.src ? (
-                // Opens in the app, not as a link: from the home screen a
-                // link to the image has no browser bar and no way back.
-                <button
-                  key={p.slotId}
-                  type="button"
-                  className="pp-row in"
-                  aria-label={`${p.label}, full size`}
-                  onClick={() => setViewing(sent.findIndex((s) => s.slotId === p.slotId))}
-                >
-                  <span className="pp-row-thumb">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={p.src} alt="" />
-                  </span>
-                  <span className="pp-row-text">
-                    <span className="pp-row-name">{p.label}</span>
-                  </span>
-                  <span className="pp-row-view">View</span>
-                </button>
-              ) : (
-                <div key={p.slotId} className="pp-row">
-                  <span className="pp-row-text">
-                    <span className="pp-row-name">{p.label}</span>
-                  </span>
-                  <span className="pp-row-missing">Not sent</span>
-                </div>
-              )
-            )}
-          </div>
+          {/* The angles as a swipe of big cards (17 Oct, Alex), the empty ones too; a photo opens full screen in the app (a link to the image from the home screen has no way back). */}
+          <PhotoDeck
+            onTap={(i) => setViewing(sent.findIndex((s) => s.slotId === photos[i].slotId))}
+            items={photos.map((p) => ({ key: p.slotId, label: p.label, src: p.src ?? null, state: p.src ? null : "Not sent", tone: p.src ? null : ("muted" as const), action: p.src ? "View" : null }))}
+          />
 
           {notes.length > 0 && (
             <div className="pp-app-notes">

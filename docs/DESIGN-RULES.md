@@ -6,6 +6,8 @@ Read this before touching any client screen. One hero language, one everyday lan
 - **Hero**: the phase cards on Home only. Full-bleed photo, dark glass panel, white type. Nothing else may look like this.
 - **Hairline**: everything else. Thin 1px lines, rings and icons alone, light type, the page colour behind. No white cards with borders and drop shadows, no gradient fills, no tiles around icons.
 
+**Where hairline belongs (16 Oct, Alex):** screens you read and scroll: lists, feeds, timelines (Home, Events, Meetings, Notifications, the session overview under its photo header, and the workout screen: sets on one spine, the open set as big light numerals with a thin underline instead of a box; the Training tab, progress pictures, settings, the check-in screen, the food diary, Nutrition, invoices and, lightly, chat too). Pop-ups and sheets where you enter things (the check-in, measurements, Add an event, Request a meeting, the gym picker) keep their fields and boxes; don't flatten them. Since 17 Oct they speak the shared voice: a plain white sheet (no wash or glow), titles at 600, small grey uppercase labels, fields and tiles white with a hairline (ink while typing), the chosen choice ink, the thing's colour only on its icon, ring or edge, one ink pill to save.
+
 **The one exception (16 Oct, by choice):** the Training tab's week card and its session cards keep their card shape (the done tint does real work on a to-do list). They speak the shared tokens: 500/600 type, the palette indigo and green, tints at 8–12%, a white hairline chip for Up next. Do not restyle them to hairline rows; that was tried and reverted.
 
 ## 2. Page and lines
@@ -34,7 +36,11 @@ Read this before touching any client screen. One hero language, one everyday lan
 - Primary: ink pill `#141a24`, white text, height 38–44, 600. One per screen at most.
 - Secondary: white pill with the hairline inset, ink text.
 - Text action: 12–13px, 600, ink or `#5b6474`, no underline.
+- A pill that opens a list (Saved days, Supplements; 17 Oct): closed, the white hairline pill; open, the pill stays as the header and the list drops out under it flat on the page, tied to the pill's icon by a thin line down the left that runs behind the rows. No white box round the list.
 - Segments and chips: white with the hairline, the active one ink with white text.
+- Anything on/off (17 Oct, Alex): white while off, ink while on. The rest timer, KG/LBS, filter chips, Settings switches, the current tab in the nav. An action like Demo is not a toggle: it stays a white secondary pill.
+- Inside a row, an action is its words alone (Fill in, Edit, Use, View), no pill.
+- Exceptions by choice: the indigo Live chip and the navy-tinted Up next chip on Training.
 - No navy fills, no gradients, no shadows under buttons.
 
 ## 7. Motion
@@ -44,9 +50,14 @@ Read this before touching any client screen. One hero language, one everyday lan
 
 ## 8. Layout
 - Section eyebrow at 28px in from the screen edge, content 16px in, rows may bleed edge to edge.
+- Sections vs. items (16 Oct): a section label (Events, Latest from, Meetings) is ink `#141a24` at 11.5px and sits under a hairline 16px in from the screen edge, with room above. Labels inside a section stay grey, and lines inside a section are inset (40px), so they read as a level below.
 - Dates in a left column as light numerals, one date per day, the live one dated today.
-- No position dots, no "See all" when a tap on the item already leads there, no explanation sentences.
+- No position dots (except under the Home phase cards, brought back 16 Oct by Alex), no "See all" when a tap on the item already leads there, no explanation sentences.
 
 ## 9. Before editing
 - Check this file. If a spec you were given conflicts with it, follow this file and say so.
 - Reuse an existing pattern (events row, Events screen, progress pill, workout header) before inventing one.
+- A list over time is the Events-screen itinerary (`evp-` classes): white pill on top to add or ask, one spine, light date numerals, a snap spot that grows its row, the past greyed under a PAST label. A row opens only when it has more; then it gets a chevron.
+  - Events: a Today row always, even when nothing (shown) is on: an empty ink ring with no icon, "Nothing on today" (or "No trips today" under a filter).
+  - Notifications: flat rows with a hairline between them (inset to the text), the ink dot and a 600 title for unread, 500 once read. Text cut at two lines gets a chevron by the title that eases it open in place; the row itself still opens the thing.
+  - Meetings: calls are few, so no Today row. The next call is a fixed white pill under the ask ("No upcoming meetings" when none), more booked behind "+1 more"; only the past scrolls, with its snap spot near the top.

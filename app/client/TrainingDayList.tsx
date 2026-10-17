@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { Fragment, useEffect, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { pickGymAction, startSessionAction } from "../lib/actions";
 import type { GymOption } from "./GymPickerDialog";
 import SessionOverview, { STATUS_LABEL } from "./SessionOverview";
 import WorkoutScreen from "./WorkoutScreen";
 import { useFocusRef, useNavigateTab, useOpenMessages, useTrainingFocus, type TrainingFocus } from "./CheckInContext";
-import { clock, durationMinutes, elapsedMs, loggedSets, plannedSets, sessionStatus, shortDate, useTicker, type SessionDay } from "./workoutShared";
+import { clock, durationMinutes, elapsedMs, isDone, loggedSets, plannedSets, roundTo, sessionStatus, shortDate, shownName, useTicker, type SessionDay } from "./workoutShared";
 
-// The week's sessions as rows on the Training tab. A row opens the
+// The week's sessions as rows on the Training tab. A finished session (swiped
+// to its end) opens in place with its sets (16 Oct); any other row opens the
 // session's overview as its own screen; "Start session" there opens the
 // workout. Both screens are laid over the app (a layer in the phone's
 // stack), so the tab keeps its week and its scroll underneath. Which screen
@@ -146,6 +147,8 @@ export default function TrainingDayList({
   const nextKey = currentWeek ? days.find((d) => sessionStatus(d, false) === "upcoming")?.key ?? null : null;
 
   const [host, setHost] = useState<HTMLElement | null>(null);
+  // The finished session open in place, if any.
+  const [expanded, setExpanded] = useState<number | null>(null);
 
   return (
     <>
@@ -172,8 +175,12 @@ export default function TrainingDayList({
                   .filter(Boolean)
                   .join(" · ");
           const tone = status === "done" ? "done" : status === "unfinished" ? "unfinished" : status === "live" ? "live" : isNext ? "next" : status;
+          // A session swiped to its end (16 Oct, Alex) opens in place with what was done; the full screen is a link inside.
+          const ended = (status === "done" || status === "unfinished") && !!d.endedAt;
+          const isOpen = ended && expanded === d.key;
           return (
-            <button key={d.key} type="button" className={`tr-row ${tone}`} onClick={() => setView({ dayId: d.key, screen: "overview" })}>
+            <Fragment key={d.key}>
+            <button type="button" className={`tr-row ${tone}${isOpen ? " open" : ""}`} onClick={() => (ended ? setExpanded((k) => (k === d.key ? null : d.key)) : setView({ dayId: d.key, screen: "overview" }))} aria-expanded={ended ? isOpen : undefined}>
               <span className={`tr-row-tile ${tone}`}>{d.index}</span>
               <span className="tr-row-main">
                 <span className="tr-row-title">{d.title}</span>
@@ -187,6 +194,45 @@ export default function TrainingDayList({
               )}
               <span className="tr-row-chev" aria-hidden="true" />
             </button>
+            {ended && (
+              <div className={`ev-x tr-x${isOpen ? " open" : ""}`} aria-hidden={!isOpen}>
+                <div className="ev-x-clip">
+                  <div className="tr-x-in">
+                    {d.exercises.map((ex) => {
+                      const sets = ex.logs.slice().sort((a, b) => a.setNumber - b.setNumber);
+                      return (
+                        <div key={ex.id} className={`tr-x-ex${isDone(ex) ? " done" : ""}`}>
+                          <span className="tr-x-name">{shownName(ex)}</span>
+                          {sets.length === 0 ? (
+                            <span className="tr-x-none">Not logged</span>
+                          ) : (
+                            sets.map((l) => (
+                              <span key={l.id} className="tr-x-set">
+                                <span className="tr-x-n">{l.setNumber > ex.sets ? `Set ${l.setNumber} · extra` : `Set ${l.setNumber}`}</span>
+                                <span className="tr-x-v">
+                                  {l.weight != null ? `${roundTo(l.weight, 2)} kg` : "–"} × {l.reps ?? "–"}
+                                  {l.rpe != null && <small> · RPE {l.rpe}</small>}
+                                </span>
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      );
+                    })}
+                    {d.cardio.map((c) => (
+                      <div key={`c${c.id}`} className={`tr-x-ex${c.done ? " done" : ""}`}>
+                        <span className="tr-x-name">{c.swap ?? c.name}</span>
+                        <span className="tr-x-none">{c.done ? "Done" : "Not done"}</span>
+                      </div>
+                    ))}
+                    <button type="button" className="tr-x-open" onClick={() => setView({ dayId: d.key, screen: "overview" })} tabIndex={isOpen ? 0 : -1}>
+                      Open session
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            </Fragment>
           );
         })}
       </div>

@@ -19047,7 +19047,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 /* ---- Home in the hairline language (16 Oct, docs/DESIGN-RULES.md): the phase cards stay the hero; Latest from the coach and the meeting cards lose their boxes, gradients and shadows. */
 .hm-eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: 0.18em; color: #5b6474; }
 .hm-tasks-head { padding: 0 12px 6px; }
-/* Latest from the coach: one row on the page, a hairline under the text, two text actions. */
+/* Latest from the coach: one row on the page, two text actions under the text. */
 .hm-lt, .hm-lt.hm-lt { padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; overflow: visible; }
 .hm-lt-body { padding: 4px 12px 12px; gap: 14px; }
 .hm-lt-body:active { background: none; }
@@ -19059,7 +19059,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .hm-lt-title { font-size: 16px; font-weight: 500; letter-spacing: -0.01em; color: #141a24; }
 .hm-lt-body.unseen .hm-lt-title { font-weight: 600; }
 .hm-lt-desc { font-size: 13px; font-weight: 500; line-height: 1.45; color: #3a4250; }
-.hm-lt-foot { justify-content: flex-end; gap: 18px; margin: 0 12px; padding-top: 10px; border-top: 1px solid #E1E5EB; }
+.hm-lt-foot { justify-content: flex-end; gap: 18px; margin: 0 12px; padding-top: 0; border-top: 0; }
 .hm-lt-more, .hm-lt-cta { flex: none; height: 32px; padding: 0; font-size: 13px; font-weight: 600; }
 .hm-lt-more { color: #5b6474; }
 .hm-lt-cta { color: #141a24; }
@@ -19137,6 +19137,56 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .tr-row-chev { border-color: #98A2B3; }
 .tr-resume { border-radius: 999px; background: #141a24; }
 .tr-resume-main b, .tr-resume-time, .tr-resume-chip { font-weight: 600; }
+/* ---- Training tab blend (16 Oct): the done box stays; numbers and the week ring back to navy (green once done), Up next as a navy-tinted chip. */
+.tr-row-tile, .tr-row-tile.live, .tr-row-tile.next { color: #1E3A5F; }
+.tr-row-pill.next { background: rgba(30, 58, 95, 0.1); box-shadow: none; color: #1E3A5F; }
+.tr-ring-fill { stroke: #1E3A5F !important; }
+.tr-ring.done .tr-ring-fill { stroke: #2f7a3f !important; }
+/* ---- Home sections read as three (16 Oct): Events, Latest from the coach and Meetings each open with an ink label and a hairline 16px in from the screen edge, with room above it. The lines inside a section stay inset at 40px, so they read as a level below. */
+.evt-eyebrow, .hm-latest-note > .hm-tasks-head .hm-eyebrow, .hm-meeting > .hm-tasks-head .hm-eyebrow, .hm-last-meeting > .hm-tasks-head .hm-eyebrow { font-size: 11.5px; color: #141a24; }
+.hm-body > .evt, .hm-body > .hm-latest-note, .hm-body > .hm-meeting, .hm-body > .hm-last-meeting { position: relative; margin-top: 10px; padding-top: 22px; }
+.hm-body > .evt::before, .hm-body > .hm-latest-note::before, .hm-body > .hm-meeting::before, .hm-body > .hm-last-meeting::before { content: ""; position: absolute; top: 0; left: -12px; right: -12px; height: 1px; background: #E1E5EB; }
+.hm-body > .evt::before { left: 16px; right: 16px; }
+/* The free-day row on the Events screen (16 Oct): nothing to open. */
+.evp-r.today .evp-row { cursor: default; }
+/* ---- The Meetings screen as an itinerary (16 Oct): the Events screen's spine, rings and rows (evp-), plus a few of its own (mtp-). */
+.evp-add.asked { cursor: default; padding-right: 18px; }
+.mtp-withdraw { flex: none; height: 32px; padding: 0; border: 0; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #5b6474; cursor: pointer; }
+.mtp-empty { cursor: default; }
+.evp-x .mt-items { gap: 8px; }
+.evp-x .mt-item, .evp-x .mt-prose { font-size: 13.5px; font-weight: 500; color: #3a4250; }
+.evp-x .mt-linked { padding-top: 10px; border-top: 1px solid #E1E5EB; }
+.evp-x .mt-linked-label { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; color: #98A2B3; }
+/* The Today row with nothing on (Events, Meetings): an empty ring always drawn in ink, so today is marked even when it isn't the focus. */
+.evp-r.today .evp-ring { box-shadow: inset 0 0 0 1.5px #141a24, 0 0 0 4px #F5F6F8; }
+/* Meetings reshaped (16 Oct): the next call fixed under the ask as a white pill; the past a feed whose snap spot sits near its top. */
+.mtp-next { flex: none; display: flex; flex-direction: column; margin: 4px 20px; border-radius: 32px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
+.mtp-next.empty { background: none; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.mtp-next.empty .evp-add-text b { font-weight: 500; color: #8b93a1; }
+.mtp-next.live { box-shadow: inset 0 0 0 1px #2f7a3f; }
+.mtp-next.live .evp-add-text small { color: #2f7a3f; }
+.mtp-next-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 4px; align-self: stretch; padding: 0 6px 0 0; border: 0; border-radius: 999px; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.mtp-next-date { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 64px; line-height: 1; }
+.mtp-next-date b { font-size: 24px; font-weight: 300; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: #141a24; }
+.mtp-next-date small { margin-top: 3px; font-size: 9.5px; font-weight: 600; letter-spacing: 0.14em; color: var(--c, #98A2B3); }
+.mtp-next-ring { display: block; width: 28px; height: 28px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px #C9CFD8; }
+.mtp-join { flex: none; display: inline-flex; align-items: center; height: 40px; padding: 0 18px; border-radius: 999px; background: #141a24; color: #fff; font-size: 13.5px; font-weight: 600; text-decoration: none; }
+.mtp-more { align-self: flex-start; height: 28px; margin: 0 20px 4px 28px; padding: 0; border: 0; background: none; font: inherit; font-size: 12px; font-weight: 600; color: #5b6474; cursor: pointer; }
+.mtp-scroll { scroll-padding-top: 48px; }
+.mtp-tl { padding: 8px 0 calc(70vh + env(safe-area-inset-bottom, 0px)); }
+.mtp-next-row { display: flex; align-items: center; gap: 6px; min-height: 64px; padding-right: 8px; }
+.mtp-next-open:disabled { cursor: default; }
+.mtp-next-title { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.mtp-next-title b { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mtp-next-chev { flex: none; color: #98A2B3; transition: transform 0.25s; }
+.mtp-next.open .mtp-next-chev { transform: rotate(90deg); }
+.mtp-cal { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; color: #141a24; }
+.mtp-cal:active { background: rgba(20, 26, 36, 0.05); }
+.mtp-next-x .ev-x-in { padding: 0 20px 16px 68px; }
+.mtp-next-x .mt-item, .mtp-next-x .mt-prose { font-size: 13.5px; font-weight: 500; color: #3a4250; }
+/* Chevron by the title (16 Oct): the title only takes its own width, so the chevron sits right after it; the added-by face keeps to the far right. */
+.evp-title { flex: 0 1 auto; }
+.evp-by { margin-left: auto; }
 /* ---- Notifications in the hairline language (16 Oct, docs/DESIGN-RULES.md): flat rows on the pushed-screen grey, a hairline between them, 500/600 type, the ink dot for unread, the icon alone for system rows. Long words cut to two lines open in place from a chevron. */
 .ntf-markall { font-weight: 600; color: #141a24; box-shadow: inset 0 0 0 1px #E1E5EB; }
 .ntf-markall.off { color: #98A2B3; }
@@ -19175,3 +19225,745 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .ntf-empty b { font-weight: 600; color: #141a24; }
 .ntf-empty small { font-weight: 500; color: #8b93a1; }
 @media (prefers-reduced-motion: reduce) { .ntf-text, .ntf-more svg { transition: none; } }
+/* A booked call landed on from a notification glows in its colour for a moment. */
+.mtp-next.lit { animation: mtp-lit 900ms ease-out 150ms both; }
+@keyframes mtp-lit { from { background-color: rgba(var(--rgb), 0.12); } to { background-color: #fff; } }
+/* Phase-card dots back (16 Oct): under the card, in the gap the scroller leaves (the old -18px pulled them behind the card). */
+.pc-dots { position: relative; z-index: 1; margin-top: -2px; }
+/* ---- Session overview in the hairline language (16 Oct, docs/DESIGN-RULES.md): the photo header stays; the exercises sit flat on the page as rows with a hairline between them, navy numbers (green once done) as on the Training tab, 500/600 type, the palette greys instead of teal, the video ask a white hairline pill, Start an ink pill. Scoped to .so-screen so the workout screen's shared pieces (.so-tbl, .ts-coachnote) keep their look. */
+.so-screen { background: #F5F6F8; }
+.so-screen .so-body { padding: 14px 0 130px; }
+.so-screen .so-list-head { padding: 0 28px 4px; }
+.so-screen .so-list-head h2 { font-size: 11.5px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: #141a24; }
+.so-screen .so-list { gap: 0; }
+.so-screen .so-card, .so-screen .so-card.done, .so-screen .so-card-fold.done { position: relative; gap: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.so-screen .so-card + .so-card::before { content: ""; position: absolute; top: 0; left: 48px; right: 20px; height: 1px; background: #E1E5EB; }
+.so-screen .so-card-toggle { padding: 15px 20px 15px 16px; }
+.so-screen .so-card-toggle:active { background: rgba(20, 26, 36, 0.03); }
+.so-screen .so-num { width: 22px; font-size: 15px; font-weight: 500; color: #1E3A5F; }
+.so-screen .so-num.done { color: #2f7a3f; }
+.so-screen .so-card-name { font-size: 15.5px; font-weight: 500; letter-spacing: -0.01em; color: #141a24; }
+.so-screen .so-card-fold.open .so-card-name { font-weight: 600; }
+.so-screen .so-card.done .so-card-name { color: #3a4250; }
+.so-screen .so-card-summary { font-size: 12px; font-weight: 500; color: #8b93a1; }
+.so-screen .so-card-chev { width: 7px; height: 7px; border-right-width: 1.6px; border-bottom-width: 1.6px; border-color: #98A2B3; }
+.so-screen .so-card-body { gap: 12px; padding: 0 20px 18px 48px; }
+.so-screen .so-tbl-label { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
+.so-screen .so-tbl { padding-top: 10px; border-top: 1px solid #E1E5EB; }
+.so-screen .so-tbl small { font-size: 9.5px; font-weight: 600; letter-spacing: 0.14em; color: #98A2B3; }
+.so-screen .so-tbl b { font-size: 16px; font-weight: 500; color: #141a24; }
+.so-screen .ts-coachnote-label { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
+.so-screen .ts-coachnote-date { font-weight: 500; color: #8b93a1; }
+.so-screen .ts-coachnote-text { font-size: 14px; font-weight: 500; line-height: 1.45; color: #3a4250; }
+.so-screen .so-video, .so-screen .so-video.sent, .so-screen .so-video.replied { gap: 10px; height: 44px; padding: 0 16px 0 14px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 13px; font-weight: 500; color: #141a24; }
+.so-screen .so-video svg { width: 18px; height: 18px; stroke-width: 1.6; color: #a8761f; }
+.so-screen .so-video.sent svg, .so-screen .so-video.replied svg { color: #2f7a3f; }
+.so-screen .so-video b { font-size: 12.5px; font-weight: 600; color: #141a24; }
+.so-screen .so-notlogged, .so-screen .so-cardio-done { font-size: 13px; font-weight: 500; color: #8b93a1; }
+.so-screen .so-cta { background: linear-gradient(rgba(245, 246, 248, 0), #F5F6F8 30%); }
+.so-screen .so-start { height: 52px; border-radius: 999px; background: #141a24; box-shadow: none; font-size: 15.5px; font-weight: 600; }
+.so-screen .so-start:disabled { background: #C9CFD8; }
+.so-screen .so-cta-note { font-weight: 500; color: #8b93a1; }
+.so-screen .so-set { border-top-color: #E1E5EB; font-weight: 500; color: #141a24; }
+.so-screen .so-set-n { font-weight: 500; color: #8b93a1; }
+.so-screen .so-delta { padding: 0 9px; height: 22px; display: inline-flex; align-items: center; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 11.5px; font-weight: 600; color: #5b6474; }
+.so-screen .so-delta.up { background: #fff; box-shadow: inset 0 0 0 1px rgba(47, 122, 63, 0.35); color: #2f7a3f; }
+.so-screen .so-cardio-done { font-weight: 600; color: #2f7a3f; }
+/* ---- The workout screen in the hairline language (16 Oct, Alex liked the mockup): flat on the pushed-screen grey, thin progress lines, the sets on one spine like the Events screen. A done set is a green-ringed tick, faded; the open set has an ink ring and big light numerals with a thin underline to show they can be typed in; the sets to come are faded rows. No card, no shadows; 500/600 type. Logging itself is untouched. */
+.wo-head, .wo-page, .wo-dock { background: #F5F6F8; }
+.wo-seg { height: 8px; }
+.wo-seg span, .wo-seg.part span, .wo-seg.done span, .wo-seg.now span { height: 2px; border-radius: 2px; }
+.wo-seg span, .wo-seg.part span { background: #E1E5EB; }
+.lw .wo-ex-head { background: #F5F6F8; box-shadow: none; }
+.wo-eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; }
+.wo-ex-top .wo-ex-name, .lw .wo-ex-name { font-size: 25px; font-weight: 500; letter-spacing: -0.01em; }
+.lw .wo-nextup-label { font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #8b93a1; }
+.lw .wo-nextup-name { font-size: 12px; font-weight: 500; color: #8b93a1; }
+.lw .wo-nextup-label::after { content: " ·"; }
+.lw .ts-coachnote { margin-top: 4px; padding: 12px 4px 0; border-top: 1px solid #E1E5EB; }
+.lw .ts-coachnote-label { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
+.lw .ts-coachnote-text { font-size: 14px; font-weight: 500; line-height: 1.45; color: #3a4250; }
+.lw-demo, .lw-demo:active { height: 42px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; font-size: 13.5px; font-weight: 500; }
+.lw-demo:active { background: #FAFBFC; }
+.lw-demo-play svg, .lw-demo-play svg { width: 16px; height: 16px; fill: #141a24; }
+.lw-card, .lw-card.lw-card { gap: 4px; padding: 6px 0 0; border-radius: 0; background: none; box-shadow: none; }
+.lw-card-head { height: 34px; padding: 0 4px; }
+.lw-card-head .lw-eyebrow, .lw-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.18em; color: #141a24; }
+.lw-progress, .lw-progress.done { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; color: #8b93a1; }
+.lw-progress.done { color: #2f7a3f; }
+.lw-reps-target, .lw-reps-target.lw-reps-target { flex: 1; text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.1em; color: #8b93a1; }
+.lw-unit { padding: 2px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.lw-unit-btn { height: 26px; padding: 0 11px; font-size: 11.5px; font-weight: 600; color: #5b6474; }
+.lw-unit-btn.on { background: #141a24; color: #fff; box-shadow: none; }
+.lw-rows { position: relative; gap: 0; }
+.lw-rows::before { content: ""; position: absolute; left: 20px; top: 0; bottom: 0; border-left: 1px solid #E1E5EB; pointer-events: none; }
+.lw-fold { position: relative; }
+.lw-row, .lw-row.done, .lw-row.extra, .lw-row.done.extra, .lw-row.done.warm { height: 52px; gap: 14px; padding: 0 6px 0 6px; border-radius: 0; background: none; box-shadow: none; outline: 0; color: #8b93a1; }
+.lw-row.done { color: #141a24; }
+.lw-row.done .lw-row-sum, .lw-row.done .lw-row-rpe, .lw-row.done .lw-row-badge { opacity: 0.6; }
+.lw-row:active { background: rgba(20, 26, 36, 0.03); }
+.lw-row-badge, .lw-row.extra .lw-row-badge { width: 28px; height: 28px; border: 0; background: #F5F6F8; box-shadow: inset 0 0 0 1px #C9CFD8; outline: 0; font-size: 12px; font-weight: 500; color: #8b93a1; }
+.lw-row.done .lw-row-badge, .lw-row.done.extra .lw-row-badge { background: #F5F6F8; box-shadow: inset 0 0 0 1px #2f7a3f; outline: 0; }
+.lw-row-badge svg, .lw-row.done.extra .lw-row-badge svg { stroke: #2f7a3f; stroke-width: 2.4; }
+.lw-row.extra .lw-row-badge { box-shadow: none; outline: 1px dashed #C9CFD8; outline-offset: -1px; }
+.lw-row.warm .lw-row-badge { box-shadow: inset 0 0 0 1px rgba(168, 118, 31, 0.5); color: #a8761f; }
+.lw-row.done.warm { color: #a8761f; }
+.lw-row.done.warm .lw-row-badge { background: #F5F6F8; box-shadow: inset 0 0 0 1px #a8761f; }
+.lw-row.done.warm .lw-row-badge svg { stroke: #a8761f; }
+.lw-row-sum { flex: 1; justify-content: flex-start; font-size: 16px; font-weight: 500; }
+.lw-row-w { min-width: 0; text-align: left; }
+.lw-row-u { font-size: 12px; font-weight: 500; color: #8b93a1; }
+.lw-row-x { font-size: 13px; font-weight: 500; opacity: 0.6; }
+.lw-row-rpe, .lw-row.done .lw-row-rpe { font-size: 11.5px; font-weight: 500; color: #8b93a1; }
+.lw-open, .lw-open.saved, .lw-open.extra, .lw-open.extra.saved, .lw-open.saved.warm { padding: 10px 6px 12px; border-radius: 0; background: none; box-shadow: none; outline: 0; }
+.lw-open-head { gap: 14px; height: 36px; padding: 0; }
+.lw-badge, .lw-open.extra .lw-badge { width: 34px; height: 34px; margin-left: -3px; background: #F5F6F8; box-shadow: inset 0 0 0 1.5px #141a24; outline: 0; color: #141a24; font-size: 14px; font-weight: 500; }
+.lw-open.saved .lw-badge, .lw-open.extra.saved .lw-badge { background: #F5F6F8; box-shadow: inset 0 0 0 1.5px #2f7a3f; color: #2f7a3f; }
+.lw-open.extra .lw-badge { box-shadow: none; outline: 1.5px dashed #141a24; outline-offset: -1.5px; }
+.lw-open.saved.warm .lw-badge { background: #F5F6F8; box-shadow: inset 0 0 0 1.5px #a8761f; color: #a8761f; }
+.lw-open-title, .lw-open-title.lw-open-title { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
+.lw-open.saved .lw-open-title { color: #2f7a3f; }
+.lw-saved, .lw-open.saved.warm .lw-saved { height: 22px; padding: 0 9px; background: #fff; box-shadow: inset 0 0 0 1px rgba(47, 122, 63, 0.35); color: #2f7a3f; font-size: 11px; font-weight: 600; }
+.lw-open.saved.warm .lw-saved { box-shadow: inset 0 0 0 1px rgba(168, 118, 31, 0.4); color: #a8761f; }
+.lw-remove { font-weight: 600; color: #8b93a1; }
+.lw-fields, .lw-fields.lw-fields { display: flex; gap: 28px; padding: 6px 0 2px 48px; }
+.lw-fields .lw-step, .lw-fields .lw-step + .lw-step { display: flex; justify-content: flex-start; min-height: 0; padding: 0; border: 0; }
+.lw-fields .lw-value { align-items: flex-start; }
+.lw-fields .lw-num, .lw-fields .lw-num.s4, .lw-fields .lw-num.s5 { font-size: 48px; font-weight: 300; letter-spacing: -0.03em; }
+.lw-fields .lw-num.s5 { font-size: 40px; }
+.lw-fields .lw-num-input, .lw-fields .lw-num-input.s4, .lw-fields .lw-num-input.s5 { width: 3.4ch; height: 54px; line-height: 54px; padding-bottom: 2px; border-bottom: 1px solid #141a24; text-align: left; color: #141a24; }
+.lw-fields .lw-num-input.s4 { width: 4.3ch; }
+.lw-fields .lw-num-input.s5 { width: 5.2ch; height: 46px; line-height: 46px; }
+.lw-fields .lw-value.ghost .lw-num-input { border-bottom-color: #C9CFD8; }
+.lw-num-input::placeholder { color: #B5BCC7; }
+.lw-open.saved .lw-value:not(.ghost) .lw-num-input { color: #2f7a3f; border-bottom-color: #2f7a3f; }
+.lw-open.saved.warm .lw-value:not(.ghost) .lw-num-input { color: #a8761f; border-bottom-color: #a8761f; }
+.lw-num-label { margin-top: 6px; font-size: 9.5px; font-weight: 600; letter-spacing: 0.14em; color: #98A2B3; }
+.lw-addset { align-self: flex-start; height: 40px; padding: 0 0 0 48px; font-size: 13px; font-weight: 600; color: #5b6474; }
+.lw-offline { font-weight: 600; color: #b8471f; }
+.wo-rest { height: 48px; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 14.5px; font-weight: 500; color: #141a24; }
+.wo-rest.running { background: #141a24; box-shadow: none; }
+.wo-rest.over { background: #2f7a3f; }
+.wo-rest-menu { box-shadow: inset 0 0 0 1px #E1E5EB; }
+.wo-rest-opt { background: #F5F6F8; font-weight: 600; color: #141a24; }
+.wo-rest-opt.on { background: #141a24; }
+.wo-dock-btn { border-color: #E1E5EB; color: #141a24; }
+.wo-dock-btn.next { background: #141a24; border-color: #141a24; }
+.lw .wo-nextup { gap: 4px; }
+.lw .wo-video, .lw .wo-video.sent, .lw .wo-video.replied { gap: 12px; padding: 10px 16px 10px 14px; border-radius: 22px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
+.lw .wo-video-tile, .lw .wo-video.sent .wo-video-tile, .lw .wo-video.replied .wo-video-tile { width: 28px; height: 28px; border-radius: 0; background: none; color: #a8761f; }
+.lw .wo-video.sent .wo-video-tile, .lw .wo-video.replied .wo-video-tile { color: #2f7a3f; }
+.lw .wo-video-tile svg { width: 22px; height: 22px; stroke-width: 1.6; }
+.lw .wo-video.asked .wo-video-tile::after, .lw .wo-video.unseen .wo-video-tile::after { border-color: #fff; background: #141a24; }
+.lw .wo-video-main b { font-size: 14px; font-weight: 600; }
+.lw .wo-video-main small { font-size: 12px; font-weight: 500; color: #8b93a1; opacity: 1; }
+.lw .wo-video-action { font-size: 12.5px; font-weight: 600; color: #141a24; }
+/* Saved on the open set (16 Oct, Alex): the green tick and the word alone, no pill. */
+.lw-saved, .lw-saved.lw-saved, .lw-open.saved.warm .lw-saved { padding: 0; background: none; box-shadow: none; }
+/* A session that happened reads as done (16 Oct, Alex): the list label carries a green tick ring and says Completed, each exercise that got all its sets swaps its number for a green-ringed tick, and one that didn't goes grey. Unfinished says so in amber. A session still to come keeps its navy numbers. */
+.so-screen.so-st-done .so-list-head h2, .so-screen.so-st-unfinished .so-list-head h2 { display: inline-flex; align-items: center; gap: 8px; }
+.so-screen.so-st-done .so-list-head h2 { color: #2f7a3f; }
+.so-screen.so-st-done .so-list-head h2::before { content: "Completed ·"; letter-spacing: 0.18em; }
+.so-screen.so-st-unfinished .so-list-head h2 { color: #a8761f; }
+.so-screen.so-st-unfinished .so-list-head h2::before { content: "Unfinished ·"; letter-spacing: 0.18em; }
+.so-screen .so-num.done { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; margin-left: -2px; border-radius: 50%; box-shadow: inset 0 0 0 1px #2f7a3f; font-size: 0; background: center / 13px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232f7a3f' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
+.so-screen.so-st-done .so-num:not(.done), .so-screen.so-st-unfinished .so-num:not(.done) { color: #C9CFD8; }
+.so-screen.so-st-done .so-card:not(.done) .so-card-name, .so-screen.so-st-unfinished .so-card:not(.done) .so-card-name { color: #8b93a1; }
+.so-screen .so-card + .so-card::before { left: 48px; }
+/* ---- Training tab in the hairline language, take two (16 Oct, Alex asked to see it again): built like the workout screen's sets. The week figure flat on the page under the photo (no white card), the note under a hairline, SESSIONS as a label, and the sessions on one spine: the number in a thin ring (navy), the next one an ink ring, a done one a green-ringed tick and faded, unfinished amber. Status words alone, no pills except the navy Up next chip and Live. CSS only, so it lifts off cleanly. Scoped to .tr-body. */
+.tr-body .tr-days { margin-top: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible; }
+.tr-body .tr-days-top { padding: 22px 12px 18px; }
+.tr-body .tr-ring svg circle:first-child { stroke: #E1E5EB; }
+.tr-body .tr-note, .tr-body .tr-note-saved, .tr-body .tr-note-writing { margin: 0 12px; padding-left: 0; padding-right: 0; border-top: 1px solid #E1E5EB; background: none; }
+.tr-body .tr-note-prompt { padding-left: 0; padding-right: 0; background: none; }
+.tr-body .tr-note-label { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
+.tr-body .tr-note-text { font-size: 14px; font-weight: 500; color: #3a4250; }
+.tr-body .tr-note-prompt-text { font-size: 14px; font-weight: 500; color: #8b93a1; }
+.tr-body .tr-note-prompt-go, .tr-body .tr-note-edit { font-size: 12.5px; font-weight: 600; color: #141a24; }
+.tr-body .tr-sessions-title { padding: 0 12px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: #141a24; }
+.tr-body .tr-rows { position: relative; gap: 0; }
+.tr-body .tr-rows::before { content: ""; position: absolute; left: 28px; top: 8px; bottom: 8px; border-left: 1px solid #E1E5EB; pointer-events: none; }
+.tr-body .tr-row, .tr-body .tr-row.done, .tr-body .tr-row.done.done, .tr-body .tr-row.unfinished, .tr-body .tr-row.live, .tr-body .tr-row.next { position: relative; gap: 14px; padding: 14px 8px 14px 12px; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.tr-body .tr-row:active { background: rgba(20, 26, 36, 0.03); }
+.tr-body .tr-row + .tr-row::after { content: ""; position: absolute; top: 0; left: 58px; right: 8px; height: 1px; background: #E1E5EB; }
+.tr-body .tr-row-tile, .tr-body .tr-row-tile.live, .tr-body .tr-row-tile.next, .tr-body .tr-row-tile.skipped, .tr-body .tr-row-tile.missed, .tr-body .tr-row-tile.done, .tr-body .tr-row-tile.unfinished { position: relative; width: 32px; height: 32px; border-radius: 50%; background: #F5F5F5; box-shadow: inset 0 0 0 1px #C9CFD8; color: #1E3A5F; font-size: 14px; font-weight: 500; }
+.tr-body .tr-row-tile.next { box-shadow: inset 0 0 0 1.5px #141a24; color: #141a24; }
+.tr-body .tr-row-tile.live { box-shadow: inset 0 0 0 1.5px #3a3390; color: #3a3390; animation: trh-pulse 2.4s ease-in-out infinite; }
+@keyframes trh-pulse { 0%, 100% { box-shadow: inset 0 0 0 1.5px #3a3390, 0 0 0 0 rgba(58, 51, 144, 0.3); } 50% { box-shadow: inset 0 0 0 1.5px #3a3390, 0 0 0 8px rgba(58, 51, 144, 0); } }
+.tr-body .tr-row-tile.done { box-shadow: inset 0 0 0 1px #2f7a3f; font-size: 0; background: #F5F5F5 center / 14px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232f7a3f' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
+.tr-body .tr-row-tile.unfinished { box-shadow: inset 0 0 0 1px #a8761f; color: #a8761f; }
+.tr-body .tr-row-tile.skipped, .tr-body .tr-row-tile.missed { color: #98A2B3; }
+.tr-body .tr-row-title { font-size: 15.5px; font-weight: 500; color: #141a24; }
+.tr-body .tr-row.next .tr-row-title, .tr-body .tr-row.live .tr-row-title { font-size: 17px; font-weight: 600; }
+.tr-body .tr-row-sub { font-size: 12px; font-weight: 500; color: #8b93a1; }
+.tr-body .tr-row.done .tr-row-main, .tr-body .tr-row.done .tr-row-pill { opacity: 0.6; }
+.tr-body .tr-row-pill.done, .tr-body .tr-row-pill.unfinished, .tr-body .tr-row-pill.skipped { padding: 0; background: none; font-size: 11.5px; font-weight: 600; }
+.tr-body .tr-row-pill.done { color: #2f7a3f; }
+.tr-body .tr-row-pill.unfinished { color: #a8761f; }
+.tr-body .tr-row-pill.live { background: #3a3390; color: #fff; }
+.tr-body .tr-row-chev { width: 7px; height: 7px; border-right-width: 1.6px; border-bottom-width: 1.6px; border-color: #98A2B3; }
+.lw .wo-nextup-label:only-child::after { content: none; }
+/* The kg change on a finished exercise (16 Oct, Alex): the words alone, no pill. */
+.so-screen .so-delta, .so-screen .so-delta.up { height: auto; padding: 0; background: none; box-shadow: none; }
+/* With the week figure no longer overlapping the photo (take two), the Training banner drops the room it kept for it. */
+.tr-banner:not(.ci-banner) { padding-bottom: 20px; }
+/* ---- Progress pictures in the hairline language (16 Oct): the photo banner stays, nothing overlaps it; the open sheet sits flat on the page (no white card), its photos as rows with a thin numbered ring and a hairline between them, To do as rust words; Earlier sheets as a labelled list of flat rows; Save an ink pill. The add-a-photo sheet keeps its boxes (an input pop-up). CSS only. */
+.pp-app-body { background: #F5F6F8; }
+.pp-one .pp-banner { padding-bottom: 22px; }
+.pp-one .pp-banner + * { margin-top: 0; }
+.pp-todo { border-radius: 0; background: none; box-shadow: none; overflow: visible; }
+.pp-todo-head { padding: 18px 4px 12px; }
+.pp-todo-title { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; color: #141a24; }
+.pp-todo-sub { font-size: 12px; font-weight: 500; color: #8b93a1; }
+.pp-todo-pill { padding: 0; background: none; font-size: 11.5px; font-weight: 600; color: #b8471f; }
+.pp-todo .tr-chev { border-color: #98A2B3; }
+.pp-todo-body { padding: 0 4px 12px; border-top: 1px solid #E1E5EB; }
+.pp-todo-row { min-height: 52px; border-bottom-color: #E1E5EB; }
+.pp-todo-num { width: 28px; height: 28px; border-radius: 50%; background: #F5F6F8; box-shadow: inset 0 0 0 1px #C9CFD8; color: #5b6474; font-size: 12px; font-weight: 500; }
+.pp-todo-thumb { width: 28px; height: 36px; border-radius: 6px; }
+.pp-todo-name { font-size: 15px; font-weight: 500; color: #141a24; }
+.pp-todo-state { font-size: 11.5px; font-weight: 600; color: #5b6474; }
+.pp-todo-state.sent { color: #2f7a3f; }
+.pp-todo-add { font-size: 13px; font-weight: 600; color: #141a24; }
+.pp-todo-save, .pp-todo-coach { border-top-color: #E1E5EB; }
+.pp-app-save-btn, .pp-todo-save .pp-app-save-btn { min-height: 44px; border-radius: 999px; background: #141a24; font-weight: 600; }
+.pp-app-save-btn:disabled { background: #C9CFD8; }
+.pp-app-save-btn.secondary { border: 0; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
+.pp-app-save-cancel { font-weight: 600; color: #5b6474; }
+.pp-app-coach-label, .pp-app-notes-label { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
+.pp-app-coach-text, .pp-app-note-text { font-size: 14px; font-weight: 500; color: #3a4250; }
+.pp-app-notes { padding: 12px 0 0; border-top: 1px solid #E1E5EB; border-radius: 0; background: none; }
+.pp-app-note-label { font-weight: 600; color: #141a24; }
+.pp-app-section-head { margin: 8px 0 2px; padding: 0 4px; }
+.pp-app-section-title { font-size: 11.5px; font-weight: 600; letter-spacing: 0.18em; color: #141a24; }
+.pp-app-section-meta { font-size: 11.5px; font-weight: 500; color: #8b93a1; }
+.pp-app-history { gap: 0; }
+.pp-app-past { border: 0; border-bottom: 1px solid #E1E5EB; border-radius: 0; background: none; overflow: visible; }
+.pp-app-past:last-child { border-bottom: 0; }
+.pp-app-past-head { padding: 14px 4px; }
+.pp-app-past-title { font-size: 15px; font-weight: 500; color: #141a24; }
+.pp-app-past-meta { font-size: 12px; font-weight: 500; color: #8b93a1; }
+.pp-app-past-chevron { color: #98A2B3; }
+.pp-app-past-body { padding: 4px 4px 16px; border-top: 0; }
+.pp-app-past-photo { border-radius: 8px; }
+.pp-app-past-name { font-weight: 500; color: #3a4250; }
+.pp-app-foot { padding: 0 4px; font-weight: 500; color: #8b93a1; }
+/* A finished session open in place on the Training tab (16 Oct): under its row, each exercise with its sets as light lines, done ones with a small green tick, then Open session for the full screen. */
+.tr-x-in { display: flex; flex-direction: column; gap: 12px; padding: 2px 8px 16px 58px; }
+.tr-x-ex { display: flex; flex-direction: column; gap: 4px; }
+.tr-x-name { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #141a24; }
+.tr-x-ex.done .tr-x-name::after { content: ""; width: 12px; height: 12px; background: center / 12px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232f7a3f' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
+.tr-x-set { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 4px 0; border-top: 1px solid #E1E5EB; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.tr-x-n { color: #8b93a1; }
+.tr-x-v { color: #141a24; }
+.tr-x-v small { font-size: 12px; color: #8b93a1; }
+.tr-x-none { font-size: 12.5px; font-weight: 500; color: #98A2B3; }
+.tr-x-open { align-self: flex-start; height: 32px; padding: 0; border: 0; background: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #141a24; cursor: pointer; }
+.tr-body .tr-row.open .tr-row-chev { transform: rotate(45deg); transition: transform 0.25s; }
+.tr-body .tr-row-chev { transition: transform 0.25s; }
+.tr-body .tr-row.done.open .tr-row-main, .tr-body .tr-row.done.open .tr-row-pill { opacity: 1; }
+.tr-body .tr-x + .tr-row::after { content: ""; position: absolute; top: 0; left: 58px; right: 8px; height: 1px; background: #E1E5EB; }
+/* ---- Settings in the hairline language (16 Oct): one page grey, no gradient or dots behind the name, nothing overlapping it; each section flat on the page under an ink label, its rows split by hairlines; 500/600 type; switches and the active unit in ink; Edit and links in ink, not teal. The details form and the delete panel keep their fields. CSS only. */
+.settings-dark { background: #F5F6F8; }
+.hm-banner.st-banner, .cn-body-settings .hm-banner.st-banner { padding-bottom: 14px; background: #F5F6F8; }
+.st-banner::before { display: none; }
+.st-name { font-size: 28px; font-weight: 600; letter-spacing: -0.01em; color: #141a24; }
+.st-body { gap: 6px; }
+.st-body > :first-child { margin-top: 0; box-shadow: none; }
+.settings-dark .home-dark-section { padding: 18px 4px 4px; border: 0; border-top: 1px solid #E1E5EB; border-radius: 0; background: none; box-shadow: none; }
+.st-body > .home-dark-section:first-child, .st-body > :first-child .home-dark-section { border-top: 0; }
+.settings-dark .home-dark-section-title { font-size: 11.5px; font-weight: 600; letter-spacing: 0.18em; color: #141a24; }
+.settings-dark .home-dark-section-count { font-weight: 600; color: #8b93a1; }
+.settings-dark .settings-toggle-row, .settings-dark .settings-units-row, .settings-dark .settings-app-row, .settings-dark .settings-data-row, .settings-dark .settings-report-row, .settings-dark .home-dark-row, .st-details-row { border-top-color: #E1E5EB; }
+.settings-dark .home-dark-row-title { font-size: 15px; font-weight: 500; color: #141a24; }
+.settings-dark .home-dark-row-detail { font-size: 12px; font-weight: 500; color: #8b93a1; }
+.settings-dark .home-dark-empty, .settings-dark .st-note { font-weight: 500; color: #8b93a1; }
+.settings-dark .settings-switch { background: #E1E5EB; }
+.settings-dark .settings-switch.on { background: #141a24; }
+.settings-dark .settings-switch-knob { box-shadow: 0 0 0 1px rgba(20, 26, 36, 0.06); }
+.settings-dark .settings-units-options { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.settings-dark .settings-unit-btn { font-weight: 600; color: #5b6474; }
+.settings-dark .settings-unit-btn.active { background: #141a24; color: #fff; box-shadow: none; }
+.settings-dark .settings-app-action { font-weight: 600; color: #8b93a1; }
+.st-soon { background: none; box-shadow: inset 0 0 0 1px #E1E5EB; font-weight: 600; color: #8b93a1; }
+.settings-dark .settings-report-period { font-weight: 500; color: #141a24; }
+.settings-dark .settings-report-new { font-weight: 600; background: none; box-shadow: inset 0 0 0 1px #141a24; color: #141a24; }
+.settings-dark .settings-report-text { color: #3a4250; }
+.settings-dark .report-card-stat-label { font-weight: 600; color: #5b6474; }
+.settings-dark .av-tile { background: #141a24; }
+.settings-dark .av-initial { font-weight: 600; }
+.settings-dark .av-title { font-weight: 500; color: #141a24; }
+.settings-dark .av-remove { font-weight: 600; color: #141a24; }
+.st-details-edit { font-weight: 600; color: #141a24; }
+.st-details-label { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
+.st-details-value { font-weight: 500; color: #141a24; }
+.st-details-value.empty { font-weight: 600; color: #141a24; }
+.st-details-save { border-radius: 999px; background: #141a24; font-weight: 600; }
+.st-details-cancel { border: 0; border-radius: 999px; box-shadow: inset 0 0 0 1px #E1E5EB; font-weight: 600; }
+.st-details-input:focus { border-color: #141a24; }
+.settings-dark .settings-logout-btn { min-height: 46px; border: 0; border-radius: 999px; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; font-weight: 600; }
+.settings-dark .settings-footnote { font-weight: 500; color: #8b93a1; }
+.settings-dark .st-delete-row { border-top-color: #E1E5EB; }
+.st-link-go { color: #98A2B3; }
+/* ---- The check-in screen in the hairline language (16 Oct): the banner stays, nothing overlaps it; the three stats flat on the page split by hairlines; Today and the last seven days as rows on one spine, each with a ring (green tick when all is in, amber when part is, a thin grey ring when nothing is); Fill in a small white hairline pill; the Progress charts flat on the page with ink chips. The fill-in pop-up keeps its boxes. CSS only. */
+.ci-screen.ci-one { background: #F5F6F8; }
+.tr-banner.ci-banner { padding-bottom: 20px; }
+.ci-body { margin-top: 0; padding-top: 6px; }
+.ci-stats { margin: 0 0 6px; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.ci-stats .ci-stat-label { border-bottom: 0; padding-bottom: 4px; font-size: 10px; font-weight: 600; letter-spacing: 0.14em; color: #5b6474; }
+.ci-stats .ci-stat { padding-top: 6px; }
+.ci-stats .ci-stat + .ci-stat, .ci-stat + .ci-stat { border-left-color: #E1E5EB; }
+.ci-stat b { font-weight: 300; font-size: 28px; color: #141a24; }
+.ci-stat b small, .ci-stats .ci-stat-sub, .ci-stat .ci-stat-sub { font-weight: 500; color: #8b93a1; }
+.ci-feed { gap: 0; position: relative; }
+.ci-feed-title { padding: 18px 4px 6px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.18em; color: #141a24; }
+.ci-feed::before { content: ""; position: absolute; left: 18px; top: 52px; bottom: 14px; border-left: 1px solid #E1E5EB; pointer-events: none; }
+.ci-day, .ci-day.done, .ci-day.unfinished { position: relative; border: 0; border-radius: 0; background: none; overflow: visible; }
+.ci-day + .ci-day::after { content: ""; position: absolute; top: 0; left: 48px; right: 4px; height: 1px; background: #E1E5EB; }
+.ci-day-head { position: relative; padding: 13px 4px 13px 48px; }
+.ci-day-head::before { content: ""; position: absolute; left: 4px; top: 50%; width: 28px; height: 28px; margin-top: -14px; border-radius: 50%; background: #F5F6F8; box-shadow: inset 0 0 0 1px #C9CFD8; }
+.ci-day.done .ci-day-head::before { box-shadow: inset 0 0 0 1px #2f7a3f; background: #F5F6F8 center / 13px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232f7a3f' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
+.ci-day.done.unfinished .ci-day-head::before, .ci-day.unfinished .ci-day-head::before { box-shadow: inset 0 0 0 1px #a8761f; background-image: none; }
+.ci-today .ci-day:not(.done) .ci-day-head::before { box-shadow: inset 0 0 0 1.5px #141a24; }
+.ci-day-date, .ci-day.done .ci-day-date { font-size: 15px; font-weight: 500; color: #141a24; }
+.ci-day:not(.done) .ci-day-date { font-weight: 500; color: #3a4250; }
+.ci-day-sub { font-size: 12px; font-weight: 500; color: #8b93a1; }
+.ci-day.done .ci-day-sub { font-weight: 500; color: #2f7a3f; }
+.ci-day.unfinished .ci-day-sub, .ci-day-state { font-weight: 600; color: #a8761f; }
+.ci-day-fill { padding: 6px 14px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 12.5px; font-weight: 600; color: #141a24; }
+.ci-day-chev { color: #98A2B3; }
+.ci-day-list { margin: 0 4px 14px 48px; border-top: 1px solid #E1E5EB; }
+.ci-day-row { font-size: 13.5px; font-weight: 500; color: #3a4250; }
+.ci-day-row b { font-weight: 600; color: #141a24; }
+.ci-day-note { font-weight: 500; color: #5b6474; }
+.ci-day-edit, .ci-day.unfinished .ci-day-edit { border: 0; border-radius: 999px; box-shadow: inset 0 0 0 1px #E1E5EB; font-weight: 600; color: #141a24; }
+.pg-chip { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-weight: 600; color: #5b6474; }
+.pg-chip.on { background: #141a24; box-shadow: none; color: #fff; }
+.pg-card { margin: 12px 16px 0; padding: 14px 4px 10px; border-radius: 0; background: none; box-shadow: none; border-top: 1px solid #E1E5EB; }
+.pg-eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; }
+.pg-name { font-size: 18px; font-weight: 600; color: #141a24; }
+.pg-hist-head { padding: 24px 20px 4px; }
+.pg-hist-title { font-size: 11.5px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: #141a24; }
+.pg-hist-count { font-weight: 500; color: #8b93a1; }
+.pg-hist-list { margin: 4px 16px 0; padding: 0 4px; border-radius: 0; background: none; box-shadow: none; }
+.pg-hist-row { border-top-color: #E1E5EB; }
+.pg-hist-row:first-child { border-top: 0; }
+.pg-hist-date { font-weight: 500; color: #3a4250; }
+.pg-hist-value { font-weight: 600; color: #141a24; }
+.pg-hist-value small { font-weight: 500; color: #98A2B3; }
+.pg-view { margin-top: 4px; }
+/* Fill in on the check-in days (16 Oct, Alex): the words alone, no pill. */
+.ci-day-fill { padding: 6px 0; background: none; box-shadow: none; }
+/* ---- The food diary in the hairline language (16 Oct): the photo banner stays, nothing overlaps it; the day's ring and macros flat on the page; Log an ink pill on a plain row; Saved days a flat row with a chevron, not the navy-to-teal bar; the meals as sections split by hairlines, each meal's foods as flat rows under its name; Add a meal a text action. The add and edit panels keep their fields. Scoped to the diary (.fdi-), so the Nutrition tab is untouched. CSS only. */
+.fdi-page { background: #F5F6F8; }
+.nd-banner.fdi-banner { padding-bottom: 20px; }
+.fdi-targets, .fdi-targets.nd-card { margin: 0 16px; padding: 18px 4px 10px; border-radius: 0; background: none; box-shadow: none; }
+.fdi-push, .fdi-push.done, .fdi-push.fdi-push-kcal { margin: 0 16px; padding: 10px 4px 12px; border-radius: 0; background: none; border-bottom: 1px solid #E1E5EB; }
+.fdi-push-kcal input { border-color: #E1E5EB; border-radius: 999px; padding-left: 16px; }
+.fdi-push-kcal input:focus { border-color: #141a24; }
+.fdi-push-btn { border-radius: 999px; background: #141a24; font-weight: 600; }
+.fdi-push.done .fdi-push-text, .fdi-push.done .fdi-push-text b { color: #2f7a3f; }
+.fdi-push-edit { font-weight: 600; color: #2f7a3f; }
+.fdi-list { margin-top: 8px; }
+.fdi-copy { border-radius: 0; background: none; box-shadow: none; overflow: visible; border-bottom: 1px solid #E1E5EB; }
+.fdi-copy-head { min-height: 52px; padding: 4px 0 4px 4px; background: none; color: #141a24; }
+.fdi-copy-title { font-size: 11.5px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: #141a24; }
+.fdi-copy-count { color: #8b93a1; font-weight: 500; }
+.fdi-copy-chev { color: #98A2B3; }
+.fdi-copy-row { padding: 12px 4px; border-top-color: #E1E5EB; }
+.fdi-copy-name { font-weight: 500; color: #141a24; }
+.fdi-copy-sub { font-weight: 500; color: #8b93a1; }
+.fdi-copy-use { height: auto; padding: 6px 0; border: 0; background: none; font-weight: 600; color: #141a24; }
+.fdi-copy-foot, .fdi-copy-empty { border-top-color: #E1E5EB; font-weight: 500; color: #8b93a1; }
+.fdi-meals { border: 0; border-radius: 0; background: none; overflow: visible; }
+.fdi-meal, .fdi-meal.fdi-meal { background: none; border-top: 1px solid #E1E5EB; }
+.fdi-meals > .fdi-meal:first-child { border-top: 0; }
+.fdi-meal-head { min-height: 52px; padding: 4px 0 4px 4px; }
+.fdi-meal-title { font-size: 15.5px; font-weight: 600; color: #141a24; }
+.fdi-meal-sub { font-weight: 500; color: #8b93a1; }
+.fdi-icon-btn { color: #141a24; }
+.fdi-row { padding: 10px 4px 0; }
+.fdi-row-wrap { padding-right: 0; }
+.fdi-row-name { font-size: 14.5px; font-weight: 500; color: #141a24; }
+.fdi-row-wrap.selected { margin: 8px 0 14px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.fdi-row-wrap.selected > .fdi-row .fdi-row-name { font-weight: 600; color: #141a24; }
+.fdi-add-meal { justify-content: flex-start; min-height: 44px; padding: 0 4px; border: 0; border-top: 1px solid #E1E5EB; border-radius: 0; background: none; font-weight: 600; color: #141a24; }
+.fdi-meals-hint { margin: 0; padding: 0 4px; text-align: left; font-weight: 500; color: #8b93a1; }
+.fdi-targets, .fdi-targets.nd-card { border: 0; }
+/* Saved days reads as its own thing (16 Oct, Alex): a white hairline pill with a bookmark, like Add an event, opening into its list; the meals under it get their own MEALS label. */
+.fdi-copy { margin-top: 6px; border: 0; border-radius: 26px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; overflow: hidden; }
+.fdi-copy-head { gap: 12px; min-height: 56px; padding: 0 6px 0 16px; }
+.fdi-copy-head::before { content: ""; flex: none; width: 20px; height: 20px; background: center / 20px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23141a24' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 4h12v16l-6-4-6 4z'/%3E%3C/svg%3E"); }
+.fdi-copy-title { font-size: 15px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.fdi-copy-row { padding: 12px 16px 12px 48px; }
+.fdi-copy-foot, .fdi-copy-empty { padding-left: 16px; padding-right: 16px; }
+.fdi-meals { margin-top: 10px; }
+.fdi-meals::before { content: "Meals"; display: block; padding: 12px 4px 4px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: #141a24; }
+/* The line under the last meal sits right under it (16 Oct), so Snacks reads the same size as the rest; Add a meal is a text action under it with no line of its own. */
+.fdi-meals { border-bottom: 1px solid #E1E5EB; }
+.fdi-add-meal { border-top: 0; }
+/* ---- The Nutrition tab in the hairline language (16 Oct): like the food diary. The photo banner stays and nothing overlaps it; the ring and macros flat on the page; Supplements its own white hairline pill (a capsule icon, the count, a chevron) opening into the checklist; the coach's note flat under a hairline like Latest from on Home; Last 7 days a label over flat rows. Scoped to .nd. CSS only. */
+.nd { background: #F5F6F8; }
+.nd > .nd-banner { padding-bottom: 20px; }
+.nd .nd-card { border: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible; }
+.nd .nd-cal { margin: 0; padding: 18px 4px 0; box-shadow: none; }
+.nd .nd-supps { margin: 16px 0 4px; border: 0; border-radius: 26px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; overflow: hidden; }
+.nd .nd-supps-toggle { gap: 12px; min-height: 56px; padding: 0 16px; background: none; }
+.nd .nd-supps-toggle::before { content: ""; flex: none; width: 20px; height: 20px; background: center / 20px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23141a24' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.5 20.5a4.95 4.95 0 0 1-7-7l6-6a4.95 4.95 0 0 1 7 7z'/%3E%3Cpath d='m8.5 8.5 7 7'/%3E%3C/svg%3E"); }
+.nd .nd-supps-title { font-size: 15px; font-weight: 600; color: #141a24; }
+.nd .nd-supps-count { font-weight: 500; color: #8b93a1; }
+.nd .nd-supps-chev { color: #98A2B3; }
+.nd .nd-supps-list { background: none; }
+.nd .nd-supp { padding: 12px 16px; border-top-color: #E1E5EB; }
+.nd .nd-check { border: 0; box-shadow: inset 0 0 0 1px #C9CFD8; }
+.nd .nd-supp.taken .nd-check { background: #fff; box-shadow: inset 0 0 0 1px #2f7a3f; color: #2f7a3f; }
+.nd .nd-supp.taken .nd-check svg { stroke: #2f7a3f; }
+.nd .nd-supp-name { font-weight: 500; color: #141a24; }
+.nd .nd-supp.taken .nd-supp-name { color: #8b93a1; }
+.nd .nd-supp-note, .nd .nd-supp-timing { font-weight: 500; color: #8b93a1; }
+.nd .nd-supp-qty { color: #141a24; }
+.nd .nd-coach { padding: 16px 4px 4px; border-top: 1px solid #E1E5EB; }
+.nd .nd-avatar { width: 40px; height: 40px; background: #141a24; font-weight: 600; }
+.nd .nd-coach-name { font-size: 14px; font-weight: 600; color: #141a24; }
+.nd .nd-coach-date { font-size: 12px; font-weight: 500; color: #8b93a1; }
+.nd .nd-coach-note { margin: 4px 0 0 50px; font-size: 14px; font-weight: 500; line-height: 1.5; color: #3a4250; }
+.nd .nd-section-head { padding: 18px 4px 4px; border-top: 1px solid #E1E5EB; }
+.nd .nd-card-title { font-size: 11.5px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: #141a24; }
+.nd .nd-empty { padding: 10px 4px; font-weight: 500; color: #8b93a1; }
+.nd .nd-day { padding: 12px 4px; }
+.nd .nd-day + .nd-day { border-top-color: #E1E5EB; }
+.nd .nd-day-date { font-weight: 500; color: #141a24; }
+.nd .nd-day-type, .nd .nd-day-note { font-weight: 500; color: #8b93a1; }
+.nd .nd-day-kcal { color: #141a24; }
+.nd .nd-day-delta.ok { color: #2f7a3f; }
+.nd .nd-day-delta.over { color: #b8471f; }
+/* ---- Invoices in the hairline language (16 Oct): the list flat on the pushed-screen grey under ink labels (To pay, Paid), rows split by hairlines, the date as a light numeral like the Events screen, 500/600 type, the state in words in the palette (ink to pay, rust when late, green paid). The invoice itself stays a document. CSS only. */
+.mts-scroll { gap: 18px; padding: 8px 16px 40px; background: #F5F6F8; }
+.mts-section { gap: 2px; }
+.mts-head { padding: 0 4px 4px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.18em; color: #141a24; }
+.mts-empty { padding: 10px 4px; border: 0; border-radius: 0; background: none; font-size: 13.5px; font-weight: 500; color: #8b93a1; }
+.mts-list { border: 0; border-radius: 0; background: none; overflow: visible; }
+.mts-list > li + li { border-top: 1px solid #E1E5EB; }
+.mts-row { padding: 14px 4px; }
+.mts-leaf { align-items: flex-end; width: 40px; }
+.mts-leaf b { font-size: 24px; font-weight: 300; letter-spacing: -0.02em; color: #141a24; }
+.mts-leaf small { font-weight: 600; color: #98A2B3; }
+.mts-row-title { font-size: 15px; font-weight: 500; color: #141a24; }
+.mts-row-sub { font-size: 12px; font-weight: 500; color: #8b93a1; }
+.inv-state { font-weight: 600; }
+.inv-state.pay { color: #141a24; }
+.inv-state.late { color: #b8471f; }
+.inv-state.paid { color: #2f7a3f; }
+.inv-total { font-size: 15px; font-weight: 600; color: #141a24; }
+.inv-chev { color: #98A2B3; }
+/* ---- Chat, lightly, in the hairline language (16 Oct): the bubbles keep their shape (chat needs them) but lose the grey border for a hairline; yours in ink instead of navy; the page on the pushed-screen grey; the header name at 600; Media a white hairline pill; day labels and times in the palette greys, 500/600 type. */
+.cn-screen:has(.cm-body) { background: #F5F6F8; }
+.cm-body { background: #F5F6F8; }
+.cm-header-name { font-size: 17px; font-weight: 600; color: #141a24; }
+.cmg-btn, .cmg-btn:hover { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-weight: 600; color: #141a24; }
+.cm-day-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; color: #8b93a1; }
+.cm-msg { border: 0; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.cm-msg-text { font-weight: 500; color: #141a24; }
+.cm-msg-time { font-weight: 500; color: #8b93a1; }
+.cm-msg.mine { border: 0; background: #141a24; box-shadow: none; }
+.cm-msg.mine .cm-msg-text { color: #fff; }
+.cm-msg.mine .cm-edit-save { color: #141a24; }
+.cm-msg.mine .cm-linkdot, .cm-msg.mine.media .cm-linkdot { border-color: #E1E5EB; color: #141a24; }
+.cm-linkdot { border-color: #E1E5EB; box-shadow: 0 0 0 3px #F5F6F8; }
+.cm-preview-note { font-weight: 500; color: #8b93a1; }
+.cn-screen:has(.mts-scroll) .cn-header, .cn-screen:has(.cm-body) .cn-header { background: #F5F6F8; }
+/* The bottom nav's current tab in ink (17 Oct, Alex), like every other selected thing now, not navy; 600, not 800. */
+.app-bottom-nav.dark .app-tab-btn.active { color: #141a24; }
+.app-bottom-nav.dark .app-tab-btn.active .app-tab-label { font-weight: 600; }
+/* The rest timer counts up (17 Oct, Alex): idle an ink pill, running a white hairline pill with the time counting up, the time green once past the coach's rest. The demo an ink pill too. Doubled for the dev-server CSS order. */
+.wo-rest.wo-rest { background: #141a24; box-shadow: none; color: #fff; }
+.wo-rest.wo-rest.running { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
+.wo-rest.wo-rest.running.past { background: #fff; color: #141a24; }
+.wo-rest-time { font-weight: 600; font-variant-numeric: tabular-nums; }
+.wo-rest.past .wo-rest-time { color: #2f7a3f; }
+.lw-demo.lw-demo, .lw-demo.lw-demo:active { background: #141a24; box-shadow: none; color: #fff; }
+.lw-demo.lw-demo .lw-demo-play svg { fill: #fff; }
+.app-bottom-nav.dark .app-tab-btn.active.active { color: #141a24; }
+.app-bottom-nav.dark .app-tab-btn.active.active .app-tab-label { font-weight: 600; }
+/* Swapped (17 Oct, Alex): the rest timer is white while idle and ink while it runs, like every other "on" in the app; past the coach's rest the time turns a light green on the ink. The demo, a plain action, goes back to the white hairline pill. */
+.wo-rest.wo-rest { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
+.wo-rest.wo-rest.running, .wo-rest.wo-rest.running.past { background: #141a24; box-shadow: none; color: #fff; }
+.wo-rest.past .wo-rest-time { color: #7fd68f; }
+.lw-demo.lw-demo, .lw-demo.lw-demo:active { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
+.lw-demo.lw-demo .lw-demo-play svg { fill: #141a24; }
+/* The ⋯ menus (workout and session) in the shared voice (17 Oct, Alex): the same Archivo at 500 in ink, the icons in ink at 1.6 stroke, a hairline edge and a softer shadow, the divider a hairline, Discard in the rust of the palette. */
+.wo-menu { color: #141a24; box-shadow: inset 0 0 0 1px #E1E5EB, 0 18px 40px -18px rgba(20, 26, 36, 0.35); }
+.wo-menu-row, .so-menu .wo-menu-row { font-size: 15px; font-weight: 500; color: #141a24; }
+.wo-menu-row:hover { background: #F5F6F8; }
+.wo-menu-ico { color: #141a24; }
+.so-menu-ico.edit { stroke: #141a24; }
+.wo-menu-ico svg, svg.wo-menu-ico { stroke-width: 1.6; }
+.wo-menu-row.danger, .wo-menu-row.danger .wo-menu-ico { color: #b8471f; }
+.so-menu-ico { stroke: #b8471f; stroke-width: 1.6; }
+.wo-menu-row.danger:hover { background: rgba(184, 71, 31, 0.06); }
+.wo-menu-divider { background: #E1E5EB; }
+.wo-menu-row:disabled, .wo-menu-row:disabled .wo-menu-ico { color: #C9CFD8; }
+/* The side menu in the shared voice (17 Oct, Alex): the page grey, items at 500 in ink with ink icons, hairlines between them, Log out a white hairline pill at 600, the footnote in the palette grey. */
+.app-menu { background: #F5F6F8; }
+.app-menu-name { font-weight: 500; color: #8b93a1; }
+.app-menu-item { font-weight: 500; color: #141a24; border-bottom-color: #E1E5EB; }
+.app-menu-ico { color: #141a24; }
+.app-menu-logout { border: 0; border-radius: 999px; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; font-weight: 600; }
+.app-menu-footnote { font-weight: 500; color: #8b93a1; }
+.app-menu-head { border-bottom-color: #E1E5EB; }
+/* The phase cards in the shared voice (17 Oct, Alex): still the hero (photo, glass, white type) but on the same weights as the rest of the app, 500 and 600 instead of 700–800. Doubled for the dev-server CSS order. */
+.pc-name.pc-name, .pc-name.pc-name * { font-weight: 600; letter-spacing: -0.01em; }
+.pc-next-name.pc-next-name { font-weight: 500; letter-spacing: -0.01em; }
+.pc-track-chip.pc-track-chip, .pc-week-chip.pc-week-chip { font-weight: 600; }
+.pc-left.pc-left { font-weight: 500; }
+.pc-next-label.pc-next-label, .pc-obj-label.pc-obj-label, .pc-nextphase-label.pc-nextphase-label { font-weight: 600; }
+.pc-start.pc-start { font-weight: 600; }
+.pc-obj-n.pc-obj-n { font-weight: 600; }
+.pc-nextphase-name.pc-nextphase-name, .pc-obj-more.pc-obj-more, .pc-through.pc-through { font-weight: 600; }
+/* Meetings with nothing yet (17 Oct, found on a new client's screens): the empty next-call pill keeps its row (the pill turned into a column for the notes), and with no past calls there is no spine, the line of text sits where the rows would. */
+.mtp-next.empty { flex-direction: row; align-items: center; gap: 4px; min-height: 64px; }
+.mtp-tl:has(> .mtp-empty) .evp-spine { display: none; }
+.mtp-tl > .mtp-empty { padding: 10px 24px; }
+.pp-app-empty { margin: 8px 0 0; padding: 10px 4px; border: 0; border-radius: 0; background: none; box-shadow: none; font-size: 13.5px; font-weight: 500; color: #8b93a1; }
+/* A phase card with nothing deployed (17 Oct, Alex): the same card, its picture washed out and dimmed, the chip, "No plan yet" and one quiet line. */
+.pc-card.pc-empty .pc-cover { filter: grayscale(0.85) brightness(0.8); }
+.pc-card.pc-empty .pc-panel { gap: 6px; }
+.pc-card.pc-empty .pc-name { font-weight: 600; color: rgba(255, 255, 255, 0.92); }
+.pc-empty-sub { margin: 0; font-size: 13.5px; font-weight: 500; line-height: 1.4; color: rgba(255, 255, 255, 0.78); }
+/* Training with nothing deployed (17 Oct): the line flat on the page, not in a white card. */
+.tr-body .empty-note { margin: 18px 12px 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; font-size: 14px; font-weight: 500; line-height: 1.5; color: #8b93a1; }
+/* ---- The progress pictures deck (17 Oct, Alex): a swipe of big 3:4 cards, one per angle, the next peeking in; a photo fills its card, an empty angle is a dashed card with the camera and its name. The number and name on a glass chip at the top, the state and action at the foot. Dots under it, filled once an angle has its photo. */
+.ppd { display: flex; flex-direction: column; gap: 10px; margin: 12px -20px 4px; }
+.ppd-scroller { display: flex; gap: 12px; overflow-x: auto; padding: 2px 20px; scroll-snap-type: x mandatory; scroll-padding: 0 20px; scrollbar-width: none; overscroll-behavior-x: contain; }
+.ppd-scroller::-webkit-scrollbar { display: none; }
+.ppd-card { flex: 0 0 74%; max-width: 300px; scroll-snap-align: start; }
+.ppd-tap { position: relative; display: block; width: 100%; aspect-ratio: 3 / 4; padding: 0; border: 0; border-radius: 22px; overflow: hidden; background: #E9ECF1; font: inherit; color: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.ppd-tap:disabled { cursor: default; }
+.ppd-card.empty .ppd-tap { background: #fff; outline: 1.5px dashed #C9CFD8; outline-offset: -10px; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.ppd-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ppd-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #8b93a1; font-size: 14px; font-weight: 500; }
+.ppd-chip { position: absolute; top: 12px; left: 12px; display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 11px 0 4px; border-radius: 999px; background: rgba(20, 26, 36, 0.42); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: #fff; font-size: 12.5px; font-weight: 600; }
+.ppd-chip b { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: rgba(255, 255, 255, 0.22); font-size: 11px; font-weight: 600; }
+.ppd-card.empty .ppd-chip { background: #F5F6F8; color: #141a24; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.ppd-card.empty .ppd-chip b { background: #fff; box-shadow: inset 0 0 0 1px #C9CFD8; }
+.ppd-foot { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ppd-state { display: inline-flex; align-items: center; height: 28px; padding: 0 11px; border-radius: 999px; background: rgba(20, 26, 36, 0.42); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: #fff; font-size: 12px; font-weight: 600; }
+.ppd-state.sent { background: rgba(47, 122, 63, 0.85); }
+.ppd-state.ready { background: rgba(20, 26, 36, 0.72); }
+.ppd-card.empty .ppd-state, .ppd-state.muted { background: none; color: #8b93a1; padding: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.ppd-action { margin-left: auto; display: inline-flex; align-items: center; height: 32px; padding: 0 14px; border-radius: 999px; background: #fff; box-shadow: 0 0 0 1px rgba(20, 26, 36, 0.06); color: #141a24; font-size: 13px; font-weight: 600; }
+.ppd-card.empty .ppd-action { background: #141a24; color: #fff; box-shadow: none; }
+.ppd-dots { display: flex; justify-content: center; gap: 6px; }
+.ppd-dot { width: 6px; height: 6px; border-radius: 99px; background: #DCE1E8; transition: width 0.25s, background-color 0.25s; }
+.ppd-dot.in { background: #9aa8bd; }
+.ppd-dot.on { width: 18px; background: #141a24; }
+.pp-app-past-body .ppd { margin-top: 4px; }
+/* Progress pictures deck, hairline (17 Oct, Alex): an empty angle is see-through, only a thin border; its chip plain (a number ring and the name), Add photo a white hairline pill. */
+.ppd-card.empty .ppd-tap { background: transparent; outline: 0; box-shadow: inset 0 0 0 1px #C9CFD8; }
+.ppd-card.empty .ppd-chip { background: none; box-shadow: none; padding-left: 0; }
+.ppd-card.empty .ppd-chip b { background: transparent; box-shadow: inset 0 0 0 1px #C9CFD8; color: #5b6474; }
+.ppd-card.empty .ppd-action { background: #fff; color: #141a24; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.ppd-empty { color: #98A2B3; }
+/* A sent photo is locked (17 Oct, Alex): a thin green ring round the card, "Sent" with a lock on a green glass pill, no Change; the card no longer reacts to a tap. */
+.ppd-state { gap: 5px; }
+.ppd-state.sent { background: rgba(47, 122, 63, 0.9); }
+/* Sent: only a green tick, low on the right (17 Oct, Alex); no ring, no pill. A soft shadow keeps it readable on any photo. */
+.ppd-card.locked .ppd-tap { cursor: default; }
+.ppd-card.locked .ppd-foot { justify-content: flex-end; }
+.ppd-check { color: #3fbf6a; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45)); }
+/* How to take them, above the cards (17 Oct): no line over it, just room. */
+.pp-todo-coach.first { margin-top: 14px; padding-top: 0; border-top: 0; }
+/* ---- Add an event in the shared voice (17 Oct, Alex): still a pop-up with real fields, but plain white (no wash or glow, which also pushed a sideways scrollbar), the type tiles white with a hairline and their icon in the category's colour, the chosen one ink; fields white with a hairline, ink while typing; small grey labels; the dates as hairline boxes; Save one ink pill. 500/600 type. */
+.evs { overflow-x: hidden; }
+.evs-wash, .evs-glow { display: none; }
+.evs-grab { background: #E1E5EB; }
+.evs-head h2 { font-size: 19px; font-weight: 600; color: #141a24; }
+.evs-pill { display: none; }
+.evs-x { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #5b6474; }
+.evs-type { height: 66px; border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 12.5px; font-weight: 500; color: #141a24; }
+.evs-type.on { background: #141a24; box-shadow: none; color: #fff; font-weight: 600; }
+.evs-label { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+.evs-title { border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
+.evs-title.ring { box-shadow: inset 0 0 0 1.5px #141a24; }
+.evs-title input { font-weight: 500; color: #141a24; }
+.evs-title input::placeholder { color: #98A2B3; }
+.evs-seg { padding: 2px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.evs-seg button { font-weight: 600; color: #5b6474; }
+.evs-seg button.on { background: #141a24; color: #fff; box-shadow: none; }
+.evs-date { border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.evs-date-head { font-size: 9.5px; font-weight: 600; letter-spacing: 0.14em; color: #98A2B3; }
+.evs-date b { font-size: 15px; font-weight: 500; color: #141a24; }
+.evs-date.empty b { font-weight: 500; color: #98A2B3; }
+.evs-arrow { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #5b6474; }
+.evs-note textarea { border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
+.evs-note textarea:focus { box-shadow: inset 0 0 0 1.5px #141a24; }
+.evs-note textarea::placeholder { color: #98A2B3; }
+.evs-save { height: 50px; border-radius: 999px; background: #141a24; box-shadow: none; font-weight: 600; }
+.evs-save:disabled { background: #C9CFD8; }
+.evs-error { font-weight: 600; color: #b8471f; }
+.evs-delete { font-weight: 600; color: #b8471f; }
+.evs-delete.sure { border-radius: 999px; background: rgba(184, 71, 31, 0.06); }
+.evs-discard { border-radius: 14px; background: #F5F6F8; font-weight: 500; color: #141a24; }
+.evs-discard button { font-weight: 600; }
+.evs-discard-yes { background: rgba(184, 71, 31, 0.08); color: #b8471f; }
+.evs-discard-no { background: #141a24; }
+.mt-ask-err { font-weight: 600; color: #b8471f; }
+/* ---- The check-in pop-up and the gym picker in the shared voice (17 Oct, Alex): like Add an event. Still pop-ups with real fields, but plain white (no wash or glow), titles at 600, small grey labels, rows white with a hairline, the colour of the thing on its ring, icon or edge only, inputs white with a hairline (ink while typing), choices ink when chosen, one ink pill to save or start. */
+.cki-wash, .cki-glow, .gpk-wash, .gpk-glow { display: none; }
+.cki-title, .gpk-title { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; color: #141a24; }
+.cki-eyebrow { font-weight: 600; letter-spacing: 0.16em; color: #a8761f; }
+.cki-sub, .gpk-sub { font-weight: 500; color: #8b93a1; }
+.cki-sub.done { color: #2f7a3f; }
+.cki-ring-in b { font-weight: 600; color: #141a24; }
+.cki-ring-in small { font-weight: 600; color: #98A2B3; }
+.cki-group-label { font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
+.cki-row { border-radius: 16px; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.cki-row.filled { background: #fff; box-shadow: inset 0 0 0 1.5px var(--c); }
+.cki-row-name { font-size: 15px; font-weight: 500; color: #141a24; }
+.cki-row.filled .cki-row-name { font-weight: 600; }
+.cki-row-last { font-weight: 500; color: #8b93a1; }
+.cki-num input { font-weight: 500; color: #141a24; }
+.cki-num input::placeholder { font-weight: 500; color: #C9CFD8; }
+.cki-unit { font-weight: 600; color: #98A2B3; }
+.cki-error { font-weight: 600; color: #b8471f; }
+.cki-num.bad input { text-decoration-color: #b8471f; }
+.cki-scale { border-radius: 12px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.cki-scale-fill { border-radius: 12px; background: var(--c); }
+.cki-scale button { font-weight: 600; color: #5b6474; }
+.cki-note-box { border-radius: 16px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.cki-note-box.has { box-shadow: inset 0 0 0 1.5px #141a24; }
+.cki-note-box textarea { color: #141a24; }
+.cki-note-box textarea::placeholder { color: #98A2B3; }
+.cki-avatar { background: #141a24; }
+.cki-foot { border-top-color: #E1E5EB; }
+.cki-save, .gpk-primary { height: 50px; border-radius: 999px; background: #141a24; box-shadow: none; font-weight: 600; }
+.cki-save:disabled, .gpk-primary:disabled { background: #C9CFD8; }
+.cki-footnote { font-weight: 500; color: #8b93a1; }
+.cki-confirm-text { font-weight: 500; color: #141a24; }
+.cki-confirm button { border-radius: 999px; font-weight: 600; }
+.cki-confirm .keep { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
+.cki-confirm .discard { background: #b8471f; }
+.gpk-round { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; color: #5b6474; }
+.gpk-row { border-radius: 16px; box-shadow: inset 0 0 0 1px #E1E5EB; color: #141a24; }
+.gpk-row.on { box-shadow: inset 0 0 0 1.5px #141a24; }
+.gpk-row-name { font-size: 15px; font-weight: 600; color: #141a24; }
+.gpk-row-meta { font-weight: 500; color: #8b93a1; }
+.gpk-badge { font-weight: 600; }
+.gpk-radio { border-width: 1.5px; border-color: #C9CFD8; }
+.gpk-addrow { border-radius: 16px; box-shadow: inset 0 0 0 1px #E1E5EB; font-weight: 600; color: #141a24; }
+.gpk-addrow-ico { background: none; }
+.gpk-addrow-ico svg { stroke: #141a24; }
+.gpk-note { font-weight: 500; color: #8b93a1; }
+.gpk-label { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+.gpk-input-box { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.gpk-input-box:focus-within, .gpk-input-box.valid { box-shadow: inset 0 0 0 1.5px #141a24; }
+.gpk-input { font-weight: 500; color: #141a24; }
+.gpk-input::placeholder { font-weight: 500; color: #98A2B3; }
+.gpk-error { font-weight: 600; color: #b8471f; }
+.gpk-seg-btn { background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-weight: 600; color: #5b6474; }
+.gpk-seg-btn.on { background: #141a24; box-shadow: none; color: #fff; }
+.gpk-info { background: none; padding: 0 2px; font-weight: 500; color: #8b93a1; }
+.gpk-toast { background: #141a24; font-weight: 600; }
+/* The check-in pop-up, closer to the workout screen (17 Oct, Alex): no box round each line. The lines sit flat, split by hairlines; a number is written on a thin underline (grey while empty, the line's colour once filled), the 1–10 scale is a row of numbers over a hairline whose filled part is a 2px line in the line's colour, the chosen numbers in that colour. The note keeps a field. */
+.cki-rows { gap: 0; }
+.cki-row, .cki-row.filled { gap: 8px; padding: 12px 2px; border-radius: 0; background: none; box-shadow: none; }
+.cki-row + .cki-row { box-shadow: inset 0 1px 0 #E1E5EB; }
+.cki-group-label { padding: 14px 2px 2px; }
+.cki-num { height: 40px; border-bottom: 1px solid #C9CFD8; border-radius: 0; }
+.cki-row.filled .cki-num { border-bottom-color: var(--c); }
+.cki-num.bad { border-bottom-color: #b8471f; }
+.cki-scale { height: 40px; border-radius: 0; background: none; box-shadow: inset 0 -1px 0 #E1E5EB; overflow: visible; }
+.cki-scale-fill { top: auto; bottom: 0; height: 2px; border-radius: 2px; background: var(--c); }
+.cki-scale button { height: 40px; color: #8b93a1; font-weight: 500; }
+.cki-scale button.in { color: var(--c); font-weight: 600; }
+/* No line between the check-in lines either (17 Oct, Alex): space alone separates them; the underlines under the numbers stay. */
+.cki-row + .cki-row { box-shadow: none; }
+.cki-row, .cki-row.filled { padding: 10px 2px; }
+/* The 1–10 numbers stay ink when picked (17 Oct, Alex); only the line under them takes the colour. */
+.cki-scale button.in { color: #141a24; }
+/* Saved days open (17 Oct, Alex): no white box round the list. The pill stays as the header; the saved days drop out under it flat on the page, tied to the bookmark by a thin line down the left, each one a row with Use, the hint under them. Closed, it is the pill alone. */
+.fdi-copy:has(.fdi-copy-chev.up) { background: none; box-shadow: none; overflow: visible; }
+.fdi-copy:has(.fdi-copy-chev.up) .fdi-copy-head { border-radius: 26px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.fdi-copy .fdi-fold-inner { position: relative; }
+.fdi-copy:has(.fdi-copy-chev.up) .fdi-fold-inner::before { content: ""; position: absolute; left: 26px; top: 0; bottom: 30px; border-left: 1px solid #E1E5EB; pointer-events: none; }
+.fdi-copy-row { padding: 12px 4px 12px 48px; border-top: 0; background: none; }
+.fdi-copy-row.asking { border-radius: 12px; background: rgba(184, 71, 31, 0.06); }
+.fdi-copy-foot, .fdi-copy-empty { padding: 4px 4px 2px 48px; border-top: 0; text-align: left; }
+/* Keep / Forget and the meal macros on the shared weights (17 Oct, Alex): 600, not 700–800; Forget a rust pill, Keep a text action; the question on a faint rust tint. The macros flat, no grey tiles. */
+.fdi-confirm { border-radius: 14px; background: rgba(184, 71, 31, 0.06); }
+.fdi-confirm-text { font-weight: 500; color: #b8471f; }
+.fdi-confirm-keep { font-weight: 600; color: #141a24; }
+.fdi-confirm-remove { border-radius: 999px; background: #b8471f; font-weight: 600; }
+.fdi-per-cell, .fdi-per.meal .fdi-per-cell { background: none; }
+.fdi-per-cell b { font-weight: 600; }
+.fdi-per-cell b i { font-weight: 500; }
+.fdi-per-cell small { font-weight: 600; letter-spacing: 0.12em; color: #8b93a1; }
+/* The saved days' line runs behind the rows (17 Oct, Alex): a row asking Keep / Forget covers it with its tint. */
+.fdi-copy .fdi-fold-inner::before { z-index: 0; }
+.fdi-copy-row { position: relative; z-index: 1; }
+.fdi-copy-row.asking { background: #F7EFEB; }
+/* Supplements open (17 Oct, Alex), like Saved days in the diary: no white box round the list. The pill stays as the header; the checklist drops out under it flat on the page, tied to the capsule by a thin line down the left that runs behind the rows. */
+.nd .nd-supps:has(.nd-supps-list) { background: none; box-shadow: none; overflow: visible; }
+.nd .nd-supps:has(.nd-supps-list) .nd-supps-toggle { border-radius: 26px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; }
+.nd .nd-supps-list { position: relative; padding: 4px 0 2px; }
+.nd .nd-supps-list::before { content: ""; position: absolute; left: 26px; top: 0; bottom: 18px; border-left: 1px solid #E1E5EB; pointer-events: none; z-index: 0; }
+.nd .nd-supp { position: relative; z-index: 1; padding: 11px 4px 11px 48px; border-top: 0; }
+.nd .nd-check { background: #F5F6F8; }
+.nd .nd-supp.taken .nd-check { background: #F5F6F8; }
+/* The rows under an open pill keep the pill's right edge (17 Oct, Alex): Use (and the supplement ticks) sit in under the chevron, not hard against the screen edge. */
+.fdi-copy-row { padding-right: 18px; }
+.nd .nd-supp { padding-right: 18px; }
+/* Naming a day to save it (17 Oct, Alex): no box round it; the name a rounded hairline field (ink while typing, not teal), Save an ink pill at 600 like Log. */
+.fdi-push-name-row { padding: 10px 0 12px; border: 0; border-radius: 0; background: none; }
+.fdi-push-name input { border-color: #E1E5EB; border-radius: 999px; padding-left: 16px; font-weight: 500; color: #141a24; }
+.fdi-push-name input:focus { border-color: #141a24; }
+.fdi-push-name .fdi-push-btn { border-radius: 999px; background: #141a24; font-weight: 600; }
+/* The day's log row (17 Oct, Alex): the bookmark (save this day) sits left of the button, Log at the far right; the bookmark in ink like the rest, green once the day is saved. The day-type dots in ink, like the phase cards'. */
+.fdi-push-text { margin-right: auto; }
+.fdi-push-mark { order: 2; margin-right: 0; color: #141a24; }
+.fdi-push-mark.saved { color: #2f7a3f; }
+.fdi-push-btn, .fdi-push-edit, .fdi-push-tick { order: 3; }
+.nd-dots span { background: #DCE1E8; }
+.nd-dots span.on { background: #141a24; }
+/* One photo, one size (17 Oct, Alex): the Nutrition tab's banner (260px) and the food diary's (about 300px, it has the date strip) used to scale the same photo to fit each, so it jumped between them. Both now lay the picture at the same fixed size from the top; the taller diary banner only shows a little more of it. */
+.nd-banner.nd-photo { background-size: auto 320px; background-position: right top; }
+.nd-banner > .tr-banner-pic { bottom: auto; height: 320px; }
+/* Taller than either banner can grow (the diary's reached ~340px on a phone and showed a dark strip under a 320px picture). */
+.nd-banner.nd-photo { background-size: auto 420px; }
+.nd-banner > .tr-banner-pic { height: 420px; }
+/* Doubled, so the fixed photo size wins over the banner's own `background: … / cover` shorthand whatever order the dev server loads them in. */
+.nd-banner.nd-photo.nd-photo { background-size: auto 420px; background-position: right top; }
+.nd-banner.nd-banner > .tr-banner-pic { bottom: auto; height: 420px; }
+/* The chosen gym in ink (17 Oct, Alex), like every other choice: a black outline and a black tick, no tint; the gym's own colour stays on its badge only (flat, no shadow). The inline gym-colour styles are overridden on purpose. */
+.gpk-row.on { background: #fff !important; box-shadow: inset 0 0 0 1.5px #141a24 !important; }
+.gpk-radio.on { background: #141a24 !important; }
+.gpk-badge { box-shadow: none; }
+/* The workout's bottom sheets (Couldn't do this session, and the others on .wo-sheet) in the shared voice (17 Oct, Alex): title at 600 in ink, the field white with a hairline (ink while typing, not teal), the main button an ink pill, the text action in ink. */
+.wo-sheet { color: #141a24; }
+.wo-sheet-grab { background: #E1E5EB; }
+.wo-sheet-title { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; color: #141a24; }
+.wo-sheet-sub { font-size: 13.5px; font-weight: 500; color: #8b93a1; }
+.wo-sheet-input { border: 0; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-weight: 500; color: #141a24; }
+.wo-sheet-input:focus { border: 0; background: #fff; box-shadow: inset 0 0 0 1.5px #141a24; }
+.wo-sheet-input::placeholder { color: #98A2B3; }
+.wo-sheet-btn { height: 50px; border-radius: 999px; background: #141a24; font-weight: 600; }
+.wo-sheet-btn:disabled { background: #C9CFD8; }
+.wo-sheet-text { font-weight: 600; color: #141a24; }
+.wo-sheet-empty { border-radius: 0; background: none; padding: 0; font-weight: 500; color: #8b93a1; }
+/* Doubled under .wo-sheet so these win over the originals whatever order the dev server loads them in (17 Oct: they lost on Alex's localhost). */
+.wo-sheet .wo-sheet-title { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; color: #141a24; }
+.wo-sheet .wo-sheet-sub { font-weight: 500; color: #8b93a1; }
+.wo-sheet .wo-sheet-input { border: 0; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-weight: 500; color: #141a24; }
+.wo-sheet .wo-sheet-input:focus { border: 0; background: #fff; box-shadow: inset 0 0 0 1.5px #141a24; }
+.wo-sheet .wo-sheet-btn { height: 50px; border-radius: 999px; background: #141a24; font-weight: 600; }
+.wo-sheet .wo-sheet-btn:disabled { background: #C9CFD8; }
+.wo-sheet .wo-sheet-text { font-weight: 600; color: #141a24; }
+/* No navy left on the Training tab (17 Oct, Alex): the chosen week chip in ink (text and dot), the week ring and the session numbers in ink; green still for a week or session done, indigo only for Live. Scoped one notch up for the dev-server order. */
+.tr-banner .tr-wk.on { color: #141a24; }
+.tr-banner .tr-wk.on .tr-wk-dot { background: #141a24; }
+.tr-body .tr-ring .tr-ring-fill { stroke: #141a24 !important; }
+.tr-body .tr-ring.done .tr-ring-fill { stroke: #2f7a3f !important; }
+.tr-body .tr-row .tr-row-tile:not(.unfinished):not(.live):not(.skipped):not(.missed) { color: #141a24; }
+/* The week ring in Training's own indigo (17 Oct, Alex: black was too sad); green when the week is done. */
+.tr-body .tr-ring .tr-ring-fill { stroke: #3a3390 !important; }
+.tr-body .tr-ring.done .tr-ring-fill { stroke: #2f7a3f !important; }

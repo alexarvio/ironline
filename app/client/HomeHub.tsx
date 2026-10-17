@@ -1,14 +1,15 @@
 "use client";
 
 import { NOTIFICATION_TYPES, type NotificationCategory } from "../lib/notificationTypes";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { markNotificationReadAction } from "../lib/actions";
 import VideoReplySheet, { type VideoReplyView } from "./VideoReplySheet";
 import PhaseCards, { type HomePhase, type PhaseFoodToday } from "./PhaseCards";
+import { defaultPhaseCover } from "../lib/phaseCovers";
 import { type ProgressPics } from "./ProgressPicsCard";
 import ProgressPicsPill from "./home/ProgressPicsPill";
 import type { CheckInForm } from "./CheckInDialog";
-import EventsCard, { type HomeEvents } from "./EventsCard";
+import type { HomeEvents } from "./EventsCard";
 import EventsTimelineCard from "./home/EventsTimelineCard";
 import type { CardCovers } from "./CardPictureSheet";
 import { ChevronDownIcon } from "../components/icons";
@@ -155,9 +156,15 @@ export default function HomeHub({
   // The cards (13 Oct): lifestyle first, as a picture card like the others
   // (a plain "Check-in" card when there are lines to log but no phase), then
   // training and nutrition.
+  // Every track always has its card (17 Oct, Alex): one with nothing deployed is an empty card that says so,
+  // and names the phase the coach has scheduled, if any.
+  const empty = (track: HomePhase["track"], id: number): HomePhase => ({ id, track, name: "No plan yet", start: today, end: null, coverUrl: defaultPhaseCover(track, 0), objectives: [], note: null, next: planGap?.next?.track === track ? { name: planGap.next.name, start: planGap.next.start } : null, placeholder: true });
   const cards: HomePhase[] = [
-    ...(lifestyle ? [lifestyle] : hasCheckIns ? [{ id: -1, track: "lifestyle" as const, name: "Check-in", start: today, end: null, coverUrl: "/img/lifestyle-bottle.jpg", objectives: [], note: null, next: null }] : []),
-    ...plan,
+    ...(lifestyle ? [lifestyle] : hasCheckIns ? [{ id: -1, track: "lifestyle" as const, name: "Check-in", start: today, end: null, coverUrl: "/img/lifestyle-bottle.jpg", objectives: [], note: null, next: null }] : [empty("lifestyle", -10)]),
+    ...(["training", "nutrition"] as const).flatMap((t, i) => {
+      const own = plan.filter((p) => p.track === t);
+      return own.length ? own : [empty(t, -11 - i)];
+    }),
   ];
   // What is still to do today, counted the way the cards under it show it.
   const foodDone = !!food && ((!!food.mealsTotal && (food.mealsLogged ?? 0) >= food.mealsTotal) || (!!food.target && food.eaten >= food.target * 0.9));
@@ -191,11 +198,11 @@ export default function HomeHub({
             ownCovers={cardCovers}
           />
         )}
-        {plan.length === 0 && <PlanGapCard gap={planGap ?? { next: null }} coachName={coach.firstName} />}
         {progressPics && <TodaysTasks pics={progressPics} />}
         {/* What is coming up in their life (7 Oct): a trip, an injury, something started. Theirs to add; the coach's listed too. Above the coach's latest (9 Oct). */}
         {/* The timeline row (15 Oct) once there is anything at all; else the old card's empty state. */}
-        {events.list.length > 0 ? <EventsTimelineCard events={events} today={today} /> : <EventsCard events={events} coachName={coach.firstName} today={today} />}
+        {/* The timeline row always (17 Oct): with nothing logged it is just Today, "Nothing on", like the Events screen. */}
+        <EventsTimelineCard events={events} today={today} />
         <LatestActivityCard a={latestActivity} coach={coach} />
         {upcoming ? (
           <MeetingCard m={upcoming} recap={recap} coachFirstName={coach.firstName} />
@@ -223,20 +230,6 @@ function TodayCard({ next, coachName, hasPlan, nextPhaseStart }: { next: string 
 // ---- 1b · Your plan, with no phase live: what is next, and a way to ask ----
 
 export type PlanGap = { next: { track: "training" | "nutrition" | "lifestyle"; name: string; start: string } | null };
-const GAP_TRACK: Record<PlanGap["next"] extends infer N ? (N extends { track: infer T } ? T : never) : never, string> = { training: "Training", nutrition: "Nutrition", lifestyle: "Lifestyle" };
-
-function PlanGapCard({ gap, coachName }: { gap: PlanGap; coachName: string }) {
-  const starts = gap.next ? new Date(`${gap.next.start}T00:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" }) : null;
-  return (
-    <section className={`hm-gap${gap.next ? " charging" : ""}`} aria-label="Your plan">
-      <span className="hm-eyebrow">Your plan</span>
-      <b className="hm-gap-title">{gap.next ? `${gap.next.name} starts ${starts}` : "No phase running"}</b>
-      <small className="hm-gap-sub">{gap.next ? `${GAP_TRACK[gap.next.track]} · ${coachName} is getting it ready.` : `${coachName} is building your next phase.`}</small>
-      {/* No button (9 Oct): the chat sits right under this card. */}
-    </section>
-  );
-}
-
 // ---- 1 · Banner: the date and the greeting, nothing under it ------------
 
 function HomeBanner({ dateLabel, firstName, initialHello }: { dateLabel: string; firstName: string; initialHello: string }) {
@@ -486,10 +479,13 @@ export function MeetingCard({ m, recap, coachFirstName }: { m: NonNullable<Upcom
         <div className="hm-mt-main">
           <div className="hm-mt-top">
             <span className="hm-mt-eyebrow">Next · with {coachFirstName}</span>
-            <span className={`hm-mt-pill${live ? " live" : shown.inLabel === "Today" ? " today" : ""}`} aria-label={pillLabel}>
-              {live && <span className="hm-mt-live-dot" aria-hidden="true" />}
-              {pillLabel}
-            </span>
+            {/* Only Today or Live (17 Oct, Alex): the countdown ("In 6 days") is gone, the date beside it says it. */}
+            {(live || shown.inLabel === "Today") && (
+              <span className={`hm-mt-pill${live ? " live" : " today"}`} aria-label={pillLabel}>
+                {live && <span className="hm-mt-live-dot" aria-hidden="true" />}
+                {pillLabel}
+              </span>
+            )}
           </div>
           <div className="hm-mt-title">{m.topic}</div>
           <div className="hm-mt-when">{shown.whenLabel}</div>
@@ -547,17 +543,38 @@ function LastMeetingCard({ recap, coachFirstName }: { recap: NonNullable<Meeting
 // recap under it, eased open.
 function RecapFold({ recap, date }: { recap: NonNullable<MeetingRecap>; /** Shown as a pill on the title's line, before the chevron. */ date?: string }) {
   const [open, setOpen] = useState(false);
+  // Opening at the foot of Home (17 Oct, Alex): the page rides up with the notes as they unfold, so their last
+  // line stays above the floating nav instead of opening behind it.
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const toggle = () => {
+    const opening = !open;
+    setOpen(opening);
+    const body = bodyRef.current;
+    if (!opening || !body) return;
+    let box: HTMLElement | null = body.parentElement;
+    while (box && !(box.scrollHeight > box.clientHeight && /auto|scroll/.test(getComputedStyle(box).overflowY))) box = box.parentElement;
+    const scroller = box ?? (document.scrollingElement as HTMLElement | null);
+    if (!scroller) return;
+    const until = performance.now() + 420;
+    const follow = () => {
+      const nav = document.querySelector(".app-bottom-nav")?.getBoundingClientRect().top ?? window.innerHeight;
+      const over = body.getBoundingClientRect().bottom - (nav - 16);
+      if (over > 0) scroller.scrollTop += over;
+      if (performance.now() < until) requestAnimationFrame(follow);
+    };
+    requestAnimationFrame(follow);
+  };
   return (
     <div className="hm-recap">
       {/* "Meeting notes" is the head; the call's name (or the coach's title) is the subheading over the notes (6 Oct). */}
-      <button type="button" className="hm-recap-head" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+      <button type="button" className="hm-recap-head" aria-expanded={open} onClick={toggle}>
         <span className="hm-recap-title">Meeting summary</span>
         {date && <span className="hm-mt-pill">{date}</span>}
         <span className={`hm-recap-chev${open ? " open" : ""}`} aria-hidden="true">
           <ChevronDownIcon />
         </span>
       </button>
-      <div className={`hm-recap-body${open ? " open" : ""}`} aria-hidden={!open}>
+      <div ref={bodyRef} className={`hm-recap-body${open ? " open" : ""}`} aria-hidden={!open}>
         <div className="hm-recap-clip">
           <b className="hm-recap-sub">{recap.title}</b>
           <p className="hm-recap-text">{recap.text}</p>

@@ -31,6 +31,8 @@ export type HomePhase = {
   note: string | null;
   /** The phase the coach has scheduled after this one on the same track (9 Oct); null, none yet. */
   next?: { name: string; start: string } | null;
+  /** No phase on this track yet (17 Oct, Alex): the card is there all the same, empty, saying so. */
+  placeholder?: boolean;
 };
 
 export const TRACK_LABEL = { nutrition: "Nutrition", training: "Training", lifestyle: "Lifestyle" } as const;
@@ -215,6 +217,33 @@ function Cover({ ph, eager }: { ph: HomePhase; eager?: boolean }) {
   return <img key={src} ref={ref} className="pc-cover" src={src} alt="" draggable={false} loading={eager ? "eager" : "lazy"} onError={retry} />;
 }
 
+// A track with nothing deployed yet (17 Oct, Alex): the same card, its picture
+// washed out, the track chip, "No plan yet" and what is coming, if anything.
+function EmptyPhaseCard({ ph, coachName, eager, onOpen }: { ph: HomePhase; coachName: string; eager?: boolean; onOpen: () => void }) {
+  const label = TRACK_LABEL[ph.track];
+  const sub = ph.next ? `${ph.next.name} starts ${short(ph.next.start)}` : `${coachName} is building your ${label.toLowerCase()} phase.`;
+  return (
+    <article className="pc-card pc-empty" data-track={ph.track} aria-label={`${label}: no plan yet. ${sub}`} onClick={onOpen}>
+      <Cover ph={ph} eager={eager} />
+      <span className="pc-scrim" aria-hidden="true" />
+      <div className="pc-top">
+        <span className="pc-track-chip">
+          <span className="pc-icon">{TRACK_ICON[ph.track]}</span>
+          {label}
+        </span>
+      </div>
+      <div className="pc-panel">
+        <div className="pc-name-row">
+          <h3 className="pc-name-h">
+            <span className="pc-name">No plan yet</span>
+          </h3>
+        </div>
+        <p className="pc-empty-sub">{sub}</p>
+      </div>
+    </article>
+  );
+}
+
 // ---- A · carousel ---------------------------------------------------------
 
 function PhaseCardCarousel({ phases, coachName, today, nextSession, food, weekDone, checkInCount, checkIn, clientId, ownCovers }: { phases: HomePhase[]; coachName: string; today: string; nextSession: PhaseNextSession; food: PhaseFoodToday; weekDone: { nextWeekLabel: string } | null; checkInCount: { done: number; total: number } | null; checkIn: CheckInForm | null; clientId: number; ownCovers: CardCovers }) {
@@ -305,10 +334,22 @@ function PhaseCardCarousel({ phases, coachName, today, nextSession, food, weekDo
   return (
     <>
       <div ref={scroller} className="pc-scroller" role="region" aria-label="Your phases" tabIndex={0} onScroll={onScroll} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
-        {phases.map((ph, i) => (
+        {phases.map((ph, i) =>
+          ph.placeholder ? (
+            <EmptyPhaseCard key={ph.id} ph={{ ...ph, coverUrl: coverFor(ph.track)[0] ?? ph.coverUrl }} coachName={coachName} eager={i === 0} onOpen={() => open(ph, i)} />
+          ) : (
           <PhaseCard key={ph.id} ph={{ ...ph, coverUrl: coverFor(ph.track)[0] ?? null }} pictures={coverFor(ph.track)} eager={i === 0} coachName={coachName} today={today} nextSession={nextSession} food={food} weekDone={weekDone} checkInCount={checkInCount} onOpen={() => open(ph, i)} onHold={() => setHoldTrack(ph.track)} onLog={checkIn ? () => setLogOpen(true) : undefined} />
-        ))}
+          )
+        )}
       </div>
+      {/* Position dots back (16 Oct, Alex): which of the cards is showing. */}
+      {count > 1 && (
+        <div className="pc-dots" aria-hidden="true">
+          {phases.map((ph, i) => (
+            <span key={ph.id} className={`pc-dot${i === active ? " on" : ""}`} data-track={ph.track} />
+          ))}
+        </div>
+      )}
       {holdTrack && (
         <CardPictureSheet
           clientId={clientId}

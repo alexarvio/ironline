@@ -182,13 +182,10 @@ export default function SessionOverview({
           </span>
           )}
         </div>
-        {(live || status === "skipped" || status === "missed") && (
+        {/* Live, no line here (17 Oct, Alex): the gym and the elapsed time are already in the stats and on Resume. */}
+        {(status === "skipped" || status === "missed") && (
         <p className="so-sub">
-          {live
-            ? `Started${gymName ? ` at ${gymName}` : ""} · ${clock(ms)} in`
-            : done
-            ? null
-            : status === "skipped"
+          {status === "skipped"
             ? `Couldn't train · ${day.skipReason}`
             : status === "missed"
             ? "Not done that week."

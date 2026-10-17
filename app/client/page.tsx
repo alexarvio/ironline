@@ -584,9 +584,11 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                   <span className="tr-days-num">{sessionsDone}</span>
                   <span className="tr-days-of">of {dayTarget} sessions</span>
                 </div>
-                <div className={`tr-days-status${sessionsLeft <= 0 ? " done" : ""}`}>
-                  {[sessionsLeft <= 0 ? (unfinished ? "No sessions left" : "Week complete") : `${sessionsLeft} session${sessionsLeft === 1 ? "" : "s"} left`, unfinished ? `${unfinished} unfinished` : null].filter(Boolean).join(" · ")}
-                </div>
+                {/* No "N sessions left" (17 Oct, Alex): the figure and the ring say it. Only a complete week or an unfinished session gets a line. */}
+                {(() => {
+                  const line = [sessionsLeft <= 0 && !unfinished ? "Week complete" : null, unfinished ? `${unfinished} unfinished` : null].filter(Boolean).join(" · ");
+                  return line ? <div className={`tr-days-status${sessionsLeft <= 0 && !unfinished ? " done" : ""}`}>{line}</div> : null;
+                })()}
               </div>
               {/* Green once the week is complete, like a finished session's pill. */}
               <div className={`tr-ring${sessionsLeft <= 0 ? " done" : ""}`} role="img" aria-label={`${pct}% of this week's sessions done`}>

@@ -705,7 +705,7 @@ export default function FoodDiaryScreen({
                 </span>
                 {total > 0 && !same && (
                   <button type="button" className="fdi-push-btn" onClick={push} disabled={loading}>
-                    {logged != null ? "Update log" : "Log calories"}
+                    {logged != null ? "Update log" : "Log"}
                   </button>
                 )}
                 {typed && (

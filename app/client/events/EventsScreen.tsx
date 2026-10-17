@@ -45,6 +45,11 @@ const chromeOf = (e: HomeEvent): Chrome => {
 const groupOf = (e: HomeEvent): string => (e.phase ? "phase" : eventTypeOf(e.kind).id);
 const GROUP_LABELS: Record<string, string> = { trip: "Trips", supplement: "Supplements", health: "Health", training: "Training", work: "Work", other: "Other", phase: "Phases" };
 
+// A free day (16 Oct): today still gets its row, in ink, so the list always
+// shows where today is. Id 0 is never an event's (saved ones are positive,
+// unsaved ones negative).
+const TODAY_ROW = 0;
+
 // Every event opens, the coach's too, with Edit and Delete (10 Oct); a phase only when it has objectives to show.
 const hasMore = (e: HomeEvent) => (e.phase ? !!e.note : true);
 
@@ -101,12 +106,15 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
     const have = new Set(list.map(groupOf));
     return [...EVENT_TYPES.map((t) => t.id as string), "phase"].filter((g) => have.has(g));
   }, [list]);
+  // Landed on from a notification: that event, centred at the spot, open and lit (16 Oct).
+  const focused = focusId != null ? (events.list.find((e) => e.id === focusId) ?? null) : null;
   const [filter, setFilter] = useState<string>(() => {
+    let kept = "all";
     try {
-      return window.sessionStorage.getItem(FILTER_KEY) ?? "all";
-    } catch {
-      return "all";
-    }
+      kept = window.sessionStorage.getItem(FILTER_KEY) ?? "all";
+    } catch {}
+    // A kept filter that would hide the event landed on gives way to All.
+    return focused && kept !== "all" && kept !== groupOf(focused) ? "all" : kept;
   });
   const pickFilter = (g: string) => {
     setFilter(g);
@@ -120,26 +128,31 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
   // Coming up: furthest first, ending with the soonest, right above today.
   const upcoming = shown.filter((e) => statusOf(e, today) === "next").sort(byStart).reverse();
   const now = shown.filter((e) => statusOf(e, today) === "now").sort((a, b) => (a.end < b.end ? -1 : a.end > b.end ? 1 : a.id - b.id));
+  // Today always has a row: when nothing in the list as shown is on today, the free-day one.
+  // Under a filter that hides today's, it says so ("No trips today") rather than "Nothing on".
+  const freeDay = now.length === 0;
+  const freeTitle = list.some((e) => statusOf(e, today) === "now") && GROUP_LABELS[filter] ? `No ${GROUP_LABELS[filter].toLowerCase()} today` : "Nothing on today";
   const pastAll = shown.filter((e) => statusOf(e, today) === "past").sort((a, b) => (a.end < b.end ? 1 : a.end > b.end ? -1 : b.id - a.id));
   // The past comes in pages of 20 as the client scrolls near the bottom.
-  const [pastShown, setPastShown] = useState(PAGE);
+  // The page always reaches far enough to hold the event landed on.
+  const [pastShown, setPastShown] = useState(() => (focused ? Math.max(PAGE, pastAll.findIndex((e) => e.id === focused.id) + 1) : PAGE));
   const past = pastAll.slice(0, pastShown);
 
   // ---- The sheet, the row open in place, and a save on its way.
   const [sheet, setSheet] = useState<Sheet>(null);
-  // Landed on from a notification: that event starts open (when it has more to show) and lit.
-  const focused = focusId != null ? (events.list.find((e) => e.id === focusId) ?? null) : null;
   const [open, setOpen] = useState<number | null>(null);
   const [pending, setPending] = useState(false);
   const [highlight, setHighlight] = useState<number | null>(null);
   const landed = useRef(false);
   useEffect(() => {
     if (!focused || landed.current) return;
-    landed.current = true;
+    // Centred on it from the first frame (below); a beat later it opens, whole, and glows.
+    // Marked landed only once it has, so an effect run twice (React's dev mode) still lands.
     const t = setTimeout(() => {
-      if (hasMore(focused)) setOpen(focused.id);
+      landed.current = true;
+      setOpen(focused.id);
       setHighlight(focused.id);
-    }, 420);
+    }, 300);
     return () => clearTimeout(t);
   }, [focused]);
   const rows = useRef(new Map<number, HTMLElement>());
@@ -149,7 +162,8 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
   // On open, the TODAY marker about 30% down the screen, so what is coming and what is on sit in view.
   // The list snaps a row to one spot, 36% down the screen (16 Oct): whichever
   // row sits there is the focus and grows a little. It opens on what is on
-  // today, else the soonest to come, else the latest past.
+  // today, else the free-day row, else the soonest to come, else the latest past;
+  // from a notification, on the event it names.
   const scrollRef = useRef<HTMLDivElement>(null);
   const [focusRow, setFocusRow] = useState<number | null>(null);
   const SNAP = 0.36;
@@ -175,18 +189,29 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
     centred.current = true;
     const box = scrollRef.current;
     if (!box) return;
-    const first = now[0] ?? upcoming[upcoming.length - 1] ?? pastAll[0] ?? null;
-    const el = first ? rows.current.get(first.id) : null;
+    const firstId = (focused && rows.current.has(focused.id) ? focused.id : null) ?? now[0]?.id ?? (freeDay ? TODAY_ROW : (upcoming[upcoming.length - 1] ?? pastAll[0])?.id) ?? null;
+    const el = firstId != null ? rows.current.get(firstId) : null;
     const top = el ? el.offsetTop + Math.min(el.offsetHeight, 72) / 2 : 0;
     box.scrollTop = Math.max(0, top - box.clientHeight * SNAP);
-    setFocusRow(first?.id ?? null);
+    setFocusRow(firstId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // While a tap glides a row to the spot, the rows it passes neither take the focus nor close it.
+  // It ends on scrollend, or after a second where there is none (Safari before 18).
+  const gliding = useRef(0);
+  useEffect(() => {
+    const box = scrollRef.current;
+    if (!box) return;
+    const end = () => (gliding.current = 0);
+    box.addEventListener("scrollend", end);
+    return () => box.removeEventListener("scrollend", end);
   }, []);
   const raf = useRef(0);
   const onScroll = () => {
     if (!raf.current)
       raf.current = requestAnimationFrame(() => {
         raf.current = 0;
+        if (Date.now() < gliding.current) return;
         const id = nearest();
         setFocusRow(id);
         // An open row closes once the list moves on from it (16 Oct).
@@ -198,10 +223,17 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
   };
   useEffect(() => () => cancelAnimationFrame(raf.current), []);
 
+  // A lit row (just saved, or landed on) glides to the snap spot and takes the focus, so the snap
+  // doesn't carry it past and close it.
   useEffect(() => {
     if (highlight == null) return;
+    const box = scrollRef.current;
     const el = rows.current.get(highlight);
-    el?.scrollIntoView({ block: "center", behavior: "smooth" });
+    if (box && el) {
+      gliding.current = Date.now() + 1000;
+      box.scrollTo({ top: Math.max(0, el.offsetTop + Math.min(el.offsetHeight, 72) / 2 - box.clientHeight * SNAP), behavior: "smooth" });
+      setFocusRow(highlight);
+    }
     const t = setTimeout(() => setHighlight(null), 900);
     return () => clearTimeout(t);
   }, [highlight]);
@@ -278,6 +310,7 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
       const box = scrollRef.current;
       const el = rows.current.get(e.id);
       if (box && el) {
+        gliding.current = Date.now() + 1000;
         box.scrollTo({ top: Math.max(0, el.offsetTop + Math.min(el.offsetHeight, 72) / 2 - box.clientHeight * SNAP), behavior: "smooth" });
         setFocusRow(e.id);
       }
@@ -344,6 +377,7 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
             {now.map((e) => (
               <EventRow key={e.id} {...rowProps(e, "now", "Now")} />
             ))}
+            {freeDay && <FreeDayRow today={today} title={freeTitle} focus={focusRow === TODAY_ROW} refFn={(el) => el && rows.current.set(TODAY_ROW, el)} />}
 
             {past.length > 0 && <div className="evp-sec">Past</div>}
             {past.map((e, i) => (
@@ -447,6 +481,30 @@ function EventRow(p: RowProps) {
         </span>
       </button>
       <RowMore {...p} clipped={clipped} />
+    </div>
+  );
+}
+
+// Today with nothing on: the date, an empty ring in ink with no icon, and the words. Nothing to open.
+function FreeDayRow({ today, title, focus, refFn }: { today: string; title: string; focus: boolean; refFn: (el: HTMLElement | null) => void }) {
+  return (
+    <div ref={refFn} className={`evp-r today${focus ? " focus" : ""}`} style={{ "--c": "#141a24", "--rgb": "20,26,36" } as React.CSSProperties}>
+      <div className="evp-row labelled" aria-label={`Today: ${title.toLowerCase()}`}>
+        <span className="evp-date" aria-hidden="true">
+          <b>{today.slice(8, 10)}</b>
+          <small>{monthOf(today)}</small>
+        </span>
+        <span className="evp-node" aria-hidden="true">
+          <span className="evp-ring" />
+        </span>
+        <span className="evp-text">
+          <span className="evp-label">Today</span>
+          <span className="evp-title-row">
+            <span className="evp-title">{title}</span>
+          </span>
+          <span className="evp-when">Free day</span>
+        </span>
+      </div>
     </div>
   );
 }

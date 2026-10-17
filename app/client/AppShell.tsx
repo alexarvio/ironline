@@ -398,7 +398,15 @@ export default function AppShell({
         <main className="cn-body cn-body-settings">
           <MessagesProvider value={openMessages}>
             <CoachProvider value={coachProfile ? () => setPushView("coach") : null}>
-              <NavigateProvider value={goToTab}>{settingsContent}</NavigateProvider>
+              {/* Settings' Progress pictures row (17 Oct): it sat outside the photos bridge, so the tap did nothing. */}
+              <PhotosProvider
+                value={() => {
+                  setPhotosPeriod(null);
+                  setPushView("photos");
+                }}
+              >
+                <NavigateProvider value={goToTab}>{settingsContent}</NavigateProvider>
+              </PhotosProvider>
             </CoachProvider>
           </MessagesProvider>
         </main>
