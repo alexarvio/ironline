@@ -20314,3 +20314,5 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .tr-banner.nd-naked-banner { background-image: url("/img/nutrition-head.jpg"); background-position: right center; }
 /* Home's meetings with none yet (17 Oct): the heading and Request a meeting, one quiet line under it. */
 .hm-mt-none { margin: 0; padding: 4px 0 0; font-size: 14px; font-weight: 500; color: #8b93a1; }
+/* No phase yet (17 Oct, Alex): the Training and Nutrition banners in black and white, like the empty cards on Home. */
+.tr.tr-naked .tr-banner, .tr-banner.nd-naked-banner { filter: grayscale(1); }

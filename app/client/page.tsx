@@ -1489,7 +1489,7 @@ export default async function ClientPage({
       bare: true,
       darkBanner: true,
       content: (
-        <div className="tr">
+        <div className={`tr${deployedProgram ? "" : " tr-naked"}`}>
           <ClientWeekSwitcher
             weeks={trainingWeeks}
             currentWeek={currentWeekNum}
