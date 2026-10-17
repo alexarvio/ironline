@@ -66,7 +66,7 @@ export default function ProgressCompare({ sheets }: { sheets: CompareSheet[] }) 
               {c?.src ? (
                 <button type="button" className="pc-cmp-zoom" onClick={() => setViewing(big.findIndex((b) => b.src === c.src))} aria-label={`${c.label}, ${s.title}: full screen`}>
                   {/* eslint-disable-next-line @next/next/no-img-element -- the client's own upload, served by the app */}
-                  <img src={c.src} alt={`${c.label}, ${s.title}`} />
+                  <img src={c.src} alt={`${c.label}, ${s.title}`} decoding="async" />
                 </button>
               ) : (
                 <span className="pc-cmp-hole">Not taken</span>

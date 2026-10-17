@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { uploadProgressPhotoAction } from "../lib/actions";
+import { fitJpeg } from "../lib/coverJpeg";
 import { ArrowRightIcon, ChevronLeftIcon } from "../components/icons";
 import { useOpenPhotos } from "./CheckInContext";
 import CoachMark from "./CoachMark";
@@ -215,7 +216,9 @@ function OpenSheet({
         const fd = new FormData();
         fd.set("clientId", String(clientId));
         fd.set("slotId", String(slot.id));
-        fd.set("file", item.file);
+        // Shrunk on the phone first (17 Oct): 1600px on the long edge, a few hundred KB instead of the camera's MBs.
+        const small = await fitJpeg(item.file);
+        fd.set("file", small ? new File([small], "photo.jpg", { type: "image/jpeg" }) : item.file);
         try {
           await uploadProgressPhotoAction(fd);
           done.push(slot.id);

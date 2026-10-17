@@ -156,7 +156,7 @@ export function PhotoViewer({
       </div>
       <div className="pp-app-viewer-stage">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={photo.src} alt={photo.label} className="pp-app-viewer-img" />
+        <img src={photo.src} alt={photo.label} className="pp-app-viewer-img" decoding="async" />
       </div>
       {photos.length > 1 && (
         <div className="pp-app-viewer-nav">

@@ -23,3 +23,30 @@ export async function coverJpeg(file: File, W = 900, H = 1200): Promise<Blob | n
     URL.revokeObjectURL(url);
   }
 }
+
+// A photo kept whole, only made smaller (17 Oct): the longest edge at most
+// `max` px, a JPEG at 0.85. Progress pictures went up as the camera's
+// originals (several MB, ~4000px), so they were slow to send and slow to show.
+// Re-encoding also drops the EXIF block, the location with it. null: the
+// browser could not read it, and the caller sends the original.
+export async function fitJpeg(file: File, max = 1600): Promise<Blob | null> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((ok, fail) => {
+      const i = new Image();
+      i.onload = () => ok(i);
+      i.onerror = fail;
+      i.src = url;
+    });
+    const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return await new Promise((ok) => canvas.toBlob(ok, "image/jpeg", 0.85));
+  } catch {
+    return null;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
