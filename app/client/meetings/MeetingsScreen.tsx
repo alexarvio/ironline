@@ -125,21 +125,51 @@ export default function MeetingsScreen({ upcoming, past, request = null, clientI
     return best;
   };
   // While a tap glides a row to the spot, the rows it passes neither take the focus nor close it.
-  // It ends on scrollend, or after a second where there is none (Safari before 18).
+  // The glide is driven frame by frame and re-aims at the row each frame
+  // (17 Oct): the call open above it folds shut as it goes, moving the row up,
+  // and a target taken once at the tap overshot by that fold and cut the ring
+  // off at the top. 450ms outlasts the 300ms fold, so it lands on the settled row.
   const gliding = useRef(0);
+  const glideRaf = useRef(0);
+  const glideEnd = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const glideTo = (id: number) => {
-    const top = spotOf(id);
-    if (top == null) return;
-    gliding.current = Date.now() + 1000;
-    scrollRef.current?.scrollTo({ top, behavior: "smooth" });
-  };
-  useEffect(() => {
     const box = scrollRef.current;
-    if (!box) return;
-    const end = () => (gliding.current = 0);
-    box.addEventListener("scrollend", end);
-    return () => box.removeEventListener("scrollend", end);
-  }, []);
+    if (!box || spotOf(id) == null) return;
+    cancelAnimationFrame(glideRaf.current);
+    clearTimeout(glideEnd.current);
+    gliding.current = Date.now() + 1000;
+    // Mandatory snapping would pull each frame back to the nearest row: off for the glide, on again once it lands.
+    box.style.scrollSnapType = "none";
+    const from = box.scrollTop;
+    const t0 = performance.now();
+    const land = () => {
+      cancelAnimationFrame(glideRaf.current);
+      clearTimeout(glideEnd.current);
+      glideRaf.current = 0;
+      const top = spotOf(id);
+      if (top != null) box.scrollTop = top;
+      box.style.scrollSnapType = "";
+      gliding.current = 0;
+    };
+    const step = (now: number) => {
+      const top = spotOf(id);
+      if (top == null) return land();
+      const k = Math.min(1, (now - t0) / 450);
+      box.scrollTop = from + (top - from) * (1 - Math.pow(1 - k, 3));
+      if (k < 1) glideRaf.current = requestAnimationFrame(step);
+      else land();
+    };
+    glideRaf.current = requestAnimationFrame(step);
+    // Frames stop when the app is hidden mid-glide: land it anyway, snapping back on.
+    glideEnd.current = setTimeout(land, 700);
+  };
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(glideRaf.current);
+      clearTimeout(glideEnd.current);
+    },
+    []
+  );
   // From a notification: a booked call opens in its pill; a past one is glided to after a beat, opened and lit.
   useEffect(() => {
     if (focusId == null) return;
