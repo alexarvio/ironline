@@ -7,6 +7,7 @@ import { displayToKg, fmtWeight, kgToDisplay, planToDisplay, stepFor, unitLabel 
 import SwapExerciseDialog from "./workout/SwapExerciseDialog";
 import { VideoAskSheet, VideoGlyph } from "./VideoAskSheet";
 import { CoachNote, shownName, type SessionExercise } from "./workoutShared";
+import CoachMark from "./CoachMark";
 
 // One exercise, as a page of the workout (13 Oct, "Stepper sheet"): logging
 // is the whole screen. The sets card holds one row a set; exactly one is
@@ -90,6 +91,8 @@ export default function ExercisePage({
   // Swapped for something else: the weight and RPE were set for the
   // prescribed exercise, so only the reps carry over.
   const swapped = exercise.swap != null;
+  // The coach's note on the substitute picked, when it is one they suggested with a note.
+  const swapNote = exercise.swap?.libraryExerciseId != null ? exercise.alternatives.find((a) => a.id === exercise.swap!.libraryExerciseId)?.note?.trim() || null : null;
   const targetWeight = swapped ? null : gymWeight;
   const targetRpe = swapped ? null : exercise.targetRpe;
   // RPE is off the set rows (14 Oct, Alex, after Strava): weight and reps only, side by side, typed (the − and + went the same day; the arrow keys still step). A figure logged before stays in the data.
@@ -463,6 +466,18 @@ export default function ExercisePage({
 
       {/* Swapped (17 Oct, Alex): the coach's cue, the client's own note and the video asks belong to the exercise it replaced, so none of them show. */}
       {!swapped && <CoachNote assignmentId={exercise.id} note={exercise.note} />}
+      {/* …but the coach's own note on the substitute they suggested does show (17 Oct, Alex). */}
+      {swapNote && (
+        <div className="ts-coachnote">
+          <div className="ts-coachnote-top">
+            <span className="ts-coachnote-label coach-eyebrow">
+              <CoachMark />
+              From your coach
+            </span>
+          </div>
+          <p className="ts-coachnote-text">{swapNote}</p>
+        </div>
+      )}
 
       {/* The coach's demo, its own row; nothing at all without one. */}
       {exercise.videoUrl && (
