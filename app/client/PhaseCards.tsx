@@ -445,7 +445,8 @@ export function PhaseCard({ ph, pictures, eager, coachName, today, nextSession, 
           <ActionRow
             label="Check-in"
             name={checkInCount ? (checkInCount.done >= checkInCount.total ? "All logged" : `${checkInCount.done} of ${checkInCount.total} logged`) : "Today's check-in"}
-            action="Log"
+            // Everything in, the button changes what it promises (17 Oct, Alex: Log read as if something were still owed).
+            action={checkInCount && checkInCount.total > 0 && checkInCount.done >= checkInCount.total ? "Edit" : "Log"}
             onClick={() => (onLog ? onLog() : openCheckIn?.("daily"))}
           />
         )}

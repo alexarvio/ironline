@@ -20241,3 +20241,5 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .fdi-meal-empty .fdi-meal-empty-note.fdi-meal-empty-note { text-align: left; }
 .fdi-meal-empty.fdi-meal-empty { align-items: flex-start; padding: 0 0 12px; }
 .fdi-meal-remove.fdi-meal-remove { padding: 6px 0; font-weight: 600; color: #b8471f; }
+/* Progress pictures done: View as its word alone, not a white pill (17 Oct, Alex). Start, while due, stays the ink pill. */
+.ppp.done .ppp-btn.ppp-btn { height: auto; padding: 0 4px; background: none; box-shadow: none; font-size: 13.5px; font-weight: 600; color: #141a24; }
