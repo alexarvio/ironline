@@ -245,7 +245,7 @@ export default function MeetingsScreen({ upcoming, past, request = null, clientI
                 </small>
               </span>
               <button type="button" className="mtp-withdraw" onClick={withdraw} disabled={pending}>
-                Withdraw
+                Cancel
               </button>
             </section>
           ) : (
