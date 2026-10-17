@@ -246,13 +246,15 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
       localStorage.setItem(LAST_TYPE_KEY, v.type);
     } catch {}
     const input = { kind: v.type, title: v.title, start: v.start, end: v.end, note: v.note };
+    // Only an event on today is lit and brought to the spot (17 Oct, Alex): a future one goes straight into its place in the future's quiet style.
+    const onToday = v.start <= today && v.end >= today;
     setSheet(null);
     if (s.event) {
       setPending(true);
       try {
         await clientUpdateEventAction(clientId, s.event.id, input);
         router.refresh();
-        setHighlight(s.event.id);
+        if (onToday) setHighlight(s.event.id);
       } catch {
         setSheet({ ...s, initial: v, error: "That didn't save. Try again." });
       } finally {
@@ -263,7 +265,7 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
     // In its place at once; the server's copy replaces it on the refresh.
     const temp: HomeEvent = { id: -Date.now(), kind: v.type, title: v.title, start: v.start, end: v.end, note: v.note, mine: true };
     setAdded((a) => [...a, temp]);
-    setHighlight(temp.id);
+    if (onToday) setHighlight(temp.id);
     try {
       const id = await clientAddEventAction(clientId, input);
       if (id == null) throw new Error("not saved");
