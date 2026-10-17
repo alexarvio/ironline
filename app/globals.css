@@ -20166,3 +20166,6 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 /* Objectives without its own hairlines (17 Oct, Alex: too many lines): on Training and Nutrition it sits in the space between Supplements and the next section, whose own line (Last 7 days) is the one parting. On the check-in it stays one of its lines. */
 .po.po.po-card { border-top: 0; border-bottom: 0; }
 .po.po.po-card .po-head { padding: 12px 4px; }
+/* The first objective's ring had its top shaved off (17 Oct, Alex): the -1px lift poked it above the fold's clip. No lift, and 2px of room at the top of the list. */
+.po.po .po-n { margin-top: 0; }
+.po.po .po-list { padding-top: 2px; }
