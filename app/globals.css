@@ -20277,3 +20277,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 /* In the check-in and add-event pop-ups the note has no underline (17 Oct, Alex): Save sits right under it, and the line read as a bar between the two. */
 .cki-note-box.cki-note-box, .cki-note-box.cki-note-box.has, .cki-note-box.cki-note-box:focus-within { border-bottom: 0; }
 .evs-note.evs-note textarea, .evs-note.evs-note textarea:focus { border-bottom: 0; }
+/* Request a meeting: What about is written straight on the sheet like When suits you, no box (17 Oct, Alex). */
+.mt-asksheet .evs-title, .mt-asksheet .evs-title.ring { height: auto; padding: 6px 0 8px; border-radius: 0; background: none; box-shadow: none; }
+.mt-asksheet .evs-title input { font-size: 16px; font-weight: 500; }
+.mt-asksheet .evs-note.evs-note textarea { height: auto; min-height: 48px; padding: 6px 0 8px; font-size: 16px; }
