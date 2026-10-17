@@ -20316,3 +20316,6 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .hm-mt-none { margin: 0; padding: 4px 0 0; font-size: 14px; font-weight: 500; color: #8b93a1; }
 /* No phase yet (17 Oct, Alex): the Training and Nutrition banners in black and white, like the empty cards on Home. */
 .tr.tr-naked .tr-banner, .tr-banner.nd-naked-banner { filter: grayscale(1); }
+/* Today's empty ring pulses exactly like Home's and like a live event (17 Oct, Alex: the halo was thicker): the shared evp-pulse in ink, 1px edge and a soft glow out to 9px. */
+.evp-r.today .evp-ring.evp-ring { animation: evp-pulse 2.4s ease-in-out infinite; box-shadow: inset 0 0 0 1px #141a24; }
+@media (prefers-reduced-motion: reduce) { .evp-r.today .evp-ring.evp-ring { animation: none; } }
