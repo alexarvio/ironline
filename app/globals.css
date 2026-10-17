@@ -20286,3 +20286,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .wo-wrap .wo-check-row, .wo-wrap .wo-check-row.done, .wo-wrap .wo-check-row:first-child { border-top: 0; }
 .wo-wrap .wo-ask, .wo-wrap .wo-coach-note { border-top: 0; padding-top: 18px; }
 .wo-wrap .wo-coach-note .wo-note-input, .wo-wrap .wo-coach-note .wo-note-input:focus { border-bottom: 0; }
+/* The session overview without lines between exercises (17 Oct, Alex): space sets them apart, and the table inside an open one has no line over it. */
+.so-screen .so-card + .so-card::before { display: none; }
+.so-screen .so-tbl { border-top: 0; }
+.so-screen .so-card-toggle { padding-top: 13px; padding-bottom: 13px; }
