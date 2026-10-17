@@ -96,11 +96,8 @@ export default function SwapExerciseDialog({
             <div className="sw-head-text">
               <div className="sw-title-row">
                 <h2 className="sw-title">Swap exercise</h2>
-                <span className="sw-pill">{groupLabel(exercise.group)}</span>
               </div>
-              <p className="sw-sub">
-                Instead of <b>{exercise.name}</b>, today only. Your plan stays the same.
-              </p>
+              {/* No muscle-group chip and no explanation line (17 Oct, Alex): the title and the choices say enough. */}
             </div>
             <button ref={first} type="button" className="sw-close" onClick={close} aria-label="Close">
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -222,18 +219,7 @@ export default function SwapExerciseDialog({
               </svg>
               <span>{label}</span>
             </button>
-            {onPhoto &&
-              (photoSent ? (
-                <span className="sw-sent">Photo sent</span>
-              ) : (
-                <button type="button" className="sw-photo" onClick={onPhoto}>
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
-                    <circle cx="12" cy="13" r="3.5" />
-                  </svg>
-                  Send {coach.firstName} a photo of the machine
-                </button>
-              ))}
+            {/* No photo-of-the-machine link here (17 Oct, Alex): the exercise's camera already does it. */}
           </div>
         </div>
       </div>

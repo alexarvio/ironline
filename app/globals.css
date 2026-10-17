@@ -20253,3 +20253,5 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .cki-note-box.cki-note-box, .cki-note-box.cki-note-box.has { padding: 2px 0 8px; border-radius: 0; background: none; box-shadow: none; border-bottom: 1px solid #C9CFD8; }
 .cki-note-box.cki-note-box:focus-within { border-bottom-color: #141a24; }
 .cki-note-box.cki-note-box textarea { font-size: 16px; font-weight: 500; color: #141a24; }
+/* Swap exercise: no hairline over Targets carry over, only under it (17 Oct, Alex). */
+.sw-card.sw-card .sw-targets { border-top: 0; padding-top: 4px; }
