@@ -305,9 +305,10 @@ export default function EventsScreen({ clientId, events, coachName, today, me = 
     open: open === e.id,
     pending,
     refFn: (el) => el && rows.current.set(e.id, el),
-    // A tap on a row brings it to the spot as it opens (16 Oct), wherever the list was.
-    onToggle: () => {
-      setOpen((o) => (o === e.id ? null : e.id));
+    // A tap on a row brings it to the spot (16 Oct), wherever the list was; it opens only when it has more (17 Oct, Alex: a row with no chevron did nothing at all).
+    onToggle: (opens: boolean) => {
+      if (opens) setOpen((o) => (o === e.id ? null : e.id));
+      else setOpen(null);
       const box = scrollRef.current;
       const el = rows.current.get(e.id);
       if (box && el) {
@@ -411,7 +412,7 @@ type RowProps = {
   open: boolean;
   pending: boolean;
   refFn: (el: HTMLElement | null) => void;
-  onToggle: () => void;
+  onToggle: (opens: boolean) => void;
   onEdit: () => void;
   onDelete: () => void;
 };
@@ -441,7 +442,7 @@ function EventRow(p: RowProps) {
   const left = progress ? progress.total - progress.day : 0;
   return (
     <div ref={refFn} className={`evp-r ${status}${lit ? " lit" : ""}${focus ? " focus" : ""}${open ? " open" : ""}`} style={{ "--c": c.color, "--rgb": c.rgb } as React.CSSProperties}>
-      <button type="button" className={`evp-row${label ? " labelled" : ""}`} onClick={onToggle} disabled={!more} aria-expanded={more ? open : undefined} aria-label={spoken}>
+      <button type="button" className={`evp-row${label ? " labelled" : ""}`} onClick={() => onToggle(more)} aria-expanded={more ? open : undefined} aria-label={spoken}>
         <span className="evp-date" aria-hidden="true">
           {showDate && (
             <>

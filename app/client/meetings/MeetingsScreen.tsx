@@ -288,10 +288,11 @@ export default function MeetingsScreen({ upcoming, past, request = null, clientI
                 refFn={(el) => {
                   if (el) rows.current.set(m.id, el);
                 }}
-                onTap={() => {
+                onTap={(opens) => {
                   glideTo(m.id);
                   setFocusRow(m.id);
-                  setOpen((o) => (o === m.id ? null : m.id));
+                  // Every row comes to the spot; only one with notes opens (17 Oct, Alex).
+                  setOpen((o) => (opens && o !== m.id ? m.id : null));
                 }}
               />
             ))}
@@ -482,7 +483,7 @@ export function EventChip({ e, onOpen }: { e: { id: number; title: string; kind:
 // the call's icon, the title and when. With notes it opens in place with what
 // was agreed and the events made from it; a chevron says so.
 
-function PastRow({ m, label, now, focus, open, lit, refFn, onTap }: { m: ClientMeetingView; label: string | null; now: number | null; focus: boolean; open: boolean; lit: boolean; refFn: (el: HTMLElement | null) => void; onTap: () => void }) {
+function PastRow({ m, label, now, focus, open, lit, refFn, onTap }: { m: ClientMeetingView; label: string | null; now: number | null; focus: boolean; open: boolean; lit: boolean; refFn: (el: HTMLElement | null) => void; onTap: (opens: boolean) => void }) {
   const t = meetingTypeOf(m.type);
   const ms = startMsOf(m);
   const d = new Date(ms);
@@ -506,7 +507,7 @@ function PastRow({ m, label, now, focus, open, lit, refFn, onTap }: { m: ClientM
   const opens = has || clipped;
   return (
     <div ref={refFn} className={`evp-r past${focus ? " focus" : ""}${open ? " open" : ""}${lit ? " lit" : ""}`} style={{ "--c": t.color, "--rgb": t.rgb } as React.CSSProperties}>
-      <button type="button" className={`evp-row${label ? " labelled" : ""}`} onClick={onTap} disabled={!opens} aria-expanded={opens ? open : undefined} aria-label={`${label ? `${label} ` : ""}${t.label} call: ${m.title}, ${when}${!has && !m.missed ? ", no notes" : ""}`}>
+      <button type="button" className={`evp-row${label ? " labelled" : ""}`} onClick={() => onTap(opens)} aria-expanded={opens ? open : undefined} aria-label={`${label ? `${label} ` : ""}${t.label} call: ${m.title}, ${when}${!has && !m.missed ? ", no notes" : ""}`}>
         <span className="evp-date" aria-hidden="true">
           <b>{String(d.getDate()).padStart(2, "0")}</b>
           <small>{MONTHS[d.getMonth()]}</small>
