@@ -70,7 +70,9 @@ export default function ProgressPicturesScreen({
   const [stuck, setStuck] = useState(false);
   const onScroll = (e: React.UIEvent<HTMLElement>) => {
     const y = e.currentTarget.scrollTop;
-    setStuck((s) => (s ? y > 48 : y > 72));
+    // Frosted as soon as the banner's words reach the bar (17 Oct, Alex): at 72px they slid
+    // under the clear bar first, the two titles and the back arrow on top of each other.
+    setStuck((s) => (s ? y > 4 : y > 8));
   };
   return (
     <>

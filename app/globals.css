@@ -20228,3 +20228,6 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .pp-app-edit-photos.pp-app-edit-photos { min-height: 44px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #E1E5EB; font-size: 14px; font-weight: 600; color: #141a24; }
 /* What your coach said sits under the pictures with space alone, no hairline (17 Oct, Alex). */
 .pp-app-notes.pp-app-notes { border-top: 0; padding-top: 6px; }
+/* Progress pictures: the bar's own title shows only once the bar is frosted; over the photo the banner's title is the one (17 Oct). */
+.pp-one > .ci-bar:not(.stuck) .ci-title { opacity: 0; }
+.pp-one > .ci-bar .ci-title { transition: opacity 0.2s; }
