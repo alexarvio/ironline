@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { uploadProgressPhotoAction } from "../lib/actions";
+import { removeProgressPhotoAction, uploadProgressPhotoAction } from "../lib/actions";
 import { fitJpeg } from "../lib/coverJpeg";
 import { ArrowRightIcon, ChevronLeftIcon } from "../components/icons";
 import { useOpenPhotos } from "./CheckInContext";
@@ -196,6 +196,24 @@ function OpenSheet({
   // Folded once every angle is in and nothing new is waiting.
   const collapsed = inCount === total && stagedCount === 0 && !editing && !saving;
 
+  const removePhoto = (slot: Slot) => {
+    setPicking(null);
+    setFailed(false);
+    if (staged[slot.id]) {
+      setStaged((s) => {
+        const next = { ...s };
+        delete next[slot.id];
+        return next;
+      });
+      return;
+    }
+    const fd = new FormData();
+    fd.set("clientId", String(clientId));
+    fd.set("slotId", String(slot.id));
+    startSaving(async () => {
+      await removeProgressPhotoAction(fd);
+    });
+  };
   const pick = (slot: Slot, file: File) => {
     const preview = URL.createObjectURL(file);
     previews.current.push(preview);
@@ -333,8 +351,9 @@ function OpenSheet({
                 // Sent (17 Oct, Alex): locked, it is Finlay's now; no Change on the card. "Edit photos" on the sent sheet reopens it.
                 state: uploading ? "Sending…" : ready ? "Ready" : ticked ? "Sent" : null,
                 tone: ready ? ("ready" as const) : ticked && !uploading ? ("sent" as const) : null,
-                locked: ticked && !uploading,
-                action: ticked && !uploading ? null : src ? "Change" : "Add photo",
+                // Editing (17 Oct, Alex: a sent photo could not be swapped or taken off): every card opens again.
+                locked: ticked && !uploading && !editing,
+                action: ticked && !uploading && !editing ? null : src ? "Change" : "Add photo",
               };
             })}
           />
@@ -397,6 +416,12 @@ function OpenSheet({
                 />
               </label>
             ))}
+            {/* Take it off (17 Oct): a photo picked on this visit just goes; a sent one is removed from the sheet. */}
+            {(staged[picking.id] || picking.src) && (
+              <button type="button" className="pp-app-sheet-remove" onClick={() => removePhoto(picking)} disabled={saving}>
+                Remove photo
+              </button>
+            )}
             <button type="button" className="pp-app-sheet-cancel" onClick={() => setPicking(null)}>
               Cancel
             </button>

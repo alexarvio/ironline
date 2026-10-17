@@ -4487,7 +4487,8 @@ export function savePhotoUpload(clientId: number, slotId: number, buffer: Buffer
   fs.mkdirSync(dir, { recursive: true });
   const filename = `${period}.${ext}`;
   fs.writeFileSync(path.join(dir, filename), buffer);
-  const publicPath = `/uploads/progress/${clientId}/${slotId}/${filename}`;
+  // ?v= (17 Oct): a replaced photo keeps its file name, and without it the phone kept showing the old one from its cache.
+  const publicPath = `/uploads/progress/${clientId}/${slotId}/${filename}?v=${Date.now()}`;
 
   const data = getData();
   const existing = data.photo_uploads.find((u) => u.slot_id === slotId && u.period === period);
@@ -4505,6 +4506,23 @@ export function savePhotoUpload(clientId: number, slotId: number, buffer: Buffer
   }
   persist();
   return publicPath;
+}
+
+/** Takes one angle's photo off the sheet open now (17 Oct). Back with its file, to delete; null when there was none. */
+export function removePhotoUpload(clientId: number, slotId: number): string | null {
+  const period = photoSheetFor(clientId, localDateStr());
+  if (!period) return null;
+  const data = getData();
+  const i = data.photo_uploads.findIndex((u) => u.slot_id === slotId && u.period === period);
+  if (i < 0) return null;
+  const [gone] = data.photo_uploads.splice(i, 1);
+  persist();
+  try {
+    fs.rmSync(path.join(DATA_DIR, gone.file_path.split("?")[0].replace(/^\//, "")), { force: true });
+  } catch {
+    /* not on the disk */
+  }
+  return gone.file_path;
 }
 
 

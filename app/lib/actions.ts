@@ -158,6 +158,7 @@ import {
   saveNutritionPlan,
   savePhotoPeriodNote,
   savePhotoUpload,
+  removePhotoUpload,
   addClientCardPicture,
   clearClientCardCover,
   removeClientCardPicture,
@@ -1315,6 +1316,16 @@ export async function uploadProgressPhotoAction(formData: FormData) {
   const buffer = Buffer.from(await file.arrayBuffer());
   // Saved to the disk, then copied into the storage bucket when it is on.
   await putUpload(savePhotoUpload(clientId, slotId, buffer, file.type || "image/jpeg"), buffer, file.type);
+  revalidatePath("/admin");
+  revalidatePath("/client");
+}
+
+/** The client takes a photo off the open sheet (17 Oct): it goes from the data and the bucket. */
+export async function removeProgressPhotoAction(formData: FormData) {
+  const clientId = await requireClientAccess(Number(formData.get("clientId")));
+  const slotId = Number(formData.get("slotId"));
+  if (getClientIdForPhotoSlot(slotId) !== clientId) return;
+  await deleteUpload(removePhotoUpload(clientId, slotId));
   revalidatePath("/admin");
   revalidatePath("/client");
 }
