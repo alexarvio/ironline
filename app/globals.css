@@ -20163,3 +20163,6 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .tr-body .tr-note-btn.tr-note-btn.primary:disabled { background: #C9CFD8; opacity: 1; }
 /* Training's sessions without hairlines between them (17 Oct, Alex): the spine and the space do the parting. */
 .tr-body .tr-row + .tr-row::after, .tr-body .tr-x + .tr-row::after { display: none; }
+/* Objectives without its own hairlines (17 Oct, Alex: too many lines): on Training and Nutrition it sits in the space between Supplements and the next section, whose own line (Last 7 days) is the one parting. On the check-in it stays one of its lines. */
+.po.po.po-card { border-top: 0; border-bottom: 0; }
+.po.po.po-card .po-head { padding: 12px 4px; }
