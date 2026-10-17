@@ -20023,3 +20023,5 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .lw .wo-note.wo-note .wo-note-input:focus { border-bottom-color: #141a24; }
 .lw .wo-note.wo-note .wo-note-cancel { font-weight: 600; color: #5b6474; }
 .lw .wo-note.wo-note .wo-note-save { border-radius: 999px; background: #141a24; font-weight: 600; padding: 8px 16px; }
+/* From your coach kept the old box's 16px corners, so its one hairline curved down at both ends like the top of a container (17 Oct, Alex). Square, so it is a straight line like Your note's. */
+.lw .ts-coachnote.ts-coachnote { border-radius: 0; background: none; }
