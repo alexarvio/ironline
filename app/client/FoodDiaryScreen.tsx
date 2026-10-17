@@ -31,6 +31,7 @@ import {
 } from "../lib/actions";
 import { useTween } from "./NutritionTargetsCard";
 import BarcodeScanner from "./BarcodeScanner";
+import PictureCycle from "./PictureCycle";
 
 // The client's food diary, opened from the ring on Nutrition. On the client
 // page model: the top bar (a back arrow in place of the burger) floating
@@ -137,12 +138,15 @@ function useDropOnTapOutside(asking: boolean, clear: (none: null) => void) {
 export default function FoodDiaryScreen({
   clientId,
   diary: initial,
+  pictures = [],
   initialDate = null,
   initialMeal = null,
   onBack,
 }: {
   clientId: number;
   diary: FoodDiaryProps;
+  /** The pictures set for Nutrition (17 Oct), taking turns behind the banner as they do there; none, the banner's own photo. */
+  pictures?: string[];
   /** A coach message linked this day: open on it rather than today. */
   initialDate?: string | null;
   /** … and the coach commented on this meal of it: open and show it. */
@@ -540,6 +544,7 @@ export default function FoodDiaryScreen({
             }}
           >
           <header className="nd-banner nd-photo fdi-banner">
+            {pictures.length > 0 && <PictureCycle pictures={pictures} className="tr-banner-pic" />}
             <div className="fdi-banner-titles">
               <div className="fdi-eyebrow">Food diary</div>
               <h1 className="fdi-date">{dayTitle}</h1>

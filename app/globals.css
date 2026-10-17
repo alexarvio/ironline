@@ -20080,3 +20080,16 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 @media (prefers-reduced-motion: reduce) { .evt-ring.evt-ring, .evt-ring.evt-ring svg { transition: none; } }
 /* Starts → Ends: the arrow sits on the middle of the pair, but Ends' extra 6px of left padding (room for the arrow) made it wider, so the gap was off the middle and the arrow looked off centre (17 Oct, Alex). Starts gets the same room on its right, so the boxes are equal and the gap is under the arrow. */
 .evs-dates .evs-date:has(+ .evs-arrow) { padding-right: 20px; }
+/* Nutrition and the food diary show the same banner (17 Oct, Alex): one height for both, so the picture fills the same space whichever screen is open. The diary's is 298px (titles, the week strip, the tabs); Nutrition's grows to match, the extra going above its tabs, which stay at the foot. */
+.nd > .nd-banner.nd-banner, .nd-banner.fdi-banner { box-sizing: border-box; min-height: 298px; }
+.nd > .nd-banner.nd-banner { display: flex; flex-direction: column; }
+.nd > .nd-banner.nd-banner > .nd-tabs { margin-top: auto; }
+/* Objectives from the coach in the hairline language (17 Oct, Alex), on every phase's tab (Training, Nutrition, the lifestyle check-in): no white card, a flat row between hairlines; the small grey label at 600, the count plain beside it, the chevron in the label grey; opened, the list drops out flat with thin numbered rings and the body text at 500. Doubled for the dev-server CSS order. */
+.po.po-card, .po.po-line { border: 0; border-top: 1px solid #E1E5EB; border-bottom: 1px solid #E1E5EB; border-radius: 0; background: none; }
+.po.po-card .po-head, .po.po-line .po-head { gap: 8px; padding: 16px 4px; }
+.po.po .po-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; color: #5b6474; }
+.po.po .po-count { padding: 0; border-radius: 0; background: none; font-size: 11px; font-weight: 500; color: #8b93a1; }
+.po.po .po-chev { color: #5b6474; }
+.po.po .po-list { gap: 12px; padding: 0 4px 16px; }
+.po.po .po-n { width: 22px; height: 22px; margin-top: -1px; background: none; box-shadow: inset 0 0 0 1px #C9CFD8; font-size: 11px; font-weight: 500; color: #5b6474; }
+.po.po .po-text { font-size: 14px; font-weight: 500; line-height: 1.45; color: #3a4250; }

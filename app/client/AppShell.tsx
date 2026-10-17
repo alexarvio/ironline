@@ -121,6 +121,7 @@ export default function AppShell({
   coachAvatarPath = null,
   clientAvatarPath = null,
   foodDiary = null,
+  foodPictures = [],
   meetings = null,
   invoices = null,
   initialPush = null,
@@ -158,6 +159,8 @@ export default function AppShell({
   clientAvatarPath?: string | null;
   /** Today's food diary, opened from the ring on Nutrition. */
   foodDiary?: FoodDiaryProps | null;
+  /** The pictures set for Nutrition, behind the food diary's banner too (17 Oct). */
+  foodPictures?: string[];
   /** Every call with the coach: to come and past, for the Meetings screen. */
   meetings?: MeetingsProps | null;
   /** The coach's invoices that reached the client; null, none yet (the menu leaves the row out). */
@@ -366,7 +369,7 @@ export default function AppShell({
       </div>
     ) : pushView === "food" && foodDiary ? (
       <div className="app-layer app-layer-push cn-screen">
-        <FoodDiaryScreen clientId={clientId} diary={foodDiary} initialDate={foodDate} initialMeal={foodMeal} onBack={backFrom("food")} />
+        <FoodDiaryScreen clientId={clientId} diary={foodDiary} pictures={foodPictures} initialDate={foodDate} initialMeal={foodMeal} onBack={backFrom("food")} />
       </div>
     ) : pushView === "meetings" && meetings ? (
       <div className="app-layer app-layer-push cn-screen">

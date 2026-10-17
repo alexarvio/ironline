@@ -1510,6 +1510,7 @@ export default async function ClientPage({
       coachAvatarPath={getCoachAvatarPath(CLIENT_ID)}
       clientAvatarPath={client?.avatar_path ?? null}
       foodDiary={foodDiary}
+      foodPictures={bannerPictures(CLIENT_ID, "nutrition")}
       meetings={meetings}
       invoices={invoices}
       initialPush={params.open === "invoices" ? "invoices" : null}
