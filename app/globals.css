@@ -20297,3 +20297,7 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .mt-asksheet .evs-title.evs-title input { margin: 0; padding: 0; -webkit-appearance: none; appearance: none; border-radius: 0; text-indent: 0; }
 /* The food diary's rings ride the same 600ms tween as its figures (17 Oct, Alex): the arcs were tweened in code AND eased again by this CSS transition, so they trailed the numbers and landed late. With the transition off, the ring fills (or winds back to an empty day) frame for frame with the count. */
 .fdi-targets .nd-ring-arc.nd-ring-arc { transition: none; }
+/* A finished sheet (17 Oct, Alex): a thin green ring with a tick before its name, "All 3 sent" in green; the rest of the row as it was. */
+.pp-app-past-head.done { gap: 14px; }
+.pp-app-past-tick { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px #2f7a3f; color: #2f7a3f; }
+.pp-app-past-done { font-weight: 600; color: #2f7a3f; }

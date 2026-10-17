@@ -29,6 +29,7 @@ export default function PhotoPeriodHistoryRow({
   onToggle,
   metaExtra,
   footer,
+  done = false,
 }: {
   title: string;
   photos: Photo[];
@@ -39,6 +40,8 @@ export default function PhotoPeriodHistoryRow({
   metaExtra?: string;
   /** Shown at the foot of the open row, e.g. the open sheet's Edit button. */
   footer?: ReactNode;
+  /** Every angle of the sheet open now is in (17 Oct, Alex): a green ring with a tick, and the count in green. */
+  done?: boolean;
 }) {
   const notes = NOTE_LABELS.filter(({ key }) => note[key].trim());
   const inCount = photos.filter((p) => p.src).length;
@@ -73,12 +76,19 @@ export default function PhotoPeriodHistoryRow({
 
   return (
     <article className="pp-app-past">
-      <button type="button" className="pp-app-past-head" aria-expanded={open} onClick={onToggle}>
+      <button type="button" className={`pp-app-past-head${done ? " done" : ""}`} aria-expanded={open} onClick={onToggle}>
+        {done && (
+          <span className="pp-app-past-tick" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="m5 12.5 4.5 4.5L19 7.5" />
+            </svg>
+          </span>
+        )}
         <span className="pp-app-past-text">
           <span className="pp-app-past-title">{title}</span>
           <span className="pp-app-past-meta">
-            {inCount} of {photos.length}
-            {metaExtra && ` · ${metaExtra}`}
+            {done ? <b className="pp-app-past-done">All {photos.length} sent</b> : <>{inCount} of {photos.length}</>}
+            {!done && metaExtra && ` · ${metaExtra}`}
             {notes.length > 0 && " · coach replied"}
           </span>
         </span>

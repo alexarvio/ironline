@@ -284,6 +284,7 @@ function OpenSheet({
           open={sentOpen}
           onToggle={() => setSentOpen((o) => !o)}
           metaExtra={justSaved ? "just sent" : "sent"}
+          done
           footer={
             <button
               type="button"
