@@ -107,8 +107,8 @@ export default function ProgramNote({
           <span className="tr-note-icon" aria-hidden="true">
             <ChatIcon />
           </span>
+          {/* No "Write" (19 Oct, Alex): the whole line is the button. */}
           <span className="tr-note-prompt-text">Tell {coachName} how the programme feels</span>
-          <span className="tr-note-prompt-go">Write</span>
         </button>
       </div>
     );
