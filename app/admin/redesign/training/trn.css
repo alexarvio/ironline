@@ -99,7 +99,7 @@
 .rd.trn .trn-week-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 18px; }
 .rd.trn .trn-week-name { font-size: 14.5px; font-weight: 500; }
 .rd.trn .trn-week.on .trn-week-name { font-weight: 600; }
-.rd.trn .trn-now { display: inline-flex; align-items: center; gap: 5px; height: 18px; padding: 0 7px 0 6px; border-radius: 999px; background: var(--trn-ink); font-size: 9.5px; font-weight: 600; letter-spacing: 0.12em; color: #fff; }
+.rd.trn .trn-now { display: inline-flex; align-items: center; gap: 6px; height: 18px; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; color: var(--trn-ink); }
 .rd.trn .trn-pulse { position: relative; width: 6px; height: 6px; border-radius: 999px; background: #3fbf5f; }
 .rd.trn .trn-pulse::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: #3fbf5f; animation: trn-pulse 1.6s ease-out infinite; }
 @keyframes trn-pulse { from { transform: scale(1); opacity: 0.7; } to { transform: scale(2.6); opacity: 0; } }
@@ -137,7 +137,7 @@
 .rd.trn .trn-row-more svg { width: 16px; height: 16px; }
 .rd.trn .trn-row-toggle { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; background: none; cursor: pointer; }
 .rd.trn .trn-row-toggle:hover .trn-chev { color: var(--trn-ink); }
-.rd.trn .trn-list .rd-session.open > .rd-rows { border-top: 1px solid var(--trn-div); }
+.rd.trn .trn-list .rd-session.open > .rd-rows { border-top: 0; }
 .rd.trn .trn-add { display: flex; align-items: center; justify-content: center; width: 100%; height: 48px; border: 1px dashed #c9cfd8; border-radius: 18px; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--trn-ink); cursor: pointer; }
 .rd.trn .trn-add:hover { border-color: var(--trn-ink); }
 .rd.trn .trn-full { margin: 0; padding: 14px; border: 1px dashed #c9cfd8; border-radius: 18px; text-align: center; }
@@ -150,7 +150,7 @@
 .rd.trn .trn-rg { border-radius: 18px; background: #fff; box-shadow: inset 0 0 0 1px var(--trn-line); overflow: hidden; }
 .rd.trn .trn-rg-row { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 14px 0 18px; cursor: pointer; }
 .rd.trn .trn-rg-when { font-size: 13px; font-weight: 500; color: var(--trn-sec); white-space: nowrap; }
-.rd.trn .trn-rg.open > .rd-rows { border-top: 1px solid var(--trn-div); }
+.rd.trn .trn-rg.open > .rd-rows { border-top: 0; }
 
 /* ---- After-workout check */
 .rd.trn .trn-check { padding: 18px 18px 6px; border-radius: 20px; background: #fff; box-shadow: inset 0 0 0 1px var(--trn-line); }
