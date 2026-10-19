@@ -63,6 +63,8 @@ export default function VideoAskButton({ ask, assignmentId, exerciseName }: { as
 export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, onClose }: { ask: VideoAsk | null; assignmentId: number; /** Sending a picture of the swap (9 Oct). */ about?: "swap" | null; exerciseName: string; onClose: () => void }) {
   const isPhoto = (f: File | null) => !!f && f.type.startsWith("image/");
   const sentPhoto = ask?.media === "photo";
+  // The coach asked for it, with or without a note (the note is optional since 15 Oct).
+  const asked = !!ask && !ask.fromClient && !ask.carried;
   const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -125,14 +127,14 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, o
   const options = (
     <>
       {[
-        { label: ask?.src ? (ask.note ? "Record a new one" : "Take a new one") : ask?.note ? "Record a video" : "Take a photo or film a video", capture: true },
+        { label: ask?.src ? (asked ? "Record a new one" : "Take a new one") : asked ? "Record a video" : "Take a photo or film a video", capture: true },
         { label: "Choose from your phone", capture: false },
       ].map((o) => (
         <label key={o.label} className="pp-app-sheet-option">
           {o.label}
           <input
             type="file"
-            accept={ask?.note ? "video/*" : "image/*,video/*"}
+            accept={asked ? "video/*" : "image/*,video/*"}
             capture={o.capture ? "environment" : undefined}
             onChange={(e) => {
               const f = e.target.files?.[0];
@@ -149,7 +151,7 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, o
     <div className="vr-sheet-scrim" role="presentation" onClick={() => !sending && onClose()}>
       <div className="pp-app-sheet vr-sheet" role="dialog" aria-modal="true" aria-label={`Video of ${exerciseName}`} onClick={(e) => e.stopPropagation()}>
         <div className="pp-app-sheet-head">
-          <span className="pp-app-sheet-title">{done ? "Sent to your coach" : ask?.src && !file ? (sentPhoto ? "Your photo" : "Your video") : ask?.note ? "Video for your coach" : about === "swap" || ask?.about === "swap" ? "A picture of what you used" : "Photo or video for your coach"}</span>
+          <span className="pp-app-sheet-title">{done ? "Sent to your coach" : ask?.src && !file ? (sentPhoto ? "Your photo" : "Your video") : asked ? "Video for your coach" : about === "swap" || ask?.about === "swap" ? "A picture of what you used" : "Photo or video for your coach"}</span>
           <span className="pp-app-sheet-sub">{exerciseName}</span>
         </div>
 
@@ -168,7 +170,7 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, o
         ) : file && preview ? (
           <>
             {isPhoto(file) ? <img className="vr-sheet-video" src={preview} alt="" /> : <video className="vr-sheet-video" src={preview} controls playsInline muted />}
-            {!ask?.note && <input className="vr-sheet-note-in" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Anything to say with it? (optional)" maxLength={300} />}
+            {!asked && <input className="vr-sheet-note-in" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Anything to say with it? (optional)" maxLength={300} />}
             {problem && <p className="vr-sheet-problem">{problem}</p>}
             <button type="button" className="vr-sheet-send" onClick={send} disabled={!!problem || sending}>
               {sending ? "Sending… keep the app open" : ask?.src ? "Send instead" : "Send to your coach"}
@@ -184,7 +186,7 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, o
                 {ask.sentAt && <p className="vr-sheet-sent">Sent {new Date(ask.sentAt).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}.</p>}
               </>
             )}
-            {!ask?.src && <p className="vr-sheet-hint">{ask?.note ? "Up to two minutes. Film in 1080p so it sends quickly." : "A photo of the machine, or a clip of a set, with a word if you like."}</p>}
+            {!ask?.src && <p className="vr-sheet-hint">{asked ? "Up to two minutes. Film in 1080p so it sends quickly." : "A photo of the machine, or a clip of a set, with a word if you like."}</p>}
             {options}
           </>
         )}
