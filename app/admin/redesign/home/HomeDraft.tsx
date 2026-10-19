@@ -53,16 +53,16 @@ const savedToast = (what: string) => toast.success("Saved", { description: what 
 
 // The live tabs' ids, as the drafts name them.
 const DRAFT_TAB: Record<string, string> = { plan: "plan", training: "training", nutrition: "nutrition", measurements: "measurements", meetings: "meetings", photos: "pictures", messages: "messages" };
-const TAB_LABEL: Record<string, string> = { plan: "Plan", training: "Training", nutrition: "Nutrition", measurements: "Measurements", meetings: "Meetings", photos: "Progress pictures", messages: "Messages" };
+const TAB_LABEL: Record<string, string> = { plan: "Plan", training: "Training", nutrition: "Nutrition", measurements: "Lifestyle", meetings: "Meetings", photos: "Progress pictures", messages: "Messages" };
 const TONE_LABEL: Record<HomeAction["tone"], string> = { urgent: "Urgent", due: "Due", note: "To read" };
-const CATEGORY_LABEL: Record<string, string> = { training: "Training", nutrition: "Nutrition", measurements: "Measurements", notes: "Note", billing: "Invoice", messages: "Message" };
+const CATEGORY_LABEL: Record<string, string> = { training: "Training", nutrition: "Nutrition", measurements: "Lifestyle", notes: "Note", billing: "Invoice", messages: "Message" };
 // Activity is read one kind at a time; every source category has a home here.
 const FILTERS = [
   // A call asked for, an event added, a note on the programme: words from the
   // client, so with the messages (12 Oct), not under Training.
   { id: "training", label: "Training", holds: ["training"] },
   { id: "nutrition", label: "Nutrition", holds: ["nutrition"] },
-  { id: "measurements", label: "Measurements", holds: ["measurements"] },
+  { id: "measurements", label: "Lifestyle", holds: ["measurements"] },
   { id: "invoices", label: "Invoices", holds: ["billing"] },
   { id: "messages", label: "Messages", holds: ["messages", "notes"] },
 ] as const;

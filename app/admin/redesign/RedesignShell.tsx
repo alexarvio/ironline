@@ -29,7 +29,7 @@ const TABS = [
   { key: "plan", label: "Plan" },
   { key: "training", label: "Training" },
   { key: "nutrition", label: "Nutrition" },
-  { key: "measurements", label: "Measurements" },
+  { key: "measurements", label: "Lifestyle" },
   { key: "pictures", label: "Progress pictures" },
   { key: "meetings", label: "Meetings" },
   { key: "invoices", label: "Invoices" },

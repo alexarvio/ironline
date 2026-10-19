@@ -201,7 +201,7 @@ export default function MeasurementsPanel({ clientId, phaseParam }: { clientId: 
                   text="Reply"
                   target={{
                     link: { kind: "checkin", section: n.kind === "daily" ? "daily" : "weekly", period: n.period },
-                    area: "Measurements",
+                    area: "Lifestyle",
                     label: `${KIND_LABEL[n.kind]} · ${new Date(`${n.period}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}`,
                   }}
                 />

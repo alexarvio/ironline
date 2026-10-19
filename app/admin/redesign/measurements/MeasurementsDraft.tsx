@@ -216,7 +216,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
   // the right (ChatPanel, 2 Oct), the message pointing at it; outside the
   // shell, the message dialog as before.
   const openChat = useOpenChat();
-  const message = (v: { label: string; link: MessageLink }) => (openChat ? openChat({ area: "Measurements", label: v.label, link: v.link }) : setDlg({ kind: "message", ...v }));
+  const message = (v: { label: string; link: MessageLink }) => (openChat ? openChat({ area: "Lifestyle", label: v.label, link: v.link }) : setDlg({ kind: "message", ...v }));
   const close = () => setDlg(null);
   const today = new Date().toISOString().slice(0, 10);
   const startHasCome = !!plan.startDate && plan.startDate <= today;
@@ -234,7 +234,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
       {/* ---- Header: the phase, where it is, its actions. */}
       <header className="rd-head">
         <div className="rd-head-main">
-          <span className="rd-eyebrow">Measurements</span>
+          <span className="rd-eyebrow">Lifestyle</span>
           <h1 className="rd-title">
             {plan.phases.length > 1 ? (
               <PhaseSwitcher name={plan.name} currentId={plan.id} items={plan.phases} hrefFor={(id) => `/admin/redesign/measurements?client=${clientId}&phase=${id}`} label="Switch phase" newLabel="New phase" onNew={() => setDlg({ kind: "newPhase" })} />
@@ -273,7 +273,7 @@ export default function MeasurementsDraft({ clientId, firstName, plan }: { clien
               <MoreIcon />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="pb-menu">
-              <DropdownMenuItem onSelect={() => message({ label: "Measurements", link: { kind: "checkin", section: logCadence } })}>
+              <DropdownMenuItem onSelect={() => message({ label: "Lifestyle", link: { kind: "checkin", section: logCadence } })}>
                 <ChatIcon /> Message about measurements
               </DropdownMenuItem>
               {plan.id !== 0 && (

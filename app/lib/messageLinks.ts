@@ -19,7 +19,7 @@ export type MessageLink =
 /** What a message the client is about to write is about: the link it will carry, and its name for the chip over the box. */
 export type MessageAbout = { link: MessageLink; label: string };
 
-export type LinkArea = "Training" | "Nutrition" | "Measurements";
+export type LinkArea = "Training" | "Nutrition" | "Lifestyle";
 
 /** A link as it is shown: where it goes, in words, and whether it still can. */
 export type LinkView = {

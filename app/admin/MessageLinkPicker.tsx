@@ -9,7 +9,7 @@ import { placePopover, type Placement } from "../components/popover";
 export type PickedLink = { link: MessageLink; label: string };
 
 const WIDTH = 340;
-type Area = "Training" | "Nutrition" | "Measurements";
+type Area = "Training" | "Nutrition" | "Lifestyle";
 
 // "Link to…" beside the message box: point the message at one thing in the
 // client's app, which they can then tap straight through to. Three areas,
@@ -50,7 +50,7 @@ export default function MessageLinkPicker({ targets, onPick }: { targets: LinkTa
   };
 
   const week = targets.training[weekAt] ?? null;
-  const nothing = { Training: targets.training.length === 0, Nutrition: !targets.nutrition && targets.foodDays.length === 0, Measurements: targets.checkins.length === 0 && !targets.photos };
+  const nothing = { Training: targets.training.length === 0, Nutrition: !targets.nutrition && targets.foodDays.length === 0, Lifestyle: targets.checkins.length === 0 && !targets.photos };
 
   return (
     <>
@@ -73,7 +73,7 @@ export default function MessageLinkPicker({ targets, onPick }: { targets: LinkTa
         createPortal(
           <div ref={panel} className="msg-link-pop" role="dialog" aria-label="Link the message to" style={{ ...(pos ?? {}), width: WIDTH }}>
             <div className="msg-link-tabs" role="tablist">
-              {(["Training", "Nutrition", "Measurements"] as Area[]).map((a) => (
+              {(["Training", "Nutrition", "Lifestyle"] as Area[]).map((a) => (
                 <button key={a} type="button" role="tab" aria-selected={area === a} className={area === a ? "on" : undefined} onClick={() => setArea(a)}>
                   {a}
                 </button>
@@ -138,8 +138,8 @@ export default function MessageLinkPicker({ targets, onPick }: { targets: LinkTa
                   </>
                 ))}
 
-              {area === "Measurements" &&
-                (nothing.Measurements ? (
+              {area === "Lifestyle" &&
+                (nothing.Lifestyle ? (
                   <p className="msg-link-empty">No check-ins or progress pictures set up yet.</p>
                 ) : (
                   <>

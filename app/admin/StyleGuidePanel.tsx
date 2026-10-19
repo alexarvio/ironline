@@ -128,7 +128,7 @@ export default function StyleGuidePanel() {
         </div>
       </Section>
 
-      <Section title="The phase band" hint="Training, Nutrition and Measurements, identically">
+      <Section title="The phase band" hint="Training, Nutrition and Lifestyle, identically">
         <div className="sg-demo-card">
           <PhaseHeader
             kind="programme"

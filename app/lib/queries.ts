@@ -920,12 +920,12 @@ export function describeMessageLink(clientId: number, link: MessageLink): LinkVi
     }
     case "checkin": {
       const what = link.section === "daily" ? "Daily check-in" : link.section === "monthly" ? "Monthly check-in" : "Weekly check-in";
-      if (!link.period) return view("Measurements", what);
-      if (link.section === "monthly") return view("Measurements", `${what} · ${new Date(`${link.period}T00:00:00`).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}`);
-      return view("Measurements", link.section === "daily" ? `${what} · ${shortDay(link.period)}` : `${what} · week of ${shortDay(link.period)}`);
+      if (!link.period) return view("Lifestyle", what);
+      if (link.section === "monthly") return view("Lifestyle", `${what} · ${new Date(`${link.period}T00:00:00`).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}`);
+      return view("Lifestyle", link.section === "daily" ? `${what} · ${shortDay(link.period)}` : `${what} · week of ${shortDay(link.period)}`);
     }
     case "photos":
-      return view("Measurements", link.period ? `Progress pictures · ${shortDay(link.period)}` : "Progress pictures");
+      return view("Lifestyle", link.period ? `Progress pictures · ${shortDay(link.period)}` : "Progress pictures");
   }
 }
 
@@ -8415,7 +8415,7 @@ export function phaseEmptyReason(phaseId: number): string | null {
     return own || (plan.trainingKcal ?? 0) > 0 || (plan.restKcal ?? 0) > 0 ? null : "Nothing in it yet: set its targets on the Nutrition tab first.";
   }
   const asks = data.metric_definitions.some((m) => m.client_id === phase.client_id && m.phase_id === phase.id);
-  return asks ? null : "Nothing in it yet: add the metrics it asks for on the Measurements tab first.";
+  return asks ? null : "Nothing in it yet: add the metrics it asks for on the Lifestyle tab first.";
 }
 
 /** A programme with no exercise or cardio in any of its weeks: why it can't go out. */

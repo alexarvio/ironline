@@ -12,7 +12,7 @@ const TAB_LABEL: Record<string, string> = {
   plan: "Plan",
   training: "Training",
   nutrition: "Nutrition",
-  measurements: "Measurements",
+  measurements: "Lifestyle",
   meetings: "Meetings",
   photos: "Progress pictures",
   messages: "Messages",
@@ -21,7 +21,7 @@ const TONE_LABEL: Record<HomeAction["tone"], string> = { urgent: "Urgent", due: 
 const CATEGORY_LABEL: Record<string, string> = {
   training: "Training",
   nutrition: "Nutrition",
-  measurements: "Measurements",
+  measurements: "Lifestyle",
   notes: "Note",
   billing: "Invoice",
   messages: "Message",
@@ -38,7 +38,7 @@ const CATEGORY_LABEL: Record<string, string> = {
 const FILTERS = [
   { id: "training", label: "Training", holds: ["training", "notes"] },
   { id: "nutrition", label: "Nutrition", holds: ["nutrition"] },
-  { id: "measurements", label: "Measurements", holds: ["measurements"] },
+  { id: "measurements", label: "Lifestyle", holds: ["measurements"] },
   { id: "invoices", label: "Invoices", holds: ["billing"] },
   { id: "messages", label: "Messages", holds: ["messages"] },
 ] as const;

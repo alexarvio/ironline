@@ -26,7 +26,7 @@ export default async function MeasurementsRedesignPage({ searchParams }: { searc
   const coach = await requireCoach();
   const params = await searchParams;
   const { client, firstName } = pickClient(coach.id, params.client);
-  touchPresence(coach, client ? `${firstName} · Measurements` : "Clients");
+  touchPresence(coach, client ? `${firstName} · Lifestyle` : "Clients");
   if (!client) return <NoClients rail={loadRail(coach)} />;
   return (
     <RedesignShell

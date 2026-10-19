@@ -339,7 +339,7 @@ export default function PicturesDraft({ clientId, firstName, plan }: { clientId:
                       <button
                         type="button"
                         className="rd-btn ghost sm"
-                        onClick={() => (openChat ? openChat({ area: "Measurements", label: `Progress pictures · ${sh.title}, ${sh.dateLabel}`, link: { kind: "photos", period: sh.period } }) : setDlg({ kind: "message", label: `Progress pictures · ${sh.title}, ${sh.dateLabel}`, period: sh.period }))}
+                        onClick={() => (openChat ? openChat({ area: "Lifestyle", label: `Progress pictures · ${sh.title}, ${sh.dateLabel}`, link: { kind: "photos", period: sh.period } }) : setDlg({ kind: "message", label: `Progress pictures · ${sh.title}, ${sh.dateLabel}`, period: sh.period }))}
                         aria-label={`Message about ${sh.title}`}
                         title="Message about this sheet"
                       >

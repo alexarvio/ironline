@@ -485,7 +485,7 @@ export default function PlanPhasesCard({
                   : null
                 : dialog.phase.track === "nutrition"
                   ? { href: `/admin?client=${clientId}&tab=nutrition&phase=${dialog.phase.id}`, label: "Open in Nutrition" }
-                  : { href: `/admin?client=${clientId}&tab=measurements&phase=${dialog.phase.id}`, label: "Open in Measurements" }
+                  : { href: `/admin?client=${clientId}&tab=measurements&phase=${dialog.phase.id}`, label: "Open in Lifestyle" }
               : null
           }
           defaultTrack={dialog.track}

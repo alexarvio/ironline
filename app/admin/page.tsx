@@ -237,7 +237,7 @@ function ClientDashboard({
     // own ids (Training: programmes; the others: phases), so another tab's id
     // would open the wrong one. Without it a tab opens on its live phase.
     { id: "nutrition", label: "Nutrition", dot: dot("nutrition"), content: <NutritionPanel clientId={clientId} phaseParam={initialTab === "nutrition" ? phaseParam : undefined} /> },
-    { id: "measurements", label: "Measurements", dot: dot("measurements"), content: <MeasurementsPanel clientId={clientId} phaseParam={initialTab === "measurements" ? phaseParam : undefined} /> },
+    { id: "measurements", label: "Lifestyle", dot: dot("measurements"), content: <MeasurementsPanel clientId={clientId} phaseParam={initialTab === "measurements" ? phaseParam : undefined} /> },
     { id: "meetings", label: "Meetings", content: <MeetingsPanel clientId={clientId} /> },
     { id: "photos", label: "Progress pictures", dot: dot("photos"), content: <ProgressPicturesPanel clientId={clientId} /> },
     // Messages is always the last tab. New sections go before it.

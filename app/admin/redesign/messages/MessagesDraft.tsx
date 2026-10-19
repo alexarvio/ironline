@@ -639,7 +639,7 @@ function LinkDialog({ firstName, targets: t, onPick }: { firstName: string; targ
   const areas: { id: Area; label: string; empty: boolean }[] = [
     { id: "training", label: "Training", empty: t.training.length === 0 },
     { id: "nutrition", label: "Nutrition", empty: !t.nutrition && t.foodDays.length === 0 },
-    { id: "measurements", label: "Measurements", empty: t.checkins.length === 0 && !t.photos },
+    { id: "measurements", label: "Lifestyle", empty: t.checkins.length === 0 && !t.photos },
   ];
   const [area, setArea] = useState<Area>(areas.find((a) => !a.empty)?.id ?? "training");
   const [weekAt, setWeekAt] = useState(0);

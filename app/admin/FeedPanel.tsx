@@ -13,7 +13,7 @@ import { pageWindow } from "../lib/pager";
 const FILTERS = [
   { id: "training", label: "Training", holds: ["training", "notes"] },
   { id: "nutrition", label: "Nutrition", holds: ["nutrition"] },
-  { id: "measurements", label: "Measurements", holds: ["measurements"] },
+  { id: "measurements", label: "Lifestyle", holds: ["measurements"] },
   { id: "invoices", label: "Invoices", holds: ["billing"] },
   { id: "messages", label: "Messages", holds: ["messages"] },
 ] as const satisfies readonly { id: string; label: string; holds: readonly FeedCategory[] }[];
@@ -22,7 +22,7 @@ type FilterId = (typeof FILTERS)[number]["id"];
 const CATEGORY_LABEL: Record<FeedCategory, string> = {
   training: "Training",
   nutrition: "Nutrition",
-  measurements: "Measurements",
+  measurements: "Lifestyle",
   notes: "Note",
   billing: "Invoice",
   messages: "Message",

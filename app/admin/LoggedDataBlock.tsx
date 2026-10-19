@@ -195,7 +195,7 @@ function Feed({ view, cadence, valueFor }: { view: LoggedValues; cadence: "daily
                   <MessageAboutButton
                     target={{
                       link: { kind: "checkin", section: cadence, period: p.key },
-                      area: "Measurements",
+                      area: "Lifestyle",
                       label: `${cadence === "daily" ? "Daily" : "Weekly"} check-in · ${p.label}`,
                     }}
                   />

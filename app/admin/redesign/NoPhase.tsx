@@ -20,7 +20,7 @@ const WORD: Record<PhaseTrack, string> = { training: "training", nutrition: "nut
 const HEAD: Record<PhaseTrack, { eyebrow: string; title: string }> = {
   training: { eyebrow: "Training", title: "Programme" },
   nutrition: { eyebrow: "Nutrition", title: "Targets" },
-  lifestyle: { eyebrow: "Measurements", title: "Check-ins" },
+  lifestyle: { eyebrow: "Lifestyle", title: "Check-ins" },
 };
 
 export default function NoPhase({ clientId, firstName, track, plan }: { clientId: number; firstName: string; track: PhaseTrack; plan: DraftPlan }) {

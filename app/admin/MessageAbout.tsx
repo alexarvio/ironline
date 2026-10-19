@@ -32,7 +32,7 @@ export const useMessageWho = () => useContext(WhoContext);
 export type AboutTarget = { link: MessageLink; area: LinkArea; label: string };
 
 // The area's colours, as on the Plan tab: measurements are the lifestyle track.
-const AREA_TRACK = { Training: "training", Nutrition: "nutrition", Measurements: "lifestyle" } as const;
+const AREA_TRACK = { Training: "training", Nutrition: "nutrition", Lifestyle: "lifestyle" } as const;
 
 export function MessageAboutDialog({ target, onClose }: { target: AboutTarget; onClose: () => void }) {
   const who = useContext(WhoContext);

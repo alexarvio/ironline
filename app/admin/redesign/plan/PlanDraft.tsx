@@ -1253,7 +1253,7 @@ function GoalDialog({ firstName, goal, options, phases, today, onSave }: { first
               [
                 ["exercise", "Exercises"],
                 ["metric", "Nutrition"],
-                ["habit", "Measurements"],
+                ["habit", "Lifestyle"],
               ] as [typeof section, string][]
             ).map(([k, label]) => (
               <button key={k} type="button" className={section === k ? "on" : ""} aria-pressed={section === k} onClick={() => setSection(k)}>
@@ -1266,7 +1266,7 @@ function GoalDialog({ firstName, goal, options, phases, today, onSave }: { first
               [
                 ["exercise", "Exercises"],
                 ["metric", "Nutrition"],
-                ["habit", "Measurements"],
+                ["habit", "Lifestyle"],
               ] as [Kind, string][]
             )
               .filter(([k]) => section === k)

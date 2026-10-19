@@ -36,13 +36,13 @@ export const dynamic = "force-dynamic";
 const FILTERS = [
   { id: "training", label: "Training", holds: ["training"] },
   { id: "nutrition", label: "Nutrition", holds: ["nutrition"] },
-  { id: "measurements", label: "Measurements", holds: ["measurements"] },
+  { id: "measurements", label: "Lifestyle", holds: ["measurements"] },
   { id: "invoices", label: "Invoices", holds: ["billing"] },
   // A call asked for, an event added, a note on the programme: the client's words, with the messages (12 Oct).
   { id: "messages", label: "Messages", holds: ["messages", "notes"] },
 ] as const satisfies readonly { id: string; label: string; holds: readonly FeedCategory[] }[];
 type FilterId = (typeof FILTERS)[number]["id"];
-const CATEGORY_LABEL: Record<FeedCategory, string> = { training: "Training", nutrition: "Nutrition", measurements: "Measurements", notes: "Note", billing: "Invoice", messages: "Message" };
+const CATEGORY_LABEL: Record<FeedCategory, string> = { training: "Training", nutrition: "Nutrition", measurements: "Lifestyle", notes: "Note", billing: "Invoice", messages: "Message" };
 const BUCKETS: { id: HomeAction["group"]; label: string; sub: string }[] = [
   { id: "reply", label: "Reply", sub: "someone is waiting on you" },
   { id: "check", label: "Check on", sub: "someone is slipping" },
