@@ -30,7 +30,8 @@ const ongoing = (e: HomeEvent, today: string) => e.kind === "supplement" && !e.p
 const statusOf = (e: HomeEvent, today: string): Status => (e.start > today ? "next" : e.end >= today && !ongoing(e, today) ? "now" : "past");
 
 // A phase on the timeline: one flag in the track's colour, as the plan draws it.
-const FLAG = "M5 21V4M5 4h11.5l-2.5 4.5 2.5 4.5H5";
+// A waving flag for a phase starting (19 Oct, Alex: another flag than the notched one).
+const FLAG = "M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7";
 const PHASES = {
   training: { label: "Training phase", color: "#3a3390", rgb: "58,51,144", icon: FLAG },
   nutrition: { label: "Nutrition phase", color: "#1d7a70", rgb: "29,122,112", icon: FLAG },
