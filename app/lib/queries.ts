@@ -10455,6 +10455,8 @@ export type PlanPhaseRow = {
   program: { id: number; status: PlanProgramStatus; totalWeeks: number; loggedWeeks: number[] } | null;
   /** A draft with nothing in it yet, and so nothing to send out: why. */
   emptyReason: string | null;
+  /** The coach's goals for it (up to three), for the phase dialog's Phase goals box. */
+  objectives?: string[];
 };
 export type PlanProgramOption = { id: number; name: string; status: PlanProgramStatus; weeks: number; linked: boolean };
 export type PlanGoalRow = {
@@ -10497,6 +10499,7 @@ export function getPlanData(clientId: number) {
         ? { id: program.id, status: programStatus(program), totalWeeks: program.total_weeks, loggedWeeks: programLoggedWeekIndexes(program.id) }
         : null,
       emptyReason: phaseEmptyReason(p.id),
+      objectives: p.objectives ?? [],
     };
   });
   const linked = new Set(phases.map((p) => p.program?.id).filter((x): x is number => x != null));

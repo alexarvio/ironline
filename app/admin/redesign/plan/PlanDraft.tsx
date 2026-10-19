@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "../../../lib/phaseCovers";
 import Link from "next/link";
 import { addClientGoalAction, addClientPhaseAction, applyGoalDoneChangesAction, duplicateClientPhaseAction, removeClientGoalAction, removeClientPhaseAction, reorderClientGoalsAction, saveAndDeployPhaseNowAction, saveAndSchedulePhaseAction, updateClientGoalAction, updateClientPhaseAction } from "../../../lib/actions";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
@@ -52,7 +53,7 @@ export type DraftPlan = {
 
 const savedToast = (what: string) => toast.success("Saved", { description: what });
 /** A phase's fields as the actions read them. */
-export const phaseForm = (v: { id?: number; clientId?: number; name: string; track: PhaseTrack; start: string; end: string; programId?: number | null }) => {
+export const phaseForm = (v: { id?: number; clientId?: number; name: string; track: PhaseTrack; start: string; end: string; programId?: number | null; /** The dialog's Phase goals (19 Oct): sent only when given, so other forms leave them be. */ goals?: string[] }) => {
   const fd = new FormData();
   if (v.id != null) fd.set("id", String(v.id));
   if (v.clientId != null) fd.set("clientId", String(v.clientId));
@@ -72,6 +73,10 @@ export const phaseForm = (v: { id?: number; clientId?: number; name: string; tra
     fd.set("adjustProgram", "1");
   }
   if (v.programId != null) fd.set("programId", String(v.programId));
+  if (v.goals) {
+    fd.set("objectivesSent", "1");
+    for (const g of v.goals) fd.append("objectives", g);
+  }
   return fd;
 };
 const DAY = 86400000;
@@ -783,8 +788,11 @@ export function gridFor(win: number, thisWeek: string, intoWeek: number) {
   return { first, count, weeks, nowIdx, months, cols, nowLeft, shift };
 }
 
-export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track: initialTrack, lockTrack = false, initialStart, others, programs, onSave, onDelete, onDuplicate, onSend }: { clientId: number; firstName: string; today: string; thisWeek: string; phase: PlanPhaseRow | null; track?: PhaseTrack; /** A new phase opens on this day (the Phases overview: the day after the one ending). */ initialStart?: string; /** Opened from a track's own tab (10 Oct): the track is given, so no tiles to pick one. */ lockTrack?: boolean; others: PlanPhaseRow[]; programs: PlanProgramOption[]; onSave: (v: { name: string; track: PhaseTrack; start: string; end: string; programId: number | null }) => void; onDelete?: () => void; /** A copy of this phase as a new draft (a past one, to run again). */ onDuplicate?: () => void; onSend: (v: { name: string; track: PhaseTrack; start: string; end: string; now: boolean }) => void }) {
+export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track: initialTrack, lockTrack = false, initialStart, others, programs, onSave, onDelete, onDuplicate, onSend }: { clientId: number; firstName: string; today: string; thisWeek: string; phase: PlanPhaseRow | null; track?: PhaseTrack; /** A new phase opens on this day (the Phases overview: the day after the one ending). */ initialStart?: string; /** Opened from a track's own tab (10 Oct): the track is given, so no tiles to pick one. */ lockTrack?: boolean; others: PlanPhaseRow[]; programs: PlanProgramOption[]; onSave: (v: { name: string; track: PhaseTrack; start: string; end: string; programId: number | null; goals: string[] }) => void; onDelete?: () => void; /** A copy of this phase as a new draft (a past one, to run again). */ onDuplicate?: () => void; onSend: (v: { name: string; track: PhaseTrack; start: string; end: string; now: boolean; goals: string[] }) => void }) {
   const editing = !!phase;
+  // The phase's goals (19 Oct), one a line, the same three the tab's Goals pill edits.
+  const [goalsText, setGoalsText] = useState((phase?.objectives ?? []).join("\n"));
+  const goalLines = goalsText.split("\n").map((g) => g.trim().slice(0, PHASE_OBJECTIVE_CHARS)).filter(Boolean).slice(0, PHASE_OBJECTIVES_MAX);
   const [track, setTrack] = useState<PhaseTrack>(phase?.track ?? initialTrack ?? "nutrition");
   const [name, setName] = useState(phase?.name ?? "");
   const [from, setFrom] = useState(phase?.start_week ?? initialStart ?? thisWeek);
@@ -938,6 +946,10 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
         <span>Name</span>
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder={track === "nutrition" ? "Cut A" : track === "training" ? "Strength block" : "Sleep focus"} maxLength={60} autoFocus={!editing} />
       </label>
+      <label className="rd-field">
+        <span>Phase goals</span>
+        <textarea className="rq-goals" rows={3} value={goalsText} onChange={(e) => setGoalsText(e.target.value.split("\n").slice(0, PHASE_OBJECTIVES_MAX).join("\n"))} placeholder={"One goal a line, up to three.\nE.g. Squat 100 kg for 5"} aria-label="Phase goals" />
+      </label>
       <div className="rdd-cols">
         <MonthRange from={from} to={to} onPick={pick} chrome={chrome} planned={planned} cursor={cursor} setCursor={setCursor} today={today} />
         <div className="rdd-fields">
@@ -1009,7 +1021,7 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
         )}
         <span className="rd-dlg-hint grow">{state === "draft" ? `Only you see a draft until it is sent.` : startsNow ? `${firstName} sees it now.` : `${firstName} sees it from ${fmtDay(startWeek)}.`}</span>
         <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onSave({ name: name.trim(), track, start: startWeek, end: endWeek, programId: linkedProgram?.id ?? null })}>
+        <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onSave({ name: name.trim(), track, start: startWeek, end: endWeek, programId: linkedProgram?.id ?? null, goals: goalLines })}>
           {editing ? "Save" : "Create draft"}
         </button>
       </DialogFooter>

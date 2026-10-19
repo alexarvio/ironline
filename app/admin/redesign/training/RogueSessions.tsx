@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type React from "react";
-import { ChevronDownIcon, CompassIcon } from "../../../components/icons";
+import { ChevronRightIcon, CompassIcon } from "../../../components/icons";
 import type { DraftRogue } from "./TrainingDraft";
 
 // The client's rogue sessions under the week's own (19 Oct, Alex): workouts
@@ -29,36 +29,32 @@ export default function RogueSessions({ items, firstName, grid, cols, unit, minW
   const shown = FIGURES.filter((k) => cols[k]);
   const label: Record<keyof Cols, string> = { sets: "Sets", weight: unit, reps: "Reps", rpe: "RPE", tempo: "Tempo", rest: "Rest" };
   return (
-    <div className="rg">
-      {/* The compass by the heading (19 Oct, Alex), and no line explaining it. */}
-      <div className="rg-head">
-        <CompassIcon size={15} />
-        <span className="rg-eyebrow">Rogue sessions</span>
+    <div className="rg trn-rogue">
+      {/* The compass by the heading; slim rows of their own under the week's card (19 Oct restructure). */}
+      <div className="trn-rogue-label">
+        <CompassIcon size={14} />
+        <span>Rogue sessions</span>
+        <em>· done outside the plan this week</em>
       </div>
       {items.map((r) => {
         const isOpen = open === r.id;
         const count = r.exercises.length + r.cardio.length;
         return (
-          <section key={r.id} className={`rd-session rg-session${isOpen ? " open" : ""}`}>
-            <div className="rd-session-head" onClick={() => setOpen(isOpen ? null : r.id)}>
-              {/* The grip's room kept empty, so the name and count line up with the week's sessions. */}
-              <span className="rd-grip rg-compass" aria-hidden="true" />
-              <button type="button" className="rd-session-toggle" onClick={(e) => (e.stopPropagation(), setOpen(isOpen ? null : r.id))} aria-expanded={isOpen} aria-label={isOpen ? "Fold rogue session" : "Open rogue session"}>
-                <span className={`rd-chev${isOpen ? " open" : ""}`} aria-hidden="true">
-                  <ChevronDownIcon />
+          <section key={r.id} className={`trn-rg${isOpen ? " open" : ""}`}>
+            <div className="trn-rg-row" onClick={(e) => !(e.target as HTMLElement).closest("button") && setOpen(isOpen ? null : r.id)}>
+              <span className="trn-row-name">
+                <b>Rogue session</b>
+                <small>
+                  {count} {count === 1 ? "exercise" : "exercises"}
+                </small>
+              </span>
+              <span className="trn-rg-when">{[r.started && day(r.started), r.duration != null && `${r.duration} min`].filter(Boolean).join(" · ")}</span>
+              <span className={`trn-state ${r.ended ? "good" : "live"}`}>{r.ended ? "Completed" : "In progress"}</span>
+              <button type="button" className="trn-row-toggle" onClick={() => setOpen(isOpen ? null : r.id)} aria-expanded={isOpen} aria-label={isOpen ? "Fold rogue session" : "Open rogue session"}>
+                <span className={`trn-chev${isOpen ? " open" : ""}`} aria-hidden="true">
+                  <ChevronRightIcon />
                 </span>
               </button>
-              <span className="rd-session-namecol">
-                <span className="rg-name">Rogue session</span>
-              </span>
-              <span className="rd-session-count">
-                {count} {count === 1 ? "exercise" : "exercises"}
-              </span>
-              <span className="rd-session-tags">
-                {r.started && <span className="rd-pill quiet">{day(r.started)}</span>}
-                {r.duration != null && <span className="rd-pill quiet">{r.duration} min</span>}
-                <span className={`rd-pill${r.ended ? " good" : ""}`}>{r.ended ? "Completed" : "In progress"}</span>
-              </span>
             </div>
             {isOpen && (
               <div className="rd-rows rd-rows-scroll" style={{ "--rd-minw": `${minW}px` } as React.CSSProperties}>

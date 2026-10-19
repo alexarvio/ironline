@@ -2,24 +2,21 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PhaseDialog, phaseForm as planPhaseForm, type DraftPlan } from "../plan/PlanDraft";
-import { addExerciseToLibraryAction, addExerciseVariationAction, markProgramNoteSeenAction, markVideoSeenAction, setRowDemoHiddenAction, setRowVariationAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, applyDayToLaterWeeksAction, addClientPhaseAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, deployProgramAction, removeGymAction, removeExerciseVariationAction, removeProgramWeekAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, saveTrainingNoteAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
+import { addExerciseToLibraryAction, addExerciseVariationAction, markProgramNoteSeenAction, markVideoSeenAction, setRowDemoHiddenAction, setRowVariationAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, applyDayToLaterWeeksAction, addClientPhaseAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, deployProgramAction, removeGymAction, removeExerciseVariationAction, removeProgramWeekAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
-import { Tabs, TabsList, TabsTrigger, ToggleGroup, ToggleGroupItem } from "../../../components/ui/basics";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
-import { CalendarIcon, ChatIcon, ChevronDownIcon, ColumnsIcon, CopyIcon, DumbbellIcon, EyeIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { CalendarIcon, ChatIcon, ChevronDownIcon, ChevronRightIcon, ColumnsIcon, CopyIcon, DumbbellIcon, EyeIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { PhotoIcon, VideoIcon } from "../../VideoRequestButton";
 import RogueSessions from "./RogueSessions";
 import MediaReviewModal, { reviewable, type MediaReview, type ThreadItem } from "../media-review/MediaReviewModal";
 import PhaseDatesDialog from "../PhaseDatesDialog";
 import PhaseSwitcher from "../PhaseSwitcher";
-import PhaseGoalsCard from "../PhaseGoalsCard";
-import WorkoutQuestionsCard from "./WorkoutQuestionsCard";
-import CoachNoteCard from "../CoachNoteCard";
+import { AfterWorkoutCheck, GoalsNotePills, GripIcon, WeekRail } from "./TrainingParts";
+import "./trn.css";
 import { SortableItem, SortableList } from "../Sortable";
 import { useOpenChat } from "../ChatPanel";
 import Picker from "../Picker";
@@ -183,7 +180,7 @@ type Dlg =
   | { kind: "message"; label: string; link: MessageLink }
   | { kind: "copySession"; sessionId: number }
   | { kind: "applyLater"; sessionId: number }
-  | { kind: "copyWeek" }
+  | { kind: "copyWeek"; from: number }
   | { kind: "deleteSession"; sessionId: number }
   | { kind: "deploy" }
   | { kind: "backToDraft" }
@@ -493,33 +490,28 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   const laterLabel = later.length === 0 ? "" : later.length === 1 ? `W${later[0].index}` : `W${later[0].index}–W${later[later.length - 1].index}`;
 
   return (
-    <div className={`rd${program.status === "past" ? " rd-past" : ""}`}>
+    <div className={`rd trn${program.status === "past" ? " rd-past" : ""}`}>
       {program.status === "past" && (
         <div className="rd-past-note" role="note">
           <b>Ended.</b> This programme is here to look back on; nothing in it can be changed.
         </div>
       )}
-      {/* ---- Header: the programme, where it is, its actions. */}
-      <header className="rd-head">
-        <div className="rd-head-main">
-          <span className="rd-eyebrow">Programme</span>
-          <h1 className="rd-title">
-            {program.programs.length > 1 ? (
+      {/* ---- Header (19 Oct restructure): the programme's name, its switcher (▾) and state, its weeks and dates; on the right the goals and note pills, the unit and the menu. */}
+      <header className="trn-head">
+        <div className="trn-head-main">
+          <span className="trn-eyebrow">Programme</span>
+          <div className="trn-name-row">
+            <h1 className="trn-name">
               <PhaseSwitcher name={program.name} currentId={program.id} items={program.programs} hrefFor={(id) => `/admin/redesign/training?client=${clientId}&program=${id}`} label="Switch programme" newLabel="New programme" onNew={() => setDlg({ kind: "newProgram" })} />
-            ) : (
-              program.name
-            )}
-            <span className="rd-title-weeks">({weeks.length} weeks)</span>
-            <span className={`rd-status ${program.status}`}>{stateLabel(program.status)}</span>
-          </h1>
-          {program.startDate && (
-            <span className="rd-sub">
-              {fmtDate(program.startDate)}
-              {program.endDate && ` – ${fmtDate(program.endDate)}`}
-            </span>
-          )}
+            </h1>
+            <span className={`trn-status ${program.status}`}>{program.status === "past" ? "Ended" : stateLabel(program.status)}</span>
+          </div>
+          <span className="trn-meta">
+            {weeks.length} {weeks.length === 1 ? "week" : "weeks"}
+            {program.startDate && ` · ${fmtDate(program.startDate)}${program.endDate ? ` – ${fmtDate(program.endDate)}` : ""}`}
+          </span>
         </div>
-        <div className="rd-head-actions">
+        <div className="trn-head-actions">
           {/* The client's note on the programme sits with the header's actions, so the week strip has the whole row. */}
           {program.note && (
             <button type="button" className={`rd-note${noteSeen ? "" : " unseen"}`} onClick={() => {
@@ -552,12 +544,17 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               </button>
             </>
           )}
-          <ToggleGroup type="single" value={lbs ? "lbs" : "kg"} onValueChange={(v) => v && setLbs(v === "lbs")} aria-label="Unit">
-            <ToggleGroupItem value="kg">Kg</ToggleGroupItem>
-            <ToggleGroupItem value="lbs">Lbs</ToggleGroupItem>
-          </ToggleGroup>
+          {/* The goals and note as pills (they were two full-width bars), one pop-over under them. */}
+          {program.phaseId != null && <GoalsNotePills firstName={firstName} phaseId={program.phaseId} goals={program.goals} note={program.coachNote} />}
+          <div className="trn-unit" role="radiogroup" aria-label="Unit">
+            {(["kg", "lbs"] as const).map((u) => (
+              <button key={u} type="button" role="radio" aria-checked={unit === u} className={unit === u ? "on" : ""} onClick={() => setLbs(u === "lbs")}>
+                {u.toUpperCase()}
+              </button>
+            ))}
+          </div>
           <DropdownMenu modal={false}>
-            <DropdownMenuTrigger className="rd-btn ghost" aria-label="More for the programme">
+            <DropdownMenuTrigger className="trn-more" aria-label="More for the programme">
               <MoreIcon />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="pb-menu">
@@ -637,86 +634,60 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         </div>
       </header>
 
-      {/* ---- The coach's goals for this phase, shown on the client's Home. */}
-      <PhaseGoalsCard phaseId={program.phaseId} phaseName={program.name} firstName={firstName} goals={program.goals} />
-      {program.phaseId != null && <CoachNoteCard firstName={firstName} note={program.coachNote} what="training" save={(text) => saveTrainingNoteAction(program.phaseId!, text)} />}
-      {/* ---- The weeks: plain chips, one pill a session. */}
-      <div className="rd-weekrow">
-        <Tabs value={String(viewIdx)} className="rd-weeks">
-          <TabsList className="rd-weeklist">
-            {weeks.map((w) => (
-              <TabsTrigger key={w.index} value={String(w.index)} asChild>
-                <Link
-                  scroll={false}
-                  href={`/admin/redesign/training?client=${clientId}&program=${program.id}&week=${w.index}`}
-                  className={`rd-week ${w.state}`}
-                  title={`${w.label}: ${w.trained.filter(Boolean).length} of ${w.trained.length} sessions done${w.missed.some(Boolean) ? `, ${w.missed.filter(Boolean).length} unfinished` : ""}${w.skipped.some(Boolean) ? `, ${w.skipped.filter(Boolean).length} couldn't be done` : ""}`}
-                  onClick={(e) => {
-                    // A week held on this screen switches in place; the rest load from the server.
-                    if (isLocal(w.index)) {
-                      e.preventDefault();
-                      showWeek(w.index);
-                    }
-                  }}
-                >
-                  <span>
-                    {w.label}
-                    {w.state === "live" && <i className="rd-live-dot" title="This week" aria-label="This week" />}
-                  </span>
-                  {/* One bar a session: green done, red couldn't do it, amber begun and left, grey not started; the title says the same in words. */}
-                  <span className="rd-pills" aria-hidden="true">
-                    {w.trained.length === 0 ? <em>no sessions</em> : w.trained.map((t, i) => <i key={i} className={t ? "on" : w.skipped[i] ? "skipped" : w.missed[i] ? "missed" : ""} />)}
-                  </span>
-                  {/* The Monday the week starts on; the bars above already say how many sessions and how many are done. */}
-                  <small>{weekDate(w.index) ?? (w.trained.length === 0 ? "no sessions" : w.state === "ahead" ? `${w.trained.length} planned` : `${w.trained.filter(Boolean).length} of ${w.trained.length} sessions`)}</small>
-                </Link>
-              </TabsTrigger>
-            ))}
-            <button type="button" className="rd-week add" onClick={() => setDlg({ kind: "addWeek" })}>
-              <span>+ Week</span>
-              <span className="rd-pills" aria-hidden="true">
-                <em>&nbsp;</em>
-              </span>
-              <small>{weekDate(weeks.length + 1) ?? "add one"}</small>
-            </button>
-          </TabsList>
-        </Tabs>
-      </div>
+      {/* ---- The weeks: a card each, one bar a session, NOW on this calendar week. */}
+      <WeekRail
+        weeks={weeks}
+        viewIdx={viewIdx}
+        dateOf={weekDate}
+        hrefFor={(index) => `/admin/redesign/training?client=${clientId}&program=${program.id}&week=${index}`}
+        isLocal={isLocal}
+        onShow={showWeek}
+        onAdd={() => setDlg({ kind: "addWeek" })}
+      />
 
       {/* ---- The week's sessions. */}
-      <div className="rd-weekhead">
-        <h2>
-          {week.label} <span>· {week.state === "ahead" ? `${week.trained.length} sessions planned` : `${week.trained.filter(Boolean).length} of ${week.trained.length} sessions done`}</span>
-        </h2>
-        <div className="rd-weekhead-actions">
+      <div className="trn-weekhead">
+        <div>
+          <h2>Week {week.index}</h2>
+          <span>
+            {weekDate(week.index) ? `${weekDate(week.index)} · ` : ""}
+            {week.trained.filter(Boolean).length} of {week.trained.length} sessions done
+          </span>
+        </div>
+        <div className="trn-weekhead-actions">
           {week.state === "ahead" && week.index === weeks.length && weeks.length > 1 && (
-            <button type="button" className="rd-btn ghost wide" onClick={() => setDlg({ kind: "removeWeek" })}>
+            <button type="button" className="trn-btn ghost" onClick={() => setDlg({ kind: "removeWeek" })}>
               <TrashIcon /> Remove week
             </button>
           )}
-          {viewIdx > 1 && week.state !== "past" && (
-            <button type="button" className="rd-btn" onClick={() => setDlg({ kind: "copyWeek" })}>
-              <CopyIcon /> Copy week {viewIdx - 1} here
-            </button>
-          )}
+          {week.state !== "past" &&
+            weeks.length > 1 &&
+            (viewIdx > 1 ? (
+              <button type="button" className="trn-btn" onClick={() => setDlg({ kind: "copyWeek", from: viewIdx - 1 })}>
+                <CopyIcon /> Copy week {viewIdx - 1} here
+              </button>
+            ) : (
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger className="trn-btn">
+                  <CopyIcon /> Copy from…
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="pb-menu">
+                  {weeks
+                    .filter((w) => w.index !== viewIdx)
+                    .map((w) => (
+                      <DropdownMenuItem key={w.index} onSelect={() => setDlg({ kind: "copyWeek", from: w.index })}>
+                        Week {w.index}
+                        <small className="rd-menu-inuse">{w.trained.length} {w.trained.length === 1 ? "session" : "sessions"}</small>
+                      </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ))}
         </div>
       </div>
 
-      {/* The name column is as wide as the week's longest name, so the counts
-          sit right after the names and still line up down the week. */}
-      <div
-        className="rd-sessions"
-        style={
-          {
-            "--rd-name-ch": Math.min(28, Math.max(4, ...sessions.map((s) => (pend(s.id).renamed ?? s.name).length))),
-            // The pills on the right the same: each column as wide as the
-            // week's widest pill of its kind, and not there when the week has none.
-            "--rd-time-ch": Math.max(0, ...sessions.map((s) => (s.duration != null ? `${s.duration} min`.length : 0))),
-            "--rd-gym-ch": Math.min(18, Math.max(0, ...sessions.map((s) => s.gym?.length ?? 0))),
-            "--rd-state-ch": Math.max(0, ...sessions.map((s) => stateWord(s).length)),
-          } as React.CSSProperties
-        }
-      >
+      {/* One card, a 60px row a session; the row opens the session's table under it. */}
+      <div className="rd-sessions trn-list">
         <SortableList
           ids={sessions.map((s) => s.id)}
           label="session"
@@ -725,7 +696,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
             act(() => reorderSessionsAction(clientId, weekNo(viewIdx), ids as number[]), "Session order changed");
           }}
         >
-        {sessions.map((s) => {
+        {sessions.map((s, i) => {
           const p = pend(s.id);
           const isOpen = open === s.id;
           const name = p.renamed ?? s.name;
@@ -733,7 +704,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           // The states worth a word: done, skipped, or begun and left with
           // sets or cardio still to log (ended early, or partly logged), as
           // the client's app calls it too.
-          const status = s.skip ? { text: "Skipped", cls: "warn" } : complete ? { text: "Completed", cls: "good" } : s.ended || s.setsLogged > 0 ? { text: "Unfinished", cls: "unfinished" } : null;
+          // In progress while the client is in it (sets logged, not ended); Unfinished once ended short.
+          const status = s.skip ? { text: "Skipped", cls: "warn" } : complete ? { text: "Completed", cls: "good" } : s.ended ? { text: "Unfinished", cls: "warn" } : s.setsLogged > 0 ? { text: "In progress", cls: "live" } : { text: "Not started", cls: "idle" };
           const rows = orderOf(s)
             .map((id) => s.rows.find((r) => r.id === id)!)
             .filter((r) => r && !p.removed.includes(r.id));
@@ -756,95 +728,67 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               {(sessionGrip) => (
               <>
               <div
-                className="rd-session-head"
-                // A click anywhere on the head opens or folds the session (1 Oct),
-                // bar the name (it renames), the grip and the buttons.
+                className="rd-session-head trn-row"
+                // A click anywhere on the row opens or folds the session, bar the
+                // grip, the buttons and (open) the name, which renames.
                 onClick={(ev) => {
                   if ((ev.target as HTMLElement).closest("input, textarea, select, button, a, [role=button], [role^=menuitem], .rd-grip")) return;
                   setOpen(isOpen ? null : s.id);
                 }}
               >
-                <span className="rd-grip" {...sessionGrip}>
-                  ⋮⋮
+                <span className="rd-grip trn-grip" {...sessionGrip}>
+                  <GripIcon />
                 </span>
-                <button type="button" className="rd-session-toggle" onClick={() => setOpen(isOpen ? null : s.id)} aria-expanded={isOpen} aria-label={isOpen ? `Fold ${name}` : `Open ${name}`}>
-                  <span className={`rd-chev${isOpen ? " open" : ""}`} aria-hidden="true">
-                    <ChevronDownIcon />
-                  </span>
-                </button>
-                {/* The name, then the counts in columns of their own, so every
-                    session's line up down the week. */}
-                <span className="rd-session-namecol">
-                  <SessionName value={name} onChange={(v) => patch(s.id, (q) => ({ ...q, renamed: v === s.name ? null : v }))} />
+                <span className="trn-disc" aria-hidden="true">
+                  {i + 1}
                 </span>
-                <span className="rd-session-count">
-                  {rows.length} {rows.length === 1 ? "exercise" : "exercises"}
+                <span className="trn-row-name">
+                  {isOpen ? <SessionName value={name} onChange={(v) => patch(s.id, (q) => ({ ...q, renamed: v === s.name ? null : v }))} /> : <b>{name}</b>}
+                  <small>
+                    {rows.length} {rows.length === 1 ? "exercise" : "exercises"}
+                    {s.cardio.length ? ` · ${s.cardio.length} cardio` : ""}
+                  </small>
                 </span>
-                {sessions.some((x) => x.cardio.length > 0) && <span className="rd-session-count cardio">{s.cardio.length ? `${s.cardio.length} cardio` : ""}</span>}
-                {/* On the right, right to left: the state, the time, the gym,
-                    a swap, the client's note. */}
-                {/* Unlabelled columns on the right, each a set width with its
-                    pill centred, so they line up down the week whatever the
-                    gym: (left to right) the client's note, a video, a swap, the
-                    two answers, the time, the gym, the state. */}
-                <span className="rd-session-tags">
-                  {/* The swap and the client's note come and go, so they pack
-                      against the time with no empty slot; the time, gym and
-                      state keep their set columns. */}
-                  <span className="rd-tagextras">
-                    {s.note && (
-                      <span className="rd-tag note" title={`${firstName}'s note: ${s.note}`} aria-label={`${firstName} left a note: ${s.note}`}>
-                        <ChatIcon />
-                        <span className="rd-tag-note-text">&ldquo;{s.note}&rdquo;</span>
+                {/* What wants the coach: the client's note, a video, extra sets, a swap. */}
+                <span className="trn-row-flags">
+                  {s.note && (
+                    <span className="rd-tag note" title={`${firstName}'s note: ${s.note}`} aria-label={`${firstName} left a note: ${s.note}`}>
+                      <ChatIcon />
+                    </span>
+                  )}
+                  {(() => {
+                    const vs = rows.map((r) => videos[r.id] ?? null).filter((v) => v && (v.state === "in" || v.state === "replied"));
+                    if (vs.length === 0) return null;
+                    const waiting = vs.some((v) => v!.state === "in");
+                    const photo = vs.every((v) => v!.media === "photo");
+                    const word = photo ? "photo" : "video";
+                    return (
+                      <span className={`rd-flag video ${waiting ? "in" : "replied"}`} title={waiting ? `${firstName} sent a ${word} · waiting for your reply` : `Their ${word} · replied`} aria-label={waiting ? `A ${word} is waiting for your reply` : `${photo ? "Photo" : "Video"} replied`}>
+                        {photo ? <PhotoIcon /> : <VideoIcon />}
                       </span>
-                    )}
-                    {(() => {
-                      // A video from the client in this session: waiting for a reply, or answered.
-                      const vs = rows.map((r) => videos[r.id] ?? null).filter((v) => v && (v.state === "in" || v.state === "replied"));
-                      if (vs.length === 0) return null;
-                      const waiting = vs.some((v) => v!.state === "in");
-                      // A photo, when that is what came in (10 Oct): the camera, not the video clapper.
-                      const photo = vs.every((v) => v!.media === "photo");
-                      const word = photo ? "photo" : "video";
-                      return (
-                        <span className={`rd-flag video ${waiting ? "in" : "replied"}`} title={waiting ? `${firstName} sent a ${word} · waiting for your reply` : `Their ${word} · replied`} aria-label={waiting ? `A ${word} is waiting for your reply` : `${photo ? "Photo" : "Video"} replied`}>
-                          {photo ? <PhotoIcon /> : <VideoIcon />}
-                        </span>
-                      );
-                    })()}
-                    {(() => {
-                      // Extra sets in this session, all exercises together (12 Oct).
-                      const n = rows.reduce((t, r) => t + extraOf(r), 0);
-                      return n > 0 ? (
-                        <span className="rd-extradot static" title={`${firstName} added ${n} extra set${n === 1 ? "" : "s"} in this session`} aria-label={`${n} extra set${n === 1 ? "" : "s"}`}>
-                          +{n}
-                        </span>
-                      ) : null;
-                    })()}
-                    {(() => {
-                      const n = rows.filter((r) => r.swap).length;
-                      return n > 0 ? (
-                        <span className="rd-swapdot static" title={`${firstName} substituted ${n} exercise${n === 1 ? "" : "s"} in this session`} aria-label={`${n} substituted`}>
-                          <SwapIcon />
-                          {n > 1 && <b>{n}</b>}
-                        </span>
-                      ) : null;
-                    })()}
-                    {/* What the client answered on ending the session (the workout questionnaire), 1 to 10 each. */}
-                    {/* The numbers as pills; words are read in the opened session. */}
-                    {s.answers?.filter((a) => a.value != null).map((a) => (
-                      <span key={a.label} className="rd-tag score" title={`${firstName}: ${a.label} ${a.value}${a.kind === "scale" ? " of 10" : a.unit ? ` ${a.unit}` : ""}`}>
-                        {a.label} <b>{a.value}{a.kind === "number" && a.unit ? ` ${a.unit}` : ""}</b>
+                    );
+                  })()}
+                  {(() => {
+                    const n = rows.reduce((t, r) => t + extraOf(r), 0);
+                    return n > 0 ? (
+                      <span className="rd-extradot static" title={`${firstName} added ${n} extra set${n === 1 ? "" : "s"} in this session`} aria-label={`${n} extra set${n === 1 ? "" : "s"}`}>
+                        +{n}
                       </span>
-                    ))}
-                  </span>
-                  {sessions.some((x) => x.duration != null) && <span className="rd-tagslot time">{s.duration != null && <span className="rd-tag time">{s.duration} min</span>}</span>}
-                  {/* The gym only matters with more than one: one gym, no slot, so nothing sits empty. */}
-                  {multiGym && sessions.some((x) => x.gym) && <span className="rd-tagslot gym">{s.gym && <span className="rd-tag gym" title={s.gym}>{s.gym}</span>}</span>}
-                  {sessions.some((x) => stateWord(x)) && <span className="rd-tagslot state">{status ? <span className={`rd-pill ${status.cls}`}>{status.text}</span> : rows.length + s.cardio.length > 0 ? <span className="rd-pill idle">Not started</span> : null}</span>}
+                    ) : null;
+                  })()}
+                  {(() => {
+                    const n = rows.filter((r) => r.swap).length;
+                    return n > 0 ? (
+                      <span className="rd-swapdot static" title={`${firstName} substituted ${n} exercise${n === 1 ? "" : "s"} in this session`} aria-label={`${n} substituted`}>
+                        <SwapIcon />
+                        {n > 1 && <b>{n}</b>}
+                      </span>
+                    ) : null;
+                  })()}
                 </span>
+                <span className={`trn-state ${status.cls}`}>{status.text}</span>
                 <DropdownMenu modal={false}>
-                  <DropdownMenuTrigger className="rd-btn ghost" aria-label={`More for ${name}`}>
+                  <DropdownMenuTrigger className="trn-row-more" aria-label={`More for ${name}`}>
                     <MoreIcon />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="pb-menu">
@@ -871,6 +815,11 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                <button type="button" className="trn-row-toggle" onClick={() => setOpen(isOpen ? null : s.id)} aria-expanded={isOpen} aria-label={isOpen ? `Fold ${name}` : `Open ${name}`}>
+                  <span className={`trn-chev${isOpen ? " open" : ""}`} aria-hidden="true">
+                    <ChevronRightIcon />
+                  </span>
+                </button>
               </div>
 
               {isOpen && (
@@ -1340,7 +1289,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         {sessions.length < MAX_SESSIONS ? (
           <button
             type="button"
-            className="rd-session add"
+            className="trn-add"
             onClick={() => {
               const n = sessions.length + 1;
               act(() => addSessionAction(fd({ clientId, week: weekNo(viewIdx) })), `Session ${n} added`);
@@ -1349,18 +1298,20 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
             + Add session
           </button>
         ) : (
-          <p className="rd-full">{MAX_SESSIONS} sessions is the most a week can hold.</p>
+          <p className="rd-full trn-full">{MAX_SESSIONS} sessions is the most a week can hold.</p>
         )}
-        {/* The client's own workouts this week, off the plan (19 Oct): read only, under the week's sessions. */}
-        <RogueSessions items={program.rogue[viewIdx] ?? []} firstName={firstName} grid={colStyle} cols={cols} unit={unit} minW={tableMinW} kgOf={(kg) => (kg == null ? null : half(lbs ? kg * LB : kg))} />
       </div>
 
-      {/* ---- What the client is asked as they end a workout in this phase, and what they answered, newest first (6 Oct: both at the foot, under the weeks). */}
-      <WorkoutQuestionsCard
+      {/* The client's own workouts this week, off the plan (19 Oct): read only, slim rows under the week's card. */}
+      <RogueSessions items={program.rogue[viewIdx] ?? []} firstName={firstName} grid={colStyle} cols={cols} unit={unit} minW={tableMinW} kgOf={(kg) => (kg == null ? null : half(lbs ? kg * LB : kg))} />
+
+      {/* ---- What the client rates as a workout ends, and what they answered (was the workout questionnaire). */}
+      <AfterWorkoutCheck
         programId={program.id}
         firstName={firstName}
         questions={program.workoutQuestions}
-        answers={<AnswersFeed firstName={firstName} items={program.answersFeed} href={(it) => `/admin/redesign/training?client=${clientId}&tab=training&program=${program.id}&week=${it.weekIdx}#session-${it.dayId}`} />}
+        answers={program.answersFeed}
+        href={(it) => `/admin/redesign/training?client=${clientId}&tab=training&program=${program.id}&week=${it.weekIdx}#session-${it.dayId}`}
       />
 
       {/* ---- Dialogs. One open at a time. */}
@@ -1587,17 +1538,17 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
 
         {dlg?.kind === "copyWeek" && (
           <ConfirmDialog
-            title={`Copy Week ${viewIdx - 1} here`}
-            description={`Replaces ${week.label}'s sessions with Week ${viewIdx - 1}'s: its sessions, exercises and cardio. Nothing the client logged is touched.`}
+            title={`Copy Week ${dlg.from} here`}
+            description={`Replaces ${week.label}'s sessions with Week ${dlg.from}'s: its sessions, exercises and cardio. Nothing the client logged is touched.`}
             confirm="Copy week"
             tick={laterLabel ? `Also copy it to ${laterLabel}` : null}
             onConfirm={(also) => {
-              const from = weekNo(viewIdx - 1);
+              const from = weekNo(dlg.from);
               const targets = also ? weeks.filter((w) => w.index >= viewIdx).map((w) => weekNo(w.index)) : [weekNo(viewIdx)];
               close();
               act(async () => {
                 for (const to of targets) await copyProgramWeekAction(fd({ clientId, fromWeek: from, toWeek: to }));
-              }, `Week ${viewIdx - 1} copied to ${week.label}${also ? ` and ${laterLabel}` : ""}`);
+              }, `Week ${dlg.from} copied to ${week.label}${also ? ` and ${laterLabel}` : ""}`);
             }}
           />
         )}
@@ -1848,8 +1799,6 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
 // ---- Small parts -------------------------------------------------------------
 
 /** The word on a session's state pill, for sizing its column: "" when it has none. */
-const stateWord = (s: DraftSession) =>
-  s.skip ? "Skipped" : s.setsPlanned > 0 && s.setsLogged >= s.setsPlanned && s.cardio.every((c) => c.done) ? "Completed" : s.ended || s.setsLogged > 0 ? "Unfinished" : s.rows.length + s.cardio.length > 0 ? "Not started" : "";
 
 export const stateLabel = (s: string) => (s === "live" ? "Live" : s === "past" ? "Past" : s === "scheduled" ? "Scheduled" : "Draft");
 export const fmtDate = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -2212,103 +2161,6 @@ function EditExerciseDialog({ row, current, library, onSave }: { row: DraftRow; 
  * the answers in a line, the time it took; open a row for the answers as
  * tiles and the client's note, and a link to that session in its week.
  */
-function AnswersFeed({ firstName, items, href }: { firstName: string; items: DraftAnswered[]; href: (it: DraftAnswered) => string }) {
-  const [open, setOpen] = useState<number | null>(null);
-  // The feed stays folded under the questions until asked for (9 Oct).
-  const [shown, setShown] = useState(false);
-  // One line per cell (9 Oct): the day with its time, the session with its week, the gym, the answers, how long it took.
-  const grid = { gridTemplateColumns: "20px 170px minmax(120px, 0.7fr) minmax(110px, 0.6fr) minmax(240px, 1.6fr) 70px 32px", columnGap: 20 } as const;
-  const when = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
-  const at = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-  const said = (a: DraftAnswered["answers"][number]) => (a.kind === "text" ? (a.text ?? "").trim() : a.value != null ? `${a.value}${a.kind === "scale" ? "/10" : a.unit ? ` ${a.unit}` : ""}` : "");
-  return (
-    <div className="rm-answers">
-      <button type="button" className="rm-answers-head" onClick={() => setShown((v) => !v)} aria-expanded={shown}>
-        <span className={`rd-chev${shown ? " open" : ""}`} aria-hidden="true">
-          <ChevronDownIcon />
-        </span>
-        Answers
-        <small>{items.length === 0 ? "none yet" : `${items.length} ${items.length === 1 ? "workout" : "workouts"}`}</small>
-      </button>
-      {!shown ? null : items.length === 0 ? (
-        <p className="rd-full">Nothing yet: the answers land here as {firstName} ends workouts.</p>
-      ) : (
-        <div className="rd-rows">
-          <div className="rd-cols" aria-hidden="true" style={grid}>
-            <span />
-            <span>Ended</span>
-            <span>Session</span>
-            <span>Gym</span>
-            <span>Answers</span>
-            <span>Took</span>
-            <span />
-          </div>
-          {items.map((it) => {
-            const isOpen = open === it.dayId;
-            const line = it.answers.map((a) => (said(a) ? `${a.label} ${said(a)}` : null)).filter(Boolean);
-            return (
-              <div key={it.dayId} className={`rd-row rn-day${isOpen ? " open" : ""}`}>
-                <div className="rd-row-main" style={grid} onClick={() => setOpen((x) => (x === it.dayId ? null : it.dayId))} role="button" tabIndex={0} aria-expanded={isOpen} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setOpen((x) => (x === it.dayId ? null : it.dayId)))}>
-                  <span className={`rd-chev${isOpen ? " open" : ""}`} aria-hidden="true">
-                    <ChevronDownIcon />
-                  </span>
-                  <span className="rm-cell">
-                    <b>{when(it.ended)}</b>
-                    <small>{at(it.ended)}</small>
-                  </span>
-                  <span className="rm-cell">
-                    <b>{it.name}</b>
-                    <small>{it.weekLabel}</small>
-                  </span>
-                  <span className="rm-cell muted">{it.gym || "—"}</span>
-                  <span className="rm-summary">
-                    {line.slice(0, 4).join(" · ") || "No answers"}
-                    {line.length > 4 ? ` · +${line.length - 4}` : ""}
-                  </span>
-                  <span>{it.duration != null && <span className="rd-set">{it.duration} min</span>}</span>
-                  <span className="rd-row-more" onClick={(e) => e.stopPropagation()}>
-                    <Link className="rd-btn ghost sm" href={href(it)} aria-label={`Open ${it.name}, ${it.weekLabel}`} title="Open this session">
-                      <CalendarIcon />
-                    </Link>
-                  </span>
-                </div>
-                {isOpen && (
-                  <div className="rm-tiles">
-                    {it.answers.map((a, i) =>
-                      a.kind === "text" ? (
-                        (a.text ?? "").trim() ? (
-                          <div key={i} className="rm-tile note">
-                            <small>{a.label}</small>
-                            <p>{a.text}</p>
-                          </div>
-                        ) : null
-                      ) : (
-                        <div key={i} className="rm-tile">
-                          <small>{a.label}</small>
-                          <b>
-                            {a.value ?? "—"}
-                            {a.value != null && (a.kind === "scale" ? <em>/10</em> : a.unit ? <em>{a.unit}</em> : null)}
-                          </b>
-                        </div>
-                      )
-                    )}
-                    {it.note && (
-                      <div className="rm-tile note">
-                        <small>{firstName}&rsquo;s note</small>
-                        <p>{it.note}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
 /** Alternatives for a cardio: names (cardio is typed, not picked from the library), each with an optional note. */
 function CardioAlternativesDialog({ cardio, firstName, onSave }: { cardio: DraftCardio; firstName: string; onSave: (list: { name: string; note: string }[]) => void }) {
   const [list, setList] = useState(cardio.alternatives ?? []);
