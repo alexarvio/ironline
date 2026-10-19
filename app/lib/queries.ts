@@ -8643,7 +8643,7 @@ export function getLastWarmupSets(assignmentId: number): { weight_kg: number | n
   const data = getData();
   const wa = data.workout_assignments.find((x) => x.id === assignmentId);
   const day = wa && data.program_days.find((pd) => pd.id === wa.program_day_id);
-  if (!wa || !day) return [];
+  if (!wa || !day || wa.exercise_id === 0 || day.free) return [];
   const days = new Map(data.program_days.filter((pd) => pd.client_id === day.client_id).map((pd) => [pd.id, pd]));
   const at = (pd: { week_number: number; day_of_week: number }) => pd.week_number * 100 + pd.day_of_week;
   let best: { when: number; sets: { weight_kg: number | null; reps: number | null }[] } | null = null;
@@ -9181,6 +9181,10 @@ function exerciseHistoryFor(assignmentId: number): { day: ProgramDay; logs: SetL
   // "last time" of its own, and its sets are nobody's history, neither the
   // prescribed exercise's nor the substitute's.
   if (wa.swap) return [];
+  // A free session's exercise (19 Oct) is a name only, every one of them
+  // exercise 0: it has no "last time", or each would carry the weights of
+  // whatever free exercise came before (88 kg on a hip abduction).
+  if (wa.exercise_id === 0 || day.free) return [];
   const exerciseId = wa.exercise_id;
   const days = new Map(data.program_days.filter((pd) => pd.client_id === day.client_id).map((pd) => [pd.id, pd]));
   const at = (pd: { week_number: number; day_of_week: number }) => pd.week_number * 100 + pd.day_of_week;
@@ -9251,7 +9255,7 @@ export function carriedVideoReply(assignmentId: number): VideoRequest | null {
   const earlier = exerciseHistoryFor(assignmentId).map((h) => h.logs[0]?.workout_assignment_id).filter((x): x is number => x != null);
   const wa = data.workout_assignments.find((x) => x.id === assignmentId);
   const day = wa && data.program_days.find((pd) => pd.id === wa.program_day_id);
-  if (!wa || !day) return null;
+  if (!wa || !day || wa.exercise_id === 0 || day.free) return null;
   // Every earlier row of the same exercise in this phase, logged or not.
   const exerciseId = wa.swap ? wa.swap.library_exercise_id : wa.exercise_id;
   const at = (pd: { week_number: number; day_of_week: number }) => pd.week_number * 100 + pd.day_of_week;
