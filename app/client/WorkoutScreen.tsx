@@ -489,13 +489,6 @@ export default function WorkoutScreen({
                   <span className="wo-note-label">Anything to mention to {coachName}?</span>
                   <textarea className="wo-note-input" rows={2} value={note} placeholder="How did it feel? Anything to flag?" onChange={(e) => setNote(e.target.value)} disabled={locked} />
                 </div>
-                {editing ? (
-                  <button type="button" className="wo-save-edit" onClick={saveEdit} disabled={ending}>
-                    {ending ? "Saving…" : "Save changes"}
-                  </button>
-                ) : (
-                  <SwipeToEnd onEnd={end} done={ended} />
-                )}
               </div>
             )}
           </section>
@@ -508,9 +501,18 @@ export default function WorkoutScreen({
           {toast}
         </div>
       )}
-      {/* The bottom bar (13 Oct): the rest timer alone. Exercises move on by themselves, and a swipe goes either way. */}
-      <div className="wo-dock">
-        <RestTimerPill timer={rest} targetSeconds={currentRest} />
+      {/* The bottom bar (13 Oct): the rest timer alone. Exercises move on by themselves, and a swipe goes either way.
+          On the wrap up (19 Oct, Alex) there is nothing to rest for: the swipe to end takes its place, or Save when editing. */}
+      <div className={`wo-dock${current.kind === "wrap" ? " end" : ""}`}>
+        {current.kind !== "wrap" ? (
+          <RestTimerPill timer={rest} targetSeconds={currentRest} />
+        ) : editing ? (
+          <button type="button" className="wo-save-edit" onClick={saveEdit} disabled={ending}>
+            {ending ? "Saving…" : "Save changes"}
+          </button>
+        ) : (
+          <SwipeToEnd onEnd={end} done={ended} />
+        )}
       </div>
 
       {gymOpen && (

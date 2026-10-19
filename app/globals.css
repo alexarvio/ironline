@@ -20391,3 +20391,12 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 .wo-cardio.done .wo-ex-name { color: #2f7a3f; }
 /* The typed-in "Create" row reads as the way to add one of your own. */
 .fa-row.fa-create .fa-row-name { font-weight: 600; }
+/* On the wrap up the bottom bar holds the swipe to end (19 Oct, Alex), the whole width, where the rest timer sits on every other page. */
+.wo-dock.end { display: block; }
+.wo-dock.end > .wo-swipe, .wo-dock.end > .wo-save-edit { width: 100%; margin: 0; }
+.wo-dock.end .wo-swipe { background: #141a24; }
+.wo-dock.end .wo-swipe.locked { background: #2f7a3f; }
+.wo-dock.end .wo-swipe-label { font-weight: 600; }
+.wo-dock.end .wo-swipe-handle { color: #141a24; }
+.wo-dock.end .wo-swipe.locked .wo-swipe-handle { color: #2f7a3f; }
+.wo-dock.end .wo-save-edit { background: #141a24; font-weight: 600; }
