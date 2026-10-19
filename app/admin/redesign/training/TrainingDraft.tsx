@@ -43,7 +43,7 @@ import DatePick from "../DatePick";
 // - Edits queue on the session's own bar at its foot: cells typed into, rows
 //   added, removed or dragged into a new order, the name. Apply lands them.
 
-export type Gym = { id: number; name: string; home: boolean; /** The picker's colour and the gym's use (15 Oct), for the gyms pop-up. */ color: string; rgb: string; sessions8w: number; lastSessionAt: string | null };
+export type Gym = { id: number; name: string; home: boolean; /** The picker's colour and the gym's use (15 Oct), for the gyms pop-up. */ color: string; rgb: string; sessions8w: number; lastSessionAt: string | null; /** The picture the client gave it in their app (20 Oct), and whether it is a gym, home or hotel. */ logo?: string | null; kind?: "gym" | "home" | "hotel" };
 export type Library = { slug: string; label: string; exercises: { id: number; name: string; /** Its muscle group and its demo (15 Oct): the substitutes and variation pop-ups. */ group?: string; video?: string | null; /** The coach's default cue (Library page): the note it starts with when added. */ cue?: string; /** Close grip, wide grip… (Library page): one can be picked per row; its own cue, if any, is the note the row starts with. */ variations?: PickedVariation[] }[] }[];
 /** A variation as the picker hands it over with the exercise. */
 export type PickedVariation = { id: number; name: string; cue?: string; /** Its own demo (15 Oct). */ video?: string | null };

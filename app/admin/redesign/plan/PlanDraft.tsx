@@ -1,5 +1,6 @@
 "use client";
 
+import "./phase-dialog.css";
 import { useEffect, useRef, useState, useTransition } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
@@ -9,7 +10,7 @@ import Link from "next/link";
 import { addClientGoalAction, addClientPhaseAction, applyGoalDoneChangesAction, duplicateClientPhaseAction, removeClientGoalAction, removeClientPhaseAction, reorderClientGoalsAction, saveAndDeployPhaseNowAction, saveAndSchedulePhaseAction, updateClientGoalAction, updateClientPhaseAction } from "../../../lib/actions";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
-import { ChevronLeftIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
+import { ChevronDownIcon, ChevronLeftIcon, MoreIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import type { GoalEditorOptions, PlanGoalRow, PlanPhaseRow, PlanProgramOption } from "../../../lib/queries";
 import type { GoalTracking } from "../../../lib/goalView";
 import type { PhaseTrack } from "../../../lib/db";
@@ -676,7 +677,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
 // ---- The phase dialog: track, name, dates on a month, and for training the programme behind it.
 
 /** Six rows of a month, the picked weeks tinted in the phase's own colours, other phases on the track as a grey mark. */
-export function MonthRange({ from, to, onPick, chrome, planned, cursor, setCursor, today }: { from: string; to: string; onPick: (day: string) => void; chrome: ReturnType<typeof phaseChrome>; planned: { name: string; from: string; to: string; draft?: boolean }[]; cursor: string; setCursor: (m: string) => void; today: string }) {
+export function MonthRange({ from, to, onPick, chrome, planned, cursor, setCursor, today, plain = false }: { from: string; to: string; onPick: (day: string) => void; chrome: ReturnType<typeof phaseChrome>; planned: { name: string; from: string; to: string; draft?: boolean }[]; cursor: string; setCursor: (m: string) => void; today: string; /** No colours of its own (20 Oct): the hairline phase dialog draws the range from its CSS. */ plain?: boolean }) {
   const [y, mo] = cursor.split("-").map(Number);
   const first = new Date(y, mo - 1, 1);
   const gridStart = mondayOf(isoOf(first));
@@ -724,7 +725,7 @@ export function MonthRange({ from, to, onPick, chrome, planned, cursor, setCurso
               key={d}
               type="button"
               className={`rdd-cell${d === today ? " today" : ""}${inR && !overlap ? " in" : ""}${overlap ? " overlap" : kind === "taken" ? " taken" : ""}${d === from ? " start" : ""}${d === to ? " end" : ""}${run}${parse(d).getMonth() !== mo - 1 ? " past" : ""}`}
-              style={inR && !overlap ? { background: edge ? chrome.edge : `rgba(${rgbOf(chrome.edge)}, 0.12)`, color: edge ? "#fff" : chrome.edge } : undefined}
+              style={!plain && inR && !overlap ? { background: edge ? chrome.edge : `rgba(${rgbOf(chrome.edge)}, 0.12)`, color: edge ? "#fff" : chrome.edge } : undefined}
               onClick={() => onPick(d)}
               aria-label={`${fmtDay(d)}, ${overlap ? `overlaps ${busy!.name}` : inR ? "in new phase" : busy ? `taken by ${busy.name}` : "free"}`}
               aria-pressed={edge}
@@ -744,7 +745,7 @@ export function MonthRange({ from, to, onPick, chrome, planned, cursor, setCurso
           )}
           {!!from && !!to && (
             <span>
-              <i style={{ background: chrome.edge }} /> New phase
+              <i className={plain ? "new" : undefined} style={plain ? undefined : { background: chrome.edge }} /> New phase
             </span>
           )}
           {days.some((d) => kindOf(d) === "overlap") && (
@@ -788,11 +789,13 @@ export function gridFor(win: number, thisWeek: string, intoWeek: number) {
   return { first, count, weeks, nowIdx, months, cols, nowLeft, shift };
 }
 
-export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track: initialTrack, lockTrack = false, initialStart, others, programs, onSave, onDelete, onDuplicate, onSend }: { clientId: number; firstName: string; today: string; thisWeek: string; phase: PlanPhaseRow | null; track?: PhaseTrack; /** A new phase opens on this day (the Phases overview: the day after the one ending). */ initialStart?: string; /** Opened from a track's own tab (10 Oct): the track is given, so no tiles to pick one. */ lockTrack?: boolean; others: PlanPhaseRow[]; programs: PlanProgramOption[]; onSave: (v: { name: string; track: PhaseTrack; start: string; end: string; programId: number | null; goals: string[] }) => void; onDelete?: () => void; /** A copy of this phase as a new draft (a past one, to run again). */ onDuplicate?: () => void; onSend: (v: { name: string; track: PhaseTrack; start: string; end: string; now: boolean; goals: string[] }) => void }) {
+export function PhaseDialog({ clientId, today, thisWeek, phase, track: initialTrack, lockTrack = false, initialStart, others, programs, onSave, onDelete, onDuplicate, onSend }: { clientId: number; firstName: string; today: string; thisWeek: string; phase: PlanPhaseRow | null; track?: PhaseTrack; /** A new phase opens on this day (the Phases overview: the day after the one ending). */ initialStart?: string; /** Opened from a track's own tab (10 Oct): the track is given, so no tiles to pick one. */ lockTrack?: boolean; others: PlanPhaseRow[]; programs: PlanProgramOption[]; onSave: (v: { name: string; track: PhaseTrack; start: string; end: string; programId: number | null; goals: string[] }) => void; onDelete?: () => void; /** A copy of this phase as a new draft (a past one, to run again). */ onDuplicate?: () => void; onSend: (v: { name: string; track: PhaseTrack; start: string; end: string; now: boolean; goals: string[] }) => void }) {
   const editing = !!phase;
   // The phase's goals (19 Oct), one a line, the same three the tab's Goals pill edits.
-  const [goalsText, setGoalsText] = useState((phase?.objectives ?? []).join("\n"));
-  const goalLines = goalsText.split("\n").map((g) => g.trim().slice(0, PHASE_OBJECTIVE_CHARS)).filter(Boolean).slice(0, PHASE_OBJECTIVES_MAX);
+  // Three slots, as the client's Home shows them under the phase (20 Oct, Alex); folded behind its chevron until opened.
+  const [goalRows, setGoalRows] = useState<string[]>(() => Array.from({ length: PHASE_OBJECTIVES_MAX }, (_, i) => phase?.objectives?.[i] ?? ""));
+  const [goalsOpen, setGoalsOpen] = useState(false);
+  const goalLines = goalRows.map((g) => g.trim().slice(0, PHASE_OBJECTIVE_CHARS)).filter(Boolean);
   const [track, setTrack] = useState<PhaseTrack>(phase?.track ?? initialTrack ?? "nutrition");
   const [name, setName] = useState(phase?.name ?? "");
   const [from, setFrom] = useState(phase?.start_week ?? initialStart ?? thisWeek);
@@ -823,15 +826,8 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
   const [moved, setMoved] = useState<{ side: "start" | "end"; picked: string; to: string } | null>(null);
   // Training can't overlap: say the weeks rule and the nearest week that fits, and hold Save.
   const weekClash = !byDay && overlap ? (overlap.from > startWeek ? { side: "end" as const, day: addDays(overlap.from, -1) } : { side: "start" as const, day: addDays(overlap.to, 1) }) : null;
-  const WEEK_RULE = "Training goes week by week: a phase always starts on a Monday and ends on a Sunday.";
-  // A clash says only what is in the way and the nearest week that fits (10 Oct); the week rule is for a day that moved.
-  const note = weekClash
-    ? `${weekClash.side === "end" ? `${overlap!.name} starts ${fmtDay(overlap!.from)}, so this one has to end on ${fmtDay(weekClash.day)}.` : `${overlap!.name} runs until ${fmtDay(overlap!.to)}, so this one can start on ${fmtDay(weekClash.day)} at the earliest.`}`
-    : overlap
-      ? `Overlaps ${overlap.name} (${fmtDay(overlap.from)} – ${fmtDay(overlap.to)}) on the same track.`
-      : !byDay && moved
-        ? `${WEEK_RULE} ${fmtDay(moved.picked)} became ${fmtDay(moved.to)}.`
-        : " ";
+  // A clash says only what is in the way; its fix button names the nearest week that fits (20 Oct, Alex: facts, no explanations).
+  const note = overlap ? `Overlaps ${overlap.name}, ${fmtDay(overlap.from)} – ${fmtDay(overlap.to)}.` : !byDay && moved ? `${fmtDay(moved.picked)} moved to ${fmtDay(moved.to)}.` : " ";
   // One click to the other side: the clash's nearest week, or the week after (or before) the one a picked day moved to.
   const movedAlt = !byDay && moved && !overlap ? { side: moved.side, day: addDays(moved.to, moved.side === "start" ? 7 : -7), instead: true } : null;
   const fix = weekClash ? { ...weekClash, instead: false } : movedAlt && (movedAlt.side === "start" ? movedAlt.day <= to : movedAlt.day > from) ? movedAlt : null;
@@ -891,140 +887,160 @@ export function PhaseDialog({ clientId, firstName, today, thisWeek, phase, track
     setCursor(m.from.slice(0, 7));
   };
   const ok = name.trim().length > 0 && from <= to && !weekClash;
-  const startsNow = startWeek <= today;
   const loose = programs.filter((p) => !p.linked);
   const linkedProgram = programChoice !== "new" ? programs.find((p) => p.id === Number(programChoice)) ?? null : null;
 
+  // In the admin hairline style (20 Oct, Alex): a title and one quiet line of
+  // facts (track · state), clean-line fields, the calendar in ink, the dates as
+  // two hairline capsules, no explanations; a clash says what is in the way
+  // and offers the fix. Delete as red words on the left, Save a black pill.
   return (
-    <DialogContent className="rd-dlg rq-phase-dlg">
-      <DialogHeader>
-        <DialogTitle>
-          <span className="rq-title-row">
-            {editing ? phase.name : "New phase"}
-            {/* Which track it is on, a filled pill with the track's icon (10 Oct), then its state. */}
-            <span className="rq-track-pill" style={{ "--c": TRACK_PALETTE[track].ink, "--rgb": rgbOf(TRACK_PALETTE[track].ink) } as React.CSSProperties}>
-              <TrackIcon track={track} size={13} />
-              {TRACK_LABEL[track]}
-            </span>
-            <span className="rq-state" style={{ background: chrome.chipBg, color: chrome.chipInk }}>
-              {STATE_LABEL[state]}
-            </span>
-            {/* Straight to the tab where the phase's contents live. */}
-            {editing && (
-              <Link
-                className="rd-btn rq-open"
-                href={
-                  track === "training"
-                    ? `/admin/redesign/training?client=${clientId}${phase.program ? `&program=${phase.program.id}` : ""}`
-                    : `/admin/redesign/${track === "nutrition" ? "nutrition" : "measurements"}?client=${clientId}&phase=${phase.id}`
-                }
-              >
-                Open
-              </Link>
-            )}
-          </span>
-        </DialogTitle>
-        {/* No explanation line (14 Oct): the tiles and the calendar say it. A hidden one for screen readers. */}
-        {!editing && <DialogDescription className="sr-only">{lockTrack ? "What it is called and when it runs." : "Which track, what it is called, and when it runs."}</DialogDescription>}
-      </DialogHeader>
+    <DialogContent className="npd">
+      <div className="npd-head">
+        <DialogTitle className="npd-title">{editing ? phase.name : "New phase"}</DialogTitle>
+        <span className="npd-tools">
+          {/* Straight to the tab where the phase's contents live. */}
+          {editing && (
+            <Link
+              className="npd-open"
+              href={
+                track === "training"
+                  ? `/admin/redesign/training?client=${clientId}${phase.program ? `&program=${phase.program.id}` : ""}`
+                  : `/admin/redesign/${track === "nutrition" ? "nutrition" : "measurements"}?client=${clientId}&phase=${phase.id}`
+              }
+            >
+              Open
+            </Link>
+          )}
+          <DialogClose className="npd-x" aria-label="Close">
+            ✕
+          </DialogClose>
+        </span>
+      </div>
+      <DialogDescription className="npd-what">
+        {TRACK_LABEL[track]} · {STATE_LABEL[state]}
+      </DialogDescription>
       {!editing && !lockTrack && (
-        <div className="rd-field">
-          <span>Track</span>
-          <div className="evs-types rq-tiles" role="radiogroup" aria-label="Track">
+        <div className="npd-field">
+          <span className="npd-label">Track</span>
+          <div className="npd-seg" role="radiogroup" aria-label="Track">
             {TRACKS.map((t) => (
-              <button key={t.id} type="button" role="radio" aria-checked={track === t.id} className={`evs-type${track === t.id ? " on" : ""}`} style={{ "--tc": TRACK_PALETTE[t.id].ink, "--trgb": rgbOf(TRACK_PALETTE[t.id].ink) } as React.CSSProperties} onClick={() => setTrack(t.id)}>
-                <span className="evs-type-disc">
-                  <TrackIcon track={t.id} />
-                </span>
+              <button key={t.id} type="button" role="radio" aria-checked={track === t.id} className={track === t.id ? "on" : undefined} onClick={() => setTrack(t.id)}>
+                <TrackIcon track={t.id} size={14} />
                 {t.label}
               </button>
             ))}
           </div>
         </div>
       )}
-      <label className="rd-field">
-        <span>Name</span>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder={track === "nutrition" ? "Cut A" : track === "training" ? "Strength block" : "Sleep focus"} maxLength={60} autoFocus={!editing} />
+      <label className="npd-field">
+        <span className="npd-label">Name</span>
+        <input className="npd-line" value={name} onChange={(e) => setName(e.target.value)} placeholder={track === "nutrition" ? "Cut A" : track === "training" ? "Strength block" : "Sleep focus"} maxLength={60} autoFocus={!editing} />
       </label>
-      <label className="rd-field">
-        <span>Phase goals</span>
-        <textarea className="rq-goals" rows={3} value={goalsText} onChange={(e) => setGoalsText(e.target.value.split("\n").slice(0, PHASE_OBJECTIVES_MAX).join("\n"))} placeholder={"One goal a line, up to three.\nE.g. Squat 100 kg for 5"} aria-label="Phase goals" />
-      </label>
-      <div className="rdd-cols">
-        <MonthRange from={from} to={to} onPick={pick} chrome={chrome} planned={planned} cursor={cursor} setCursor={setCursor} today={today} />
-        <div className="rdd-fields">
-          {/* The dates as two pills with the arrow between (10 Oct), as the client's New event sheet has them. A tap arms
-              that end in the calendar, which is the picker. */}
-          <div className="rd-field">
-            <div className="evs-dates rq-dates" style={{ "--c": TRACK_PALETTE[track].ink, "--rgb": rgbOf(TRACK_PALETTE[track].ink) } as React.CSSProperties}>
-              <button type="button" className={`evs-date${picking === "start" ? " arm" : ""}${startLocked ? " locked" : ""}`} onClick={() => !startLocked && setPicking("start")} aria-pressed={picking === "start"} disabled={startLocked}>
-                <span className="evs-date-head">STARTS{startLocked ? " · FIXED" : ""}</span>
-                <b>{from === today ? "Today" : fmtDay(from)}</b>
-              </button>
-              <span className="evs-arrow" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12h14M13 6l6 6-6 6" />
-                </svg>
-              </span>
-              <button type="button" className={`evs-date ends${picking === "end" ? " arm" : ""}`} onClick={() => setPicking("end")} aria-pressed={picking === "end"}>
-                <span className="evs-date-head">ENDS</span>
-                {/* A training phase ends on its week's Sunday, so that is the day shown. */}
-                <b>{fmtDay(byDay ? to : savedTo)}</b>
-              </button>
-            </div>
+      <div className="npd-field">
+        <button type="button" className="npd-goals-head" aria-expanded={goalsOpen} onClick={() => setGoalsOpen((o) => !o)}>
+          <span className="npd-label">Phase goals</span>
+          <span className="npd-goals-n">{goalLines.length}</span>
+          <span className={`npd-goals-chev${goalsOpen ? " open" : ""}`} aria-hidden="true">
+            <ChevronDownIcon />
+          </span>
+        </button>
+        {goalsOpen && (
+          <ul className="npd-goals-list">
+            {goalRows.map((g, i) => (
+              <li key={i}>
+                <i aria-hidden="true" />
+                <input
+                  className="npd-line"
+                  value={g}
+                  maxLength={PHASE_OBJECTIVE_CHARS}
+                  autoFocus={i === 0}
+                  onChange={(e) => setGoalRows((r) => r.map((x, j) => (j === i ? e.target.value : x)))}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return;
+                    e.preventDefault();
+                    (e.currentTarget.closest("li")?.nextElementSibling?.querySelector("input") as HTMLInputElement | null)?.focus();
+                  }}
+                  placeholder={i === 0 ? "What this phase is for" : "Another goal"}
+                  aria-label={`Goal ${i + 1}`}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className="npd-cols">
+        <MonthRange from={from} to={to} onPick={pick} chrome={chrome} planned={planned} cursor={cursor} setCursor={setCursor} today={today} plain />
+        <div className="npd-side">
+          {/* The dates as two capsules with the arrow between; a tap arms that end in the calendar, which is the picker. */}
+          <div className="npd-dates">
+            <button type="button" className={`npd-date${picking === "start" ? " arm" : ""}${startLocked ? " locked" : ""}`} onClick={() => !startLocked && setPicking("start")} aria-pressed={picking === "start"} disabled={startLocked}>
+              <span className="npd-date-head">Starts{startLocked ? " · fixed" : ""}</span>
+              <b>{from === today ? "Today" : fmtDay(from)}</b>
+            </button>
+            <span className="npd-arrow" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </span>
+            <button type="button" className={`npd-date${picking === "end" ? " arm" : ""}`} onClick={() => setPicking("end")} aria-pressed={picking === "end"}>
+              <span className="npd-date-head">Ends</span>
+              {/* A training phase ends on its week's Sunday, so that is the day shown. */}
+              <b>{fmtDay(byDay ? to : savedTo)}</b>
+            </button>
           </div>
-          {/* Type the weeks and the end follows; pick the end and the weeks follow. A span the calendar left uneven says so under it. */}
-          <label className="rd-field">
-            <span>Weeks</span>
-            <input className="rq-weeks" type="number" inputMode="numeric" min={1} max={104} step={1} value={weeksShown} onChange={(e) => setWeeks(e.target.value)} onBlur={() => setWeeksText(null)} onFocus={() => setPicking("end")} aria-label="Length in weeks" />
-            {days % 7 ? <small className="rd-dlg-hint">{phaseLengthLabel(startWeek, endWeek)}</small> : null}
+          {/* Type the weeks and the end follows; pick the end and the weeks follow. An uneven span shows its length beside it. */}
+          <label className="npd-field">
+            <span className="npd-label">Weeks</span>
+            <span className="npd-weeks-row">
+              <input className="npd-line npd-weeks" type="number" inputMode="numeric" min={1} max={104} step={1} value={weeksShown} onChange={(e) => setWeeks(e.target.value)} onBlur={() => setWeeksText(null)} onFocus={() => setPicking("end")} aria-label="Length in weeks" />
+              {days % 7 ? <small className="npd-meta">{phaseLengthLabel(startWeek, endWeek)}</small> : null}
+            </span>
           </label>
           {/* The same days as a phase on another track, so the two run in tandem. */}
           {matchable.length > 0 && (
-            <div className="rd-field">
-              <span>Same dates as</span>
+            <div className="npd-field">
+              <span className="npd-label">Same dates as</span>
               <Picker
                 value={matched}
                 onChange={matchPhase}
                 label="Same dates as"
-                className="rq-wide"
-                options={[{ value: "none", label: "Not matched" }, ...matchable.map((m) => ({ value: m.id, label: m.name, hint: `${TRACK_LABEL[m.track]} · ${shortDate(m.from)} – ${shortDate(m.to)}` }))]}
+                className="npd-pick"
+                options={[{ value: "none", label: "Not matched" }, ...matchable.map((m) => ({ value: m.id, label: m.name, color: TRACK_PALETTE[m.track].ink, hint: `${shortDate(m.from)} – ${shortDate(m.to)}` }))]}
               />
             </div>
           )}
           {/* Only when a draft programme is waiting on the Training tab with no phase of its own: then this phase can be it rather than a second one. */}
           {!editing && loose.length > 0 && (
-            <div className="rd-field" style={{ visibility: track === "training" ? "visible" : "hidden" }} aria-hidden={track !== "training"}>
-              <span>Built from</span>
-              <Picker value={programChoice} onChange={setProgramChoice} label="Programme" className="rq-wide" options={[{ value: "new", label: "A new programme", hint: `${weeks} weeks` }, ...loose.map((p) => ({ value: String(p.id), label: p.name, hint: `${p.weeks} weeks · ${p.status}` }))]} />
+            <div className="npd-field" style={{ visibility: track === "training" ? "visible" : "hidden" }} aria-hidden={track !== "training"}>
+              <span className="npd-label">Built from</span>
+              <Picker value={programChoice} onChange={setProgramChoice} label="Programme" className="npd-pick" options={[{ value: "new", label: "A new programme", hint: `${weeks} weeks` }, ...loose.map((p) => ({ value: String(p.id), label: p.name, hint: `${p.weeks} weeks · ${p.status}` }))]} />
             </div>
           )}
           {/* Always a line, so the dialog keeps its height whether or not there is something to say. */}
-          <p className="rq-overlap" role={weekClash ? "alert" : undefined}>
-            {note}
+          <p className={`npd-note${overlap ? " bad" : ""}`} role={weekClash ? "alert" : undefined}>
+            <span>{note}</span>
             {fix && !(startLocked && fix.side === "start") && (
-              <button type="button" className="rq-fix" onClick={() => (fix.side === "start" ? setStart(fix.day) : setEnd(fix.day))}>
-                {fix.side === "start" ? "Start" : "End"} {fmtDay(fix.day)}{fix.instead ? " instead" : ""}
+              <button type="button" className="npd-fix" onClick={() => (fix.side === "start" ? setStart(fix.day) : setEnd(fix.day))}>
+                {fix.side === "start" ? "Start" : "End"} {fmtDay(fix.day)}
+                {fix.instead ? " instead" : ""}
               </button>
             )}
           </p>
         </div>
       </div>
-      {/* A phase that exists: Delete on the far left, Cancel, and Open in its
-          tab up top; everything else (sending, copying) is done in that tab
-          (30 Sep). Save always shows. */}
-      <DialogFooter>
+      {/* Delete on the far left for a phase that exists; Cancel and Save on the right. */}
+      <div className="npd-foot">
         {editing && onDelete && (
-          <button type="button" className="rd-btn danger" onClick={onDelete}>
+          <button type="button" className="npd-delete" onClick={onDelete}>
             Delete
           </button>
         )}
-        <span className="rd-dlg-hint grow">{state === "draft" ? `Only you see a draft until it is sent.` : startsNow ? `${firstName} sees it now.` : `${firstName} sees it from ${fmtDay(startWeek)}.`}</span>
-        <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onSave({ name: name.trim(), track, start: startWeek, end: endWeek, programId: linkedProgram?.id ?? null, goals: goalLines })}>
+        <DialogClose className="npd-cancel">Cancel</DialogClose>
+        <button type="button" className="npd-save" disabled={!ok} onClick={() => onSave({ name: name.trim(), track, start: startWeek, end: endWeek, programId: linkedProgram?.id ?? null, goals: goalLines })}>
           {editing ? "Save" : "Create draft"}
         </button>
-      </DialogFooter>
+      </div>
     </DialogContent>
   );
 }

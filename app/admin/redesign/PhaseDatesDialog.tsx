@@ -1,8 +1,9 @@
 "use client";
 
+import "./phase-dates.css";
 import { useState } from "react";
-import { DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../components/ui/dialog";
-import { ChevronLeftIcon } from "../../components/icons";
+import { DialogClose, DialogContent, DialogDescription, DialogTitle } from "../../components/ui/dialog";
+import { ChevronLeftIcon, ChevronRightIcon } from "../../components/icons";
 import DateText from "./DateText";
 
 // When a programme or phase reaches the client: a month to click the dates
@@ -10,6 +11,9 @@ import DateText from "./DateText";
 // Sunday, so a click snaps to its week, and its length is however many weeks
 // are on its rail, so only its start is picked and the end follows. A
 // nutrition or lifestyle phase (byDay) has both ends open, on any day.
+// In the admin hairline style (20 Oct, Alex): the title, one quiet line of
+// the length and the dates, the name and the dates as clean lines, the month
+// in ink and grey. No explanations. Classes are pdh-, in phase-dates.css.
 
 const DAY = 86400000;
 const parse = (d: string) => new Date(`${d}T00:00:00`);
@@ -111,34 +115,34 @@ export default function PhaseDatesDialog({
   const now = today();
 
   return (
-    <DialogContent className="rd-dlg rdd">
-      <DialogHeader>
-        <DialogTitle>{title}</DialogTitle>
-        {/* For screen readers only: on screen the dialog explains itself (2 Oct). */}
-        <DialogDescription hidden>{byDay ? "Pick the day it starts and the day it ends." : "Pick the week it starts and the week it ends."}</DialogDescription>
-      </DialogHeader>
+    <DialogContent className="pdh">
+      <div className="pdh-head">
+        <DialogTitle className="pdh-title">{title}</DialogTitle>
+      </div>
+      {/* The one fact line: how long, from when to when (20 Oct: no explanations). */}
+      <DialogDescription className="pdh-what">{[lengthLabel, `${fmtShort(from)} – ${fmtShort(to)}`].filter(Boolean).join(" · ")}</DialogDescription>
       {name !== undefined && (
-        <label className="rd-field">
-          <span>Name</span>
-          <input value={nm} onChange={(e) => setNm(e.target.value)} placeholder="Strength Block" maxLength={60} />
+        <label className="pdh-field pdh-name">
+          <span className="pdh-label">Name</span>
+          <input className="pdh-input" value={nm} onChange={(e) => setNm(e.target.value)} placeholder="Strength Block" maxLength={60} />
         </label>
       )}
-      <div className="rdd-cols">
-        <div className="rdd-cal">
-          <div className="rdd-cal-head">
+      <div className="pdh-cols">
+        <div className="pdh-cal">
+          <div className="pdh-cal-head">
             <b>{first.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</b>
-            <span className="rdd-cal-nav">
-              <button type="button" className="rd-btn ghost sm" onClick={() => move(-1)} aria-label="Previous month">
+            <span className="pdh-cal-nav">
+              <button type="button" className="pdh-nav" onClick={() => move(-1)} aria-label="Previous month">
                 <ChevronLeftIcon />
               </button>
-              <button type="button" className="rd-btn ghost sm next" onClick={() => move(1)} aria-label="Next month">
-                <ChevronLeftIcon />
+              <button type="button" className="pdh-nav" onClick={() => move(1)} aria-label="Next month">
+                <ChevronRightIcon />
               </button>
             </span>
           </div>
-          <div className="rdd-cal-grid">
+          <div className="pdh-grid">
             {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
-              <span key={i} className="rdd-dow">
+              <span key={i} className="pdh-dow">
                 {d}
               </span>
             ))}
@@ -147,7 +151,7 @@ export default function PhaseDatesDialog({
                 <button
                   key={i}
                   type="button"
-                  className={`rdd-cell${d === now ? " today" : ""}${d >= from && d <= to ? " in" : ""}${d === from ? " start" : ""}${d === to ? " end" : ""}${d < now ? " past" : ""}`}
+                  className={`pdh-cell${d === now ? " today" : ""}${d >= from && d <= to ? " in" : ""}${d === from ? " start" : ""}${d === to ? " end" : ""}${d < now ? " past" : ""}`}
                   onClick={() => pick(d)}
                   aria-label={fmt(d)}
                   aria-pressed={d === from || d === to}
@@ -159,43 +163,33 @@ export default function PhaseDatesDialog({
               )
             )}
           </div>
-          {!fixed && <p className="rdd-picking">{picking === "start" ? "Click a day for the start." : "Now click a day for the end."}</p>}
         </div>
-        <div className="rdd-fields">
-          <label className="rd-field">
-            <span>Starts</span>
+        {/* With both ends open, the end the next click sets has its label in ink (no "click a day" line). */}
+        <div className="pdh-fields">
+          <label className={`pdh-field${!fixed && picking === "start" ? " armed" : ""}`}>
+            <span className="pdh-label">Starts</span>
             <DateText value={from} onChange={setStart} label="Starts" onFocus={() => setPicking("start")} />
           </label>
-          <label className="rd-field">
-            <span>Ends</span>
+          <label className={`pdh-field${!fixed && picking === "end" ? " armed" : ""}`}>
+            <span className="pdh-label">Ends</span>
             <DateText value={to} onChange={setEnd} label="Ends" onFocus={() => setPicking("end")} />
           </label>
-          <div className="rd-field">
-            <span>Length</span>
-            <span className="rdd-length">
-              {lengthLabel}
-              <small>
-                {fmtShort(from)} – {fmtShort(to)}
-              </small>
-            </span>
-          </div>
-          <div className="rd-field">
-            <span>Quick</span>
-            {/* One quick move (2 Oct): a week longer, on the end. */}
-            <div className="rdd-quick">
-              <button type="button" className="rd-chip" onClick={() => setTo(shift(to, 7))}>
-                + 1 week
-              </button>
-            </div>
-          </div>
+          {/* One quick move (2 Oct): a week longer, on the end. */}
+          <button type="button" className="pdh-more" onClick={() => setTo(shift(to, 7))}>
+            + 1 week
+          </button>
         </div>
       </div>
-      <DialogFooter>
-        <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className="rd-btn primary" disabled={!ok} onClick={() => onConfirm({ name: nm.trim(), start: from, end: to, weeks: length })}>
+      <div className="pdh-foot">
+        <DialogClose className="pdh-cancel">Cancel</DialogClose>
+        <button type="button" className="pdh-primary" disabled={!ok} onClick={() => onConfirm({ name: nm.trim(), start: from, end: to, weeks: length })}>
           {confirm}
         </button>
-      </DialogFooter>
+      </div>
+      {/* Last in the order, so the first field still takes the focus as it opens; drawn top right. */}
+      <DialogClose className="pdh-x" aria-label="Close">
+        ✕
+      </DialogClose>
     </DialogContent>
   );
 }

@@ -138,7 +138,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
   const gymStats = gymSessionStats(clientId);
   const gyms = gymRows.map((g) => {
     const c = GYM_COLORS[isGymColor(g.color) ? g.color : "navy"];
-    return { id: g.id, name: g.name, home: g.id === homeId, color: c.hex, rgb: c.rgb, sessions8w: gymStats.get(g.id)?.sessions8w ?? 0, lastSessionAt: gymStats.get(g.id)?.lastUsedAt ?? null };
+    return { id: g.id, name: g.name, home: g.id === homeId, color: c.hex, rgb: c.rgb, sessions8w: gymStats.get(g.id)?.sessions8w ?? 0, lastSessionAt: gymStats.get(g.id)?.lastUsedAt ?? null, logo: g.logo_path ?? null, kind: g.kind ?? "gym" };
   });
 
   // The coach's library, for the add-exercise row; cardio has its own form.

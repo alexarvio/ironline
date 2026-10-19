@@ -1,0 +1,153 @@
+/* ---- New phase / Edit phase (PhaseDialog in PlanDraft.tsx), in the admin hairline
+   style (20 Oct, Alex), after the Delete session pop-up (.dlh in trn.css). Prefix
+   npd-. Portalled, so not under .rd; doubled classes out-rank the dialog's own
+   utility classes and the shared calendar/picker rules (the dev-server CSS-order
+   trap). MonthRange (rdd-*) and Picker (rd-picker) are shared with other screens,
+   so they are only restyled under .npd here. */
+
+.npd.npd { width: min(760px, 100vw - 32px); max-width: none; max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 0; padding: 20px 20px 16px; border: 0; border-radius: 20px; background: #fff; box-shadow: 0 30px 60px -24px rgba(16, 24, 40, 0.35), 0 0 0 1px #e1e5eb; color: #141a24; font-family: var(--font-archivo), system-ui, sans-serif; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
+.npd.npd::-webkit-scrollbar { width: 6px; }
+.npd.npd::-webkit-scrollbar-thumb { border-radius: 999px; background: #dce1e8; }
+
+/* Head: the title, Open in its tab, a ghost ✕; one line of facts under it. */
+.npd-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.npd-title.npd-title { margin: 0; min-width: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; color: #141a24; overflow-wrap: anywhere; }
+.npd-tools { flex: none; display: inline-flex; align-items: center; gap: 2px; margin: -2px -4px 0 0; }
+.npd.npd .npd-open { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600; color: #5b6474; text-decoration: none; white-space: nowrap; }
+.npd.npd .npd-open:hover, .npd.npd .npd-open:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }
+.npd.npd .npd-x { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; color: #8b93a1; cursor: pointer; }
+.npd.npd .npd-x:hover, .npd.npd .npd-x:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }
+.npd-what.npd-what { margin: 4px 0 0; font-size: 13.5px; font-weight: 500; line-height: 1.4; color: #5b6474; }
+
+/* Fields: a small-caps label, then the clean line. */
+.npd.npd .npd-field { display: flex; flex-direction: column; gap: 2px; margin-top: 18px; }
+.npd.npd .npd-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; white-space: nowrap; }
+.npd.npd .npd-line { display: block; width: 100%; height: auto; margin: 0; padding: 8px 0 9px; border: 0; border-bottom: 1px solid #e1e5eb; border-radius: 0; outline: none; background: transparent; box-shadow: none; font: inherit; font-size: 15px; font-weight: 500; line-height: 1.45; letter-spacing: 0; text-transform: none; color: #141a24; box-sizing: border-box; transition: border-color 0.15s; }
+.npd.npd .npd-line:focus { border-bottom-color: #141a24; box-shadow: none; }
+.npd.npd .npd-line::placeholder { color: #98a2b3; }
+.npd.npd textarea.npd-line { resize: none; }
+.npd.npd .npd-weeks-row { display: flex; align-items: baseline; gap: 12px; }
+.npd.npd input.npd-weeks { width: 72px; flex: none; font-variant-numeric: tabular-nums; }
+.npd.npd .npd-meta { font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #98a2b3; white-space: nowrap; }
+
+/* Track: a segmented capsule, the chosen one ink. */
+.npd.npd .npd-seg { display: flex; width: min(420px, 100%); height: 36px; margin-top: 6px; padding: 3px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; box-sizing: border-box; }
+.npd.npd .npd-seg button { flex: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 30px; padding: 0 8px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #5b6474; white-space: nowrap; cursor: pointer; }
+.npd.npd .npd-seg button svg { flex: none; }
+.npd.npd .npd-seg button:hover { color: #141a24; }
+.npd.npd .npd-seg button:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }
+.npd.npd .npd-seg button.on { background: #141a24; color: #fff; }
+.npd.npd .npd-seg button.on:focus-visible { background: #2a3242; }
+
+/* The calendar beside the dates. */
+.npd.npd .npd-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, 0.85fr); gap: 28px; align-items: start; margin-top: 22px; }
+.npd.npd .npd-side { display: flex; flex-direction: column; min-width: 0; }
+.npd.npd .npd-side > .npd-field { margin-top: 16px; }
+
+/* Starts → Ends: two hairline capsules, the armed one ringed in ink. */
+.npd.npd .npd-dates { display: flex; align-items: center; gap: 6px; }
+.npd.npd .npd-date { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 1px; height: 50px; padding: 0 16px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; font: inherit; text-align: left; color: #141a24; cursor: pointer; box-sizing: border-box; transition: box-shadow 0.15s; }
+.npd.npd .npd-date:hover { box-shadow: inset 0 0 0 1px #c5ccd8; }
+.npd.npd .npd-date:focus-visible { outline: none; background: #f5f6f8; }
+.npd.npd .npd-date.arm { box-shadow: inset 0 0 0 1.5px #141a24; }
+.npd.npd .npd-date.locked { background: #f5f6f8; box-shadow: none; cursor: default; }
+.npd.npd .npd-date.locked b { color: #5b6474; }
+.npd.npd .npd-date-head { font-size: 10px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #98a2b3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.npd.npd .npd-date b { font-size: 14px; font-weight: 500; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.npd.npd .npd-arrow { flex: none; display: inline-flex; color: #98a2b3; }
+
+/* Same dates as / Built from: the shared Picker as a clean line. */
+.npd.npd .rd-picker { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex: none; width: 100%; height: 40px; margin: 0; padding: 0; border: 0; border-bottom: 1px solid #e1e5eb; border-radius: 0; outline: none; background: transparent; box-shadow: none; font: inherit; font-size: 15px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #141a24; text-align: left; cursor: pointer; transition: border-color 0.15s; }
+.npd.npd .rd-picker:hover { border-bottom-color: #c5ccd8; }
+.npd.npd .rd-picker:focus-visible, .npd.npd .rd-picker[data-state="open"] { border-bottom-color: #141a24; box-shadow: none; }
+.npd.npd .rd-picker svg { width: 16px; height: 16px; color: #8b93a1; }
+/* Its menu is portalled outside the card; styled only while this pop-up is open. */
+body:has(.npd.npd) .rd-picker-menu.rd-picker-menu { padding: 6px; border-radius: 14px; box-shadow: 0 24px 40px -16px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; font-family: var(--font-archivo), system-ui, sans-serif; }
+body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"] { min-height: 38px; padding: 0 10px; border-radius: 8px; font-size: 14px; font-weight: 500; color: #141a24; }
+body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"]:hover, body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"][data-highlighted] { background: #fafbfc; color: #141a24; }
+body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"].on { background: #f5f6f8; color: #141a24; }
+body:has(.npd.npd) .rd-picker-menu [data-slot="dropdown-menu-item"] small { font-size: 12px; font-weight: 500; color: #98a2b3; }
+
+/* The note: a clash in red with its fix as a small hairline capsule; a moved day in grey. */
+.npd.npd .npd-note { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-height: 18px; margin: 16px 0 0; font-size: 13px; font-weight: 500; line-height: 1.45; color: #5b6474; }
+.npd.npd .npd-note.bad { color: #b42318; }
+.npd.npd .npd-fix { display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #e1e5eb; font: inherit; font-size: 12.5px; font-weight: 600; color: #141a24; white-space: nowrap; cursor: pointer; }
+.npd.npd .npd-fix:hover, .npd.npd .npd-fix:focus-visible { outline: none; background: #f5f6f8; }
+
+/* ---- MonthRange under .npd: no panel, ink range on a soft band, grey and red hatches. */
+.npd.npd .rdd-cal { display: flex; flex-direction: column; gap: 4px; padding: 0; border-radius: 0; background: none; }
+.npd.npd .rdd-cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 0 4px; }
+.npd.npd .rdd-cal-head b { font-size: 14px; font-weight: 600; color: #141a24; }
+.npd.npd .rdd-cal-nav { display: flex; gap: 2px; margin-right: -4px; }
+.npd.npd .rdd-cal-nav .rd-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px; background: none; box-shadow: none; color: #8b93a1; }
+.npd.npd .rdd-cal-nav .rd-btn:hover, .npd.npd .rdd-cal-nav .rd-btn:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }
+.npd.npd .rdd-cal-nav .rd-btn svg { width: 14px; height: 14px; }
+.npd.npd .rdd-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: 36px; gap: 2px 0; }
+.npd.npd .rdd-dow { padding: 4px 0; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; text-align: center; color: #98a2b3; }
+
+.npd.npd .rdd-cell { position: relative; height: 36px; padding: 0; border: 0; border-radius: 0; outline: none; background: none; box-shadow: none; opacity: 1; filter: none; font: inherit; font-size: 13px; font-weight: 500; color: #141a24; font-variant-numeric: tabular-nums; cursor: pointer; }
+.npd.npd .rdd-cell.past { color: #c5ccd8; }
+.npd.npd .rdd-cell:hover, .npd.npd .rdd-cell:focus-visible { border-radius: 10px; background: #f5f6f8; }
+.npd.npd .rdd-cell.today { border-radius: 10px; box-shadow: inset 0 0 0 1px #141a24; }
+
+/* Days taken by another phase on the track: a light grey hatch, rounded at the ends of each week's run. */
+.npd.npd .rdd-cell.taken { background: repeating-linear-gradient(135deg, rgba(20, 26, 36, 0.08) 0 4px, rgba(20, 26, 36, 0.02) 4px 8px); color: #98a2b3; }
+.npd.npd .rdd-cell.taken:hover { filter: none; background: repeating-linear-gradient(135deg, rgba(20, 26, 36, 0.12) 0 4px, rgba(20, 26, 36, 0.04) 4px 8px); }
+/* The new range: a soft band, its first and last days solid ink. */
+.npd.npd .rdd-cell.in { background: #f5f6f8; color: #141a24; font-weight: 500; }
+.npd.npd .rdd-cell.in.past { color: #98a2b3; }
+.npd.npd .rdd-cell.in:hover, .npd.npd .rdd-cell.in:focus-visible { background: #eef0f3; }
+.npd.npd .rdd-cell.in.start, .npd.npd .rdd-cell.in.end { background: #141a24; color: #fff; font-weight: 600; }
+.npd.npd .rdd-cell.in.start:hover, .npd.npd .rdd-cell.in.end:hover, .npd.npd .rdd-cell.in.start:focus-visible, .npd.npd .rdd-cell.in.end:focus-visible { background: #2a3242; }
+.npd.npd .rdd-cell.in.past.start, .npd.npd .rdd-cell.in.past.end { opacity: 0.6; }
+.npd.npd .rdd-cell.today.in.start, .npd.npd .rdd-cell.today.in.end { box-shadow: inset 0 0 0 2px #141a24, inset 0 0 0 3px #fff; }
+/* Overlap: a light red hatch (above the shared rule's !important). */
+.npd.npd .rdd-cell.overlap { background: repeating-linear-gradient(135deg, rgba(180, 35, 24, 0.14) 0 4px, rgba(180, 35, 24, 0.04) 4px 8px) !important; color: #b42318 !important; font-weight: 600; }
+.npd.npd .rdd-cell.overlap:hover { filter: none; background: repeating-linear-gradient(135deg, rgba(180, 35, 24, 0.2) 0 4px, rgba(180, 35, 24, 0.06) 4px 8px) !important; }
+
+/* Each run reads as a bar per week row. */
+.npd.npd .rdd-cell.run-start { border-radius: 10px 0 0 10px; }
+.npd.npd .rdd-cell.run-end { border-radius: 0 10px 10px 0; }
+.npd.npd .rdd-cell.run-mid { border-radius: 0; }
+.npd.npd .rdd-cell.run-one { border-radius: 10px; }
+.npd.npd .rdd-cell.start { border-radius: 10px 0 0 10px; }
+.npd.npd .rdd-cell.end { border-radius: 0 10px 10px 0; }
+.npd.npd .rdd-cell.start.end { border-radius: 10px; }
+
+/* The key under it, quiet. */
+.npd.npd .rdd-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 8px 0 0; }
+.npd.npd .rdd-legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 500; color: #5b6474; }
+.npd.npd .rdd-legend i { display: inline-block; width: 14px; height: 10px; border-radius: 3px; }
+.npd.npd .rdd-legend i.new { background: #141a24; }
+.npd.npd .rdd-legend i.taken { background: repeating-linear-gradient(135deg, rgba(20, 26, 36, 0.22) 0 3px, rgba(20, 26, 36, 0.05) 3px 6px); }
+.npd.npd .rdd-legend i.overlap { background: repeating-linear-gradient(135deg, rgba(180, 35, 24, 0.32) 0 3px, rgba(180, 35, 24, 0.08) 3px 6px); }
+
+/* Footer: Delete as red words on the left; Cancel as words and the black pill on the right. */
+.npd.npd .npd-foot { display: flex; align-items: center; justify-content: flex-end; gap: 2px; margin-top: 20px; }
+.npd.npd .npd-delete { margin-right: auto; margin-left: -14px; height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #b42318; cursor: pointer; }
+.npd.npd .npd-delete:hover, .npd.npd .npd-delete:focus-visible { outline: none; background: #fdf1ef; }
+.npd.npd .npd-cancel { height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #5b6474; cursor: pointer; }
+.npd.npd .npd-cancel:hover { color: #141a24; }
+.npd.npd .npd-cancel:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }
+.npd.npd .npd-save { height: 36px; padding: 0 18px; border: 0; border-radius: 999px; background: #141a24; font: inherit; font-size: 13.5px; font-weight: 600; color: #fff; white-space: nowrap; cursor: pointer; }
+.npd.npd .npd-save:hover { background: #262e3b; }
+.npd.npd .npd-save:focus-visible { outline: none; background: #2f3846; }
+.npd.npd .npd-save:disabled { background: #c9cfd8; cursor: default; }
+
+@media (max-width: 700px) {
+  .npd.npd .npd-cols { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .npd.npd .npd-line, .npd.npd .npd-date, .npd.npd .rd-picker { transition: none; }
+}
+
+/* Phase goals: a row with its count and a chevron; open, three bullet lines (20 Oct, Alex). */
+.npd.npd .npd-goals-head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 4px 0 8px; border: 0; border-bottom: 1px solid #e1e5eb; background: none; font: inherit; text-align: left; cursor: pointer; }
+.npd.npd .npd-goals-n { font-size: 12px; font-weight: 600; color: #98a2b3; }
+.npd.npd .npd-goals-chev { display: inline-flex; margin-left: auto; color: #8b93a1; transition: transform 0.15s; }
+.npd.npd .npd-goals-chev svg { width: 16px; height: 16px; }
+.npd.npd .npd-goals-chev.open { transform: rotate(180deg); }
+.npd.npd .npd-goals-list { display: flex; flex-direction: column; margin: 2px 0 0; padding: 0; list-style: none; }
+.npd.npd .npd-goals-list li { display: flex; align-items: center; gap: 12px; }
+.npd.npd .npd-goals-list li > i { flex: none; width: 6px; height: 6px; border-radius: 999px; background: #141a24; }
+.npd.npd .npd-goals-list .npd-line { border-bottom-color: #eef0f3; }

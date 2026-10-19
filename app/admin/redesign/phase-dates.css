@@ -1,0 +1,81 @@
+/* ---- Dates / Schedule pop-up (PhaseDatesDialog), in the admin hairline style
+   (20 Oct). Portalled, so not under .rd; doubled classes out-rank the dialog's
+   own utility classes (the dev-server CSS-order trap). Prefix pdh-. The ✕ is a
+   direct child of the card (last in the order, drawn top right), so no rule
+   here hides the card's own dialog-close buttons. */
+.pdh.pdh { width: min(600px, 100vw - 32px); max-width: none; max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 0; padding: 20px 20px 16px; border: 0; border-radius: 20px; background: #fff; box-shadow: 0 30px 60px -24px rgba(16, 24, 40, 0.35), 0 0 0 1px #e1e5eb; color: #141a24; font-family: var(--font-archivo), system-ui, sans-serif; outline: none; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
+
+/* Head: the title, a ghost ✕ top right, one line of facts under it. */
+.pdh-head { padding-right: 36px; }
+.pdh-title.pdh-title { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; color: #141a24; overflow-wrap: anywhere; }
+.pdh-what.pdh-what { margin: 4px 0 0; font-size: 13.5px; font-weight: 500; line-height: 1.4; color: #5b6474; font-variant-numeric: tabular-nums; }
+.pdh-x.pdh-x { position: absolute; top: 18px; right: 16px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; color: #8b93a1; cursor: pointer; }
+.pdh-x.pdh-x:hover, .pdh-x.pdh-x:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }
+
+/* Fields: a small-caps label over a clean line. */
+.pdh-field { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pdh-name { margin-top: 18px; }
+.pdh-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; transition: color 0.15s; }
+/* With both ends open: the end the next click sets. */
+.pdh-field.armed .pdh-label { color: #141a24; }
+/* The name, and DateText's own input (rd-input rdt, shared, so overridden here). */
+.pdh-input.pdh-input, .pdh .pdh-field input.rdt { display: block; flex: none; width: 100%; height: 40px; margin: 0; padding: 0; border: 0; border-bottom: 1px solid #e1e5eb; border-radius: 0; outline: none; box-shadow: none; background: transparent; font: inherit; font-size: 15px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #141a24; box-sizing: border-box; transition: border-color 0.15s; }
+.pdh .pdh-field input.rdt { font-variant-numeric: tabular-nums; }
+.pdh-input.pdh-input:focus, .pdh .pdh-field input.rdt:focus { border-bottom-color: #141a24; box-shadow: none; }
+.pdh-input.pdh-input::placeholder, .pdh .pdh-field input.rdt::placeholder { color: #98a2b3; }
+.pdh .pdh-field input.rdt.bad, .pdh .pdh-field input.rdt.bad:focus { border-bottom-color: #b42318; box-shadow: none; }
+
+/* The month beside the two dates; stacked on a phone. */
+.pdh-cols { display: grid; grid-template-columns: minmax(0, 1fr) 200px; gap: 28px; align-items: start; margin-top: 20px; }
+@media (max-width: 600px) {
+  .pdh-cols { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+}
+
+/* The month: no panel, ink and grey. */
+.pdh-cal { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pdh-cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pdh-cal-head b { font-size: 14px; font-weight: 600; color: #141a24; }
+.pdh-cal-nav { display: flex; gap: 2px; margin-right: -4px; }
+.pdh-nav { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px; background: none; color: #8b93a1; cursor: pointer; }
+.pdh-nav svg { width: 16px; height: 16px; }
+.pdh-nav:hover, .pdh-nav:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }
+.pdh-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: 26px; grid-auto-rows: 36px; row-gap: 2px; }
+.pdh-dow { display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; color: #98a2b3; }
+
+/* A day: its number over a 32px disc (::before: hover, the chosen ends;
+   ::after: today's ring). The range is a soft band behind the discs. */
+.pdh-cell { position: relative; isolation: isolate; display: flex; align-items: center; justify-content: center; min-width: 0; height: 36px; padding: 0; border: 0; border-radius: 0; outline: none; background: none; font: inherit; font-size: 13px; font-weight: 500; color: #141a24; font-variant-numeric: tabular-nums; cursor: pointer; }
+.pdh-cell::before, .pdh-cell::after { content: ""; position: absolute; top: 50%; left: 50%; z-index: -1; width: 32px; height: 32px; margin: -16px 0 0 -16px; border-radius: 999px; pointer-events: none; }
+.pdh-cell:hover::before, .pdh-cell:focus-visible::before { background: #eef0f3; }
+.pdh-cell.past { color: #c5ccd8; }
+.pdh-cell.in { background: #f5f6f8; }
+.pdh-cell.in.past { color: #98a2b3; }
+/* The band rounds off where a week's row ends (the seven weekday letters come first in the grid). */
+.pdh-cell.in:nth-child(7n + 1) { border-radius: 999px 0 0 999px; }
+.pdh-cell.in:nth-child(7n) { border-radius: 0 999px 999px 0; }
+.pdh-cell.start { background: linear-gradient(to right, transparent 50%, #f5f6f8 50%); }
+.pdh-cell.end { background: linear-gradient(to left, transparent 50%, #f5f6f8 50%); }
+.pdh-cell.start.end, .pdh-cell.start:nth-child(7n), .pdh-cell.end:nth-child(7n + 1) { background: none; }
+.pdh-cell.in.start, .pdh-cell.in.end { font-weight: 600; color: #fff; }
+.pdh-cell.start::before, .pdh-cell.end::before { background: #141a24; }
+.pdh-cell.start:hover::before, .pdh-cell.end:hover::before, .pdh-cell.start:focus-visible::before, .pdh-cell.end:focus-visible::before { background: #2f3846; }
+.pdh-cell.today::after { box-shadow: inset 0 0 0 1px #141a24; }
+.pdh-cell.today.start::after, .pdh-cell.today.end::after { box-shadow: inset 0 0 0 2px #141a24, inset 0 0 0 3px #fff; }
+
+/* The dates: two clean lines, then + 1 week as a small hairline capsule. */
+.pdh-fields { display: flex; flex-direction: column; gap: 16px; }
+.pdh-more { align-self: flex-start; display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; font: inherit; font-size: 12.5px; font-weight: 600; color: #141a24; white-space: nowrap; cursor: pointer; }
+.pdh-more:hover, .pdh-more:focus-visible { outline: none; background: #f5f6f8; }
+
+/* Footer: Cancel as words, the confirm as a black pill. */
+.pdh-foot { display: flex; align-items: center; justify-content: flex-end; gap: 2px; margin-top: 20px; }
+.pdh-cancel.pdh-cancel { height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #5b6474; white-space: nowrap; cursor: pointer; }
+.pdh-cancel.pdh-cancel:hover { color: #141a24; }
+.pdh-cancel.pdh-cancel:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }
+.pdh-primary { height: 36px; padding: 0 18px; border: 0; border-radius: 999px; background: #141a24; font: inherit; font-size: 13.5px; font-weight: 600; color: #fff; white-space: nowrap; cursor: pointer; }
+.pdh-primary:hover { background: #262e3b; }
+.pdh-primary:focus-visible { outline: none; background: #2f3846; }
+.pdh-primary:disabled { background: #c9cfd8; cursor: default; }
+@media (prefers-reduced-motion: reduce) {
+  .pdh-label, .pdh-input.pdh-input, .pdh .pdh-field input.rdt { transition: none; }
+}
