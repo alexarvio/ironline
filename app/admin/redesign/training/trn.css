@@ -144,10 +144,7 @@
 .rd.trn .trn-add:hover { border-color: var(--trn-ink); }
 .rd.trn .trn-full { margin: 0; padding: 14px; border: 1px dashed #c9cfd8; border-radius: 18px; text-align: center; }
 
-/* ---- Autosave: a quiet word by the session's name, and the week's line */
-.rd.trn .trn-save { font-size: 12px; font-weight: 500; color: var(--trn-muted); white-space: nowrap; }
-.rd.trn .trn-save.saved { color: var(--trn-green); }
-.rd.trn .trn-save.saved::before { content: "✓ "; }
+/* ---- Autosave: one status, on the week's line */
 .rd.trn .trn-allsaved { margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--trn-line); font-weight: 500; color: var(--trn-green); }
 .rd.trn .trn-allsaved::before { content: "✓ "; }
 .rd.trn .trn-allsaved.saving { color: var(--trn-muted); }

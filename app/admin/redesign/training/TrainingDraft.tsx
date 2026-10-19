@@ -393,10 +393,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   // while a box in that session is being typed in or a cardio is still being
   // typed, five seconds after a removal so its Undo can take it back, and at
   // once when the page is hidden or left. One save at a time per session.
-  // The status shows by the session's name and the week's heading.
+  // One status for it all, on the week's line (20 Oct, Alex: not per session).
   const [saving, setSaving] = useState<Record<number, boolean>>({});
-  // "Saved" by a session's name for a moment after its save lands.
-  const [justSaved, setJustSaved] = useState<Record<number, boolean>>({});
   const inFlight = useRef<Record<number, boolean>>({});
   const flush = (sessionId: number) => {
     const p = pend(sessionId);
@@ -408,10 +406,6 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
     void applyDayChangesAction(payload)
       .then((r) => {
         if (r && r.ok === false) toast.error(r.error ?? "Couldn't save that change");
-        else {
-          setJustSaved((x) => ({ ...x, [sessionId]: true }));
-          setTimeout(() => setJustSaved((x) => ({ ...x, [sessionId]: false })), 2500);
-        }
       })
       .catch(() => toast.error("Couldn't save that change", { description: "Check the connection; the page shows what is saved." }))
       .finally(() => {
@@ -457,7 +451,6 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
       now();
     };
   }, []);
-  const saveState = (sessionId: number): "saving" | "saved" | null => (saving[sessionId] || pendingCount(pend(sessionId)) > 0 ? "saving" : justSaved[sessionId] ? "saved" : null);
   const weekSaving = anyPending || Object.values(saving).some(Boolean);
   /** Taken off, with Undo while it waits (the removal saves five seconds after). */
   const removeWithUndo = (sessionId: number, what: string, f: (q: Pending) => Pending, undo: (q: Pending) => Pending) => {
@@ -871,14 +864,6 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                     ) : null;
                   })()}
                 </span>
-                {(() => {
-                  const st = saveState(s.id);
-                  return st ? (
-                    <span className={`trn-save ${st}`} role="status">
-                      {st === "saving" ? "Saving…" : "Saved"}
-                    </span>
-                  ) : null;
-                })()}
                 <span className={`trn-state ${status.cls}`}>{status.text}</span>
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger className="trn-row-more" aria-label={`More for ${name}`}>
