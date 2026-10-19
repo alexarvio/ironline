@@ -381,7 +381,8 @@ export default function WorkoutScreen({
               {/* Editing a finished session: no Discard, it is kept. */}
               {!editing && (
                 <>
-                  <div className="wo-menu-divider" />
+                  {/* The line only between something and Discard (19 Oct): alone, Discard has none over it. */}
+                  {((day.gyms.length > 0 && !day.free) || currentEx) && <div className="wo-menu-divider" />}
                   <button type="button" role="menuitem" className="wo-menu-row ico danger" onClick={discard}>
                     <MenuIcon kind="discard" />
                     Discard session

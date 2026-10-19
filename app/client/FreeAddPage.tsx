@@ -70,26 +70,19 @@ export default function FreeAddPage({
         <div className="fa-list" role="listbox" aria-label="Matches">
           {matches.map((e) => (
             <button key={e.id} type="button" role="option" aria-selected={false} className="fa-row" onClick={() => add({ exerciseId: e.id, name: e.name, group: e.group })} disabled={busy}>
-              <span className="fa-row-name">
-                {e.name}
-                {e.group === "cardio" && <small className="fa-tag">Cardio</small>}
-              </span>
-              <span className="fa-row-add">Add</span>
+              {/* The row is the button (19 Oct, Alex): no "Add"; Cardio sits where it was. */}
+              <span className="fa-row-name">{e.name}</span>
+              {e.group === "cardio" && <small className="fa-tag">Cardio</small>}
             </button>
           ))}
           {!exact && (
             <>
               <button type="button" className="fa-row fa-create" onClick={create} disabled={busy}>
-                <span className="fa-row-name">
-                  Create &ldquo;{q.trim()}&rdquo;
-                </span>
-                <span className="fa-row-add">{busy ? "Adding…" : "Add"}</span>
+                <span className="fa-row-name">Create &ldquo;{q.trim()}&rdquo;</span>
               </button>
               <button type="button" className="fa-row fa-create" onClick={createCardio} disabled={busy}>
-                <span className="fa-row-name">
-                  Create &ldquo;{q.trim()}&rdquo; as cardio
-                </span>
-                <span className="fa-row-add">{busy ? "Adding…" : "Add"}</span>
+                <span className="fa-row-name">Create &ldquo;{q.trim()}&rdquo;</span>
+                <small className="fa-tag">Cardio</small>
               </button>
             </>
           )}

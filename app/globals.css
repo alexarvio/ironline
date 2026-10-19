@@ -20410,3 +20410,8 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 /* Live as words in the training purple, no pill (19 Oct, Alex); the green dot keeps pulsing beside it. */
 .tr-body .tr-row-pill.tr-row-pill.live { display: inline-flex; align-items: center; gap: 6px; padding: 0; background: none; box-shadow: none; font-size: 11.5px; font-weight: 600; color: #3a3390; }
 .fa-tag { margin-left: 8px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #a3366b; }
+/* The add page's matches without lines (19 Oct, Alex: the app has mostly let them go): air between rows, the tag on the right, the row the button. */
+.fa-list.fa-list { gap: 0; }
+.fa-row.fa-row, .fa-row.fa-row:last-child { min-height: 46px; border: 0; }
+.fa-row.fa-row:active { opacity: 0.6; }
+.fa-tag.fa-tag { margin-left: 0; flex: none; }
