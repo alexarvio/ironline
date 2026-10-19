@@ -1336,9 +1336,12 @@ export function copyProgramWeek(clientId: number, fromWeek: number, toWeek: numb
   for (const src of source) {
     const dest = sessionAt(clientId, toWeek, src.day_of_week, true);
     if (!dest) continue;
+    // A session the client has logged on keeps what they did: replacing its rows would strand their sets (20 Oct).
+    const destRows = new Set(data.workout_assignments.filter((wa) => wa.program_day_id === dest.id).map((wa) => wa.id));
+    if (data.set_logs.some((l) => destRows.has(l.workout_assignment_id))) continue;
     dest.label = src.label;
     // Replace rather than append, so copying twice doesn't double the day.
-    const replacedIds = data.workout_assignments.filter((wa) => wa.program_day_id === dest.id).map((wa) => wa.id);
+    const replacedIds = [...destRows];
     data.workout_assignments = data.workout_assignments.filter((wa) => wa.program_day_id !== dest.id);
     data.assignment_custom_values = data.assignment_custom_values.filter(
       (v) => !replacedIds.includes(v.workout_assignment_id)

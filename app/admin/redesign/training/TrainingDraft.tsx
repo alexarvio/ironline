@@ -186,6 +186,7 @@ type Dlg =
   | { kind: "copySession"; sessionId: number }
   | { kind: "applyLater"; sessionId: number }
   | { kind: "copyWeek"; from: number }
+  | { kind: "copyForward" }
   | { kind: "deleteSession"; sessionId: number }
   | { kind: "removeRow"; sessionId: number; rowId: number }
   | { kind: "removeCardio"; sessionId: number; cardioId: number }
@@ -907,6 +908,12 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                 </DropdownMenuContent>
               </DropdownMenu>
             ))}
+          {/* Build one week, fill the rest in one go (20 Oct, Alex). */}
+          {later.length > 0 && sessions.length > 0 && (
+            <button type="button" className="trn-btn" onClick={() => setDlg({ kind: "copyForward" })}>
+              <CopyIcon /> Copy to {later.length === 1 ? `week ${later[0].index}` : `weeks ${later[0].index}–${later[later.length - 1].index}`}
+            </button>
+          )}
           {/* KG / LBS beside the sessions it changes (20 Oct, Alex: it was in the programme's header). */}
           <div className="trn-unit" role="radiogroup" aria-label="Unit">
             {(["kg", "lbs"] as const).map((u) => (
@@ -1760,10 +1767,27 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           />
         )}
 
+        {dlg?.kind === "copyForward" && later.length > 0 && (
+          <ConfirmDialog
+            title={`Copy ${week.label} to ${later.length === 1 ? `week ${later[0].index}` : `weeks ${later[0].index}–${later[later.length - 1].index}`}?`}
+            description="Their sessions are replaced. Nothing logged is touched."
+            confirm="Copy"
+            onConfirm={() => {
+              const from = weekNo(viewIdx);
+              const targets = later.map((w) => weekNo(w.index));
+              const label = week.label;
+              close();
+              act(async () => {
+                await settle(Object.keys(pendingRef.current).map(Number));
+                for (const to of targets) await copyProgramWeekAction(fd({ clientId, fromWeek: from, toWeek: to }));
+              }, `${label} copied to ${laterLabel}`);
+            }}
+          />
+        )}
         {dlg?.kind === "copyWeek" && (
           <ConfirmDialog
             title={`Copy Week ${dlg.from} here`}
-            description={`Replaces ${week.label}'s sessions with Week ${dlg.from}'s: its sessions, exercises and cardio. Nothing the client logged is touched.`}
+            description="Replaces this week's sessions. Nothing logged is touched."
             confirm="Copy week"
             tick={laterLabel ? `Also copy it to ${laterLabel}` : null}
             onConfirm={(also) => {
