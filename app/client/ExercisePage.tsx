@@ -492,7 +492,8 @@ export default function ExercisePage({
       )}
 
 
-      {ask && (!swapped || ask.about === "swap") && (ask.note || ask.src || ask.reply) && (
+      {/* A coach's ask shows with or without a note (the note is optional since 15 Oct); a row the client started shows once something is in it. */}
+      {ask && (!swapped || ask.about === "swap") && (!ask.fromClient || ask.note || ask.src || ask.reply) && (
         <button
           type="button"
           className={`wo-video${ask.reply ? " replied" : ask.src ? " sent" : " asked"}${ask.reply && !ask.reply.seen ? " unseen" : ""}`}
