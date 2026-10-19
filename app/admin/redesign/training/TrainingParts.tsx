@@ -387,13 +387,13 @@ export function AfterWorkoutCheck({ programId, firstName, questions, answers, hr
             <div className="trn-ans-scroll">
               <div className="trn-ans-table" style={{ minWidth: minW }}>
                 <div className="trn-ans-row trn-ans-cols" style={grid}>
-                  <span>Ended</span>
+                  <span>Date</span>
                   <span>Session</span>
                   {/* Each question's average sits in its own heading (20 Oct, Alex): "Enjoyment · avg 8". */}
                   {labels.map((l) => (
                     <span key={l}>
                       {l}
-                      {avg(l) != null && <em className="trn-ans-avgval"> · avg {avg(l)}</em>}
+                      {avg(l) != null && <em className="trn-ans-avgval">Avg {avg(l)}</em>}
                     </span>
                   ))}
                 </div>
