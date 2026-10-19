@@ -248,16 +248,13 @@ export default function WorkoutScreen({
   );
 
   const pageDone = (p: Page) => (p.kind === "exercise" ? isDone(day.exercises[p.index]) : p.kind === "cardio" ? day.cardio[p.index].done : ended);
-  // Where "next" goes from page i (5 Oct): the next exercise or cardio not
-  // done yet, after this one, then round from the start (one skipped while
-  // its machine was taken); with everything done, the wrap up. So finishing
-  // the one you went back to never lands on one already done.
-  // The next page still to do, forward only: the last exercise has no
-  // "Next up" (it used to circle back to the first, 7 Oct); it goes on to
-  // the wrap-up, where the checklist shows anything skipped.
+  // Where "next" goes from page i (19 Oct): the earliest exercise or cardio
+  // not done yet, counted from the start, so one skipped earlier comes back
+  // before going on (skip 1–3, finish 4, and it lands on 1, not 5). With
+  // everything else done, the wrap up. Never one already done.
   const nextOpen = (i: number) => {
     const wrap = pages.length - 1;
-    for (let j = i + 1; j < wrap; j++) if (!pageDone(pages[j])) return j;
+    for (let j = 0; j < wrap; j++) if (j !== i && !pageDone(pages[j])) return j;
     return wrap;
   };
   const pageStarted = (p: Page) => p.kind === "exercise" && loggedCount(day.exercises[p.index]) > 0;
