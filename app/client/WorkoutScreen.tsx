@@ -215,9 +215,11 @@ export default function WorkoutScreen({
   const discard = () => {
     setMenuOpen(false);
     if (!window.confirm(`Discard ${day.title}? Logged sets will be deleted.`)) return;
+    // At once (19 Oct, Alex: it took seconds): the screen closes now and the
+    // server's discard, and the page it rebuilds, follow behind.
+    onDiscarded();
     startTransition(async () => {
       await discardSessionAction(day.key);
-      onDiscarded();
     });
   };
 

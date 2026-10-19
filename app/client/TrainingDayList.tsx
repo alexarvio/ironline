@@ -29,6 +29,17 @@ function readView(): View {
     return null;
   }
 }
+/** A session as a discard leaves it (discardSession in queries.ts): not started, nothing logged, no swaps or warm-ups. */
+const fresh = (d: SessionDay): SessionDay => ({
+  ...d,
+  startedAt: null,
+  endedAt: null,
+  sessionNote: "",
+  answers: {},
+  exercises: d.exercises.map((e) => ({ ...e, logs: [], warmups: [], swap: null })),
+  cardio: d.cardio.map((c) => ({ ...c, done: false, swap: null })),
+});
+
 function writeView(v: View) {
   try {
     if (v) window.sessionStorage.setItem(VIEW_KEY, JSON.stringify(v));
@@ -37,13 +48,13 @@ function writeView(v: View) {
 }
 
 export default function TrainingDayList({
-  days,
+  days: serverDays,
   currentWeek,
   pastWeek,
   coachName,
   coachPhoto = null,
   clientName = "",
-  liveSession,
+  liveSession: serverLive,
   headerPicture = null,
 }: {
   days: SessionDay[];
@@ -60,6 +71,14 @@ export default function TrainingDayList({
   /** The client's own training picture (15 Oct) behind the session header; none, the stock one. */
   headerPicture?: string | null;
 }) {
+  // Discarded here (19 Oct, Alex: discarding took seconds): the workout closes
+  // at once and the session reads as never started, its sets gone, until the
+  // server's page catches up (the mask holds while the server still has the
+  // start it had, so a fresh start right after is not hidden).
+  const [discardedHere, setDiscardedHere] = useState<{ dayId: number; startedAt: string } | null>(null);
+  const masked = (d: SessionDay) => discardedHere != null && d.key === discardedHere.dayId && d.startedAt === discardedHere.startedAt;
+  const days = discardedHere == null ? serverDays : serverDays.map((d) => (masked(d) ? fresh(d) : d));
+  const liveSession = serverLive && discardedHere && serverLive.id === discardedHere.dayId && serverLive.startedAt === discardedHere.startedAt ? null : serverLive;
   const [view, setViewState] = useState<View>(null);
   // Put back from storage after a reload: shown in place, not slid in.
   const [restored, setRestored] = useState(false);
@@ -323,7 +342,12 @@ export default function TrainingDayList({
             setView(null);
             setToast({ title: `${openDay.title} saved`, sub: `${minutes != null ? `${minutes} min · ` : ""}${sets} set${sets === 1 ? "" : "s"} · ${coachName} can see it now` });
           }}
-          onDiscarded={() => setView({ dayId: openDay.key, screen: "overview" })}
+          onDiscarded={() => {
+            const at = openDay.startedAt ?? (startedHere?.dayId === openDay.key ? startedHere.at : null);
+            if (at) setDiscardedHere({ dayId: openDay.key, startedAt: at });
+            if (startedHere?.dayId === openDay.key) setStartedHere(null);
+            setView({ dayId: openDay.key, screen: "overview" });
+          }}
           onEdited={() => {
             setView({ dayId: openDay.key, screen: "overview" });
             setToast({ title: "Changes saved", sub: `${coachName} sees the workout as it is now` });
