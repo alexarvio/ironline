@@ -5,7 +5,7 @@ import type React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PhaseDialog, phaseForm as planPhaseForm, type DraftPlan } from "../plan/PlanDraft";
-import { addExerciseToLibraryAction, addExerciseVariationAction, markProgramNoteSeenAction, markVideoSeenAction, setRowDemoHiddenAction, setRowVariationAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, applyDayToLaterWeeksAction, addClientPhaseAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, deployProgramAction, removeGymAction, removeExerciseVariationAction, removeProgramWeekAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
+import { addExerciseToLibraryAction, addExerciseVariationAction, markProgramNoteSeenAction, markVideoSeenAction, setRowDemoHiddenAction, setRowVariationAction, addGymAction, addProgramWeekAction, addSessionAction, applyDayChangesAction, applyDayToLaterWeeksAction, addClientPhaseAction, cancelProgramScheduleAction, clearExerciseDemoAction, copyProgramDayAction, copyProgramWeekAction, deployProgramAction, removeGymAction, removeExerciseVariationAction, removeProgramWeekAction, removeClientPhaseAction, removeSessionAction, removeVideoRequestAction, renameProgramAction, reorderSessionsAction, requestExerciseVideoAction, scheduleProgramDeployAction, sendChatMessageAction, sendVideoReplyAction, setExerciseAlternativesAction, setCardioAlternativesAction, setExerciseDemoLinkAction, setHomeGymAction, updateClientPhaseAction, uploadExerciseVideoAction, type DayChangesPayload } from "../../../lib/actions";
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
@@ -197,6 +197,7 @@ type Dlg =
   | { kind: "note" }
   | { kind: "removeWeek" }
   | { kind: "addWeek" }
+  | { kind: "deletePhase" }
   | null;
 
 export default function TrainingDraft({ clientId, firstName, program, library, cardioMoves = [], coachVideos = [] }: { clientId: number; firstName: string; program: DraftProgram; library: Library; cardioMoves?: CardioMove[]; coachVideos?: CoachClip[] }) {
@@ -756,13 +757,6 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           )}
           {/* The goals and note as pills (they were two full-width bars), one pop-over under them. */}
           {program.phaseId != null && <GoalsNotePills firstName={firstName} phaseId={program.phaseId} goals={program.goals} note={program.coachNote} />}
-          <div className="trn-unit" role="radiogroup" aria-label="Unit">
-            {(["kg", "lbs"] as const).map((u) => (
-              <button key={u} type="button" role="radio" aria-checked={unit === u} className={unit === u ? "on" : ""} onClick={() => setLbs(u === "lbs")}>
-                {u.toUpperCase()}
-              </button>
-            ))}
-          </div>
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger className="trn-more" aria-label="More for the programme">
               <MoreIcon />
@@ -839,6 +833,12 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               <DropdownMenuItem onSelect={() => setDlg({ kind: "newProgram" })}>
                 <PlusIcon /> New programme
               </DropdownMenuItem>
+              {/* Deleting the phase from here too (20 Oct, Alex), not only from Plan. */}
+              {program.phaseId != null && (
+                <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "deletePhase" })}>
+                  <TrashIcon /> Delete phase
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -907,6 +907,14 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                 </DropdownMenuContent>
               </DropdownMenu>
             ))}
+          {/* KG / LBS beside the sessions it changes (20 Oct, Alex: it was in the programme's header). */}
+          <div className="trn-unit" role="radiogroup" aria-label="Unit">
+            {(["kg", "lbs"] as const).map((u) => (
+              <button key={u} type="button" role="radio" aria-checked={unit === u} className={unit === u ? "on" : ""} onClick={() => setLbs(u === "lbs")}>
+                {u.toUpperCase()}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -1859,6 +1867,25 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                 await removeProgramWeekAction(fd({ clientId, programId: program.id, week: idx }));
                 savedToast(`${label} removed`);
                 router.push(`${window.location.pathname}?client=${clientId}&tab=training&program=${program.id}&week=${Math.max(1, idx - 1)}`, { scroll: false });
+              });
+            }}
+          />
+        )}
+
+        {dlg?.kind === "deletePhase" && program.phaseId != null && (
+          <ConfirmDialog
+            title={`Delete ${program.name}?`}
+            // An unbuilt draft goes with its phase; anything built, scheduled or live stays here, off the plan (removeClientPhase).
+            description={program.status === "draft" && !weeks.some((w) => w.trained.length > 0) ? "It comes off the plan, and its empty programme with it." : program.status === "live" ? `It comes off the plan and ${firstName}'s Home. The programme stays here.` : "It comes off the plan. The programme stays here."}
+            confirm="Delete phase"
+            danger
+            onConfirm={() => {
+              const id = program.phaseId!;
+              close();
+              startTransition(async () => {
+                await removeClientPhaseAction(fd({ id }));
+                savedToast(`${program.name} deleted`);
+                router.push(`${window.location.pathname}?client=${clientId}&tab=training`, { scroll: false });
               });
             }}
           />
