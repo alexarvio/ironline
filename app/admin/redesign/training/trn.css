@@ -53,6 +53,9 @@
 .rd.trn .trn-name-btn:hover { border-bottom-color: var(--trn-line); }
 .rd.trn .trn-name-input { max-width: 100%; padding: 0 0 2px; border: 0; border-bottom: 1px solid var(--trn-ink); border-radius: 0; background: none; font: inherit; font-size: 26px; font-weight: 600; letter-spacing: -0.01em; color: var(--trn-ink); outline: none; }
 .rd.trn .trn-status { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--trn-line); font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--trn-muted); }
+.rd.trn .trn-status-btn { gap: 4px; border: 0; background: #fff; font-family: inherit; cursor: pointer; }
+.rd.trn .trn-status-btn svg { width: 11px; height: 11px; }
+.rd.trn .trn-status-btn:hover, .rd.trn .trn-status-btn[data-state="open"] { box-shadow: inset 0 0 0 1px var(--trn-ink); color: var(--trn-ink); }
 .rd.trn .trn-status.live { box-shadow: inset 0 0 0 1px rgba(47, 122, 63, 0.35); color: var(--trn-green); }
 .rd.trn .trn-status.scheduled { box-shadow: inset 0 0 0 1px rgba(20, 26, 36, 0.35); color: var(--trn-ink); }
 .rd.trn .trn-meta { font-size: 13.5px; font-weight: 500; color: var(--trn-sec); }

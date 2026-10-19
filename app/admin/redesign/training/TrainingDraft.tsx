@@ -707,7 +707,27 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                 </>
               )}
             </h1>
-            <span className={`trn-status ${program.status}`}>{program.status === "past" ? "Ended" : stateLabel(program.status)}</span>
+            {/* The state is where its actions live (20 Oct, Alex): a draft or a scheduled programme's tag opens what can be done with it. */}
+            {program.status === "draft" || program.status === "scheduled" ? (
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger className={`trn-status trn-status-btn ${program.status}`} aria-label={`${stateLabel(program.status)}: change`}>
+                  {stateLabel(program.status)}
+                  <ChevronDownIcon />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="pb-menu">
+                  {program.status === "draft" ? (
+                    <DropdownMenuItem onSelect={() => setDlg({ kind: "deploy" })}>{startHasCome ? "Make it live" : "Schedule it"}</DropdownMenuItem>
+                  ) : (
+                    <>
+                      <DropdownMenuItem onSelect={() => setDlg({ kind: "deploy" })}>Make it live now</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => setDlg({ kind: "backToDraft" })}>Back to draft</DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <span className={`trn-status ${program.status}`}>{program.status === "past" ? "Ended" : stateLabel(program.status)}</span>
+            )}
           </div>
           <span className="trn-meta">
             {weeks.length} {weeks.length === 1 ? "week" : "weeks"}
@@ -731,21 +751,6 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                 <small>{program.note.when}</small>
               </span>
             </button>
-          )}
-          {program.status === "draft" && (
-            <button type="button" className="rd-btn primary" onClick={() => setDlg({ kind: "deploy" })}>
-              {startHasCome ? "Make it live" : "Schedule it"}
-            </button>
-          )}
-          {program.status === "scheduled" && (
-            <>
-              <button type="button" className="rd-btn" onClick={() => setDlg({ kind: "backToDraft" })}>
-                Back to draft
-              </button>
-              <button type="button" className="rd-btn primary" onClick={() => setDlg({ kind: "deploy" })}>
-                Make it live now
-              </button>
-            </>
           )}
           {/* The goals and note as pills (they were two full-width bars), one pop-over under them. */}
           {program.phaseId != null && <GoalsNotePills firstName={firstName} phaseId={program.phaseId} goals={program.goals} note={program.coachNote} />}
