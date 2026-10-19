@@ -27,6 +27,8 @@ import VariationDialog from "./VariationDialog";
 import DemoVideoDialog, { type CoachClip } from "./DemoVideoDialog";
 import ClientGymsDialog from "./ClientGymsDialog";
 import DeleteSessionDialog from "./DeleteSessionDialog";
+import ScheduleDialog from "./ScheduleDialog";
+import { addDays } from "../phases/timeline";
 import ExerciseProgressDialog from "./ExerciseProgressDialog";
 import DatePick from "../DatePick";
 
@@ -876,7 +878,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           </span>
         </div>
         <div className="trn-weekhead-actions">
-          {week.state === "ahead" && week.index === weeks.length && weeks.length > 1 && (
+          {/* Any week with nothing logged can go (20 Oct, Alex: it was only the last); a live programme's only from the weeks still to come. The ones after move up. */}
+          {weeks.length > 1 && (program.status !== "live" || week.state === "ahead") && !week.trained.some(Boolean) && !week.missed.some(Boolean) && sessions.every((x) => x.setsLogged === 0) && (
             <button type="button" className="trn-btn ghost" onClick={() => setDlg({ kind: "removeWeek" })}>
               <TrashIcon /> Remove week
             </button>
@@ -1845,7 +1848,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         {dlg?.kind === "removeWeek" && (
           <ConfirmDialog
             title={`Remove ${week.label}`}
-            description={sessions.length ? `Its ${sessions.length} ${sessions.length === 1 ? "session goes" : "sessions go"} with it. The programme gets a week shorter.` : "An empty week at the end of the programme. The programme gets a week shorter."}
+            description={[sessions.length ? `${sessions.length} ${sessions.length === 1 ? "session goes" : "sessions go"} with it.` : "It's empty.", viewIdx < weeks.length ? "The weeks after move up." : ""].filter(Boolean).join(" ")}
             confirm="Remove week"
             danger
             onConfirm={() => {
@@ -1881,24 +1884,21 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           />
         )}
 
+        {/* Scheduling is not editing dates (20 Oct, Alex): the week it starts and the time it goes live; the length stays as built. */}
         {dlg?.kind === "deploy" && program.status === "draft" && !startHasCome && (
-          <PhaseDatesDialog
-            title="Schedule it"
+          <ScheduleDialog
             name={program.name}
             weeks={weeks.length}
             start={program.startDate}
-            end={program.endDate}
-            firstName={firstName}
-            what="the programme"
-            confirm="Schedule it"
-            onConfirm={(v) => {
+            today={program.planCtx.today}
+            others={program.planCtx.phases.filter((p) => p.track === "training" && p.id !== program.phaseId).map((p) => ({ name: p.name, from: p.start_week, to: addDays(p.end_week, 6) }))}
+            onClose={close}
+            onSchedule={(v) => {
               close();
               act(async () => {
-                if (v.name && v.name !== program.name) await renameProgramAction(fd({ programId: program.id, name: v.name }));
-                // A new end (typed, or + 1 week) is a new length: the programme gains or loses weeks.
-                if (program.phaseId) await updateClientPhaseAction(fd({ id: program.phaseId, track: "training", name: v.name || program.name, start: v.start, end: v.end, adjustProgram: v.weeks !== weeks.length ? "1" : null }));
-                await scheduleProgramDeployAction(fd({ programId: program.id, date: v.start, time: "09:00" }));
-              }, `${v.name || program.name} scheduled: ${fmtDate(v.start)} – ${fmtDate(v.end)}`);
+                if (program.phaseId) await updateClientPhaseAction(fd({ id: program.phaseId, track: "training", name: program.name, start: v.start, end: v.end }));
+                await scheduleProgramDeployAction(fd({ programId: program.id, date: v.start, time: v.time }));
+              }, `${program.name} goes live ${fmtDate(v.start)} at ${v.time}`);
             }}
           />
         )}
@@ -1907,10 +1907,10 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
             title={program.status === "scheduled" ? "Make it live now" : startHasCome ? "Make it live" : "Schedule it"}
             description={
               program.status === "scheduled"
-                ? `${program.name} goes live this week instead of ${program.startDate ? fmtDate(program.startDate) : "its start"}. ${firstName} sees it on their Training tab straight away.`
+                ? `Live this week instead of ${program.startDate ? fmtDate(program.startDate) : "its start"}.`
                 : startHasCome
-                  ? `${program.name} goes live this week. ${firstName} sees it on their Training tab straight away and gets a notification.`
-                  : `${program.name} goes out on ${program.startDate ? fmtDate(program.startDate) : "its start date"} by itself. Until then only you see it.`
+                  ? "Live this week."
+                  : `Goes out on ${program.startDate ? fmtDate(program.startDate) : "its start date"}.`
             }
             confirm={program.status === "scheduled" ? "Make it live now" : startHasCome ? "Make it live" : "Schedule it"}
             onConfirm={() => {
@@ -1924,7 +1924,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         {dlg?.kind === "backToDraft" && (
           <ConfirmDialog
             title="Back to draft"
-            description={`${program.name} stops being scheduled. ${firstName} won't see it until it is scheduled again.`}
+            description={`${program.name} stops being scheduled.`}
             confirm="Back to draft"
             onConfirm={() => {
               close();
@@ -2889,26 +2889,32 @@ function CopySessionDialog({ source, others, canAdd, nextNumber, laterLabel, onC
   );
 }
 
+/** A yes-or-no, in the hairline style (20 Oct, Alex): the title, one short line, an optional tick, Cancel and the action (black, or red words when it takes something away). */
 export function ConfirmDialog({ title, description, confirm, danger, tick, onConfirm }: { title: string; description: string; confirm: string; danger?: boolean; tick?: string | null; onConfirm: (also: boolean) => void }) {
   const [also, setAlso] = useState(false);
   return (
-    <DialogContent className="rd-dlg">
-      <DialogHeader>
-        <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
-      </DialogHeader>
+    <DialogContent className="dlh">
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">{title}</DialogTitle>
+        <DialogClose className="dlh-x" aria-label="Close">
+          ✕
+        </DialogClose>
+      </div>
+      <DialogDescription className="dlh-what">{description}</DialogDescription>
       {tick && (
-        <label className="rd-tick">
-          <input type="checkbox" checked={also} onChange={(e) => setAlso(e.target.checked)} />
+        <button type="button" role="checkbox" aria-checked={also} className="dlh-ack" onClick={() => setAlso((x) => !x)}>
+          <span className={`dlh-box ink${also ? " on" : ""}`} aria-hidden="true">
+            {also ? "✓" : ""}
+          </span>
           {tick}
-        </label>
+        </button>
       )}
-      <DialogFooter>
-        <DialogClose className="rd-btn">Cancel</DialogClose>
-        <button type="button" className={`rd-btn ${danger ? "danger-solid" : "primary"}`} onClick={() => onConfirm(also)} autoFocus>
+      <div className="dlh-foot">
+        <DialogClose className="dlh-cancel">Cancel</DialogClose>
+        <button type="button" className={danger ? "dlh-delete" : "dlh-go"} onClick={() => onConfirm(also)} autoFocus>
           {confirm}
         </button>
-      </DialogFooter>
+      </div>
     </DialogContent>
   );
 }

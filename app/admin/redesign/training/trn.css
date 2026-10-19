@@ -175,6 +175,11 @@
 .rd-addpop .rd-addrow-item.create svg { width: 14px; height: 14px; }
 .rd-addpop .rd-addrow-back { flex: none; padding: 8px 10px; font-weight: 600; color: #5b6474; }
 
+/* ---- Schedule pop-up (ScheduleDialog, on the phase pop-up's npd styles) */
+.npd.sch.sch { width: min(680px, 100vw - 32px); }
+.npd .sch-when { padding: 8px 0 9px; border-bottom: 1px solid #e1e5eb; font-size: 15px; font-weight: 500; color: #141a24; }
+.npd .sch-time { max-width: 140px; }
+
 /* ---- Delete session pop-up (DeleteSessionDialog): portalled, so not under
    .rd.trn; doubled classes out-rank the dialog's own utility classes. */
 .dlh.dlh { width: min(400px, 100vw - 32px); max-width: none; display: flex; flex-direction: column; gap: 10px; padding: 20px 20px 16px; border: 0; border-radius: 20px; background: #fff; box-shadow: 0 30px 60px -24px rgba(16, 24, 40, 0.35), 0 0 0 1px #e1e5eb; color: #141a24; font-family: var(--font-archivo), system-ui, sans-serif; }
@@ -200,6 +205,8 @@
 /* Delete as red words, no pill (20 Oct, Alex). */
 .dlh-delete { height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #b42318; cursor: pointer; }
 .dlh-delete:hover { background: #fdf1ef; }
+.dlh-go { height: 36px; padding: 0 18px; border: 0; border-radius: 999px; background: #141a24; font: inherit; font-size: 13.5px; font-weight: 600; color: #fff; cursor: pointer; }
+.dlh-go:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(20, 26, 36, 0.18); }
 .dlh-delete:disabled { background: none; color: rgba(180, 35, 24, 0.35); cursor: default; }
 
 /* ---- Rogue sessions: a label row, then slim rows of their own */
