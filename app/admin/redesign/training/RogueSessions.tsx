@@ -30,9 +30,10 @@ export default function RogueSessions({ items, firstName, grid, cols, unit, minW
   const label: Record<keyof Cols, string> = { sets: "Sets", weight: unit, reps: "Reps", rpe: "RPE", tempo: "Tempo", rest: "Rest" };
   return (
     <div className="rg">
+      {/* The compass by the heading (19 Oct, Alex), and no line explaining it. */}
       <div className="rg-head">
+        <CompassIcon size={15} />
         <span className="rg-eyebrow">Rogue sessions</span>
-        <span className="rg-sub">{firstName}&rsquo;s own, off the plan · not counted in the week</span>
       </div>
       {items.map((r) => {
         const isOpen = open === r.id;
@@ -40,9 +41,8 @@ export default function RogueSessions({ items, firstName, grid, cols, unit, minW
         return (
           <section key={r.id} className={`rd-session rg-session${isOpen ? " open" : ""}`}>
             <div className="rd-session-head" onClick={() => setOpen(isOpen ? null : r.id)}>
-              <span className="rd-grip rg-compass" aria-hidden="true">
-                <CompassIcon size={18} />
-              </span>
+              {/* The grip's room kept empty, so the name and count line up with the week's sessions. */}
+              <span className="rd-grip rg-compass" aria-hidden="true" />
               <button type="button" className="rd-session-toggle" onClick={(e) => (e.stopPropagation(), setOpen(isOpen ? null : r.id))} aria-expanded={isOpen} aria-label={isOpen ? "Fold rogue session" : "Open rogue session"}>
                 <span className={`rd-chev${isOpen ? " open" : ""}`} aria-hidden="true">
                   <ChevronDownIcon />

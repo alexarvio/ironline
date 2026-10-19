@@ -1328,3 +1328,4 @@
 .rd-grip.rg-compass { cursor: default; color: #5b6474; letter-spacing: 0; }
 .rg-fig { font-size: 14px; font-weight: 600; color: #141a24; font-variant-numeric: tabular-nums; }
 .rg-fig.rg-span { font-weight: 500; color: #3a4250; }
+.rg-head.rg-head { align-items: center; gap: 8px; color: #5b6474; }
