@@ -20346,3 +20346,6 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 /* Eight event types (19 Oct, Alex): four across, two rows, so the grid stays even; a touch less padding so "Supplement" fits a phone's quarter. */
 .evs .evs-types.evs-types { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
 .evs .evs-types .evs-type { padding: 0 2px; font-size: 11.5px; letter-spacing: -0.01em; }
+/* The weekdays spread across the whole row (19 Oct, Alex), each still a round button. */
+.evr-days.evr-days { justify-content: space-between; gap: 4px; }
+.evr-days.evr-days button { flex: 0 0 auto; width: clamp(34px, 12.5%, 44px); max-width: none; }
