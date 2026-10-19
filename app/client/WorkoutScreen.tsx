@@ -207,6 +207,14 @@ export default function WorkoutScreen({
   const end = () => {
     if (ending) return;
     setEnding(true);
+    // A free session ended with nothing in it is not kept (19 Oct): it goes, as when left empty.
+    if (day.free && day.exercises.length === 0) {
+      onDiscarded();
+      startTransition(async () => {
+        await discardSessionAction(day.key);
+      });
+      return;
+    }
     startTransition(async () => {
       await endSessionAction(day.key, { note, answers: day.questions.map((q) => ({ id: q.id, value: answers[q.id] ?? null })) });
       setTimeout(onEnded, 900);
@@ -246,7 +254,8 @@ export default function WorkoutScreen({
         </button>
       )}
       {/* Editing, nothing to put in it on a cardio or the wrap up without gyms. */}
-      {!(editing && !ex && day.gyms.length === 0) && (
+      {/* No ⋯ over an empty menu (19 Oct, Alex: a blank white box): editing has no Discard, a free session no Change gym, the wrap up no exercise. */}
+      {!(editing && !ex && (day.gyms.length === 0 || day.free)) && (
       <button type="button" className={cls} onClick={toggleMenu} aria-label="More" aria-expanded={menuOpen}>
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="5" cy="12" r="1.8" fill="currentColor" stroke="none" />
