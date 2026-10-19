@@ -198,3 +198,10 @@
 .cal-entry-spin { width: 14px; height: 14px; border-radius: 999px; border: 2px solid rgba(255, 255, 255, 0.35); border-top-color: #fff; animation: exm-spin 0.8s linear infinite; }
 @keyframes cal-entry-spin { to { transform: rotate(360deg); } }
 .cal-entry-spin { animation-name: cal-entry-spin; }
+
+/* The note's chevron at the start of the pill (19 Oct, Alex): on the right it pushed only some rows' "30 min" in and broke the column. Every pill keeps the same small gutter on the left, the chevron in it when there is a note, so the times and the lengths line up down the day. */
+.cdg-pill .cdg-pill-chev { order: -1; width: 20px; margin-left: 2px; }
+.cdg-pill .cdg-pill-chev + .cdg-pill-main,
+.cdg-pill:has(.cdg-pill-chev) .cdg-pill-main { padding-left: 0; }
+.cdg-pill:not(:has(.cdg-pill-chev)) .cdg-pill-main { padding-left: 22px; }
+.cdg-pill .cdg-pill-chev svg { width: 14px; height: 14px; }
