@@ -20321,3 +20321,12 @@ button.ts-circle:focus-visible { outline: 2px solid #00897B; outline-offset: 2px
 @media (prefers-reduced-motion: reduce) { .evp-r.today .evp-ring.evp-ring { animation: none; } }
 /* Check-in with nothing to log and nothing logged (17 Oct, Alex): the Training banner's size, in black and white, no pills. */
 .tr-banner.ci-banner.ci-naked-banner { filter: grayscale(1); padding-bottom: 26px; }
+/* 19 Oct (Alex): the workout's video card keeps its amber camera without the dot on it. */
+.lw .wo-video.wo-video .wo-video-tile::after { content: none; }
+/* 19 Oct: a picked video under review offers another as a quiet line under it, not two more buttons. */
+.vr-sheet .vr-sheet-again.vr-sheet-again { position: relative; align-self: center; padding: 2px 8px; font-size: 13px; font-weight: 600; color: #5b6472; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.vr-sheet .vr-sheet-again input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+/* 19 Oct (Alex: the open set's ring was thicker top-left). The ring is an SVG circle in the number's colour, not an inset shadow: iOS snaps a 1.5px shadow to whole device pixels, and on a half-pixel spot one side came out a pixel thicker. The dashed extra set keeps its outline. Stacked classes for the dev-server CSS order. */
+.lw .lw-open-head .lw-badge.lw-badge.lw-badge { position: relative; box-shadow: none; }
+.lw-badge-ring { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.5; pointer-events: none; }
+.lw .lw-open.extra .lw-badge-ring { display: none; }

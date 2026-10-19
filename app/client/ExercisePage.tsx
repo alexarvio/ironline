@@ -566,6 +566,10 @@ export default function ExercisePage({
               <div className={`lw-open${row.saved ? " saved" : ""}${row.kind === "warm" ? " warm" : ""}${row.extra && row.kind === "work" ? " extra" : ""}`}>
                 <div className="lw-open-head">
                   <button type="button" className="lw-badge" onClick={() => acceptAll(row)} aria-label={`Log ${row.kind === "warm" ? "warm-up" : "set"} ${row.n} as planned`} title="Log as planned">
+                    {/* The ring as a vector (19 Oct): an inset shadow on a half-pixel spot came out thicker on one side on iOS. */}
+                    <svg className="lw-badge-ring" viewBox="0 0 34 34" aria-hidden="true">
+                      <circle cx="17" cy="17" r="16.25" />
+                    </svg>
                     {row.label}
                   </button>
                   {/* The title folds the set (13 Oct): the next one still to do opens, or none. */}

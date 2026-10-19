@@ -124,28 +124,29 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, o
     });
   };
 
+  const picker = (label: string, capture: boolean, className = "pp-app-sheet-option") => (
+    <label key={label} className={className}>
+      {label}
+      <input
+        type="file"
+        accept={asked ? "video/*" : "image/*,video/*"}
+        capture={capture ? "environment" : undefined}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void pick(f);
+          e.target.value = "";
+        }}
+      />
+    </label>
+  );
   const options = (
     <>
-      {[
-        { label: ask?.src ? (asked ? "Record a new one" : "Take a new one") : asked ? "Record a video" : "Take a photo or film a video", capture: true },
-        { label: "Choose from your phone", capture: false },
-      ].map((o) => (
-        <label key={o.label} className="pp-app-sheet-option">
-          {o.label}
-          <input
-            type="file"
-            accept={asked ? "video/*" : "image/*,video/*"}
-            capture={o.capture ? "environment" : undefined}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void pick(f);
-              e.target.value = "";
-            }}
-          />
-        </label>
-      ))}
+      {picker(ask?.src ? (asked ? "Record a new one" : "Take a new one") : asked ? "Record a video" : "Take a photo or film a video", true)}
+      {picker("Choose from your phone", false)}
     </>
   );
+  // A video shows its first frame before it plays (19 Oct): iOS paints nothing until asked for a time.
+  const firstFrame = (src: string) => (src.includes("#") ? src : `${src}#t=0.001`);
 
   return createPortal(
     <div className="vr-sheet-scrim" role="presentation" onClick={() => !sending && onClose()}>
@@ -169,19 +170,20 @@ export function VideoAskSheet({ ask, assignmentId, about = null, exerciseName, o
           <p className="vr-sheet-done">✓ Your coach can watch it now.</p>
         ) : file && preview ? (
           <>
-            {isPhoto(file) ? <img className="vr-sheet-video" src={preview} alt="" /> : <video className="vr-sheet-video" src={preview} controls playsInline muted />}
+            {isPhoto(file) ? <img className="vr-sheet-video" src={preview} alt="" /> : <video className="vr-sheet-video" src={firstFrame(preview)} controls playsInline muted preload="metadata" />}
+            {/* Send and Cancel are the choice here (19 Oct, Alex: four buttons was crowded); another one is a quiet line. */}
+            {picker(`Choose another ${asked ? "video" : "one"}`, false, "vr-sheet-again")}
             {!asked && <input className="vr-sheet-note-in" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Anything to say with it? (optional)" maxLength={300} />}
             {problem && <p className="vr-sheet-problem">{problem}</p>}
             <button type="button" className="vr-sheet-send" onClick={send} disabled={!!problem || sending}>
               {sending ? "Sending… keep the app open" : ask?.src ? "Send instead" : "Send to your coach"}
             </button>
-            {options}
           </>
         ) : (
           <>
             {ask?.src && (
               <>
-                {sentPhoto ? <img className="vr-sheet-video" src={ask.src} alt="" /> : <video className="vr-sheet-video" src={ask.src} controls playsInline preload="metadata" />}
+                {sentPhoto ? <img className="vr-sheet-video" src={ask.src} alt="" /> : <video className="vr-sheet-video" src={firstFrame(ask.src)} controls playsInline preload="metadata" />}
                 {ask.clientNote && <p className="vr-sheet-sent">{ask.clientNote}</p>}
                 {ask.sentAt && <p className="vr-sheet-sent">Sent {new Date(ask.sentAt).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}.</p>}
               </>
