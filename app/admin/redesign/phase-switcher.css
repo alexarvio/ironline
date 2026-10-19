@@ -1,0 +1,18 @@
+/* The phase / programme switcher's menu (PhaseSwitcher) in the admin hairline
+   style (20 Oct, Alex): a white card with a hairline edge, Live / Scheduled /
+   Draft / Past as a black-and-white capsule, rows tinted grey when chosen or
+   pointed at, no navy. The menu is portalled; doubled classes out-rank the
+   shared menu and toggle styles. */
+.rd-switch-menu.rd-switch-menu { min-width: 300px; padding: 6px; border: 0; border-radius: 14px; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; font-family: var(--font-archivo), system-ui, sans-serif; color: #141a24; }
+.rd-switch-menu .rd-switch-states.rd-switch-states { display: flex; gap: 0; height: 32px; margin: 2px 2px 6px; padding: 3px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; box-sizing: border-box; }
+.rd-switch-states.rd-switch-states > button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 26px; padding: 0 8px; border: 0; border-radius: 999px; background: none; box-shadow: none; font-size: 10.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #5b6474; }
+.rd-switch-states.rd-switch-states > button[data-state="on"] { background: #141a24; color: #fff; }
+.rd-switch-states.rd-switch-states > button:disabled { opacity: 0.35; }
+.rd-switch-states .rd-switch-count.rd-switch-count { font-weight: 600; opacity: 0.6; }
+.rd-switch-menu.rd-switch-menu [role="menuitem"] { min-height: 38px; padding: 0 10px; border-radius: 8px; font-size: 13.5px; font-weight: 500; color: #141a24; }
+.rd-switch-menu.rd-switch-menu [role="menuitem"][data-highlighted],
+.rd-switch-menu.rd-switch-menu a.on { background: #f5f6f8; color: #141a24; }
+.rd-switch-menu.rd-switch-menu a.on { font-weight: 600; }
+.rd-switch-menu.rd-switch-menu small { font-size: 12px; font-weight: 500; color: #98a2b3; }
+.rd-switch-menu.rd-switch-menu [role="separator"] { margin: 4px 0; background: #eef0f3; }
+.rd-switch-menu.rd-switch-menu [role="menuitem"] svg { width: 14px; height: 14px; color: #141a24; }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../components/ui/dropdown-menu";
 import { ToggleGroup, ToggleGroupItem } from "../../components/ui/basics";
 import { ChevronDownIcon, PlusIcon } from "../../components/icons";
+import "./phase-switcher.css";
 
 // The switcher under a tab's title (Training, Nutrition, Measurements): the
 // phases or programmes of this client, sorted by where they stand. The

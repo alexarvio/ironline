@@ -612,6 +612,14 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   const [openedNote, setOpenedNote] = useState<string | null>(null);
   const noteSeen = !program.note || program.note.seen || openedNote === noteKey;
   const [dlg, setDlg] = useState<Dlg>(null);
+  // Renaming the phase in place (20 Oct, Alex): a click on the title makes it a line to type on; a click away or Enter saves, Esc leaves it.
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const commitRename = () => {
+    if (renaming == null) return;
+    const v = renaming.trim();
+    setRenaming(null);
+    if (v && v !== program.name) act(() => renameProgramAction(fd({ programId: program.id, name: v })), `Renamed to ${v}`);
+  };
   const close = () => setDlg(null);
   const rowById = (id: number) => sessions.flatMap((s) => s.rows).find((r) => r.id === id) ?? null;
   // Taking a row or a cardio off, once the warning is confirmed (20 Oct, Alex).
@@ -674,7 +682,30 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           <span className="trn-eyebrow">Programme</span>
           <div className="trn-name-row">
             <h1 className="trn-name">
-              <PhaseSwitcher name={program.name} currentId={program.id} items={program.programs} hrefFor={(id) => `/admin/redesign/training?client=${clientId}&program=${id}`} label="Switch programme" newLabel="New programme" onNew={() => setDlg({ kind: "newProgram" })} />
+              {renaming != null ? (
+                <input
+                  className="trn-name-input"
+                  value={renaming}
+                  autoFocus
+                  maxLength={60}
+                  size={Math.max(8, renaming.length + 1)}
+                  onChange={(e) => setRenaming(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitRename();
+                    if (e.key === "Escape") setRenaming(null);
+                  }}
+                  onBlur={commitRename}
+                  aria-label="Phase name"
+                />
+              ) : (
+                <>
+                  {/* Click the name to type it (20 Oct, Alex); the ▾ beside it switches programme. */}
+                  <button type="button" className="trn-name-btn" onClick={() => setRenaming(program.name)} title="Rename">
+                    {program.name}
+                  </button>
+                  <PhaseSwitcher name="" currentId={program.id} items={program.programs} hrefFor={(id) => `/admin/redesign/training?client=${clientId}&program=${id}`} label="Switch programme" newLabel="New programme" onNew={() => setDlg({ kind: "newProgram" })} />
+                </>
+              )}
             </h1>
             <span className={`trn-status ${program.status}`}>{program.status === "past" ? "Ended" : stateLabel(program.status)}</span>
           </div>
