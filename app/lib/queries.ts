@@ -1657,6 +1657,9 @@ export function progressTargetFromLogs(workoutAssignmentId: number) {
   if (wa.swap) return;
   const day = data.program_days.find((pd) => pd.id === wa.program_day_id);
   if (!day) return;
+  // Nor do a free session's (19 Oct): its exercises are names, all exercise 0,
+  // and 88 kg logged on one became the target of every free exercise after it.
+  if (day.free || wa.exercise_id === 0) return;
   const logs = data.set_logs.filter((sl) => sl.workout_assignment_id === wa.id);
   if (logs.length === 0) return;
   const home = homeGymId(day.client_id);
@@ -1680,7 +1683,7 @@ export function progressTargetFromLogs(workoutAssignmentId: number) {
   const later = data.workout_assignments.filter((other) => {
     if (other.id === wa.id || other.exercise_id !== wa.exercise_id) return false;
     const otherDay = days.get(other.program_day_id);
-    return !!otherDay && isLater(otherDay) && !data.set_logs.some((sl) => sl.workout_assignment_id === other.id);
+    return !!otherDay && !otherDay.free && isLater(otherDay) && !data.set_logs.some((sl) => sl.workout_assignment_id === other.id);
   });
 
   let changed = false;

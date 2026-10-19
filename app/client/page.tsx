@@ -751,7 +751,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                   group: library.has(a.exercise_id) ? exerciseGroup(library.get(a.exercise_id)!) : "other",
                   sets: a.sets,
                   reps: a.reps,
-                  targetWeight: a.target_weight_kg,
+                  targetWeight: day.free ? null : a.target_weight_kg,
                   unit: getExerciseUnit(a.id),
                   targetRpe: a.rpe_target,
                   tempo: a.tempo,
@@ -773,7 +773,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                     const reply = c ? videoReplies.find((x) => x.id === c.id) ?? null : null;
                     return c && reply ? { id: c.id, note: null, src: null, sentAt: null, reply, carried: true } : null;
                   })(),
-                  gymTargets: allGyms.length ? Object.fromEntries(allGyms.map((g) => [g.id, targetAtGym(a, g.id, home)])) : undefined,
+                  gymTargets: !day.free && allGyms.length ? Object.fromEntries(allGyms.map((g) => [g.id, targetAtGym(a, g.id, home)])) : undefined,
                   gymNotes: allGyms.length ? Object.fromEntries(allGyms.map((g) => [g.id, notesByGym.get(g.id)?.get(a.exercise_id) ?? ""])) : undefined,
                   logs: getLogsForAssignment(a.id).map((l) => ({
                     id: l.id,
