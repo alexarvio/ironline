@@ -1,15 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { ChevronDownIcon } from "../../../components/icons";
 import type { DraftRogue } from "./TrainingDraft";
 
 // The client's rogue sessions under the week's own (19 Oct, Alex): workouts
-// they made themselves, off the plan. Read only: the coach sees when, how
-// long, and every set and cardio logged; nothing here counts towards the
-// week, and there is nothing to edit.
+// they made themselves, off the plan. Built from the session card's own parts
+// (head, pills, column heads, rows) so they read as sessions: the head says
+// how many exercises, when, how long and whether it ended; open, the table is
+// Exercise, then Sets, KG and Reps centred. Read only, and counted in nothing.
 
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
-const kg = (n: number | null) => (n == null ? "–" : `${Math.round(n * 100) / 100}`);
+const num = (n: number | null) => (n == null ? "–" : String(Math.round(n * 100) / 100));
+/** "60" when every set is the same, else each in turn: "60 · 65 · 70". */
+const each = (xs: (number | null)[]) => (xs.length === 0 ? "–" : xs.every((x) => x === xs[0]) ? num(xs[0]) : xs.map(num).join(" · "));
+const GRID = { gridTemplateColumns: "minmax(200px, 1fr) 90px 140px 140px" };
 
 export default function RogueSessions({ items, firstName }: { items: DraftRogue[]; firstName: string }) {
   const [open, setOpen] = useState<number | null>(null);
@@ -22,51 +27,59 @@ export default function RogueSessions({ items, firstName }: { items: DraftRogue[
       </div>
       {items.map((r) => {
         const isOpen = open === r.id;
-        const sets = r.exercises.reduce((t, e) => t + e.sets.length, 0);
-        const what = [r.exercises.length ? `${r.exercises.length} exercise${r.exercises.length === 1 ? "" : "s"}` : null, sets ? `${sets} set${sets === 1 ? "" : "s"}` : null, r.cardio.length ? `${r.cardio.length} cardio` : null].filter(Boolean).join(" · ");
+        const count = r.exercises.length + r.cardio.length;
         return (
-          <section key={r.id} className={`rg-card${isOpen ? " open" : ""}`}>
-            <button type="button" className="rg-row" onClick={() => setOpen(isOpen ? null : r.id)} aria-expanded={isOpen}>
-              <span className="rg-ring" aria-hidden="true" />
-              <span className="rg-main">
-                <b>Rogue session</b>
-                <small>{what || "Nothing logged"}</small>
+          <section key={r.id} className={`rd-session rg-session${isOpen ? " open" : ""}`}>
+            <div className="rd-session-head" onClick={() => setOpen(isOpen ? null : r.id)}>
+              <button type="button" className="rd-session-toggle" onClick={(e) => (e.stopPropagation(), setOpen(isOpen ? null : r.id))} aria-expanded={isOpen} aria-label={isOpen ? "Fold rogue session" : "Open rogue session"}>
+                <span className={`rd-chev${isOpen ? " open" : ""}`} aria-hidden="true">
+                  <ChevronDownIcon />
+                </span>
+              </button>
+              <span className="rd-session-namecol">
+                <span className="rg-name">Rogue session</span>
               </span>
-              <span className="rg-when">{r.started ? day(r.started) : ""}</span>
-              {r.duration != null && <span className="rg-when">{r.duration} min</span>}
-              <span className={`rg-state${r.ended ? "" : " live"}`}>{r.ended ? "Completed" : "In progress"}</span>
-              <span className={`rg-chev${isOpen ? " open" : ""}`} aria-hidden="true" />
-            </button>
+              <span className="rd-session-count">
+                {count} {count === 1 ? "exercise" : "exercises"}
+              </span>
+              <span className="rd-session-tags">
+                {r.started && <span className="rd-pill quiet">{day(r.started)}</span>}
+                {r.duration != null && <span className="rd-pill quiet">{r.duration} min</span>}
+                <span className={`rd-pill${r.ended ? " good" : ""}`}>{r.ended ? "Completed" : "In progress"}</span>
+              </span>
+            </div>
             {isOpen && (
-              <div className="rg-body">
+              <div className="rd-rows">
+                <div className="rd-cols rg-cols" aria-hidden="true" style={GRID}>
+                  <span>Exercise</span>
+                  <span>Sets</span>
+                  <span>KG</span>
+                  <span>Reps</span>
+                </div>
                 {r.exercises.map((e) => (
-                  <div key={e.id} className="rg-line">
-                    <span className="rg-name">{e.name}</span>
-                    <span className="rg-sets">
-                      {e.sets.length === 0 ? (
-                        <em>Not logged</em>
-                      ) : (
-                        e.sets.map((s) => (
-                          <span key={s.n}>
-                            {kg(s.kg)} kg × {s.reps ?? "–"}
-                          </span>
-                        ))
-                      )}
-                    </span>
+                  <div key={e.id} className="rd-row">
+                    <div className="rd-row-main static rg-row" style={GRID}>
+                      <span className="rd-ex">{e.name}</span>
+                      <span>{e.sets.length || "–"}</span>
+                      <span>{each(e.sets.map((s) => s.kg))}</span>
+                      <span>{each(e.sets.map((s) => s.reps))}</span>
+                    </div>
                   </div>
                 ))}
                 {r.cardio.map((c) => {
-                  const bits = [c.time && `${c.time} min`, c.distance && `${c.distance} km`, c.pace && `${c.pace} km/h`, c.incline && `${c.incline}% incline`].filter(Boolean);
+                  const bits = [c.time && `${c.time} min`, c.distance && `${c.distance} km`, c.pace && `${c.pace} km/h`, c.incline && `${c.incline}% incline`].filter(Boolean).join(" · ");
                   return (
-                    <div key={`c${c.id}`} className="rg-line">
-                      <span className="rg-name">
-                        {c.name} <small className="rg-tag">Cardio</small>
-                      </span>
-                      <span className="rg-sets">{bits.length ? bits.map((b) => <span key={String(b)}>{b}</span>) : <em>{c.done ? "Done" : "Not logged"}</em>}</span>
+                    <div key={`c${c.id}`} className="rd-row cardio">
+                      <div className="rd-row-main static rg-row" style={GRID}>
+                        <span className="rd-ex">
+                          {c.name} <small className="rg-tag">Cardio</small>
+                        </span>
+                        <span className="rg-span">{bits || (c.done ? "Done" : "Not logged")}</span>
+                      </div>
                     </div>
                   );
                 })}
-                {r.note && <p className="rg-note">&ldquo;{r.note}&rdquo;</p>}
+                {r.note && <p className="rd-session-note">{firstName} wrote: &ldquo;{r.note}&rdquo;</p>}
               </div>
             )}
           </section>
