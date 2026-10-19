@@ -65,6 +65,8 @@
 .rd.trn .trn-pill { position: relative; display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px 0 12px; border: 0; border-radius: 999px; background: transparent; box-shadow: inset 0 0 0 1px var(--trn-btnline); font: inherit; font-size: 13px; font-weight: 600; color: var(--trn-ink); cursor: pointer; white-space: nowrap; }
 .rd.trn .trn-pill svg { width: 15px; height: 15px; color: var(--trn-ink); }
 .rd.trn .trn-pill.set { background: #fff; color: var(--trn-ink); }
+.rd.trn .trn-pill-n { display: inline-flex; justify-content: center; width: 1ch; margin-left: 1px; font-weight: 600; color: var(--trn-faint); }
+.rd.trn .trn-pill.set .trn-pill-n { color: var(--trn-ink); }
 .rd.trn .trn-pill.set svg { color: var(--trn-ink); }
 .rd.trn .trn-pill:hover, .rd.trn .trn-pill.on { box-shadow: inset 0 0 0 1px var(--trn-ink); }
 .rd.trn .trn-tip { position: absolute; top: calc(100% + 8px); right: 0; z-index: 30; width: max-content; max-width: 260px; padding: 8px 11px; border-radius: 10px; background: var(--trn-ink); font-size: 12px; font-weight: 500; line-height: 1.4; color: #fff; white-space: normal; text-align: left; opacity: 0; pointer-events: none; transform: translateY(-2px); transition: opacity 0.12s, transform 0.12s; }
@@ -97,7 +99,7 @@
 .rd.trn .trn-week.on { box-shadow: inset 0 0 0 1.5px var(--trn-ink), 0 12px 24px -18px rgba(16, 24, 40, 0.5); }
 .rd.trn .trn-week:focus-visible { outline: 2px solid var(--trn-navy); outline-offset: 2px; }
 .rd.trn .trn-week-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 18px; }
-.rd.trn .trn-week-name { font-size: 14.5px; font-weight: 500; }
+.rd.trn .trn-week-name { font-size: 14.5px; font-weight: 500; white-space: nowrap; }
 .rd.trn .trn-week.on .trn-week-name { font-weight: 600; }
 .rd.trn .trn-now { display: inline-flex; align-items: center; gap: 6px; height: 18px; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; color: var(--trn-ink); }
 .rd.trn .trn-pulse { position: relative; width: 6px; height: 6px; border-radius: 999px; background: #3fbf5f; }
@@ -141,6 +143,17 @@
 .rd.trn .trn-add { display: flex; align-items: center; justify-content: center; width: 100%; height: 48px; border: 1px dashed #c9cfd8; border-radius: 18px; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--trn-ink); cursor: pointer; }
 .rd.trn .trn-add:hover { border-color: var(--trn-ink); }
 .rd.trn .trn-full { margin: 0; padding: 14px; border: 1px dashed #c9cfd8; border-radius: 18px; text-align: center; }
+
+/* ---- Autosave: a quiet word by the session's name, and the week's line */
+.rd.trn .trn-save { font-size: 12px; font-weight: 500; color: var(--trn-muted); white-space: nowrap; }
+.rd.trn .trn-save.saved { color: var(--trn-green); }
+.rd.trn .trn-save.saved::before { content: "✓ "; }
+.rd.trn .trn-allsaved { margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--trn-line); font-weight: 500; color: var(--trn-green); }
+.rd.trn .trn-allsaved::before { content: "✓ "; }
+.rd.trn .trn-allsaved.saving { color: var(--trn-muted); }
+.rd.trn .trn-allsaved.saving::before { content: none; }
+/* A row just added, until the server gives it its number. */
+.rd.trn .rd-row.trn-landing { opacity: 0.55; pointer-events: none; }
 
 /* ---- Rogue sessions: a label row, then slim rows of their own */
 .rd.trn .trn-rogue { display: flex; flex-direction: column; gap: 8px; margin-top: -8px; }

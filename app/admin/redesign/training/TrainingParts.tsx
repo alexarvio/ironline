@@ -96,7 +96,9 @@ export function GoalsNotePills({ firstName, phaseId, goals, note }: { firstName:
     return (
       <button type="button" className={`trn-pill${set ? " set" : ""}${open === k ? " on" : ""}`} aria-haspopup="dialog" aria-expanded={open === k} aria-label={`${name}, ${set ? "set" : "not set"}`} onClick={() => openIt(k)}>
         {k === "goals" ? <TargetIcon /> : <ChatIcon />}
-        <span>{set ? (k === "goals" ? "Goals · set" : "Note · set") : name}</span>
+        {/* One size whatever it holds (20 Oct, Alex): set only changes the colour; the goals say how many. */}
+        <span>{name}</span>
+        {k === "goals" && <b className="trn-pill-n">{savedGoals.length}</b>}
         {set && open == null && (
           <span className="trn-tip" role="tooltip">
             {preview(value)}

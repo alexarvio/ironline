@@ -156,6 +156,8 @@ const half = (x: number) => Math.round(x * 2) / 2;
 const kgOf = (v: number | null, lbs: boolean) => (v == null ? "—" : `${half(lbs ? v * LB : v)}`);
 const restOf = (s: number | null) => (s == null ? null : s >= 60 && s % 60 === 0 ? `${s / 60} min` : s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : `${s}s`);
 const MAX_SESSIONS = 7;
+/** The clock, for autosave's pauses (kept out of render). */
+const nowMs = () => Date.now();
 const MAX_COLS = 6;
 
 type AddedExercise = { kind: "exercise"; exerciseId: number | null; /** The exercise's variation picked with it; its name is already in `name`. */ variationId?: number | null; name: string; sets: number | string; reps: string; kg: number | null; rpe?: string; tempo?: string; rest?: string; note?: string };
@@ -284,7 +286,12 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   const isLocal = (index: number) => index === viewIdx || index in stash;
   const [pending, setPending] = useState<Record<number, Pending>>({});
   const pend = (id: number) => pending[id] ?? emptyPending();
-  const patch = (id: number, f: (p: Pending) => Pending) => setPending((prev) => ({ ...prev, [id]: f(prev[id] ?? emptyPending()) }));
+  // When each session last changed: autosave waits for a pause (20 Oct).
+  const changedAt = useRef<Record<number, number>>({});
+  const patch = (id: number, f: (p: Pending) => Pending) => {
+    changedAt.current[id] = nowMs();
+    setPending((prev) => ({ ...prev, [id]: f(prev[id] ?? emptyPending()) }));
+  };
   // What is being added, and where. A cardio being typed is already a pending
   // change (key: its row in the session's queue), so the bar shows at once.
   const [adding, setAdding] = useState<{ session: number; kind: "exercise" | "cardio"; key?: number } | null>(null);
@@ -379,6 +386,83 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
       })
     );
     setPending((prev) => ({ ...prev, [sessionId]: emptyPending() }));
+  };
+
+  // ---- Autosave (20 Oct, Alex: no Apply bar). A session's changes save on
+  // their own once the coach pauses: a second after the last change, never
+  // while a box in that session is being typed in or a cardio is still being
+  // typed, five seconds after a removal so its Undo can take it back, and at
+  // once when the page is hidden or left. One save at a time per session.
+  // The status shows by the session's name and the week's heading.
+  const [saving, setSaving] = useState<Record<number, boolean>>({});
+  // "Saved" by a session's name for a moment after its save lands.
+  const [justSaved, setJustSaved] = useState<Record<number, boolean>>({});
+  const inFlight = useRef<Record<number, boolean>>({});
+  const flush = (sessionId: number) => {
+    const p = pend(sessionId);
+    if (pendingCount(p) === 0 || inFlight.current[sessionId]) return;
+    const payload = payloadOf({ id: sessionId } as DraftSession, { ...p, alsoRemaining: false });
+    applyPending(sessionId);
+    inFlight.current[sessionId] = true;
+    setSaving((x) => ({ ...x, [sessionId]: true }));
+    void applyDayChangesAction(payload)
+      .then((r) => {
+        if (r && r.ok === false) toast.error(r.error ?? "Couldn't save that change");
+        else {
+          setJustSaved((x) => ({ ...x, [sessionId]: true }));
+          setTimeout(() => setJustSaved((x) => ({ ...x, [sessionId]: false })), 2500);
+        }
+      })
+      .catch(() => toast.error("Couldn't save that change", { description: "Check the connection; the page shows what is saved." }))
+      .finally(() => {
+        inFlight.current[sessionId] = false;
+        setSaving((x) => ({ ...x, [sessionId]: false }));
+        router.refresh();
+      });
+  };
+  const blocked = (sessionId: number) => {
+    if (adding?.session === sessionId && adding.kind === "cardio") return true;
+    const el = document.activeElement as HTMLElement | null;
+    if (!el || !el.matches("input, textarea")) return false;
+    return !!el.closest(`#session-${sessionId}`) && !el.closest(".rd-addrow");
+  };
+  const tick = useRef<(force?: boolean) => void>(() => {});
+  useEffect(() => {
+    tick.current = (force = false) => {
+      const now = nowMs();
+      for (const [key, p] of Object.entries(pending)) {
+        const id = Number(key);
+        if (pendingCount(p) === 0) continue;
+        const wait = p.removed.length || p.cardioRemoved.length ? 5000 : 1000;
+        if (!force && (now - (changedAt.current[id] ?? 0) < wait || blocked(id))) continue;
+        flush(id);
+      }
+    };
+  });
+  const anyPending = Object.values(pending).some((p) => pendingCount(p) > 0);
+  useEffect(() => {
+    if (!anyPending) return;
+    const t = setInterval(() => tick.current(), 400);
+    return () => clearInterval(t);
+  }, [anyPending]);
+  useEffect(() => {
+    const now = () => tick.current(true);
+    const hidden = () => document.visibilityState === "hidden" && now();
+    window.addEventListener("pagehide", now);
+    document.addEventListener("visibilitychange", hidden);
+    return () => {
+      window.removeEventListener("pagehide", now);
+      document.removeEventListener("visibilitychange", hidden);
+      // Leaving the tab or the client: what is waiting goes now.
+      now();
+    };
+  }, []);
+  const saveState = (sessionId: number): "saving" | "saved" | null => (saving[sessionId] || pendingCount(pend(sessionId)) > 0 ? "saving" : justSaved[sessionId] ? "saved" : null);
+  const weekSaving = anyPending || Object.values(saving).some(Boolean);
+  /** Taken off, with Undo while it waits (the removal saves five seconds after). */
+  const removeWithUndo = (sessionId: number, what: string, f: (q: Pending) => Pending, undo: (q: Pending) => Pending) => {
+    patch(sessionId, f);
+    toast(`${what} removed`, { duration: 4500, action: { label: "Undo", onClick: () => patch(sessionId, undo) } });
   };
   // A demo set or taken off in this sitting, by row; a row not touched reads its own.
   const [demos, setDemos] = useState<Record<number, DraftRow["demo"]>>({});
@@ -652,6 +736,10 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           <span>
             {weekDate(week.index) ? `${weekDate(week.index)} · ` : ""}
             {week.trained.filter(Boolean).length} of {week.trained.length} sessions done
+            {/* Every change saves itself (20 Oct): the week says so. */}
+            <span className={`trn-allsaved${weekSaving ? " saving" : ""}`} role="status">
+              {weekSaving ? "Saving…" : "All changes saved"}
+            </span>
           </span>
         </div>
         <div className="trn-weekhead-actions">
@@ -783,6 +871,14 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                     ) : null;
                   })()}
                 </span>
+                {(() => {
+                  const st = saveState(s.id);
+                  return st ? (
+                    <span className={`trn-save ${st}`} role="status">
+                      {st === "saving" ? "Saving…" : "Saved"}
+                    </span>
+                  ) : null;
+                })()}
                 <span className={`trn-state ${status.cls}`}>{status.text}</span>
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger className="trn-row-more" aria-label={`More for ${name}`}>
@@ -871,7 +967,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                     const shownName = e.name ?? r.name;
                     const under = e.note !== undefined ? e.note : (r.note ?? "");
                     return (
-                      <SortableItem key={r.id} id={r.id} anchor={`row-${r.id}`} className={`rd-row${Object.keys(e).length ? " edited" : ""}${flashRow === r.id ? " flash" : ""}`}>
+                      <SortableItem key={r.id} id={r.id} anchor={`row-${r.id}`} className={`rd-row${Object.keys(e).length ? " edited" : ""}${flashRow === r.id ? " flash" : ""}${r.id < 0 ? " trn-landing" : ""}`}>
                         {(rowGrip) => (
                         <>
                         <div
@@ -1047,7 +1143,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                   </DropdownMenuItem>
                                 )}
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem variant="destructive" onSelect={() => patch(s.id, (q) => ({ ...q, removed: [...q.removed, r.id] }))}>
+                                <DropdownMenuItem variant="destructive" onSelect={() => removeWithUndo(s.id, r.name, (q) => ({ ...q, removed: [...q.removed, r.id] }), (q) => ({ ...q, removed: q.removed.filter((x) => x !== r.id) }))}>
                                   <TrashIcon /> Remove from session
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
@@ -1107,7 +1203,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                         <span />
                         <span className="rd-ex">
                           <span className="rd-ex-name">{r.name}</span>
-                          <small>New · not applied yet</small>
+                          <small>New</small>
                         </span>
                         {cols.sets && <Cell value={String(r.sets)} onChange={(v) => editAdded({ sets: v })} label="Sets" width="sm" />}
                         {cols.weight && <WeightCell key={unit} kg={r.kg} lbs={lbs} onChange={(v) => editAdded({ kg: v })} />}
@@ -1192,7 +1288,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                   <DumbbellIcon />
                                   {c.alternatives?.length ? <b>{c.alternatives.length}</b> : null}
                                 </button>
-                                <button type="button" className="rd-btn ghost sm" onClick={() => patch(s.id, (q) => ({ ...q, cardioRemoved: [...q.cardioRemoved, c.id] }))} aria-label={`Remove ${c.name}`} title="Remove from session">
+                                <button type="button" className="rd-btn ghost sm" onClick={() => removeWithUndo(s.id, c.name, (q) => ({ ...q, cardioRemoved: [...q.cardioRemoved, c.id] }), (q) => ({ ...q, cardioRemoved: q.cardioRemoved.filter((x) => x !== c.id) }))} aria-label={`Remove ${c.name}`} title="Remove from session">
                                   <TrashIcon />
                                 </button>
                               </span>
@@ -1208,7 +1304,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                               <span />
                               <span className="rd-ex">
                                 <span className="rd-ex-name">{r.name}</span>
-                                <small>New · not applied yet</small>
+                                <small>New</small>
                               </span>
                               <span className="rd-cband" style={cs.band}>
                                 {show.time && <span className="rd-num">{r.time || "—"}</span>}
@@ -1261,20 +1357,6 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                     </div>
                   )}
 
-                  {pendingCount(p) > 0 && (
-                    <PendingBar
-                      p={p}
-                      laterLabel={laterLabel}
-                      onAlso={(v) => patch(s.id, (q) => ({ ...q, alsoRemaining: v }))}
-                      onDiscard={() => setPending((prev) => ({ ...prev, [s.id]: emptyPending() }))}
-                      onApply={() => {
-                        const payload = payloadOf(s, p);
-                        const said = `${name}: ${pendingCount(p)} ${pendingCount(p) === 1 ? "change" : "changes"} applied${p.alsoRemaining && laterLabel ? `, and to ${laterLabel}` : ""}`;
-                        applyPending(s.id);
-                        act(() => applyDayChangesAction(payload), said);
-                      }}
-                    />
-                  )}
                 </div>
               )}
               </>
@@ -1869,42 +1951,6 @@ function WeightCell({ kg, lbs, label, onChange }: { kg: number | null; lbs: bool
         }}
       />
     </span>
-  );
-}
-
-/** The session's own pending bar, at its foot: what changed here, in counts. */
-function PendingBar({ p, laterLabel, onAlso, onDiscard, onApply }: { p: Pending; laterLabel: string; onAlso: (v: boolean) => void; onDiscard: () => void; onApply: () => void }) {
-  const n = pendingCount(p);
-  const ex = p.added.filter((r) => r.kind === "exercise").length;
-  const ca = p.added.filter((r) => r.kind === "cardio").length;
-  const edited = Object.keys(p.edits).length + Object.keys(p.cardioEdits).length;
-  const parts = [
-    ex ? `${ex} ${ex === 1 ? "exercise" : "exercises"} added` : null,
-    ca ? `${ca} cardio added` : null,
-    p.removed.length + p.cardioRemoved.length ? `${p.removed.length + p.cardioRemoved.length} removed` : null,
-    edited ? `${edited} ${edited === 1 ? "row" : "rows"} changed` : null,
-    p.order ? "order changed" : null,
-    p.renamed != null ? "renamed" : null,
-  ].filter(Boolean);
-  return (
-    <div className="rd-pending" role="region" aria-label="Unsaved changes to this session">
-      <span className="rd-pending-count">
-        {n} {n === 1 ? "change" : "changes"}
-      </span>
-      <span className="rd-pending-text">{parts.join(" · ")}</span>
-      {laterLabel && (
-        <label className="rd-pending-also">
-          <input type="checkbox" checked={p.alsoRemaining} onChange={(e) => onAlso(e.target.checked)} /> Apply to the rest of the programme
-        </label>
-      )}
-      <button type="button" className="rd-pending-ghost" onClick={onDiscard}>
-        Discard
-      </button>
-      <button type="button" className="rd-pending-apply" onClick={onApply}>
-        Apply
-      </button>
-      <span className="rd-pending-note">Draft page: Apply keeps it on this page only, until a reload.</span>
-    </div>
   );
 }
 
