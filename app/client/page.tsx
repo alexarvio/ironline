@@ -728,7 +728,7 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                 // numbered by its place in the week; the weekday is never
                 // shown here, so a session skipped to another day still
                 // reads correctly.
-                title: day.label || `Session ${i + 1}`,
+                title: day.free ? "Rogue session" : day.label || `Session ${i + 1}`,
                 skipReason: day.skip_reason ?? "",
                 startedAt: day.session_started_at ?? null,
                 endedAt: day.session_ended_at ?? null,

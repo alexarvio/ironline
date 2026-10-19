@@ -2574,7 +2574,7 @@ export function getActivityFeed(coachId: number): FeedEvent[] {
       (p) => p.client_id === day.client_id && day.week_number >= p.start_week && day.week_number < p.start_week + p.total_weeks
     );
     const week = program ? programWeekLabel(program, day.week_number) : `Week ${day.week_number}`;
-    if (day.free) return `Free session (${week})`;
+    if (day.free) return `Rogue session (${week})`;
     return `Session ${day.day_of_week}${day.label ? ` · ${day.label}` : ""} (${week})`;
   };
 
@@ -8682,7 +8682,7 @@ export function liveSessionFor(clientId: number): { id: number; label: string; s
   if (!day) return null;
   const week = data.program_days.filter((pd) => pd.client_id === clientId && pd.week_number === day.week_number).sort((a, b) => a.day_of_week - b.day_of_week);
   const idx = week.findIndex((pd) => pd.id === day.id);
-  return { id: day.id, label: day.label || `Session ${idx + 1}`, startedAt: day.session_started_at!, week: day.week_number };
+  return { id: day.id, label: day.free ? "Rogue session" : day.label || `Session ${idx + 1}`, startedAt: day.session_started_at!, week: day.week_number };
 }
 
 // A session begun and forgotten (13 Oct, Roziena): its clock ran for days,
@@ -8725,7 +8725,7 @@ export function createFreeSession(clientId: number, week: number, at: string): {
   const live = liveSessionFor(clientId);
   if (live) return { ok: false, other: live.label };
   const free = data.program_days.filter((pd) => pd.client_id === clientId && pd.week_number === week && pd.free).length;
-  const day: ProgramDay = { id: allocId("program_days"), client_id: clientId, week_number: week, day_of_week: 100 + free, label: "Free session", status: "published", free: true, session_started_at: at };
+  const day: ProgramDay = { id: allocId("program_days"), client_id: clientId, week_number: week, day_of_week: 100 + free, label: "Rogue session", status: "published", free: true, session_started_at: at };
   data.program_days.push(day);
   persist();
   return { ok: true, id: day.id };
@@ -12372,7 +12372,7 @@ export function getWorkoutCalendar(clientId: number): WorkoutDay[] {
 function trainedSessions(clientId: number): { date: string; dayId: number; title: string; minutes: number | null; finished: boolean }[] {
   const data = getData();
   const out: { date: string; dayId: number; title: string; minutes: number | null; finished: boolean }[] = [];
-  const title = (d: { label: string | null; day_of_week: number }) => d.label?.trim() || `Session ${d.day_of_week}`;
+  const title = (d: { label: string | null; day_of_week: number; free?: boolean }) => (d.free ? "Rogue session" : d.label?.trim() || `Session ${d.day_of_week}`);
   for (const d of data.program_days) {
     if (d.client_id !== clientId) continue;
     if (d.session_ended_at) {

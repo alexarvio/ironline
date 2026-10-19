@@ -198,11 +198,11 @@ export default function TrainingDayList({
           new Promise<{ ok: false; other?: string }>((resolve) => setTimeout(() => resolve({ ok: false }), 10000)),
         ]).catch(() => ({ ok: false as const }));
         if (!r.ok) {
-          setStartProblem("other" in r && r.other ? `Finish ${r.other} first.` : "Couldn't start a free session. Try again.");
+          setStartProblem("other" in r && r.other ? `Finish ${r.other} first.` : "Couldn't start a rogue session. Try again.");
           return;
         }
         const like = serverDays.find((d) => !d.free) ?? serverDays[0];
-        setLocalFree({ key: r.id, index: days.length + 1, week: like?.week ?? 1, title: "Free session", exercises: [], cardio: [], skipReason: "", startedAt: at, endedAt: null, sessionNote: "", questions: like?.questions ?? [], answers: {}, gyms: [], gymId: null, free: true });
+        setLocalFree({ key: r.id, index: days.length + 1, week: like?.week ?? 1, title: "Rogue session", exercises: [], cardio: [], skipReason: "", startedAt: at, endedAt: null, sessionNote: "", questions: like?.questions ?? [], answers: {}, gyms: [], gymId: null, free: true });
         setView({ dayId: r.id, screen: "workout" });
       } finally {
         setFreeBusy(false);
@@ -332,10 +332,10 @@ export default function TrainingDayList({
             On the same line as the week's sessions, but its ring empty: no
             number, so it doesn't read as one more to do this week. */}
         {currentWeek && (
-          <button type="button" className="tr-row tr-free" onClick={startFree} disabled={freeBusy} aria-label="Free session: your own workout, off the plan">
+          <button type="button" className="tr-row tr-free" onClick={startFree} disabled={freeBusy} aria-label="Rogue session: your own workout, off the plan">
             <span className="tr-row-tile free" aria-hidden="true" />
             <span className="tr-row-main">
-              <span className="tr-row-title">Free session</span>
+              <span className="tr-row-title">Rogue session</span>
               <span className="tr-row-sub">{freeBusy ? "Starting…" : "Your own workout, off the plan"}</span>
             </span>
             <span className="tr-row-chev" aria-hidden="true" />
