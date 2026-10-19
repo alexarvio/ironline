@@ -5628,7 +5628,8 @@ export const EVENT_PRESETS: { id: string; label: string; color: string }[] = [
   { id: "work", label: "Work", color: "navy" },
   // The client's sheet has these two as well (9 Oct); Family stays the coach's and reads as Other to the client.
   { id: "supplement", label: "Supplement", color: "green" },
-  { id: "training", label: "Sports", color: "rose" },
+  { id: "training", label: "Training", color: "navy" },
+  { id: "sports", label: "Sports", color: "rose" },
 ];
 
 export function listClientEvents(clientId: number): ClientEvent[] {

@@ -44,7 +44,7 @@ const chromeOf = (e: HomeEvent): Chrome => {
 };
 /** Which filter chip an event belongs to. */
 const groupOf = (e: HomeEvent): string => (e.phase ? "phase" : eventTypeOf(e.kind).id);
-const GROUP_LABELS: Record<string, string> = { trip: "Trips", supplement: "Supplements", health: "Health", training: "Sports", work: "Work", other: "Other", phase: "Phases" };
+const GROUP_LABELS: Record<string, string> = { trip: "Trips", supplement: "Supplements", health: "Health", training: "Training", sports: "Sports", family: "Family", work: "Work", other: "Other", phase: "Phases" };
 
 // A free day (16 Oct): today still gets its row, in ink, so the list always
 // shows where today is. Id 0 is never an event's (saved ones are positive,
