@@ -270,3 +270,7 @@ html .rd.trn .trn-rail[role="tablist"] .trn-week[role="tab"].on { box-shadow: in
 
 /* The exercise and cardio search bars as wide as their dropdown (20 Oct, Alex): a compact bar, the list the same width under it. */
 .rd.trn .rd-rows .rd-addrow:has(> .rd-addrow-bar) { min-width: 0; max-width: 560px; box-sizing: border-box; }
+/* One container, not two (20 Oct, Alex): the search bar alone, no frame around it; its edge in ink, not blue. */
+.rd.trn .rd-rows .rd-addrow:has(> .rd-addrow-bar) { margin: 8px 0 6px 10px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.rd.trn .rd-rows .rd-addrow > .rd-addrow-bar { border: 1px solid var(--trn-ink); border-radius: 12px; box-shadow: none; background: #fff; }
+.rd.trn .rd-rows .rd-addrow > .rd-addrow-bar .rd-addrow-search { box-shadow: none; }

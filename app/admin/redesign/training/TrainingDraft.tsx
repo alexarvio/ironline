@@ -523,6 +523,25 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
       await new Promise((r) => setTimeout(r, 150));
     }
   };
+  // A row just added waits (faded) for the page read that brings its real id.
+  // That read can get lost (a dropped connection, a dev server rebuilding), and
+  // the row stayed faded and locked (20 Oct, Alex). So while one waits: read
+  // again every two seconds, three times, then fall back to what is saved.
+  const landing = sessions.some((x) => x.rows.some((r) => r.id < 0) || x.cardio.some((c) => c.id < 0));
+  const landingTries = useRef(0);
+  useEffect(() => {
+    if (!landing) {
+      landingTries.current = 0;
+      return;
+    }
+    const t = setInterval(() => {
+      if (Object.values(inFlight.current).some(Boolean)) return;
+      landingTries.current += 1;
+      if (landingTries.current <= 3) router.refresh();
+      else setSeenProgram("");
+    }, 2000);
+    return () => clearInterval(t);
+  }, [landing, router]);
   const weekFailed = Object.values(failed).some(Boolean);
   const weekSaving = anyPending || Object.values(saving).some(Boolean);
   const retry = () => {
@@ -964,7 +983,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                     ) : null;
                   })()}
                 </span>
-                <span className={`trn-state ${status.cls}`}>{status.text}</span>
+                {/* "Not started" only where it can be: this week, or a past week left undone; a week still to come shows nothing (20 Oct, Alex). */}
+                {!(status.cls === "idle" && week.state === "ahead") && <span className={`trn-state ${status.cls}`}>{status.text}</span>}
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger className="trn-row-more" aria-label={`More for ${name}`}>
                     <MoreIcon />
