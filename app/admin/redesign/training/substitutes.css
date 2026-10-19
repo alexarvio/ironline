@@ -1,0 +1,94 @@
+/* ---- Substitutes (SessionSubstitutesDialog), in the admin hairline style (20 Oct).
+   Portalled, so not under .rd.trn; doubled classes out-rank the dialog's own
+   utility classes (the dev-server CSS-order trap). Prefix sbh-. The card's
+   overflow stays visible so the library search's list can float past it;
+   on short screens the card scrolls instead. */
+.sbh.sbh { width: min(480px, 100vw - 32px); max-width: none; display: flex; flex-direction: column; gap: 0; padding: 20px 20px 16px; border: 0; border-radius: 20px; background: #fff; box-shadow: 0 30px 60px -24px rgba(16, 24, 40, 0.35), 0 0 0 1px #e1e5eb; overflow: visible; color: #141a24; font-family: var(--font-archivo), system-ui, sans-serif; outline: none; }
+.sbh.sbh > button[data-slot="dialog-close"], .sbh.sbh > button.absolute { display: none; }
+@media (max-height: 720px) {
+  .sbh.sbh { max-height: calc(100dvh - 24px); overflow-y: auto; scrollbar-width: thin; scrollbar-color: #d5dae3 transparent; }
+}
+
+/* Head: the title and a ghost close; one line of facts under it. */
+.sbh-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.sbh-title.sbh-title { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; color: #141a24; }
+.sbh-x { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin: -2px -4px 0 0; padding: 0; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; color: #8b93a1; cursor: pointer; }
+.sbh-x:hover, .sbh-x:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }
+.sbh-what.sbh-what { margin: 4px 0 0; font-size: 13.5px; font-weight: 500; line-height: 1.4; color: #5b6474; overflow-wrap: anywhere; }
+
+/* Sections: a small-caps label, then hairline rows. */
+.sbh-sec { display: flex; flex-direction: column; margin-top: 20px; }
+.sbh-label-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 2px; font: inherit; }
+.sbh-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; white-space: nowrap; }
+.sbh-link { font-size: 12.5px; font-weight: 600; color: #141a24; text-decoration: none; white-space: nowrap; border-radius: 6px; }
+.sbh-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.sbh-link:focus-visible { outline: none; background: #f5f6f8; box-shadow: 0 0 0 4px #f5f6f8; }
+.sbh-count { font-size: 12px; font-weight: 500; color: #98a2b3; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sbh-empty { margin: 6px 0 0; font-size: 13.5px; font-weight: 500; color: #98a2b3; }
+
+.sbh-rows { list-style: none; margin: 0; padding: 0; }
+.sbh-rows > li + li { border-top: 1px solid #eef0f3; }
+.sbh-librow { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; }
+.sbh-row { display: grid; grid-template-columns: 14px 48px minmax(0, 1fr) 28px; gap: 12px; align-items: center; padding: 10px 0; }
+.sbh-rows.replaced .sbh-librow { opacity: 0.5; }
+.sbh-librow.off .sbh-thumb, .sbh-librow.off .sbh-text { opacity: 0.45; }
+.sbh-thumb, .sbh-text { transition: opacity 0.2s; }
+
+.sbh-thumb { display: block; width: 48px; height: 36px; border-radius: 8px; object-fit: cover; background: #eef0f3; }
+.sbh-thumb.none { display: inline-flex; align-items: center; justify-content: center; background: #f5f6f8; font-size: 9px; font-weight: 600; color: #98a2b3; white-space: nowrap; }
+.sbh-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sbh-text b { font-size: 14px; font-weight: 500; line-height: 1.35; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sbh-text small { font-size: 12px; font-weight: 500; color: #98a2b3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sbh-tag { font-size: 12px; font-weight: 500; color: #98a2b3; white-space: nowrap; }
+.sbh-rank { font-size: 12px; font-weight: 600; color: #98a2b3; text-align: center; font-variant-numeric: tabular-nums; }
+
+/* Offered on this session: a switch, ink when on. */
+.sbh-switch { position: relative; flex: none; width: 36px; height: 22px; padding: 0; border: 0; border-radius: 999px; background: #141a24; cursor: pointer; transition: background 0.2s; }
+.sbh-switch[aria-checked="false"] { background: #d5dae3; }
+.sbh-switch i { position: absolute; top: 3px; left: 17px; width: 16px; height: 16px; border-radius: 999px; background: #fff; box-shadow: 0 1px 3px rgba(16, 24, 40, 0.25); transition: left 0.2s; }
+.sbh-switch[aria-checked="false"] i { left: 3px; }
+.sbh-switch:focus-visible { outline: none; box-shadow: 0 0 0 4px #eef0f3; }
+
+/* The note under a session pick: a clean line while empty; just the words once written. */
+.sbh-note { display: block; width: 100%; height: 26px; margin: 0; padding: 2px 0 3px; border: 0; border-bottom: 1px solid #e1e5eb; border-radius: 0; outline: none; background: transparent; font: inherit; font-size: 13.5px; font-weight: 500; color: #141a24; box-sizing: border-box; transition: border-color 0.15s; }
+.sbh-note:not(:placeholder-shown) { border-bottom-color: transparent; }
+.sbh-note:hover { border-bottom-color: #e1e5eb; }
+.sbh-note:focus { border-bottom-color: #141a24; }
+.sbh-note::placeholder { color: #98a2b3; }
+.sbh-remove { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 12px; color: #98a2b3; cursor: pointer; }
+.sbh-remove:hover, .sbh-remove:focus-visible { outline: none; background: #fdf1ef; color: #b42318; }
+
+/* The library search: a hairline capsule; its list floats under it. */
+.sbh-search-wrap { position: relative; display: flex; flex-direction: column; margin-top: 8px; }
+.sbh-search { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; color: #98a2b3; cursor: text; transition: box-shadow 0.15s; }
+.sbh-search:focus-within, .sbh-search.open { box-shadow: inset 0 0 0 1px #141a24; color: #5b6474; }
+.sbh-search svg { flex: none; }
+.sbh-search input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: none; background: none; font: inherit; font-size: 14px; font-weight: 500; color: #141a24; }
+.sbh-search input::placeholder { color: #98a2b3; }
+.sbh-drop { position: absolute; top: 46px; left: 0; right: 0; z-index: 5; display: flex; flex-direction: column; gap: 1px; max-height: 264px; overflow-y: auto; padding: 6px; border-radius: 14px; background: #fff; box-shadow: 0 24px 40px -16px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; scrollbar-width: thin; scrollbar-color: #d5dae3 transparent; }
+.sbh-drop-label { padding: 6px 10px 4px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #98a2b3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sbh-opt { flex: none; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 38px; padding: 0 10px; border: 0; border-radius: 8px; background: none; font: inherit; text-align: left; cursor: pointer; }
+.sbh-opt span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 500; color: #141a24; }
+.sbh-opt small { font-size: 12px; font-weight: 500; color: #98a2b3; white-space: nowrap; }
+.sbh-opt:hover, .sbh-opt.on { background: #f5f6f8; }
+.sbh-nomatch { display: flex; align-items: center; gap: 10px; padding: 8px 10px; font-size: 13.5px; font-weight: 500; color: #98a2b3; }
+.sbh-create { margin-left: auto; padding: 0; border: 0; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #141a24; white-space: nowrap; cursor: pointer; }
+.sbh-create:hover { text-decoration: underline; text-underline-offset: 3px; }
+.sbh-create:disabled { color: #98a2b3; text-decoration: none; cursor: default; }
+.sbh-copy { align-self: flex-start; margin-top: 8px; padding: 2px 0; border: 0; border-radius: 6px; background: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #5b6474; cursor: pointer; }
+.sbh-copy:hover { color: #141a24; }
+.sbh-copy:focus-visible { outline: none; background: #f5f6f8; box-shadow: 0 0 0 4px #f5f6f8; color: #141a24; }
+
+.sbh-error { margin: 12px 0 0; font-size: 13px; font-weight: 600; color: #b42318; }
+
+/* Footer: Cancel as words, Save as a black pill. */
+.sbh-foot { display: flex; align-items: center; justify-content: flex-end; gap: 2px; margin-top: 20px; }
+.sbh-cancel { height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #5b6474; cursor: pointer; }
+.sbh-cancel:hover { color: #141a24; }
+.sbh-cancel:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }
+.sbh-save { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 18px; border: 0; border-radius: 999px; background: #141a24; font: inherit; font-size: 13.5px; font-weight: 600; color: #fff; white-space: nowrap; cursor: pointer; transition: background 0.15s; }
+.sbh-save:hover { background: #000; }
+.sbh-save:focus-visible { outline: none; box-shadow: 0 0 0 4px #e1e5eb; }
+.sbh-save:disabled { background: #c9cfd8; box-shadow: none; cursor: default; }
+.sbh-spin { width: 13px; height: 13px; border-radius: 999px; border: 2px solid rgba(255, 255, 255, 0.35); border-top-color: #fff; box-sizing: border-box; animation: sbh-spin 0.8s linear infinite; }
+@keyframes sbh-spin { to { transform: rotate(360deg); } }

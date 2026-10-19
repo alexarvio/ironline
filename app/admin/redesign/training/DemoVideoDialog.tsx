@@ -1,14 +1,14 @@
 "use client";
 
+import "./demo-video.css";
 import { useEffect, useRef, useState } from "react";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 
-// The demo video on an exercise (15 Oct), in the shared pop-up language:
-// what the clients see now as a real preview (the poster, the source, the
-// title, a short URL, Play and Open), then a new source: a link (YouTube,
-// Vimeo, Drive, anything), a file (dropped or chosen, with progress), or one
-// of the coach's own videos from the library. The demo belongs to the
-// library exercise: set once, every client's sheet with it shows it.
+// The demo video on an exercise (15 Oct), in the admin hairline style (20 Oct,
+// Alex): the exercise name, one quiet fact line, the demo as clients see it,
+// then a new source: a link, a file (dropped or chosen, with progress), or one
+// of the coach's own videos. No explanations. The demo belongs to the library
+// exercise: set once, every client's sheet with it shows it. Prefix dmvh-.
 
 const PLAY = "M8 5v14l11-7z";
 export type DemoCurrent = { url: string; source: "library" | "row" } | null;
@@ -34,7 +34,7 @@ const mb = (bytes: number) => `${Math.max(1, Math.round(bytes / 1024 / 1024))} M
 const shortDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
 
-/** The poster for a source: YouTube's thumbnail, the clip's first frame, or the gradient. */
+/** The poster for a source: YouTube's thumbnail, the clip's first frame, or the plain dark tile. */
 function Poster({ url, onDuration }: { url: string; onDuration?: (s: number) => void }) {
   const id = ytId(url);
   if (id)
@@ -152,80 +152,59 @@ export default function DemoVideoDialog({
   const previewTitle = preview ? (isUpload(preview) ? fileName(preview) : `${exerciseName} demo`) : "";
   const previewProvider = preview ? providerOf(preview) : null;
   const clip = preview && isUpload(preview) ? videos.find((v) => v.path === preview) ?? null : null;
+  const previewMeta = !preview
+    ? ""
+    : isUpload(preview)
+      ? ["Uploaded", clip ? shortDate(clip.at) : null, clip?.bytes ? mb(clip.bytes) : null].filter(Boolean).join(" · ")
+      : `${previewProvider} · ${shortUrl(preview)}`;
 
   return (
-    <DialogContent className="dmv" aria-describedby={undefined} aria-label={`${exerciseName} demo video`} onOpenAutoFocus={(ev) => ev.preventDefault()}>
-      <span className="dmv-glow" aria-hidden="true" />
-      <span className="dmv-wash" aria-hidden="true" />
-      <div className="dmv-body">
-        <header className="dmv-head">
-          <span className="dmv-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width={34} height={34} fill="currentColor">
-              <path d={PLAY} />
-            </svg>
-          </span>
-          <div className="dmv-head-text">
-            <div className="dmv-pills">
-              <span className="dmv-pill">Demo video</span>
-              <span className={`dmv-state ${attached ? "on" : "off"}`}>{attached ? "Attached" : "No demo yet"}</span>
-            </div>
-            <DialogTitle className="dmv-title">{exerciseName}</DialogTitle>
-            <DialogDescription className="dmv-sub">Set once, shows on every client’s sheet with this exercise{clientsUsing > 1 ? ` · ${clientsUsing} clients` : ""}</DialogDescription>
-          </div>
-          <button type="button" className="dmv-x" onClick={onClose} aria-label="Close">
-            <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" aria-hidden="true">
-              <path d="M6 6l12 12M18 6 6 18" />
-            </svg>
-          </button>
-        </header>
+    <DialogContent className="dmvh" aria-describedby={undefined} aria-label={`${exerciseName} demo video`} onOpenAutoFocus={(ev) => ev.preventDefault()}>
+      <div className="dmvh-head">
+        <DialogTitle className="dmvh-title">{exerciseName}</DialogTitle>
+        <button type="button" className="dmvh-x" onClick={onClose} aria-label="Close">
+          ✕
+        </button>
+      </div>
+      <DialogDescription className="dmvh-what">Demo video{clientsUsing > 1 ? ` · ${clientsUsing} clients` : ""}</DialogDescription>
 
+      <div className="dmvh-body">
         {preview && previewProvider && (
-          <div className="dmv-section">
-            <span className="dmv-label">Clients see</span>
-            <div className="dmv-card">
-              <span className="dmv-thumb">
+          <section className="dmvh-section">
+            <span className="dmvh-label">{isNew ? "New" : "Current"}</span>
+            <div className="dmvh-card">
+              <span className="dmvh-thumb">
                 <Poster url={preview} onDuration={setDuration} />
-                <i className="dmv-playdisc" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width={16} height={16} fill="currentColor">
+                <i className="dmvh-playdisc" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width={14} height={14} fill="currentColor">
                     <path d={PLAY} />
                   </svg>
                 </i>
-                {duration != null && isUpload(preview) && <small className="dmv-duration">{clock(duration)}</small>}
-                {isNew && <small className="dmv-new">New</small>}
+                {duration != null && isUpload(preview) && <small className="dmvh-duration">{clock(duration)}</small>}
               </span>
-              <span className="dmv-info">
-                <span className={`dmv-source${previewProvider.startsWith("YouTube") ? " yt" : ""}`}>
-                  <svg viewBox="0 0 24 24" width={11} height={11} fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    {previewProvider === "Uploaded file" ? <path d="M12 16V4M6 10l6-6 6 6M4 20h16" /> : <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.5 1.5M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.5-1.5" />}
-                  </svg>
-                  {previewProvider}
-                </span>
-                <b className="dmv-ptitle">{previewTitle}</b>
-                <small className="dmv-purl">{isUpload(preview) ? `Uploaded ${clip ? shortDate(clip.at) : ""}${clip?.bytes ? ` · ${mb(clip.bytes)}` : ""}`.replace("Uploaded  ·", "Uploaded ·").trim() : shortUrl(preview)}</small>
-                <span className="dmv-btns">
-                  <button type="button" className="dmv-play" onClick={() => setPlaying(preview)}>
+              <span className="dmvh-info">
+                <b className="dmvh-ptitle">{previewTitle}</b>
+                <small className="dmvh-meta">{previewMeta}</small>
+                <span className="dmvh-btns">
+                  <button type="button" className="dmvh-play" onClick={() => setPlaying(preview)}>
                     <svg viewBox="0 0 24 24" width={10} height={10} fill="currentColor" aria-hidden="true">
                       <path d={PLAY} />
                     </svg>
                     Play
                   </button>
                   {!isUpload(preview) && (
-                    <a className="dmv-open" href={preview} target="_blank" rel="noreferrer">
-                      Open
-                      <svg viewBox="0 0 24 24" width={11} height={11} fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M7 17 17 7M9 7h8v8" />
-                      </svg>
+                    <a className="dmvh-open" href={preview} target="_blank" rel="noreferrer">
+                      Open ↗
                     </a>
                   )}
                 </span>
               </span>
             </div>
-          </div>
+          </section>
         )}
 
-        <div className="dmv-section">
-          <span className="dmv-label">{attached ? "Replace it with" : "Add a demo"}</span>
-          <div className="dmv-seg" role="tablist" aria-label="Source">
+        <section className="dmvh-section">
+          <div className="dmvh-seg" role="tablist" aria-label="Source">
             {(
               [
                 ["link", "Paste a link"],
@@ -240,16 +219,13 @@ export default function DemoVideoDialog({
           </div>
 
           {tab === "link" && (
-            <div className="dmv-panel" role="tabpanel">
-              <label className={`dmv-field${linkOk ? " ok" : linkBad ? " bad" : ""}`}>
-                <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.5 1.5M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.5-1.5" />
-                </svg>
+            <div className="dmvh-panel" role="tabpanel">
+              <label className={`dmvh-field${linkBad ? " bad" : ""}`}>
                 <input
                   ref={linkInput}
                   value={link}
                   onChange={(e) => setLink(e.target.value)}
-                  placeholder="Paste a YouTube, Vimeo or Drive link"
+                  placeholder="YouTube, Vimeo or Drive link"
                   aria-label="Link"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
@@ -259,20 +235,20 @@ export default function DemoVideoDialog({
                   }}
                 />
                 {linkOk && (
-                  <span className="dmv-recognised" aria-live="polite">
+                  <span className="dmvh-recognised" aria-live="polite">
                     ✓ {providerOf(trimmed) === "YouTube Shorts" ? "YouTube" : providerOf(trimmed)}
                   </span>
                 )}
               </label>
-              {linkBad ? <span className="dmv-bad">That doesn’t look like a link</span> : <span className="dmv-help">Anything the client can open without signing in.</span>}
+              {linkBad && <span className="dmvh-bad">Not a link</span>}
             </div>
           )}
 
           {tab === "file" && (
-            <div className="dmv-panel" role="tabpanel">
+            <div className="dmvh-panel" role="tabpanel">
               <button
                 type="button"
-                className={`dmv-drop${dragOver ? " over" : ""}${upload.state === "done" ? " done" : upload.state === "error" ? " bad" : ""}`}
+                className={`dmvh-drop${dragOver ? " over" : ""}${upload.state === "done" ? " done" : upload.state === "error" ? " bad" : ""}`}
                 onClick={() => fileInput.current?.click()}
                 onDragOver={(e) => {
                   e.preventDefault();
@@ -290,12 +266,12 @@ export default function DemoVideoDialog({
                 {upload.state === "uploading" ? (
                   <>
                     <b>Uploading {Math.round(upload.share * 100)}%</b>
-                    <i className="dmv-progress" style={{ width: `${upload.share * 100}%` }} aria-hidden="true" />
+                    <i className="dmvh-progress" style={{ width: `${upload.share * 100}%` }} aria-hidden="true" />
                   </>
                 ) : upload.state === "done" && file ? (
                   <>
                     <b>✓ {file.name}</b>
-                    <small>Ready. It also goes into Your videos.</small>
+                    <small>Uploaded</small>
                   </>
                 ) : upload.state === "error" ? (
                   <>
@@ -305,11 +281,11 @@ export default function DemoVideoDialog({
                 ) : file ? (
                   <>
                     <b>{file.name}</b>
-                    <small>{mb(file.size)} · ready to add</small>
+                    <small>{mb(file.size)}</small>
                   </>
                 ) : (
                   <>
-                    <b>Drop a video, or click to choose</b>
+                    <b>Drop or choose a video</b>
                     <small>MP4 or MOV · up to 200 MB</small>
                   </>
                 )}
@@ -319,21 +295,26 @@ export default function DemoVideoDialog({
           )}
 
           {tab === "mine" && (
-            <div className="dmv-panel" role="tabpanel">
-              {videos.length > 12 && <input className="dmv-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search your videos" aria-label="Search your videos" />}
+            <div className="dmvh-panel" role="tabpanel">
+              {videos.length > 12 && <input className="dmvh-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" aria-label="Search your videos" />}
               {videos.length === 0 ? (
-                <p className="dmv-none">No videos in your library yet. Upload one and it lands there too.</p>
+                <p className="dmvh-none">None yet</p>
               ) : (
-                <div className="dmv-grid" role="radiogroup" aria-label="Your videos">
+                <div className="dmvh-list" role="radiogroup" aria-label="Your videos">
                   {shownVideos.map((v) => {
                     const on = picked === v.path;
                     return (
-                      <button key={v.id} type="button" role="radio" aria-checked={on} className={`dmv-clip${on ? " on" : ""}`} onClick={() => setPicked(on ? null : v.path)} aria-label={v.name}>
-                        <video src={`${v.path}#t=0.5`} preload="metadata" muted playsInline />
-                        <small>{v.name}</small>
+                      <button key={v.id} type="button" role="radio" aria-checked={on} className={`dmvh-row${on ? " on" : ""}`} onClick={() => setPicked(on ? null : v.path)}>
+                        <span className="dmvh-rthumb" aria-hidden="true">
+                          <video src={`${v.path}#t=0.5`} preload="metadata" muted playsInline />
+                        </span>
+                        <span className="dmvh-rtext">
+                          <b>{v.name}</b>
+                          <small>{[v.path === attached ? "Current" : null, shortDate(v.at), v.bytes ? mb(v.bytes) : null].filter(Boolean).join(" · ")}</small>
+                        </span>
                         {on && (
-                          <i aria-hidden="true">
-                            <svg viewBox="0 0 24 24" width={11} height={11} fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                          <i className="dmvh-tick" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
                               <path d="M5 12l5 5 9-10" />
                             </svg>
                           </i>
@@ -344,50 +325,48 @@ export default function DemoVideoDialog({
                 </div>
               )}
               {!all && sortedVideos.length > 8 && (
-                <button type="button" className="dmv-more" onClick={() => setAll(true)}>
+                <button type="button" className="dmvh-more" onClick={() => setAll(true)}>
                   See all {sortedVideos.length}
                 </button>
               )}
             </div>
           )}
-        </div>
+        </section>
 
-        {error && <p className="dmv-error">{error}</p>}
+        {error && <p className="dmvh-error">{error}</p>}
       </div>
 
-      <footer className="dmv-foot">
-        {attached &&
-          (confirm ? (
-            <span className="dmv-confirm">
-              Remove for all {clientsUsing > 1 ? `${clientsUsing} clients` : "clients"}?
-              <button type="button" className="dmv-danger" onClick={() => void remove()}>
-                Yes, remove
-              </button>
-              <button type="button" className="dmv-keep" onClick={() => setConfirm(false)}>
-                Keep
-              </button>
-            </span>
-          ) : (
-            <button type="button" className="dmv-remove" onClick={() => setConfirm(true)}>
-              <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
-              </svg>
+      {attached && confirm ? (
+        <div className="dmvh-foot">
+          <span className="dmvh-ask">{clientsUsing > 1 ? `Remove for all ${clientsUsing} clients?` : "Remove the demo?"}</span>
+          <button type="button" className="dmvh-cancel" onClick={() => setConfirm(false)}>
+            Keep
+          </button>
+          <button type="button" className="dmvh-danger" onClick={() => void remove()}>
+            Remove
+          </button>
+        </div>
+      ) : (
+        <div className="dmvh-foot">
+          {attached && (
+            <button type="button" className="dmvh-danger dmvh-remove" onClick={() => setConfirm(true)}>
               Remove
             </button>
-          ))}
-        <span className="dmv-spacer" />
-        <button type="button" className="dmv-cancel" onClick={onClose}>
-          Cancel
-        </button>
-        <button type="button" className="dmv-primary" disabled={!ready || busy} onClick={() => void save()}>
-          {busy ? <span className="dmv-spin" aria-hidden="true" /> : null}
-          {attached ? "Replace" : "Add demo"}
-        </button>
-      </footer>
+          )}
+          <span className="dmvh-spacer" />
+          <button type="button" className="dmvh-cancel" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="button" className="dmvh-primary" disabled={!ready || busy} onClick={() => void save()}>
+            {busy ? <span className="dmvh-spin" aria-hidden="true" /> : null}
+            {attached ? "Replace" : "Add demo"}
+          </button>
+        </div>
+      )}
 
       {playing && (
-        <div className="dmv-lightbox" role="dialog" aria-label="Playing the demo" onClick={() => setPlaying(null)}>
-          <div className="dmv-lightbox-box" onClick={(e) => e.stopPropagation()}>
+        <div className="dmvh-lightbox" role="dialog" aria-label="Playing the demo" onClick={() => setPlaying(null)}>
+          <div className="dmvh-lightbox-box" onClick={(e) => e.stopPropagation()}>
             {ytId(playing) ? (
               <iframe src={`https://www.youtube.com/embed/${ytId(playing)}?autoplay=1`} title="Demo" allow="autoplay; fullscreen" allowFullScreen />
             ) : /vimeo\.com\/(\d+)/.test(playing) ? (
@@ -395,11 +374,11 @@ export default function DemoVideoDialog({
             ) : isUpload(playing) ? (
               <video src={playing} controls autoPlay playsInline />
             ) : (
-              <a className="dmv-open" href={playing} target="_blank" rel="noreferrer">
+              <a className="dmvh-lightbox-open" href={playing} target="_blank" rel="noreferrer">
                 Open the link ↗
               </a>
             )}
-            <button type="button" className="dmv-lightbox-x" onClick={() => setPlaying(null)} aria-label="Close">
+            <button type="button" className="dmvh-lightbox-x" onClick={() => setPlaying(null)} aria-label="Close">
               ✕
             </button>
           </div>

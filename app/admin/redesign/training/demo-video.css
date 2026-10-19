@@ -1,0 +1,110 @@
+/* The demo video pop-up (DemoVideoDialog) in the admin hairline style (20 Oct, Alex),
+   after the Delete session pop-up (.dlh in trn.css). Prefix dmvh-. Classes on the
+   dialog's own elements are doubled to beat its utility classes (dev-server CSS order). */
+
+.dmvh.dmvh { width: min(440px, 100vw - 32px); max-width: none; max-height: min(720px, calc(100vh - 32px)); display: flex; flex-direction: column; gap: 10px; padding: 20px 20px 16px; border: 0; border-radius: 20px; background: #fff; box-shadow: 0 30px 60px -24px rgba(16, 24, 40, 0.35), 0 0 0 1px #e1e5eb; color: #141a24; font-family: var(--font-archivo), system-ui, sans-serif; overflow: hidden; }
+.dmvh.dmvh > button[data-slot="dialog-close"], .dmvh.dmvh > button.absolute { display: none; }
+
+/* Head: the exercise, a ghost ✕, one fact line. */
+.dmvh-head { flex: none; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.dmvh-title.dmvh-title { margin: 0; min-width: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; color: #141a24; }
+.dmvh-x { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin: -2px -4px 0 0; padding: 0; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; color: #8b93a1; cursor: pointer; }
+.dmvh-x:hover, .dmvh-x:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }
+.dmvh-what.dmvh-what { flex: none; margin: 0; font-size: 13.5px; font-weight: 500; line-height: 1.4; color: #5b6474; }
+
+/* Body: scrolls on its own when the list is long. */
+.dmvh-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; margin: 6px -20px 0; padding: 2px 20px 4px; scrollbar-width: thin; scrollbar-color: #dce1e8 transparent; }
+.dmvh-body::-webkit-scrollbar { width: 6px; }
+.dmvh-body::-webkit-scrollbar-thumb { border-radius: 999px; background: #dce1e8; }
+.dmvh-section { display: flex; flex-direction: column; gap: 10px; }
+.dmvh-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+
+/* The demo as clients see it. */
+.dmvh-card { display: flex; align-items: center; gap: 14px; }
+.dmvh-thumb { position: relative; flex: none; display: block; width: 72px; height: 90px; border-radius: 10px; overflow: hidden; background: #1a2030; }
+.dmvh-thumb img, .dmvh-thumb video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.dmvh-playdisc { position: absolute; left: 50%; top: 50%; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 999px; background: rgba(255, 255, 255, 0.22); color: #fff; }
+.dmvh-duration { position: absolute; left: 5px; bottom: 5px; padding: 1px 5px; border-radius: 5px; background: rgba(14, 17, 24, 0.6); color: #fff; font-size: 10.5px; font-weight: 600; }
+.dmvh-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.dmvh-ptitle { font-size: 14.5px; font-weight: 600; line-height: 1.3; color: #141a24; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.dmvh-meta { font-size: 12px; font-weight: 500; color: #98a2b3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dmvh-btns { display: flex; align-items: center; gap: 4px; margin-top: 6px; }
+.dmvh-play { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; font: inherit; font-size: 12.5px; font-weight: 600; color: #141a24; cursor: pointer; }
+.dmvh-play:hover, .dmvh-play:focus-visible { outline: none; background: #f5f6f8; }
+.dmvh-open { display: inline-flex; align-items: center; height: 30px; padding: 0 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600; color: #5b6474; text-decoration: none; }
+.dmvh-open:hover, .dmvh-open:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }
+
+/* Paste a link / Upload a file / Your videos. */
+.dmvh-seg { display: flex; height: 36px; padding: 3px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; }
+.dmvh-seg button { flex: 1; min-width: 0; height: 30px; padding: 0 8px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13px; font-weight: 600; color: #5b6474; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.dmvh-seg button:hover { color: #141a24; }
+.dmvh-seg button:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }
+.dmvh-seg button.on { background: #141a24; color: #fff; }
+.dmvh-seg button.on:focus-visible { background: #2a3242; }
+.dmvh-panel { display: flex; flex-direction: column; gap: 8px; }
+
+/* The link: a clean line. */
+.dmvh-field { display: flex; align-items: center; gap: 10px; height: 40px; border-bottom: 1px solid #e1e5eb; transition: border-color 0.15s; }
+.dmvh-field:focus-within { border-bottom-color: #141a24; }
+.dmvh-field.bad, .dmvh-field.bad:focus-within { border-bottom-color: #b42318; }
+.dmvh-field input { flex: 1; min-width: 0; height: 100%; margin: 0; padding: 0; border: 0; border-radius: 0; outline: none; box-shadow: none; background: transparent; font: inherit; font-size: 15px; font-weight: 500; color: #141a24; }
+.dmvh-field input::placeholder { color: #98a2b3; }
+.dmvh-recognised { flex: none; font-size: 12px; font-weight: 600; color: #5b6474; white-space: nowrap; }
+.dmvh-bad { font-size: 12.5px; font-weight: 500; color: #b42318; }
+
+/* The file: a quiet drop area. */
+.dmvh-drop { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 100%; height: 112px; padding: 0 16px; border: 1px dashed #c9cfd8; border-radius: 14px; background: #fff; font: inherit; color: #141a24; text-align: center; cursor: pointer; overflow: hidden; transition: border-color 0.15s, background 0.15s; }
+.dmvh-drop b { max-width: 100%; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dmvh-drop small { font-size: 12px; font-weight: 500; color: #98a2b3; }
+.dmvh-drop:hover, .dmvh-drop:focus-visible { outline: none; background: #f5f6f8; }
+.dmvh-drop.over { border-color: #141a24; background: #f5f6f8; }
+.dmvh-drop.done { border-style: solid; border-color: #e1e5eb; }
+.dmvh-drop.bad { border-color: #b42318; }
+.dmvh-drop.bad b { color: #b42318; }
+.dmvh-progress { position: absolute; left: 0; bottom: 0; height: 3px; background: #141a24; transition: width 0.2s; }
+
+/* Your videos: rows with hairlines between. */
+.dmvh-search { width: 100%; height: 36px; margin: 0; padding: 0 14px; border: 0; border-radius: 999px; outline: none; background: #fff; box-shadow: inset 0 0 0 1px #dce1e8; font: inherit; font-size: 13.5px; font-weight: 500; color: #141a24; }
+.dmvh-search::placeholder { color: #98a2b3; }
+.dmvh-search:focus { box-shadow: inset 0 0 0 1px #141a24; }
+.dmvh-list { display: flex; flex-direction: column; }
+.dmvh-row { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 7px 8px; border: 0; border-radius: 10px; background: none; font: inherit; color: #141a24; text-align: left; cursor: pointer; }
+.dmvh-row + .dmvh-row::before { content: ""; position: absolute; left: 8px; right: 8px; top: 0; height: 1px; background: #eef0f3; }
+.dmvh-row:hover, .dmvh-row:focus-visible { outline: none; background: #fafbfc; }
+.dmvh-row.on { background: #f5f6f8; }
+.dmvh-row.on::before, .dmvh-row.on + .dmvh-row::before, .dmvh-row:hover::before, .dmvh-row:hover + .dmvh-row::before { opacity: 0; }
+.dmvh-rthumb { position: relative; flex: none; width: 48px; height: 36px; border-radius: 6px; overflow: hidden; background: #1a2030; }
+.dmvh-rthumb video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.dmvh-rtext { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.dmvh-rtext b { font-size: 14px; font-weight: 500; color: #141a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dmvh-rtext small { font-size: 12px; font-weight: 500; color: #98a2b3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dmvh-tick { flex: none; display: inline-flex; color: #141a24; }
+.dmvh-more { align-self: flex-start; height: 28px; margin-left: -8px; padding: 0 8px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 12.5px; font-weight: 600; color: #5b6474; cursor: pointer; }
+.dmvh-more:hover, .dmvh-more:focus-visible { outline: none; background: #f5f6f8; color: #141a24; }
+.dmvh-none { margin: 0; padding: 4px 0; font-size: 13.5px; font-weight: 500; color: #98a2b3; }
+.dmvh-error { margin: 0; font-size: 13px; font-weight: 600; color: #b42318; }
+
+/* Footer: Remove in red words on the left; Cancel and the black pill on the right. */
+.dmvh-foot { flex: none; display: flex; align-items: center; justify-content: flex-end; gap: 2px; margin-top: 6px; }
+.dmvh-spacer { flex: 1; }
+.dmvh-ask { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 500; color: #141a24; }
+.dmvh-cancel { height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #5b6474; white-space: nowrap; cursor: pointer; }
+.dmvh-cancel:hover { color: #141a24; }
+.dmvh-danger { height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #b42318; white-space: nowrap; cursor: pointer; }
+.dmvh-danger:hover { background: #fdf1ef; }
+.dmvh-remove { margin-left: -10px; }
+.dmvh-cancel:focus-visible, .dmvh-danger:focus-visible { outline: none; background: #f5f6f8; }
+.dmvh-primary { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 18px; border: 0; border-radius: 999px; background: #141a24; color: #fff; font: inherit; font-size: 13.5px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.dmvh-primary:hover { background: #2a3242; }
+.dmvh-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px #e1e5eb; }
+.dmvh-primary:disabled { background: #c9cfd8; box-shadow: none; cursor: default; }
+.dmvh-spin { width: 13px; height: 13px; border: 2px solid rgba(255, 255, 255, 0.35); border-top-color: #fff; border-radius: 999px; animation: dmvh-spin 0.8s linear infinite; }
+@keyframes dmvh-spin { to { transform: rotate(360deg); } }
+
+/* Play: over the card itself. */
+.dmvh-lightbox { position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; padding: 12px; border-radius: inherit; background: rgba(14, 17, 24, 0.92); }
+.dmvh-lightbox-box { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; max-height: 100%; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; background: #000; }
+.dmvh-lightbox-box iframe, .dmvh-lightbox-box video { width: 100%; height: 100%; border: 0; }
+.dmvh-lightbox-open { font-size: 13.5px; font-weight: 600; color: #fff; text-decoration: none; }
+.dmvh-lightbox-x { position: absolute; right: 8px; top: 8px; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.18); font: inherit; font-size: 13px; color: #fff; cursor: pointer; }
+.dmvh-lightbox-x:hover { background: rgba(255, 255, 255, 0.3); }

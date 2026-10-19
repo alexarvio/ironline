@@ -1,21 +1,21 @@
 "use client";
 
+import "./substitutes.css";
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 import { createLibraryExerciseAction } from "../library/actions";
 import type { Library } from "./TrainingDraft";
 
-// A session's substitutes for one exercise (15 Oct), in the shared pop-up
-// language. The library's substitutes are the defaults, read-only here;
-// up to three picked for this session replace them for this client. Each
-// session pick has a rank, the demo's poster, a note for the client and a
-// way out; more come from a search of the library, the same muscle group
-// first. Saved as one list; an empty list means "use the library".
+// A session's substitutes for one exercise (15 Oct), in the admin hairline
+// style since 20 Oct (Alex: no explanations, facts only). The library's
+// substitutes are the defaults, read-only here; up to three picked for this
+// session replace them for this client. Each session pick has a rank, the
+// demo's poster, a note for the client and a way out; more come from a search
+// of the library, the same muscle group first. Saved as one list; an empty
+// list means "use the library". Prefix sbh- (substitutes.css).
 
-const SWAP = "M7 4 3 8l4 4M3 8h13M17 20l4-4-4-4M21 16H8";
 const MAX = 3;
-const INFO_KEY = "norcoach:subs-info-dismissed";
 const ytId = (url: string) => /(?:youtu\.be\/|[?&]v=|shorts\/|embed\/)([\w-]{11})/.exec(url)?.[1] ?? null;
 
 export type SessionSub = { exerciseId: number; name: string; note: string };
@@ -27,10 +27,10 @@ function Thumb({ video }: { video: string | null }) {
   if (id)
     return (
       // eslint-disable-next-line @next/next/no-img-element -- YouTube's own thumbnail
-      <img className="ssb-thumb" src={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`} alt="" loading="lazy" draggable={false} />
+      <img className="sbh-thumb" src={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`} alt="" loading="lazy" draggable={false} />
     );
-  if (video && video.startsWith("/uploads/")) return <video className="ssb-thumb" src={`${video}#t=0.5`} preload="metadata" muted playsInline draggable={false} />;
-  return <span className="ssb-thumb none">No demo</span>;
+  if (video && video.startsWith("/uploads/")) return <video className="sbh-thumb" src={`${video}#t=0.5`} preload="metadata" muted playsInline draggable={false} />;
+  return <span className="sbh-thumb none">No demo</span>;
 }
 
 export default function SessionSubstitutesDialog({
@@ -62,20 +62,6 @@ export default function SessionSubstitutesDialog({
   const dirty = snapshot(list, hidden) !== initial;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // The pop-up only ever renders in the browser, so the dismissed flag can be read up front.
-  const [info, setInfo] = useState(() => {
-    try {
-      return !window.localStorage.getItem(INFO_KEY);
-    } catch {
-      return true;
-    }
-  });
-  const dismissInfo = () => {
-    setInfo(false);
-    try {
-      window.localStorage.setItem(INFO_KEY, "1");
-    } catch {}
-  };
 
   // The search.
   const [q, setQ] = useState("");
@@ -135,219 +121,179 @@ export default function SessionSubstitutesDialog({
   };
 
   return (
-    <DialogContent className="ssb" aria-describedby={undefined} aria-label={`Substitutes, ${row.name}`} onOpenAutoFocus={(ev) => ev.preventDefault()}>
-      <span className="ssb-decor" aria-hidden="true">
-        <i className="ssb-glow" />
-        <i className="ssb-wash" />
-      </span>
-      <div className="ssb-body">
-        <header className="ssb-head">
-          <span className="ssb-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width={36} height={36} fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-              <path d={SWAP} />
-            </svg>
-          </span>
-          <div className="ssb-head-text">
-            <DialogTitle className="ssb-title">Substitutes</DialogTitle>
-            <DialogDescription className="ssb-context">
-              <span className="ssb-pill">{row.name}</span>
-              <span className="ssb-meta">
-                {session} · {firstName}
-              </span>
-            </DialogDescription>
-          </div>
-          <button type="button" className="ssb-x" onClick={onClose} aria-label="Close">
-            <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" aria-hidden="true">
-              <path d="M6 6l12 12M18 6 6 18" />
-            </svg>
-          </button>
-        </header>
+    <DialogContent className="sbh" aria-label={`Substitutes, ${row.name}`} onOpenAutoFocus={(ev) => ev.preventDefault()}>
+      <div className="sbh-head">
+        <DialogTitle className="sbh-title">Substitutes</DialogTitle>
+        <button type="button" className="sbh-x" onClick={onClose} aria-label="Close">
+          ✕
+        </button>
+      </div>
+      <DialogDescription className="sbh-what">
+        {row.name} · {session}
+      </DialogDescription>
 
-        {info && (
-          <div className="ssb-info">
-            <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="9" />
-              <path d="M12 11v5M12 8h.01" />
-            </svg>
-            <span>
-              When the machine’s taken, {firstName} picks one under <b>Substitute today</b>. Targets carry over; those sets don’t count toward this exercise’s weight history.
-            </span>
-            <button type="button" className="ssb-info-x" onClick={dismissInfo} aria-label="Got it, hide this">
-              ✕
-            </button>
+      {/* From the library: read-only. */}
+      <section className="sbh-sec">
+        <h2 className="sbh-label-row">
+          <span className="sbh-label">From the library</span>
+          <Link href="/admin/redesign/library" className="sbh-link">
+            Edit in library ↗
+          </Link>
+        </h2>
+        {row.librarySubstitutes.length === 0 ? (
+          <p className="sbh-empty">None yet</p>
+        ) : (
+          <ul className={`sbh-rows${replaced ? " replaced" : ""}`}>
+            {row.librarySubstitutes.map((s) => {
+              const off = hidden.includes(s.exerciseId);
+              return (
+                <li key={s.exerciseId} className={`sbh-librow${off && !replaced ? " off" : ""}`} aria-label={`${s.name}, ${replaced ? "replaced" : off ? "not offered on this session" : "offered"}`}>
+                  <Thumb video={byId.get(s.exerciseId)?.video ?? null} />
+                  <span className="sbh-text">
+                    <b>{s.name}</b>
+                    <small>{s.note ? `“${s.note}”` : "No note"}</small>
+                  </span>
+                  {replaced ? (
+                    <span className="sbh-tag">Replaced</span>
+                  ) : (
+                    /* Offered by default; the coach can switch one off just for this session (15 Oct). */
+                    <button type="button" role="switch" aria-checked={!off} className="sbh-switch" onClick={() => setHidden((h) => (off ? h.filter((id) => id !== s.exerciseId) : [...h, s.exerciseId]))} aria-label={`${s.name} offered on this session`}>
+                      <i aria-hidden="true" />
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      {/* Just for this session. */}
+      <section className="sbh-sec">
+        <h2 className="sbh-label-row">
+          <span className="sbh-label">Just for this session</span>
+          <span className="sbh-count">
+            {list.length} of {MAX}
+          </span>
+        </h2>
+        {list.length > 0 && (
+          <ul className="sbh-rows">
+            {list.map((s, i) => {
+              const x = byId.get(s.exerciseId) ?? null;
+              return (
+                <li
+                  key={s.exerciseId}
+                  className="sbh-row"
+                  aria-label={`Substitute ${i + 1} of ${MAX}, ${s.name}`}
+                  onKeyDown={(e) => {
+                    if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+                      e.preventDefault();
+                      move(i, e.key === "ArrowUp" ? i - 1 : i + 1);
+                    }
+                  }}
+                >
+                  <span className="sbh-rank" aria-hidden="true">
+                    {i + 1}
+                  </span>
+                  <Thumb video={x?.video ?? null} />
+                  <span className="sbh-text">
+                    <b>{s.name}</b>
+                    <input className="sbh-note" value={s.note} onChange={(e) => setList((l) => l.map((y) => (y.exerciseId === s.exerciseId ? { ...y, note: e.target.value.slice(0, 120) } : y)))} placeholder={`Note for ${firstName}`} maxLength={120} aria-label={`Note for ${s.name}`} />
+                  </span>
+                  <button type="button" className="sbh-remove" onClick={() => setList((l) => l.filter((y) => y.exerciseId !== s.exerciseId))} aria-label={`Remove ${s.name}`}>
+                    ✕
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {list.length < MAX && (
+          <div className="sbh-search-wrap">
+            <label className={`sbh-search${open ? " open" : ""}`}>
+              <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" />
+                <path d="M20 20l-3.5-3.5" />
+              </svg>
+              <input
+                ref={input}
+                role="combobox"
+                aria-expanded={open}
+                aria-controls="sbh-listbox"
+                aria-autocomplete="list"
+                aria-label="Search the library"
+                value={q}
+                onChange={(e) => {
+                  setQ(e.target.value);
+                  setCursor(0);
+                  setOpen(true);
+                }}
+                onFocus={() => setOpen(true)}
+                onBlur={() => setOpen(false)}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setOpen(true);
+                    setCursor((c) => Math.min(c + 1, Math.max(0, candidates.length - 1)));
+                  }
+                  if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setCursor((c) => Math.max(0, c - 1));
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    setOpen(false);
+                  }
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (candidates[cursor]) add(candidates[cursor]);
+                    else if (q.trim()) void create();
+                  }
+                }}
+                placeholder="Search the library"
+              />
+            </label>
+            {open && (
+              <div id="sbh-listbox" className="sbh-drop" role="listbox" onMouseDown={(e) => e.preventDefault()}>
+                <span className="sbh-drop-label">{q.trim() ? "Results" : `Suggested · ${groupLabel}`}</span>
+                {candidates.map((x, i) => (
+                  <button key={x.id} type="button" role="option" aria-selected={i === cursor} className={`sbh-opt${i === cursor ? " on" : ""}`} onMouseEnter={() => setCursor(i)} onClick={() => add(x)}>
+                    <span>{x.name}</span>
+                    <small>{x.video ? "Has demo" : "No demo"}</small>
+                  </button>
+                ))}
+                {candidates.length === 0 && (
+                  <div className="sbh-nomatch">
+                    {q.trim() ? "No match" : "None yet"}
+                    {q.trim() && (
+                      <button type="button" className="sbh-create" onClick={() => void create()} disabled={creating}>
+                        Create “{q.trim()}”
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            {row.librarySubstitutes.length > 0 && list.length === 0 && (
+              <button type="button" className="sbh-copy" onClick={() => setList(row.librarySubstitutes.slice(0, MAX).map((s) => ({ ...s })))}>
+                Copy from library
+              </button>
+            )}
           </div>
         )}
+      </section>
 
-        {/* From the library: read-only. */}
-        <section className="ssb-section">
-          <h2 className="ssb-label-row">
-            <span className="ssb-label">From the library</span>
-            <span className="ssb-spacer" />
-            <Link href="/admin/redesign/library" className="ssb-link">
-              Edit in library ↗
-            </Link>
-          </h2>
-          {row.librarySubstitutes.length === 0 ? (
-            <p className="ssb-empty">None set for this exercise yet. Set them in the library and every programme gets them.</p>
-          ) : (
-            <>
-              <ul className={`ssb-lib${replaced ? " replaced" : ""}`}>
-                {row.librarySubstitutes.map((s) => {
-                  const off = hidden.includes(s.exerciseId);
-                  return (
-                    <li key={s.exerciseId} className={`ssb-librow${off && !replaced ? " off" : ""}`} aria-label={`${s.name}, ${replaced ? "replaced" : off ? "not offered on this session" : "offered"}`}>
-                      <Thumb video={byId.get(s.exerciseId)?.video ?? null} />
-                      <span className="ssb-text">
-                        <b>{s.name}</b>
-                        <small>{s.note ? `“${s.note}”` : "No note"}</small>
-                      </span>
-                      {replaced ? (
-                        <span className="ssb-tag">Replaced</span>
-                      ) : (
-                        /* Offered by default; the coach can switch one off just for this session (15 Oct). */
-                        <button type="button" role="switch" aria-checked={!off} className="ssb-offer" onClick={() => setHidden((h) => (off ? h.filter((id) => id !== s.exerciseId) : [...h, s.exerciseId]))} aria-label={`${s.name} offered on this session`}>
-                          {off ? "Off" : "Offered"}
-                          <i aria-hidden="true" />
-                        </button>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-              {replaced && <p className="ssb-replaced">This session’s picks replace these for {firstName}.</p>}
-            </>
-          )}
-        </section>
+      {error && <p className="sbh-error">{error}</p>}
 
-        {/* Just for this session. */}
-        <section className="ssb-section">
-          <h2 className="ssb-label-row">
-            <span className="ssb-label">Just for this session</span>
-            <span className={`ssb-count${list.length >= MAX ? " full" : ""}`}>
-              {list.length} of {MAX}
-            </span>
-          </h2>
-          {list.length > 0 && (
-            <ul className="ssb-list">
-              {list.map((s, i) => {
-                const x = byId.get(s.exerciseId) ?? null;
-                return (
-                  <li
-                    key={s.exerciseId}
-                    className="ssb-row"
-                    aria-label={`Substitute ${i + 1} of ${MAX}, ${s.name}`}
-                    onKeyDown={(e) => {
-                      if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
-                        e.preventDefault();
-                        move(i, e.key === "ArrowUp" ? i - 1 : i + 1);
-                      }
-                    }}
-                  >
-                    <span className="ssb-rank" aria-hidden="true">
-                      {i + 1}
-                    </span>
-                    <Thumb video={x?.video ?? null} />
-                    <span className="ssb-text">
-                      <b>{s.name}</b>
-                      <small>{x?.video ? "Demo attached" : "No demo yet"}</small>
-                    </span>
-                    <input className="ssb-note" value={s.note} onChange={(e) => setList((l) => l.map((y) => (y.exerciseId === s.exerciseId ? { ...y, note: e.target.value.slice(0, 120) } : y)))} placeholder={`Note for ${firstName} · optional`} maxLength={120} aria-label={`Note for ${s.name}`} />
-                    <button type="button" className="ssb-remove" onClick={() => setList((l) => l.filter((y) => y.exerciseId !== s.exerciseId))} aria-label={`Remove ${s.name}`}>
-                      ✕
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {list.length < MAX ? (
-            <div className="ssb-search-wrap">
-              <label className={`ssb-search${open ? " open" : ""}`}>
-                <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden="true">
-                  <circle cx="11" cy="11" r="7" />
-                  <path d="M20 20l-3.5-3.5" />
-                </svg>
-                <input
-                  ref={input}
-                  role="combobox"
-                  aria-expanded={open}
-                  aria-controls="ssb-listbox"
-                  aria-autocomplete="list"
-                  value={q}
-                  onChange={(e) => {
-                    setQ(e.target.value);
-                    setCursor(0);
-                    setOpen(true);
-                  }}
-                  onFocus={() => setOpen(true)}
-                  onBlur={() => setOpen(false)}
-                  onKeyDown={(e) => {
-                    if (e.key === "ArrowDown") {
-                      e.preventDefault();
-                      setOpen(true);
-                      setCursor((c) => Math.min(c + 1, Math.max(0, candidates.length - 1)));
-                    }
-                    if (e.key === "ArrowUp") {
-                      e.preventDefault();
-                      setCursor((c) => Math.max(0, c - 1));
-                    }
-                    if (e.key === "Escape") {
-                      e.preventDefault();
-                      setOpen(false);
-                    }
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      if (candidates[cursor]) add(candidates[cursor]);
-                      else if (q.trim()) void create();
-                    }
-                  }}
-                  placeholder="Add one: search the library"
-                />
-              </label>
-              {open && (
-                <div id="ssb-listbox" className="ssb-drop" role="listbox" onMouseDown={(e) => e.preventDefault()}>
-                  <span className="ssb-drop-label">{q.trim() ? "Results" : `Suggested · ${groupLabel}`}</span>
-                  {candidates.map((x, i) => (
-                    <button key={x.id} type="button" role="option" aria-selected={i === cursor} className={`ssb-opt${i === cursor ? " on" : ""}`} onMouseEnter={() => setCursor(i)} onClick={() => add(x)}>
-                      <span>{x.name}</span>
-                      <small>{x.video ? "Has demo" : "No demo"}</small>
-                    </button>
-                  ))}
-                  {candidates.length === 0 && (
-                    <div className="ssb-nomatch">
-                      {q.trim() ? "No match in the library." : "Nothing else in this group yet."}
-                      {q.trim() && (
-                        <button type="button" className="ssb-create" onClick={() => void create()} disabled={creating}>
-                          Create “{q.trim()}”
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-              {row.librarySubstitutes.length > 0 && list.length === 0 && (
-                <button type="button" className="ssb-copy" onClick={() => setList(row.librarySubstitutes.slice(0, MAX).map((s) => ({ ...s })))}>
-                  Copy library picks here to tweak them
-                </button>
-              )}
-            </div>
-          ) : (
-            <p className="ssb-full">That’s three. Remove one to add another.</p>
-          )}
-        </section>
-
-        {error && <p className="ssb-error">{error}</p>}
-      </div>
-
-      <footer className="ssb-foot">
-        <button type="button" className="ssb-cancel" onClick={onClose}>
+      <div className="sbh-foot">
+        <button type="button" className="sbh-cancel" onClick={onClose}>
           Cancel
         </button>
-        <button type="button" className="ssb-save" disabled={!dirty || saving} onClick={() => void save()}>
-          {saving ? <span className="ssb-spin" aria-hidden="true" /> : null}
+        <button type="button" className="sbh-save" disabled={!dirty || saving} onClick={() => void save()}>
+          {saving ? <span className="sbh-spin" aria-hidden="true" /> : null}
           Save
         </button>
-      </footer>
+      </div>
     </DialogContent>
   );
 }

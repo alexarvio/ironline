@@ -1,15 +1,15 @@
 "use client";
 
+import "./ask-video.css";
 import { useEffect, useRef, useState } from "react";
 import { DialogContent, DialogDescription, DialogTitle } from "../../../components/ui/dialog";
 
-// Asking the client for a video of one exercise (15 Oct): the shared pop-up
-// language, indigo because it is an exercise. The camera alone and big, a
-// pill with the exercise, the session and its targets, a field for what to
-// see (optional), and one switch: Ask every session. Opened again on a
-// request already made, it edits it. Nothing else: no angle, set or preview.
+// Asking the client for a video of one exercise, in the admin hairline style
+// (20 Oct, Alex): the title, one quiet line of facts (the exercise, the
+// session, the week, its targets), the note as a clean line, one switch: Ask
+// every session. No explanations. Opened again on a request already made, it
+// edits it.
 
-const CAMERA = "M3 7h12v10H3zM15 10.5l6-3.5v10l-6-3.5";
 const MAX = 280;
 
 export default function AskVideoDialog({
@@ -44,12 +44,12 @@ export default function AskVideoDialog({
   const text = useRef<HTMLTextAreaElement>(null);
   const editing = !!existing;
 
-  // The field grows with the text, from 76px to 160.
+  // The line grows with the text, up to 160px (the border under it counted).
   useEffect(() => {
     const el = text.current;
     if (!el) return;
-    el.style.height = "76px";
-    el.style.height = `${Math.min(160, Math.max(76, el.scrollHeight))}px`;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(160, el.scrollHeight + 1)}px`;
   }, [note]);
 
   const ask = async () => {
@@ -59,14 +59,14 @@ export default function AskVideoDialog({
     try {
       await onAsk(note.trim(), recurring);
     } catch {
-      setError("That didn’t send. Check your connection and try again.");
+      setError("That didn’t send. Try again.");
       setBusy(false);
     }
   };
 
   return (
     <DialogContent
-      className="avr"
+      className="avh"
       aria-describedby={undefined}
       onOpenAutoFocus={(ev) => {
         ev.preventDefault();
@@ -79,79 +79,54 @@ export default function AskVideoDialog({
         }
       }}
     >
-      <span className="avr-glow" aria-hidden="true" />
-      <span className="avr-wash" aria-hidden="true" />
-      <div className="avr-body">
-        <header className="avr-head">
-          <span className="avr-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width={38} height={38} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d={CAMERA} />
-            </svg>
-          </span>
-          <div className="avr-head-text">
-            <DialogTitle className="avr-title">{editing ? "Edit video request" : `Ask ${firstName} for a video`}</DialogTitle>
-            <DialogDescription className="avr-context">
-              <span className="avr-pill">{exerciseName}</span>
-              <span className="avr-meta">
-                {session} · Week {week}
-                {targets ? ` · ${targets}` : ""}
-              </span>
-            </DialogDescription>
-          </div>
-          <button type="button" className="avr-x" onClick={onClose} aria-label="Close">
-            <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" aria-hidden="true">
-              <path d="M6 6l12 12M18 6 6 18" />
-            </svg>
-          </button>
-        </header>
-
-        <label className="avr-field">
-          <span className="avr-label">
-            What you want to see <small>optional</small>
-          </span>
-          <span className="avr-text-wrap">
-            <textarea ref={text} className={`avr-text${note.trim() ? " filled" : ""}`} value={note} onChange={(e) => setNote(e.target.value.slice(0, MAX))} placeholder="e.g. I want to see how far your elbows travel back" maxLength={MAX} rows={3} />
-            {note.length > 240 && (
-              <span className="avr-count" aria-live="polite">
-                {note.length}/{MAX}
-              </span>
-            )}
-          </span>
-        </label>
-
-        <button type="button" role="switch" aria-checked={recurring} className="avr-switch-row" onClick={() => setRecurring((r) => !r)}>
-          <span className="avr-switch" aria-hidden="true">
-            <i />
-          </span>
-          <span className="avr-switch-text">
-            <b>Ask every session</b>
-            <small>{recurring ? `Every ${session} session until you turn it off` : `Only this session (${session} · Week ${week})`}</small>
-          </span>
+      <div className="avh-head">
+        <DialogTitle className="avh-title">{editing ? "Edit video request" : `Ask ${firstName} for a video`}</DialogTitle>
+        <button type="button" className="avh-x" onClick={onClose} aria-label="Close">
+          ✕
         </button>
+      </div>
+      <DialogDescription className="avh-what">{[exerciseName, session, `Week ${week}`, targets].filter(Boolean).join(" · ")}</DialogDescription>
 
-        {error && <p className="avr-error">{error}</p>}
+      <div className="avh-field">
+        <textarea
+          ref={text}
+          className="avh-text"
+          value={note}
+          onChange={(e) => setNote(e.target.value.slice(0, MAX))}
+          placeholder="What you want to see"
+          aria-label="What you want to see"
+          maxLength={MAX}
+          rows={1}
+        />
+        {note.length > 240 && (
+          <span className="avh-count" aria-live="polite">
+            {note.length}/{MAX}
+          </span>
+        )}
       </div>
 
-      <footer className="avr-foot">
+      <button type="button" role="switch" aria-checked={recurring} className="avh-switch-row" onClick={() => setRecurring((r) => !r)}>
+        Ask every session
+        <span className="avh-switch" aria-hidden="true">
+          <i />
+        </span>
+      </button>
+
+      {error && <p className="avh-error">{error}</p>}
+
+      <div className="avh-foot">
         {editing && onWithdraw && (
-          <button type="button" className="avr-withdraw" onClick={onWithdraw}>
-            Withdraw the request
+          <button type="button" className="avh-withdraw" onClick={onWithdraw}>
+            Withdraw request
           </button>
         )}
-        <button type="button" className="avr-cancel" onClick={onClose}>
+        <button type="button" className="avh-cancel" onClick={onClose}>
           Cancel
         </button>
-        <button type="button" className="avr-ask" onClick={() => void ask()} disabled={busy}>
-          {busy ? (
-            <span className="avr-spin" aria-hidden="true" />
-          ) : (
-            <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d={CAMERA} />
-            </svg>
-          )}
-          {editing ? "Update request" : `Ask ${firstName}`}
+        <button type="button" className="avh-ask" onClick={() => void ask()} disabled={busy}>
+          {busy ? (editing ? "Saving…" : "Asking…") : editing ? "Update request" : `Ask ${firstName}`}
         </button>
-      </footer>
+      </div>
     </DialogContent>
   );
 }
