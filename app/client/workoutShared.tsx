@@ -242,7 +242,7 @@ export function CoachNote({ assignmentId, note }: { assignmentId: number | null;
 // Cardio: the targets as tiles, the coach's note, one button to tick it
 // off, a second tap to undo. Bike taken: Swap says what was done instead
 // (the coach's alternatives, or typed), which ticks it off too (28 Sep).
-export function CardioCard({ cardio, index, readOnly = false, coachName = "Your coach" }: { cardio: SessionCardio; index: number; readOnly?: boolean; coachName?: string }) {
+export function CardioCard({ cardio, index, readOnly = false, coachName = "Your coach", sessionLabel = null, position = null }: { cardio: SessionCardio; index: number; readOnly?: boolean; coachName?: string; /** The workout's eyebrow (19 Oct): the session, and which cardio of how many. */ sessionLabel?: string | null; position?: { n: number; total: number } | null }) {
   const [pending, startTransition] = useTransition();
   const [swapOpen, setSwapOpen] = useState(false);
   const done = cardio.done;
@@ -254,11 +254,21 @@ export function CardioCard({ cardio, index, readOnly = false, coachName = "Your 
       ["Distance", cardio.distance],
     ] as const
   ).filter(([, v]) => v);
+  // Drawn like an exercise page (19 Oct, Alex: the cardio was still the old boxed card): the eyebrow,
+  // the name large, the targets on one line in ink, the coach's note, then Mark as done.
   return (
-    <div className={`ts-card ts-cardio${done ? " done" : ""}`}>
-      <div className="ts-card-head">
-        <span className={`ts-circle ${done ? "done" : "active"}`}>{done ? "✓" : index}</span>
-        <span className="ts-card-name">{cardio.swap ?? cardio.name}</span>
+    <div className={`wo-cardio${done ? " done" : ""}`} data-index={index}>
+      <div className="wo-ex-head">
+        <div className="wo-eyebrow">
+          {sessionLabel && <span className="wo-eyebrow-session">{sessionLabel}</span>}
+          <span className="wo-eyebrow-count">
+            {sessionLabel ? "· " : ""}
+            {position ? `Cardio ${position.n} of ${position.total}` : "Cardio"}
+          </span>
+        </div>
+        <div className="wo-ex-top">
+          <h2 className="wo-ex-name">{cardio.swap ?? cardio.name}</h2>
+        </div>
       </div>
       {cardio.swap && (
         <div className="wo-swap-banner">
@@ -273,20 +283,22 @@ export function CardioCard({ cardio, index, readOnly = false, coachName = "Your 
         </div>
       )}
       {cells.length > 0 && (
-        <div className="ts-cardio-grid" style={{ gridTemplateColumns: `repeat(${cells.length}, minmax(0, 1fr))` }}>
-          {cells.map(([label, v]) => (
-            <div key={label} className="ts-cardio-cell">
-              <b>{v}</b>
-              <small>{label}</small>
-            </div>
-          ))}
+        <div className="lw-target">
+          <span className="lw-target-label">Target</span>
+          <span className="lw-target-vals">
+            {cells.map(([label, v]) => (
+              <span key={label} title={label}>
+                {v}
+              </span>
+            ))}
+          </span>
         </div>
       )}
       <ExerciseCoachNote assignmentId={null} dateLabel="" text={cardio.notes || null} unread={false} />
       {!readOnly && (
         <button
           type="button"
-          className={`ts-cardio-done${done ? " is-done" : ""}`}
+          className={`wo-cardio-done${done ? " is-done" : ""}`}
           disabled={pending}
           onClick={() => startTransition(() => setCardioDoneAction(cardio.id, !done))}
         >
@@ -294,7 +306,7 @@ export function CardioCard({ cardio, index, readOnly = false, coachName = "Your 
         </button>
       )}
       {!readOnly && (
-        <button type="button" className="ts-cardio-swap" onClick={() => setSwapOpen(true)} disabled={pending}>
+        <button type="button" className="wo-cardio-swap" onClick={() => setSwapOpen(true)} disabled={pending}>
           {cardio.swap ? "Change today's substitute" : "Substitute today"}
         </button>
       )}

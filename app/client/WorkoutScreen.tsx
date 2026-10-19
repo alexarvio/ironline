@@ -418,11 +418,8 @@ export default function WorkoutScreen({
                 }}
               />
             ) : p.kind === "cardio" ? (
-              <div className="wo-page-inner">
-                <div className="wo-kicker">
-                  Cardio {p.index + 1} of {day.cardio.length}
-                </div>
-                <CardioCard cardio={day.cardio[p.index]} index={day.exercises.length + p.index + 1} coachName={coachName} />
+              <div className="wo-page-inner lw">
+                <CardioCard cardio={day.cardio[p.index]} index={day.exercises.length + p.index + 1} coachName={coachName} sessionLabel={editing ? `Editing · ${day.title}` : day.title} position={{ n: p.index + 1, total: day.cardio.length }} />
               </div>
             ) : (
               <div className="wo-page-inner wo-wrap">
