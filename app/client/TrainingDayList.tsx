@@ -195,7 +195,7 @@ export default function TrainingDayList({
           return;
         }
         const like = serverDays.find((d) => !d.free) ?? serverDays[0];
-        setLocalFree({ key: r.id, index: days.length + 1, week: like?.week ?? 1, title: "Free session", exercises: [], cardio: [], skipReason: "", startedAt: at, endedAt: null, sessionNote: "", questions: like?.questions ?? [], answers: {}, gyms: like?.gyms ?? [], gymId: like ? gymIdFor(like) : null, free: true });
+        setLocalFree({ key: r.id, index: days.length + 1, week: like?.week ?? 1, title: "Free session", exercises: [], cardio: [], skipReason: "", startedAt: at, endedAt: null, sessionNote: "", questions: like?.questions ?? [], answers: {}, gyms: [], gymId: null, free: true });
         setView({ dayId: r.id, screen: "workout" });
       } finally {
         setFreeBusy(false);

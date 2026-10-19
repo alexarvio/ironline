@@ -721,8 +721,9 @@ function TrainingTab({ CLIENT_ID, week, currentWeek, showMyNotes }: { CLIENT_ID:
                 index: i + 1,
                 free: !!day.free,
                 week: week - (program?.start_week ?? 1) + 1,
-                gyms: dayGyms.map((g) => ({ id: g.id, name: g.name, color: isGymColor(g.color) ? g.color : "navy", kind: g.kind ?? "gym", sessions: gymStats.get(g.id)?.sessions ?? 0, lastUsedAt: gymStats.get(g.id)?.lastUsedAt ?? null, lastUsed: g.id === lastGymId, logo: g.logo_path ?? null })),
-                gymId,
+                // A free session has no gym (19 Oct, Alex): it is not tied to a place, and its sets carry none.
+                gyms: day.free ? [] : dayGyms.map((g) => ({ id: g.id, name: g.name, color: isGymColor(g.color) ? g.color : "navy", kind: g.kind ?? "gym", sessions: gymStats.get(g.id)?.sessions ?? 0, lastUsedAt: gymStats.get(g.id)?.lastUsedAt ?? null, lastUsed: g.id === lastGymId, logo: g.logo_path ?? null })),
+                gymId: day.free ? null : gymId,
                 // The coach's own name for the session. Without one it is
                 // numbered by its place in the week; the weekday is never
                 // shown here, so a session skipped to another day still
