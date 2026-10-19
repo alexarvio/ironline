@@ -1947,7 +1947,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
             weeks={weeks.length}
             start={program.startDate}
             today={program.planCtx.today}
-            others={program.planCtx.phases.filter((p) => p.track === "training" && p.id !== program.phaseId).map((p) => ({ name: p.name, from: p.start_week, to: addDays(p.end_week, 6) }))}
+            others={program.planCtx.phases.filter((p) => p.track === "training" && p.id !== program.phaseId && !p.draft && p.program?.status !== "draft").map((p) => ({ name: p.name, from: p.start_week, to: addDays(p.end_week, 6) }))}
             onClose={close}
             onSchedule={(v) => {
               close();

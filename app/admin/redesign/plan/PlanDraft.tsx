@@ -819,7 +819,11 @@ export function PhaseDialog({ clientId, today, thisWeek, phase, track: initialTr
   const planned = others.filter((o) => o.track === track && o.id !== phase?.id).map((o) => ({ name: o.name, from: o.start_week, to: addDays(o.end_week, 6), draft: o.draft || o.program?.status === "draft" }));
   // Against the days that will be saved, so a training phase is checked by its whole weeks.
   const savedTo = addDays(endWeek, 6);
-  const overlap = planned.find((p) => p.from <= savedTo && p.to >= startWeek) ?? null;
+  // What can block (21 Oct, Alex: a live phase's end wouldn't move): only phases planned for real, not drafts
+  // (a draft is checked when it is scheduled); and when the start is locked (a live programme), only those
+  // after it: a clash at a start that can't move is history, not something the coach can fix here.
+  const blocking = planned.filter((p) => !p.draft && (!startLocked || p.from > startWeek));
+  const overlap = blocking.find((p) => p.from <= savedTo && p.to >= startWeek) ?? null;
   // The day the coach picked when training's weeks moved it, to say so.
   const [moved, setMoved] = useState<{ side: "start" | "end"; picked: string; to: string } | null>(null);
   // Training can't overlap: say the weeks rule and the nearest week that fits, and hold Save.
