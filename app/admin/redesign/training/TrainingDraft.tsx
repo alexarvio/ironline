@@ -13,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger, ToggleGroup, ToggleGroupItem } from "../..
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 import { CalendarIcon, ChatIcon, ChevronDownIcon, ColumnsIcon, CopyIcon, DumbbellIcon, EyeIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { PhotoIcon, VideoIcon } from "../../VideoRequestButton";
+import RogueSessions from "./RogueSessions";
 import MediaReviewModal, { reviewable, type MediaReview, type ThreadItem } from "../media-review/MediaReviewModal";
 import PhaseDatesDialog from "../PhaseDatesDialog";
 import PhaseSwitcher from "../PhaseSwitcher";
@@ -97,6 +98,17 @@ export type DraftCardio = { id: number; name: string; time: string; pace: string
 export type DraftSession = { id: number; number: number; name: string; setsPlanned: number; setsLogged: number; gym: string | null; skip: string | null; duration: number | null; ended: string | null; note: string | null; /** What the client answered on ending the session (the workout questionnaire): 1 to 10, a number, or words. */ answers?: { label: string; kind: "scale" | "number" | "text"; value: number | null; text: string | null; unit: string }[]; rows: DraftRow[]; cardio: DraftCardio[] };
 /** A workout the client ended, with what they answered on ending it (the answers feed). */
 export type DraftAnswered = { dayId: number; weekIdx: number; weekLabel: string; name: string; ended: string; duration: number | null; gym: string | null; note: string | null; answers: { label: string; kind: "scale" | "number" | "text"; value: number | null; text: string | null; unit: string }[] };
+/** A rogue session as the coach sees it: when, how long, and what was logged. */
+export type DraftRogue = {
+  id: number;
+  started: string | null;
+  ended: string | null;
+  duration: number | null;
+  note: string | null;
+  exercises: { id: number; name: string; sets: { n: number; kg: number | null; reps: number | null }[] }[];
+  cardio: { id: number; name: string; time: string; distance: string; pace: string; incline: string; done: boolean }[];
+};
+
 export type DraftProgram = {
   id: number;
   /** The plan behind the tab (10 Oct): today, this week, every phase and programme, for the New phase dialog the Plan tab has. */
@@ -124,6 +136,8 @@ export type DraftProgram = {
   /** trained: each session completed; missed: begun and left unfinished; skipped: the client said they couldn't do it. Neither: not started. */
   weeks: { index: number; label: string; trained: boolean[]; missed: boolean[]; skipped: boolean[]; state: "past" | "live" | "ahead" }[];
   sessions: DraftSession[];
+  /** The client's rogue sessions (19 Oct), by week index: their own workouts off the plan, read only. */
+  rogue: Record<number, DraftRogue[]>;
   gyms: Gym[];
   /** The client's note to the coach on this programme. */
   /** The client's note on it; seen: the coach has opened this version. */
@@ -1337,6 +1351,8 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
         ) : (
           <p className="rd-full">{MAX_SESSIONS} sessions is the most a week can hold.</p>
         )}
+        {/* The client's own workouts this week, off the plan (19 Oct): read only, under the week's sessions. */}
+        <RogueSessions items={program.rogue[viewIdx] ?? []} firstName={firstName} />
       </div>
 
       {/* ---- What the client is asked as they end a workout in this phase, and what they answered, newest first (6 Oct: both at the foot, under the weeks). */}

@@ -29,6 +29,7 @@ import {
   getNutritionPlan,
   getPlanData,
   listClientEvents,
+  getFreeSessions,
   listEventCategories,
   getClientEngagement,
   getClientHome,
@@ -328,6 +329,29 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     return { id: d.id, number: si + 1, name: d.label || `Session ${si + 1}`, rows, cardio, setsPlanned, setsLogged, gym, skip: d.skip_reason ?? null, duration, ended: d.session_ended_at ?? null, note: d.session_note ?? null, answers: sessionAnswers(d).map((a) => ({ label: a.label, kind: a.kind ?? "scale", value: a.value ?? null, text: a.text ?? null, unit: a.unit ?? "" })) };
   });
 
+  // The client's rogue sessions (19 Oct, Alex): workouts of their own, off
+  // the plan, by week of the programme. Not sessions of the week (they count
+  // in nothing); shown under it, read only, with what was done.
+  const rogue: DraftProgram["rogue"] = {};
+  for (let i = 0; i < program.total_weeks; i++) {
+    const list = getFreeSessions(clientId, program.start_week + i)
+      .filter((d) => d.session_started_at)
+      .map((d) => ({
+        id: d.id,
+        started: d.session_started_at ?? null,
+        ended: d.session_ended_at ?? null,
+        duration: d.session_started_at && d.session_ended_at ? Math.max(0, Math.round((Date.parse(d.session_ended_at) - Date.parse(d.session_started_at)) / 60000)) : null,
+        note: d.session_note ?? null,
+        exercises: getAssignmentsForDay(d.id).map((a) => ({
+          id: a.id,
+          name: a.exercise_name ?? "Exercise",
+          sets: [...getLogsForAssignment(a.id)].sort((x, y) => x.set_number - y.set_number).map((l) => ({ n: l.set_number, kg: l.weight_kg, reps: l.reps })),
+        })),
+        cardio: listCardioForDay(d.id).map((c) => ({ id: c.id, name: c.name, time: c.time, distance: c.distance ?? "", pace: c.pace, incline: c.incline, done: isCardioDone(c.id) })),
+      }));
+    if (list.length) rogue[i + 1] = list;
+  }
+
   const phase = getData().client_phases.find((p) => p.program_id === program.id) ?? null;
   const noteMeta = getClientProgramNoteMeta(clientId, program.id);
   const draft: DraftProgram = {
@@ -350,6 +374,7 @@ export function loadTraining(coachId: number, clientId: number, params: { week?:
     liveIdx,
     weeks,
     sessions,
+    rogue,
     gyms,
     note: noteMeta ? { seen: noteMeta.seen, text: noteMeta.text, when: new Date(noteMeta.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) } : null,
   };
