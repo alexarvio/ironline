@@ -185,6 +185,8 @@ type Dlg =
   | { kind: "applyLater"; sessionId: number }
   | { kind: "copyWeek"; from: number }
   | { kind: "deleteSession"; sessionId: number }
+  | { kind: "removeRow"; sessionId: number; rowId: number }
+  | { kind: "removeCardio"; sessionId: number; cardioId: number }
   | { kind: "deploy" }
   | { kind: "backToDraft" }
   | { kind: "dates" }
@@ -463,8 +465,6 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
     if (adding?.session === sessionId && adding.kind === "cardio" && el.closest(".rd-addrow")) return true;
     return el.matches("input, textarea") && !el.closest(".rd-addrow");
   };
-  // Removals wait while their Undo is on screen (sonner pauses it on hover and while the tab is hidden).
-  const undoOpen = useRef<Record<number, Set<string | number>>>({});
   const tick = useRef<(force?: boolean) => void>(() => {});
   useEffect(() => {
     pendingRef.current = pending;
@@ -474,10 +474,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
       for (const [key, p] of Object.entries(pending)) {
         const id = Number(key);
         if (pendingCount(p) === 0) continue;
-        if (!force && (failed[id] || now - (changedAt.current[id] ?? 0) < 1000 || blocked(id) || (undoOpen.current[id]?.size ?? 0) > 0)) continue;
-        // Going now: an Undo still showing would no longer work, so it goes.
-        for (const t of undoOpen.current[id] ?? []) toast.dismiss(t);
-        undoOpen.current[id]?.clear();
+        if (!force && (failed[id] || now - (changedAt.current[id] ?? 0) < 1000 || blocked(id))) continue;
         flush(id);
       }
     };
@@ -513,11 +510,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   /** Before a copy (duplicate, apply to the weeks after, copy week): what these sessions still have waiting is saved first, so the copy has it. */
   const settle = async (ids: number[]) => {
     for (let i = 0; i < 25; i++) {
-      for (const id of ids) {
-        for (const t of undoOpen.current[id] ?? []) toast.dismiss(t);
-        undoOpen.current[id]?.clear();
-        flushRef.current(id);
-      }
+      for (const id of ids) flushRef.current(id);
       const busy = ids.some((id) => inFlight.current[id] || pendingCount(pendingRef.current[id] ?? emptyPending()) > 0);
       if (!busy) return;
       await new Promise((r) => setTimeout(r, 150));
@@ -547,25 +540,6 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   const retry = () => {
     setFailed({});
     for (const [key, p] of Object.entries(pending)) if (pendingCount(p) > 0) flush(Number(key));
-  };
-  /** Taken off, with Undo while the message shows; the removal saves once it has gone. */
-  const removeWithUndo = (sessionId: number, what: string, f: (q: Pending) => Pending, undo: (q: Pending) => Pending, stillQueued: (q: Pending) => boolean) => {
-    patch(sessionId, f);
-    const drop = () => undoOpen.current[sessionId]?.delete(tid);
-    const tid = toast(`${what} removed`, {
-      duration: 4500,
-      onDismiss: drop,
-      onAutoClose: drop,
-      action: {
-        label: "Undo",
-        onClick: () => {
-          drop();
-          if (stillQueued(pendingRef.current[sessionId] ?? emptyPending())) patch(sessionId, undo);
-          else toast("Already saved", { description: `${what} was removed before Undo.` });
-        },
-      },
-    });
-    (undoOpen.current[sessionId] ??= new Set()).add(tid);
   };
   // A demo set or taken off in this sitting, by row; a row not touched reads its own.
   const [demos, setDemos] = useState<Record<number, DraftRow["demo"]>>({});
@@ -640,6 +614,17 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   const [dlg, setDlg] = useState<Dlg>(null);
   const close = () => setDlg(null);
   const rowById = (id: number) => sessions.flatMap((s) => s.rows).find((r) => r.id === id) ?? null;
+  // Taking a row or a cardio off, once the warning is confirmed (20 Oct, Alex).
+  const takeOff = (sessionId: number, what: { row?: number; cardio?: number }) => {
+    setDlg(null);
+    patch(sessionId, (q) => ({ ...q, removed: what.row != null ? [...q.removed, what.row] : q.removed, cardioRemoved: what.cardio != null ? [...q.cardioRemoved, what.cardio] : q.cardioRemoved }));
+  };
+  const removeRowCopy = (r: DraftRow) => ({
+    title: `Remove ${r.name}?`,
+    what: `${r.sets} ${r.sets === 1 ? "set" : "sets"} · ${r.logged.length ? `${r.logged.length} logged` : "nothing logged"}`,
+    warn: r.logged.length ? `${firstName}'s ${r.logged.length} logged ${r.logged.length === 1 ? "set goes" : "sets go"} with it.` : null,
+  });
+  const removeCardioCopy = (c: DraftCardio) => ({ title: `Remove ${c.name}?`, what: c.done ? "Done" : "Not done yet", warn: c.done ? `What ${firstName} logged on it goes with it.` : null });
   const sessionById = (id: number) => sessions.find((s) => s.id === id) ?? null;
 
   // Drag to reorder: exercises inside a session (queued on its bar), and
@@ -1248,7 +1233,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                   </DropdownMenuItem>
                                 )}
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem variant="destructive" onSelect={() => removeWithUndo(s.id, r.name, (q) => ({ ...q, removed: [...q.removed, r.id] }), (q) => ({ ...q, removed: q.removed.filter((x) => x !== r.id) }), (q) => q.removed.includes(r.id))}>
+                                <DropdownMenuItem variant="destructive" onSelect={() => setDlg({ kind: "removeRow", sessionId: s.id, rowId: r.id })}>
                                   <TrashIcon /> Remove from session
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
@@ -1396,7 +1381,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                   <DumbbellIcon />
                                   {c.alternatives?.length ? <b>{c.alternatives.length}</b> : null}
                                 </button>
-                                <button type="button" className="rd-btn ghost sm" onClick={() => removeWithUndo(s.id, c.name, (q) => ({ ...q, cardioRemoved: [...q.cardioRemoved, c.id] }), (q) => ({ ...q, cardioRemoved: q.cardioRemoved.filter((x) => x !== c.id) }), (q) => q.cardioRemoved.includes(c.id))} aria-label={`Remove ${c.name}`} title="Remove from session">
+                                <button type="button" className="rd-btn ghost sm" onClick={() => setDlg({ kind: "removeCardio", sessionId: s.id, cardioId: c.id })} aria-label={`Remove ${c.name}`} title="Remove from session">
                                   <TrashIcon />
                                 </button>
                               </span>
@@ -1788,6 +1773,11 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
             );
           })()
         )}
+        {/* Taking an exercise or a cardio off a session asks first (20 Oct, Alex), in the delete pop-up's style. */}
+        {dlg?.kind === "removeRow" && rowById(dlg.rowId) && <RemoveDialog {...removeRowCopy(rowById(dlg.rowId)!)} onRemove={() => takeOff(dlg.sessionId, { row: dlg.rowId })} onClose={close} />}
+        {dlg?.kind === "removeCardio" && sessionById(dlg.sessionId)?.cardio.find((c) => c.id === dlg.cardioId) && (
+          <RemoveDialog {...removeCardioCopy(sessionById(dlg.sessionId)!.cardio.find((c) => c.id === dlg.cardioId)!)} onRemove={() => takeOff(dlg.sessionId, { cardio: dlg.cardioId })} onClose={close} />
+        )}
         {dlg?.kind === "deleteSession" && sessionById(dlg.sessionId) && (
           (() => {
             const gone = sessionById(dlg.sessionId)!;
@@ -2035,6 +2025,38 @@ function SessionName({ value, onChange }: { value: string; onChange: (v: string)
       }}
       aria-label="Session name"
     />
+  );
+}
+
+/** Taking a row off a session, in the delete pop-up's style: the title, one line of what it is, the logged sets in red when there are any. Cancel holds the focus. */
+function RemoveDialog({ title, what, warn, onRemove, onClose }: { title: string; what: string; warn: string | null; onRemove: () => void; onClose: () => void }) {
+  const cancel = useRef<HTMLButtonElement>(null);
+  return (
+    <DialogContent
+      className="dlh"
+      role="alertdialog"
+      onOpenAutoFocus={(ev) => {
+        ev.preventDefault();
+        setTimeout(() => cancel.current?.focus(), 60);
+      }}
+    >
+      <div className="dlh-head">
+        <DialogTitle className="dlh-title">{title}</DialogTitle>
+        <button type="button" className="dlh-x" onClick={onClose} aria-label="Close">
+          ✕
+        </button>
+      </div>
+      <DialogDescription className="dlh-what">{what}</DialogDescription>
+      {warn && <p className="dlh-warn">{warn}</p>}
+      <div className="dlh-foot">
+        <button ref={cancel} type="button" className="dlh-cancel" onClick={onClose}>
+          Cancel
+        </button>
+        <button type="button" className="dlh-delete" onClick={onRemove}>
+          Remove
+        </button>
+      </div>
+    </DialogContent>
   );
 }
 
