@@ -9,6 +9,7 @@ import { saveProgramWorkoutQuestionsAction, saveTrainingNoteAction, setPhaseGoal
 import { PHASE_OBJECTIVE_CHARS, PHASE_OBJECTIVES_MAX } from "../../../lib/phaseCovers";
 import { MAX_WORKOUT_QUESTIONS, WORKOUT_QUESTION_PRESETS } from "../../../lib/workoutQuestions";
 import { ChatIcon, ChevronRightIcon, TargetIcon } from "../../../components/icons";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog } from "../../../components/ui/dialog";
 import { ConfirmDialog, type DraftAnswered, type DraftProgram } from "./TrainingDraft";
 
@@ -263,9 +264,6 @@ export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onA
 // ---- After-workout check: the questions as pills, the answers folded under them.
 
 type Q = DraftProgram["workoutQuestions"][number];
-const MAX_LEN = 30;
-/** A new question's id (kept out of render for the compiler's purity check). */
-const newQuestionId = () => `q-${Date.now().toString(36)}`;
 const ANSWERS_KEY = "trn-answers-open";
 
 export function AfterWorkoutCheck({ programId, firstName, questions, answers, href }: { programId: number; firstName: string; questions: Q[]; answers: DraftAnswered[]; href: (it: DraftAnswered) => string }) {
@@ -279,7 +277,6 @@ export function AfterWorkoutCheck({ programId, firstName, questions, answers, hr
     setSeen(key);
     setList(questions);
   }
-  const [typed, setTyped] = useState("");
   const [removing, setRemoving] = useState<Q | null>(null);
   const save = (next: Q[], said: string) => {
     setList(next);
@@ -289,24 +286,14 @@ export function AfterWorkoutCheck({ programId, firstName, questions, answers, hr
       toast.success("Saved", { description: said });
     });
   };
-  const name = typed.trim();
-  const dup = list.some((x) => x.label.trim().toLowerCase() === name.toLowerCase());
   const full = list.length >= MAX_WORKOUT_QUESTIONS;
-  const ready = !!name && !dup && !full;
-  const add = (label = name) => {
-    const l = label.trim();
-    if (!l || full || list.some((x) => x.label.trim().toLowerCase() === l.toLowerCase())) return;
+  // The ready questions not asked yet (20 Oct, Alex: a plain + Add, no typing for now).
+  const sugs = WORKOUT_QUESTION_PRESETS.filter((p) => !list.some((x) => x.label.toLowerCase() === p.label.toLowerCase()));
+  const add = (p: (typeof WORKOUT_QUESTION_PRESETS)[number]) => {
+    if (full || list.some((x) => x.label.toLowerCase() === p.label.toLowerCase())) return;
     // A ready question keeps its id, so its answers stay one series (and Enjoyment, Adherence fill their metrics).
-    const preset = WORKOUT_QUESTION_PRESETS.find((p) => p.label.toLowerCase() === l.toLowerCase());
-    save([...list, { id: preset?.id ?? newQuestionId(), label: preset?.label ?? l, kind: "scale" }], `${preset?.label ?? l} added · asked from ${firstName}'s next workout`);
-    setTyped("");
-    setCur(-1);
+    save([...list, { id: p.id, label: p.label, kind: "scale" }], `${p.label} added · asked from ${firstName}'s next workout`);
   };
-  // The ready questions as a list under the box (20 Oct, Alex: not the browser's own): the ones not asked yet that match what is typed.
-  const [sugOpen, setSugOpen] = useState(false);
-  const [cur, setCur] = useState(-1);
-  const sugs = WORKOUT_QUESTION_PRESETS.filter((p) => !list.some((x) => x.label.toLowerCase() === p.label.toLowerCase()) && (!name || p.label.toLowerCase().includes(name.toLowerCase())));
-  const showSugs = sugOpen && sugs.length > 0 && !full;
   const answered = (label: string) => answers.some((a) => a.answers.some((x) => x.label === label && (x.value != null || !!(x.text ?? "").trim())));
   const remove = (q: Q) => save(list.filter((x) => x.id !== q.id), `${q.label} removed · past answers kept`);
 
@@ -350,7 +337,6 @@ export function AfterWorkoutCheck({ programId, firstName, questions, answers, hr
     <section className="trn-check" aria-labelledby="trn-check-h">
       <div className="trn-check-head">
         <h2 id="trn-check-h">After-workout check</h2>
-        <span>{firstName} rates each from 1 to 10 when a workout ends</span>
       </div>
       <div className="trn-qs">
         {list.map((q) => (
@@ -362,69 +348,19 @@ export function AfterWorkoutCheck({ programId, firstName, questions, answers, hr
             </button>
           </span>
         ))}
-        {!full && (
-          <span className="trn-q-add">
-            <input
-              value={typed}
-              maxLength={MAX_LEN}
-              onFocus={() => setSugOpen(true)}
-              onBlur={() => setSugOpen(false)}
-              onChange={(e) => {
-                setTyped(e.target.value);
-                setSugOpen(true);
-                setCur(-1);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "ArrowDown" && sugs.length) {
-                  e.preventDefault();
-                  setSugOpen(true);
-                  setCur((c) => Math.min(c + 1, sugs.length - 1));
-                }
-                if (e.key === "ArrowUp") {
-                  e.preventDefault();
-                  setCur((c) => Math.max(c - 1, -1));
-                }
-                if (e.key === "Escape") setSugOpen(false);
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  if (showSugs && sugs[cur]) add(sugs[cur].label);
-                  else add();
-                }
-              }}
-              placeholder="Add a question, e.g. Motivation"
-              role="combobox"
-              aria-expanded={showSugs}
-              aria-controls="trn-q-sugs"
-              aria-label="New question"
-              aria-invalid={dup || undefined}
-            />
-            <button type="button" className={`trn-q-addbtn${ready ? " ready" : ""}`} disabled={!ready} onClick={() => add()}>
-              Add
-            </button>
-            {showSugs && (
-              <div className="trn-q-sugs" id="trn-q-sugs" role="listbox" aria-label="Ready questions">
-                {sugs.map((p, i) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    role="option"
-                    aria-selected={i === cur}
-                    className={i === cur ? "on" : ""}
-                    // Keeps the box focused, so the list is still there for the click.
-                    onMouseDown={(e) => e.preventDefault()}
-                    onMouseEnter={() => setCur(i)}
-                    onClick={() => add(p.label)}
-                  >
-                    {p.label}
-                    <small>1–10</small>
-                  </button>
-                ))}
-              </div>
-            )}
-          </span>
+        {!full && sugs.length > 0 && (
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger className="trn-q-plus">+ Add</DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="pb-menu trn-q-menu">
+              {sugs.map((p) => (
+                <DropdownMenuItem key={p.id} onSelect={() => add(p)}>
+                  {p.label}
+                  <small className="rd-menu-inuse">1–10</small>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
-        {dup && name && <span className="trn-q-warn">Already asked</span>}
-        {full && <span className="trn-q-warn">{MAX_WORKOUT_QUESTIONS} at most, so the end of a workout stays quick</span>}
       </div>
 
       <div className="trn-ans">
@@ -434,7 +370,7 @@ export function AfterWorkoutCheck({ programId, firstName, questions, answers, hr
           </span>
           <b>Answers</b>
           <span className="trn-muted">{answers.length === 0 ? "none yet" : `${answers.length} ${answers.length === 1 ? "workout" : "workouts"}`}</span>
-          {averages.length > 0 && (
+          {averages.length > 0 && !shown && (
             <span className="trn-avgs">
               {averages.map((a) => (
                 <span key={a.label}>
@@ -455,6 +391,20 @@ export function AfterWorkoutCheck({ programId, firstName, questions, answers, hr
                   <span>Session</span>
                   {labels.map((l) => (
                     <span key={l}>{l}</span>
+                  ))}
+                </div>
+                {/* The average of each, over every workout answered (20 Oct, Alex: "I want to see it"). */}
+                <div className="trn-ans-row trn-ans-avg" style={grid}>
+                  <span>Average</span>
+                  <span className="trn-ans-session">
+                    <small>
+                      {answers.length} {answers.length === 1 ? "workout" : "workouts"}
+                    </small>
+                  </span>
+                  {labels.map((l) => (
+                    <span key={l} className="trn-ans-val">
+                      {avg(l) ?? "–"}
+                    </span>
                   ))}
                 </div>
                 {answers.slice(0, limit).map((it) => (

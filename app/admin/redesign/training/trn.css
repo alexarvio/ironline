@@ -223,6 +223,9 @@
 .rd.trn .trn-q-add input::placeholder { color: var(--trn-faint); }
 .rd.trn .trn-q-addbtn { height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--trn-div); font: inherit; font-size: 12.5px; font-weight: 600; color: var(--trn-faint); cursor: default; }
 .rd.trn .trn-q-addbtn.ready { background: var(--trn-navy); color: #fff; cursor: pointer; }
+.rd.trn .trn-q-plus { height: 40px; padding: 0 16px; border: 0; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 1px var(--trn-btnline); font: inherit; font-size: 13.5px; font-weight: 600; color: var(--trn-ink); cursor: pointer; }
+.rd.trn .trn-q-plus:hover, .rd.trn .trn-q-plus[data-state="open"] { box-shadow: inset 0 0 0 1px var(--trn-ink); }
+.trn-q-menu.trn-q-menu { min-width: 200px; max-height: calc(6 * 36px + 12px); overflow-y: auto; scrollbar-width: thin; }
 .rd.trn .trn-q-add { position: relative; }
 .rd.trn .trn-q-sugs { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; display: flex; flex-direction: column; width: 260px; max-height: calc(6 * 36px + 12px); padding: 6px; border-radius: 14px; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px var(--trn-line); box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #d5dae2 transparent; }
 .rd.trn .trn-q-sugs button { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 10px; height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 13.5px; font-weight: 500; color: var(--trn-ink); text-align: left; cursor: pointer; }
@@ -241,7 +244,11 @@
 .rd.trn .trn-ans-row { display: grid; align-items: center; column-gap: 0; min-height: 44px; padding: 0 18px; border-top: 1px solid var(--trn-div); font-size: 13.5px; font-weight: 500; color: var(--trn-body); text-decoration: none; }
 .rd.trn a.trn-ans-row:hover { background: #fafbfd; }
 .rd.trn .trn-ans-row > span { min-width: 0; padding-right: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rd.trn .trn-ans-cols { min-height: 34px; background: var(--trn-thead); font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--trn-faint); }
+/* As a session's table (20 Oct, Alex): white heads in the same small caps, no line between Answers and them, hairlines between rows. */
+.rd.trn .trn-ans-cols { min-height: 30px; border-top: 0; background: none; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6474; }
+.rd.trn .trn-ans-row { border-top-color: var(--trn-line); }
+.rd.trn .trn-ans-avg { font-weight: 600; color: var(--trn-ink); }
+.rd.trn .trn-ans-avg > span:first-child { font-weight: 600; }
 .rd.trn .trn-ans-session { color: var(--trn-ink); font-weight: 600; }
 .rd.trn .trn-ans-session small { font-weight: 500; color: var(--trn-muted); }
 .rd.trn .trn-ans-val { font-weight: 600; color: var(--trn-ink); }
