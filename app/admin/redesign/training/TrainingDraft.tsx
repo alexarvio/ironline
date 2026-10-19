@@ -9,6 +9,7 @@ import { addExerciseToLibraryAction, addExerciseVariationAction, markProgramNote
 import type { MessageLink } from "../../../lib/messageLinks";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
+import { Popover, PopoverAnchor, PopoverContent } from "../../../components/ui/popover";
 import { CalendarIcon, ChatIcon, ChevronDownIcon, ChevronRightIcon, ColumnsIcon, CopyIcon, DumbbellIcon, EyeIcon, MoreIcon, PlayIcon, PlusIcon, TrashIcon } from "../../../components/icons";
 import { PhotoIcon, VideoIcon } from "../../VideoRequestButton";
 import RogueSessions from "./RogueSessions";
@@ -344,8 +345,14 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
       removed: p.removed,
       added: p.added
         .filter((a): a is Added & AddedExercise => a.kind === "exercise" && a.exerciseId != null)
-        .map((a) => ({ exerciseId: a.exerciseId!, variationId: a.variationId ?? null, fields: { sets: String(a.sets), reps: a.reps, targetWeight: str(a.kg), rpe: a.rpe ?? "", tempo: a.tempo ?? "", rest: a.rest ?? "", notes: a.note ?? "" } })),
+        .map((a) => ({ exerciseId: a.exerciseId!, variationId: a.variationId ?? null, fields: { sets: String(a.sets).trim() || "3", reps: a.reps, targetWeight: str(a.kg), rpe: a.rpe ?? "", tempo: a.tempo ?? "", rest: a.rest ?? "", notes: a.note ?? "" } })),
       order: p.order,
+      // An exercise replaced in its Edit dialog (by name, from the library): the row keeps its place and figures.
+      swap: Object.fromEntries(
+        Object.entries(p.edits)
+          .map(([id, e]) => [id, e.name ? (library.flatMap((g) => g.exercises).find((x) => x.name.toLowerCase() === e.name!.toLowerCase())?.id ?? null) : null] as const)
+          .filter((x): x is readonly [string, number] => x[1] != null),
+      ),
     };
   };
   const applyPending = (sessionId: number) => {
@@ -390,45 +397,87 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
 
   // ---- Autosave (20 Oct, Alex: no Apply bar). A session's changes save on
   // their own once the coach pauses: a second after the last change, never
-  // while a box in that session is being typed in or a cardio is still being
-  // typed, five seconds after a removal so its Undo can take it back, and at
-  // once when the page is hidden or left. One save at a time per session.
-  // One status for it all, on the week's line (20 Oct, Alex: not per session).
+  // while a box in that session is being typed in (or a cardio typed), never
+  // while a removal's Undo is still on screen, and at once when the page is
+  // hidden or left. One save at a time per session; a change made while one
+  // is out goes right after. A save that fails keeps its changes queued and
+  // the week's line says so, with Retry. One status for it all, on the
+  // week's line (20 Oct, Alex: not per session).
   const [saving, setSaving] = useState<Record<number, boolean>>({});
+  const [failed, setFailed] = useState<Record<number, boolean>>({});
   const inFlight = useRef<Record<number, boolean>>({});
+  const again = useRef<Record<number, boolean>>({});
+  const pendingRef = useRef(pending);
+  const flushRef = useRef<(id: number) => void>(() => {});
+  /** Two queues as one: what failed to save, under what came since (the newer wins). */
+  const mergePending = (old: Pending, now: Pending): Pending => ({
+    added: [...old.added, ...now.added],
+    removed: [...new Set([...old.removed, ...now.removed])],
+    cardioRemoved: [...new Set([...old.cardioRemoved, ...now.cardioRemoved])],
+    edits: Object.fromEntries([...new Set([...Object.keys(old.edits), ...Object.keys(now.edits)])].map((k) => [k, { ...(old.edits[Number(k)] ?? {}), ...(now.edits[Number(k)] ?? {}) }])),
+    cardioEdits: Object.fromEntries([...new Set([...Object.keys(old.cardioEdits), ...Object.keys(now.cardioEdits)])].map((k) => [k, { ...(old.cardioEdits[Number(k)] ?? {}), ...(now.cardioEdits[Number(k)] ?? {}) }])),
+    order: now.order ?? old.order,
+    renamed: now.renamed ?? old.renamed,
+    alsoRemaining: false,
+  });
   const flush = (sessionId: number) => {
     const p = pend(sessionId);
-    if (pendingCount(p) === 0 || inFlight.current[sessionId]) return;
+    if (pendingCount(p) === 0) return;
+    if (inFlight.current[sessionId]) {
+      again.current[sessionId] = true;
+      return;
+    }
     const payload = payloadOf({ id: sessionId } as DraftSession, { ...p, alsoRemaining: false });
     applyPending(sessionId);
+    // A cardio still open in its form is saved now: the form closes, so the next keystroke can't add it twice.
+    if (adding?.session === sessionId && adding.kind === "cardio" && adding.key != null && p.added.some((x) => x.key === adding.key)) setAdding(null);
     inFlight.current[sessionId] = true;
     setSaving((x) => ({ ...x, [sessionId]: true }));
+    setFailed((x) => ({ ...x, [sessionId]: false }));
+    const fail = (why: string) => {
+      // Nothing of it was kept: the changes go back in the queue (under any made since) and the screen back to what is saved.
+      setPending((prev) => ({ ...prev, [sessionId]: mergePending(p, prev[sessionId] ?? emptyPending()) }));
+      setSeenProgram("");
+      setFailed((x) => ({ ...x, [sessionId]: true }));
+      toast.error("Not saved", { description: why });
+    };
     void applyDayChangesAction(payload)
       .then((r) => {
-        if (r && r.ok === false) toast.error(r.error ?? "Couldn't save that change");
+        if (r && r.ok === false) fail(r.error ?? "Something went wrong");
       })
-      .catch(() => toast.error("Couldn't save that change", { description: "Check the connection; the page shows what is saved." }))
+      .catch(() => fail("Check the connection, then Retry."))
       .finally(() => {
         inFlight.current[sessionId] = false;
         setSaving((x) => ({ ...x, [sessionId]: false }));
         router.refresh();
+        if (again.current[sessionId]) {
+          again.current[sessionId] = false;
+          flushRef.current(sessionId);
+        }
       });
   };
   const blocked = (sessionId: number) => {
-    if (adding?.session === sessionId && adding.kind === "cardio") return true;
     const el = document.activeElement as HTMLElement | null;
-    if (!el || !el.matches("input, textarea")) return false;
-    return !!el.closest(`#session-${sessionId}`) && !el.closest(".rd-addrow");
+    if (!el || !el.closest(`#session-${sessionId}`)) return false;
+    // A cardio being typed in its form, or any box in the session being typed in (not the exercise search).
+    if (adding?.session === sessionId && adding.kind === "cardio" && el.closest(".rd-addrow")) return true;
+    return el.matches("input, textarea") && !el.closest(".rd-addrow");
   };
+  // Removals wait while their Undo is on screen (sonner pauses it on hover and while the tab is hidden).
+  const undoOpen = useRef<Record<number, Set<string | number>>>({});
   const tick = useRef<(force?: boolean) => void>(() => {});
   useEffect(() => {
+    pendingRef.current = pending;
+    flushRef.current = flush;
     tick.current = (force = false) => {
       const now = nowMs();
       for (const [key, p] of Object.entries(pending)) {
         const id = Number(key);
         if (pendingCount(p) === 0) continue;
-        const wait = p.removed.length || p.cardioRemoved.length ? 5000 : 1000;
-        if (!force && (now - (changedAt.current[id] ?? 0) < wait || blocked(id))) continue;
+        if (!force && (failed[id] || now - (changedAt.current[id] ?? 0) < 1000 || blocked(id) || (undoOpen.current[id]?.size ?? 0) > 0)) continue;
+        // Going now: an Undo still showing would no longer work, so it goes.
+        for (const t of undoOpen.current[id] ?? []) toast.dismiss(t);
+        undoOpen.current[id]?.clear();
         flush(id);
       }
     };
@@ -442,20 +491,62 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
   useEffect(() => {
     const now = () => tick.current(true);
     const hidden = () => document.visibilityState === "hidden" && now();
+    // Closing or reloading with something not saved yet: the browser asks first.
+    const ask = (e: BeforeUnloadEvent) => {
+      const busy = Object.values(inFlight.current).some(Boolean) || Object.values(pendingRef.current).some((p) => pendingCount(p) > 0);
+      if (!busy) return;
+      now();
+      e.preventDefault();
+      e.returnValue = "";
+    };
     window.addEventListener("pagehide", now);
+    window.addEventListener("beforeunload", ask);
     document.addEventListener("visibilitychange", hidden);
     return () => {
       window.removeEventListener("pagehide", now);
+      window.removeEventListener("beforeunload", ask);
       document.removeEventListener("visibilitychange", hidden);
       // Leaving the tab or the client: what is waiting goes now.
       now();
     };
   }, []);
+  /** Before a copy (duplicate, apply to the weeks after, copy week): what these sessions still have waiting is saved first, so the copy has it. */
+  const settle = async (ids: number[]) => {
+    for (let i = 0; i < 25; i++) {
+      for (const id of ids) {
+        for (const t of undoOpen.current[id] ?? []) toast.dismiss(t);
+        undoOpen.current[id]?.clear();
+        flushRef.current(id);
+      }
+      const busy = ids.some((id) => inFlight.current[id] || pendingCount(pendingRef.current[id] ?? emptyPending()) > 0);
+      if (!busy) return;
+      await new Promise((r) => setTimeout(r, 150));
+    }
+  };
+  const weekFailed = Object.values(failed).some(Boolean);
   const weekSaving = anyPending || Object.values(saving).some(Boolean);
-  /** Taken off, with Undo while it waits (the removal saves five seconds after). */
-  const removeWithUndo = (sessionId: number, what: string, f: (q: Pending) => Pending, undo: (q: Pending) => Pending) => {
+  const retry = () => {
+    setFailed({});
+    for (const [key, p] of Object.entries(pending)) if (pendingCount(p) > 0) flush(Number(key));
+  };
+  /** Taken off, with Undo while the message shows; the removal saves once it has gone. */
+  const removeWithUndo = (sessionId: number, what: string, f: (q: Pending) => Pending, undo: (q: Pending) => Pending, stillQueued: (q: Pending) => boolean) => {
     patch(sessionId, f);
-    toast(`${what} removed`, { duration: 4500, action: { label: "Undo", onClick: () => patch(sessionId, undo) } });
+    const drop = () => undoOpen.current[sessionId]?.delete(tid);
+    const tid = toast(`${what} removed`, {
+      duration: 4500,
+      onDismiss: drop,
+      onAutoClose: drop,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          drop();
+          if (stillQueued(pendingRef.current[sessionId] ?? emptyPending())) patch(sessionId, undo);
+          else toast("Already saved", { description: `${what} was removed before Undo.` });
+        },
+      },
+    });
+    (undoOpen.current[sessionId] ??= new Set()).add(tid);
   };
   // A demo set or taken off in this sitting, by row; a row not touched reads its own.
   const [demos, setDemos] = useState<Record<number, DraftRow["demo"]>>({});
@@ -730,9 +821,18 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
             {weekDate(week.index) ? `${weekDate(week.index)} · ` : ""}
             {week.trained.filter(Boolean).length} of {week.trained.length} sessions done
             {/* Every change saves itself (20 Oct): the week says so. */}
-            <span className={`trn-allsaved${weekSaving ? " saving" : ""}`} role="status">
-              {weekSaving ? "Saving…" : "All changes saved"}
-            </span>
+            {weekFailed ? (
+              <span className="trn-allsaved failed" role="alert">
+                Not saved ·{" "}
+                <button type="button" onClick={retry}>
+                  Retry
+                </button>
+              </span>
+            ) : (
+              <span className={`trn-allsaved${weekSaving ? " saving" : ""}`} role="status">
+                {weekSaving ? "Saving…" : "All changes saved"}
+              </span>
+            )}
           </span>
         </div>
         <div className="trn-weekhead-actions">
@@ -1128,7 +1228,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                   </DropdownMenuItem>
                                 )}
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem variant="destructive" onSelect={() => removeWithUndo(s.id, r.name, (q) => ({ ...q, removed: [...q.removed, r.id] }), (q) => ({ ...q, removed: q.removed.filter((x) => x !== r.id) }))}>
+                                <DropdownMenuItem variant="destructive" onSelect={() => removeWithUndo(s.id, r.name, (q) => ({ ...q, removed: [...q.removed, r.id] }), (q) => ({ ...q, removed: q.removed.filter((x) => x !== r.id) }), (q) => q.removed.includes(r.id))}>
                                   <TrashIcon /> Remove from session
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
@@ -1204,8 +1304,11 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                         </span>
                         <span />
                         <span />
-                        {/* No bin on a new row: Discard on the bar takes it off (6 Oct). */}
-                        <span />
+                        <span className="rd-row-more">
+                          <button type="button" className="rd-btn ghost sm" onClick={() => patch(s.id, (q) => ({ ...q, added: q.added.filter((x) => x.key !== r.key) }))} aria-label={`Take ${r.name} off`} title="Take it off">
+                            <TrashIcon />
+                          </button>
+                        </span>
                       </div>
                     </div>
                     );
@@ -1273,7 +1376,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                                   <DumbbellIcon />
                                   {c.alternatives?.length ? <b>{c.alternatives.length}</b> : null}
                                 </button>
-                                <button type="button" className="rd-btn ghost sm" onClick={() => removeWithUndo(s.id, c.name, (q) => ({ ...q, cardioRemoved: [...q.cardioRemoved, c.id] }), (q) => ({ ...q, cardioRemoved: q.cardioRemoved.filter((x) => x !== c.id) }))} aria-label={`Remove ${c.name}`} title="Remove from session">
+                                <button type="button" className="rd-btn ghost sm" onClick={() => removeWithUndo(s.id, c.name, (q) => ({ ...q, cardioRemoved: [...q.cardioRemoved, c.id] }), (q) => ({ ...q, cardioRemoved: q.cardioRemoved.filter((x) => x !== c.id) }), (q) => q.cardioRemoved.includes(c.id))} aria-label={`Remove ${c.name}`} title="Remove from session">
                                   <TrashIcon />
                                 </button>
                               </span>
@@ -1304,8 +1407,11 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                               </span>
                               <span />
                               <span />
-                              {/* No bin on a new row: Discard on the bar takes it off (6 Oct). */}
-                        <span />
+                              <span className="rd-row-more">
+                                <button type="button" className="rd-btn ghost sm" onClick={() => patch(s.id, (q) => ({ ...q, added: q.added.filter((x) => x.key !== r.key) }))} aria-label={`Take ${r.name} off`} title="Take it off">
+                                  <TrashIcon />
+                                </button>
+                              </span>
                             </div>
                           </div>
                         ))}
@@ -1333,9 +1439,11 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                     )
                   ) : (
                     <div className="rd-add">
-                      <button type="button" className="rd-btn ghost wide" onClick={() => setAdding({ session: s.id, kind: "exercise" })}>
-                        <PlusIcon /> Exercise
-                      </button>
+                      {!complete && (
+                        <button type="button" className="rd-btn ghost wide" onClick={() => setAdding({ session: s.id, kind: "exercise" })}>
+                          <PlusIcon /> Exercise
+                        </button>
+                      )}
                       <button type="button" className="rd-btn ghost wide" onClick={() => setAdding({ session: s.id, kind: "cardio" })}>
                         <PlusIcon /> Cardio
                       </button>
@@ -1582,7 +1690,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               const n = sessions.length + 1;
               const target = to === "new" ? null : sessionById(to);
               close();
-              act(() => copyProgramDayAction(fd({ fromDayId: src.id, toDayId: to === "new" ? "new" : to, applyToRemainingWeeks: also ? "1" : null })), to === "new" ? `Added as Session ${n}${also && laterLabel ? `, and in ${laterLabel}` : ""}` : `Replaced ${target?.name ?? "session"}${also && laterLabel ? `, and in ${laterLabel}` : ""}`);
+              act(async () => (await settle([src.id]), copyProgramDayAction(fd({ fromDayId: src.id, toDayId: to === "new" ? "new" : to, applyToRemainingWeeks: also ? "1" : null }))), to === "new" ? `Added as Session ${n}${also && laterLabel ? `, and in ${laterLabel}` : ""}` : `Replaced ${target?.name ?? "session"}${also && laterLabel ? `, and in ${laterLabel}` : ""}`);
             }}
           />
         )}
@@ -1595,7 +1703,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
             onConfirm={() => {
               const src = sessionById(dlg.sessionId)!;
               close();
-              act(() => applyDayToLaterWeeksAction(src.id), `${src.name} applied to ${laterLabel}`);
+              act(async () => (await settle([src.id]), applyDayToLaterWeeksAction(src.id)), `${src.name} applied to ${laterLabel}`);
             }}
           />
         )}
@@ -1611,6 +1719,7 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
               const targets = also ? weeks.filter((w) => w.index >= viewIdx).map((w) => weekNo(w.index)) : [weekNo(viewIdx)];
               close();
               act(async () => {
+                await settle(Object.keys(pendingRef.current).map(Number));
                 for (const to of targets) await copyProgramWeekAction(fd({ clientId, fromWeek: from, toWeek: to }));
               }, `Week ${dlg.from} copied to ${week.label}${also ? ` and ${laterLabel}` : ""}`);
             }}
@@ -1674,11 +1783,12 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
                 lastLoggedAt={gone.ended}
                 hasUploads={gone.rows.some((r) => !!r.video?.src)}
                 sessionsAfter={sessions.filter((x) => x.number > gone.number).map((x) => x.number)}
-                onDelete={async () => {
-                  await removeSessionAction(fd({ programDayId: gone.id }));
+                laterLabel={later.length === 0 ? "" : later.length === 1 ? `week ${later[0].index}` : `weeks ${later[0].index}–${later[later.length - 1].index}`}
+                onDelete={async (alsoLater) => {
+                  const more = await removeSessionAction(fd({ programDayId: gone.id, alsoLater: alsoLater ? 1 : null }));
                   close();
                   router.refresh();
-                  toast.success(`Session ${gone.number} deleted`);
+                  toast.success(`${gone.name} deleted${more ? ` here and from ${more} later ${more === 1 ? "week" : "weeks"}` : ""}`);
                 }}
                 onClose={close}
               />
@@ -1920,7 +2030,15 @@ function Cell({ value, onChange, label, placeholder, width }: { value: string; o
 /** A weight cell: kept in kg, typed and shown in the unit picked. Keyed by
  *  unit where it is used, so a flip re-reads the figure. */
 function WeightCell({ kg, lbs, label, onChange }: { kg: number | null; lbs: boolean; label?: string; onChange: (kg: number | null) => void }) {
-  const [text, setText] = useState(kg == null ? "" : String(half(lbs ? kg * LB : kg)));
+  const show = (v: number | null) => (v == null ? "" : String(half(lbs ? v * LB : v)));
+  const [text, setText] = useState(show(kg));
+  // A new saved figure (a page read after a save) shows, unless the box is being typed in.
+  const [seenKg, setSeenKg] = useState(kg);
+  const [focused, setFocused] = useState(false);
+  if (kg !== seenKg && !focused) {
+    setSeenKg(kg);
+    setText(show(kg));
+  }
   return (
     <span className="rd-cell">
       {label && <small>{label}</small>}
@@ -1929,6 +2047,8 @@ function WeightCell({ kg, lbs, label, onChange }: { kg: number | null; lbs: bool
         value={text}
         placeholder={lbs ? "lbs" : "kg"}
         aria-label={label ? `Weight at ${label}` : "Weight"}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         onChange={(e) => {
           setText(e.target.value);
           const n = parseFloat(e.target.value.replace(",", "."));
@@ -1987,7 +2107,7 @@ function AddExerciseRow({ library, onPick, onClose }: { library: Library; onPick
   const needle = q.trim().toLowerCase();
   // What the list shows: matches while typing; else the picked group's
   // exercises; else, with the chevron open, the groups.
-  const matches = needle ? library.flatMap((g) => g.exercises.filter((e) => e.name.toLowerCase().includes(needle)).map((e) => ({ id: e.id, name: e.name, group: g.label }))).slice(0, 8) : [];
+  const matches = needle ? library.flatMap((g) => g.exercises.filter((e) => e.name.toLowerCase().includes(needle)).map((e) => ({ id: e.id, name: e.name, group: g.label }))) : [];
   const inGroup = !needle && group ? (library.find((g) => g.slug === group)?.exercises ?? []).map((e) => ({ id: e.id, name: e.name, group: "" })) : [];
   const list = needle ? matches : inGroup;
   const showGroups = !needle && browse && !group;
@@ -2004,58 +2124,131 @@ function AddExerciseRow({ library, onPick, onClose }: { library: Library; onPick
     setBrowse(false);
     box.current?.focus();
   };
+  // The list floats over the page under the bar (20 Oct, Alex): it no longer
+  // stretches the session, six rows show and the rest scroll, and Create
+  // stays pinned at its foot. In a layer of its own, so the session's
+  // sideways-scrolling table can't clip it.
+  const open = !creating && (showGroups || (!!group && !needle) || !!needle);
+  const pop = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    pop.current?.querySelector(".rd-addrow-item.on")?.scrollIntoView({ block: "nearest" });
+  }, [cursor, open]);
   return (
     <div ref={wrap} className="rd-addrow">
-      <div className={`rd-addrow-bar${browse || needle ? " open" : ""}`}>
-        <input
-          ref={box}
-          className="rd-addrow-search"
-          value={q}
-          onChange={(e) => {
-            setQ(e.target.value);
-            setCursor(0);
-            setGroup(null);
+      <Popover open={open} onOpenChange={() => {}}>
+        <PopoverAnchor asChild>
+          <div className={`rd-addrow-bar${open ? " open" : ""}`}>
+            <input
+              ref={box}
+              className="rd-addrow-search"
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setCursor(0);
+                setGroup(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  if (group) setGroup(null);
+                  else if (browse) setBrowse(false);
+                  else onClose();
+                }
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  if (!needle && !browse) setBrowse(true);
+                  setCursor((c) => Math.min(c + 1, Math.max(0, list.length - 1)));
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setCursor((c) => Math.max(c - 1, 0));
+                }
+                if (e.key === "Enter") {
+                  if (list[cursor]) pick(list[cursor].name);
+                  else if (needle) pick(q.trim());
+                }
+              }}
+              placeholder={group ? `${library.find((g) => g.slug === group)?.label ?? ""} · type to narrow` : "Search exercises"}
+              aria-label="Search exercises"
+            />
+            <button
+              type="button"
+              className={`rd-addrow-chev${browse ? " open" : ""}`}
+              onClick={() => {
+                setBrowse((o) => !o);
+                setGroup(null);
+                box.current?.focus();
+              }}
+              aria-label={browse ? "Hide groups" : "Browse by group"}
+              aria-expanded={browse}
+            >
+              <ChevronDownIcon />
+            </button>
+            <button type="button" className="rd-addrow-x" onClick={onClose} aria-label="Close">
+              ×
+            </button>
+          </div>
+        </PopoverAnchor>
+        <PopoverContent
+          ref={pop}
+          className="rd-addpop"
+          align="start"
+          sideOffset={6}
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+          // The bar is outside the panel; a click in it is not a click away.
+          onInteractOutside={(e) => {
+            if (wrap.current?.contains(e.target as Node)) e.preventDefault();
           }}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              if (group) setGroup(null);
-              else if (browse) setBrowse(false);
-              else onClose();
-            }
-            if (e.key === "ArrowDown") {
-              e.preventDefault();
-              if (!needle && !browse) setBrowse(true);
-              setCursor((c) => Math.min(c + 1, Math.max(0, list.length - 1)));
-            }
-            if (e.key === "ArrowUp") {
-              e.preventDefault();
-              setCursor((c) => Math.max(c - 1, 0));
-            }
-            if (e.key === "Enter") {
-              if (list[cursor]) pick(list[cursor].name);
-              else if (needle) pick(q.trim());
-            }
-          }}
-          placeholder={group ? `${library.find((g) => g.slug === group)?.label ?? ""} · type to narrow` : "Search exercises"}
-          aria-label="Search exercises"
-        />
-        <button
-          type="button"
-          className={`rd-addrow-chev${browse ? " open" : ""}`}
-          onClick={() => {
-            setBrowse((o) => !o);
-            setGroup(null);
-            box.current?.focus();
-          }}
-          aria-label={browse ? "Hide groups" : "Browse by group"}
-          aria-expanded={browse}
         >
-          <ChevronDownIcon />
-        </button>
-        <button type="button" className="rd-addrow-x" onClick={onClose} aria-label="Close">
-          ×
-        </button>
-      </div>
+          {showGroups && (
+            <>
+              <div className="rd-addpop-scroll" role="listbox" aria-label="Groups">
+                {library.map((g) => (
+                  <button key={g.slug} type="button" role="option" aria-selected={false} className="rd-addrow-item" onClick={() => setGroup(g.slug)}>
+                    {g.label}
+                    <small>{g.exercises.length}</small>
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="rd-addrow-item create" onClick={() => setCreating(true)}>
+                <PlusIcon /> Create your own exercise
+              </button>
+            </>
+          )}
+          {group && !needle && (
+            <>
+              <button type="button" className="rd-addrow-back" onClick={() => setGroup(null)}>
+                ‹ All groups
+              </button>
+              <div className="rd-addpop-scroll" role="listbox" aria-label={library.find((g) => g.slug === group)?.label}>
+                {list.map((m, i) => (
+                  <button key={m.id} type="button" role="option" aria-selected={i === cursor} className={`rd-addrow-item${i === cursor ? " on" : ""}`} onMouseEnter={() => setCursor(i)} onClick={() => pick(m.name)}>
+                    {m.name}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          {needle && (
+            <>
+              {list.length > 0 && (
+                <div className="rd-addpop-scroll" role="listbox" aria-label="Exercises">
+                  {list.map((m, i) => (
+                    <button key={m.id} type="button" role="option" aria-selected={i === cursor} className={`rd-addrow-item${i === cursor ? " on" : ""}`} onMouseEnter={() => setCursor(i)} onClick={() => pick(m.name)}>
+                      {m.name}
+                      {m.group && <small>{m.group}</small>}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <button type="button" className={`rd-addrow-item create${list.length === 0 ? " on solo" : ""}`} onClick={() => setCreating(true)}>
+                <PlusIcon /> Create &ldquo;{q.trim()}&rdquo; as your own exercise
+              </button>
+            </>
+          )}
+        </PopoverContent>
+      </Popover>
       {creating && (
         <CreateExercise
           library={library}
@@ -2073,44 +2266,6 @@ function AddExerciseRow({ library, onPick, onClose }: { library: Library; onPick
             box.current?.focus();
           }}
         />
-      )}
-      {!creating && showGroups && (
-        <div className="rd-addrow-list" role="listbox" aria-label="Groups">
-          {library.map((g) => (
-            <button key={g.slug} type="button" role="option" aria-selected={false} className="rd-addrow-item" onClick={() => setGroup(g.slug)}>
-              {g.label}
-              <small>{g.exercises.length}</small>
-            </button>
-          ))}
-          <button type="button" className="rd-addrow-item create" onClick={() => setCreating(true)}>
-            <PlusIcon /> Create your own exercise
-          </button>
-        </div>
-      )}
-      {!creating && group && !needle && (
-        <div className="rd-addrow-list" role="listbox" aria-label={library.find((g) => g.slug === group)?.label}>
-          <button type="button" className="rd-addrow-back" onClick={() => setGroup(null)}>
-            ‹ All groups
-          </button>
-          {list.map((m, i) => (
-            <button key={m.id} type="button" role="option" aria-selected={i === cursor} className={`rd-addrow-item${i === cursor ? " on" : ""}`} onMouseEnter={() => setCursor(i)} onClick={() => pick(m.name)}>
-              {m.name}
-            </button>
-          ))}
-        </div>
-      )}
-      {!creating && needle && (
-        <div className="rd-addrow-list" role="listbox">
-          {list.map((m, i) => (
-            <button key={m.id} type="button" role="option" aria-selected={i === cursor} className={`rd-addrow-item${i === cursor ? " on" : ""}`} onMouseEnter={() => setCursor(i)} onClick={() => pick(m.name)}>
-              {m.name}
-              {m.group && <small>{m.group}</small>}
-            </button>
-          ))}
-          <button type="button" className={`rd-addrow-item create${list.length === 0 ? " on" : ""}`} onClick={() => setCreating(true)}>
-            <PlusIcon /> Create &ldquo;{q.trim()}&rdquo; as your own exercise
-          </button>
-        </div>
       )}
     </div>
   );

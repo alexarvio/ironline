@@ -262,6 +262,7 @@ import {
   getProgramCurrentWeekIndex,
   addSession,
   removeSession,
+  laterSameSlotSessions,
   setNutritionDayTargets,
   setNutritionNote,
   setNutritionWater,
@@ -3252,16 +3253,20 @@ export async function addSessionAction(formData: FormData) {
 }
 
 // Deleting a session from its header; the ones after it move up.
-export async function removeSessionAction(formData: FormData) {
+export async function removeSessionAction(formData: FormData): Promise<number> {
   const programDayId = Number(formData.get("programDayId"));
   const clientId = clientIdForProgramDay(programDayId);
-  if (!programDayId || !(await coachForClient(clientId))) return;
+  if (!programDayId || !(await coachForClient(clientId))) return 0;
   const seen = clientSeesProgramDay(programDayId);
   const was = dayWords(programDayId);
+  // "Also from the weeks after" (20 Oct): found before anything moves up.
+  const later = formData.get("alsoLater") === "1" ? laterSameSlotSessions(programDayId) : [];
   removeSession(programDayId);
-  if (seen) trainingChange(clientId, null, `Removed ${was}`);
+  for (const id of later) removeSession(id);
+  if (seen) trainingChange(clientId, null, `Removed ${was}${later.length ? " and the weeks after" : ""}`);
   revalidatePath("/client");
   revalidatePath("/admin");
+  return later.length;
 }
 
 // Called from the reorder bar after a drop, with no form.
@@ -3284,6 +3289,7 @@ export async function applyDayChangesAction(
   if (!coach) return { ok: false, error: "Unknown day" };
   // Exercises added to the day must come from this coach's own library.
   if ((payload.added ?? []).some((a) => !coachOwnsExercise(coach.id, a.exerciseId))) return { ok: false, error: "Unknown exercise" };
+  if (Object.values(payload.swap ?? {}).some((id) => !Number.isInteger(id) || !coachOwnsExercise(coach.id, id))) return { ok: false, error: "Unknown exercise" };
   // A finished session takes no new exercises (the builder hides the row; this is the backstop).
   if ((payload.added ?? []).length > 0 && isSessionComplete(payload.programDayId)) return { ok: false, error: "This session is completed" };
   try {
@@ -3306,10 +3312,11 @@ export async function applyDayChangesAction(
       removed: (payload.removed ?? []).filter((id) => Number.isInteger(id)),
       added: (payload.added ?? []).filter((a) => Number.isInteger(a.exerciseId)).map((a) => ({ exerciseId: a.exerciseId, fields: a.fields, variationId: Number.isInteger(a.variationId) ? a.variationId : null })),
       order: Array.isArray(payload.order) ? payload.order.filter((id) => Number.isInteger(id)) : null,
+      swap: payload.swap ?? {},
     });
     if (clientSeesProgramDay(payload.programDayId)) {
       const addedNames = (payload.added ?? []).map((a) => exerciseWords(a.exerciseId));
-      const changed = new Set([...Object.keys(payload.fields ?? {}), ...Object.keys(payload.custom ?? {}), ...Object.keys(payload.gyms ?? {})]).size;
+      const changed = new Set([...Object.keys(payload.fields ?? {}), ...Object.keys(payload.custom ?? {}), ...Object.keys(payload.gyms ?? {}), ...Object.keys(payload.swap ?? {})]).size;
       const cardioTouched = Object.keys(payload.cardio?.fields ?? {}).length + (payload.cardio?.removed ?? []).length + (payload.cardio?.added ?? []).length;
       const parts = [
         addedNames.length ? `Added ${addedNames.join(", ")}` : null,

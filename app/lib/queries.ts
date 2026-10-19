@@ -9549,6 +9549,29 @@ export function saveLibraryVideoUpload(exerciseId: number, buffer: Buffer, mimeT
 // After copying a day within a week, the coach can push the same day onto
 // the same weekday of every later week of the programme too. Each later
 // week's day is replaced the same way copyProgramDay replaces its target.
+/**
+ * The same session in the programme's later weeks (the same slot, as
+ * copyProgramDayToLaterWeeks matches them), for deleting it from the rest of
+ * the programme (20 Oct). One the client has logged anything on is left out.
+ */
+export function laterSameSlotSessions(programDayId: number): number[] {
+  const data = getData();
+  const day = data.program_days.find((d) => d.id === programDayId);
+  if (!day) return [];
+  const program = listPrograms(day.client_id).find((p) => day.week_number >= p.start_week && day.week_number < p.start_week + p.total_weeks);
+  if (!program) return [];
+  const out: number[] = [];
+  for (let week = day.week_number + 1; week < program.start_week + program.total_weeks; week++) {
+    const target = sessionAt(day.client_id, week, day.day_of_week);
+    if (!target) continue;
+    const rows = new Set(data.workout_assignments.filter((wa) => wa.program_day_id === target.id).map((wa) => wa.id));
+    const cardio = new Set((data.cardio_entries ?? []).filter((c) => c.program_day_id === target.id).map((c) => c.id));
+    const logged = data.set_logs.some((l) => rows.has(l.workout_assignment_id)) || (data.cardio_logs ?? []).some((l) => cardio.has(l.cardio_entry_id));
+    if (!logged) out.push(target.id);
+  }
+  return out;
+}
+
 export function copyProgramDayToLaterWeeks(fromDayId: number, toDayId: number): number {
   const data = getData();
   const dest = data.program_days.find((d) => d.id === toDayId);
@@ -9682,6 +9705,8 @@ export type DayChanges = {
   gyms?: Record<string, Record<string, string>>;
   removed: number[];
   added: { exerciseId: number; fields: DayFieldValues; /** The exercise's variation asked for (close grip…). */ variationId?: number | null }[];
+  /** assignment id -> the exercise that replaces it (the Edit dialog's Replace, 20 Oct): the row keeps its place and figures. */
+  swap?: Record<string, number>;
   /** Full order of the surviving assignment ids, or null if untouched. */
   order: number[] | null;
 };
@@ -9741,6 +9766,14 @@ export function applyDayChanges(changes: DayChanges): { skipped: string[] } {
       data.assignment_custom_values = data.assignment_custom_values.filter((v) => !dropIds.includes(v.workout_assignment_id));
       data.workout_assignments = data.workout_assignments.filter((wa) => !dropIds.includes(wa.id));
     }
+
+    if (!mirror)
+      for (const [idStr, exerciseId] of Object.entries(changes.swap ?? {})) {
+        const target = rows().find((wa) => wa.id === Number(idStr));
+        if (!target || !Number.isInteger(exerciseId) || target.exercise_id === exerciseId) continue;
+        target.exercise_id = exerciseId;
+        target.variation_id = null;
+      }
 
     for (const [idStr, raw] of Object.entries(changes.fields)) {
       const srcRow = data.workout_assignments.find((wa) => wa.id === Number(idStr));

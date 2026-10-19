@@ -263,6 +263,8 @@ export function WeekRail({ weeks, viewIdx, dateOf, hrefFor, isLocal, onShow, onA
 
 type Q = DraftProgram["workoutQuestions"][number];
 const MAX_LEN = 30;
+/** A new question's id (kept out of render for the compiler's purity check). */
+const newQuestionId = () => `q-${Date.now().toString(36)}`;
 const ANSWERS_KEY = "trn-answers-open";
 
 export function AfterWorkoutCheck({ programId, firstName, questions, answers, href }: { programId: number; firstName: string; questions: Q[]; answers: DraftAnswered[]; href: (it: DraftAnswered) => string }) {
@@ -290,13 +292,20 @@ export function AfterWorkoutCheck({ programId, firstName, questions, answers, hr
   const dup = list.some((x) => x.label.trim().toLowerCase() === name.toLowerCase());
   const full = list.length >= MAX_WORKOUT_QUESTIONS;
   const ready = !!name && !dup && !full;
-  const add = () => {
-    if (!ready) return;
+  const add = (label = name) => {
+    const l = label.trim();
+    if (!l || full || list.some((x) => x.label.trim().toLowerCase() === l.toLowerCase())) return;
     // A ready question keeps its id, so its answers stay one series (and Enjoyment, Adherence fill their metrics).
-    const preset = WORKOUT_QUESTION_PRESETS.find((p) => p.label.toLowerCase() === name.toLowerCase());
-    save([...list, { id: preset?.id ?? `q-${Date.now().toString(36)}`, label: preset?.label ?? name, kind: "scale" }], `${preset?.label ?? name} added · asked from ${firstName}'s next workout`);
+    const preset = WORKOUT_QUESTION_PRESETS.find((p) => p.label.toLowerCase() === l.toLowerCase());
+    save([...list, { id: preset?.id ?? newQuestionId(), label: preset?.label ?? l, kind: "scale" }], `${preset?.label ?? l} added · asked from ${firstName}'s next workout`);
     setTyped("");
+    setCur(-1);
   };
+  // The ready questions as a list under the box (20 Oct, Alex: not the browser's own): the ones not asked yet that match what is typed.
+  const [sugOpen, setSugOpen] = useState(false);
+  const [cur, setCur] = useState(-1);
+  const sugs = WORKOUT_QUESTION_PRESETS.filter((p) => !list.some((x) => x.label.toLowerCase() === p.label.toLowerCase()) && (!name || p.label.toLowerCase().includes(name.toLowerCase())));
+  const showSugs = sugOpen && sugs.length > 0 && !full;
   const answered = (label: string) => answers.some((a) => a.answers.some((x) => x.label === label && (x.value != null || !!(x.text ?? "").trim())));
   const remove = (q: Q) => save(list.filter((x) => x.id !== q.id), `${q.label} removed · past answers kept`);
 
@@ -357,26 +366,60 @@ export function AfterWorkoutCheck({ programId, firstName, questions, answers, hr
             <input
               value={typed}
               maxLength={MAX_LEN}
-              list="trn-q-presets"
-              onChange={(e) => setTyped(e.target.value)}
+              onFocus={() => setSugOpen(true)}
+              onBlur={() => setSugOpen(false)}
+              onChange={(e) => {
+                setTyped(e.target.value);
+                setSugOpen(true);
+                setCur(-1);
+              }}
               onKeyDown={(e) => {
+                if (e.key === "ArrowDown" && sugs.length) {
+                  e.preventDefault();
+                  setSugOpen(true);
+                  setCur((c) => Math.min(c + 1, sugs.length - 1));
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setCur((c) => Math.max(c - 1, -1));
+                }
+                if (e.key === "Escape") setSugOpen(false);
                 if (e.key === "Enter") {
                   e.preventDefault();
-                  add();
+                  if (showSugs && sugs[cur]) add(sugs[cur].label);
+                  else add();
                 }
               }}
               placeholder="Add a question, e.g. Motivation"
+              role="combobox"
+              aria-expanded={showSugs}
+              aria-controls="trn-q-sugs"
               aria-label="New question"
               aria-invalid={dup || undefined}
             />
-            <datalist id="trn-q-presets">
-              {WORKOUT_QUESTION_PRESETS.filter((p) => !list.some((x) => x.label.toLowerCase() === p.label.toLowerCase())).map((p) => (
-                <option key={p.id} value={p.label} />
-              ))}
-            </datalist>
-            <button type="button" className={`trn-q-addbtn${ready ? " ready" : ""}`} disabled={!ready} onClick={add}>
+            <button type="button" className={`trn-q-addbtn${ready ? " ready" : ""}`} disabled={!ready} onClick={() => add()}>
               Add
             </button>
+            {showSugs && (
+              <div className="trn-q-sugs" id="trn-q-sugs" role="listbox" aria-label="Ready questions">
+                {sugs.map((p, i) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    role="option"
+                    aria-selected={i === cur}
+                    className={i === cur ? "on" : ""}
+                    // Keeps the box focused, so the list is still there for the click.
+                    onMouseDown={(e) => e.preventDefault()}
+                    onMouseEnter={() => setCur(i)}
+                    onClick={() => add(p.label)}
+                  >
+                    {p.label}
+                    <small>1–10</small>
+                  </button>
+                ))}
+              </div>
+            )}
           </span>
         )}
         {dup && name && <span className="trn-q-warn">Already asked</span>}

@@ -149,8 +149,23 @@
 .rd.trn .trn-allsaved::before { content: "✓ "; }
 .rd.trn .trn-allsaved.saving { color: var(--trn-muted); }
 .rd.trn .trn-allsaved.saving::before { content: none; }
+.rd.trn .trn-allsaved.failed { color: #b42318; }
+.rd.trn .trn-allsaved.failed::before { content: none; }
+.rd.trn .trn-allsaved.failed button { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: inherit; text-decoration: underline; cursor: pointer; }
 /* A row just added, until the server gives it its number. */
 .rd.trn .rd-row.trn-landing { opacity: 0.55; pointer-events: none; }
+
+/* ---- The exercise search's list (AddExerciseRow): a panel over the page,
+   portalled (so not under .rd.trn), six rows then it scrolls; Create pinned at its foot. */
+.rd-addpop.rd-addpop { width: var(--radix-popper-anchor-width); max-width: min(560px, 100vw - 32px); display: flex; flex-direction: column; padding: 6px; border: 0; border-radius: 14px; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px #e1e5eb; color: #141a24; font-family: var(--font-archivo), system-ui, sans-serif; }
+.rd-addpop-scroll { display: flex; flex-direction: column; max-height: calc(6 * 38px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #d5dae2 transparent; }
+.rd-addpop .rd-addrow-item { flex: none; min-height: 38px; padding: 0 10px; border-radius: 8px; font-size: 13.5px; font-weight: 500; color: #141a24; }
+.rd-addpop .rd-addrow-item.on, .rd-addpop .rd-addrow-item:hover { background: #f5f6f8; color: #141a24; }
+.rd-addpop .rd-addrow-item small { font-size: 10px; font-weight: 600; letter-spacing: 0.14em; color: #98a2b3; }
+.rd-addpop .rd-addrow-item.create { justify-content: flex-start; gap: 6px; margin-top: 4px; padding-top: 4px; border-top: 1px solid #eef0f3; border-radius: 0 0 8px 8px; font-weight: 600; color: #141a24; }
+.rd-addpop .rd-addrow-item.create.solo { margin-top: 0; padding-top: 0; border-top: 0; border-radius: 8px; }
+.rd-addpop .rd-addrow-item.create svg { width: 14px; height: 14px; }
+.rd-addpop .rd-addrow-back { flex: none; padding: 8px 10px; font-weight: 600; color: #5b6474; }
 
 /* ---- Delete session pop-up (DeleteSessionDialog): portalled, so not under
    .rd.trn; doubled classes out-rank the dialog's own utility classes. */
@@ -166,15 +181,18 @@
 .dlh-ack { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 2px; padding: 4px 0; border: 0; background: none; font: inherit; font-size: 13.5px; font-weight: 500; color: #141a24; text-align: left; cursor: pointer; }
 .dlh-box { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 5px; box-shadow: inset 0 0 0 1.5px #c5ccd8; font-size: 11px; font-weight: 700; color: #fff; }
 .dlh-box.on { background: #b42318; box-shadow: none; }
+.dlh-box.ink.on { background: #141a24; }
 .dlh-ack:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; border-radius: 6px; }
 .dlh-error { margin: 0; font-size: 13px; font-weight: 600; color: #b42318; }
-.dlh-foot { display: flex; align-items: center; gap: 4px; margin-top: 10px; }
-.dlh-hint { flex: 1; font-size: 12.5px; font-weight: 500; color: #98a2b3; }
+.dlh-foot { display: flex; align-items: center; justify-content: flex-end; gap: 2px; margin-top: 10px; }
 .dlh-cancel { height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #5b6474; cursor: pointer; }
 .dlh-cancel:hover { color: #141a24; }
-.dlh-cancel:focus-visible, .dlh-delete:focus-visible { outline: 2px solid #141a24; outline-offset: 2px; }
-.dlh-delete { height: 36px; padding: 0 18px; border: 0; border-radius: 999px; background: #b42318; font: inherit; font-size: 13.5px; font-weight: 600; color: #fff; cursor: pointer; }
-.dlh-delete:disabled { background: rgba(180, 35, 24, 0.3); cursor: default; }
+/* Focus as a soft tint, not a ring (Cancel takes the focus as the pop-up opens). */
+.dlh-cancel:focus-visible, .dlh-delete:focus-visible { outline: none; background: #f5f6f8; }
+/* Delete as red words, no pill (20 Oct, Alex). */
+.dlh-delete { height: 36px; padding: 0 14px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 13.5px; font-weight: 600; color: #b42318; cursor: pointer; }
+.dlh-delete:hover { background: #fdf1ef; }
+.dlh-delete:disabled { background: none; color: rgba(180, 35, 24, 0.35); cursor: default; }
 
 /* ---- Rogue sessions: a label row, then slim rows of their own */
 .rd.trn .trn-rogue { display: flex; flex-direction: column; gap: 8px; margin-top: -8px; }
@@ -204,6 +222,11 @@
 .rd.trn .trn-q-add input::placeholder { color: var(--trn-faint); }
 .rd.trn .trn-q-addbtn { height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--trn-div); font: inherit; font-size: 12.5px; font-weight: 600; color: var(--trn-faint); cursor: default; }
 .rd.trn .trn-q-addbtn.ready { background: var(--trn-navy); color: #fff; cursor: pointer; }
+.rd.trn .trn-q-add { position: relative; }
+.rd.trn .trn-q-sugs { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; display: flex; flex-direction: column; width: 260px; max-height: calc(6 * 36px + 12px); padding: 6px; border-radius: 14px; background: #fff; box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.3), 0 0 0 1px var(--trn-line); box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #d5dae2 transparent; }
+.rd.trn .trn-q-sugs button { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 10px; height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 13.5px; font-weight: 500; color: var(--trn-ink); text-align: left; cursor: pointer; }
+.rd.trn .trn-q-sugs button.on { background: var(--trn-page); }
+.rd.trn .trn-q-sugs small { font-size: 12px; font-weight: 500; color: var(--trn-faint); }
 .rd.trn .trn-q-warn { font-size: 12.5px; font-weight: 500; color: #b8471f; }
 
 .rd.trn .trn-ans { margin: 0 -18px; border-top: 1px solid var(--trn-div); }

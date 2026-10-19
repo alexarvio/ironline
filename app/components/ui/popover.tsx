@@ -14,6 +14,11 @@ function PopoverTrigger(props: React.ComponentProps<typeof PopoverPrimitive.Trig
   return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
 }
 
+/** Positions the panel against something other than its trigger (a search bar, say). */
+function PopoverAnchor(props: React.ComponentProps<typeof PopoverPrimitive.Anchor>) {
+  return <PopoverPrimitive.Anchor data-slot="popover-anchor" {...props} />;
+}
+
 function PopoverContent({ className, align = "start", sideOffset = 6, onOpenAutoFocus, onCloseAutoFocus, ...props }: React.ComponentProps<typeof PopoverPrimitive.Content>) {
   // Closing hands focus back to what opened it, without the page scrolling to it (6 Oct).
   const opener = React.useRef<HTMLElement | null>(null);
@@ -40,4 +45,4 @@ function PopoverContent({ className, align = "start", sideOffset = 6, onOpenAuto
   );
 }
 
-export { Popover, PopoverTrigger, PopoverContent };
+export { Popover, PopoverTrigger, PopoverAnchor, PopoverContent };
