@@ -460,10 +460,13 @@ export default function ExercisePage({
           <div className="wo-ex-tools">{tools}</div>
         </div>
         <div className="wo-ex-title-row">
-          <div className="wo-nextup">
-            <span className="wo-nextup-label">{nextName ? "Next up" : "Last exercise"}</span>
-            {nextName && <span className="wo-nextup-name">{nextName}</span>}
-          </div>
+          {/* Next up only with an exercise ahead (19 Oct, Alex); a free session with nothing after says nothing, not "Last exercise". */}
+          {(nextName || !free) && (
+            <div className="wo-nextup">
+              <span className="wo-nextup-label">{nextName ? "Next up" : "Last exercise"}</span>
+              {nextName && <span className="wo-nextup-name">{nextName}</span>}
+            </div>
+          )}
         </div>
       </div>
 

@@ -408,7 +408,7 @@ export default function WorkoutScreen({
                 coachPhoto={coachPhoto}
                 nextName={(() => {
                   const n = pages[nextOpen(i)];
-                  return n?.kind === "exercise" ? shownName(day.exercises[n.index]) : n?.kind === "cardio" ? day.cardio[n.index].name : n?.kind === "add" ? "Add exercise" : null;
+                  return n?.kind === "exercise" ? shownName(day.exercises[n.index]) : n?.kind === "cardio" ? day.cardio[n.index].name : null;
                 })()}
                 onNext={(line) => {
                   if (line) setToast(line);
