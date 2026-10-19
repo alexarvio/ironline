@@ -260,3 +260,6 @@ html .rd.trn .trn-rail[role="tablist"] .trn-week[role="tab"].on { box-shadow: in
 @media (max-width: 900px) {
   .rd.trn .trn-rail { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 150px; overflow-x: auto; scrollbar-width: thin; }
 }
+
+/* The exercise and cardio search bars as wide as their dropdown (20 Oct, Alex): a compact bar, the list the same width under it. */
+.rd.trn .rd-rows .rd-addrow:has(> .rd-addrow-bar) { min-width: 0; max-width: 560px; box-sizing: border-box; }
