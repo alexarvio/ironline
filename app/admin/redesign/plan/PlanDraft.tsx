@@ -621,7 +621,7 @@ export default function PlanDraft({ clientId, firstName, plan }: { clientId: num
         {dlg?.kind === "deletePhase" && phases.find((p) => p.id === dlg.id) && (
           <ConfirmDialog
             title={`Delete ${phases.find((p) => p.id === dlg.id)!.name}?`}
-            description={phases.find((p) => p.id === dlg.id)!.program ? "Its programme goes with it." : `It comes off the plan and ${firstName}'s app.`}
+            description="This permanently deletes the phase. It can't be undone."
             confirm="Delete phase"
             danger
             onConfirm={() => {

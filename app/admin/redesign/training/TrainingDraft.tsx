@@ -1876,11 +1876,9 @@ export default function TrainingDraft({ clientId, firstName, program, library, c
           (() => {
             // The phase is its programme (20 Oct, Alex): both go. Sessions the client trained go too, so that needs a tick.
             const logged = weeks.reduce((t, w) => t + w.trained.filter(Boolean).length + w.missed.filter(Boolean).length, 0);
-            const sessionsAll = weeks.reduce((t, w) => t + w.trained.length, 0);
             return (
               <DeletePhaseDialog
                 name={program.name}
-                what={`${weeks.length} ${weeks.length === 1 ? "week" : "weeks"} · ${sessionsAll} ${sessionsAll === 1 ? "session" : "sessions"}`}
                 logged={logged}
                 firstName={firstName}
                 onDelete={() => {
@@ -2099,7 +2097,7 @@ function SessionName({ value, onChange }: { value: string; onChange: (v: string)
 }
 
 /** Deleting a phase and its programme: what goes, and a tick when the client's logged sessions go with it. */
-function DeletePhaseDialog({ name, what, logged, firstName, onDelete, onClose }: { name: string; what: string; logged: number; firstName: string; onDelete: () => void; onClose: () => void }) {
+function DeletePhaseDialog({ name, logged, firstName, onDelete, onClose }: { name: string; logged: number; firstName: string; onDelete: () => void; onClose: () => void }) {
   const [agreed, setAgreed] = useState(false);
   const cancel = useRef<HTMLButtonElement>(null);
   return (
@@ -2117,12 +2115,10 @@ function DeletePhaseDialog({ name, what, logged, firstName, onDelete, onClose }:
           ✕
         </button>
       </div>
-      <DialogDescription className="dlh-what">{what}</DialogDescription>
+      {/* Not what goes, just that it is for good (20 Oct, Alex). */}
+      <DialogDescription className="dlh-what">This permanently deletes the phase. It can&rsquo;t be undone.</DialogDescription>
       {logged > 0 && (
         <>
-          <p className="dlh-warn">
-            {firstName} trained {logged} {logged === 1 ? "session" : "sessions"} of it. They go too.
-          </p>
           <button type="button" role="checkbox" aria-checked={agreed} className="dlh-ack" onClick={() => setAgreed((x) => !x)}>
             <span className={`dlh-box${agreed ? " on" : ""}`} aria-hidden="true">
               {agreed ? "✓" : ""}
