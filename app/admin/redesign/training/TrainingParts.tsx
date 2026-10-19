@@ -330,8 +330,8 @@ export function AfterWorkoutCheck({ programId, firstName, questions, answers, hr
     return a.value == null ? "–" : `${a.value}${a.kind === "number" && a.unit ? ` ${a.unit}` : ""}`;
   };
   const when = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
-  const grid = { gridTemplateColumns: `150px minmax(160px, 1fr) repeat(${labels.length}, 110px)` } as const;
-  const minW = 150 + 160 + labels.length * 110;
+  const grid = { gridTemplateColumns: `150px minmax(160px, 1fr) repeat(${labels.length}, 150px)` } as const;
+  const minW = 150 + 160 + labels.length * 150;
 
   return (
     <section className="trn-check" aria-labelledby="trn-check-h">
@@ -386,24 +386,14 @@ export function AfterWorkoutCheck({ programId, firstName, questions, answers, hr
           ) : (
             <div className="trn-ans-scroll">
               <div className="trn-ans-table" style={{ minWidth: minW }}>
-                <div className="trn-ans-row trn-ans-cols" style={grid} aria-hidden="true">
+                <div className="trn-ans-row trn-ans-cols" style={grid}>
                   <span>Ended</span>
                   <span>Session</span>
+                  {/* Each question's average sits in its own heading (20 Oct, Alex): "Enjoyment · avg 8". */}
                   {labels.map((l) => (
-                    <span key={l}>{l}</span>
-                  ))}
-                </div>
-                {/* The average of each, over every workout answered (20 Oct, Alex: "I want to see it"). */}
-                <div className="trn-ans-row trn-ans-avg" style={grid}>
-                  <span>Average</span>
-                  <span className="trn-ans-session">
-                    <small>
-                      {answers.length} {answers.length === 1 ? "workout" : "workouts"}
-                    </small>
-                  </span>
-                  {labels.map((l) => (
-                    <span key={l} className="trn-ans-val">
-                      {avg(l) ?? "–"}
+                    <span key={l}>
+                      {l}
+                      {avg(l) != null && <em className="trn-ans-avgval"> · avg {avg(l)}</em>}
                     </span>
                   ))}
                 </div>
