@@ -189,9 +189,14 @@ export default function TrainingDayList({
     setStartProblem(null);
     startTransition(async () => {
       try {
-        const r = await createFreeSessionAction(clientId, at);
+        // Never stuck on "Starting…" (19 Oct): an answer lost on the way (the
+        // server restarting, the connection dropping) gives up after 10 s.
+        const r = await Promise.race([
+          createFreeSessionAction(clientId, at),
+          new Promise<{ ok: false; other?: string }>((resolve) => setTimeout(() => resolve({ ok: false }), 10000)),
+        ]).catch(() => ({ ok: false as const }));
         if (!r.ok) {
-          setStartProblem(r.other ? `Finish ${r.other} first.` : "Couldn't start a free session.");
+          setStartProblem("other" in r && r.other ? `Finish ${r.other} first.` : "Couldn't start a free session. Try again.");
           return;
         }
         const like = serverDays.find((d) => !d.free) ?? serverDays[0];
